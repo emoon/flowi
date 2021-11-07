@@ -1,3 +1,5 @@
+#![no_std]
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -6,3 +8,8 @@ mod tests {
         assert_eq!(result, 4);
     }
 }
+
+extern "C" {
+    pub fn fli_render_font(dest: *mut u32, width: u32, height: u32);
+}
+

@@ -8,6 +8,7 @@ fn main() {
     build.include("external/freetype2/include/config");
 
     build.file("external/freetype2/src/autofit/autofit.c");
+    build.file("external/freetype2/src/base/ftsystem.c");
     build.file("external/freetype2/src/base/ftbase.c");
     build.file("external/freetype2/src/base/ftbbox.c");
     build.file("external/freetype2/src/base/ftbdf.c");
@@ -55,6 +56,7 @@ fn main() {
 
     build.compile("freetype2");
 
+    /*
     // build harfbuzz
     build = cc::Build::new();
     build.cpp(true)
@@ -75,5 +77,13 @@ fn main() {
     }
 
     build.compile("embedded_harfbuzz");
+
+    // build the c code for the lib
+    build = cc::Build::new();
+    */
+
+    build.include("external/freetype2/build/include");
+    build.file("src/c/font_cache.c");
+    build.compile("flowi_c");
 }
 

@@ -9,3 +9,7 @@ edition = "2021"
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
+
+[dev-dependencies]
+minifb = "0.19.3"
+
