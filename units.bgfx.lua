@@ -5,9 +5,9 @@ require "tundra.syntax.rust-cargo"
 
 local native = require('tundra.native')
 
-local BIMG_DIR = "src/external/bimg/"
-local BX_DIR = "src/external/bx/"
-local BGFX_DIR = "src/external/bgfx/"
+local BIMG_DIR = "testbed/external/bimg/"
+local BX_DIR = "testbed/external/bx/"
+local BGFX_DIR = "testbed/external/bgfx/"
 
 local GLSL_OPTIMIZER = BGFX_DIR  .. "3rdparty/glsl-optimizer/"
 local FCPP_DIR = BGFX_DIR .. "3rdparty/fcpp/"

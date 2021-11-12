@@ -1,7 +1,4 @@
 require "tundra.syntax.glob"
-require "tundra.syntax.qt"
-require "tundra.syntax.rust-cargo"
-require "tundra.syntax.osx-bundle"
 require "tundra.path"
 require "tundra.util"
 
@@ -9,10 +6,9 @@ local native = require('tundra.native')
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local GLFW_DIR = "src/external/glfw/"
-local BIMG_DIR = "src/external/bimg/"
-local BX_DIR = "src/external/bx/"
-local STB_DIR = "src/external/stb/"
+local GLFW_DIR = "testbed/external/glfw/"
+local BIMG_DIR = "testbed/external/bimg/"
+local BX_DIR = "testbed/external/bx/"
 
 -- setup target for shader
 local shaderc_platform = "windows"
@@ -178,7 +174,6 @@ StaticLibrary {
     },
 }
 
-
 -----------------------------------------------------------------------------------------------------------------------
 
 Program {
@@ -186,10 +181,10 @@ Program {
 
 	Includes = {
         BIMG_DIR .. "include",
-		"src/external/bx/include",
-		"src/external/bgfx/include",
-		"src/external/glfw/include",
-		"src/external",
+		"testbed/external/bx/include",
+		"testbed/external/bgfx/include",
+		"testbed/external/glfw/include",
+		"testbed/external",
         { BX_DIR .. "/include/compat/msvc" ; Config = "win64-*-*" },
 	},
 
@@ -202,7 +197,7 @@ Program {
 
     Sources = {
         Glob {
-            Dir = "src/flowi_testbed",
+            Dir = "testbed/src",
             Extensions = { ".cpp" },
             Recursive = true,
         },
@@ -218,7 +213,7 @@ Program {
 
     Frameworks = { "Cocoa", "IOKit", "Metal", "QuartzCore", "MetalKit" },
 
-    Depends = { "bgfx", "glfw" },
+    Depends = { "bgfx", "glfw", "flowi" },
 }
 
 Default "flowi_testbed"
