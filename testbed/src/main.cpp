@@ -57,12 +57,44 @@ struct RenderContext {
     // TODO: Don't hard code
     bx::TextureHandle texture_handles[128];
     // layout and shader for rendering non-textured triangles
-    bgfx::VertexLayout m_flat_layout;
-    bgfx::ProgramHandle m_flat_shader;
+    bgfx::VertexLayout flat_layout;
+    bgfx::ProgramHandle flat_shader;
     // layout and shader for rendering textured triangles
-    bgfx::VertexLayout m_texture_layout;
-    bgfx::ProgramHandle m_texture_shader;
+    bgfx::VertexLayout texture_layout;
+    bgfx::ProgramHandle texture_shader;
 };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Render triangles without texture
+
+static const u8* render_flat_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+	FliRcSolidTriangles* draw_cmd = (FliRcSolidTriangles*)render_data; 
+
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::TransientIndexBuffer tib;
+
+    const int vertex_count = draw_cmd->vertex_count;
+    const int index_count = draw_cmd->triangle_count;
+
+    bgfx::allocTransientVertexBuffer(&tvb, num_verts, ctx.flat_layout);
+    bgfx::allocTransientIndexBuffer(&tib, num_indices, sizeof(FliIdxSize) == 4);
+
+    void* verts = (void*)tvb.data;
+    memcpy(verts, draw_cmd->vertex_buffer, num_verts * sizeof(FliVertPosColor));
+
+    u16* indices = (u16*)tib.data;
+    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FliIdxSize));
+
+    uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+
+    encoder->setState(state);
+    encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
+    encoder->setIndexBuffer(&tib, 0, index_count);
+    encoder->submit(255, ctx.flat_shader);
+
+	// Return next entry in the list
+	return (u8*)(draw_cmd + 1);
+}	
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -91,6 +123,8 @@ void ui_render(RenderContext& render_ctx, FliContext* flowi_ctx) {
     const u8* render_commands = render_data->render_commands;
     const u8* render_data = render_data->render_data;
 
+    bgfx::Encoder* encoder = bgfx::begin();
+
     // process all the render commands
     for (int i, count = render_data->render_command_count; i < count; ++i) {
         FliRenderCommand cmd = (FliRenderCommand)*render_commands++;
@@ -98,7 +132,7 @@ void ui_render(RenderContext& render_ctx, FliContext* flowi_ctx) {
         switch (cmd) {
             case FliRc_RenderTriangles:
             {
-                render_data = render_flat_triangles(
+                render_data = render_flat_triangles(render_ctx, render_data);
                 break;
             }
 
@@ -109,35 +143,6 @@ void ui_render(RenderContext& render_ctx, FliContext* flowi_ctx) {
             }
         }
     }
-
-
-    bgfx::TransientVertexBuffer tvb;
-    bgfx::TransientIndexBuffer tib;
-
-    int num_verts = 4;
-    int num_indices = draw_data->pos_color_triangle_count * 3;
-
-    bgfx::allocTransientVertexBuffer(&tvb, num_verts, layout);
-    bgfx::allocTransientIndexBuffer(&tib, num_indices, sizeof(FliIdxSize) == 4);
-
-    void* verts = (void*)tvb.data;
-    memcpy(verts, draw_data->pos_color_vertices, num_verts * sizeof(FliVertPosColor));
-
-    u16* indices = (u16*)tib.data;
-    memcpy(indices, draw_data->pos_color_indices, num_indices * sizeof(FliIdxSize));
-
-    uint64_t state = 0
-        | BGFX_STATE_WRITE_RGB
-        | BGFX_STATE_WRITE_A
-        | BGFX_STATE_MSAA
-        ;
-
-    bgfx::Encoder* encoder = bgfx::begin();
-
-    encoder->setState(state);
-    encoder->setVertexBuffer(0, &tvb, 0, num_verts);
-    encoder->setIndexBuffer(&tib, 0, num_indices);
-    encoder->submit(view_id, program);
 
     bgfx::end(encoder);
 }

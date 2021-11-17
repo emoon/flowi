@@ -61,8 +61,8 @@ typedef struct FliRcSolidTriangles {
     FliIdxSize* index_buffer;
     // number of vertices
     u32 vertex_count;
-    // number of triangles in the buffer
-    u32 triangle_count;
+    // number of indices in the buffer
+    u32 index_count;
 } FliRcSolidTriangles;
 
 // Texture format specificed when using FliRc_CreateTexture command
