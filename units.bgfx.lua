@@ -304,6 +304,7 @@ StaticLibrary {
     },
 
     Defines = {
+    	"BGFX_CONFIG_DEBUG=1",
         "BGFX_CONFIG_RENDERER_WEBGPU=0",
         "BGFX_CONFIG_RENDERER_GNM=0",
         "BGFX_CONFIG_RENDERER_VULKAN=0",

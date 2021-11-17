@@ -21,7 +21,7 @@
 #endif //
 
 #if defined(FLI_SIMD_SSE)
-#include "simd_sse.h"
+#include "simd_sse.inl"
 #elif defined(FLI_SIMD_NEON)
 #include "simd_neon.h"
 #else

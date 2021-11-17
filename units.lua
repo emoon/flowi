@@ -201,6 +201,9 @@ Program {
             Extensions = { ".cpp" },
             Recursive = true,
         },
+
+        ShadercFS { Source = "testbed/shaders/color_fill.fs", OutName = "color_fill_fs.bin" },
+        ShadercVS { Source = "testbed/shaders/color_fill.vs", OutName = "color_fill_vs.bin" },
     },
 
     Env = {
