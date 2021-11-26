@@ -6,28 +6,28 @@
 #define FLI_INDEX_SIZE 2
 
 #if FLI_INDEX_SIZE == 2
-typedef u16 FliIdxSize;
+typedef u16 FlIdxSize;
 #elif FLI_INDEX_SIZE == 4
-typedef u32 FliIdxSize;
+typedef u32 FlIdxSize;
 #else
 #error "Unsupported index size. Only u16 or u32 supported"
 #endif
 
-typedef struct FliVertPosColor {
+typedef struct FlVertPosColor {
 	float x,y;
 	u32 color;
-} FliVertPosColor;
+} FlVertPosColor;
 
-typedef struct FliVertPosUvColor {
+typedef struct FlVertPosUvColor {
 	float x,y;
 	float u,v;
 	u32 color;
-} FliVertPosUvColor;
+} FlVertPosUvColor;
 
-typedef struct FliIntRect {
+typedef struct FlIntRect {
     int x0, y0;
     int x1, y1;
-} FliIntRect;
+} FlIntRect;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This describes the API that the Rendering backend needs to implement.
@@ -42,103 +42,103 @@ typedef struct FliIntRect {
 // have succused to the next update
 
 // Used for rendering triangles with a texture.
-typedef struct FliRcTexturedTriangles {
+typedef struct FlRcTexturedTriangles {
     // Lifetime: Renderer has to take a copy of this.
-    FliVertPosUvColor* vertex_buffer;
+    FlVertPosUvColor* vertex_buffer;
     // Lifetime: Renderer has to take a copy of this.
-    FliIdxSize* index_buffer;
+    FlIdxSize* index_buffer;
     // number of vertices
     u32 vertex_count;
     // number of triangles in the buffer
     u32 triangle_count;
-} FliRcTexturedTriangles;
+} FlRcTexturedTriangles;
 
 // Used for rendering non-textured triangles (doesn't have to be single color) as the shader may generate colors itself
-typedef struct FliRcSolidTriangles {
+typedef struct FlRcSolidTriangles {
     // Lifetime: Renderer has to take a copy of this.
-    FliVertPosColor* vertex_buffer;
+    FlVertPosColor* vertex_buffer;
     // Lifetime: Renderer has to take a copy of this.
-    FliIdxSize* index_buffer;
+    FlIdxSize* index_buffer;
     // number of vertices
     u32 vertex_count;
     // number of indices in the buffer
     u32 index_count;
-} FliRcSolidTriangles;
+} FlRcSolidTriangles;
 
-// Texture format specificed when using FliRc_CreateTexture command
-typedef enum FliTextureFormat {
+// Texture format specificed when using FlRc_CreateTexture command
+typedef enum FlTextureFormat {
     // Single byte texture in linear format
-    FliTextureFormat_R8_LINEAR,
+    FlTextureFormat_R8_LINEAR,
     // 3 byte R,G,B format (sRGB)
-    FliTextureFormat_RGB8_sRGB,
+    FlTextureFormat_RGB8_sRGB,
     // 3 byte R,G,B format (LINEAR)
-    FliTextureFormat_RGB8_LINEAR,
+    FlTextureFormat_RGB8_LINEAR,
     // 4 byte R,G,B,A format (sRGB)
-    FliTextureFormat_RGBA8_sRGB,
+    FlTextureFormat_RGBA8_sRGB,
     // 4 byte R,G,B,A format (LINEAR)
-    FliTextureFormat_RGBA8_LINEAR,
+    FlTextureFormat_RGBA8_LINEAR,
     // 16-bit single format. This will mostly be used for temporary things such as blurs that requires more
     // than one pass rendering. i16 or f16 will allow better accuracy, but R8_LINEAR can be used in worst case
     // in case the rendering backend doesn't support this format.
-    FliTextureFormat_I16_OR_F16_LINEAR,
-} FliTextureFormat;
+    FlTextureFormat_I16_OR_F16_LINEAR,
+} FlTextureFormat;
 
 // Used when Flowi needs to create a texture for some purpose (can be for fonts, temporary render-targets, etc)
 // Notice that fli_create(...) allow the set the maximum number of textures/sizes that flowi is allowed to use.
 // If Flowi is unable to to live within the bounds of the restrictions given it will stop updating and the user
 // has to use fli_get_status() to check what the issue is.
-typedef struct FliRcCreateTexture {
+typedef struct FlRcCreateTexture {
     // This is the id that will later be used when refering to the texture
     u16 texture_id;
-    // See FliTextureFormat for the type
+    // See FlTextureFormat for the type
     u16 texture_format;
     // width of the texture
     u16 width;
     // height of the texture
     u16 height;
-} FliRcCreateTexture;
+} FlRcCreateTexture;
 
 // This command is used to copy some data from the CPU to the GPU side. This is mostly used
-// for images/fonts/etc that needs to endup in a texture on the GPU. There is also a FliRcBlitRect
+// for images/fonts/etc that needs to endup in a texture on the GPU. There is also a FlRcBlitRect
 // for blitting between GPU targets (this may be used for example when scaling down content for bluring or other reasons)
-typedef struct FliRcCpuBlitRect {
+typedef struct FlRcCpuBlitRect {
     // Lifetime: The GPU backend can assume this will be alive for at least 3 times of GPU-frames.
     u8* source_data;
     // Source rectangle to copy from
-    FliIntRect source_rect;
+    FlIntRect source_rect;
     // Destination rectangle on the GPU Side
-    FliIntRect dest_rect;
+    FlIntRect dest_rect;
     // Target for the blit
     u16 texture_id;
-} FliRcCpuBlitRect;
+} FlRcCpuBlitRect;
 
 // Copy data between GPU targets.
-typedef struct FliRcGpuBlitRect {
+typedef struct FlRcGpuBlitRect {
     // Source rectangle to copy from
-    FliIntRect source_rect;
+    FlIntRect source_rect;
     // Destination rectangle on the GPU Side
-    FliIntRect dest_rect;
+    FlIntRect dest_rect;
     // Source for the texture
     u16 source_texture_id;
     // Target Texture Id
     u16 target_texture_id;
-} FliRcGpuBlitRect;
+} FlRcGpuBlitRect;
 
-// FliRenderCommands that the render backend needs to support
-typedef enum FliRenderCommand {
-    FliRc_RenderTexturedTriangles,
-    FliRc_RenderTriangles,
-    FliRc_CreateTexture,
-    FliRc_CpuBlitRect,
-    FliRc_GpuBlitRect,
-} FliRenderCommand;
+// FlRenderCommands that the render backend needs to support
+typedef enum FlRenderCommand {
+    FlRc_RenderTexturedTriangles,
+    FlRc_RenderTriangles,
+    FlRc_CreateTexture,
+    FlRc_CpuBlitRect,
+    FlRc_GpuBlitRect,
+} FlRenderCommand;
 
 // Return from Flowi to be used by a rendering backend to render data
-typedef struct FliRenderData {
-    // list of render command. These values should be cast to FliRenderCommand
-    const u8* render_commands;
+typedef struct FlRenderData {
+    // list of render command. These values should be cast to FlRenderCommand
+    u8* render_commands;
     // Data for the render commands. Needs to be cast to the correct type depending on enum
-    const u8* render_data;
+    u8* render_data;
     // Total number of render commands
-    int render_command_count;
-} FliRenderData;
+    int count;
+} FlRenderData;

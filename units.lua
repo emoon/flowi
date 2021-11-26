@@ -216,9 +216,31 @@ Program {
 
     Frameworks = { "Cocoa", "IOKit", "Metal", "QuartzCore", "MetalKit" },
 
-    Depends = { "bgfx", "glfw", "flowi" },
+    Depends = { "bgfx", "glfw", "flowi", "freetype2" },
 }
 
+local FLOWI_DIR = "core/src/"
+local FREETYPE2_LIB = "core/external/freetype2/"
+
+-----------------------------------------------------------------------------------------------------------------------
+
+Program {
+    Name = "flowi_core_tests",
+
+    Includes = {
+        -- FREETYPE2_LIB .. "build/include",
+        FREETYPE2_LIB .. "include",
+        -- FREETYPE2_LIB .. "include/config",
+    },
+
+    Sources = {
+        "core/tests/tests.c",
+    },
+
+    Depends = { "flowi", "freetype2" },
+}
+
+Default "flowi_core_tests"
 Default "flowi_testbed"
 
 -- vim: ts=4:sw=4:sts=4

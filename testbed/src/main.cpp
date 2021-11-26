@@ -14,48 +14,10 @@
 #define WINDOW_HEIGHT 400
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void error_callback(int error, const char* description) {
-    fprintf(stderr, "Error: %s\n", description);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void* glfwNativeWindowHandle(GLFWwindow* _window) {
-#   if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
-
-    return (void*)(uintptr_t)glfwGetX11Window(_window);
-#   elif BX_PLATFORM_OSX
-    return glfwGetCocoaWindow(_window);
-#   elif BX_PLATFORM_WINDOWS
-    return glfwGetWin32Window(_window);
-#   endif // BX_PLATFORM_
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void ui_update(FliContext* ctx) {
-    fli_frame_begin(ctx);
-
-    if (fli_button_c(ctx, "test")) {
-        printf("button\n");
-    }
-
-    fli_frame_end(ctx);
-}
-
 // Track data needed by the Flowi rendering
 struct RenderContext {
     // TODO: Don't hard code
-    bx::TextureHandle texture_handles[128];
+    bgfx::TextureHandle texture_handles[128];
     // layout and shader for rendering non-textured triangles
     bgfx::VertexLayout flat_layout;
     bgfx::ProgramHandle flat_shader;
@@ -65,86 +27,9 @@ struct RenderContext {
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Render triangles without texture
 
-static const u8* render_flat_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
-	FliRcSolidTriangles* draw_cmd = (FliRcSolidTriangles*)render_data; 
-
-    bgfx::TransientVertexBuffer tvb;
-    bgfx::TransientIndexBuffer tib;
-
-    const int vertex_count = draw_cmd->vertex_count;
-    const int index_count = draw_cmd->triangle_count;
-
-    bgfx::allocTransientVertexBuffer(&tvb, num_verts, ctx.flat_layout);
-    bgfx::allocTransientIndexBuffer(&tib, num_indices, sizeof(FliIdxSize) == 4);
-
-    void* verts = (void*)tvb.data;
-    memcpy(verts, draw_cmd->vertex_buffer, num_verts * sizeof(FliVertPosColor));
-
-    u16* indices = (u16*)tib.data;
-    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FliIdxSize));
-
-    uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
-
-    encoder->setState(state);
-    encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
-    encoder->setIndexBuffer(&tib, 0, index_count);
-    encoder->submit(255, ctx.flat_shader);
-
-	// Return next entry in the list
-	return (u8*)(draw_cmd + 1);
-}	
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void ui_render(RenderContext& render_ctx, FliContext* flowi_ctx) {
-    FliRenderData* render_data = fli_get_render_data_get(flowi_ctx);
-
-    bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
-
-    int view_id = 255;
-
-	bgfx::setViewName(view_id, "Flowi");
-    bgfx::setViewMode(view_id, bgfx::ViewMode::Sequential);
-
-    float ortho[16];
-
-    // TODO: Fix hard-coding
-    float x = 0.0f;
-    float y = 0.0f;
-    float width = 640.0f;
-    float height = 360.0f;
-
-	bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, 1.0f);
-    bgfx::setViewTransform(view_id, NULL, ortho);
-    bgfx::setViewRect(view_id, 0, 0, uint16_t(640), uint16_t(360));
-
-    const u8* render_commands = render_data->render_commands;
-    const u8* render_data = render_data->render_data;
-
-    bgfx::Encoder* encoder = bgfx::begin();
-
-    // process all the render commands
-    for (int i, count = render_data->render_command_count; i < count; ++i) {
-        FliRenderCommand cmd = (FliRenderCommand)*render_commands++;
-
-        switch (cmd) {
-            case FliRc_RenderTriangles:
-            {
-                render_data = render_flat_triangles(render_ctx, render_data);
-                break;
-            }
-
-            default:
-            {
-                printf("Case %d - not handled!\n", cmd);
-                break;
-            }
-        }
-    }
-
-    bgfx::end(encoder);
+static void error_callback(int error, const char* description) {
+    fprintf(stderr, "Error: %s\n", description);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -180,9 +65,6 @@ bgfx::ProgramHandle load_shader_program(const char* vs, const char* fs) {
         exit(1);
     }
 
-    printf("%p %d\n", vs_data, vs_data_len);
-    printf("%p %d\n", ps_data, fs_data_len);
-
     auto vs_data_mem = bgfx::copy(vs_data, vs_data_len);
     auto ps_data_mem = bgfx::copy(ps_data, fs_data_len);
 
@@ -191,10 +73,140 @@ bgfx::ProgramHandle load_shader_program(const char* vs, const char* fs) {
 
     auto t = bgfx::createProgram(vs_shader, ps_shader, false);
     if (!bgfx::isValid(t)) {
-        printf("failed soethuo\n");
+        printf("failed to init shaders\n");
     }
 
     return t;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void* glfwNativeWindowHandle(GLFWwindow* _window) {
+#   if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+
+    return (void*)(uintptr_t)glfwGetX11Window(_window);
+#   elif BX_PLATFORM_OSX
+    return glfwGetCocoaWindow(_window);
+#   elif BX_PLATFORM_WINDOWS
+    return glfwGetWin32Window(_window);
+#   endif // BX_PLATFORM_
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ui_init(RenderContext& ctx) {
+    ctx.flat_layout
+        .begin()
+        .add(bgfx::Attrib::Position,  2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
+        .end();
+
+    ctx.flat_shader = load_shader_program(
+        "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.vs",
+        "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.fs");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ui_update(FlContext* ctx) {
+    fl_frame_begin(ctx);
+
+    if (fl_button_c(ctx, "test")) {
+        printf("button\n");
+    }
+
+    fl_frame_end(ctx);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Render triangles without texture
+
+static const u8* render_flat_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+	FlRcSolidTriangles* draw_cmd = (FlRcSolidTriangles*)render_data;
+
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::TransientIndexBuffer tib;
+
+    const int vertex_count = draw_cmd->vertex_count;
+    const int index_count = draw_cmd->index_count;
+
+    bgfx::allocTransientVertexBuffer(&tvb, vertex_count, ctx.flat_layout);
+    bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(FlIdxSize) == 4);
+
+    void* verts = (void*)tvb.data;
+    memcpy(verts, draw_cmd->vertex_buffer, vertex_count * sizeof(FlVertPosColor));
+
+    u16* indices = (u16*)tib.data;
+    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FlIdxSize));
+
+    uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+
+    encoder->setState(state);
+    encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
+    encoder->setIndexBuffer(&tib, 0, index_count);
+    encoder->submit(255, ctx.flat_shader);
+
+	// Return next entry in the list
+	return (u8*)(draw_cmd + 1);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx) {
+    FlRenderData* render_data = fl_get_render_data(flowi_ctx);
+
+    bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
+
+    int view_id = 255;
+
+	bgfx::setViewName(view_id, "Flowi");
+    bgfx::setViewMode(view_id, bgfx::ViewMode::Sequential);
+
+    float ortho[16];
+
+    // TODO: Fix hard-coding
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 640.0f;
+    float height = 360.0f;
+
+	bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, 1.0f);
+    bgfx::setViewTransform(view_id, NULL, ortho);
+    bgfx::setViewRect(view_id, 0, 0, uint16_t(640), uint16_t(360));
+
+    const u8* render_commands = render_data->render_commands;
+    const u8* render_cmd_data = render_data->render_data;
+
+    bgfx::Encoder* encoder = bgfx::begin();
+
+    // process all the render commands
+    for (int i = 0, count = render_data->count; i < count; ++i) {
+        FlRenderCommand cmd = (FlRenderCommand)*render_commands++;
+
+        switch (cmd) {
+            case FlRc_RenderTriangles:
+            {
+                render_cmd_data = render_flat_triangles(render_ctx, render_cmd_data, encoder);
+                break;
+            }
+
+            default:
+            {
+                printf("Case %d - not handled!\n", cmd);
+                break;
+            }
+        }
+    }
+
+    bgfx::end(encoder);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -254,19 +266,10 @@ int main() {
 
     bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
 
-    FliContext* ctx = fli_context_create();
+    FlContext* ctx = fl_context_create();
 
-    bgfx::VertexLayout layout;
-
-    layout
-        .begin()
-        .add(bgfx::Attrib::Position,  2, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::Color0,    4, bgfx::AttribType::Uint8, true)
-        .end();
-
-    bgfx::ProgramHandle program = load_shader_program(
-        "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.vs",
-        "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.fs");
+    RenderContext render_ctx = { 0 };
+    ui_init(render_ctx);
 
     //glfwGetWindowSize(window, &old_width, &old_height);
 
@@ -285,7 +288,7 @@ int main() {
         }
 
         ui_update(ctx);
-        ui_render(ctx, layout, program);
+        ui_render(render_ctx, ctx);
 
         bgfx::frame();
     }

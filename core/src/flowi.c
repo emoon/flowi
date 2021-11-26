@@ -3,13 +3,28 @@
 #include <stdio.h>
 
 #include "flowi.h"
-#include "flowi_render.h"
+#include "../include/flowi_render.h"
 #include "simd.h"
+#include "internal.h"
 
-struct FliContext* g_fli_global_ctx;
+struct FlContext* g_fl_global_ctx = NULL;
+struct FlGlobalState* g_state = NULL;
+
+//extern FliGlobalCtx* g_global_ctx;
+
+// Output data to draw on the GPU
+
+typedef struct FlDrawData {
+    FlVertPosColor* pos_color_vertices;
+    FlVertPosUvColor* pos_uv_color_vertices;
+    FlIdxSize* pos_color_indices;
+    FlIdxSize* pos_uv_color_indices;
+    int pos_color_triangle_count;
+    int pos_uv_color_triangle_count;
+} FlDrawData;
 
 typedef struct MouseState {
-	FliVec2 pos;
+	FlVec2 pos;
 	bool buttons[3];
 } MouseState;
 
@@ -53,12 +68,12 @@ typedef struct FadeAction {
 } FadeAction;
 */
 
-typedef struct FliContext {
+typedef struct FlContext {
 	// hash of the full context. Use for to skip rendering if nothing has changed
 	//XXH3_state_t context_hash;
 	// Previous frames hash. We can check against this to see if anything has changed
 	//XXH3_state_t prev_frame_hash;
-	FliVec2 cursor;
+	FlVec2 cursor;
 	// id from the previous frame
 	u32 prev_active_item;
 	// current id
@@ -78,18 +93,18 @@ typedef struct FliContext {
 	ItemWithText* items_with_text;
 	// Active fade actions
 	int fade_actions;
-	FliDrawData draw_data;
+	FlDrawData draw_data;
 
 	// Render commands and data for the GPU backend
-	FliRenderData render_data;
+	FlRenderData render_data;
 
-} FliContext;
+} FlContext;
 
 
 // TODO: Allow for custom allocations
-FliContext* fli_context_create() {
-	FliContext* ctx = aligned_alloc(16, sizeof(FliContext));
-	memset(ctx, 0, sizeof(FliContext));
+FlContext* fl_context_create() {
+	FlContext* ctx = aligned_alloc(16, sizeof(FlContext));
+	memset(ctx, 0, sizeof(FlContext));
 
 	// TODO: Use custom allocator
 	ctx->positions = (vec128*)aligned_alloc(16, sizeof(vec128) * (MAX_CONTROLS + + MEMORY_PADDING));
@@ -97,21 +112,29 @@ FliContext* fli_context_create() {
 	ctx->items_with_text = (ItemWithText*)aligned_alloc(16, sizeof(ItemWithText) * (MAX_CONTROLS + MEMORY_PADDING));
 
 	// temp
-	ctx->draw_data.pos_color_vertices = (FliVertPosColor*)aligned_alloc(16, sizeof(FliVertPosColor) * MAX_VERTS);
-	ctx->draw_data.pos_uv_color_vertices = (FliVertPosUvColor*)aligned_alloc(16, sizeof(FliVertPosUvColor) * MAX_VERTS);
-	ctx->draw_data.pos_color_indices = (FliIdxSize*)aligned_alloc(16, sizeof(FliIdxSize) * MAX_VERTS * 6);
-	ctx->draw_data.pos_uv_color_indices = (FliIdxSize*)aligned_alloc(16, sizeof(FliIdxSize) * MAX_VERTS * 6);
+	ctx->draw_data.pos_color_vertices = (FlVertPosColor*)aligned_alloc(16, sizeof(FlVertPosColor) * MAX_VERTS);
+	ctx->draw_data.pos_uv_color_vertices = (FlVertPosUvColor*)aligned_alloc(16, sizeof(FlVertPosUvColor) * MAX_VERTS);
+	ctx->draw_data.pos_color_indices = (FlIdxSize*)aligned_alloc(16, sizeof(FlIdxSize) * MAX_VERTS * 6);
+	ctx->draw_data.pos_uv_color_indices = (FlIdxSize*)aligned_alloc(16, sizeof(FlIdxSize) * MAX_VERTS * 6);
 
 	// temp
 	ctx->render_data.render_commands = aligned_alloc(16, MAX_RENDER_COMMANDS);
-	ctx->render_data.render_data = alligned_alloc(16, MAX_RENDER_COMMAND_DATA);
+	ctx->render_data.render_data = aligned_alloc(16, MAX_RENDER_COMMAND_DATA);
 
 	return ctx;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This to be called before using any other functions
-void fli_create() {
-	g_fli_global_ctx = fli_context_create();
+
+void fl_create() {
+	g_fl_global_ctx = fl_context_create();
+
+	// TODO: Use local allocator
+	g_state = (FlGlobalState*)malloc(sizeof(FlGlobalState));
+	memset(g_state, 0, sizeof(FlGlobalState));
+
+	Font_init(g_state);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -138,11 +161,11 @@ static u32 str_hash(const char* string, int len) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static int add_or_update_control(FliContext* ctx, u32 id, FliVec2 size) {
+static int add_or_update_control(FlContext* ctx, u32 id, FlVec2 size) {
 	// TODO: Vector-based
 	// IDEA: Always add/resolve later instead
 
-	FliVec2 cursor = ctx->cursor;
+	FlVec2 cursor = ctx->cursor;
 	ctx->cursor.y += size.y + WIDGET_SPACING;
 
 	vec128* positions = ctx->positions;
@@ -163,27 +186,27 @@ static int add_or_update_control(FliContext* ctx, u32 id, FliVec2 size) {
 }
 
 // To be called before exit
-void fli_destroy();
+void fl_destroy();
 
-void fli_begin_c(FliContext* context) {
+void fl_begin_c(FlContext* context) {
 	context->cursor.x = 0.0f;
 	context->cursor.y = 0.0f;
     //XXH3_64bits_reset(context->context_hash);
 }
 
 /// Create a push button with the given label
-bool fli_button_c(struct FliContext* context, const char* label) {
-	FliVec2 size = { 100.0f, 100.0f };
+bool fl_button_c(struct FlContext* context, const char* label) {
+	FlVec2 size = { 100.0f, 100.0f };
 	int label_len = strlen(label);
-	return fli_button_ex_c(context, label, label_len, size);
+	return fl_button_ex_c(context, label, label_len, size);
 }
 
-bool fli_button_size_c(struct FliContext* context, const char* label, FliVec2 size) {
+bool fl_button_size_c(struct FlContext* context, const char* label, FlVec2 size) {
 	int label_len = strlen(label);
-	return fli_button_ex_c(context, label, label_len, size);
+	return fl_button_ex_c(context, label, label_len, size);
 }
 
-bool fli_button_ex_c(struct FliContext* ctx, const char* label, int label_len, FliVec2 size) {
+bool fl_button_ex_c(struct FlContext* ctx, const char* label, int label_len, FlVec2 size) {
 	u32 control_id = str_hash(label, label_len);
 
 	if (add_or_update_control(ctx, control_id, size) < 0) {
@@ -207,7 +230,7 @@ bool fli_button_ex_c(struct FliContext* ctx, const char* label, int label_len, F
 }
 
 // TODO: Vectorize
-void fli_set_mouse_pos_state(struct FliContext* ctx, FliVec2 pos, bool b1, bool b2, bool b3) {
+void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2, bool b3) {
 	// Tracks the mouse state for this frame
 	ctx->mouse_state.pos = pos;
 	ctx->mouse_state.buttons[0] = b1;
@@ -218,14 +241,13 @@ void fli_set_mouse_pos_state(struct FliContext* ctx, FliVec2 pos, bool b1, bool 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Use block based allocator
 
-static void fli_generate_render_data(struct FliContext* ctx) {
-    FliVertPosColor* pos_color_vertices = ctx->draw_data.pos_color_vertices;
-    FliIdxSize* pos_color_indices = ctx->draw_data.pos_color_indices;
+static void fl_generate_render_data(struct FlContext* ctx) {
+    FlVertPosColor* pos_color_vertices = ctx->draw_data.pos_color_vertices;
+    FlIdxSize* pos_color_indices = ctx->draw_data.pos_color_indices;
     Rect* rects = (Rect*)ctx->positions;
 
-    FliIdxSize vertex_id = 0;
+    FlIdxSize vertex_id = 0;
     u32 color = 0x0fffff1f;
-    u32 vertex_count = 0;
 
 	// TODO: More types etc
 	// Vectorize
@@ -270,7 +292,7 @@ static void fli_generate_render_data(struct FliContext* ctx) {
 
 		vertex_id += 4;
 		pos_color_vertices += 4;
-		pos_color_indices += 2;
+		pos_color_indices += 6;
 
 		// generate a quad
 	}
@@ -280,45 +302,40 @@ static void fli_generate_render_data(struct FliContext* ctx) {
 
 	// hack add render command
 
-	FliRcSolidTriangles* tri_data = (FliRcSolidTriangles*)ctx->render_commands.render_data;
+	ctx->render_data.render_commands[0] = (u8)FlRc_RenderTriangles;
+
+	FlRcSolidTriangles* tri_data = (FlRcSolidTriangles*)ctx->render_data.render_data;
 
 	tri_data->vertex_buffer = ctx->draw_data.pos_color_vertices;
 	tri_data->index_buffer = ctx->draw_data.pos_color_indices;
 	tri_data->vertex_count = vertex_id;
-	tri_data->triangle_count = vertex_id / 2;
+	tri_data->index_count = 6;
 
-	*cxt->render_commands = (u8)FliRc_RenderTriangles;
-	*ctx->render_command_count = 1;
+	ctx->render_data.count = 1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
-void fli_begin() {
-	fli_begin_c(g_fli_global_ctx);
+void fl_begin() {
+	fl_begin_c(g_fl_global_ctx);
 }
 */
 
-void fli_frame_begin(struct FliContext* ctx) {
+void fl_frame_begin(struct FlContext* ctx) {
 	ctx->cursor.x = 0;
 	ctx->cursor.y = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fli_frame_end(struct FliContext* ctx) {
-	fli_generate_render_data(ctx);
+void fl_frame_end(struct FlContext* ctx) {
+	fl_generate_render_data(ctx);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FliRenderData* fli_get_render_data_get(struct FliContext* ctx) {
+FlRenderData* fl_get_render_data(struct FlContext* ctx) {
 	return &ctx->render_data;
 }
-
-
-
-
-
-
 
