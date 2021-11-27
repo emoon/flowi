@@ -7,10 +7,18 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-
+  build_linux:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Install Tundra
+      run: git clone --recursive https://github.com/deplinenoise/tundra.git && cd tundra && make -j2 && sudo make install && cd ..
+
+    - name: Build Debug
+      run: tundra2 linux-gcc-debug
+
+    - name: Run tests
+      run: t2-output/linux-gcc-debug-default/flowi_core_test
 
