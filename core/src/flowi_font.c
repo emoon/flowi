@@ -261,6 +261,8 @@ FlFont fl_font_from_memory(
 	const int texture_width = round_to_next_pow_two(area_t);
     const int texture_max_height = 1024 * 32;
 
+    //printf("texture width %d\n", texture_width);
+
 	// Allocate temp data for rect packer
 	stbrp_node* pack_nodes = LinearAllocator_alloc_array(&allocator, stbrp_node, array_len);
 
@@ -276,13 +278,17 @@ FlFont fl_font_from_memory(
 
 	for (int i = 0; i < array_len; ++i) {
 		const stbrp_rect* rect = &pack_rects[i];
-		int t = rect->y + rect->x;
+		int t = rect->h + rect->x;
 		if (rect->was_packed) {
 			texture_height = t > texture_height ? t : texture_height;
 		}
 
-		//printf("packed id %d - %d %d\n", rect->id, rect->y, rect->x);
+		//printf("packed id %04d - [%04d %04d - %04d %04d]\n", rect->id, rect->y, rect->x, rect->x + rect->w, rect->y + rect->h);
 	}
+
+	texture_height = round_to_next_pow_two(area_t);
+
+	//printf("texture size %d %d\n", texture_width, texture_height);
 
 	free(data);
 
