@@ -34,3 +34,39 @@ jobs:
     - name: Build All (Debug)
       run: tundra2 linux-gcc-debug
 
+  # Build macOS
+  build_macOS:
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build Core Tests (Debug)
+      run: bin/macos/tundra2 macosx-clang-debug flowi_core_tests
+
+    - name: Run Core Tests (Debug)
+      run: t2-output/macosx-clang-debug-default/flowi_core_tests
+
+    - name: Build Core Tests (Optimized)
+      run: bin/macos/tundra2 macosx-clang-release flowi_core_tests
+
+    - name: Run Core Tests (Optimized)
+      run: t2-output/macosx-clang-release-default/flowi_core_tests
+
+  # Build Windows
+  build_windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build Core Tests (Debug)
+      run: bin\windows\tundra2.exe --unprotected win64-msvc-debug flowi_core_tests
+
+    - name: Run Core Tests (Debug)
+      run: t2-output\win64-msvc-debug-default\flowi_core_tests
+
+    - name: Build Core Tests (Optimized)
+      run: bin\windows\tundra2.exe --unprotected win64-msvc-release flowi_core_tests
+
+    - name: Run Core Tests (Optimized)
+      run: t2-output\win64-msvc-release-default\flowi_core_tests
+
