@@ -18,7 +18,9 @@ typedef struct FlGlobalState {
 #if defined(__GNUC__) || defined(__clang__)
 #define FL_LIKELY(x) __builtin_expect((x),1)
 #define FL_UNLIKELY(x) __builtin_expect((x),0)
+#define FL_ALIGNOF(_type) alignof(_type)
 #else
+#define FL_ALIGNOF(_type) __alignof(_type)
 #define FL_LIKELY(x) (x)
 #define FL_UNLIKELY(x) (x)
 #endif
