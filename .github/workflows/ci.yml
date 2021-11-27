@@ -44,13 +44,13 @@ jobs:
       run: bin/macos/tundra2 macosx-clang-debug flowi_core_tests
 
     - name: Run Core Tests (Debug)
-      run: t2-output/macosx-clang-debug-default/flowi_core_tests
+      run: t2-output/macos-clang-debug-default/flowi_core_tests
 
     - name: Build Core Tests (Optimized)
       run: bin/macos/tundra2 macosx-clang-release flowi_core_tests
 
     - name: Run Core Tests (Optimized)
-      run: t2-output/macosx-clang-release-default/flowi_core_tests
+      run: t2-output/macos-clang-release-default/flowi_core_tests
 
   # Build Windows
   build_windows:
