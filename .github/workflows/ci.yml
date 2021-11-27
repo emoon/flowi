@@ -13,12 +13,24 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install deps
+      run: sudo apt update && sudo apt-get install mesa-common-dev libx11-dev libxcursor-dev libxinerama-dev libxkbcommon-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+
     - name: Install Tundra
       run: git clone --recursive https://github.com/deplinenoise/tundra.git && cd tundra && make -j2 && sudo make install && cd ..
 
-    - name: Build Debug
-      run: tundra2 linux-gcc-debug
+    - name: Build Core Tests (Debug)
+      run: tundra2 linux-gcc-debug flowi_core_test
 
-    - name: Run tests
+    - name: Run Core Tests (Debug)
       run: t2-output/linux-gcc-debug-default/flowi_core_test
+
+    - name: Build Core Tests (Optimized)
+      run: tundra2 linux-gcc-release flowi_core_test
+
+    - name: Run Core Tests (Optimized)
+      run: t2-output/linux-gcc-debug-release/flowi_core_test
+
+    - name: Build All (Debug)
+      run: tundra2 linux-gcc-debug
 
