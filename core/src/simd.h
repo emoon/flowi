@@ -6,7 +6,7 @@
 #	define FLI_SIMD_AVX 1
 #endif //
 
-#if defined(__SSE2__)
+#if defined(__SSE2__) || defined(_MSC_VER)
 #	include <emmintrin.h> // __m128i
 #	if defined(__SSE4_1__)
 #		include <smmintrin.h>

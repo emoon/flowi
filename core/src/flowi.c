@@ -7,6 +7,12 @@
 #include "simd.h"
 #include "internal.h"
 
+#if defined(_MSC_VER)
+#include <malloc.h>
+#undef aligned_alloc
+#define aligned_alloc(align, size) _alligned_maloc(size, align)
+#endif
+
 struct FlContext* g_fl_global_ctx = NULL;
 struct FlGlobalState* g_state = NULL;
 

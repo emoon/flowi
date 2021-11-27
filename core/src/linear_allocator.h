@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdalign.h>
 #include "types.h"
 #include "internal.h"
 
