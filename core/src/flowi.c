@@ -10,7 +10,7 @@
 #if defined(_MSC_VER)
 #include <malloc.h>
 #undef aligned_alloc
-#define aligned_alloc(align, size) _alligned_maloc(size, align)
+#define aligned_alloc(align, size) _aligned_malloc(size, align)
 #endif
 
 struct FlContext* g_fl_global_ctx = NULL;
