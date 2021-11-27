@@ -23,13 +23,13 @@ jobs:
       run: tundra2 linux-gcc-debug flowi_core_test
 
     - name: Run Core Tests (Debug)
-      run: t2-output/linux-gcc-debug-default/flowi_core_test
+      run: t2-output/linux-gcc-debug-default/flowi_core_tests
 
     - name: Build Core Tests (Optimized)
       run: tundra2 linux-gcc-release flowi_core_test
 
     - name: Run Core Tests (Optimized)
-      run: t2-output/linux-gcc-debug-release/flowi_core_test
+      run: t2-output/linux-gcc-debug-release/flowi_core_tests
 
     - name: Build All (Debug)
       run: tundra2 linux-gcc-debug
