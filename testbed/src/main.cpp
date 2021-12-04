@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define WINDOW_WIDTH 640*2
-#define WINDOW_HEIGHT 400*2
+#define WINDOW_WIDTH 640
+#define WINDOW_HEIGHT 400
 #define MAX_TEXTURE_COUNT 128
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -251,12 +251,12 @@ void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx) {
     // TODO: Fix hard-coding
     float x = 0.0f;
     float y = 0.0f;
-    float width = 640.0f;
-    float height = 360.0f;
+    float width = WINDOW_WIDTH;
+    float height = WINDOW_HEIGHT;
 
     bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, 1.0f);
     bgfx::setViewTransform(view_id, NULL, ortho);
-    bgfx::setViewRect(view_id, 0, 0, uint16_t(640), uint16_t(360));
+    bgfx::setViewRect(view_id, 0, 0, uint16_t(WINDOW_WIDTH), uint16_t(WINDOW_HEIGHT));
 
     const u8* render_commands = render_data->render_commands;
     const u8* render_cmd_data = render_data->render_data;
@@ -360,11 +360,12 @@ int main() {
 
     ui_init(render_ctx);
 
-    static u16 t[] = {32, 127};
+    //static u16 t[] = {64, 65};
+    static u16 t[] = {97, 100};
     static FlGlyphRange font_range = {(u16*)&t, 2};
 
     // Load test font
-    fl_font_from_file("data/montserrat-regular.ttf", 72, FlFontBuildMode_Immediate, FlFontAtlasMode_PrebildGlyphs,
+    fl_font_from_file("data/montserrat-regular.ttf", 180, FlFontBuildMode_Immediate, FlFontAtlasMode_PrebildGlyphs,
                       FlFontGlyphPlacementMode_Basic, &font_range);
 
     printf("finished loading font");
@@ -383,6 +384,8 @@ int main() {
             bgfx::reset(display_w, display_h);
             old_width = display_w;
             old_height = display_h;
+
+            printf("display size %d %d\n", display_w, display_h);
         }
 
         ui_update(ctx);

@@ -360,13 +360,20 @@ static void fl_generate_render_data_2(struct FlContext* ctx) {
 	// Vectorize
 	for (int i = 0, count = ctx->items_with_text_count; i < count; ++i) {
 		Rect r = *rects++;
-		r.width = 800.0f;
-		r.height = 600.0f;
+		r.width = 640.0f;
+		r.height = 400.0f;
 
-		float x0 = r.x + 10.0f;
-		float y0 = r.y + 10.0f;
-		float x1 = x0 + r.width + 10.0f;
-		float y1 = y0 + r.height + 10.0f;
+		/*
+		float x0 = r.x;
+		float y0 = r.y;
+		float x1 = x0 + r.width;
+		float y1 = y0 + r.height;
+		*/
+
+		float x0 = 0.0f;
+		float y0 = 0.0f;
+		float x1 = 640.0f;
+		float y1 = 400.0f;
 
 		// vert 1
 		pos_uv_color_vertices[0].x = x0;
