@@ -29,6 +29,26 @@ typedef struct FlIntRect {
     int x1, y1;
 } FlIntRect;
 
+
+// Used to describe the lifetime of data that is being rendered.
+//
+// FlMemoryLifetime_Static
+// Static means that the data is alive for *at least* 3 frames of rendering update.
+// If it's deleted/freed during that time the application will likely crash.
+// Also if any updates happens to the data during this time it's undefined what the
+// result will be on the GPU side
+//
+// FlMemoryLifetime_Temporary
+// Temporary means that the memory will be freed after calling this function. The system
+// will take a temporary copy and keep it alive for at least 3 frames so it can be safley
+// tranfered to the GPU. This costs extra memory/allocations/etc so if Static can be used
+// that is the preferred option.
+//
+typedef enum FlMemoryLifetime {
+    FlMemoryLifetime_Static,
+    FlMemoryLifetime_Temporary,
+} FlMemoryLifetime;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This describes the API that the Rendering backend needs to implement.
 //
@@ -47,10 +67,12 @@ typedef struct FlRcTexturedTriangles {
     FlVertPosUvColor* vertex_buffer;
     // Lifetime: Renderer has to take a copy of this.
     FlIdxSize* index_buffer;
+    // Texture id to use when rendering
+    u32 texture_id;
     // number of vertices
     u32 vertex_count;
-    // number of triangles in the buffer
-    u32 triangle_count;
+    // number of indices in the buffer
+    u32 index_count;
 } FlRcTexturedTriangles;
 
 // Used for rendering non-textured triangles (doesn't have to be single color) as the shader may generate colors itself
@@ -88,10 +110,12 @@ typedef enum FlTextureFormat {
 // If Flowi is unable to to live within the bounds of the restrictions given it will stop updating and the user
 // has to use fli_get_status() to check what the issue is.
 typedef struct FlRcCreateTexture {
+    // Data upload
+    u8* data;
     // This is the id that will later be used when refering to the texture
-    u16 texture_id;
+    u16 id;
     // See FlTextureFormat for the type
-    u16 texture_format;
+    u16 format;
     // width of the texture
     u16 width;
     // height of the texture

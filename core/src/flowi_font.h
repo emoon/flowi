@@ -3,6 +3,10 @@
 #include "types.h"
 #include "../include/config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef s32 FlFont;
 
 // Set when the font atlast should be built.
@@ -71,4 +75,8 @@ FlFont fl_font_from_memory(
     FlFontAtlasMode atlas_mode,
     FlFontGlyphPlacementMode placement_mode,
     FlGlyphRange* glyph_ranges);
+
+#ifdef __cplusplus
+}
+#endif
 

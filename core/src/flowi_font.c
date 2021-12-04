@@ -3,8 +3,9 @@
 #include "flowi.h"
 #include "flowi_font.h"
 #include "internal.h"
-#include "internal.h"
+#include "render.h"
 #include "linear_allocator.h"
+#include "font_private.h"
 #include "utils.h"
 #include <assert.h>
 
@@ -106,6 +107,8 @@ FlFont fl_font_from_memory(
     FlFontGlyphPlacementMode placement_mode,
     FlGlyphRange* ranges)
 {
+	printf("%s:%d\n", __FILE__, __LINE__);
+
 	// Use to store global data such as fonts, etc
 	FlGlobalState* state = g_state;
 
@@ -150,10 +153,11 @@ FlFont fl_font_from_memory(
 	// Approx alloc size needed
 	int array_len = end - start;
 	int memory_size = ((pixel_size * pixel_size) * array_len) * 8;
+	int glyph_count = end;
 
 	// TODO: Fix me
-	u8* data = malloc(memory_size);
-	LinearAllocator_init(&allocator, "FreetypeBuilder", data, memory_size);
+	u8* linear_allocator_data = malloc(memory_size);
+	LinearAllocator_init(&allocator, "FreetypeBuilder", linear_allocator_data, memory_size);
 
 	u8** bitmaps = LinearAllocator_alloc_array(&allocator, u8*, array_len);
 	stbrp_rect* pack_rects = LinearAllocator_alloc_array_zero(&allocator, stbrp_rect, array_len);
@@ -169,7 +173,7 @@ FlFont fl_font_from_memory(
 		if (error != 0) {
 			ERROR_ADD(FlError_Font, "Freetype error %s when loading char %d (0x%x) for font: %s",
 				FT_Error_String(error), gylph_id, gylph_id, name);
-			free(data);
+			free(linear_allocator_data);
 			return -1;
 		}
 
@@ -177,7 +181,6 @@ FlFont fl_font_from_memory(
 
 		const FT_GlyphSlot slot = face->glyph;
         const FT_Bitmap* ft_bitmap = &face->glyph->bitmap;
-
 
 		// Make sure we can fit these in s16. No error handling as this shouldn't happen
 		assert(ft_bitmap->width >= 0 && ft_bitmap->width < 0x7fff);
@@ -240,7 +243,7 @@ FlFont fl_font_from_memory(
 			default:
 			{
 				ERROR_ADD(FlError_Font, "Freetype error. Pixel mode %d not supported for font: %s", ft_bitmap->pixel_mode, name);
-				free(data);
+				free(linear_allocator_data);
 				return -1;
 			}
         }
@@ -278,9 +281,8 @@ FlFont fl_font_from_memory(
 
 	for (int i = 0; i < array_len; ++i) {
 		const stbrp_rect* rect = &pack_rects[i];
-		int t = rect->h + rect->x;
 		if (rect->was_packed) {
-			texture_height = t > texture_height ? t : texture_height;
+			texture_height = FL_MAX(rect->h + rect->x, texture_height);
 		}
 
 		//printf("packed id %04d - [%04d %04d - %04d %04d]\n", rect->id, rect->y, rect->x, rect->x + rect->w, rect->y + rect->h);
@@ -288,11 +290,82 @@ FlFont fl_font_from_memory(
 
 	texture_height = round_to_next_pow_two(area_t);
 
-	//printf("texture size %d %d\n", texture_width, texture_height);
+	// TODO: Custom allocator
+	Font* font = (Font*)calloc(1, sizeof(Font));
+	font->advance_x = (f32*)calloc(1, sizeof(f32) * glyph_count);
+	font->glyphs = (Glyph*)calloc(1, sizeof(Glyph) * glyph_count);
+	font->glyph_count = glyph_count;
 
-	free(data);
+	// TODO: Handle different glyph formats (RGBA etc)
 
-	return -1;
+	u8* texture_data = (u8*)calloc(1, texture_width * texture_height);
+
+	float inv_tex_width = 1.0f / texture_width;
+	float inv_tex_height = 1.0f / texture_height;
+
+	// update the texture atlas and the glyph lookup
+	for (int i = 0; i < array_len; ++i) {
+		const stbrp_rect* rect = &pack_rects[i];
+		const TempGlyphInfo* info = &glyph_infos[i];
+
+		const u32 id = rect->id;
+		const u8* bitmap = bitmaps[id];
+		const u32 height = rect->h;
+		const u32 width = rect->w;
+
+		// TODO: Handle RGBA data
+		u8* temp_data = texture_data + (rect->y * texture_width) + rect->x;
+
+		for (u32 y = 0; y < height; ++y, bitmap += width, temp_data += texture_width) {
+			memcpy(temp_data, bitmap, width);
+		}
+
+		const int tx = rect->x + padding;
+		const int ty = rect->y + padding;
+
+		// TODO: SIMD
+		font->glyphs[id].x0 = info->offset_x + 0;//font_off_x;
+		font->glyphs[id].y0 = info->offset_y + 0;//font_off_y;
+		font->glyphs[id].x1 = font->glyphs[id].x0 + info->width;
+		font->glyphs[id].y1 = font->glyphs[id].y0 + info->height;
+
+		// calc uv coords in normalized 0.0 - 1.0 space
+		font->glyphs[id].u0 = tx * inv_tex_width;
+		font->glyphs[id].v0 = ty * inv_tex_height;
+		font->glyphs[id].u1 = (tx + info->width) * inv_tex_width;
+		font->glyphs[id].v1 = (ty + info->height) * inv_tex_height;
+
+		font->glyphs[id].advance_x = info->advance_x;
+		font->advance_x[id] = info->advance_x;
+	}
+
+	printf("create texture\n");
+
+	// TODO: Make sure we select the correct texture format here
+	FlRcCreateTexture* texture = Render_create_texture_static(state, texture_data);
+
+#if FL_VALIDATE_RANGES
+	if (!texture) {
+        ERROR_ADD(FlError_Font, "Failed to create font: %s because crate_texture_static failed.", filename);
+		return -1;
+	}
+#endif
+
+	texture->format = FlTextureFormat_R8_LINEAR;
+	texture->width = texture_width;
+	texture->height = texture_height;
+
+	// TODO: Custom allocator
+	free(linear_allocator_data);
+
+	int font_id = state->font_count++;
+
+	if (state->font_count > FL_FONTS_MAX) {
+		ERROR_ADD(FlError_Font, "Max number of fonts %d has been reached", FL_FONTS_MAX);
+		return -1;
+	}
+
+	return (FlFont)font_id;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

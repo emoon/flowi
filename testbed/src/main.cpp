@@ -2,28 +2,33 @@
 #include <GLFW/glfw3native.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#include "../../core/src/flowi.h"
 #include <bx/math.h>
+#include "../../core/src/flowi.h"
+#include "../../core/src/flowi_font.h"
 
-#include <stdlib.h>
+#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#define WINDOW_WIDTH 640
-#define WINDOW_HEIGHT 400
+#define WINDOW_WIDTH 640*2
+#define WINDOW_HEIGHT 400*2
+#define MAX_TEXTURE_COUNT 128
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Track data needed by the Flowi rendering
 struct RenderContext {
     // TODO: Don't hard code
-    bgfx::TextureHandle texture_handles[128];
+    bgfx::TextureHandle textures[128];
     // layout and shader for rendering non-textured triangles
     bgfx::VertexLayout flat_layout;
     bgfx::ProgramHandle flat_shader;
     // layout and shader for rendering textured triangles
     bgfx::VertexLayout texture_layout;
     bgfx::ProgramHandle texture_shader;
+    //
+    bgfx::UniformHandle tex_handle;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -82,14 +87,14 @@ bgfx::ProgramHandle load_shader_program(const char* vs, const char* fs) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void* glfwNativeWindowHandle(GLFWwindow* _window) {
-#   if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+#if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
 
     return (void*)(uintptr_t)glfwGetX11Window(_window);
-#   elif BX_PLATFORM_OSX
+#elif BX_PLATFORM_OSX
     return glfwGetCocoaWindow(_window);
-#   elif BX_PLATFORM_WINDOWS
+#elif BX_PLATFORM_WINDOWS
     return glfwGetWin32Window(_window);
-#   endif // BX_PLATFORM_
+#endif  // BX_PLATFORM_
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,15 +108,22 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_init(RenderContext& ctx) {
-    ctx.flat_layout
-        .begin()
-        .add(bgfx::Attrib::Position,  2, bgfx::AttribType::Float)
+    ctx.flat_layout.begin()
+        .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
         .end();
 
-    ctx.flat_shader = load_shader_program(
-        "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.vs",
-        "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.fs");
+    ctx.texture_layout.begin()
+        .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
+        .end();
+
+    ctx.flat_shader = load_shader_program("t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.vs",
+                                          "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.fs");
+    ctx.texture_shader =
+        load_shader_program("t2-output/linux-gcc-debug-default/_generated/testbed/shaders/vs_texture.vs",
+                            "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/fs_texture.fs");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -129,8 +141,42 @@ void ui_update(FlContext* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render triangles without texture
 
+static const u8* render_textured_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+    FlRcTexturedTriangles* draw_cmd = (FlRcTexturedTriangles*)render_data;
+
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::TransientIndexBuffer tib;
+
+    const int vertex_count = draw_cmd->vertex_count;
+    const int index_count = draw_cmd->index_count;
+    const u32 texture_id = draw_cmd->texture_id;
+
+    bgfx::allocTransientVertexBuffer(&tvb, vertex_count, ctx.texture_layout);
+    bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(FlIdxSize) == 4);
+
+    void* verts = (void*)tvb.data;
+    memcpy(verts, draw_cmd->vertex_buffer, vertex_count * sizeof(FlVertPosUvColor));
+
+    u16* indices = (u16*)tib.data;
+    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FlIdxSize));
+
+    uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+
+    encoder->setState(state);
+    encoder->setTexture(0, ctx.tex_handle, ctx.textures[texture_id]);
+    encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
+    encoder->setIndexBuffer(&tib, 0, index_count);
+    encoder->submit(255, ctx.texture_shader);
+
+    // Return next entry in the list
+    return (u8*)(draw_cmd + 1);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Render triangles without texture
+
 static const u8* render_flat_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
-	FlRcSolidTriangles* draw_cmd = (FlRcSolidTriangles*)render_data;
+    FlRcSolidTriangles* draw_cmd = (FlRcSolidTriangles*)render_data;
 
     bgfx::TransientVertexBuffer tvb;
     bgfx::TransientIndexBuffer tib;
@@ -154,8 +200,38 @@ static const u8* render_flat_triangles(RenderContext& ctx, const u8* render_data
     encoder->setIndexBuffer(&tib, 0, index_count);
     encoder->submit(255, ctx.flat_shader);
 
-	// Return next entry in the list
-	return (u8*)(draw_cmd + 1);
+    // Return next entry in the list
+    return (u8*)(draw_cmd + 1);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// static const u8* create_texture(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+static const u8* create_texture(RenderContext& ctx, const u8* render_data) {
+    const FlRcCreateTexture* cmd = (FlRcCreateTexture*)render_data;
+    const u8* data = cmd->data;
+    const u32 id = cmd->id;
+    const u16 width = cmd->width;
+    const u16 height = cmd->height;
+    const u16 flags = 0;
+
+    assert(id < MAX_TEXTURE_COUNT);
+
+    switch (cmd->format) {
+        case FlTextureFormat_R8_LINEAR: {
+            const bgfx::Memory* mem = bgfx::makeRef(data, width * height);
+            ctx.textures[id] = bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::R8, flags, mem);
+            break;
+        }
+
+        default: {
+            // TODO: Implement support
+            printf("unsupported texturo format %d\n", cmd->format);
+            exit(0);
+        }
+    }
+
+    return (u8*)(cmd + 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -167,7 +243,7 @@ void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx) {
 
     int view_id = 255;
 
-	bgfx::setViewName(view_id, "Flowi");
+    bgfx::setViewName(view_id, "Flowi");
     bgfx::setViewMode(view_id, bgfx::ViewMode::Sequential);
 
     float ortho[16];
@@ -178,7 +254,7 @@ void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx) {
     float width = 640.0f;
     float height = 360.0f;
 
-	bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, 1.0f);
+    bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, 1.0f);
     bgfx::setViewTransform(view_id, NULL, ortho);
     bgfx::setViewRect(view_id, 0, 0, uint16_t(640), uint16_t(360));
 
@@ -192,14 +268,22 @@ void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx) {
         FlRenderCommand cmd = (FlRenderCommand)*render_commands++;
 
         switch (cmd) {
-            case FlRc_RenderTriangles:
-            {
+            case FlRc_RenderTexturedTriangles: {
+                render_cmd_data = render_textured_triangles(render_ctx, render_cmd_data, encoder);
+                break;
+            }
+
+            case FlRc_RenderTriangles: {
                 render_cmd_data = render_flat_triangles(render_ctx, render_cmd_data, encoder);
                 break;
             }
 
-            default:
-            {
+            case FlRc_CreateTexture: {
+                render_cmd_data = create_texture(render_ctx, render_cmd_data);
+                break;
+            }
+
+            default: {
                 printf("Case %d - not handled!\n", cmd);
                 break;
             }
@@ -259,19 +343,33 @@ int main() {
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00ff00ff, 1.0f, 0);
 
     glfwSetKeyCallback(window, key_callback);
-    //glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    // glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     int old_width = 0;
     int old_height = 0;
 
     bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
 
-    FlContext* ctx = fl_context_create();
+    FlGlobalState* state = fl_create(NULL);
 
-    RenderContext render_ctx = { 0 };
+    FlContext* ctx = fl_context_create(state);
+
+    RenderContext render_ctx = {0};
+
+    render_ctx.tex_handle = bgfx::createUniform("s_tex", bgfx::UniformType::Sampler);
+
     ui_init(render_ctx);
 
-    //glfwGetWindowSize(window, &old_width, &old_height);
+    static u16 t[] = {32, 127};
+    static FlGlyphRange font_range = {(u16*)&t, 2};
+
+    // Load test font
+    fl_font_from_file("data/montserrat-regular.ttf", 72, FlFontBuildMode_Immediate, FlFontAtlasMode_PrebildGlyphs,
+                      FlFontGlyphPlacementMode_Basic, &font_range);
+
+    printf("finished loading font");
+
+    // glfwGetWindowSize(window, &old_width, &old_height);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();

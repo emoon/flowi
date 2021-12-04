@@ -11,19 +11,28 @@ extern "C" {
 #define FL_INDEX_SIZE 2
 
 struct FlContext;
+struct FlGlobalState;
+struct FlRenderData;
 
 typedef struct FlVec2 {
     float x, y;
 } FlVec2;
 
-struct FlRenderData;
-struct FlContext* fl_context_create();
+// TODO: Bunch of settings here including max memory usage etc
+typedef struct FlSettings {
+    // dummy currently
+    int max_memory_usage;
+} FlSettings;
+
 
 // This to be called before using any other functions
-void fl_create();
+struct FlGlobalState* fl_create(const FlSettings* settings);
 
 // To be called before exit
-void fl_destroy();
+void fl_destroy(struct FlGlobalState* state);
+
+// Create a context for UI updates etc
+struct FlContext* fl_context_create(struct FlGlobalState* state);
 
 /// Create a push button with the given label
 bool fl_button_c(struct FlContext* ctx, const char* label);

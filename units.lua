@@ -204,6 +204,8 @@ Program {
 
         ShadercFS { Source = "testbed/shaders/color_fill.fs", OutName = "color_fill_fs.bin" },
         ShadercVS { Source = "testbed/shaders/color_fill.vs", OutName = "color_fill_vs.bin" },
+        ShadercFS { Source = "testbed/shaders/fs_texture.sc", OutName = "fs_texture.bin" },
+        ShadercVS { Source = "testbed/shaders/vs_texture.sc", OutName = "vs_texture.bin" },
     },
 
     Env = {
