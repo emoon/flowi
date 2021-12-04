@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define WINDOW_WIDTH 640
-#define WINDOW_HEIGHT 400
+#define WINDOW_WIDTH 640*2
+#define WINDOW_HEIGHT 400*2
 #define MAX_TEXTURE_COUNT 128
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -236,7 +236,7 @@ static const u8* create_texture(RenderContext& ctx, const u8* render_data) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx) {
+void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx, uint16_t width, uint16_t height) {
     FlRenderData* render_data = fl_get_render_data(flowi_ctx);
 
     bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
@@ -248,15 +248,9 @@ void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx) {
 
     float ortho[16];
 
-    // TODO: Fix hard-coding
-    float x = 0.0f;
-    float y = 0.0f;
-    float width = WINDOW_WIDTH;
-    float height = WINDOW_HEIGHT;
-
-    bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, 1.0f);
+    bx::mtxOrtho(ortho, 0.0f, float(width), float(height), 0.0f, 0.0f, 1000.0f, 0.0f, 1.0f);
     bgfx::setViewTransform(view_id, NULL, ortho);
-    bgfx::setViewRect(view_id, 0, 0, uint16_t(WINDOW_WIDTH), uint16_t(WINDOW_HEIGHT));
+    bgfx::setViewRect(view_id, 0, 0, width, height);
 
     const u8* render_commands = render_data->render_commands;
     const u8* render_cmd_data = render_data->render_data;
@@ -360,8 +354,8 @@ int main() {
 
     ui_init(render_ctx);
 
-    //static u16 t[] = {64, 65};
-    static u16 t[] = {97, 100};
+    static u16 t[] = {32, 127};
+    //static u16 t[] = {97, 100};
     static FlGlyphRange font_range = {(u16*)&t, 2};
 
     // Load test font
@@ -389,7 +383,7 @@ int main() {
         }
 
         ui_update(ctx);
-        ui_render(render_ctx, ctx);
+        ui_render(render_ctx, ctx, display_w, display_h);
 
         bgfx::frame();
     }

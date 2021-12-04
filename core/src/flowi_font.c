@@ -107,8 +107,6 @@ FlFont fl_font_from_memory(
     FlFontGlyphPlacementMode placement_mode,
     FlGlyphRange* ranges)
 {
-	printf("%s:%d\n", __FILE__, __LINE__);
-
 	// Use to store global data such as fonts, etc
 	FlGlobalState* state = g_state;
 
@@ -196,8 +194,6 @@ FlFont fl_font_from_memory(
 		info->pitch = ft_bitmap->pitch;
 		info->advance_x = (float)FT_CEIL(slot->advance.x);
 
-		printf("%04d : %d %d : %f\n", i, ft_bitmap->width, ft_bitmap->rows, info->advance_x);
-
         const int width = ft_bitmap->width;
         const int height = ft_bitmap->rows;
         const u8* src = ft_bitmap->buffer;
@@ -209,8 +205,6 @@ FlFont fl_font_from_memory(
         	{
 				u8* bitmap = LinearAllocator_alloc_array(&allocator, u8, height * width);
 				bitmaps[i] = bitmap;
-
-				printf("font height %d\n", height);
 
         		if (FL_LIKELY(src_pitch == width)) {
         			memcpy(bitmap, ft_bitmap->buffer, width * height);
@@ -257,8 +251,6 @@ FlFont fl_font_from_memory(
 		pack_rects[i].w = (stbrp_coord)w;
 		pack_rects[i].h = (stbrp_coord)h;
 
-		printf("pack rects %d - %d %d\n", i, w, h);
-
 		area += w * h;
 	}
 
@@ -285,10 +277,10 @@ FlFont fl_font_from_memory(
 	for (int i = 0; i < array_len; ++i) {
 		const stbrp_rect* rect = &pack_rects[i];
 		if (rect->was_packed) {
-			texture_height = FL_MAX(rect->h, texture_height);
+			texture_height = FL_MAX(rect->y + rect->h, texture_height);
 		}
 
-		printf("packed id %04d - [%04d %04d - %04d %04d]\n", rect->id, rect->y, rect->x, rect->x + rect->w, rect->y + rect->h);
+		//printf("packed id %04d - [%04d %04d - %04d %04d]\n", rect->id, rect->y, rect->x, rect->x + rect->w, rect->y + rect->h);
 	}
 
 	texture_height = round_to_next_pow_two(texture_height);
@@ -299,16 +291,12 @@ FlFont fl_font_from_memory(
 	font->glyphs = (Glyph*)calloc(1, sizeof(Glyph) * glyph_count);
 	font->glyph_count = glyph_count;
 
-	printf("texture size %d:%d\n", texture_width, texture_height);
-
 	// TODO: Handle different glyph formats (RGBA etc)
 
 	u8* texture_data = (u8*)calloc(1, texture_width * texture_height);
 
 	float inv_tex_width = 1.0f / texture_width;
 	float inv_tex_height = 1.0f / texture_height;
-
-	printf("texture width %d\n", texture_width);
 
 	// update the texture atlas and the glyph lookup
 	for (int i = 0; i < array_len; ++i) {
@@ -319,17 +307,13 @@ FlFont fl_font_from_memory(
 			continue;
 		}
 
-		printf("was packed %d\n", rect->was_packed);
-
 		const u32 id = rect->id;
 		const u8* bitmap = bitmaps[id];
-		const u32 height = rect->h - 1;
-		const u32 width = rect->w - 1;
+		const u32 height = rect->h - padding;
+		const u32 width = rect->w - padding;
 
 		// TODO: Handle RGBA data
 		u8* temp_data = texture_data + (rect->y * texture_width) + rect->x;
-
-		printf("font height copy %d\n", height);
 
 		for (u32 y = 0; y < height; ++y, bitmap += width, temp_data += texture_width) {
 			memcpy(temp_data, bitmap, width);
@@ -353,8 +337,6 @@ FlFont fl_font_from_memory(
 		font->glyphs[id].advance_x = info->advance_x;
 		font->advance_x[id] = info->advance_x;
 	}
-
-	printf("create texture\n");
 
 	// TODO: Make sure we select the correct texture format here
 	FlRcCreateTexture* texture = Render_create_texture_static(state, texture_data);
