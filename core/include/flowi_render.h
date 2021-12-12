@@ -20,7 +20,7 @@ typedef struct FlVertPosColor {
 
 typedef struct FlVertPosUvColor {
 	float x,y;
-	float u,v;
+	u16 u,v;
 	u32 color;
 } FlVertPosUvColor;
 

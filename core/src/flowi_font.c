@@ -352,6 +352,8 @@ FlFont fl_font_from_memory(
 	texture->width = texture_width;
 	texture->height = texture_height;
 
+	printf("texture size %d %d\n", texture_width, texture_height);
+
 	// TODO: Custom allocator
 	free(linear_allocator_data);
 

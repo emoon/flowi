@@ -351,7 +351,7 @@ static void fl_generate_render_data(struct FlContext* ctx) {
 static void fl_generate_render_data_2(struct FlContext* ctx) {
     FlVertPosUvColor* pos_uv_color_vertices = ctx->draw_data.pos_uv_color_vertices;
     FlIdxSize* indices = ctx->draw_data.pos_color_indices;
-    Rect* rects = (Rect*)ctx->positions;
+    //Rect* rects = (Rect*)ctx->positions;
 
     FlIdxSize vertex_id = 0;
     u32 color = 0x0fffff1f;
@@ -359,15 +359,29 @@ static void fl_generate_render_data_2(struct FlContext* ctx) {
 	// TODO: More types etc
 	// Vectorize
 	for (int i = 0, count = ctx->items_with_text_count; i < count; ++i) {
-		Rect r = *rects++;
-		r.width = 640.0f;
-		r.height = 400.0f;
+		//Rect r;// = *rects++;
+		//r.width = 640.0f;
+		//r.height = 400.0f;
 
 		/*
 		float x0 = r.x;
 		float y0 = r.y;
 		float x1 = x0 + r.width;
 		float y1 = y0 + r.height;
+		*/
+
+		/*
+		simd = x0_y0_x1_y1
+		simd = u0v0_u1v1....
+		simd = c_c_c_c
+
+		output
+
+		x0_y0_u0v0_c
+		x1_y0_u1v0_c
+		x1_y1_u1v1_c
+		x0_y1_u0v1_c
+
 		*/
 
 		float x0 = 0.0f;
@@ -378,26 +392,26 @@ static void fl_generate_render_data_2(struct FlContext* ctx) {
 		// vert 1
 		pos_uv_color_vertices[0].x = x0;
 		pos_uv_color_vertices[0].y = y0;
-		pos_uv_color_vertices[0].u = 0.0f;
-		pos_uv_color_vertices[0].v = 0.0f;
+		pos_uv_color_vertices[0].u = 0;
+		pos_uv_color_vertices[0].v = 0;
 		pos_uv_color_vertices[0].color = color;
 
 		pos_uv_color_vertices[1].x = x1;
 		pos_uv_color_vertices[1].y = y0;
-		pos_uv_color_vertices[1].u = 1.0f;
-		pos_uv_color_vertices[1].v = 0.0f;
+		pos_uv_color_vertices[1].u = 1024;
+		pos_uv_color_vertices[1].v = 0;
 		pos_uv_color_vertices[1].color = color;
 
 		pos_uv_color_vertices[2].x = x1;
 		pos_uv_color_vertices[2].y = y1;
-		pos_uv_color_vertices[2].u = 1.0f;
-		pos_uv_color_vertices[2].v = 1.0f;
+		pos_uv_color_vertices[2].u = 1024;
+		pos_uv_color_vertices[2].v = 1024;
 		pos_uv_color_vertices[2].color = color;
 
 		pos_uv_color_vertices[3].x = x0;
 		pos_uv_color_vertices[3].y = y1;
-		pos_uv_color_vertices[3].u = 0.0f;
-		pos_uv_color_vertices[3].v = 1.0f;
+		pos_uv_color_vertices[3].u = 0;
+		pos_uv_color_vertices[3].v = 1024;
 		pos_uv_color_vertices[3].color = color;
 
 		// Generate triangles
@@ -430,6 +444,107 @@ static void fl_generate_render_data_2(struct FlContext* ctx) {
 
 	//ctx->render_data.count = 1;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if 0
+static void generate_text_mesh_data(struct FlContext* ctx) {
+    FlVertPosUvColor* pos_uv_color_vertices = ctx->draw_data.pos_uv_color_vertices;
+    FlIdxSize* indices = ctx->draw_data.pos_color_indices;
+    //Rect* rects = (Rect*)ctx->positions;
+
+    FlIdxSize vertex_id = 0;
+    u32 color = 0x0fffff1f;
+
+	// TODO: More types etc
+	// Vectorize
+	for (int i = 0, count = ctx->items_with_text_count; i < count; ++i) {
+		//Rect r = *rects++;
+		//r.width = 640.0f;
+		//r.height = 400.0f;
+
+		/*
+		float x0 = r.x;
+		float y0 = r.y;
+		float x1 = x0 + r.width;
+		float y1 = y0 + r.height;
+		*/
+
+		/*
+		simd = x0_y0_x1_y1
+		simd = u0v0_u1v1....
+		simd = c_c_c_c
+
+		output
+
+		x0_y0_u0v0_c
+		x1_y0_u1v0_c
+		x1_y1_u1v1_c
+		x0_y1_u0v1_c
+
+		*/
+
+		float x0 = 0.0f;
+		float y0 = 0.0f;
+		float x1 = 640.0f;
+		float y1 = 400.0f;
+
+		// vert 1
+		pos_uv_color_vertices[0].x = x0;
+		pos_uv_color_vertices[0].y = y0;
+		pos_uv_color_vertices[0].u = 0;
+		pos_uv_color_vertices[0].v = 0;
+		pos_uv_color_vertices[0].color = color;
+
+		pos_uv_color_vertices[1].x = x1;
+		pos_uv_color_vertices[1].y = y0;
+		pos_uv_color_vertices[1].u = 256;
+		pos_uv_color_vertices[1].v = 0;
+		pos_uv_color_vertices[1].color = color;
+
+		pos_uv_color_vertices[2].x = x1;
+		pos_uv_color_vertices[2].y = y1;
+		pos_uv_color_vertices[2].u = 256;
+		pos_uv_color_vertices[2].v = 256;
+		pos_uv_color_vertices[2].color = color;
+
+		pos_uv_color_vertices[3].x = x0;
+		pos_uv_color_vertices[3].y = y1;
+		pos_uv_color_vertices[3].u = 0;
+		pos_uv_color_vertices[3].v = 256;
+		pos_uv_color_vertices[3].color = color;
+
+		// Generate triangles
+
+		indices[0] = vertex_id + 0;
+		indices[1] = vertex_id + 1;
+		indices[2] = vertex_id + 2;
+
+		indices[3] = vertex_id + 0;
+		indices[4] = vertex_id + 2;
+		indices[5] = vertex_id + 3;
+
+		vertex_id += 4;
+		pos_uv_color_vertices += 4;
+		indices += 6;
+
+		// generate a quad
+	}
+
+	FlRcTexturedTriangles* tri_data = Render_render_texture_triangles_static(
+		ctx->global_state,
+    	ctx->draw_data.pos_uv_color_vertices,
+    	ctx->draw_data.pos_color_indices);
+
+	tri_data->vertex_count = vertex_id;
+	tri_data->index_count = 6;
+
+	// TODO: Fix me
+	tri_data->texture_id = 0;
+
+	//ctx->render_data.count = 1;
+}
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

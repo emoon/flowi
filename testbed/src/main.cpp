@@ -12,15 +12,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define WINDOW_WIDTH 640*2
-#define WINDOW_HEIGHT 400*2
+#define WINDOW_WIDTH 640 * 2
+#define WINDOW_HEIGHT 400 * 2
 #define MAX_TEXTURE_COUNT 128
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct Texture {
+    bgfx::TextureHandle handle;
+    float inv_x;
+    float inv_y;
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Track data needed by the Flowi rendering
 struct RenderContext {
     // TODO: Don't hard code
-    bgfx::TextureHandle textures[128];
+    Texture textures[MAX_TEXTURE_COUNT];
     // layout and shader for rendering non-textured triangles
     bgfx::VertexLayout flat_layout;
     bgfx::ProgramHandle flat_shader;
@@ -29,6 +37,7 @@ struct RenderContext {
     bgfx::ProgramHandle texture_shader;
     //
     bgfx::UniformHandle tex_handle;
+    bgfx::UniformHandle u_inv_res_tex;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -115,9 +124,11 @@ void ui_init(RenderContext& ctx) {
 
     ctx.texture_layout.begin()
         .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Int16, false, true)
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
         .end();
+
+    ctx.u_inv_res_tex = bgfx::createUniform("u_inv_res_tex", bgfx::UniformType::Vec4);
 
     ctx.flat_shader = load_shader_program("t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.vs",
                                           "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.fs");
@@ -139,6 +150,13 @@ void ui_update(FlContext* ctx) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void set_uniform_4(bgfx::Encoder* encoder, bgfx::UniformHandle handle, float a, float b, float c, float d) {
+    float data[4] = { a, b, c, d };
+    encoder->setUniform(handle, data, UINT16_MAX);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render triangles without texture
 
 static const u8* render_textured_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
@@ -151,6 +169,8 @@ static const u8* render_textured_triangles(RenderContext& ctx, const u8* render_
     const int index_count = draw_cmd->index_count;
     const u32 texture_id = draw_cmd->texture_id;
 
+    const Texture& texture = ctx.textures[texture_id];
+
     bgfx::allocTransientVertexBuffer(&tvb, vertex_count, ctx.texture_layout);
     bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(FlIdxSize) == 4);
 
@@ -162,8 +182,14 @@ static const u8* render_textured_triangles(RenderContext& ctx, const u8* render_
 
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
 
+    set_uniform_4(encoder, ctx.u_inv_res_tex, texture.inv_x, texture.inv_y, 0.0f, 0.0f);
+
+    // Set 1/texture size for shader
+    float data[4] = { texture.inv_x, texture.inv_y, 0.0f, 0.0f };
+    encoder->setUniform(ctx.u_inv_res_tex, data, UINT16_MAX);
+
     encoder->setState(state);
-    encoder->setTexture(0, ctx.tex_handle, ctx.textures[texture_id]);
+    encoder->setTexture(0, ctx.tex_handle, texture.handle);
     encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
     encoder->setIndexBuffer(&tib, 0, index_count);
     encoder->submit(255, ctx.texture_shader);
@@ -220,13 +246,16 @@ static const u8* create_texture(RenderContext& ctx, const u8* render_data) {
     switch (cmd->format) {
         case FlTextureFormat_R8_LINEAR: {
             const bgfx::Memory* mem = bgfx::makeRef(data, width * height);
-            ctx.textures[id] = bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::R8, flags, mem);
+            Texture* texture = &ctx.textures[id];
+            texture->handle = bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::R8, flags, mem);
+            texture->inv_x = 1.0f / width;
+            texture->inv_y = 1.0f / height;
             break;
         }
 
         default: {
             // TODO: Implement support
-            printf("unsupported texturo format %d\n", cmd->format);
+            printf("unsupported texture format %d\n", cmd->format);
             exit(0);
         }
     }
@@ -355,7 +384,7 @@ int main() {
     ui_init(render_ctx);
 
     static u16 t[] = {32, 127};
-    //static u16 t[] = {97, 100};
+    // static u16 t[] = {97, 100};
     static FlGlyphRange font_range = {(u16*)&t, 2};
 
     // Load test font

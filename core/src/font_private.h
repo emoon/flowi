@@ -9,10 +9,10 @@
 // TODO: Investigate making memory usage smaller
 
 typedef struct Glyph {
-    f32 x0,y0;
-    f32 x1,y1;
-    f32 u0,v0;
-    f32 u1,v1;
+    u16 x0,y0;
+    u16 x1,y1;
+    u16 u0,v0;
+    u16 u1,v1;
     f32 advance_x;
 } Glyph;
 

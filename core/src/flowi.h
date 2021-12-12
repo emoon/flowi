@@ -14,8 +14,10 @@ struct FlContext;
 struct FlGlobalState;
 struct FlRenderData;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 typedef struct FlVec2 {
-    float x, y;
+    f32 x, y;
 } FlVec2;
 
 // TODO: Bunch of settings here including max memory usage etc
@@ -23,7 +25,6 @@ typedef struct FlSettings {
     // dummy currently
     int max_memory_usage;
 } FlSettings;
-
 
 // This to be called before using any other functions
 struct FlGlobalState* fl_create(const FlSettings* settings);
