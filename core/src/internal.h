@@ -3,6 +3,8 @@
 #include "flowi.h"
 #include "../include/config.h"
 #include "../include/error.h"
+#include "primitives.h"
+#include "simd.h"
 
 #if defined(FL_FONTLIB_FREETYPE)
 #include <freetype/freetype.h>
@@ -27,6 +29,8 @@ typedef struct FlGlobalState {
 	FT_Library ft_library;
 #endif
     BuildRenderState render_data;
+    BuildPrimitives primitives_data;
+
     // TODO: Fix max number of fonts
     struct Font* fonts[FL_FONTS_MAX];
     int font_count;
@@ -66,4 +70,66 @@ void Font_init(FlGlobalState* ctx);
 // TODO: Custom allocator
 u8* Io_load_file_to_memory(const char* filename, u32* out_size);
 
+typedef struct MouseState {
+	FlVec2 pos;
+	bool buttons[3];
+} MouseState;
+
+typedef struct Rect {
+	float x,y,width,height;
+} Rect;
+
+// TODO: We can lilkey do this better
+typedef struct ItemWithText {
+	char text[1024];
+	int len;
+} ItemWithText;
+
+// Output data to draw on the GPU
+
+typedef struct FlDrawData {
+    FlVertPosColor* pos_color_vertices;
+    FlVertPosUvColor* pos_uv_color_vertices;
+    FlIdxSize* pos_color_indices;
+    FlIdxSize* pos_uv_color_indices;
+    int pos_color_triangle_count;
+    int pos_uv_color_triangle_count;
+} FlDrawData;
+
+typedef struct FlContext {
+	// hash of the full context. Use for to skip rendering if nothing has changed
+	//XXH3_state_t context_hash;
+	// Previous frames hash. We can check against this to see if anything has changed
+	//XXH3_state_t prev_frame_hash;
+	FlVec2 cursor;
+	// id from the previous frame
+	u32 prev_active_item;
+	// current id
+	u32 active_item;
+	// Tracks the mouse state for this frame
+	MouseState mouse_state;
+	// TODO: Likely need block allocator here instead
+	vec128* positions;
+	// TODO: Likely need block allocator here instead
+	vec128* colors;
+	// TODO: Likely need block allocator here instead
+	u32* widget_ids;
+	// count of all widgets
+	int current_font;
+	// count of all widgets
+	int widget_count;
+	// Times with text (push button, labels, etc)
+	int items_with_text_count;
+	ItemWithText* items_with_text;
+	// Active fade actions
+	int fade_actions;
+	FlDrawData draw_data;
+
+	FlGlobalState* global_state;
+	BuildRenderState* build_state;
+
+	// Render commands and data for the GPU backend
+	FlRenderData render_data_out;
+
+} FlContext;
 

@@ -73,3 +73,11 @@ FlRcCreateTexture* Render_create_texture_static(FlGlobalState* state, u8* data) 
 
     return texture;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Process all the rendering commands and output vertex/index buffers
+
+void Render_process_commands(FlGlobalState* state) {
+
+
+}

@@ -1,6 +1,7 @@
 #include "text.h"
-#include "render.h"
 #include "font_private.h"
+#include "render.h"
+#include <stdio.h>
 
 #include <emmintrin.h>  // __m128i
 #include <smmintrin.h>
@@ -27,12 +28,24 @@ bool Text_utf8_to_codepoints_u16(u16* output, const u8* input, int len) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Convert utf8 to codepoints (u32) Will return false if the input utf8 is is invalid
+// Output is to be expected to be 16 byte aligned and contain 32 bytes of extra data
+bool utf8_to_codepoints_u32(u32* output, const u8* input, int len) {
+	for (int i = 0; i < len; ++i) {
+		*output++ = *input++;
+	}
 
-void Text_generate_vertex_buffer_ref(FlVertPosUvColor* __restrict out, FlIdxSize* __restrict index_buffer,
-                                     const Glyph* __restrict glyph_lookup, const u32* __restrict codepoints, u32 color,
-                                     FlVec2 pos, FlIdxSize vertex_id, int count) {
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSize* FL_RESTRICT index_buffer,
+                                     const Glyph* FL_RESTRICT glyph_lookup, const u32* FL_RESTRICT codepoints,
+                                     u32 color, FlVec2 pos, FlIdxSize vertex_id, int count) {
     for (int i = 0; i < count; ++i) {
-        const Glyph* g = &glyph_lookup[*codepoints++];
+    	u32 cp = *codepoints++;
+        const Glyph* g = &glyph_lookup[cp];
 
         out[0].x = pos.x + g->x0;
         out[0].y = pos.y + g->y0;
@@ -40,7 +53,7 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* __restrict out, FlIdxSize
         out[0].v = g->v0;
         out[0].color = color;
 
-        out[1].x = pos.x + g->y1;
+        out[1].x = pos.x + g->x1;
         out[1].y = pos.y + g->y0;
         out[1].u = g->u1;
         out[1].v = g->v0;

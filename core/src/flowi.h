@@ -43,6 +43,9 @@ bool fl_button_ex_c(struct FlContext* ctx, const char* label, int label_len, FlV
 void fl_frame_begin(struct FlContext* ctx);
 void fl_frame_end(struct FlContext* ctx);
 
+void fl_text(struct FlContext* ctx, const char* text);
+void fl_text_len(struct FlContext* ctx, const char* text, int text_len);
+
 /// Set the mouse position in window relative pixel positions and button 1/2/3
 void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2, bool b3);
 

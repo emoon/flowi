@@ -124,7 +124,7 @@ StaticLibrary {
         GLSLANG_DIR,
         BGFX_DIR .. "3rdparty",
         SPIRV_TOOLS .. "include",
-    },
+    },--"
 
     Sources = {
         get_c_cpp_src(GLSLANG_DIR .. "OGLCompilersDLL"),
@@ -187,7 +187,7 @@ Program {
         },
 
         CPPDEFS = {
-            { "NINCLUDE=64", "NWORK=65536", "NBUFF=65536", "OLD_PREPROCESSOR=0" },
+            { "BX_CONFIG_DEBUG=1", "NINCLUDE=64", "NWORK=65536", "NBUFF=65536", "OLD_PREPROCESSOR=0" },
         },
 
         CPPPATH = {
@@ -219,7 +219,7 @@ Program {
             {
                 BX_DIR .. "include/compat/msvc"; Config = "win64-*-*"
             },
-        },
+        },--"
 
         PROGCOM = {
             { "-lstdc++"; Config = { "macos-clang-*", "linux-gcc-*" } },
@@ -294,6 +294,7 @@ StaticLibrary {
         BIMG_DIR .. "3rdparty",
         BIMG_DIR .. "3rdparty/iqa/include",
         BIMG_DIR .. "3rdparty/astc-codec/include",
+        BIMG_DIR .. "3rdparty/tinyexr/deps/miniz",
     },
 
     Env = {
@@ -304,10 +305,17 @@ StaticLibrary {
     },
 
     Defines = {
+        "BX_CONFIG_DEBUG=1",
+        "__STDC_LIMIT_MACROS",
+        "__STDC_FORMAT_MACROS",
+        "__STDC_CONSTANT_MACROS",
+        "_DEBUG",
     	--"BGFX_CONFIG_DEBUG=1",
+    	--
         "BGFX_CONFIG_RENDERER_WEBGPU=0",
         "BGFX_CONFIG_RENDERER_GNM=0",
-        "BGFX_CONFIG_RENDERER_VULKAN=0",
+        "BGFX_CONFIG_RENDERER_VULKAN=1",
+        "BGFX_CONFIG_MULTITHREADED=0",
         { "BGFX_CONFIG_RENDERER_OPENGL=1" ; Config = { "linux-*-*", "win64-*-*" } },
         { "BGFX_CONFIG_RENDERER_METAL=1" ; Config = "macos-*-*" },
         { "BGFX_CONFIG_RENDERER_DIRECT3D11=1"  ; Config = "win64-*-*" },
@@ -320,7 +328,11 @@ StaticLibrary {
         BGFX_DIR .. "src/vertexlayout.cpp",
         BGFX_DIR .. "src/debug_renderdoc.cpp",
         BGFX_DIR .. "src/topology.cpp",
+        BGFX_DIR .. "src/shader_dx9bc.cpp",
         BGFX_DIR .. "src/shader_dxbc.cpp",
+        BGFX_DIR .. "src/shader.cpp",
+        BGFX_DIR .. "src/shader_spirv.cpp",
+        BGFX_DIR .. "src/renderer_agc.cpp",
         BGFX_DIR .. "src/renderer_gnm.cpp",
         BGFX_DIR .. "src/renderer_webgpu.cpp",
         BGFX_DIR .. "src/renderer_nvn.cpp",

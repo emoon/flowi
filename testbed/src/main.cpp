@@ -1,10 +1,10 @@
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <bx/math.h>
 #include "../../core/src/flowi.h"
 #include "../../core/src/flowi_font.h"
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -142,18 +142,15 @@ void ui_init(RenderContext& ctx) {
 void ui_update(FlContext* ctx) {
     fl_frame_begin(ctx);
 
+    fl_text(ctx, "Be gone!");
+
+    /*
     if (fl_button_c(ctx, "test")) {
         printf("button\n");
     }
+    */
 
     fl_frame_end(ctx);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void set_uniform_4(bgfx::Encoder* encoder, bgfx::UniformHandle handle, float a, float b, float c, float d) {
-    float data[4] = { a, b, c, d };
-    encoder->setUniform(handle, data, UINT16_MAX);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -181,8 +178,6 @@ static const u8* render_textured_triangles(RenderContext& ctx, const u8* render_
     memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FlIdxSize));
 
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
-
-    set_uniform_4(encoder, ctx.u_inv_res_tex, texture.inv_x, texture.inv_y, 0.0f, 0.0f);
 
     // Set 1/texture size for shader
     float data[4] = { texture.inv_x, texture.inv_y, 0.0f, 0.0f };
@@ -324,11 +319,22 @@ int main() {
     if (!glfwInit())
         exit(EXIT_FAILURE);
 
-#if !defined(GLFW_EXPOSE_NATIVE_X11)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-#endif
     glfwWindowHint(GLFW_FLOATING, GL_TRUE);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+/*
+	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+	glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
+	glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+	glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+	glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+	glfwWindowHint(GLFW_ALPHA_BITS, GLFW_DONT_CARE);
+	glfwWindowHint(GLFW_DEPTH_BITS, GLFW_DONT_CARE);
+	glfwWindowHint(GLFW_STENCIL_BITS, 8);
+	glfwWindowHint(GLFW_REFRESH_RATE, GLFW_DONT_CARE);
+*/
 
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Flowi Testbed", NULL, NULL);
     if (!window) {
@@ -345,14 +351,19 @@ int main() {
     pd.backBuffer = NULL;
     pd.backBufferDS = NULL;
 
+    glfwSetKeyCallback(window, key_callback);
+
     bgfx::setPlatformData(pd);
 
     bgfx::Init bgfxInit;
-    bgfxInit.type = bgfx::RendererType::Count;
+    //bgfxInit.type = bgfx::RendererType::Count;
+    bgfxInit.type = bgfx::RendererType::OpenGL;
     bgfxInit.resolution.width = WINDOW_WIDTH;
     bgfxInit.resolution.height = WINDOW_HEIGHT;
     bgfxInit.resolution.reset = BGFX_RESET_VSYNC;
     bgfxInit.platformData = pd;
+
+    printf("init\n");
 
     if (!bgfx::init(bgfxInit)) {
         printf("failed to init bgfx\n");
@@ -361,15 +372,15 @@ int main() {
         return 0;
     }
 
-    bgfx::setDebug(BGFX_DEBUG_TEXT);
-    bgfx::setViewRect(0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00ff00ff, 1.0f, 0);
+    printf("init done\n");
 
-    glfwSetKeyCallback(window, key_callback);
+    //bgfx::setDebug(BGFX_DEBUG_TEXT);
+    //bgfx::setViewRect(0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
+    //bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00ff00ff, 1.0f, 0);
+
     // glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    int old_width = 0;
-    int old_height = 0;
 
     bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
 
@@ -383,7 +394,7 @@ int main() {
 
     ui_init(render_ctx);
 
-    static u16 t[] = {32, 127};
+    static u16 t[] = {0, 127};
     // static u16 t[] = {97, 100};
     static FlGlyphRange font_range = {(u16*)&t, 2};
 
@@ -393,28 +404,43 @@ int main() {
 
     printf("finished loading font");
 
-    // glfwGetWindowSize(window, &old_width, &old_height);
+    int old_width = 0;
+    int old_height = 0;
+
+    //bgfx::setDebug(BGFX_DEBUG_STATS);
+
+    glfwGetWindowSize(window, &old_width, &old_height);
 
     while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-
         int display_w, display_h;
         glfwGetWindowSize(window, &display_w, &display_h);
 
-        bgfx::touch(0);
-
         if ((old_width != display_w) || (old_height != display_h)) {
-            bgfx::reset(display_w, display_h);
+            bgfx::reset(display_w, display_h, BGFX_RESET_VSYNC);
             old_width = display_w;
             old_height = display_h;
 
             printf("display size %d %d\n", display_w, display_h);
         }
 
+        bgfx::setViewRect(0, 0, 0, uint16_t(display_w), uint16_t(display_h));
+
+        // This dummy draw call is here to make sure that view 0 is cleared
+        // if no other draw calls are submitted to view 0.
+        bgfx::touch(0);
+
+        // Use debug font to print information about this example.
+        //bgfx::dbgTextClear();
+        //bgfx::dbgTextPrintf(0, 1, 0x4f, "bgfxTemplate");
+        //bgfx::dbgTextPrintf(0, 2, 0x6f, "Description: Minimal bgfx + GLFW application.");
+        //bgfx::dbgTextPrintf(0, 4, 0x4f, "Press F1 to toggle bgfx stats, Esc to quit");
+
         ui_update(ctx);
         ui_render(render_ctx, ctx, display_w, display_h);
 
         bgfx::frame();
+
+        glfwPollEvents();
     }
 
     bgfx::shutdown();

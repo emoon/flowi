@@ -190,17 +190,22 @@ Program {
 
 	Defines = {
 		"BX_CONFIG_DEBUG=1",
+        "__STDC_LIMIT_MACROS",
+        "__STDC_FORMAT_MACROS",
+        "__STDC_CONSTANT_MACROS",
+        "_DEBUG",
 		{ "GLFW_EXPOSE_NATIVE_WIN32" ; Config = "win64-*-*" },
 		{ "GLFW_EXPOSE_NATIVE_COCOA" ; Config = "macos*-*-*" },
 		{ "GLFW_EXPOSE_NATIVE_X11" ; Config = "linux-*-*" },
 	},
 
     Sources = {
-        Glob {
-            Dir = "testbed/src",
-            Extensions = { ".cpp" },
-            Recursive = true,
-        },
+        "testbed/src/main.cpp",
+        --Glob {
+        --    Dir = "testbed/src",
+        --    Extensions = { ".cpp" },
+        --    Recursive = true,
+        --},
 
         ShadercFS { Source = "testbed/shaders/color_fill.fs", OutName = "color_fill_fs.bin" },
         ShadercVS { Source = "testbed/shaders/color_fill.vs", OutName = "color_fill_vs.bin" },
@@ -211,7 +216,7 @@ Program {
     Env = {
 		PROGCOM = {
             { "opengl32.lib", "shell32.lib", "qtmain.lib", "gdi32.lib", "user32.lib"; Config = "win64-*-*" },
-			{  "-lGL", "-lX11", "-lpthread", "-ldl"; Config = "linux-*-*" },
+			{  "-lrt", "-ldl", "-lX11", "-lGL", "-lpthread", "-ldl"; Config = "linux-*-*" },
 			{  "-lc++"; Config = "macosx-*-*" },
 		},
 	},

@@ -130,6 +130,7 @@ FlFont fl_font_from_memory(
 	if (error != 0) {
 		ERROR_ADD(FlError_Font, "Freetype error %s when selecting charmap for font: %s", FT_Error_String(error), name);
 		return -1;
+
 	}
 
 	if (error != 0) {
@@ -189,7 +190,7 @@ FlFont fl_font_from_memory(
 		info->width = (s16)ft_bitmap->width;
 		info->height = (s16)ft_bitmap->rows;
 		info->offset_x = (s16)slot->bitmap_left;
-		info->offset_y = -(s16)slot->bitmap_top;
+		info->offset_y = 140 -(s16)slot->bitmap_top;
 		info->height = (s16)ft_bitmap->rows;
 		info->pitch = ft_bitmap->pitch;
 		info->advance_x = (float)FT_CEIL(slot->advance.x);
@@ -295,9 +296,6 @@ FlFont fl_font_from_memory(
 
 	u8* texture_data = (u8*)calloc(1, texture_width * texture_height);
 
-	float inv_tex_width = 1.0f / texture_width;
-	float inv_tex_height = 1.0f / texture_height;
-
 	// update the texture atlas and the glyph lookup
 	for (int i = 0; i < array_len; ++i) {
 		const stbrp_rect* rect = &pack_rects[i];
@@ -312,6 +310,8 @@ FlFont fl_font_from_memory(
 		const u32 height = rect->h - padding;
 		const u32 width = rect->w - padding;
 
+		printf("rect y %d\n", rect->y);
+
 		// TODO: Handle RGBA data
 		u8* temp_data = texture_data + (rect->y * texture_width) + rect->x;
 
@@ -322,17 +322,22 @@ FlFont fl_font_from_memory(
 		const int tx = rect->x + padding;
 		const int ty = rect->y + padding;
 
+		int x0 = info->offset_x;
+		int y0 = info->offset_y;
+		int x1 = x0 + info->width;
+		int y1 = y0 + info->height;
+
 		// TODO: SIMD
-		font->glyphs[id].x0 = info->offset_x + 0;//font_off_x;
-		font->glyphs[id].y0 = info->offset_y + 0;//font_off_y;
-		font->glyphs[id].x1 = font->glyphs[id].x0 + info->width;
-		font->glyphs[id].y1 = font->glyphs[id].y0 + info->height;
+		font->glyphs[id].x0 = x0;
+		font->glyphs[id].y0 = y0;
+		font->glyphs[id].x1 = x1;
+		font->glyphs[id].y1 = y1;
 
 		// calc uv coords in normalized 0.0 - 1.0 space
-		font->glyphs[id].u0 = tx * inv_tex_width;
-		font->glyphs[id].v0 = ty * inv_tex_height;
-		font->glyphs[id].u1 = (tx + info->width) * inv_tex_width;
-		font->glyphs[id].v1 = (ty + info->height) * inv_tex_height;
+		font->glyphs[id].u0 = tx;
+		font->glyphs[id].v0 = ty;
+		font->glyphs[id].u1 = tx + info->width;
+		font->glyphs[id].v1 = ty + info->height;
 
 		font->glyphs[id].advance_x = info->advance_x;
 		font->advance_x[id] = info->advance_x;
@@ -344,6 +349,7 @@ FlFont fl_font_from_memory(
 #if FL_VALIDATE_RANGES
 	if (!texture) {
         ERROR_ADD(FlError_Font, "Failed to create font: %s because crate_texture_static failed.", filename);
+
 		return -1;
 	}
 #endif
@@ -363,6 +369,8 @@ FlFont fl_font_from_memory(
 		ERROR_ADD(FlError_Font, "Max number of fonts %d has been reached", FL_FONTS_MAX);
 		return -1;
 	}
+
+	state->fonts[font_id] = font;
 
 	return (FlFont)font_id;
 }
