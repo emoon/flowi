@@ -15,7 +15,7 @@
 #ifndef BGFX_DEFINES_H_HEADER_GUARD
 #define BGFX_DEFINES_H_HEADER_GUARD
 
-#define BGFX_API_VERSION UINT32_C(114)
+#define BGFX_API_VERSION UINT32_C(115)
 
 /**
  * Color RGB/alpha/depth write. When it's not specified write will be disabled.
@@ -522,6 +522,7 @@
 #define BGFX_PCI_ID_AMD                           UINT16_C(0x1002) //!< AMD adapter.
 #define BGFX_PCI_ID_INTEL                         UINT16_C(0x8086) //!< Intel adapter.
 #define BGFX_PCI_ID_NVIDIA                        UINT16_C(0x10de) //!< nVidia adapter.
+#define BGFX_PCI_ID_MICROSOFT                     UINT16_C(0x1414) //!< Microsoft adapter.
 
 #define BGFX_CUBE_MAP_POSITIVE_X                  UINT8_C(0x00) //!< Cubemap +x.
 #define BGFX_CUBE_MAP_NEGATIVE_X                  UINT8_C(0x01) //!< Cubemap -x.

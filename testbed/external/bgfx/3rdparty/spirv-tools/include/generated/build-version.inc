@@ -1,1 +1,1 @@
-"v2021.0-dev", "SPIRV-Tools v2021.0-dev a176685a2c84eb6c09ec716962a43bda10d74d3d"
+"v2021.5-dev", "SPIRV-Tools v2021.5-dev 73acc9e59b165d08e3b418d207d84abd46cca49c"

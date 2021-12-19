@@ -11,6 +11,7 @@
 #	if BGFX_USE_GLX
 #		define GLX_GLXEXT_PROTOTYPES
 #		include <glx/glxext.h>
+#include <stdio.h>
 
 // will include X11 which #defines None...
 #undef None
@@ -28,6 +29,7 @@ namespace bgfx { namespace gl
 #	include "glimports.h"
 
 	struct SwapChainGL
+
 	{
 		SwapChainGL(::Display* display, ::Window _window, XVisualInfo* _visualInfo, GLXContext _context)
 			: m_display(display)
@@ -324,6 +326,7 @@ namespace bgfx { namespace gl
 
 	SwapChainGL* GlContext::createSwapChain(void* _nwh)
 	{
+	    //printf("createSwapChain\n");
 		return BX_NEW(g_allocator, SwapChainGL)(m_display, (::Window)_nwh, m_visualInfo, m_context);
 	}
 
@@ -337,8 +340,11 @@ namespace bgfx { namespace gl
 	{
 		makeCurrent(_swapChain);
 
+		//printf("swapChain %p\n", _swapChain);
+
 		if (NULL == _swapChain)
 		{
+		    //printf("%p %p\n", m_display, g_platformData.nwh);
 			glXSwapBuffers(m_display, (::Window)g_platformData.nwh);
 		}
 		else
