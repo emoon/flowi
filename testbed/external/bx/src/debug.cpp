@@ -3,7 +3,6 @@
  * License: https://github.com/bkaradzic/bx#license-bsd-2-clause
  */
 
-#include "bx_p.h"
 #include <bx/debug.h>
 #include <bx/string.h>       // isPrint
 #include <bx/readerwriter.h> // WriterI
@@ -138,7 +137,7 @@ namespace bx
 		debugPrintfVargs(_format, argList);
 		va_end(argList);
 
-		//debugPrintf("\ndata: " DBG_ADDRESS ", size: %d\n", _data, _size);
+		debugPrintf("\ndata: " DBG_ADDRESS ", size: %d\n", _data, _size);
 
 		if (NULL != _data)
 		{
@@ -158,7 +157,7 @@ namespace bx
 				if (HEX_DUMP_WIDTH == asciiPos)
 				{
 					ascii[asciiPos] = '\0';
-					//debugPrintf("\t" DBG_ADDRESS "\t" HEX_DUMP_FORMAT "\t%s\n", data, hex, ascii);
+					debugPrintf("\t" DBG_ADDRESS "\t" HEX_DUMP_FORMAT "\t%s\n", data, hex, ascii);
 					data += asciiPos;
 					hexPos   = 0;
 					asciiPos = 0;
@@ -168,7 +167,7 @@ namespace bx
 			if (0 != asciiPos)
 			{
 				ascii[asciiPos] = '\0';
-				//debugPrintf("\t" DBG_ADDRESS "\t" HEX_DUMP_FORMAT "\t%s\n", data, hex, ascii);
+				debugPrintf("\t" DBG_ADDRESS "\t" HEX_DUMP_FORMAT "\t%s\n", data, hex, ascii);
 			}
 		}
 

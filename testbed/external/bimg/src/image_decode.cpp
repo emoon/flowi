@@ -866,3 +866,4 @@ namespace bimg
 	}
 
 } // namespace bimg
+
