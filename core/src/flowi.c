@@ -54,19 +54,19 @@ typedef struct FadeAction {
 
 // TODO: Allow for custom allocations
 FlContext* fl_context_create(struct FlGlobalState* state) {
-    FlContext* ctx = aligned_alloc(16, sizeof(FlContext));
+    FlContext* ctx = malloc(sizeof(FlContext));
     memset(ctx, 0, sizeof(FlContext));
 
     // TODO: Use custom allocator
-    ctx->positions = (vec128*)aligned_alloc(16, sizeof(vec128) * (MAX_CONTROLS + +MEMORY_PADDING));
-    ctx->widget_ids = (u32*)aligned_alloc(16, sizeof(u32) * (MAX_CONTROLS + MEMORY_PADDING));
-    ctx->items_with_text = (ItemWithText*)aligned_alloc(16, sizeof(ItemWithText) * (MAX_CONTROLS + MEMORY_PADDING));
+    ctx->positions = (vec128*)malloc(sizeof(vec128) * (MAX_CONTROLS + +MEMORY_PADDING));
+    ctx->widget_ids = (u32*)malloc(sizeof(u32) * (MAX_CONTROLS + MEMORY_PADDING));
+    ctx->items_with_text = (ItemWithText*)malloc(sizeof(ItemWithText) * (MAX_CONTROLS + MEMORY_PADDING));
 
     // temp
-    ctx->draw_data.pos_color_vertices = (FlVertPosColor*)aligned_alloc(16, sizeof(FlVertPosColor) * MAX_VERTS);
-    ctx->draw_data.pos_uv_color_vertices = (FlVertPosUvColor*)aligned_alloc(16, sizeof(FlVertPosUvColor) * MAX_VERTS);
-    ctx->draw_data.pos_color_indices = (FlIdxSize*)aligned_alloc(16, sizeof(FlIdxSize) * MAX_VERTS * 6);
-    ctx->draw_data.pos_uv_color_indices = (FlIdxSize*)aligned_alloc(16, sizeof(FlIdxSize) * MAX_VERTS * 6);
+    ctx->draw_data.pos_color_vertices = (FlVertPosColor*)malloc(sizeof(FlVertPosColor) * MAX_VERTS);
+    ctx->draw_data.pos_uv_color_vertices = (FlVertPosUvColor*)malloc(sizeof(FlVertPosUvColor) * MAX_VERTS);
+    ctx->draw_data.pos_color_indices = (FlIdxSize*)malloc(sizeof(FlIdxSize) * MAX_VERTS * 6);
+    ctx->draw_data.pos_uv_color_indices = (FlIdxSize*)malloc(sizeof(FlIdxSize) * MAX_VERTS * 6);
 
     // TODO: Fixup
     ctx->build_state = &state->render_data;
@@ -522,9 +522,9 @@ u8* draw_text(struct FlContext* ctx, const u8* cmd) {
     FlVertPosUvColor* pos_uv_color_vertices = ctx->draw_data.pos_uv_color_vertices;
     FlIdxSize* indices = ctx->draw_data.pos_color_indices;
 
-    FlVec2 pos = {10.0f, 10.0f};
+    FlVec2 pos = {10.0f, -20.0f};
 
-    Text_generate_vertex_buffer_ref(pos_uv_color_vertices, indices, font->glyphs, codepoints, 0x0fffff1f, pos, 0, text_len);
+    Text_generate_vertex_buffer_ref(pos_uv_color_vertices, indices, font->glyphs, codepoints, 0x0fffffff, pos, 0, text_len);
 
     FlRcTexturedTriangles* tri_data = Render_render_texture_triangles_static(
         ctx->global_state, ctx->draw_data.pos_uv_color_vertices, ctx->draw_data.pos_color_indices);

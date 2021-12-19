@@ -142,7 +142,7 @@ void ui_init(RenderContext& ctx) {
 void ui_update(FlContext* ctx) {
     fl_frame_begin(ctx);
 
-    fl_text(ctx, "Be gone!");
+    fl_text(ctx, "Almost before we knew it");
 
     /*
     if (fl_button_c(ctx, "test")) {
@@ -399,7 +399,7 @@ int main() {
     static FlGlyphRange font_range = {(u16*)&t, 2};
 
     // Load test font
-    fl_font_from_file("data/montserrat-regular.ttf", 180, FlFontBuildMode_Immediate, FlFontAtlasMode_PrebildGlyphs,
+    fl_font_from_file("data/montserrat-regular.ttf", 80, FlFontBuildMode_Immediate, FlFontAtlasMode_PrebildGlyphs,
                       FlFontGlyphPlacementMode_Basic, &font_range);
 
     printf("finished loading font");

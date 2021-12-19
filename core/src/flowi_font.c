@@ -310,8 +310,6 @@ FlFont fl_font_from_memory(
 		const u32 height = rect->h - padding;
 		const u32 width = rect->w - padding;
 
-		printf("rect y %d\n", rect->y);
-
 		// TODO: Handle RGBA data
 		u8* temp_data = texture_data + (rect->y * texture_width) + rect->x;
 
@@ -319,8 +317,8 @@ FlFont fl_font_from_memory(
 			memcpy(temp_data, bitmap, width);
 		}
 
-		const int tx = rect->x + padding;
-		const int ty = rect->y + padding;
+		const int tx = rect->x;// + padding;
+		const int ty = rect->y;// + padding;
 
 		int x0 = info->offset_x;
 		int y0 = info->offset_y;
@@ -357,8 +355,6 @@ FlFont fl_font_from_memory(
 	texture->format = FlTextureFormat_R8_LINEAR;
 	texture->width = texture_width;
 	texture->height = texture_height;
-
-	printf("texture size %d %d\n", texture_width, texture_height);
 
 	// TODO: Custom allocator
 	free(linear_allocator_data);
