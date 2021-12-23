@@ -242,6 +242,7 @@ Program {
 
     Sources = {
         "core/tests/tests.c",
+        "core/tests/text_tests.c",
     },
 
     Depends = { "flowi", "freetype2" },

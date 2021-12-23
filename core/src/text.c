@@ -87,6 +87,24 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
     }
 }
 
+// Calculate AABB for the text
+FlVec2 Text_calculate_size(const struct Glyph* FL_RESTRICT glyph_lookup, const u32* FL_RESTRICT codepoints, int count)
+{
+	FlVec2 size = { 0.0f, 0.0f };
+
+	// TODO: Separate array for lookup_x
+	// TODO: Support left -> right text
+
+	for (int i = 0; i < count; ++i) {
+		const Glyph* g = &glyph_lookup[*codepoints++];
+		u16 y_size = g->y1 - g->y0;
+		size.x += g->advance_x;
+		size.y = y_size > size.y ? y_size : size.y;
+	}
+
+	return size;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define _mm_shuffle_ps_si128(a, b, i) _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(a), _mm_castsi128_ps(b), i))
@@ -168,5 +186,6 @@ void Text_generate_vertex_buffer_sse2(FlVertPosUvColor* __restrict out, FlIdxSiz
         index_buffer += 6;
     }
 }
+
 
 #endif
