@@ -87,12 +87,15 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Calculate AABB for the text
+// TODO: Supply styling for text spacing and stuff like that
+
 FlVec2 Text_calculate_size(const struct Glyph* FL_RESTRICT glyph_lookup, const u32* FL_RESTRICT codepoints, int count)
 {
 	FlVec2 size = { 0.0f, 0.0f };
 
-	// TODO: Separate array for lookup_x
+	// TODO: Separate array for lookup_x for better cache locality?
 	// TODO: Support left -> right text
 
 	for (int i = 0; i < count; ++i) {

@@ -86,6 +86,7 @@ StaticLibrary {
         FLOWI_DIR .. "flowi_font.c",
         FLOWI_DIR .. "render.c",
         FLOWI_DIR .. "text.c",
+        FLOWI_DIR .. "style.c",
         FLOWI_DIR .. "linear_allocator.c",
         FLOWI_DIR .. "primitives.c",
     },

@@ -376,7 +376,7 @@ FlFont fl_font_from_memory(
 void Font_init(FlGlobalState* state) {
 //#if defined(fl_FONTLIB_FREETYPE)
 	int error = FT_Init_FreeType(&state->ft_library);
-	printf("init font %d\n", error);
+	(void)error;
 //#elif defined(fl_FONTLIB_STBTYPE)
 //#endif
 }

@@ -3,6 +3,7 @@
 #include "flowi.h"
 #include "../include/config.h"
 #include "../include/error.h"
+#include "style.h"
 #include "primitives.h"
 #include "simd.h"
 
@@ -11,6 +12,7 @@
 #endif
 
 #define FL_FONTS_MAX 32
+#define FL_MAX_STYLES 128
 
 struct Font;
 
@@ -130,6 +132,10 @@ typedef struct FlContext {
 
 	// Render commands and data for the GPU backend
 	FlRenderData render_data_out;
+
+    // TODO: Dynamic array instead of hard-coded max style
+	FlStyle* styles[FL_MAX_STYLES];
+	int style_count;
 
 } FlContext;
 
