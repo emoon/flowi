@@ -5,6 +5,7 @@ typedef enum FlError {
     FlError_Io,
     FlError_Memory,
     FlError_Font,
+    FlError_Style,
 } FlError;
 
 // Get current Fl error if any

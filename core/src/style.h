@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "../include/config.h"
 #include <stdbool.h>
 
 struct FlContext;
@@ -55,8 +56,7 @@ typedef struct FlBorder {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct FlStyle {
-    // private internal data
-    void* priv;
+    const char* name;
     FlBorder border;
     FlSpacing padding;
     FlSpacing margin;
@@ -69,20 +69,15 @@ typedef struct FlStyle {
 // Create a style to apply changes to with an optional name
 FlStyle* fl_style_create_name_len(struct FlContext* ctx, const char* name, int name_len);
 
-// Get the default style, not intended for
+// Get the default style. Changing this will apply the base style for the whole application
 FlStyle* fl_style_get_default(struct FlContext* ctx);
 
-// end changes made to the current style
-void fl_style_end_changes(FlStyle* style);
-
-// Called before making changes to an existing style after making it with end_changes
-void fl_style_begin_changes(FlStyle* style);
-
 // Select the style to be used, to end using the style use 'fl_pop_style()'
-void fl_push_style(FlStyle* style);
+// TODO: Support filename, line in debug
+void fl_style_push(struct FlContext* ctx, FlStyle* style);
 
 // Pops the current style
-void fl_pop_style();
+void fl_style_pop(struct FlContext* ctx);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Helper macros

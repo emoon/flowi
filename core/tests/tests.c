@@ -5,6 +5,10 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+FlContext* g_ctx = NULL;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static void init_allocator(LinearAllocator* alloc, const char* name, int size) {
     u8* data = malloc(size);
     memset(data, 0xcd, size);  // init memory to cdcd for uncleared memory
@@ -146,7 +150,8 @@ UTEST_STATE();
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, const char* const argv[]) {
-    fl_create(NULL);
-    // do your own thing
+	// Create a global context that we can use in all tests
+	FlGlobalState* global = fl_create(NULL);
+	g_ctx = fl_context_create(global);
     return utest_main(argc, argv);
 }

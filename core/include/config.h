@@ -31,3 +31,11 @@
 #error "Can only have one font-generator"
 #endif
 
+/*
+#if defined(FLOWI_DEBUG)
+#define FUNC_FILE_LINE(funcname, args) void funcname(const char* file, int line, ##args)
+#else
+#define FUNC_FILE_LINE(funcname, args) void funcname(##args)
+#endif
+*/
+

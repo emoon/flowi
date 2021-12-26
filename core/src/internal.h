@@ -13,6 +13,7 @@
 
 #define FL_FONTS_MAX 32
 #define FL_MAX_STYLES 128
+#define FL_STYLE_DEPTH 128
 
 struct Font;
 
@@ -136,6 +137,10 @@ typedef struct FlContext {
     // TODO: Dynamic array instead of hard-coded max style
 	FlStyle* styles[FL_MAX_STYLES];
 	int style_count;
+
+    // Having 128 max styles should be enough
+	FlStyle* style_stack[FL_STYLE_DEPTH];
+	int style_stack_depth;
 
 } FlContext;
 
