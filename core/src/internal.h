@@ -16,6 +16,7 @@
 #define FL_STYLE_DEPTH 128
 
 struct Font;
+struct StyleInternal;
 
 // Used to build up the render state
 typedef struct BuildRenderState {
@@ -135,11 +136,11 @@ typedef struct FlContext {
 	FlRenderData render_data_out;
 
     // TODO: Dynamic array instead of hard-coded max style
-	FlStyle* styles[FL_MAX_STYLES];
+	struct StyleInternal* styles[FL_MAX_STYLES];
 	int style_count;
 
     // Having 128 max styles should be enough
-	FlStyle* style_stack[FL_STYLE_DEPTH];
+	struct StyleInternal* style_stack[FL_STYLE_DEPTH];
 	int style_stack_depth;
 
 } FlContext;

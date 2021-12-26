@@ -84,3 +84,35 @@ UTEST(Style, overflow_style_stack) {
 	ASSERT_TRUE(g_ctx->style_stack_depth == 0);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Trypes to push the default style and we expect nothing to change as this isn't supported
+
+UTEST(Style, push_default) {
+	fl_style_push(g_ctx, fl_style_get_default(g_ctx));
+	ASSERT_TRUE(g_ctx->style_stack_depth == 0);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Trypes to push the default style and we expect nothing to change as this isn't supported
+
+UTEST(Style, push_style_1) {
+	FlStyle* style = fl_style_create(g_ctx, "test");
+	FlStyle* default_style = fl_style_get_default(g_ctx);
+
+	// test change setting
+	style->background_color = 0xffff;
+	fl_style_end_changes(style);
+
+	FlStyle current;
+	fl_style_get_current(g_ctx, &current);
+	ASSERT_TRUE(current.background_color == default_style->background_color);
+
+	fl_style_push(g_ctx, style);
+	fl_style_get_current(g_ctx, &current);
+	ASSERT_TRUE(current.background_color == style->background_color);
+
+	fl_style_pop(g_ctx);
+	fl_style_get_current(g_ctx, &current);
+	ASSERT_TRUE(current.background_color == default_style->background_color);
+}
+

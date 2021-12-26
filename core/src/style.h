@@ -69,6 +69,9 @@ typedef struct FlStyle {
 // Create a style to apply changes to with an optional name
 FlStyle* fl_style_create_name_len(struct FlContext* ctx, const char* name, int name_len);
 
+// Mark the end of style changes
+void fl_style_end_changes(FlStyle* style);
+
 // Get the default style. Changing this will apply the base style for the whole application
 FlStyle* fl_style_get_default(struct FlContext* ctx);
 
@@ -78,6 +81,9 @@ void fl_style_push(struct FlContext* ctx, FlStyle* style);
 
 // Pops the current style
 void fl_style_pop(struct FlContext* ctx);
+
+// Get the current style which is based on what has been pushed on the style stack using push/pop
+void fl_style_get_current(struct FlContext* ctx, FlStyle* style);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Helper macros

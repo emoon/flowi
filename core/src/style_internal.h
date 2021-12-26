@@ -5,24 +5,16 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "types.h"
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-typedef enum StyleBits {
-    StyleBits_Border = 1 << 0,
-    StyleBits_Padding = 1 << 2,
-    StyleBits_Margin = 1 << 3,
-    StyleBits_CurrentFont = 1 << 4,
-    StyleBits_BackgroundColor = 1 << 5,
-    StyleBits_TextColor = 1 << 6,
-    StyleBits_FontSize = 1 << 7,
-} StyleBits;
+#include "style.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Used to track style changes so we can apply them and create a full new state to apply
 
 typedef struct StyleInternal {
-    u64 bits0;
+    FlStyle style; // has to be first
+    // Extra states states for style
+    bool has_generated_diff;
+    u8 diff_bits[sizeof(FlStyle)];
 } StyleInternal;
 
 
