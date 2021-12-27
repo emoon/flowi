@@ -12,13 +12,13 @@ u8* Render_create_render_cmd_mem_2(struct FlGlobalState* state, FlRenderCommand 
 //FcCreateTexture* Render_create_texture_static(FlGlobalState* state, u8* data);
 
 #define Render_create_texture_cmd_static(state, data) \
-    Render_create_texture_static(state, FlRc_CreateTexture, data, sizeof(FlRcCreateTexture), FL_ALIGNOF(FlRcCreateTexture), FlLifetime_Static)
+    Render_create_texture_static(state, FlRc_CreateTexture, data, sizeof(FlRcCreateTexture), 16, FlLifetime_Static)
 
 FlRcCreateTexture* Render_create_texture_static(struct FlGlobalState* state, u8* data);
 
 #define Render_render_flat_triangles_static(state, data0, data1) \
-    (FlRcSolidTriangles*)Render_create_render_cmd_mem_2(state, FlRc_RenderTriangles, data0, data1, sizeof(FlRc_RenderTriangles), FlMemoryLifetime_Static, FL_ALIGNOF(FlRc_RenderTriangles))
+    (FlRcSolidTriangles*)Render_create_render_cmd_mem_2(state, FlRc_RenderTriangles, data0, data1, sizeof(FlRc_RenderTriangles), FlMemoryLifetime_Static, 16)
 
 #define Render_render_texture_triangles_static(state, data0, data1) \
-    (FlRcTexturedTriangles*)Render_create_render_cmd_mem_2(state, FlRc_RenderTexturedTriangles, data0, data1, sizeof(FlRc_RenderTexturedTriangles), FlMemoryLifetime_Static, FL_ALIGNOF(FlRc_RenderTexturedTriangles))
+    (FlRcTexturedTriangles*)Render_create_render_cmd_mem_2(state, FlRc_RenderTexturedTriangles, data0, data1, sizeof(FlRc_RenderTexturedTriangles), FlMemoryLifetime_Static, 16)
 
