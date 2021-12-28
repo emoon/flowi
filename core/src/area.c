@@ -32,13 +32,13 @@ Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
 	}
 
 	// Size up with the padding
-	size.x += style->padding.sides[FlSide_Left] + style->padding.sides[FlSide_Right];
-	size.y += style->padding.sides[FlSide_Top] + style->padding.sides[FlSide_Bottom];
+	size.x += style->padding[FlSide_Left] + style->padding[FlSide_Right];
+	size.y += style->padding[FlSide_Top] + style->padding[FlSide_Bottom];
 
-	area->content_start.x = style->padding.sides[FlSide_Left];
-	area->content_start.y = style->padding.sides[FlSide_Top];
-	area->content_end.x = style->padding.sides[FlSide_Right];
-	area->content_end.y = style->padding.sides[FlSide_Bottom];
+	area->content_start.x = style->padding[FlSide_Left];
+	area->content_start.y = style->padding[FlSide_Top];
+	area->content_end.x = style->padding[FlSide_Right];
+	area->content_end.y = style->padding[FlSide_Bottom];
 
 	u32 color = style->background_color;
 

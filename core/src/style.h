@@ -58,8 +58,8 @@ typedef struct FlBorder {
 typedef struct FlStyle {
     const char* name;
     FlBorder border;
-    FlSpacing padding;
-    FlSpacing margin;
+    u16 padding[4];
+    u16 margin[4];
     u32 current_font;
     u32 background_color;
     u32 text_color;

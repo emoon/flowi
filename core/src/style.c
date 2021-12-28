@@ -24,8 +24,8 @@ static FlStyle s_default_style = {
 		.active = false,
 	},
 
-	.padding = { .sides = { 4, 4, 4, 4 } },
-	.margin = { .sides = { 4, 4, 4, 4 } },
+	.padding = { 4, 4, 4, 4 },
+	.margin = { 4, 4, 4, 4 },
 	.current_font = 0,
 	.background_color = FL_RGB_WHITE,
 	.text_color = FL_RGB_BLACK,
