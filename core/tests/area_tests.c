@@ -37,3 +37,10 @@ UTEST(Area, area_default) {
 	ASSERT_EQ(area->vertex_buffer[3].color, background_color);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Genererate triangle list for corner
+
+UTEST(Area, corner_triangle_list_1) {
+	//Area_generate_corner_triangle_list(NULL, 0, 5);
+}
+

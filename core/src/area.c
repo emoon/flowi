@@ -1,6 +1,11 @@
 #include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <math.h>
 #include "area.h"
 #include "style.h"
+#include "internal.h"
+#include "render.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -10,7 +15,86 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Generate the sin values for a rounded corner
 
+static int generate_corner_values(FlVec2* values, FlVec2 size, float corner_size, LengthPercentType type) {
+	// first calculate the value the number of pixels
+
+	const float half_x = size.x * 0.5f;
+	const float half_y = size.y * 0.5f;
+	const float shortest_side = half_x > half_y ? half_y : half_x;
+
+	int corner_pixels = 0;
+
+	if (type == FlLengthPercentType_Length) {
+		corner_pixels = (int)shortest_side;
+	} else {
+		corner_pixels = (int)(shortest_side * (corner_size * 0.01));
+	}
+
+	// Test with generating every other pixel to see how it looks
+	int pixel_count = corner_pixels;
+
+	if (corner_pixels == 0) {
+		assert(0);
+	}
+
+	const float sin_step = (M_PI/2.0f) / pixel_count;
+	float angle = 0.0f;
+
+	//printf("pixel count %d\n", pixel_count);
+
+	// TODO: SIMD
+	for (int i = 0; i < pixel_count; ++i) {
+		values[i].x = (float)(cos(angle) * corner_pixels);
+		values[i].y = (float)(sin(angle) * corner_pixels);
+		//printf("%d %f\n", i, values[i]);
+		angle += sin_step;
+	}
+
+	return corner_pixels;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+static void print_indent(int level) {
+	for (int i = 0; i < level; ++i) {
+		printf(" ");
+	}
+}
+*/
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// This will generate the triangle list for a corner. Instead of a fan we try to maximize the area each triangle covers
+// This generator is a bit slower than doing a fan, but is more GPU friendly.
+
+static void generate_recursive(FlIdxSize* index_list, int* count, int start_index, int end_index) {
+	int middle_index = start_index + ((end_index - start_index) / 2);
+
+	if (middle_index == start_index) {
+		return;
+	}
+
+	int i = *count;
+	index_list[i + 0] = middle_index;
+	index_list[i + 1] = end_index;
+	index_list[i + 2] = start_index;
+
+	*count += 3;
+
+	generate_recursive(index_list, count, start_index, middle_index);
+	generate_recursive(index_list, count, middle_index, end_index);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int Area_generate_corner_triangle_list(FlIdxSize* index_list, FlIdxSize start_index, int count) {
+	int index_count = 0;
+	generate_recursive(index_list, &index_count, 0, count);
+	return index_count;
+}
 
 // generating triangles
 // The most common way is generating this with a fan from each new vertex. This quite bad for GPUs with many long thin
@@ -81,3 +165,38 @@ Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
 
 	return area;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Area_generate_circle(struct FlContext* ctx) {
+	FlIdxSize* index_buffer = ctx->draw_data.pos_color_indices;
+
+	FlVertPosColor* vertices = ctx->draw_data.pos_color_vertices;
+
+	FlVec2* temp = alloca(400 * sizeof(FlVec2));
+
+	FlVec2 size = { 80.0f, 80.0f };
+
+	int count = generate_corner_values(temp, size, 40.0f, FlLengthPercentType_Length);
+	int index_count = Area_generate_corner_triangle_list(index_buffer, 0, count - 1);
+
+	// generate vertex list
+	for (int i = 0; i < count; ++i) {
+		vertices[i].x = temp[i].x * 10;
+		vertices[i].y = temp[i].y * 10;
+		vertices[i].color = FL_RGB(255, 0, 0);
+	}
+
+    FlRcSolidTriangles* tri_data = Render_render_flat_triangles_static(
+        ctx->global_state, ctx->draw_data.pos_color_vertices, ctx->draw_data.pos_color_indices);
+
+	tri_data->vertex_count = count;
+	tri_data->index_count = index_count;
+
+	//printf("index count %d\n", tri_data->index_count);
+}
+
+
+
+
+

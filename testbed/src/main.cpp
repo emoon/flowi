@@ -3,6 +3,7 @@
 #include <bx/math.h>
 #include "../../core/src/flowi.h"
 #include "../../core/src/flowi_font.h"
+#include "../../core/src/area.h"
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
@@ -142,7 +143,9 @@ void ui_init(RenderContext& ctx) {
 void ui_update(FlContext* ctx) {
     fl_frame_begin(ctx);
 
-    fl_text(ctx, "Almost before we knew it");
+    Area_generate_circle(ctx);
+
+    //fl_text(ctx, "Almost before we knew it");
 
     /*
     if (fl_button_c(ctx, "test")) {

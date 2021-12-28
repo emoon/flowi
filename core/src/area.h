@@ -38,4 +38,15 @@ typedef struct Area {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 Area* Area_generate(struct FlContext* ctx, const struct FlStyle* style, FlVec2 size);
+int Area_generate_corner_triangle_list(FlIdxSize* index_list, FlIdxSize start_index, int count);
+void Area_generate_circle(struct FlContext* ctx);
+
+#ifdef __cplusplus
+}
+#endif
+
