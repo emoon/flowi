@@ -87,6 +87,7 @@ StaticLibrary {
         FLOWI_DIR .. "render.c",
         FLOWI_DIR .. "text.c",
         FLOWI_DIR .. "style.c",
+        FLOWI_DIR .. "area.c",
         FLOWI_DIR .. "linear_allocator.c",
         FLOWI_DIR .. "primitives.c",
     },

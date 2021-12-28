@@ -26,17 +26,17 @@ typedef struct FlLengthPercentValue {
 } FlLengthPercentValue;
 
 typedef enum FlSide {
-    Side_Top,
-    Side_Right,
-    Side_Bottom,
-    Side_Left,
+    FlSide_Top,
+    FlSide_Right,
+    FlSide_Bottom,
+    FlSide_Left,
 } FlSide;
 
-typedef enum Corner {
-    Side_TopLeft,
-    Side_TopRight,
-    Side_BottomRight,
-    Side_BottomLeft,
+typedef enum FlCorner {
+    FlCorner_TopLeft,
+    FlCorner_TopRight,
+    FlCorner_BottomRight,
+    FlCorner_BottomLeft,
 } FlCorner;
 
 typedef struct FlSpacing {

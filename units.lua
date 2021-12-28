@@ -244,6 +244,7 @@ Program {
         "core/tests/tests.c",
         "core/tests/text_tests.c",
         "core/tests/style_tests.c",
+        "core/tests/area_tests.c",
     },
 
     Depends = { "flowi", "freetype2" },

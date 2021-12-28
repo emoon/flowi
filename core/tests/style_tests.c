@@ -12,8 +12,8 @@ UTEST(Style, default_create) {
 	FlStyle* style = fl_style_create(g_ctx, "test");
 	FlStyle* default_style = fl_style_get_default(g_ctx);
 
-	int t = memcmp(style, default_style, sizeof(FlStyle));
-	printf("defaul_create_style %d\n", t);
+	//int t = memcmp(style, default_style, sizeof(FlStyle));
+	//printf("defaul_create_style %d\n", t);
 
 	ASSERT_TRUE(memcmp(style, default_style, sizeof(FlStyle)) == 0);
 }
