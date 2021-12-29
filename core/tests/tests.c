@@ -101,6 +101,34 @@ UTEST(LinearAllocator, alignment) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+UTEST(LinearAllocator, size_left) {
+    LinearAllocator alloc;
+    init_allocator(&alloc, "test", 20);
+
+	ASSERT_EQ(LinearAllocator_memory_left(&alloc), 20);
+    LinearAllocator_alloc(&alloc, u64);
+	ASSERT_EQ(LinearAllocator_memory_left(&alloc), 20 - 8);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(LinearAllocator, update_resize) {
+    LinearAllocator alloc;
+    init_allocator(&alloc, "test", 20);
+
+	ASSERT_EQ(LinearAllocator_current_position(&alloc), 0);
+	ASSERT_EQ(LinearAllocator_memory_left(&alloc), 20);
+
+    LinearAllocator_alloc(&alloc, u64);
+
+	LinearAllocator_update_resize(&alloc, 0, 40);
+
+	ASSERT_EQ(LinearAllocator_current_position(&alloc), 8);
+	ASSERT_EQ(LinearAllocator_memory_left(&alloc), 40 - 8);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 UTEST(Io, load_file_fail) {
     u32 size = 0;
     const u8* data = Io_load_file_to_memory("dummy_not_found", &size);

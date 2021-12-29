@@ -47,4 +47,14 @@ u8* LinearAllocator_internal_alloc_zero(LinearAllocator* s, int size, int alignm
 	return data;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// If we ran out of memory it's possible to set new pointers and continue on from where we were
+
+void LinearAllocator_update_resize(LinearAllocator* alloc, u8* data, int new_len) {
+	int current_location = LinearAllocator_current_position(alloc);
+	alloc->start_data = data;
+	alloc->end_data = data + new_len;
+	alloc->current_data = data + current_location;
+}
+
 
