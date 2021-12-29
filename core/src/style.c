@@ -38,6 +38,9 @@ static FlStyle s_default_style = {
 // Create a style to apply changes to with an optional name
 
 FlStyle* fl_style_create_name_len(struct FlContext* ctx, const char* name, int name_len) {
+	FL_UNUSED(name);
+	FL_UNUSED(name_len);
+
     // TODO: Separate allocator
     StyleInternal* style_internal = malloc(sizeof(StyleInternal));
     assert(style_internal != NULL);
@@ -55,7 +58,8 @@ FlStyle* fl_style_create_name_len(struct FlContext* ctx, const char* name, int n
 // Get the default style, not intended for
 
 FlStyle* fl_style_get_default(struct FlContext* ctx) {
-    (void)ctx;
+	FL_UNUSED(ctx);
+
     return &s_default_style;
 }
 
@@ -86,13 +90,13 @@ void fl_style_push(FlContext* ctx, FlStyle* style) {
 
 void fl_style_pop(FlContext* ctx) {
     const int depth = ctx->style_stack_depth - 1;
-    ctx->style_stack_depth = depth >= 0 ? depth : 0;
+    ctx->style_stack_depth = FL_MAX(depth, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void build_diff_bits(u8* FL_RESTRICT bits, const u8* FL_RESTRICT def, const u8* FL_RESTRICT style) {
-    for (int i = 0; i < sizeof(FlStyle); ++i) {
+    for (u32 i = 0; i < sizeof(FlStyle); ++i) {
         const u8 d = *def++;
         const u8 s = *style++;
         *bits++ = d != s ? 0 : 1;
@@ -120,7 +124,7 @@ void fl_style_end_changes(FlStyle* end_style) {
 // If something in the style differs between target and src they will be copied to the target
 
 static void apply_style_diff(u8* FL_RESTRICT target, const u8* FL_RESTRICT src, const u8* diff) {
-    for (int i = 0; i < sizeof(FlStyle); ++i) {
+    for (u32 i = 0; i < sizeof(FlStyle); ++i) {
         const u8 t = *target;
         const u8 s = *src++;
         const u8 select = *diff++;

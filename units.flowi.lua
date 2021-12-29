@@ -77,6 +77,7 @@ StaticLibrary {
 
     Env = {
         CCOPTS = {
+            { "-Wall", "-Wextra", "-Werror"; Config = "linux-*-*-*" },
             { "-fprofile-arcs", "-ftest-coverage"; Config = "linux-gcc-*-test" },
         },
     },

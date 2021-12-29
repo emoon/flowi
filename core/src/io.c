@@ -28,7 +28,7 @@ u8* Io_load_file_to_memory(const char* filename, u32* out_size) {
         goto cleanup;
     }
 
-    size_t filesize = ftell(f);
+    s64 filesize = (s64)ftell(f);
 
     if (filesize == -1) {
         ERROR_ADD(FlError_Io, "Unable to get size for file %s", filename);
@@ -48,7 +48,7 @@ u8* Io_load_file_to_memory(const char* filename, u32* out_size) {
         goto cleanup;
     }
 
-    if (fread(data, 1, filesize, f) != filesize) {
+    if (fread(data, 1, filesize, f) != (size_t)filesize) {
         ERROR_ADD(FlError_Io, "Unable to read the whole %s file to memory, size %d", filename, filesize);
         goto cleanup;
     }
@@ -66,4 +66,8 @@ cleanup:
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Errors_add(FlError err, const char* filename, int line, const char* fmt, ...) {
+	FL_UNUSED(err);
+	FL_UNUSED(filename);
+	FL_UNUSED(line);
+	FL_UNUSED(fmt);
 }

@@ -94,6 +94,10 @@ typedef struct FontAtlas {
 FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size, int pixel_size,
                            FlFontBuildMode build_mode, FlFontAtlasMode atlas_mode,
                            FlFontGlyphPlacementMode placement_mode, FlGlyphRange* ranges) {
+    FL_UNUSED(build_mode);
+    FL_UNUSED(atlas_mode);
+    FL_UNUSED(placement_mode);
+
     // Use to store global data such as fonts, etc
     FlGlobalState* state = g_state;
 
@@ -169,8 +173,8 @@ FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size,
         const FT_Bitmap* ft_bitmap = &face->glyph->bitmap;
 
         // Make sure we can fit these in s16. No error handling as this shouldn't happen
-        assert(ft_bitmap->width >= 0 && ft_bitmap->width < 0x7fff);
-        assert(ft_bitmap->rows >= 0 && ft_bitmap->rows < 0x7fff);
+        assert(ft_bitmap->width > 0 && ft_bitmap->width < 0x7fff);
+        assert(ft_bitmap->rows > 0 && ft_bitmap->rows < 0x7fff);
         // assert(slot->bitmap_left >= 0 && slot->bitmap_left < 0x7fff);
         // assert(slot->bitmap_top >= 0 && slot->bitmap_top < 0x7fff);
 
@@ -361,7 +365,7 @@ FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size,
 void Font_init(FlGlobalState* state) {
     //#if defined(fl_FONTLIB_FREETYPE)
     int error = FT_Init_FreeType(&state->ft_library);
-    (void)error;
+    FL_UNUSED(error);
     //#elif defined(fl_FONTLIB_STBTYPE)
     //#endif
 }

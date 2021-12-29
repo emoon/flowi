@@ -55,6 +55,7 @@ typedef struct FlGlobalState {
 
 #define FL_MIN(a, b) ((a) < (b)) ? (a) : (b)
 #define FL_MAX(a, b) ((a) > (b)) ? (a) : (b)
+#define FL_UNUSED(a) (void)a
 
 // Global state for the whole lib
 // Contains loaded fonts, etc

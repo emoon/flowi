@@ -83,6 +83,8 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
 // This to be called before using any other functions
 
 struct FlGlobalState* fl_create(const FlSettings* settings) {
+	FL_UNUSED(settings);
+
     // TODO: Use local allocator
     g_state = (FlGlobalState*)calloc(1, sizeof(FlGlobalState));
 

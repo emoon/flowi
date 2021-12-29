@@ -70,7 +70,7 @@ static void generate_recursive(FlIdxSize* index_list, int* count, int start_inde
 
 int Area_generate_corner_triangle_list(FlIdxSize* index_list, FlIdxSize start_index, int count) {
 	int index_count = 0;
-	generate_recursive(index_list, &index_count, 0, count);
+	generate_recursive(index_list, &index_count, start_index, start_index + count);
 	return index_count;
 }
 
@@ -84,6 +84,8 @@ int Area_generate_corner_triangle_list(FlIdxSize* index_list, FlIdxSize start_in
 // more about what we are trying to generate (a square with potentially rounded corners)
 
 Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
+	FL_UNUSED(ctx);
+
 	// TODO: Custom allocator
 	Area* area = calloc(1, sizeof(Area));
 
