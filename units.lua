@@ -247,6 +247,12 @@ Program {
         "core/tests/area_tests.c",
     },
 
+    Env = {
+        PROGCOM = {
+            { "-lgcov"; Config = { "linux-gcc-*-test"} }
+        },
+    },
+
     Depends = { "flowi", "freetype2" },
 }
 

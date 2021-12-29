@@ -57,6 +57,7 @@ local gcc_opts = {
     "-I$(OBJECTDIR)",
     "-Wall",
     "-fPIC",
+    { "-DFLOWI_TEST", "-O2", "-g"; Config = "*-*-test" },
     { "-DFLOWI_DEBUG", "-O0", "-g"; Config = "*-*-debug" },
     { "-DFLOWI_RELEASE", "-O3", "-g"; Config = "*-*-release" },
 }
@@ -100,10 +101,6 @@ local win64 = {
 		FLOWI_VERSION = native.getenv("FLOWI_VERSION", "Development Version"),
 		BGFX_SHADERC = "$(OBJECTDIR)$(SEP)bgfx_shaderc$(PROGSUFFIX)",
 
-        RUST_CARGO_OPTS = {
-            { "test"; Config = "*-*-*-test" },
-        },
-
         GENERATE_PDB = "1",
         CCOPTS = {
             win64_opts,
@@ -132,10 +129,10 @@ Build {
     },
 
     Configs = {
-        Config { Name = "macos-clang", DefaultOnHost = "macosx", Inherit = macosx, Tools = { "clang-osx", "rust" } },
-        Config { Name = "win64-msvc", DefaultOnHost = { "windows" }, Inherit = win64, Tools = { "msvc-vs2019", "rust" } },
-        Config { Name = "linux-gcc", DefaultOnHost = { "linux" }, Inherit = gcc_env, Tools = { "gcc", "rust" } },
-        Config { Name = "linux-clang", DefaultOnHost = { "linux" }, Inherit = gcc_env, Tools = { "clang", "rust" } },
+        Config { Name = "macos-clang", DefaultOnHost = "macosx", Inherit = macosx, Tools = { "clang-osx" } },
+        Config { Name = "win64-msvc", DefaultOnHost = { "windows" }, Inherit = win64, Tools = { "msvc-vs2019" } },
+        Config { Name = "linux-gcc", DefaultOnHost = { "linux" }, Inherit = gcc_env, Tools = { "gcc" } },
+        Config { Name = "linux-clang", DefaultOnHost = { "linux" }, Inherit = gcc_env, Tools = { "clang" } },
     },
 
     IdeGenerationHints = {
@@ -158,8 +155,9 @@ Build {
 
     },
 
+    -- Variants = { "debug", "test", "release" },
     Variants = { "debug", "release" },
-    SubVariants = { "default" },
+    SubVariants = { "default", "test" },
 }
 
 -- vim: ts=4:sw=4:sts=4

@@ -25,46 +25,24 @@ static int generate_corner_values(FlVec2* values, FlVec2 size, float corner_size
 	const float half_y = size.y * 0.5f;
 	const float shortest_side = half_x > half_y ? half_y : half_x;
 
-	int corner_pixels = 0;
-
-	if (type == FlLengthPercentType_Length) {
-		corner_pixels = (int)shortest_side;
-	} else {
-		corner_pixels = (int)(shortest_side * (corner_size * 0.01));
-	}
+	const int corner_pixels_percent = (int)(shortest_side * (corner_size * 0.01));
+	const int corner_pixels = type == FlLengthPercentType_Length ? (int)shortest_side : corner_pixels_percent;
 
 	// Test with generating every other pixel to see how it looks
 	int pixel_count = corner_pixels;
 
-	if (corner_pixels == 0) {
-		assert(0);
-	}
-
 	const float sin_step = (M_PI/2.0f) / pixel_count;
 	float angle = 0.0f;
-
-	//printf("pixel count %d\n", pixel_count);
 
 	// TODO: SIMD
 	for (int i = 0; i < pixel_count; ++i) {
 		values[i].x = (float)(cos(angle) * corner_pixels);
 		values[i].y = (float)(sin(angle) * corner_pixels);
-		//printf("%d %f\n", i, values[i]);
 		angle += sin_step;
 	}
 
 	return corner_pixels;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/*
-static void print_indent(int level) {
-	for (int i = 0; i < level; ++i) {
-		printf(" ");
-	}
-}
-*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This will generate the triangle list for a corner. Instead of a fan we try to maximize the area each triangle covers

@@ -75,6 +75,12 @@ StaticLibrary {
 StaticLibrary {
     Name = "flowi",
 
+    Env = {
+        CCOPTS = {
+            { "-fprofile-arcs", "-ftest-coverage"; Config = "linux-gcc-*-test" },
+        },
+    },
+
     Includes = {
         "core/external/freetype2/include",
     },

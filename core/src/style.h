@@ -8,7 +8,7 @@ struct FlContext;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define FL_RGB(r, g, b) (((u32)r) << 16 | (((u32)g) << 8) | ((u32)b))
+#define FL_RGB(r, g, b) (((u32)b) << 16 | (((u32)g) << 8) | ((u32)r))
 #define FL_RGB_RED FL_RGB(255, 0, 0)
 #define FL_RGB_WHITE FL_RGB(255, 255, 255)
 #define FL_RGB_BLACK FL_RGB(0, 0, 0)
