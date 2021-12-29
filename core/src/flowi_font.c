@@ -173,8 +173,8 @@ FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size,
         const FT_Bitmap* ft_bitmap = &face->glyph->bitmap;
 
         // Make sure we can fit these in s16. No error handling as this shouldn't happen
-        assert(ft_bitmap->width > 0 && ft_bitmap->width < 0x7fff);
-        assert(ft_bitmap->rows > 0 && ft_bitmap->rows < 0x7fff);
+        assert((int)ft_bitmap->width >= 0 && ft_bitmap->width < 0x7fff);
+        assert((int)ft_bitmap->rows >= 0 && ft_bitmap->rows < 0x7fff);
         // assert(slot->bitmap_left >= 0 && slot->bitmap_left < 0x7fff);
         // assert(slot->bitmap_top >= 0 && slot->bitmap_top < 0x7fff);
 
