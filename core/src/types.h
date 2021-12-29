@@ -25,3 +25,7 @@ typedef int8_t s8;
 typedef float f32;
 typedef double f64;
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
