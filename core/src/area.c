@@ -45,37 +45,54 @@ static int generate_corner_values(FlVec2* values, FlVec2 size, float corner_size
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// This will generate the triangle list for a corner. Instead of a fan we try to maximize the area each triangle covers
-// This generator is a bit slower than doing a fan, but is more GPU friendly.
 
-static void generate_recursive(FlIdxSize* index_list, int* count, int start_index, int end_index) {
+static void generate_recursive_count(int* count, int start_index, int end_index) {
 	int middle_index = start_index + ((end_index - start_index) / 2);
 
 	if (middle_index == start_index) {
 		return;
 	}
 
-	int i = *count;
-
-	// TODO: optimize
-	if (index_list) {
-		index_list[i + 0] = middle_index;
-		index_list[i + 1] = end_index;
-		index_list[i + 2] = start_index;
-	}
-
 	*count += 3;
 
-	generate_recursive(index_list, count, start_index, middle_index);
-	generate_recursive(index_list, count, middle_index, end_index);
+	generate_recursive_count(count, start_index, middle_index);
+	generate_recursive_count(count, middle_index, end_index);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// This will generate the triangle list for a corner. Instead of a fan we try to maximize the area each triangle covers
+// This generator is a bit slower than doing a fan, but is more GPU friendly.
+
+static void generate_recursive(FlIdxSize* index_list, int* offset, int start_index, int end_index) {
+	int middle_index = start_index + ((end_index - start_index) / 2);
+
+	if (middle_index == start_index) {
+		return;
+	}
+
+	int i = *offset;
+
+	index_list[i + 0] = middle_index;
+	index_list[i + 1] = end_index;
+	index_list[i + 2] = start_index;
+
+	*offset += 3;
+
+	generate_recursive(index_list, offset, start_index, middle_index);
+	generate_recursive(index_list, offset, middle_index, end_index);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int Area_generate_corner_triangle_list(FlIdxSize* index_list, FlIdxSize start_index, int count) {
-	int index_count = 0;
-	generate_recursive(index_list, &index_count, start_index, start_index + count);
-	return index_count;
+	int count_offset = 0;
+	if (!index_list) {
+		generate_recursive_count(&count_offset, start_index, count);
+		return count_offset;
+	}
+
+	generate_recursive(index_list, &count_offset, start_index, start_index + count);
+	return count_offset;
 }
 
 // generating triangles

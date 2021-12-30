@@ -40,7 +40,33 @@ UTEST(Area, area_default) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Genererate triangle list for corner
 
-UTEST(Area, corner_triangle_list_1) {
-	//Area_generate_corner_triangle_list(NULL, 0, 5);
+UTEST(Area, count_triangle_list) {
+	int count = Area_generate_corner_triangle_list(NULL, 0, 3);
+	ASSERT_EQ(count, (3 - 1) * 3);
+
+	count = Area_generate_corner_triangle_list(NULL, 0, 6);
+	ASSERT_EQ(count, (6 - 1) * 3);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(Area, verify_triangle_list) {
+	int vert_count = 4;
+	FlIdxSize* index_list = alloca(vert_count * 3 * sizeof(FlIdxSize));
+
+	int count = Area_generate_corner_triangle_list(index_list, 0, vert_count);
+	ASSERT_EQ(count, (vert_count - 1) * 3);
+
+	ASSERT_EQ(index_list[0], 2);
+	ASSERT_EQ(index_list[1], 4);
+	ASSERT_EQ(index_list[2], 0);
+
+	ASSERT_EQ(index_list[3], 1);
+	ASSERT_EQ(index_list[4], 2);
+	ASSERT_EQ(index_list[5], 0);
+
+	ASSERT_EQ(index_list[6], 3);
+	ASSERT_EQ(index_list[7], 4);
+	ASSERT_EQ(index_list[8], 2);
 }
 
