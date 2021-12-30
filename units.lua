@@ -239,11 +239,12 @@ Program {
     },
 
     Sources = {
-        "core/tests/tests.c",
         "core/tests/area_tests.c",
         "core/tests/linear_allocator_tests.c",
         "core/tests/style_tests.c",
+        "core/tests/tests.c",
         "core/tests/text_tests.c",
+        "core/tests/vertex_allocator_tests.c",
     },
 
     Env = {

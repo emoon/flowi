@@ -100,7 +100,7 @@ StaticLibrary {
         FLOWI_DIR .. "render.c",
         FLOWI_DIR .. "style.c",
         FLOWI_DIR .. "text.c",
-        -- FLOWI_DIR .. "vertex_allocator.c",
+        FLOWI_DIR .. "vertex_allocator.c",
     },
 }
 

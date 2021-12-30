@@ -20,12 +20,16 @@ void LinearAllocator_create(LinearAllocator* self, const char* name, u8* data, i
 bool LinearAllocator_create_with_allocator(LinearAllocator* self, const char* name, FlAllocator* allocator, int len,
                                            bool allow_realloc);
 void LinearAllocator_destroy(LinearAllocator* self);
-
-void LinearAllocator_rewind(LinearAllocator* alloc);
 void LinearAllocator_update_resize(LinearAllocator* alloc, u8* data, int new_len);
 
 u8* LinearAllocator_internal_alloc(LinearAllocator* s, int size, int alignement);
 u8* LinearAllocator_internal_alloc_zero(LinearAllocator* s, int size, int alignement);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FL_INLINE void LinearAllocator_rewind(LinearAllocator* self) {
+    self->current_data = self->start_data;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Get how much memory is left
