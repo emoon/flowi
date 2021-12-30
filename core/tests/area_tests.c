@@ -2,6 +2,10 @@
 #include "../src/area.h"
 #include "../src/style.h"
 
+#ifdef _WIN32
+#include <malloc.h> // alloca
+#endif
+
 struct FlContext;
 
 extern struct FlContext* g_ctx;
