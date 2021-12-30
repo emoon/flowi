@@ -1,15 +1,18 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "../include/flowi_render.h"
-#include "text.h"
+#include "allocator.h"
 #include "flowi.h"
 #include "font_private.h"
 #include "internal.h"
 #include "primitives.h"
 #include "render.h"
 #include "simd.h"
+#include "text.h"
+#include "vertex_allocator.h"
 
 #if defined(_MSC_VER)
 #include <malloc.h>
@@ -40,6 +43,30 @@ typedef enum ButtonState {
     Hover,
 } ButtonState;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Malloc based allocator. We should use tslf or similar in a sandbox, but this is atleast in one place
+
+static void* alloc_malloc(void* user_data, u64 size) {
+    FL_UNUSED(user_data);
+    return malloc(size);
+}
+
+static void* realloc_malloc(void* user_data, void* ptr, u64 size) {
+    FL_UNUSED(user_data);
+    return realloc(ptr, size);
+}
+
+static void free_malloc(void* user_data, void* ptr) {
+    FL_UNUSED(user_data);
+    free(ptr);
+}
+
+static FlAllocator malloc_allocator = {
+    alloc_malloc, NULL, realloc_malloc, free_malloc, NULL,
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // TODO: Revisit data-layout
 /*
 typedef struct FadeAction {
@@ -62,11 +89,20 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
     ctx->widget_ids = (u32*)malloc(sizeof(u32) * (MAX_CONTROLS + MEMORY_PADDING));
     ctx->items_with_text = (ItemWithText*)malloc(sizeof(ItemWithText) * (MAX_CONTROLS + MEMORY_PADDING));
 
+    // TODO: Configure these values
+    int vertex_sizes[VertexAllocType_SIZEOF] = {1024 * 1024, 1024 * 1024};
+    int index_sizes[VertexAllocType_SIZEOF] = {512 * 1024, 512 * 1024};
+
+    if (!VertexAllocator_create(&ctx->vertex_allocator, &malloc_allocator, vertex_sizes, index_sizes, true)) {
+        // TODO: Add error
+        return NULL;
+    }
+
     // temp
-    ctx->draw_data.pos_color_vertices = (FlVertPosColor*)malloc(sizeof(FlVertPosColor) * MAX_VERTS);
-    ctx->draw_data.pos_uv_color_vertices = (FlVertPosUvColor*)malloc(sizeof(FlVertPosUvColor) * MAX_VERTS);
-    ctx->draw_data.pos_color_indices = (FlIdxSize*)malloc(sizeof(FlIdxSize) * MAX_VERTS * 6);
-    ctx->draw_data.pos_uv_color_indices = (FlIdxSize*)malloc(sizeof(FlIdxSize) * MAX_VERTS * 6);
+    // ctx->draw_data.pos_color_vertices = (FlVertPosColor*)malloc(sizeof(FlVertPosColor) * MAX_VERTS);
+    // ctx->draw_data.pos_uv_color_vertices = (FlVertPosUvColor*)malloc(sizeof(FlVertPosUvColor) * MAX_VERTS);
+    // ctx->draw_data.pos_color_indices = (FlIdxSize*)malloc(sizeof(FlIdxSize) * MAX_VERTS * 6);
+    // ctx->draw_data.pos_uv_color_indices = (FlIdxSize*)malloc(sizeof(FlIdxSize) * MAX_VERTS * 6);
 
     // TODO: Fixup
     ctx->build_state = &state->render_data;
@@ -83,7 +119,7 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
 // This to be called before using any other functions
 
 struct FlGlobalState* fl_create(const FlSettings* settings) {
-	FL_UNUSED(settings);
+    FL_UNUSED(settings);
 
     // TODO: Use local allocator
     g_state = (FlGlobalState*)calloc(1, sizeof(FlGlobalState));
@@ -242,19 +278,23 @@ u8* draw_text(struct FlContext* ctx, const u8* cmd) {
     u32* codepoints = alloca(sizeof(u32) * text_len);
     utf8_to_codepoints_u32(codepoints, (u8*)prim->text, text_len);
 
-    FlVertPosUvColor* pos_uv_color_vertices = ctx->draw_data.pos_uv_color_vertices;
-    FlIdxSize* indices = ctx->draw_data.pos_color_indices;
+    FlVertPosUvColor* vertices = NULL;
+    FlIdxSize* indices = NULL;
+
+    if (!VertexAllocator_alloc_pos_uv_color(&ctx->vertex_allocator, &vertices, &indices, text_len * 4, text_len * 6)) {
+        // TODO: Better error handling
+        assert(0);
+    }
 
     FlVec2 pos = {10.0f, -20.0f};
 
-    Text_generate_vertex_buffer_ref(pos_uv_color_vertices, indices, font->glyphs, codepoints, 0x0fffffff, pos, 0, text_len);
+    Text_generate_vertex_buffer_ref(vertices, indices, font->glyphs, codepoints, 0x0fffffff, pos, 0, text_len);
 
-    FlRcTexturedTriangles* tri_data = Render_render_texture_triangles_static(
-        ctx->global_state, ctx->draw_data.pos_uv_color_vertices, ctx->draw_data.pos_color_indices);
+    FlRcTexturedTriangles* tri_data = Render_render_texture_triangles_static(ctx->global_state, vertices, indices);
 
     tri_data->vertex_count = text_len * 4;
     tri_data->index_count = text_len * 6;
-    tri_data->texture_id = 0; // TODO: Fix me
+    tri_data->texture_id = 0;  // TODO: Fix me
 
     return (u8*)(prim + 1);
 }
@@ -274,21 +314,23 @@ void fl_frame_end(struct FlContext* ctx) {
 
         switch (prim) {
             case Primitive_DrawText: {
-				commands = draw_text(ctx, commands);
+                commands = draw_text(ctx, commands);
                 break;
             }
 
             default:
-            	goto exit;
+                goto exit;
         }
     }
 exit:
 
     primitives->data = (u8*)commands_save;
 
+    VertexAllocator_end_frame(&ctx->vertex_allocator);
+
     // const u8* primitives = ctx->global_state->primitives_data.
     // fl_generate_render_data(ctx);
-    //fl_generate_render_data_2(ctx);
+    // fl_generate_render_data_2(ctx);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

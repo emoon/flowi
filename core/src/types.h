@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define FL_RESTRICT __restrict
 
@@ -28,3 +29,19 @@ typedef double f64;
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#include <stdalign.h>
+#define FL_LIKELY(x) __builtin_expect((x),1)
+#define FL_UNLIKELY(x) __builtin_expect((x),0)
+#define FL_ALIGNOF(_type) alignof(_type)
+#else
+#define FL_ALIGNOF(_type) __alignof(_type)
+#define FL_LIKELY(x) (x)
+#define FL_UNLIKELY(x) (x)
+#endif
+
+#define FL_MIN(a, b) ((a) < (b)) ? (a) : (b)
+#define FL_MAX(a, b) ((a) > (b)) ? (a) : (b)
+#define FL_UNUSED(a) (void)a
+

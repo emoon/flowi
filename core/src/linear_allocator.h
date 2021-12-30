@@ -1,8 +1,8 @@
 #pragma once
 
-#include "allocator.h"
-#include "internal.h"
 #include "types.h"
+
+struct FlAllocator;
 
 // TODO: VirtualAlloc based allocator
 typedef struct LinearAllocator {
@@ -10,15 +10,15 @@ typedef struct LinearAllocator {
     u8* start_data;
     u8* end_data;
     u8* current_data;
-    FlAllocator* allocator;
+    struct FlAllocator* allocator;
     bool allow_realloc;
 } LinearAllocator;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void LinearAllocator_create(LinearAllocator* self, const char* name, u8* data, int len);
-bool LinearAllocator_create_with_allocator(LinearAllocator* self, const char* name, FlAllocator* allocator, int len,
-                                           bool allow_realloc);
+bool LinearAllocator_create_with_allocator(LinearAllocator* self, const char* name, struct FlAllocator* allocator,
+                                           int len, bool allow_realloc);
 void LinearAllocator_destroy(LinearAllocator* self);
 void LinearAllocator_update_resize(LinearAllocator* alloc, u8* data, int new_len);
 

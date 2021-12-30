@@ -35,6 +35,8 @@ typedef struct VertexAllocator {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct VertsCounts {
+    void* vertex_data;
+    void* index_data;
     int vertex_count;
     int index_count;
 } VertsCounts;
@@ -46,7 +48,6 @@ bool VertexAllocator_create(VertexAllocator* self, FlAllocator* allocator,
                             int index_intial_sizes[VertexAllocType_SIZEOF], bool allow_realloc);
 
 void VertexAllocator_end_frame(VertexAllocator* self);
-
 void VertexAllocator_destroy(VertexAllocator* self);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,19 +56,18 @@ bool VertexAllocator_alloc(VertexAllocator* self, VertexAllocType alloc_type, u8
                            int idx_size);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Get the number of vertices and indices in an allocator
 
 FL_INLINE VertsCounts VertexAllocator_get_counts(VertexAllocator* self, VertexAllocType alloc_type,
                                                  int vert_type_size) {
     LinearAllocator* vertex_alloc = &self->allocators[self->frame_index][alloc_type][VertexStreamAllocatorType_Vertex];
     LinearAllocator* index_alloc = &self->allocators[self->frame_index][alloc_type][VertexStreamAllocatorType_Index];
 
-    VertsCounts t = {LinearAllocator_current_position(vertex_alloc) / vert_type_size,
+    VertsCounts t = {vertex_alloc->start_data, index_alloc->start_data,
+                     LinearAllocator_current_position(vertex_alloc) / vert_type_size,
                      LinearAllocator_current_position(index_alloc) / sizeof(FlIdxSize)};
 
     return t;
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

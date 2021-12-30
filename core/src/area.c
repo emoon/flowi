@@ -56,9 +56,13 @@ static void generate_recursive(FlIdxSize* index_list, int* count, int start_inde
 	}
 
 	int i = *count;
-	index_list[i + 0] = middle_index;
-	index_list[i + 1] = end_index;
-	index_list[i + 2] = start_index;
+
+	// TODO: optimize
+	if (index_list) {
+		index_list[i + 0] = middle_index;
+		index_list[i + 1] = end_index;
+		index_list[i + 2] = start_index;
+	}
 
 	*count += 3;
 
@@ -149,16 +153,22 @@ Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Area_generate_circle(struct FlContext* ctx) {
-	FlIdxSize* index_buffer = ctx->draw_data.pos_color_indices;
-
-	FlVertPosColor* vertices = ctx->draw_data.pos_color_vertices;
+	FlVertPosColor* vertices = NULL;
+	FlIdxSize* indices = NULL;
 
 	FlVec2* temp = alloca(400 * sizeof(FlVec2));
 
 	FlVec2 size = { 80.0f, 80.0f };
 
 	int count = generate_corner_values(temp, size, 40.0f, FlLengthPercentType_Length);
-	int index_count = Area_generate_corner_triangle_list(index_buffer, 0, count - 1);
+	int index_count = Area_generate_corner_triangle_list(NULL, 0, count - 1);
+
+	if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, count, index_count)) {
+		// TODO: Error
+		return;
+	}
+
+	Area_generate_corner_triangle_list(indices, 0, count - 1);
 
 	// generate vertex list
 	for (int i = 0; i < count; ++i) {
@@ -167,13 +177,9 @@ void Area_generate_circle(struct FlContext* ctx) {
 		vertices[i].color = FL_RGB(255, 0, 0);
 	}
 
-    FlRcSolidTriangles* tri_data = Render_render_flat_triangles_static(
-        ctx->global_state, ctx->draw_data.pos_color_vertices, ctx->draw_data.pos_color_indices);
-
+    FlRcSolidTriangles* tri_data = Render_render_flat_triangles_static(ctx->global_state, vertices, indices);
 	tri_data->vertex_count = count;
 	tri_data->index_count = index_count;
-
-	//printf("index count %d\n", tri_data->index_count);
 }
 
 

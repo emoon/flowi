@@ -5,6 +5,7 @@
 #include "../include/error.h"
 #include "style.h"
 #include "primitives.h"
+#include "vertex_allocator.h"
 #include "simd.h"
 
 #if defined(FL_FONTLIB_FREETYPE)
@@ -42,20 +43,6 @@ typedef struct FlGlobalState {
     u16 texture_ids;
 } FlGlobalState;
 
-#if defined(__GNUC__) || defined(__clang__)
-#include <stdalign.h>
-#define FL_LIKELY(x) __builtin_expect((x),1)
-#define FL_UNLIKELY(x) __builtin_expect((x),0)
-#define FL_ALIGNOF(_type) alignof(_type)
-#else
-#define FL_ALIGNOF(_type) __alignof(_type)
-#define FL_LIKELY(x) (x)
-#define FL_UNLIKELY(x) (x)
-#endif
-
-#define FL_MIN(a, b) ((a) < (b)) ? (a) : (b)
-#define FL_MAX(a, b) ((a) > (b)) ? (a) : (b)
-#define FL_UNUSED(a) (void)a
 
 // Global state for the whole lib
 // Contains loaded fonts, etc
@@ -90,17 +77,6 @@ typedef struct ItemWithText {
 	int len;
 } ItemWithText;
 
-// Output data to draw on the GPU
-
-typedef struct FlDrawData {
-    FlVertPosColor* pos_color_vertices;
-    FlVertPosUvColor* pos_uv_color_vertices;
-    FlIdxSize* pos_color_indices;
-    FlIdxSize* pos_uv_color_indices;
-    int pos_color_triangle_count;
-    int pos_uv_color_triangle_count;
-} FlDrawData;
-
 typedef struct FlContext {
 	// hash of the full context. Use for to skip rendering if nothing has changed
 	//XXH3_state_t context_hash;
@@ -128,13 +104,15 @@ typedef struct FlContext {
 	ItemWithText* items_with_text;
 	// Active fade actions
 	int fade_actions;
-	FlDrawData draw_data;
 
 	FlGlobalState* global_state;
 	BuildRenderState* build_state;
 
 	// Render commands and data for the GPU backend
 	FlRenderData render_data_out;
+
+    // Used for building vertex / index output
+	VertexAllocator vertex_allocator;
 
     // TODO: Dynamic array instead of hard-coded max style
 	struct StyleInternal* styles[FL_MAX_STYLES];
