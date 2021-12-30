@@ -17,7 +17,7 @@ typedef struct LinearAllocator {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void LinearAllocator_create(LinearAllocator* self, const char* name, u8* data, int len);
-void LinearAllocator_create_with_allocator(LinearAllocator* self, const char* name, FlAllocator* allocator, int len,
+bool LinearAllocator_create_with_allocator(LinearAllocator* self, const char* name, FlAllocator* allocator, int len,
                                            bool allow_realloc);
 void LinearAllocator_destroy(LinearAllocator* self);
 

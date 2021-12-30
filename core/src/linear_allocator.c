@@ -14,12 +14,22 @@ void LinearAllocator_create(LinearAllocator* self, const char* id, u8* data, int
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void LinearAllocator_create_with_allocator(LinearAllocator* self, const char* id, FlAllocator* allocator, int len,
+bool LinearAllocator_create_with_allocator(LinearAllocator* self, const char* id, FlAllocator* allocator, int len,
                                            bool allow_realloc) {
     u8* mem = FlAllocator_alloc(allocator, len);
+
+    if (!mem) {
+    	memset(self, 0, sizeof(LinearAllocator));
+    	self->id = id;
+		ERROR_ADD(FlError_Memory, "Unable to allocate memory for LinearAllocator: %s", id);
+    	return false;
+    }
+
     LinearAllocator_create(self, id, mem, len);
     self->allocator = allocator;
     self->allow_realloc = allow_realloc;
+
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

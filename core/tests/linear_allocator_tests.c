@@ -256,3 +256,18 @@ UTEST(LinearAllocator, with_allocator_realloc_fail) {
     ASSERT_EQ(data, NULL);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void* dummy_alloc_6(void* user_data, u64 count) {
+	return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(LinearAllocator, with_allocator_fail) {
+	LinearAllocator linear_allocator;
+	FlAllocator allocator = { 0 };
+	allocator.alloc = dummy_alloc_6;
+	ASSERT_EQ(LinearAllocator_create_with_allocator(&linear_allocator, "with allocator", &allocator, 10, true), false);
+}
+
