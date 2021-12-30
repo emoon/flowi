@@ -147,7 +147,7 @@ FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size,
 
     // TODO: Fix me
     u8* linear_allocator_data = malloc(memory_size);
-    LinearAllocator_init(&allocator, "FreetypeBuilder", linear_allocator_data, memory_size);
+    LinearAllocator_create(&allocator, "FreetypeBuilder", linear_allocator_data, memory_size);
 
     u8** bitmaps = LinearAllocator_alloc_array(&allocator, u8*, array_len);
     stbrp_rect* pack_rects = LinearAllocator_alloc_array_zero(&allocator, stbrp_rect, array_len);

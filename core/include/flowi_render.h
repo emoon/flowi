@@ -166,3 +166,6 @@ typedef struct FlRenderData {
     // Total number of render commands
     int count;
 } FlRenderData;
+
+// History to keep buffers alive
+#define FL_FRAME_HISTORY 2

@@ -235,16 +235,15 @@ Program {
     Name = "flowi_core_tests",
 
     Includes = {
-        -- FREETYPE2_LIB .. "build/include",
         FREETYPE2_LIB .. "include",
-        -- FREETYPE2_LIB .. "include/config",
     },
 
     Sources = {
         "core/tests/tests.c",
-        "core/tests/text_tests.c",
-        "core/tests/style_tests.c",
         "core/tests/area_tests.c",
+        "core/tests/linear_allocator_tests.c",
+        "core/tests/style_tests.c",
+        "core/tests/text_tests.c",
     },
 
     Env = {

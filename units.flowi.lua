@@ -7,6 +7,7 @@ require "tundra.util"
 local FLOWI_DIR = "core/src/"
 local FREETYPE2_LIB = "core/external/freetype2/"
 local STB_LIB = "core/external/stb/"
+local TLSF_LIB = "core/external/tlsf/"
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -84,19 +85,22 @@ StaticLibrary {
 
     Includes = {
         "core/external/freetype2/include",
+        "core/external/tslf",
     },
 
     Sources = {
         STB_LIB .. "stb.c",
-        FLOWI_DIR .. "flowi.c",
-        FLOWI_DIR .. "io.c",
-        FLOWI_DIR .. "flowi_font.c",
-        FLOWI_DIR .. "render.c",
-        FLOWI_DIR .. "text.c",
-        FLOWI_DIR .. "style.c",
+        TLSF_LIB .. "tlsf.c",
         FLOWI_DIR .. "area.c",
+        FLOWI_DIR .. "flowi.c",
+        FLOWI_DIR .. "flowi_font.c",
+        FLOWI_DIR .. "io.c",
         FLOWI_DIR .. "linear_allocator.c",
         FLOWI_DIR .. "primitives.c",
+        FLOWI_DIR .. "render.c",
+        FLOWI_DIR .. "style.c",
+        FLOWI_DIR .. "text.c",
+        -- FLOWI_DIR .. "vertex_allocator.c",
     },
 }
 
