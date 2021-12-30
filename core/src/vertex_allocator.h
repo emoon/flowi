@@ -71,18 +71,18 @@ FL_INLINE VertsCounts VertexAllocator_get_counts(VertexAllocator* self, VertexAl
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define VertexAllocator_alloc_pos_color(alloc, verts, indices, vert_count, index_count) \
-    VertexAllocator_alloc(alloc, VertexAllocType_PosColor, (u8**)verts, (u8**)indices,  \
-                          verts_count * sizeof(FlVertPosColor), idx_count * sizeof(FlIdxSize))
+#define VertexAllocator_alloc_pos_color(self, verts, indices, vert_count, index_count) \
+    VertexAllocator_alloc(self, VertexAllocType_PosColor, (u8**)verts, (u8**)indices,  \
+                          vert_count * sizeof(FlVertPosColor), index_count * sizeof(FlIdxSize))
 
-#define VertexAllocator_alloc_uv_pos_color(alloc, verts, indices, vert_count, index_count) \
-    VertexAllocator_alloc(alloc, VertexAllocType_PosUvColor, (u8**)verts, (u8**)indices,   \
-                          verts_count * sizeof(FlVertUvPosColor), idx_count * sizeof(FlIdxSize))
+#define VertexAllocator_alloc_pos_uv_color(self, verts, indices, vert_count, index_count) \
+    VertexAllocator_alloc(self, VertexAllocType_PosUvColor, (u8**)verts, (u8**)indices,   \
+                          vert_count * sizeof(FlVertPosUvColor), index_count * sizeof(FlIdxSize))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define VertexAllocator_get_pos_color_counts(alloc, type, verts_type_size) \
-    VertexAllocator_get_counts(alloc, VertexAllocType_PosColor, sizeof(FlVertPosColor))
+#define VertexAllocator_get_pos_color_counts(self) \
+    VertexAllocator_get_counts(self, VertexAllocType_PosColor, sizeof(FlVertPosColor))
 
-#define VertexAllocator_get_uv_pos_color_counts(alloc, type, verts_type_size) \
-    VertexAllocator_get_counts(alloc, VertexAllocType_PosUvColor, sizeof(FlVertUvPosColor))
+#define VertexAllocator_get_pos_uv_color_counts(self) \
+    VertexAllocator_get_counts(self, VertexAllocType_PosUvColor, sizeof(FlVertPosUvColor))

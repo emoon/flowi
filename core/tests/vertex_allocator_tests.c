@@ -202,5 +202,45 @@ UTEST(VertexAllocator, fail_alloc_realloc_ok) {
 	ASSERT_EQ((uintptr_t)indices, 4);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(VertexAllocator, get_counts) {
+	VertexAllocator vertex_allocator;
+
+	int vertex_sizes[VertexAllocType_SIZEOF] = { 256, 256 };
+	int index_sizes[VertexAllocType_SIZEOF] = { 256, 256 };
+
+	ASSERT_TRUE(VertexAllocator_create(&vertex_allocator, &malloc_allocator, vertex_sizes, index_sizes, false));
+
+	FlVertPosColor* verts_0 = NULL;
+	FlIdxSize* indices_0 = NULL;
+
+	ASSERT_TRUE(VertexAllocator_alloc_pos_color(&vertex_allocator, &verts_0, &indices_0, 4, 6));
+	VertsCounts counts_0 = VertexAllocator_get_pos_color_counts(&vertex_allocator);
+
+	ASSERT_NE(verts_0, NULL);
+	ASSERT_NE(indices_0, NULL);
+	ASSERT_EQ(counts_0.vertex_count, 4);
+	ASSERT_EQ(counts_0.index_count, 6);
+
+	FlVertPosUvColor* verts_1 = NULL;
+	FlIdxSize* indices_1 = NULL;
+
+	ASSERT_TRUE(VertexAllocator_alloc_pos_uv_color(&vertex_allocator, &verts_1, &indices_1, 8, 12));
+	VertsCounts counts_1 = VertexAllocator_get_pos_uv_color_counts(&vertex_allocator);
+	ASSERT_NE(verts_1, NULL);
+	ASSERT_NE(indices_1, NULL);
+	ASSERT_EQ(counts_1.vertex_count, 8);
+	ASSERT_EQ(counts_1.index_count, 12);
+
+	ASSERT_TRUE(VertexAllocator_alloc_pos_color(&vertex_allocator, &verts_0, &indices_0, 2, 4));
+	VertsCounts counts_2 = VertexAllocator_get_pos_color_counts(&vertex_allocator);
+	ASSERT_NE(verts_0, NULL);
+	ASSERT_NE(indices_0, NULL);
+	ASSERT_EQ(counts_2.vertex_count, 6);
+	ASSERT_EQ(counts_2.index_count, 10);
+
+	VertexAllocator_destroy(&vertex_allocator);
+}
 
 
