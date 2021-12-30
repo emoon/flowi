@@ -37,7 +37,7 @@ jobs:
       run: tundra2 linux-gcc-release flowi_core_tests
 
     - name: Run Core Tests (Optimized)
-      run: t2-output/linux-gcc-release-default/flowi_core_tests --enable-mixed-units
+      run: t2-output/linux-gcc-release-default/flowi_core_tests --enable-mixed-units --random-order
 
     - name: Install deps (BGFX required)
       run: sudo apt-get install mesa-common-dev libx11-dev libxcursor-dev libxinerama-dev libxkbcommon-dev libxrandr-dev libxi-dev libgl1-mesa-dev
@@ -55,7 +55,7 @@ jobs:
       run: bin/macos/tundra2 macosx-clang-debug flowi_core_tests
 
     - name: Run Core Tests (Debug)
-      run: t2-output/macos-clang-debug-default/flowi_core_tests --enable-mixed-units
+      run: t2-output/macos-clang-debug-default/flowi_core_tests --enable-mixed-units --random-order
     # - name: Build Core Tests (Optimized)
     #   run: bin/macos/tundra2 macosx-clang-release flowi_core_tests
 
@@ -72,10 +72,10 @@ jobs:
       run: bin\windows\tundra2.exe --unprotected win64-msvc-debug flowi_core_tests
 
     - name: Run Core Tests (Debug)
-      run: t2-output\win64-msvc-debug-default\flowi_core_tests --enable-mixed-units
+      run: t2-output\win64-msvc-debug-default\flowi_core_tests --enable-mixed-units --random-order
 
     - name: Build Core Tests (Optimized)
       run: bin\windows\tundra2.exe --unprotected win64-msvc-release flowi_core_tests
 
     - name: Run Core Tests (Optimized)
-      run: t2-output\win64-msvc-release-default\flowi_core_tests --enable-mixed-units
+      run: t2-output\win64-msvc-release-default\flowi_core_tests --enable-mixed-units --random-order
