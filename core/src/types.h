@@ -45,3 +45,17 @@ typedef double f64;
 #define FL_MAX(a, b) ((a) > (b)) ? (a) : (b)
 #define FL_UNUSED(a) (void)a
 
+#if defined(__GNUC__)
+#if defined(__clang__)
+#define FL_ASSUME(cond) __builtin_assume(cond)
+#else
+#define FL_ASSUME(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+#endif
+#else
+#define FL_ASSUME(cond) while (0) { }
+#endif
+
+
+
+
+

@@ -1,11 +1,11 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include "area.h"
 #include <assert.h>
 #include <math.h>
-#include "area.h"
-#include "style.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include "internal.h"
 #include "render.h"
+#include "style.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -18,83 +18,42 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Generate the sin values for a rounded corner
 
-static int generate_corner_values(FlVec2* values, FlVec2 size, float corner_size, LengthPercentType type) {
-	// first calculate the value the number of pixels
+/*
+static int generate_corner_values(FlVec2* values, FlVec2 size, float corner_size, LengthPercentType type,
+                                  int segment_size) {
+    // first calculate the value the number of pixels
 
-	const float half_x = size.x * 0.5f;
-	const float half_y = size.y * 0.5f;
-	const float shortest_side = half_x > half_y ? half_y : half_x;
+    const float half_x = size.x * 0.5f;
+    const float half_y = size.y * 0.5f;
+    const float shortest_side = half_x > half_y ? half_y : half_x;
 
-	const int corner_pixels_percent = (int)(shortest_side * (corner_size * 0.01));
-	const int corner_pixels = type == FlLengthPercentType_Length ? (int)shortest_side : corner_pixels_percent;
+    const int corner_pixels_percent = (int)(shortest_side * (corner_size * 0.01));
+    const int corner_pixels = type == FlLengthPercentType_Length ? (int)shortest_side : corner_pixels_percent;
 
-	// Test with generating every other pixel to see how it looks
-	int pixel_count = corner_pixels;
+    // Test with generating every other pixel to see how it looks
+    int pixel_count = corner_pixels / segment_size;
 
-	const float sin_step = (M_PI/2.0f) / pixel_count;
-	float angle = 0.0f;
+    if (pixel_count == 0) {
+        return 0;
+    }
 
-	// TODO: SIMD
-	for (int i = 0; i < pixel_count; ++i) {
-		values[i].x = (float)(cos(angle) * corner_pixels);
-		values[i].y = (float)(sin(angle) * corner_pixels);
-		angle += sin_step;
-	}
+    const float sin_step = (M_PI / 2.0f) / pixel_count;
+    float angle = 0.0f;
 
-	return corner_pixels;
+    FL_ASSUME(pixel_count > 0);
+
+    // TODO: SIMD
+    for (int i = 0; i < pixel_count; ++i) {
+        values[i].x = (float)(cos(angle) * corner_pixels);
+        values[i].y = (float)(sin(angle) * corner_pixels);
+        angle += sin_step;
+    }
+
+    return pixel_count;
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void generate_recursive_count(int* count, int start_index, int end_index) {
-	int middle_index = start_index + ((end_index - start_index) / 2);
-
-	if (middle_index == start_index) {
-		return;
-	}
-
-	*count += 3;
-
-	generate_recursive_count(count, start_index, middle_index);
-	generate_recursive_count(count, middle_index, end_index);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// This will generate the triangle list for a corner. Instead of a fan we try to maximize the area each triangle covers
-// This generator is a bit slower than doing a fan, but is more GPU friendly.
-
-static void generate_recursive(FlIdxSize* index_list, int* offset, int start_index, int end_index) {
-	int middle_index = start_index + ((end_index - start_index) / 2);
-
-	if (middle_index == start_index) {
-		return;
-	}
-
-	int i = *offset;
-
-	index_list[i + 0] = middle_index;
-	index_list[i + 1] = end_index;
-	index_list[i + 2] = start_index;
-
-	*offset += 3;
-
-	generate_recursive(index_list, offset, start_index, middle_index);
-	generate_recursive(index_list, offset, middle_index, end_index);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-int Area_generate_corner_triangle_list(FlIdxSize* index_list, FlIdxSize start_index, int count) {
-	int count_offset = 0;
-	if (!index_list) {
-		generate_recursive_count(&count_offset, start_index, count);
-		return count_offset;
-	}
-
-	generate_recursive(index_list, &count_offset, start_index, start_index + count);
-	return count_offset;
-}
-
 // generating triangles
 // The most common way is generating this with a fan from each new vertex. This quite bad for GPUs with many long thin
 // triangles.
@@ -104,102 +63,289 @@ int Area_generate_corner_triangle_list(FlIdxSize* index_list, FlIdxSize start_in
 // insert a triangle there, this is quite a costly way to do it so we do something simpler given that we know
 // more about what we are trying to generate (a square with potentially rounded corners)
 
-Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
-	FL_UNUSED(ctx);
+static void generate_recursive(FlIdxSize* index_list, int* offset, int start_index, int end_index) {
+    int middle_index = start_index + ((end_index - start_index) / 2);
 
-	// TODO: Custom allocator
-	Area* area = calloc(1, sizeof(Area));
+    if (middle_index == start_index) {
+        return;
+    }
 
-	// TODO: Generate with border active
-	if (style->border.active) {
-		// TODO: Fixme
-		return NULL;
-	}
+    int i = *offset;
 
-	// Size up with the padding
-	size.x += style->padding[FlSide_Left] + style->padding[FlSide_Right];
-	size.y += style->padding[FlSide_Top] + style->padding[FlSide_Bottom];
+    index_list[i + 0] = middle_index;
+    index_list[i + 1] = end_index;
+    index_list[i + 2] = start_index;
 
-	area->content_start.x = style->padding[FlSide_Left];
-	area->content_start.y = style->padding[FlSide_Top];
-	area->content_end.x = style->padding[FlSide_Right];
-	area->content_end.y = style->padding[FlSide_Bottom];
+    *offset += 3;
 
-	u32 color = style->background_color;
-
-	// TODO: Custom a
-	area->vertex_buffer = malloc(sizeof(FlVertPosColor) * 4);
-	area->index_buffer = malloc(sizeof(FlIdxSize) * 6);
-
-	// Generate the vertex buffer with 2 triangles
-
-	area->vertex_buffer[0].x = 0.0f;
-	area->vertex_buffer[0].y = 0.0f;
-	area->vertex_buffer[0].color = color;
-
-	area->vertex_buffer[1].x = size.x;
-	area->vertex_buffer[1].y = 0.0f;
-	area->vertex_buffer[1].color = color;
-
-	area->vertex_buffer[2].x = size.x;
-	area->vertex_buffer[2].y = size.y;
-	area->vertex_buffer[2].color = color;
-
-	area->vertex_buffer[3].x = 0.0f;
-	area->vertex_buffer[3].y = size.y;
-	area->vertex_buffer[3].color = color;
-
-	// Write index buffer
-
-	area->index_buffer[0] = 0;
-	area->index_buffer[1] = 1;
-	area->index_buffer[2] = 2;
-
-	area->index_buffer[3] = 0;
-	area->index_buffer[4] = 2;
-	area->index_buffer[5] = 3;
-
-	// Counts
-
-	area->vertex_count = 4;
-	area->index_count = 6;
-
-	return area;
+    generate_recursive(index_list, offset, start_index, middle_index);
+    generate_recursive(index_list, offset, middle_index, end_index);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Area_generate_circle(struct FlContext* ctx) {
-	FlVertPosColor* vertices = NULL;
-	FlIdxSize* indices = NULL;
-
-	FlVec2* temp = alloca(400 * sizeof(FlVec2));
-
-	FlVec2 size = { 80.0f, 80.0f };
-
-	int count = generate_corner_values(temp, size, 40.0f, FlLengthPercentType_Length);
-	int index_count = Area_generate_corner_triangle_list(NULL, 0, count - 1);
-
-	if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, count, index_count)) {
-		// TODO: Error
-		return;
-	}
-
-	Area_generate_corner_triangle_list(indices, 0, count - 1);
-
-	// generate vertex list
-	for (int i = 0; i < count; ++i) {
-		vertices[i].x = temp[i].x * 10;
-		vertices[i].y = temp[i].y * 10;
-		vertices[i].color = FL_RGB(255, 0, 0);
-	}
-
-    FlRcSolidTriangles* tri_data = Render_render_flat_triangles_static(ctx->global_state, vertices, indices);
-	tri_data->vertex_count = count;
-	tri_data->index_count = index_count;
+int Area_generate_corner_triangle_list(FlIdxSize* index_list, FlIdxSize start_index, int count) {
+    int count_offset = 0;
+    generate_recursive(index_list, &count_offset, start_index, start_index + count);
+    return count_offset;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+FL_INLINE int corner_triangle_list_calc(int count) {
+    return (count - 1) * 3;
+}
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+typedef struct CornerVerts {
+    FlIdxSize idx[8];
+    int count;
+} CornerVerts;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FL_INLINE void corner_add_idx(CornerVerts* verts, FlIdxSize idx) {
+    verts->idx[verts->count++] = idx;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static int generate_corner(struct FlContext* ctx, float side, CornerVerts* corner_verts, const FlStyle* style,
+                           FlVec2 offset, int vertex_offset, int corner_index) {
+    FlIdxSize* indices = NULL;
+    FlVertPosColor* cverts = NULL;
+
+    const int segment_size = 1;
+
+    const FlLengthPercentValue border_radius = style->border.border_radius[corner_index];
+    const float pixel_side = border_radius.value;
+    const int corner_pixels_percent = (int)(side * (border_radius.value * 0.01));
+    const int corner_pixels = border_radius.type == FlLengthPercentType_Length ? (int)pixel_side
+                                                                               : corner_pixels_percent;
+    const int pixel_count = corner_pixels / segment_size;
+
+    if (pixel_count == 0) {
+        return 0;
+    }
+
+    int index_count = corner_triangle_list_calc(pixel_count - 1);
+
+    if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &cverts, &indices, pixel_count, index_count)) {
+        return -1;
+    }
+
+    Area_generate_corner_triangle_list(indices, vertex_offset, pixel_count - 1);
+
+    const float sin_step = (M_PI / 2.0f) / pixel_count;
+    float angle = 0.0f;
+
+    FL_ASSUME(pixel_count > 0);
+
+    float start_x = 60.0f;
+
+    // TODO: SIMD
+    for (int i = 0; i < pixel_count; ++i) {
+        cverts[i].x = offset.x + start_x + ((float)(cos(angle) * corner_pixels));
+        cverts[i].y = offset.y + (corner_pixels - ((float)(sin(angle) * corner_pixels)));
+        cverts[i].color = style->background_color;
+        angle += sin_step;
+    }
+
+    corner_add_idx(corner_verts, vertex_offset + (pixel_count - 1));
+    corner_add_idx(corner_verts, vertex_offset);
+
+    return vertex_offset + (pixel_count - 1);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TODO: This isn't really generating optimial triangle layout (to minimize area usage so we need to fix that)
+
+bool join_corners(struct FlContext* ctx, CornerVerts* corners) {
+    FlVertPosColor* vertices = NULL;
+    FlIdxSize* indices = NULL;
+
+    const int triangle_count = (corners->count - 2);
+
+    if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, 0, triangle_count * 3)) {
+        return false;
+    }
+
+    for (int i = 0; i < triangle_count; ++i) {
+        *indices++ = corners->idx[0];
+        *indices++ = corners->idx[i + 1];
+        *indices++ = corners->idx[i + 2];
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool generate_corners(struct FlContext* ctx, const FlStyle* style, FlVec2 offset, FlVec2 size) {
+    CornerVerts corners[4] = {0};
+
+    // TODO: This should be passed in
+    int index = 0;
+
+    const float half_x = size.x * 0.5f;
+    const float half_y = size.y * 0.5f;
+    const float shortest_side = half_x > half_y ? half_y : half_x;
+    const u32 background_color = style->background_color;
+
+    FlVec2 area_corners[4] = {
+        {0.0f, 0.0f},
+        {size.x, 0.0f},
+        {size.x, size.y},
+        {0.0f, size.y},
+    };
+
+    for (int i = 0; i < 4; ++i) {
+        int vertex_count = generate_corner(ctx, shortest_side, corners, style, offset, index, i);
+        if (vertex_count == 0) {
+            FlVertPosColor* vertices = NULL;
+            FlIdxSize* indices = NULL;
+
+            if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, 1, 0)) {
+                return false;
+            }
+
+            vertices[0].x = offset.x + area_corners[i].x;
+            vertices[0].y = offset.y + area_corners[i].y;
+            vertices[0].color = background_color;
+            corner_add_idx(corners, index);
+
+            vertex_count = 1;
+        }
+
+        index += vertex_count;
+    }
+
+    if (!join_corners(ctx, corners)) {
+        return false;
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
+    FL_UNUSED(ctx);
+    FL_UNUSED(style);
+    FL_UNUSED(size);
+
+    return NULL;
+
+    /*
+    // TODO: Custom allocator
+    Area* area = calloc(1, sizeof(Area));
+    CornerVerts corner_verts[4];
+
+    // Size up with the padding
+    size.x += style->padding[FlSide_Left] + style->padding[FlSide_Right];
+    size.y += style->padding[FlSide_Top] + style->padding[FlSide_Bottom];
+
+    area->content_start.x = style->padding[FlSide_Left];
+    area->content_start.y = style->padding[FlSide_Top];
+    area->content_end.x = style->padding[FlSide_Right];
+    area->content_end.y = style->padding[FlSide_Bottom];
+    */
+
+    // u32 color = style->background_color;
+
+    /*
+    // TODO: Custom a
+    area->vertex_buffer = malloc(sizeof(FlVertPosColor) * 4);
+    area->index_buffer = malloc(sizeof(FlIdxSize) * 6);
+
+    // Generate the vertex buffer with 2 triangles
+
+    area->vertex_buffer[0].x = 0.0f;
+    area->vertex_buffer[0].y = 0.0f;
+    area->vertex_buffer[0].color = color;
+
+    area->vertex_buffer[1].x = size.x;
+    area->vertex_buffer[1].y = 0.0f;
+    area->vertex_buffer[1].color = color;
+
+    area->vertex_buffer[2].x = size.x;
+    area->vertex_buffer[2].y = size.y;
+    area->vertex_buffer[2].color = color;
+
+    area->vertex_buffer[3].x = 0.0f;
+    area->vertex_buffer[3].y = size.y;
+    area->vertex_buffer[3].color = color;
+
+    // Write index buffer
+
+    area->index_buffer[0] = 0;
+    area->index_buffer[1] = 1;
+    area->index_buffer[2] = 2;
+
+    area->index_buffer[3] = 0;
+    area->index_buffer[4] = 2;
+    area->index_buffer[5] = 3;
+
+    // Counts
+
+    area->vertex_count = 4;
+    area->index_count = 6;
+    */
+
+    // return area;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool Area_generate_circle(struct FlContext* ctx) {
+    FlStyle* style = fl_style_get_default(ctx);
+
+    /*
+    FlVertPosColor* vertices = NULL;
+    FlIdxSize* indices = NULL;
+
+    FlVec2* temp = alloca(400 * sizeof(FlVec2));
+
+    FlVec2 size = {80.0f, 80.0f};
+
+    int count = generate_corner_values(temp, size, 20.0f, FlLengthPercentType_Length, 1);
+    int index_count = Area_generate_corner_triangle_list(NULL, 0, count - 1);
+
+    if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, count, index_count)) {
+        // TODO: Error
+        return false;
+    }
+
+    Area_generate_corner_triangle_list(indices, 0, count - 1);
+
+    // generate vertex list
+    for (int i = 0; i < count; ++i) {
+        vertices[i].x = 10 + (40.0f - temp[i].x);
+        vertices[i].y = 10 + (40.0f - temp[i].y);
+        vertices[i].color = FL_RGB(255, 0, 0);
+    }
+
+    FlRcSolidTriangles* tri_data = Render_render_flat_triangles_static(ctx->global_state, vertices, indices);
+    tri_data->vertex_count = count;
+    tri_data->index_count = index_count;
+    */
+
+    //VertsCounts counts_0 = VertexAllocator_get_pos_color_counts(&ctx->vertex_allocator);
+
+    FlVec2 offset = {10.0f, 10.f};
+    FlVec2 size = {80.0f, 80.0f};
+
+    //style->border.border_radius[1].value = 20.0f;
+
+    generate_corners(ctx, style, offset, size);
+
+    VertsCounts counts = VertexAllocator_get_pos_color_counts(&ctx->vertex_allocator);
+
+    FlRcSolidTriangles* tri_data =
+        Render_render_flat_triangles_static(ctx->global_state, counts.vertex_data, counts.index_data);
+    tri_data->vertex_count = counts.vertex_count;
+    tri_data->index_count = counts.index_count;
+
+    return true;
+}
