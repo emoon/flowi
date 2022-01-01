@@ -31,25 +31,25 @@ static int generate_corner_values(FlVec2* values, FlVec2 size, float corner_size
     const int corner_pixels = type == FlLengthPercentType_Length ? (int)shortest_side : corner_pixels_percent;
 
     // Test with generating every other pixel to see how it looks
-    int pixel_count = corner_pixels / segment_size;
+    int vertex_count = corner_pixels / segment_size;
 
-    if (pixel_count == 0) {
+    if (vertex_count == 0) {
         return 0;
     }
 
-    const float sin_step = (M_PI / 2.0f) / pixel_count;
+    const float sin_step = (M_PI / 2.0f) / vertex_count;
     float angle = 0.0f;
 
-    FL_ASSUME(pixel_count > 0);
+    FL_ASSUME(vertex_count > 0);
 
     // TODO: SIMD
-    for (int i = 0; i < pixel_count; ++i) {
+    for (int i = 0; i < vertex_count; ++i) {
         values[i].x = (float)(cos(angle) * corner_pixels);
         values[i].y = (float)(sin(angle) * corner_pixels);
         angle += sin_step;
     }
 
-    return pixel_count;
+    return vertex_count;
 }
 */
 
@@ -105,7 +105,7 @@ typedef struct CornerVerts {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FL_INLINE void corner_add_idx(CornerVerts* verts, FlIdxSize idx) {
+void corner_add_idx(CornerVerts* verts, FlIdxSize idx) {
     verts->idx[verts->count++] = idx;
 }
 
@@ -123,39 +123,92 @@ static int generate_corner(struct FlContext* ctx, float side, CornerVerts* corne
     const int corner_pixels_percent = (int)(side * (border_radius.value * 0.01));
     const int corner_pixels = border_radius.type == FlLengthPercentType_Length ? (int)pixel_side
                                                                                : corner_pixels_percent;
-    const int pixel_count = corner_pixels / segment_size;
+    const int vertex_count = corner_pixels / segment_size;
 
-    if (pixel_count == 0) {
+    if (vertex_count == 0) {
         return 0;
     }
 
-    int index_count = corner_triangle_list_calc(pixel_count - 1);
+    int index_count = corner_triangle_list_calc(vertex_count - 1);
 
-    if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &cverts, &indices, pixel_count, index_count)) {
+    if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &cverts, &indices, vertex_count, index_count)) {
         return -1;
     }
 
-    Area_generate_corner_triangle_list(indices, vertex_offset, pixel_count - 1);
+    Area_generate_corner_triangle_list(indices, vertex_offset, vertex_count - 1);
 
-    const float sin_step = (M_PI / 2.0f) / pixel_count;
+    const float sin_step = (M_PI / 2.0f) / vertex_count;
     float angle = 0.0f;
 
-    FL_ASSUME(pixel_count > 0);
+    FL_ASSUME(vertex_count > 0);
 
-    float start_x = 60.0f;
+    // TODO: do this better
 
-    // TODO: SIMD
-    for (int i = 0; i < pixel_count; ++i) {
-        cverts[i].x = offset.x + start_x + ((float)(cos(angle) * corner_pixels));
-        cverts[i].y = offset.y + (corner_pixels - ((float)(sin(angle) * corner_pixels)));
-        cverts[i].color = style->background_color;
-        angle += sin_step;
+    switch (corner_index) {
+		case FlCorner_TopLeft: {
+    		//float start_x = 0.0f;
+			for (int i = 0; i < vertex_count; ++i) {
+				cverts[i].x = offset.x + (corner_pixels - ((float)(cos(angle) * corner_pixels)));
+				cverts[i].y = offset.y + (corner_pixels - ((float)(sin(angle) * corner_pixels)));
+				cverts[i].color = style->background_color;
+				angle += sin_step;
+			}
+
+			corner_add_idx(corner_verts, vertex_offset);
+			corner_add_idx(corner_verts, vertex_offset + (vertex_count - 1));
+
+			break;
+		}
+
+		case FlCorner_TopRight: {
+    		float start_x = 60.0f;
+			for (int i = 0; i < vertex_count; ++i) {
+				cverts[i].x = offset.x + start_x + ((float)(cos(angle) * corner_pixels));
+				cverts[i].y = offset.y + (corner_pixels - ((float)(sin(angle) * corner_pixels)));
+				cverts[i].color = style->background_color;
+				angle += sin_step;
+			}
+
+			corner_add_idx(corner_verts, vertex_offset + (vertex_count - 1));
+			corner_add_idx(corner_verts, vertex_offset);
+
+			break;
+		}
+
+		case FlCorner_BottomRight: {
+			float start_x = 60.0f;
+			float start_y = 60.0f;
+			for (int i = 0; i < vertex_count; ++i) {
+				cverts[i].x = offset.x + start_x + (float)(cos(angle) * corner_pixels);
+				cverts[i].y = offset.y + start_y + (float)(sin(angle) * corner_pixels);
+				cverts[i].color = style->background_color;
+				angle += sin_step;
+			}
+
+			corner_add_idx(corner_verts, vertex_offset);
+			corner_add_idx(corner_verts, vertex_offset + (vertex_count - 1));
+
+			break;
+		}
+
+		case FlCorner_BottomLeft: {
+			//float start_x = 60.0f;
+			float start_y = 60.0f;
+			for (int i = 0; i < vertex_count; ++i) {
+				cverts[i].x = offset.x + (corner_pixels - (float)(cos(angle) * corner_pixels));
+				cverts[i].y = offset.y + start_y + ((float)(sin(angle) * corner_pixels));
+				cverts[i].color = style->background_color;
+				angle += sin_step;
+			}
+
+			corner_add_idx(corner_verts, vertex_offset + (vertex_count - 1));
+			corner_add_idx(corner_verts, vertex_offset);
+
+			break;
+		}
     }
 
-    corner_add_idx(corner_verts, vertex_offset + (pixel_count - 1));
-    corner_add_idx(corner_verts, vertex_offset);
-
-    return vertex_offset + (pixel_count - 1);
+    return vertex_count;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -336,7 +389,10 @@ bool Area_generate_circle(struct FlContext* ctx) {
     FlVec2 offset = {10.0f, 10.f};
     FlVec2 size = {80.0f, 80.0f};
 
-    //style->border.border_radius[1].value = 20.0f;
+    style->border.border_radius[0].value = 20.0f;
+    style->border.border_radius[1].value = 20.0f;
+    style->border.border_radius[2].value = 20.0f;
+    style->border.border_radius[3].value = 20.0f;
 
     generate_corners(ctx, style, offset, size);
 
