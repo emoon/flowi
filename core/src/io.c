@@ -9,9 +9,7 @@
 #include <stdio.h>
 
 #if defined(_WIN32)
-extern __declspec(dllimport) int __stdcall MultiByteToWideChar(unsigned int cp, unsigned long flags, const char* str,
-                                                               int cbmb, wchar_t* widestr, int cchwide);
-#define CP_UTF8 65001
+#include <windows.h>
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
