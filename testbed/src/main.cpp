@@ -2,7 +2,7 @@
 #include <bgfx/platform.h>
 #include <bx/math.h>
 #include "../../core/src/flowi.h"
-#include "../../core/src/flowi_font.h"
+#include "../../core/src/font.h"
 #include "../../core/src/area.h"
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>

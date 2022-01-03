@@ -93,7 +93,7 @@ StaticLibrary {
         TLSF_LIB .. "tlsf.c",
         FLOWI_DIR .. "area.c",
         FLOWI_DIR .. "flowi.c",
-        FLOWI_DIR .. "flowi_font.c",
+        FLOWI_DIR .. "font.c",
         FLOWI_DIR .. "atlas.c",
         FLOWI_DIR .. "io.c",
         FLOWI_DIR .. "linear_allocator.c",
