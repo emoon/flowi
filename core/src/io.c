@@ -16,7 +16,6 @@
 
 static FILE* open_file(const char* filename, const char* mode) {
 #ifdef _WIN32
-    int len = 0;
     int file_len = strlen(filename);
     int mode_len = strlen(mode);
     wchar_t wpath[MAX_PATH];
