@@ -1,6 +1,6 @@
 #include "types.h"
 #include "allocator.h"
-#include "error.h"
+#include "../include/error.h"
 #include "internal.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -25,6 +25,7 @@ static bool insert_node(Atlas* atlas, int idx, int x, int y, int w) {
     if (atlas->count + 1 > atlas->capacity) {
         atlas->capacity = atlas->capacity == 0 ? 8 : atlas->capacity * 2;
         atlas->nodes = (AtlasNode*)FlAllocator_realloc(atlas->allocator, atlas->nodes, sizeof(AtlasNode) * atlas->capacity);
+        printf("insert_node %d\n", atlas->count);
         if (atlas->nodes == NULL) {
         	ERROR_ADD(FlError_Memory, "Out of memory in Atlas: %s", "atlas");
             return false;
@@ -216,6 +217,7 @@ Atlas* Atlas_create(int w, int h, int pre_alloc, FlAllocator* allocator) {
 
 	atlas->allocator = allocator;
 	atlas->nodes = FlAllocator_alloc_array_type(allocator, pre_alloc, AtlasNode);
+	atlas->capacity = pre_alloc;
 
 	if (!atlas->nodes) {
 		ERROR_ADD(FlError_Memory, "Unable to create atlas nodes: %s", "out of memory");

@@ -257,7 +257,25 @@ Program {
     Depends = { "flowi", "freetype2" },
 }
 
+-----------------------------------------------------------------------------------------------------------------------
+
+Program {
+    Name = "flowi_core_bench",
+
+    Includes = {
+        FREETYPE2_LIB .. "include",
+    },
+
+    Sources = {
+        "core/bench/atlas_bench.c",
+        "core/bench/bench_main.c",
+    },
+
+    Depends = { "flowi" },
+}
+
 Default "flowi_core_tests"
+Default "flowi_core_bench"
 Default "flowi_testbed"
 
 -- vim: ts=4:sw=4:sts=4
