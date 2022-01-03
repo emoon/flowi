@@ -14,12 +14,6 @@ struct FlContext;
 struct FlGlobalState;
 struct FlRenderData;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-typedef struct FlVec2 {
-    f32 x, y;
-} FlVec2;
-
 // TODO: Bunch of settings here including max memory usage etc
 typedef struct FlSettings {
     // dummy currently

@@ -26,6 +26,14 @@ typedef int8_t s8;
 typedef float f32;
 typedef double f64;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+typedef struct FlVec2 {
+    f32 x, y;
+} FlVec2;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -64,6 +72,5 @@ typedef double f64;
 #define FL_TRY_ALLOC_BOOL(expr) if (!(expr)) { return false; }
 #define FL_TRY_ALLOC_INT(expr) if (!(expr)) { return -1; }
 #endif
-
 
 

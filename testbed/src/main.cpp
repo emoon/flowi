@@ -398,13 +398,8 @@ int main() {
 
     ui_init(render_ctx);
 
-    static u16 t[] = {0, 127};
-    // static u16 t[] = {97, 100};
-    static FlGlyphRange font_range = {(u16*)&t, 2};
-
     // Load test font
-    fl_font_from_file("data/montserrat-regular.ttf", 80, FlFontBuildMode_Immediate, FlFontAtlasMode_PrebildGlyphs,
-                      FlFontGlyphPlacementMode_Basic, &font_range);
+    (void)fl_font_create_from_file(ctx, "data/montserrat-regular.ttf", 80, FlFontGlyphPlacementMode_Auto);
 
     printf("finished loading font");
 

@@ -35,7 +35,7 @@ typedef struct FlGlobalState {
 #endif
     BuildRenderState render_data;
     BuildPrimitives primitives_data;
-
+    FlAllocator* global_allocator;
     // TODO: Fix max number of fonts
     struct Font* fonts[FL_FONTS_MAX];
     int font_count;

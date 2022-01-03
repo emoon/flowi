@@ -11,16 +11,14 @@
 
 // TODO: Support external functions
 #include <math.h>
-
-// TODO: Handle if we don't have freetype
 #include <freetype/freetype.h>
 
 //#if fl_ALLOW_STDIO
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Build a font from (TTF) file. To use the font use `fl_font_set(id)` before using text-based widgets
 // GlyphRanges can be set to NULL if AtlasMode is BuildOnDemand
-FlFont fl_font_from_file(const char* filename, int font_size, FlFontBuildMode build_mode, FlFontAtlasMode atlas_mode,
-                         FlFontGlyphPlacementMode placement_mode, FlGlyphRange* ranges) {
+FlFont fl_font_create_from_file(struct FlContext* ctx, const char* filename, int font_size,
+                                FlFontGlyphPlacementMode placement_mode) {
     u32 size = 0;
     const u8* data = Io_load_file_to_memory(filename, &size);
 
@@ -28,7 +26,7 @@ FlFont fl_font_from_file(const char* filename, int font_size, FlFontBuildMode bu
         return -1;
     }
 
-    return fl_font_from_memory(filename, data, size, font_size, build_mode, atlas_mode, placement_mode, ranges);
+    return fl_font_create_from_memory(ctx, filename, strlen(filename), data, size, font_size, placement_mode);
 }
 //#endif
 
@@ -74,16 +72,6 @@ typedef struct TempGlyphInfo {
     float advance_x;  // the distance from the origin to the origin of the next glyph. this is usually a value > 0.
 } TempGlyphInfo;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/*
-typedef struct FontAtlas {
-    int font_id;
-    GlyphInfo* glyph_info;
-    u8* colored;
-} FontAtlas;
-*/
-
 // From SDL_ttf: Handy routines for converting from fixed point
 // TODO: Use proper floats here
 #define FT_CEIL(X) (((X + 63) & -64) / 64)
@@ -91,15 +79,12 @@ typedef struct FontAtlas {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Build a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
 // Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
-FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size, int pixel_size,
-                           FlFontBuildMode build_mode, FlFontAtlasMode atlas_mode,
-                           FlFontGlyphPlacementMode placement_mode, FlGlyphRange* ranges) {
-    FL_UNUSED(build_mode);
-    FL_UNUSED(atlas_mode);
+FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int name_len, const u8* font_data,
+                                  u32 data_size, int font_size, FlFontGlyphPlacementMode placement_mode) {
+    FL_UNUSED(name_len);
     FL_UNUSED(placement_mode);
-
     // Use to store global data such as fonts, etc
-    FlGlobalState* state = g_state;
+    FlGlobalState* state = ctx->global_state;
 
     // TODO: Support threaded context
     FT_Face face;
@@ -111,7 +96,7 @@ FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size,
         return -1;
     }
 
-    error = FT_Set_Pixel_Sizes(face, 0, pixel_size);
+    error = FT_Set_Pixel_Sizes(face, 0, font_size);
     if (error) {
         ERROR_ADD(FlError_Font, "Freetype error %s when setting size font: %s", FT_Error_String(error), name);
         return -1;
@@ -129,6 +114,20 @@ FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size,
         return -1;
     }
 
+
+    if (state->font_count > FL_FONTS_MAX) {
+        ERROR_ADD(FlError_Font, "Max number of fonts %d has been reached", FL_FONTS_MAX);
+        return -1;
+    }
+
+    Font* font = FlAllocator_alloc_zero_type(state->global_allocator, Font);
+    font->ft_face = face;
+
+    int font_id = state->font_count++;
+    state->fonts[font_id] = font;
+
+
+#if 0
     LinearAllocator allocator;
 
     // TODO: Add support for Immeditae/DeferredMode
@@ -137,8 +136,6 @@ FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size,
     // TODO: Do all ranges
 
     // TODO: Validate ranges
-    s16 start = ranges->ranges[0];
-    s16 end = ranges->ranges[1] + 1;  // + 1 to make range inclusive
 
     // Approx alloc size needed
     int array_len = end - start;
@@ -356,6 +353,7 @@ FlFont fl_font_from_memory(const char* name, const u8* font_data, u32 data_size,
     }
 
     state->fonts[font_id] = font;
+#endif
 
     return (FlFont)font_id;
 }

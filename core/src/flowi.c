@@ -83,6 +83,7 @@ typedef struct FadeAction {
 FlContext* fl_context_create(struct FlGlobalState* state) {
     FlContext* ctx = malloc(sizeof(FlContext));
     memset(ctx, 0, sizeof(FlContext));
+    state->global_allocator = &malloc_allocator;
 
     // TODO: Use custom allocator
     ctx->positions = (vec128*)malloc(sizeof(vec128) * (MAX_CONTROLS + +MEMORY_PADDING));

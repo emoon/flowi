@@ -8,13 +8,57 @@
 // TODO: Support io-override
 #include <stdio.h>
 
+#if defined(_WIN32)
+extern __declspec(dllimport) int __stdcall MultiByteToWideChar(unsigned int cp, unsigned long flags, const char* str,
+                                                               int cbmb, wchar_t* widestr, int cchwide);
+#define CP_UTF8 65001
+#endif
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FILE* open_file(const char* filename, const char* mode) {
+#ifdef _WIN32
+    int len = 0;
+    int file_len = strlen(filename);
+    int mode_len = strlen(mode);
+    wchar_t wpath[MAX_PATH];
+    wchar_t wmode[MAX_PATH];
+
+    if (file_len == 0) {
+        return NULL;
+    }
+
+    if (mode_len == 0) {
+        return NULL;
+    }
+
+    int len = MultiByteToWideChar(CP_UTF8, 0, filename, file_len, wpath, file_len);
+    if (len >= MAX_PATH) {
+    	// TODO: Error
+        return NULL;
+    }
+
+    wpath[len] = L'\0';
+    len = MultiByteToWideChar(CP_UTF8, 0, mode, mode_len, wmode, mode_len);
+    if (len >= MAX_PATH) {
+    	// TODO: Error
+        return NULL;
+    }
+
+    wmode[len] = L'\0';
+	return _wfopen(wpath, wmode);
+#else
+    return fopen(filename, mode);
+#endif
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Add support to override IO functions
 // TODO: Add allocator
 
 u8* Io_load_file_to_memory(const char* filename, u32* out_size) {
     // TODO: Use internal/sandboxed allocator
-    FILE* f = fopen(filename, "rb");
+    FILE* f = open_file(filename, "rb");
     u8* data = NULL;
     *out_size = 0;
 
@@ -66,8 +110,8 @@ cleanup:
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Errors_add(FlError err, const char* filename, int line, const char* fmt, ...) {
-	FL_UNUSED(err);
-	FL_UNUSED(filename);
-	FL_UNUSED(line);
-	FL_UNUSED(fmt);
+    FL_UNUSED(err);
+    FL_UNUSED(filename);
+    FL_UNUSED(line);
+    FL_UNUSED(fmt);
 }

@@ -5,6 +5,7 @@
 #include "../include/config.h"
 #include "flowi.h"
 #include "../include/flowi_render.h"
+#include <freetype/freetype.h>
 
 // TODO: Investigate making memory usage smaller
 
@@ -19,6 +20,8 @@ typedef struct Glyph {
 // TODO: Don't have a big array for all glyphs
 // Maybe have one level if indirection table instead
 typedef struct Font {
+    FT_Face ft_face;
+
     // faster lookup for figuring out length in Basic_Case
     f32* advance_x;
     Glyph* glyphs;
