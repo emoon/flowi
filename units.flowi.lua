@@ -94,6 +94,7 @@ StaticLibrary {
         FLOWI_DIR .. "area.c",
         FLOWI_DIR .. "flowi.c",
         FLOWI_DIR .. "flowi_font.c",
+        FLOWI_DIR .. "atlas.c",
         FLOWI_DIR .. "io.c",
         FLOWI_DIR .. "linear_allocator.c",
         FLOWI_DIR .. "primitives.c",

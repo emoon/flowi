@@ -55,7 +55,15 @@ typedef double f64;
 #define FL_ASSUME(cond) while (0) { }
 #endif
 
+// macro for returning a bool if allocation fails
 
+#if defined(FL_ASSUME_ALLOCS_NEVER_FAILS)
+#define FL_TRY_ALLOC_BOOL(expr) (void)expr
+#define FL_TRY_ALLOC_INT(expr) (void)expr
+#else
+#define FL_TRY_ALLOC_BOOL(expr) if (!(expr)) { return false; }
+#define FL_TRY_ALLOC_INT(expr) if (!(expr)) { return -1; }
+#endif
 
 
 

@@ -18,3 +18,7 @@ typedef struct FlAllocator {
 #define FlAllocator_memalign(self, align, size) self->memalign(self->user_data, align, size)
 #define FlAllocator_realloc(self, ptr, size) self->realloc(self->user_data, ptr, size)
 #define FlAllocator_free(self, ptr) self->free(self->user_data, ptr)
+
+#define FlAllocator_alloc_type(self, type) (type*)self->alloc(self->user_data, sizeof(type))
+#define FlAllocator_alloc_array_type(self, count, type) (type*)self->alloc(self->user_data, count * sizeof(type))
+

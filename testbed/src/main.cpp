@@ -358,12 +358,14 @@ int main() {
 
     bgfx::setPlatformData(pd);
 
+    int reset_flags = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8;
+
     bgfx::Init bgfxInit;
     //bgfxInit.type = bgfx::RendererType::Count;
     bgfxInit.type = bgfx::RendererType::OpenGL;
     bgfxInit.resolution.width = WINDOW_WIDTH;
     bgfxInit.resolution.height = WINDOW_HEIGHT;
-    bgfxInit.resolution.reset = BGFX_RESET_VSYNC;
+    bgfxInit.resolution.reset = reset_flags;
     bgfxInit.platformData = pd;
 
     printf("init\n");
@@ -383,7 +385,6 @@ int main() {
     //bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00ff00ff, 1.0f, 0);
 
     // glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
 
     bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
 
@@ -414,16 +415,18 @@ int main() {
 
     glfwGetWindowSize(window, &old_width, &old_height);
 
+    // hack
+    int counter = 2;
+
     while (!glfwWindowShouldClose(window)) {
         int display_w, display_h;
         glfwGetWindowSize(window, &display_w, &display_h);
 
-        if ((old_width != display_w) || (old_height != display_h)) {
-            bgfx::reset(display_w, display_h, BGFX_RESET_VSYNC);
+        if ((old_width != display_w) || (old_height != display_h) || counter != 0) {
+            bgfx::reset(display_w, display_h, reset_flags);
             old_width = display_w;
             old_height = display_h;
-
-            printf("display size %d %d\n", display_w, display_h);
+            counter--;
         }
 
         bgfx::setViewRect(0, 0, 0, uint16_t(display_w), uint16_t(display_h));

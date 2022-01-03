@@ -240,6 +240,7 @@ Program {
 
     Sources = {
         "core/tests/area_tests.c",
+        "core/tests/atlas_tests.c",
         "core/tests/linear_allocator_tests.c",
         "core/tests/style_tests.c",
         "core/tests/tests.c",
