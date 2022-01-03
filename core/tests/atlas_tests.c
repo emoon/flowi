@@ -54,3 +54,22 @@ UTEST(Atlas, add_single_rect_fail) {
 	Atlas_destroy(atlas);
 }
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(Atlas, add_rects_util_fail_expand_once) {
+	int rx = 0, ry = 0, i;
+	struct Atlas* atlas = Atlas_create(64, 64, 256, &malloc_allocator);
+
+	for (i = 0; i < 128; ++i) {
+		if (!Atlas_add_rect(atlas, i, i * 2, &rx, &ry)) {
+			break;
+		}
+	}
+
+	ASSERT_TRUE(Atlas_expand(atlas, 256, 256));
+	ASSERT_TRUE(Atlas_add_rect(atlas, i, i * 2, &rx, &ry));
+
+	Atlas_destroy(atlas);
+}
+
