@@ -4,6 +4,7 @@
 #include "types.h"
 #include "../include/config.h"
 #include "flowi.h"
+#include "font.h"
 #include "../include/flowi_render.h"
 #include <freetype/freetype.h>
 
@@ -17,23 +18,34 @@ typedef struct Glyph {
     f32 advance_x;
 } Glyph;
 
-// TODO: Don't have a big array for all glyphs
+typedef struct CodepointSize {
+    u32 codepoint;
+    u16 size;
+    u16 next_index;
+} CodepointSize;
+
+typedef struct GlyphInfo {
+    CodepointSize* codepoint_sizes;
+    Glyph* glyphs;
+    f32* advance_x;
+    int count;
+    int capacity;
+} GlyphInfo;
+
+#define HASH_LUT_SIZE 256
+
 // Maybe have one level if indirection table instead
 typedef struct Font {
     FT_Face ft_face;
 
-    // faster lookup for figuring out length in Basic_Case
-    f32* advance_x;
-    Glyph* glyphs;
-    //FL_WCHAR* gryphs;
-    u8* texture_data;
-    u32 glyph_count;
+    // TODO: Special case for codepoints <= 0xff ? need to handle different sizes also
+    int lut[HASH_LUT_SIZE];
 
-    // Format of the texture (usually R8_LINEAR or RGBA_sRGB/LINEAR)
-    FlTextureFormat texture_format;
-    u16 texture_width;
-    u16 texture_height;
+    GlyphInfo glyph_info;
 
     // Debug data
     char debug_name[512];
 } Font;
+
+void Font_generate_glyphs(struct FlContext* FL_RESTRICT ctx, FlFont font_id, const u32* FL_RESTRICT codepoints, int count, int size);
+

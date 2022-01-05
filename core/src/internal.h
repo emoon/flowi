@@ -36,6 +36,13 @@ typedef struct FlGlobalState {
     BuildRenderState render_data;
     BuildPrimitives primitives_data;
     FlAllocator* global_allocator;
+
+    // TODO: We may have to support more atlases, but right now we have three
+    // One for grayscale fonts, one for colored fonts and one for images.
+    struct Atlas* mono_fonts_atlas;
+    struct Atlas* color_fonts_atlas;
+    struct Atlas* images_atlas;
+
     // TODO: Fix max number of fonts
     struct Font* fonts[FL_FONTS_MAX];
     int font_count;

@@ -271,7 +271,7 @@ void fl_frame_begin(struct FlContext* ctx) {
 u8* draw_text(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
-    Font* font = ctx->global_state->fonts[prim->font_handle];
+    //Font* font = ctx->global_state->fonts[prim->font_handle];
 
     const int text_len = prim->len;
 
@@ -287,15 +287,17 @@ u8* draw_text(struct FlContext* ctx, const u8* cmd) {
         assert(0);
     }
 
-    FlVec2 pos = {10.0f, -20.0f};
+    //FlVec2 pos = {10.0f, -20.0f};
 
-    Text_generate_vertex_buffer_ref(vertices, indices, font->glyphs, codepoints, 0x0fffffff, pos, 0, text_len);
+	/*
+    //Text_generate_vertex_buffer_ref(vertices, indices, font->glyphs, codepoints, 0x0fffffff, pos, 0, text_len);
 
     FlRcTexturedTriangles* tri_data = Render_render_texture_triangles_static(ctx->global_state, vertices, indices);
 
     tri_data->vertex_count = text_len * 4;
     tri_data->index_count = text_len * 6;
     tri_data->texture_id = 0;  // TODO: Fix me
+    */
 
     return (u8*)(prim + 1);
 }

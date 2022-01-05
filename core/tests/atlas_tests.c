@@ -27,48 +27,46 @@ static FlAllocator malloc_allocator = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(Atlas, create_destroy) {
-	struct Atlas* atlas = Atlas_create(256, 256, 256, &malloc_allocator);
+	struct Atlas* atlas = Atlas_create(256, 256, AtlasImageType_U8, &malloc_allocator);
 	Atlas_destroy(atlas);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(Atlas, add_single_rect) {
-	int rx = 0, ry = 0;
-	struct Atlas* atlas = Atlas_create(256, 256, 256, &malloc_allocator);
+	int rx = 0, ry = 0, stride = 0;
+	struct Atlas* atlas = Atlas_create(256, 256, AtlasImageType_U8, &malloc_allocator);
 
-	ASSERT_TRUE(Atlas_add_rect(atlas, 64, 64, &rx, &ry));
+	ASSERT_NE(Atlas_add_rect(atlas, 64, 64, &rx, &ry, &stride), NULL);
 
 	Atlas_destroy(atlas);
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(Atlas, add_single_rect_fail) {
-	int rx = 0, ry = 0;
-	struct Atlas* atlas = Atlas_create(64, 64, 256, &malloc_allocator);
+	int rx = 0, ry = 0, stride = 0;
+	struct Atlas* atlas = Atlas_create(64, 64, AtlasImageType_U8, &malloc_allocator);
 
-	ASSERT_FALSE(Atlas_add_rect(atlas, 128, 128, &rx, &ry));
+	ASSERT_EQ(Atlas_add_rect(atlas, 128, 128, &rx, &ry, &stride), NULL);
 
 	Atlas_destroy(atlas);
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(Atlas, add_rects_util_fail_expand_once) {
-	int rx = 0, ry = 0, i;
-	struct Atlas* atlas = Atlas_create(64, 64, 256, &malloc_allocator);
+	int rx = 0, ry = 0, stride = 0, i;
+	struct Atlas* atlas = Atlas_create(64, 64, AtlasImageType_U8, &malloc_allocator);
 
 	for (i = 0; i < 128; ++i) {
-		if (!Atlas_add_rect(atlas, i, i * 2, &rx, &ry)) {
+		if (Atlas_add_rect(atlas, i, i * 2, &rx, &ry, &stride) == NULL) {
 			break;
 		}
 	}
 
 	ASSERT_TRUE(Atlas_expand(atlas, 256, 256));
-	ASSERT_TRUE(Atlas_add_rect(atlas, i, i * 2, &rx, &ry));
+	ASSERT_NE(Atlas_add_rect(atlas, i, i * 2, &rx, &ry, &stride), NULL);
 
 	Atlas_destroy(atlas);
 }

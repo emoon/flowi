@@ -4,6 +4,16 @@ require "tundra.util"
 
 -----------------------------------------------------------------------------------------------------------------------
 
+local function get_c_src(dir)
+    return Glob {
+        Dir = dir,
+        Extensions = { ".c", ".h" },
+        Recursive = true,
+}
+end
+
+-----------------------------------------------------------------------------------------------------------------------
+
 local FLOWI_DIR = "core/src/"
 local FREETYPE2_LIB = "core/external/freetype2/"
 local STB_LIB = "core/external/stb/"
@@ -90,18 +100,7 @@ StaticLibrary {
 
     Sources = {
         STB_LIB .. "stb.c",
-        TLSF_LIB .. "tlsf.c",
-        FLOWI_DIR .. "area.c",
-        FLOWI_DIR .. "flowi.c",
-        FLOWI_DIR .. "font.c",
-        FLOWI_DIR .. "atlas.c",
-        FLOWI_DIR .. "io.c",
-        FLOWI_DIR .. "linear_allocator.c",
-        FLOWI_DIR .. "primitives.c",
-        FLOWI_DIR .. "render.c",
-        FLOWI_DIR .. "style.c",
-        FLOWI_DIR .. "text.c",
-        FLOWI_DIR .. "vertex_allocator.c",
+        get_c_src(FLOWI_DIR),
     },
 }
 

@@ -42,6 +42,9 @@ FlFont fl_font_create_from_file(struct FlContext* ctx, const char* filename, int
 FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int name_len, const u8* data, u32 data_size,
                                   int font_size, FlFontGlyphPlacementMode placement_mode);
 
+// Destroy an existing created font
+void fl_font_destroy(struct FlContext* ctx, FlFont font_id);
+
 // Set the font as active when drawing text
 void fl_font_set(struct FlContext* ctx, FlFont handle);
 

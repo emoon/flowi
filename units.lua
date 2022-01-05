@@ -6,6 +6,16 @@ local native = require('tundra.native')
 
 -----------------------------------------------------------------------------------------------------------------------
 
+local function get_c_src(dir)
+    return Glob {
+        Dir = dir,
+        Extensions = { ".c", ".h" },
+        Recursive = true,
+}
+end
+
+-----------------------------------------------------------------------------------------------------------------------
+
 local GLFW_DIR = "testbed/external/glfw/"
 local BIMG_DIR = "testbed/external/bimg/"
 local BX_DIR = "testbed/external/bx/"
@@ -238,15 +248,7 @@ Program {
         FREETYPE2_LIB .. "include",
     },
 
-    Sources = {
-        "core/tests/area_tests.c",
-        "core/tests/atlas_tests.c",
-        "core/tests/linear_allocator_tests.c",
-        "core/tests/style_tests.c",
-        "core/tests/tests.c",
-        "core/tests/text_tests.c",
-        "core/tests/vertex_allocator_tests.c",
-    },
+    Sources = get_c_src("core/tests"),
 
     Env = {
         PROGCOM = {
@@ -266,10 +268,7 @@ Program {
         FREETYPE2_LIB .. "include",
     },
 
-    Sources = {
-        "core/bench/atlas_bench.c",
-        "core/bench/bench_main.c",
-    },
+    Sources = get_c_src("core/bench"),
 
     Depends = { "flowi" },
 }

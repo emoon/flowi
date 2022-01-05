@@ -10,8 +10,8 @@
 #include "utils.h"
 
 // TODO: Support external functions
-#include <math.h>
 #include <freetype/freetype.h>
+#include <math.h>
 
 //#if fl_ALLOW_STDIO
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,6 +77,24 @@ typedef struct TempGlyphInfo {
 #define FT_CEIL(X) (((X + 63) & -64) / 64)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static Font* font_create(FlContext* ctx, FT_Face face) {
+    Font* font = FlAllocator_alloc_zero_type(ctx->global_state->global_allocator, Font);
+
+    if (!font) {
+        return NULL;
+    }
+
+    font->ft_face = face;
+
+    for (int i = 0; i < HASH_LUT_SIZE; ++i) {
+        font->lut[i] = -1;
+    }
+
+    return font;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Build a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
 // Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
 FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int name_len, const u8* font_data,
@@ -114,18 +132,20 @@ FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int n
         return -1;
     }
 
-
     if (state->font_count > FL_FONTS_MAX) {
         ERROR_ADD(FlError_Font, "Max number of fonts %d has been reached", FL_FONTS_MAX);
         return -1;
     }
 
-    Font* font = FlAllocator_alloc_zero_type(state->global_allocator, Font);
-    font->ft_face = face;
+    Font* font = font_create(ctx, face);
+
+    if (!font) {
+        ERROR_ADD(FlError_Font, "Unable to allocate memory for font: %s", "fixme");
+        return -1;
+    }
 
     int font_id = state->font_count++;
     state->fonts[font_id] = font;
-
 
 #if 0
     LinearAllocator allocator;
@@ -356,6 +376,129 @@ FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int n
 #endif
 
     return (FlFont)font_id;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Destroy an existing created font
+
+void fl_font_destroy(struct FlContext* ctx, FlFont font_id) {
+    FlGlobalState* state = ctx->global_state;
+
+    if (font_id < 0 || font_id >= state->font_count) {
+        ERROR_ADD(FlError_Font, "Tried to destroy font id %d, but id is out of range (0 - %d)", font_id,
+                  state->font_count - 1);
+        return;
+    }
+
+    Font* font = state->fonts[font_id];
+
+    FT_Error error = FT_Done_Face(font->ft_face);
+    if (error != 0) {
+        ERROR_ADD(FlError_Font, "Freetype error %s when destroying font font: %s", FT_Error_String(error),
+                  font->debug_name);
+    }
+
+    FlAllocator_free(state->global_allocator, font->glyph_info.codepoint_sizes);
+    FlAllocator_free(state->global_allocator, font);
+
+    state->fonts[font_id] = NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Hash a codepoint to allow us faster lookups
+
+FL_INLINE u32 hash_int(u32 a) {
+    a += ~(a << 15);
+    a ^= (a >> 10);
+    a += (a << 3);
+    a ^= (a >> 6);
+    a += ~(a << 11);
+    a ^= (a >> 16);
+    return a;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TODO: Use glyph allocator
+
+static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
+    GlyphInfo* info = &font->glyph_info;
+
+    if (info->count + 1 > info->capacity) {
+        const int old_size = info->capacity;
+        const int new_size = old_size == 0 ? 16 : old_size * 2;
+        // we batch all of the allocations into and get the new ranges.
+        // As we do the batching like this we can't use regular realloc so we manually memcopy the old data
+        u8* data = FlAllocator_alloc(ctx->global_state->global_allocator,
+                                     sizeof(Glyph) + sizeof(CodepointSize) + sizeof(f32) * new_size);
+
+        CodepointSize* codepoint_sizes = (CodepointSize*)data;
+        Glyph* glyphs = (Glyph*)(codepoint_sizes + new_size);
+        f32* advance_x = (f32*)(glyphs + new_size);
+
+        // Copy the old data data if we had any
+        if (old_size != 0) {
+            memcpy(codepoint_sizes, info->codepoint_sizes, old_size * sizeof(CodepointSize));
+            memcpy(glyphs, info->glyphs, old_size * sizeof(Glyph));
+            memcpy(advance_x, info->advance_x, old_size * sizeof(f32));
+            FlAllocator_free(ctx->global_state->global_allocator, info->codepoint_sizes);
+        }
+
+        info->codepoint_sizes = codepoint_sizes;
+        info->glyphs = glyphs;
+        info->advance_x = advance_x;
+
+        info->capacity = new_size;
+    }
+
+    int index = info->count++;
+
+    return index;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint, int size) {
+    GlyphInfo* info = &font->glyph_info;
+
+    const CodepointSize* codepoint_sizes = info->codepoint_sizes;
+
+    // TODO: :Perf: Unpack all codepoints to an array first as it allows the compiler to generate vector instructions
+    // instead
+    const u32 hash_idx = hash_int(codepoint) & (HASH_LUT_SIZE - 1);
+    u16 hash_entry = font->lut[hash_idx];
+
+    // find glyph if it exists already
+    while (hash_entry != 0xffff) {
+        const CodepointSize* current = &codepoint_sizes[hash_entry];
+
+        // already generated
+        if (current->codepoint == codepoint && current->size == size) {
+            return false;
+        }
+
+        hash_entry = current->next_index;
+    }
+
+    int alloc_index = allocate_glyph(ctx, font);
+
+    info->codepoint_sizes[alloc_index].codepoint = codepoint;
+    info->codepoint_sizes[alloc_index].size = codepoint;
+    info->codepoint_sizes[alloc_index].next_index = font->lut[hash_idx];
+    font->lut[hash_idx] = alloc_index;
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Font_generate_glyphs(FlContext* FL_RESTRICT ctx, FlFont font_id, const u32* FL_RESTRICT codepoints, int count,
+                          int size) {
+    Font* font = ctx->global_state->fonts[font_id];
+
+    for (int i = 0; i < count; ++i) {
+        const u32 codepoint = *codepoints++;
+        generate_glyph(ctx, font, codepoint, size);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

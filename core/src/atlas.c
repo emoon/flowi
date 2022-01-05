@@ -1,21 +1,10 @@
+#include "atlas.h"
 #include "types.h"
 #include "allocator.h"
 #include "../include/error.h"
 #include "internal.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-typedef struct AtlasNode {
-    short x, y, width;
-} AtlasNode;
-
-typedef struct Atlas {
-    int width, height;
-    AtlasNode* nodes;
-    int count;
-    int capacity;
-    FlAllocator* allocator;
-} Atlas;
+#define PRE_ALLOC_COUNT 256
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -67,8 +56,35 @@ bool Atlas_expand(Atlas* atlas, int w, int h) {
         }
     }
 
+    const int memory_size = w * h * atlas->image_stride_mul;
+
+	u8* image_data = FlAllocator_alloc(atlas->allocator, memory_size);
+	if (!image_data) {
+		ERROR_ADD(FlError_Memory, "Out of memory expanding Atlas: %d size", memory_size);
+		return false;
+	}
+
+	u8* dest = image_data;
+	u8* src = atlas->image_data;
+
+    // copy the old image data to the new
+
+	const int old_stride = atlas->image_stride;
+	const int new_stride = w * atlas->image_stride_mul;
+
+	for (int i = 0, old_h = atlas->height; i < old_h; ++i) {
+		memcpy(dest, src, old_stride);
+		dest += new_stride;
+		src += old_stride;
+	}
+
+	FlAllocator_free(atlas->allocator, atlas->image_data);
+
+	atlas->image_data = image_data;
+
     atlas->width = w;
     atlas->height = h;
+    atlas->image_stride = 0;//new_stride;
 
     return true;
 }
@@ -162,7 +178,7 @@ static int rect_fits(const Atlas* atlas, int i, int w, int h) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool Atlas_add_rect(Atlas* atlas, int rw, int rh, int* rx, int* ry) {
+u8* Atlas_add_rect(Atlas* atlas, int rw, int rh, int* rx, int* ry, int* image_stride) {
     int besth = atlas->height, bestw = atlas->width, besti = -1;
     int bestx = -1, besty = -1, i;
     const int count = atlas->count;
@@ -182,18 +198,22 @@ bool Atlas_add_rect(Atlas* atlas, int rw, int rh, int* rx, int* ry) {
     }
 
     if (besti == -1) {
-        return false;
+        return NULL;
     }
 
     // Perform the actual packing.
     if (!add_skyline_level(atlas, besti, bestx, besty, rw, rh)) {
-        return false;
+        return NULL;
     }
 
     *rx = bestx;
     *ry = besty;
+    *image_stride = atlas->image_stride;
 
-    return true;
+	// Return star ptr to fill with image data
+    u8* image_data = atlas->image_data + (besty * atlas->image_stride) + bestx;
+
+    return image_data;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -206,18 +226,39 @@ void Atlas_destroy(Atlas* atlas) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Atlas* Atlas_create(int w, int h, int pre_alloc, FlAllocator* allocator) {
-	Atlas* atlas = FlAllocator_alloc_type(allocator, Atlas);
-	memset(atlas, 0, sizeof(Atlas));
+Atlas* Atlas_create(int w, int h, AtlasImageType image_type, FlAllocator* allocator) {
+	int image_stride_mul = 0;
 
+	if (image_type == AtlasImageType_U8) {
+		image_stride_mul = 1;
+	} else if (image_type == AtlasImageType_RGBA8) {
+		image_stride_mul = 4;
+	} else {
+		ERROR_ADD(FlError_Memory, "Invalid image type %d", image_type);
+		return NULL;
+	}
+
+	const int image_memory_size = w * h * image_stride_mul;
+
+	u8* image_data = FlAllocator_alloc(allocator, image_memory_size);
+	if (!image_data) {
+		ERROR_ADD(FlError_Memory, "Unable to allocate memory for Atlas: %d", image_memory_size);
+		return NULL;
+	}
+
+	Atlas* atlas = FlAllocator_alloc_zero_type(allocator, Atlas);
 	if (!atlas) {
 		ERROR_ADD(FlError_Memory, "Unable to create atlas: %s", "out of memory");
 		return NULL;
 	}
 
 	atlas->allocator = allocator;
-	atlas->nodes = FlAllocator_alloc_array_type(allocator, pre_alloc, AtlasNode);
-	atlas->capacity = pre_alloc;
+	atlas->nodes = FlAllocator_alloc_array_type(allocator, PRE_ALLOC_COUNT, AtlasNode);
+	atlas->capacity = PRE_ALLOC_COUNT;
+	atlas->image_type = image_type;
+	atlas->image_stride = w * image_stride_mul;
+	atlas->image_stride_mul = image_stride_mul;
+	atlas->image_data = image_data;
 
 	if (!atlas->nodes) {
 		ERROR_ADD(FlError_Memory, "Unable to create atlas nodes: %s", "out of memory");
