@@ -95,6 +95,7 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
         switch (cmd) {
 			case FlRc_UpdateTexture: {
 				const FlRcUpdateTexture* cmd = (FlRcUpdateTexture*)render_cmd_data;
+				ASSERT_NE(cmd->source_data, NULL);
 				ASSERT_EQ(cmd->texture_id, state->mono_fonts_atlas->texture_id);
 				found_update_texture = true;
 				break;

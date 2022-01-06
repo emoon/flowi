@@ -39,36 +39,55 @@ bool utf8_to_codepoints_u32(u32* output, const u8* input, int len) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
+
 void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSize* FL_RESTRICT index_buffer,
-                                     const Glyph* FL_RESTRICT glyph_lookup, const u32* FL_RESTRICT codepoints,
+                                     const Font* FL_RESTRICT font, const u32* FL_RESTRICT codepoints,
                                      u32 color, FlVec2 pos, FlIdxSize vertex_id, int count) {
     for (int i = 0; i < count; ++i) {
     	u32 cp = *codepoints++;
-        const Glyph* g = &glyph_lookup[cp];
 
-        out[0].x = pos.x + g->x0;
-        out[0].y = pos.y + g->y0;
-        out[0].u = g->u0;
-        out[0].v = g->v0;
+		Glyph* g = Font_get_glyph(font, cp);
+
+		// TODO: Should never happen, should log error here
+		if (!g) {
+			continue;
+		}
+
+        u16 x0 = g->x0;
+        u16 y0 = g->y0;
+        u16 x1 = g->x1;
+        u16 y1 = g->y1;
+
+        float rx = g->x_offset + pos.x;
+        float ry = g->y_offset + pos.y;
+
+        float nx0 = rx;
+        float ny0 = ry;
+        float nx1 = rx + (x1 - x0);
+        float ny1 = ry + (y1 - y0);
+
+        out[0].x = nx0;
+        out[0].y = ny0;
+        out[0].u = x0;
+        out[0].v = y0;
         out[0].color = color;
 
-        out[1].x = pos.x + g->x1;
-        out[1].y = pos.y + g->y0;
-        out[1].u = g->u1;
-        out[1].v = g->v0;
+        out[1].x = nx1;
+        out[1].y = ny0;
+        out[1].u = x1;
+        out[1].v = y0;
         out[1].color = color;
 
-        out[2].x = pos.x + g->x1;
-        out[2].y = pos.y + g->y1;
-        out[2].u = g->u1;
-        out[2].v = g->v1;
+        out[2].x = nx1;
+        out[2].y = ny1;
+        out[2].u = x1;
+        out[2].v = y1;
         out[2].color = color;
 
-        out[3].x = pos.x + g->x0;
-        out[3].y = pos.y + g->y1;
-        out[3].u = g->u0;
-        out[3].v = g->v1;
+        out[3].x = nx0;
+        out[3].y = ny1;
+        out[3].u = x0;
+        out[3].v = y1;
         out[3].color = color;
 
         index_buffer[0] = vertex_id + 0;
@@ -86,7 +105,6 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
         index_buffer += 6;
     }
 }
-*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Calculate AABB for the text

@@ -273,10 +273,14 @@ void fl_frame_begin(struct FlContext* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 u8* draw_text(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
-    //Font* font = ctx->global_state->fonts[prim->font_handle];
+    Font* font = ctx->global_state->fonts[prim->font_handle];
 
     const int text_len = prim->len;
 
@@ -292,17 +296,33 @@ u8* draw_text(struct FlContext* ctx, const u8* cmd) {
         assert(0);
     }
 
-    //FlVec2 pos = {10.0f, -20.0f};
+    FlVec2 pos = {10.0f, 80.0f};
 
-	/*
-    //Text_generate_vertex_buffer_ref(vertices, indices, font->glyphs, codepoints, 0x0fffffff, pos, 0, text_len);
+    Text_generate_vertex_buffer_ref(vertices, indices, font, codepoints, 0x0fffffff, pos, 0, text_len);
 
     FlRcTexturedTriangles* tri_data = Render_render_texture_triangles_static(ctx->global_state, vertices, indices);
 
     tri_data->vertex_count = text_len * 4;
     tri_data->index_count = text_len * 6;
     tri_data->texture_id = 0;  // TODO: Fix me
-    */
+
+    return (u8*)(prim + 1);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+u8* generate_glyphs(struct FlContext* ctx, const u8* cmd) {
+    PrimitiveText* prim = (PrimitiveText*)cmd;
+
+    const int text_len = prim->len;
+    Font* font = ctx->global_state->fonts[prim->font_handle]; // TODO: fix me
+
+	// TODO: we should hash the text, font, + size + dirty and don't
+	// don't try to regenerate glyphs if hash matches
+    u32* codepoints = alloca(sizeof(u32) * text_len);
+    utf8_to_codepoints_u32(codepoints, (u8*)prim->text, text_len);
+
+	Font_generate_glyphs(ctx, prim->font_handle, codepoints, text_len, font->default_size);
 
     return (u8*)(prim + 1);
 }
@@ -310,10 +330,36 @@ u8* draw_text(struct FlContext* ctx, const u8* cmd) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_frame_end(struct FlContext* ctx) {
-    BuildPrimitives* primitives = &ctx->global_state->primitives_data;
+	FlGlobalState* state = ctx->global_state;
+    BuildPrimitives* primitives = &state->primitives_data;
 
     const u8* commands = primitives->start_data;
     const u8* commands_save = commands;
+
+    // first do generation pass
+    // TODO: Clean this up
+
+	Atlas_begin_add_rects(state->mono_fonts_atlas);
+
+    while (1) {
+        Primitive prim = (Primitive)*commands++;
+
+        switch (prim) {
+            case Primitive_DrawText: {
+                commands = generate_glyphs(ctx, commands);
+                break;
+            }
+
+            default:
+            	goto exit_1;
+        }
+    }
+
+exit_1:
+	Atlas_end_add_rects(state->mono_fonts_atlas, state);
+
+    commands = primitives->start_data;
+    commands_save = commands;
 
     // TODO: Function pointers instead of switch?
 

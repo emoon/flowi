@@ -144,6 +144,8 @@ FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int n
         return -1;
     }
 
+    font->default_size = font_size;
+
     int font_id = state->font_count++;
     state->fonts[font_id] = font;
 
@@ -198,11 +200,15 @@ static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
     if (info->count + 1 > info->capacity) {
         const int old_size = info->capacity;
         const int new_size = old_size == 0 ? 16 : old_size * 2;
+
+        printf("old size %d - new size %d\n", old_size, new_size);
+
+        int total_size = (sizeof(Glyph) + sizeof(CodepointSize) + sizeof(f32)) * new_size;
+
         // TODO: Handle OOM
         // we batch all of the allocations into and get the new ranges.
         // As we do the batching like this we can't use regular realloc so we manually memcopy the old data
-        u8* data = FlAllocator_alloc(ctx->global_state->global_allocator,
-                                     sizeof(Glyph) + sizeof(CodepointSize) + sizeof(f32) * new_size);
+        u8* data = FlAllocator_alloc(ctx->global_state->global_allocator, total_size);
 
         CodepointSize* codepoint_sizes = (CodepointSize*)data;
         Glyph* glyphs = (Glyph*)(codepoint_sizes + new_size);
@@ -226,6 +232,27 @@ static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
     int index = info->count++;
 
     return index;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Find glyph given codepoint
+// TODO: Check performance of this code
+
+Glyph* Font_get_glyph(const Font* self, u32 codepoint) {
+    const u32 hash_idx = hash_int(codepoint) & (HASH_LUT_SIZE - 1);
+    u16 hash_entry = self->lut[hash_idx];
+    int size = self->default_size;	// TODO: Fixme
+
+    while (hash_entry != 0xffff) {
+        const CodepointSize* current = &self->glyph_info.codepoint_sizes[hash_entry];
+        if (current->codepoint == codepoint && current->size == size) {
+        	return &self->glyph_info.glyphs[hash_entry];
+        }
+
+        hash_entry = current->next_index;
+    }
+
+    return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -253,7 +280,6 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
 
         hash_entry = current->next_index;
     }
-
 
     // Find a glyph for the codepoint
     // TODO: Add fallback options
@@ -288,8 +314,11 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
 
 	// Alloc glyph and insert into hashtable
     int alloc_index = allocate_glyph(ctx, font);
+
+	printf("alloc index %d\n", alloc_index);
+
     info->codepoint_sizes[alloc_index].codepoint = codepoint;
-    info->codepoint_sizes[alloc_index].size = codepoint;
+    info->codepoint_sizes[alloc_index].size = size;
     info->codepoint_sizes[alloc_index].next_index = font->lut[hash_idx];
     font->lut[hash_idx] = alloc_index;
 
@@ -302,7 +331,6 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     int x1 = x0 + g->bitmap.width;
     int y0 = -g->bitmap_top;
     int y1 = y0 + g->bitmap.rows;
-    int glyph_offset = 0;
 
     int gw = x1 - x0;
     int gh = y1 - y0;
@@ -319,13 +347,21 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
         return false;
 	}
 
+	printf("stride %d\n", stride);
+
+	const u8* src = g->bitmap.buffer;
+	const int src_pitch = g->bitmap.pitch;
+
+	printf("width %d %d\n", g->bitmap.width, src_pitch);
+
 	// TODO: Handle the case when we have colors here also
     for (int y = 0, rows = g->bitmap.rows; y < rows; ++y) {
-        for (int x = 0, width = g->bitmap.width; x < width; ++x) {
-            dest[(y * stride) + x] = g->bitmap.buffer[glyph_offset++];
-        }
+    	memcpy(dest, src, g->bitmap.width);
+    	dest += stride;
+    	src += src_pitch;
     }
 
+    printf("writing to %p\n", glyph);
 
     glyph->x0 = rx;
     glyph->y0 = ry;
@@ -334,13 +370,6 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     glyph->x_offset = (u16)x0;
     glyph->y_offset = (u16)y0;
 	glyph->advance_x = (float)FT_CEIL(g->advance.x);
-
-	/*
-	printf("-------------------------\n");
-    printf("%d %d\n", glyph->x0, glyph->y0);
-    printf("%d %d\n", glyph->x1, glyph->y1);
-    printf("%d %d\n", glyph->x_offset, glyph->y_offset);
-    */
 
     return true;
 }

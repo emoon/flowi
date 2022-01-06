@@ -41,10 +41,12 @@ typedef struct Font {
     int lut[HASH_LUT_SIZE];
 
     GlyphInfo glyph_info;
+    int default_size;
 
     // Debug data
     char debug_name[512];
 } Font;
 
 void Font_generate_glyphs(struct FlContext* FL_RESTRICT ctx, FlFont font_id, const u32* FL_RESTRICT codepoints, int count, int size);
+Glyph* Font_get_glyph(const Font* self, u32 codepoint);
 

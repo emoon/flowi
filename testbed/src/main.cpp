@@ -22,6 +22,8 @@
 struct Texture {
     bgfx::TextureHandle handle;
     int size;
+    int width;
+    int height;
     float inv_x;
     float inv_y;
 };
@@ -143,9 +145,9 @@ void ui_init(RenderContext& ctx) {
 void ui_update(FlContext* ctx) {
     fl_frame_begin(ctx);
 
-    Area_generate_circle(ctx);
+    // Area_generate_circle(ctx);
 
-    // fl_text(ctx, "Almost before we knew it");
+    fl_text(ctx, "Testing");
 
     /*
     if (fl_button_c(ctx, "test")) {
@@ -253,6 +255,8 @@ static const u8* create_texture(RenderContext& ctx, const u8* render_data) {
             texture->inv_x = 1.0f / width;
             texture->inv_y = 1.0f / height;
             texture->size = width * height;
+            texture->height = height;
+            texture->width = width;
             break;
         }
 
@@ -275,7 +279,8 @@ static const u8* update_texture(RenderContext& ctx, const u8* render_data) {
     const bgfx::Memory* mem = bgfx::makeRef(cmd->source_data, texture->size);
     const FlIntRect* rect = &cmd->rect;
 
-    bgfx::updateTexture2D(texture->handle, 0, 0, rect->x0, rect->y0, rect->x1 - rect->x0, rect->y1 - rect->y0, mem);
+    bgfx::updateTexture2D(texture->handle, 0, 0, rect->x0, rect->y0, rect->x1 - rect->x0, rect->y1 - rect->y0, mem,
+                          texture->width);
 
     return (u8*)(cmd + 1);
 }
@@ -348,20 +353,6 @@ int main() {
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_FLOATING, GL_TRUE);
-    // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    /*
-        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-
-        glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
-        glfwWindowHint(GLFW_RED_BITS, mode->redBits);
-        glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
-        glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
-        glfwWindowHint(GLFW_ALPHA_BITS, GLFW_DONT_CARE);
-        glfwWindowHint(GLFW_DEPTH_BITS, GLFW_DONT_CARE);
-        glfwWindowHint(GLFW_STENCIL_BITS, 8);
-        glfwWindowHint(GLFW_REFRESH_RATE, GLFW_DONT_CARE);
-    */
 
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Flowi Testbed", NULL, NULL);
     if (!window) {
@@ -405,8 +396,8 @@ int main() {
 
     // bgfx::setDebug(BGFX_DEBUG_TEXT);
     // bgfx::setViewRect(0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
-    // bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00ff00ff, 1.0f, 0);
+    // bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
+    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00ff00ff, 1.0f, 0);
 
     // glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 

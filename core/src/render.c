@@ -1,4 +1,5 @@
 #include "internal.h"
+#include "render.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Used for casting the start of a struct that holds pointers so we don't need to care about the concrete type
@@ -38,7 +39,8 @@ u8* Render_alloc_command_internal(FlGlobalState* state, FlRenderCommand cmd, int
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* Render_create_render_cmd_mem_2(FlGlobalState* state, FlRenderCommand cmd, void* d0, void* d1, int size) {
+u8* Render_create_render_cmd_mem_2(FlGlobalState* state, FlRenderCommand cmd, void* d0, void* d1, FlMemoryLifetime lifetime, int size) {
+	FL_UNUSED(lifetime);
     Pointers* cmd_write = (Pointers*)alloc_internal(state, cmd, size);
 #if FL_VALIDATE_RANGES
     if (FL_UNLIKELY(!cmd)) {
@@ -53,7 +55,8 @@ u8* Render_create_render_cmd_mem_2(FlGlobalState* state, FlRenderCommand cmd, vo
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* Render_create_render_cmd_mem_1(FlGlobalState* state, FlRenderCommand cmd, void* d0, int size) {
+u8* Render_create_render_cmd_mem_1(FlGlobalState* state, FlRenderCommand cmd, void* d0, FlMemoryLifetime lifetime, int size) {
+	FL_UNUSED(lifetime);
     Pointers* cmd_write = (Pointers*)alloc_internal(state, cmd, size);
 #if FL_VALIDATE_RANGES
     if (FL_UNLIKELY(!cmd)) {
