@@ -110,7 +110,7 @@ typedef enum FlTextureFormat {
 // If Flowi is unable to to live within the bounds of the restrictions given it will stop updating and the user
 // has to use fli_get_status() to check what the issue is.
 typedef struct FlRcCreateTexture {
-    // Data upload
+    // Data upload (can be NULL if data is uploaded later)
     u8* data;
     // This is the id that will later be used when refering to the texture
     u16 id;
@@ -122,19 +122,16 @@ typedef struct FlRcCreateTexture {
     u16 height;
 } FlRcCreateTexture;
 
-// This command is used to copy some data from the CPU to the GPU side. This is mostly used
-// for images/fonts/etc that needs to endup in a texture on the GPU. There is also a FlRcBlitRect
-// for blitting between GPU targets (this may be used for example when scaling down content for bluring or other reasons)
-typedef struct FlRcCpuBlitRect {
-    // Lifetime: The GPU backend can assume this will be alive for at least 3 times of GPU-frames.
+// This is used to update an existing texture with some data. This usually happens when a new image/glyph/etc
+// needs to be displayed but isn't present in a texture yet
+typedef struct FlRcUpdateTexture {
+    // Lifetime: The GPU backend can assume this will be alive for at least FL_FRAME_HISTORY times of GPU-frames.
     u8* source_data;
-    // Source rectangle to copy from
-    FlIntRect source_rect;
-    // Destination rectangle on the GPU Side
-    FlIntRect dest_rect;
+    // Rect to be updated
+    FlIntRect rect;
     // Target for the blit
     u16 texture_id;
-} FlRcCpuBlitRect;
+} FlRcUpdateTexture;
 
 // Copy data between GPU targets.
 typedef struct FlRcGpuBlitRect {
@@ -153,7 +150,7 @@ typedef enum FlRenderCommand {
     FlRc_RenderTexturedTriangles,
     FlRc_RenderTriangles,
     FlRc_CreateTexture,
-    FlRc_CpuBlitRect,
+    FlRc_UpdateTexture,
     FlRc_GpuBlitRect,
 } FlRenderCommand;
 

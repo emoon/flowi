@@ -13,8 +13,7 @@
 typedef struct Glyph {
     u16 x0,y0;
     u16 x1,y1;
-    u16 u0,v0;
-    u16 u1,v1;
+    s16 x_offset,y_offset;
     f32 advance_x;
 } Glyph;
 

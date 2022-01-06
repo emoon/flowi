@@ -1,6 +1,7 @@
 #include "ubench.h"
 #include "../src/atlas.h"
 #include "../src/allocator.h"
+#include "../src/internal.h"
 #include <stdlib.h>
 #include <assert.h>
 
@@ -29,7 +30,7 @@ static FlAllocator malloc_allocator = {
 
 UBENCH(Atlas, add_rect_to_1000_with_malloc) {
 	int rx = 0, ry = 0, stride = 0;
-	struct Atlas* atlas = Atlas_create(8192, 8192, 1024 * 10, &malloc_allocator);
+	struct Atlas* atlas = Atlas_create(8192, 8192, 1024 * 10, g_state, &malloc_allocator);
 
 	for (int i = 0; i < 1000; ++i) {
 		Atlas_add_rect(atlas, rand() & 3, rand() & 3, &rx, &ry, &stride);
@@ -42,7 +43,7 @@ UBENCH(Atlas, add_rect_to_1000_with_malloc) {
 
 UBENCH(Atlas, add_rect_to_5000_with_malloc) {
 	int rx = 0, ry = 0, stride = 0;
-	struct Atlas* atlas = Atlas_create(32000, 32000, 1024 * 100, &malloc_allocator);
+	struct Atlas* atlas = Atlas_create(32000, 32000, 1024 * 100, g_state, &malloc_allocator);
 
 	for (int i = 0; i < 5000; ++i) {
 		Atlas_add_rect(atlas, rand() & 3, rand() & 3, &rx, &ry, &stride);

@@ -10,13 +10,9 @@ typedef struct Pointers {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static inline u8* alloc_internal(FlGlobalState* state, FlRenderCommand cmd, int size, u64 alignment) {
-    FL_UNLIKELY(alignment);
-
+static inline u8* alloc_internal(FlGlobalState* state, FlRenderCommand cmd, int size) {
     BuildRenderState* render_data = &state->render_data;
-    // TODO: Check if we actually need to align the data
 
-    // Align the pointer up to correct alignment
     u8* start = render_data->render_data;
     u8* end_data = start + size;
     render_data->render_data = end_data;
@@ -36,14 +32,14 @@ static inline u8* alloc_internal(FlGlobalState* state, FlRenderCommand cmd, int 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* Render_alloc_command_internal(FlGlobalState* state, FlRenderCommand cmd, int size, int alignment) {
-    return alloc_internal(state, cmd, size, alignment);
+u8* Render_alloc_command_internal(FlGlobalState* state, FlRenderCommand cmd, int size) {
+    return alloc_internal(state, cmd, size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* Render_create_render_cmd_mem_2(FlGlobalState* state, FlRenderCommand cmd, void* d0, void* d1, int size, int align) {
-    Pointers* cmd_write = (Pointers*)alloc_internal(state, cmd, size, align);
+u8* Render_create_render_cmd_mem_2(FlGlobalState* state, FlRenderCommand cmd, void* d0, void* d1, int size) {
+    Pointers* cmd_write = (Pointers*)alloc_internal(state, cmd, size);
 #if FL_VALIDATE_RANGES
     if (FL_UNLIKELY(!cmd)) {
         return NULL;
@@ -57,9 +53,23 @@ u8* Render_create_render_cmd_mem_2(FlGlobalState* state, FlRenderCommand cmd, vo
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+u8* Render_create_render_cmd_mem_1(FlGlobalState* state, FlRenderCommand cmd, void* d0, int size) {
+    Pointers* cmd_write = (Pointers*)alloc_internal(state, cmd, size);
+#if FL_VALIDATE_RANGES
+    if (FL_UNLIKELY(!cmd)) {
+        return NULL;
+    }
+#endif
+
+    cmd_write->p0 = d0;
+    return (u8*)cmd_write;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 FlRcCreateTexture* Render_create_texture_static(FlGlobalState* state, u8* data) {
-    FlRcCreateTexture* texture = (FlRcCreateTexture*)alloc_internal(
-        state, FlRc_CreateTexture, sizeof(FlRcCreateTexture), FL_ALIGNOF(FlRcCreateTexture));
+    FlRcCreateTexture* texture =
+        (FlRcCreateTexture*)alloc_internal(state, FlRc_CreateTexture, sizeof(FlRcCreateTexture));
 
     // TODO: Error return macro
 #if FL_VALIDATE_RANGES
@@ -79,5 +89,5 @@ FlRcCreateTexture* Render_create_texture_static(FlGlobalState* state, u8* data) 
 // Process all the rendering commands and output vertex/index buffers
 
 void Render_process_commands(FlGlobalState* state) {
-	FL_UNUSED(state);
+    FL_UNUSED(state);
 }

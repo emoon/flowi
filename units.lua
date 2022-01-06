@@ -270,7 +270,7 @@ Program {
 
     Sources = get_c_src("core/bench"),
 
-    Depends = { "flowi" },
+    Depends = { "flowi", "freetype2" },
 }
 
 Default "flowi_core_tests"

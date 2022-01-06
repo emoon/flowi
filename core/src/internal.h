@@ -18,6 +18,7 @@
 
 struct Font;
 struct StyleInternal;
+struct Atlas;
 
 // Used to build up the render state
 typedef struct BuildRenderState {

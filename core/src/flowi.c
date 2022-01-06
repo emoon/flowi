@@ -12,6 +12,7 @@
 #include "render.h"
 #include "simd.h"
 #include "text.h"
+#include "atlas.h"
 #include "vertex_allocator.h"
 
 #if defined(_MSC_VER)
@@ -142,6 +143,10 @@ struct FlGlobalState* fl_create(const FlSettings* settings) {
     g_state->primitives_data.data = primitive_data;
     g_state->primitives_data.start_data = primitive_data;
     g_state->primitives_data.end_data = primitive_data + (1024 * 1024);
+
+    // TODO: We should check settings for texture size
+
+    g_state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, g_state, &malloc_allocator);
 
     Font_init(g_state);
 
@@ -382,4 +387,10 @@ void fl_text_len(struct FlContext* ctx, const char* text, int text_len) {
     prim->text = text;
     prim->len = text_len;
     prim->position_index = 0;  // TODO: Fixme
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void fl_destroy(FlGlobalState* self) {
+	FL_UNUSED(self);
 }

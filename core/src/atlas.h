@@ -1,8 +1,10 @@
 #pragma once
 
 #include "types.h"
+#include "../include/flowi_render.h" // unsure about having this here
 
 struct FlAllocator;
+struct FlGlobalState;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // INTERNAL HEADER
@@ -29,16 +31,23 @@ typedef struct Atlas {
     int image_stride_mul;
     int count;
     int capacity;
+    u32 texture_id;
     AtlasImageType image_type;
+    FlIntRect dirty_rect;
     struct FlAllocator* allocator;
 } Atlas;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlAllocator* allocator);
+Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalState* state, struct FlAllocator* allocator);
 void Atlas_destroy(Atlas* self);
 u8* Atlas_image_data_at(Atlas* self, int x, int y, int* stride);
 
+// Used when starting to add/end rects to track dirty area
+void Atlas_begin_add_rects(Atlas* self);
+void Atlas_end_add_rects(Atlas* self, struct FlGlobalState* state);
+
 u8* Atlas_add_rect(Atlas* self, int rw, int rh, int* rx, int* ry, int* stride);
+
 bool Atlas_expand(Atlas* self, int w, int h);
 

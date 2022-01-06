@@ -3,124 +3,122 @@
 #include "allocator.h"
 #include "../include/error.h"
 #include "internal.h"
+#include "render.h"
 
 #define PRE_ALLOC_COUNT 256
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool insert_node(Atlas* atlas, int idx, int x, int y, int w) {
+static bool insert_node(Atlas* self, int idx, int x, int y, int w) {
     int i;
     // Insert node
-    if (atlas->count + 1 > atlas->capacity) {
-        atlas->capacity = atlas->capacity == 0 ? 8 : atlas->capacity * 2;
-        atlas->nodes = (AtlasNode*)FlAllocator_realloc(atlas->allocator, atlas->nodes, sizeof(AtlasNode) * atlas->capacity);
-        printf("insert_node %d\n", atlas->count);
-        if (atlas->nodes == NULL) {
+    if (self->count + 1 > self->capacity) {
+        self->capacity = self->capacity == 0 ? 8 : self->capacity * 2;
+        self->nodes = (AtlasNode*)FlAllocator_realloc(self->allocator, self->nodes, sizeof(AtlasNode) * self->capacity);
+        if (self->nodes == NULL) {
         	ERROR_ADD(FlError_Memory, "Out of memory in Atlas: %s", "atlas");
             return false;
         }
     }
 
-    for (i = atlas->count; i > idx; i--)
-        atlas->nodes[i] = atlas->nodes[i - 1];
+    for (i = self->count; i > idx; i--)
+        self->nodes[i] = self->nodes[i - 1];
 
-    atlas->nodes[idx].x = (short)x;
-    atlas->nodes[idx].y = (short)y;
-    atlas->nodes[idx].width = (short)w;
-    atlas->count++;
+    self->nodes[idx].x = (short)x;
+    self->nodes[idx].y = (short)y;
+    self->nodes[idx].width = (short)w;
+    self->count++;
 
     return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void remove_node(Atlas* atlas, int idx) {
-    if (atlas->count == 0) {
+static void remove_node(Atlas* self, int idx) {
+	int count = self->count - 1;
+
+    if (count <= 0) {
         return;
     }
 
-    for (int i = idx, count = atlas->count - 1; i < count; i++) {
-        atlas->nodes[i] = atlas->nodes[i + 1];
+    for (int i = idx; i < count; i++) {
+        self->nodes[i] = self->nodes[i + 1];
     }
 
-    atlas->count--;
+    self->count = count;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool Atlas_expand(Atlas* atlas, int w, int h) {
+bool Atlas_expand(Atlas* self, int w, int h) {
     // Insert node for empty space
-    if (w > atlas->width) {
-        if (!insert_node(atlas, atlas->count, atlas->width, 0, w - atlas->width)) {
+    if (w > self->width) {
+        if (!insert_node(self, self->count, self->width, 0, w - self->width)) {
         	return false;
         }
     }
 
-    const int memory_size = w * h * atlas->image_stride_mul;
+    const int memory_size = w * h * self->image_stride_mul;
 
-	u8* image_data = FlAllocator_alloc(atlas->allocator, memory_size);
+	u8* image_data = FlAllocator_alloc(self->allocator, memory_size);
 	if (!image_data) {
 		ERROR_ADD(FlError_Memory, "Out of memory expanding Atlas: %d size", memory_size);
 		return false;
 	}
 
 	u8* dest = image_data;
-	u8* src = atlas->image_data;
+	u8* src = self->image_data;
 
     // copy the old image data to the new
+	const int old_stride = self->image_stride;
+	const int new_stride = w * self->image_stride_mul;
 
-	const int old_stride = atlas->image_stride;
-	const int new_stride = w * atlas->image_stride_mul;
-
-	for (int i = 0, old_h = atlas->height; i < old_h; ++i) {
+	for (int i = 0, old_h = self->height; i < old_h; ++i) {
 		memcpy(dest, src, old_stride);
 		dest += new_stride;
 		src += old_stride;
 	}
 
-	FlAllocator_free(atlas->allocator, atlas->image_data);
+	FlAllocator_free(self->allocator, self->image_data);
 
-	atlas->image_data = image_data;
-
-    atlas->width = w;
-    atlas->height = h;
-    atlas->image_stride = 0;//new_stride;
+	self->image_data = image_data;
+    self->width = w;
+    self->height = h;
+    self->image_stride = new_stride;
 
     return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Atlas_reset(Atlas* atlas, int w, int h) {
-    atlas->width = w;
-    atlas->height = h;
-    atlas->count = 0;
+void Atlas_reset(Atlas* self, int w, int h) {
+    self->width = w;
+    self->height = h;
+    self->count = 0;
 
     // Init root node.
-    atlas->nodes[0].x = 0;
-    atlas->nodes[0].y = 0;
-    atlas->nodes[0].width = (short)w;
-    atlas->count = 1;
+    self->nodes[0].x = 0;
+    self->nodes[0].y = 0;
+    self->nodes[0].width = (short)w;
+    self->count = 1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool add_skyline_level(Atlas* atlas, int idx, int x, int y, int w, int h) {
-    int i, count;
-
+static bool add_skyline_level(Atlas* self, int idx, int x, int y, int w, int h) {
     // Insert new node
-    if (!insert_node(atlas, idx, x, y + h, w)) {
+    if (!insert_node(self, idx, x, y + h, w)) {
         return false;
     }
 
     // Delete skyline segments that fall under the shadow of the new segment.
-    for (i = idx + 1, count = atlas->count; i < count; i++) {
-        if (atlas->nodes[i].x < atlas->nodes[i - 1].x + atlas->nodes[i - 1].width) {
-            int shrink = atlas->nodes[i - 1].x + atlas->nodes[i - 1].width - atlas->nodes[i].x;
-            atlas->nodes[i].x += (short)shrink;
-            atlas->nodes[i].width -= (short)shrink;
-            if (atlas->nodes[i].width <= 0) {
-                remove_node(atlas, i);
+    for (int i = idx + 1; i < self->count; i++) {
+        if (self->nodes[i].x < self->nodes[i - 1].x + self->nodes[i - 1].width) {
+            int shrink = self->nodes[i - 1].x + self->nodes[i - 1].width - self->nodes[i].x;
+            self->nodes[i].x += (short)shrink;
+            self->nodes[i].width -= (short)shrink;
+            if (self->nodes[i].width <= 0) {
+                remove_node(self, i);
                 i--;
             } else {
                 break;
@@ -131,10 +129,11 @@ static bool add_skyline_level(Atlas* atlas, int idx, int x, int y, int w, int h)
     }
 
     // Merge same height skyline segments that are next to each other.
-    for (i = 0; i < atlas->count - 1; i++) {
-        if (atlas->nodes[i].y == atlas->nodes[i + 1].y) {
-            atlas->nodes[i].width += atlas->nodes[i + 1].width;
-            remove_node(atlas, i + 1);
+    // Can't cache self->count as remove node changes the value
+    for (int i = 0; i < self->count - 1; i++) {
+        if (self->nodes[i].y == self->nodes[i + 1].y) {
+            self->nodes[i].width += self->nodes[i + 1].width;
+            remove_node(self, i + 1);
             i--;
         }
     }
@@ -178,20 +177,20 @@ static int rect_fits(const Atlas* atlas, int i, int w, int h) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* Atlas_add_rect(Atlas* atlas, int rw, int rh, int* rx, int* ry, int* image_stride) {
-    int besth = atlas->height, bestw = atlas->width, besti = -1;
+u8* Atlas_add_rect(Atlas* self, int rw, int rh, int* rx, int* ry, int* image_stride) {
+    int besth = self->height, bestw = self->width, besti = -1;
     int bestx = -1, besty = -1, i;
-    const int count = atlas->count;
+    const int count = self->count;
 
     // Bottom left fit heuristic.
     for (i = 0; i < count; i++) {
-        int y = rect_fits(atlas, i, rw, rh);
+        int y = rect_fits(self, i, rw, rh);
         if (y != -1) {
-            if (y + rh < besth || (y + rh == besth && atlas->nodes[i].width < bestw)) {
+            if (y + rh < besth || (y + rh == besth && self->nodes[i].width < bestw)) {
                 besti = i;
-                bestw = atlas->nodes[i].width;
+                bestw = self->nodes[i].width;
                 besth = y + rh;
-                bestx = atlas->nodes[i].x;
+                bestx = self->nodes[i].x;
                 besty = y;
             }
         }
@@ -202,31 +201,60 @@ u8* Atlas_add_rect(Atlas* atlas, int rw, int rh, int* rx, int* ry, int* image_st
     }
 
     // Perform the actual packing.
-    if (!add_skyline_level(atlas, besti, bestx, besty, rw, rh)) {
+    if (!add_skyline_level(self, besti, bestx, besty, rw, rh)) {
         return NULL;
     }
 
     *rx = bestx;
     *ry = besty;
-    *image_stride = atlas->image_stride;
+    *image_stride = self->image_stride;
+
+    self->dirty_rect.x0 = FL_MIN(self->dirty_rect.x0, bestx);
+    self->dirty_rect.y0 = FL_MIN(self->dirty_rect.y0, besty);
+    self->dirty_rect.x1 = FL_MAX(self->dirty_rect.x1, bestx + rw);
+    self->dirty_rect.y1 = FL_MAX(self->dirty_rect.y1, besty + rh);
 
 	// Return star ptr to fill with image data
-    u8* image_data = atlas->image_data + (besty * atlas->image_stride) + bestx;
+    u8* image_data = self->image_data + (besty * self->image_stride) + bestx;
 
     return image_data;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Used when starting to add/end rects to track dirty area
 
-void Atlas_destroy(Atlas* atlas) {
-	FlAllocator* allocator = atlas->allocator;
-	FlAllocator_free(allocator, atlas->nodes);
-	FlAllocator_free(allocator, atlas);
+void Atlas_begin_add_rects(Atlas* self) {
+	self->dirty_rect.x0 = INT_MAX;
+	self->dirty_rect.y0 = INT_MAX;
+	self->dirty_rect.x1 = INT_MIN;
+	self->dirty_rect.y1 = INT_MIN;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Atlas* Atlas_create(int w, int h, AtlasImageType image_type, FlAllocator* allocator) {
+void Atlas_end_add_rects(Atlas* self, FlGlobalState* state) {
+	// Validate that we actually have a rect to update
+	if (self->dirty_rect.x0 < 0 || self->dirty_rect.x1 >= self->width) {
+		return;
+	}
+
+	// Add command to update the texture with the added glyphs
+	FlRcUpdateTexture* cmd = Render_update_texture_cmd_static(state, self->image_data);
+	cmd->rect = self->dirty_rect;
+	cmd->texture_id = self->texture_id;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Atlas_destroy(Atlas* self) {
+	FlAllocator* allocator = self->allocator;
+	FlAllocator_free(allocator, self->nodes);
+	FlAllocator_free(allocator, self);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalState* state, FlAllocator* allocator) {
 	int image_stride_mul = 0;
 
 	if (image_type == AtlasImageType_U8) {
@@ -246,29 +274,42 @@ Atlas* Atlas_create(int w, int h, AtlasImageType image_type, FlAllocator* alloca
 		return NULL;
 	}
 
-	Atlas* atlas = FlAllocator_alloc_zero_type(allocator, Atlas);
-	if (!atlas) {
+	Atlas* self = FlAllocator_alloc_zero_type(allocator, Atlas);
+	if (!self) {
 		ERROR_ADD(FlError_Memory, "Unable to create atlas: %s", "out of memory");
 		return NULL;
 	}
 
-	atlas->allocator = allocator;
-	atlas->nodes = FlAllocator_alloc_array_type(allocator, PRE_ALLOC_COUNT, AtlasNode);
-	atlas->capacity = PRE_ALLOC_COUNT;
-	atlas->image_type = image_type;
-	atlas->image_stride = w * image_stride_mul;
-	atlas->image_stride_mul = image_stride_mul;
-	atlas->image_data = image_data;
+	self->allocator = allocator;
+	self->nodes = FlAllocator_alloc_array_type(allocator, PRE_ALLOC_COUNT, AtlasNode);
+	self->capacity = PRE_ALLOC_COUNT;
+	self->image_type = image_type;
+	self->image_stride = w * image_stride_mul;
+	self->image_stride_mul = image_stride_mul;
+	self->image_data = image_data;
 
-	if (!atlas->nodes) {
+	if (!self->nodes) {
 		ERROR_ADD(FlError_Memory, "Unable to create atlas nodes: %s", "out of memory");
-		Atlas_destroy(atlas);
-		atlas = NULL;
+		Atlas_destroy(self);
+		return NULL;
 	}
 
-	Atlas_reset(atlas, w, h);
+	// Create texture
+    FlRcCreateTexture* texture = Render_create_texture_static(state, NULL);
 
-	return atlas;
+    if (image_type == AtlasImageType_U8) {
+    	texture->format = FlTextureFormat_R8_LINEAR;
+    } else {
+    	texture->format = FlTextureFormat_RGBA8_sRGB;
+    }
+
+    texture->width = w;
+    texture->height = h;
+    self->texture_id = texture->id;
+
+	Atlas_reset(self, w, h);
+
+	return self;
 }
 
 

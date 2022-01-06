@@ -7,7 +7,8 @@ struct FlGlobalState;
 // TODO: Inline?
 //u8* Render_create_render_cmd(FlGlobalState* state, FlRenderCommand cmd, int size, int alignment);
 //u8* Render_create_render_cmd_mem_1(FlGlobalState* state, FlRenderCommand cmd, u8* data, FlMemoryLifetime lifetime, int size, int alignment);
-u8* Render_create_render_cmd_mem_2(struct FlGlobalState* state, FlRenderCommand cmd, void* data0, void* data1, FlMemoryLifetime lifetime, int size, int alignment);
+u8* Render_create_render_cmd_mem_1(struct FlGlobalState* state, FlRenderCommand cmd, void* data0, FlMemoryLifetime lifetime, int size);
+u8* Render_create_render_cmd_mem_2(struct FlGlobalState* state, FlRenderCommand cmd, void* data0, void* data1, FlMemoryLifetime lifetime, int size);
 
 //FcCreateTexture* Render_create_texture_static(FlGlobalState* state, u8* data);
 
@@ -17,8 +18,11 @@ u8* Render_create_render_cmd_mem_2(struct FlGlobalState* state, FlRenderCommand 
 FlRcCreateTexture* Render_create_texture_static(struct FlGlobalState* state, u8* data);
 
 #define Render_render_flat_triangles_static(state, data0, data1) \
-    (FlRcSolidTriangles*)Render_create_render_cmd_mem_2(state, FlRc_RenderTriangles, data0, data1, sizeof(FlRc_RenderTriangles), FlMemoryLifetime_Static, 16)
+    (FlRcSolidTriangles*)Render_create_render_cmd_mem_2(state, FlRc_RenderTriangles, data0, data1, sizeof(FlRc_RenderTriangles), FlMemoryLifetime_Static)
 
 #define Render_render_texture_triangles_static(state, data0, data1) \
-    (FlRcTexturedTriangles*)Render_create_render_cmd_mem_2(state, FlRc_RenderTexturedTriangles, data0, data1, sizeof(FlRc_RenderTexturedTriangles), FlMemoryLifetime_Static, 16)
+    (FlRcTexturedTriangles*)Render_create_render_cmd_mem_2(state, FlRc_RenderTexturedTriangles, data0, data1, sizeof(FlRc_RenderTexturedTriangles), FlMemoryLifetime_Static)
+
+#define Render_update_texture_cmd_static(state, data0) \
+    (FlRcUpdateTexture*)Render_create_render_cmd_mem_1(state, FlRc_UpdateTexture, data0, sizeof(FlRc_UpdateTexture), FlMemoryLifetime_Static)
 

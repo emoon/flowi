@@ -39,7 +39,7 @@ bool utf8_to_codepoints_u32(u32* output, const u8* input, int len) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/*
 void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSize* FL_RESTRICT index_buffer,
                                      const Glyph* FL_RESTRICT glyph_lookup, const u32* FL_RESTRICT codepoints,
                                      u32 color, FlVec2 pos, FlIdxSize vertex_id, int count) {
@@ -86,6 +86,7 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
         index_buffer += 6;
     }
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Calculate AABB for the text

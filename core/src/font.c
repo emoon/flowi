@@ -1,6 +1,5 @@
 #include "font.h"
 #include <assert.h>
-#include "../external/stb/stb_rect_pack.h"
 #include "../include/error.h"
 #include "flowi.h"
 #include "font_private.h"
@@ -8,6 +7,7 @@
 #include "linear_allocator.h"
 #include "render.h"
 #include "utils.h"
+#include "atlas.h"
 
 // TODO: Support external functions
 #include <freetype/freetype.h>
@@ -115,7 +115,7 @@ FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int n
     }
 
     error = FT_Set_Pixel_Sizes(face, 0, font_size);
-    if (error) {
+    if (error != 0) {
         ERROR_ADD(FlError_Font, "Freetype error %s when setting size font: %s", FT_Error_String(error), name);
         return -1;
     }
@@ -146,6 +146,230 @@ FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int n
 
     int font_id = state->font_count++;
     state->fonts[font_id] = font;
+
+    return (FlFont)font_id;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Destroy an existing created font
+
+void fl_font_destroy(struct FlContext* ctx, FlFont font_id) {
+    FlGlobalState* state = ctx->global_state;
+
+    if (font_id < 0 || font_id >= state->font_count) {
+        ERROR_ADD(FlError_Font, "Tried to destroy font id %d, but id is out of range (0 - %d)", font_id,
+                  state->font_count - 1);
+        return;
+    }
+
+    Font* font = state->fonts[font_id];
+
+    FT_Error error = FT_Done_Face(font->ft_face);
+    if (error != 0) {
+        ERROR_ADD(FlError_Font, "Freetype error %s when destroying font font: %s", FT_Error_String(error),
+                  font->debug_name);
+    }
+
+    FlAllocator_free(state->global_allocator, font->glyph_info.codepoint_sizes);
+    FlAllocator_free(state->global_allocator, font);
+
+    state->fonts[font_id] = NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Hash a codepoint to allow us faster lookups
+
+FL_INLINE u32 hash_int(u32 a) {
+    a += ~(a << 15);
+    a ^= (a >> 10);
+    a += (a << 3);
+    a ^= (a >> 6);
+    a += ~(a << 11);
+    a ^= (a >> 16);
+    return a;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TODO: Use glyph allocator
+
+static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
+    GlyphInfo* info = &font->glyph_info;
+
+    if (info->count + 1 > info->capacity) {
+        const int old_size = info->capacity;
+        const int new_size = old_size == 0 ? 16 : old_size * 2;
+        // TODO: Handle OOM
+        // we batch all of the allocations into and get the new ranges.
+        // As we do the batching like this we can't use regular realloc so we manually memcopy the old data
+        u8* data = FlAllocator_alloc(ctx->global_state->global_allocator,
+                                     sizeof(Glyph) + sizeof(CodepointSize) + sizeof(f32) * new_size);
+
+        CodepointSize* codepoint_sizes = (CodepointSize*)data;
+        Glyph* glyphs = (Glyph*)(codepoint_sizes + new_size);
+        f32* advance_x = (f32*)(glyphs + new_size);
+
+        // Copy the old data data if we had any
+        if (old_size != 0) {
+            memcpy(codepoint_sizes, info->codepoint_sizes, old_size * sizeof(CodepointSize));
+            memcpy(glyphs, info->glyphs, old_size * sizeof(Glyph));
+            memcpy(advance_x, info->advance_x, old_size * sizeof(f32));
+            FlAllocator_free(ctx->global_state->global_allocator, info->codepoint_sizes);
+        }
+
+        info->codepoint_sizes = codepoint_sizes;
+        info->glyphs = glyphs;
+        info->advance_x = advance_x;
+
+        info->capacity = new_size;
+    }
+
+    int index = info->count++;
+
+    return index;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint, int size) {
+    GlyphInfo* info = &font->glyph_info;
+    // TODO: Assign atlas to a font when creating
+    Atlas* atlas = ctx->global_state->mono_fonts_atlas;
+
+    const CodepointSize* codepoint_sizes = info->codepoint_sizes;
+
+    // TODO: :Perf: Unpack all codepoints to an array first as it allows the compiler to generate vector instructions
+    // instead
+    const u32 hash_idx = hash_int(codepoint) & (HASH_LUT_SIZE - 1);
+    u16 hash_entry = font->lut[hash_idx];
+
+    // find glyph if it exists already
+    while (hash_entry != 0xffff) {
+        const CodepointSize* current = &codepoint_sizes[hash_entry];
+
+        // already generated
+        if (current->codepoint == codepoint && current->size == size) {
+            return false;
+        }
+
+        hash_entry = current->next_index;
+    }
+
+
+    // Find a glyph for the codepoint
+    // TODO: Add fallback options
+
+    int glyph_index = FT_Get_Char_Index(font->ft_face, codepoint);
+    if (glyph_index == 0) {
+        // ..
+    }
+
+    FT_Error error = FT_Set_Pixel_Sizes(font->ft_face, 0, size);
+    if (error != 0) {
+        ERROR_ADD(FlError_Font, "Freetype error %s when setting size. font: %s", FT_Error_String(error),
+                  font->debug_name);
+        return false;
+    }
+
+    error = FT_Load_Glyph(font->ft_face, glyph_index, FT_LOAD_RENDER);
+    if (error != 0) {
+        ERROR_ADD(FlError_Font, "Freetype error %s when loading glyph %d. font: %s", FT_Error_String(error), glyph_index,
+                  font->debug_name);
+        return false;
+    }
+
+	/*
+    error = FT_Get_Advance(font->font, glyph, FT_LOAD_NO_SCALE, &adv_fixed);
+    if (error != 0) {
+        ERROR_ADD(FlError_Font, "Freetype error %s when getting advance glyph %d. font: %s", FT_Error_String(error),
+                  glyph, font->debug_name);
+        return false;
+    }
+    */
+
+	// Alloc glyph and insert into hashtable
+    int alloc_index = allocate_glyph(ctx, font);
+    info->codepoint_sizes[alloc_index].codepoint = codepoint;
+    info->codepoint_sizes[alloc_index].size = codepoint;
+    info->codepoint_sizes[alloc_index].next_index = font->lut[hash_idx];
+    font->lut[hash_idx] = alloc_index;
+
+	Glyph* glyph = &info->glyphs[alloc_index];
+
+    FT_GlyphSlot g = font->ft_face->glyph;
+
+    //int advance = (int)adv_fixed;
+    int x0 = g->bitmap_left;
+    int x1 = x0 + g->bitmap.width;
+    int y0 = -g->bitmap_top;
+    int y1 = y0 + g->bitmap.rows;
+    int glyph_offset = 0;
+
+    int gw = x1 - x0;
+    int gh = y1 - y0;
+
+    int rx = 0, ry = 0, stride = 0;
+
+    // Alloc slot in the atlas
+    // TODO: We need to handle this in a good way
+    // if we run out of space in the atlas we need to resize here
+
+	u8* dest = Atlas_add_rect(atlas, gw, gh, &rx, &ry, &stride);
+	if (!dest) {
+        ERROR_ADD(FlError_Memory, "Out of space in atlas when generating glyph for font %s", font->debug_name);
+        return false;
+	}
+
+	// TODO: Handle the case when we have colors here also
+    for (int y = 0, rows = g->bitmap.rows; y < rows; ++y) {
+        for (int x = 0, width = g->bitmap.width; x < width; ++x) {
+            dest[(y * stride) + x] = g->bitmap.buffer[glyph_offset++];
+        }
+    }
+
+
+    glyph->x0 = rx;
+    glyph->y0 = ry;
+    glyph->x1 = rx + gw;
+    glyph->y1 = ry + gh;
+    glyph->x_offset = (u16)x0;
+    glyph->y_offset = (u16)y0;
+	glyph->advance_x = (float)FT_CEIL(g->advance.x);
+
+	/*
+	printf("-------------------------\n");
+    printf("%d %d\n", glyph->x0, glyph->y0);
+    printf("%d %d\n", glyph->x1, glyph->y1);
+    printf("%d %d\n", glyph->x_offset, glyph->y_offset);
+    */
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Font_generate_glyphs(FlContext* FL_RESTRICT ctx, FlFont font_id, const u32* FL_RESTRICT codepoints, int count,
+                          int size) {
+    Font* font = ctx->global_state->fonts[font_id];
+
+    for (int i = 0; i < count; ++i) {
+        const u32 codepoint = *codepoints++;
+        generate_glyph(ctx, font, codepoint, size);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Font_init(FlGlobalState* state) {
+    //#if defined(fl_FONTLIB_FREETYPE)
+    int error = FT_Init_FreeType(&state->ft_library);
+    FL_UNUSED(error);
+    //#elif defined(fl_FONTLIB_STBTYPE)
+    //#endif
+}
+
+
+
+
 
 #if 0
     LinearAllocator allocator;
@@ -375,138 +599,4 @@ FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int n
     state->fonts[font_id] = font;
 #endif
 
-    return (FlFont)font_id;
-}
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Destroy an existing created font
-
-void fl_font_destroy(struct FlContext* ctx, FlFont font_id) {
-    FlGlobalState* state = ctx->global_state;
-
-    if (font_id < 0 || font_id >= state->font_count) {
-        ERROR_ADD(FlError_Font, "Tried to destroy font id %d, but id is out of range (0 - %d)", font_id,
-                  state->font_count - 1);
-        return;
-    }
-
-    Font* font = state->fonts[font_id];
-
-    FT_Error error = FT_Done_Face(font->ft_face);
-    if (error != 0) {
-        ERROR_ADD(FlError_Font, "Freetype error %s when destroying font font: %s", FT_Error_String(error),
-                  font->debug_name);
-    }
-
-    FlAllocator_free(state->global_allocator, font->glyph_info.codepoint_sizes);
-    FlAllocator_free(state->global_allocator, font);
-
-    state->fonts[font_id] = NULL;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Hash a codepoint to allow us faster lookups
-
-FL_INLINE u32 hash_int(u32 a) {
-    a += ~(a << 15);
-    a ^= (a >> 10);
-    a += (a << 3);
-    a ^= (a >> 6);
-    a += ~(a << 11);
-    a ^= (a >> 16);
-    return a;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TODO: Use glyph allocator
-
-static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
-    GlyphInfo* info = &font->glyph_info;
-
-    if (info->count + 1 > info->capacity) {
-        const int old_size = info->capacity;
-        const int new_size = old_size == 0 ? 16 : old_size * 2;
-        // we batch all of the allocations into and get the new ranges.
-        // As we do the batching like this we can't use regular realloc so we manually memcopy the old data
-        u8* data = FlAllocator_alloc(ctx->global_state->global_allocator,
-                                     sizeof(Glyph) + sizeof(CodepointSize) + sizeof(f32) * new_size);
-
-        CodepointSize* codepoint_sizes = (CodepointSize*)data;
-        Glyph* glyphs = (Glyph*)(codepoint_sizes + new_size);
-        f32* advance_x = (f32*)(glyphs + new_size);
-
-        // Copy the old data data if we had any
-        if (old_size != 0) {
-            memcpy(codepoint_sizes, info->codepoint_sizes, old_size * sizeof(CodepointSize));
-            memcpy(glyphs, info->glyphs, old_size * sizeof(Glyph));
-            memcpy(advance_x, info->advance_x, old_size * sizeof(f32));
-            FlAllocator_free(ctx->global_state->global_allocator, info->codepoint_sizes);
-        }
-
-        info->codepoint_sizes = codepoint_sizes;
-        info->glyphs = glyphs;
-        info->advance_x = advance_x;
-
-        info->capacity = new_size;
-    }
-
-    int index = info->count++;
-
-    return index;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint, int size) {
-    GlyphInfo* info = &font->glyph_info;
-
-    const CodepointSize* codepoint_sizes = info->codepoint_sizes;
-
-    // TODO: :Perf: Unpack all codepoints to an array first as it allows the compiler to generate vector instructions
-    // instead
-    const u32 hash_idx = hash_int(codepoint) & (HASH_LUT_SIZE - 1);
-    u16 hash_entry = font->lut[hash_idx];
-
-    // find glyph if it exists already
-    while (hash_entry != 0xffff) {
-        const CodepointSize* current = &codepoint_sizes[hash_entry];
-
-        // already generated
-        if (current->codepoint == codepoint && current->size == size) {
-            return false;
-        }
-
-        hash_entry = current->next_index;
-    }
-
-    int alloc_index = allocate_glyph(ctx, font);
-
-    info->codepoint_sizes[alloc_index].codepoint = codepoint;
-    info->codepoint_sizes[alloc_index].size = codepoint;
-    info->codepoint_sizes[alloc_index].next_index = font->lut[hash_idx];
-    font->lut[hash_idx] = alloc_index;
-
-    return true;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void Font_generate_glyphs(FlContext* FL_RESTRICT ctx, FlFont font_id, const u32* FL_RESTRICT codepoints, int count,
-                          int size) {
-    Font* font = ctx->global_state->fonts[font_id];
-
-    for (int i = 0; i < count; ++i) {
-        const u32 codepoint = *codepoints++;
-        generate_glyph(ctx, font, codepoint, size);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void Font_init(FlGlobalState* state) {
-    //#if defined(fl_FONTLIB_FREETYPE)
-    int error = FT_Init_FreeType(&state->ft_library);
-    FL_UNUSED(error);
-    //#elif defined(fl_FONTLIB_STBTYPE)
-    //#endif
-}

@@ -1,9 +1,9 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <bx/math.h>
+#include "../../core/src/area.h"
 #include "../../core/src/flowi.h"
 #include "../../core/src/font.h"
-#include "../../core/src/area.h"
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
@@ -21,6 +21,7 @@
 
 struct Texture {
     bgfx::TextureHandle handle;
+    int size;
     float inv_x;
     float inv_y;
 };
@@ -98,7 +99,6 @@ bgfx::ProgramHandle load_shader_program(const char* vs, const char* fs) {
 
 static void* glfwNativeWindowHandle(GLFWwindow* _window) {
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
-
     return (void*)(uintptr_t)glfwGetX11Window(_window);
 #elif BX_PLATFORM_OSX
     return glfwGetCocoaWindow(_window);
@@ -145,7 +145,7 @@ void ui_update(FlContext* ctx) {
 
     Area_generate_circle(ctx);
 
-    //fl_text(ctx, "Almost before we knew it");
+    // fl_text(ctx, "Almost before we knew it");
 
     /*
     if (fl_button_c(ctx, "test")) {
@@ -183,7 +183,7 @@ static const u8* render_textured_triangles(RenderContext& ctx, const u8* render_
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
 
     // Set 1/texture size for shader
-    float data[4] = { texture.inv_x, texture.inv_y, 0.0f, 0.0f };
+    float data[4] = {texture.inv_x, texture.inv_y, 0.0f, 0.0f};
     encoder->setUniform(ctx.u_inv_res_tex, data, UINT16_MAX);
 
     encoder->setState(state);
@@ -230,7 +230,6 @@ static const u8* render_flat_triangles(RenderContext& ctx, const u8* render_data
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// static const u8* create_texture(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
 static const u8* create_texture(RenderContext& ctx, const u8* render_data) {
     const FlRcCreateTexture* cmd = (FlRcCreateTexture*)render_data;
     const u8* data = cmd->data;
@@ -243,11 +242,17 @@ static const u8* create_texture(RenderContext& ctx, const u8* render_data) {
 
     switch (cmd->format) {
         case FlTextureFormat_R8_LINEAR: {
-            const bgfx::Memory* mem = bgfx::makeRef(data, width * height);
+            const bgfx::Memory* mem = nullptr;
+
+            if (data) {
+                mem = bgfx::makeRef(data, width * height);
+            }
+
             Texture* texture = &ctx.textures[id];
             texture->handle = bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::R8, flags, mem);
             texture->inv_x = 1.0f / width;
             texture->inv_y = 1.0f / height;
+            texture->size = width * height;
             break;
         }
 
@@ -257,6 +262,20 @@ static const u8* create_texture(RenderContext& ctx, const u8* render_data) {
             exit(0);
         }
     }
+
+    return (u8*)(cmd + 1);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static const u8* update_texture(RenderContext& ctx, const u8* render_data) {
+    const FlRcUpdateTexture* cmd = (FlRcUpdateTexture*)render_data;
+
+    const Texture* texture = &ctx.textures[cmd->texture_id];
+    const bgfx::Memory* mem = bgfx::makeRef(cmd->source_data, texture->size);
+    const FlIntRect* rect = &cmd->rect;
+
+    bgfx::updateTexture2D(texture->handle, 0, 0, rect->x0, rect->y0, rect->x1 - rect->x0, rect->y1 - rect->y0, mem);
 
     return (u8*)(cmd + 1);
 }
@@ -304,6 +323,11 @@ void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx, uint16_t width, 
                 break;
             }
 
+            case FlRc_UpdateTexture: {
+                render_cmd_data = update_texture(render_ctx, render_cmd_data);
+                break;
+            }
+
             default: {
                 printf("Case %d - not handled!\n", cmd);
                 break;
@@ -324,20 +348,20 @@ int main() {
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_FLOATING, GL_TRUE);
-    //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-/*
-	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    /*
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 
-	glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
-	glfwWindowHint(GLFW_RED_BITS, mode->redBits);
-	glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
-	glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
-	glfwWindowHint(GLFW_ALPHA_BITS, GLFW_DONT_CARE);
-	glfwWindowHint(GLFW_DEPTH_BITS, GLFW_DONT_CARE);
-	glfwWindowHint(GLFW_STENCIL_BITS, 8);
-	glfwWindowHint(GLFW_REFRESH_RATE, GLFW_DONT_CARE);
-*/
+        glfwWindowHint(GLFW_DOUBLEBUFFER, 1);
+        glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+        glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+        glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+        glfwWindowHint(GLFW_ALPHA_BITS, GLFW_DONT_CARE);
+        glfwWindowHint(GLFW_DEPTH_BITS, GLFW_DONT_CARE);
+        glfwWindowHint(GLFW_STENCIL_BITS, 8);
+        glfwWindowHint(GLFW_REFRESH_RATE, GLFW_DONT_CARE);
+    */
 
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Flowi Testbed", NULL, NULL);
     if (!window) {
@@ -361,7 +385,7 @@ int main() {
     int reset_flags = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8;
 
     bgfx::Init bgfxInit;
-    //bgfxInit.type = bgfx::RendererType::Count;
+    // bgfxInit.type = bgfx::RendererType::Count;
     bgfxInit.type = bgfx::RendererType::OpenGL;
     bgfxInit.resolution.width = WINDOW_WIDTH;
     bgfxInit.resolution.height = WINDOW_HEIGHT;
@@ -379,10 +403,10 @@ int main() {
 
     printf("init done\n");
 
-    //bgfx::setDebug(BGFX_DEBUG_TEXT);
-    //bgfx::setViewRect(0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+    // bgfx::setDebug(BGFX_DEBUG_TEXT);
+    // bgfx::setViewRect(0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
-    //bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00ff00ff, 1.0f, 0);
+    // bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00ff00ff, 1.0f, 0);
 
     // glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
@@ -406,7 +430,7 @@ int main() {
     int old_width = 0;
     int old_height = 0;
 
-    //bgfx::setDebug(BGFX_DEBUG_STATS);
+    // bgfx::setDebug(BGFX_DEBUG_STATS);
 
     glfwGetWindowSize(window, &old_width, &old_height);
 
@@ -431,10 +455,10 @@ int main() {
         bgfx::touch(0);
 
         // Use debug font to print information about this example.
-        //bgfx::dbgTextClear();
-        //bgfx::dbgTextPrintf(0, 1, 0x4f, "bgfxTemplate");
-        //bgfx::dbgTextPrintf(0, 2, 0x6f, "Description: Minimal bgfx + GLFW application.");
-        //bgfx::dbgTextPrintf(0, 4, 0x4f, "Press F1 to toggle bgfx stats, Esc to quit");
+        // bgfx::dbgTextClear();
+        // bgfx::dbgTextPrintf(0, 1, 0x4f, "bgfxTemplate");
+        // bgfx::dbgTextPrintf(0, 2, 0x6f, "Description: Minimal bgfx + GLFW application.");
+        // bgfx::dbgTextPrintf(0, 4, 0x4f, "Press F1 to toggle bgfx stats, Esc to quit");
 
         ui_update(ctx);
         ui_render(render_ctx, ctx, display_w, display_h);
