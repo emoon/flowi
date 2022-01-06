@@ -16,44 +16,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Generate the sin values for a rounded corner
-
-/*
-static int generate_corner_values(FlVec2* values, FlVec2 size, float corner_size, LengthPercentType type,
-                                  int segment_size) {
-    // first calculate the value the number of pixels
-
-    const float half_x = size.x * 0.5f;
-    const float half_y = size.y * 0.5f;
-    const float shortest_side = half_x > half_y ? half_y : half_x;
-
-    const int corner_pixels_percent = (int)(shortest_side * (corner_size * 0.01));
-    const int corner_pixels = type == FlLengthPercentType_Length ? (int)shortest_side : corner_pixels_percent;
-
-    // Test with generating every other pixel to see how it looks
-    int vertex_count = corner_pixels / segment_size;
-
-    if (vertex_count == 0) {
-        return 0;
-    }
-
-    const float sin_step = (M_PI / 2.0f) / vertex_count;
-    float angle = 0.0f;
-
-    FL_ASSUME(vertex_count > 0);
-
-    // TODO: SIMD
-    for (int i = 0; i < vertex_count; ++i) {
-        values[i].x = (float)(cos(angle) * corner_pixels);
-        values[i].y = (float)(sin(angle) * corner_pixels);
-        angle += sin_step;
-    }
-
-    return vertex_count;
-}
-*/
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // generating triangles
 // The most common way is generating this with a fan from each new vertex. This quite bad for GPUs with many long thin
 // triangles.
@@ -353,38 +315,6 @@ Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
 
 bool Area_generate_circle(struct FlContext* ctx) {
     FlStyle* style = fl_style_get_default(ctx);
-
-    /*
-    FlVertPosColor* vertices = NULL;
-    FlIdxSize* indices = NULL;
-
-    FlVec2* temp = alloca(400 * sizeof(FlVec2));
-
-    FlVec2 size = {80.0f, 80.0f};
-
-    int count = generate_corner_values(temp, size, 20.0f, FlLengthPercentType_Length, 1);
-    int index_count = Area_generate_corner_triangle_list(NULL, 0, count - 1);
-
-    if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, count, index_count)) {
-        // TODO: Error
-        return false;
-    }
-
-    Area_generate_corner_triangle_list(indices, 0, count - 1);
-
-    // generate vertex list
-    for (int i = 0; i < count; ++i) {
-        vertices[i].x = 10 + (40.0f - temp[i].x);
-        vertices[i].y = 10 + (40.0f - temp[i].y);
-        vertices[i].color = FL_RGB(255, 0, 0);
-    }
-
-    FlRcSolidTriangles* tri_data = Render_render_flat_triangles_static(ctx->global_state, vertices, indices);
-    tri_data->vertex_count = count;
-    tri_data->index_count = index_count;
-    */
-
-    //VertsCounts counts_0 = VertexAllocator_get_pos_color_counts(&ctx->vertex_allocator);
 
     FlVec2 offset = {10.0f, 10.f};
     FlVec2 size = {280.0f * 2, 280*2.0f};

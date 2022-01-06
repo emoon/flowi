@@ -145,7 +145,7 @@ void ui_init(RenderContext& ctx) {
 void ui_update(FlContext* ctx) {
     fl_frame_begin(ctx);
 
-    // Area_generate_circle(ctx);
+    Area_generate_circle(ctx);
 
     fl_text(ctx, "Testing");
 
@@ -183,6 +183,7 @@ static const u8* render_textured_triangles(RenderContext& ctx, const u8* render_
     memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FlIdxSize));
 
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+    state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
 
     // Set 1/texture size for shader
     float data[4] = {texture.inv_x, texture.inv_y, 0.0f, 0.0f};
@@ -397,7 +398,7 @@ int main() {
     // bgfx::setDebug(BGFX_DEBUG_TEXT);
     // bgfx::setViewRect(0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     // bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
-    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x00ff00ff, 1.0f, 0);
+    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
 
     // glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
@@ -414,8 +415,8 @@ int main() {
     ui_init(render_ctx);
 
     // Load test font
-    (void)fl_font_create_from_file(ctx, "data/montserrat-regular.ttf", 80, FlFontGlyphPlacementMode_Auto);
-
+    //(void)fl_font_create_from_file(ctx, "data/montserrat-regular.ttf", 80, FlFontGlyphPlacementMode_Auto);
+    (void)fl_font_create_from_file(ctx, "data/Montserrat-Bold.ttf", 80, FlFontGlyphPlacementMode_Auto);
     printf("finished loading font");
 
     int old_width = 0;

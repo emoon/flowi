@@ -296,7 +296,7 @@ u8* draw_text(struct FlContext* ctx, const u8* cmd) {
         assert(0);
     }
 
-    FlVec2 pos = {10.0f, 80.0f};
+    FlVec2 pos = {40.0f, 80.0f};
 
     Text_generate_vertex_buffer_ref(vertices, indices, font, codepoints, 0x0fffffff, pos, 0, text_len);
 
