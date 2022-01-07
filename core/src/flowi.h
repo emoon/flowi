@@ -43,7 +43,11 @@ void fl_text_len(struct FlContext* ctx, const char* text, int text_len);
 /// Set the mouse position in window relative pixel positions and button 1/2/3
 void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2, bool b3);
 
-struct FlRenderData* fl_get_render_data(struct FlContext* ctx);
+// Returns the number of render commands. use fl_render_get_cmd to get each command
+int fl_render_begin_commands(struct FlGlobalState* state);
+
+// Get the next render command
+u16 fl_render_get_command(struct FlGlobalState* state, const u8** data);
 
 #ifdef __cplusplus
 }

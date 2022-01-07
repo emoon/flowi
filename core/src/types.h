@@ -71,6 +71,7 @@ typedef struct FlVec2 {
 #else
 #define FL_TRY_ALLOC_BOOL(expr) if (!(expr)) { return false; }
 #define FL_TRY_ALLOC_INT(expr) if (!(expr)) { return -1; }
+#define FL_TRY_ALLOC_NULL(expr) if (!(expr)) { return 0; }
 #endif
 
 

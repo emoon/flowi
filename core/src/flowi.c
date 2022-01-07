@@ -5,6 +5,7 @@
 
 #include "../include/flowi_render.h"
 #include "allocator.h"
+#include "atlas.h"
 #include "flowi.h"
 #include "font_private.h"
 #include "internal.h"
@@ -12,7 +13,6 @@
 #include "render.h"
 #include "simd.h"
 #include "text.h"
-#include "atlas.h"
 #include "vertex_allocator.h"
 
 #if defined(_MSC_VER)
@@ -68,26 +68,13 @@ static FlAllocator malloc_allocator = {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: Revisit data-layout
-/*
-typedef struct FadeAction {
-    // current step_value
-    vec128 current_value;
-    vec128 step_value;
-    u32 widget_id;
-    int target;
-    int count;
-} FadeAction;
-*/
-
-// TODO: Allow for custom allocations
 FlContext* fl_context_create(struct FlGlobalState* state) {
     FlContext* ctx = malloc(sizeof(FlContext));
     memset(ctx, 0, sizeof(FlContext));
     state->global_allocator = &malloc_allocator;
 
     // TODO: Use custom allocator
-    ctx->positions = (vec128*)malloc(sizeof(vec128) * (MAX_CONTROLS + +MEMORY_PADDING));
+    ctx->positions = (vec128*)malloc(sizeof(vec128) * (MAX_CONTROLS + MEMORY_PADDING));
     ctx->widget_ids = (u32*)malloc(sizeof(u32) * (MAX_CONTROLS + MEMORY_PADDING));
     ctx->items_with_text = (ItemWithText*)malloc(sizeof(ItemWithText) * (MAX_CONTROLS + MEMORY_PADDING));
 
@@ -100,19 +87,8 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
         return NULL;
     }
 
-    // temp
-    // ctx->draw_data.pos_color_vertices = (FlVertPosColor*)malloc(sizeof(FlVertPosColor) * MAX_VERTS);
-    // ctx->draw_data.pos_uv_color_vertices = (FlVertPosUvColor*)malloc(sizeof(FlVertPosUvColor) * MAX_VERTS);
-    // ctx->draw_data.pos_color_indices = (FlIdxSize*)malloc(sizeof(FlIdxSize) * MAX_VERTS * 6);
-    // ctx->draw_data.pos_uv_color_indices = (FlIdxSize*)malloc(sizeof(FlIdxSize) * MAX_VERTS * 6);
-
     // TODO: Fixup
-    ctx->build_state = &state->render_data;
     ctx->global_state = state;
-
-    // temp
-    // ctx->render_data.render_commands = aligned_alloc(16, MAX_RENDER_COMMANDS);
-    // ctx->render_data.render_data = aligned_alloc(16, MAX_RENDER_COMMAND_DATA);
 
     return ctx;
 }
@@ -128,25 +104,11 @@ struct FlGlobalState* fl_create(const FlSettings* settings) {
 
     g_fl_global_ctx = fl_context_create(g_state);
 
-    // TODO: Custom allocator
-    u8* render_data = (u8*)malloc(1024 * 1024);
-    u8* render_commands = (u8*)malloc(10 * 1024);
-
-    g_state->render_data.render_data = render_data;
-    g_state->render_data.render_commands = render_commands;
-    g_state->render_data.start_render_data = render_data;
-    g_state->render_data.start_render_commands = render_commands;
-    g_state->render_data.end_render_data = render_data + (1024 * 1024);
-    g_state->render_data.end_render_commands = render_commands + (10 * 1024);
-
-    u8* primitive_data = (u8*)malloc(1024 * 1024);
-    g_state->primitives_data.data = primitive_data;
-    g_state->primitives_data.start_data = primitive_data;
-    g_state->primitives_data.end_data = primitive_data + (1024 * 1024);
+    FL_TRY_ALLOC_NULL((CommandBuffer_create(&g_state->primitive_commands, "primitives", &malloc_allocator, 4 * 1024)));
+	FL_TRY_ALLOC_NULL((CommandBuffer_create(&g_state->render_commands, "primitives", &malloc_allocator, 4 * 1024)));
 
     // TODO: We should check settings for texture size
-
-    g_state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, g_state, &malloc_allocator);
+    FL_TRY_ALLOC_NULL((g_state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, g_state, &malloc_allocator)));
 
     Font_init(g_state);
 
@@ -207,6 +169,7 @@ void fl_destroy();
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_begin_c(FlContext* context) {
+
     context->cursor.x = 0.0f;
     context->cursor.y = 0.0f;
     // XXH3_64bits_reset(context->context_hash);
@@ -266,18 +229,24 @@ void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static bool hack_first_frame = false;
+
 void fl_frame_begin(struct FlContext* ctx) {
+	if (hack_first_frame) {
+		CommandBuffer_rewind(&ctx->global_state->render_commands);
+	}
+
+	hack_first_frame = true;
+
+	CommandBuffer_rewind(&ctx->global_state->primitive_commands);
+
     ctx->cursor.x = 0;
     ctx->cursor.y = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-u8* draw_text(struct FlContext* ctx, const u8* cmd) {
+void draw_text(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
     Font* font = ctx->global_state->fonts[prim->font_handle];
@@ -300,115 +269,66 @@ u8* draw_text(struct FlContext* ctx, const u8* cmd) {
 
     Text_generate_vertex_buffer_ref(vertices, indices, font, codepoints, 0x0fffffff, pos, 0, text_len);
 
-    FlRcTexturedTriangles* tri_data = Render_render_texture_triangles_static(ctx->global_state, vertices, indices);
+    FlRcTexturedTriangles* tri_data = Render_render_texture_triangles_cmd(ctx->global_state);
 
+	tri_data->vertex_buffer = vertices;
+	tri_data->index_buffer = indices;
     tri_data->vertex_count = text_len * 4;
     tri_data->index_count = text_len * 6;
     tri_data->texture_id = 0;  // TODO: Fix me
-
-    return (u8*)(prim + 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* generate_glyphs(struct FlContext* ctx, const u8* cmd) {
+void generate_glyphs(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
     const int text_len = prim->len;
-    Font* font = ctx->global_state->fonts[prim->font_handle]; // TODO: fix me
+    Font* font = ctx->global_state->fonts[prim->font_handle];  // TODO: fix me
 
-	// TODO: we should hash the text, font, + size + dirty and don't
-	// don't try to regenerate glyphs if hash matches
+    // TODO: we should hash the text, font, + size + dirty and don't
+    // don't try to regenerate glyphs if hash matches
     u32* codepoints = alloca(sizeof(u32) * text_len);
     utf8_to_codepoints_u32(codepoints, (u8*)prim->text, text_len);
 
-	Font_generate_glyphs(ctx, prim->font_handle, codepoints, text_len, font->default_size);
-
-    return (u8*)(prim + 1);
+    Font_generate_glyphs(ctx, prim->font_handle, codepoints, text_len, font->default_size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_frame_end(struct FlContext* ctx) {
-	FlGlobalState* state = ctx->global_state;
-    BuildPrimitives* primitives = &state->primitives_data;
+    FlGlobalState* state = ctx->global_state;
+    const u8* command_data = NULL;
+	const int command_count = CommandBuffer_begin_read_commands(&state->primitive_commands);
 
-    const u8* commands = primitives->start_data;
-    const u8* commands_save = commands;
+    // first do generation pass to build up all glyphs and other data
+    Atlas_begin_add_rects(state->mono_fonts_atlas);
 
-    // first do generation pass
-    // TODO: Clean this up
-
-	Atlas_begin_add_rects(state->mono_fonts_atlas);
-
-    while (1) {
-        Primitive prim = (Primitive)*commands++;
-
-        switch (prim) {
+    for (int i = 0; i < command_count; ++i) {
+        switch (CommandBuffer_read_next_cmd(&state->primitive_commands, &command_data)) {
             case Primitive_DrawText: {
-                commands = generate_glyphs(ctx, commands);
+                generate_glyphs(ctx, command_data);
                 break;
             }
-
-            default:
-            	goto exit_1;
         }
     }
 
-exit_1:
-	Atlas_end_add_rects(state->mono_fonts_atlas, state);
+    Atlas_end_add_rects(state->mono_fonts_atlas, state);
 
-    commands = primitives->start_data;
-    commands_save = commands;
+	CommandBuffer_begin_read_commands(&state->primitive_commands);
 
     // TODO: Function pointers instead of switch?
-
-    while (1) {
-        Primitive prim = (Primitive)*commands++;
-
-        switch (prim) {
+    for (int i = 0; i < command_count; ++i) {
+        switch (CommandBuffer_read_next_cmd(&state->primitive_commands, &command_data)) {
             case Primitive_DrawText: {
-                commands = draw_text(ctx, commands);
+                draw_text(ctx, command_data);
                 break;
             }
-
-            default:
-                goto exit;
         }
     }
-exit:
-
-    primitives->data = (u8*)commands_save;
 
     VertexAllocator_end_frame(&ctx->vertex_allocator);
-
-    // const u8* primitives = ctx->global_state->primitives_data.
-    // fl_generate_render_data(ctx);
-    // fl_generate_render_data_2(ctx);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-FlRenderData* fl_get_render_data(struct FlContext* ctx) {
-    BuildRenderState* render_state = &ctx->global_state->render_data;
-
-    u8* start_render_commands = render_state->start_render_commands;
-    u8* render_commands = render_state->render_commands;
-
-    ctx->render_data_out.render_commands = start_render_commands;
-    ctx->render_data_out.render_data = render_state->start_render_data;
-    ctx->render_data_out.count = (u32)((uintptr_t)render_commands - (uintptr_t)start_render_commands);
-
-    // printf("commands %d\n", ctx->render_data_out.count);
-
-    // Reset back the pointers
-
-    render_state->render_data = render_state->start_render_data;
-    render_state->render_commands = render_state->start_render_commands;
-
-    return &ctx->render_data_out;
+    CommandBuffer_rewind(&state->primitive_commands);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -438,5 +358,18 @@ void fl_text_len(struct FlContext* ctx, const char* text, int text_len) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_destroy(FlGlobalState* self) {
-	FL_UNUSED(self);
+    FL_UNUSED(self);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Returns the number of render commands. use fl_render_get_cmd to get each command
+
+int fl_render_begin_commands(struct FlGlobalState* state) {
+	return CommandBuffer_begin_read_commands(&state->render_commands);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+u16 fl_render_get_command(struct FlGlobalState* state, const u8** data) {
+	return CommandBuffer_read_next_cmd(&state->render_commands, data);
 }

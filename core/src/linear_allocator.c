@@ -56,6 +56,27 @@ FL_INLINE u8* internal_alloc_unchecked(LinearAllocator* self, int size, int alig
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static u8* handle_out_of_memory(LinearAllocator* self, int size, int alignment) {
+	if (!self->allocator || !self->allow_realloc) {
+		ERROR_ADD(FlError_Memory, "Ran out of memory in fixed LinearAllocator: %s", self->id);
+		return NULL;
+	}
+
+	// calculate the the original size and double it for the new alloc
+	int memory_size = (int)((uintptr_t)self->end_data - (uintptr_t)self->start_data) * 2;
+	u8* data = FlAllocator_realloc(self->allocator, self->start_data, memory_size);
+
+	if (FL_UNLIKELY(!data)) {
+		ERROR_ADD(FlError_Memory, "Unable to resize LinearAllocator: %s", self->id);
+		return NULL;
+	}
+
+	LinearAllocator_update_resize(self, data, memory_size);
+	return internal_alloc_unchecked(self, size, alignment);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 u8* LinearAllocator_internal_alloc(LinearAllocator* self, int size, int alignment) {
     u8* start = self->current_data;
 
@@ -65,25 +86,26 @@ u8* LinearAllocator_internal_alloc(LinearAllocator* self, int size, int alignmen
     u8* end = start + size;
 
     if (FL_UNLIKELY(end > self->end_data)) {
-        if (!self->allocator || !self->allow_realloc) {
-            ERROR_ADD(FlError_Memory, "Ran out of memory in fixed LinearAllocator: %s", self->id);
-            return NULL;
-        }
-
-        // calculate the the original size and double it for the new alloc
-        int memory_size = (int)((uintptr_t)self->end_data - (uintptr_t)self->start_data) * 2;
-        u8* data = FlAllocator_realloc(self->allocator, self->start_data, memory_size);
-
-        if (FL_UNLIKELY(!data)) {
-            ERROR_ADD(FlError_Memory, "Unable to resize LinearAllocator: %s", self->id);
-            return NULL;
-        }
-
-        LinearAllocator_update_resize(self, data, memory_size);
-        return internal_alloc_unchecked(self, size, alignment);
+		return handle_out_of_memory(self, size, alignment);
     }
 
     self->current_data = end;
+
+    return start;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+u8* LinearAllocator_internal_alloc_unaligned(LinearAllocator* self, int size) {
+    u8* start = self->current_data;
+    u8* end = start + size;
+
+    if (FL_UNLIKELY(end > self->end_data)) {
+		return handle_out_of_memory(self, size, 1);
+    }
+
+    self->current_data = end;
+
     return start;
 }
 

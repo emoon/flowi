@@ -251,19 +251,17 @@ void Atlas_begin_add_rects(Atlas* self) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Atlas_end_add_rects(Atlas* self, FlGlobalState* state) {
+	FL_UNUSED(state);
     // Validate that we actually have a rect to update
     if (self->dirty_rect.x1 < 0 || self->dirty_rect.x0 >= self->width) {
         return;
     }
 
-    printf("dirty rect %d %d %d %d\n",
-    	self->dirty_rect.x0,
-    	self->dirty_rect.y0,
-    	self->dirty_rect.x1,
-    	self->dirty_rect.y1);
-
     // Add command to update the texture with the added glyphs
-    FlRcUpdateTexture* cmd = Render_update_texture_cmd_static(state, self->image_data);
+    // TODO: There is a potential race-condition here as the static texture may be uploaded at the same time
+    // as we are adding more glyphs to it. In practice it may not be a problem tho
+    FlRcUpdateTexture* cmd = Render_update_texture_cmd(state);
+    cmd->source_data = self->image_data;
     cmd->rect = self->dirty_rect;
     cmd->texture_id = self->texture_id;
 }
@@ -318,8 +316,11 @@ Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalStat
         return NULL;
     }
 
+    FL_UNUSED(state);
+
     // Create texture
-    FlRcCreateTexture* texture = Render_create_texture_static(state, NULL);
+
+    FlRcCreateTexture* texture = Render_create_texture_cmd(state);
 
     if (image_type == AtlasImageType_U8) {
         texture->format = FlTextureFormat_R8_LINEAR;
@@ -327,8 +328,11 @@ Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalStat
         texture->format = FlTextureFormat_RGBA8_sRGB;
     }
 
+	texture->data = NULL;
+	texture->id = state->texture_ids++;			// TODO: Function
     texture->width = w;
     texture->height = h;
+
     self->texture_id = texture->id;
 
     Atlas_reset(self, w, h);

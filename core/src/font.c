@@ -201,8 +201,6 @@ static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
         const int old_size = info->capacity;
         const int new_size = old_size == 0 ? 16 : old_size * 2;
 
-        printf("old size %d - new size %d\n", old_size, new_size);
-
         int total_size = (sizeof(Glyph) + sizeof(CodepointSize) + sizeof(f32)) * new_size;
 
         // TODO: Handle OOM
@@ -315,8 +313,6 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
 	// Alloc glyph and insert into hashtable
     int alloc_index = allocate_glyph(ctx, font);
 
-	printf("alloc index %d\n", alloc_index);
-
     info->codepoint_sizes[alloc_index].codepoint = codepoint;
     info->codepoint_sizes[alloc_index].size = size;
     info->codepoint_sizes[alloc_index].next_index = font->lut[hash_idx];
@@ -347,12 +343,8 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
         return false;
 	}
 
-	printf("stride %d\n", stride);
-
 	const u8* src = g->bitmap.buffer;
 	const int src_pitch = g->bitmap.pitch;
-
-	printf("width %d %d\n", g->bitmap.width, src_pitch);
 
 	// TODO: Handle the case when we have colors here also
     for (int y = 0, rows = g->bitmap.rows; y < rows; ++y) {
@@ -360,8 +352,6 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     	dest += stride;
     	src += src_pitch;
     }
-
-    printf("writing to %p\n", glyph);
 
     glyph->x0 = rx;
     glyph->y0 = ry;
@@ -395,237 +385,4 @@ void Font_init(FlGlobalState* state) {
     //#elif defined(fl_FONTLIB_STBTYPE)
     //#endif
 }
-
-
-
-
-
-#if 0
-    LinearAllocator allocator;
-
-    // TODO: Add support for Immeditae/DeferredMode
-    // TODO: Add support for Prebuild/OnDemand mode
-    // TODO: Check for overlap in the ranges for the char indices
-    // TODO: Do all ranges
-
-    // TODO: Validate ranges
-
-    // Approx alloc size needed
-    int array_len = end - start;
-    int memory_size = ((pixel_size * pixel_size) * array_len) * 8;
-    int glyph_count = end;
-
-    // TODO: Fix me
-    u8* linear_allocator_data = malloc(memory_size);
-    LinearAllocator_create(&allocator, "FreetypeBuilder", linear_allocator_data, memory_size);
-
-    u8** bitmaps = LinearAllocator_alloc_array(&allocator, u8*, array_len);
-    stbrp_rect* pack_rects = LinearAllocator_alloc_array_zero(&allocator, stbrp_rect, array_len);
-    TempGlyphInfo* glyph_infos = LinearAllocator_alloc_array(&allocator, TempGlyphInfo, array_len);
-
-    // 1 pixel padding between each glyph
-    const int padding = 1;
-    int area = 0;
-    int gylph_id = start;
-
-    for (int i = 0; i < array_len; ++i, ++gylph_id) {
-        error = FT_Load_Char(face, gylph_id, FT_LOAD_RENDER);
-        if (error != 0) {
-            ERROR_ADD(FlError_Font, "Freetype error %s when loading char %d (0x%x) for font: %s",
-                      FT_Error_String(error), gylph_id, gylph_id, name);
-            free(linear_allocator_data);
-            return -1;
-        }
-
-        TempGlyphInfo* info = &glyph_infos[i];
-
-        const FT_GlyphSlot slot = face->glyph;
-        const FT_Bitmap* ft_bitmap = &face->glyph->bitmap;
-
-        // Make sure we can fit these in s16. No error handling as this shouldn't happen
-        assert((int)ft_bitmap->width >= 0 && ft_bitmap->width < 0x7fff);
-        assert((int)ft_bitmap->rows >= 0 && ft_bitmap->rows < 0x7fff);
-        // assert(slot->bitmap_left >= 0 && slot->bitmap_left < 0x7fff);
-        // assert(slot->bitmap_top >= 0 && slot->bitmap_top < 0x7fff);
-
-        info->width = (s16)ft_bitmap->width;
-        info->height = (s16)ft_bitmap->rows;
-        info->offset_x = (s16)slot->bitmap_left;
-        info->offset_y = 140 - (s16)slot->bitmap_top;
-        info->height = (s16)ft_bitmap->rows;
-        info->pitch = ft_bitmap->pitch;
-        info->advance_x = (float)FT_CEIL(slot->advance.x);
-
-        const int width = ft_bitmap->width;
-        const int height = ft_bitmap->rows;
-        const u8* src = ft_bitmap->buffer;
-        const int src_pitch = ft_bitmap->pitch;
-
-        switch (ft_bitmap->pixel_mode) {
-            // Grayscale image, 1 byte per pixel.
-            case FT_PIXEL_MODE_GRAY: {
-                u8* bitmap = LinearAllocator_alloc_array(&allocator, u8, height * width);
-                bitmaps[i] = bitmap;
-
-                if (FL_LIKELY(src_pitch == width)) {
-                    memcpy(bitmap, ft_bitmap->buffer, width * height);
-                } else {
-                    for (int h = 0; h < height; ++h, src += src_pitch, bitmap += width) {
-                        memcpy(bitmap, src, width);
-                    }
-                }
-
-                break;
-            }
-
-            case FT_PIXEL_MODE_BGRA: {
-                // RGBA 4-bytes per-pixel
-                // TODO: How to deal with pre-mul alpha? Either convert, or have renderer handle it
-                u8* bitmap = LinearAllocator_alloc_array(&allocator, u8, height * width * 4);
-                bitmaps[i] = bitmap;
-
-                if (FL_LIKELY(src_pitch * 4 == width)) {
-                    memcpy(bitmap, ft_bitmap->buffer, width * height * 4);
-                } else {
-                    for (int h = 0; h < height; ++h, src += src_pitch, bitmap += width) {
-                        memcpy(bitmap, src, width * 4);
-                    }
-                }
-
-                break;
-            }
-
-            default: {
-                ERROR_ADD(FlError_Font, "Freetype error. Pixel mode %d not supported for font: %s",
-                          ft_bitmap->pixel_mode, name);
-                free(linear_allocator_data);
-                return -1;
-            }
-        }
-
-        const int w = ft_bitmap->width + padding;
-        const int h = ft_bitmap->rows + padding;
-
-        pack_rects[i].id = i;
-        pack_rects[i].w = (stbrp_coord)w;
-        pack_rects[i].h = (stbrp_coord)h;
-
-        area += w * h;
-    }
-
-    // TODO: Don't rely on mathlib
-    const int area_t = (int)(sqrt(area) * 0.7f);
-    const int texture_width = round_to_next_pow_two(area_t);
-    const int texture_max_height = 1024 * 32;
-
-    // printf("texture width %d\n", texture_width);
-
-    // Allocate temp data for rect packer
-    stbrp_node* pack_nodes = LinearAllocator_alloc_array(&allocator, stbrp_node, array_len);
-
-    // Pack the the rectangles
-    stbrp_context pack_context;
-    stbrp_init_target(&pack_context, texture_width, texture_max_height, pack_nodes, array_len);
-    stbrp_pack_rects(&pack_context, pack_rects, array_len);
-
-    int texture_height = -1;
-
-    // figure out min max for texture
-    // TODO: SIMD
-
-    for (int i = 0; i < array_len; ++i) {
-        const stbrp_rect* rect = &pack_rects[i];
-        if (rect->was_packed) {
-            texture_height = FL_MAX(rect->y + rect->h, texture_height);
-        }
-
-        // printf("packed id %04d - [%04d %04d - %04d %04d]\n", rect->id, rect->y, rect->x, rect->x + rect->w, rect->y +
-        // rect->h);
-    }
-
-    texture_height = round_to_next_pow_two(texture_height);
-
-    // TODO: Custom allocator
-    Font* font = (Font*)calloc(1, sizeof(Font));
-    font->advance_x = (f32*)calloc(1, sizeof(f32) * glyph_count);
-    font->glyphs = (Glyph*)calloc(1, sizeof(Glyph) * glyph_count);
-    font->glyph_count = glyph_count;
-
-    // TODO: Handle different glyph formats (RGBA etc)
-
-    u8* texture_data = (u8*)calloc(1, texture_width * texture_height);
-
-    // update the texture atlas and the glyph lookup
-    for (int i = 0; i < array_len; ++i) {
-        const stbrp_rect* rect = &pack_rects[i];
-        const TempGlyphInfo* info = &glyph_infos[i];
-
-        if (!rect->was_packed) {
-            continue;
-        }
-
-        const u32 id = rect->id;
-        const u8* bitmap = bitmaps[id];
-        const u32 height = rect->h - padding;
-        const u32 width = rect->w - padding;
-
-        // TODO: Handle RGBA data
-        u8* temp_data = texture_data + (rect->y * texture_width) + rect->x;
-
-        for (u32 y = 0; y < height; ++y, bitmap += width, temp_data += texture_width) {
-            memcpy(temp_data, bitmap, width);
-        }
-
-        const int tx = rect->x;  // + padding;
-        const int ty = rect->y;  // + padding;
-
-        int x0 = info->offset_x;
-        int y0 = info->offset_y;
-        int x1 = x0 + info->width;
-        int y1 = y0 + info->height;
-
-        // TODO: SIMD
-        font->glyphs[id].x0 = x0;
-        font->glyphs[id].y0 = y0;
-        font->glyphs[id].x1 = x1;
-        font->glyphs[id].y1 = y1;
-
-        // calc uv coords in normalized 0.0 - 1.0 space
-        font->glyphs[id].u0 = tx;
-        font->glyphs[id].v0 = ty;
-        font->glyphs[id].u1 = tx + info->width;
-        font->glyphs[id].v1 = ty + info->height;
-
-        font->glyphs[id].advance_x = info->advance_x;
-        font->advance_x[id] = info->advance_x;
-    }
-
-    // TODO: Make sure we select the correct texture format here
-    FlRcCreateTexture* texture = Render_create_texture_static(state, texture_data);
-
-#if FL_VALIDATE_RANGES
-    if (!texture) {
-        ERROR_ADD(FlError_Font, "Failed to create font: %s because crate_texture_static failed.", filename);
-
-        return -1;
-    }
-#endif
-
-    texture->format = FlTextureFormat_R8_LINEAR;
-    texture->width = texture_width;
-    texture->height = texture_height;
-
-    // TODO: Custom allocator
-    free(linear_allocator_data);
-
-    int font_id = state->font_count++;
-
-    if (state->font_count > FL_FONTS_MAX) {
-        ERROR_ADD(FlError_Font, "Max number of fonts %d has been reached", FL_FONTS_MAX);
-        return -1;
-    }
-
-    state->fonts[font_id] = font;
-#endif
-
 

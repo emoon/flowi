@@ -2,6 +2,7 @@
 
 #include "flowi.h"
 #include "style.h"
+#include "command_buffer.h"
 
 struct Font;
 struct FlContext;
@@ -44,17 +45,6 @@ typedef struct PrimitiveBox {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* Primitive_alloc_cmd(struct FlGlobalState* state, Primitive cmd, int size);
-
 #define Primitive_alloc_text(state) \
-    (PrimitiveText*)Primitive_alloc_cmd(state, Primitive_DrawText, sizeof(PrimitiveText) + 1)
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Used to build up the render state
-
-typedef struct BuildPrimitives {
-    u8* data;
-    u8* start_data;
-    u8* end_data;
-} BuildPrimitives;
+    (PrimitiveText*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawText, sizeof(PrimitiveText))
 

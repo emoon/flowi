@@ -161,7 +161,7 @@ void ui_update(FlContext* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render triangles without texture
 
-static const u8* render_textured_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+static void render_textured_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
     FlRcTexturedTriangles* draw_cmd = (FlRcTexturedTriangles*)render_data;
 
     bgfx::TransientVertexBuffer tvb;
@@ -194,15 +194,12 @@ static const u8* render_textured_triangles(RenderContext& ctx, const u8* render_
     encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
     encoder->setIndexBuffer(&tib, 0, index_count);
     encoder->submit(255, ctx.texture_shader);
-
-    // Return next entry in the list
-    return (u8*)(draw_cmd + 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render triangles without texture
 
-static const u8* render_flat_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+static void render_flat_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
     FlRcSolidTriangles* draw_cmd = (FlRcSolidTriangles*)render_data;
 
     bgfx::TransientVertexBuffer tvb;
@@ -226,14 +223,11 @@ static const u8* render_flat_triangles(RenderContext& ctx, const u8* render_data
     encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
     encoder->setIndexBuffer(&tib, 0, index_count);
     encoder->submit(255, ctx.flat_shader);
-
-    // Return next entry in the list
-    return (u8*)(draw_cmd + 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static const u8* create_texture(RenderContext& ctx, const u8* render_data) {
+static void create_texture(RenderContext& ctx, const u8* render_data) {
     const FlRcCreateTexture* cmd = (FlRcCreateTexture*)render_data;
     const u8* data = cmd->data;
     const u32 id = cmd->id;
@@ -267,13 +261,11 @@ static const u8* create_texture(RenderContext& ctx, const u8* render_data) {
             exit(0);
         }
     }
-
-    return (u8*)(cmd + 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static const u8* update_texture(RenderContext& ctx, const u8* render_data) {
+static void update_texture(RenderContext& ctx, const u8* render_data) {
     const FlRcUpdateTexture* cmd = (FlRcUpdateTexture*)render_data;
 
     const Texture* texture = &ctx.textures[cmd->texture_id];
@@ -282,15 +274,11 @@ static const u8* update_texture(RenderContext& ctx, const u8* render_data) {
 
     bgfx::updateTexture2D(texture->handle, 0, 0, rect->x0, rect->y0, rect->x1 - rect->x0, rect->y1 - rect->y0, mem,
                           texture->width);
-
-    return (u8*)(cmd + 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx, uint16_t width, uint16_t height) {
-    FlRenderData* render_data = fl_get_render_data(flowi_ctx);
-
+void ui_render(RenderContext& render_ctx, FlGlobalState* flowi_state, uint16_t width, uint16_t height) {
     bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
 
     int view_id = 255;
@@ -304,33 +292,32 @@ void ui_render(RenderContext& render_ctx, FlContext* flowi_ctx, uint16_t width, 
     bgfx::setViewTransform(view_id, NULL, ortho);
     bgfx::setViewRect(view_id, 0, 0, width, height);
 
-    const u8* render_commands = render_data->render_commands;
-    const u8* render_cmd_data = render_data->render_data;
+    const int count = fl_render_begin_commands(flowi_state);
+    const u8* render_cmd_data = nullptr;
+    u16 cmd = 0;
 
     bgfx::Encoder* encoder = bgfx::begin();
 
     // process all the render commands
-    for (int i = 0, count = render_data->count; i < count; ++i) {
-        FlRenderCommand cmd = (FlRenderCommand)*render_commands++;
-
-        switch (cmd) {
+    for (int i = 0; i < count; ++i) {
+        switch (cmd = fl_render_get_command(flowi_state, &render_cmd_data)) {
             case FlRc_RenderTexturedTriangles: {
-                render_cmd_data = render_textured_triangles(render_ctx, render_cmd_data, encoder);
+                render_textured_triangles(render_ctx, render_cmd_data, encoder);
                 break;
             }
 
             case FlRc_RenderTriangles: {
-                render_cmd_data = render_flat_triangles(render_ctx, render_cmd_data, encoder);
+                render_flat_triangles(render_ctx, render_cmd_data, encoder);
                 break;
             }
 
             case FlRc_CreateTexture: {
-                render_cmd_data = create_texture(render_ctx, render_cmd_data);
+                create_texture(render_ctx, render_cmd_data);
                 break;
             }
 
             case FlRc_UpdateTexture: {
-                render_cmd_data = update_texture(render_ctx, render_cmd_data);
+                update_texture(render_ctx, render_cmd_data);
                 break;
             }
 
@@ -453,7 +440,7 @@ int main() {
         // bgfx::dbgTextPrintf(0, 4, 0x4f, "Press F1 to toggle bgfx stats, Esc to quit");
 
         ui_update(ctx);
-        ui_render(render_ctx, ctx, display_w, display_h);
+        ui_render(render_ctx, state, display_w, display_h);
 
         bgfx::frame();
 

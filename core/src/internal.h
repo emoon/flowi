@@ -6,6 +6,7 @@
 #include "style.h"
 #include "primitives.h"
 #include "vertex_allocator.h"
+#include "command_buffer.h"
 #include "simd.h"
 
 #if defined(FL_FONTLIB_FREETYPE)
@@ -20,23 +21,17 @@ struct Font;
 struct StyleInternal;
 struct Atlas;
 
-// Used to build up the render state
-typedef struct BuildRenderState {
-    u8* render_data;
-    u8* render_commands;
-    u8* start_render_data;
-    u8* start_render_commands;
-    u8* end_render_data;
-    u8* end_render_commands;
-} BuildRenderState;
-
 typedef struct FlGlobalState {
 #if defined(FL_FONTLIB_FREETYPE)
 	FT_Library ft_library;
 #endif
-    BuildRenderState render_data;
-    BuildPrimitives primitives_data;
     FlAllocator* global_allocator;
+
+    // Primitive commands
+    CommandBuffer primitive_commands;
+
+    // Render commands that is generated for the rendering backend
+    CommandBuffer render_commands;
 
     // TODO: We may have to support more atlases, but right now we have three
     // One for grayscale fonts, one for colored fonts and one for images.
@@ -50,7 +45,6 @@ typedef struct FlGlobalState {
     u32 temp;
     u16 texture_ids;
 } FlGlobalState;
-
 
 // Global state for the whole lib
 // Contains loaded fonts, etc
@@ -114,10 +108,6 @@ typedef struct FlContext {
 	int fade_actions;
 
 	FlGlobalState* global_state;
-	BuildRenderState* build_state;
-
-	// Render commands and data for the GPU backend
-	FlRenderData render_data_out;
 
     // Used for building vertex / index output
 	VertexAllocator vertex_allocator;

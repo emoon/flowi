@@ -43,6 +43,18 @@ UTEST(LinearAllocator, alloc_single_byte) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+UTEST(LinearAllocator, alloc_single_byte_unaligned) {
+    LinearAllocator alloc;
+    allocator_create(&alloc, "test", 20);
+    u8* data = LinearAllocator_alloc_unaligend(&alloc, u8);
+
+    // make sure we have incremented pointers enough
+    ASSERT_TRUE(alloc.current_data == data + 1);
+    allocator_destroy(&alloc);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 UTEST(LinearAllocator, rewind) {
     LinearAllocator alloc;
     allocator_create(&alloc, "test", 20);

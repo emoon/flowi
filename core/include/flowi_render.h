@@ -156,13 +156,14 @@ typedef enum FlRenderCommand {
 
 // Return from Flowi to be used by a rendering backend to render data
 typedef struct FlRenderData {
-    // list of render command. These values should be cast to FlRenderCommand
-    u8* render_commands;
     // Data for the render commands. Needs to be cast to the correct type depending on enum
     u8* render_data;
     // Total number of render commands
     int count;
 } FlRenderData;
+
+// Get the next render command
+//u16 fl_render_get_next_command(struct FlGlobalState* state, const u8** ptr);
 
 // History to keep buffers alive
 #define FL_FRAME_HISTORY 2
