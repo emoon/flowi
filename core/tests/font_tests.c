@@ -85,10 +85,11 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
 		}
 	}
 
+	// validate that we have created some textures
 	ASSERT_TRUE(found_update_texture);
 
-	// validate that we have created some textures
-
+	fl_font_destroy(ctx, font_id);
+	fl_context_destroy(ctx);
 	fl_destroy(state);
 }
 

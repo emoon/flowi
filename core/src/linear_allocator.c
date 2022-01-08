@@ -37,6 +37,7 @@ bool LinearAllocator_create_with_allocator(LinearAllocator* self, const char* id
 void LinearAllocator_destroy(LinearAllocator* self) {
     if (self->allocator) {
         FlAllocator_free(self->allocator, self->start_data);
+        self->allocator = NULL;
     }
 }
 

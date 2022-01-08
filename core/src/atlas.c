@@ -270,6 +270,7 @@ void Atlas_end_add_rects(Atlas* self, FlGlobalState* state) {
 
 void Atlas_destroy(Atlas* self) {
     FlAllocator* allocator = self->allocator;
+    FlAllocator_free(allocator, self->image_data);
     FlAllocator_free(allocator, self->nodes);
     FlAllocator_free(allocator, self);
 }

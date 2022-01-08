@@ -116,6 +116,7 @@ UTEST(CommandBuffer, alloc_commands_rewind) {
 	CommandBuffer_rewind(&buffer);
 
 	ASSERT_EQ(CommandBuffer_begin_read_commands(&buffer), 0);
+	CommandBuffer_destroy(&buffer);
 }
 
 

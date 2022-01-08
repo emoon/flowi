@@ -233,7 +233,6 @@ static void create_texture(RenderContext& ctx, const u8* render_data) {
     const u32 id = cmd->id;
     const u16 width = cmd->width;
     const u16 height = cmd->height;
-    const u16 flags = 0;
 
     assert(id < MAX_TEXTURE_COUNT);
 
@@ -246,7 +245,7 @@ static void create_texture(RenderContext& ctx, const u8* render_data) {
             }
 
             Texture* texture = &ctx.textures[id];
-            texture->handle = bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::R8, flags, mem);
+            texture->handle = bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::R8, 0, mem);
             texture->inv_x = 1.0f / width;
             texture->inv_y = 1.0f / height;
             texture->size = width * height;

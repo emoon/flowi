@@ -8,6 +8,8 @@
 #include "../include/flowi_render.h"
 #include <freetype/freetype.h>
 
+struct FlAllocator;
+
 // TODO: Investigate making memory usage smaller
 
 typedef struct Glyph {
@@ -42,6 +44,10 @@ typedef struct Font {
 
     GlyphInfo glyph_info;
     int default_size;
+
+    u8* font_data_to_free;
+
+    struct FlAllocator* allocator;
 
     // Debug data
     char debug_name[512];

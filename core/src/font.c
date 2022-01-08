@@ -20,13 +20,15 @@
 FlFont fl_font_create_from_file(struct FlContext* ctx, const char* filename, int font_size,
                                 FlFontGlyphPlacementMode placement_mode) {
     u32 size = 0;
-    const u8* data = Io_load_file_to_memory(filename, &size);
+    u8* data = Io_load_file_to_memory(filename, &size);
 
     if (!data) {
         return -1;
     }
 
-    return fl_font_create_from_memory(ctx, filename, strlen(filename), data, size, font_size, placement_mode);
+    FlFont id = fl_font_create_from_memory(ctx, filename, strlen(filename), data, size, font_size, placement_mode);
+
+    return id;
 }
 //#endif
 
@@ -79,7 +81,9 @@ typedef struct TempGlyphInfo {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static Font* font_create(FlContext* ctx, FT_Face face) {
+	// TODO: Pass in allocator
     Font* font = FlAllocator_alloc_zero_type(ctx->global_state->global_allocator, Font);
+    font->allocator = ctx->global_state->global_allocator;
 
     if (!font) {
         return NULL;
@@ -93,6 +97,9 @@ static Font* font_create(FlContext* ctx, FT_Face face) {
 
     return font;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Build a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
@@ -139,6 +146,9 @@ FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int n
 
     Font* font = font_create(ctx, face);
 
+	// Hack: do proper allocator
+    font->font_data_to_free = (u8*)font_data;
+
     if (!font) {
         ERROR_ADD(FlError_Font, "Unable to allocate memory for font: %s", "fixme");
         return -1;
@@ -171,6 +181,9 @@ void fl_font_destroy(struct FlContext* ctx, FlFont font_id) {
         ERROR_ADD(FlError_Font, "Freetype error %s when destroying font font: %s", FT_Error_String(error),
                   font->debug_name);
     }
+
+    // TODO: allocator
+	free(font->font_data_to_free);
 
     FlAllocator_free(state->global_allocator, font->glyph_info.codepoint_sizes);
     FlAllocator_free(state->global_allocator, font);

@@ -19,10 +19,13 @@ UTEST(Io, load_file_fail) {
 
 UTEST(Io, load_file_ok) {
     u32 size = 0;
-    const u8* data = Io_load_file_to_memory("data/montserrat-regular.ttf", &size);
+    u8* data = Io_load_file_to_memory("data/montserrat-regular.ttf", &size);
 
     ASSERT_TRUE(data != NULL);
     ASSERT_TRUE(size == 245708);
+
+	// TODO: Allocator
+    free(data);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -35,5 +38,8 @@ int main(int argc, const char* const argv[]) {
 	// Create a global context that we can use in all tests
 	FlGlobalState* global = fl_create(NULL);
 	g_ctx = fl_context_create(global);
-    return utest_main(argc, argv);
+    int status = utest_main(argc, argv);
+	fl_context_destroy(g_ctx);
+	fl_destroy(global);
+	return status;
 }

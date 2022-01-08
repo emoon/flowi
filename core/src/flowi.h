@@ -28,6 +28,7 @@ void fl_destroy(struct FlGlobalState* state);
 
 // Create a context for UI updates etc
 struct FlContext* fl_context_create(struct FlGlobalState* state);
+void fl_context_destroy(struct FlContext* self);
 
 /// Create a push button with the given label
 bool fl_button_c(struct FlContext* ctx, const char* label);

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <freetype/freetype.h>
 
 #include "../include/flowi_render.h"
 #include "allocator.h"
@@ -69,14 +70,15 @@ static FlAllocator malloc_allocator = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlContext* fl_context_create(struct FlGlobalState* state) {
+	// TODO: Custom allocator
     FlContext* ctx = malloc(sizeof(FlContext));
     memset(ctx, 0, sizeof(FlContext));
     state->global_allocator = &malloc_allocator;
 
     // TODO: Use custom allocator
-    ctx->positions = (vec128*)malloc(sizeof(vec128) * (MAX_CONTROLS + MEMORY_PADDING));
-    ctx->widget_ids = (u32*)malloc(sizeof(u32) * (MAX_CONTROLS + MEMORY_PADDING));
-    ctx->items_with_text = (ItemWithText*)malloc(sizeof(ItemWithText) * (MAX_CONTROLS + MEMORY_PADDING));
+    ctx->positions = 0;//(vec128*)malloc(sizeof(vec128) * (MAX_CONTROLS + MEMORY_PADDING));
+    ctx->widget_ids = 0;//(u32*)malloc(sizeof(u32) * (MAX_CONTROLS + MEMORY_PADDING));
+    ctx->items_with_text = 0;//(ItemWithText*)malloc(sizeof(ItemWithText) * (MAX_CONTROLS + MEMORY_PADDING));
 
     // TODO: Configure these values
     int vertex_sizes[VertexAllocType_SIZEOF] = {1024 * 1024, 1024 * 1024};
@@ -357,8 +359,34 @@ void fl_text_len(struct FlContext* ctx, const char* text, int text_len) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void fl_context_destroy(struct FlContext* self) {
+	// TODO: Custom allocator
+	for (int i = 0; i < self->style_count; ++i) {
+		free(self->styles[i]);
+	}
+
+	VertexAllocator_destroy(&self->vertex_allocator);
+	free(self);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void fl_destroy(FlGlobalState* self) {
-    FL_UNUSED(self);
+    CommandBuffer_destroy(&self->primitive_commands);
+	CommandBuffer_destroy(&self->render_commands);
+	Atlas_destroy(self->mono_fonts_atlas);
+
+	for (int i = 0; i < self->font_count; ++i) {
+		Font* font = self->fonts[i];
+		// TODO: Fix me, ptr should always be valid here
+		if (font) {
+			FlAllocator_free(font->allocator, font);
+		}
+	}
+
+	FT_Done_FreeType(self->ft_library);
+	// TODO: Custom allocator
+	free(self);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

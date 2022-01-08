@@ -145,6 +145,8 @@ UTEST(LinearAllocator, update_resize) {
 
     LinearAllocator_alloc(&alloc, u64);
 
+    free(alloc.start_data);
+
 	LinearAllocator_update_resize(&alloc, 0, 40);
 
 	ASSERT_EQ(LinearAllocator_current_position(&alloc), 8);
