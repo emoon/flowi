@@ -133,11 +133,11 @@ void ui_init(RenderContext& ctx) {
 
     ctx.u_inv_res_tex = bgfx::createUniform("u_inv_res_tex", bgfx::UniformType::Vec4);
 
-    ctx.flat_shader = load_shader_program("t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.vs",
-                                          "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/color_fill.fs");
+    ctx.flat_shader = load_shader_program("t2-output/linux-gcc-debug-default/_generated/full/shaders/color_fill.vs",
+                                          "t2-output/linux-gcc-debug-default/_generated/full/shaders/color_fill.fs");
     ctx.texture_shader =
-        load_shader_program("t2-output/linux-gcc-debug-default/_generated/testbed/shaders/vs_texture.vs",
-                            "t2-output/linux-gcc-debug-default/_generated/testbed/shaders/fs_texture.fs");
+        load_shader_program("t2-output/linux-gcc-debug-default/_generated/full/shaders/vs_texture.vs",
+                            "t2-output/linux-gcc-debug-default/_generated/full/shaders/fs_texture.fs");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

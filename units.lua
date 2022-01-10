@@ -16,9 +16,9 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local GLFW_DIR = "testbed/external/glfw/"
-local BIMG_DIR = "testbed/external/bimg/"
-local BX_DIR = "testbed/external/bx/"
+local GLFW_DIR = "full/external/glfw/"
+local BIMG_DIR = "full/external/bimg/"
+local BX_DIR = "full/external/bx/"
 
 -- setup target for shader
 local shaderc_platform = "windows"
@@ -191,10 +191,10 @@ Program {
 
 	Includes = {
         BIMG_DIR .. "include",
-		"testbed/external/bx/include",
-		"testbed/external/bgfx/include",
-		"testbed/external/glfw/include",
-		"testbed/external",
+		"full/external/bx/include",
+		"full/external/bgfx/include",
+		"full/external/glfw/include",
+		"full/external",
         { BX_DIR .. "/include/compat/msvc" ; Config = "win64-*-*" },
 	},
 
@@ -210,17 +210,17 @@ Program {
 	},
 
     Sources = {
-        "testbed/src/main.cpp",
+        "full/src/main.cpp",
         --Glob {
         --    Dir = "testbed/src",
         --    Extensions = { ".cpp" },
         --    Recursive = true,
         --},
 
-        ShadercFS { Source = "testbed/shaders/color_fill.fs", OutName = "color_fill_fs.bin" },
-        ShadercVS { Source = "testbed/shaders/color_fill.vs", OutName = "color_fill_vs.bin" },
-        ShadercFS { Source = "testbed/shaders/fs_texture.sc", OutName = "fs_texture.bin" },
-        ShadercVS { Source = "testbed/shaders/vs_texture.sc", OutName = "vs_texture.bin" },
+        ShadercFS { Source = "full/shaders/color_fill.fs", OutName = "color_fill_fs.bin" },
+        ShadercVS { Source = "full/shaders/color_fill.vs", OutName = "color_fill_vs.bin" },
+        ShadercFS { Source = "full/shaders/fs_texture.sc", OutName = "fs_texture.bin" },
+        ShadercVS { Source = "full/shaders/vs_texture.sc", OutName = "vs_texture.bin" },
     },
 
     Env = {

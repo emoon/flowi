@@ -6,6 +6,7 @@
 // Generate a basic area
 
 UTEST(Layout, area_default) {
+	/*
 	FlLayoutArea sidepanel = {
 		.name = fl_str("sidepanel")
 		.width = { .value = 300, .type = FlSizeType_Fixed },
@@ -24,5 +25,6 @@ UTEST(Layout, area_default) {
 	};
 
 	FL_UNUSED(full);
+	*/
 }
 
