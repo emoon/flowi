@@ -1,0 +1,58 @@
+chunk = _{ SOI ~ (structdef | enumdef | doc_comment)+ ~ EOI }
+
+structdef   =  { attributes? ~ traits? ~ ("struct") ~ name ~ derive? ~ ("{") ~ fieldlist? ~ ("}") }
+enumdef     =  { (attributes | enum_flags | org_name)*? ~ ("enum") ~ name ~ ("{") ~ fieldlist? ~ ("}") }
+fieldlist   =  { (doc_comment | field)*  }
+field       =  { (var | function | enum_type) ~ fieldsep? }
+fieldsep    = _{ (",") }
+
+rettype      = { name }
+org_name     = { ("[org_name(") ~ name_with_namespace ~ (")]") }
+enum_flags   = { ("[enum_flags(") ~ name ~ (")]") }
+attributes   = { ("[attributes(") ~ namelist ~ (")]") }
+traits       = { ("[traits(") ~ namelist ~ (")]") }
+derive       = { (":") ~ namelist? }
+event        = { ("[event]") }
+no_chain     = { ("[no_chain]") }
+signal       = { ("[signal]") }
+manual       = { ("[manual]") }
+static_typ   = { ("[static]") }
+pointer_exp  = { ("*") }
+refexp       = { ("&") }
+optional     = { ("?") }
+array        = { ("[") ~ (refexp | pointer_exp)? ~ vtype ~ ("]") }
+enum_use     = { ("::") ~ vtype }
+retexp       = { ("->") ~ (refexp | pointer_exp)? ~ (vtype | array) ~ enum_use? ~ optional? }
+var          = { name ~ (":") ~ (refexp | pointer_exp)? ~ (vtype | array) ~ enum_use? }
+varlist      = { (var | array) ~ ((",") ~ (var | array))* }
+enum_assign  = { ("=") ~ name_or_num }
+enum_type    = { name ~ enum_assign }
+namelist     = { name ~ ((",") ~ name)* }
+function     = { (static_typ | org_name | no_chain | manual | signal | event)*? ~ name ~ ("(") ~ varlist? ~ (")") ~ retexp? }
+
+name = @{
+	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*
+}
+
+name_with_namespace = @{
+	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("::") | ("_") | ('0'..'9'))*
+}
+
+name_or_num = @{
+	(('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*
+}
+
+vtype = @{
+	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*
+}
+
+COMMENT = _{
+	("//") ~ !("/") ~ (!(("\r") | ("\n")) ~ ANY)* ~ (("\n") | ("\r\n") | ("\r") | EOI)
+}
+
+doc_comment = @{
+	((" ")*) ~ ("///") ~ (!NEWLINE ~ ANY)*
+}
+
+WHITESPACE = _{ (" ") | ("\t") | ("\u{000C}") | ("\r") | ("\n") }
+
