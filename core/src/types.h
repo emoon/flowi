@@ -2,16 +2,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "../include/inline.h"
 
 #define FL_RESTRICT __restrict
-
-#if defined(__GNUC__)
-#define FL_INLINE static inline
-#elif defined(_MSC_VER)
-#define FL_INLINE __forceinline static
-#else
-#error "Unsupported compiler"
-#endif
 
 typedef uint64_t u64;
 typedef uint32_t u32;

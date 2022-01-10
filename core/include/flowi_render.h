@@ -29,7 +29,6 @@ typedef struct FlIntRect {
     int x1, y1;
 } FlIntRect;
 
-
 // Used to describe the lifetime of data that is being rendered.
 //
 // FlMemoryLifetime_Static
@@ -145,6 +144,13 @@ typedef struct FlRcGpuBlitRect {
     u16 target_texture_id;
 } FlRcGpuBlitRect;
 
+// Used when restricting an area for rendering. How this is to be implemented depends onthe GPU
+// API, but for OpenGL this corresponts to https://www.khronos.org/registry/OpenGL-Refpages/es2.0/xhtml/glScissor.xml
+typedef struct FlRcScissorRect {
+    // Source rectangle to copy from
+    FlIntRect rect;
+} FlRcScissorRect;
+
 // FlRenderCommands that the render backend needs to support
 typedef enum FlRenderCommand {
     FlRc_RenderTexturedTriangles,
@@ -152,6 +158,7 @@ typedef enum FlRenderCommand {
     FlRc_CreateTexture,
     FlRc_UpdateTexture,
     FlRc_GpuBlitRect,
+    FlRc_ScissorRect,
 } FlRenderCommand;
 
 // Return from Flowi to be used by a rendering backend to render data
