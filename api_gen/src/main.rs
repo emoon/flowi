@@ -11,10 +11,10 @@ mod api_parser;
 extern crate pest_derive;
 
 // Code for C/Header generation
-//mod c_gen;
+mod c_gen;
 
 use crate::api_parser::{ApiDef, ApiParser};
-//use crate::c_gen::CapiHeaderGen;
+use crate::c_gen::Cgen;
 use rayon::prelude::*;
 use std::fs;
 use std::process::Command;
@@ -67,14 +67,16 @@ fn run_clang_format(filename: &str) {
 fn main() {
     let wd = WalkDir::new("defs");
     // temporary set to one thread during debugging
-	//rayon::ThreadPoolBuilder::new().num_threads(1).build_global() .unwrap();
+	rayon::ThreadPoolBuilder::new().num_threads(1).build_global() .unwrap();
+
+	let c_core_dest_dir = "../core/include";
 
     //let rust_dest_dir = "../rute/src/auto";
     //let dest = "../rute/cpp/auto";
 
     // Create the output dirs before doing anything else
-    create_dir(dest);
-    create_dir(rust_dest_dir);
+    //create_dir(dest);
+    //create_dir(rust_dest_dir);
 
     // Collect all files that needs to be parsed
     let files = wd
@@ -113,8 +115,15 @@ fn main() {
     // Pass 2:
     // Generate all the code.
 
-    api_defs_read.par_iter().enumerate().for_each(|(index, api_def)| {
+    api_defs_read.par_iter().enumerate().for_each(|(_index, api_def)| {
         let base_filename = &api_def.base_filename;
+        dbg!(&api_def);
+
+        let c_core_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
+
+        // Generate C/C++ Header for FFI structs
+        println!("    Generating Core C header: {}", c_core_filename);
+        Cgen::generate(&c_core_filename, &api_def).unwrap();
 
         // Rust Rustfmt on rust files
         //run_rustfmt(&rust_ffi_target);

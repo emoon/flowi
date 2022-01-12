@@ -1,15 +1,14 @@
 chunk = _{ SOI ~ (structdef | enumdef | doc_comment)+ ~ EOI }
 
 structdef   =  { attributes? ~ traits? ~ ("struct") ~ name ~ derive? ~ ("{") ~ fieldlist? ~ ("}") }
-enumdef     =  { (attributes | enum_flags | org_name)*? ~ ("enum") ~ name ~ ("{") ~ fieldlist? ~ ("}") }
+enumdef     =  { (attributes | enum_flags)*? ~ ("enum") ~ name ~ ("{") ~ fieldlist? ~ ("}") }
 fieldlist   =  { (doc_comment | field)*  }
 field       =  { (var | function | enum_type) ~ fieldsep? }
 fieldsep    = _{ (",") }
 
 rettype      = { name }
-org_name     = { ("[org_name(") ~ name_with_namespace ~ (")]") }
 enum_flags   = { ("[enum_flags(") ~ name ~ (")]") }
-attributes   = { ("[attributes(") ~ namelist ~ (")]") }
+attributes   = { ("#[attributes(") ~ namelist ~ (")]") }
 traits       = { ("[traits(") ~ namelist ~ (")]") }
 derive       = { (":") ~ namelist? }
 event        = { ("[event]") }
@@ -19,16 +18,16 @@ manual       = { ("[manual]") }
 static_typ   = { ("[static]") }
 pointer_exp  = { ("*") }
 refexp       = { ("&") }
+default_val  = { ("=") ~ name_or_num? ~ string? }
 optional     = { ("?") }
-array        = { ("[") ~ (refexp | pointer_exp)? ~ vtype ~ ("]") }
-enum_use     = { ("::") ~ vtype }
-retexp       = { ("->") ~ (refexp | pointer_exp)? ~ (vtype | array) ~ enum_use? ~ optional? }
-var          = { name ~ (":") ~ (refexp | pointer_exp)? ~ (vtype | array) ~ enum_use? }
+array        = { ("[") ~ (refexp | pointer_exp)? ~ vtype ~ ("]") ~ optional? }
+retexp       = { ("->") ~ (refexp | pointer_exp)? ~ (vtype | array) ~ optional? }
+var          = { name ~ (":") ~ (refexp | pointer_exp)? ~ (vtype | array) ~ default_val? }
 varlist      = { (var | array) ~ ((",") ~ (var | array))* }
 enum_assign  = { ("=") ~ name_or_num }
 enum_type    = { name ~ enum_assign }
 namelist     = { name ~ ((",") ~ name)* }
-function     = { (static_typ | org_name | no_chain | manual | signal | event)*? ~ name ~ ("(") ~ varlist? ~ (")") ~ retexp? }
+function     = { (static_typ | no_chain | manual | signal | event)*? ~ name ~ ("(") ~ varlist? ~ (")") ~ retexp? }
 
 name = @{
 	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*
@@ -40,6 +39,10 @@ name_with_namespace = @{
 
 name_or_num = @{
 	(('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*
+}
+
+string = @{
+	( "\"" ~ name_or_num ~ "\"")*
 }
 
 vtype = @{

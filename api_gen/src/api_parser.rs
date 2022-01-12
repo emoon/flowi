@@ -123,9 +123,6 @@ pub struct Function {
     pub def_file: String,
     /// Name of the function
     pub name: String,
-    /// This is the C++ name of the function. Most of the time it will
-    /// be the same as name but it can vary
-    pub cpp_name: String,
     /// Function argumnts
     pub function_args: Vec<Variable>,
     /// Return value
@@ -145,7 +142,6 @@ impl Default for Function {
             doc_comments: String::new(),
             name: String::new(),
             def_file: String::new(),
-            cpp_name: String::new(),
             function_args: Vec::new(),
             return_val: None,
             func_type: FunctionType::Regular,
@@ -165,8 +161,6 @@ pub struct Struct {
     pub name: String,
     /// Which def file this struct comes from
     pub def_file: String,
-    /// Name for the C++ class in the generation
-    pub cpp_name: String,
     /// Variables in the struct
     pub variables: Vec<Variable>,
     /// Functions for the struct
@@ -191,6 +185,8 @@ pub struct Struct {
 ///
 #[derive(Debug)]
 pub struct EnumEntry {
+    /// Documentation
+    pub doc_comments: String,
     /// Name of the enum entry
     pub name: String,
     /// Value of the enum entry
@@ -220,16 +216,16 @@ impl Default for EnumType {
 ///
 #[derive(Debug, Default)]
 pub struct Enum {
+    /// Documentation
+    pub doc_comments: String,
     /// Name of the enum
     pub name: String,
-    /// The file this enum is present in (notice if it's qnamespace we change it to rute_enums)
+    /// The file this enum is present in
     pub def_file: String,
     /// Type of enum
     pub enum_type: EnumType,
     /// Qt supports having a flags macro on enums being type checked with an extra name
     pub flags_name: String,
-    /// Original class name (like Qt, QAccesibility)
-    pub original_class_name: String,
     /// All the enem entries
     pub entries: Vec<EnumEntry>,
 }
@@ -245,7 +241,7 @@ pub struct ApiDef {
     pub base_filename: String,
     /// Structs that only holds data (such as Rect, NOTE: currently not in use)
     pub pod_structs: Vec<Struct>,
-    /// Structs that holds functions (such as QPushButton)
+    /// Structs that holds functions
     pub class_structs: Vec<Struct>,
     /// Enums
     pub enums: Vec<Enum>,
@@ -285,7 +281,7 @@ impl ApiParser {
 
         let base_filename = Path::new(filename).file_name().unwrap().to_str().unwrap();
         let base_filename = &base_filename[..base_filename.len() - 4];
-        let mut struct_comments = String::new();
+        let mut current_comments = String::new();
 
         api_def.filename = filename.to_owned();
         api_def.base_filename = base_filename.to_owned();
@@ -293,8 +289,8 @@ impl ApiParser {
         for chunk in chunks {
             match chunk.as_rule() {
                 Rule::structdef => {
-                    let sdef = Self::fill_struct(chunk, &struct_comments, &api_def.base_filename);
-                    struct_comments.clear();
+                    let sdef = Self::fill_struct(chunk, &current_comments, &api_def.base_filename);
+                    current_comments.clear();
 
                     // If we have some variables in the struct we push it to pod_struct
                     if !sdef.variables.is_empty() {
@@ -305,33 +301,19 @@ impl ApiParser {
                 }
 
                 Rule::doc_comment => {
-                    struct_comments.push_str(chunk.as_str());
-                    struct_comments.push_str("\n");
+                    current_comments.push_str(&chunk.as_str()[4..]);
                 }
 
                 Rule::enumdef => {
                     let mut enum_def = Enum::default();
-
-                    // Global enums are stored in qnamespace in Qt but we have them in rute_enums
-                    // so we change the name here to reflect that
-                    if base_filename == "qnamespace" {
-                        enum_def.def_file = "rute_enums".to_owned();
-                    } else {
-                        enum_def.def_file = base_filename.to_owned();
-                    }
+                    enum_def.def_file = base_filename.to_owned();
+                    enum_def.doc_comments = current_comments.to_owned();
+                    current_comments.clear();
 
                     for entry in chunk.into_inner() {
                         match entry.as_rule() {
                             Rule::name => enum_def.name = entry.as_str().to_owned(),
                             Rule::fieldlist => enum_def.entries = Self::fill_field_list_enum(entry),
-                            Rule::org_name => {
-                                enum_def.original_class_name = entry
-                                    .into_inner()
-                                    .next()
-                                    .map(|e| e.as_str())
-                                    .unwrap()
-                                    .to_owned();
-                            }
                             Rule::enum_flags => {
                                 enum_def.flags_name = entry
                                     .into_inner()
@@ -464,13 +446,6 @@ impl ApiParser {
             }
         }
 
-        // Set the name we use in C++
-        if sdef.should_gen_wrap_class() {
-            sdef.cpp_name = format!("WR{}", sdef.name);
-        } else if sdef.cpp_name.is_empty() {
-            sdef.cpp_name = format!("Q{}", sdef.name);
-        }
-
         sdef
     }
 
@@ -567,15 +542,6 @@ impl ApiParser {
                 Rule::static_typ => function.func_type = FunctionType::Static,
                 Rule::varlist => function.function_args = Self::get_variable_list(entry),
                 Rule::retexp => function.return_val = Some(Self::get_variable(entry, "")),
-                Rule::org_name => {
-                    function.cpp_name = entry
-                        .into_inner()
-                        .next()
-                        .map(|e| e.as_str())
-                        .unwrap()
-                        .to_owned();
-                }
-
                 Rule::manual => {
                     function.is_manual = true;
                     function.func_type = FunctionType::Regular;
@@ -592,10 +558,6 @@ impl ApiParser {
                 type_name: "self".to_owned(),
                 ..Variable::default()
             });
-        }
-
-        if function.cpp_name.is_empty() {
-            function.cpp_name = function.name.to_owned();
         }
 
         function
@@ -637,12 +599,6 @@ impl ApiParser {
                 Rule::pointer_exp => vtype = Rule::pointer_exp,
                 Rule::optional => var.optional = true,
                 Rule::vtype => type_name = entry.as_str().to_owned(),
-                Rule::enum_use => {
-                    let name = entry.as_str();
-                    var.enum_sub_type = name[2..].to_owned();
-                    vtype = Rule::enum_use;
-                }
-
                 Rule::array => {
                     // Get the type if we have an array
                     for entry in entry.into_inner() {
@@ -664,7 +620,6 @@ impl ApiParser {
         let var_type = match vtype {
             Rule::refexp => VariableType::Reference,
             Rule::pointer_exp => VariableType::Reference,
-            Rule::enum_use => VariableType::Enum,
             _ => {
                 if type_name == "String" {
                     VariableType::Str
@@ -696,14 +651,24 @@ impl ApiParser {
     ///
     fn fill_field_list_enum(rule: Pair<Rule>) -> Vec<EnumEntry> {
         let mut entries = Vec::new();
+        let mut doc_comments = String::new();
 
         for entry in rule.into_inner() {
-            if entry.as_rule() == Rule::field {
-                let field = entry.clone().into_inner().next().unwrap();
+            match entry.as_rule() {
+                Rule::field => {
+                    let field = entry.clone().into_inner().next().unwrap();
 
-                if field.as_rule() == Rule::enum_type {
-                    entries.push(Self::get_enum(field));
+                    if field.as_rule() == Rule::enum_type {
+                        entries.push(Self::get_enum(doc_comments.to_owned(), field));
+                        doc_comments.clear();
+                    }
                 }
+
+                Rule::doc_comment => {
+                    doc_comments.push_str(&entry.as_str()[4..]);
+                }
+
+                _ => (),
             }
         }
 
@@ -713,7 +678,7 @@ impl ApiParser {
     ///
     /// Get enum
     ///
-    fn get_enum(rule: Pair<Rule>) -> EnumEntry {
+    fn get_enum(doc_comments: String, rule: Pair<Rule>) -> EnumEntry {
         let mut name = String::new();
         let mut assign = None;
 
@@ -726,7 +691,7 @@ impl ApiParser {
         }
 
         if let Some(value) = assign {
-            EnumEntry { name, value }
+            EnumEntry { doc_comments, name, value }
         } else {
             panic!("Should not be here")
         }
@@ -789,7 +754,6 @@ impl ApiParser {
     }
 
     fn update_variable(arg: &mut Variable,
-        _struct_name_map: &HashMap<String, String>,
         type_def_file: &HashMap<String, String>,
         enum_def_file_type: &HashMap<String, (String, EnumType)>)
     {
@@ -868,13 +832,11 @@ impl ApiParser {
         // Build a hash map of all type and their QtName
         // and we also build two hashmaps for all types and which modules they belong into
         // and they are separate for structs and enums
-        let mut struct_name_map = HashMap::new();
         let mut type_def_file = HashMap::new();
         let mut enum_def_file_type = HashMap::new();
 
         for api_def in api_defs.iter() {
             api_def.class_structs.iter().for_each(|s| {
-                struct_name_map.insert(s.name.to_owned(), s.cpp_name.to_owned());
                 type_def_file.insert(s.name.to_owned(), s.def_file.to_owned());
                 type_def_file.insert(format!("{}Trait",s.name), s.def_file.to_owned());
             });
@@ -895,11 +857,11 @@ impl ApiParser {
             .flat_map(|s| s.functions.iter_mut())
         {
             for arg in func.function_args.iter_mut() {
-                Self::update_variable(arg, &struct_name_map, &type_def_file, &enum_def_file_type);
+                Self::update_variable(arg, &type_def_file, &enum_def_file_type);
             }
 
             if let Some(ref mut ret_val) = func.return_val {
-                Self::update_variable(ret_val, &struct_name_map, &type_def_file, &enum_def_file_type);
+                Self::update_variable(ret_val, &type_def_file, &enum_def_file_type);
             }
         }
     }
