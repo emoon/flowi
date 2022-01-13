@@ -1,7 +1,7 @@
 #pragma once
 
 #include "types.h"
-#include "../include/flowi_render.h" // unsure about having this here
+#include "render.h"
 
 struct FlAllocator;
 struct FlGlobalState;
@@ -33,7 +33,7 @@ typedef struct Atlas {
     int capacity;
     u32 texture_id;
     AtlasImageType image_type;
-    FlIntRect dirty_rect;
+    FlRenderRect dirty_rect;
     struct FlAllocator* allocator;
 } Atlas;
 

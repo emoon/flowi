@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
+#include "idx.h"
 
 #ifdef __cplusplus
 extern "C" {

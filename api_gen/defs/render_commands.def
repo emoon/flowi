@@ -1,10 +1,10 @@
 
 /// Used when specifying rect updates
 struct RenderRect {
-    x: i16,
-    y: i16,
-    width: i16,
-    height: i16,
+    x0: i32,
+    y0: i32,
+    x1: i32,
+    y1: i32,
 }
 
 /// Vertex layout for textured triangles
@@ -29,7 +29,7 @@ struct TexturedTriangles {
     /// Vertices for the command
     vertex_buffer: [VertPosUvColor],
     /// Index buffer for the command
-    index_buffer: [IndexSize],
+    index_buffer: [IdxSize],
     /// Texture id used for the command
     texture_id: u32,
 }
@@ -39,7 +39,7 @@ struct SolidTriangles {
     /// Vertices for the command
     vertex_buffer: [VertPosColor],
     /// Index buffer for the command
-    index_buffer: [IndexSize],
+    index_buffer: [IdxSize],
 }
 
 /// Texture format specificed when using [CreateTexture] command

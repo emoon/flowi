@@ -5,7 +5,7 @@
 #include "../include/config.h"
 #include "flowi.h"
 #include "font.h"
-#include "../include/flowi_render.h"
+#include "render.h"
 #include <freetype/freetype.h>
 
 struct FlAllocator;

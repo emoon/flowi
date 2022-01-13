@@ -47,8 +47,8 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
     // TODO: We need to support skipping commands also
     for (int i = 0; i < count; ++i) {
         switch (fl_render_get_command(state, &cmd_data)) {
-			case FlRc_CreateTexture: {
-				const FlRcCreateTexture* cmd = (FlRcCreateTexture*)cmd_data;
+			case FlRenderCommand_CreateTexture: {
+				const FlCreateTexture* cmd = (FlCreateTexture*)cmd_data;
 				ASSERT_EQ(cmd->format, FlTextureFormat_R8_LINEAR);
 				ASSERT_EQ(cmd->width, 4096);
 				ASSERT_EQ(cmd->height, 4096);
@@ -75,9 +75,9 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
     // Expect a update texture command here
     for (int i = 0; i < count; ++i) {
         switch (fl_render_get_command(state, &cmd_data)) {
-			case FlRc_UpdateTexture: {
-				const FlRcUpdateTexture* cmd = (FlRcUpdateTexture*)cmd_data;
-				ASSERT_NE(cmd->source_data, NULL);
+			case FlRenderCommand_UpdateTexture: {
+				const FlUpdateTexture* cmd = (FlUpdateTexture*)cmd_data;
+				ASSERT_NE(cmd->data, NULL);
 				ASSERT_EQ(cmd->texture_id, state->mono_fonts_atlas->texture_id);
 				found_update_texture = true;
 				break;

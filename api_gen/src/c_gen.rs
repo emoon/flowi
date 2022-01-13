@@ -27,7 +27,8 @@ static HEADER: &str = "
 
 #pragma once\n
 #include <stdint.h>
-#include <stdbool.h>\n
+#include <stdbool.h>
+#include \"idx.h\"
 
 #ifdef __cplusplus
 extern \"C\" {
@@ -93,8 +94,10 @@ impl Cgen {
             VariableType::SelfType => panic!("Shouldn't be here"),
             //VariableType::Enum => panic!("Shouldn't be here"),
             VariableType::Reference => panic!("Shouldn't be here"),
-            VariableType::Regular => write!(f, "    {}", var.type_name)?,
-            VariableType::Str => write!(f, "    const char*")?,
+            VariableType::Regular => {
+                write!(f, "    {}{}", C_API_SUFIX_STRUCTS_ENUMS, var.type_name)?
+            }
+            VariableType::Str => write!(f, "    const char*")?, // TODO: Fixme should be ptr + size
             VariableType::Primitive => write!(f, "    {}", var.get_c_primitive_type())?,
         }
 
@@ -105,7 +108,7 @@ impl Cgen {
         // for arrays we generate a pointer and a size
         if var.array {
             writeln!(f, "* {};", var.name)?;
-            writeln!(f, "    u32 {}_size;", var.name)
+            writeln!(f, "    uint32_t {}_size;", var.name)
         } else {
             writeln!(f, " {};", var.name)
         }
@@ -151,7 +154,7 @@ impl Cgen {
             writeln!(f, "#define Render_{}_cmd(state) \\", cmd.to_snake_case())?;
             writeln!(
                 f,
-                "    ({}*)CommandBuffer_alloc_cmd(&state->render_commands, {}_{}, sizeof({}))\n",
+                "    ({}*)CommandBuffer_alloc_cmd(&state->render_commands, {}RenderCommand_{}, sizeof({}))\n",
                 name, C_API_SUFIX_STRUCTS_ENUMS, cmd, name
             )?;
         }

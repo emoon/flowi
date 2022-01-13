@@ -4,7 +4,7 @@
 #include "types.h"
 #include "../include/config.h"
 #include "flowi.h"
-#include "../include/flowi_render.h"    // TODO: Fixme
+#include "render.h"
 
 struct FlVertPosUvColor;
 struct Glyph;

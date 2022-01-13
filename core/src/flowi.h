@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 #include "types.h"
-#include "../include/flowi_render.h"
+#include "render.h"
 
 #ifdef __cplusplus
 extern "C" {

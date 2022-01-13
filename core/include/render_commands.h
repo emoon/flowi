@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
+#include "idx.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,10 +31,10 @@ typedef enum FlTextureFormat {
 
 // Used when specifying rect updates
 typedef struct FlRenderRect {
-    int16_t x;
-    int16_t y;
-    int16_t width;
-    int16_t height;
+    int x0;
+    int y0;
+    int x1;
+    int y1;
 } FlRenderRect;
 
 // Vertex layout for textured triangles
@@ -56,28 +56,28 @@ typedef struct FlVertPosColor {
 // Used for rendering triangles with a texture.
 typedef struct FlTexturedTriangles {
     // Vertices for the command
-    VertPosUvColor* vertex_buffer;
-    u32 vertex_buffer_size;
+    FlVertPosUvColor* vertex_buffer;
+    uint32_t vertex_buffer_size;
     // Index buffer for the command
-    IndexSize* index_buffer;
-    u32 index_buffer_size;
+    FlIdxSize* index_buffer;
+    uint32_t index_buffer_size;
     // Texture id used for the command
     uint32_t texture_id;
 } FlTexturedTriangles;
 
 typedef struct FlSolidTriangles {
     // Vertices for the command
-    VertPosColor* vertex_buffer;
-    u32 vertex_buffer_size;
+    FlVertPosColor* vertex_buffer;
+    uint32_t vertex_buffer_size;
     // Index buffer for the command
-    IndexSize* index_buffer;
-    u32 index_buffer_size;
+    FlIdxSize* index_buffer;
+    uint32_t index_buffer_size;
 } FlSolidTriangles;
 
 typedef struct FlCreateTexture {
     // Data upload (can be NULL if data is uploaded later)
     uint8_t* data;
-    u32 data_size;
+    uint32_t data_size;
     // This is the id that will later be used when refering to the texture
     uint16_t id;
     // See [TextureFormat] for the type
@@ -92,9 +92,9 @@ typedef struct FlCreateTexture {
 typedef struct FlUpdateTexture {
     // Data to upload
     uint8_t* data;
-    u32 data_size;
+    uint32_t data_size;
     // area to update
-    RenderRect rect;
+    FlRenderRect rect;
     // Texture to update
     uint16_t texture_id;
 } FlUpdateTexture;
@@ -102,7 +102,7 @@ typedef struct FlUpdateTexture {
 // Used when restricting an area for rendering. How this is to be implemented depends onthe GPUAPI, but for OpenGL this corresponts to https://www.khronos.org/registry/OpenGL-Refpages/es2.0/xhtml/glScissor.xml
 typedef struct FlScissorRect {
     // Area restricted for rendering
-    RenderRect rect;
+    FlRenderRect rect;
 } FlScissorRect;
 
 // Commands that will be in the render stream

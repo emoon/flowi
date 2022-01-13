@@ -124,10 +124,9 @@ fn main() {
 
     api_defs_read.par_iter().enumerate().for_each(|(_index, api_def)| {
         let base_filename = &api_def.base_filename;
-        dbg!(&api_def);
 
         let c_core_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
-        let c_render_cmds_filenames = format!("{}/render_commands.h", c_core_internal_dest_dir);
+        let c_render_cmds_filenames = format!("{}/render.h", c_core_internal_dest_dir);
 
         // Generate C/C++ Header for FFI structs
         println!("    Generating Core C header: {}", c_core_filename);

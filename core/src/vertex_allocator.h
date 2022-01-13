@@ -1,9 +1,11 @@
 #pragma once
 
-#include "../include/flowi_render.h"
+#include "render.h"
 #include "allocator.h"
 #include "linear_allocator.h"
 #include "types.h"
+
+#define FL_FRAME_HISTORY 2
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // INTERNAL HEADER

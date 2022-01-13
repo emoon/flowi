@@ -162,13 +162,13 @@ void ui_update(FlContext* ctx) {
 // Render triangles without texture
 
 static void render_textured_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
-    FlRcTexturedTriangles* draw_cmd = (FlRcTexturedTriangles*)render_data;
+    FlTexturedTriangles* draw_cmd = (FlTexturedTriangles*)render_data;
 
     bgfx::TransientVertexBuffer tvb;
     bgfx::TransientIndexBuffer tib;
 
-    const int vertex_count = draw_cmd->vertex_count;
-    const int index_count = draw_cmd->index_count;
+    const int vertex_count = draw_cmd->vertex_buffer_size;
+    const int index_count = draw_cmd->index_buffer_size;
     const u32 texture_id = draw_cmd->texture_id;
 
     const Texture& texture = ctx.textures[texture_id];
@@ -200,13 +200,13 @@ static void render_textured_triangles(RenderContext& ctx, const u8* render_data,
 // Render triangles without texture
 
 static void render_flat_triangles(RenderContext& ctx, const u8* render_data, bgfx::Encoder* encoder) {
-    FlRcSolidTriangles* draw_cmd = (FlRcSolidTriangles*)render_data;
+    FlSolidTriangles* draw_cmd = (FlSolidTriangles*)render_data;
 
     bgfx::TransientVertexBuffer tvb;
     bgfx::TransientIndexBuffer tib;
 
-    const int vertex_count = draw_cmd->vertex_count;
-    const int index_count = draw_cmd->index_count;
+    const int vertex_count = draw_cmd->vertex_buffer_size;
+    const int index_count = draw_cmd->index_buffer_size;
 
     bgfx::allocTransientVertexBuffer(&tvb, vertex_count, ctx.flat_layout);
     bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(FlIdxSize) == 4);
@@ -228,7 +228,7 @@ static void render_flat_triangles(RenderContext& ctx, const u8* render_data, bgf
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void create_texture(RenderContext& ctx, const u8* render_data) {
-    const FlRcCreateTexture* cmd = (FlRcCreateTexture*)render_data;
+    const FlCreateTexture* cmd = (FlCreateTexture*)render_data;
     const u8* data = cmd->data;
     const u32 id = cmd->id;
     const u16 width = cmd->width;
@@ -265,11 +265,11 @@ static void create_texture(RenderContext& ctx, const u8* render_data) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void update_texture(RenderContext& ctx, const u8* render_data) {
-    const FlRcUpdateTexture* cmd = (FlRcUpdateTexture*)render_data;
+    const FlUpdateTexture* cmd = (FlUpdateTexture*)render_data;
 
     const Texture* texture = &ctx.textures[cmd->texture_id];
-    const bgfx::Memory* mem = bgfx::makeRef(cmd->source_data, texture->size);
-    const FlIntRect* rect = &cmd->rect;
+    const bgfx::Memory* mem = bgfx::makeRef(cmd->data, texture->size);
+    const FlRenderRect* rect = &cmd->rect;
 
     bgfx::updateTexture2D(texture->handle, 0, 0, rect->x0, rect->y0, rect->x1 - rect->x0, rect->y1 - rect->y0, mem,
                           texture->width);
@@ -300,22 +300,22 @@ void ui_render(RenderContext& render_ctx, FlGlobalState* flowi_state, uint16_t w
     // process all the render commands
     for (int i = 0; i < count; ++i) {
         switch (cmd = fl_render_get_command(flowi_state, &render_cmd_data)) {
-            case FlRc_RenderTexturedTriangles: {
+            case FlRenderCommand_TexturedTriangles: {
                 render_textured_triangles(render_ctx, render_cmd_data, encoder);
                 break;
             }
 
-            case FlRc_RenderTriangles: {
+            case FlRenderCommand_SolidTriangles: {
                 render_flat_triangles(render_ctx, render_cmd_data, encoder);
                 break;
             }
 
-            case FlRc_CreateTexture: {
+            case FlRenderCommand_CreateTexture: {
                 create_texture(render_ctx, render_cmd_data);
                 break;
             }
 
-            case FlRc_UpdateTexture: {
+            case FlRenderCommand_UpdateTexture: {
                 update_texture(render_ctx, render_cmd_data);
                 break;
             }

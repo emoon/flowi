@@ -260,8 +260,8 @@ void Atlas_end_add_rects(Atlas* self, FlGlobalState* state) {
     // Add command to update the texture with the added glyphs
     // TODO: There is a potential race-condition here as the static texture may be uploaded at the same time
     // as we are adding more glyphs to it. In practice it may not be a problem tho
-    FlRcUpdateTexture* cmd = Render_update_texture_cmd(state);
-    cmd->source_data = self->image_data;
+    FlUpdateTexture* cmd = Render_update_texture_cmd(state);
+    cmd->data = self->image_data;
     cmd->rect = self->dirty_rect;
     cmd->texture_id = self->texture_id;
 }
@@ -321,7 +321,7 @@ Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalStat
 
     // Create texture
 
-    FlRcCreateTexture* texture = Render_create_texture_cmd(state);
+    FlCreateTexture* texture = Render_create_texture_cmd(state);
 
     if (image_type == AtlasImageType_U8) {
         texture->format = FlTextureFormat_R8_LINEAR;

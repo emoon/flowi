@@ -4,7 +4,7 @@
 #include <string.h>
 #include <freetype/freetype.h>
 
-#include "../include/flowi_render.h"
+#include "render.h"
 #include "allocator.h"
 #include "atlas.h"
 #include "flowi.h"
@@ -271,12 +271,12 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
 
     Text_generate_vertex_buffer_ref(vertices, indices, font, codepoints, 0x0fffffff, pos, 0, text_len);
 
-    FlRcTexturedTriangles* tri_data = Render_render_texture_triangles_cmd(ctx->global_state);
+    FlTexturedTriangles* tri_data = Render_textured_triangles_cmd(ctx->global_state);
 
 	tri_data->vertex_buffer = vertices;
 	tri_data->index_buffer = indices;
-    tri_data->vertex_count = text_len * 4;
-    tri_data->index_count = text_len * 6;
+    tri_data->vertex_buffer_size = text_len * 4;
+    tri_data->index_buffer_size = text_len * 6;
     tri_data->texture_id = 0;  // TODO: Fix me
 }
 
