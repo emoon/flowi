@@ -16,17 +16,17 @@ mod c_gen;
 use crate::api_parser::{ApiDef, ApiParser};
 use crate::c_gen::Cgen;
 use rayon::prelude::*;
-use std::fs;
-use std::process::Command;
+//use std::fs;
+//use std::process::Command;
 use std::sync::RwLock;
 use walkdir::WalkDir;
 
-///
-/// Function for creating a directory and just bail in case it already exists.
-/// If there is an error here this code will panic as these directories are required in order for
-/// this program to work correctly.
-///
-
+//
+// Function for creating a directory and just bail in case it already exists.
+// If there is an error here this code will panic as these directories are required in order for
+// this program to work correctly.
+//
+/*
 fn create_dir(path: &str) {
     // dir already existits so just bail
     if let Ok(p) = fs::metadata(path) {
@@ -38,20 +38,24 @@ fn create_dir(path: &str) {
     // This function is expected to succed now when we have checked that the directory exists
     fs::create_dir(path).unwrap();
 }
+*/
 
-///
-/// Run Rustfmt on generated file
-///
+//
+// Run Rustfmt on generated file
+//
+/*
 fn run_rustfmt(filename: &str) {
     Command::new("rustfmt")
         .arg(filename)
         .output()
         .expect("failed to execute cargo fmt");
 }
+*/
 
-///
-/// Run Rustfmt on generated file
-///
+//
+// Run Rustfmt on generated file
+//
+/*
 fn run_clang_format(filename: &str) {
     Command::new("clang-format")
         .arg("-style=file")
@@ -60,6 +64,7 @@ fn run_clang_format(filename: &str) {
         .output()
         .expect("failed to execute cargo fmt");
 }
+*/
 
 ///
 /// Main
@@ -123,7 +128,7 @@ fn main() {
 
         // Generate C/C++ Header for FFI structs
         println!("    Generating Core C header: {}", c_core_filename);
-        Cgen::generate(&c_core_filename, &api_def).unwrap();
+        Cgen::generate(&c_core_filename, api_def).unwrap();
 
         // Rust Rustfmt on rust files
         //run_rustfmt(&rust_ffi_target);
