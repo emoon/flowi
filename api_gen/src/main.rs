@@ -12,6 +12,7 @@ extern crate pest_derive;
 
 // Code for C/Header generation
 mod c_gen;
+mod lints;
 
 use crate::api_parser::{ApiDef, ApiParser};
 use crate::c_gen::Cgen;
@@ -75,6 +76,7 @@ fn main() {
 	rayon::ThreadPoolBuilder::new().num_threads(1).build_global() .unwrap();
 
 	let c_core_dest_dir = "../core/include";
+	let c_core_internal_dest_dir = "../core/src";
 
     //let rust_dest_dir = "../rute/src/auto";
     //let dest = "../rute/cpp/auto";
@@ -125,10 +127,12 @@ fn main() {
         dbg!(&api_def);
 
         let c_core_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
+        let c_render_cmds_filenames = format!("{}/render_commands.h", c_core_internal_dest_dir);
 
         // Generate C/C++ Header for FFI structs
         println!("    Generating Core C header: {}", c_core_filename);
-        Cgen::generate(&c_core_filename, api_def).unwrap();
+        println!("    Generating RenderCommands C header: {}", c_render_cmds_filenames);
+        Cgen::generate(&c_core_filename, &c_render_cmds_filenames, api_def).unwrap();
 
         // Rust Rustfmt on rust files
         //run_rustfmt(&rust_ffi_target);
