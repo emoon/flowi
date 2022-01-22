@@ -73,7 +73,7 @@ fn run_clang_format(filename: &str) {
 fn main() {
     let wd = WalkDir::new("../api");
     // temporary set to one thread during debugging
-	// rayon::ThreadPoolBuilder::new().num_threads(1).build_global().unwrap();
+	rayon::ThreadPoolBuilder::new().num_threads(1).build_global().unwrap();
 
     // Dest directores for various langs
 	let c_core_dest_dir = "../core/c/include";

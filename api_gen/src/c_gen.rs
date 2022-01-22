@@ -43,7 +43,7 @@ static FOOTER: &str = "
 #endif\n";
 
 static C_API_SUFIX_STRUCTS_ENUMS: &str = "Fl";
-//static C_API_SUFIX_FUNCS: &str = "fl";
+pub static C_API_SUFIX_FUNCS: &str = "fl";
 
 pub struct Cgen;
 
@@ -85,25 +85,30 @@ impl Cgen {
         writeln!(f, "}} {}{};\n", C_API_SUFIX_STRUCTS_ENUMS, enum_def.name)
     }
 
+    fn get_variable(var: &Variable, self_type: &str) -> String {
+        let mut output = String::with_capacity(256);
+
+        match var.vtype {
+            VariableType::None => output.push_str("void"),
+            VariableType::SelfType => output.push_str(&format!("{}{}*", C_API_SUFIX_STRUCTS_ENUMS, self_type)),
+            VariableType::Reference => panic!("Shouldn't be here"),
+            VariableType::Regular => output.push_str(&format!("{}{}", C_API_SUFIX_STRUCTS_ENUMS, var.type_name)),
+            VariableType::Str => output.push_str("FlString"),
+            VariableType::Primitive => output.push_str(&var.get_c_primitive_type()),
+        }
+
+        if var.pointer {
+            output.push('*');
+        }
+
+        output
+    }
+
     /// Output variable for for struct
     fn write_struct_variable<W: Write>(f: &mut W, var: &Variable) -> io::Result<()> {
         Self::write_commment(f, &var.doc_comments, 4)?;
 
-        match var.vtype {
-            VariableType::None => panic!("Shouldn't be here"),
-            VariableType::SelfType => panic!("Shouldn't be here"),
-            //VariableType::Enum => panic!("Shouldn't be here"),
-            VariableType::Reference => panic!("Shouldn't be here"),
-            VariableType::Regular => {
-                write!(f, "    {}{}", C_API_SUFIX_STRUCTS_ENUMS, var.type_name)?
-            }
-            VariableType::Str => write!(f, "    const char*")?, // TODO: Fixme should be ptr + size
-            VariableType::Primitive => write!(f, "    {}", var.get_c_primitive_type())?,
-        }
-
-        if var.pointer {
-            write!(f, "*")?;
-        }
+        write!(f, "    {}", Self::get_variable(var, ""))?;
 
         // for arrays we generate a pointer and a size
         if var.array {
@@ -162,6 +167,38 @@ impl Cgen {
         Ok(())
     }
 
+    fn generate_function<W: Write>(f: &mut W, func: &Function, self_name: &str) -> io::Result<()> {
+        let mut function_args = String::with_capacity(128);
+        let len = func.function_args.len();
+
+
+        // write arguments
+        for (i, arg) in func.function_args.iter().enumerate() {
+            if i == 0 && func.func_type == FunctionType::Static {
+                continue;
+            }
+
+            function_args.push_str(&Self::get_variable(&arg, self_name));
+            function_args.push_str(" ");
+            function_args.push_str(&arg.name);
+
+            if i != len - 1 {
+                function_args.push_str(", ");
+            }
+        }
+
+        let return_value;
+
+        if let Some(ret) = &func.return_val {
+            return_value = Self::get_variable(&ret, self_name);
+        } else {
+            return_value = "void".to_owned();
+        }
+
+        Self::write_commment(f, &func.doc_comments, 0)?;
+        writeln!(f, "{} {}({});", return_value, func.c_name, function_args)
+    }
+
     pub fn generate(filename: &str, render_filename_dir: &str, api_def: &ApiDef) -> io::Result<()> {
         println!("    Generating Core C header: {}", filename);
 
@@ -180,6 +217,13 @@ impl Cgen {
             }
 
             Self::generate_struct(&mut f, sdef)?;
+        }
+
+
+        for sdef in &api_def.pod_structs {
+            for func in &sdef.functions {
+                Self::generate_function(&mut f, &func, &sdef.name)?;
+            }
         }
 
         // Generate the render commands enum

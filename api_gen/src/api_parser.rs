@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use heck::ToSnakeCase;
 
 //#[cfg(debug_assertions)]
 const _GRAMMAR: &str = include_str!("api.pest");
@@ -93,10 +94,6 @@ impl Default for Variable {
 pub enum FunctionType {
     /// This is a regular function in a Qt Class
     Regular,
-    /// Event functions maps to a virtual override in a Qt Class
-    Event,
-    /// Signal functions maps to a signal in Qt
-    Signal,
     /// Static function is that doesn't belong to a class
     Static,
 }
@@ -112,6 +109,8 @@ pub struct Function {
     pub def_file: String,
     /// Name of the function
     pub name: String,
+    /// Name of the C function
+    pub c_name: String,
     /// Function argumnts
     pub function_args: Vec<Variable>,
     /// Return value
@@ -130,6 +129,7 @@ impl Default for Function {
         Function {
             doc_comments: String::new(),
             name: String::new(),
+            c_name: String::new(),
             def_file: String::new(),
             function_args: Vec::new(),
             return_val: None,
@@ -523,12 +523,6 @@ impl ApiParser {
                 Rule::static_typ => function.func_type = FunctionType::Static,
                 Rule::varlist => function.function_args = Self::get_variable_list(entry),
                 Rule::retexp => function.return_val = Some(Self::get_variable(entry, "")),
-                /*
-                Rule::manual => {
-                    function.is_manual = true;
-                    function.func_type = FunctionType::Regular;
-                }
-                */
                 _ => (),
             }
         }
@@ -536,7 +530,7 @@ impl ApiParser {
         // if we don't have any function args we add self as first argument as we always have that
         if function.function_args.is_empty() {
             function.function_args.push(Variable {
-                name: "self_c".to_owned(),
+                name: "self".to_owned(),
                 vtype: VariableType::SelfType,
                 type_name: "self".to_owned(),
                 ..Variable::default()
@@ -551,7 +545,7 @@ impl ApiParser {
     ///
     fn get_variable_list(rule: Pair<Rule>) -> Vec<Variable> {
         let mut variables = vec![Variable {
-            name: "self_c".to_owned(),
+            name: "self".to_owned(),
             vtype: VariableType::SelfType,
             ..Variable::default()
         }];
@@ -600,7 +594,7 @@ impl ApiParser {
         // match up with the correct type
         let var_type = match vtype {
             Rule::refexp => VariableType::Reference,
-            Rule::pointer_exp => VariableType::Reference,
+            //Rule::pointer_exp => VariableType::Reference,
             _ => {
                 if type_name == "String" {
                     VariableType::Str
@@ -816,6 +810,15 @@ impl ApiParser {
             });
         }
 
+        for api_def in api_defs.iter_mut() {
+            for s in &mut api_def.pod_structs {
+                for func in &mut s.functions {
+                    func.c_name = format!("{}_{}_{}", crate::c_gen::C_API_SUFIX_FUNCS, s.name.to_snake_case(), func.name);
+                }
+            }
+        }
+
+
         // Patch up the names/def_file in the function arguments
         for func in api_defs
             .iter_mut()
@@ -998,31 +1001,31 @@ impl Function {
     // For example: "float test, uint32_t bar"
     //
     /*
-       pub fn generate_c_function_def(&self, replace_first: FirstArgType) -> String {
-       let mut function_args = String::with_capacity(128);
-       let len = self.function_args.len();
+    pub fn generate_c_function_def(&self, replace_first: FirstArgType) -> String {
+        let mut function_args = String::with_capacity(128);
+        let len = self.function_args.len();
 
-    // write arguments
-    for (i, arg) in self.function_args.iter().enumerate() {
-    if i == 0 {
-    match replace_first {
-    FirstArgType::Keep => function_args.push_str(&arg.get_c_type(IsReturnType::No)),
-    //FirstArgType::Remove => continue,
-    //FirstArgType::Event(ref arg) => function_args.push_str(&arg),
-    }
-    } else {
-    function_args.push_str(&arg.get_c_type(IsReturnType::No));
-    }
+        // write arguments
+        for (i, arg) in self.function_args.iter().enumerate() {
+            if i == 0 {
+                match replace_first {
+                    FirstArgType::Keep => function_args.push_str(&arg.get_c_type(IsReturnType::No)),
+                    //FirstArgType::Remove => continue,
+                    //FirstArgType::Event(ref arg) => function_args.push_str(&arg),
+                }
+            } else {
+                function_args.push_str(&arg.get_c_type(IsReturnType::No));
+            }
 
-    function_args.push_str(" ");
-    function_args.push_str(&arg.name);
+            function_args.push_str(" ");
+            function_args.push_str(&arg.name);
 
-    if i != len - 1 {
-    function_args.push_str(", ");
-    }
-    }
+            if i != len - 1 {
+                function_args.push_str(", ");
+            }
+        }
 
-    function_args
+        function_args
     }
     */
 
