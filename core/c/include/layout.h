@@ -32,7 +32,7 @@ typedef struct FlLayoutRect {
 
 typedef struct FlSizing {
     int value;
-    FlSizeType size_type;
+    FlSizeType value_type;
 } FlSizing;
 
 typedef struct FlLayoutArea {

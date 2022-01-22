@@ -1,0 +1,9 @@
+
+struct Application {
+    // TODO: More options
+    [static] new(application_name: String, developer: String),
+}
+
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

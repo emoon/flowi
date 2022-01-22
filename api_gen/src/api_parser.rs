@@ -520,15 +520,15 @@ impl ApiParser {
         for entry in rule.into_inner() {
             match entry.as_rule() {
                 Rule::name => function.name = entry.as_str().to_owned(),
-                Rule::signal => function.func_type = FunctionType::Signal,
-                Rule::event => function.func_type = FunctionType::Event,
                 Rule::static_typ => function.func_type = FunctionType::Static,
                 Rule::varlist => function.function_args = Self::get_variable_list(entry),
                 Rule::retexp => function.return_val = Some(Self::get_variable(entry, "")),
+                /*
                 Rule::manual => {
                     function.is_manual = true;
                     function.func_type = FunctionType::Regular;
                 }
+                */
                 _ => (),
             }
         }
@@ -791,7 +791,8 @@ impl ApiParser {
     }
 
     pub fn second_pass(api_defs: &mut [ApiDef]) {
-        // Build a hash map of all type and their QtName
+        // TODO: Investigate if we actually need this pass
+        // Build a hash map of all type and their types
         // and we also build two hashmaps for all types and which modules they belong into
         // and they are separate for structs and enums
         let mut type_def_file = HashMap::new();

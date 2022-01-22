@@ -1,0 +1,36 @@
+
+enum LayoutDirection {
+    Horizontal = 0,
+    Directional = 1,
+}
+
+enum SizeType {
+    Fixed = 0,
+    Stretch = 1,
+}
+
+struct LayoutRect {
+    x0: i32,
+    y0: i32,
+    x1: i32,
+    y1: i32,
+}
+
+#[attributes(RustEnum)]
+struct Sizing {
+    value: i32,
+    value_type: SizeType,
+}
+
+#[attributes(RustBuilder)]
+struct LayoutArea {
+    name: String,
+    width: Sizing,
+    height: Sizing,
+
+    [static] new() -> LayoutArena,
+    [static] from_children([*LayoutArena], row: i16, cols: i16) -> LayoutArena,
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

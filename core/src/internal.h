@@ -8,6 +8,7 @@
 #include "vertex_allocator.h"
 #include "command_buffer.h"
 #include "simd.h"
+#include "layout_private.h"
 
 #if defined(FL_FONTLIB_FREETYPE)
 #include <freetype/freetype.h>
@@ -15,6 +16,7 @@
 
 #define FL_FONTS_MAX 32
 #define FL_MAX_STYLES 128
+#define FL_MAX_LAYOUTS 256
 #define FL_STYLE_DEPTH 128
 
 struct Font;
@@ -111,14 +113,17 @@ typedef struct FlContext {
 
     // Used for building vertex / index output
 	VertexAllocator vertex_allocator;
+	LinearAllocator layout_allocator;
+    LayoutAreaPrivate* current_layout;
 
-    // TODO: Dynamic array instead of hard-coded max style
-	struct StyleInternal* styles[FL_MAX_STYLES];
+	struct StyleInternal* styles[FL_MAX_STYLES]; // TODO: Dynamic array instead of hard-coded max style
+	struct StyleInternal* style_stack[FL_STYLE_DEPTH]; // Having 128 max styles should be enough
+
 	int style_count;
-
-    // Having 128 max styles should be enough
-	struct StyleInternal* style_stack[FL_STYLE_DEPTH];
+    int layout_count;
 	int style_stack_depth;
+
+	int layout_ids;
 
 } FlContext;
 

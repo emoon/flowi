@@ -71,12 +71,19 @@ fn run_clang_format(filename: &str) {
 /// Main
 ///
 fn main() {
-    let wd = WalkDir::new("defs");
+    let wd = WalkDir::new("../api");
     // temporary set to one thread during debugging
-	rayon::ThreadPoolBuilder::new().num_threads(1).build_global() .unwrap();
+	// rayon::ThreadPoolBuilder::new().num_threads(1).build_global().unwrap();
 
-	let c_core_dest_dir = "../core/include";
-	let c_core_internal_dest_dir = "../core/src";
+    // Dest directores for various langs
+	let c_core_dest_dir = "../core/c/include";
+	let c_flowi_dest_dir = "../flowi/c/include";
+
+    let rust_core_dest = "../core/rust-core/src";
+    let rust_flowi_dest = "../flowi/rust/src";
+
+    // Used for generating internal headers
+	let c_core_src_dir = "../core/src";
 
     //let rust_dest_dir = "../rute/src/auto";
     //let dest = "../rute/cpp/auto";
@@ -125,13 +132,21 @@ fn main() {
     api_defs_read.par_iter().enumerate().for_each(|(_index, api_def)| {
         let base_filename = &api_def.base_filename;
 
-        let c_core_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
-        let c_render_cmds_filenames = format!("{}/render.h", c_core_internal_dest_dir);
+        let c_filename;
+        let rust_filename;
+
+        if api_def.filename.contains("core") {
+            c_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
+            rust_filename = format!("{}/{}.rs", rust_core_dest, base_filename);
+        } else {
+            c_filename = format!("{}/{}.h", c_flowi_dest_dir, base_filename);
+            rust_filename = format!("{}/{}.rs", rust_flowi_dest , base_filename);
+        }
+
+        //let c_render_cmds_filenames = format!("{}/render.h", c_core_src_dir);
 
         // Generate C/C++ Header for FFI structs
-        println!("    Generating Core C header: {}", c_core_filename);
-        println!("    Generating RenderCommands C header: {}", c_render_cmds_filenames);
-        Cgen::generate(&c_core_filename, &c_render_cmds_filenames, api_def).unwrap();
+        Cgen::generate(&c_filename, &c_core_src_dir, api_def).unwrap();
 
         // Rust Rustfmt on rust files
         //run_rustfmt(&rust_ffi_target);

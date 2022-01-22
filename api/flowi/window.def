@@ -1,0 +1,15 @@
+
+struct Window {
+    handle: u64,
+    /// Opens up new window
+    [static] new(width: u16, height: u16) -> Window,
+    /// Destroy the window
+    [drop] destroy(),
+    /// Check if the current window is still open
+    is_open() -> bool,
+    /// Update the window. This has to be done in a loop for the UI to fuction correctly
+    update(),
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

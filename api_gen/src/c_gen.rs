@@ -162,7 +162,9 @@ impl Cgen {
         Ok(())
     }
 
-    pub fn generate(filename: &str, render_filename: &str, api_def: &ApiDef) -> io::Result<()> {
+    pub fn generate(filename: &str, render_filename_dir: &str, api_def: &ApiDef) -> io::Result<()> {
+        println!("    Generating Core C header: {}", filename);
+
         let mut f = BufWriter::new(File::create(filename)?);
         writeln!(f, "{}", HEADER)?;
 
@@ -182,6 +184,9 @@ impl Cgen {
 
         // Generate the render commands enum
         if !render_commands.is_empty() {
+            let render_filename = format!("{}/render.h", render_filename_dir);
+            println!("    Generating RenderCommands C header: {}", render_filename);
+
             writeln!(f, "// Commands that will be in the render stream")?;
             writeln!(f, "typedef enum FlRenderCommand {{")?;
             for cmd in &render_commands {
@@ -189,7 +194,7 @@ impl Cgen {
             }
             writeln!(f, "}} FlRenderCommand;\n")?;
 
-            Self::generate_render_file(render_filename, &render_commands)?;
+            Self::generate_render_file(&render_filename, &render_commands)?;
         }
 
         writeln!(f, "{}", FOOTER)

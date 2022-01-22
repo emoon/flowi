@@ -11,10 +11,7 @@ enum_flags   = { ("[enum_flags(") ~ name ~ (")]") }
 attributes   = { ("#[attributes(") ~ namelist ~ (")]") }
 traits       = { ("[traits(") ~ namelist ~ (")]") }
 derive       = { (":") ~ namelist? }
-event        = { ("[event]") }
-no_chain     = { ("[no_chain]") }
-signal       = { ("[signal]") }
-manual       = { ("[manual]") }
+drop_typ     = { ("[drop]") }
 static_typ   = { ("[static]") }
 pointer_exp  = { ("*") }
 refexp       = { ("&") }
@@ -27,7 +24,7 @@ varlist      = { (var | array) ~ ((",") ~ (var | array))* }
 enum_assign  = { ("=") ~ name_or_num }
 enum_type    = { name ~ enum_assign }
 namelist     = { name ~ ((",") ~ name)* }
-function     = { (static_typ | no_chain | manual | signal | event)*? ~ name ~ ("(") ~ varlist? ~ (")") ~ retexp? }
+function     = { (static_typ | drop_typ)*? ~ name ~ ("(") ~ varlist? ~ (")") ~ retexp? }
 
 name = @{
 	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*
