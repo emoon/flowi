@@ -1,7 +1,11 @@
 
+callback MainLoopCallback(user_data: *void)
+
 struct Application {
     // TODO: More options
     [static] new(application_name: String, developer: String),
+    [static] main_loop(callback: MainLoopCallback),
+    [static] set_layout(layout: *const LayoutArea),
 }
 
 

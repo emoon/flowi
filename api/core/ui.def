@@ -1,0 +1,7 @@
+
+struct Ui {
+    [static] text(text: String),
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

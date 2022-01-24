@@ -10,15 +10,16 @@ mod api_parser;
 #[macro_use]
 extern crate pest_derive;
 
-// Code for C/Header generation
 mod c_gen;
+mod rust_gen;
 mod lints;
 
 use crate::api_parser::{ApiDef, ApiParser};
 use crate::c_gen::Cgen;
+use crate::rust_gen::RustGen;
 use rayon::prelude::*;
 //use std::fs;
-//use std::process::Command;
+use std::process::Command;
 use std::sync::RwLock;
 use walkdir::WalkDir;
 
@@ -44,28 +45,25 @@ fn create_dir(path: &str) {
 //
 // Run Rustfmt on generated file
 //
-/*
+
 fn run_rustfmt(filename: &str) {
     Command::new("rustfmt")
         .arg(filename)
         .output()
         .expect("failed to execute cargo fmt");
 }
-*/
 
 //
 // Run Rustfmt on generated file
 //
-/*
 fn run_clang_format(filename: &str) {
     Command::new("clang-format")
         .arg("-style=file")
         .arg("-i")
         .arg(filename)
         .output()
-        .expect("failed to execute cargo fmt");
+        .expect("failed to execute clang-format");
 }
-*/
 
 ///
 /// Main
@@ -73,14 +71,14 @@ fn run_clang_format(filename: &str) {
 fn main() {
     let wd = WalkDir::new("../api");
     // temporary set to one thread during debugging
-	rayon::ThreadPoolBuilder::new().num_threads(1).build_global().unwrap();
+	//rayon::ThreadPoolBuilder::new().num_threads(1).build_global().unwrap();
 
     // Dest directores for various langs
 	let c_core_dest_dir = "../core/c/include";
 	let c_flowi_dest_dir = "../flowi/c/include";
 
-    let rust_core_dest = "../core/rust-core/src";
-    let rust_flowi_dest = "../flowi/rust/src";
+    let rust_core_dest = "../core/rust/flowi-core/src";
+    let rust_flowi_dest = "../flowi/rust/flowi/src";
 
     // Used for generating internal headers
 	let c_core_src_dir = "../core/src";
@@ -129,11 +127,19 @@ fn main() {
     // Pass 2:
     // Generate all the code.
 
-    api_defs_read.par_iter().enumerate().for_each(|(_index, api_def)| {
+    api_defs_read.par_iter().enumerate().for_each(|(index, api_def)| {
         let base_filename = &api_def.base_filename;
 
         let c_filename;
         let rust_filename;
+
+        // On the first thread we start with generating a bunch of main files so we have this
+        // generation running threaded as well. Next time when index isn't 0 anymore regular work
+        // will come along here.
+
+        if index == 0 {
+            RustGen::generate_mod_files(rust_core_dest, rust_flowi_dest, &api_defs_read).unwrap();
+        }
 
         if api_def.filename.contains("core") {
             c_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
@@ -143,14 +149,21 @@ fn main() {
             rust_filename = format!("{}/{}.rs", rust_flowi_dest , base_filename);
         }
 
-        //let c_render_cmds_filenames = format!("{}/render.h", c_core_src_dir);
+        // Generate C/C++ Header for FFI structs
+        if let Err(e) = Cgen::generate(&c_filename, &c_core_src_dir, api_def) {
+            println!("ERROR: Unable to write {}, error: {:?}", c_filename, e);
+        }
 
         // Generate C/C++ Header for FFI structs
-        Cgen::generate(&c_filename, &c_core_src_dir, api_def).unwrap();
+        if let Err(e) = RustGen::generate(&rust_filename, api_def) {
+            println!("ERROR: Unable to write {}, error: {:?}", rust_filename, e);
+        }
+
+        // clang-format C files
+        run_clang_format(&c_filename);
 
         // Rust Rustfmt on rust files
-        //run_rustfmt(&rust_ffi_target);
-        //run_rustfmt(&rust_target);
+        run_rustfmt(&rust_filename);
     });
 
     // All done!

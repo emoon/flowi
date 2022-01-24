@@ -1,3 +1,4 @@
+use heck::ToSnakeCase;
 use pest::iterators::Pair;
 use pest::Parser;
 use std::borrow::Cow;
@@ -5,7 +6,6 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use heck::ToSnakeCase;
 
 //#[cfg(debug_assertions)]
 const _GRAMMAR: &str = include_str!("api.pest");
@@ -14,7 +14,7 @@ const _GRAMMAR: &str = include_str!("api.pest");
 /// Current primitive types
 ///
 const PRMITIVE_TYPES: &[&str] = &[
-    "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "bool", "f32", "f64",
+    "void", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "bool", "f32", "f64",
 ];
 
 ///
@@ -60,8 +60,10 @@ pub struct Variable {
     pub array: bool,
     /// If variable is optional (nullable)
     pub optional: bool,
-    /// If the type is a reference it may be a pointer on the C side
+    /// Type is a mutable pointer
     pub pointer: bool,
+    /// Type is a const pointer
+    pub const_pointer: bool,
     /// If the type is of Regular it can be either a class or pod type
     pub class_type: bool,
 }
@@ -82,6 +84,7 @@ impl Default for Variable {
             array: false,
             optional: false,
             pointer: false,
+            const_pointer: false,
             class_type: false,
         }
     }
@@ -96,6 +99,8 @@ pub enum FunctionType {
     Regular,
     /// Static function is that doesn't belong to a class
     Static,
+    /// Function that is manually implemented in some cases
+    Manual,
 }
 
 ///
@@ -219,10 +224,10 @@ pub struct ApiDef {
     pub filename: String,
     /// Base filename (such as foo/file/some_name.def) is some_name
     pub base_filename: String,
+    /// Callbacks types
+    pub callbacks: Vec<Function>,
     /// Structs that only holds data
-    pub pod_structs: Vec<Struct>,
-    /// Structs that holds functions
-    pub class_structs: Vec<Struct>,
+    pub structs: Vec<Struct>,
     /// Enums
     pub enums: Vec<Enum>,
 }
@@ -273,11 +278,14 @@ impl ApiParser {
                     current_comments.clear();
 
                     // If we have some variables in the struct we push it to pod_struct
-                    if !sdef.variables.is_empty() {
-                        api_def.pod_structs.push(sdef);
-                    } else {
-                        api_def.class_structs.push(sdef);
-                    }
+                    api_def.structs.push(sdef);
+                }
+
+                Rule::callbackdef => {
+                    let mut func = Self::fill_callback(chunk, &current_comments);
+                    func.func_type = FunctionType::Static;
+                    api_def.callbacks.push(func);
+                    current_comments.clear();
                 }
 
                 Rule::doc_comment => {
@@ -404,6 +412,19 @@ impl ApiParser {
         }
     }
 
+    fn fill_callback(chunk: Pair<Rule>, doc_comments: &str) -> Function {
+        let mut func = Function::default();
+
+        for entry in chunk.into_inner() {
+            match entry.as_rule() {
+                Rule::function => func = Self::get_function(entry, &doc_comments),
+                _ => (),
+            }
+        }
+
+        func
+    }
+
     ///
     /// Fill struct def
     ///
@@ -521,6 +542,7 @@ impl ApiParser {
             match entry.as_rule() {
                 Rule::name => function.name = entry.as_str().to_owned(),
                 Rule::static_typ => function.func_type = FunctionType::Static,
+                Rule::manual_typ => function.func_type = FunctionType::Manual,
                 Rule::varlist => function.function_args = Self::get_variable_list(entry),
                 Rule::retexp => function.return_val = Some(Self::get_variable(entry, "")),
                 _ => (),
@@ -572,6 +594,7 @@ impl ApiParser {
                 Rule::name => var.name = entry.as_str().to_owned(),
                 Rule::refexp => vtype = Rule::refexp,
                 Rule::pointer_exp => vtype = Rule::pointer_exp,
+                Rule::const_ptr_exp => vtype = Rule::const_ptr_exp,
                 Rule::optional => var.optional = true,
                 Rule::vtype => type_name = entry.as_str().to_owned(),
                 Rule::array => {
@@ -581,6 +604,7 @@ impl ApiParser {
                             Rule::vtype => type_name = entry.as_str().to_owned(),
                             Rule::refexp => vtype = Rule::refexp,
                             Rule::pointer_exp => vtype = Rule::pointer_exp,
+                            Rule::const_ptr_exp => vtype = Rule::const_ptr_exp,
                             _ => (),
                         }
                     }
@@ -608,6 +632,10 @@ impl ApiParser {
 
         if vtype == Rule::pointer_exp {
             var.pointer = true;
+        }
+
+        if vtype == Rule::const_ptr_exp {
+            var.const_pointer = true;
         }
 
         // TODO: We assume regular is class type now but this will change
@@ -793,7 +821,7 @@ impl ApiParser {
         let mut enum_def_file_type = HashMap::new();
 
         for api_def in api_defs.iter() {
-            api_def.class_structs.iter().for_each(|s| {
+            api_def.structs.iter().for_each(|s| {
                 type_def_file.insert(s.name.to_owned(), s.def_file.to_owned());
                 type_def_file.insert(format!("{}Trait", s.name), s.def_file.to_owned());
             });
@@ -811,18 +839,22 @@ impl ApiParser {
         }
 
         for api_def in api_defs.iter_mut() {
-            for s in &mut api_def.pod_structs {
+            for s in &mut api_def.structs {
                 for func in &mut s.functions {
-                    func.c_name = format!("{}_{}_{}", crate::c_gen::C_API_SUFIX_FUNCS, s.name.to_snake_case(), func.name);
+                    func.c_name = format!(
+                        "{}_{}_{}",
+                        crate::c_gen::C_API_SUFIX_FUNCS,
+                        s.name.to_snake_case(),
+                        func.name
+                    );
                 }
             }
         }
 
-
         // Patch up the names/def_file in the function arguments
         for func in api_defs
             .iter_mut()
-            .flat_map(|api| api.class_structs.iter_mut())
+            .flat_map(|api| api.structs.iter_mut())
             .flat_map(|s| s.functions.iter_mut())
         {
             for arg in func.function_args.iter_mut() {
@@ -873,7 +905,7 @@ impl ApiDef {
     //
     /*
     pub fn get_functions<'a>(&'a self, func_type: FunctionType) -> Vec<&'a Function> {
-    self.class_structs
+    self.structs
     .iter()
     .flat_map(|s| s.functions.iter())
     .filter(|f| f.func_type == func_type)
@@ -941,6 +973,7 @@ impl Variable {
             "bool" => "bool".into(),
             "f64" => "double".into(),
             "i32" => "int".into(),
+            "void" => "void".into(),
             _ => {
                 if self.type_name.starts_with('u') {
                     format!("uint{}_t", &tname[1..]).into()
@@ -1185,10 +1218,10 @@ mod tests {
             "dummy_filename.def",
             &mut api_def,
         );
-        assert_eq!(api_def.pod_structs.is_empty(), true);
-        assert_eq!(api_def.class_structs.is_empty(), false);
+        assert_eq!(api_def.structs.is_empty(), true);
+        assert_eq!(api_def.structs.is_empty(), false);
 
-        let sdef = &api_def.class_structs[0];
+        let sdef = &api_def.structs[0];
 
         assert_eq!(sdef.name, "Widget");
         assert_eq!(sdef.functions.len(), 1);

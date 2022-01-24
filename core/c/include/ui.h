@@ -13,15 +13,10 @@
 extern "C" {
 #endif
 
-typedef struct FlRect {
-    int x;
-    int y;
-    int z;
-    int w;
-} FlRect;
+typedef struct FlUi {
+} FlUi;
 
-// Documentation for foo
-int fl_rect_foo(FlRect* self);
+void fl_ui_text(FlString text);
 
 #ifdef __cplusplus
 }

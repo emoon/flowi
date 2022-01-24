@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "idx.h"
 
 #ifdef __cplusplus
@@ -18,8 +18,6 @@ typedef enum FlDebugMode {
     FlDebugMode_Layout = 1,
 } FlDebugMode;
 
-
 #ifdef __cplusplus
 }
 #endif
-

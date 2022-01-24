@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "idx.h"
 
 #ifdef __cplusplus
@@ -36,13 +36,14 @@ typedef struct FlSizing {
 } FlSizing;
 
 typedef struct FlLayoutArea {
-    const char* name;
+    FlString name;
     FlSizing width;
     FlSizing height;
 } FlLayoutArea;
 
+FlLayoutArea fl_layout_area_new();
+void fl_layout_area_from_children(FlLayoutArea children, int16_t row, int16_t cols);
 
 #ifdef __cplusplus
 }
 #endif
-

@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "idx.h"
 
 #ifdef __cplusplus
@@ -17,8 +17,15 @@ typedef struct FlWindow {
     uint64_t handle;
 } FlWindow;
 
+// Opens up new window
+FlWindow fl_window_new(uint16_t width, uint16_t height);
+// Destroy the window
+void fl_window_destroy(FlWindow* self);
+// Check if the current window is still open
+bool fl_window_is_open(FlWindow* self);
+// Update the window. This has to be done in a loop for the UI to fuction correctly
+void fl_window_update(FlWindow* self);
 
 #ifdef __cplusplus
 }
 #endif
-

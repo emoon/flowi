@@ -5,16 +5,23 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "idx.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef struct FlApplication {
+} FlApplication;
+
+typedef void (*FlMainLoopCallback)(void* user_data);
+
+void fl_application_new(FlString application_name, FlString developer);
+void fl_application_main_loop(FlMainLoopCallback callback);
+void fl_application_set_layout(FlLayoutArea layout);
 
 #ifdef __cplusplus
 }
 #endif
-

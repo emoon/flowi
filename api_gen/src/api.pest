@@ -1,6 +1,7 @@
-chunk = _{ SOI ~ (structdef | enumdef | doc_comment)+ ~ EOI }
+chunk = _{ SOI ~ (structdef | callbackdef | enumdef | doc_comment)+ ~ EOI }
 
 structdef   =  { attributes? ~ traits? ~ ("struct") ~ name ~ derive? ~ ("{") ~ fieldlist? ~ ("}") }
+callbackdef =  { ("callback") ~ function }
 enumdef     =  { (attributes | enum_flags)*? ~ ("enum") ~ name ~ ("{") ~ fieldlist? ~ ("}") }
 fieldlist   =  { (doc_comment | field)*  }
 field       =  { (var | function | enum_type) ~ fieldsep? }
@@ -12,19 +13,21 @@ attributes   = { ("#[attributes(") ~ namelist ~ (")]") }
 traits       = { ("[traits(") ~ namelist ~ (")]") }
 derive       = { (":") ~ namelist? }
 drop_typ     = { ("[drop]") }
+manual_typ   = { ("[manual]") }
 static_typ   = { ("[static]") }
+const_ptr_exp  = { ("*const ") }
 pointer_exp  = { ("*") }
 refexp       = { ("&") }
 default_val  = { ("=") ~ name_or_num? ~ string? }
 optional     = { ("?") }
-array        = { ("[") ~ (refexp | pointer_exp)? ~ vtype ~ ("]") ~ optional? }
+array        = { ("[") ~ (const_ptr_exp | refexp | pointer_exp)? ~ vtype ~ ("]") ~ optional? }
 retexp       = { ("->") ~ (refexp | pointer_exp)? ~ (vtype | array) ~ optional? }
-var          = { name ~ (":") ~ (refexp | pointer_exp)? ~ (vtype | array) ~ default_val? }
+var          = { name ~ (":") ~ (const_ptr_exp | refexp | pointer_exp)? ~ (vtype | array) ~ default_val? }
 varlist      = { (var | array) ~ ((",") ~ (var | array))* }
 enum_assign  = { ("=") ~ name_or_num }
 enum_type    = { name ~ enum_assign }
 namelist     = { name ~ ((",") ~ name)* }
-function     = { (static_typ | drop_typ)*? ~ name ~ ("(") ~ varlist? ~ (")") ~ retexp? }
+function     = { (manual_typ | static_typ | drop_typ)*? ~ name ~ ("(") ~ varlist? ~ (")") ~ retexp? }
 
 name = @{
 	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*

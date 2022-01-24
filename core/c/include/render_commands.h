@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "idx.h"
 
 #ifdef __cplusplus
@@ -25,7 +25,9 @@ typedef enum FlTextureFormat {
     FlTextureFormat_RGBA8_sRGB = 3,
     // 4 byte R,G,B,A format (LINEAR)
     FlTextureFormat_RGBA8_LINEAR = 4,
-    // 16-bit single format. This will mostly be used for temporary things such as blurs that requires morethan one pass rendering. i16 or f16 will allow better accuracy, but R8_LINEAR can be used in worst casein case the rendering backend doesn't support this format
+    // 16-bit single format. This will mostly be used for temporary things such as blurs that requires morethan one pass
+    // rendering. i16 or f16 will allow better accuracy, but R8_LINEAR can be used in worst casein case the rendering
+    // backend doesn't support this format
     FlTextureFormat_I16_OR_F16_LINEAR = 5,
 } FlTextureFormat;
 
@@ -88,7 +90,8 @@ typedef struct FlCreateTexture {
     uint16_t height;
 } FlCreateTexture;
 
-// This is used to update an existing texture with some data. This usually happens when a new image/glyph/etcneeds to be displayed but isn't present in a texture yet
+// This is used to update an existing texture with some data. This usually happens when a new image/glyph/etcneeds to be
+// displayed but isn't present in a texture yet
 typedef struct FlUpdateTexture {
     // Data to upload
     uint8_t* data;
@@ -99,7 +102,8 @@ typedef struct FlUpdateTexture {
     uint16_t texture_id;
 } FlUpdateTexture;
 
-// Used when restricting an area for rendering. How this is to be implemented depends onthe GPUAPI, but for OpenGL this corresponts to https://www.khronos.org/registry/OpenGL-Refpages/es2.0/xhtml/glScissor.xml
+// Used when restricting an area for rendering. How this is to be implemented depends onthe GPUAPI, but for OpenGL this
+// corresponts to https://www.khronos.org/registry/OpenGL-Refpages/es2.0/xhtml/glScissor.xml
 typedef struct FlScissorRect {
     // Area restricted for rendering
     FlRenderRect rect;
@@ -114,8 +118,6 @@ typedef enum FlRenderCommand {
     FlRenderCommand_ScissorRect,
 } FlRenderCommand;
 
-
 #ifdef __cplusplus
 }
 #endif
-
