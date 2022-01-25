@@ -1,0 +1,55 @@
+enum LengthPercent {
+    Length = 0,
+    Percent = 1,
+}
+
+struct LengthPercentValue {
+    value: f32,
+    typ: LengthPercent,
+}
+
+struct Side {
+    Top = 0,
+    Right = 1,
+    Bottom = 2,
+    Left = 3,
+}
+
+struct Spacing {
+    sides: [u16; 4],
+}
+
+struct Border {
+    border_radius: [LengthPercentValue; 4],
+}
+
+struct Style {
+    name: String,
+    border: Border,
+    padding: [u16; 4],
+    current_font: u32,
+    background_color: Color,
+    text_color: Color,
+    font_color: Color,
+
+    /// Create a new style
+    [static] create(name: String) -> *Style,
+
+    /// Get the default style. Changing this will apply the base style for the whole application
+    [static] get_default() -> *Style,
+
+    /// Get the current style which is based on what has been pushed on the style stack using push/pop
+    [static] get_current() -> *const Style,
+
+    /// Mark the end of style changes
+    end_changes(),
+
+    /// Select the style to be used, to end using the style use 'fl_pop_style()'
+    push(),
+
+    /// Pops the current style
+    pop(),
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+
