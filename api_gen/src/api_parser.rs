@@ -38,6 +38,23 @@ pub enum VariableType {
 }
 
 ///
+/// Array Type
+///
+#[derive(PartialEq, Debug, Clone)]
+pub enum ArrayType {
+    /// Array is unsized
+    Unsized,
+    /// Array with fixed size
+    SizedArray(String),
+}
+
+impl Default for ArrayType {
+    fn default() -> ArrayType {
+        ArrayType::Unsized
+    }
+}
+
+///
 /// Holds the data for a variable. It's name and it's type and additional flags
 ///
 #[derive(Debug, Clone)]
@@ -57,7 +74,7 @@ pub struct Variable {
     /// Rest name of a enum. "test" in the case of Rute::test
     pub enum_sub_type: String,
     /// If variable is an array
-    pub array: bool,
+    pub array: Option<ArrayType>,
     /// If variable is optional (nullable)
     pub optional: bool,
     /// Type is a mutable pointer
@@ -81,7 +98,7 @@ impl Default for Variable {
             type_name: String::new(),
             enum_sub_type: String::new(),
             enum_type: EnumType::Regular,
-            array: false,
+            array: None,
             optional: false,
             pointer: false,
             const_pointer: false,
@@ -598,6 +615,7 @@ impl ApiParser {
                 Rule::optional => var.optional = true,
                 Rule::vtype => type_name = entry.as_str().to_owned(),
                 Rule::array => {
+                    var.array = Some(ArrayType::Unsized);
                     // Get the type if we have an array
                     for entry in entry.into_inner() {
                         match entry.as_rule() {
@@ -605,10 +623,12 @@ impl ApiParser {
                             Rule::refexp => vtype = Rule::refexp,
                             Rule::pointer_exp => vtype = Rule::pointer_exp,
                             Rule::const_ptr_exp => vtype = Rule::const_ptr_exp,
+                            Rule::array_size => {
+                                var.array = Some(ArrayType::SizedArray(entry.into_inner().as_str().to_owned()));
+                            },
                             _ => (),
                         }
                     }
-                    var.array = true;
                 }
 
                 _ => (),

@@ -16,7 +16,7 @@ extern "C" {
 typedef struct FlApplication {
 } FlApplication;
 
-typedef void (*FlMainLoopCallback)(void* user_data);
+typedef void (*FlMainLoopCallback)(void* user0, void* user1, void* user2);
 
 void fl_application_new(FlString application_name, FlString developer);
 void fl_application_main_loop(FlMainLoopCallback callback);

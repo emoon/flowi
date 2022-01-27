@@ -8,25 +8,31 @@ struct LengthPercentValue {
     typ: LengthPercent,
 }
 
-struct Side {
-    Top = 0,
-    Right = 1,
-    Bottom = 2,
-    Left = 3,
+struct Spacing {
+    top: u16,
+    right: u16,
+    bottom: u16,
+    left: u16,
 }
 
-struct Spacing {
-    sides: [u16; 4],
+struct Padding {
+    top: u16,
+    right: u16,
+    bottom: u16,
+    left: u16,
 }
 
 struct Border {
-    border_radius: [LengthPercentValue; 4],
+    border_radius_top: LengthPercentValue,
+    border_radius_right: LengthPercentValue,
+    border_radius_bottom: LengthPercentValue,
+    border_radius_left: LengthPercentValue,
 }
 
 struct Style {
     name: String,
     border: Border,
-    padding: [u16; 4],
+    padding: Padding,
     current_font: u32,
     background_color: Color,
     text_color: Color,

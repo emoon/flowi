@@ -1,5 +1,5 @@
 
-callback MainLoopCallback(user_data: *void)
+callback MainLoopCallback(user0: *void, user1: *void, user2: *void)
 
 struct Application {
     // TODO: More options
@@ -7,7 +7,6 @@ struct Application {
     [static] main_loop(callback: MainLoopCallback),
     [static] set_layout(layout: *const LayoutArea),
 }
-
 
 // vim: syntax=rust expandtab ts=4 sw=4
 

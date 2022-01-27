@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 typedef struct FlUi {
+    FlTest data[4];
 } FlUi;
 
 void fl_ui_text(FlString text);

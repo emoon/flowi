@@ -14,10 +14,10 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local FLOWI_DIR = "core/src/"
-local FREETYPE2_LIB = "core/external/freetype2/"
-local STB_LIB = "core/external/stb/"
-local TLSF_LIB = "core/external/tlsf/"
+local FLOWI_DIR = "core/c/src/"
+local FREETYPE2_LIB = "core/c/external/freetype2/"
+local STB_LIB = "core/c/external/stb/"
+local TLSF_LIB = "core/c/external/tlsf/"
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ StaticLibrary {
 -----------------------------------------------------------------------------------------------------------------------
 
 StaticLibrary {
-    Name = "flowi",
+    Name = "flowi-core",
 
     Env = {
         CCOPTS = {
@@ -94,8 +94,8 @@ StaticLibrary {
     },
 
     Includes = {
-        "core/external/freetype2/include",
-        "core/external/tslf",
+        "core/c/external/freetype2/include",
+        "core/c/external/tslf",
     },
 
     Sources = {

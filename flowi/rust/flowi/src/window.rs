@@ -19,12 +19,14 @@ pub struct Window {
 }
 
 impl Window {
+    /// Opens up new window
     pub fn new(width: u16, height: u16) {
         unsafe {
             fl_window_new(width, height);
         }
     }
 
+    /// Destroy the window
     pub fn destroy(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
@@ -32,6 +34,7 @@ impl Window {
         }
     }
 
+    /// Check if the current window is still open
     pub fn is_open(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
@@ -39,6 +42,7 @@ impl Window {
         }
     }
 
+    /// Update the window. This has to be done in a loop for the UI to fuction correctly
     pub fn update(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);

@@ -25,23 +25,34 @@ pub struct LengthPercentValue {
 }
 
 #[repr(C)]
-pub struct Side {}
+pub struct Spacing {
+    top: u16,
+    right: u16,
+    bottom: u16,
+    left: u16,
+}
 
 #[repr(C)]
-pub struct Spacing {
-    sides: u16,
+pub struct Padding {
+    top: u16,
+    right: u16,
+    bottom: u16,
+    left: u16,
 }
 
 #[repr(C)]
 pub struct Border {
-    border_radius: LengthPercentValue,
+    border_radius_top: LengthPercentValue,
+    border_radius_right: LengthPercentValue,
+    border_radius_bottom: LengthPercentValue,
+    border_radius_left: LengthPercentValue,
 }
 
 #[repr(C)]
 pub struct Style {
     name: FlString,
     border: Border,
-    padding: u16,
+    padding: Padding,
     current_font: u32,
     background_color: Color,
     text_color: Color,
@@ -50,31 +61,35 @@ pub struct Style {
 
 impl LengthPercentValue {}
 
-impl Side {}
-
 impl Spacing {}
+
+impl Padding {}
 
 impl Border {}
 
 impl Style {
+    /// Create a new style
     pub fn create(name: &str) {
         unsafe {
             fl_style_create(FlString::new(name));
         }
     }
 
+    /// Get the default style. Changing this will apply the base style for the whole application
     pub fn get_default() {
         unsafe {
             fl_style_get_default();
         }
     }
 
+    /// Get the current style which is based on what has been pushed on the style stack using push/pop
     pub fn get_current() {
         unsafe {
             fl_style_get_current();
         }
     }
 
+    /// Mark the end of style changes
     pub fn end_changes(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
@@ -82,6 +97,7 @@ impl Style {
         }
     }
 
+    /// Select the style to be used, to end using the style use 'fl_pop_style()'
     pub fn push(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
@@ -89,6 +105,7 @@ impl Style {
         }
     }
 
+    /// Pops the current style
     pub fn pop(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);

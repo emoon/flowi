@@ -23,24 +23,31 @@ typedef struct FlLengthPercentValue {
     FlLengthPercent typ;
 } FlLengthPercentValue;
 
-typedef struct FlSide {
-} FlSide;
-
 typedef struct FlSpacing {
-    uint16_t* sides;
-    uint32_t sides_size;
+    uint16_t top;
+    uint16_t right;
+    uint16_t bottom;
+    uint16_t left;
 } FlSpacing;
 
+typedef struct FlPadding {
+    uint16_t top;
+    uint16_t right;
+    uint16_t bottom;
+    uint16_t left;
+} FlPadding;
+
 typedef struct FlBorder {
-    FlLengthPercentValue* border_radius;
-    uint32_t border_radius_size;
+    FlLengthPercentValue border_radius_top;
+    FlLengthPercentValue border_radius_right;
+    FlLengthPercentValue border_radius_bottom;
+    FlLengthPercentValue border_radius_left;
 } FlBorder;
 
 typedef struct FlStyle {
     FlString name;
     FlBorder border;
-    uint16_t* padding;
-    uint32_t padding_size;
+    FlPadding padding;
     uint32_t current_font;
     FlColor background_color;
     FlColor text_color;

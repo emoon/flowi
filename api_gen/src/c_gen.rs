@@ -113,11 +113,16 @@ impl Cgen {
         write!(f, "    {}", Self::get_variable(var, ""))?;
 
         // for arrays we generate a pointer and a size
-        if var.array {
-            writeln!(f, "* {};", var.name)?;
-            writeln!(f, "    uint32_t {}_size;", var.name)
-        } else {
-            writeln!(f, " {};", var.name)
+        match var.array {
+            None => writeln!(f, " {};", var.name),
+            Some(ArrayType::Unsized) => {
+                writeln!(f, "* {};", var.name)?;
+                writeln!(f, "    uint32_t {}_size;", var.name)
+            }
+
+            Some(ArrayType::SizedArray(ref size)) => {
+                writeln!(f, " {}[{}];", var.name, size)
+            },
         }
     }
 

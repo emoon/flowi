@@ -5,23 +5,22 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "idx.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct FlRect {
-    int x;
-    int y;
-    int z;
-    int w;
-} FlRect;
-
+typedef enum FlError {
+    FlError_None = 0,
+    FlError_Io = 1,
+    FlError_Memory = 2,
+    FlError_Font = 3,
+    FlError_Style = 4,
+} FlError;
 
 #ifdef __cplusplus
 }
 #endif
-

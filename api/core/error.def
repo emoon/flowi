@@ -1,0 +1,8 @@
+
+enum Error {
+    None = 0,
+    Io = 1,
+    Memory = 2,
+    Font = 3,
+    Style = 4,
+}

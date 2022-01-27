@@ -2,7 +2,7 @@
 
 #include "../include/layout.h"
 
-typedef FlLayoutAreaId uint32_t;
+typedef uint32_t FlLayoutAreaId;
 struct FlContext;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -14,8 +14,8 @@ typedef struct LayoutAreaPrivate {
     FlLayoutAreaId layout[128];
     int rows;
     int cols;
-    LayoutRect total_size;
-    LayoutRect updating_size;
+    FlLayoutRect total_size;
+    FlLayoutRect updating_size;
 } LayoutAreaPrivate;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

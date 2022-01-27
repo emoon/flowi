@@ -4,6 +4,9 @@
 pub mod debug;
 pub use debug::*;
 
+pub mod error;
+pub use error::*;
+
 pub mod layout;
 pub use layout::*;
 

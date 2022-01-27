@@ -81,7 +81,7 @@ fn main() {
     let rust_flowi_dest = "../flowi/rust/flowi/src";
 
     // Used for generating internal headers
-	let c_core_src_dir = "../core/src";
+	let c_core_src_dir = "../core/c/src";
 
     //let rust_dest_dir = "../rute/src/auto";
     //let dest = "../rute/cpp/auto";

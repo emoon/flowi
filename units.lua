@@ -233,7 +233,7 @@ Program {
 
     Frameworks = { "Cocoa", "IOKit", "Metal", "QuartzCore", "MetalKit" },
 
-    Depends = { "bgfx", "glfw", "flowi", "freetype2" },
+    Depends = { "bgfx", "glfw", "flowi-core", "freetype2" },
 }
 
 local FLOWI_DIR = "core/src/"
@@ -256,7 +256,7 @@ Program {
         },
     },
 
-    Depends = { "flowi", "freetype2" },
+    Depends = { "flowi-core", "freetype2" },
 }
 
 -----------------------------------------------------------------------------------------------------------------------
@@ -270,7 +270,7 @@ Program {
 
     Sources = get_c_src("core/bench"),
 
-    Depends = { "flowi", "freetype2" },
+    Depends = { "flowi-core", "freetype2" },
 }
 
 Default "flowi_core_tests"

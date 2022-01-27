@@ -162,12 +162,18 @@ impl RustGen {
     }
 
     fn get_type(fa: &mut FuncArgs, var: &Variable, type_name: &str) {
-        if var.array {
+        if var.array.is_some() {
+            let sized: Cow<str> = match var.array.as_ref() {
+                None => "".into(),
+                Some(ArrayType::Unsized) => "".into(),
+                Some(ArrayType::SizedArray(size)) => format!("; {}", size).into(),
+            };
+
             if var.const_pointer {
-                fa.func_args.push(format!("{}: &[{}]", var.name, type_name));
+                fa.func_args.push(format!("{}: &[{}{}]", var.name, type_name, sized));
                 fa.ffi_args.push(format!("{}.as_ptr()", var.name));
             } else if var.pointer {
-                fa.func_args.push(format!("{}: &mut [{}]", var.name, type_name));
+                fa.func_args.push(format!("{}: &mut [{}{}]", var.name, type_name, sized));
                 fa.ffi_args.push(format!("{}.as_mut_ptr()", var.name));
             } else {
                 panic!("Unsupported");
@@ -187,6 +193,7 @@ impl RustGen {
     }
 
     fn generate_func_impl(func: &Function) -> FuncArgs {
+
         let mut fa = FuncArgs::default();
 
         for (i, arg) in func.function_args.iter().enumerate() {
@@ -223,6 +230,8 @@ impl RustGen {
         writeln!(f, "impl {} {{", sdef.name)?;
 
         for func in &sdef.functions {
+            Self::write_commment(f, &func.doc_comments, 0)?;
+
             let func_args = Self::generate_func_impl(&func);
 
             //if func_args.ret_value.is_empty() {

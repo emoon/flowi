@@ -8,7 +8,9 @@ extern "C" {
 }
 
 #[repr(C)]
-pub struct Ui {}
+pub struct Ui {
+    data: Test,
+}
 
 impl Ui {
     pub fn text(text: &str) {
