@@ -8,16 +8,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "idx.h"
+#include "manual.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct FlUi {
-    FlTest data[4];
-} FlUi;
-
-void fl_ui_text(FlString text);
+typedef enum FlDebugMode {
+    FlDebugMode_Off = 0,
+    FlDebugMode_Layout = 1,
+} FlDebugMode;
 
 #ifdef __cplusplus
 }

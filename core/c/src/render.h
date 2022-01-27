@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "../include/render_commands.h"
+#include <flowi_core/render_commands.h>
 #include "command_buffer.h"
 
 #define Render_textured_triangles_cmd(state) \

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "../include/inline.h"
+#include <flowi_core/inline.h>
 
 #define FL_RESTRICT __restrict
 

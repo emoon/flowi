@@ -7,7 +7,7 @@
 
 FlLayoutAreaId fl_layout_area_create(FlContext* self, FlLayoutArea* area) {
 	const int id = self->layout_ids++;
-	LayoutAreaPrivate* layout = LinearAllocator_alloc_zero(self->layout_allocator, LayoutAreaPrivate);
+	LayoutAreaPrivate* layout = LinearAllocator_alloc_zero(&self->layout_allocator, LayoutAreaPrivate);
 	FL_TRY_ALLOC_INT(layout);
 	layout->area = *area;
 	layout->id = id;
@@ -22,6 +22,7 @@ void fl_layout_set(struct FlContext* self, FlLayoutAreaId area) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
 void fl_layout_update_area(FlLayoutAreaId area, FlLayoutArea* area) {
 	LayoutAreaPrivate* a = ((LayoutAreaPrivate*)self->layout_allocator.start_data) + area;
 	a->area = *area;
@@ -47,12 +48,16 @@ void Layout_update(LayoutAreaPrivate* layout, FlLayoutRect rect) {
 		// TODO: Handle if we have layouts
 	}
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
 void fl_layout_debug_render_current(struct FlContext* self) {
 
 
+
 }
+*/
 
 

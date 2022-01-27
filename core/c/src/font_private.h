@@ -2,7 +2,7 @@
 #pragma once
 
 #include "types.h"
-#include "../include/config.h"
+#include <flowi_core/config.h>
 #include "flowi.h"
 #include "font.h"
 #include "render.h"

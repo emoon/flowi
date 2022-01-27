@@ -8,23 +8,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "idx.h"
+#include "manual.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct FlWindow {
-    uint64_t handle;
-} FlWindow;
+typedef struct FlApplication {
+} FlApplication;
 
-// Opens up new window
-FlWindow fl_window_new(uint16_t width, uint16_t height);
-// Destroy the window
-void fl_window_destroy(FlWindow* self);
-// Check if the current window is still open
-bool fl_window_is_open(FlWindow* self);
-// Update the window. This has to be done in a loop for the UI to fuction correctly
-void fl_window_update(FlWindow* self);
+typedef void (*FlMainLoopCallback)(void* user0, void* user1, void* user2);
+
+void fl_application_new(FlString application_name, FlString developer);
+void fl_application_main_loop(FlMainLoopCallback callback);
+void fl_application_set_layout(FlLayoutArea layout);
 
 #ifdef __cplusplus
 }

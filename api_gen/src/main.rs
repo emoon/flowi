@@ -74,8 +74,8 @@ fn main() {
 	//rayon::ThreadPoolBuilder::new().num_threads(1).build_global().unwrap();
 
     // Dest directores for various langs
-	let c_core_dest_dir = "../core/c/include";
-	let c_flowi_dest_dir = "../flowi/c/include";
+	let c_core_dest_dir = "../core/c/include/flowi_core";
+	let c_flowi_dest_dir = "../flowi/c/include/flowi";
 
     let rust_core_dest = "../core/rust/flowi-core/src";
     let rust_flowi_dest = "../flowi/rust/flowi/src";

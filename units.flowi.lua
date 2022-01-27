@@ -96,6 +96,7 @@ StaticLibrary {
     Includes = {
         "core/c/external/freetype2/include",
         "core/c/external/tslf",
+        "core/c/include/",
     },
 
     Sources = {

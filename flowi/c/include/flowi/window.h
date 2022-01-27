@@ -8,18 +8,24 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "idx.h"
+#include "manual.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum FlError {
-    FlError_None = 0,
-    FlError_Io = 1,
-    FlError_Memory = 2,
-    FlError_Font = 3,
-    FlError_Style = 4,
-} FlError;
+typedef struct FlWindow {
+    uint64_t handle;
+} FlWindow;
+
+// Opens up new window
+FlWindow fl_window_new(uint16_t width, uint16_t height);
+// Destroy the window
+void fl_window_destroy(FlWindow* self);
+// Check if the current window is still open
+bool fl_window_is_open(FlWindow* self);
+// Update the window. This has to be done in a loop for the UI to fuction correctly
+void fl_window_update(FlWindow* self);
 
 #ifdef __cplusplus
 }

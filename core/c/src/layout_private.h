@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../include/layout.h"
+#include <flowi_core/layout.h>
 
 typedef uint32_t FlLayoutAreaId;
 struct FlContext;
@@ -20,7 +20,7 @@ typedef struct LayoutAreaPrivate {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlLayoutAreaId fl_layout_area_create(FlContext* self, FlLayoutArea* area);
+FlLayoutAreaId fl_layout_area_create(struct FlContext* self, FlLayoutArea* area);
 
 void fl_layout_set(struct FlContext* self, FlLayoutAreaId area);
 

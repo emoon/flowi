@@ -16,9 +16,9 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local GLFW_DIR = "full/external/glfw/"
-local BIMG_DIR = "full/external/bimg/"
-local BX_DIR = "full/external/bx/"
+local GLFW_DIR = "flowi/c/external/glfw/"
+local BIMG_DIR = "flowi/c/external/bimg/"
+local BX_DIR = "flowi/c/external/bx/"
 
 -- setup target for shader
 local shaderc_platform = "windows"
@@ -191,10 +191,10 @@ Program {
 
 	Includes = {
         BIMG_DIR .. "include",
-		"full/external/bx/include",
-		"full/external/bgfx/include",
-		"full/external/glfw/include",
-		"full/external",
+		"flowi/c/external/bx/include",
+		"flowi/c/external/bgfx/include",
+		"flowi/c/external/glfw/include",
+		"flowi/c/external",
         { BX_DIR .. "/include/compat/msvc" ; Config = "win64-*-*" },
 	},
 
@@ -217,10 +217,10 @@ Program {
         --    Recursive = true,
         --},
 
-        ShadercFS { Source = "full/shaders/color_fill.fs", OutName = "color_fill_fs.bin" },
-        ShadercVS { Source = "full/shaders/color_fill.vs", OutName = "color_fill_vs.bin" },
-        ShadercFS { Source = "full/shaders/fs_texture.sc", OutName = "fs_texture.bin" },
-        ShadercVS { Source = "full/shaders/vs_texture.sc", OutName = "vs_texture.bin" },
+        ShadercFS { Source = "flowi/c/shaders/color_fill.fs", OutName = "color_fill_fs.bin" },
+        ShadercVS { Source = "flowi/c/shaders/color_fill.vs", OutName = "color_fill_vs.bin" },
+        ShadercFS { Source = "flowi/c/shaders/fs_texture.sc", OutName = "fs_texture.bin" },
+        ShadercVS { Source = "flowi/c/shaders/vs_texture.sc", OutName = "vs_texture.bin" },
     },
 
     Env = {
@@ -236,8 +236,7 @@ Program {
     Depends = { "bgfx", "glfw", "flowi-core", "freetype2" },
 }
 
-local FLOWI_DIR = "core/src/"
-local FREETYPE2_LIB = "core/external/freetype2/"
+local FREETYPE2_LIB = "core/c/external/freetype2/"
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -246,9 +245,10 @@ Program {
 
     Includes = {
         FREETYPE2_LIB .. "include",
+        "core/c/include",
     },
 
-    Sources = get_c_src("core/tests"),
+    Sources = get_c_src("core/c/tests"),
 
     Env = {
         PROGCOM = {
@@ -266,16 +266,17 @@ Program {
 
     Includes = {
         FREETYPE2_LIB .. "include",
+        "core/c/include",
     },
 
-    Sources = get_c_src("core/bench"),
+    Sources = get_c_src("core/c/bench"),
 
     Depends = { "flowi-core", "freetype2" },
 }
 
 Default "flowi_core_tests"
 Default "flowi_core_bench"
-Default "flowi_testbed"
+-- Default "flowi_testbed"
 
 -- vim: ts=4:sw=4:sts=4
 

@@ -8,19 +8,19 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "idx.h"
+#include "manual.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct FlApplication {
-} FlApplication;
-
-typedef void (*FlMainLoopCallback)(void* user0, void* user1, void* user2);
-
-void fl_application_new(FlString application_name, FlString developer);
-void fl_application_main_loop(FlMainLoopCallback callback);
-void fl_application_set_layout(FlLayoutArea layout);
+typedef enum FlError {
+    FlError_None = 0,
+    FlError_Io = 1,
+    FlError_Memory = 2,
+    FlError_Font = 3,
+    FlError_Style = 4,
+} FlError;
 
 #ifdef __cplusplus
 }

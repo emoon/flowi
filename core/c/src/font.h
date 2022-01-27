@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../include/config.h"
+#include <flowi_core/config.h>
 #include "types.h"
 
 #ifdef __cplusplus

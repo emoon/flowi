@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 #include "types.h"
-#include "../include/config.h"
+#include <flowi_core/config.h>
 #include "flowi.h"
 #include "render.h"
 

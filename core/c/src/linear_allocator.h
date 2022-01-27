@@ -54,7 +54,7 @@ FL_INLINE int LinearAllocator_current_position(LinearAllocator* alloc) {
 #define LinearAllocator_alloc(state, type) (type*)LinearAllocator_internal_alloc(state, sizeof(type), FL_ALIGNOF(type))
 #define LinearAllocator_alloc_array(state, type, count) \
     (type*)LinearAllocator_internal_alloc(state, sizeof(type) * count, FL_ALIGNOF(type))
-#define LinearAllocator_alloc_zero(state, typecount) \
+#define LinearAllocator_alloc_zero(state, type) \
     (type*)LinearAllocator_internal_alloc_zero(state, sizeof(type), FL_ALIGNOF(type))
 #define LinearAllocator_alloc_array_zero(state, type, count) \
     (type*)LinearAllocator_internal_alloc_zero(state, sizeof(type) * count, FL_ALIGNOF(type))

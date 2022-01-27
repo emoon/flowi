@@ -1,8 +1,8 @@
 #pragma once
 
 #include "flowi.h"
-#include "../include/config.h"
-#include "../include/error.h"
+#include <flowi_core/config.h>
+#include <flowi_core/error.h>
 #include "style.h"
 #include "primitives.h"
 #include "vertex_allocator.h"

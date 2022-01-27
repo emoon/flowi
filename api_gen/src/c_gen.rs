@@ -13,7 +13,7 @@ static RENDER_CMD_HEADER: &str = "
 
 #pragma once
 
-#include \"../include/render_commands.h\"
+#include <flowi_core/render_commands.h>
 #include \"command_buffer.h\"
 ";
 
@@ -29,6 +29,7 @@ static HEADER: &str = "
 #include <stdint.h>
 #include <stdbool.h>
 #include \"idx.h\"
+#include \"manual.h\"
 
 #ifdef __cplusplus
 extern \"C\" {
