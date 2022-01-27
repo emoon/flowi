@@ -1,5 +1,5 @@
 #include "atlas.h"
-#include "../include/error.h"
+#include <flowi_core/error.h>
 #include "allocator.h"
 #include "internal.h"
 #include "render.h"

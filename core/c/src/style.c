@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../include/error.h"
+#include <flowi_core/error.h>
 #include "internal.h"
 #include "style_internal.h"
 

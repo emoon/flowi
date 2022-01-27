@@ -1,4 +1,4 @@
-#include "../include/error.h"
+#include <flowi_core/error.h>
 #include "internal.h"
 #include "types.h"
 

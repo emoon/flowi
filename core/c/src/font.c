@@ -1,6 +1,6 @@
 #include "font.h"
 #include <assert.h>
-#include "../include/error.h"
+#include <flowi_core/error.h>
 #include "flowi.h"
 #include "font_private.h"
 #include "internal.h"
