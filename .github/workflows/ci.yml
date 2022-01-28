@@ -56,6 +56,10 @@ jobs:
 
     - name: Run Core Tests (Debug)
       run: t2-output/macos-clang-debug-default/flowi_core_tests --enable-mixed-units
+
+    - name: Build All (Debug)
+      run: tundra2 macos-gcc-debug
+
     # - name: Build Core Tests (Optimized)
     #   run: bin/macos/tundra2 macosx-clang-release flowi_core_tests
 
@@ -79,3 +83,7 @@ jobs:
 
     - name: Run Core Tests (Optimized)
       run: t2-output\win64-msvc-release-default\flowi_core_tests --enable-mixed-units
+
+    - name: Build All (Debug)
+      run: bin\windows\tundra2.exe --unprotected win64-msvc-debug
+
