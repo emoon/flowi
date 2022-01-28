@@ -18,7 +18,13 @@ typedef struct FlUi {
     FlTest data[4];
 } FlUi;
 
-void fl_ui_text(FlString text);
+void fl_ui_text_impl(struct FlContext* ctx, FlString text);
+
+FL_INLINE void fl_ui_text(const char* text) {
+    extern struct FlContext* g_fl_ctx;
+    FlString text_ = FlString{text, strlen(text)};
+    fl_ui_text_impl(g_fl_ctx, text_);
+}
 
 #ifdef __cplusplus
 }

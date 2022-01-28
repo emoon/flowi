@@ -42,8 +42,19 @@ typedef struct FlLayoutArea {
     FlSizing height;
 } FlLayoutArea;
 
-FlLayoutArea fl_layout_area_new();
-void fl_layout_area_from_children(FlLayoutArea children, int16_t row, int16_t cols);
+FlLayoutArea fl_layout_area_new_impl(struct FlContext* ctx);
+
+FL_INLINE FlLayoutArea fl_layout_area_new() {
+    extern struct FlContext* g_fl_ctx;
+    return fl_layout_area_new_impl(g_fl_ctx);
+}
+
+void fl_layout_area_from_children_impl(struct FlContext* ctx, FlLayoutArea children, int16_t row, int16_t cols);
+
+FL_INLINE void fl_layout_area_from_children(FlLayoutArea children, int16_t row, int16_t cols) {
+    extern struct FlContext* g_fl_ctx;
+    fl_layout_area_from_children_impl(g_fl_ctx, children, row, cols);
+}
 
 #ifdef __cplusplus
 }

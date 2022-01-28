@@ -4,12 +4,12 @@
 use crate::*;
 
 extern "C" {
-    fn fl_style_create(name: FlString) -> *mut Style;
-    fn fl_style_get_default() -> *mut Style;
-    fn fl_style_get_current() -> *const Style;
-    fn fl_style_end_changes(self_c: *mut Style);
-    fn fl_style_push(self_c: *mut Style);
-    fn fl_style_pop(self_c: *mut Style);
+    fn fl_style_create_impl(name: FlString) -> *mut Style;
+    fn fl_style_get_default_impl() -> *mut Style;
+    fn fl_style_get_current_impl() -> *const Style;
+    fn fl_style_end_changes_impl(self_c: *mut Style);
+    fn fl_style_push_impl(self_c: *mut Style);
+    fn fl_style_pop_impl(self_c: *mut Style);
 }
 
 #[repr(C)]
@@ -71,21 +71,21 @@ impl Style {
     /// Create a new style
     pub fn create(name: &str) {
         unsafe {
-            fl_style_create(FlString::new(name));
+            fl_style_create_impl(FlString::new(name));
         }
     }
 
     /// Get the default style. Changing this will apply the base style for the whole application
     pub fn get_default() {
         unsafe {
-            fl_style_get_default();
+            fl_style_get_default_impl();
         }
     }
 
     /// Get the current style which is based on what has been pushed on the style stack using push/pop
     pub fn get_current() {
         unsafe {
-            fl_style_get_current();
+            fl_style_get_current_impl();
         }
     }
 
@@ -93,7 +93,7 @@ impl Style {
     pub fn end_changes(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
-            fl_style_end_changes(self_);
+            fl_style_end_changes_impl(self_);
         }
     }
 
@@ -101,7 +101,7 @@ impl Style {
     pub fn push(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
-            fl_style_push(self_);
+            fl_style_push_impl(self_);
         }
     }
 
@@ -109,7 +109,7 @@ impl Style {
     pub fn pop(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
-            fl_style_pop(self_);
+            fl_style_pop_impl(self_);
         }
     }
 }

@@ -1,9 +1,11 @@
+#if 0
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <bx/math.h>
-#include "../../core/src/area.h"
-#include "../../core/src/flowi.h"
-#include "../../core/src/font.h"
+//#include "../../core/src/area.h"
+//#include "../../core/src/flowi.h"
+//#include "../../core/src/font.h"
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
@@ -62,7 +64,7 @@ void* load_shader_file(const char* filename, int* size) {
     fseek(f, 0, SEEK_END);
     int len = (int)ftell(f);
     fseek(f, 0, SEEK_SET);
-    u8* data = (u8*)malloc(len + 1);
+    uint8_t* data = (uint8_t*)malloc(len + 1);
     fread(data, len, 1, f);
     data[len] = 0;
     fclose(f);
@@ -398,11 +400,11 @@ int main() {
 
     render_ctx.tex_handle = bgfx::createUniform("s_tex", bgfx::UniformType::Sampler);
 
-    ui_init(render_ctx);
+    //ui_init(render_ctx);
 
     // Load test font
     //(void)fl_font_create_from_file(ctx, "data/montserrat-regular.ttf", 80, FlFontGlyphPlacementMode_Auto);
-    (void)fl_font_create_from_file(ctx, "data/Montserrat-Bold.ttf", 80, FlFontGlyphPlacementMode_Auto);
+    //(void)fl_font_create_from_file(ctx, "data/Montserrat-Bold.ttf", 80, FlFontGlyphPlacementMode_Auto);
     printf("finished loading font");
 
     int old_width = 0;
@@ -438,8 +440,8 @@ int main() {
         // bgfx::dbgTextPrintf(0, 2, 0x6f, "Description: Minimal bgfx + GLFW application.");
         // bgfx::dbgTextPrintf(0, 4, 0x4f, "Press F1 to toggle bgfx stats, Esc to quit");
 
-        ui_update(ctx);
-        ui_render(render_ctx, state, display_w, display_h);
+        //ui_update(ctx);
+        //ui_render(render_ctx, state, display_w, display_h);
 
         bgfx::frame();
 
@@ -453,3 +455,5 @@ int main() {
 
     return 0;
 }
+
+#endif

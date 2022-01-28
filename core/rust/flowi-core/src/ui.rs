@@ -4,7 +4,7 @@
 use crate::*;
 
 extern "C" {
-    fn fl_ui_text(text: FlString);
+    fn fl_ui_text_impl(text: FlString);
 }
 
 #[repr(C)]
@@ -15,7 +15,7 @@ pub struct Ui {
 impl Ui {
     pub fn text(text: &str) {
         unsafe {
-            fl_ui_text(FlString::new(text));
+            fl_ui_text_impl(FlString::new(text));
         }
     }
 }

@@ -186,11 +186,12 @@ StaticLibrary {
 
 -----------------------------------------------------------------------------------------------------------------------
 
-Program {
-    Name = "flowi_testbed",
+StaticLibrary {
+    Name = "flowi",
 
 	Includes = {
         BIMG_DIR .. "include",
+		"flowi/c/include",
 		"flowi/c/external/bx/include",
 		"flowi/c/external/bgfx/include",
 		"flowi/c/external/glfw/include",
@@ -209,18 +210,20 @@ Program {
 		{ "GLFW_EXPOSE_NATIVE_X11" ; Config = "linux-*-*" },
 	},
 
-    Sources = {
-        "full/src/main.cpp",
-        --Glob {
-        --    Dir = "testbed/src",
-        --    Extensions = { ".cpp" },
-        --    Recursive = true,
-        --},
+    Sources = get_c_cpp_src("flowi/c/src"),
+}
 
-        ShadercFS { Source = "flowi/c/shaders/color_fill.fs", OutName = "color_fill_fs.bin" },
-        ShadercVS { Source = "flowi/c/shaders/color_fill.vs", OutName = "color_fill_vs.bin" },
-        ShadercFS { Source = "flowi/c/shaders/fs_texture.sc", OutName = "fs_texture.bin" },
-        ShadercVS { Source = "flowi/c/shaders/vs_texture.sc", OutName = "vs_texture.bin" },
+-----------------------------------------------------------------------------------------------------------------------
+
+Program {
+    Name = "flowi_testbed",
+
+	Includes = {
+		"flowi/c/include",
+	},
+
+    Sources = {
+        "flowi/c/examples/testbed.c",
     },
 
     Env = {
@@ -233,7 +236,7 @@ Program {
 
     Frameworks = { "Cocoa", "IOKit", "Metal", "QuartzCore", "MetalKit" },
 
-    Depends = { "bgfx", "glfw", "flowi-core", "freetype2" },
+    Depends = { "bgfx", "glfw", "flowi", "flowi-core", "freetype2" },
 }
 
 local FREETYPE2_LIB = "core/c/external/freetype2/"
@@ -276,7 +279,7 @@ Program {
 
 Default "flowi_core_tests"
 Default "flowi_core_bench"
--- Default "flowi_testbed"
+Default "flowi_testbed"
 
 -- vim: ts=4:sw=4:sts=4
 

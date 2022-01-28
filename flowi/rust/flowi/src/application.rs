@@ -7,9 +7,9 @@ use crate::*;
 use flowi_core::*;
 
 extern "C" {
-    fn fl_application_new(application_name: FlString, developer: FlString);
-    fn fl_application_main_loop(callback: MainLoopCallback);
-    fn fl_application_set_layout(layout: *const LayoutArea);
+    fn fl_application_new_impl(application_name: FlString, developer: FlString) -> bool;
+    fn fl_application_main_loop_impl(callback: MainLoopCallback);
+    fn fl_application_set_layout_impl(layout: *const LayoutArea);
 }
 
 #[repr(C)]
@@ -18,19 +18,19 @@ pub struct Application {}
 impl Application {
     pub fn new(application_name: &str, developer: &str) {
         unsafe {
-            fl_application_new(FlString::new(application_name), FlString::new(developer));
+            fl_application_new_impl(FlString::new(application_name), FlString::new(developer));
         }
     }
 
     pub fn main_loop(callback: MainLoopCallback) {
         unsafe {
-            fl_application_main_loop(callback);
+            fl_application_main_loop_impl(callback);
         }
     }
 
     pub fn set_layout(layout: &LayoutArea) {
         unsafe {
-            fl_application_set_layout(layout as _);
+            fl_application_set_layout_impl(layout as _);
         }
     }
 }

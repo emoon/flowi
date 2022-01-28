@@ -17,11 +17,30 @@ extern "C" {
 typedef struct FlApplication {
 } FlApplication;
 
-typedef void (*FlMainLoopCallback)(void* user0, void* user1, void* user2);
+typedef void (*FlMainLoopCallback)(void* user_data);
 
-void fl_application_new(FlString application_name, FlString developer);
-void fl_application_main_loop(FlMainLoopCallback callback);
-void fl_application_set_layout(FlLayoutArea layout);
+bool fl_application_new_impl(struct FlContext* ctx, FlString application_name, FlString developer);
+
+FL_INLINE bool fl_application_new(const char* application_name, const char* developer) {
+    extern struct FlContext* g_fl_ctx;
+    FlString application_name_ = FlString{application_name, strlen(application_name)};
+    FlString developer_ = FlString{developer, strlen(developer)};
+    return fl_application_new_impl(g_fl_ctx, application_name_, developer_);
+}
+
+void fl_application_main_loop_impl(struct FlContext* ctx, FlMainLoopCallback callback);
+
+FL_INLINE void fl_application_main_loop(FlMainLoopCallback callback) {
+    extern struct FlContext* g_fl_ctx;
+    fl_application_main_loop_impl(g_fl_ctx, callback);
+}
+
+void fl_application_set_layout_impl(struct FlContext* ctx, FlLayoutArea layout);
+
+FL_INLINE void fl_application_set_layout(FlLayoutArea layout) {
+    extern struct FlContext* g_fl_ctx;
+    fl_application_set_layout_impl(g_fl_ctx, layout);
+}
 
 #ifdef __cplusplus
 }

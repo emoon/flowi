@@ -1,9 +1,9 @@
 
-callback MainLoopCallback(user0: *void, user1: *void, user2: *void)
+callback MainLoopCallback(user_data: *void)
 
 struct Application {
     // TODO: More options
-    [static] new(application_name: String, developer: String),
+    [static] new(application_name: String, developer: String) -> bool,
     [static] main_loop(callback: MainLoopCallback),
     [static] set_layout(layout: *const LayoutArea),
 }

@@ -4,8 +4,8 @@
 use crate::*;
 
 extern "C" {
-    fn fl_layout_area_new() -> LayoutArea;
-    fn fl_layout_area_from_children(children: *const LayoutArea, row: i16, cols: i16);
+    fn fl_layout_area_new_impl() -> LayoutArea;
+    fn fl_layout_area_from_children_impl(children: *const LayoutArea, row: i16, cols: i16);
 }
 
 #[repr(C)]
@@ -48,13 +48,13 @@ impl Sizing {}
 impl LayoutArea {
     pub fn new() {
         unsafe {
-            fl_layout_area_new();
+            fl_layout_area_new_impl();
         }
     }
 
     pub fn from_children(children: &[LayoutArea], row: i16, cols: i16) {
         unsafe {
-            fl_layout_area_from_children(children.as_ptr(), row, cols);
+            fl_layout_area_from_children_impl(children.as_ptr(), row, cols);
         }
     }
 }

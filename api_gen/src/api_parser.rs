@@ -862,7 +862,7 @@ impl ApiParser {
             for s in &mut api_def.structs {
                 for func in &mut s.functions {
                     func.c_name = format!(
-                        "{}_{}_{}",
+                        "{}_{}_{}_impl",
                         crate::c_gen::C_API_SUFIX_FUNCS,
                         s.name.to_snake_case(),
                         func.name

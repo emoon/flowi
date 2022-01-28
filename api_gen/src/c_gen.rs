@@ -49,9 +49,36 @@ pub static C_API_SUFIX_FUNCS: &str = "fl";
 pub struct Cgen;
 
 #[derive(PartialEq)]
-enum IsCallback {
+enum WithContext {
     Yes,
     No,
+}
+
+#[derive(Default)]
+struct FuncArgs {
+    func_args: Vec<String>,
+    internal_args: Vec<String>,
+    call_args: Vec<String>,
+    body: String,
+    return_value: String,
+}
+
+fn get_arg_line(args: &[String], with_context: WithContext) -> String {
+    let mut output = String::with_capacity(256);
+
+    if with_context == WithContext::Yes {
+        output.push_str("struct FlContext* ctx");
+    }
+
+    for (i, a) in args.iter().enumerate() {
+        if i > 0 || with_context == WithContext::Yes {
+            output.push_str(", ")
+        }
+
+        output.push_str(a);
+    }
+
+    output
 }
 
 impl Cgen {
@@ -123,7 +150,7 @@ impl Cgen {
 
             Some(ArrayType::SizedArray(ref size)) => {
                 writeln!(f, " {}[{}];", var.name, size)
-            },
+            }
         }
     }
 
@@ -170,50 +197,96 @@ impl Cgen {
 
         Ok(())
     }
+    /*
+    func_args: Vec<String>,
+    internal_args: Vec<String>,
+    call_args: Vec<String>,
+    body: String,
+    */
 
-    fn generate_function<W: Write>(
-        f: &mut W,
-        func: &Function,
-        self_name: &str,
-        is_callback: IsCallback,
-    ) -> io::Result<()> {
-        let mut function_args = String::with_capacity(128);
-        let len = func.function_args.len();
+    fn generate_function_args(func: &Function, self_name: &str) -> FuncArgs {
+        let mut fa = FuncArgs::default();
 
-        // write arguments
+        fa.call_args.push("g_fl_ctx".to_owned());
+
         for (i, arg) in func.function_args.iter().enumerate() {
             if i == 0 && func.func_type == FunctionType::Static {
                 continue;
             }
 
-            function_args.push_str(&Self::get_variable(&arg, self_name));
-            function_args.push_str(" ");
-            function_args.push_str(&arg.name);
+            match arg.vtype {
+                VariableType::Str => {
+                    fa.func_args.push(format!("const char* {}", arg.name));
+                    fa.body.push_str(&format!(
+                        "FlString {}_ = FlString {{ {}, strlen({}) }};",
+                        arg.name, arg.name, arg.name
+                    ));
 
-            if i != len - 1 {
-                function_args.push_str(", ");
+                    fa.internal_args.push(format!("FlString {}", arg.name));
+                    fa.call_args.push(format!("{}_", arg.name));
+                }
+
+                _ => {
+                    let carg = format!("{} {}", Self::get_variable(&arg, self_name), arg.name);
+                    fa.func_args.push(carg.to_owned());
+                    fa.internal_args.push(carg.to_owned());
+                    fa.call_args.push(arg.name.to_owned());
+                }
             }
         }
 
-        let return_value;
-
         if let Some(ret) = &func.return_val {
-            return_value = Self::get_variable(&ret, self_name);
+            fa.return_value = Self::get_variable(&ret, self_name);
         } else {
-            return_value = "void".to_owned();
+            fa.return_value = "void".to_owned();
         }
+
+        fa
+    }
+
+    fn generate_callback_function<W: Write>(
+        f: &mut W,
+        func: &Function,
+        self_name: &str,
+    ) -> io::Result<()> {
+        let fa = Self::generate_function_args(func, self_name);
+        writeln!(
+            f,
+            "typedef {} (*{}{})({});",
+            fa.return_value,
+            C_API_SUFFIX,
+            func.name,
+            get_arg_line(&fa.func_args, WithContext::No)
+        )
+    }
+
+    fn generate_function<W: Write>(f: &mut W, func: &Function, self_name: &str) -> io::Result<()> {
+        let fa = Self::generate_function_args(func, self_name);
 
         Self::write_commment(f, &func.doc_comments, 0)?;
 
-        if is_callback == IsCallback::Yes {
-            writeln!(
-                f,
-                "typedef {} (*{}{})({});",
-                return_value, C_API_SUFFIX, func.name, function_args
-            )
-        } else {
-            writeln!(f, "{} {}({});", return_value, func.c_name, function_args)
+        // write the implementation func
+
+        writeln!(f, "{} {}({});\n", fa.return_value, func.c_name, get_arg_line(&fa.internal_args, WithContext::Yes))?;
+
+        // write the inline function
+        // TODO: Generate the internal inside a separate header to make things cleaner
+
+        let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, self_name.to_snake_case(), func.name);
+
+        writeln!(f, "FL_INLINE {} {}({}) {{", fa.return_value, func_name, get_arg_line(&fa.func_args, WithContext::No))?;
+        writeln!(f, "extern struct FlContext* g_fl_ctx;")?;
+        if !fa.body.is_empty() {
+            write!(f, "{}", &fa.body)?;
         }
+
+        if fa.return_value != "void" {
+            writeln!(f, "return {}({});", func.c_name, get_arg_line(&fa.call_args, WithContext::No))?;
+        } else {
+            writeln!(f, "{}({});", func.c_name, get_arg_line(&fa.call_args, WithContext::No))?;
+        }
+
+        writeln!(f, "}}\n")
     }
 
     pub fn generate(filename: &str, render_filename_dir: &str, api_def: &ApiDef) -> io::Result<()> {
@@ -240,14 +313,14 @@ impl Cgen {
 
         if !api_def.callbacks.is_empty() {
             for func in &api_def.callbacks {
-                Self::generate_function(&mut f, &func, "", IsCallback::Yes)?;
+                Self::generate_callback_function(&mut f, &func, "")?;
             }
             writeln!(f, "")?;
         }
 
         for sdef in &api_def.structs {
             for func in &sdef.functions {
-                Self::generate_function(&mut f, &func, &sdef.name, IsCallback::No)?;
+                Self::generate_function(&mut f, &func, &sdef.name)?;
             }
         }
 
@@ -271,5 +344,4 @@ impl Cgen {
 
         writeln!(f, "{}", FOOTER)
     }
-
 }

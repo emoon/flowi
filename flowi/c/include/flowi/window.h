@@ -19,13 +19,36 @@ typedef struct FlWindow {
 } FlWindow;
 
 // Opens up new window
-FlWindow fl_window_new(uint16_t width, uint16_t height);
+FlWindow fl_window_new_impl(struct FlContext* ctx, uint16_t width, uint16_t height);
+
+FL_INLINE FlWindow fl_window_new(uint16_t width, uint16_t height) {
+    extern struct FlContext* g_fl_ctx;
+    return fl_window_new_impl(g_fl_ctx, width, height);
+}
+
 // Destroy the window
-void fl_window_destroy(FlWindow* self);
+void fl_window_destroy_impl(struct FlContext* ctx, FlWindow* self);
+
+FL_INLINE void fl_window_destroy(FlWindow* self) {
+    extern struct FlContext* g_fl_ctx;
+    fl_window_destroy_impl(g_fl_ctx, self);
+}
+
 // Check if the current window is still open
-bool fl_window_is_open(FlWindow* self);
+bool fl_window_is_open_impl(struct FlContext* ctx, FlWindow* self);
+
+FL_INLINE bool fl_window_is_open(FlWindow* self) {
+    extern struct FlContext* g_fl_ctx;
+    return fl_window_is_open_impl(g_fl_ctx, self);
+}
+
 // Update the window. This has to be done in a loop for the UI to fuction correctly
-void fl_window_update(FlWindow* self);
+void fl_window_update_impl(struct FlContext* ctx, FlWindow* self);
+
+FL_INLINE void fl_window_update(FlWindow* self) {
+    extern struct FlContext* g_fl_ctx;
+    fl_window_update_impl(g_fl_ctx, self);
+}
 
 #ifdef __cplusplus
 }

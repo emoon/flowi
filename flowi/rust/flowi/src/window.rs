@@ -7,10 +7,10 @@ use crate::*;
 use flowi_core::*;
 
 extern "C" {
-    fn fl_window_new(width: u16, height: u16) -> Window;
-    fn fl_window_destroy(self_c: *mut Window);
-    fn fl_window_is_open(self_c: *mut Window) -> bool;
-    fn fl_window_update(self_c: *mut Window);
+    fn fl_window_new_impl(width: u16, height: u16) -> Window;
+    fn fl_window_destroy_impl(self_c: *mut Window);
+    fn fl_window_is_open_impl(self_c: *mut Window) -> bool;
+    fn fl_window_update_impl(self_c: *mut Window);
 }
 
 #[repr(C)]
@@ -22,7 +22,7 @@ impl Window {
     /// Opens up new window
     pub fn new(width: u16, height: u16) {
         unsafe {
-            fl_window_new(width, height);
+            fl_window_new_impl(width, height);
         }
     }
 
@@ -30,7 +30,7 @@ impl Window {
     pub fn destroy(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
-            fl_window_destroy(self_);
+            fl_window_destroy_impl(self_);
         }
     }
 
@@ -38,7 +38,7 @@ impl Window {
     pub fn is_open(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
-            fl_window_is_open(self_);
+            fl_window_is_open_impl(self_);
         }
     }
 
@@ -46,7 +46,7 @@ impl Window {
     pub fn update(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
-            fl_window_update(self_);
+            fl_window_update_impl(self_);
         }
     }
 }

@@ -1,6 +1,4 @@
 use crate::api_parser::*;
-use crate::c_gen::C_API_SUFFIX;
-use heck::ToSnakeCase;
 use std::borrow::Cow;
 ///
 ///
@@ -193,7 +191,6 @@ impl RustGen {
     }
 
     fn generate_func_impl(func: &Function) -> FuncArgs {
-
         let mut fa = FuncArgs::default();
 
         for (i, arg) in func.function_args.iter().enumerate() {
