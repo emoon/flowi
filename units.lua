@@ -228,7 +228,7 @@ Program {
 
     Env = {
 		PROGCOM = {
-            { "opengl32.lib", "shell32.lib", "qtmain.lib", "gdi32.lib", "user32.lib"; Config = "win64-*-*" },
+            { "opengl32.lib", "shell32.lib", "gdi32.lib", "user32.lib"; Config = "win64-*-*" },
 			{  "-lrt", "-ldl", "-lX11", "-lGL", "-lpthread", "-ldl"; Config = "linux-*-*" },
 			{  "-lc++"; Config = "macosx-*-*" },
 		},
