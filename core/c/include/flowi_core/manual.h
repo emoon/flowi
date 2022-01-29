@@ -10,5 +10,5 @@ struct FlContext;
 
 typedef struct FlString {
     const char* str;
-    uint32_t len;
+    int len;
 } FlString;

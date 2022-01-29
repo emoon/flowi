@@ -28,6 +28,7 @@ static HEADER: &str = "
 #pragma once\n
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include \"idx.h\"
 #include \"manual.h\"
 
@@ -218,7 +219,7 @@ impl Cgen {
                 VariableType::Str => {
                     fa.func_args.push(format!("const char* {}", arg.name));
                     fa.body.push_str(&format!(
-                        "FlString {}_ = FlString {{ {}, strlen({}) }};",
+                        "FlString {}_ = {{ {}, (int)strlen({}) }};",
                         arg.name, arg.name, arg.name
                     ));
 

@@ -20,80 +20,54 @@ local GLFW_DIR = "flowi/c/external/glfw/"
 local BIMG_DIR = "flowi/c/external/bimg/"
 local BX_DIR = "flowi/c/external/bx/"
 
--- setup target for shader
-local shaderc_platform = "windows"
-local shaderc_vs_extra_params = " -p vs_5_0"
-local shaderc_ps_extra_params = " -p ps_5_0"
-if native.host_platform == "macosx" then
-    shaderc_platform = "osx"
-    shaderc_vs_extra_params = ""
-    shaderc_ps_extra_params = ""
-elseif native.host_platform == "linux" then
-    shaderc_platform = "linux"
-    shaderc_vs_extra_params = ""
-    shaderc_ps_extra_params = ""
+-----------------------------------------------------------------------------------------------------------------------
+
+DefRule {
+    Name = "ShaderC",
+    Command = "$(BGFX_SHADERC) $(COMPILE_PARAMS) -i core/c/external/bgfx/src -f $(<) --bin2c -o $(@)",
+    ConfigInvariant = true,
+
+    Blueprint = {
+        Parameters = { Required = true, Type = "string", Help = "Compile parameters", },
+        Source = { Required = true, Type = "string", Help = "Input filename", },
+        OutName = { Required = false, Type = "string", Help = "Output filename", },
+    },
+
+    Setup = function (env, data)
+        env:set('COMPILE_PARAMS', data.Parameters)
+        return {
+            InputFiles    = { data.Source },
+            OutputFiles   = { data.OutName },
+        }
+    end,
+}
+
+-----------------------------------------------------------------------------------------------------------------------
+
+local function build_vs(src, dest)
+    return {
+        ShaderC { Source = src, OutName = dest .. "_glsl.h", Parameters = "--type vertex --platform linux -p 120" },
+        ShaderC { Source = src, OutName = dest .. "_essl.h", Parameters = "--type vertex --platform android" },
+        ShaderC { Source = src, OutName = dest .. "_spv.h", Parameters = "--type vertex --platform linux -p spirv" },
+        ShaderC { Source = src, OutName = dest .. "_mtl.h", Parameters = "--type vertex --platform osx -p metal -O 3" },
+    }
 end
 
 -----------------------------------------------------------------------------------------------------------------------
 
-DefRule {
-    Name = "ShadercFS",
-    Command = "$(BGFX_SHADERC) -i external/bgfx/src -f $(<) -o $(@) --type fragment --platform " .. shaderc_platform .. shaderc_ps_extra_params,
-
-    Blueprint = {
-        Source = { Required = true, Type = "string", Help = "Input filename", },
-        OutName = { Required = false, Type = "string", Help = "Output filename", },
-    },
-
-    Setup = function (env, data)
-        return {
-            InputFiles    = { data.Source },
-            OutputFiles   = { "$(OBJECTDIR)/_generated/" .. tundra.path.drop_suffix(data.Source) .. ".fs" },
-        }
-    end,
-}
-
------------------------------------------------------------------------------------------------------------------------
-
-DefRule {
-    Name = "ShadercVS",
-    Command = "$(BGFX_SHADERC) -i external/bgfx/src -f $(<) -o $(@) --type vertex --platform " .. shaderc_platform .. shaderc_vs_extra_params,
-
-    Blueprint = {
-        Source = { Required = true, Type = "string", Help = "Input filename", },
-        OutName = { Required = false, Type = "string", Help = "Output filename", },
-    },
-
-    Setup = function (env, data)
-        return {
-            InputFiles    = { data.Source },
-            OutputFiles   = { "$(OBJECTDIR)/_generated/" .. tundra.path.drop_suffix(data.Source) .. ".vs" },
-        }
-    end,
-}
+local function build_fs(src, dest)
+    return {
+        ShaderC { Source = src, OutName = dest .. "_glsl.h", Parameters = "--type fragment --platform linux -p 120" },
+        ShaderC { Source = src, OutName = dest .. "_essl.h", Parameters = "--type fragment --platform android" },
+        ShaderC { Source = src, OutName = dest .. "_spv.h", Parameters = "--type fragment --platform linux -p spirv" },
+        ShaderC { Source = src, OutName = dest .. "_mtl.h", Parameters = "--type fragment --platform osx -p metal -O 3" },
+    }
+end
 
 -----------------------------------------------------------------------------------------------------------------------
 
 local function gen_moc(src)
     return Moc {
-        Pass = "GenerateSources",
-        Source = src
-    }
-end
-
------------------------------------------------------------------------------------------------------------------------
-
-local function gen_uic(src)
-    return Uic {
-        Pass = "GenerateSources",
-        Source = src
-    }
-end
-
------------------------------------------------------------------------------------------------------------------------
-
-local function gen_rcc(src)
-    return Rcc {
         Pass = "GenerateSources",
         Source = src
     }
@@ -192,6 +166,8 @@ StaticLibrary {
 	Includes = {
         BIMG_DIR .. "include",
 		"flowi/c/include",
+		"core/c/include",
+		"core/c/include/flowi_core",
 		"flowi/c/external/bx/include",
 		"flowi/c/external/bgfx/include",
 		"flowi/c/external/glfw/include",
@@ -200,11 +176,20 @@ StaticLibrary {
 	},
 
 	Defines = {
-		"BX_CONFIG_DEBUG=1",
+	    -- TODO: Don't duplicate
+        { "BX_CONFIG_DEBUG=1", "_DEBUG" ; Config = { "*-*-debug" } },
+        { "BX_CONFIG_DEBUG=0" ; Config = { "*-*-release" } },
         "__STDC_LIMIT_MACROS",
         "__STDC_FORMAT_MACROS",
         "__STDC_CONSTANT_MACROS",
-        "_DEBUG",
+        "BGFX_CONFIG_RENDERER_WEBGPU=0",
+        "BGFX_CONFIG_RENDERER_GNM=0",
+        "BGFX_CONFIG_RENDERER_DIRECT3D11=0", -- Enable when we have a solution for dx shaders
+        "BGFX_CONFIG_RENDERER_DIRECT3D12=0", -- Enable when we have a solution for dx shaders
+        "BGFX_CONFIG_RENDERER_VULKAN=1",
+        "BGFX_CONFIG_MULTITHREADED=0",
+        { "BGFX_CONFIG_RENDERER_OPENGL=1" ; Config = { "linux-*-*", "win64-*-*" } },
+        { "BGFX_CONFIG_RENDERER_METAL=1" ; Config = "macos-*-*" },
 		{ "GLFW_EXPOSE_NATIVE_WIN32" ; Config = "win64-*-*" },
 		{ "GLFW_EXPOSE_NATIVE_COCOA" ; Config = "macos*-*-*" },
 		{ "GLFW_EXPOSE_NATIVE_X11" ; Config = "linux-*-*" },
@@ -220,6 +205,7 @@ Program {
 
 	Includes = {
 		"flowi/c/include",
+		"core/c/include/flowi_core",
 	},
 
     Sources = {
@@ -236,7 +222,7 @@ Program {
 
     Frameworks = { "Cocoa", "IOKit", "Metal", "QuartzCore", "MetalKit" },
 
-    Depends = { "bgfx", "glfw", "flowi", "flowi-core", "freetype2" },
+    Depends = { "flowi", "flowi-core", "bgfx", "glfw", "freetype2" },
 }
 
 local FREETYPE2_LIB = "core/c/external/freetype2/"
@@ -277,9 +263,22 @@ Program {
     Depends = { "flowi-core", "freetype2" },
 }
 
+-----------------------------------------------------------------------------------------------------------------------
+-- This is somewhat of a hack to generate the shader headers. There might be a better way to do this
+
+Program {
+    Name = "build_shaders",
+    Sources = {
+        "flowi/c/shaders/dummy.c",
+        build_vs("flowi/c/shaders/color_fill.vs", "flowi/c/shaders/generated/color_fill_vs"),
+        build_fs("flowi/c/shaders/color_fill.fs", "flowi/c/shaders/generated/color_fill_fs"),
+    }
+}
+
 Default "flowi_core_tests"
 Default "flowi_core_bench"
 Default "flowi_testbed"
+Default "build_shaders"
 
 -- vim: ts=4:sw=4:sts=4
 

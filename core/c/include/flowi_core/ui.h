@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include "idx.h"
 #include "manual.h"
 
@@ -22,7 +23,7 @@ void fl_ui_text_impl(struct FlContext* ctx, FlString text);
 
 FL_INLINE void fl_ui_text(const char* text) {
     extern struct FlContext* g_fl_ctx;
-    FlString text_ = FlString{text, strlen(text)};
+    FlString text_ = {text, (int)strlen(text)};
     fl_ui_text_impl(g_fl_ctx, text_);
 }
 

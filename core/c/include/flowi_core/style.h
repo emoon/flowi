@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include "idx.h"
 #include "manual.h"
 
@@ -60,7 +61,7 @@ FlStyle* fl_style_create_impl(struct FlContext* ctx, FlString name);
 
 FL_INLINE FlStyle* fl_style_create(const char* name) {
     extern struct FlContext* g_fl_ctx;
-    FlString name_ = FlString{name, strlen(name)};
+    FlString name_ = {name, (int)strlen(name)};
     return fl_style_create_impl(g_fl_ctx, name_);
 }
 

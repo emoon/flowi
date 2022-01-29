@@ -8,8 +8,7 @@ use flowi_core::*;
 
 extern "C" {
     fn fl_application_new_impl(application_name: FlString, developer: FlString) -> bool;
-    fn fl_application_main_loop_impl(callback: MainLoopCallback);
-    fn fl_application_set_layout_impl(layout: *const LayoutArea);
+    fn fl_application_main_loop_impl(callback: MainLoopCallback, userdata: *mut c_void);
 }
 
 #[repr(C)]
@@ -22,15 +21,9 @@ impl Application {
         }
     }
 
-    pub fn main_loop(callback: MainLoopCallback) {
+    pub fn main_loop(callback: MainLoopCallback, userdata: &mut c_void) {
         unsafe {
-            fl_application_main_loop_impl(callback);
-        }
-    }
-
-    pub fn set_layout(layout: &LayoutArea) {
-        unsafe {
-            fl_application_set_layout_impl(layout as _);
+            fl_application_main_loop_impl(callback, userdata as _);
         }
     }
 }

@@ -4,8 +4,8 @@ callback MainLoopCallback(user_data: *void)
 struct Application {
     // TODO: More options
     [static] new(application_name: String, developer: String) -> bool,
-    [static] main_loop(callback: MainLoopCallback),
-    [static] set_layout(layout: *const LayoutArea),
+    [static] main_loop(callback: MainLoopCallback, userdata: *void),
+    //[static] set_layout(layout: *const LayoutArea),
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

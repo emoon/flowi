@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include "idx.h"
 #include "manual.h"
 
@@ -23,23 +24,16 @@ bool fl_application_new_impl(struct FlContext* ctx, FlString application_name, F
 
 FL_INLINE bool fl_application_new(const char* application_name, const char* developer) {
     extern struct FlContext* g_fl_ctx;
-    FlString application_name_ = FlString{application_name, strlen(application_name)};
-    FlString developer_ = FlString{developer, strlen(developer)};
+    FlString application_name_ = {application_name, (int)strlen(application_name)};
+    FlString developer_ = {developer, (int)strlen(developer)};
     return fl_application_new_impl(g_fl_ctx, application_name_, developer_);
 }
 
-void fl_application_main_loop_impl(struct FlContext* ctx, FlMainLoopCallback callback);
+void fl_application_main_loop_impl(struct FlContext* ctx, FlMainLoopCallback callback, void* userdata);
 
-FL_INLINE void fl_application_main_loop(FlMainLoopCallback callback) {
+FL_INLINE void fl_application_main_loop(FlMainLoopCallback callback, void* userdata) {
     extern struct FlContext* g_fl_ctx;
-    fl_application_main_loop_impl(g_fl_ctx, callback);
-}
-
-void fl_application_set_layout_impl(struct FlContext* ctx, FlLayoutArea layout);
-
-FL_INLINE void fl_application_set_layout(FlLayoutArea layout) {
-    extern struct FlContext* g_fl_ctx;
-    fl_application_set_layout_impl(g_fl_ctx, layout);
+    fl_application_main_loop_impl(g_fl_ctx, callback, userdata);
 }
 
 #ifdef __cplusplus

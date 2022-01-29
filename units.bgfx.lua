@@ -66,44 +66,6 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------
 
-DefRule {
-    Name = "ShadercFS",
-    Command = "$(BGFX_SHADERC) -f $(<) -o $(@) --type fragment --platform " .. shaderc_platform .. shaderc_ps_extra_params,
-
-    Blueprint = {
-        Source = { Required = true, Type = "string", Help = "Input filename", },
-        OutName = { Required = false, Type = "string", Help = "Output filename", },
-    },
-
-    Setup = function (env, data)
-        return {
-            InputFiles    = { data.Source },
-            OutputFiles   = { "$(OBJECTDIR)/_generated/" .. path.drop_suffix(data.Source) .. ".fs" },
-        }
-    end,
-}
-
------------------------------------------------------------------------------------------------------------------------
-
-DefRule {
-    Name = "ShadercVS",
-    Command = "$(BGFX_SHADERC) -f $(<) -o $(@) --type vertex --platform " .. shaderc_platform .. shaderc_vs_extra_params,
-
-    Blueprint = {
-        Source = { Required = true, Type = "string", Help = "Input filename", },
-        OutName = { Required = false, Type = "string", Help = "Output filename", },
-    },
-
-    Setup = function (env, data)
-        return {
-            InputFiles    = { data.Source },
-            OutputFiles   = { "$(OBJECTDIR)/_generated/" .. path.drop_suffix(data.Source) .. ".vs" },
-        }
-    end,
-}
-
------------------------------------------------------------------------------------------------------------------------
-
 StaticLibrary {
     Name = "glslang",
     Pass = "BuildTools",
@@ -116,6 +78,7 @@ StaticLibrary {
 
     Defines = {
         "ENABLE_OPT=1",
+        "ENABLE_HLSL=1",
     },
 
     Includes = {
@@ -124,15 +87,15 @@ StaticLibrary {
         GLSLANG_DIR,
         BGFX_DIR .. "3rdparty",
         SPIRV_TOOLS .. "include",
-    },--"
+    },
 
     Sources = {
         get_c_cpp_src(GLSLANG_DIR .. "OGLCompilersDLL"),
         get_c_cpp_src(GLSLANG_DIR .. "StandAlone"),
         get_c_cpp_src(GLSLANG_DIR .. "glslang/GenericCodeGen"),
         get_c_cpp_src(GLSLANG_DIR .. "glslang/MachineIndependent"),
-         get_c_cpp_src(GLSLANG_DIR .. "SPIRV"),
-        -- get_c_cpp_src(GLSLANG_DIR .. "glslang/HLSL"),
+        get_c_cpp_src(GLSLANG_DIR .. "SPIRV"),
+        get_c_cpp_src(GLSLANG_DIR .. "glslang/HLSL"),
         get_c_cpp_src(GLSLANG_DIR .. "glslang/CInterface"),
         { get_c_cpp_src(GLSLANG_DIR .. "glslang/OSDependent/Windows") ; Config = "win64-*-*" },
         { get_c_cpp_src(GLSLANG_DIR .. "glslang/OSDependent/Unix") ; Config = { "linux-*-*", "macos-*-*" } },
@@ -187,7 +150,7 @@ Program {
         },
 
         CPPDEFS = {
-            { "BX_CONFIG_DEBUG=1", "NINCLUDE=64", "NWORK=65536", "NBUFF=65536", "OLD_PREPROCESSOR=0" },
+            { "BX_CONFIG_DEBUG=0", "NINCLUDE=64", "NWORK=65536", "NBUFF=65536", "OLD_PREPROCESSOR=0" },
         },
 
         CPPPATH = {
@@ -305,20 +268,19 @@ StaticLibrary {
     },
 
     Defines = {
-        "BX_CONFIG_DEBUG=1",
+        { "BX_CONFIG_DEBUG=1", "_DEBUG" ; Config = { "*-*-debug" } },
+        { "BX_CONFIG_DEBUG=0" ; Config = { "*-*-release" } },
         "__STDC_LIMIT_MACROS",
         "__STDC_FORMAT_MACROS",
         "__STDC_CONSTANT_MACROS",
-        "_DEBUG",
-    	--"BGFX_CONFIG_DEBUG=1",
-    	--
         "BGFX_CONFIG_RENDERER_WEBGPU=0",
         "BGFX_CONFIG_RENDERER_GNM=0",
+        "BGFX_CONFIG_RENDERER_DIRECT3D11=0", -- Enable when we have a solution for dx shaders
+        "BGFX_CONFIG_RENDERER_DIRECT3D12=0", -- Enable when we have a solution for dx shaders
         "BGFX_CONFIG_RENDERER_VULKAN=1",
         "BGFX_CONFIG_MULTITHREADED=0",
         { "BGFX_CONFIG_RENDERER_OPENGL=1" ; Config = { "linux-*-*", "win64-*-*" } },
         { "BGFX_CONFIG_RENDERER_METAL=1" ; Config = "macos-*-*" },
-        { "BGFX_CONFIG_RENDERER_DIRECT3D11=1"  ; Config = "win64-*-*" },
     },
 
     Sources = {
@@ -359,4 +321,4 @@ StaticLibrary {
     IdeGenerationHints = { Msvc = { SolutionFolder = "External" } },
 }
 
--- Default "bgfx_shaderc"
+Default "bgfx_shaderc"

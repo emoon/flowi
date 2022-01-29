@@ -118,8 +118,8 @@ local win64 = {
 
 Build {
     Passes = {
-        BuildTools = { Name = "Build Tools", BuildOrder = 1 },
-        GenerateSources = { Name = "Generate sources", BuildOrder = 2 },
+        BuildTools = { Name = "BuildTools", BuildOrder = 1 },
+        GenerateSources = { Name = "GenerateSources", BuildOrder = 2 },
     },
 
     Units = {
