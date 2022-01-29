@@ -31,6 +31,8 @@ struct Texture {
     float inv_y;
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #define MAX_TEXTURE_COUNT 128
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
@@ -182,8 +184,6 @@ extern"C" bool fl_application_new_impl(struct FlContext* ctx, FlString applicati
     }
 
     state->u_inv_res_tex = bgfx::createUniform("u_inv_res_tex", bgfx::UniformType::Vec4);
-
-    printf("%d\n", __LINE__);
 
     return true;
 }
