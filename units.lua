@@ -51,6 +51,13 @@ local function build_vs(src, dest)
         ShaderC { Source = src, OutName = dest .. "_essl.h", Parameters = "--type vertex --platform android" },
         ShaderC { Source = src, OutName = dest .. "_spv.h", Parameters = "--type vertex --platform linux -p spirv" },
         ShaderC { Source = src, OutName = dest .. "_mtl.h", Parameters = "--type vertex --platform osx -p metal -O 3" },
+        {
+            {
+                ShaderC { Source = src, OutName = dest .. "_dx9.h", Parameters = "--type vertex --platform windows -p vs_3_0 -O 3" },
+                ShaderC { Source = src, OutName = dest .. "_dx11.h", Parameters = "--type vertex --platform windows -p vs_4_0 -O 3" }
+                ; Config = "win64-*-*",
+            },
+        },
     }
 end
 
@@ -62,6 +69,13 @@ local function build_fs(src, dest)
         ShaderC { Source = src, OutName = dest .. "_essl.h", Parameters = "--type fragment --platform android" },
         ShaderC { Source = src, OutName = dest .. "_spv.h", Parameters = "--type fragment --platform linux -p spirv" },
         ShaderC { Source = src, OutName = dest .. "_mtl.h", Parameters = "--type fragment --platform osx -p metal -O 3" },
+        {
+            {
+                ShaderC { Source = src, OutName = dest .. "_dx9.h", Parameters = "--type fragment --platform windows -p ps_3_0 -O 3" },
+                ShaderC { Source = src, OutName = dest .. "_dx11.h", Parameters = "--type fragment --platform windows -p ps_4_0 -O 3" }
+                ; Config = "win64-*-*",
+            },
+        },
     }
 end
 

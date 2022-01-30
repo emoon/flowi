@@ -12,9 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// TODO: Move
-struct FlContext* g_fl_ctx = NULL;
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const bgfx::EmbeddedShader s_shaders[] = {BGFX_EMBEDDED_SHADER(color_fill_vs),
