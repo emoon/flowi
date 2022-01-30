@@ -2,6 +2,7 @@
 callback MainLoopCallback(user_data: *void)
 
 struct Application {
+    dummy: u32,
     // TODO: More options
     [static] new(application_name: String, developer: String) -> bool,
     [static] main_loop(callback: MainLoopCallback, userdata: *void),

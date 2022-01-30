@@ -12,7 +12,9 @@ extern "C" {
 }
 
 #[repr(C)]
-pub struct Application {}
+pub struct Application {
+    dummy: u32,
+}
 
 impl Application {
     pub fn new(application_name: &str, developer: &str) {

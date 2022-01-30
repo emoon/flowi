@@ -16,6 +16,7 @@ extern "C" {
 #endif
 
 typedef struct FlApplication {
+    uint32_t dummy;
 } FlApplication;
 
 typedef void (*FlMainLoopCallback)(void* user_data);
