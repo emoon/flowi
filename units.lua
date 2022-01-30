@@ -25,6 +25,7 @@ local BX_DIR = "flowi/c/external/bx/"
 DefRule {
     Name = "ShaderC",
     Command = "$(BGFX_SHADERC) $(COMPILE_PARAMS) -i core/c/external/bgfx/src -f $(<) --bin2c -o $(@)",
+    Pass = "BuildTools",
     ConfigInvariant = true,
 
     Blueprint = {
@@ -267,6 +268,8 @@ Program {
 
 Program {
     Name = "build_shaders",
+    Pass = "GenerateSources",
+
     Sources = {
         "flowi/c/shaders/dummy.c",
         build_vs("flowi/c/shaders/color_fill.vs", "flowi/c/shaders/generated/color_fill_vs"),
