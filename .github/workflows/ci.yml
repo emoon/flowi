@@ -43,7 +43,7 @@ jobs:
       run: sudo apt-get install mesa-common-dev libx11-dev libxcursor-dev libxinerama-dev libxkbcommon-dev libxrandr-dev libxi-dev libgl1-mesa-dev
 
     - name: Build All (Debug)
-      run: tundra2 linux-gcc-debug
+      run: tundra2 linux-gcc-debug bgfx_shaderc && tundra2 linux-gcc-debug
 
   # Build macOS
   build_macOS:
@@ -58,7 +58,7 @@ jobs:
       run: t2-output/macos-clang-debug-default/flowi_core_tests --enable-mixed-units
 
     - name: Build All (Debug)
-      run: bin/macos/tundra2 macos-clang-debug
+      run: bin/macos/tundra2 macos-clang-debug bgfx_shaderc && bin/macos/tundra2 macos-clang-debug
 
     # - name: Build Core Tests (Optimized)
     #   run: bin/macos/tundra2 macosx-clang-release flowi_core_tests
@@ -85,5 +85,5 @@ jobs:
       run: t2-output\win64-msvc-release-default\flowi_core_tests --enable-mixed-units
 
     - name: Build All (Debug)
-      run: bin\windows\tundra2.exe --unprotected win64-msvc-debug
+      run: bin\windows\tundra2.exe --unprotected win64-msvc-debug bgfx_shaderc && bin\windows\tundra2.exe --unprotected win64-msvc-debug
 
