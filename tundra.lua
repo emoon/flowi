@@ -16,16 +16,13 @@ local macosx = {
     Env = {
 		BGFX_SHADERC = "$(OBJECTDIR)$(SEP)bgfx_shaderc$(PROGSUFFIX)",
 
-        RUST_CARGO_OPTS = {
-            { "test"; Config = "*-*-*-test" },
-        },
-
         CCOPTS =  {
             mac_opts,
         },
 
         CXXOPTS = {
             mac_opts,
+            "-std=c++14",
         },
 
         SHLIBOPTS = {
