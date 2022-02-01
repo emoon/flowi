@@ -22,7 +22,6 @@
 #define aligned_alloc(align, size) _aligned_malloc(size, align)
 #endif
 
-struct FlContext* g_fl_global_ctx = NULL;
 struct FlGlobalState* g_state = NULL;
 struct FlContext* g_fl_ctx = NULL;
 
@@ -102,10 +101,14 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
 struct FlGlobalState* fl_create(const FlSettings* settings) {
     FL_UNUSED(settings);
 
+	if (g_state) {
+		// TODO: Waring, trying to re-create global state
+		return g_state;
+	}
+
     // TODO: Use local allocator
     g_state = (FlGlobalState*)calloc(1, sizeof(FlGlobalState));
-
-    g_fl_global_ctx = fl_context_create(g_state);
+	g_fl_ctx = fl_context_create(g_state);
 
     FL_TRY_ALLOC_NULL((CommandBuffer_create(&g_state->primitive_commands, "primitives", &malloc_allocator, 4 * 1024)));
 	FL_TRY_ALLOC_NULL((CommandBuffer_create(&g_state->render_commands, "primitives", &malloc_allocator, 4 * 1024)));
@@ -393,12 +396,12 @@ void fl_destroy(FlGlobalState* self) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Returns the number of render commands. use fl_render_get_cmd to get each command
 
-int fl_render_begin_commands(struct FlGlobalState* state) {
-	return CommandBuffer_begin_read_commands(&state->render_commands);
+int fl_render_begin_commands() {
+	return CommandBuffer_begin_read_commands(&g_state->render_commands);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u16 fl_render_get_command(struct FlGlobalState* state, const u8** data) {
-	return CommandBuffer_read_next_cmd(&state->render_commands, data);
+u16 fl_render_get_command(const u8** data) {
+	return CommandBuffer_read_next_cmd(&g_state->render_commands, data);
 }

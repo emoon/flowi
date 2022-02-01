@@ -45,10 +45,17 @@ void fl_text_len(struct FlContext* ctx, const char* text, int text_len);
 void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2, bool b3);
 
 // Returns the number of render commands. use fl_render_get_cmd to get each command
-int fl_render_begin_commands(struct FlGlobalState* state);
+int fl_render_begin_commands();
 
 // Get the next render command
-u16 fl_render_get_command(struct FlGlobalState* state, const u8** data);
+u16 fl_render_get_command(const u8** data);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FL_INLINE struct FlContext* fl_context_get_global() {
+    extern struct FlContext* g_fl_ctx;
+    return g_fl_ctx;
+}
 
 #ifdef __cplusplus
 }

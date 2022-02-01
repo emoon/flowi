@@ -12,6 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+// TODO: Should be in public core api
+#include "../../core/c/src/flowi.h"
+#include "../../core/c/src/font.h"
+#include "../../core/c/src/area.h"
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const bgfx::EmbeddedShader s_shaders[] = {BGFX_EMBEDDED_SHADER(color_fill_vs),
@@ -107,7 +112,14 @@ extern"C" bool fl_application_new_impl(struct FlContext* ctx, FlString applicati
         state->window_height = WINDOW_HEIGHT;
     }
 
-    state->ctx = ctx;
+    // This to be called before using any other functions
+    // TODO: Proper error
+    if (!fl_create(NULL)) {
+        printf("Unable to create flowi state\n");
+        return 0;
+    }
+
+    state->ctx = fl_context_get_global();
 
     glfwSetErrorCallback(error_callback);
 
@@ -186,6 +198,179 @@ extern"C" bool fl_application_new_impl(struct FlContext* ctx, FlString applicati
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Render triangles without texture
+
+static void render_textured_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+    FlTexturedTriangles* draw_cmd = (FlTexturedTriangles*)render_data;
+
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::TransientIndexBuffer tib;
+
+    const int vertex_count = draw_cmd->vertex_buffer_size;
+    const int index_count = draw_cmd->index_buffer_size;
+    const u32 texture_id = draw_cmd->texture_id;
+
+    const Texture& texture = ctx.textures[texture_id];
+
+    bgfx::allocTransientVertexBuffer(&tvb, vertex_count, ctx.texture_layout);
+    bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(FlIdxSize) == 4);
+
+    void* verts = (void*)tvb.data;
+    memcpy(verts, draw_cmd->vertex_buffer, vertex_count * sizeof(FlVertPosUvColor));
+
+    u16* indices = (u16*)tib.data;
+    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FlIdxSize));
+
+    uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+    state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
+
+    // Set 1/texture size for shader
+    float data[4] = {texture.inv_x, texture.inv_y, 0.0f, 0.0f};
+    encoder->setUniform(ctx.u_inv_res_tex, data, UINT16_MAX);
+
+    encoder->setState(state);
+    encoder->setTexture(0, ctx.tex_handle, texture.handle);
+    encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
+    encoder->setIndexBuffer(&tib, 0, index_count);
+    encoder->submit(255, ctx.texture_shader);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Render triangles without texture
+
+static void render_flat_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+    FlSolidTriangles* draw_cmd = (FlSolidTriangles*)render_data;
+
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::TransientIndexBuffer tib;
+
+    const int vertex_count = draw_cmd->vertex_buffer_size;
+    const int index_count = draw_cmd->index_buffer_size;
+
+    bgfx::allocTransientVertexBuffer(&tvb, vertex_count, ctx.flat_layout);
+    bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(FlIdxSize) == 4);
+
+    void* verts = (void*)tvb.data;
+    memcpy(verts, draw_cmd->vertex_buffer, vertex_count * sizeof(FlVertPosColor));
+
+    u16* indices = (u16*)tib.data;
+    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FlIdxSize));
+
+    uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+
+    encoder->setState(state);
+    encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
+    encoder->setIndexBuffer(&tib, 0, index_count);
+    encoder->submit(255, ctx.flat_shader);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void create_texture(ApplicationState& ctx, const u8* render_data) {
+    const FlCreateTexture* cmd = (FlCreateTexture*)render_data;
+    const u8* data = cmd->data;
+    const u32 id = cmd->id;
+    const u16 width = cmd->width;
+    const u16 height = cmd->height;
+
+    assert(id < MAX_TEXTURE_COUNT);
+
+    switch (cmd->format) {
+        case FlTextureFormat_R8_LINEAR: {
+            const bgfx::Memory* mem = nullptr;
+
+            if (data) {
+                mem = bgfx::makeRef(data, width * height);
+            }
+
+            Texture* texture = &ctx.textures[id];
+            texture->handle = bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::R8, 0, mem);
+            texture->inv_x = 1.0f / width;
+            texture->inv_y = 1.0f / height;
+            texture->size = width * height;
+            texture->height = height;
+            texture->width = width;
+            break;
+        }
+
+        default: {
+            // TODO: Implement support
+            printf("unsupported texture format %d\n", cmd->format);
+            exit(0);
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void update_texture(ApplicationState& ctx, const u8* render_data) {
+    const FlUpdateTexture* cmd = (FlUpdateTexture*)render_data;
+
+    const Texture* texture = &ctx.textures[cmd->texture_id];
+    const bgfx::Memory* mem = bgfx::makeRef(cmd->data, texture->size);
+    const FlRenderRect* rect = &cmd->rect;
+
+    bgfx::updateTexture2D(texture->handle, 0, 0, rect->x0, rect->y0, rect->x1 - rect->x0, rect->y1 - rect->y0, mem,
+                          texture->width);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void render_flowi(ApplicationState& state, uint16_t width, uint16_t height) {
+    bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
+
+    int view_id = 255;
+
+    bgfx::setViewName(view_id, "Flowi");
+    bgfx::setViewMode(view_id, bgfx::ViewMode::Sequential);
+
+    float ortho[16];
+
+    bx::mtxOrtho(ortho, 0.0f, float(width), float(height), 0.0f, 0.0f, 1000.0f, 0.0f, 1.0f);
+    bgfx::setViewTransform(view_id, NULL, ortho);
+    bgfx::setViewRect(view_id, 0, 0, width, height);
+
+    const int count = fl_render_begin_commands();
+    const u8* render_cmd_data = nullptr;
+    u16 cmd = 0;
+
+    bgfx::Encoder* encoder = bgfx::begin();
+
+    // process all the render commands
+    for (int i = 0; i < count; ++i) {
+        switch (cmd = fl_render_get_command(&render_cmd_data)) {
+            case FlRenderCommand_TexturedTriangles: {
+                render_textured_triangles(state, render_cmd_data, encoder);
+                break;
+            }
+
+            case FlRenderCommand_SolidTriangles: {
+                render_flat_triangles(state, render_cmd_data, encoder);
+                break;
+            }
+
+            case FlRenderCommand_CreateTexture: {
+                create_texture(state, render_cmd_data);
+                break;
+            }
+
+            case FlRenderCommand_UpdateTexture: {
+                update_texture(state, render_cmd_data);
+                break;
+            }
+
+            default: {
+                printf("Case %d - not handled!\n", cmd);
+                break;
+            }
+        }
+    }
+
+    bgfx::end(encoder);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void generate_frame(void* user_data) {
     ApplicationState* state = (ApplicationState*)user_data;
@@ -207,9 +392,17 @@ static void generate_frame(void* user_data) {
     // if no other draw calls are submitted to view 0.
     bgfx::touch(0);
 
+    fl_frame_begin(state->ctx);
+
     if (state->main_callback) {
         state->main_callback(state->user_data);
     }
+
+    Area_generate_circle(state->ctx);
+    fl_text(state->ctx, "Testing");
+
+    fl_frame_end(state->ctx);
+    render_flowi(*state, display_w, display_h);
 
     bgfx::frame();
 
@@ -224,6 +417,9 @@ extern "C" void fl_application_main_loop_impl(struct FlContext* ctx, FlMainLoopC
     state->main_callback = callback;
     state->user_data = user_data;
     state->counter = 2;
+
+    (void)fl_font_create_from_file(ctx, "data/montserrat-regular.ttf", 80, FlFontGlyphPlacementMode_Auto);
+    (void)fl_font_create_from_file(ctx, "data/Montserrat-Bold.ttf", 80, FlFontGlyphPlacementMode_Auto);
 
     // Run the loop correctly for the target environment
 #ifdef __EMSCRIPTEN__
