@@ -42,9 +42,6 @@ jobs:
     - name: Install (Valgrind)
       run: sudo apt-get install valgrind
 
-    - name: Run Core Tests (Debug + Valgrind)
-      run: valgrind --leak-check=full --error-exitcode=1 t2-output/linux-gcc-debug-default/flowi_core_tests --random-order
-
     - name: Run Core Tests (Optimized + Valgrind)
       run: valgrind --leak-check=full --error-exitcode=1 t2-output/linux-gcc-release-default/flowi_core_tests --random-order
 
