@@ -4,13 +4,31 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern struct FlContext* g_ctx;
+static void* alloc_malloc(void* user_data, u64 size) {
+    FL_UNUSED(user_data);
+    return malloc(size);
+}
+
+static void* realloc_malloc(void* user_data, void* ptr, u64 size) {
+    FL_UNUSED(user_data);
+    return realloc(ptr, size);
+}
+
+static void free_malloc(void* user_data, void* ptr) {
+    FL_UNUSED(user_data);
+    free(ptr);
+}
+
+static FlAllocator malloc_allocator = {
+    alloc_malloc, NULL, realloc_malloc, free_malloc, NULL,
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(CommandBuffer, create_destroy) {
 	CommandBuffer buffer;
-	CommandBuffer_create(&buffer, "buffer", g_ctx->global_state->global_allocator, 256);
+
+	CommandBuffer_create(&buffer, "buffer", &malloc_allocator, 256);
 	CommandBuffer_destroy(&buffer);
 }
 
@@ -19,7 +37,7 @@ UTEST(CommandBuffer, create_destroy) {
 UTEST(CommandBuffer, alloc_single_command) {
 	CommandBuffer buffer;
 
-	CommandBuffer_create(&buffer, "buffer", g_ctx->global_state->global_allocator, 256);
+	CommandBuffer_create(&buffer, "buffer", &malloc_allocator, 256);
 	u8* data = CommandBuffer_alloc_cmd(&buffer, 1, 4);
 	*data = 0;
 
@@ -31,7 +49,7 @@ UTEST(CommandBuffer, alloc_single_command) {
 UTEST(CommandBuffer, alloc_single_command_read_data) {
 	CommandBuffer buffer;
 
-	CommandBuffer_create(&buffer, "buffer", g_ctx->global_state->global_allocator, 256);
+	CommandBuffer_create(&buffer, "buffer", &malloc_allocator, 256);
 	u8* data = CommandBuffer_alloc_cmd(&buffer, 1, 4);
 	*data++ = 3;
 	*data++ = 4;
@@ -58,7 +76,7 @@ UTEST(CommandBuffer, alloc_single_command_read_data) {
 UTEST(CommandBuffer, alloc_two_command_read_data) {
 	CommandBuffer buffer;
 
-	CommandBuffer_create(&buffer, "buffer", g_ctx->global_state->global_allocator, 256);
+	CommandBuffer_create(&buffer, "buffer", &malloc_allocator, 256);
 	u8* data = CommandBuffer_alloc_cmd(&buffer, 1, 6);
 	*data++ = 3;
 	*data++ = 4;
@@ -98,7 +116,7 @@ UTEST(CommandBuffer, alloc_two_command_read_data) {
 UTEST(CommandBuffer, alloc_commands_rewind) {
 	CommandBuffer buffer;
 
-	CommandBuffer_create(&buffer, "buffer", g_ctx->global_state->global_allocator, 256);
+	CommandBuffer_create(&buffer, "buffer", &malloc_allocator, 256);
 	u8* data = CommandBuffer_alloc_cmd(&buffer, 1, 6);
 	*data++ = 3;
 	*data++ = 4;
