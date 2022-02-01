@@ -22,8 +22,8 @@
 #define aligned_alloc(align, size) _aligned_malloc(size, align)
 #endif
 
-struct FlGlobalState* g_state = NULL;
-struct FlContext* g_fl_ctx = NULL;
+//struct FlGlobalState* g_state = NULL;
+//struct FlContext* g_fl_ctx = NULL;
 
 // extern FliGlobalCtx* g_global_ctx;
 
@@ -73,7 +73,6 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
 	// TODO: Custom allocator
     FlContext* ctx = malloc(sizeof(FlContext));
     memset(ctx, 0, sizeof(FlContext));
-    state->global_allocator = &malloc_allocator;
 
     // TODO: Use custom allocator
     ctx->positions = 0;//(vec128*)malloc(sizeof(vec128) * (MAX_CONTROLS + MEMORY_PADDING));
@@ -99,26 +98,21 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
 // This to be called before using any other functions
 
 struct FlGlobalState* fl_create(const FlSettings* settings) {
+	FlGlobalState* state = NULL;
     FL_UNUSED(settings);
 
-	if (g_state) {
-		// TODO: Waring, trying to re-create global state
-		return g_state;
-	}
+    FL_TRY_ALLOC_NULL(state = FlAllocator_alloc_zero_type(&malloc_allocator, FlGlobalState));
+    state->global_allocator = &malloc_allocator;
 
-    // TODO: Use local allocator
-    g_state = (FlGlobalState*)calloc(1, sizeof(FlGlobalState));
-	g_fl_ctx = fl_context_create(g_state);
-
-    FL_TRY_ALLOC_NULL((CommandBuffer_create(&g_state->primitive_commands, "primitives", &malloc_allocator, 4 * 1024)));
-	FL_TRY_ALLOC_NULL((CommandBuffer_create(&g_state->render_commands, "primitives", &malloc_allocator, 4 * 1024)));
+    FL_TRY_ALLOC_NULL((CommandBuffer_create(&state->primitive_commands, "primitives", state->global_allocator, 4 * 1024)));
+	FL_TRY_ALLOC_NULL((CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024)));
 
     // TODO: We should check settings for texture size
-    FL_TRY_ALLOC_NULL((g_state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, g_state, &malloc_allocator)));
+    FL_TRY_ALLOC_NULL((state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, state, state->global_allocator)));
 
-    Font_init(g_state);
+    Font_init(state);
 
-    return g_state;
+    return state;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -364,18 +358,21 @@ void fl_text_len(struct FlContext* ctx, const char* text, int text_len) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_context_destroy(struct FlContext* self) {
-	// TODO: Custom allocator
+	FlAllocator* allocator = self->global_state->global_allocator;
+
 	for (int i = 0; i < self->style_count; ++i) {
-		free(self->styles[i]);
+		FlAllocator_free(allocator, self->styles[i]);
 	}
 
 	VertexAllocator_destroy(&self->vertex_allocator);
-	free(self);
+	FlAllocator_free(allocator, self);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_destroy(FlGlobalState* self) {
+	FlAllocator* allocator = self->global_allocator;
+
     CommandBuffer_destroy(&self->primitive_commands);
 	CommandBuffer_destroy(&self->render_commands);
 	Atlas_destroy(self->mono_fonts_atlas);
@@ -389,19 +386,18 @@ void fl_destroy(FlGlobalState* self) {
 	}
 
 	FT_Done_FreeType(self->ft_library);
-	// TODO: Custom allocator
-	free(self);
+	FlAllocator_free(allocator, self);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Returns the number of render commands. use fl_render_get_cmd to get each command
 
-int fl_render_begin_commands() {
-	return CommandBuffer_begin_read_commands(&g_state->render_commands);
+int fl_render_begin_commands(FlGlobalState* state) {
+	return CommandBuffer_begin_read_commands(&state->render_commands);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u16 fl_render_get_command(const u8** data) {
-	return CommandBuffer_read_next_cmd(&g_state->render_commands, data);
+u16 fl_render_get_command(FlGlobalState* state, const u8** data) {
+	return CommandBuffer_read_next_cmd(&state->render_commands, data);
 }

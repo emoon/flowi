@@ -42,6 +42,7 @@ struct Texture {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct ApplicationState {
+    struct FlGlobalState* flowi_state;
     struct FlContext* ctx;
     int window_width;
     int window_height;
@@ -95,13 +96,13 @@ static void error_callback(int error, const char* description) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern"C" bool fl_application_new_impl(struct FlContext* ctx, FlString application_name, FlString developer) {
+extern"C" struct FlContext* fl_application_new_impl(struct FlContext* ctx, FlString application_name, FlString developer) {
     ApplicationState* state = &s_state;
 
     // TODO: Error, we only support one application so make sure we only run this once.
     if (state->ctx != NULL) {
         printf("Application already created\n");
-        return false;
+        return NULL;
     }
 
     if (state->window_width == 0) {
@@ -114,19 +115,19 @@ extern"C" bool fl_application_new_impl(struct FlContext* ctx, FlString applicati
 
     // This to be called before using any other functions
     // TODO: Proper error
-    if (!fl_create(NULL)) {
+    if (!(state->flowi_state = fl_create(NULL))) {
         printf("Unable to create flowi state\n");
         return 0;
     }
 
-    state->ctx = fl_context_get_global();
+    state->ctx = fl_context_create(state->flowi_state);
 
     glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) {
         // TODO: Proper error
         printf("failed to init glfw\n");
-        return false;
+        return NULL;
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -136,7 +137,7 @@ extern"C" bool fl_application_new_impl(struct FlContext* ctx, FlString applicati
     if (!state->default_window) {
         printf("failed to open window\n");
         glfwTerminate();
-        return false;
+        return NULL;
     }
 
     bgfx::PlatformData pd;
@@ -165,7 +166,7 @@ extern"C" bool fl_application_new_impl(struct FlContext* ctx, FlString applicati
         printf("failed to init bgfx\n");
         glfwDestroyWindow(state->default_window);
         glfwTerminate();
-        return false;
+        return NULL;
     }
 
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x001f001f, 1.0f, 0);
@@ -189,12 +190,12 @@ extern"C" bool fl_application_new_impl(struct FlContext* ctx, FlString applicati
 
     if (!bgfx::isValid(state->flat_shader)) {
         printf("failed to init flat_shader shaders\n");
-        return false;
+        return NULL;
     }
 
     state->u_inv_res_tex = bgfx::createUniform("u_inv_res_tex", bgfx::UniformType::Vec4);
 
-    return true;
+    return state->ctx;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -330,7 +331,7 @@ static void render_flowi(ApplicationState& state, uint16_t width, uint16_t heigh
     bgfx::setViewTransform(view_id, NULL, ortho);
     bgfx::setViewRect(view_id, 0, 0, width, height);
 
-    const int count = fl_render_begin_commands();
+    const int count = fl_render_begin_commands(state.flowi_state);
     const u8* render_cmd_data = nullptr;
     u16 cmd = 0;
 
@@ -338,7 +339,7 @@ static void render_flowi(ApplicationState& state, uint16_t width, uint16_t heigh
 
     // process all the render commands
     for (int i = 0; i < count; ++i) {
-        switch (cmd = fl_render_get_command(&render_cmd_data)) {
+        switch (cmd = fl_render_get_command(state.flowi_state, &render_cmd_data)) {
             case FlRenderCommand_TexturedTriangles: {
                 render_textured_triangles(state, render_cmd_data, encoder);
                 break;
@@ -395,7 +396,7 @@ static void generate_frame(void* user_data) {
     fl_frame_begin(state->ctx);
 
     if (state->main_callback) {
-        state->main_callback(state->user_data);
+        state->main_callback(state->ctx, state->user_data);
     }
 
     Area_generate_circle(state->ctx);

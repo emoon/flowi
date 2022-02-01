@@ -20,36 +20,40 @@ typedef struct FlWindow {
 } FlWindow;
 
 // Opens up new window
-FlWindow fl_window_new_impl(struct FlContext* ctx, uint16_t width, uint16_t height);
+FlWindow fl_window_new_impl(struct FlContext* flowi_ctx, uint16_t width, uint16_t height);
 
-FL_INLINE FlWindow fl_window_new(uint16_t width, uint16_t height) {
-    extern struct FlContext* g_fl_ctx;
-    return fl_window_new_impl(g_fl_ctx, width, height);
+FL_INLINE FlWindow fl_window_new_ctx(struct FlContext* flowi_ctx, uint16_t width, uint16_t height) {
+    return fl_window_new_impl(flowi_ctx, width, height);
 }
+
+#define fl_window_new(width, height) fl_window_new_ctx(flowi_ctx, width, height)
 
 // Destroy the window
-void fl_window_destroy_impl(struct FlContext* ctx, FlWindow* self);
+void fl_window_destroy_impl(struct FlContext* flowi_ctx, FlWindow* self);
 
-FL_INLINE void fl_window_destroy(FlWindow* self) {
-    extern struct FlContext* g_fl_ctx;
-    fl_window_destroy_impl(g_fl_ctx, self);
+FL_INLINE void fl_window_destroy_ctx(struct FlContext* flowi_ctx, FlWindow* self) {
+    fl_window_destroy_impl(flowi_ctx, self);
 }
+
+#define fl_window_destroy(self) fl_window_destroy_ctx(flowi_ctx, self)
 
 // Check if the current window is still open
-bool fl_window_is_open_impl(struct FlContext* ctx, FlWindow* self);
+bool fl_window_is_open_impl(struct FlContext* flowi_ctx, FlWindow* self);
 
-FL_INLINE bool fl_window_is_open(FlWindow* self) {
-    extern struct FlContext* g_fl_ctx;
-    return fl_window_is_open_impl(g_fl_ctx, self);
+FL_INLINE bool fl_window_is_open_ctx(struct FlContext* flowi_ctx, FlWindow* self) {
+    return fl_window_is_open_impl(flowi_ctx, self);
 }
+
+#define fl_window_is_open(self) fl_window_is_open_ctx(flowi_ctx, self)
 
 // Update the window. This has to be done in a loop for the UI to fuction correctly
-void fl_window_update_impl(struct FlContext* ctx, FlWindow* self);
+void fl_window_update_impl(struct FlContext* flowi_ctx, FlWindow* self);
 
-FL_INLINE void fl_window_update(FlWindow* self) {
-    extern struct FlContext* g_fl_ctx;
-    fl_window_update_impl(g_fl_ctx, self);
+FL_INLINE void fl_window_update_ctx(struct FlContext* flowi_ctx, FlWindow* self) {
+    fl_window_update_impl(flowi_ctx, self);
 }
+
+#define fl_window_update(self) fl_window_update_ctx(flowi_ctx, self)
 
 #ifdef __cplusplus
 }

@@ -7,7 +7,7 @@ use crate::*;
 use flowi_core::*;
 
 extern "C" {
-    fn fl_application_new_impl(application_name: FlString, developer: FlString) -> bool;
+    fn fl_application_new_impl(application_name: FlString, developer: FlString) -> *mut Context;
     fn fl_application_main_loop_impl(callback: MainLoopCallback, userdata: *mut c_void);
 }
 

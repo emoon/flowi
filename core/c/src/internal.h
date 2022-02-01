@@ -48,10 +48,6 @@ typedef struct FlGlobalState {
     u16 texture_ids;
 } FlGlobalState;
 
-// Global state for the whole lib
-// Contains loaded fonts, etc
-extern FlGlobalState* g_state;
-
 // These are for internal library wise functions. This header should never
 // be included in the public headers!
 

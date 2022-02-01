@@ -4,7 +4,7 @@ callback MainLoopCallback(user_data: *void)
 struct Application {
     dummy: u32,
     // TODO: More options
-    [static] new(application_name: String, developer: String) -> bool,
+    [static] new(application_name: String, developer: String) -> *Context,
     [static] main_loop(callback: MainLoopCallback, userdata: *void),
     //[static] set_layout(layout: *const LayoutArea),
 }

@@ -3,14 +3,16 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void main_loop(void* user_data) {
+void main_loop(struct FlContext* flowi_ctx, void* user_data) {
 
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int main() {
-	if (!fl_application_new("Test", "Test")) {
+	struct FlContext* flowi_ctx = NULL;
+
+	if (!(flowi_ctx = fl_application_new("Test", "Test"))) {
 		printf("Failed to open application!\n");
 		return 0;
 	}

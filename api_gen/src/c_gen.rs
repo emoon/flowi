@@ -68,7 +68,7 @@ fn get_arg_line(args: &[String], with_context: WithContext) -> String {
     let mut output = String::with_capacity(256);
 
     if with_context == WithContext::Yes {
-        output.push_str("struct FlContext* ctx");
+        output.push_str("struct FlContext* flowi_ctx");
     }
 
     for (i, a) in args.iter().enumerate() {
@@ -208,7 +208,7 @@ impl Cgen {
     fn generate_function_args(func: &Function, self_name: &str) -> FuncArgs {
         let mut fa = FuncArgs::default();
 
-        fa.call_args.push("g_fl_ctx".to_owned());
+        fa.call_args.push("flowi_ctx".to_owned());
 
         for (i, arg) in func.function_args.iter().enumerate() {
             if i == 0 && func.func_type == FunctionType::Static {
@@ -257,7 +257,7 @@ impl Cgen {
             fa.return_value,
             C_API_SUFFIX,
             func.name,
-            get_arg_line(&fa.func_args, WithContext::No)
+            get_arg_line(&fa.func_args, WithContext::Yes)
         )
     }
 
@@ -274,9 +274,9 @@ impl Cgen {
         // TODO: Generate the internal inside a separate header to make things cleaner
 
         let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, self_name.to_snake_case(), func.name);
+        let func_name_c = format!("{}_ctx", func_name);
 
-        writeln!(f, "FL_INLINE {} {}({}) {{", fa.return_value, func_name, get_arg_line(&fa.func_args, WithContext::No))?;
-        writeln!(f, "extern struct FlContext* g_fl_ctx;")?;
+        writeln!(f, "FL_INLINE {} {}({}) {{", fa.return_value, func_name_c, get_arg_line(&fa.func_args, WithContext::Yes))?;
         if !fa.body.is_empty() {
             write!(f, "{}", &fa.body)?;
         }
@@ -287,7 +287,12 @@ impl Cgen {
             writeln!(f, "{}({});", func.c_name, get_arg_line(&fa.call_args, WithContext::No))?;
         }
 
-        writeln!(f, "}}\n")
+        writeln!(f, "}}\n")?;
+
+        writeln!(f, "#define {}({}) {}({})\n", func_name,
+            get_arg_line(&fa.call_args[1..], WithContext::No),
+            func_name_c,
+            get_arg_line(&fa.call_args, WithContext::No))
     }
 
     pub fn generate(filename: &str, render_filename_dir: &str, api_def: &ApiDef) -> io::Result<()> {
