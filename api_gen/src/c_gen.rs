@@ -32,6 +32,8 @@ static HEADER: &str = "
 #include \"idx.h\"
 #include \"manual.h\"
 
+struct FlContext;
+
 #ifdef __cplusplus
 extern \"C\" {
 #endif\n";
@@ -121,9 +123,17 @@ impl Cgen {
 
         match var.vtype {
             VariableType::None => output.push_str("void"),
-            VariableType::SelfType => output.push_str(&format!("{}{}*", C_API_SUFFIX, self_type)),
+            VariableType::SelfType => output.push_str(&format!("{}{}", C_API_SUFFIX, self_type)),
             VariableType::Reference => panic!("Shouldn't be here"),
-            VariableType::Regular => output.push_str(&format!("{}{}", C_API_SUFFIX, var.type_name)),
+            VariableType::Regular => {
+                // hack, fix me
+                if var.type_name == "Context" {
+                    output.push_str("struct FlContext");
+                } else {
+                    output.push_str(&format!("{}{}", C_API_SUFFIX, var.type_name));
+                }
+            },
+
             VariableType::Str => output.push_str("FlString"),
             VariableType::Primitive => output.push_str(&var.get_c_primitive_type()),
         }
@@ -165,13 +175,18 @@ impl Cgen {
     fn generate_struct<W: Write>(f: &mut W, sdef: &Struct) -> io::Result<()> {
         Self::write_commment(f, &sdef.doc_comments, 0)?;
 
-        writeln!(f, "typedef struct {}{} {{", C_API_SUFFIX, sdef.name)?;
+        // if we have handle set we just generate it as a i32 instead
+        if sdef.has_attribute("Handle") {
+            writeln!(f, "typedef int32_t {}{};\n", C_API_SUFFIX, sdef.name)
+        } else {
+            writeln!(f, "typedef struct {}{} {{", C_API_SUFFIX, sdef.name)?;
 
-        for var in &sdef.variables {
-            Self::write_struct_variable(f, var)?;
+            for var in &sdef.variables {
+                Self::write_struct_variable(f, var)?;
+            }
+
+            writeln!(f, "}} {}{};\n", C_API_SUFFIX, sdef.name)
         }
-
-        writeln!(f, "}} {}{};\n", C_API_SUFFIX, sdef.name)
     }
 
     ///
@@ -219,7 +234,7 @@ impl Cgen {
                 VariableType::Str => {
                     fa.func_args.push(format!("const char* {}", arg.name));
                     fa.body.push_str(&format!(
-                        "FlString {}_ = {{ {}, (int)strlen({}) }};",
+                        "FlString {}_ = {{ {}, 1, (uint32_t)strlen({}) }};",
                         arg.name, arg.name, arg.name
                     ));
 
@@ -228,10 +243,26 @@ impl Cgen {
                 }
 
                 _ => {
+                    // TODO: support arrays with fixed size
                     let carg = format!("{} {}", Self::get_variable(&arg, self_name), arg.name);
                     fa.func_args.push(carg.to_owned());
                     fa.internal_args.push(carg.to_owned());
                     fa.call_args.push(arg.name.to_owned());
+                }
+            }
+
+            // If we have an array we add name with size after the parameter
+            match arg.array {
+                None => (),
+                Some(ArrayType::Unsized) => {
+                    let carg = format!("uint32_t {}_size", arg.name);
+                    fa.func_args.push(carg.to_owned());
+                    fa.internal_args.push(carg.to_owned());
+                    fa.call_args.push(format!("{}_size", arg.name));
+                }
+
+                Some(ArrayType::SizedArray(ref _size)) => {
+                    unimplemented!();
                 }
             }
         }
@@ -326,7 +357,11 @@ impl Cgen {
 
         for sdef in &api_def.structs {
             for func in &sdef.functions {
-                Self::generate_function(&mut f, &func, &sdef.name)?;
+                if sdef.has_attribute("Handle") {
+                    Self::generate_function(&mut f, &func, &sdef.name)?;
+                } else {
+                    Self::generate_function(&mut f, &func, &format!("{}*", sdef.name))?;
+                }
             }
         }
 

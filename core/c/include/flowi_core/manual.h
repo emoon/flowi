@@ -10,5 +10,6 @@ struct FlContext;
 
 typedef struct FlString {
     const char* str;
-    int len;
+    unsigned int c_string:1;
+    unsigned int len:31;
 } FlString;

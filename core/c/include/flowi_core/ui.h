@@ -11,6 +11,8 @@
 #include "idx.h"
 #include "manual.h"
 
+struct FlContext;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,7 +24,7 @@ typedef struct FlUi {
 void fl_ui_text_impl(struct FlContext* flowi_ctx, FlString text);
 
 FL_INLINE void fl_ui_text_ctx(struct FlContext* flowi_ctx, const char* text) {
-    FlString text_ = {text, (int)strlen(text)};
+    FlString text_ = {text, 1, (uint32_t)strlen(text)};
     fl_ui_text_impl(flowi_ctx, text_);
 }
 

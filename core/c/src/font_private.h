@@ -3,8 +3,8 @@
 
 #include "types.h"
 #include <flowi_core/config.h>
+#include <flowi_core/font.h>
 #include "flowi.h"
-#include "font.h"
 #include "render.h"
 #include <freetype/freetype.h>
 

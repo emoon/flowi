@@ -11,6 +11,8 @@
 #include "idx.h"
 #include "manual.h"
 
+struct FlContext;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -60,7 +62,7 @@ typedef struct FlStyle {
 FlStyle* fl_style_create_impl(struct FlContext* flowi_ctx, FlString name);
 
 FL_INLINE FlStyle* fl_style_create_ctx(struct FlContext* flowi_ctx, const char* name) {
-    FlString name_ = {name, (int)strlen(name)};
+    FlString name_ = {name, 1, (uint32_t)strlen(name)};
     return fl_style_create_impl(flowi_ctx, name_);
 }
 

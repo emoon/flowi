@@ -1,5 +1,5 @@
 #include "utest.h"
-#include "../src/font.h"
+#include <flowi_core/font.h>
 #include "../src/atlas.h"
 #include "../src/font_private.h"
 #include "../src/internal.h"
@@ -10,14 +10,14 @@ struct FlContext;
 
 UTEST(Font, load_failed) {
     struct FlGlobalState* state = fl_create(NULL);
-    struct FlContext* ctx = fl_context_create(state);
+    struct FlContext* flowi_ctx = fl_context_create(state);
 
-    FlFont font_id = fl_font_create_from_file(ctx, "unable_to_load.bin", 12, FlFontGlyphPlacementMode_Auto);
+    FlFont font_id = fl_font_new_from_file("unable_to_load.bin", 12, FlFontPlacementMode_Auto);
 
     // Expect loading fail
     ASSERT_TRUE(font_id == -1);
 
-    fl_context_destroy(ctx);
+    fl_context_destroy(flowi_ctx);
     fl_destroy(state);
 }
 
@@ -25,15 +25,15 @@ UTEST(Font, load_failed) {
 
 UTEST(Font, load_font_ok) {
     struct FlGlobalState* state = fl_create(NULL);
-    struct FlContext* ctx = fl_context_create(state);
+    struct FlContext* flowi_ctx = fl_context_create(state);
 
-    FlFont font_id = fl_font_create_from_file(ctx, "data/montserrat-regular.ttf", 36, FlFontGlyphPlacementMode_Auto);
+    FlFont font_id = fl_font_new_from_file("data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
 
     // Expect loading to work
     ASSERT_TRUE(font_id == 0);
 
-    fl_font_destroy(ctx, font_id);
-    fl_context_destroy(ctx);
+    fl_font_destroy(font_id);
+    fl_context_destroy(flowi_ctx);
     fl_destroy(state);
 }
 
@@ -41,9 +41,9 @@ UTEST(Font, load_font_ok) {
 
 UTEST(Font, gen_glyph_verify_render_cmds) {
     struct FlGlobalState* state = fl_create(NULL);
-    struct FlContext* ctx = fl_context_create(state);
+    struct FlContext* flowi_ctx = fl_context_create(state);
 
-    FlFont font_id = fl_font_create_from_file(ctx, "data/montserrat-regular.ttf", 36, FlFontGlyphPlacementMode_Auto);
+    FlFont font_id = fl_font_new_from_file("data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
     u32 test[] = { 64, 65 };
 
     int count = fl_render_begin_commands(state);
@@ -71,13 +71,13 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
 
 	// Begin frame and generate some glyphs and figure out the range to update
 
-	fl_frame_begin(ctx);
+	fl_frame_begin(flowi_ctx);
 
 	Atlas_begin_add_rects(state->mono_fonts_atlas);
-	Font_generate_glyphs(ctx, font_id, test, 2, 36);
+	Font_generate_glyphs(flowi_ctx, font_id, test, 2, 36);
 	Atlas_end_add_rects(state->mono_fonts_atlas, state);
 
-	fl_frame_end(ctx);
+	fl_frame_end(flowi_ctx);
 
     count = fl_render_begin_commands(state);
 
@@ -97,8 +97,8 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
 	// validate that we have created some textures
 	ASSERT_TRUE(found_update_texture);
 
-	fl_font_destroy(ctx, font_id);
-	fl_context_destroy(ctx);
+	fl_font_destroy(font_id);
+	fl_context_destroy(flowi_ctx);
 	fl_destroy(state);
 }
 

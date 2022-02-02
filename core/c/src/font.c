@@ -1,6 +1,6 @@
-#include "font.h"
-#include <assert.h>
+#include <flowi_core/font.h>
 #include <flowi_core/error.h>
+#include <assert.h>
 #include "flowi.h"
 #include "font_private.h"
 #include "internal.h"
@@ -14,21 +14,24 @@
 #include <math.h>
 
 //#if fl_ALLOW_STDIO
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Build a font from (TTF) file. To use the font use `fl_font_set(id)` before using text-based widgets
-// GlyphRanges can be set to NULL if AtlasMode is BuildOnDemand
-FlFont fl_font_create_from_file(struct FlContext* ctx, const char* filename, int font_size,
-                                FlFontGlyphPlacementMode placement_mode) {
+// Create a font from (TTF) file. To use the font use [Font::set] or [Font::set_with_size] before using text-based
+// widgetsReturns >= 0 for valid handle, use fl_get_status(); for more detailed error message
+FlFont fl_font_new_from_file_impl(struct FlContext* flowi_ctx, FlString filename, uint32_t font_size,
+                                  FlFontPlacementMode placement_mode)
+{
+	// TODO: Handle temp string
+	if (!filename.c_string) {
+		return -1;
+	}
+
     u32 size = 0;
-    u8* data = Io_load_file_to_memory(filename, &size);
+    u8* data = Io_load_file_to_memory(filename.str, &size);
 
     if (!data) {
         return -1;
     }
 
-    FlFont id = fl_font_create_from_memory(ctx, filename, strlen(filename), data, size, font_size, placement_mode);
-
-    return id;
+    return fl_font_new_from_memory_impl(flowi_ctx, filename, data, size, font_size, placement_mode);
 }
 //#endif
 
@@ -99,14 +102,10 @@ static Font* font_create(FlContext* ctx, FT_Face face) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Build a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
 // Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
-FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int name_len, const u8* font_data,
-                                  u32 data_size, int font_size, FlFontGlyphPlacementMode placement_mode) {
-    FL_UNUSED(name_len);
+FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* font_data, uint32_t data_size,
+                                    uint32_t font_size, FlFontPlacementMode placement_mode) {
     FL_UNUSED(placement_mode);
     // Use to store global data such as fonts, etc
     FlGlobalState* state = ctx->global_state;
@@ -165,7 +164,7 @@ FlFont fl_font_create_from_memory(struct FlContext* ctx, const char* name, int n
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Destroy an existing created font
 
-void fl_font_destroy(struct FlContext* ctx, FlFont font_id) {
+void fl_font_destroy_impl(struct FlContext* ctx, FlFont font_id) {
     FlGlobalState* state = ctx->global_state;
 
     if (font_id < 0 || font_id >= state->font_count) {

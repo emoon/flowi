@@ -11,6 +11,8 @@
 #include "idx.h"
 #include "manual.h"
 
+struct FlContext;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

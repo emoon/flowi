@@ -12,9 +12,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <flowi_core/font.h>
+
 // TODO: Should be in public core api
 #include "../../../core/c/src/flowi.h"
-#include "../../../core/c/src/font.h"
 #include "../../../core/c/src/area.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -419,8 +420,7 @@ extern "C" void fl_application_main_loop_impl(struct FlContext* ctx, FlMainLoopC
     state->user_data = user_data;
     state->counter = 2;
 
-    (void)fl_font_create_from_file(ctx, "data/montserrat-regular.ttf", 80, FlFontGlyphPlacementMode_Auto);
-    (void)fl_font_create_from_file(ctx, "data/Montserrat-Bold.ttf", 80, FlFontGlyphPlacementMode_Auto);
+    (void)fl_font_new_from_file_ctx(ctx, "data/montserrat-regular.ttf", 80, FlFontPlacementMode_Auto);
 
     // Run the loop correctly for the target environment
 #ifdef __EMSCRIPTEN__

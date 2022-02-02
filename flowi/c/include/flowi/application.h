@@ -11,6 +11,8 @@
 #include "idx.h"
 #include "manual.h"
 
+struct FlContext;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -19,16 +21,14 @@ typedef struct FlApplication {
     uint32_t dummy;
 } FlApplication;
 
-struct FlContext;
-
 typedef void (*FlMainLoopCallback)(struct FlContext* flowi_ctx, void* user_data);
 
 struct FlContext* fl_application_new_impl(struct FlContext* flowi_ctx, FlString application_name, FlString developer);
 
 FL_INLINE struct FlContext* fl_application_new_ctx(struct FlContext* flowi_ctx, const char* application_name,
-                                            const char* developer) {
-    FlString application_name_ = {application_name, (int)strlen(application_name)};
-    FlString developer_ = {developer, (int)strlen(developer)};
+                                                   const char* developer) {
+    FlString application_name_ = {application_name, 1, (uint32_t)strlen(application_name)};
+    FlString developer_ = {developer, 1, (uint32_t)strlen(developer)};
     return fl_application_new_impl(flowi_ctx, application_name_, developer_);
 }
 
