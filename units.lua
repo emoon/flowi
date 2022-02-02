@@ -221,6 +221,7 @@ Program {
 	Includes = {
 		"flowi/c/include",
 		"core/c/include/flowi_core",
+		"core/c/include",
 	},
 
     Sources = {

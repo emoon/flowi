@@ -1,10 +1,22 @@
 #include <flowi/application.h>
+// TODO: flowi/font.h should just include tho core version
+#include <flowi_core/font.h>
+#include <flowi_core/ui.h>
 #include <stdio.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void main_loop(struct FlContext* flowi_ctx, void* user_data) {
+typedef struct App {
+	FlFont font;
+} App;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void main_loop(struct FlContext* flowi_ctx, void* user_data) {
+	App* app = (App*)user_data;
+
+	fl_font_set(app->font);
+	fl_ui_text("Test");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -17,7 +29,11 @@ int main() {
 		return 0;
 	}
 
-	fl_application_main_loop(main_loop, 0);
+	App app = {
+    	.font = fl_font_new_from_file("data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
+	};
+
+	fl_application_main_loop(main_loop, &app);
 
 	return 0;
 }

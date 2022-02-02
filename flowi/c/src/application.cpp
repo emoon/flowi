@@ -401,7 +401,7 @@ static void generate_frame(void* user_data) {
     }
 
     Area_generate_circle(state->ctx);
-    fl_text(state->ctx, "Testing");
+    //fl_text(state->ctx, "Testing");
 
     fl_frame_end(state->ctx);
     render_flowi(*state, display_w, display_h);
@@ -420,7 +420,6 @@ extern "C" void fl_application_main_loop_impl(struct FlContext* ctx, FlMainLoopC
     state->user_data = user_data;
     state->counter = 2;
 
-    (void)fl_font_new_from_file_ctx(ctx, "data/montserrat-regular.ttf", 80, FlFontPlacementMode_Auto);
 
     // Run the loop correctly for the target environment
 #ifdef __EMSCRIPTEN__

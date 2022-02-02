@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 typedef struct FlUi {
-    FlTest data[4];
+    uint32_t dummy;
 } FlUi;
 
 void fl_ui_text_impl(struct FlContext* flowi_ctx, FlString text);

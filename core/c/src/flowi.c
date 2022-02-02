@@ -4,6 +4,7 @@
 #include <string.h>
 #include <freetype/freetype.h>
 
+#include <flowi_core/ui.h>
 #include "render.h"
 #include "allocator.h"
 #include "atlas.h"
@@ -333,13 +334,7 @@ void fl_frame_end(struct FlContext* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_text(struct FlContext* ctx, const char* text) {
-    fl_text_len(ctx, text, strlen(text));
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void fl_text_len(struct FlContext* ctx, const char* text, int text_len) {
+void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
     PrimitiveText* prim = Primitive_alloc_text(ctx->global_state);
 
 #if FL_VALIDATE_RANGES
@@ -350,8 +345,8 @@ void fl_text_len(struct FlContext* ctx, const char* text, int text_len) {
 
     // TODO: Copy text to string buffer
     prim->font_handle = ctx->current_font;
-    prim->text = text;
-    prim->len = text_len;
+    prim->text = text.str;
+    prim->len = text.len;
     prim->position_index = 0;  // TODO: Fixme
 }
 

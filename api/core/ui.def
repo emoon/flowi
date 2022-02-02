@@ -1,7 +1,7 @@
 
 struct Ui {
+    dummy: u32,
     [static] text(text: String),
-    data: [Test; 4],
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

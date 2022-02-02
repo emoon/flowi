@@ -64,13 +64,13 @@ FL_INLINE FlFont fl_font_new_from_memory_ctx(struct FlContext* flowi_ctx, const 
     fl_font_new_from_memory_ctx(flowi_ctx, name_, data, data_size, font_size, placement_mode)
 
 // Set the font as active when drawing text
-void fl_font_set_font_impl(struct FlContext* flowi_ctx, FlFont font);
+void fl_font_set_impl(struct FlContext* flowi_ctx, FlFont font);
 
-FL_INLINE void fl_font_set_font_ctx(struct FlContext* flowi_ctx, FlFont font) {
-    fl_font_set_font_impl(flowi_ctx, font);
+FL_INLINE void fl_font_set_ctx(struct FlContext* flowi_ctx, FlFont font) {
+    fl_font_set_impl(flowi_ctx, font);
 }
 
-#define fl_font_set_font(font) fl_font_set_font_ctx(flowi_ctx, font)
+#define fl_font_set(font) fl_font_set_ctx(flowi_ctx, font)
 
 // Set font active with specific size in pixels
 void fl_font_set_with_size_impl(struct FlContext* flowi_ctx, uint32_t size);
