@@ -20,8 +20,13 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static const bgfx::EmbeddedShader s_shaders[] = {BGFX_EMBEDDED_SHADER(color_fill_vs),
-                                                 BGFX_EMBEDDED_SHADER(color_fill_fs), BGFX_EMBEDDED_SHADER_END()};
+static const bgfx::EmbeddedShader s_shaders[] = {
+    BGFX_EMBEDDED_SHADER(color_fill_vs),
+    BGFX_EMBEDDED_SHADER(color_fill_fs),
+    BGFX_EMBEDDED_SHADER(vs_texture),
+    BGFX_EMBEDDED_SHADER(fs_texture),
+    BGFX_EMBEDDED_SHADER_END()
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -157,7 +162,7 @@ extern"C" struct FlContext* fl_application_new_impl(struct FlContext* ctx, FlStr
     int reset_flags = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8;
 
     bgfx::Init bgfxInit;
-    bgfxInit.type = bgfx::RendererType::Count;
+    bgfxInit.type = bgfx::RendererType::OpenGL;
     bgfxInit.resolution.width = state->window_width;
     bgfxInit.resolution.height = state->window_height;
     bgfxInit.resolution.reset = reset_flags;
@@ -170,7 +175,7 @@ extern"C" struct FlContext* fl_application_new_impl(struct FlContext* ctx, FlStr
         return NULL;
     }
 
-    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x001f001f, 1.0f, 0);
+    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x2f2f2fff, 1.0f, 0);
 
     state->flat_layout.begin()
         .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
@@ -189,8 +194,17 @@ extern"C" struct FlContext* fl_application_new_impl(struct FlContext* ctx, FlStr
         bgfx::createEmbeddedShader(s_shaders, type, "color_fill_vs"),
         bgfx::createEmbeddedShader(s_shaders, type, "color_fill_fs"));
 
+    state->texture_shader = bgfx::createProgram(
+        bgfx::createEmbeddedShader(s_shaders, type, "vs_texture"),
+        bgfx::createEmbeddedShader(s_shaders, type, "fs_texture"));
+
     if (!bgfx::isValid(state->flat_shader)) {
         printf("failed to init flat_shader shaders\n");
+        return NULL;
+    }
+
+    if (!bgfx::isValid(state->texture_shader)) {
+        printf("failed to init texture_shader shaders\n");
         return NULL;
     }
 
@@ -400,7 +414,7 @@ static void generate_frame(void* user_data) {
         state->main_callback(state->ctx, state->user_data);
     }
 
-    Area_generate_circle(state->ctx);
+    //Area_generate_circle(state->ctx);
     //fl_text(state->ctx, "Testing");
 
     fl_frame_end(state->ctx);

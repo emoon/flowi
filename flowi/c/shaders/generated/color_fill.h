@@ -17,3 +17,21 @@
 #include "color_fill_fs_dx11.h"
 #endif
 
+#include "vs_texture_glsl.h"
+#include "vs_texture_mtl.h"
+#include "vs_texture_spv.h"
+#include "vs_texture_essl.h"
+
+#include "fs_texture_glsl.h"
+#include "fs_texture_mtl.h"
+#include "fs_texture_spv.h"
+#include "fs_texture_essl.h"
+
+#if BX_PLATFORM_WINDOWS
+#include "vs_texture_dx9.h"
+#include "vs_texture_dx11.h"
+#include "fs_texture_dx9.h"
+#include "fs_texture_dx11.h"
+#endif
+
+
