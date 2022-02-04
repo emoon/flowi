@@ -28,8 +28,8 @@ struct LayoutArea {
     width: Sizing,
     height: Sizing,
 
-    [static] new() -> LayoutArea,
-    [static] from_children(children: *const [LayoutArea], row: i16, cols: i16),
+    [static] new(name: String) -> LayoutArea,
+    [static] from_children(name: String, children: *const [LayoutArea], row: i16, cols: i16) -> LayoutArea,
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

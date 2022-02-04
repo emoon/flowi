@@ -50,10 +50,10 @@ FL_INLINE FlFont fl_font_new_from_file_ctx(struct FlContext* flowi_ctx, const ch
 
 // Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some
 // casesLike when needing the accurate placement mode used by Harzbuff that needs to original ttf data
-FlFont fl_font_new_from_memory_impl(struct FlContext* flowi_ctx, FlString name, uint8_t* data, uint32_t data_size,
+FlFont fl_font_new_from_memory_impl(struct FlContext* flowi_ctx, FlString name, uint8_t data, uint32_t data_size,
                                     uint32_t font_size, FlFontPlacementMode placement_mode);
 
-FL_INLINE FlFont fl_font_new_from_memory_ctx(struct FlContext* flowi_ctx, const char* name, uint8_t* data,
+FL_INLINE FlFont fl_font_new_from_memory_ctx(struct FlContext* flowi_ctx, const char* name, uint8_t data,
                                              uint32_t data_size, uint32_t font_size,
                                              FlFontPlacementMode placement_mode) {
     FlString name_ = {name, 1, (uint32_t)strlen(name)};

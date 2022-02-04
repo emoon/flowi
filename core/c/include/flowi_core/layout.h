@@ -45,24 +45,27 @@ typedef struct FlLayoutArea {
     FlSizing height;
 } FlLayoutArea;
 
-FlLayoutArea fl_layout_area_new_impl(struct FlContext* flowi_ctx);
+FlLayoutArea fl_layout_area_new_impl(struct FlContext* flowi_ctx, FlString name);
 
-FL_INLINE FlLayoutArea fl_layout_area_new_ctx(struct FlContext* flowi_ctx) {
-    return fl_layout_area_new_impl(flowi_ctx);
+FL_INLINE FlLayoutArea fl_layout_area_new_ctx(struct FlContext* flowi_ctx, const char* name) {
+    FlString name_ = {name, 1, (uint32_t)strlen(name)};
+    return fl_layout_area_new_impl(flowi_ctx, name_);
 }
 
-#define fl_layout_area_new() fl_layout_area_new_ctx(flowi_ctx)
+#define fl_layout_area_new(name_) fl_layout_area_new_ctx(flowi_ctx, name_)
 
-void fl_layout_area_from_children_impl(struct FlContext* flowi_ctx, FlLayoutArea children, uint32_t children_size,
-                                       int16_t row, int16_t cols);
+FlLayoutArea fl_layout_area_from_children_impl(struct FlContext* flowi_ctx, FlString name, FlLayoutArea children,
+                                               uint32_t children_size, int16_t row, int16_t cols);
 
-FL_INLINE void fl_layout_area_from_children_ctx(struct FlContext* flowi_ctx, FlLayoutArea children,
-                                                uint32_t children_size, int16_t row, int16_t cols) {
-    fl_layout_area_from_children_impl(flowi_ctx, children, children_size, row, cols);
+FL_INLINE FlLayoutArea fl_layout_area_from_children_ctx(struct FlContext* flowi_ctx, const char* name,
+                                                        FlLayoutArea children, uint32_t children_size, int16_t row,
+                                                        int16_t cols) {
+    FlString name_ = {name, 1, (uint32_t)strlen(name)};
+    return fl_layout_area_from_children_impl(flowi_ctx, name_, children, children_size, row, cols);
 }
 
-#define fl_layout_area_from_children(children, children_size, row, cols) \
-    fl_layout_area_from_children_ctx(flowi_ctx, children, children_size, row, cols)
+#define fl_layout_area_from_children(name_, children, children_size, row, cols) \
+    fl_layout_area_from_children_ctx(flowi_ctx, name_, children, children_size, row, cols)
 
 #ifdef __cplusplus
 }

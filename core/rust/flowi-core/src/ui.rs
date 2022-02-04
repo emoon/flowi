@@ -9,7 +9,7 @@ extern "C" {
 
 #[repr(C)]
 pub struct Ui {
-    data: Test,
+    dummy: u32,
 }
 
 impl Ui {

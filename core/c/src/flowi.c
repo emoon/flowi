@@ -75,11 +75,6 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
     FlContext* ctx = malloc(sizeof(FlContext));
     memset(ctx, 0, sizeof(FlContext));
 
-    // TODO: Use custom allocator
-    ctx->positions = 0;//(vec128*)malloc(sizeof(vec128) * (MAX_CONTROLS + MEMORY_PADDING));
-    ctx->widget_ids = 0;//(u32*)malloc(sizeof(u32) * (MAX_CONTROLS + MEMORY_PADDING));
-    ctx->items_with_text = 0;//(ItemWithText*)malloc(sizeof(ItemWithText) * (MAX_CONTROLS + MEMORY_PADDING));
-
     // TODO: Configure these values
     int vertex_sizes[VertexAllocType_SIZEOF] = {1024 * 1024, 1024 * 1024};
     int index_sizes[VertexAllocType_SIZEOF] = {512 * 1024, 512 * 1024};
