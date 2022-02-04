@@ -1,0 +1,2353 @@
+Archive member included to satisfy reference by file (symbol)
+
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi.a(application-cpp-0cdc75becfd67dab50cd067274e662f5.o)
+                              /home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/__flowi_testbed/testbed-c-dbc862dc4c3ef142b5dabc1f74e662f5.o (symbol from plugin) (fl_application_new_impl)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi-core.a(flowi-c-5988d06f303a5c97b13e1fd174e662f5.o)
+                              application-cpp-0cdc75becfd67dab50cd067274e662f5.o (symbol from plugin) (fl_context_create)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi-core.a(font-c-ab1d498237f6c3f2beb50acf74e662f5.o)
+                              /home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/__flowi_testbed/testbed-c-dbc862dc4c3ef142b5dabc1f74e662f5.o (symbol from plugin) (fl_font_new_from_file_impl)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi-core.a(io-c-51cc54dd0f7d7a9b2428bb8674e662f5.o)
+                              font-c-ab1d498237f6c3f2beb50acf74e662f5.o (symbol from plugin) (Errors_add)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi-core.a(text-c-ab1d49828cbbdacdbeb50acf74e662f5.o)
+                              flowi-c-5988d06f303a5c97b13e1fd174e662f5.o (symbol from plugin) (utf8_to_codepoints_u32)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi-core.a(vertex_allocator-c-22c3c7ad9c3c1f1d17c4e75374e662f5.o)
+                              flowi-c-5988d06f303a5c97b13e1fd174e662f5.o (symbol from plugin) (VertexAllocator_create)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi-core.a(atlas-c-65cb4f1b7cd4893eb13e1fd174e662f5.o)
+                              font-c-ab1d498237f6c3f2beb50acf74e662f5.o (symbol from plugin) (Atlas_add_rect)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi-core.a(command_buffer-c-7f098e0bb717039a28ccb28c74e662f5.o)
+                              flowi-c-5988d06f303a5c97b13e1fd174e662f5.o (symbol from plugin) (CommandBuffer_create)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi-core.a(linear_allocator-c-ca7029ad19d4645017c4e75374e662f5.o)
+                              vertex_allocator-c-22c3c7ad9c3c1f1d17c4e75374e662f5.o (symbol from plugin) (LinearAllocator_create_with_allocator)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(amalgamated-cpp-37e51b6f1a2422881a4c396b8ae743a7.o)
+                              application-cpp-0cdc75becfd67dab50cd067274e662f5.o (symbol from plugin) (bx::mtxOrtho(float*, float, float, float, float, float, float, float, bool, bx::Handness::Enum))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o)
+                              application-cpp-0cdc75becfd67dab50cd067274e662f5.o (symbol from plugin) (bgfx::setPlatformData(bgfx::PlatformData const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(vertexlayout-cpp-c6439a981a242288f29f12656e88b5a8.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::initAttribTypeSizeTable(bgfx::RendererType::Enum))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(topology-cpp-ae74a5ad1a242288b27313878a8f35c9.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::topologyConvert(bgfx::TopologyConvert::Enum, void*, unsigned int, void const*, unsigned int, bool, bx::AllocatorI*))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_agc-cpp-635bf8fe1a242288f29f1265a80a4b54.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::agc::rendererCreate(bgfx::Init const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_gnm-cpp-635bf8fe1a242288f29f12657242ee5b.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::gnm::rendererCreate(bgfx::Init const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_webgpu-cpp-635bf8fe1a2422888b863e114a0fac78.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::webgpu::rendererCreate(bgfx::Init const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_nvn-cpp-635bf8fe1a242288f29f126561b317c8.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::nvn::rendererCreate(bgfx::Init const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_gl-cpp-635bf8fe1a24228861f8928054ce8619.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::gl::rendererDestroy())
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_vk-cpp-635bf8fe1a24228861f892805e69eadb.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::vk::rendererCreate(bgfx::Init const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_noop-cpp-635bf8fe1a242288a9eea0d56bb2e3c5.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::noop::rendererCreate(bgfx::Init const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_d3d9-cpp-635bf8fe1a242288a9eea0d542b71200.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::d3d9::rendererCreate(bgfx::Init const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_d3d11-cpp-635bf8fe1a242288790926394a8fe40f.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::d3d11::rendererCreate(bgfx::Init const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(renderer_d3d12-cpp-635bf8fe1a24228879092639007f8579.o)
+                              bgfx-cpp-0e26231a1a242288d75dad2774e662f5.o (symbol from plugin) (bgfx::d3d12::rendererCreate(bgfx::Init const&))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(glcontext_glx-cpp-07f724e41a242288a9eea0d586527c7c.o)
+                              renderer_gl-cpp-635bf8fe1a24228861f8928054ce8619.o (symbol from plugin) (bgfx::gl::GlContext::destroy())
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(image-cpp-a29be9881a2422888891809a3a237c27.o)
+                              renderer_gl-cpp-635bf8fe1a24228861f8928054ce8619.o (symbol from plugin) (bimg::isCompressed(bimg::TextureFormat::Enum))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(image_gnf-cpp-a29be9881a2422887166d185c34c3b2b.o)
+                              image-cpp-a29be9881a2422888891809a3a237c27.o (symbol from plugin) (bimg::imageParseGnf(bimg::ImageContainer&, bx::ReaderSeekerI*, bx::Error*))
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a(debug_renderdoc-cpp-9ea4d9911a2422888b863e111e0bbba9.o)
+                              renderer_gl-cpp-635bf8fe1a24228861f8928054ce8619.o (symbol from plugin) (bgfx::loadRenderDoc())
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(window-c-36a8892d1a2422888891809a3a237c27.o)
+                              application-cpp-0cdc75becfd67dab50cd067274e662f5.o (symbol from plugin) (glfwWindowHint)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(context-c-40fd1e0e1a2422884eb6bf5509b73575.o)
+                              window-c-36a8892d1a2422888891809a3a237c27.o (symbol from plugin) (_glfwIsValidContextConfig)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(init-c-6e29af351a242288d75dad2774e662f5.o)
+                              window-c-36a8892d1a2422888891809a3a237c27.o (symbol from plugin) (_glfw)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(input-c-b14264621a242288fb6bc9ba74e662f5.o)
+                              window-c-36a8892d1a2422888891809a3a237c27.o (symbol from plugin) (_glfwInputKey)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(monitor-c-67ec41a31a2422884eb6bf552e4dc8db.o)
+                              init-c-6e29af351a242288d75dad2774e662f5.o (symbol from plugin) (_glfwFreeMonitor)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(vulkan-c-bf7b51701a2422888891809a3a237c27.o)
+                              init-c-6e29af351a242288d75dad2774e662f5.o (symbol from plugin) (_glfwTerminateVulkan)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(x11_init-c-e5d8b17f1a242288b273138798efe23c.o)
+                              init-c-6e29af351a242288d75dad2774e662f5.o (symbol from plugin) (_glfwPlatformInit)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(x11_monitor-c-1c6c6b571a24228861f8928057617ddd.o)
+                              x11_init-c-e5d8b17f1a242288b273138798efe23c.o (symbol from plugin) (_glfwPollMonitorsX11)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(x11_window-c-58984d111a2422887166d1852ffb9f06.o)
+                              x11_init-c-e5d8b17f1a242288b273138798efe23c.o (symbol from plugin) (_glfwGetWindowPropertyX11)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(linux_joystick-c-91f010eb1a2422887909263977d7d59b.o)
+                              x11_init-c-e5d8b17f1a242288b273138798efe23c.o (symbol from plugin) (_glfwInitJoysticksLinux)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(posix_thread-c-e4caa3c11a242288f29f1265317288b5.o)
+                              init-c-6e29af351a242288d75dad2774e662f5.o (symbol from plugin) (_glfwPlatformCreateTls)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(posix_time-c-e4caa3c11a2422887166d1850867124e.o)
+                              x11_init-c-e5d8b17f1a242288b273138798efe23c.o (symbol from plugin) (_glfwInitTimerPOSIX)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(xkb_unicode-c-047230bf1a24228861f892808bb48273.o)
+                              x11_window-c-58984d111a2422887166d1852ffb9f06.o (symbol from plugin) (_glfwKeySym2Unicode)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(osmesa_context-c-75d29ef41a24228879092639878c08ba.o)
+                              x11_window-c-58984d111a2422887166d1852ffb9f06.o (symbol from plugin) (_glfwInitOSMesa)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(egl_context-c-7cdcfff71a24228861f8928038ae2bbd.o)
+                              x11_init-c-e5d8b17f1a242288b273138798efe23c.o (symbol from plugin) (_glfwTerminateEGL)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a(glx_context-c-606ab9cf1a24228861f8928038ae2bbd.o)
+                              x11_window-c-58984d111a2422887166d1852ffb9f06.o (symbol from plugin) (_glfwInitGLX)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(ftbase-c-7dc1caefd13e28dd8b863e11ca69352f.o)
+                              font-c-ab1d498237f6c3f2beb50acf74e662f5.o (symbol from plugin) (FT_Error_String)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o)
+                              font-c-ab1d498237f6c3f2beb50acf74e662f5.o (symbol from plugin) (FT_Init_FreeType)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(bdf-c-8f637750d13e28dd61f8928087107612.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (bdf_driver_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(cff-c-214e4ba9d13e28dd61f8928007a4735e.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (cff_driver_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(type1cid-c-bc523181d13e28dd7597755114a67757.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (t1cid_driver_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(pcf-c-70c1445ad13e28dd61f89280ac375880.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (pcf_driver_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(pfr-c-1b1ae098d13e28dd61f892809eb63b5b.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (pfr_driver_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(psaux-c-fbff09d0d13e28dd8b863e11d73ba27e.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (psaux_module_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(pshinter-c-fbff09d0d13e28dd261805de338b66cd.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (pshinter_module_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(psnames-c-fbff09d0d13e28dd94864c6a9f55a355.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (psnames_module_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(raster-c-cef1f154d13e28dd0ed44f2f36d81f67.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (ft_raster1_renderer_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(sdf-c-20707a2fd13e28dd61f8928058588906.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (ft_bitmap_sdf_renderer_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(sfnt-c-5aa0e183d13e28dda9eea0d576479639.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (sfnt_module_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(smooth-c-dede864dd13e28dd0ed44f2fdc39c002.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (ft_smooth_renderer_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(truetype-c-5bd5b972d13e28dd261805de4e0f6314.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (tt_driver_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(type1-c-270ed4ecd13e28dd8b863e11c7bffbfd.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (t1_driver_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(type42-c-270ed4ecd13e28dd0ed44f2fa04a7c4e.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (t42_driver_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(winfnt-c-c5b50471d13e28dd94864c6aff1b7a90.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (winfnt_driver_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(ftdebug-c-7dc1caefd13e28dd75977551317c4304.o)
+                              smooth-c-dede864dd13e28dd0ed44f2fdc39c002.o (symbol from plugin) (FT_Trace_Disable)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(autofit-c-b7a429e4d13e28dd94864c6a52d69968.o)
+                              ftinit-c-7dc1caefd13e28dd8b863e110f3b03ab.o (symbol from plugin) (autofit_module_class)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(ftsystem-c-7dc1caefd13e28dd0ed44f2fe994e4f8.o)
+                              ftbase-c-7dc1caefd13e28dd8b863e11ca69352f.o (symbol from plugin) (FT_Stream_Open)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(ftbitmap-c-7dc1caefd13e28dd0ed44f2f1349bad0.o)
+                              sdf-c-20707a2fd13e28dd61f8928058588906.o (symbol from plugin) (FT_Bitmap_Init)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(ftgzip-c-189dfe16d13e28dd8b863e11edea0448.o)
+                              pcf-c-70c1445ad13e28dd61f89280ac375880.o (symbol from plugin) (FT_Stream_OpenGzip)
+/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a(ftlzw-c-9a20cb5fd13e28dda9eea0d59846a725.o)
+                              pcf-c-70c1445ad13e28dd61f89280ac375880.o (symbol from plugin) (FT_Stream_OpenLZW)
+/usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+                              /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o (__libc_csu_init)
+
+Merging program properties
+
+
+As-needed library included to satisfy reference by file (symbol)
+
+libX11.so.6                   x11_window-c-58984d111a2422887166d1852ffb9f06.o (symbol from plugin) (XConvertSelection)
+libGL.so.1                    glcontext_glx-cpp-07f724e41a242288a9eea0d586527c7c.o (symbol from plugin) (glXGetVisualFromFBConfig)
+libpthread.so.0               /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libX11.so (write@@GLIBC_2.2.5)
+libc.so.6                     /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o (__libc_start_main@@GLIBC_2.2.5)
+libdl.so.2                    /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o (dlclose@@GLIBC_2.2.5)
+libstdc++.so.6                /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o (vtable for __cxxabiv1::__vmi_class_type_info@@CXXABI_1.3)
+libm.so.6                     /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o (round@@GLIBC_2.2.5)
+
+Discarded input sections
+
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crti.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crti.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/crtendS.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/gcc/x86_64-linux-gnu/10/crtendS.o
+ .note.gnu.property
+                0x0000000000000000       0x20 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crtn.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crtn.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crti.o
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+LOAD /home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/__flowi_testbed/testbed-c-dbc862dc4c3ef142b5dabc1f74e662f5.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+LOAD /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+LOAD /home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi.a
+LOAD /home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libflowi-core.a
+LOAD /home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libbgfx.a
+LOAD /home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libglfw.a
+LOAD /home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/libfreetype2.a
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/librt.so
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libdl.so
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libX11.so
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libGL.so
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libpthread.so
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libdl.so
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/libstdc++.so
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libm.so
+START GROUP
+LOAD /lib/x86_64-linux-gnu/libm.so.6
+LOAD /lib/x86_64-linux-gnu/libmvec.so.1
+END GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/libgcc_s.so
+START GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libgcc_s.so.1
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/libgcc.a
+END GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/libgcc.a
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libc.so
+START GROUP
+LOAD /lib/x86_64-linux-gnu/libc.so.6
+LOAD /usr/lib/x86_64-linux-gnu/libc_nonshared.a
+LOAD /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+END GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/libgcc_s.so
+START GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/libgcc_s.so.1
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/libgcc.a
+END GROUP
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/libgcc.a
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/crtendS.o
+LOAD /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crtn.o
+                [!provide]                        PROVIDE (__executable_start = SEGMENT_START ("text-segment", 0x0))
+                0x0000000000000318                . = (SEGMENT_START ("text-segment", 0x0) + SIZEOF_HEADERS)
+
+.interp         0x0000000000000318       0x1c
+ *(.interp)
+ .interp        0x0000000000000318       0x1c /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.note.gnu.property
+                0x0000000000000338       0x30
+ .note.gnu.property
+                0x0000000000000338       0x30 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.note.gnu.build-id
+                0x0000000000000368       0x24
+ *(.note.gnu.build-id)
+ .note.gnu.build-id
+                0x0000000000000368       0x24 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.note.ABI-tag   0x000000000000038c       0x20
+ .note.ABI-tag  0x000000000000038c       0x20 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.hash
+ *(.hash)
+
+.gnu.hash       0x00000000000003b0       0x24
+ *(.gnu.hash)
+ .gnu.hash      0x00000000000003b0       0x24 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.dynsym         0x00000000000003d8     0x1308
+ *(.dynsym)
+ .dynsym        0x00000000000003d8     0x1308 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.dynstr         0x00000000000016e0      0xb4d
+ *(.dynstr)
+ .dynstr        0x00000000000016e0      0xb4d /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.gnu.version    0x000000000000222e      0x196
+ *(.gnu.version)
+ .gnu.version   0x000000000000222e      0x196 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.gnu.version_d  0x00000000000023c8        0x0
+ *(.gnu.version_d)
+ .gnu.version_d
+                0x00000000000023c8        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.gnu.version_r  0x00000000000023c8      0x130
+ *(.gnu.version_r)
+ .gnu.version_r
+                0x00000000000023c8      0x130 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.rela.dyn       0x00000000000024f8     0xf168
+ *(.rela.init)
+ *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*)
+ .rela.text     0x00000000000024f8        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.fini)
+ *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*)
+ *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*)
+ .rela.data.rel.ro
+                0x00000000000024f8      0x648 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.data.rel.local
+                0x0000000000002b40     0x1a28 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.data.rel.ro.local
+                0x0000000000004568     0xc4b0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.data     0x0000000000010a18      0xb58 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*)
+ *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*)
+ *(.rela.ctors)
+ *(.rela.dtors)
+ *(.rela.got)
+ .rela.got      0x0000000000011570       0xa8 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*)
+ .rela.bss      0x0000000000011618        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.ldata .rela.ldata.* .rela.gnu.linkonce.l.*)
+ *(.rela.lbss .rela.lbss.* .rela.gnu.linkonce.lb.*)
+ *(.rela.lrodata .rela.lrodata.* .rela.gnu.linkonce.lr.*)
+ *(.rela.ifunc)
+ .rela.ifunc    0x0000000000011618        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.fini_array
+                0x0000000000011618       0x18 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ .rela.init_array
+                0x0000000000011630       0x30 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+
+.rela.plt       0x0000000000011660     0x1200
+ *(.rela.plt)
+ .rela.plt      0x0000000000011660     0x1200 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ *(.rela.iplt)
+                0x0000000000013000                . = ALIGN (CONSTANT (MAXPAGESIZE))
+
+.init           0x0000000000013000       0x1b
+ *(SORT_NONE(.init))
+ .init          0x0000000000013000       0x16 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crti.o
+                0x0000000000013000                _init
+ .init          0x0000000000013016        0x5 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crtn.o
+
+.plt            0x0000000000013020      0xc10
+ *(.plt)
+ .plt           0x0000000000013020      0xc10 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ *(.iplt)
+
+.plt.got        0x0000000000013c30       0x10
+ *(.plt.got)
+ .plt.got       0x0000000000013c30       0x10 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000013c30                __cxa_finalize@@GLIBC_2.2.5
+
+.plt.sec        0x0000000000013c40      0xc00
+ *(.plt.sec)
+ .plt.sec       0x0000000000013c40      0xc00 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000013c40                __printf_chk@@GLIBC_2.3.4
+                0x0000000000013c50                ftell@@GLIBC_2.2.5
+                0x0000000000013c60                __errno_location@@GLIBC_2.2.5
+                0x0000000000013c70                XConvertSelection
+                0x0000000000013c80                XUnsetICFocus
+                0x0000000000013c90                strcspn@@GLIBC_2.2.5
+                0x0000000000013ca0                XSetScreenSaver
+                0x0000000000013cb0                __longjmp_chk@@GLIBC_2.11
+                0x0000000000013cc0                XrmUniqueQuark
+                0x0000000000013cd0                XAllocSizeHints
+                0x0000000000013ce0                XFreeColormap
+                0x0000000000013cf0                strstr@@GLIBC_2.2.5
+                0x0000000000013d00                XResourceManagerString
+                0x0000000000013d10                XSendEvent
+                0x0000000000013d20                XGetWindowProperty
+                0x0000000000013d30                glXGetFBConfigAttrib
+                0x0000000000013d40                XGetIMValues
+                0x0000000000013d50                XGetScreenSaver
+                0x0000000000013d60                XSetErrorHandler
+                0x0000000000013d70                strtoul@@GLIBC_2.2.5
+                0x0000000000013d80                Xutf8SetWMProperties
+                0x0000000000013d90                XQueryExtension
+                0x0000000000013da0                strerror@@GLIBC_2.2.5
+                0x0000000000013db0                XrmInitialize
+                0x0000000000013dc0                XUndefineCursor
+                0x0000000000013dd0                XFreeEventData
+                0x0000000000013de0                XGrabPointer
+                0x0000000000013df0                XFindContext
+                0x0000000000013e00                XPeekEvent
+                0x0000000000013e10                strspn@@GLIBC_2.2.5
+                0x0000000000013e20                round@@GLIBC_2.2.5
+                0x0000000000013e30                XSetWMHints
+                0x0000000000013e40                strlen@@GLIBC_2.2.5
+                0x0000000000013e50                memcmp@@GLIBC_2.2.5
+                0x0000000000013e60                XUnlockDisplay
+                0x0000000000013e70                inotify_rm_watch@@GLIBC_2.4
+                0x0000000000013e80                strncmp@@GLIBC_2.2.5
+                0x0000000000013e90                XSetWMNormalHints
+                0x0000000000013ea0                XFilterEvent
+                0x0000000000013eb0                XIconifyWindow
+                0x0000000000013ec0                strncpy@@GLIBC_2.2.5
+                0x0000000000013ed0                inotify_add_watch@@GLIBC_2.4
+                0x0000000000013ee0                XLockDisplay
+                0x0000000000013ef0                memset@@GLIBC_2.2.5
+                0x0000000000013f00                abort@@GLIBC_2.2.5
+                0x0000000000013f10                XSetWMProtocols
+                0x0000000000013f20                XSetClassHint
+                0x0000000000013f30                __sprintf_chk@@GLIBC_2.3.4
+                0x0000000000013f40                pthread_key_create@@GLIBC_2.2.5
+                0x0000000000013f50                __snprintf_chk@@GLIBC_2.3.4
+                0x0000000000013f60                XSelectInput
+                0x0000000000013f70                XCreateColormap
+                0x0000000000013f80                __cxa_guard_release@@CXXABI_1.3
+                0x0000000000013f90                glXDestroyContext
+                0x0000000000013fa0                sysconf@@GLIBC_2.2.5
+                0x0000000000013fb0                __assert_fail@@GLIBC_2.2.5
+                0x0000000000013fc0                calloc@@GLIBC_2.2.5
+                0x0000000000013fd0                Xutf8LookupString
+                0x0000000000013fe0                glXGetProcAddress
+                0x0000000000013ff0                open@@GLIBC_2.2.5
+                0x0000000000014000                dlclose@@GLIBC_2.2.5
+                0x0000000000014010                XInternAtom
+                0x0000000000014020                pthread_mutex_unlock@@GLIBC_2.2.5
+                0x0000000000014030                XrmGetResource
+                0x0000000000014040                XSetInputFocus
+                0x0000000000014050                strtod@@GLIBC_2.2.5
+                0x0000000000014060                XAllocWMHints
+                0x0000000000014070                glXMakeCurrent
+                0x0000000000014080                __vsnprintf_chk@@GLIBC_2.3.4
+                0x0000000000014090                XGetWMNormalHints
+                0x00000000000140a0                __memmove_chk@@GLIBC_2.3.4
+                0x00000000000140b0                memcpy@@GLIBC_2.14
+                0x00000000000140c0                XGetVisualInfo
+                0x00000000000140d0                XInitThreads
+                0x00000000000140e0                XMoveWindow
+                0x00000000000140f0                XkbGetState
+                0x0000000000014100                XSaveContext
+                0x0000000000014110                XkbQueryExtension
+                0x0000000000014120                XChangeProperty
+                0x0000000000014130                XrmDestroyDatabase
+                0x0000000000014140                XLookupString
+                0x0000000000014150                XMoveResizeWindow
+                0x0000000000014160                XPending
+                0x0000000000014170                XCreateIC
+                0x0000000000014180                setlocale@@GLIBC_2.2.5
+                0x0000000000014190                XkbFreeNames
+                0x00000000000141a0                clock_gettime@@GLIBC_2.17
+                0x00000000000141b0                XDestroyIC
+                0x00000000000141c0                strcpy@@GLIBC_2.2.5
+                0x00000000000141d0                XkbGetMap
+                0x00000000000141e0                XUngrabPointer
+                0x00000000000141f0                select@@GLIBC_2.2.5
+                0x0000000000014200                __isoc99_sscanf@@GLIBC_2.7
+                0x0000000000014210                fclose@@GLIBC_2.2.5
+                0x0000000000014220                XGetEventData
+                0x0000000000014230                regfree@@GLIBC_2.2.5
+                0x0000000000014240                operator delete(void*, unsigned long)@@CXXABI_1.3.9
+                0x0000000000014250                XCloseIM
+                0x0000000000014260                XFreeCursor
+                0x0000000000014270                XSupportsLocale
+                0x0000000000014280                XEventsQueued
+                0x0000000000014290                strrchr@@GLIBC_2.2.5
+                0x00000000000142a0                fseek@@GLIBC_2.2.5
+                0x00000000000142b0                memchr@@GLIBC_2.2.5
+                0x00000000000142c0                __stack_chk_fail@@GLIBC_2.4
+                0x00000000000142d0                XMapWindow
+                0x00000000000142e0                fputs@@GLIBC_2.2.5
+                0x00000000000142f0                XQueryPointer
+                0x0000000000014300                XRaiseWindow
+                0x0000000000014310                regcomp@@GLIBC_2.2.5
+                0x0000000000014320                pthread_mutex_destroy@@GLIBC_2.2.5
+                0x0000000000014330                XDisplayKeycodes
+                0x0000000000014340                fflush@@GLIBC_2.2.5
+                0x0000000000014350                fopen@@GLIBC_2.2.5
+                0x0000000000014360                free@@GLIBC_2.2.5
+                0x0000000000014370                exit@@GLIBC_2.2.5
+                0x0000000000014380                getenv@@GLIBC_2.2.5
+                0x0000000000014390                glXCreateContext
+                0x00000000000143a0                regexec@@GLIBC_2.3.4
+                0x00000000000143b0                XFree
+                0x00000000000143c0                XSetLocaleModifiers
+                0x00000000000143d0                malloc@@GLIBC_2.2.5
+                0x00000000000143e0                XCheckTypedWindowEvent
+                0x00000000000143f0                pthread_key_delete@@GLIBC_2.2.5
+                0x0000000000014400                glXQueryExtensionsString
+                0x0000000000014410                glXChooseFBConfig
+                0x0000000000014420                XOpenDisplay
+                0x0000000000014430                glXQueryVersion
+                0x0000000000014440                pthread_getspecific@@GLIBC_2.2.5
+                0x0000000000014450                strcmp@@GLIBC_2.2.5
+                0x0000000000014460                strtol@@GLIBC_2.2.5
+                0x0000000000014470                ioctl@@GLIBC_2.2.5
+                0x0000000000014480                glXGetVisualFromFBConfig
+                0x0000000000014490                XNextEvent
+                0x00000000000144a0                XGetErrorText
+                0x00000000000144b0                read@@GLIBC_2.2.5
+                0x00000000000144c0                _setjmp@@GLIBC_2.2.5
+                0x00000000000144d0                getpid@@GLIBC_2.2.5
+                0x00000000000144e0                dlopen@@GLIBC_2.2.5
+                0x00000000000144f0                pthread_mutex_lock@@GLIBC_2.2.5
+                0x0000000000014500                XkbSelectEventDetails
+                0x0000000000014510                XUnmapWindow
+                0x0000000000014520                pthread_mutex_init@@GLIBC_2.2.5
+                0x0000000000014530                fread@@GLIBC_2.2.5
+                0x0000000000014540                XWarpPointer
+                0x0000000000014550                XAllocClassHint
+                0x0000000000014560                opendir@@GLIBC_2.2.5
+                0x0000000000014570                ftello64@@GLIBC_2.2.5
+                0x0000000000014580                XDeleteContext
+                0x0000000000014590                readdir@@GLIBC_2.2.5
+                0x00000000000145a0                XFlush
+                0x00000000000145b0                puts@@GLIBC_2.2.5
+                0x00000000000145c0                XCreateWindow
+                0x00000000000145d0                strtok@@GLIBC_2.2.5
+                0x00000000000145e0                XkbFreeKeyboard
+                0x00000000000145f0                XDestroyWindow
+                0x0000000000014600                __fdelt_chk@@GLIBC_2.15
+                0x0000000000014610                closedir@@GLIBC_2.2.5
+                0x0000000000014620                XChangeWindowAttributes
+                0x0000000000014630                gettimeofday@@GLIBC_2.2.5
+                0x0000000000014640                XTranslateCoordinates
+                0x0000000000014650                XkbGetNames
+                0x0000000000014660                memmove@@GLIBC_2.2.5
+                0x0000000000014670                XDeleteProperty
+                0x0000000000014680                realloc@@GLIBC_2.2.5
+                0x0000000000014690                __fprintf_chk@@GLIBC_2.3.4
+                0x00000000000146a0                fseeko64@@GLIBC_2.2.5
+                0x00000000000146b0                XSetICFocus
+                0x00000000000146c0                XrmGetStringDatabase
+                0x00000000000146d0                XGetICValues
+                0x00000000000146e0                __memcpy_chk@@GLIBC_2.3.4
+                0x00000000000146f0                XOpenIM
+                0x0000000000014700                XDefineCursor
+                0x0000000000014710                inotify_init1@@GLIBC_2.9
+                0x0000000000014720                strcat@@GLIBC_2.2.5
+                0x0000000000014730                XGetWindowAttributes
+                0x0000000000014740                XkbSetDetectableAutoRepeat
+                0x0000000000014750                XGetKeyboardMapping
+                0x0000000000014760                __cxa_guard_acquire@@CXXABI_1.3
+                0x0000000000014770                pthread_setspecific@@GLIBC_2.2.5
+                0x0000000000014780                glXSwapBuffers
+                0x0000000000014790                __isoc99_fscanf@@GLIBC_2.7
+                0x00000000000147a0                dlsym@@GLIBC_2.2.5
+                0x00000000000147b0                XGetSelectionOwner
+                0x00000000000147c0                qsort@@GLIBC_2.2.5
+                0x00000000000147d0                XCloseDisplay
+                0x00000000000147e0                XSync
+                0x00000000000147f0                XMapRaised
+                0x0000000000014800                XQLength
+                0x0000000000014810                fwrite@@GLIBC_2.2.5
+                0x0000000000014820                close@@GLIBC_2.2.5
+                0x0000000000014830                XCheckIfEvent
+
+.text           0x0000000000014840    0xe7355
+ *(.text.unlikely .text.*_unlikely .text.unlikely.*)
+ .text.unlikely
+                0x0000000000014840       0x1b /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ *fill*         0x000000000001485b        0x1 
+ .text.unlikely
+                0x000000000001485c        0xa /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+ .text.unlikely
+                0x0000000000014866       0x2a /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+ .text.unlikely
+                0x0000000000014890       0x54 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+ .text.unlikely
+                0x00000000000148e4        0x3 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+ .text.unlikely
+                0x00000000000148e7      0x40a /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+ .text.unlikely
+                0x0000000000014cf1       0x13 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+ .text.unlikely
+                0x0000000000014d04       0x1f /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+ .text.unlikely
+                0x0000000000014d23       0x86 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ .text.unlikely
+                0x0000000000014da9       0xb4 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+ .text.unlikely
+                0x0000000000014e5d        0xe /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+ *(.text.exit .text.exit.*)
+ *(.text.startup .text.startup.*)
+ *fill*         0x0000000000014e6b        0x5 
+ .text.startup  0x0000000000014e70     0x2151 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+                0x0000000000014e70                main
+ *fill*         0x0000000000016fc1        0xf 
+ .text.startup  0x0000000000016fd0       0x34 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+ *(.text.hot .text.hot.*)
+ *(SORT_BY_NAME(.text.sorted.*))
+ *(.text .stub .text.* .gnu.linkonce.t.*)
+ *fill*         0x0000000000017004        0xc 
+ .text          0x0000000000017010       0x2f /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000017010                _start
+ .text          0x000000000001703f        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crti.o
+ *fill*         0x000000000001703f        0x1 
+ .text          0x0000000000017040       0xb9 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+ *fill*         0x00000000000170f9        0x7 
+ .text          0x0000000000017100     0x9728 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+                0x0000000000017100                bx::DefaultAllocator::~DefaultAllocator()
+                0x0000000000017120                bx::StaticMemoryBlock::more(unsigned int)
+                0x0000000000017130                bx::StaticMemoryBlock::getSize()
+                0x00000000000173b0                bx::MemoryReader::seek(long, bx::Whence::Enum) [clone .lto_priv.0]
+                0x0000000000017440                non-virtual thunk to bx::MemoryReader::seek(long, bx::Whence::Enum)
+                0x00000000000174d0                bx::MemoryWriter::seek(long, bx::Whence::Enum) [clone .lto_priv.0]
+                0x0000000000017560                non-virtual thunk to bx::MemoryWriter::seek(long, bx::Whence::Enum)
+                0x0000000000017610                main_loop
+                0x00000000000178d0                bx::FileWriter::open(bx::FilePath const&, bool, bx::Error*)
+                0x0000000000017b20                bx::FileWriterImpl::~FileWriterImpl() [clone .lto_priv.0]
+                0x0000000000017ca0                bx::FileWriterImpl::close() [clone .lto_priv.0]
+                0x0000000000017d20                bx::FileWriter::~FileWriter()
+                0x0000000000017fe0                bx::FileWriter::close()
+                0x0000000000018030                non-virtual thunk to bx::FileWriter::close()
+                0x00000000000180b0                free_malloc.lto_priv.0
+                0x0000000000018180                bx::MemoryReader::read(void*, int, bx::Error*)
+                0x00000000000182b0                bx::MemoryWriter::write(void const*, int, bx::Error*)
+                0x00000000000195d0                bx::DefaultAllocator::realloc(void*, unsigned long, unsigned long, char const*, unsigned int)
+                0x00000000000197d0                bx::FileWriterImpl::write(void const*, int, bx::Error*) [clone .lto_priv.0]
+                0x00000000000199f0                bx::FileWriter::write(void const*, int, bx::Error*)
+                0x0000000000019b30                non-virtual thunk to bx::FileWriter::write(void const*, int, bx::Error*)
+                0x000000000001b920                draw_text
+                0x000000000001c020                generate_glyphs
+                0x000000000001cc40                bx::write(bx::WriterI*, char const*, bx::Error*)
+                0x000000000001ce50                bx::findIdentifierMatch(bx::StringView const&, bx::StringView const&)
+                0x000000000001d140                bx::write(bx::WriterI*, bx::Error*, char const*, ...)
+                0x000000000001d240                bx::vsnprintf(char*, int, char const*, __va_list_tag*)
+                0x000000000001d5c0                bx::debugPrintfVargs(char const*, __va_list_tag*)
+                0x000000000001d6e0                bx::snprintf(char*, int, char const*, ...)
+                0x000000000001d790                bx::getHPCounter()
+ *fill*         0x0000000000020828        0x8 
+ .text          0x0000000000020830     0xa381 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+                0x0000000000020830                bgfx::CommandBuffer::resize(unsigned int)
+                0x0000000000020870                bgfx::CallbackStub::profilerBegin(char const*, unsigned int, char const*, unsigned short)
+                0x0000000000020870                bgfx::CallbackStub::profilerBeginLiteral(char const*, unsigned int, char const*, unsigned short)
+                0x0000000000020880                bgfx::gl::RendererContextGL::updateTextureEnd()
+                0x0000000000020880                bgfx::CallbackStub::profilerEnd()
+                0x0000000000020880                bgfx::noop::RendererContextNOOP::updateTextureEnd()
+                0x0000000000020880                bgfx::noop::RendererContextNOOP::flip()
+                0x0000000000020880                bgfx::CallbackStub::captureEnd()
+                0x0000000000020890                bgfx::CallbackStub::cacheReadSize(unsigned long)
+                0x00000000000208a0                bgfx::CallbackStub::cacheRead(unsigned long, void*, unsigned int)
+                0x00000000000208b0                bgfx::CallbackStub::cacheWrite(unsigned long, void const*, unsigned int)
+                0x00000000000208c0                bgfx::CallbackStub::captureBegin(unsigned int, unsigned int, unsigned int, bgfx::TextureFormat::Enum, bool)
+                0x00000000000208d0                bgfx::noop::RendererContextNOOP::blitRender(bgfx::TextVideoMemBlitter&, unsigned int)
+                0x00000000000208d0                bgfx::CallbackStub::captureFrame(void const*, unsigned int)
+                0x00000000000208e0                bgfx::compareDescending(void const*, void const*) [clone .lto_priv.0]
+                0x00000000000208f0                bgfx::alloc(unsigned int)
+                0x0000000000020920                bgfx::CommandBuffer::write(void const*, unsigned int)
+                0x0000000000020b90                bgfx::Context::findOrCreateVertexLayout(bgfx::VertexLayout const&, bool)
+                0x0000000000021000                bgfx::CallbackStub::~CallbackStub()
+                0x0000000000021010                bgfx::CallbackStub::fatal(char const*, unsigned short, bgfx::Fatal::Enum, char const*)
+                0x0000000000021040                bgfx::CallbackStub::traceVargs(char const*, unsigned short, char const*, __va_list_tag*)
+                0x00000000000211e0                bgfx::CallbackStub::screenShot(char const*, unsigned int, unsigned int, unsigned int, void const*, unsigned int, bool)
+                0x0000000000021c00                bgfx::AllocatorStub::realloc(void*, unsigned long, unsigned long, char const*, unsigned int)
+                0x0000000000023080                bx::exp(float) [clone .part.0]
+                0x00000000000231e0                bx::HandleAlloc::free(unsigned short)
+                0x0000000000023220                bx::HashMurmur2A::add(void const*, int)
+                0x0000000000023580                bx::radixSort(unsigned int*, unsigned int*, unsigned int)
+                0x0000000000023760                bgfx::Frame::destroy()
+                0x0000000000023820                bgfx::NonLocalAllocator::~NonLocalAllocator()
+                0x0000000000023820                bgfx::NonLocalAllocator::~NonLocalAllocator() [clone .lto_priv.0]
+                0x00000000000238d0                bgfx::NonLocalAllocator::compact()
+                0x0000000000023960                bgfx::Context::destroyTransientIndexBuffer(bgfx::TransientIndexBuffer*)
+                0x0000000000023a30                bgfx::Context::destroyTransientVertexBuffer(bgfx::TransientVertexBuffer*)
+                0x0000000000023b00                bgfx::Context::shaderDecRef(bgfx::ShaderHandle)
+                0x0000000000024110                bgfx::CallbackStub::~CallbackStub() [clone .lto_priv.0]
+                0x0000000000024110                bgfx::CallbackStub::~CallbackStub() [clone .lto_priv.0]
+                0x0000000000024120                bgfx::fatal(char const*, unsigned short, bgfx::Fatal::Enum, char const*, ...)
+                0x0000000000024330                bgfx::TextVideoMem::printfVargs(unsigned short, unsigned short, unsigned char, char const*, __va_list_tag*)
+                0x0000000000024610                bgfx::nameToPredefinedUniformEnum(bx::StringView const&)
+                0x0000000000024710                bgfx::Context::createUniform(char const*, bgfx::UniformType::Enum, unsigned short)
+                0x0000000000026660                bgfx::createEmbeddedShader(bgfx::EmbeddedShader const*, bgfx::RendererType::Enum, char const*)
+                0x00000000000269f0                bgfx::Context::swap()
+                0x0000000000028ad0                bgfx::Context::init(bgfx::Init const&)
+                0x000000000002a070                bgfx::Init::Init()
+                0x000000000002a070                bgfx::Init::Init()
+                0x000000000002a0e0                bgfx::Context::Context() [clone .lto_priv.0]
+                0x000000000002a0e0                bgfx::Context::Context()
+ *fill*         0x000000000002abb1        0xf 
+ .text          0x000000000002abc0     0x85e6 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+                0x000000000002abc0                tinystl::list<bgfx::NonLocalAllocator::Free, bgfx::TinyStlAllocator>::sort()::{lambda(void const*, void const*)#1}::_FUN(void const*, void const*)
+                0x000000000002abd0                bgfx::agc::rendererCreate(bgfx::Init const&)
+                0x000000000002abe0                bgfx::agc::rendererDestroy()
+                0x000000000002abf0                bgfx::gnm::rendererCreate(bgfx::Init const&)
+                0x000000000002ac00                bgfx::gnm::rendererDestroy()
+                0x000000000002ac10                bgfx::webgpu::rendererCreate(bgfx::Init const&)
+                0x000000000002ac20                bgfx::webgpu::rendererDestroy()
+                0x000000000002ac30                bgfx::nvn::rendererCreate(bgfx::Init const&)
+                0x000000000002ac40                bgfx::nvn::rendererDestroy()
+                0x000000000002b980                bgfx::gl::RendererContextGL::getRendererName() const
+                0x000000000002b990                bgfx::noop::RendererContextNOOP::isDeviceRemoved()
+                0x000000000002b990                bgfx::gl::RendererContextGL::isDeviceRemoved()
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyUniform(bgfx::UniformHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyDynamicVertexBuffer(bgfx::VertexBufferHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyFrameBuffer(bgfx::FrameBufferHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyVertexLayout(bgfx::VertexLayoutHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::invalidateOcclusionQuery(bgfx::OcclusionQueryHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyShader(bgfx::ShaderHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyVertexBuffer(bgfx::VertexBufferHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyProgram(bgfx::ProgramHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyTexture(bgfx::TextureHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyDynamicIndexBuffer(bgfx::IndexBufferHandle)
+                0x000000000002ba60                bgfx::noop::RendererContextNOOP::destroyIndexBuffer(bgfx::IndexBufferHandle)
+                0x000000000002ba60                bgfx::gl::RendererContextGL::destroyVertexLayout(bgfx::VertexLayoutHandle)
+                0x000000000002be00                bgfx::gl::RendererContextGL::updateTextureBegin(bgfx::TextureHandle, unsigned char, unsigned char)
+                0x000000000002be00                bgfx::noop::RendererContextNOOP::updateTextureBegin(bgfx::TextureHandle, unsigned char, unsigned char)
+                0x000000000002c290                bgfx::gl::RendererContextGL::setMarker(char const*, unsigned short)
+                0x000000000002c540                bgfx::gl::RendererContextGL::updateUniform(unsigned short, void const*, unsigned int)
+                0x000000000002c800                bgfx::gl::RendererContextGL::blitSetup(bgfx::TextVideoMemBlitter&)
+                0x000000000002ca60                bgfx::AllocatorStub::~AllocatorStub()
+                0x000000000002d3c0                bgfx::gl::rendererDestroy()
+                0x000000000002f610                bgfx::gl::rendererCreate(bgfx::Init const&)
+                0x0000000000030f30                bgfx::gl::RendererContextGL::blitRender(bgfx::TextVideoMemBlitter&, unsigned int)
+                0x0000000000031540                bgfx::allocTransientVertexBuffer(bgfx::TransientVertexBuffer*, unsigned int, bgfx::VertexLayout const&)
+                0x00000000000318e0                bgfx::createProgram(bgfx::ShaderHandle, bgfx::ShaderHandle, bool)
+                0x00000000000320d0                bgfx::getTextureSizeFromRatio(bgfx::BackbufferRatio::Enum, unsigned short&, unsigned short&)
+                0x0000000000032160                tinystl::unordered_map<unsigned long, unsigned int, bgfx::TinyStlAllocator>::unordered_map() [clone .lto_priv.0]
+                0x0000000000032160                tinystl::unordered_map<unsigned long, unsigned int, bgfx::TinyStlAllocator>::unordered_map()
+                0x00000000000321d0                tinystl::unordered_map<unsigned long, unsigned int, bgfx::TinyStlAllocator>::erase(tinystl::unordered_hash_iterator<tinystl::unordered_hash_node<unsigned long, unsigned int> const>)
+                0x0000000000032360                void bx::radixSort<unsigned short>(unsigned long*, unsigned long*, unsigned short*, unsigned short*, unsigned int)
+                0x0000000000032630                void bgfx::VertexLayoutRef::shutdown<(unsigned short)64>(bx::HandleAllocT<(unsigned short)64>&)
+                0x0000000000032870                bgfx::UpdateBatchT<256u>::sort()
+                0x0000000000032940                bgfx::AllocatorStub::~AllocatorStub() [clone .lto_priv.0]
+                0x0000000000032940                bgfx::AllocatorStub::~AllocatorStub() [clone .lto_priv.0]
+                0x0000000000032950                bx::HandleHashMapT<1024u, unsigned int>::removeByHandle(unsigned short) [clone .part.0] [clone .lto_priv.0]
+                0x0000000000032ab0                bgfx::Context::flushTextureUpdateBatch(bgfx::CommandBuffer&) [clone .part.0]
+                0x0000000000032cd0                bgfx::VertexLayout::end()
+                0x0000000000032fd0                bgfx::TextVideoMem::printf(unsigned short, unsigned short, unsigned char, char const*, ...)
+                0x0000000000033080                bgfx::gl::RendererContextGL::commit(bgfx::UniformBuffer&)
+ *fill*         0x00000000000331a6        0xa 
+ .text          0x00000000000331b0     0xd085 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+                0x00000000000343c0                bgfx::gl::ProgramGL::init()
+                0x0000000000034f50                bgfx::gl::ProgramGL::bindAttributes(bgfx::VertexLayout const&, unsigned int)
+                0x0000000000035090                bgfx::gl::TextureGL::create(bgfx::Memory const*, unsigned long, unsigned char)
+                0x0000000000035d70                bgfx::gl::ShaderGL::create(bgfx::Memory const*)
+                0x0000000000038980                bgfx::gl::FrameBufferGL::postReset() [clone .part.0]
+                0x0000000000038e10                bgfx::gl::RendererContextGL::submit(bgfx::Frame*, bgfx::ClearQuad&, bgfx::TextVideoMemBlitter&)
+ *fill*         0x0000000000040235        0xb 
+ .text          0x0000000000040240     0xe255 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+                0x0000000000040240                bgfx::vk::rendererCreate(bgfx::Init const&)
+                0x0000000000040250                bgfx::vk::rendererDestroy()
+                0x00000000000403d0                bgfx::noop::rendererCreate(bgfx::Init const&)
+                0x00000000000404b0                bgfx::noop::rendererDestroy()
+                0x0000000000040530                bgfx::d3d9::rendererCreate(bgfx::Init const&)
+                0x0000000000040540                bgfx::d3d9::rendererDestroy()
+                0x0000000000040550                bgfx::d3d11::rendererCreate(bgfx::Init const&)
+                0x0000000000040560                bgfx::d3d11::rendererDestroy()
+                0x0000000000040570                bgfx::d3d12::rendererCreate(bgfx::Init const&)
+                0x0000000000040580                bgfx::d3d12::rendererDestroy()
+                0x0000000000040590                bx::packA8(void*, float const*)
+                0x0000000000040640                bx::unpackA8(float*, void const*)
+                0x0000000000040660                bx::packR8(void*, float const*)
+                0x0000000000040710                bx::unpackR8(float*, void const*)
+                0x0000000000040740                bx::packR8S(void*, float const*)
+                0x00000000000407f0                bx::unpackR8S(float*, void const*)
+                0x0000000000040830                bx::packR8I(void*, float const*)
+                0x0000000000040840                bx::unpackR8I(float*, void const*)
+                0x0000000000040870                bx::packR8U(void*, float const*)
+                0x0000000000040880                bx::unpackR8U(float*, void const*)
+                0x00000000000408b0                bx::packRg8(void*, float const*)
+                0x0000000000040a10                bx::unpackRg8(float*, void const*)
+                0x0000000000040a60                bx::packRg8S(void*, float const*)
+                0x0000000000040bb0                bx::unpackRg8S(float*, void const*)
+                0x0000000000040c10                bx::packRg8I(void*, float const*)
+                0x0000000000040c30                bx::unpackRg8I(float*, void const*)
+                0x0000000000040c70                bx::packRg8U(void*, float const*)
+                0x0000000000040c90                bx::unpackRg8U(float*, void const*)
+                0x0000000000040cd0                bx::packRgb8(void*, float const*)
+                0x0000000000040ef0                bx::unpackRgb8(float*, void const*)
+                0x0000000000040f50                bx::packRgb8S(void*, float const*)
+                0x0000000000041150                bx::unpackRgb8S(float*, void const*)
+                0x00000000000411c0                bx::packRgb8I(void*, float const*)
+                0x00000000000411e0                bx::unpackRgb8I(float*, void const*)
+                0x0000000000041220                bx::packRgb8U(void*, float const*)
+                0x0000000000041240                bx::unpackRgb8U(float*, void const*)
+                0x0000000000041280                bx::packBgra8(void*, float const*)
+                0x0000000000041550                bx::unpackBgra8(float*, void const*)
+                0x00000000000415b0                bx::packRgba8(void*, float const*)
+                0x0000000000041880                bx::unpackRgba8(float*, void const*)
+                0x00000000000418e0                bx::packRgba8S(void*, float const*)
+                0x0000000000041ba0                bx::unpackRgba8S(float*, void const*)
+                0x0000000000041c20                bx::packRgba8I(void*, float const*)
+                0x0000000000041c50                bx::unpackRgba8I(float*, void const*)
+                0x0000000000041ca0                bx::packRgba8U(void*, float const*)
+                0x0000000000041cd0                bx::unpackRgba8U(float*, void const*)
+                0x0000000000041d20                bx::packR16(void*, float const*)
+                0x0000000000041de0                bx::unpackR16(float*, void const*)
+                0x0000000000041e10                bx::packR16S(void*, float const*)
+                0x0000000000041ec0                bx::unpackR16S(float*, void const*)
+                0x0000000000041f00                bx::packR16I(void*, float const*)
+                0x0000000000041f10                bx::unpackR16I(float*, void const*)
+                0x0000000000041f40                bx::packR16U(void*, float const*)
+                0x0000000000041f50                bx::unpackR16U(float*, void const*)
+                0x0000000000041f70                bx::packR16F(void*, float const*)
+                0x0000000000042040                bx::packRg16(void*, float const*)
+                0x00000000000421a0                bx::unpackRg16(float*, void const*)
+                0x00000000000421f0                bx::packRg16S(void*, float const*)
+                0x0000000000042340                bx::unpackRg16S(float*, void const*)
+                0x00000000000423a0                bx::packRg16I(void*, float const*)
+                0x00000000000423c0                bx::unpackRg16I(float*, void const*)
+                0x0000000000042400                bx::packRg16U(void*, float const*)
+                0x0000000000042420                bx::unpackRg16U(float*, void const*)
+                0x0000000000042460                bx::packRg16F(void*, float const*)
+                0x0000000000042600                bx::packRgba16(void*, float const*)
+                0x00000000000428d0                bx::unpackRgba16(float*, void const*)
+                0x0000000000042920                bx::packRgba16S(void*, float const*)
+                0x0000000000042be0                bx::unpackRgba16S(float*, void const*)
+                0x0000000000042c60                bx::packRgba16I(void*, float const*)
+                0x0000000000042ca0                bx::unpackRgba16I(float*, void const*)
+                0x0000000000042ce0                bx::packRgba16U(void*, float const*)
+                0x0000000000042d20                bx::unpackRgba16U(float*, void const*)
+                0x0000000000042d60                bx::packRgba16F(void*, float const*)
+                0x0000000000043090                bx::packR24(void*, float const*)
+                0x0000000000043160                bx::unpackR24(float*, void const*)
+                0x00000000000431a0                bx::packR24G8(void*, float const*)
+                0x0000000000043310                bx::unpackR24G8(float*, void const*)
+                0x0000000000043370                bx::packR5G6B5(void*, float const*)
+                0x00000000000435b0                bx::unpackR5G6B5(float*, void const*)
+                0x0000000000043620                bx::packRgba4(void*, float const*)
+                0x0000000000043920                bx::unpackRgba4(float*, void const*)
+                0x00000000000439a0                bx::packRgb5a1(void*, float const*)
+                0x0000000000043c90                bx::unpackRgb5a1(float*, void const*)
+                0x0000000000043d00                bx::packRgb10A2(void*, float const*)
+                0x0000000000044000                bx::unpackRgb10A2(float*, void const*)
+                0x0000000000044080                bx::packRG11B10F(void*, float const*)
+                0x0000000000045d50                bx::unpackR16F(float*, void const*)
+                0x0000000000045e40                bx::unpackRg16F(float*, void const*)
+                0x0000000000046000                bx::unpackRgba16F(float*, void const*)
+                0x0000000000046360                bx::unpackRG11B10F(float*, void const*)
+                0x00000000000465c0                bx::packR32I(void*, float const*)
+                0x00000000000465d0                bx::unpackR32I(float*, void const*)
+                0x00000000000465e0                bx::packR32U(void*, float const*)
+                0x00000000000465f0                bx::unpackR32U(float*, void const*)
+                0x0000000000046600                bx::packR32F(void*, float const*)
+                0x0000000000046610                bx::unpackR32F(float*, void const*)
+                0x0000000000046620                bx::packRg32I(void*, float const*)
+                0x0000000000046630                bx::unpackRg32I(float*, void const*)
+                0x0000000000046640                bx::packRg32U(void*, float const*)
+                0x0000000000046650                bx::unpackRg32U(float*, void const*)
+                0x0000000000046660                bx::packRg32F(void*, float const*)
+                0x0000000000046670                bx::unpackRg32F(float*, void const*)
+                0x0000000000046680                bx::packRgba32I(void*, float const*)
+                0x0000000000046690                bx::unpackRgba32I(float*, void const*)
+                0x00000000000466a0                bx::packRgba32U(void*, float const*)
+                0x00000000000466b0                bx::unpackRgba32U(float*, void const*)
+                0x00000000000466c0                bx::packRgba32F(void*, float const*)
+                0x00000000000466d0                bx::unpackRgba32F(float*, void const*)
+                0x00000000000466e0                bx::packRgb9E5F(void*, float const*)
+                0x0000000000046ac0                bx::unpackRgb9E5F(float*, void const*)
+                0x0000000000046bc0                bgfx::gl::haveGlxExtension(char const*, char const*) [clone .lto_priv.0]
+                0x0000000000046d10                bimg::imageGetSize(bimg::TextureInfo*, unsigned short, unsigned short, unsigned short, bool, bool, unsigned short, bimg::TextureFormat::Enum)
+                0x0000000000046f30                bimg::imageSwizzleBgra8(void*, unsigned int, unsigned int, unsigned int, void const*, unsigned int)
+                0x0000000000047480                bimg::decodeBlockDxt45A(unsigned char*, unsigned char const*) [clone .lto_priv.0]
+                0x0000000000047730                bimg::BitReader::read(unsigned char)
+                0x00000000000477e0                bimg::imageParseDds(bimg::ImageContainer&, bx::ReaderSeekerI*, bx::Error*)
+                0x0000000000049380                bimg::imageParseKtx(bimg::ImageContainer&, bx::ReaderSeekerI*, bx::Error*)
+                0x000000000004a9f0                bimg::imageDecodeToBgra8(bx::AllocatorI*, void*, void const*, unsigned int, unsigned int, unsigned int, bimg::TextureFormat::Enum)
+ *fill*         0x000000000004e495        0xb 
+ .text          0x000000000004e4a0     0xb2e9 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+                0x000000000004e790                errorHandler.lto_priv.0
+                0x000000000004e7e0                getProcAddressOSMesa.lto_priv.0
+                0x000000000004e7f0                swapBuffersOSMesa.lto_priv.0
+                0x000000000004e800                swapIntervalOSMesa.lto_priv.0
+                0x000000000004e810                extensionSupportedOSMesa.lto_priv.0
+                0x000000000004e820                swapIntervalEGL.lto_priv.0
+                0x000000000004e840                swapBuffersGLX.lto_priv.0
+                0x000000000004e860                destroyContextGLX.lto_priv.0
+                0x000000000004e8c0                hash_str_lookup.lto_priv.0
+                0x000000000004e900                hash_num_lookup.lto_priv.0
+                0x000000000004e950                hash_num_compare.lto_priv.0
+                0x000000000004e960                destroyContextOSMesa.lto_priv.0
+                0x000000000004e9d0                hash_str_compare.lto_priv.0
+                0x000000000004ea00                extensionSupportedEGL.lto_priv.0
+                0x000000000004ea80                extensionSupportedGLX.lto_priv.0
+                0x000000000004eb10                destroyContextEGL.lto_priv.0
+                0x000000000004f640                getProcAddressGLX.lto_priv.0
+                0x000000000004f680                bimg::imageDecodeToRgba8(bx::AllocatorI*, void*, void const*, unsigned int, unsigned int, unsigned int, bimg::TextureFormat::Enum)
+                0x000000000004f7e0                _glfwGetWindowPropertyX11
+                0x000000000004f860                createKeyTables.lto_priv.0
+                0x00000000000501c0                getAtomIfSupported.lto_priv.0
+                0x0000000000050210                createHiddenCursor.lto_priv.0
+                0x0000000000050520                _glfwReleaseErrorHandlerX11
+                0x0000000000050550                updateNormalHints.lto_priv.0
+                0x0000000000050660                updateWindowMode.lto_priv.0
+                0x00000000000509d0                acquireMonitor.lto_priv.0
+                0x0000000000051b70                _glfwIsVisualTransparentX11
+                0x0000000000051bc0                _glfwPlatformShowWindow
+                0x0000000000051c90                _glfwPlatformGetTls.part.0
+                0x0000000000051cc0                getProcAddressEGL.lto_priv.0
+                0x0000000000051d10                swapIntervalGLX.lto_priv.0
+                0x0000000000051da0                _glfwPlatformSetTls.part.0
+                0x0000000000051dd0                _glfwInputError
+                0x0000000000052240                glfwWindowHint
+                0x0000000000052370                glfwMakeContextCurrent
+                0x0000000000052410                glfwDestroyWindow
+                0x0000000000052630                glfwExtensionSupported
+                0x0000000000052bb0                glfwUpdateGamepadMappings.part.0
+                0x0000000000053f30                _glfwPollMonitorsX11
+                0x00000000000544e0                _glfwInputErrorX11
+                0x0000000000054560                processEvent.lto_priv.0
+                0x0000000000056c80                _glfwDetectJoystickConnectionLinux
+                0x00000000000570b0                _glfwInitJoysticksLinux.part.0
+                0x0000000000057210                _glfwPlatformCreateTls
+                0x0000000000057280                swapBuffersEGL.lto_priv.0
+                0x00000000000572e0                makeContextCurrentOSMesa.lto_priv.0
+                0x0000000000057430                makeContextCurrentEGL.lto_priv.0
+                0x00000000000576a0                makeContextCurrentGLX.lto_priv.0
+                0x0000000000057730                getEGLErrorString.lto_priv.0
+                0x00000000000577e0                chooseEGLConfig.lto_priv.0
+                0x0000000000057bc0                _glfwTerminateEGL
+                0x0000000000057c10                terminate.lto_priv.0
+                0x0000000000058280                glfwTerminate
+                0x00000000000582a0                chooseGLXFBConfig.lto_priv.0
+                0x00000000000586b0                FT_DivFix
+                0x0000000000058710                FT_Matrix_Check
+                0x0000000000058960                FT_Vector_NormLen
+                0x0000000000058b60                ft_corner_is_flat
+                0x0000000000058c30                FT_GlyphLoader_Reset
+                0x0000000000058d20                FT_GlyphLoader_CheckPoints
+                0x0000000000059160                FT_GlyphLoader_Add
+                0x0000000000059300                hash_insert.lto_priv.0
+                0x0000000000059530                ft_validator_error
+                0x0000000000059550                FT_Stream_New
+                0x0000000000059740                FT_Stream_Free
+ *fill*         0x0000000000059789        0x7 
+ .text          0x0000000000059790     0xbe3b /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+                0x0000000000059790                destroy_size.lto_priv.0
+                0x0000000000059830                ft_raccess_sort_ref_by_id.lto_priv.0
+                0x0000000000059c10                BDF_Glyph_Load.lto_priv.0
+                0x000000000005a230                BDF_Face_Done.lto_priv.0
+                0x000000000005a780                ps_property_get
+                0x000000000005a850                bdf_driver_requester.lto_priv.0
+                0x000000000005a8b0                ps_property_set
+                0x000000000005b470                ft_glyphslot_preset_bitmap
+                0x000000000005b880                ft_glyphslot_alloc_bitmap
+                0x000000000005b930                ft_mem_alloc
+                0x000000000005b9a0                ft_glyphslot_done.lto_priv.0
+                0x000000000005bab0                destroy_face.lto_priv.0
+                0x000000000005bcb0                FT_New_GlyphSlot
+                0x000000000005bec0                FT_Stream_ReadULong
+                0x000000000005c710                FT_Stream_ReadUShort
+                0x000000000005c7c0                ft_open_face_internal.lto_priv.0
+                0x000000000005d400                open_face_from_buffer.lto_priv.0
+                0x000000000005e510                ft_recompute_scaled_metrics.lto_priv.0
+                0x000000000005e5c0                BDF_Size_Select.lto_priv.0
+                0x000000000005e730                FT_Select_Metrics
+                0x000000000005e870                BDF_Size_Request.lto_priv.0
+                0x000000000005e950                FT_Request_Metrics
+                0x000000000005ee60                FT_Set_Charmap
+                0x000000000005ef60                ft_module_get_service
+                0x000000000005f000                FT_Outline_Decompose
+                0x000000000005f4f0                FT_Outline_Transform
+                0x000000000005f610                FT_Load_Glyph
+                0x00000000000602c0                FT_Outline_Get_Orientation
+                0x00000000000604c0                FT_Stream_Seek
+                0x0000000000060510                FT_Stream_Skip
+                0x0000000000060570                FT_Stream_Read
+                0x0000000000060600                FT_Stream_ExtractFrame
+                0x0000000000060730                FT_Stream_EnterFrame
+                0x0000000000060880                FT_Stream_ExitFrame
+                0x00000000000608c0                FT_Stream_GetUShort
+                0x00000000000608f0                FT_Stream_ReadChar
+                0x0000000000060990                FT_Stream_ReadFields
+                0x0000000000060c10                FT_Vector_Length
+                0x0000000000060dc0                ft_mem_qalloc
+                0x0000000000060e00                ft_mem_realloc
+                0x0000000000060f10                FT_CMap_New
+                0x0000000000062be0                ft_mem_qrealloc
+                0x0000000000062cb0                ft_mem_free
+                0x0000000000063e40                ft_mem_strdup
+                0x0000000000063ec0                BDF_Face_Init.lto_priv.0
+                0x0000000000065260                FT_Match_Size.part.0
+                0x0000000000065370                FT_Set_Default_Properties
+ *fill*         0x00000000000655cb        0x5 
+ .text          0x00000000000655d0     0xbfc1 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+                0x0000000000065740                cff_cmap_unicode_done.lto_priv.0
+                0x00000000000657c0                cff_get_kerning.lto_priv.0
+                0x0000000000065e00                cff_parse_integer.lto_priv.0
+                0x0000000000066b10                cff_slot_done.lto_priv.0
+                0x0000000000066fe0                cff_get_interface.lto_priv.0
+                0x00000000000670b0                cff_size_done.lto_priv.0
+                0x00000000000671b0                cff_slot_init.lto_priv.0
+                0x00000000000673c0                cff_size_init.lto_priv.0
+                0x0000000000068440                cff_face_done.lto_priv.0
+                0x000000000006aaf0                cff_glyph_load.lto_priv.0
+                0x000000000006ab50                cff_get_advances.lto_priv.0
+                0x000000000006b6d0                cff_size_select.lto_priv.0
+                0x000000000006b900                cff_size_request.lto_priv.0
+                0x000000000006bb90                cff_parse_real.lto_priv.0
+                0x000000000006e580                cff_face_init.lto_priv.0
+ *fill*         0x0000000000071591        0xf 
+ .text          0x00000000000715a0     0xbe2f /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+                0x00000000000715a0                cff_driver_init.lto_priv.0
+                0x0000000000071640                cff_driver_done.lto_priv.0
+                0x00000000000716c0                cid_slot_done.lto_priv.0
+                0x00000000000716e0                cid_face_done.lto_priv.0
+                0x0000000000071910                cid_driver_init.lto_priv.0
+                0x00000000000719a0                cid_driver_done.lto_priv.0
+                0x0000000000071bf0                PCF_Size_Request.lto_priv.0
+                0x0000000000071d30                pcf_driver_init.lto_priv.0
+                0x0000000000071d40                pcf_driver_done.lto_priv.0
+                0x0000000000071f20                PCF_Face_Done.lto_priv.0
+                0x0000000000072250                pfr_face_done.lto_priv.0
+                0x0000000000072410                pfr_slot_done.lto_priv.0
+                0x0000000000072d80                cid_slot_load_glyph.lto_priv.0
+                0x0000000000073f80                pfr_slot_init.lto_priv.0
+                0x00000000000752f0                cid_slot_init.lto_priv.0
+                0x0000000000075390                cid_size_done.lto_priv.0
+                0x0000000000075450                cid_size_init.lto_priv.0
+                0x0000000000075550                cid_face_init.lto_priv.0
+                0x0000000000075950                cid_get_interface.lto_priv.0
+                0x0000000000075a70                pcf_driver_requester.lto_priv.0
+                0x0000000000075ad0                pfr_get_service.lto_priv.0
+                0x0000000000075b30                cid_size_request.lto_priv.0
+                0x0000000000075bd0                PCF_Size_Select.lto_priv.0
+                0x0000000000075d60                PCF_Glyph_Load.lto_priv.0
+                0x0000000000079590                PCF_Face_Init.lto_priv.0
+                0x000000000007a120                pfr_face_init.lto_priv.0
+                0x000000000007b350                pfr_get_kerning.lto_priv.0
+                0x000000000007c440                pfr_slot_load.lto_priv.0
+ *fill*         0x000000000007d3cf        0x1 
+ .text          0x000000000007d3d0    0x10325 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+                0x000000000007d3d0                afm_parser_done.lto_priv.0
+                0x000000000007d400                afm_compare_kern_pairs.lto_priv.0
+                0x000000000007d440                ps_table_release.lto_priv.0
+                0x000000000007d790                ps_parser_skip_PS_token.lto_priv.0
+                0x000000000007da50                ps_parser_skip_spaces.lto_priv.0
+                0x000000000007dac0                ps_parser_to_token.lto_priv.0
+                0x000000000007ddb0                ps_parser_to_token_array.lto_priv.0
+                0x000000000007def0                ps_parser_to_bytes.lto_priv.0
+                0x000000000007e0e0                ps_parser_init.lto_priv.0
+                0x000000000007e1d0                ps_parser_done.lto_priv.0
+                0x000000000007e1e0                t1_builder_done.lto_priv.0
+                0x000000000007e220                t1_builder_close_contour.lto_priv.0
+                0x000000000007e300                t1_builder_init.lto_priv.0
+                0x000000000007e460                t1_builder_add_point.lto_priv.0
+                0x000000000007e800                t1_decrypt.lto_priv.0
+                0x000000000007e860                cff_random.lto_priv.0
+                0x000000000007e880                t1_cmap_std_done.lto_priv.0
+                0x000000000007e8b0                t1_cmap_standard_init.lto_priv.0
+                0x000000000007e8f0                t1_cmap_expert_init.lto_priv.0
+                0x000000000007e930                t1_cmap_custom_init.lto_priv.0
+                0x000000000007e960                t1_cmap_custom_done.lto_priv.0
+                0x000000000007e980                t1_cmap_custom_char_index.lto_priv.0
+                0x000000000007e9b0                t1_cmap_custom_char_next.lto_priv.0
+                0x000000000007ea30                t1_cmap_unicode_init.lto_priv.0
+                0x000000000007ea70                t1_cmap_unicode_done.lto_priv.0
+                0x000000000007eab0                t1_cmap_unicode_char_index.lto_priv.0
+                0x000000000007ead0                t1_cmap_unicode_char_next.lto_priv.0
+                0x000000000007eaf0                t1_decoder_parse_metrics.lto_priv.0
+                0x000000000007f010                t1_decoder_done.lto_priv.0
+                0x000000000007f090                cff_decoder_prepare.lto_priv.0
+                0x000000000007ff60                pfr_face_get_kerning.lto_priv.0
+                0x0000000000080200                afm_parser_init.lto_priv.0
+                0x00000000000803c0                ps_decoder_init.lto_priv.0
+                0x0000000000080640                t1_make_subfont.lto_priv.0
+                0x0000000000080ec0                cff_decoder_init.lto_priv.0
+                0x0000000000081380                ps_table_done.lto_priv.0
+                0x0000000000081430                ps_table_add.lto_priv.0
+                0x0000000000081920                ps_table_new.lto_priv.0
+                0x0000000000081a90                t1_builder_add_contour.lto_priv.0
+                0x0000000000081b10                t1_builder_check_points.lto_priv.0
+                0x0000000000081b40                t1_builder_add_point1.lto_priv.0
+                0x0000000000081bf0                t1_builder_start_point.lto_priv.0
+                0x0000000000082450                t1_cmap_std_char_index.lto_priv.0
+                0x00000000000824e0                t1_cmap_std_char_next.lto_priv.0
+                0x0000000000082660                t1_decoder_init.lto_priv.0
+                0x0000000000089ce0                cf2_decoder_parse_charstrings.lto_priv.0
+                0x000000000008af90                afm_stream_read_one.lto_priv.0
+                0x000000000008b070                afm_stream_read_string.lto_priv.0
+                0x000000000008b150                PS_Conv_ToInt.lto_priv.0
+                0x000000000008b3c0                ps_parser_to_int.lto_priv.0
+                0x000000000008b430                PS_Conv_ToFixed.lto_priv.0
+                0x000000000008b950                afm_parser_parse.lto_priv.0
+                0x000000000008ca40                ps_parser_to_fixed_array.lto_priv.0
+                0x000000000008cac0                ps_parser_load_field.lto_priv.0
+                0x000000000008d1f0                ps_parser_load_field_table.lto_priv.0
+                0x000000000008d460                ps_parser_to_fixed.lto_priv.0
+                0x000000000008d4e0                ps_parser_to_coord_array.lto_priv.0
+ *fill*         0x000000000008d6f5        0xb 
+ .text          0x000000000008d700     0xc967 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+                0x000000000008e220                ps_hinter_done.lto_priv.0
+                0x000000000008e580                pshinter_get_globals_funcs.lto_priv.0
+                0x000000000008e590                pshinter_get_t1_funcs.lto_priv.0
+                0x000000000008e5a0                pshinter_get_t2_funcs.lto_priv.0
+                0x000000000008e5b0                ps_unicode_value.lto_priv.0
+                0x000000000008e9b0                ps_unicodes_char_index.lto_priv.0
+                0x000000000008ea40                ps_unicodes_char_next.lto_priv.0
+                0x000000000008eae0                ps_get_macintosh_name.lto_priv.0
+                0x000000000008eb10                ps_get_standard_strings.lto_priv.0
+                0x000000000008f740                ft_black_done.lto_priv.0
+                0x000000000008f750                ft_black_reset.lto_priv.0
+                0x000000000008f760                ft_black_set_mode.lto_priv.0
+                0x000000000008f770                ft_raster1_init.lto_priv.0
+                0x000000000008f7a0                ft_raster1_set_mode.lto_priv.0
+                0x000000000008f7c0                ft_sdf_init.lto_priv.0
+                0x000000000008f7f0                ft_sdf_done.lto_priv.0
+                0x000000000008f800                ft_sdf_set_mode.lto_priv.0
+                0x000000000008f820                bsdf_raster_reset.lto_priv.0
+                0x000000000008f830                bsdf_raster_set_mode.lto_priv.0
+                0x000000000008f840                bsdf_raster_done.lto_priv.0
+                0x000000000008ffa0                sdf_raster_reset.lto_priv.0
+                0x000000000008ffb0                sdf_raster_set_mode.lto_priv.0
+                0x000000000008ffc0                sdf_raster_done.lto_priv.0
+                0x000000000008ffd0                get_sfnt_table.lto_priv.0
+                0x0000000000090070                sfnt_table_info.lto_priv.0
+                0x00000000000900d0                sfnt_get_name_id.lto_priv.0
+                0x00000000000908c0                ps_hinter_init.lto_priv.0
+                0x0000000000090a00                ft_black_new.lto_priv.0
+                0x0000000000090a50                ft_raster1_get_cbox.lto_priv.0
+                0x0000000000090b10                ft_sdf_get_cbox.lto_priv.0
+                0x0000000000090bd0                bsdf_raster_new.lto_priv.0
+                0x0000000000090c20                sdf_raster_new.lto_priv.0
+                0x0000000000091b90                ft_bsdf_render.lto_priv.0
+                0x0000000000093810                ps_unicodes_init.lto_priv.0
+                0x0000000000093e30                psnames_get_service.lto_priv.0
+                0x0000000000094000                ft_sdf_requester.lto_priv.0
+                0x0000000000094030                ft_black_render.lto_priv.0
+                0x00000000000943a0                ft_raster1_transform.lto_priv.0
+                0x0000000000094450                ft_sdf_transform.lto_priv.0
+                0x0000000000094500                ft_raster1_render.lto_priv.0
+                0x0000000000094820                ft_sdf_render.lto_priv.0
+                0x0000000000094bd0                bsdf_raster_render.lto_priv.0
+                0x0000000000096090                sdf_raster_render.lto_priv.0
+                0x00000000000968b0                sfnt_get_glyph_name.lto_priv.0
+                0x0000000000096a80                sfnt_get_name_index.lto_priv.0
+                0x0000000000096c20                sfnt_get_ps_name.lto_priv.0
+                0x0000000000097fc0                cf2_stack_pushInt.lto_priv.0
+                0x0000000000098010                cf2_stack_pushFixed.lto_priv.0
+                0x0000000000098060                cf2_stack_popInt.lto_priv.0
+                0x00000000000980c0                cf2_stack_popFixed.lto_priv.0
+                0x0000000000098130                cf2_stack_getReal.lto_priv.0
+                0x00000000000981b0                cf2_computeDarkening.part.0.lto_priv.0
+                0x0000000000098660                ps_mask_set_bit.lto_priv.0
+                0x0000000000098bb0                Insert_Y_Turn.lto_priv.0
+                0x0000000000098c70                Line_To.lto_priv.0
+                0x00000000000991b0                Conic_To.lto_priv.0
+                0x0000000000099940                Cubic_To.lto_priv.0
+                0x0000000000099fd0                Sort.lto_priv.0
+ *fill*         0x000000000009a067        0x9 
+ .text          0x000000000009a070     0xa524 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+                0x000000000009a180                sfnt_done_face.lto_priv.0
+                0x000000000009ab50                tt_cmap_init.lto_priv.0
+                0x000000000009ab60                tt_cmap0_char_index.lto_priv.0
+                0x000000000009ab80                tt_cmap0_char_next.lto_priv.0
+                0x000000000009abc0                tt_cmap0_get_info.lto_priv.0
+                0x000000000009abf0                tt_cmap2_char_index.lto_priv.0
+                0x000000000009aca0                tt_cmap2_char_next.lto_priv.0
+                0x000000000009ae30                tt_cmap2_get_info.lto_priv.0
+                0x000000000009ae60                tt_cmap4_init.lto_priv.0
+                0x000000000009b7b0                tt_cmap4_get_info.lto_priv.0
+                0x000000000009b7e0                tt_cmap6_char_index.lto_priv.0
+                0x000000000009b820                tt_cmap6_char_next.lto_priv.0
+                0x000000000009b8b0                tt_cmap6_get_info.lto_priv.0
+                0x000000000009b8e0                tt_cmap8_char_index.lto_priv.0
+                0x000000000009b960                tt_cmap8_char_next.lto_priv.0
+                0x000000000009ba90                tt_cmap8_get_info.lto_priv.0
+                0x000000000009bab0                tt_cmap10_char_index.lto_priv.0
+                0x000000000009baf0                tt_cmap10_char_next.lto_priv.0
+                0x000000000009bb70                tt_cmap10_get_info.lto_priv.0
+                0x000000000009bb90                tt_cmap12_init.lto_priv.0
+                0x000000000009be30                tt_cmap12_char_index.lto_priv.0
+                0x000000000009be50                tt_cmap12_char_next.lto_priv.0
+                0x000000000009beb0                tt_cmap12_get_info.lto_priv.0
+                0x000000000009bed0                tt_cmap13_init.lto_priv.0
+                0x000000000009c0b0                tt_cmap13_char_index.lto_priv.0
+                0x000000000009c0d0                tt_cmap13_char_next.lto_priv.0
+                0x000000000009c130                sfnt_get_interface.lto_priv.0
+                0x000000000009c230                tt_face_get_name.lto_priv.0
+                0x00000000000a0ba0                sfnt_init_face.lto_priv.0
+                0x00000000000a2730                sfnt_load_face.lto_priv.0
+                0x00000000000a3960                tt_cmap0_validate.lto_priv.0
+                0x00000000000a39f0                tt_cmap2_validate.lto_priv.0
+                0x00000000000a3b80                tt_cmap4_validate.lto_priv.0
+                0x00000000000a3f60                tt_cmap6_validate.lto_priv.0
+                0x00000000000a4020                tt_cmap8_validate.lto_priv.0
+                0x00000000000a4240                tt_cmap10_validate.lto_priv.0
+                0x00000000000a42f0                tt_cmap12_validate.lto_priv.0
+                0x00000000000a43f0                tt_cmap13_validate.lto_priv.0
+                0x00000000000a44e0                tt_cmap4_char_index.lto_priv.0
+                0x00000000000a4530                tt_cmap4_char_next.lto_priv.0
+ *fill*         0x00000000000a4594        0xc 
+ .text          0x00000000000a45a0     0xb493 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+                0x00000000000a45a0                tt_cmap13_get_info.lto_priv.0
+                0x00000000000a45c0                tt_cmap14_done.lto_priv.0
+                0x00000000000a4600                tt_cmap14_init.lto_priv.0
+                0x00000000000a4630                tt_cmap14_char_index.lto_priv.0
+                0x00000000000a4640                tt_cmap14_char_next.lto_priv.0
+                0x00000000000a4650                tt_cmap14_get_info.lto_priv.0
+                0x00000000000a4670                tt_cmap14_char_var_index.lto_priv.0
+                0x00000000000a47d0                tt_cmap14_char_var_isdefault.lto_priv.0
+                0x00000000000a4930                tt_cmap_unicode_init.lto_priv.0
+                0x00000000000a4970                tt_cmap_unicode_done.lto_priv.0
+                0x00000000000a49b0                tt_cmap_unicode_char_index.lto_priv.0
+                0x00000000000a49d0                tt_cmap_unicode_char_next.lto_priv.0
+                0x00000000000a49f0                tt_get_cmap_info.lto_priv.0
+                0x00000000000a4a10                tt_face_free_colr.lto_priv.0
+                0x00000000000a4a80                tt_face_get_colr_layer.lto_priv.0
+                0x00000000000a4bc0                tt_face_get_colr_glyph_paint.lto_priv.0
+                0x00000000000a4cd0                tt_face_get_paint_layers.lto_priv.0
+                0x00000000000a4d70                tt_face_get_colorline_stops.lto_priv.0
+                0x00000000000a4e00                tt_face_get_paint.lto_priv.0
+                0x00000000000a5430                tt_face_palette_set.lto_priv.0
+                0x00000000000a55d0                tt_face_free_cpal.lto_priv.0
+                0x00000000000a5640                tt_face_get_kerning.lto_priv.0
+                0x00000000000a57e0                tt_face_goto_table.lto_priv.0
+                0x00000000000a5890                tt_face_free_name.lto_priv.0
+                0x00000000000a5a10                tt_face_load_kern.lto_priv.0
+                0x00000000000a5c20                tt_face_load_cmap.lto_priv.0
+                0x00000000000a5db0                tt_face_load_hmtx.lto_priv.0
+                0x00000000000a5e40                tt_face_get_metrics.lto_priv.0
+                0x00000000000a6300                tt_face_free_ps_names.lto_priv.0
+                0x00000000000a6400                tt_face_load_sbit.lto_priv.0
+                0x00000000000a68e0                tt_face_free_sbit.lto_priv.0
+                0x00000000000a6940                tt_face_load_strike_metrics.lto_priv.0
+                0x00000000000a74f0                gray_raster_done.lto_priv.0
+                0x00000000000a7500                gray_raster_reset.lto_priv.0
+                0x00000000000a7510                gray_raster_set_mode.lto_priv.0
+                0x00000000000a7520                ft_smooth_set_mode.lto_priv.0
+                0x00000000000a7540                ft_smooth_init.lto_priv.0
+                0x00000000000a7810                tt_get_kerning.lto_priv.0
+                0x00000000000a7850                tt_cmap14_validate.lto_priv.0
+                0x00000000000a7ad0                tt_cmap14_variants.lto_priv.0
+                0x00000000000a7bd0                tt_cmap14_char_variants.lto_priv.0
+                0x00000000000a8280                tt_cmap14_variant_chars.lto_priv.0
+                0x00000000000a89f0                tt_face_load_colr.lto_priv.0
+                0x00000000000a8ca0                gray_raster_new.lto_priv.0
+                0x00000000000a8cf0                ft_smooth_get_cbox.lto_priv.0
+                0x00000000000a8db0                tt_face_load_any.lto_priv.0
+                0x00000000000a8ed0                tt_face_colr_blend_layer.lto_priv.0
+                0x00000000000a9d00                tt_face_load_cpal.lto_priv.0
+                0x00000000000aa970                tt_face_load_gasp.lto_priv.0
+                0x00000000000aac30                tt_face_load_font_dir.lto_priv.0
+                0x00000000000ab290                tt_face_load_head.lto_priv.0
+                0x00000000000ab2e0                tt_face_load_bhed.lto_priv.0
+                0x00000000000ab330                tt_face_load_maxp.lto_priv.0
+                0x00000000000ab420                tt_face_load_name.lto_priv.0
+                0x00000000000ab950                tt_face_load_os2.lto_priv.0
+                0x00000000000aba60                tt_face_load_post.lto_priv.0
+                0x00000000000abaf0                tt_face_load_pclt.lto_priv.0
+                0x00000000000abb40                tt_face_load_hhea.lto_priv.0
+                0x00000000000abbc0                tt_face_load_sbit_image.lto_priv.0
+                0x00000000000ad180                tt_face_set_sbit_strike.lto_priv.0
+                0x00000000000adb50                gray_raster_render.lto_priv.0
+                0x00000000000add50                ft_smooth_transform.lto_priv.0
+                0x00000000000ade00                ft_smooth_render.lto_priv.0
+                0x00000000000ae8a0                tt_property_get.lto_priv.0
+                0x00000000000ae8e0                tt_property_set.lto_priv.0
+                0x00000000000ae980                load_post_names.lto_priv.0
+                0x00000000000af220                tt_face_get_ps_name.lto_priv.0
+                0x00000000000af370                gray_render_line.lto_priv.0
+ *fill*         0x00000000000afa33        0xd 
+ .text          0x00000000000afa40     0xae57 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+                0x00000000000afa40                tt_get_advances.lto_priv.0
+                0x00000000000afc60                TT_Access_Glyph_Frame.lto_priv.0
+                0x00000000000afe00                TT_Forget_Glyph_Frame.lto_priv.0
+                0x00000000000afe40                TT_Load_Glyph_Header.lto_priv.0
+                0x00000000000b0550                tt_apply_mvar.lto_priv.0
+                0x00000000000b0d70                tt_size_select.lto_priv.0
+                0x00000000000b1000                tt_size_request.lto_priv.0
+                0x00000000000b1170                tt_get_interface.lto_priv.0
+                0x00000000000b15a0                TT_Load_Simple_Glyph.lto_priv.0
+                0x00000000000b1af0                TT_Load_Composite_Glyph.lto_priv.0
+                0x00000000000b6200                tt_glyph_load.lto_priv.0
+                0x00000000000b8770                ft_var_readpackedpoints.lto_priv.0
+                0x00000000000b8a20                ft_var_readpackeddeltas.lto_priv.0
+                0x00000000000b8c60                ft_var_apply_tuple.lto_priv.0
+                0x00000000000b8e60                tt_face_vary_cvt.lto_priv.0
+                0x00000000000ba620                TT_Set_Named_Instance.lto_priv.0
+ *fill*         0x00000000000ba897        0x9 
+ .text          0x00000000000ba8a0     0xa85d /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+                0x00000000000ba8a0                tt_get_var_blend.lto_priv.0
+                0x00000000000baa50                tt_done_blend.lto_priv.0
+                0x00000000000bcd40                tt_face_get_location.lto_priv.0
+                0x00000000000bce30                tt_face_done.lto_priv.0
+                0x00000000000bcfe0                tt_size_init.lto_priv.0
+                0x00000000000bd010                tt_size_done.lto_priv.0
+                0x00000000000bd2b0                tt_driver_init.lto_priv.0
+                0x00000000000bd2c0                tt_driver_done.lto_priv.0
+                0x00000000000bd870                T1_Get_Track_Kerning.lto_priv.0
+                0x00000000000bd9b0                t1_get_glyph_name.lto_priv.0
+                0x00000000000bd9f0                t1_get_ps_name.lto_priv.0
+                0x00000000000bda00                t1_ps_get_font_info.lto_priv.0
+                0x00000000000bda40                t1_ps_get_font_extra.lto_priv.0
+                0x00000000000bda60                t1_ps_has_glyph_names.lto_priv.0
+                0x00000000000bda70                t1_ps_get_font_private.lto_priv.0
+                0x00000000000bdd70                Update_Max.lto_priv.0
+                0x00000000000be5e0                TT_RunIns
+                0x00000000000c1b20                t1_get_name_index.lto_priv.0
+                0x00000000000c1b80                tt_slot_init.lto_priv.0
+                0x00000000000c1d40                T1_Read_Metrics.lto_priv.0
+                0x00000000000c22d0                TT_Vary_Apply_Glyph_Deltas.lto_priv.0
+                0x00000000000c3470                TT_Load_Context.lto_priv.0
+                0x00000000000c3840                tt_size_run_prep.lto_priv.0
+                0x00000000000c3df0                tt_size_reset.lto_priv.0
+                0x00000000000c4060                tt_face_load_cvt.lto_priv.0
+                0x00000000000c4210                tt_face_init.lto_priv.0
+ *fill*         0x00000000000c50fd        0x3 
+ .text          0x00000000000c5100     0xaadf /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+                0x00000000000c5100                Get_Kerning.lto_priv.0
+                0x00000000000c5650                T1_Get_Advances.lto_priv.0
+                0x00000000000c6270                T1_GlyphSlot_Done.lto_priv.0
+                0x00000000000c6290                T1_Face_Done.lto_priv.0
+                0x00000000000c65d0                T1_Driver_Init.lto_priv.0
+                0x00000000000c6660                T1_Driver_Done.lto_priv.0
+                0x00000000000c67f0                T42_Driver_Done.lto_priv.0
+                0x00000000000c7600                Get_Interface.lto_priv.0
+                0x00000000000c7d20                T1_Size_Done.lto_priv.0
+                0x00000000000c7de0                T1_Size_Init.lto_priv.0
+                0x00000000000c7ed0                T1_GlyphSlot_Init.lto_priv.0
+                0x00000000000c7f70                T42_Get_Interface.lto_priv.0
+                0x00000000000c7fd0                T42_Driver_Init.lto_priv.0
+                0x00000000000c85c0                T1_Load_Glyph.lto_priv.0
+                0x00000000000c8d50                t1_allocate_blend.lto_priv.0
+                0x00000000000c9ff0                T42_Size_Init.lto_priv.0
+                0x00000000000cc890                T1_Size_Request.lto_priv.0
+                0x00000000000cde40                T1_Face_Init.lto_priv.0
+                0x00000000000ce480                T42_GlyphSlot_Load.lto_priv.0
+                0x00000000000ce6b0                T42_Size_Done.lto_priv.0
+                0x00000000000ce700                T42_Face_Init.lto_priv.0
+                0x00000000000cf590                T42_Face_Done.lto_priv.0
+                0x00000000000cf7a0                T42_Size_Request.lto_priv.0
+                0x00000000000cf950                T42_Size_Select.lto_priv.0
+                0x00000000000cfa20                T42_GlyphSlot_Init.lto_priv.0
+                0x00000000000cfb40                T42_GlyphSlot_Done.lto_priv.0
+ *fill*         0x00000000000cfbdf        0x1 
+ .text          0x00000000000cfbe0     0xfbad /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+                0x00000000000cfc70                FNT_Face_Done.lto_priv.0
+                0x00000000000cfd30                FNT_Size_Request.lto_priv.0
+                0x00000000000d1400                af_autofitter_init.lto_priv.0
+                0x00000000000d1430                af_autofitter_done.lto_priv.0
+                0x00000000000d25d0                adler32.lto_priv.0
+                0x00000000000d2930                ft_gzip_free.lto_priv.0
+                0x00000000000d2950                zcfree.lto_priv.0
+                0x00000000000d2be0                ft_gzip_alloc.lto_priv.0
+                0x00000000000d2c20                zcalloc.lto_priv.0
+                0x00000000000d2c60                FNT_Face_Init.lto_priv.0
+                0x00000000000d3c70                FNT_Size_Select.lto_priv.0
+                0x00000000000d3e00                FNT_Load_Glyph.lto_priv.0
+                0x00000000000d45e0                winfnt_get_service.lto_priv.0
+                0x00000000000d4640                af_get_interface.lto_priv.0
+                0x00000000000db770                af_autofitter_load_glyph.lto_priv.0
+                0x00000000000dd020                ft_alloc.lto_priv.0
+                0x00000000000dd030                ft_realloc.lto_priv.0
+                0x00000000000dd040                ft_free.lto_priv.0
+                0x00000000000dd050                ft_ansi_stream_close.lto_priv.0
+                0x00000000000dd080                ft_ansi_stream_io.lto_priv.0
+                0x00000000000dd0e0                inflateEnd.lto_priv.0
+                0x00000000000dd1f0                ft_gzip_stream_close.lto_priv.0
+                0x00000000000dd280                inflate.lto_priv.0
+                0x00000000000df220                ft_gzip_check_header.lto_priv.0
+                0x00000000000df540                ft_gzip_file_io.lto_priv.0
+                0x00000000000df780                ft_gzip_stream_io.lto_priv.0
+ *fill*         0x00000000000df78d        0x3 
+ .text          0x00000000000df790     0xab06 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+                0x00000000000df790                ft_lzw_stream_close.lto_priv.0
+                0x00000000000e42b0                ft_lzw_stream_io.lto_priv.0
+                0x00000000000e44f0                t1_allocate_blend.constprop.0
+                0x00000000000e4850                Render_Single_Pass.constprop.0
+                0x00000000000e5640                ps_dimension_add_t1stem.constprop.0
+                0x00000000000e5850                psh_hint_table_init.constprop.0
+                0x00000000000e5bc0                psh_blues_set_zones_0.constprop.0
+                0x00000000000e5d80                afm_parser_read_vals.constprop.0
+                0x00000000000e5f50                _bdf_add_property.constprop.0
+                0x00000000000e6990                raccess_guess_apple_generic.constprop.0
+                0x00000000000e6d30                void bgfx::ViewState::setPredefined<(unsigned short)1, bgfx::gl::RendererContextGL, bgfx::gl::ProgramGL, bgfx::RenderDraw>(bgfx::gl::RendererContextGL*, unsigned short, bgfx::gl::ProgramGL const&, bgfx::Frame const*, bgfx::RenderDraw const&) [clone .constprop.0]
+                0x00000000000e7ab0                void bgfx::ViewState::setPredefined<(unsigned short)1, bgfx::gl::RendererContextGL, bgfx::gl::ProgramGL, bgfx::RenderCompute>(bgfx::gl::RendererContextGL*, unsigned short, bgfx::gl::ProgramGL const&, bgfx::Frame const*, bgfx::RenderCompute const&) [clone .constprop.0]
+                0x00000000000e8830                bgfx::gl::RendererContextGL::clearQuad(bgfx::ClearQuad&, bgfx::Rect const&, bgfx::Clear const&, unsigned int, float const (*) [4]) [clone .constprop.0]
+                0x00000000000e9700                bimg::imageDecodeToRgba32f(bx::AllocatorI*, void*, void const*, unsigned int, unsigned int, unsigned int, unsigned int, bimg::TextureFormat::Enum) [clone .constprop.0]
+                0x00000000000e9f50                bimg::imageConvert(bx::AllocatorI*, void*, bimg::TextureFormat::Enum, void const*, bimg::TextureFormat::Enum, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int) [clone .constprop.0]
+                0x00000000000ea130                bimg::imageCheckerboard(void*, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int) [clone .constprop.0]
+ *fill*         0x00000000000ea296        0xa 
+ .text          0x00000000000ea2a0     0x9e24 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+                0x00000000000eb0b0                bgfx::gl::GlContext::create(unsigned int, unsigned int) [clone .constprop.0]
+                0x00000000000ef1e0                bgfx::gl::initTestTexture(bgfx::TextureFormat::Enum, bool, bool, bool, int) [clone .constprop.0]
+                0x00000000000ef500                bgfx::gl::isTextureFormatValid(bgfx::TextureFormat::Enum, bool, bool, bool, int) [clone .constprop.0]
+                0x00000000000ef5f0                bgfx::gl::compressedTexImage(unsigned int, int, unsigned int, int, int, int, int, int, void const*) [clone .constprop.0]
+                0x00000000000ef6c0                bgfx::gl::texImage(unsigned int, unsigned int, int, int, int, int, int, int, unsigned int, unsigned int, void const*) [clone .constprop.0]
+                0x00000000000ef790                bgfx::rendererUpdateUniforms(bgfx::RendererContextI*, bgfx::UniformBuffer*, unsigned int, unsigned int) [clone .constprop.0]
+                0x00000000000ef8a0                bgfx::blit(bgfx::RendererContextI*, bgfx::TextVideoMemBlitter&, bgfx::TextVideoMem const&) [clone .constprop.0]
+                0x00000000000f02f0                bx::findIdentifierMatch(bx::StringView const&, char const**, int) [clone .constprop.0]
+                0x00000000000f04d0                bx::dlsym(void*, bx::StringView const&) [clone .constprop.0]
+                0x00000000000f05d0                bx::log(float) [clone .constprop.0]
+                0x00000000000f05e0                open_face_PS_from_sfnt_stream.constprop.0
+                0x00000000000f0c90                ft_mem_realloc.constprop.0
+                0x00000000000f0d50                FT_MulDiv.constprop.0
+                0x00000000000f0d90                void bx::deleteObject<bgfx::Context>(bx::AllocatorI*, bgfx::Context*, unsigned long, char const*, unsigned int) [clone .part.0] [clone .constprop.0]
+                0x00000000000f1060                bgfx::charsetFillTexture(unsigned char const*, unsigned char*, unsigned int, unsigned int, unsigned int) [clone .constprop.0]
+                0x00000000000f1120                bgfx::createTexture2D(bgfx::BackbufferRatio::Enum, unsigned short, unsigned short, bool, unsigned short, bgfx::TextureFormat::Enum, unsigned long, bgfx::Memory const*) [clone .constprop.0]
+                0x00000000000f1a00                fl_application_main_loop_impl.constprop.0
+ *fill*         0x00000000000f40c4        0xc 
+ .text          0x00000000000f40d0     0x7a4f /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+                0x00000000000f4390                bimg::imageParse(bimg::ImageContainer&, void const*, unsigned int, bx::Error*) [clone .constprop.0]
+                0x00000000000f53e0                bx::strLen(char const*, int) [clone .constprop.0]
+                0x00000000000f5410                int bx::read<unsigned int>(bx::ReaderI*, unsigned int&, bx::Error*) [clone .constprop.1] [clone .isra.0]
+                0x00000000000f5580                bgfx::Context::setName(bgfx::Handle, bx::StringView const&) [clone .constprop.0]
+                0x00000000000f5870                bgfx::CommandBuffer::write(void const*, unsigned int) [clone .constprop.1]
+                0x00000000000f58f0                bgfx::CommandBuffer::write(void const*, unsigned int) [clone .constprop.0]
+                0x00000000000f5970                bgfx::VertexLayout::begin(bgfx::RendererType::Enum) [clone .constprop.0]
+                0x00000000000f59b0                bx::quickSort(void*, unsigned int, unsigned int, int (*)(void const*, void const*)) [clone .constprop.0]
+                0x00000000000f5a20                bx::quickSort(void*, unsigned int, unsigned int, int (*)(void const*, void const*)) [clone .constprop.1]
+                0x00000000000f5a90                bgfx::TinyStlAllocator::static_deallocate(void*, unsigned long) [clone .constprop.5]
+                0x00000000000f5ac0                void tinystl::buffer_reserve<tinystl::unordered_hash_node<unsigned long, unsigned int>*, bgfx::TinyStlAllocator>(tinystl::buffer<tinystl::unordered_hash_node<unsigned long, unsigned int>*, bgfx::TinyStlAllocator>*, unsigned long) [clone .constprop.0]
+                0x00000000000f5bb0                bx::debugPrintf(char const*, ...) [clone .constprop.0]
+                0x00000000000f5c80                bgfx::trace(char const*, unsigned short, char const*, ...) [clone .constprop.0]
+                0x00000000000f5d70                bx::snprintf(char*, int, char const*, ...) [clone .constprop.0]
+                0x00000000000f5e30                bx::snprintf(char*, int, char const*, ...) [clone .constprop.1]
+                0x00000000000f5ef0                int bx::write<char>(bx::WriterI*, char const&, bx::Error*) [clone .constprop.0]
+                0x00000000000f60c0                bx::normalizeFilePath(char*, int, char const*, int) [clone .constprop.0] [clone .isra.0]
+                0x00000000000f7050                bx::strFind(bx::StringView const&, bx::StringView const&, int) [clone .constprop.0] [clone .isra.0]
+                0x00000000000f71a0                afm_parser_next_key.constprop.1.isra.0
+                0x00000000000f7210                af_cjk_compute_stem_width.constprop.0.isra.0
+                0x00000000000f7450                af_shaper_get_cluster.isra.0
+                0x00000000000f7660                af_cjk_metrics_check_digits.isra.0
+                0x00000000000f7880                af_loader_compute_darkening.isra.0
+                0x00000000000f7c60                af_latin_compute_stem_width.isra.0
+                0x00000000000f7fb0                t1_set_mm_blend.isra.0
+                0x00000000000f80d0                ft_var_to_normalized.isra.0
+                0x00000000000f8370                Ins_MDRP.isra.0
+                0x00000000000f8650                gray_render_cubic.isra.0
+                0x00000000000f8970                tt_face_build_cmaps.isra.0
+                0x00000000000f8c70                tt_cmap4_char_map_linear.isra.0
+                0x00000000000f8f40                sdf_generate_bounding_box.isra.0
+                0x00000000000fa4d0                psh_hint_table_find_strong_points.isra.0
+                0x00000000000fa760                psh_hint_table_activate_mask.isra.0
+                0x00000000000fa880                ps_builder_check_points.part.0.isra.0
+                0x00000000000fa8b0                cf2_stack_pushInt.part.0.isra.0
+                0x00000000000fa8d0                cf2_getT1SeacComponent.isra.0
+                0x00000000000fa970                cff_parse_num.isra.0
+                0x00000000000faa80                FT_Done_Face.isra.0
+                0x00000000000fab50                FT_Done_Size.isra.0
+                0x00000000000fac90                FT_Raccess_Get_DataOffsets.isra.0
+                0x00000000000fb3d0                ft_lcd_padding.isra.0
+                0x00000000000fb4e0                vidmodeFromModeInfo.isra.0
+                0x00000000000fb650                bgfx::Context::frame(bool) [clone .isra.0]
+                0x00000000000fb7a0                bx::HandleHashMapT<128u, unsigned int>::insert(unsigned int, unsigned short) [clone .isra.0]
+                0x00000000000fb810                bx::strRTrim(bx::StringView const&, bx::StringView const&) [clone .isra.0]
+                0x00000000000fb9b0                bx::fromString(int*, bx::StringView const&) [clone .isra.0]
+                0x00000000000fbad0                FlAllocator_alloc_zero.isra.0
+ *fill*         0x00000000000fbb1f        0x1 
+ .text          0x00000000000fbb20       0x75 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+                0x00000000000fbb20                __libc_csu_init
+                0x00000000000fbb90                __libc_csu_fini
+ .text          0x00000000000fbb95        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/crtendS.o
+ .text          0x00000000000fbb95        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crtn.o
+ *(.gnu.warning)
+
+.fini           0x00000000000fbb98        0xd
+ *(SORT_NONE(.fini))
+ .fini          0x00000000000fbb98        0x8 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crti.o
+                0x00000000000fbb98                _fini
+ .fini          0x00000000000fbba0        0x5 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crtn.o
+                [!provide]                        PROVIDE (__etext = .)
+                [!provide]                        PROVIDE (_etext = .)
+                [!provide]                        PROVIDE (etext = .)
+                0x00000000000fc000                . = ALIGN (CONSTANT (MAXPAGESIZE))
+                0x00000000000fc000                . = SEGMENT_START ("rodata-segment", (ALIGN (CONSTANT (MAXPAGESIZE)) + (. & (CONSTANT (MAXPAGESIZE) - 0x1))))
+
+.rodata         0x00000000000fc000    0x45a90
+ *(.rodata .rodata.* .gnu.linkonce.r.*)
+ .rodata.cst4   0x00000000000fc000        0x4 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                0x00000000000fc000                _IO_stdin_used
+ .rodata.str1.1
+                0x00000000000fc004      0xf4a /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+                                        0xf8d (size before relaxing)
+ *fill*         0x00000000000fcf4e        0x2 
+ .rodata.str1.8
+                0x00000000000fcf50    0x1c007 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ *fill*         0x0000000000118f57        0x9 
+ .rodata        0x0000000000118f60     0x272c /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+                0x000000000011ad60                t1_expert_encoding
+                0x000000000011af60                t1_standard_encoding
+                0x000000000011b5e8                _ZN2bxL22kErrorReaderWriterReadE.lto_priv.0
+                0x000000000011b5ec                _ZN2bxL23kErrorReaderWriterWriteE.lto_priv.0
+ *fill*         0x000000000011b68c        0x4 
+ .rodata.cst8   0x000000000011b690       0xe0 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ .rodata.cst16  0x000000000011b770       0x80 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ .rodata.cst4   0x000000000011b7f0        0xc /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ .rodata.str1.1
+                0x000000000011b7fc      0x1a7 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+                                        0x1e0 (size before relaxing)
+ *fill*         0x000000000011b9a3       0x1d 
+ .rodata        0x000000000011b9c0     0x6828 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+                0x00000000001221d0                bgfx::g_uniformTypeSize
+ *fill*         0x00000000001221e8        0x8 
+ .rodata.cst16  0x00000000001221f0      0x1b0 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+                                        0x1c0 (size before relaxing)
+ .rodata.cst8   0x00000000001223a0       0x18 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+ .rodata.cst4   0x00000000001223b8       0x2c /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+ .rodata.str1.1
+                0x00000000001223e4      0xc9a /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+                                        0xd05 (size before relaxing)
+ *fill*         0x000000000012307e        0x2 
+ .rodata        0x0000000000123080      0x774 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+                0x00000000001230a0                typeinfo name for bgfx::RendererContextI
+                0x00000000001230e0                _ZN4bgfx2glL13s_imageFormatE.lto_priv.0
+                0x0000000000123240                _ZN4bimgL16s_imageBlockInfoE.lto_priv.0
+                0x00000000001236a0                _ZN4bgfx2glL11s_rboFormatE.lto_priv.0
+ *fill*         0x00000000001237f4        0x4 
+ .rodata.str1.8
+                0x00000000001237f8      0x38d /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+ *fill*         0x0000000000123b85        0x3 
+ .rodata.cst4   0x0000000000123b88       0x10 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+                                         0x14 (size before relaxing)
+ .rodata.cst8   0x0000000000123b98       0x50 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+ *fill*         0x0000000000123be8        0x8 
+ .rodata.cst16  0x0000000000123bf0       0x40 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+                                         0x50 (size before relaxing)
+ .rodata.str1.1
+                0x0000000000123c30      0x639 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+                                        0x6ad (size before relaxing)
+ *fill*         0x0000000000124269       0x17 
+ .rodata        0x0000000000124280      0x424 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ *fill*         0x00000000001246a4        0x4 
+ .rodata.str1.8
+                0x00000000001246a8      0x810 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+                                        0x830 (size before relaxing)
+ .rodata.cst4   0x0000000000124eb8        0x8 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ .rodata.cst8   0x0000000000124ec0       0x30 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ .rodata.cst16  0x0000000000124ef0       0x20 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ .rodata.str1.1
+                0x0000000000124f10       0x96 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+                                         0xba (size before relaxing)
+ *fill*         0x0000000000124fa6        0x2 
+ .rodata.str1.8
+                0x0000000000124fa8       0x20 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+ *fill*         0x0000000000124fc8       0x18 
+ .rodata        0x0000000000124fe0     0x1020 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+                0x00000000001252a0                _ZN4bimgL8s_bptcA2E.lto_priv.0
+                0x00000000001252e0                _ZN4bimgL8s_bptcP2E.lto_priv.0
+                0x0000000000125360                _ZN4bimgL13s_bptcFactorsE.lto_priv.0
+                0x0000000000125f70                _ZL10BIMG_ERROR.lto_priv.0.lto_priv.0
+                0x0000000000125f70                _ZL10BIMG_ERROR.lto_priv.1.lto_priv.0
+ .rodata.cst8   0x0000000000126000        0x8 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+ .rodata.cst4   0x0000000000126008       0x38 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+                                         0x48 (size before relaxing)
+ .rodata.cst16  0x0000000000126040       0x40 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+                                         0x70 (size before relaxing)
+ .rodata.str1.1
+                0x0000000000126080      0x3b0 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+                                        0x3ce (size before relaxing)
+ *fill*         0x0000000000126430       0x10 
+ .rodata        0x0000000000126440     0x1989 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+ *fill*         0x0000000000127dc9        0x7 
+ .rodata.str1.8
+                0x0000000000127dd0      0x897 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+                                        0x8e7 (size before relaxing)
+ *fill*         0x0000000000128667        0x1 
+ .rodata.cst8   0x0000000000128668       0x28 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+                                         0x40 (size before relaxing)
+ .rodata.cst16  0x0000000000128690      0x100 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+                                        0x110 (size before relaxing)
+ .rodata.cst4   0x0000000000128790        0x4 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+                                          0xc (size before relaxing)
+ .rodata.str1.1
+                0x0000000000128794      0x4aa /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+                                        0x63f (size before relaxing)
+ *fill*         0x0000000000128c3e        0x2 
+ .rodata        0x0000000000128c40      0x201 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+                0x0000000000128da0                ddigits.lto_priv.0
+                0x0000000000128dc0                a2i.lto_priv.0
+ *fill*         0x0000000000128e41        0xf 
+ .rodata.cst16  0x0000000000128e50       0x70 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+ .rodata.cst8   0x0000000000128ec0        0x8 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+ .rodata.str1.1
+                0x0000000000128ec8       0x81 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+                                         0xbe (size before relaxing)
+ *fill*         0x0000000000128f49       0x17 
+ .rodata        0x0000000000128f60      0x890 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+ .rodata.cst16  0x00000000001297f0       0x30 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+                                         0x60 (size before relaxing)
+ .rodata.cst8   0x0000000000129820        0x8 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+ .rodata.str1.1
+                0x0000000000129828      0x246 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+                                        0x39a (size before relaxing)
+ *fill*         0x0000000000129a6e        0x2 
+ .rodata.str1.8
+                0x0000000000129a70       0x20 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+ *fill*         0x0000000000129a90       0x10 
+ .rodata        0x0000000000129aa0      0x234 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+ *fill*         0x0000000000129cd4        0xc 
+ .rodata.cst16  0x0000000000129ce0       0x80 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+                                         0xa0 (size before relaxing)
+ .rodata.cst8   0x0000000000129d60       0x10 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+ *fill*         0x0000000000129d70       0x10 
+ .rodata        0x0000000000129d80      0x580 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+ .rodata.str1.1
+                0x000000000012a300      0x236 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+                                        0x2d7 (size before relaxing)
+ *fill*         0x000000000012a536        0xa 
+ .rodata.cst16  0x000000000012a540       0x30 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+ .rodata.cst8   0x000000000012a570        0x8 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+ *fill*         0x000000000012a570       0x10 
+ .rodata        0x000000000012a580     0xef5d /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+ .rodata.str1.1
+                0x00000000001394dd       0x21 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+                                         0x3d (size before relaxing)
+ *fill*         0x00000000001394fe        0x2 
+ .rodata.cst16  0x0000000000139500       0x50 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+                                         0x60 (size before relaxing)
+ .rodata.cst8   0x0000000000139550       0x10 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+ .rodata.str1.1
+                0x0000000000139560        0xb /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+                                         0x9a (size before relaxing)
+ *fill*         0x000000000013956b       0x15 
+ .rodata        0x0000000000139580      0x290 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+ .rodata.cst16  0x0000000000139810       0x10 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+                                         0x20 (size before relaxing)
+ .rodata.cst8   0x0000000000139820        0x8 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+ *fill*         0x0000000000139828       0x18 
+ .rodata        0x0000000000139840      0x518 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+ .rodata.str1.1
+                0x0000000000139d58       0x14 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+ *fill*         0x0000000000139d6c        0x4 
+ .rodata.cst16  0x0000000000139d70       0x50 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+                                         0x90 (size before relaxing)
+ .rodata.cst8   0x0000000000139dc0        0x8 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+ *fill*         0x0000000000139dc8       0x18 
+ .rodata        0x0000000000139de0       0xe4 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+ .rodata.str1.1
+                0x0000000000139ec4       0x33 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+                                         0x7d (size before relaxing)
+ *fill*         0x0000000000139ef7        0x9 
+ .rodata.cst16  0x0000000000139f00       0x30 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+                                         0x50 (size before relaxing)
+ .rodata.cst8   0x0000000000139f30        0x8 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+                                         0x10 (size before relaxing)
+ *fill*         0x0000000000139f38        0x8 
+ .rodata        0x0000000000139f40      0xc20 /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+ .rodata.str1.1
+                0x000000000013ab60        0x8 /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+                                         0x18 (size before relaxing)
+ .rodata.cst8   0x000000000013ab68        0x8 /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+ *fill*         0x000000000013ab68        0x8 
+ .rodata.cst16  0x000000000013ab70       0x10 /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+ .rodata        0x000000000013ab80       0xdc /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+ .rodata.str1.1
+                0x000000000013ac5c       0xc1 /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+                                        0x337 (size before relaxing)
+ *fill*         0x000000000013ad1d        0x3 
+ .rodata.cst16  0x000000000013ad20       0x40 /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+                                         0x70 (size before relaxing)
+ .rodata.cst8   0x000000000013ad60       0x18 /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+ .rodata.str1.1
+                0x000000000013ad60      0x33d /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+                                        0x39b (size before relaxing)
+ *fill*         0x000000000013b09d        0x3 
+ .rodata.str1.8
+                0x000000000013b0a0       0xe1 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ *fill*         0x000000000013b181       0x1f 
+ .rodata        0x000000000013b1a0     0x4f38 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ .rodata.cst8   0x00000000001400d8        0x8 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ .rodata.cst16  0x00000000001400e0       0x70 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+                                         0xc0 (size before relaxing)
+ *fill*         0x0000000000140150       0x10 
+ .rodata        0x0000000000140160      0x1c0 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+ .rodata.str1.1
+                0x0000000000140320       0x22 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+                                         0x5d (size before relaxing)
+ *fill*         0x0000000000140342        0xe 
+ .rodata.cst16  0x0000000000140350       0x50 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+                                         0xd0 (size before relaxing)
+ .rodata.cst8   0x00000000001403a0        0x8 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+ .rodata.cst4   0x00000000001403a0        0x8 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+ .rodata.str1.1
+                0x00000000001403a0     0x101e /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+                                       0x1107 (size before relaxing)
+ *fill*         0x00000000001413be        0x2 
+ .rodata.str1.8
+                0x00000000001413c0      0x33f /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+                                        0x3cf (size before relaxing)
+ *fill*         0x00000000001416ff        0x1 
+ .rodata        0x0000000000141700       0xc0 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+ .rodata.cst16  0x00000000001417c0       0x60 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+                                         0x70 (size before relaxing)
+ .rodata.cst8   0x0000000000141820       0x18 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+ .rodata.cst4   0x0000000000141838       0x20 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+                                         0x3c (size before relaxing)
+ .rodata.str1.1
+                0x0000000000141858       0x16 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+                                         0x80 (size before relaxing)
+ .rodata.str1.8
+                0x000000000014186e       0x1f /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+ *fill*         0x000000000014186e       0x12 
+ .rodata        0x0000000000141880      0x210 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+ .rodata.cst16  0x0000000000141a90       0x10 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+
+.rodata1
+ *(.rodata1)
+
+.eh_frame_hdr   0x0000000000141a90       0x3c
+ *(.eh_frame_hdr)
+ .eh_frame_hdr  0x0000000000141a90       0x3c /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                0x0000000000141a90                __GNU_EH_FRAME_HDR
+ *(.eh_frame_entry .eh_frame_entry.*)
+
+.eh_frame       0x0000000000141ad0       0xe8
+ *(.eh_frame)
+ .eh_frame      0x0000000000141ad0       0x30 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                                         0x2c (size before relaxing)
+ *fill*         0x0000000000141b00        0x0 
+ .eh_frame      0x0000000000141b00       0x28 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x0000000000141b28       0x18 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                                         0x30 (size before relaxing)
+ .eh_frame      0x0000000000141b40       0x18 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                                         0x30 (size before relaxing)
+ .eh_frame      0x0000000000141b58       0x5c /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+                                         0x78 (size before relaxing)
+ .eh_frame      0x0000000000141bb4        0x4 /usr/lib/gcc/x86_64-linux-gnu/10/crtendS.o
+ *(.eh_frame.*)
+
+.gcc_except_table
+ *(.gcc_except_table .gcc_except_table.*)
+
+.gnu_extab
+ *(.gnu_extab*)
+
+.exception_ranges
+ *(.exception_ranges*)
+                0x0000000000143428                . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE))
+
+.eh_frame
+ *(.eh_frame)
+ *(.eh_frame.*)
+
+.gnu_extab
+ *(.gnu_extab)
+
+.gcc_except_table
+ *(.gcc_except_table .gcc_except_table.*)
+
+.exception_ranges
+ *(.exception_ranges*)
+
+.tdata          0x0000000000143428        0x0
+                [!provide]                        PROVIDE (__tdata_start = .)
+ *(.tdata .tdata.* .gnu.linkonce.td.*)
+
+.tbss
+ *(.tbss .tbss.* .gnu.linkonce.tb.*)
+ *(.tcommon)
+
+.preinit_array  0x0000000000143428        0x0
+                [!provide]                        PROVIDE (__preinit_array_start = .)
+ *(.preinit_array)
+                [!provide]                        PROVIDE (__preinit_array_end = .)
+
+.init_array     0x0000000000143428       0x10
+                0x0000000000143428                PROVIDE (__init_array_start = .)
+ *(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*))
+ *(.init_array EXCLUDE_FILE(*crtend?.o *crtend.o *crtbegin?.o *crtbegin.o) .ctors)
+ .init_array    0x0000000000143428        0x8 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+ .init_array    0x0000000000143430        0x8 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+                0x0000000000143438                PROVIDE (__init_array_end = .)
+
+.fini_array     0x0000000000143438        0x8
+                [!provide]                        PROVIDE (__fini_array_start = .)
+ *(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*))
+ *(.fini_array EXCLUDE_FILE(*crtend?.o *crtend.o *crtbegin?.o *crtbegin.o) .dtors)
+ .fini_array    0x0000000000143438        0x8 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+                [!provide]                        PROVIDE (__fini_array_end = .)
+
+.ctors
+ *crtbegin.o(.ctors)
+ *crtbegin?.o(.ctors)
+ *(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
+ *(SORT_BY_NAME(.ctors.*))
+ *(.ctors)
+
+.dtors
+ *crtbegin.o(.dtors)
+ *crtbegin?.o(.dtors)
+ *(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
+ *(SORT_BY_NAME(.dtors.*))
+ *(.dtors)
+
+.jcr
+ *(.jcr)
+
+.data.rel.ro    0x0000000000143440     0x9318
+ *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*)
+ .data.rel.ro.local
+                0x0000000000143440     0x2778 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+                0x00000000001439a0                pscmaps_interface.lto_priv.0
+                0x0000000000144540                vtable for bx::StaticMemoryBlock
+                0x0000000000144570                vtable for bx::StaticMemoryBlockWriter
+                0x00000000001445c8                vtable for bx::MemoryReader
+                0x0000000000144620                vtable for bx::FileWriter
+                0x00000000001446d8                vtable for bx::FileWriterImpl
+                0x0000000000144790                vtable for bx::DefaultAllocator
+ *fill*         0x0000000000145bb8        0x8 
+ .data.rel.ro.local
+                0x0000000000145bc0     0x13a0 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+                0x0000000000145bc0                _ZN4bimgL12s_packUnpackE.lto_priv.0
+ .data.rel.ro.local
+                0x0000000000146f60      0x1b8 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+ *fill*         0x0000000000147118        0x8 
+ .data.rel.ro.local
+                0x0000000000147120      0x110 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ .data.rel.ro.local
+                0x0000000000147230      0x178 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+ *fill*         0x00000000001473a8       0x18 
+ .data.rel.ro.local
+                0x00000000001473c0      0x930 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+                0x0000000000147480                _bdf_properties.lto_priv.0
+ *fill*         0x0000000000147cf0       0x10 
+ .data.rel.ro.local
+                0x0000000000147d00      0xc70 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+ *fill*         0x0000000000148970       0x10 
+ .data.rel.ro.local
+                0x0000000000148980      0xcb0 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+ *fill*         0x0000000000149630       0x10 
+ .data.rel.ro.local
+                0x0000000000149640      0x250 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+ *fill*         0x0000000000149890       0x10 
+ .data.rel.ro.local
+                0x00000000001498a0       0x50 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+ *fill*         0x00000000001498f0       0x10 
+ .data.rel.ro.local
+                0x0000000000149900      0x140 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+ .data.rel.ro.local
+                0x0000000000149a40       0x30 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+ *fill*         0x0000000000149a70       0x10 
+ .data.rel.ro.local
+                0x0000000000149a80      0x130 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+ *fill*         0x0000000000149bb0       0x10 
+ .data.rel.ro.local
+                0x0000000000149bc0      0xea0 /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+ .data.rel.ro.local
+                0x000000000014aa60     0x15b0 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ *fill*         0x000000000014c010       0x10 
+ .data.rel.ro.local
+                0x000000000014c020      0x4d0 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+ *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*)
+ .data.rel.ro   0x000000000014c4f0        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ .data.rel.ro   0x000000000014c4f0      0x228 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ .data.rel.ro   0x000000000014c718       0x28 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+                0x000000000014c718                typeinfo for bgfx::RendererContextI
+ .data.rel.ro   0x000000000014c740       0x18 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+
+.dynamic        0x000000000014c758      0x250
+ *(.dynamic)
+ .dynamic       0x000000000014c758      0x250 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                0x000000000014c758                _DYNAMIC
+
+.got            0x000000000014c9a8      0x650
+ *(.got.plt)
+ .got.plt       0x000000000014c9a8      0x618 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                0x000000000014c9a8                _GLOBAL_OFFSET_TABLE_
+ *(.igot.plt)
+ *(.got)
+ .got           0x000000000014cfc0       0x38 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ *(.igot)
+                0x000000000014d000                . = DATA_SEGMENT_RELRO_END (., 0x0)
+
+.data           0x000000000014d000     0x1f50
+ *(.data .data.* .gnu.linkonce.d.*)
+ .data          0x000000000014d000        0x4 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+                0x000000000014d000                data_start
+                0x000000000014d000                __data_start
+ .data          0x000000000014d004        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crti.o
+ .data          0x000000000014d004        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+ *fill*         0x000000000014d004        0x4 
+ .data.rel.local
+                0x000000000014d008        0x8 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+                0x000000000014d008                __dso_handle
+ .data          0x000000000014d010        0x0 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ *fill*         0x000000000014d010       0x10 
+ .data.rel.local
+                0x000000000014d020       0xa8 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+                0x000000000014d020                _ZN4bgfxL16s_attribTypeSizeE.lto_priv.0
+ .data          0x000000000014d0c8        0x0 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+ *fill*         0x000000000014d0c8       0x18 
+ .data.rel.local
+                0x000000000014d0e0      0x180 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+ .data          0x000000000014d260      0x7f8 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+                0x000000000014d260                _ZN4bgfx2glL15s_textureFormatE.lto_priv.0
+ *fill*         0x000000000014da58        0x8 
+ .data.rel.local
+                0x000000000014da60      0xab0 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+                0x000000000014da60                _ZN4bgfx2glL11s_extensionE.lto_priv.0
+ .data          0x000000000014e510        0x0 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ *fill*         0x000000000014e510       0x10 
+ .data.rel.local
+                0x000000000014e520      0x290 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ .data          0x000000000014e7b0        0x0 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+ *fill*         0x000000000014e7b0       0x10 
+ .data          0x000000000014e7c0      0x790 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+ .data          0x000000000014ef50        0x0 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+ .data          0x000000000014ef50        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .data          0x000000000014ef50        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/crtendS.o
+ .data          0x000000000014ef50        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crtn.o
+
+.tm_clone_table
+                0x000000000014ef50        0x0
+ .tm_clone_table
+                0x000000000014ef50        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+ .tm_clone_table
+                0x000000000014ef50        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/crtendS.o
+
+.data1
+ *(.data1)
+                0x000000000014ef50                _edata = .
+                [!provide]                        PROVIDE (edata = .)
+                0x000000000014ef50                . = .
+                0x000000000014ef50                __bss_start = .
+
+.bss            0x000000000014ef60    0x3ab48
+ *(.dynbss)
+ .dynbss        0x000000000014ef60        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ *(.bss .bss.* .gnu.linkonce.b.*)
+ .bss           0x000000000014ef60        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/Scrt1.o
+ .bss           0x000000000014ef60        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crti.o
+ .bss           0x000000000014ef60        0x1 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+ *fill*         0x000000000014ef61       0x1f 
+ .bss           0x000000000014ef80    0x22320 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+                0x000000000014ef80                _ZN4bgfxL13s_threadIndexE.lto_priv.0
+                0x000000000014ef90                bgfx::g_caps
+                0x000000000014f0c8                _ZN4bgfxL14s_callbackStubE.lto_priv.0
+                0x000000000014f0d0                bgfx::g_callback
+                0x000000000014f0d8                _ZN4bgfxL15s_allocatorStubE.lto_priv.0
+                0x000000000014f0e0                bgfx::g_allocator
+                0x000000000014f0e8                bgfx::g_platformDataChangedSinceReset
+                0x000000000014f0f0                bgfx::g_platformData
+                0x000000000014f118                _ZN4bgfxL5s_ctxE.lto_priv.0
+                0x000000000014f120                _glfwMainThreadError.lto_priv.0
+                0x000000000014f530                _glfw
+                0x00000000001705a8                _glfwErrorCallback.lto_priv.0
+                0x00000000001705c0                _ZL7s_state.lto_priv.0
+ .bss           0x00000000001712a0       0x20 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+                0x00000000001712a0                _ZN4bgfxL25s_graphicsDebuggerPresentE.lto_priv.0
+                0x00000000001712b0                bgfx::g_internalData
+ .bss           0x00000000001712c0    0x103a8 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+                0x00000000001712c0                bgfx::gl::glProgramParameteri
+                0x00000000001712c8                bgfx::gl::glProgramBinary
+                0x00000000001712d0                bgfx::gl::glGetProgramBinary
+                0x00000000001712d8                bgfx::gl::glDetachShader
+                0x00000000001712e0                bgfx::gl::glGetProgramInfoLog
+                0x00000000001712e8                bgfx::gl::glGetProgramiv
+                0x00000000001712f0                bgfx::gl::glLinkProgram
+                0x00000000001712f8                bgfx::gl::glAttachShader
+                0x0000000000171300                bgfx::gl::glCreateProgram
+                0x0000000000171308                bgfx::gl::glDeleteSamplers
+                0x0000000000171310                bgfx::gl::glDeleteVertexArrays
+                0x0000000000171318                bgfx::gl::glUniformMatrix3fv
+                0x0000000000171320                bgfx::gl::glUniform4fv
+                0x0000000000171328                bgfx::gl::glUniform1iv
+                0x0000000000171330                bgfx::gl::glDisableVertexAttribArray
+                0x0000000000171338                bgfx::gl::glUniformMatrix4fv
+                0x0000000000171340                bgfx::gl::glBindSampler
+                0x0000000000171348                bgfx::gl::glActiveTexture
+                0x0000000000171350                bgfx::gl::glUniform1i
+                0x0000000000171358                bgfx::gl::glColorMask
+                0x0000000000171360                bgfx::gl::glDepthFunc
+                0x0000000000171368                bgfx::gl::glDisable
+                0x0000000000171370                bgfx::gl::glViewport
+                0x0000000000171378                bgfx::gl::glBindVertexArray
+                0x0000000000171380                bgfx::gl::glReadPixels
+                0x0000000000171388                bgfx::gl::glGetTexImage
+                0x0000000000171390                bgfx::gl::glGetCompressedTexImage
+                0x0000000000171398                bgfx::gl::glCompressedTexSubImage3D
+                0x00000000001713a0                bgfx::gl::glCompressedTexSubImage2D
+                0x00000000001713a8                bgfx::gl::glTexSubImage2D
+                0x00000000001713b0                bgfx::gl::glTexSubImage3D
+                0x00000000001713b8                bgfx::gl::s_renderGL
+                0x00000000001713c0                bgfx::gl::glPixelStorei
+                0x00000000001713c8                bgfx::gl::glDeleteProgram
+                0x00000000001713d0                bgfx::gl::glUseProgram
+                0x00000000001713d8                bgfx::gl::glDeleteShader
+                0x00000000001713e0                bgfx::gl::glBufferSubData
+                0x00000000001713e8                bgfx::gl::glDeleteBuffers
+                0x00000000001713f0                bgfx::gl::glBufferData
+                0x00000000001713f8                bgfx::gl::glBindBuffer
+                0x0000000000171400                bgfx::gl::glGenBuffers
+                0x0000000000171408                _ZN4bgfxL11s_renderDocE.lto_priv.0
+                0x0000000000171410                bgfx::gl::glFramebufferRenderbuffer
+                0x0000000000171418                bgfx::gl::glRenderbufferStorageMultisample
+                0x0000000000171420                bgfx::gl::glXSwapIntervalSGI
+                0x0000000000171428                bgfx::gl::glXSwapIntervalMESA
+                0x0000000000171430                bgfx::gl::glXSwapIntervalEXT
+                0x0000000000171438                bgfx::gl::glGenerateMipmap
+                0x0000000000171440                bgfx::gl::glTexStorage3D
+                0x0000000000171448                bgfx::gl::glBindImageTexture
+                0x0000000000171450                bgfx::gl::glTexStorage2D
+                0x0000000000171458                bgfx::gl::glDeleteTextures
+                0x0000000000171460                bgfx::gl::glDeleteFramebuffers
+                0x0000000000171468                bgfx::gl::glCheckFramebufferStatus
+                0x0000000000171470                bgfx::gl::glFramebufferTexture2D
+                0x0000000000171478                bgfx::gl::glBindTexture
+                0x0000000000171480                bgfx::gl::glGenTextures
+                0x0000000000171488                bgfx::gl::glBindFramebuffer
+                0x0000000000171490                bgfx::gl::glGenFramebuffers
+                0x0000000000171498                bgfx::gl::glDeleteRenderbuffers
+                0x00000000001714a0                bgfx::gl::glRenderbufferStorage
+                0x00000000001714a8                bgfx::gl::glBindRenderbuffer
+                0x00000000001714b0                bgfx::gl::glGenRenderbuffers
+                0x00000000001714c0                _ZN4bgfx2glL10s_viewNameE.lto_priv.0
+                0x00000000001814c0                bgfx::gl::glFramebufferTexture
+                0x00000000001814c8                bgfx::gl::glInvalidateFramebuffer
+                0x00000000001814d0                bgfx::gl::glObjectLabel
+                0x00000000001814d8                bgfx::gl::glInsertEventMarker
+                0x00000000001814e0                bgfx::gl::glProvokingVertex
+                0x00000000001814e8                bgfx::gl::glEnable
+                0x00000000001814f0                bgfx::gl::glPopDebugGroup
+                0x00000000001814f8                bgfx::gl::glPushDebugGroup
+                0x0000000000181500                bgfx::gl::glGetDebugMessageLog
+                0x0000000000181508                bgfx::gl::glDebugMessageCallback
+                0x0000000000181510                bgfx::gl::glDebugMessageInsert
+                0x0000000000181518                bgfx::gl::glDebugMessageControl
+                0x0000000000181520                bgfx::gl::glDrawElementsInstancedNV
+                0x0000000000181528                bgfx::gl::glDrawArraysInstancedNV
+                0x0000000000181530                bgfx::gl::glVertexAttribDivisorNV
+                0x0000000000181538                bgfx::gl::glDrawElementsInstanced
+                0x0000000000181540                bgfx::gl::glDrawArraysInstanced
+                0x0000000000181548                bgfx::gl::glVertexAttribDivisor
+                0x0000000000181550                bgfx::gl::glGetFloatv
+                0x0000000000181558                bgfx::gl::glEndQuery
+                0x0000000000181560                bgfx::gl::glBeginQuery
+                0x0000000000181568                bgfx::gl::glDeleteQueries
+                0x0000000000181570                bgfx::gl::glGenQueries
+                0x0000000000181578                bgfx::gl::glGetQueryObjectui64v
+                0x0000000000181580                bgfx::gl::glGetQueryObjectiv
+                0x0000000000181588                bgfx::gl::glQueryCounter
+                0x0000000000181590                bgfx::gl::glGenVertexArrays
+                0x0000000000181598                bgfx::gl::glCopyImageSubData
+                0x00000000001815a0                bgfx::gl::glPolygonMode
+                0x00000000001815a8                bgfx::gl::glMultiDrawElementsIndirect
+                0x00000000001815b0                bgfx::gl::glMultiDrawArraysIndirect
+                0x00000000001815b8                bgfx::gl::glGetInternalformativ
+                0x00000000001815c0                _ZN4bgfx2glL15s_textureFilterE.lto_priv.0
+                0x0000000000181618                bgfx::gl::glGetStringi
+                0x0000000000181620                bgfx::gl::glGetIntegerv
+                0x0000000000181628                bgfx::gl::glGetError
+                0x0000000000181630                bgfx::gl::glGetString
+                0x0000000000181638                bgfx::gl::glDrawElementsIndirect
+                0x0000000000181640                bgfx::gl::glDrawArraysIndirect
+                0x0000000000181648                bgfx::gl::glFramebufferTextureLayer
+                0x0000000000181650                bgfx::gl::glDrawElements
+                0x0000000000181658                bgfx::gl::glDrawArrays
+ *fill*         0x0000000000181668       0x18 
+ .bss           0x0000000000181680     0x82a8 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+                0x0000000000181680                bgfx::gl::glDrawBuffers
+                0x0000000000181688                bgfx::gl::glDrawBuffer
+                0x0000000000181690                bgfx::gl::glReadBuffer
+                0x0000000000181698                bgfx::gl::glBlitFramebuffer
+                0x00000000001816a0                bgfx::gl::glFlush
+                0x00000000001816a8                bgfx::gl::glBlendEquationi
+                0x00000000001816b0                bgfx::gl::glBlendFunci
+                0x00000000001816b8                bgfx::gl::glDisablei
+                0x00000000001816c0                bgfx::gl::glBlendEquationSeparatei
+                0x00000000001816c8                bgfx::gl::glBlendFuncSeparatei
+                0x00000000001816d0                bgfx::gl::glEnablei
+                0x00000000001816d8                bgfx::gl::glBlendColor
+                0x00000000001816e0                bgfx::gl::glBlendEquationSeparate
+                0x00000000001816e8                bgfx::gl::glBlendFuncSeparate
+                0x00000000001816f0                bgfx::gl::glPointSize
+                0x00000000001816f8                bgfx::gl::glDepthMask
+                0x0000000000181700                bgfx::gl::glCullFace
+                0x0000000000181708                bgfx::gl::glStencilOpSeparate
+                0x0000000000181710                bgfx::gl::glStencilFuncSeparate
+                0x0000000000181718                bgfx::gl::glScissor
+                0x0000000000181720                bgfx::gl::glMemoryBarrier
+                0x0000000000181728                bgfx::gl::glDispatchCompute
+                0x0000000000181730                bgfx::gl::glDispatchComputeIndirect
+                0x0000000000181738                bgfx::gl::glBindBufferBase
+                0x0000000000181740                _ZZN4bgfx2gl17RendererContextGL6submitEPNS_5FrameERNS_9ClearQuadERNS_19TextVideoMemBlitterEE9viewState.lto_priv.0
+                0x0000000000189820                bgfx::gl::glFrontFace
+                0x0000000000189828                bgfx::gl::glGetShaderInfoLog
+                0x0000000000189830                bgfx::gl::glGetShaderiv
+                0x0000000000189838                bgfx::gl::glCompileShader
+                0x0000000000189840                bgfx::gl::glShaderSource
+                0x0000000000189848                bgfx::gl::glCreateShader
+                0x0000000000189850                bgfx::gl::glGenSamplers
+                0x0000000000189858                bgfx::gl::glSamplerParameterfv
+                0x0000000000189860                bgfx::gl::glSamplerParameterf
+                0x0000000000189868                bgfx::gl::glSamplerParameteri
+                0x0000000000189870                bgfx::gl::glTexParameterfv
+                0x0000000000189878                bgfx::gl::glTexParameterf
+                0x0000000000189880                bgfx::gl::glTexParameteri
+                0x0000000000189888                bgfx::gl::glTexParameteriv
+                0x0000000000189890                bgfx::gl::glEnableVertexAttribArray
+                0x0000000000189898                bgfx::gl::glVertexAttribPointer
+                0x00000000001898a0                bgfx::gl::glVertexAttribIPointer
+                0x00000000001898a8                bgfx::gl::glGetAttribLocation
+                0x00000000001898b0                bgfx::gl::glGetUniformLocation
+                0x00000000001898b8                bgfx::gl::glGetActiveUniform
+                0x00000000001898c0                bgfx::gl::glGetActiveAttrib
+                0x00000000001898c8                bgfx::gl::glGetProgramResourceiv
+                0x00000000001898d0                bgfx::gl::glGetProgramResourceName
+                0x00000000001898d8                bgfx::gl::glGetProgramInterfaceiv
+ .bss           0x0000000000189928        0x8 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+ .bss           0x0000000000189930        0x0 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ .bss           0x0000000000189930       0x20 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+                0x0000000000189930                bgfx::gl::glClear
+                0x0000000000189938                bgfx::gl::glClearStencil
+                0x0000000000189940                bgfx::gl::glClearDepth
+                0x0000000000189948                bgfx::gl::glClearColor
+ .bss           0x0000000000189950      0x158 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+ .bss           0x0000000000189aa8        0x0 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+ .bss           0x0000000000189aa8        0x0 /usr/lib/x86_64-linux-gnu/libc_nonshared.a(elf-init.oS)
+ .bss           0x0000000000189aa8        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/crtendS.o
+ .bss           0x0000000000189aa8        0x0 /usr/lib/gcc/x86_64-linux-gnu/10/../../../x86_64-linux-gnu/crtn.o
+ *(COMMON)
+                0x0000000000189aa8                . = ALIGN ((. != 0x0)?0x8:0x1)
+
+.lbss
+ *(.dynlbss)
+ *(.lbss .lbss.* .gnu.linkonce.lb.*)
+ *(LARGE_COMMON)
+                0x0000000000189aa8                . = ALIGN (0x8)
+                0x0000000000189aa8                . = SEGMENT_START ("ldata-segment", .)
+
+.lrodata
+ *(.lrodata .lrodata.* .gnu.linkonce.lr.*)
+
+.ldata          0x000000000018baa8        0x0
+ *(.ldata .ldata.* .gnu.linkonce.l.*)
+                0x000000000018baa8                . = ALIGN ((. != 0x0)?0x8:0x1)
+                0x000000000018baa8                . = ALIGN (0x8)
+                0x0000000000189aa8                _end = .
+                [!provide]                        PROVIDE (end = .)
+                0x000000000018baa8                . = DATA_SEGMENT_END (.)
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+
+.stab.excl
+ *(.stab.excl)
+
+.stab.exclstr
+ *(.stab.exclstr)
+
+.stab.index
+ *(.stab.index)
+
+.stab.indexstr
+ *(.stab.indexstr)
+
+.comment        0x0000000000000000       0x25
+ *(.comment)
+ .comment       0x0000000000000000       0x25 /usr/lib/gcc/x86_64-linux-gnu/10/crtbeginS.o
+                                         0x26 (size before relaxing)
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans0.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans1.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans2.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans3.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans4.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans5.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans6.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans7.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans8.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans9.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans10.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans11.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans12.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans13.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans14.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans15.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans16.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans17.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans18.ltrans.o
+ .comment       0x0000000000000025       0x26 /tmp/flowi_testbed.LRgjf2.ltrans19.ltrans.o
+ .comment       0x0000000000000025       0x26 /usr/lib/gcc/x86_64-linux-gnu/10/crtendS.o
+
+.gnu.build.attributes
+ *(.gnu.build.attributes .gnu.build.attributes.*)
+
+.debug
+ *(.debug)
+
+.line
+ *(.line)
+
+.debug_srcinfo
+ *(.debug_srcinfo)
+
+.debug_sfnames
+ *(.debug_sfnames)
+
+.debug_aranges
+ *(.debug_aranges)
+
+.debug_pubnames
+ *(.debug_pubnames)
+
+.debug_info
+ *(.debug_info .gnu.linkonce.wi.*)
+
+.debug_abbrev
+ *(.debug_abbrev)
+
+.debug_line
+ *(.debug_line .debug_line.* .debug_line_end)
+
+.debug_frame
+ *(.debug_frame)
+
+.debug_str
+ *(.debug_str)
+
+.debug_loc
+ *(.debug_loc)
+
+.debug_macinfo
+ *(.debug_macinfo)
+
+.debug_weaknames
+ *(.debug_weaknames)
+
+.debug_funcnames
+ *(.debug_funcnames)
+
+.debug_typenames
+ *(.debug_typenames)
+
+.debug_varnames
+ *(.debug_varnames)
+
+.debug_pubtypes
+ *(.debug_pubtypes)
+
+.debug_ranges
+ *(.debug_ranges)
+
+.debug_addr
+ *(.debug_addr)
+
+.debug_line_str
+ *(.debug_line_str)
+
+.debug_loclists
+ *(.debug_loclists)
+
+.debug_macro
+ *(.debug_macro)
+
+.debug_names
+ *(.debug_names)
+
+.debug_rnglists
+ *(.debug_rnglists)
+
+.debug_str_offsets
+ *(.debug_str_offsets)
+
+.debug_sup
+ *(.debug_sup)
+
+.gnu.attributes
+ *(.gnu.attributes)
+
+/DISCARD/
+ *(.note.GNU-stack)
+ *(.gnu_debuglink)
+ *(.gnu.lto_*)
+OUTPUT(/home/emoon/code/projects/flowi/t2-output/linux-gcc-release-default/flowi_testbed elf64-x86-64)

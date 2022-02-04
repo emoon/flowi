@@ -188,6 +188,7 @@ extern"C" struct FlContext* fl_application_new_impl(struct FlContext* ctx, FlStr
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
         .end();
 
+
     bgfx::RendererType::Enum type = bgfx::getRendererType();
 
     state->flat_shader = bgfx::createProgram(

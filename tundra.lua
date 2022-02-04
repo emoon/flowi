@@ -56,7 +56,7 @@ local gcc_opts = {
     "-fPIC",
     { "-DFLOWI_TEST", "-O2", "-g"; Config = "*-*-test" },
     { "-DFLOWI_DEBUG", "-O0", "-g"; Config = "*-*-debug" },
-    { "-DFLOWI_RELEASE", "-O3", "-g"; Config = "*-*-release" },
+    { "-DFLOWI_RELEASE", "-O3", Config = "*-*-release" },
 }
 
 local gcc_env = {
@@ -75,6 +75,8 @@ local gcc_env = {
 
         CXXOPTS = {
             gcc_opts,
+            "-fno-exceptions",
+            "-fno-asynchronous-unwind-tables",
             "-DFLOWI_VERSION='\"$(FLOWI_VERSION)\"'",
         },
     },
