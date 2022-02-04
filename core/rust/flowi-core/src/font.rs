@@ -11,7 +11,7 @@ extern "C" {
     ) -> Font;
     fn fl_font_new_from_memory_impl(
         name: FlString,
-        data: *const u8,
+        data: *mut u8,
         font_size: u32,
         placement_mode: FontPlacementMode,
     ) -> Font;
@@ -47,14 +47,14 @@ impl Font {
     /// Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some casesLike when needing the accurate placement mode used by Harzbuff that needs to original ttf data
     pub fn new_from_memory(
         name: &str,
-        data: &[u8],
+        data: &mut [u8],
         font_size: u32,
         placement_mode: FontPlacementMode,
     ) {
         unsafe {
             fl_font_new_from_memory_impl(
                 FlString::new(name),
-                data.as_ptr(),
+                data.as_mut_ptr(),
                 font_size,
                 placement_mode,
             );
