@@ -276,8 +276,6 @@ StaticLibrary {
         "__STDC_CONSTANT_MACROS",
         "BGFX_CONFIG_RENDERER_WEBGPU=0",
         "BGFX_CONFIG_RENDERER_GNM=0",
-        "BGFX_CONFIG_RENDERER_DIRECT3D11=0", -- Enable when we have a solution for dx shaders
-        "BGFX_CONFIG_RENDERER_DIRECT3D12=0", -- Enable when we have a solution for dx shaders
         "BGFX_CONFIG_MULTITHREADED=0",
         { "BGFX_CONFIG_RENDERER_VULKAN=1", "BGFX_CONFIG_RENDERER_OPENGL=1" ; Config = { "linux-*-*", "win64-*-*" } },
         { "GLFW_EXPOSE_NATIVE_COCOA",

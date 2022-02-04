@@ -75,8 +75,6 @@ local gcc_env = {
 
         CXXOPTS = {
             gcc_opts,
-            "-fno-exceptions",
-            "-fno-asynchronous-unwind-tables",
             "-DFLOWI_VERSION='\"$(FLOWI_VERSION)\"'",
         },
     },
