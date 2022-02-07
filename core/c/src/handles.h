@@ -7,14 +7,14 @@ struct FlAllocator;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Handles {
-	struct FlAllocator* allocator;
-	u8* objects;
-	u32* free_slots;
-	int len;
-	int capacity;
-	int object_size;
-	int free_slots_count;
-	u32 next_inner_id;
+    struct FlAllocator* allocator;
+    u8* objects;
+    u32* free_slots;
+    int len;
+    int capacity;
+    int object_size;
+    int free_slots_count;
+    u32 next_inner_id;
 } Handles;
 
 bool Handles_create_impl(Handles* self, struct FlAllocator* allocator, int capacity, int entry_size);
@@ -25,4 +25,3 @@ bool Handles_is_valid(Handles* self, uint64_t id);
 void Handles_destroy(Handles* self);
 
 #define Handles_crate(self, allocator, cap, Type) Handles_create_impl(self, allocator, cap, sizeof(Type))
-
