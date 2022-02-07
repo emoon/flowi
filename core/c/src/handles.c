@@ -112,13 +112,19 @@ void* Handles_create_handle(Handles* self) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Handles_remove_handle(Handles* self, u64 id) {
-	const u32 index = handle_index(id);
+	const int index = (int)handle_index(id);
+	const u32 inner = handle_inner(id);
 
-	// mark the index as invalid
-	*(u64*)(self->objects + (self->object_size * index)) = 0;
-
-	// add index to free slots
-	u32 offset = self->free_slots_count++;
-	self->free_slots[offset] = index;
+	if (index >= 0 && index < self->len) {
+		u64 handle = *(u64*)(self->objects + (self->object_size * index));
+		// Validate that handle is valid before removing it
+		if (handle_inner(handle) == inner) {
+			// mark the index as invalid
+			*(u64*)(self->objects + (self->object_size * index)) = 0;
+			// add index to free slots
+			u32 offset = self->free_slots_count++;
+			self->free_slots[offset] = index;
+		}
+	}
 }
 

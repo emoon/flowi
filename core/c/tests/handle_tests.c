@@ -220,4 +220,36 @@ UTEST(Handles, create_remove_2) {
 	Handles_destroy(&handles);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(Handles, test_valid_handle) {
+	Handles handles;
+	ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+
+	Handles_create_handle(&handles);
+	u64 h = *(u64*)Handles_create_handle(&handles);
+
+	ASSERT_TRUE(Handles_is_valid(&handles, h));
+
+	Handles_remove_handle(&handles, h);
+
+	ASSERT_FALSE(Handles_is_valid(&handles, h));
+
+	Handles_destroy(&handles);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(Handles, test_remove_invalid) {
+	Handles handles;
+	ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+
+	u64 h = *(u64*)Handles_create_handle(&handles);
+	Handles_remove_handle(&handles, h | 0x111);
+
+	ASSERT_EQ(1, handles.len);
+	ASSERT_EQ(0, handles.free_slots_count);
+
+	Handles_destroy(&handles);
+}
 
