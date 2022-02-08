@@ -16,8 +16,8 @@ pub use image::*;
 pub mod layout;
 pub use layout::*;
 
-pub mod math;
-pub use math::*;
+pub mod math_data;
+pub use math_data::*;
 
 pub mod render_commands;
 pub use render_commands::*;

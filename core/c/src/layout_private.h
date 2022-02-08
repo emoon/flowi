@@ -1,7 +1,7 @@
 #pragma once
 
 #include <flowi_core/layout.h>
-#include <flowi_core/math.h>
+#include <flowi_core/math_data.h>
 
 struct FlContext;
 

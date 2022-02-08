@@ -1,5 +1,5 @@
 mod layout
-mod math
+mod math_data
 
 struct Ui {
     dummy: u32,

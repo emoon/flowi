@@ -10,7 +10,7 @@
 #include <string.h>
 #include "idx.h"
 #include "manual.h"
-#include "math.h"
+#include "math_data.h"
 
 struct FlContext;
 

@@ -11,7 +11,7 @@
 #include "idx.h"
 #include "layout.h"
 #include "manual.h"
-#include "math.h"
+#include "math_data.h"
 
 struct FlContext;
 
