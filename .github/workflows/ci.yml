@@ -24,7 +24,7 @@ jobs:
       run: tundra2 linux-gcc-debug-test flowi_core_tests
 
     - name: Run Core Tests (Debug - GCOV)
-      run: t2-output/linux-gcc-debug-test/flowi_core_tests && lcov --capture --directory . --output-file coverage.info && lcov --remove coverage.info '/usr/*' '/home/runner/work/flowi/flowi/core/c/external/*' -o coverage.info && lcov --list coverage.info
+      run: t2-output/linux-gcc-debug-test/flowi_core_tests && lcov --capture --directory . --output-file coverage.info && lcov --remove coverage.info '/usr/*' '/home/runner/work/flowi/flowi/core/c/external/*' '/home/runner/work/flow/flowi/flowi/c/external/*' -o coverage.info && lcov --list coverage.info
 
     - name: Upload Report to Codecov
       uses: codecov/codecov-action@v1.3.2
