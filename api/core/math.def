@@ -1,0 +1,17 @@
+struct Rect {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+}
+
+/// Used for setting a position in pixel space
+struct Pos {
+    /// x position
+    x: f32,
+    /// y position
+    y: f32,
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

@@ -4,19 +4,20 @@
 use crate::*;
 
 extern "C" {
-    fn fl_layout_area_new_impl(name: FlString) -> LayoutArea;
+    fn fl_layout_area_create_impl(name: FlString, area: LayoutArea) -> LayoutAreaId;
     fn fl_layout_area_from_children_impl(
         name: FlString,
         children: *const LayoutArea,
         row: i16,
         cols: i16,
-    ) -> LayoutArea;
+    ) -> LayoutAreaId;
+    fn fl_layout_area_set_layout_mode_impl(mode: LayoutMode);
 }
 
 #[repr(C)]
 pub enum LayoutDirection {
     Horizontal = 0,
-    Directional = 1,
+    Verticial = 1,
 }
 
 #[repr(C)]
@@ -25,12 +26,13 @@ pub enum SizeType {
     Stretch = 1,
 }
 
+/// LayoutMode make it possible to select how ui elements are being layed out.
 #[repr(C)]
-pub struct LayoutRect {
-    x0: i32,
-    y0: i32,
-    x1: i32,
-    y1: i32,
+pub enum LayoutMode {
+    /// Automatic (default) will use [LayoutArea] to do automatic positining. See [LayoutArea] for more info on how to use this.
+    Automatic = 0,
+    /// User will have to use the [Ui::set_position]
+    Manual = 1,
 }
 
 #[repr(C)]
@@ -40,26 +42,36 @@ pub struct Sizing {
 }
 
 #[repr(C)]
+pub struct LayoutAreaId {}
+
+#[repr(C)]
 pub struct LayoutArea {
     name: FlString,
     width: Sizing,
     height: Sizing,
+    direction: LayoutDirection,
 }
-
-impl LayoutRect {}
 
 impl Sizing {}
 
+impl LayoutAreaId {}
+
 impl LayoutArea {
-    pub fn new(name: &str) {
+    pub fn create(name: &str, area: LayoutArea) {
         unsafe {
-            fl_layout_area_new_impl(FlString::new(name));
+            fl_layout_area_create_impl(FlString::new(name), area);
         }
     }
 
     pub fn from_children(name: &str, children: &[LayoutArea], row: i16, cols: i16) {
         unsafe {
             fl_layout_area_from_children_impl(FlString::new(name), children.as_ptr(), row, cols);
+        }
+    }
+
+    pub fn set_layout_mode(mode: LayoutMode) {
+        unsafe {
+            fl_layout_area_set_layout_mode_impl(mode);
         }
     }
 }

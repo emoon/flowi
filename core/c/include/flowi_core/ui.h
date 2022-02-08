@@ -9,7 +9,9 @@
 #include <stdint.h>
 #include <string.h>
 #include "idx.h"
+#include "layout.h"
 #include "manual.h"
+#include "math.h"
 
 struct FlContext;
 
@@ -29,6 +31,24 @@ FL_INLINE void fl_ui_text_ctx(struct FlContext* flowi_ctx, const char* text) {
 }
 
 #define fl_ui_text(text_) fl_ui_text_ctx(flowi_ctx, text_)
+
+// Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
+void fl_ui_set_position_impl(struct FlContext* flowi_ctx, FlPos pos);
+
+FL_INLINE void fl_ui_set_position_ctx(struct FlContext* flowi_ctx, FlPos pos) {
+    fl_ui_set_position_impl(flowi_ctx, pos);
+}
+
+#define fl_ui_set_position(pos) fl_ui_set_position_ctx(flowi_ctx, pos)
+
+// Get the last widget size. This is usually used for doing manual layouting
+FlRect fl_ui_get_last_widget_size_impl(struct FlContext* flowi_ctx, FlPos pos);
+
+FL_INLINE FlRect fl_ui_get_last_widget_size_ctx(struct FlContext* flowi_ctx, FlPos pos) {
+    return fl_ui_get_last_widget_size_impl(flowi_ctx, pos);
+}
+
+#define fl_ui_get_last_widget_size(pos) fl_ui_get_last_widget_size_ctx(flowi_ctx, pos)
 
 #ifdef __cplusplus
 }

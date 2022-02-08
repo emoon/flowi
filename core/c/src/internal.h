@@ -3,12 +3,14 @@
 #include "flowi.h"
 #include <flowi_core/config.h>
 #include <flowi_core/error.h>
+#include <flowi_core/layout.h>
 #include "style.h"
 #include "primitives.h"
 #include "vertex_allocator.h"
 #include "command_buffer.h"
 #include "simd.h"
 #include "layout_private.h"
+#include "handles.h"
 
 #if defined(FL_FONTLIB_FREETYPE)
 #include <freetype/freetype.h>
@@ -28,6 +30,9 @@ typedef struct FlGlobalState {
 	FT_Library ft_library;
 #endif
     FlAllocator* global_allocator;
+
+    // Loaded images
+	Handles image_handles;
 
     // Primitive commands
     CommandBuffer primitive_commands;
@@ -105,16 +110,20 @@ typedef struct FlContext {
 	// Active fade actions
 	int fade_actions;
 
-	FlGlobalState* global_state;
+	FlGlobalState* global;
 
     // Used for building vertex / index output
 	VertexAllocator vertex_allocator;
 	LinearAllocator layout_allocator;
     LayoutAreaPrivate* current_layout;
+    FlLayoutAreaId default_layout;
+    FlLayoutAreaId active_layout;
+    FlLayoutMode layout_mode;
 
 	struct StyleInternal* styles[FL_MAX_STYLES]; // TODO: Dynamic array instead of hard-coded max style
 	struct StyleInternal* style_stack[FL_STYLE_DEPTH]; // Having 128 max styles should be enough
 
+    int frame_count;
 	int style_count;
     int layout_count;
 	int style_stack_depth;

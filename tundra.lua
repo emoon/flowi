@@ -54,6 +54,7 @@ local gcc_opts = {
     "-I$(OBJECTDIR)",
     "-Wall",
     "-fPIC",
+    "-msse2",   -- TODO: Separate gcc options for x64/arm somehow?
     { "-DFLOWI_TEST", "-O2", "-g"; Config = "*-*-test" },
     { "-DFLOWI_DEBUG", "-O0", "-g"; Config = "*-*-debug" },
     { "-DFLOWI_RELEASE", "-O3", Config = "*-*-release" },

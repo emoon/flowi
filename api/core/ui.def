@@ -1,7 +1,13 @@
+mod layout
+mod math
 
 struct Ui {
     dummy: u32,
     [static] text(text: String),
+    /// Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
+    [static] set_position(pos: Pos),
+    /// Get the last widget size. This is usually used for doing manual layouting
+    [static] get_last_widget_size(pos: Pos) -> Rect,
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

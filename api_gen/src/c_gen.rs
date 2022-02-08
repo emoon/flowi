@@ -30,13 +30,16 @@ static HEADER: &str = "
 #include <stdbool.h>
 #include <string.h>
 #include \"idx.h\"
-#include \"manual.h\"
+#include \"manual.h\"";
+
+static HEADER2: &str = "
 
 struct FlContext;
 
 #ifdef __cplusplus
 extern \"C\" {
 #endif\n";
+
 
 ///
 /// Footer that is generated at the end of the the file
@@ -177,7 +180,7 @@ impl Cgen {
 
         // if we have handle set we just generate it as a i32 instead
         if sdef.has_attribute("Handle") {
-            writeln!(f, "typedef int32_t {}{};\n", C_API_SUFFIX, sdef.name)
+            writeln!(f, "typedef uint64_t {}{};\n", C_API_SUFFIX, sdef.name)
         } else {
             writeln!(f, "typedef struct {}{} {{", C_API_SUFFIX, sdef.name)?;
 
@@ -331,6 +334,12 @@ impl Cgen {
 
         let mut f = BufWriter::new(File::create(filename)?);
         writeln!(f, "{}", HEADER)?;
+
+        for m in &api_def.mods {
+            writeln!(f, "#include \"{}.h\"", m)?;
+        }
+
+        writeln!(f, "{}", HEADER2)?;
 
         let mut render_commands = Vec::with_capacity(api_def.structs.len());
 

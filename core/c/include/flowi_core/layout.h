@@ -10,6 +10,7 @@
 #include <string.h>
 #include "idx.h"
 #include "manual.h"
+#include "math.h"
 
 struct FlContext;
 
@@ -19,7 +20,7 @@ extern "C" {
 
 typedef enum FlLayoutDirection {
     FlLayoutDirection_Horizontal = 0,
-    FlLayoutDirection_Directional = 1,
+    FlLayoutDirection_Verticial = 1,
 } FlLayoutDirection;
 
 typedef enum FlSizeType {
@@ -27,45 +28,58 @@ typedef enum FlSizeType {
     FlSizeType_Stretch = 1,
 } FlSizeType;
 
-typedef struct FlLayoutRect {
-    int x0;
-    int y0;
-    int x1;
-    int y1;
-} FlLayoutRect;
+// LayoutMode make it possible to select how ui elements are being layed out.
+typedef enum FlLayoutMode {
+    // Automatic (default) will use [LayoutArea] to do automatic positining. See [LayoutArea] for more info on how to
+    // use this.
+    FlLayoutMode_Automatic = 0,
+    // User will have to use the [Ui::set_position]
+    FlLayoutMode_Manual = 1,
+} FlLayoutMode;
 
 typedef struct FlSizing {
     int value;
     FlSizeType value_type;
 } FlSizing;
 
+typedef uint64_t FlLayoutAreaId;
+
 typedef struct FlLayoutArea {
     FlString name;
     FlSizing width;
     FlSizing height;
+    FlLayoutDirection direction;
 } FlLayoutArea;
 
-FlLayoutArea fl_layout_area_new_impl(struct FlContext* flowi_ctx, FlString name);
+FlLayoutAreaId fl_layout_area_create_impl(struct FlContext* flowi_ctx, FlString name, FlLayoutArea area);
 
-FL_INLINE FlLayoutArea fl_layout_area_new_ctx(struct FlContext* flowi_ctx, const char* name) {
+FL_INLINE FlLayoutAreaId fl_layout_area_create_ctx(struct FlContext* flowi_ctx, const char* name, FlLayoutArea area) {
     FlString name_ = {name, 1, (uint32_t)strlen(name)};
-    return fl_layout_area_new_impl(flowi_ctx, name_);
+    return fl_layout_area_create_impl(flowi_ctx, name_, area);
 }
 
-#define fl_layout_area_new(name_) fl_layout_area_new_ctx(flowi_ctx, name_)
+#define fl_layout_area_create(name_, area) fl_layout_area_create_ctx(flowi_ctx, name_, area)
 
-FlLayoutArea fl_layout_area_from_children_impl(struct FlContext* flowi_ctx, FlString name, FlLayoutArea children,
-                                               uint32_t children_size, int16_t row, int16_t cols);
+FlLayoutAreaId fl_layout_area_from_children_impl(struct FlContext* flowi_ctx, FlString name, FlLayoutArea children,
+                                                 uint32_t children_size, int16_t row, int16_t cols);
 
-FL_INLINE FlLayoutArea fl_layout_area_from_children_ctx(struct FlContext* flowi_ctx, const char* name,
-                                                        FlLayoutArea children, uint32_t children_size, int16_t row,
-                                                        int16_t cols) {
+FL_INLINE FlLayoutAreaId fl_layout_area_from_children_ctx(struct FlContext* flowi_ctx, const char* name,
+                                                          FlLayoutArea children, uint32_t children_size, int16_t row,
+                                                          int16_t cols) {
     FlString name_ = {name, 1, (uint32_t)strlen(name)};
     return fl_layout_area_from_children_impl(flowi_ctx, name_, children, children_size, row, cols);
 }
 
 #define fl_layout_area_from_children(name_, children, children_size, row, cols) \
     fl_layout_area_from_children_ctx(flowi_ctx, name_, children, children_size, row, cols)
+
+void fl_layout_area_set_layout_mode_impl(struct FlContext* flowi_ctx, FlLayoutMode mode);
+
+FL_INLINE void fl_layout_area_set_layout_mode_ctx(struct FlContext* flowi_ctx, FlLayoutMode mode) {
+    fl_layout_area_set_layout_mode_impl(flowi_ctx, mode);
+}
+
+#define fl_layout_area_set_layout_mode(mode) fl_layout_area_set_layout_mode_ctx(flowi_ctx, mode)
 
 #ifdef __cplusplus
 }

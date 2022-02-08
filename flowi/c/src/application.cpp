@@ -405,18 +405,16 @@ static void generate_frame(void* user_data) {
     }
 
     bgfx::setViewRect(0, 0, 0, uint16_t(display_w), uint16_t(display_h));
+
     // This dummy draw call is here to make sure that view 0 is cleared
     // if no other draw calls are submitted to view 0.
     bgfx::touch(0);
 
-    fl_frame_begin(state->ctx);
+    fl_frame_begin(state->ctx, display_w, display_h);
 
     if (state->main_callback) {
         state->main_callback(state->ctx, state->user_data);
     }
-
-    //Area_generate_circle(state->ctx);
-    //fl_text(state->ctx, "Testing");
 
     fl_frame_end(state->ctx);
     render_flowi(*state, display_w, display_h);

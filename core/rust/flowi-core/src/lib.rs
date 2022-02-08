@@ -10,8 +10,14 @@ pub use error::*;
 pub mod font;
 pub use font::*;
 
+pub mod image;
+pub use image::*;
+
 pub mod layout;
 pub use layout::*;
+
+pub mod math;
+pub use math::*;
 
 pub mod render_commands;
 pub use render_commands::*;

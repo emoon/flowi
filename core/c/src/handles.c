@@ -85,10 +85,10 @@ void* Handles_create_handle(Handles* self) {
         // Realloc if we are out of space
         if (len > self->capacity) {
             u8* objs_free_slots = NULL;
-            int cap = self->capacity * 2;
-            int object_size = self->object_size * cap;
-            int free_slots_size = sizeof(u32) * cap;
-            int size = object_size + free_slots_size;
+            const int cap = self->capacity * 2;
+            const int object_size = self->object_size * cap;
+            const int free_slots_size = sizeof(u32) * cap;
+            const int size = object_size + free_slots_size;
 
             FL_TRY_ALLOC_NULL(objs_free_slots = FlAllocator_realloc(self->allocator, self->objects, size));
 
@@ -113,13 +113,13 @@ void* Handles_get_data(Handles* self, u64 id) {
     const u32 inner = handle_inner(id);
 
     if (index >= 0 && index < self->len) {
-		u64* data = (u64*)(self->objects + (self->object_size * index));
-		if (handle_inner(*data) == inner) {
-			return data;
-		}
-	}
+        u64* data = (u64*)(self->objects + (self->object_size * index));
+        if (handle_inner(*data) == inner) {
+            return data;
+        }
+    }
 
-	return NULL;
+    return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

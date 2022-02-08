@@ -32,7 +32,7 @@ typedef enum FlFontPlacementMode {
     FlFontPlacementMode_Accurate = 2,
 } FlFontPlacementMode;
 
-typedef int32_t FlFont;
+typedef uint64_t FlFont;
 
 // Create a font from (TTF) file. To use the font use [Font::set] or [Font::set_with_size] before using text-based
 // widgetsReturns >= 0 for valid handle, use fl_get_status(); for more detailed error message

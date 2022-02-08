@@ -97,6 +97,7 @@ StaticLibrary {
         "core/c/external/freetype2/include",
         "core/c/external/tslf",
         "core/c/include/",
+        STB_LIB,
     },
 
     Sources = {

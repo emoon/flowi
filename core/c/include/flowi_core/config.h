@@ -31,6 +31,9 @@
 #error "Can only have one font-generator"
 #endif
 
+// 1 to include jpg, png, etc image loaders
+#define FL_IMAGE_LOADERS 1
+
 /*
 #if defined(FLOWI_DEBUG)
 #define FUNC_FILE_LINE(funcname, args) void funcname(const char* file, int line, ##args)

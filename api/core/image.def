@@ -1,0 +1,40 @@
+mod render_commands
+
+#[attributes(Handle)]
+struct ImageId {}
+
+struct Image {
+    /// width of the image
+    width: u32,
+    /// height of the Image
+    height: u32,
+    /// Load image from file. Supported formats are:
+    /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
+    /// PNG 1/2/4/8/16-bit-per-channel
+    /// TGA
+    /// BMP non-1bpp, non-RLE
+    /// PSD (composited view only, no extra channels, 8/16 bit-per-channel)
+    /// GIF
+    /// HDR (radiance rgbE format)
+    /// PIC (Softimage PIC)
+    /// PNM (PPM and PGM binary only)
+    [static] new_from_file(filename: String) -> ImageId,
+    /// Load image from memory. Supported formats are:
+    /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
+    /// PNG 1/2/4/8/16-bit-per-channel
+    /// TGA
+    /// BMP non-1bpp, non-RLE
+    /// PSD (composited view only, no extra channels, 8/16 bit-per-channel)
+    /// GIF
+    /// HDR (radiance rgbE format)
+    /// PIC (Softimage PIC)
+    /// PNM (PPM and PGM binary only)
+    [static] load_from_memory(name: String, data: [*u8]) -> ImageId,
+    /// Get data amout the image
+    [static] get_image_data(image: ImageId) -> Image,
+    /// Destroy the created image
+    [static] destroy(image: ImageId),
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

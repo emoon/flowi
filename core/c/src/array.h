@@ -1,17 +1,18 @@
 #pragma once
-
 /*
+
+struct FlAllocator;
+
 typedef struct Array {
+    struct FLAllocator* allocator;
+    void* data;
     int len;
     int capacity;
-    int pad[2];
 } Array;
 
-Array array_new_(void* array, int count, int size_type);
+void array_new_impl(Array* array, struct FlAllocator* allocator);
+void* array_alloc_item_impl(Array* array, int size);
 
-void array_push(void* array,
-int array_len(void* array)
-
-
-#define array_new(array, count, sizeof(type)) array_new_(array, count, size)
+#define array_push_item(ArrayName* array, Type, item) \
+    { Type* ret_item = array_push_item_impl((Array*)array, sizeof(Type)); *ret_item = item; }
 */

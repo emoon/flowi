@@ -330,7 +330,7 @@ bool Area_generate_circle(struct FlContext* ctx) {
     generate_corners(ctx, style, offset, size);
 
     VertsCounts counts = VertexAllocator_get_pos_color_counts(&ctx->vertex_allocator);
-    FlSolidTriangles* tri_data = Render_solid_triangles_cmd(ctx->global_state);
+    FlSolidTriangles* tri_data = Render_solid_triangles_cmd(ctx->global);
 
     tri_data->vertex_buffer = counts.vertex_data;
     tri_data->index_buffer = counts.index_data;

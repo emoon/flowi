@@ -85,8 +85,8 @@ typedef struct TempGlyphInfo {
 
 static Font* font_create(FlContext* ctx, FT_Face face) {
 	// TODO: Pass in allocator
-    Font* font = FlAllocator_alloc_zero_type(ctx->global_state->global_allocator, Font);
-    font->allocator = ctx->global_state->global_allocator;
+    Font* font = FlAllocator_alloc_zero_type(ctx->global->global_allocator, Font);
+    font->allocator = ctx->global->global_allocator;
 
     if (!font) {
         return NULL;
@@ -108,7 +108,7 @@ FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString name, uint8_
                                     uint32_t font_size, FlFontPlacementMode placement_mode) {
     FL_UNUSED(placement_mode);
     // Use to store global data such as fonts, etc
-    FlGlobalState* state = ctx->global_state;
+    FlGlobalState* state = ctx->global;
 
     // TODO: Support threaded context
     FT_Face face;
@@ -171,9 +171,9 @@ void fl_font_set_impl(struct FlContext* flowi_ctx, FlFont font) {
 // Destroy an existing created font
 
 void fl_font_destroy_impl(struct FlContext* ctx, FlFont font_id) {
-    FlGlobalState* state = ctx->global_state;
+    FlGlobalState* state = ctx->global;
 
-    if (font_id < 0 || font_id >= state->font_count) {
+    if (font_id >= (u64)state->font_count) {
         ERROR_ADD(FlError_Font, "Tried to destroy font id %d, but id is out of range (0 - %d)", font_id,
                   state->font_count - 1);
         return;
@@ -224,7 +224,7 @@ static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
         // TODO: Handle OOM
         // we batch all of the allocations into and get the new ranges.
         // As we do the batching like this we can't use regular realloc so we manually memcopy the old data
-        u8* data = FlAllocator_alloc(ctx->global_state->global_allocator, total_size);
+        u8* data = FlAllocator_alloc(ctx->global->global_allocator, total_size);
 
         CodepointSize* codepoint_sizes = (CodepointSize*)data;
         Glyph* glyphs = (Glyph*)(codepoint_sizes + new_size);
@@ -235,7 +235,7 @@ static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
             memcpy(codepoint_sizes, info->codepoint_sizes, old_size * sizeof(CodepointSize));
             memcpy(glyphs, info->glyphs, old_size * sizeof(Glyph));
             memcpy(advance_x, info->advance_x, old_size * sizeof(f32));
-            FlAllocator_free(ctx->global_state->global_allocator, info->codepoint_sizes);
+            FlAllocator_free(ctx->global->global_allocator, info->codepoint_sizes);
         }
 
         info->codepoint_sizes = codepoint_sizes;
@@ -276,7 +276,7 @@ Glyph* Font_get_glyph(const Font* self, u32 codepoint) {
 static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint, int size) {
     GlyphInfo* info = &font->glyph_info;
     // TODO: Assign atlas to a font when creating
-    Atlas* atlas = ctx->global_state->mono_fonts_atlas;
+    Atlas* atlas = ctx->global->mono_fonts_atlas;
 
     const CodepointSize* codepoint_sizes = info->codepoint_sizes;
 
@@ -386,7 +386,7 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
 
 void Font_generate_glyphs(FlContext* FL_RESTRICT ctx, FlFont font_id, const u32* FL_RESTRICT codepoints, int count,
                           int size) {
-    Font* font = ctx->global_state->fonts[font_id];
+    Font* font = ctx->global->fonts[font_id];
 
     for (int i = 0; i < count; ++i) {
         const u32 codepoint = *codepoints++;

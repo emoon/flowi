@@ -17,14 +17,20 @@ struct FlContext;
 extern "C" {
 #endif
 
-typedef enum FlError {
-    FlError_None = 0,
-    FlError_Io = 1,
-    FlError_Memory = 2,
-    FlError_Font = 3,
-    FlError_Style = 4,
-    FlError_Image = 5,
-} FlError;
+typedef struct FlRect {
+    int x;
+    int y;
+    int width;
+    int height;
+} FlRect;
+
+// Used for setting a position in pixel space
+typedef struct FlPos {
+    // x position
+    float x;
+    // y position
+    float y;
+} FlPos;
 
 #ifdef __cplusplus
 }

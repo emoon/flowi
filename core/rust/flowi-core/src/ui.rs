@@ -5,6 +5,8 @@ use crate::*;
 
 extern "C" {
     fn fl_ui_text_impl(text: FlString);
+    fn fl_ui_set_position_impl(pos: Pos);
+    fn fl_ui_get_last_widget_size_impl(pos: Pos) -> Rect;
 }
 
 #[repr(C)]
@@ -16,6 +18,20 @@ impl Ui {
     pub fn text(text: &str) {
         unsafe {
             fl_ui_text_impl(FlString::new(text));
+        }
+    }
+
+    /// Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
+    pub fn set_position(pos: Pos) {
+        unsafe {
+            fl_ui_set_position_impl(pos);
+        }
+    }
+
+    /// Get the last widget size. This is usually used for doing manual layouting
+    pub fn get_last_widget_size(pos: Pos) {
+        unsafe {
+            fl_ui_get_last_widget_size_impl(pos);
         }
     }
 }

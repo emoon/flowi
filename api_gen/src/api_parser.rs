@@ -241,6 +241,8 @@ pub struct ApiDef {
     pub filename: String,
     /// Base filename (such as foo/file/some_name.def) is some_name
     pub base_filename: String,
+    /// Mods to to be included in the file
+    pub mods: Vec<String>,
     /// Callbacks types
     pub callbacks: Vec<Function>,
     /// Structs that only holds data
@@ -303,6 +305,15 @@ impl ApiParser {
                     func.func_type = FunctionType::Static;
                     api_def.callbacks.push(func);
                     current_comments.clear();
+                }
+
+                Rule::moddef => {
+                    for entry in chunk.into_inner() {
+                        match entry.as_rule() {
+                            Rule::name => api_def.mods.push(entry.as_str().to_owned()),
+                            _ => (),
+                        }
+                    }
                 }
 
                 Rule::doc_comment => {

@@ -1,19 +1,13 @@
+mod math
 
 enum LayoutDirection {
     Horizontal = 0,
-    Directional = 1,
+    Verticial = 1,
 }
 
 enum SizeType {
     Fixed = 0,
     Stretch = 1,
-}
-
-struct LayoutRect {
-    x0: i32,
-    y0: i32,
-    x1: i32,
-    y1: i32,
 }
 
 #[attributes(RustEnum)]
@@ -22,14 +16,27 @@ struct Sizing {
     value_type: SizeType,
 }
 
+/// LayoutMode make it possible to select how ui elements are being layed out.
+enum LayoutMode {
+    /// Automatic (default) will use [LayoutArea] to do automatic positining. See [LayoutArea] for more info on how to use this.
+    Automatic = 0,
+    /// User will have to use the [Ui::set_position]
+    Manual = 1,
+}
+
+#[attributes(Handle)]
+struct LayoutAreaId {}
+
 #[attributes(RustBuilder)]
 struct LayoutArea {
     name: String,
     width: Sizing,
     height: Sizing,
+    direction: LayoutDirection,
 
-    [static] new(name: String) -> LayoutArea,
-    [static] from_children(name: String, children: *const [LayoutArea], row: i16, cols: i16) -> LayoutArea,
+    [static] create(name: String, area: LayoutArea) -> LayoutAreaId,
+    [static] from_children(name: String, children: *const [LayoutArea], row: i16, cols: i16) -> LayoutAreaId,
+    [static] set_layout_mode(mode: LayoutMode),
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

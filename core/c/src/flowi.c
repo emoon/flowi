@@ -10,6 +10,8 @@
 #include "atlas.h"
 #include "flowi.h"
 #include "font_private.h"
+#include "layout_private.h"
+#include "image_private.h"
 #include "internal.h"
 #include "primitives.h"
 #include "render.h"
@@ -72,8 +74,8 @@ static FlAllocator malloc_allocator = {
 
 FlContext* fl_context_create(struct FlGlobalState* state) {
 	// TODO: Custom allocator
-    FlContext* ctx = malloc(sizeof(FlContext));
-    memset(ctx, 0, sizeof(FlContext));
+    FlContext* ctx = FlAllocator_alloc_zero_type(&malloc_allocator, FlContext);
+    FL_TRY_ALLOC_NULL(ctx);
 
     // TODO: Configure these values
     int vertex_sizes[VertexAllocType_SIZEOF] = {1024 * 1024, 1024 * 1024};
@@ -84,8 +86,11 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
         return NULL;
     }
 
+	Layout_create_default(ctx);
+	ctx->layout_mode = FlLayoutMode_Automatic;
+
     // TODO: Fixup
-    ctx->global_state = state;
+    ctx->global = state;
 
     return ctx;
 }
@@ -102,6 +107,7 @@ struct FlGlobalState* fl_create(const FlSettings* settings) {
 
     FL_TRY_ALLOC_NULL((CommandBuffer_create(&state->primitive_commands, "primitives", state->global_allocator, 4 * 1024)));
 	FL_TRY_ALLOC_NULL((CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024)));
+	FL_TRY_ALLOC_NULL((Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate)));
 
     // TODO: We should check settings for texture size
     FL_TRY_ALLOC_NULL((state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, state, state->global_allocator)));
@@ -227,14 +233,24 @@ void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2,
 
 static bool hack_first_frame = false;
 
-void fl_frame_begin(struct FlContext* ctx) {
+void fl_frame_begin(struct FlContext* ctx, int width, int height) {
+	FL_UNUSED(width);
+	FL_UNUSED(height);
+
 	if (hack_first_frame) {
-		CommandBuffer_rewind(&ctx->global_state->render_commands);
+		CommandBuffer_rewind(&ctx->global->render_commands);
 	}
+
+	// Update default layout
+	//FlRect rect = { 0, 0, width, height };
+	//Layout_resolve(ctx, ctx->default_layout, &rect);
 
 	hack_first_frame = true;
 
-	CommandBuffer_rewind(&ctx->global_state->primitive_commands);
+	CommandBuffer_rewind(&ctx->global->primitive_commands);
+
+	ctx->active_layout = ctx->active_layout;
+	ctx->frame_count++;
 
     ctx->cursor.x = 0;
     ctx->cursor.y = 0;
@@ -245,7 +261,7 @@ void fl_frame_begin(struct FlContext* ctx) {
 void draw_text(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
-    Font* font = ctx->global_state->fonts[prim->font_handle];
+    Font* font = ctx->global->fonts[prim->font_handle];
 
     const int text_len = prim->len;
 
@@ -265,7 +281,7 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
 
     Text_generate_vertex_buffer_ref(vertices, indices, font, codepoints, 0x0fffffff, pos, 0, text_len);
 
-    FlTexturedTriangles* tri_data = Render_textured_triangles_cmd(ctx->global_state);
+    FlTexturedTriangles* tri_data = Render_textured_triangles_cmd(ctx->global);
 
 	tri_data->vertex_buffer = vertices;
 	tri_data->index_buffer = indices;
@@ -280,7 +296,7 @@ void generate_glyphs(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
     const int text_len = prim->len;
-    Font* font = ctx->global_state->fonts[prim->font_handle];  // TODO: fix me
+    Font* font = ctx->global->fonts[prim->font_handle];  // TODO: fix me
 
     // TODO: we should hash the text, font, + size + dirty and don't
     // don't try to regenerate glyphs if hash matches
@@ -293,7 +309,7 @@ void generate_glyphs(struct FlContext* ctx, const u8* cmd) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_frame_end(struct FlContext* ctx) {
-    FlGlobalState* state = ctx->global_state;
+    FlGlobalState* state = ctx->global;
     const u8* command_data = NULL;
 	const int command_count = CommandBuffer_begin_read_commands(&state->primitive_commands);
 
@@ -330,7 +346,7 @@ void fl_frame_end(struct FlContext* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
-    PrimitiveText* prim = Primitive_alloc_text(ctx->global_state);
+    PrimitiveText* prim = Primitive_alloc_text(ctx->global);
 
 #if FL_VALIDATE_RANGES
     if (FL_UNLIKELY(!prim)) {
@@ -348,7 +364,7 @@ void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_context_destroy(struct FlContext* self) {
-	FlAllocator* allocator = self->global_state->global_allocator;
+	FlAllocator* allocator = self->global->global_allocator;
 
 	for (int i = 0; i < self->style_count; ++i) {
 		FlAllocator_free(allocator, self->styles[i]);
@@ -374,6 +390,8 @@ void fl_destroy(FlGlobalState* self) {
 			FlAllocator_free(font->allocator, font);
 		}
 	}
+
+	Handles_destroy(&self->image_handles);
 
 	FT_Done_FreeType(self->ft_library);
 	FlAllocator_free(allocator, self);

@@ -1,7 +1,8 @@
-chunk = _{ SOI ~ (structdef | callbackdef | enumdef | doc_comment)+ ~ EOI }
+chunk = _{ SOI ~ (structdef | moddef | callbackdef | enumdef | doc_comment)+ ~ EOI }
 
 structdef   =  { attributes? ~ traits? ~ ("struct") ~ name ~ derive? ~ ("{") ~ fieldlist? ~ ("}") }
 callbackdef =  { ("callback") ~ function }
+moddef      =  { ("mod") ~ name }
 enumdef     =  { (attributes | enum_flags)*? ~ ("enum") ~ name ~ ("{") ~ fieldlist? ~ ("}") }
 fieldlist   =  { (doc_comment | field)*  }
 field       =  { (var | function | enum_type) ~ fieldsep? }

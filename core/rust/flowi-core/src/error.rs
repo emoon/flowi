@@ -12,4 +12,5 @@ pub enum Error {
     Memory = 2,
     Font = 3,
     Style = 4,
+    Image = 5,
 }

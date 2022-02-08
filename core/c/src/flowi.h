@@ -35,7 +35,7 @@ bool fl_button_c(struct FlContext* ctx, const char* label);
 bool fl_button_size_c(struct FlContext* ctx, const char* label, FlVec2 size);
 bool fl_button_ex_c(struct FlContext* ctx, const char* label, int label_len, FlVec2 Size);
 
-void fl_frame_begin(struct FlContext* ctx);
+void fl_frame_begin(struct FlContext* ctx, int width, int height);
 void fl_frame_end(struct FlContext* ctx);
 
 void fl_text(struct FlContext* ctx, const char* text);
