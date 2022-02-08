@@ -252,3 +252,24 @@ UTEST(Handles, test_remove_invalid) {
 
     Handles_destroy(&handles);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(Handles, test_get_data) {
+    Handles handles;
+    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+
+    u64* d0 = Handles_create_handle(&handles);
+    u64 h0 = *d0;
+
+    u64* d1 = Handles_create_handle(&handles);
+    u64 h1 = *d1;
+
+	ASSERT_EQ(d0, Handles_get_data(&handles, h0));
+	ASSERT_EQ(d1, Handles_get_data(&handles, h1));
+	ASSERT_EQ(NULL, Handles_get_data(&handles, h0 | 0x333));
+	ASSERT_EQ(NULL, Handles_get_data(&handles, h1 | 0x222));
+
+    Handles_destroy(&handles);
+}
+

@@ -108,6 +108,22 @@ void* Handles_create_handle(Handles* self) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void* Handles_get_data(Handles* self, u64 id) {
+    const int index = (int)handle_index(id);
+    const u32 inner = handle_inner(id);
+
+    if (index >= 0 && index < self->len) {
+		u64* data = (u64*)(self->objects + (self->object_size * index));
+		if (handle_inner(*data) == inner) {
+			return data;
+		}
+	}
+
+	return NULL;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void Handles_remove_handle(Handles* self, u64 id) {
     const int index = (int)handle_index(id);
     const u32 inner = handle_inner(id);
