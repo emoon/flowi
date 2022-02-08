@@ -23,6 +23,9 @@ jobs:
     - name: Build Core Tests (Debug - GCOV)
       run: tundra2 linux-gcc-debug-test flowi_core_tests
 
+    - name: Show paths
+      run: ls -ld $PWD/*
+
     - name: Run Core Tests (Debug - GCOV)
       run: t2-output/linux-gcc-debug-test/flowi_core_tests && lcov --capture --directory . --output-file coverage.info && lcov --remove coverage.info '/usr/*' '/home/runner/work/flowi/core/c/external/*' --output-file coverage.info && lcov --list coverage.info
 
