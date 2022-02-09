@@ -32,9 +32,9 @@ fn get_arg_line(args: &[String]) -> String {
 
 
 impl RustGen {
-    fn write_commment<W: Write>(f: &mut W, comment: &str, indent: usize) -> io::Result<()> {
-        if !comment.is_empty() {
-            writeln!(f, "{:indent$}/// {}", "", comment, indent = indent)?;
+    fn write_commment<W: Write>(f: &mut W, comments: &Vec<String>, indent: usize) -> io::Result<()> {
+        for c in comments {
+            writeln!(f, "{:indent$}/// {}", "", c, indent = indent)?;
         }
 
         Ok(())
@@ -143,20 +143,23 @@ impl RustGen {
     fn generate_struct<W: Write>(f: &mut W, sdef: &Struct) -> io::Result<()> {
         Self::write_commment(f, &sdef.doc_comments, 0)?;
 
-        writeln!(f, "#[repr(C)]")?;
-        writeln!(f, "pub struct {} {{", sdef.name)?;
+        if sdef.has_attribute("Handle") {
+            writeln!(f, "type {} = u64;\n", sdef.name)
+        } else {
+            writeln!(f, "#[repr(C)]")?;
+            writeln!(f, "pub struct {} {{", sdef.name)?;
 
-        for var in &sdef.variables {
-            Self::write_commment(f, &var.doc_comments, 4)?;
-            writeln!(
-                f,
-                "    {}: {},",
-                var.name,
-                Self::get_ffi_type(var, &sdef.name)
-            )?;
+            for var in &sdef.variables {
+                Self::write_commment(f, &var.doc_comments, 4)?;
+                writeln!(
+                    f,
+                    "    {}: {},",
+                    var.name,
+                    Self::get_ffi_type(var, &sdef.name)
+                )?;
+            }
+            writeln!(f, "}}\n")
         }
-
-        writeln!(f, "}}\n")
     }
 
     fn get_type(fa: &mut FuncArgs, var: &Variable, type_name: &str) {
@@ -224,6 +227,10 @@ impl RustGen {
     }
 
     fn generate_struct_impl<W: Write>(f: &mut W, sdef: &Struct) -> io::Result<()> {
+        if sdef.has_attribute("Handle") {
+            return Ok(());
+        }
+
         writeln!(f, "impl {} {{", sdef.name)?;
 
         for func in &sdef.functions {

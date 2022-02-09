@@ -18,7 +18,9 @@ pub enum TextureFormat {
     RGBA8_sRGB = 3,
     /// 4 byte R,G,B,A format (LINEAR)
     RGBA8_LINEAR = 4,
-    /// 16-bit single format. This will mostly be used for temporary things such as blurs that requires morethan one pass rendering. i16 or f16 will allow better accuracy, but R8_LINEAR can be used in worst casein case the rendering backend doesn't support this format
+    /// 16-bit single format. This will mostly be used for temporary things such as blurs that requires more
+    /// than one pass rendering. i16 or f16 will allow better accuracy, but R8_LINEAR can be used in worst case
+    /// in case the rendering backend doesn't support this format
     I16_OR_F16_LINEAR = 5,
 }
 
@@ -82,7 +84,8 @@ pub struct CreateTexture {
     height: u16,
 }
 
-/// This is used to update an existing texture with some data. This usually happens when a new image/glyph/etcneeds to be displayed but isn't present in a texture yet
+/// This is used to update an existing texture with some data. This usually happens when a new image/glyph/etc
+/// needs to be displayed but isn't present in a texture yet
 #[repr(C)]
 pub struct UpdateTexture {
     /// Data to upload
@@ -93,7 +96,8 @@ pub struct UpdateTexture {
     texture_id: u16,
 }
 
-/// Used when restricting an area for rendering. How this is to be implemented depends onthe GPUAPI, but for OpenGL this corresponts to https://www.khronos.org/registry/OpenGL-Refpages/es2.0/xhtml/glScissor.xml
+/// Used when restricting an area for rendering. How this is to be implemented depends onthe GPU
+/// API, but for OpenGL this corresponts to https://www.khronos.org/registry/OpenGL-Refpages/es2.0/xhtml/glScissor.xml
 #[repr(C)]
 pub struct ScissorRect {
     /// Area restricted for rendering

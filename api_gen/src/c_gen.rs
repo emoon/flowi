@@ -88,9 +88,11 @@ fn get_arg_line(args: &[String], with_context: WithContext) -> String {
 }
 
 impl Cgen {
-    fn write_commment<W: Write>(f: &mut W, comment: &str, indent: usize) -> io::Result<()> {
-        if !comment.is_empty() {
-            writeln!(f, "{:indent$}// {}", "", comment, indent = indent)?;
+    fn write_commment<W: Write>(f: &mut W, comments: &Vec<String>, indent: usize) -> io::Result<()> {
+        if !comments.is_empty() {
+            for c in comments {
+                writeln!(f, "{:indent$}// {}", "", c, indent = indent)?;
+            }
         }
 
         Ok(())

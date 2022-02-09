@@ -27,9 +27,16 @@ typedef struct FlImage {
     uint32_t height;
 } FlImage;
 
-// Load image from file. Supported formats are:JPEG baseline & progressive (12 bpc/arithmetic not supported, same as
-// stock IJG lib)PNG 1/2/4/8/16-bit-per-channelTGABMP non-1bpp, non-RLEPSD (composited view only, no extra channels,
-// 8/16 bit-per-channel)GIFHDR (radiance rgbE format)PIC (Softimage PIC)PNM (PPM and PGM binary only)
+// Load image from file. Supported formats are:
+// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
+// PNG 1/2/4/8/16-bit-per-channel
+// TGA
+// BMP non-1bpp, non-RLE
+// PSD (composited view only, no extra channels, 8/16 bit-per-channel)
+// GIF
+// HDR (radiance rgbE format)
+// PIC (Softimage PIC)
+// PNM (PPM and PGM binary only)
 FlImageId fl_image_new_from_file_impl(struct FlContext* flowi_ctx, FlString filename);
 
 FL_INLINE FlImageId fl_image_new_from_file_ctx(struct FlContext* flowi_ctx, const char* filename) {
@@ -39,9 +46,16 @@ FL_INLINE FlImageId fl_image_new_from_file_ctx(struct FlContext* flowi_ctx, cons
 
 #define fl_image_new_from_file(filename_) fl_image_new_from_file_ctx(flowi_ctx, filename_)
 
-// Load image from memory. Supported formats are:JPEG baseline & progressive (12 bpc/arithmetic not supported, same as
-// stock IJG lib)PNG 1/2/4/8/16-bit-per-channelTGABMP non-1bpp, non-RLEPSD (composited view only, no extra channels,
-// 8/16 bit-per-channel)GIFHDR (radiance rgbE format)PIC (Softimage PIC)PNM (PPM and PGM binary only)
+// Load image from memory. Supported formats are:
+// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
+// PNG 1/2/4/8/16-bit-per-channel
+// TGA
+// BMP non-1bpp, non-RLE
+// PSD (composited view only, no extra channels, 8/16 bit-per-channel)
+// GIF
+// HDR (radiance rgbE format)
+// PIC (Softimage PIC)
+// PNM (PPM and PGM binary only)
 FlImageId fl_image_load_from_memory_impl(struct FlContext* flowi_ctx, FlString name, uint8_t* data, uint32_t data_size);
 
 FL_INLINE FlImageId fl_image_load_from_memory_ctx(struct FlContext* flowi_ctx, const char* name, uint8_t* data,

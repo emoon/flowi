@@ -17,10 +17,13 @@ struct FlContext;
 extern "C" {
 #endif
 
-// Allows the user to select how accurate the glyph placement should be.The list has a the fastest (CPU performance
-// wise) first (Monospace) and the slowest (Accurate) lastRule of thumb is:Auto (Same as basic)Monospaced (code/fixed
-// size fonts) - use Monospace modeRegular Latin text - use Basic modeHebrew and other complex languages that require
-// accurate layout - Use accurate
+// Allows the user to select how accurate the glyph placement should be.
+// The list has a the fastest (CPU performance wise) first (Monospace) and the slowest (Accurate) last
+// Rule of thumb is:
+// Auto (Same as basic)
+// Monospaced (code/fixed size fonts) - use Monospace mode
+// Regular Latin text - use Basic mode
+// Hebrew and other complex languages that require accurate layout - Use accurate
 typedef enum FlFontPlacementMode {
     // Let the library decide the mode (default)
     FlFontPlacementMode_Auto = 0,
@@ -35,7 +38,7 @@ typedef enum FlFontPlacementMode {
 typedef uint64_t FlFont;
 
 // Create a font from (TTF) file. To use the font use [Font::set] or [Font::set_with_size] before using text-based
-// widgetsReturns >= 0 for valid handle, use fl_get_status(); for more detailed error message
+// widgets Returns >= 0 for valid handle, use fl_get_status(); for more detailed error message
 FlFont fl_font_new_from_file_impl(struct FlContext* flowi_ctx, FlString filename, uint32_t font_size,
                                   FlFontPlacementMode placement_mode);
 
@@ -48,8 +51,8 @@ FL_INLINE FlFont fl_font_new_from_file_ctx(struct FlContext* flowi_ctx, const ch
 #define fl_font_new_from_file(filename_, font_size, placement_mode) \
     fl_font_new_from_file_ctx(flowi_ctx, filename_, font_size, placement_mode)
 
-// Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some
-// casesLike when needing the accurate placement mode used by Harzbuff that needs to original ttf data
+// Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
+// Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
 FlFont fl_font_new_from_memory_impl(struct FlContext* flowi_ctx, FlString name, uint8_t* data, uint32_t data_size,
                                     uint32_t font_size, FlFontPlacementMode placement_mode);
 

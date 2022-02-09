@@ -41,8 +41,7 @@ pub struct Sizing {
     value_type: SizeType,
 }
 
-#[repr(C)]
-pub struct LayoutAreaId {}
+type LayoutAreaId = u64;
 
 #[repr(C)]
 pub struct LayoutArea {
@@ -53,8 +52,6 @@ pub struct LayoutArea {
 }
 
 impl Sizing {}
-
-impl LayoutAreaId {}
 
 impl LayoutArea {
     pub fn create(name: &str, area: LayoutArea) {

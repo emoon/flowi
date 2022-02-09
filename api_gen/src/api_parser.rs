@@ -60,7 +60,7 @@ impl Default for ArrayType {
 #[derive(Debug, Clone)]
 pub struct Variable {
     /// Documentation
-    pub doc_comments: String,
+    pub doc_comments: Vec<String>,
     /// Which def file this variable comes from
     pub def_file: String,
     /// Name of the variable
@@ -92,7 +92,7 @@ impl Default for Variable {
     fn default() -> Self {
         Variable {
             name: String::new(),
-            doc_comments: String::new(),
+            doc_comments: Vec::new(),
             def_file: String::new(),
             vtype: VariableType::None,
             type_name: String::new(),
@@ -126,7 +126,7 @@ pub enum FunctionType {
 #[derive(Debug, Clone)]
 pub struct Function {
     /// Documentation
-    pub doc_comments: String,
+    pub doc_comments: Vec<String>,
     /// Which def file this function comes from
     pub def_file: String,
     /// Name of the function
@@ -149,7 +149,7 @@ pub struct Function {
 impl Default for Function {
     fn default() -> Self {
         Function {
-            doc_comments: String::new(),
+            doc_comments: Vec::new(),
             name: String::new(),
             c_name: String::new(),
             def_file: String::new(),
@@ -167,7 +167,7 @@ impl Default for Function {
 #[derive(Debug, Default)]
 pub struct Struct {
     /// Docummentanion
-    pub doc_comments: String,
+    pub doc_comments: Vec<String>,
     /// Name
     pub name: String,
     /// Which def file this struct comes from
@@ -188,7 +188,7 @@ pub struct Struct {
 #[derive(Debug)]
 pub struct EnumEntry {
     /// Documentation
-    pub doc_comments: String,
+    pub doc_comments: Vec<String>,
     /// Name of the enum entry
     pub name: String,
     /// Value of the enum entry
@@ -219,7 +219,7 @@ impl Default for EnumType {
 #[derive(Debug, Default)]
 pub struct Enum {
     /// Documentation
-    pub doc_comments: String,
+    pub doc_comments: Vec<String>,
     /// Name of the enum
     pub name: String,
     /// The file this enum is present in
@@ -285,7 +285,7 @@ impl ApiParser {
 
         let base_filename = Path::new(filename).file_name().unwrap().to_str().unwrap();
         let base_filename = &base_filename[..base_filename.len() - 4];
-        let mut current_comments = String::new();
+        let mut current_comments = Vec::new();
 
         api_def.filename = filename.to_owned();
         api_def.base_filename = base_filename.to_owned();
@@ -317,7 +317,7 @@ impl ApiParser {
                 }
 
                 Rule::doc_comment => {
-                    current_comments.push_str(&chunk.as_str()[4..]);
+                    current_comments.push(chunk.as_str()[4..].to_owned());
                 }
 
                 Rule::enumdef => {
@@ -440,7 +440,7 @@ impl ApiParser {
         }
     }
 
-    fn fill_callback(chunk: Pair<Rule>, doc_comments: &str) -> Function {
+    fn fill_callback(chunk: Pair<Rule>, doc_comments: &Vec<String>) -> Function {
         let mut func = Function::default();
 
         for entry in chunk.into_inner() {
@@ -456,7 +456,7 @@ impl ApiParser {
     ///
     /// Fill struct def
     ///
-    fn fill_struct(chunk: Pair<Rule>, doc_comments: &str, def_file: &str) -> Struct {
+    fn fill_struct(chunk: Pair<Rule>, doc_comments: &Vec<String>, def_file: &str) -> Struct {
         let mut sdef = Struct {
             doc_comments: doc_comments.to_owned(),
             def_file: def_file.to_owned(),
@@ -526,7 +526,7 @@ impl ApiParser {
     fn fill_field_list(rule: Pair<Rule>) -> (Vec<Variable>, Vec<Function>) {
         let mut var_entries = Vec::new();
         let mut func_entries = Vec::new();
-        let mut doc_comments = String::new();
+        let mut doc_comments = Vec::new();
 
         for entry in rule.into_inner() {
             match entry.as_rule() {
@@ -547,7 +547,7 @@ impl ApiParser {
                 }
 
                 Rule::doc_comment => {
-                    doc_comments.push_str(&entry.as_str()[4..]);
+                    doc_comments.push(entry.as_str()[4..].to_owned());
                 }
 
                 _ => (),
@@ -560,7 +560,7 @@ impl ApiParser {
     ///
     /// Get data for function declaration
     ///
-    fn get_function(rule: Pair<Rule>, doc_comments: &str) -> Function {
+    fn get_function(rule: Pair<Rule>, doc_comments: &Vec<String>) -> Function {
         let mut function = Function {
             doc_comments: doc_comments.to_owned(),
             ..Function::default()
@@ -572,7 +572,7 @@ impl ApiParser {
                 Rule::static_typ => function.func_type = FunctionType::Static,
                 Rule::manual_typ => function.func_type = FunctionType::Manual,
                 Rule::varlist => function.function_args = Self::get_variable_list(entry),
-                Rule::retexp => function.return_val = Some(Self::get_variable(entry, "")),
+                Rule::retexp => function.return_val = Some(Self::get_variable(entry, &Vec::new())),
                 _ => (),
             }
         }
@@ -600,8 +600,10 @@ impl ApiParser {
             ..Variable::default()
         }];
 
+        let t = Vec::new();
+
         for entry in rule.into_inner() {
-            variables.push(Self::get_variable(entry, ""));
+            variables.push(Self::get_variable(entry, &t));
         }
 
         variables
@@ -610,7 +612,7 @@ impl ApiParser {
     ///
     /// Get variable
     ///
-    fn get_variable(rule: Pair<Rule>, doc_comments: &str) -> Variable {
+    fn get_variable(rule: Pair<Rule>, doc_comments: &Vec<String>) -> Variable {
         let mut vtype = Rule::var;
         let mut var = Variable::default();
         let mut type_name = String::new();
@@ -685,7 +687,7 @@ impl ApiParser {
     ///
     fn fill_field_list_enum(rule: Pair<Rule>) -> Vec<EnumEntry> {
         let mut entries = Vec::new();
-        let mut doc_comments = String::new();
+        let mut doc_comments = Vec::new();
 
         for entry in rule.into_inner() {
             match entry.as_rule() {
@@ -693,13 +695,13 @@ impl ApiParser {
                     let field = entry.clone().into_inner().next().unwrap();
 
                     if field.as_rule() == Rule::enum_type {
-                        entries.push(Self::get_enum(doc_comments.to_owned(), field));
+                        entries.push(Self::get_enum(&doc_comments, field));
                         doc_comments.clear();
                     }
                 }
 
                 Rule::doc_comment => {
-                    doc_comments.push_str(&entry.as_str()[4..]);
+                    doc_comments.push(entry.as_str()[4..].to_owned());
                 }
 
                 _ => (),
@@ -712,7 +714,7 @@ impl ApiParser {
     ///
     /// Get enum
     ///
-    fn get_enum(doc_comments: String, rule: Pair<Rule>) -> EnumEntry {
+    fn get_enum(doc_comments: &Vec<String>, rule: Pair<Rule>) -> EnumEntry {
         let mut name = String::new();
         let mut assign = None;
 
@@ -728,7 +730,7 @@ impl ApiParser {
 
         if let Some(value) = assign {
             EnumEntry {
-                doc_comments,
+                doc_comments: doc_comments.to_owned(),
                 name,
                 value,
             }
