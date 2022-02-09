@@ -248,26 +248,32 @@ impl Cgen {
                 }
 
                 _ => {
-                    // TODO: support arrays with fixed size
-                    let carg = format!("{} {}", Self::get_variable(&arg, self_name), arg.name);
-                    fa.func_args.push(carg.to_owned());
-                    fa.internal_args.push(carg.to_owned());
-                    fa.call_args.push(arg.name.to_owned());
-                }
-            }
+                    match arg.array {
+                        None => {
+                            let carg = format!("{} {}", Self::get_variable(&arg, self_name), arg.name);
+                            fa.func_args.push(carg.to_owned());
+                            fa.internal_args.push(carg.to_owned());
+                            fa.call_args.push(arg.name.to_owned());
+                        }
 
-            // If we have an array we add name with size after the parameter
-            match arg.array {
-                None => (),
-                Some(ArrayType::Unsized) => {
-                    let carg = format!("uint32_t {}_size", arg.name);
-                    fa.func_args.push(carg.to_owned());
-                    fa.internal_args.push(carg.to_owned());
-                    fa.call_args.push(format!("{}_size", arg.name));
-                }
+                        Some(ArrayType::Unsized) => {
+                            let carg = format!("{}* {}", Self::get_variable(&arg, self_name), arg.name);
+                            fa.func_args.push(carg.to_owned());
+                            fa.internal_args.push(carg.to_owned());
+                            fa.call_args.push(arg.name.to_owned());
+                            let carg = format!("uint32_t {}_size", arg.name);
+                            fa.func_args.push(carg.to_owned());
+                            fa.internal_args.push(carg.to_owned());
+                            fa.call_args.push(format!("{}_size", arg.name));
+                        }
 
-                Some(ArrayType::SizedArray(ref _size)) => {
-                    unimplemented!();
+                        Some(ArrayType::SizedArray(ref size)) => {
+                            let carg = format!("{} {}[{}]", Self::get_variable(&arg, self_name), arg.name, size);
+                            fa.func_args.push(carg.to_owned());
+                            fa.internal_args.push(carg.to_owned());
+                            fa.call_args.push(arg.name.to_owned());
+                        }
+                    }
                 }
             }
         }
