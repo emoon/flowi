@@ -24,7 +24,7 @@ struct Font {
     [static] new_from_file(filename: String, font_size: u32, placement_mode: FontPlacementMode) -> Font?,
     /// Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
     /// Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
-    [static] new_from_memory(name: String, data: [*u8], font_size: u32, placement_mode: FontPlacementMode) -> Font?,
+    [static] new_from_memory(name: String, data: [u8], font_size: u32, placement_mode: FontPlacementMode) -> Font?,
     /// Set the font as active when drawing text
     [static] set(font: Font),
     /// Set font active with specific size in pixels

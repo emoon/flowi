@@ -1,6 +1,7 @@
 
 callback MainLoopCallback(user_data: *void)
 
+#[attributes(NoContext)]
 struct Application {
     dummy: u32,
     // TODO: More options

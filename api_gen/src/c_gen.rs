@@ -40,7 +40,6 @@ struct FlContext;
 extern \"C\" {
 #endif\n";
 
-
 ///
 /// Footer that is generated at the end of the the file
 ///
@@ -54,8 +53,8 @@ pub static C_API_SUFIX_FUNCS: &str = "fl";
 
 pub struct Cgen;
 
-#[derive(PartialEq)]
-enum WithContext {
+#[derive(PartialEq, Copy, Clone)]
+enum Ctx {
     Yes,
     No,
 }
@@ -69,15 +68,15 @@ struct FuncArgs {
     return_value: String,
 }
 
-fn get_arg_line(args: &[String], with_context: WithContext) -> String {
+fn arg_line(args: &[String], with_context: Ctx) -> String {
     let mut output = String::with_capacity(256);
 
-    if with_context == WithContext::Yes {
+    if with_context == Ctx::Yes {
         output.push_str("struct FlContext* flowi_ctx");
     }
 
     for (i, a) in args.iter().enumerate() {
-        if i > 0 || with_context == WithContext::Yes {
+        if i > 0 || with_context == Ctx::Yes {
             output.push_str(", ")
         }
 
@@ -88,7 +87,11 @@ fn get_arg_line(args: &[String], with_context: WithContext) -> String {
 }
 
 impl Cgen {
-    fn write_commment<W: Write>(f: &mut W, comments: &Vec<String>, indent: usize) -> io::Result<()> {
+    fn write_commment<W: Write>(
+        f: &mut W,
+        comments: &Vec<String>,
+        indent: usize,
+    ) -> io::Result<()> {
         if !comments.is_empty() {
             for c in comments {
                 writeln!(f, "{:indent$}// {}", "", c, indent = indent)?;
@@ -137,7 +140,7 @@ impl Cgen {
                 } else {
                     output.push_str(&format!("{}{}", C_API_SUFFIX, var.type_name));
                 }
-            },
+            }
 
             VariableType::Str => output.push_str("FlString"),
             VariableType::Primitive => output.push_str(&var.get_c_primitive_type()),
@@ -210,10 +213,10 @@ impl Cgen {
             let name = format!("{}{}", C_API_SUFFIX, cmd);
             writeln!(f, "#define Render_{}_cmd(state) \\", cmd.to_snake_case())?;
             writeln!(
-                f,
-                "    ({}*)CommandBuffer_alloc_cmd(&state->render_commands, {}RenderCommand_{}, sizeof({}))\n",
-                name, C_API_SUFFIX, cmd, name
-            )?;
+                    f,
+                    "    ({}*)CommandBuffer_alloc_cmd(&state->render_commands, {}RenderCommand_{}, sizeof({}))\n",
+                    name, C_API_SUFFIX, cmd, name
+                    )?;
         }
 
         Ok(())
@@ -247,34 +250,37 @@ impl Cgen {
                     fa.call_args.push(format!("{}_", arg.name));
                 }
 
-                _ => {
-                    match arg.array {
-                        None => {
-                            let carg = format!("{} {}", Self::get_variable(&arg, self_name), arg.name);
-                            fa.func_args.push(carg.to_owned());
-                            fa.internal_args.push(carg.to_owned());
-                            fa.call_args.push(arg.name.to_owned());
-                        }
-
-                        Some(ArrayType::Unsized) => {
-                            let carg = format!("{}* {}", Self::get_variable(&arg, self_name), arg.name);
-                            fa.func_args.push(carg.to_owned());
-                            fa.internal_args.push(carg.to_owned());
-                            fa.call_args.push(arg.name.to_owned());
-                            let carg = format!("uint32_t {}_size", arg.name);
-                            fa.func_args.push(carg.to_owned());
-                            fa.internal_args.push(carg.to_owned());
-                            fa.call_args.push(format!("{}_size", arg.name));
-                        }
-
-                        Some(ArrayType::SizedArray(ref size)) => {
-                            let carg = format!("{} {}[{}]", Self::get_variable(&arg, self_name), arg.name, size);
-                            fa.func_args.push(carg.to_owned());
-                            fa.internal_args.push(carg.to_owned());
-                            fa.call_args.push(arg.name.to_owned());
-                        }
+                _ => match arg.array {
+                    None => {
+                        let carg = format!("{} {}", Self::get_variable(&arg, self_name), arg.name);
+                        fa.func_args.push(carg.to_owned());
+                        fa.internal_args.push(carg.to_owned());
+                        fa.call_args.push(arg.name.to_owned());
                     }
-                }
+
+                    Some(ArrayType::Unsized) => {
+                        let carg = format!("{}* {}", Self::get_variable(&arg, self_name), arg.name);
+                        fa.func_args.push(carg.to_owned());
+                        fa.internal_args.push(carg.to_owned());
+                        fa.call_args.push(arg.name.to_owned());
+                        let carg = format!("uint32_t {}_size", arg.name);
+                        fa.func_args.push(carg.to_owned());
+                        fa.internal_args.push(carg.to_owned());
+                        fa.call_args.push(format!("{}_size", arg.name));
+                    }
+
+                    Some(ArrayType::SizedArray(ref size)) => {
+                        let carg = format!(
+                            "{} {}[{}]",
+                            Self::get_variable(&arg, self_name),
+                            arg.name,
+                            size
+                        );
+                        fa.func_args.push(carg.to_owned());
+                        fa.internal_args.push(carg.to_owned());
+                        fa.call_args.push(arg.name.to_owned());
+                    }
+                },
             }
         }
 
@@ -299,42 +305,71 @@ impl Cgen {
             fa.return_value,
             C_API_SUFFIX,
             func.name,
-            get_arg_line(&fa.func_args, WithContext::Yes)
+            arg_line(&fa.func_args, Ctx::Yes)
         )
     }
 
-    fn generate_function<W: Write>(f: &mut W, func: &Function, self_name: &str) -> io::Result<()> {
+    fn generate_function<W: Write>(
+        f: &mut W,
+        func: &Function,
+        self_name: &str,
+        with_ctx: Ctx,
+    ) -> io::Result<()> {
         let fa = Self::generate_function_args(func, self_name);
 
         Self::write_commment(f, &func.doc_comments, 0)?;
 
         // write the implementation func
 
-        writeln!(f, "{} {}({});\n", fa.return_value, func.c_name, get_arg_line(&fa.internal_args, WithContext::Yes))?;
+        #[rustfmt::skip]
+        writeln!(f, "{} {}({});\n", fa.return_value, func.c_name, arg_line(&fa.internal_args, with_ctx))?;
 
         // write the inline function
         // TODO: Generate the internal inside a separate header to make things cleaner
 
+        #[rustfmt::skip]
         let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, self_name.to_snake_case(), func.name);
-        let func_name_c = format!("{}_ctx", func_name);
 
-        writeln!(f, "FL_INLINE {} {}({}) {{", fa.return_value, func_name_c, get_arg_line(&fa.func_args, WithContext::Yes))?;
+        let (func_name_c, arg_offset) = if with_ctx == Ctx::Yes {
+            (format!("{}_ctx", func_name), 0)
+        } else {
+            (func_name.to_owned(), 1)
+        };
+
+        writeln!(
+            f,
+            "FL_INLINE {} {}({}) {{",
+            fa.return_value,
+            func_name_c,
+            arg_line(&fa.func_args, with_ctx)
+        )?;
+
         if !fa.body.is_empty() {
             write!(f, "{}", &fa.body)?;
         }
 
         if fa.return_value != "void" {
-            writeln!(f, "return {}({});", func.c_name, get_arg_line(&fa.call_args, WithContext::No))?;
+            #[rustfmt::skip]
+            writeln!(f, "return {}({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
         } else {
-            writeln!(f, "{}({});", func.c_name, get_arg_line(&fa.call_args, WithContext::No))?;
+            #[rustfmt::skip]
+            writeln!(f, "{}({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
         }
 
         writeln!(f, "}}\n")?;
 
-        writeln!(f, "#define {}({}) {}({})\n", func_name,
-            get_arg_line(&fa.call_args[1..], WithContext::No),
-            func_name_c,
-            get_arg_line(&fa.call_args, WithContext::No))
+        if with_ctx == Ctx::Yes {
+            writeln!(
+                f,
+                "#define {}({}) {}({})\n",
+                func_name,
+                arg_line(&fa.call_args[1..], Ctx::No),
+                func_name_c,
+                arg_line(&fa.call_args, Ctx::No)
+            )
+        } else {
+            Ok(())
+        }
     }
 
     pub fn generate(filename: &str, render_filename_dir: &str, api_def: &ApiDef) -> io::Result<()> {
@@ -374,10 +409,15 @@ impl Cgen {
 
         for sdef in &api_def.structs {
             for func in &sdef.functions {
-                if sdef.has_attribute("Handle") {
-                    Self::generate_function(&mut f, &func, &sdef.name)?;
+                let with_ctx = if sdef.has_attribute("NoContext") {
+                    Ctx::No
                 } else {
-                    Self::generate_function(&mut f, &func, &format!("{}*", sdef.name))?;
+                    Ctx::Yes
+                };
+                if sdef.has_attribute("Handle") {
+                    Self::generate_function(&mut f, &func, &sdef.name, with_ctx)?;
+                } else {
+                    Self::generate_function(&mut f, &func, &format!("{}*", sdef.name), with_ctx)?;
                 }
             }
         }

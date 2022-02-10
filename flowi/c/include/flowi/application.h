@@ -23,25 +23,19 @@ typedef struct FlApplication {
 
 typedef void (*FlMainLoopCallback)(struct FlContext* flowi_ctx, void* user_data);
 
-struct FlContext* fl_application_new_impl(struct FlContext* flowi_ctx, FlString application_name, FlString developer);
+struct FlContext* fl_application_new_impl(FlString application_name, FlString developer);
 
-FL_INLINE struct FlContext* fl_application_new_ctx(struct FlContext* flowi_ctx, const char* application_name,
-                                                   const char* developer) {
+FL_INLINE struct FlContext* fl_application_new(const char* application_name, const char* developer) {
     FlString application_name_ = {application_name, 1, (uint32_t)strlen(application_name)};
     FlString developer_ = {developer, 1, (uint32_t)strlen(developer)};
-    return fl_application_new_impl(flowi_ctx, application_name_, developer_);
+    return fl_application_new_impl(application_name_, developer_);
 }
 
-#define fl_application_new(application_name_, developer_) \
-    fl_application_new_ctx(flowi_ctx, application_name_, developer_)
+void fl_application_main_loop_impl(FlMainLoopCallback callback, void* userdata);
 
-void fl_application_main_loop_impl(struct FlContext* flowi_ctx, FlMainLoopCallback callback, void* userdata);
-
-FL_INLINE void fl_application_main_loop_ctx(struct FlContext* flowi_ctx, FlMainLoopCallback callback, void* userdata) {
-    fl_application_main_loop_impl(flowi_ctx, callback, userdata);
+FL_INLINE void fl_application_main_loop(FlMainLoopCallback callback, void* userdata) {
+    fl_application_main_loop_impl(callback, userdata);
 }
-
-#define fl_application_main_loop(callback, userdata) fl_application_main_loop_ctx(flowi_ctx, callback, userdata)
 
 #ifdef __cplusplus
 }

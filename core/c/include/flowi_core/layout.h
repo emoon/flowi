@@ -60,11 +60,11 @@ FL_INLINE FlLayoutAreaId fl_layout_area_create_ctx(struct FlContext* flowi_ctx, 
 
 #define fl_layout_area_create(name_, area) fl_layout_area_create_ctx(flowi_ctx, name_, area)
 
-FlLayoutAreaId fl_layout_area_from_children_impl(struct FlContext* flowi_ctx, FlString name, FlLayoutArea children,
+FlLayoutAreaId fl_layout_area_from_children_impl(struct FlContext* flowi_ctx, FlString name, FlLayoutArea* children,
                                                  uint32_t children_size, int16_t row, int16_t cols);
 
 FL_INLINE FlLayoutAreaId fl_layout_area_from_children_ctx(struct FlContext* flowi_ctx, const char* name,
-                                                          FlLayoutArea children, uint32_t children_size, int16_t row,
+                                                          FlLayoutArea* children, uint32_t children_size, int16_t row,
                                                           int16_t cols) {
     FlString name_ = {name, 1, (uint32_t)strlen(name)};
     return fl_layout_area_from_children_impl(flowi_ctx, name_, children, children_size, row, cols);

@@ -29,7 +29,7 @@ struct Image {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
-    [static] load_from_memory(name: String, data: [*u8]) -> ImageId,
+    [static] load_from_memory(name: String, data: [u8]) -> ImageId,
     /// Get data amout the image
     [static] get_image_data(image: ImageId) -> Image,
     /// Destroy the created image

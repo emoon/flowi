@@ -11,7 +11,7 @@ extern "C" {
     ) -> Font;
     fn fl_font_new_from_memory_impl(
         name: FlString,
-        data: *mut u8,
+        data: u8,
         font_size: u32,
         placement_mode: FontPlacementMode,
     ) -> Font;

@@ -154,16 +154,19 @@ fn main() {
             println!("ERROR: Unable to write {}, error: {:?}", c_filename, e);
         }
 
+        /*
         // Generate C/C++ Header for FFI structs
         if let Err(e) = RustGen::generate(&rust_filename, api_def) {
             println!("ERROR: Unable to write {}, error: {:?}", rust_filename, e);
         }
 
+        // Rust Rustfmt on rust files
+        run_rustfmt(&rust_filename);
+        */
+
         // clang-format C files
         run_clang_format(&c_filename);
 
-        // Rust Rustfmt on rust files
-        run_rustfmt(&rust_filename);
     });
 
     // All done!

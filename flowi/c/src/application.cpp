@@ -102,7 +102,7 @@ static void error_callback(int error, const char* description) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern"C" struct FlContext* fl_application_new_impl(struct FlContext* ctx, FlString application_name, FlString developer) {
+extern"C" struct FlContext* fl_application_new_impl(FlString application_name, FlString developer) {
     ApplicationState* state = &s_state;
 
     // TODO: Error, we only support one application so make sure we only run this once.
@@ -426,7 +426,7 @@ static void generate_frame(void* user_data) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_application_main_loop_impl(struct FlContext* ctx, FlMainLoopCallback callback, void* user_data) {
+extern "C" void fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data) {
     ApplicationState* state = &s_state;
 
     state->main_callback = callback;
