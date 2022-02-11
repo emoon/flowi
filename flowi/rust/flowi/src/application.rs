@@ -7,8 +7,16 @@ use crate::*;
 use flowi_core::*;
 
 extern "C" {
-    fn fl_application_new_impl(application_name: FlString, developer: FlString) -> *mut Context;
-    fn fl_application_main_loop_impl(callback: MainLoopCallback, userdata: *mut c_void);
+    fn fl_application_new_impl(
+        ctx: *const core::ffi::c_void,
+        application_name: FlString,
+        developer: FlString,
+    ) -> *mut Context;
+    fn fl_application_main_loop_impl(
+        ctx: *const core::ffi::c_void,
+        callback: MainLoopCallback,
+        userdata: *mut core::ffi::c_void,
+    );
 }
 
 #[repr(C)]
@@ -16,16 +24,25 @@ pub struct Application {
     dummy: u32,
 }
 
-impl Application {
-    pub fn new(application_name: &str, developer: &str) {
+impl Ui {
+    pub fn application_new(&self, application_name: &str, developer: &str) -> Context {
         unsafe {
-            fl_application_new_impl(FlString::new(application_name), FlString::new(developer));
+            let ret_val = fl_application_new_impl(
+                self.ctx,
+                FlString::new(application_name),
+                FlString::new(developer),
+            );
+            ret_val.as_mut()
         }
     }
 
-    pub fn main_loop(callback: MainLoopCallback, userdata: &mut c_void) {
+    pub fn application_main_loop(
+        &self,
+        callback: MainLoopCallback,
+        userdata: &mut core::ffi::c_void,
+    ) {
         unsafe {
-            fl_application_main_loop_impl(callback, userdata as _);
+            fl_application_main_loop_impl(self.ctx, callback, userdata as _);
         }
     }
 }

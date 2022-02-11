@@ -285,7 +285,11 @@ impl Cgen {
         }
 
         if let Some(ret) = &func.return_val {
-            fa.return_value = Self::get_variable(&ret, self_name);
+            if ret.const_pointer {
+                fa.return_value = format!("{}*", Self::get_variable(&ret, self_name));
+            } else {
+                fa.return_value = Self::get_variable(&ret, self_name);
+            }
         } else {
             fa.return_value = "void".to_owned();
         }

@@ -4,14 +4,20 @@
 use crate::*;
 
 extern "C" {
-    fn fl_layout_area_create_impl(name: FlString, area: LayoutArea) -> LayoutAreaId;
+    fn fl_layout_area_create_impl(
+        ctx: *const core::ffi::c_void,
+        name: FlString,
+        area: LayoutArea,
+    ) -> LayoutAreaId;
     fn fl_layout_area_from_children_impl(
+        ctx: *const core::ffi::c_void,
         name: FlString,
         children: *const LayoutArea,
+        children_size: u32,
         row: i16,
         cols: i16,
     ) -> LayoutAreaId;
-    fn fl_layout_area_set_layout_mode_impl(mode: LayoutMode);
+    fn fl_layout_area_set_layout_mode_impl(ctx: *const core::ffi::c_void, mode: LayoutMode);
 }
 
 #[repr(C)]
@@ -41,7 +47,10 @@ pub struct Sizing {
     value_type: SizeType,
 }
 
-type LayoutAreaId = u64;
+#[derive(Clone, Debug)]
+pub struct LayoutAreaId {
+    handle: u64,
+}
 
 #[repr(C)]
 pub struct LayoutArea {
@@ -51,24 +60,36 @@ pub struct LayoutArea {
     direction: LayoutDirection,
 }
 
-impl Sizing {}
-
-impl LayoutArea {
-    pub fn create(name: &str, area: LayoutArea) {
+impl Ui {
+    pub fn layout_area_create(&self, name: &str, area: LayoutArea) -> LayoutAreaId {
         unsafe {
-            fl_layout_area_create_impl(FlString::new(name), area);
+            let ret_val = fl_layout_area_create_impl(self.ctx, FlString::new(name), area);
+            ret_val
         }
     }
 
-    pub fn from_children(name: &str, children: &[LayoutArea], row: i16, cols: i16) {
+    pub fn layout_area_from_children(
+        &self,
+        name: &str,
+        children: &[LayoutArea],
+        row: i16,
+        cols: i16,
+    ) -> LayoutAreaId {
         unsafe {
-            fl_layout_area_from_children_impl(FlString::new(name), children.as_ptr(), row, cols);
+            let ret_val = fl_layout_area_from_children_impl(
+                self.ctx,
+                FlString::new(name),
+                children.as_ptr(),
+                row,
+                cols,
+            );
+            ret_val
         }
     }
 
-    pub fn set_layout_mode(mode: LayoutMode) {
+    pub fn layout_area_set_layout_mode(&self, mode: LayoutMode) {
         unsafe {
-            fl_layout_area_set_layout_mode_impl(mode);
+            fl_layout_area_set_layout_mode_impl(self.ctx, mode);
         }
     }
 }

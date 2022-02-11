@@ -6,7 +6,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // load image from file or memory
 
-static FlImageId load_image(struct FlContext* ctx, FlString filename, u8* data, u32 size) {
+static FlImage load_image(struct FlContext* ctx, FlString filename, u8* data, u32 size) {
     int x = 0;
     int y = 0;
     int channels_in_file = 0;
@@ -40,8 +40,8 @@ static FlImageId load_image(struct FlContext* ctx, FlString filename, u8* data, 
     // TODO: Currenty assumes 4 bytes per pixel
     // TODO: Make sure we pick the correct texture format
     image->data = image_data;
-    image->width = x;
-    image->height = y;
+    image->info.width = x;
+    image->info.height = y;
     image->format = FlTextureFormat_RGBA8_sRGB;
 
     return image->handle;
@@ -49,38 +49,34 @@ static FlImageId load_image(struct FlContext* ctx, FlString filename, u8* data, 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlImageId fl_image_new_from_file_impl(struct FlContext* ctx, FlString filename) {
+FlImage fl_image_create_from_file_impl(struct FlContext* ctx, FlString filename) {
     return load_image(ctx, filename, NULL, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlImageId fl_image_load_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size) {
+FlImage fl_image_create_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size) {
     return load_image(ctx, name, data, data_size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlImage fl_image_get_image_data_impl(struct FlContext* ctx, FlImageId image) {
-	FlImage image_data = { 0 };
-
+FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self) {
     // Lock_lock(flowi_ctx->global_state->lock);
-	ImagePrivate* data = Handles_get_data(&ctx->global->image_handles, image);
+	ImagePrivate* data = Handles_get_data(&ctx->global->image_handles, self);
     // Lock_unlock(flowi_ctx->global_state->lock);
 
 	if (!data) {
 		ERROR_ADD(FlError_Image, "Invalid handle %s", "todo: filename");
-		return image_data;
+		return NULL;
 	}
 
-	image_data.width = data->width;
-	image_data.height = data->height;
-	return image_data;
+	return &data->info;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_image_destroy_impl(struct FlContext* ctx, FlImageId image) {
+void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
     // Lock_lock(flowi_ctx->global_state->lock);
 	ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
     // Lock_unlock(flowi_ctx->global_state->lock);

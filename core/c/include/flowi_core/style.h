@@ -78,9 +78,9 @@ FL_INLINE FlStyle* fl_style_get_default_ctx(struct FlContext* flowi_ctx) {
 #define fl_style_get_default() fl_style_get_default_ctx(flowi_ctx)
 
 // Get the current style which is based on what has been pushed on the style stack using push/pop
-FlStyle fl_style_get_current_impl(struct FlContext* flowi_ctx);
+FlStyle* fl_style_get_current_impl(struct FlContext* flowi_ctx);
 
-FL_INLINE FlStyle fl_style_get_current_ctx(struct FlContext* flowi_ctx) {
+FL_INLINE FlStyle* fl_style_get_current_ctx(struct FlContext* flowi_ctx) {
     return fl_style_get_current_impl(flowi_ctx);
 }
 

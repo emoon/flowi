@@ -81,8 +81,8 @@ pub struct Variable {
     pub pointer: bool,
     /// Type is a const pointer
     pub const_pointer: bool,
-    /// If the type is of Regular it can be either a class or pod type
-    pub class_type: bool,
+    /// If the type is a Handle (attribute set on struct)
+    pub is_handle_type: bool,
 }
 
 ///
@@ -102,7 +102,7 @@ impl Default for Variable {
             optional: false,
             pointer: false,
             const_pointer: false,
-            class_type: false,
+            is_handle_type: false,
         }
     }
 }
@@ -139,8 +139,6 @@ pub struct Function {
     pub return_val: Option<Variable>,
     /// Type of function. See FunctionType descrition for more info
     pub func_type: FunctionType,
-    /// If the function is manually implemented (not auto-generated)
-    pub is_manual: bool,
 }
 
 ///
@@ -156,7 +154,6 @@ impl Default for Function {
             function_args: Vec::new(),
             return_val: None,
             func_type: FunctionType::Regular,
-            is_manual: false,
         }
     }
 }
@@ -671,12 +668,6 @@ impl ApiParser {
             var.const_pointer = true;
         }
 
-        // TODO: We assume regular is class type now but this will change
-        // when we have POD structs
-        if var_type == VariableType::Regular {
-            var.class_type = true;
-        }
-
         var.type_name = type_name;
         var.vtype = var_type;
         var
@@ -884,7 +875,29 @@ impl ApiParser {
             }
         }
 
+        // Patch up so handle types are marked as such
+
+        for api_def in api_defs.iter_mut() {
+            for s in &mut api_def.structs {
+                let is_handle_type = s.has_attribute("Handle");
+                for func in &mut s.functions {
+                    for arg in &mut func.function_args {
+                        if arg.type_name == s.name {
+                            arg.is_handle_type = is_handle_type;
+                        }
+                    }
+
+                    if let Some(ret_var) = func.return_val.as_mut() {
+                        if ret_var.type_name == s.name {
+                            ret_var.is_handle_type = is_handle_type;
+                        }
+                    }
+                }
+            }
+        }
+
         // Patch up the names/def_file in the function arguments
+        /*
         for func in api_defs
             .iter_mut()
             .flat_map(|api| api.structs.iter_mut())
@@ -898,6 +911,7 @@ impl ApiParser {
                 Self::update_variable(ret_val, &type_def_file, &enum_def_file_type);
             }
         }
+        */
     }
 }
 

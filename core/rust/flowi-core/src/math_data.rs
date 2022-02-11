@@ -21,7 +21,3 @@ pub struct Pos {
     /// y position
     y: f32,
 }
-
-impl Rect {}
-
-impl Pos {}

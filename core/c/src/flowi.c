@@ -25,8 +25,6 @@
 #endif
 
 // struct FlGlobalState* g_state = NULL;
-// struct FlContext* g_fl_ctx = NULL;
-
 // extern FliGlobalCtx* g_global_ctx;
 
 // TODO: Block based allocations

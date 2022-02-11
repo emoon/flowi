@@ -10,11 +10,11 @@ enum FontPlacementMode {
     /// Let the library decide the mode (default)
     Auto = 0,
     /// Used for regular Latin based text
-    Basic = 0,
+    Basic = 1,
     /// Used for fixed-width monospaces fonts (Fastest)
-    Mono = 1,
+    Mono = 2,
     /// Used for accurate glyph placement (uses the Harfbuzz lib thus is the slowest mode)
-    Accurate = 2,
+    Accurate = 3,
 }
 
 #[attributes(Handle)]

@@ -28,11 +28,11 @@ typedef enum FlFontPlacementMode {
     // Let the library decide the mode (default)
     FlFontPlacementMode_Auto = 0,
     // Used for regular Latin based text
-    FlFontPlacementMode_Basic = 0,
+    FlFontPlacementMode_Basic = 1,
     // Used for fixed-width monospaces fonts (Fastest)
-    FlFontPlacementMode_Mono = 1,
+    FlFontPlacementMode_Mono = 2,
     // Used for accurate glyph placement (uses the Harfbuzz lib thus is the slowest mode)
-    FlFontPlacementMode_Accurate = 2,
+    FlFontPlacementMode_Accurate = 3,
 } FlFontPlacementMode;
 
 typedef uint64_t FlFont;

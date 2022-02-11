@@ -4,9 +4,9 @@
 use crate::*;
 
 extern "C" {
-    fn fl_style_create_impl(name: FlString) -> *mut Style;
-    fn fl_style_get_default_impl() -> *mut Style;
-    fn fl_style_get_current_impl() -> *const Style;
+    fn fl_style_create_impl(ctx: *const core::ffi::c_void, name: FlString) -> *mut Style;
+    fn fl_style_get_default_impl(ctx: *const core::ffi::c_void) -> *mut Style;
+    fn fl_style_get_current_impl(ctx: *const core::ffi::c_void) -> *const Style;
     fn fl_style_end_changes_impl(self_c: *mut Style);
     fn fl_style_push_impl(self_c: *mut Style);
     fn fl_style_pop_impl(self_c: *mut Style);
@@ -59,57 +59,51 @@ pub struct Style {
     font_color: Color,
 }
 
-impl LengthPercentValue {}
-
-impl Spacing {}
-
-impl Padding {}
-
-impl Border {}
-
-impl Style {
+impl Ui {
     /// Create a new style
-    pub fn create(name: &str) {
+    pub fn style_create(&self, name: &str) -> Style {
         unsafe {
-            fl_style_create_impl(FlString::new(name));
+            let ret_val = fl_style_create_impl(self.ctx, FlString::new(name));
+            ret_val.as_mut()
         }
     }
 
     /// Get the default style. Changing this will apply the base style for the whole application
-    pub fn get_default() {
+    pub fn style_get_default(&self) -> Style {
         unsafe {
-            fl_style_get_default_impl();
+            let ret_val = fl_style_get_default_impl(self.ctx);
+            ret_val.as_mut()
         }
     }
 
     /// Get the current style which is based on what has been pushed on the style stack using push/pop
-    pub fn get_current() {
+    pub fn style_get_current(&self) -> Style {
         unsafe {
-            fl_style_get_current_impl();
+            let ret_val = fl_style_get_current_impl(self.ctx);
+            ret_val.as_ref()
         }
     }
+}
 
+impl Style {
     /// Mark the end of style changes
     pub fn end_changes(&self) {
         unsafe {
-            let self_ = std::mem::transmute(self);
-            fl_style_end_changes_impl(self_);
+            fl_style_end_changes_impl(self.handle);
         }
     }
 
     /// Select the style to be used, to end using the style use 'fl_pop_style()'
     pub fn push(&self) {
         unsafe {
-            let self_ = std::mem::transmute(self);
-            fl_style_push_impl(self_);
+            fl_style_push_impl(self.handle);
         }
     }
 
     /// Pops the current style
     pub fn pop(&self) {
         unsafe {
-            let self_ = std::mem::transmute(self);
-            fl_style_pop_impl(self_);
+            fl_style_pop_impl(self.handle);
         }
     }
 }

@@ -1,5 +1,6 @@
 use crate::api_parser::*;
 use std::borrow::Cow;
+use heck::ToSnakeCase;
 ///
 ///
 use std::fs::File;
@@ -65,29 +66,47 @@ impl RustGen {
         let tname = var.type_name.as_str();
 
         match tname {
-            "void" => "c_void".into(),
+            "void" => "core::ffi::c_void".into(),
             _ => tname.into(),
         }
     }
 
-    fn get_ffi_type(var: &Variable, self_type: &str) -> String {
+    fn get_ffi_type(var: &Variable, self_type: &str, type_name: &str, handle_struct: bool) -> String {
         let mut output = String::with_capacity(256);
 
         match var.vtype {
-            VariableType::None => output.push_str("c_void"),
-            VariableType::SelfType => output.push_str(&format!("*mut {}", self_type)),
+            VariableType::None => output.push_str("core::ffi::c_void"),
+            VariableType::SelfType => {
+                if handle_struct {
+                   output.push_str(self_type);
+                } else {
+                    output.push_str(&format!("*mut {}", self_type));
+                }
+            }
             VariableType::Reference => panic!("Shouldn't be here"),
             VariableType::Regular => output.push_str(&format!("{}", var.type_name)),
             VariableType::Str => output.push_str("FlString"),
             VariableType::Primitive => output.push_str(&Self::get_primitive_type(&var)),
         }
 
-        if var.pointer {
-            format!("*mut {}", output)
-        } else if var.const_pointer {
-            format!("*const {}", output)
-        } else {
-            output
+        match var.array.as_ref() {
+            None => {
+                if var.pointer {
+                    format!("*mut {}", output)
+                } else if var.const_pointer {
+                    format!("*const {}", output)
+                } else {
+                    output
+                }
+            },
+
+            Some(ArrayType::Unsized) => {
+                format!("*const {}, {}_size: u32", output, type_name)
+            },
+
+            Some(ArrayType::SizedArray(size)) => {
+                format!("[{}; {}]", output, size)
+            },
         }
     }
 
@@ -95,6 +114,7 @@ impl RustGen {
         f: &mut W,
         func: &Function,
         self_name: &str,
+        handle_struct: bool,
     ) -> io::Result<()> {
         let mut function_args = String::with_capacity(128);
         let len = func.function_args.len();
@@ -102,6 +122,10 @@ impl RustGen {
         // write arguments
         for (i, arg) in func.function_args.iter().enumerate() {
             if i == 0 && func.func_type == FunctionType::Static {
+                function_args.push_str("ctx: *const core::ffi::c_void");
+                if len > 0 {
+                    function_args.push_str(", ");
+                }
                 continue;
             }
 
@@ -112,7 +136,7 @@ impl RustGen {
             }
 
             function_args.push_str(": ");
-            function_args.push_str(&Self::get_ffi_type(&arg, self_name));
+            function_args.push_str(&Self::get_ffi_type(&arg, self_name, &arg.name, handle_struct));
 
             if i != len - 1 {
                 function_args.push_str(", ");
@@ -122,7 +146,7 @@ impl RustGen {
         write!(f, "    fn {}({})", func.c_name, function_args)?;
 
         if let Some(ret) = &func.return_val {
-            writeln!(f, " -> {};", Self::get_ffi_type(&ret, self_name))
+            writeln!(f, " -> {};", Self::get_ffi_type(&ret, self_name, "", handle_struct))
         } else {
             writeln!(f, ";")
         }
@@ -132,8 +156,9 @@ impl RustGen {
         writeln!(f, "extern \"C\" {{")?;
 
         for s in &api_def.structs {
+            let handle_struct = s.has_attribute("Handle");
             for func in &s.functions {
-                Self::generate_ffi_function(f, &func, &s.name)?;
+                Self::generate_ffi_function(f, &func, &s.name, handle_struct)?;
             }
         }
 
@@ -144,7 +169,8 @@ impl RustGen {
         Self::write_commment(f, &sdef.doc_comments, 0)?;
 
         if sdef.has_attribute("Handle") {
-            writeln!(f, "type {} = u64;\n", sdef.name)
+            writeln!(f, "#[derive(Clone, Debug)]")?;
+            writeln!(f, "pub struct {} {{ handle: u64 }}\n", sdef.name)
         } else {
             writeln!(f, "#[repr(C)]")?;
             writeln!(f, "pub struct {} {{", sdef.name)?;
@@ -155,7 +181,7 @@ impl RustGen {
                     f,
                     "    {}: {},",
                     var.name,
-                    Self::get_ffi_type(var, &sdef.name)
+                    Self::get_ffi_type(var, &sdef.name, &var.type_name, false)
                 )?;
             }
             writeln!(f, "}}\n")
@@ -170,14 +196,12 @@ impl RustGen {
                 Some(ArrayType::SizedArray(size)) => format!("; {}", size).into(),
             };
 
-            if var.const_pointer {
-                fa.func_args.push(format!("{}: &[{}{}]", var.name, type_name, sized));
-                fa.ffi_args.push(format!("{}.as_ptr()", var.name));
-            } else if var.pointer {
+            if var.pointer {
                 fa.func_args.push(format!("{}: &mut [{}{}]", var.name, type_name, sized));
                 fa.ffi_args.push(format!("{}.as_mut_ptr()", var.name));
             } else {
-                panic!("Unsupported");
+                fa.func_args.push(format!("{}: &[{}{}]", var.name, type_name, sized));
+                fa.ffi_args.push(format!("{}.as_ptr()", var.name));
             }
         } else {
             if var.const_pointer {
@@ -197,7 +221,10 @@ impl RustGen {
         let mut fa = FuncArgs::default();
 
         for (i, arg) in func.function_args.iter().enumerate() {
+            // Static for rust means we that we are in a Ctx/Ui instance
             if i == 0 && func.func_type == FunctionType::Static {
+                fa.func_args.push("&self".to_owned());
+                fa.ffi_args.push("self.ctx".to_owned());
                 continue;
             }
 
@@ -206,8 +233,12 @@ impl RustGen {
                 VariableType::Reference => panic!("Shouldn't be here"),
                 VariableType::SelfType => {
                     fa.func_args.push("&self".to_owned());
-                    fa.body.push_str("let self_ = std::mem::transmute(self);\n");
-                    fa.ffi_args.push("self_".to_owned());
+                    if arg.is_handle_type {
+                        fa.body.push_str("let self_ = std::mem::transmute(self);\n");
+                        fa.ffi_args.push("self_".to_owned());
+                    } else {
+                        fa.ffi_args.push("self.handle".to_owned());
+                    }
                 }
 
                 VariableType::Regular => Self::get_type(&mut fa, &arg, &arg.type_name),
@@ -220,44 +251,103 @@ impl RustGen {
                     Self::get_type(&mut fa, &arg, &Self::get_primitive_type(&arg));
                 }
             }
+        }
 
+        if let Some(ret_val) = func.return_val.as_ref() {
+            let ret = Self::get_primitive_type(&ret_val);
+
+            if ret_val.optional {
+                fa.ret_value = format!("Option<{}>", ret);
+            } else {
+                fa.ret_value = format!("{}", ret);
+            }
         }
 
         fa
     }
 
+    fn generate_func<W: Write>(f: &mut W, func: &Function, self_name: &str) -> io::Result<()> {
+        Self::write_commment(f, &func.doc_comments, 0)?;
+
+        let func_args = Self::generate_func_impl(&func);
+
+        if func_args.ret_value.is_empty() {
+            writeln!(
+                f,
+                "pub fn {}{}({}) {{",
+                self_name, func.name,
+                get_arg_line(&func_args.func_args)
+            )?;
+        } else {
+            writeln!(
+                f,
+                "pub fn {}{}({}) -> {} {{",
+                self_name, func.name,
+                get_arg_line(&func_args.func_args),
+                func_args.ret_value
+            )?;
+        }
+
+        writeln!(f, "unsafe {{ ")?;
+        if !func_args.body.is_empty() {
+            write!(f, "{}", &func_args.body)?;
+        }
+
+        let args = get_arg_line(&func_args.ffi_args);
+
+        if let Some(ret_val) = func.return_val.as_ref() {
+            writeln!(f, "let ret_val = {}({});", func.c_name, args)?;
+
+            if ret_val.is_handle_type {
+                if ret_val.optional {
+                    writeln!(f, "if ret_val == 0 {{ None }} else {{ Some({} {{ handle: ret_value }}) }}", ret_val.type_name)?;
+                } else {
+                    writeln!(f, "{} {{ handle: ret_value }}", ret_val.type_name)?;
+                }
+            } else {
+                if ret_val.const_pointer {
+                    writeln!(f, "ret_val.as_ref()")?;
+                } else if ret_val.pointer {
+                    writeln!(f, "ret_val.as_mut()")?;
+                } else {
+                    writeln!(f, "ret_val")?;
+                }
+            }
+        } else {
+            writeln!(f, "{}({});", func.c_name, args)?;
+        }
+
+        writeln!(f, "}}\n}}\n")
+    }
+
     fn generate_struct_impl<W: Write>(f: &mut W, sdef: &Struct) -> io::Result<()> {
-        if sdef.has_attribute("Handle") {
+        if sdef.functions.is_empty() {
             return Ok(());
         }
 
-        writeln!(f, "impl {} {{", sdef.name)?;
+        if sdef.functions.iter().find(|&func| func.func_type == FunctionType::Static).is_some() {
+            writeln!(f, "impl Ui {{")?;
 
-        for func in &sdef.functions {
-            Self::write_commment(f, &func.doc_comments, 0)?;
+            let self_name = format!("{}_", sdef.name.to_snake_case());
 
-            let func_args = Self::generate_func_impl(&func);
-
-            //if func_args.ret_value.is_empty() {
-            writeln!(
-                f,
-                "pub fn {}({}) {{",
-                func.name,
-                get_arg_line(&func_args.func_args)
-            )?;
-
-            writeln!(f, "unsafe {{ ")?;
-            if !func_args.body.is_empty() {
-                write!(f, "{}", &func_args.body)?;
+            for func in sdef.functions.iter().filter(|func| func.func_type == FunctionType::Static) {
+                Self::generate_func(f, &func, &self_name)?;
             }
 
-            let args = get_arg_line(&func_args.ffi_args);
-            writeln!(f, "{}({});", func.c_name, args)?;
-
-            writeln!(f, "}}\n}}\n")?;
+            writeln!(f, "}}\n")?;
         }
 
-        writeln!(f, "}}\n")
+        if sdef.functions.iter().find(|&func| func.func_type != FunctionType::Static).is_some() {
+            writeln!(f, "impl {} {{", sdef.name)?;
+
+            for func in sdef.functions.iter().filter(|func| func.func_type != FunctionType::Static) {
+                Self::generate_func(f, &func, "")?;
+            }
+
+            writeln!(f, "}}\n")?;
+        }
+
+        Ok(())
     }
 
     pub fn generate(filename: &str, api_def: &ApiDef) -> io::Result<()> {

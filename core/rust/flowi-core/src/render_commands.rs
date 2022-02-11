@@ -55,9 +55,11 @@ pub struct VertPosColor {
 #[repr(C)]
 pub struct TexturedTriangles {
     /// Vertices for the command
-    vertex_buffer: VertPosUvColor,
+    vertex_buffer: *const VertPosUvColor,
+    VertPosUvColor_size: u32,
     /// Index buffer for the command
-    index_buffer: IdxSize,
+    index_buffer: *const IdxSize,
+    IdxSize_size: u32,
     /// Texture id used for the command
     texture_id: u32,
 }
@@ -65,15 +67,18 @@ pub struct TexturedTriangles {
 #[repr(C)]
 pub struct SolidTriangles {
     /// Vertices for the command
-    vertex_buffer: VertPosColor,
+    vertex_buffer: *const VertPosColor,
+    VertPosColor_size: u32,
     /// Index buffer for the command
-    index_buffer: IdxSize,
+    index_buffer: *const IdxSize,
+    IdxSize_size: u32,
 }
 
 #[repr(C)]
 pub struct CreateTexture {
     /// Data upload (can be NULL if data is uploaded later)
-    data: u8,
+    data: *const u8,
+    u8_size: u32,
     /// This is the id that will later be used when refering to the texture
     id: u16,
     /// See [TextureFormat] for the type
@@ -89,7 +94,8 @@ pub struct CreateTexture {
 #[repr(C)]
 pub struct UpdateTexture {
     /// Data to upload
-    data: u8,
+    data: *const u8,
+    u8_size: u32,
     /// area to update
     rect: RenderRect,
     /// Texture to update
@@ -103,19 +109,3 @@ pub struct ScissorRect {
     /// Area restricted for rendering
     rect: RenderRect,
 }
-
-impl RenderRect {}
-
-impl VertPosUvColor {}
-
-impl VertPosColor {}
-
-impl TexturedTriangles {}
-
-impl SolidTriangles {}
-
-impl CreateTexture {}
-
-impl UpdateTexture {}
-
-impl ScissorRect {}

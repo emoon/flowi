@@ -2,14 +2,14 @@
 
 #include "types.h"
 #include <flowi_core/render_commands.h>
+#include <flowi_core/image.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct ImagePrivate {
     u64 handle;
     u8* data;
-    int width;
-    int height;
+    FlImageInfo info;
     FlTextureFormat format;
 } ImagePrivate;
 

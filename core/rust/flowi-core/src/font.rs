@@ -5,19 +5,22 @@ use crate::*;
 
 extern "C" {
     fn fl_font_new_from_file_impl(
+        ctx: *const core::ffi::c_void,
         filename: FlString,
         font_size: u32,
         placement_mode: FontPlacementMode,
     ) -> Font;
     fn fl_font_new_from_memory_impl(
+        ctx: *const core::ffi::c_void,
         name: FlString,
-        data: u8,
+        data: *const u8,
+        data_size: u32,
         font_size: u32,
         placement_mode: FontPlacementMode,
     ) -> Font;
-    fn fl_font_set_impl(font: Font);
-    fn fl_font_set_with_size_impl(size: u32);
-    fn fl_font_destroy_impl(font: Font);
+    fn fl_font_set_impl(ctx: *const core::ffi::c_void, font: Font);
+    fn fl_font_set_with_size_impl(ctx: *const core::ffi::c_void, size: u32);
+    fn fl_font_destroy_impl(ctx: *const core::ffi::c_void, font: Font);
 }
 
 /// Allows the user to select how accurate the glyph placement should be.
@@ -32,11 +35,85 @@ pub enum FontPlacementMode {
     /// Let the library decide the mode (default)
     Auto = 0,
     /// Used for regular Latin based text
-    Basic = 0,
+    Basic = 1,
     /// Used for fixed-width monospaces fonts (Fastest)
-    Mono = 1,
+    Mono = 2,
     /// Used for accurate glyph placement (uses the Harfbuzz lib thus is the slowest mode)
-    Accurate = 2,
+    Accurate = 3,
 }
 
-type Font = u64;
+#[derive(Clone, Debug)]
+pub struct Font {
+    handle: u64,
+}
+
+impl Ui {
+    /// Create a font from (TTF) file. To use the font use [Font::set] or [Font::set_with_size] before using text-based widgets
+    /// Returns >= 0 for valid handle, use fl_get_status(); for more detailed error message
+    pub fn font_new_from_file(
+        &self,
+        filename: &str,
+        font_size: u32,
+        placement_mode: FontPlacementMode,
+    ) -> Option<Font> {
+        unsafe {
+            let ret_val = fl_font_new_from_file_impl(
+                self.ctx,
+                FlString::new(filename),
+                font_size,
+                placement_mode,
+            );
+            if ret_val == 0 {
+                None
+            } else {
+                Some(Font { handle: ret_value })
+            }
+        }
+    }
+
+    /// Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
+    /// Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
+    pub fn font_new_from_memory(
+        &self,
+        name: &str,
+        data: &[u8],
+        font_size: u32,
+        placement_mode: FontPlacementMode,
+    ) -> Option<Font> {
+        unsafe {
+            let ret_val = fl_font_new_from_memory_impl(
+                self.ctx,
+                FlString::new(name),
+                data.as_ptr(),
+                font_size,
+                placement_mode,
+            );
+            if ret_val == 0 {
+                None
+            } else {
+                Some(Font { handle: ret_value })
+            }
+        }
+    }
+
+    /// Set the font as active when drawing text
+    pub fn font_set(&self, font: Font) {
+        unsafe {
+            fl_font_set_impl(self.ctx, font);
+        }
+    }
+
+    /// Set font active with specific size in pixels
+    pub fn font_set_with_size(&self, size: u32) {
+        unsafe {
+            fl_font_set_with_size_impl(self.ctx, size);
+        }
+    }
+
+    /// Destory the current font, render the id invalid
+    pub fn font_destroy(&self, font: Font) {
+        unsafe {
+            fl_font_destroy_impl(self.ctx, font);
+        }
+    }
+}
