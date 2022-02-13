@@ -30,11 +30,10 @@ static HEADER: &str = "
 #include <stdbool.h>
 #include <string.h>
 #include \"idx.h\"
+#include \"context.h\"
 #include \"manual.h\"";
 
 static HEADER2: &str = "
-
-struct FlContext;
 
 #ifdef __cplusplus
 extern \"C\" {
@@ -131,12 +130,22 @@ impl Cgen {
 
         match var.vtype {
             VariableType::None => output.push_str("void"),
-            VariableType::SelfType => output.push_str(&format!("{}{}", C_API_SUFFIX, self_type)),
+            VariableType::SelfType => {
+                // hack
+                if self_type == "Context*" {
+                    output.push_str(&format!("struct {}{}", C_API_SUFFIX, self_type));
+                } else {
+                    output.push_str(&format!("{}{}", C_API_SUFFIX, self_type));
+                }
+            }
+
             VariableType::Reference => panic!("Shouldn't be here"),
             VariableType::Regular => {
                 // hack, fix me
                 if var.type_name == "Context" {
                     output.push_str("struct FlContext");
+                } else if var.pointer && var.is_empty_struct {
+                    output.push_str(&format!("struct {}{}", C_API_SUFFIX, var.type_name));
                 } else {
                     output.push_str(&format!("{}{}", C_API_SUFFIX, var.type_name));
                 }
@@ -186,6 +195,8 @@ impl Cgen {
         // if we have handle set we just generate it as a i32 instead
         if sdef.has_attribute("Handle") {
             writeln!(f, "typedef uint64_t {}{};\n", C_API_SUFFIX, sdef.name)
+        } else if sdef.variables.is_empty() {
+            writeln!(f, "struct {}{};", C_API_SUFFIX, sdef.name)
         } else {
             writeln!(f, "typedef struct {}{} {{", C_API_SUFFIX, sdef.name)?;
 
@@ -234,7 +245,10 @@ impl Cgen {
         fa.call_args.push("flowi_ctx".to_owned());
 
         for (i, arg) in func.function_args.iter().enumerate() {
-            if i == 0 && func.func_type == FunctionType::Static {
+            if i == 0
+                && (func.func_type == FunctionType::Static
+                    || func.func_type == FunctionType::Manual)
+            {
                 continue;
             }
 
@@ -408,7 +422,7 @@ impl Cgen {
             for func in &api_def.callbacks {
                 Self::generate_callback_function(&mut f, &func, "")?;
             }
-            writeln!(f, "")?;
+            writeln!(f)?;
         }
 
         for sdef in &api_def.structs {

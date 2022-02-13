@@ -1,32 +1,30 @@
-#include <bgfx/embedded_shader.h>
-#include <flowi/application.h>
-#include "../shaders/generated/color_fill.h"
+// clang-format off
+#include <assert.h>
 #include <bgfx/bgfx.h>
+#include <bgfx/embedded_shader.h>
 #include <bgfx/platform.h>
 #include <bx/math.h>
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
-#include <assert.h>
+#include <flowi/application.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../shaders/generated/color_fill.h"
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+// clang-format off
 
 #include <flowi_core/font.h>
 
 // TODO: Should be in public core api
-#include "../../../core/c/src/flowi.h"
 #include "../../../core/c/src/area.h"
+#include "../../../core/c/src/flowi.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static const bgfx::EmbeddedShader s_shaders[] = {
-    BGFX_EMBEDDED_SHADER(color_fill_vs),
-    BGFX_EMBEDDED_SHADER(color_fill_fs),
-    BGFX_EMBEDDED_SHADER(vs_texture),
-    BGFX_EMBEDDED_SHADER(fs_texture),
-    BGFX_EMBEDDED_SHADER_END()
-};
+static const bgfx::EmbeddedShader s_shaders[] = {BGFX_EMBEDDED_SHADER(color_fill_vs),
+                                                 BGFX_EMBEDDED_SHADER(color_fill_fs), BGFX_EMBEDDED_SHADER(vs_texture),
+                                                 BGFX_EMBEDDED_SHADER(fs_texture), BGFX_EMBEDDED_SHADER_END()};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -102,7 +100,7 @@ static void error_callback(int error, const char* description) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern"C" struct FlContext* fl_application_new_impl(FlString application_name, FlString developer) {
+extern "C" struct FlContext* fl_application_create_impl(FlString application_name, FlString developer) {
     ApplicationState* state = &s_state;
 
     // TODO: Error, we only support one application so make sure we only run this once.
@@ -188,16 +186,13 @@ extern"C" struct FlContext* fl_application_new_impl(FlString application_name, F
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
         .end();
 
-
     bgfx::RendererType::Enum type = bgfx::getRendererType();
 
-    state->flat_shader = bgfx::createProgram(
-        bgfx::createEmbeddedShader(s_shaders, type, "color_fill_vs"),
-        bgfx::createEmbeddedShader(s_shaders, type, "color_fill_fs"));
+    state->flat_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "color_fill_vs"),
+                                             bgfx::createEmbeddedShader(s_shaders, type, "color_fill_fs"));
 
-    state->texture_shader = bgfx::createProgram(
-        bgfx::createEmbeddedShader(s_shaders, type, "vs_texture"),
-        bgfx::createEmbeddedShader(s_shaders, type, "fs_texture"));
+    state->texture_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "vs_texture"),
+                                                bgfx::createEmbeddedShader(s_shaders, type, "fs_texture"));
 
     if (!bgfx::isValid(state->flat_shader)) {
         printf("failed to init flat_shader shaders\n");
@@ -293,7 +288,7 @@ static void create_texture(ApplicationState& ctx, const u8* render_data) {
     assert(id < MAX_TEXTURE_COUNT);
 
     switch (cmd->format) {
-        case FlTextureFormat_R8_LINEAR: {
+        case FlTextureFormat_R8Linear: {
             const bgfx::Memory* mem = nullptr;
 
             if (data) {
@@ -386,7 +381,6 @@ static void render_flowi(ApplicationState& state, uint16_t width, uint16_t heigh
     bgfx::end(encoder);
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void generate_frame(void* user_data) {
@@ -432,7 +426,6 @@ extern "C" void fl_application_main_loop_impl(FlMainLoopCallback callback, void*
     state->main_callback = callback;
     state->user_data = user_data;
     state->counter = 2;
-
 
     // Run the loop correctly for the target environment
 #ifdef __EMSCRIPTEN__

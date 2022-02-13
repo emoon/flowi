@@ -8,12 +8,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include "context.h"
 #include "idx.h"
 #include "layout.h"
 #include "manual.h"
 #include "math_data.h"
-
-struct FlContext;
 
 #ifdef __cplusplus
 extern "C" {

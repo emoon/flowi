@@ -1,7 +1,7 @@
 #include <flowi_core/image.h>
 #include <stb_image.h>
-#include "internal.h"
 #include "image_private.h"
+#include "internal.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // load image from file or memory
@@ -42,7 +42,7 @@ static FlImage load_image(struct FlContext* ctx, FlString filename, u8* data, u3
     image->data = image_data;
     image->info.width = x;
     image->info.height = y;
-    image->format = FlTextureFormat_RGBA8_sRGB;
+    image->format = FlTextureFormat_Rgb8Srgb;
 
     return image->handle;
 }
@@ -63,30 +63,30 @@ FlImage fl_image_create_from_memory_impl(struct FlContext* ctx, FlString name, u
 
 FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self) {
     // Lock_lock(flowi_ctx->global_state->lock);
-	ImagePrivate* data = Handles_get_data(&ctx->global->image_handles, self);
+    ImagePrivate* data = Handles_get_data(&ctx->global->image_handles, self);
     // Lock_unlock(flowi_ctx->global_state->lock);
 
-	if (!data) {
-		ERROR_ADD(FlError_Image, "Invalid handle %s", "todo: filename");
-		return NULL;
-	}
+    if (!data) {
+        ERROR_ADD(FlError_Image, "Invalid handle %s", "todo: filename");
+        return NULL;
+    }
 
-	return &data->info;
+    return &data->info;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
     // Lock_lock(flowi_ctx->global_state->lock);
-	ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
+    ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
     // Lock_unlock(flowi_ctx->global_state->lock);
 
-	if (!image_data) {
-		ERROR_ADD(FlError_Image, "Invalid handle %s", "todo name");
-		return;
-	}
+    if (!image_data) {
+        ERROR_ADD(FlError_Image, "Invalid handle %s", "todo name");
+        return;
+    }
 
-	stbi_image_free(image_data->data);
+    stbi_image_free(image_data->data);
     // Lock_lock(flowi_ctx->global_state->lock);
     Handles_remove_handle(&ctx->global->image_handles, image);
     // Lock_unlock(flowi_ctx->global_state->lock);

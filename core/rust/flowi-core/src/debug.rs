@@ -6,6 +6,7 @@ use crate::*;
 extern "C" {}
 
 #[repr(C)]
+#[derive(Debug)]
 pub enum DebugMode {
     Off = 0,
     Layout = 1,

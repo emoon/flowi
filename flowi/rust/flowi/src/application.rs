@@ -7,42 +7,36 @@ use crate::*;
 use flowi_core::*;
 
 extern "C" {
-    fn fl_application_new_impl(
-        ctx: *const core::ffi::c_void,
+    fn fl_application_create_impl(
         application_name: FlString,
         developer: FlString,
-    ) -> *mut Context;
+    ) -> *const Context;
     fn fl_application_main_loop_impl(
-        ctx: *const core::ffi::c_void,
+        self_c: *mut Application,
         callback: MainLoopCallback,
         userdata: *mut core::ffi::c_void,
     );
 }
 
 #[repr(C)]
-pub struct Application {
-    dummy: u32,
-}
+#[derive(Debug)]
+pub struct Application {}
 
-impl Ui {
-    pub fn application_new(&self, application_name: &str, developer: &str) -> Context {
+impl Context {}
+
+impl Application {
+    /// TODO: More options
+    pub fn create(application_name: &str, developer: &str) -> Result<&Context> {
         unsafe {
-            let ret_val = fl_application_new_impl(
-                self.ctx,
+            let ret_val = fl_application_create_impl(
                 FlString::new(application_name),
                 FlString::new(developer),
             );
-            ret_val.as_mut()
-        }
-    }
-
-    pub fn application_main_loop(
-        &self,
-        callback: MainLoopCallback,
-        userdata: &mut core::ffi::c_void,
-    ) {
-        unsafe {
-            fl_application_main_loop_impl(self.ctx, callback, userdata as _);
+            if ret_val.is_null() {
+                Err(get_last_error())
+            } else {
+                Ok(&*ret_val)
+            }
         }
     }
 }

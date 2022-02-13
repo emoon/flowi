@@ -1,13 +1,9 @@
-
 callback MainLoopCallback(user_data: *void)
 
 #[attributes(NoContext)]
 struct Application {
-    dummy: u32,
-    // TODO: More options
-    [static] new(application_name: String, developer: String) -> *Context,
-    [static] main_loop(callback: MainLoopCallback, userdata: *void),
+    /// TODO: More options
+    [static] create(application_name: String, developer: String) -> *const Context?,
+    [manual] main_loop(callback: MainLoopCallback, userdata: *void),
     //[static] set_layout(layout: *const LayoutArea),
 }
-
-// vim: syntax=rust expandtab ts=4 sw=4

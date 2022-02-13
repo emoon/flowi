@@ -83,6 +83,8 @@ pub struct Variable {
     pub const_pointer: bool,
     /// If the type is a Handle (attribute set on struct)
     pub is_handle_type: bool,
+    /// If this type is a struct
+    pub is_empty_struct: bool,
 }
 
 ///
@@ -103,6 +105,7 @@ impl Default for Variable {
             pointer: false,
             const_pointer: false,
             is_handle_type: false,
+            is_empty_struct: false,
         }
     }
 }
@@ -634,8 +637,10 @@ impl ApiParser {
                             Rule::pointer_exp => vtype = Rule::pointer_exp,
                             Rule::const_ptr_exp => vtype = Rule::const_ptr_exp,
                             Rule::array_size => {
-                                var.array = Some(ArrayType::SizedArray(entry.into_inner().as_str().to_owned()));
-                            },
+                                var.array = Some(ArrayType::SizedArray(
+                                    entry.into_inner().as_str().to_owned(),
+                                ));
+                            }
                             _ => (),
                         }
                     }
@@ -790,6 +795,7 @@ impl ApiParser {
     }
     */
 
+    /*
     fn update_variable(
         arg: &mut Variable,
         type_def_file: &HashMap<String, String>,
@@ -827,7 +833,9 @@ impl ApiParser {
             _ => (),
         }
     }
+    */
 
+    /*
     fn get_trait_name(name: &str) -> String {
         if let Some(trait_name) = name.strip_suffix("Type") {
             format!("{}Trait", trait_name)
@@ -835,6 +843,7 @@ impl ApiParser {
             name.to_owned()
         }
     }
+     */
 
     pub fn second_pass(api_defs: &mut [ApiDef]) {
         // TODO: Investigate if we actually need this pass
@@ -843,9 +852,13 @@ impl ApiParser {
         // and they are separate for structs and enums
         let mut type_def_file = HashMap::new();
         let mut enum_def_file_type = HashMap::new();
+        let mut empty_structs = HashSet::new();
 
         for api_def in api_defs.iter() {
             api_def.structs.iter().for_each(|s| {
+                if s.variables.is_empty() && !s.has_attribute("Handle") {
+                    empty_structs.insert(s.name.to_owned());
+                }
                 type_def_file.insert(s.name.to_owned(), s.def_file.to_owned());
                 type_def_file.insert(format!("{}Trait", s.name), s.def_file.to_owned());
             });
@@ -882,14 +895,26 @@ impl ApiParser {
                 let is_handle_type = s.has_attribute("Handle");
                 for func in &mut s.functions {
                     for arg in &mut func.function_args {
+                        //if arg.type_name == s.name || arg.type_name == "self" {
                         if arg.type_name == s.name {
                             arg.is_handle_type = is_handle_type;
+                        }
+
+                        dbg!(&arg.type_name);
+
+                        if empty_structs.contains(&arg.type_name) {
+                            dbg!(&arg);
+                            arg.is_empty_struct = true;
                         }
                     }
 
                     if let Some(ret_var) = func.return_val.as_mut() {
                         if ret_var.type_name == s.name {
                             ret_var.is_handle_type = is_handle_type;
+                        }
+
+                        if empty_structs.contains(&ret_var.type_name) {
+                            ret_var.is_empty_struct = true;
                         }
                     }
                 }
@@ -914,34 +939,6 @@ impl ApiParser {
         */
     }
 }
-
-//
-// Use if self should be included when finding all the structs
-//
-/*
-#[derive(Copy, Clone, PartialEq)]
-pub enum RecurseIncludeSelf {
-Yes,
-}
-
-//
-// ReturnType bool
-//
-#[derive(PartialEq, Clone, Copy)]
-pub enum IsReturnArg {
-//Yes,
-No,
-}
-
-//
-// Used when returning types that may differ if used as input or not
-//
-#[derive(Copy, Clone, PartialEq)]
-pub enum IsReturnType {
-Yes,
-No,
-}
-*/
 
 ///
 /// Some helper functions for ApiDef
@@ -977,41 +974,6 @@ impl Struct {
 /// Impl for Variable. Helper functions to make C and Rust generation easier
 ///
 impl Variable {
-    /*
-       pub fn get_c_type(&self, is_ret_type: IsReturnType) -> Cow<str> {
-       if self.array {
-       return "struct RUArray".into();
-       }
-
-       let tname = self.type_name.as_str();
-
-       match self.vtype {
-       VariableType::SelfType => "struct RUBase*".into(),
-       VariableType::Primitive => self.get_c_primitive_type(),
-       VariableType::Reference => match is_ret_type {
-       IsReturnType::Yes => format!("struct RU{}", tname).into(),
-       IsReturnType::No => "struct RUBase*".into(),
-       },
-
-       VariableType::Regular => {
-       if tname == "String" {
-       "const char*".into()
-       } else {
-       format!("struct RU{}", tname).into()
-       }
-       }
-
-    //VariableType::Enum => "uint32_t".into(),
-    VariableType::Str => "const char*".into(),
-
-    _ => {
-    println!("Should not be here {}", self.name);
-    "<error>".into()
-    }
-    }
-    }
-    */
-
     pub fn get_c_primitive_type(&self) -> Cow<str> {
         let tname = self.type_name.as_str();
 
@@ -1031,9 +993,10 @@ impl Variable {
         }
     }
 
-    ///
-    /// If the typename ends with "Type" return a name without it
-    ///
+    //
+    // If the typename ends with "Type" return a name without it
+    //
+    /*
     pub fn get_untyped_name(&self) -> &str {
         if self.type_name.ends_with("Type") {
             &self.type_name[..self.type_name.len() - 4]
@@ -1041,6 +1004,7 @@ impl Variable {
             &self.type_name
         }
     }
+     */
 }
 
 //
@@ -1273,31 +1237,5 @@ mod tests {
         assert_eq!(sdef.name, "Widget");
         assert_eq!(sdef.functions.len(), 1);
         assert_eq!(sdef.functions[0].name, "show");
-    }
-
-    ///
-    /// Tests that get_untyped_name() returs correct
-    ///
-    #[test]
-    fn test_var_untyped_name_typed() {
-        let var = Variable {
-            type_name: "WidgetType".to_owned(),
-            ..Variable::default()
-        };
-
-        assert_eq!(var.get_untyped_name(), "Widget");
-    }
-
-    ///
-    /// Tests that get_untyped_name() returs correct
-    ///
-    #[test]
-    fn test_var_untyped_name() {
-        let var = Variable {
-            type_name: "Widget".to_owned(),
-            ..Variable::default()
-        };
-
-        assert_eq!(var.get_untyped_name(), "Widget");
     }
 }

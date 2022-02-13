@@ -10,28 +10,32 @@ extern "C" {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct Ui {
     dummy: u32,
 }
 
-impl Ui {
+impl Context {
     pub fn ui_text(&self, text: &str) {
         unsafe {
-            fl_ui_text_impl(self.ctx, FlString::new(text));
+            let self_ = std::mem::transmute(self);
+            fl_ui_text_impl(self_, FlString::new(text));
         }
     }
 
     /// Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
     pub fn ui_set_position(&self, pos: Pos) {
         unsafe {
-            fl_ui_set_position_impl(self.ctx, pos);
+            let self_ = std::mem::transmute(self);
+            fl_ui_set_position_impl(self_, pos);
         }
     }
 
     /// Get the last widget size. This is usually used for doing manual layouting
     pub fn ui_get_last_widget_size(&self, pos: Pos) -> Rect {
         unsafe {
-            let ret_val = fl_ui_get_last_widget_size_impl(self.ctx, pos);
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_ui_get_last_widget_size_impl(self_, pos);
             ret_val
         }
     }

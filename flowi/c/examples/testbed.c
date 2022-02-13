@@ -24,7 +24,7 @@ void main_loop(struct FlContext* flowi_ctx, void* user_data) {
 int main() {
     struct FlContext* flowi_ctx = NULL;
 
-    if (!(flowi_ctx = fl_application_new("Test", "Test"))) {
+    if (!(flowi_ctx = fl_application_create("Test", "Test"))) {
         printf("Failed to open application!\n");
         return 0;
     }

@@ -1,8 +1,8 @@
-#include "utest.h"
 #include <flowi_core/font.h>
 #include "../src/atlas.h"
 #include "../src/font_private.h"
 #include "../src/internal.h"
+#include "utest.h"
 
 struct FlContext;
 
@@ -44,7 +44,7 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
     struct FlContext* flowi_ctx = fl_context_create(state);
 
     FlFont font_id = fl_font_new_from_file("data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
-    u32 test[] = { 64, 65 };
+    u32 test[] = {64, 65};
 
     int count = fl_render_begin_commands(state);
     const u8* cmd_data = NULL;
@@ -56,51 +56,48 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
     // TODO: We need to support skipping commands also
     for (int i = 0; i < count; ++i) {
         switch (fl_render_get_command(state, &cmd_data)) {
-			case FlRenderCommand_CreateTexture: {
-				const FlCreateTexture* cmd = (FlCreateTexture*)cmd_data;
-				ASSERT_EQ(cmd->format, FlTextureFormat_R8_LINEAR);
-				ASSERT_EQ(cmd->width, 4096);
-				ASSERT_EQ(cmd->height, 4096);
-				found_create_texture = true;
-				break;
-			}
-		}
-	}
+            case FlRenderCommand_CreateTexture: {
+                const FlCreateTexture* cmd = (FlCreateTexture*)cmd_data;
+                ASSERT_EQ(cmd->format, FlTextureFormat_Rgb8Linear);
+                ASSERT_EQ(cmd->width, 4096);
+                ASSERT_EQ(cmd->height, 4096);
+                found_create_texture = true;
+                break;
+            }
+        }
+    }
 
-	ASSERT_TRUE(found_create_texture);
+    ASSERT_TRUE(found_create_texture);
 
-	// Begin frame and generate some glyphs and figure out the range to update
+    // Begin frame and generate some glyphs and figure out the range to update
 
-	fl_frame_begin(flowi_ctx, 640, 480);
+    fl_frame_begin(flowi_ctx, 640, 480);
 
-	Atlas_begin_add_rects(state->mono_fonts_atlas);
-	Font_generate_glyphs(flowi_ctx, font_id, test, 2, 36);
-	Atlas_end_add_rects(state->mono_fonts_atlas, state);
+    Atlas_begin_add_rects(state->mono_fonts_atlas);
+    Font_generate_glyphs(flowi_ctx, font_id, test, 2, 36);
+    Atlas_end_add_rects(state->mono_fonts_atlas, state);
 
-	fl_frame_end(flowi_ctx);
+    fl_frame_end(flowi_ctx);
 
     count = fl_render_begin_commands(state);
 
     // Expect a update texture command here
     for (int i = 0; i < count; ++i) {
         switch (fl_render_get_command(state, &cmd_data)) {
-			case FlRenderCommand_UpdateTexture: {
-				const FlUpdateTexture* cmd = (FlUpdateTexture*)cmd_data;
-				ASSERT_NE(cmd->data, NULL);
-				ASSERT_EQ(cmd->texture_id, state->mono_fonts_atlas->texture_id);
-				found_update_texture = true;
-				break;
-			}
-		}
-	}
+            case FlRenderCommand_UpdateTexture: {
+                const FlUpdateTexture* cmd = (FlUpdateTexture*)cmd_data;
+                ASSERT_NE(cmd->data, NULL);
+                ASSERT_EQ(cmd->texture_id, state->mono_fonts_atlas->texture_id);
+                found_update_texture = true;
+                break;
+            }
+        }
+    }
 
-	// validate that we have created some textures
-	ASSERT_TRUE(found_update_texture);
+    // validate that we have created some textures
+    ASSERT_TRUE(found_update_texture);
 
-	fl_font_destroy(font_id);
-	fl_context_destroy(flowi_ctx);
-	fl_destroy(state);
+    fl_font_destroy(font_id);
+    fl_context_destroy(flowi_ctx);
+    fl_destroy(state);
 }
-
-
-

@@ -6,6 +6,7 @@ use crate::*;
 extern "C" {}
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct Rect {
     x: i32,
     y: i32,
@@ -15,6 +16,7 @@ pub struct Rect {
 
 /// Used for setting a position in pixel space
 #[repr(C)]
+#[derive(Debug)]
 pub struct Pos {
     /// x position
     x: f32,

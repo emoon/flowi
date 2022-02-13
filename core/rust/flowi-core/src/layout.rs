@@ -21,12 +21,14 @@ extern "C" {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub enum LayoutDirection {
     Horizontal = 0,
     Verticial = 1,
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub enum SizeType {
     Fixed = 0,
     Stretch = 1,
@@ -34,6 +36,7 @@ pub enum SizeType {
 
 /// LayoutMode make it possible to select how ui elements are being layed out.
 #[repr(C)]
+#[derive(Debug)]
 pub enum LayoutMode {
     /// Automatic (default) will use [LayoutArea] to do automatic positining. See [LayoutArea] for more info on how to use this.
     Automatic = 0,
@@ -42,17 +45,20 @@ pub enum LayoutMode {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct Sizing {
     value: i32,
     value_type: SizeType,
 }
 
-#[derive(Clone, Debug)]
+#[repr(C)]
+#[derive(Debug)]
 pub struct LayoutAreaId {
-    handle: u64,
+    pub handle: u64,
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct LayoutArea {
     name: FlString,
     width: Sizing,
@@ -60,10 +66,11 @@ pub struct LayoutArea {
     direction: LayoutDirection,
 }
 
-impl Ui {
+impl Context {
     pub fn layout_area_create(&self, name: &str, area: LayoutArea) -> LayoutAreaId {
         unsafe {
-            let ret_val = fl_layout_area_create_impl(self.ctx, FlString::new(name), area);
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_layout_area_create_impl(self_, FlString::new(name), area);
             ret_val
         }
     }
@@ -76,10 +83,12 @@ impl Ui {
         cols: i16,
     ) -> LayoutAreaId {
         unsafe {
+            let self_ = std::mem::transmute(self);
             let ret_val = fl_layout_area_from_children_impl(
-                self.ctx,
+                self_,
                 FlString::new(name),
                 children.as_ptr(),
+                children.len() as _,
                 row,
                 cols,
             );
@@ -89,7 +98,8 @@ impl Ui {
 
     pub fn layout_area_set_layout_mode(&self, mode: LayoutMode) {
         unsafe {
-            fl_layout_area_set_layout_mode_impl(self.ctx, mode);
+            let self_ = std::mem::transmute(self);
+            fl_layout_area_set_layout_mode_impl(self_, mode);
         }
     }
 }

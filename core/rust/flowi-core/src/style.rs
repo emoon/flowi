@@ -13,18 +13,21 @@ extern "C" {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub enum LengthPercent {
     Length = 0,
     Percent = 1,
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct LengthPercentValue {
     value: f32,
     typ: LengthPercent,
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct Spacing {
     top: u16,
     right: u16,
@@ -33,6 +36,7 @@ pub struct Spacing {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct Padding {
     top: u16,
     right: u16,
@@ -41,6 +45,7 @@ pub struct Padding {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct Border {
     border_radius_top: LengthPercentValue,
     border_radius_right: LengthPercentValue,
@@ -49,6 +54,7 @@ pub struct Border {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct Style {
     name: FlString,
     border: Border,
@@ -59,28 +65,43 @@ pub struct Style {
     font_color: Color,
 }
 
-impl Ui {
+impl Context {
     /// Create a new style
-    pub fn style_create(&self, name: &str) -> Style {
+    pub fn style_create(&self, name: &str) -> Result<&mut Style> {
         unsafe {
-            let ret_val = fl_style_create_impl(self.ctx, FlString::new(name));
-            ret_val.as_mut()
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_style_create_impl(self_, FlString::new(name));
+            if ret_val.is_null() {
+                Err(get_last_error())
+            } else {
+                Ok(&mut *ret_val)
+            }
         }
     }
 
     /// Get the default style. Changing this will apply the base style for the whole application
-    pub fn style_get_default(&self) -> Style {
+    pub fn style_get_default(&self) -> Result<&mut Style> {
         unsafe {
-            let ret_val = fl_style_get_default_impl(self.ctx);
-            ret_val.as_mut()
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_style_get_default_impl(self_);
+            if ret_val.is_null() {
+                Err(get_last_error())
+            } else {
+                Ok(&mut *ret_val)
+            }
         }
     }
 
     /// Get the current style which is based on what has been pushed on the style stack using push/pop
-    pub fn style_get_current(&self) -> Style {
+    pub fn style_get_current(&self) -> Result<&Style> {
         unsafe {
-            let ret_val = fl_style_get_current_impl(self.ctx);
-            ret_val.as_ref()
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_style_get_current_impl(self_);
+            if ret_val.is_null() {
+                Err(get_last_error())
+            } else {
+                Ok(&*ret_val)
+            }
         }
     }
 }
@@ -89,21 +110,24 @@ impl Style {
     /// Mark the end of style changes
     pub fn end_changes(&self) {
         unsafe {
-            fl_style_end_changes_impl(self.handle);
+            let self_ = std::mem::transmute(self);
+            fl_style_end_changes_impl(self_);
         }
     }
 
     /// Select the style to be used, to end using the style use 'fl_pop_style()'
     pub fn push(&self) {
         unsafe {
-            fl_style_push_impl(self.handle);
+            let self_ = std::mem::transmute(self);
+            fl_style_push_impl(self_);
         }
     }
 
     /// Pops the current style
     pub fn pop(&self) {
         unsafe {
-            fl_style_pop_impl(self.handle);
+            let self_ = std::mem::transmute(self);
+            fl_style_pop_impl(self_);
         }
     }
 }

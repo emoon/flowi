@@ -8,10 +8,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include "context.h"
 #include "idx.h"
 #include "manual.h"
-
-struct FlContext;
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,19 +19,19 @@ extern "C" {
 // Texture format specificed when using [CreateTexture] command
 typedef enum FlTextureFormat {
     // Single byte texture in linear format
-    FlTextureFormat_R8_LINEAR = 0,
+    FlTextureFormat_R8Linear = 0,
     // 3 byte R,G,B format (sRGB)
-    FlTextureFormat_RGB8_sRGB = 1,
+    FlTextureFormat_Rgb8Srgb = 1,
     // 3 byte R,G,B format (LINEAR)
-    FlTextureFormat_RGB8_LINEAR = 2,
+    FlTextureFormat_Rgb8Linear = 2,
     // 4 byte R,G,B,A format (sRGB)
-    FlTextureFormat_RGBA8_sRGB = 3,
+    FlTextureFormat_Rgba8Srgb = 3,
     // 4 byte R,G,B,A format (LINEAR)
-    FlTextureFormat_RGBA8_LINEAR = 4,
+    FlTextureFormat_Rgba8Linear = 4,
     // 16-bit single format. This will mostly be used for temporary things such as blurs that requires more
     // than one pass rendering. i16 or f16 will allow better accuracy, but R8_LINEAR can be used in worst case
     // in case the rendering backend doesn't support this format
-    FlTextureFormat_I16_OR_F16_LINEAR = 5,
+    FlTextureFormat_I16OrF16Linear = 5,
 } FlTextureFormat;
 
 // Used when specifying rect updates

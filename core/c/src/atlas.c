@@ -251,7 +251,7 @@ void Atlas_begin_add_rects(Atlas* self) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Atlas_end_add_rects(Atlas* self, FlGlobalState* state) {
-	FL_UNUSED(state);
+    FL_UNUSED(state);
     // Validate that we actually have a rect to update
     if (self->dirty_rect.x1 < 0 || self->dirty_rect.x0 >= self->width) {
         return;
@@ -324,13 +324,13 @@ Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalStat
     FlCreateTexture* texture = Render_create_texture_cmd(state);
 
     if (image_type == AtlasImageType_U8) {
-        texture->format = FlTextureFormat_R8_LINEAR;
+        texture->format = FlTextureFormat_R8Linear;
     } else {
-        texture->format = FlTextureFormat_RGBA8_sRGB;
+        texture->format = FlTextureFormat_Rgb8Srgb;
     }
 
-	texture->data = NULL;
-	texture->id = state->texture_ids++;			// TODO: Function
+    texture->data = NULL;
+    texture->id = state->texture_ids++;  // TODO: Function
     texture->width = w;
     texture->height = h;
 

@@ -7,11 +7,4 @@ extern "C" {}
 
 #[repr(C)]
 #[derive(Debug)]
-pub enum Error {
-    None = 0,
-    Io = 1,
-    Memory = 2,
-    Font = 3,
-    Style = 4,
-    Image = 5,
-}
+pub struct Context {}

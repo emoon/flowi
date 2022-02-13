@@ -7,25 +7,27 @@ extern "C" {}
 
 /// Texture format specificed when using [CreateTexture] command
 #[repr(C)]
+#[derive(Debug)]
 pub enum TextureFormat {
     /// Single byte texture in linear format
-    R8_LINEAR = 0,
+    R8Linear = 0,
     /// 3 byte R,G,B format (sRGB)
-    RGB8_sRGB = 1,
+    Rgb8Srgb = 1,
     /// 3 byte R,G,B format (LINEAR)
-    RGB8_LINEAR = 2,
+    Rgb8Linear = 2,
     /// 4 byte R,G,B,A format (sRGB)
-    RGBA8_sRGB = 3,
+    Rgba8Srgb = 3,
     /// 4 byte R,G,B,A format (LINEAR)
-    RGBA8_LINEAR = 4,
+    Rgba8Linear = 4,
     /// 16-bit single format. This will mostly be used for temporary things such as blurs that requires more
     /// than one pass rendering. i16 or f16 will allow better accuracy, but R8_LINEAR can be used in worst case
     /// in case the rendering backend doesn't support this format
-    I16_OR_F16_LINEAR = 5,
+    I16OrF16Linear = 5,
 }
 
 /// Used when specifying rect updates
 #[repr(C)]
+#[derive(Debug)]
 pub struct RenderRect {
     x0: i32,
     y0: i32,
@@ -35,6 +37,7 @@ pub struct RenderRect {
 
 /// Vertex layout for textured triangles
 #[repr(C)]
+#[derive(Debug)]
 pub struct VertPosUvColor {
     x: f32,
     y: f32,
@@ -45,6 +48,7 @@ pub struct VertPosUvColor {
 
 /// Vertex layout for solid triangles
 #[repr(C)]
+#[derive(Debug)]
 pub struct VertPosColor {
     x: f32,
     y: f32,
@@ -53,32 +57,35 @@ pub struct VertPosColor {
 
 /// Used for rendering triangles with a texture.
 #[repr(C)]
+#[derive(Debug)]
 pub struct TexturedTriangles {
     /// Vertices for the command
     vertex_buffer: *const VertPosUvColor,
-    VertPosUvColor_size: u32,
+    vertex_buffer_size: u32,
     /// Index buffer for the command
     index_buffer: *const IdxSize,
-    IdxSize_size: u32,
+    index_buffer_size: u32,
     /// Texture id used for the command
     texture_id: u32,
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct SolidTriangles {
     /// Vertices for the command
     vertex_buffer: *const VertPosColor,
-    VertPosColor_size: u32,
+    vertex_buffer_size: u32,
     /// Index buffer for the command
     index_buffer: *const IdxSize,
-    IdxSize_size: u32,
+    index_buffer_size: u32,
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct CreateTexture {
     /// Data upload (can be NULL if data is uploaded later)
     data: *const u8,
-    u8_size: u32,
+    data_size: u32,
     /// This is the id that will later be used when refering to the texture
     id: u16,
     /// See [TextureFormat] for the type
@@ -92,10 +99,11 @@ pub struct CreateTexture {
 /// This is used to update an existing texture with some data. This usually happens when a new image/glyph/etc
 /// needs to be displayed but isn't present in a texture yet
 #[repr(C)]
+#[derive(Debug)]
 pub struct UpdateTexture {
     /// Data to upload
     data: *const u8,
-    u8_size: u32,
+    data_size: u32,
     /// area to update
     rect: RenderRect,
     /// Texture to update
@@ -105,6 +113,7 @@ pub struct UpdateTexture {
 /// Used when restricting an area for rendering. How this is to be implemented depends onthe GPU
 /// API, but for OpenGL this corresponts to https://www.khronos.org/registry/OpenGL-Refpages/es2.0/xhtml/glScissor.xml
 #[repr(C)]
+#[derive(Debug)]
 pub struct ScissorRect {
     /// Area restricted for rendering
     rect: RenderRect,

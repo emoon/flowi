@@ -4,18 +4,19 @@
 use crate::*;
 
 extern "C" {
-    fn fl_image_create_from_file_impl(ctx: *const core::ffi::c_void, filename: FlString) -> Image;
+    fn fl_image_create_from_file_impl(ctx: *const core::ffi::c_void, filename: FlString) -> u64;
     fn fl_image_create_from_memory_impl(
         ctx: *const core::ffi::c_void,
         name: FlString,
         data: *const u8,
         data_size: u32,
-    ) -> Image;
+    ) -> u64;
     fn fl_image_get_info_impl(self_c: Image) -> *const ImageInfo;
     fn fl_image_destroy_impl(self_c: Image);
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct ImageInfo {
     /// width of the image
     width: u32,
@@ -23,12 +24,13 @@ pub struct ImageInfo {
     height: u32,
 }
 
-#[derive(Clone, Debug)]
+#[repr(C)]
+#[derive(Debug)]
 pub struct Image {
-    handle: u64,
+    pub handle: u64,
 }
 
-impl Ui {
+impl Context {
     /// Load image from file. Supported formats are:
     /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
     /// PNG 1/2/4/8/16-bit-per-channel
@@ -39,13 +41,14 @@ impl Ui {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
-    pub fn image_create_from_file(&self, filename: &str) -> Option<Image> {
+    pub fn image_create_from_file(&self, filename: &str) -> Result<Image> {
         unsafe {
-            let ret_val = fl_image_create_from_file_impl(self.ctx, FlString::new(filename));
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_image_create_from_file_impl(self_, FlString::new(filename));
             if ret_val == 0 {
-                None
+                Err(get_last_error())
             } else {
-                Some(Image { handle: ret_value })
+                Ok(Image { handle: ret_val })
             }
         }
     }
@@ -60,14 +63,19 @@ impl Ui {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
-    pub fn image_create_from_memory(&self, name: &str, data: &[u8]) -> Option<Image> {
+    pub fn image_create_from_memory(&self, name: &str, data: &[u8]) -> Result<Image> {
         unsafe {
-            let ret_val =
-                fl_image_create_from_memory_impl(self.ctx, FlString::new(name), data.as_ptr());
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_image_create_from_memory_impl(
+                self_,
+                FlString::new(name),
+                data.as_ptr(),
+                data.len() as _,
+            );
             if ret_val == 0 {
-                None
+                Err(get_last_error())
             } else {
-                Some(Image { handle: ret_value })
+                Ok(Image { handle: ret_val })
             }
         }
     }
@@ -75,17 +83,23 @@ impl Ui {
 
 impl Image {
     /// Get data amout the image
-    pub fn get_info(&self) -> Option<ImageInfo> {
+    pub fn get_info(&self) -> Result<&ImageInfo> {
         unsafe {
-            let ret_val = fl_image_get_info_impl(self.handle);
-            ret_val.as_ref()
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_image_get_info_impl(self_);
+            if ret_val.is_null() {
+                Err(get_last_error())
+            } else {
+                Ok(&*ret_val)
+            }
         }
     }
 
     /// Destroy the created image
     pub fn destroy(&self) {
         unsafe {
-            fl_image_destroy_impl(self.handle);
+            let self_ = std::mem::transmute(self);
+            fl_image_destroy_impl(self_);
         }
     }
 }

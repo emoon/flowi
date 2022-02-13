@@ -39,13 +39,13 @@ struct Style {
     font_color: Color,
 
     /// Create a new style
-    [static] create(name: String) -> *Style,
+    [static] create(name: String) -> *Style?,
 
     /// Get the default style. Changing this will apply the base style for the whole application
-    [static] get_default() -> *Style,
+    [static] get_default() -> *Style?,
 
     /// Get the current style which is based on what has been pushed on the style stack using push/pop
-    [static] get_current() -> *const Style,
+    [static] get_current() -> *const Style?,
 
     /// Mark the end of style changes
     end_changes(),

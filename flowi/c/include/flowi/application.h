@@ -8,27 +8,24 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include "context.h"
 #include "idx.h"
 #include "manual.h"
-
-struct FlContext;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct FlApplication {
-    uint32_t dummy;
-} FlApplication;
-
+struct FlApplication;
 typedef void (*FlMainLoopCallback)(struct FlContext* flowi_ctx, void* user_data);
 
-struct FlContext* fl_application_new_impl(FlString application_name, FlString developer);
+// TODO: More options
+struct FlContext* fl_application_create_impl(FlString application_name, FlString developer);
 
-FL_INLINE struct FlContext* fl_application_new(const char* application_name, const char* developer) {
+FL_INLINE struct FlContext* fl_application_create(const char* application_name, const char* developer) {
     FlString application_name_ = {application_name, 1, (uint32_t)strlen(application_name)};
     FlString developer_ = {developer, 1, (uint32_t)strlen(developer)};
-    return fl_application_new_impl(application_name_, developer_);
+    return fl_application_create_impl(application_name_, developer_);
 }
 
 void fl_application_main_loop_impl(FlMainLoopCallback callback, void* userdata);
