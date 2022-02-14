@@ -19,6 +19,7 @@ pub struct Window {
     handle: u64,
 }
 
+/*
 impl Context {
     /// Opens up new window
     pub fn window_new(&self, width: u16, height: u16) -> Window {
@@ -56,3 +57,4 @@ impl Window {
         }
     }
 }
+*/

@@ -6,3 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+flowi-core = { path = "../../../core/rust/flowi-core" }
+
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"] }

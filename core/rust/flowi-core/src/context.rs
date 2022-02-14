@@ -7,4 +7,6 @@ extern "C" {}
 
 #[repr(C)]
 #[derive(Debug)]
-pub struct Context {}
+pub struct Context {
+    _dummy: u32,
+}
