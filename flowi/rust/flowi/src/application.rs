@@ -6,16 +6,13 @@ use crate::*;
 #[allow(unused_imports)]
 use flowi_core::*;
 
-use flowi_core::Context;
-
 extern "C" {
     fn fl_application_create_impl(
         application_name: FlString,
         developer: FlString,
     ) -> *const Context;
     fn fl_application_main_loop_impl(
-        self_c: *mut Application,
-        callback: MainLoopCallback,
+        callback: *const core::ffi::c_void,
         userdata: *mut core::ffi::c_void,
     );
 }
@@ -28,11 +25,11 @@ pub struct Application {
 
 impl Application {
     /// TODO: More options
-    pub fn create<'a>(application_name: &str, developer: &str) -> flowi_core::Result<&'a Context> {
+    pub fn create<'a>(application_name: &str, developer: &str) -> Result<&'a Context> {
         unsafe {
             let ret_val = fl_application_create_impl(
-                flowi_core::FlString::new(application_name),
-                flowi_core::FlString::new(developer),
+                FlString::new(application_name),
+                FlString::new(developer),
             );
             if ret_val.is_null() {
                 Err(get_last_error())

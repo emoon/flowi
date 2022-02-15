@@ -18,7 +18,6 @@ extern "C" {
 pub struct Window {
     handle: u64,
 }
-
 /*
 impl Context {
     /// Opens up new window
@@ -57,4 +56,4 @@ impl Window {
         }
     }
 }
-*/
+ */

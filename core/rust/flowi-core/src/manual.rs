@@ -31,9 +31,10 @@ pub type Result<T> = core::result::Result<T, &'static str>;
 
 pub fn get_last_error() -> &'static str {
     unsafe {
-        let text = fl_error_last_error();
-        let slice = core::slice::from_raw_parts(text.str_ptr, text.len as _);
-        core::str::from_utf8_unchecked(slice)
+        "TODO: Correct error"
+        //let text = fl_error_last_error();
+        //let slice = core::slice::from_raw_parts(text.str_ptr, text.len as _);
+        //core::str::from_utf8_unchecked(slice)
     }
 }
 

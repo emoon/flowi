@@ -224,6 +224,13 @@ impl RustGen {
                     Self::get_ffi_type(var, &sdef.name, &var.type_name, false)
                 )?;
             }
+
+            // if we have no variables in the struct we generate a dummy one because otherwise
+            // rust will complain about it not being FFI compatible
+            if sdef.variables.is_empty() {
+                writeln!(f, "_dummy: u32")?;
+            }
+
             writeln!(f, "}}\n")
         }
     }

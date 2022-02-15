@@ -407,3 +407,12 @@ int fl_render_begin_commands(FlGlobalState* state) {
 u16 fl_render_get_command(FlGlobalState* state, const u8** data) {
     return CommandBuffer_read_next_cmd(&state->render_commands, data);
 }
+
+static char s_dummy_buffer[512];
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FlString fl_error_last_error() {
+    strcpy(s_dummy_buffer, "TODO: Correct error");
+    return (FlString){.str = s_dummy_buffer, c_string : 0, .len = strlen(s_dummy_buffer)};
+}

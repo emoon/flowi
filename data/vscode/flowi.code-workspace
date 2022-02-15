@@ -1,0 +1,55 @@
+{
+	"folders": [
+		{
+			"path": "../../api_gen"
+		},
+		{
+			"path": "../../core/rust/flowi-core"
+		},
+		{
+			"path": "../../core/c/tests"
+		},
+		{
+			"path": "../../core/c/src"
+		},
+		{
+			"path": "../../core/c/bench"
+		},
+		{
+			"path": "../../core/c/include"
+		},
+		{
+			"path": "../../flowi/rust/flowi"
+		},
+		{
+			"path": "../../flowi/c/src"
+		},
+		{
+			"path": "../../flowi/c/shaders"
+		},
+		{
+			"path": "../../flowi/c/examples"
+		},
+		{
+			"path": "../../flowi/c/include"
+		},
+		{
+			"path": "../../flowi/c/external/glfw/include"
+		},
+		{
+			"path": "../../flowi/c/external/bgfx/include/bgfx"
+		},
+		{
+			"path": "../../../hippo/src/hippo_new_ui"
+		},
+		{
+			"path": "../../api"
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/t2-output": true,
+			"**/target": true
+		}
+	}
+}

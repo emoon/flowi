@@ -15,12 +15,13 @@ fn main() {
 
     let bgfx_extern = "../../c/external";
     let glfw_extern = "../../c/external/glfw";
-    let bgfx_in_tree = "";
+    let flowi_extern = "../../c";
+    let flowi_core_extern = "../../../core/c";
 
-    let (root, glfw_root) = if Path::new(bgfx_in_tree).exists() {
-        (bgfx_in_tree, bgfx_in_tree)
+    let (root, glfw_root, flowi_root, flowi_core_root) = if Path::new(bgfx_extern).exists() {
+        (bgfx_extern, glfw_extern, flowi_extern, flowi_core_extern)
     } else {
-        (bgfx_extern, glfw_extern)
+        ("", "", "", "")
     };
 
     add_includes(
@@ -90,10 +91,10 @@ fn main() {
         //build.define("BGFX_CONFIG_DEBUG", "0");
     }
 
-    match std::env::var("CARGO_CFG_TARGET_OS")
-        .expect("TARGET_OS not specified")
-        .as_str()
-    {
+    let os = std::env::var("CARGO_CFG_TARGET_OS").expect("TARGET_OS not specified");
+    let target_os = os.as_str();
+
+    match target_os {
         "linux" => {
             build.flag("-g");
             build.flag("-msse2");
@@ -183,14 +184,14 @@ fn main() {
         ],
     );
 
-    match std::env::var("CARGO_CFG_TARGET_OS")
-        .expect("TARGET_OS not specified")
-        .as_str()
-    {
+    match target_os {
         "linux" => {
             build.define("_GLFW_X11", None);
             build.define("_GLFW_GFX", None);
             build.define("LINUX", None);
+            build.flag("-Wno-unused-parameter");
+            build.flag("-Wno-missing-field-initializers");
+            build.flag("-Wno-sign-compare");
 
             add_sources(
                 &mut build,
@@ -255,4 +256,39 @@ fn main() {
     }
 
     build.compile("glfw");
+
+    // Build flowi
+
+    let mut build = cc::Build::new();
+
+    build.define("BX_CONFIG_DEBUG", "1");
+
+    add_includes(&mut build, glfw_root, &["include"]);
+    add_includes(&mut build, flowi_root, &["include"]);
+    add_includes(&mut build, root, &["bx/include", "bgfx/include"]);
+    add_includes(
+        &mut build,
+        flowi_core_root,
+        &["include", "include/flowi_core"],
+    );
+
+    add_sources(&mut build, flowi_root, &["src/application.cpp"]);
+
+    match target_os {
+        "linux" => {
+            build.define("GLFW_EXPOSE_NATIVE_X11", None);
+        }
+
+        "windows" => {
+            build.define("GLFW_EXPOSE_NATIVE_WIN32", None);
+        }
+
+        "macos" => {
+            build.define("GLFW_EXPOSE_NATIVE_COCOA", None);
+        }
+
+        unsupported => unimplemented!("{} is not a supported target", unsupported),
+    }
+
+    build.compile("flowi");
 }
