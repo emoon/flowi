@@ -131,6 +131,40 @@ impl RustGen {
         }
     }
 
+    fn get_ffi_args(
+        fa: &mut FuncArgs,
+        func: &Function,
+        self_name: &str,
+        handle_struct: bool,
+        with_ctx: Ctx,
+    ) {
+        for (i, arg) in func.function_args.iter().enumerate() {
+            if i == 0 && func.func_type == FunctionType::Static {
+                if with_ctx == Ctx::Yes {
+                    fa.ffi_args.push("ctx: *const core::ffi::c_void".to_owned());
+                }
+                continue;
+            }
+
+            if arg.name == "self" {
+                fa.ffi_args.push(format!(
+                    "self_c: {}",
+                    Self::get_ffi_type(&arg, self_name, &arg.type_name, handle_struct)
+                ));
+            } else {
+                fa.ffi_args.push(format!(
+                    "{}: {}",
+                    arg.name,
+                    Self::get_ffi_type(&arg, self_name, &arg.type_name, handle_struct)
+                ));
+            }
+        }
+
+        if let Some(ret) = &func.return_val {
+            fa.ret_value = Self::get_ffi_type(&ret, self_name, "", handle_struct);
+        }
+    }
+
     fn generate_ffi_function<W: Write>(
         f: &mut W,
         func: &Function,
@@ -138,50 +172,22 @@ impl RustGen {
         handle_struct: bool,
         with_ctx: Ctx,
     ) -> io::Result<()> {
-        let mut function_args = String::with_capacity(128);
-        let len = func.function_args.len();
+        let mut fa = FuncArgs::default();
+
+        Self::get_ffi_args(&mut fa, func, self_name, handle_struct, with_ctx);
 
         // write arguments
-        for (i, arg) in func.function_args.iter().enumerate() {
-            if i == 0 && func.func_type == FunctionType::Static {
-                if with_ctx == Ctx::Yes {
-                    function_args.push_str("ctx: *const core::ffi::c_void");
-                    if len > 0 {
-                        function_args.push_str(", ");
-                    }
-                }
-                continue;
-            }
 
-            if arg.name == "self" {
-                function_args.push_str("self_c");
-            } else {
-                function_args.push_str(&arg.name);
-            }
-
-            function_args.push_str(": ");
-            function_args.push_str(&Self::get_ffi_type(
-                &arg,
-                self_name,
-                &arg.name,
-                handle_struct,
-            ));
-
-            if i != len - 1 {
-                function_args.push_str(", ");
-            }
-        }
-
-        write!(f, "    fn {}({})", func.c_name, function_args)?;
-
-        if let Some(ret) = &func.return_val {
+        if fa.ret_value.is_empty() {
+            writeln!(f, "    fn {}({});", func.c_name, get_arg_line(&fa.ffi_args))
+        } else {
             writeln!(
                 f,
-                " -> {};",
-                Self::get_ffi_type(&ret, self_name, "", handle_struct)
+                "    fn {}({}) -> {};",
+                func.c_name,
+                get_arg_line(&fa.ffi_args),
+                fa.ret_value
             )
-        } else {
-            writeln!(f, ";")
         }
     }
 
@@ -195,7 +201,12 @@ impl RustGen {
             } else {
                 Ctx::Yes
             };
-            for func in &s.functions {
+
+            for func in s
+                .functions
+                .iter()
+                .filter(|&func| func.func_type != FunctionType::Manual)
+            {
                 Self::generate_ffi_function(f, &func, &s.name, handle_struct, with_ctx)?;
             }
         }
@@ -318,9 +329,9 @@ impl RustGen {
 
             if ret_val.optional {
                 if ret_val.const_pointer {
-                    fa.ret_value = format!("Result<&{}>", ret);
+                    fa.ret_value = format!("Result<&'a {}>", ret);
                 } else if ret_val.pointer {
-                    fa.ret_value = format!("Result<&mut {}>", ret);
+                    fa.ret_value = format!("Result<&'a mut {}>", ret);
                 } else {
                     fa.ret_value = format!("Result<{}>", ret);
                 }
@@ -330,6 +341,35 @@ impl RustGen {
         }
 
         fa
+    }
+
+    fn generate_callback_function<W: Write>(
+        f: &mut W,
+        func: &Function,
+        self_name: &str,
+    ) -> io::Result<()> {
+        let mut fa = FuncArgs::default();
+
+        Self::get_ffi_args(&mut fa, func, self_name, false, Ctx::Yes);
+
+        // write arguments
+
+        if fa.ret_value.is_empty() {
+            writeln!(
+                f,
+                "type {} = extern \"C\" fn ({});",
+                func.name,
+                get_arg_line(&fa.ffi_args)
+            )
+        } else {
+            writeln!(
+                f,
+                "type {} = extern \"C\" fn ({}) -> {};",
+                func.name,
+                get_arg_line(&fa.ffi_args),
+                fa.ret_value
+            )
+        }
     }
 
     fn generate_func<W: Write>(
@@ -351,14 +391,32 @@ impl RustGen {
                 get_arg_line(&func_args.func_args)
             )?;
         } else {
-            writeln!(
-                f,
-                "pub fn {}{}({}) -> {} {{",
-                self_name,
-                func.name,
-                get_arg_line(&func_args.func_args),
-                func_args.ret_value
-            )?;
+            let mut needs_lifetime = false;
+            if let Some(ret_val) = func.return_val.as_ref() {
+                if ret_val.const_pointer || ret_val.pointer {
+                    needs_lifetime = true;
+                }
+            }
+
+            if needs_lifetime {
+                writeln!(
+                    f,
+                    "pub fn {}{}<'a>({}) -> {} {{",
+                    self_name,
+                    func.name,
+                    get_arg_line(&func_args.func_args),
+                    func_args.ret_value
+                )?;
+            } else {
+                writeln!(
+                    f,
+                    "pub fn {}{}({}) -> {} {{",
+                    self_name,
+                    func.name,
+                    get_arg_line(&func_args.func_args),
+                    func_args.ret_value
+                )?;
+            }
         }
 
         writeln!(f, "unsafe {{ ")?;
@@ -419,8 +477,6 @@ impl RustGen {
             .find(|&func| func.func_type == FunctionType::Static)
             .is_some()
         {
-            writeln!(f, "impl Context {{")?;
-
             let self_name = format!("{}_", sdef.name.to_snake_case());
             let with_ctx = if sdef.has_attribute("NoContext") {
                 Ctx::No
@@ -428,15 +484,21 @@ impl RustGen {
                 Ctx::Yes
             };
 
+            let mut output_string = Vec::with_capacity(1024);
+
             for func in sdef
                 .functions
                 .iter()
                 .filter(|func| func.func_type == FunctionType::Static && with_ctx == Ctx::Yes)
             {
-                Self::generate_func(f, &func, &self_name, Ctx::Yes)?;
+                Self::generate_func(&mut output_string, &func, &self_name, Ctx::Yes)?;
             }
 
-            writeln!(f, "}}\n")?;
+            if !output_string.is_empty() {
+                writeln!(f, "impl Context {{")?;
+                writeln!(f, "{}", std::str::from_utf8(&output_string).unwrap())?;
+                writeln!(f, "}}\n")?;
+            }
         }
 
         if sdef
@@ -480,6 +542,13 @@ impl RustGen {
         }
 
         Self::generate_ffi_functions(&mut f, api_def)?;
+
+        if !api_def.callbacks.is_empty() {
+            for func in &api_def.callbacks {
+                Self::generate_callback_function(&mut f, &func, "")?;
+            }
+            writeln!(f)?;
+        }
 
         for enum_def in &api_def.enums {
             Self::generate_enum(&mut f, enum_def)?;
