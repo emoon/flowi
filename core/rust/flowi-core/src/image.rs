@@ -83,7 +83,7 @@ impl Context {
 
 impl Image {
     /// Get data amout the image
-    pub fn get_info(&self) -> Result<&ImageInfo> {
+    pub fn get_info<'a>(&self) -> Result<&'a ImageInfo> {
         unsafe {
             let self_ = std::mem::transmute(self);
             let ret_val = fl_image_get_info_impl(self_);

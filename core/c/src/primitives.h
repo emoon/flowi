@@ -1,8 +1,8 @@
 #pragma once
 
+#include "command_buffer.h"
 #include "flowi.h"
 #include "style.h"
-#include "command_buffer.h"
 
 struct Font;
 struct FlContext;
@@ -24,7 +24,7 @@ typedef enum Primitive {
 
 typedef struct PrimitiveText {
     // Font to be used when generating the text
-    int font_handle;
+    struct Font* font;
     // utf8 text
     const char* text;
     // length of the text
@@ -47,4 +47,3 @@ typedef struct PrimitiveBox {
 
 #define Primitive_alloc_text(state) \
     (PrimitiveText*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawText, sizeof(PrimitiveText))
-

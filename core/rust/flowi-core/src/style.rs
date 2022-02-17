@@ -67,7 +67,7 @@ pub struct Style {
 
 impl Context {
     /// Create a new style
-    pub fn style_create(&self, name: &str) -> Result<&mut Style> {
+    pub fn style_create<'a>(&self, name: &str) -> Result<&'a mut Style> {
         unsafe {
             let self_ = std::mem::transmute(self);
             let ret_val = fl_style_create_impl(self_, FlString::new(name));
@@ -80,7 +80,7 @@ impl Context {
     }
 
     /// Get the default style. Changing this will apply the base style for the whole application
-    pub fn style_get_default(&self) -> Result<&mut Style> {
+    pub fn style_get_default<'a>(&self) -> Result<&'a mut Style> {
         unsafe {
             let self_ = std::mem::transmute(self);
             let ret_val = fl_style_get_default_impl(self_);
@@ -93,7 +93,7 @@ impl Context {
     }
 
     /// Get the current style which is based on what has been pushed on the style stack using push/pop
-    pub fn style_get_current(&self) -> Result<&Style> {
+    pub fn style_get_current<'a>(&self) -> Result<&'a Style> {
         unsafe {
             let self_ = std::mem::transmute(self);
             let ret_val = fl_style_get_current_impl(self_);

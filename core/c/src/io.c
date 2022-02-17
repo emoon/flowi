@@ -1,4 +1,5 @@
 #include <flowi_core/error.h>
+#include <flowi_core/manual.h>
 #include "internal.h"
 #include "types.h"
 
@@ -31,22 +32,37 @@ static FILE* open_file(const char* filename, const char* mode) {
 
     int len = MultiByteToWideChar(CP_UTF8, 0, filename, file_len, wpath, file_len);
     if (len >= MAX_PATH) {
-    	// TODO: Error
+        // TODO: Error
         return NULL;
     }
 
     wpath[len] = L'\0';
     len = MultiByteToWideChar(CP_UTF8, 0, mode, mode_len, wmode, mode_len);
     if (len >= MAX_PATH) {
-    	// TODO: Error
+        // TODO: Error
         return NULL;
     }
 
     wmode[len] = L'\0';
-	return _wfopen(wpath, wmode);
+    return _wfopen(wpath, wmode);
 #else
     return fopen(filename, mode);
 #endif
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+u8* Io_load_file_to_memory_flstring(FlString name, u32* out_size) {
+    char temp_buffer[2048];
+
+    const char* filename = fl_string_to_cstr(temp_buffer, sizeof(temp_buffer), name);
+
+    if (!filename) {
+        ERROR_ADD(FlError_Io, "Unable to convert filename to cstr: %s", "fixme");
+        return NULL;
+    }
+
+    return Io_load_file_to_memory(filename, out_size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,7 +124,12 @@ cleanup:
 
 void Errors_add(FlError err, const char* filename, int line, const char* fmt, ...) {
     FL_UNUSED(err);
-    FL_UNUSED(filename);
     FL_UNUSED(line);
-    FL_UNUSED(fmt);
+    FL_UNUSED(filename);
+    char buffer[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    // printf("ERROR:%d | %s:%d: %s\n", err, filename, line, buffer);
+    va_end(args);
 }

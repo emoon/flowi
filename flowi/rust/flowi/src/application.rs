@@ -11,11 +11,10 @@ extern "C" {
         application_name: FlString,
         developer: FlString,
     ) -> *const Context;
-    fn fl_application_main_loop_impl(
-        callback: *const core::ffi::c_void,
-        userdata: *mut core::ffi::c_void,
-    );
 }
+
+type MainLoopCallback =
+    extern "C" fn(ctx: *const core::ffi::c_void, user_data: *mut core::ffi::c_void);
 
 #[repr(C)]
 #[derive(Debug)]

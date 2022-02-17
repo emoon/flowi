@@ -83,6 +83,12 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
         return NULL;
     }
 
+    if (!LinearAllocator_create_with_allocator(&ctx->layout_allocator, "layout allocator", &malloc_allocator, 1024,
+                                               true)) {
+        // TODO: Add error
+        return NULL;
+    }
+
     Layout_create_default(ctx);
     ctx->layout_mode = FlLayoutMode_Automatic;
 
@@ -106,6 +112,7 @@ struct FlGlobalState* fl_create(const FlSettings* settings) {
         (CommandBuffer_create(&state->primitive_commands, "primitives", state->global_allocator, 4 * 1024)));
     FL_TRY_ALLOC_NULL((CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024)));
     FL_TRY_ALLOC_NULL((Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate)));
+    FL_TRY_ALLOC_NULL((Handles_create(&state->font_handles, state->global_allocator, 16, Font)));
 
     // TODO: We should check settings for texture size
     FL_TRY_ALLOC_NULL(
@@ -259,7 +266,12 @@ void fl_frame_begin(struct FlContext* ctx, int width, int height) {
 void draw_text(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
-    Font* font = ctx->global->fonts[prim->font_handle];
+    Font* font = ctx->current_font;
+
+    if (!font) {
+        ERROR_ADD(FlError_Font, "No font set, unable to draw_text: %s", "TODO: Name");
+        return;
+    }
 
     const int text_len = prim->len;
 
@@ -294,14 +306,14 @@ void generate_glyphs(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
     const int text_len = prim->len;
-    Font* font = ctx->global->fonts[prim->font_handle];  // TODO: fix me
+    Font* font = ctx->current_font;
 
     // TODO: we should hash the text, font, + size + dirty and don't
     // don't try to regenerate glyphs if hash matches
     u32* codepoints = alloca(sizeof(u32) * text_len);
     utf8_to_codepoints_u32(codepoints, (u8*)prim->text, text_len);
 
-    Font_generate_glyphs(ctx, prim->font_handle, codepoints, text_len, font->default_size);
+    Font_generate_glyphs(ctx, prim->font, codepoints, text_len, font->default_size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -353,7 +365,7 @@ void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
 #endif
 
     // TODO: Copy text to string buffer
-    prim->font_handle = ctx->current_font;
+    prim->font = ctx->current_font;
     prim->text = text.str;
     prim->len = text.len;
     prim->position_index = 0;  // TODO: Fixme
@@ -368,6 +380,7 @@ void fl_context_destroy(struct FlContext* self) {
         FlAllocator_free(allocator, self->styles[i]);
     }
 
+    LinearAllocator_destroy(&self->layout_allocator);
     VertexAllocator_destroy(&self->vertex_allocator);
     FlAllocator_free(allocator, self);
 }
@@ -381,15 +394,14 @@ void fl_destroy(FlGlobalState* self) {
     CommandBuffer_destroy(&self->render_commands);
     Atlas_destroy(self->mono_fonts_atlas);
 
-    for (int i = 0; i < self->font_count; ++i) {
-        Font* font = self->fonts[i];
-        // TODO: Fix me, ptr should always be valid here
-        if (font) {
-            FlAllocator_free(font->allocator, font);
-        }
+    Font* fonts = (Font*)self->font_handles.objects;
+
+    for (int i = 0; i < self->font_handles.len; ++i) {
+        Font_destroy(self, &fonts[i]);
     }
 
     Handles_destroy(&self->image_handles);
+    Handles_destroy(&self->font_handles);
 
     FT_Done_FreeType(self->ft_library);
     FlAllocator_free(allocator, self);
@@ -416,4 +428,23 @@ FlString fl_error_last_error() {
     strcpy(s_dummy_buffer, "TODO: Correct error");
     FlString ret = {s_dummy_buffer, 1, strlen(s_dummy_buffer)};
     return ret;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TODO: Needs tests
+
+const char* fl_string_to_cstr(char* temp_target, int temp_size, FlString str) {
+    if (str.c_string) {
+        temp_target[0] = 0;
+        return str.str;
+    }
+
+    if (str.len + 1 > (u32)temp_size) {
+        // TODO: Error here
+        return NULL;
+    }
+
+    memcpy(temp_target, str.str, str.len);
+    temp_target[str.len] = 0;
+    return temp_target;
 }

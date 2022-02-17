@@ -1,21 +1,22 @@
 // Internal header only. Shouldn't be exposed to user side!
 #pragma once
 
-#include "types.h"
 #include <flowi_core/config.h>
 #include <flowi_core/font.h>
+#include <freetype/freetype.h>
 #include "flowi.h"
 #include "render.h"
-#include <freetype/freetype.h>
+#include "types.h"
 
 struct FlAllocator;
+struct FlGlobalState;
 
 // TODO: Investigate making memory usage smaller
 
 typedef struct Glyph {
-    u16 x0,y0;
-    u16 x1,y1;
-    s16 x_offset,y_offset;
+    u16 x0, y0;
+    u16 x1, y1;
+    s16 x_offset, y_offset;
     f32 advance_x;
 } Glyph;
 
@@ -37,6 +38,9 @@ typedef struct GlyphInfo {
 
 // Maybe have one level if indirection table instead
 typedef struct Font {
+    // Id of font
+    u64 handle;
+
     FT_Face ft_face;
 
     // TODO: Special case for codepoints <= 0xff ? need to handle different sizes also
@@ -53,6 +57,7 @@ typedef struct Font {
     char debug_name[512];
 } Font;
 
-void Font_generate_glyphs(struct FlContext* FL_RESTRICT ctx, FlFont font_id, const u32* FL_RESTRICT codepoints, int count, int size);
+void Font_generate_glyphs(struct FlContext* FL_RESTRICT ctx, Font* font, const u32* FL_RESTRICT codepoints, int count,
+                          int size);
 Glyph* Font_get_glyph(const Font* self, u32 codepoint);
-
+void Font_destroy(struct FlGlobalState* state, Font* font);

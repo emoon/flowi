@@ -5,6 +5,7 @@ pub type IdxSize = u16;
 #[derive(Debug)]
 pub struct FlString {
     pub str_ptr: *const u8,
+    pub c_type: i32,
     pub len: i32,
 }
 
@@ -12,6 +13,7 @@ impl FlString {
     pub fn new(str_: &str) -> FlString {
         FlString {
             str_ptr: str_.as_ptr() as _,
+            c_type: 0,
             len: str_.len() as _,
         }
     }

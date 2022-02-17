@@ -6,28 +6,31 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // load image from file or memory
 
-static FlImage load_image(struct FlContext* ctx, FlString filename, u8* data, u32 size) {
+static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 size) {
     int x = 0;
     int y = 0;
     int channels_in_file = 0;
     u8* image_data = NULL;
 
+    char temp_buffer[2048];
+    const char* filename = fl_string_to_cstr(temp_buffer, sizeof(temp_buffer), name);
+
+    if (!filename) {
+        // TODO: Handle case where string is not null-terminated
+        ERROR_ADD(FlError_Image, "Unable to load: %s", "fixme");
+        return 0;
+    }
+
     // if data is set we assume that we are going to load from memory
     if (data) {
         image_data = stbi_load_from_memory(data, size, &x, &y, &channels_in_file, 4);
     } else {
-        if (!filename.c_string) {
-            // TODO: Implement non-cstring to temp buffer
-            printf("failed to load image: fix nullterm\n");
-            return 0;
-        }
-
-        image_data = stbi_load(filename.str, &x, &y, &channels_in_file, 4);
+        image_data = stbi_load(filename, &x, &y, &channels_in_file, 4);
     }
 
     if (!image_data) {
         // TODO: Handle case where string is not null-terminated
-        ERROR_ADD(FlError_Image, "Unable to load %s", filename.str);
+        ERROR_ADD(FlError_Image, "Unable to load %s", filename);
         return 0;
     }
 

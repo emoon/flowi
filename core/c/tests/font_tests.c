@@ -15,7 +15,7 @@ UTEST(Font, load_failed) {
     FlFont font_id = fl_font_new_from_file("unable_to_load.bin", 12, FlFontPlacementMode_Auto);
 
     // Expect loading fail
-    ASSERT_TRUE(font_id == -1);
+    ASSERT_TRUE(font_id == 0);
 
     fl_context_destroy(flowi_ctx);
     fl_destroy(state);
@@ -30,9 +30,9 @@ UTEST(Font, load_font_ok) {
     FlFont font_id = fl_font_new_from_file("data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
 
     // Expect loading to work
-    ASSERT_TRUE(font_id == 0);
+    ASSERT_NE(0, font_id);
 
-    fl_font_destroy(font_id);
+    // fl_font_destroy(font_id);
     fl_context_destroy(flowi_ctx);
     fl_destroy(state);
 }
@@ -74,7 +74,7 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
     fl_frame_begin(flowi_ctx, 640, 480);
 
     Atlas_begin_add_rects(state->mono_fonts_atlas);
-    Font_generate_glyphs(flowi_ctx, font_id, test, 2, 36);
+    Font_generate_glyphs(flowi_ctx, (Font*)Handles_get_data(&state->font_handles, font_id), test, 2, 36);
     Atlas_end_add_rects(state->mono_fonts_atlas, state);
 
     fl_frame_end(flowi_ctx);

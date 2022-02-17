@@ -31,8 +31,9 @@ typedef struct FlGlobalState {
 #endif
     FlAllocator* global_allocator;
 
-    // Loaded images
+    // Handles
     Handles image_handles;
+    Handles font_handles;
 
     // Primitive commands
     CommandBuffer primitive_commands;
@@ -46,10 +47,6 @@ typedef struct FlGlobalState {
     struct Atlas* color_fonts_atlas;
     struct Atlas* images_atlas;
 
-    // TODO: Fix max number of fonts
-    struct Font* fonts[FL_FONTS_MAX];
-    int font_count;
-    u32 temp;
     u16 texture_ids;
 } FlGlobalState;
 
@@ -65,6 +62,7 @@ void Font_init(FlGlobalState* ctx);
 // TODO: Use custom io functions
 // TODO: Custom allocator
 u8* Io_load_file_to_memory(const char* filename, u32* out_size);
+u8* Io_load_file_to_memory_flstring(FlString name, u32* out_size);
 
 typedef struct MouseState {
     FlVec2 pos;
@@ -99,8 +97,8 @@ typedef struct FlContext {
     vec128* colors;
     // TODO: Likely need block allocator here instead
     u32* widget_ids;
-    // count of all widgets
-    int current_font;
+
+    struct Font* current_font;
     // count of all widgets
     int widget_count;
     // Times with text (push button, labels, etc)

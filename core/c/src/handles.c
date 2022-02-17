@@ -66,7 +66,7 @@ bool Handles_is_valid(Handles* self, uint64_t id) {
 
 void* Handles_create_handle(Handles* self) {
     u64* handle_ptr = NULL;
-    u64 inner_id = self->next_inner_id++;
+    u32 inner_id = self->next_inner_id++;
     const u32 free_slots_count = self->free_slots_count;
     const u32 object_size = self->object_size;
 

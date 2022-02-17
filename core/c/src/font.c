@@ -1,13 +1,13 @@
-#include <flowi_core/font.h>
-#include <flowi_core/error.h>
 #include <assert.h>
+#include <flowi_core/error.h>
+#include <flowi_core/font.h>
+#include "atlas.h"
 #include "flowi.h"
 #include "font_private.h"
 #include "internal.h"
 #include "linear_allocator.h"
 #include "render.h"
 #include "utils.h"
-#include "atlas.h"
 
 // TODO: Support external functions
 #include <freetype/freetype.h>
@@ -17,18 +17,17 @@
 // Create a font from (TTF) file. To use the font use [Font::set] or [Font::set_with_size] before using text-based
 // widgetsReturns >= 0 for valid handle, use fl_get_status(); for more detailed error message
 FlFont fl_font_new_from_file_impl(struct FlContext* flowi_ctx, FlString filename, uint32_t font_size,
-                                  FlFontPlacementMode placement_mode)
-{
-	// TODO: Handle temp string
-	if (!filename.c_string) {
-		return -1;
-	}
+                                  FlFontPlacementMode placement_mode) {
+    // TODO: Handle temp string
+    if (!filename.c_string) {
+        return -1;
+    }
 
     u32 size = 0;
-    u8* data = Io_load_file_to_memory(filename.str, &size);
+    u8* data = Io_load_file_to_memory_flstring(filename, &size);
 
     if (!data) {
-        return -1;
+        return 0;
     }
 
     return fl_font_new_from_memory_impl(flowi_ctx, filename, data, size, font_size, placement_mode);
@@ -84,9 +83,14 @@ typedef struct TempGlyphInfo {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static Font* font_create(FlContext* ctx, FT_Face face) {
-	// TODO: Pass in allocator
-    Font* font = FlAllocator_alloc_zero_type(ctx->global->global_allocator, Font);
+    Font* font = Handles_create_handle(&ctx->global->font_handles);
     font->allocator = ctx->global->global_allocator;
+
+    u64 handle = font->handle;
+
+    memset(font, 0, sizeof(Font));
+
+    font->handle = handle;
 
     if (!font) {
         return NULL;
@@ -106,6 +110,7 @@ static Font* font_create(FlContext* ctx, FT_Face face) {
 // Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
 FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* font_data, uint32_t data_size,
                                     uint32_t font_size, FlFontPlacementMode placement_mode) {
+    Font* font = NULL;
     FL_UNUSED(placement_mode);
     // Use to store global data such as fonts, etc
     FlGlobalState* state = ctx->global;
@@ -117,69 +122,57 @@ FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString name, uint8_
     FT_Error error = FT_New_Memory_Face(state->ft_library, font_data, data_size, 0, &face);
     if (error != 0) {
         ERROR_ADD(FlError_Font, "Freetype error %s when loading font: %s", FT_Error_String(error), name);
-        return -1;
+        return 0;
     }
 
     error = FT_Set_Pixel_Sizes(face, 0, font_size);
     if (error != 0) {
         ERROR_ADD(FlError_Font, "Freetype error %s when setting size font: %s", FT_Error_String(error), name);
-        return -1;
+        return 0;
     }
 
     error = FT_Select_Charmap(face, FT_ENCODING_UNICODE);
     if (error != 0) {
         ERROR_ADD(FlError_Font, "Freetype error %s when selecting charmap for font: %s", FT_Error_String(error), name);
-        return -1;
+        return 0;
     }
 
     if (error != 0) {
         ERROR_ADD(FlError_Font, "Freetype error %s when selecting font size for font: %s", FT_Error_String(error),
                   name);
-        return -1;
+        return 0;
     }
 
-    if (state->font_count > FL_FONTS_MAX) {
-        ERROR_ADD(FlError_Font, "Max number of fonts %d has been reached", FL_FONTS_MAX);
-        return -1;
-    }
+    FL_TRY_ALLOC_NULL(font = font_create(ctx, face));
 
-    Font* font = font_create(ctx, face);
-
-	// Hack: do proper allocator
+    // Hack: do proper allocator
     font->font_data_to_free = (u8*)font_data;
 
     if (!font) {
         ERROR_ADD(FlError_Font, "Unable to allocate memory for font: %s", "fixme");
-        return -1;
+        return 0;
     }
 
     font->default_size = font_size;
 
-    int font_id = state->font_count++;
-    state->fonts[font_id] = font;
-
-    return (FlFont)font_id;
+    return (FlFont)font->handle;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_font_set_impl(struct FlContext* flowi_ctx, FlFont font) {
-	flowi_ctx->current_font = font;
-}
+void fl_font_set_impl(struct FlContext* ctx, FlFont font) {
+    ctx->current_font = Handles_get_data(&ctx->global->font_handles, font);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Destroy an existing created font
-
-void fl_font_destroy_impl(struct FlContext* ctx, FlFont font_id) {
-    FlGlobalState* state = ctx->global;
-
-    if (font_id >= (u64)state->font_count) {
-        ERROR_ADD(FlError_Font, "Tried to destroy font id %d, but id is out of range (0 - %d)", font_id,
-                  state->font_count - 1);
-        return;
+    if (!ctx->current_font) {
+        ERROR_ADD(FlError_Font, "Unable to get font handle %x has it been deleted?. Using default font", font)
     }
+}
 
-    Font* font = state->fonts[font_id];
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Font_destroy(FlGlobalState* state, Font* font) {
+    if (font->handle == 0)
+        return;
 
     FT_Error error = FT_Done_Face(font->ft_face);
     if (error != 0) {
@@ -188,12 +181,29 @@ void fl_font_destroy_impl(struct FlContext* ctx, FlFont font_id) {
     }
 
     // TODO: allocator
-	free(font->font_data_to_free);
+    free(font->font_data_to_free);
 
     FlAllocator_free(state->global_allocator, font->glyph_info.codepoint_sizes);
-    FlAllocator_free(state->global_allocator, font);
 
-    state->fonts[font_id] = NULL;
+    font->handle = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Destroy an existing created font
+
+void fl_font_destroy_impl(struct FlContext* ctx, FlFont font_id) {
+    FlGlobalState* state = ctx->global;
+
+    Font* font = Handles_get_data(&ctx->global->font_handles, font_id);
+
+    if (!font) {
+        ERROR_ADD(FlError_Font, "Unable to delete font handle %x has it been already been deleted?", font)
+        return;
+    }
+
+    Font_destroy(state, font);
+
+    Handles_remove_handle(&ctx->global->font_handles, font_id);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -257,12 +267,12 @@ static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
 Glyph* Font_get_glyph(const Font* self, u32 codepoint) {
     const u32 hash_idx = hash_int(codepoint) & (HASH_LUT_SIZE - 1);
     u16 hash_entry = self->lut[hash_idx];
-    int size = self->default_size;	// TODO: Fixme
+    int size = self->default_size;  // TODO: Fixme
 
     while (hash_entry != 0xffff) {
         const CodepointSize* current = &self->glyph_info.codepoint_sizes[hash_entry];
         if (current->codepoint == codepoint && current->size == size) {
-        	return &self->glyph_info.glyphs[hash_entry];
+            return &self->glyph_info.glyphs[hash_entry];
         }
 
         hash_entry = current->next_index;
@@ -314,12 +324,12 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
 
     error = FT_Load_Glyph(font->ft_face, glyph_index, FT_LOAD_RENDER);
     if (error != 0) {
-        ERROR_ADD(FlError_Font, "Freetype error %s when loading glyph %d. font: %s", FT_Error_String(error), glyph_index,
-                  font->debug_name);
+        ERROR_ADD(FlError_Font, "Freetype error %s when loading glyph %d. font: %s", FT_Error_String(error),
+                  glyph_index, font->debug_name);
         return false;
     }
 
-	/*
+    /*
     error = FT_Get_Advance(font->font, glyph, FT_LOAD_NO_SCALE, &adv_fixed);
     if (error != 0) {
         ERROR_ADD(FlError_Font, "Freetype error %s when getting advance glyph %d. font: %s", FT_Error_String(error),
@@ -328,7 +338,7 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     }
     */
 
-	// Alloc glyph and insert into hashtable
+    // Alloc glyph and insert into hashtable
     int alloc_index = allocate_glyph(ctx, font);
 
     info->codepoint_sizes[alloc_index].codepoint = codepoint;
@@ -336,11 +346,11 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     info->codepoint_sizes[alloc_index].next_index = font->lut[hash_idx];
     font->lut[hash_idx] = alloc_index;
 
-	Glyph* glyph = &info->glyphs[alloc_index];
+    Glyph* glyph = &info->glyphs[alloc_index];
 
     FT_GlyphSlot g = font->ft_face->glyph;
 
-    //int advance = (int)adv_fixed;
+    // int advance = (int)adv_fixed;
     int x0 = g->bitmap_left;
     int x1 = x0 + g->bitmap.width;
     int y0 = -g->bitmap_top;
@@ -355,20 +365,20 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     // TODO: We need to handle this in a good way
     // if we run out of space in the atlas we need to resize here
 
-	u8* dest = Atlas_add_rect(atlas, gw, gh, &rx, &ry, &stride);
-	if (!dest) {
+    u8* dest = Atlas_add_rect(atlas, gw, gh, &rx, &ry, &stride);
+    if (!dest) {
         ERROR_ADD(FlError_Memory, "Out of space in atlas when generating glyph for font %s", font->debug_name);
         return false;
-	}
+    }
 
-	const u8* src = g->bitmap.buffer;
-	const int src_pitch = g->bitmap.pitch;
+    const u8* src = g->bitmap.buffer;
+    const int src_pitch = g->bitmap.pitch;
 
-	// TODO: Handle the case when we have colors here also
+    // TODO: Handle the case when we have colors here also
     for (int y = 0, rows = g->bitmap.rows; y < rows; ++y) {
-    	memcpy(dest, src, g->bitmap.width);
-    	dest += stride;
-    	src += src_pitch;
+        memcpy(dest, src, g->bitmap.width);
+        dest += stride;
+        src += src_pitch;
     }
 
     glyph->x0 = rx;
@@ -377,17 +387,15 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     glyph->y1 = ry + gh;
     glyph->x_offset = (u16)x0;
     glyph->y_offset = (u16)y0;
-	glyph->advance_x = (float)FT_CEIL(g->advance.x);
+    glyph->advance_x = (float)FT_CEIL(g->advance.x);
 
     return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Font_generate_glyphs(FlContext* FL_RESTRICT ctx, FlFont font_id, const u32* FL_RESTRICT codepoints, int count,
+void Font_generate_glyphs(FlContext* FL_RESTRICT ctx, Font* font, const u32* FL_RESTRICT codepoints, int count,
                           int size) {
-    Font* font = ctx->global->fonts[font_id];
-
     for (int i = 0; i < count; ++i) {
         const u32 codepoint = *codepoints++;
         generate_glyph(ctx, font, codepoint, size);
@@ -403,4 +411,3 @@ void Font_init(FlGlobalState* state) {
     //#elif defined(fl_FONTLIB_STBTYPE)
     //#endif
 }
-

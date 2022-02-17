@@ -4,7 +4,7 @@ use std::mem::transmute;
 use std::os::raw::c_void;
 
 extern "C" {
-    fn fl_application_main_loop_impl(callback: *const c_void, user_data: *mut c_void);
+    fn fl_application_main_loop_impl(callback: *const c_void, userdata: *mut core::ffi::c_void);
 }
 
 #[repr(C)]
