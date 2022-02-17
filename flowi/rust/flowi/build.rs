@@ -87,7 +87,7 @@ fn main() {
 
     //#[cfg(feature = "bgfx-debug")]
     {
-        build.define("BX_CONFIG_DEBUG", "1");
+        build.define("BX_CONFIG_DEBUG", "0");
         //build.define("BGFX_CONFIG_DEBUG", "0");
     }
 
@@ -261,7 +261,7 @@ fn main() {
 
     let mut build = cc::Build::new();
 
-    build.define("BX_CONFIG_DEBUG", "1");
+    build.define("BX_CONFIG_DEBUG", "0");
 
     add_includes(&mut build, glfw_root, &["include"]);
     add_includes(&mut build, flowi_root, &["include"]);

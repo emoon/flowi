@@ -130,6 +130,6 @@ void Errors_add(FlError err, const char* filename, int line, const char* fmt, ..
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
-    // printf("ERROR:%d | %s:%d: %s\n", err, filename, line, buffer);
+    printf("ERROR:%d | %s:%d: %s\n", err, filename, line, buffer);
     va_end(args);
 }

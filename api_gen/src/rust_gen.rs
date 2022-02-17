@@ -352,6 +352,8 @@ impl RustGen {
 
         Self::get_ffi_args(&mut fa, func, self_name, false, Ctx::Yes);
 
+        writeln!(f, "#[allow(dead_code)]")?;
+
         // write arguments
 
         if fa.ret_value.is_empty() {

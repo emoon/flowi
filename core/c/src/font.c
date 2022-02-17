@@ -18,11 +18,6 @@
 // widgetsReturns >= 0 for valid handle, use fl_get_status(); for more detailed error message
 FlFont fl_font_new_from_file_impl(struct FlContext* flowi_ctx, FlString filename, uint32_t font_size,
                                   FlFontPlacementMode placement_mode) {
-    // TODO: Handle temp string
-    if (!filename.c_string) {
-        return -1;
-    }
-
     u32 size = 0;
     u8* data = Io_load_file_to_memory_flstring(filename, &size);
 

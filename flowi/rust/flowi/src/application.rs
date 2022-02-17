@@ -13,6 +13,7 @@ extern "C" {
     ) -> *const Context;
 }
 
+#[allow(dead_code)]
 type MainLoopCallback =
     extern "C" fn(ctx: *const core::ffi::c_void, user_data: *mut core::ffi::c_void);
 

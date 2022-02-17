@@ -105,7 +105,6 @@ impl Context {
     pub fn font_set(&self, font: Font) {
         unsafe {
             let self_ = std::mem::transmute(self);
-            println!("Setting font handle {:x}", font.handle);
             fl_font_set_impl(self_, font.handle);
         }
     }

@@ -87,6 +87,9 @@ static void* native_window_handle(GLFWwindow* window) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    (void)scancode;
+    (void)action;
+    (void)mods;
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
@@ -95,12 +98,15 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void error_callback(int error, const char* description) {
-    fprintf(stderr, "Error: %s\n", description);
+    fprintf(stderr, "Error: %d:%s\n", error, description);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" struct FlContext* fl_application_create_impl(FlString application_name, FlString developer) {
+    (void)application_name;
+    (void)developer;
+
     ApplicationState* state = &s_state;
 
     // TODO: Error, we only support one application so make sure we only run this once.
