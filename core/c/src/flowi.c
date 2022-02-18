@@ -270,7 +270,7 @@ void fl_frame_begin(struct FlContext* ctx, int width, int height) {
 void draw_text(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
-    Font* font = ctx->current_font;
+    Font* font = prim->font;
 
     if (!font) {
         ERROR_ADD(FlError_Font, "No font set, unable to draw_text: %s", "TODO: Name");
