@@ -234,8 +234,6 @@ void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2,
     ctx->mouse_state.buttons[2] = b3;
 }
 
-static float hack = 80.0f;
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool hack_first_frame = false;
@@ -247,8 +245,6 @@ void fl_frame_begin(struct FlContext* ctx, int width, int height) {
     if (hack_first_frame) {
         CommandBuffer_rewind(&ctx->global->render_commands);
     }
-
-    hack = 80.0f;
 
     // Update default layout
     // FlRect rect = { 0, 0, width, height };
@@ -291,11 +287,8 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
         assert(0);
     }
 
-    FlVec2 pos = {40.0f, hack};
-
-    hack += 80.0f;
-
-    Text_generate_vertex_buffer_ref(vertices, indices, font, prim->font_size, codepoints, 0x0fffffff, pos, 0, text_len);
+    Text_generate_vertex_buffer_ref(vertices, indices, font, prim->font_size, codepoints, 0x0fffffff, prim->position, 0,
+                                    text_len);
 
     FlTexturedTriangles* tri_data = Render_textured_triangles_cmd(ctx->global);
 
@@ -371,6 +364,7 @@ void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
 
     // TODO: Copy text to string buffer
     prim->font = ctx->current_font;
+    prim->position = ctx->cursor;
     prim->font_size = ctx->current_font_size != 0 ? ctx->current_font_size : ctx->current_font->default_size;
     prim->text = text.str;
     prim->len = text.len;

@@ -5,9 +5,9 @@ struct Ui {
     dummy: u32,
     [static] text(text: String),
     /// Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
-    [static] set_pos(pos: Pos),
+    [static] set_pos(pos: Vec2),
     /// Get the last widget size. This is usually used for doing manual layouting
-    [static] get_last_widget_size(pos: Pos) -> Rect,
+    [static] get_last_widget_size(pos: Vec2) -> Rect,
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

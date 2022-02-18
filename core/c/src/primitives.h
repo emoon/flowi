@@ -1,5 +1,6 @@
 #pragma once
 
+#include <flowi_core/math_data.h>
 #include "command_buffer.h"
 #include "flowi.h"
 #include "style.h"
@@ -25,10 +26,12 @@ typedef enum Primitive {
 typedef struct PrimitiveText {
     // Font to be used when generating the text
     struct Font* font;
-    // Size of the font when rendering
-    u32 font_size;
     // utf8 text
     const char* text;
+    // Where to draw the primitive. TODO: Separate data stream for positions
+    FlVec2 position;
+    // Size of the font when rendering
+    u32 font_size;
     // length of the text
     int len;
     // Index into global position list

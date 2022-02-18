@@ -24,12 +24,12 @@ typedef struct FlRect {
 } FlRect;
 
 // Used for setting a position in pixel space
-typedef struct FlPos {
+typedef struct FlVec2 {
     // x position
     float x;
     // y position
     float y;
-} FlPos;
+} FlVec2;
 
 #ifdef __cplusplus
 }

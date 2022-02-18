@@ -1,5 +1,5 @@
-#include <flowi/application.h>
 // TODO: flowi/font.h should just include tho core version
+#include <flowi/application.h>
 #include <flowi_core/font.h>
 #include <flowi_core/ui.h>
 #include <stdio.h>
@@ -16,10 +16,15 @@ typedef struct App {
 void main_loop(struct FlContext* flowi_ctx, void* user_data) {
     App* app = (App*)user_data;
 
+    FlVec2 pos = {40.0f, 80.0f};
+    FlVec2 pos2 = {40.0f, 180.0f};
+
+    fl_ui_set_pos(pos);
     fl_font_set(app->font_bold);
     fl_font_set_with_size(64);
     fl_ui_text("Test");
 
+    fl_ui_set_pos(pos2);
     fl_font_set(app->font);
     fl_font_set_with_size(32);
     fl_ui_text("Hola");

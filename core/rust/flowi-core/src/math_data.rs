@@ -17,7 +17,7 @@ pub struct Rect {
 /// Used for setting a position in pixel space
 #[repr(C)]
 #[derive(Debug)]
-pub struct Pos {
+pub struct Vec2 {
     /// x position
     x: f32,
     /// y position

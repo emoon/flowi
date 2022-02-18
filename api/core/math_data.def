@@ -6,7 +6,7 @@ struct Rect {
 }
 
 /// Used for setting a position in pixel space
-struct Pos {
+struct Vec2 {
     /// x position
     x: f32,
     /// y position
