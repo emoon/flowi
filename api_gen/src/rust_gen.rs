@@ -219,7 +219,7 @@ impl RustGen {
 
         if sdef.has_attribute("Handle") {
             writeln!(f, "#[repr(C)]")?;
-            writeln!(f, "#[derive(Debug)]")?;
+            writeln!(f, "#[derive(Debug, Copy, Clone)]")?;
             writeln!(f, "pub struct {} {{ pub handle: u64 }}\n", sdef.name)
         } else {
             writeln!(f, "#[repr(C)]")?;
@@ -604,7 +604,9 @@ impl RustGen {
         writeln!(core_mod, "pub mod manual;")?;
         writeln!(core_mod, "pub use manual::*;\n")?;
         writeln!(flowi_mod, "pub mod manual;")?;
-        writeln!(flowi_mod, "pub use manual::*;\n")
+        writeln!(flowi_mod, "pub use manual::*;\n")?;
+
+        writeln!(flowi_mod, "pub use flowi_core::*;\n")
     }
 }
 

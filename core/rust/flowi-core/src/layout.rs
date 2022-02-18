@@ -52,7 +52,7 @@ pub struct Sizing {
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct LayoutAreaId {
     pub handle: u64,
 }

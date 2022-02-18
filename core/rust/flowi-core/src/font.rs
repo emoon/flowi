@@ -44,7 +44,7 @@ pub enum FontPlacementMode {
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Font {
     pub handle: u64,
 }

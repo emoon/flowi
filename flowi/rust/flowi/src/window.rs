@@ -9,7 +9,7 @@ use flowi_core::*;
 extern "C" {}
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Window {
     pub handle: u64,
 }

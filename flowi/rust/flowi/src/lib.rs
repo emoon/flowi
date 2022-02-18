@@ -10,3 +10,5 @@ pub use window::*;
 pub mod manual;
 pub use manual::*;
 
+pub use flowi_core::*;
+

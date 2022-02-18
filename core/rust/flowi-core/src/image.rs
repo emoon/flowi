@@ -25,7 +25,7 @@ pub struct ImageInfo {
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Image {
     pub handle: u64,
 }
