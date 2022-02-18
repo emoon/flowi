@@ -1,7 +1,7 @@
 #include "text.h"
+#include <stdio.h>
 #include "font_private.h"
 #include "render.h"
-#include <stdio.h>
 
 #include <emmintrin.h>  // __m128i
 #include <smmintrin.h>
@@ -31,27 +31,27 @@ bool Text_utf8_to_codepoints_u16(u16* output, const u8* input, int len) {
 // Convert utf8 to codepoints (u32) Will return false if the input utf8 is is invalid
 // Output is to be expected to be 16 byte aligned and contain 32 bytes of extra data
 bool utf8_to_codepoints_u32(u32* output, const u8* input, int len) {
-	for (int i = 0; i < len; ++i) {
-		*output++ = *input++;
-	}
+    for (int i = 0; i < len; ++i) {
+        *output++ = *input++;
+    }
 
-	return true;
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSize* FL_RESTRICT index_buffer,
-                                     const Font* FL_RESTRICT font, const u32* FL_RESTRICT codepoints,
+                                     const Font* FL_RESTRICT font, u32 font_size, const u32* FL_RESTRICT codepoints,
                                      u32 color, FlVec2 pos, FlIdxSize vertex_id, int count) {
     for (int i = 0; i < count; ++i) {
-    	u32 cp = *codepoints++;
+        u32 cp = *codepoints++;
 
-		Glyph* g = Font_get_glyph(font, cp);
+        Glyph* g = Font_get_glyph(font, cp, font_size);
 
-		// TODO: Should never happen, should log error here
-		if (!g) {
-			continue;
-		}
+        // TODO: Should never happen, should log error here
+        if (!g) {
+            continue;
+        }
 
         u16 x0 = g->x0;
         u16 y0 = g->y0;
@@ -110,21 +110,20 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
 // Calculate AABB for the text
 // TODO: Supply styling for text spacing and stuff like that
 
-FlVec2 Text_calculate_size(const struct Glyph* FL_RESTRICT glyph_lookup, const u32* FL_RESTRICT codepoints, int count)
-{
-	FlVec2 size = { 0.0f, 0.0f };
+FlVec2 Text_calculate_size(const struct Glyph* FL_RESTRICT glyph_lookup, const u32* FL_RESTRICT codepoints, int count) {
+    FlVec2 size = {0.0f, 0.0f};
 
-	// TODO: Separate array for lookup_x for better cache locality?
-	// TODO: Support left -> right text
+    // TODO: Separate array for lookup_x for better cache locality?
+    // TODO: Support left -> right text
 
-	for (int i = 0; i < count; ++i) {
-		const Glyph* g = &glyph_lookup[*codepoints++];
-		u16 y_size = g->y1 - g->y0;
-		size.x += g->advance_x;
-		size.y = y_size > size.y ? y_size : size.y;
-	}
+    for (int i = 0; i < count; ++i) {
+        const Glyph* g = &glyph_lookup[*codepoints++];
+        u16 y_size = g->y1 - g->y0;
+        size.x += g->advance_x;
+        size.y = y_size > size.y ? y_size : size.y;
+    }
 
-	return size;
+    return size;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -208,6 +207,5 @@ void Text_generate_vertex_buffer_sse2(FlVertPosUvColor* __restrict out, FlIdxSiz
         index_buffer += 6;
     }
 }
-
 
 #endif

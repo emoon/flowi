@@ -1,10 +1,10 @@
 #pragma once
 
-#include <stdbool.h>
-#include "types.h"
 #include <flowi_core/config.h>
+#include <stdbool.h>
 #include "flowi.h"
 #include "render.h"
+#include "types.h"
 
 struct FlVertPosUvColor;
 struct Glyph;
@@ -28,8 +28,9 @@ bool utf8_to_codepoints_u32_unsafe(u32* output, const u8* input, int len);
 
 // Generate a vertex buffer given some input data
 void Text_generate_vertex_buffer_ref(struct FlVertPosUvColor* FL_RESTRICT out, FlIdxSize* FL_RESTRICT index_buffer,
-                                     const struct Font* FL_RESTRICT font, const u32* FL_RESTRICT codepoints, u32 color,
-                                     FlVec2 pos, FlIdxSize vertex_id, int count);
+                                     const struct Font* FL_RESTRICT font, u32 font_size,
+                                     const u32* FL_RESTRICT codepoints, u32 color, FlVec2 pos, FlIdxSize vertex_id,
+                                     int count);
 
 // Calculate AABB for the text
 FlVec2 Text_calculate_size(const struct Glyph* FL_RESTRICT glyph_lookup, const u32* FL_RESTRICT codepoints, int count);

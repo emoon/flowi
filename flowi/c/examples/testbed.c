@@ -16,7 +16,11 @@ void main_loop(struct FlContext* flowi_ctx, void* user_data) {
     App* app = (App*)user_data;
 
     fl_font_set(app->font);
+    fl_font_set_with_size(64);
     fl_ui_text("Test");
+
+    fl_font_set_with_size(32);
+    fl_ui_text("Hola");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

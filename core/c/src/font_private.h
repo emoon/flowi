@@ -59,5 +59,5 @@ typedef struct Font {
 
 void Font_generate_glyphs(struct FlContext* FL_RESTRICT ctx, Font* font, const u32* FL_RESTRICT codepoints, int count,
                           int size);
-Glyph* Font_get_glyph(const Font* self, u32 codepoint);
+Glyph* Font_get_glyph(const Font* self, u32 codepoint, u32 font_size);
 void Font_destroy(struct FlGlobalState* state, Font* font);

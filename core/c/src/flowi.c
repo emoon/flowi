@@ -234,6 +234,8 @@ void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2,
     ctx->mouse_state.buttons[2] = b3;
 }
 
+static float hack = 80.0f;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool hack_first_frame = false;
@@ -245,6 +247,8 @@ void fl_frame_begin(struct FlContext* ctx, int width, int height) {
     if (hack_first_frame) {
         CommandBuffer_rewind(&ctx->global->render_commands);
     }
+
+    hack = 80.0f;
 
     // Update default layout
     // FlRect rect = { 0, 0, width, height };
@@ -287,9 +291,11 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
         assert(0);
     }
 
-    FlVec2 pos = {40.0f, 80.0f};
+    FlVec2 pos = {40.0f, hack};
 
-    Text_generate_vertex_buffer_ref(vertices, indices, font, codepoints, 0x0fffffff, pos, 0, text_len);
+    hack += 80.0f;
+
+    Text_generate_vertex_buffer_ref(vertices, indices, font, prim->font_size, codepoints, 0x0fffffff, pos, 0, text_len);
 
     FlTexturedTriangles* tri_data = Render_textured_triangles_cmd(ctx->global);
 
@@ -306,14 +312,13 @@ void generate_glyphs(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
     const int text_len = prim->len;
-    Font* font = ctx->current_font;
 
     // TODO: we should hash the text, font, + size + dirty and don't
     // don't try to regenerate glyphs if hash matches
     u32* codepoints = alloca(sizeof(u32) * text_len);
     utf8_to_codepoints_u32(codepoints, (u8*)prim->text, text_len);
 
-    Font_generate_glyphs(ctx, prim->font, codepoints, text_len, font->default_size);
+    Font_generate_glyphs(ctx, prim->font, codepoints, text_len, prim->font_size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -366,6 +371,7 @@ void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
 
     // TODO: Copy text to string buffer
     prim->font = ctx->current_font;
+    prim->font_size = ctx->current_font_size != 0 ? ctx->current_font_size : ctx->current_font->default_size;
     prim->text = text.str;
     prim->len = text.len;
     prim->position_index = 0;  // TODO: Fixme

@@ -259,14 +259,13 @@ static int allocate_glyph(FlContext* FL_RESTRICT ctx, Font* font) {
 // Find glyph given codepoint
 // TODO: Check performance of this code
 
-Glyph* Font_get_glyph(const Font* self, u32 codepoint) {
+Glyph* Font_get_glyph(const Font* self, u32 codepoint, u32 font_size) {
     const u32 hash_idx = hash_int(codepoint) & (HASH_LUT_SIZE - 1);
     u16 hash_entry = self->lut[hash_idx];
-    int size = self->default_size;  // TODO: Fixme
 
     while (hash_entry != 0xffff) {
         const CodepointSize* current = &self->glyph_info.codepoint_sizes[hash_entry];
-        if (current->codepoint == codepoint && current->size == size) {
+        if (current->codepoint == codepoint && current->size == font_size) {
             return &self->glyph_info.glyphs[hash_entry];
         }
 
@@ -385,6 +384,17 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     glyph->advance_x = (float)FT_CEIL(g->advance.x);
 
     return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void fl_font_set_with_size_impl(struct FlContext* ctx, uint32_t size) {
+    const uint32_t font_max_size = 400;
+    if (size < font_max_size) {
+        ctx->current_font_size = size;
+    } else {
+        ERROR_ADD(FlError_Font, "Unable to set font size: %d (larger than max %d)", size, font_max_size);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -25,6 +25,8 @@ typedef enum Primitive {
 typedef struct PrimitiveText {
     // Font to be used when generating the text
     struct Font* font;
+    // Size of the font when rendering
+    u32 font_size;
     // utf8 text
     const char* text;
     // length of the text

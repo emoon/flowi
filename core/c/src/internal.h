@@ -120,6 +120,7 @@ typedef struct FlContext {
     struct StyleInternal* styles[FL_MAX_STYLES];        // TODO: Dynamic array instead of hard-coded max style
     struct StyleInternal* style_stack[FL_STYLE_DEPTH];  // Having 128 max styles should be enough
 
+    int current_font_size;
     int frame_count;
     int style_count;
     int layout_count;
