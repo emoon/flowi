@@ -22,6 +22,7 @@ void StringAllocator_end_frame(StringAllocator* self);
 
 /// Frame based allocator. FlString will be invalid after next update
 FlString StringAllocator_copy_cstr_frame(StringAllocator* self, const char* str);
+FlString StringAllocator_copy_string_frame(StringAllocator* self, FlString str);
 FlString StringAllocator_copy_cstr(StringAllocator* self, const char* str);
 FlString StringAllocator_copy_string(StringAllocator* self, FlString str);
 

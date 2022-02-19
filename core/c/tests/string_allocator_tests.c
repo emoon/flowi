@@ -149,6 +149,25 @@ UTEST(StringAllocator, copy_frame) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+UTEST(StringAllocator, copy_frame_string) {
+    StringAllocator str_alloc;
+
+    FlString dummy = {"notfound", 1, strlen("notfound")};
+
+    ASSERT_TRUE(StringAllocator_create(&str_alloc, &malloc_allocator));
+    FlString s = StringAllocator_copy_string_frame(&str_alloc, dummy);
+
+    // Expect that frame allocator and the string should point to the same memory for the first allocation
+    ASSERT_EQ(s.str, (char*)str_alloc.frame_allocator.start_data);
+
+    // Assume no persistant strings has been added
+    ASSERT_EQ(0, str_alloc.string_count);
+
+    StringAllocator_destroy(&str_alloc);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 UTEST(StringAllocator, copy_frame_rewind) {
     StringAllocator str_alloc;
 

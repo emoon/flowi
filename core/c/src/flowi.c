@@ -282,11 +282,11 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
         return;
     }
 
-    const int text_len = prim->len;
+    const int text_len = prim->text.len;
 
     // TODO: LinearAllocator here instead of alloca and/or have treshhold
     u32* codepoints = alloca(sizeof(u32) * text_len);
-    utf8_to_codepoints_u32(codepoints, (u8*)prim->text, text_len);
+    utf8_to_codepoints_u32(codepoints, (u8*)prim->text.str, text_len);
 
     FlVertPosUvColor* vertices = NULL;
     FlIdxSize* indices = NULL;
@@ -313,12 +313,12 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
 void generate_glyphs(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
 
-    const int text_len = prim->len;
+    const int text_len = prim->text.len;
 
     // TODO: we should hash the text, font, + size + dirty and don't
     // don't try to regenerate glyphs if hash matches
     u32* codepoints = alloca(sizeof(u32) * text_len);
-    utf8_to_codepoints_u32(codepoints, (u8*)prim->text, text_len);
+    utf8_to_codepoints_u32(codepoints, (u8*)prim->text.str, text_len);
 
     Font_generate_glyphs(ctx, prim->font, codepoints, text_len, prim->font_size);
 }
@@ -379,12 +379,10 @@ void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
     }
 #endif
 
-    // TODO: Copy text to string buffer
     prim->font = ctx->current_font;
     prim->position = ctx->cursor;
     prim->font_size = ctx->current_font_size != 0 ? ctx->current_font_size : ctx->current_font->default_size;
-    prim->text = text.str;
-    prim->len = text.len;
+    prim->text = StringAllocator_copy_string_frame(&ctx->string_allocator, text);
     prim->position_index = 0;  // TODO: Fixme
 }
 

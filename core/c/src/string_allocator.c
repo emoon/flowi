@@ -114,6 +114,13 @@ FlString StringAllocator_copy_cstr_frame(StringAllocator* self, const char* str)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Frame based allocator. FlString will be invalid after next update
+
+FlString StringAllocator_copy_string_frame(StringAllocator* self, FlString str) {
+    return copy_cstr(self, str.str, str.len, AllocType_Frame);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString StringAllocator_copy_cstr(StringAllocator* self, const char* str) {
     return copy_cstr(self, str, 0, AllocType_Persistant);

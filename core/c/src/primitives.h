@@ -29,13 +29,11 @@ typedef struct PrimitiveText {
     // Font to be used when generating the text
     struct Font* font;
     // utf8 text
-    const char* text;
+    FlString text;
     // Where to draw the primitive. TODO: Separate data stream for positions
     FlVec2 position;
     // Size of the font when rendering
     u32 font_size;
-    // length of the text
-    int len;
     // Index into global position list
     int position_index;
 } PrimitiveText;
