@@ -28,6 +28,8 @@ bool Handles_create_impl(Handles* self, FlAllocator* allocator, int capacity, in
     const int object_size = entry_size * capacity;
     const int free_slot_size = sizeof(u32) * capacity;
 
+    // Lock_create(self->lock);
+
     FL_TRY_ALLOC_BOOL(objs_free_slots = FlAllocator_alloc(allocator, object_size + free_slot_size));
 
     self->allocator = allocator;
@@ -47,7 +49,6 @@ bool Handles_create_impl(Handles* self, FlAllocator* allocator, int capacity, in
 void Handles_destroy(Handles* self) {
     FlAllocator_free(self->allocator, self->objects);
     self->objects = NULL;
-    self->free_slots = NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -66,6 +67,7 @@ bool Handles_is_valid(Handles* self, uint64_t id) {
 
 void* Handles_create_handle(Handles* self) {
     u64* handle_ptr = NULL;
+    // Lock_lock(self->lock);
     u32 inner_id = self->next_inner_id++;
     const u32 free_slots_count = self->free_slots_count;
     const u32 object_size = self->object_size;
@@ -103,6 +105,7 @@ void* Handles_create_handle(Handles* self) {
         self->len = len;
     }
 
+    // Lock_unlock(self->lock);
     return handle_ptr;
 }
 
@@ -112,12 +115,15 @@ void* Handles_get_data(Handles* self, u64 id) {
     const int index = (int)handle_index(id);
     const u32 inner = handle_inner(id);
 
+    // Lock_lock(self->lock);
     if (index >= 0 && index < self->len) {
         u64* data = (u64*)(self->objects + (self->object_size * index));
         if (handle_inner(*data) == inner) {
+            // Lock_unlock(flowi_ctx->global_state->lock);
             return data;
         }
     }
+    // Lock_unlock(self->lock);
 
     return NULL;
 }
@@ -128,6 +134,7 @@ void Handles_remove_handle(Handles* self, u64 id) {
     const int index = (int)handle_index(id);
     const u32 inner = handle_inner(id);
 
+    // Lock_lock(self->lock);
     if (index >= 0 && index < self->len) {
         u64 handle = *(u64*)(self->objects + (self->object_size * index));
         // Validate that handle is valid before removing it
@@ -139,4 +146,5 @@ void Handles_remove_handle(Handles* self, u64 id) {
             self->free_slots[offset] = index;
         }
     }
+    // Lock_unlock(self->lock);
 }

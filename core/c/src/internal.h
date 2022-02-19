@@ -9,6 +9,7 @@
 #include "layout_private.h"
 #include "primitives.h"
 #include "simd.h"
+#include "string_allocator.h"
 #include "style.h"
 #include "vertex_allocator.h"
 
@@ -58,11 +59,6 @@ typedef struct FlGlobalState {
 void Errors_add(FlError err, const char* filename, int line, const char* fmt, ...);
 
 void Font_init(FlGlobalState* ctx);
-
-// TODO: Use custom io functions
-// TODO: Custom allocator
-u8* Io_load_file_to_memory(const char* filename, u32* out_size);
-u8* Io_load_file_to_memory_flstring(FlString name, u32* out_size);
 
 typedef struct MouseState {
     FlVec2 pos;
@@ -117,6 +113,8 @@ typedef struct FlContext {
     FlLayoutAreaId active_layout;
     FlLayoutMode layout_mode;
 
+    StringAllocator string_allocator;
+
     struct StyleInternal* styles[FL_MAX_STYLES];        // TODO: Dynamic array instead of hard-coded max style
     struct StyleInternal* style_stack[FL_STYLE_DEPTH];  // Having 128 max styles should be enough
 
@@ -129,3 +127,8 @@ typedef struct FlContext {
     int layout_ids;
 
 } FlContext;
+
+// TODO: Use custom io functions
+// TODO: Custom allocator
+u8* Io_load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size);
+u8* Io_load_file_to_memory_flstring(FlContext* ctx, FlString name, u32* out_size);

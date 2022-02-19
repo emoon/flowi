@@ -113,6 +113,7 @@ fn main() {
         "src/font_cache.c",
         "src/layout.c",
         "src/vertex_allocator.c",
+        "src/string_allocator.c",
         "src/command_buffer.c",
         "src/handles.c",
         "src/linear_allocator.c",

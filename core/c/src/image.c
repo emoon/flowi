@@ -2,6 +2,7 @@
 #include <stb_image.h>
 #include "image_private.h"
 #include "internal.h"
+#include "string_allocator.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // load image from file or memory
@@ -13,7 +14,7 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     u8* image_data = NULL;
 
     char temp_buffer[2048];
-    const char* filename = fl_string_to_cstr(temp_buffer, sizeof(temp_buffer), name);
+    const char* filename = StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
 
     if (!filename) {
         // TODO: Handle case where string is not null-terminated
@@ -34,10 +35,7 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
         return 0;
     }
 
-    // TODO: Needs lock in MT_CONFIG
-    // Lock_lock(flowi_ctx->global_state->lock);
     ImagePrivate* image = Handles_create_handle(&ctx->global->image_handles);
-    // Lock_unlock(flowi_ctx->global_state->lock);
     FL_TRY_ALLOC_INT(image);
     // Fill image data
     // TODO: Currenty assumes 4 bytes per pixel
@@ -65,9 +63,7 @@ FlImage fl_image_create_from_memory_impl(struct FlContext* ctx, FlString name, u
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self) {
-    // Lock_lock(flowi_ctx->global_state->lock);
     ImagePrivate* data = Handles_get_data(&ctx->global->image_handles, self);
-    // Lock_unlock(flowi_ctx->global_state->lock);
 
     if (!data) {
         ERROR_ADD(FlError_Image, "Invalid handle %s", "todo: filename");
@@ -80,9 +76,7 @@ FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
-    // Lock_lock(flowi_ctx->global_state->lock);
     ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
-    // Lock_unlock(flowi_ctx->global_state->lock);
 
     if (!image_data) {
         ERROR_ADD(FlError_Image, "Invalid handle %s", "todo name");
@@ -90,7 +84,25 @@ void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
     }
 
     stbi_image_free(image_data->data);
-    // Lock_lock(flowi_ctx->global_state->lock);
     Handles_remove_handle(&ctx->global->image_handles, image);
-    // Lock_unlock(flowi_ctx->global_state->lock);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool Image_add_to_rect(ImagePrivate* self, struct FlContext* ctx, struct Atlas* atlas) {
+    FL_UNUSED(self);
+    FL_UNUSED(ctx);
+    FL_UNUSED(atlas);
+    /*
+    // If we have already upload the image we can skip this step
+    if (self->texture_id != 0) {
+        return true;
+    }
+
+    u8* dest = Atlas_add_rect(atlas, gw, gh, &rx, &ry, &stride);
+    if (!dest) {
+        ERROR_ADD(FlError_Image, "Invalid handle %s", "todo name");
+    }
+    */
+    return false;
 }

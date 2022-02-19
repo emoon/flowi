@@ -23,6 +23,7 @@ typedef enum FlError {
     FlError_Font = 3,
     FlError_Style = 4,
     FlError_Image = 5,
+    FlError_Generic = 6,
 } FlError;
 
 #ifdef __cplusplus

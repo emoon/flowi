@@ -13,7 +13,6 @@
             //"program": "/home/emoon/code/projects/hippo/src/hippo_new_ui/target/debug/hippo_new_ui",
             "args": [],
             "stopAtEntry": true,
-            "cwd": "/home/emoon/code/projects/flowi",
         }
     ]
 }

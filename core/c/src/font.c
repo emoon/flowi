@@ -16,16 +16,16 @@
 //#if fl_ALLOW_STDIO
 // Create a font from (TTF) file. To use the font use [Font::set] or [Font::set_with_size] before using text-based
 // widgetsReturns >= 0 for valid handle, use fl_get_status(); for more detailed error message
-FlFont fl_font_new_from_file_impl(struct FlContext* flowi_ctx, FlString filename, uint32_t font_size,
+FlFont fl_font_new_from_file_impl(struct FlContext* ctx, FlString filename, uint32_t font_size,
                                   FlFontPlacementMode placement_mode) {
     u32 size = 0;
-    u8* data = Io_load_file_to_memory_flstring(filename, &size);
+    u8* data = Io_load_file_to_memory_flstring(ctx, filename, &size);
 
     if (!data) {
         return 0;
     }
 
-    return fl_font_new_from_memory_impl(flowi_ctx, filename, data, size, font_size, placement_mode);
+    return fl_font_new_from_memory_impl(ctx, filename, data, size, font_size, placement_mode);
 }
 //#endif
 

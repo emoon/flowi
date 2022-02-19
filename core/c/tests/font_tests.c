@@ -58,10 +58,12 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
         switch (fl_render_get_command(state, &cmd_data)) {
             case FlRenderCommand_CreateTexture: {
                 const FlCreateTexture* cmd = (FlCreateTexture*)cmd_data;
-                ASSERT_EQ(cmd->format, FlTextureFormat_R8Linear);
-                ASSERT_EQ(cmd->width, 4096);
-                ASSERT_EQ(cmd->height, 4096);
-                found_create_texture = true;
+                // Don't assert directly as we may have more textures being created
+                // so we verify that we have one that matches what we want
+                if (cmd->width == 4096 && cmd->height == 4096 && cmd->format == FlTextureFormat_R8Linear) {
+                    found_create_texture = true;
+                }
+
                 break;
             }
         }

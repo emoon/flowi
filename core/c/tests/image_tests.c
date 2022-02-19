@@ -37,13 +37,13 @@ UTEST(Image, load_file_from_memory) {
     struct FlContext* flowi_ctx = fl_context_create(state);
 
     u32 size = 0;
-    u8* data = Io_load_file_to_memory("data/uv.png", &size);
+    u8* data = Io_load_file_to_memory(flowi_ctx, "data/uv.png", &size);
     ASSERT_NE(NULL, data);
 
     FlImage id = fl_image_create_from_memory("uv", data, size);
     ASSERT_NE(0, id);
 
-    free(data);  // TODO: fix me, custom allocator
+    FlAllocator_free(state->global_allocator, data);
 
     fl_image_destroy(id);
     fl_context_destroy(flowi_ctx);

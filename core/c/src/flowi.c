@@ -89,6 +89,11 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
         return NULL;
     }
 
+    if (!StringAllocator_create(&ctx->string_allocator, &malloc_allocator)) {
+        // TODO: Add error
+        return NULL;
+    }
+
     Layout_create_default(ctx);
     ctx->layout_mode = FlLayoutMode_Automatic;
 
@@ -117,6 +122,10 @@ struct FlGlobalState* fl_create(const FlSettings* settings) {
     // TODO: We should check settings for texture size
     FL_TRY_ALLOC_NULL(
         (state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, state, state->global_allocator)));
+
+    // TODO: We should check settings for texture size
+    FL_TRY_ALLOC_NULL(
+        (state->images_atlas = Atlas_create(4096, 4096, AtlasImageType_RGBA8, state, state->global_allocator)));
 
     Font_init(state);
 
@@ -322,6 +331,7 @@ void fl_frame_end(struct FlContext* ctx) {
     const int command_count = CommandBuffer_begin_read_commands(&state->primitive_commands);
 
     // first do generation pass to build up all glyphs and other data
+    Atlas_begin_add_rects(state->images_atlas);
     Atlas_begin_add_rects(state->mono_fonts_atlas);
 
     for (int i = 0; i < command_count; ++i) {
@@ -330,9 +340,15 @@ void fl_frame_end(struct FlContext* ctx) {
                 generate_glyphs(ctx, command_data);
                 break;
             }
+
+            case Primitive_DrawImage: {
+                generate_glyphs(ctx, command_data);
+                break;
+            }
         }
     }
 
+    Atlas_end_add_rects(state->images_atlas, state);
     Atlas_end_add_rects(state->mono_fonts_atlas, state);
 
     CommandBuffer_begin_read_commands(&state->primitive_commands);
@@ -349,6 +365,7 @@ void fl_frame_end(struct FlContext* ctx) {
 
     VertexAllocator_end_frame(&ctx->vertex_allocator);
     CommandBuffer_rewind(&state->primitive_commands);
+    StringAllocator_end_frame(&ctx->string_allocator);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -382,6 +399,8 @@ void fl_context_destroy(struct FlContext* self) {
 
     LinearAllocator_destroy(&self->layout_allocator);
     VertexAllocator_destroy(&self->vertex_allocator);
+    StringAllocator_destroy(&self->string_allocator);
+
     FlAllocator_free(allocator, self);
 }
 
@@ -428,23 +447,4 @@ FlString fl_error_last_error() {
     strcpy(s_dummy_buffer, "TODO: Correct error");
     FlString ret = {s_dummy_buffer, 1, strlen(s_dummy_buffer)};
     return ret;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TODO: Needs tests
-
-const char* fl_string_to_cstr(char* temp_target, int temp_size, FlString str) {
-    if (str.c_string) {
-        temp_target[0] = 0;
-        return str.str;
-    }
-
-    if (str.len + 1 > (u32)temp_size) {
-        // TODO: Error here
-        return NULL;
-    }
-
-    memcpy(temp_target, str.str, str.len);
-    temp_target[str.len] = 0;
-    return temp_target;
 }
