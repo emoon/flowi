@@ -60,6 +60,8 @@ static FlString copy_cstr(StringAllocator* self, const char* str, int len, Alloc
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool StringAllocator_create(StringAllocator* self, struct FlAllocator* allocator) {
+    memset(self, 0, sizeof(StringAllocator));
+
     int intial_frame_allocator_size = 64 * 1024;
     int intial_tracking_size = 1024;
 

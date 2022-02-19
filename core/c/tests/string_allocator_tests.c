@@ -174,13 +174,11 @@ UTEST(StringAllocator, copy_frame_rewind) {
 
 UTEST(StringAllocator, temp_copy_temp_buffer) {
     StringAllocator str_alloc;
-    ASSERT_TRUE(StringAllocator_create(&str_alloc, &malloc_allocator));
 
     char temp_buffer[2048];
     FlString dummy = {"notfound", 0, strlen("notfound")};
 
     ASSERT_TRUE(StringAllocator_create(&str_alloc, &malloc_allocator));
-
     const char* str = StringAllocator_temp_string_to_cstr(&str_alloc, temp_buffer, sizeof(temp_buffer), dummy);
 
     // string should point to temp buffer
@@ -193,13 +191,11 @@ UTEST(StringAllocator, temp_copy_temp_buffer) {
 
 UTEST(StringAllocator, temp_copy_frame_allocator) {
     StringAllocator str_alloc;
-    ASSERT_TRUE(StringAllocator_create(&str_alloc, &malloc_allocator));
 
     char temp_buffer[4];
     FlString dummy = {"notfound", 0, strlen("notfound")};
 
     ASSERT_TRUE(StringAllocator_create(&str_alloc, &malloc_allocator));
-
     const char* str = StringAllocator_temp_string_to_cstr(&str_alloc, temp_buffer, sizeof(temp_buffer), dummy);
 
     // Expect the string to end up in the frame allocator
@@ -212,17 +208,50 @@ UTEST(StringAllocator, temp_copy_frame_allocator) {
 
 UTEST(StringAllocator, temp_copy_is_cstr) {
     StringAllocator str_alloc;
-    ASSERT_TRUE(StringAllocator_create(&str_alloc, &malloc_allocator));
 
     char temp_buffer[2048];
     FlString dummy = {"notfound", 1, strlen("notfound")};
 
     ASSERT_TRUE(StringAllocator_create(&str_alloc, &malloc_allocator));
-
     const char* str = StringAllocator_temp_string_to_cstr(&str_alloc, temp_buffer, sizeof(temp_buffer), dummy);
 
     // As it's a cstring we can just return
     ASSERT_EQ(str, dummy.str);
 
+    StringAllocator_destroy(&str_alloc);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+typedef struct CountDown {
+    int count;
+} CountDown;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void* dummy_malloc(void* user_data, u64 size) {
+    CountDown* t = (CountDown*)user_data;
+    if (t->count <= 0)
+        return NULL;
+    t->count--;
+    return malloc(size);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(StringAllocator, fail_allocator) {
+    StringAllocator str_alloc;
+    CountDown count_down;
+
+    FlAllocator allocator = {
+        dummy_malloc, NULL, NULL, free_malloc, &count_down,
+    };
+
+    count_down.count = 0;
+    ASSERT_FALSE(StringAllocator_create(&str_alloc, &allocator));
+    StringAllocator_destroy(&str_alloc);
+
+    count_down.count = 1;
+    ASSERT_FALSE(StringAllocator_create(&str_alloc, &allocator));
     StringAllocator_destroy(&str_alloc);
 }

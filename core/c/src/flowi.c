@@ -412,6 +412,7 @@ void fl_destroy(FlGlobalState* self) {
     CommandBuffer_destroy(&self->primitive_commands);
     CommandBuffer_destroy(&self->render_commands);
     Atlas_destroy(self->mono_fonts_atlas);
+    Atlas_destroy(self->images_atlas);
 
     Font* fonts = (Font*)self->font_handles.objects;
 
