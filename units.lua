@@ -290,10 +290,12 @@ Program {
         "flowi/c/shaders/dummy.c",
         build_vs("flowi/c/shaders/color_fill.vs", "flowi/c/shaders/generated/color_fill_vs"),
         build_fs("flowi/c/shaders/color_fill.fs", "flowi/c/shaders/generated/color_fill_fs"),
+
         build_vs("flowi/c/shaders/vs_texture.sc", "flowi/c/shaders/generated/vs_texture"),
         build_fs("flowi/c/shaders/fs_texture.sc", "flowi/c/shaders/generated/fs_texture"),
-        build_vs("flowi/c/shaders/vs_texture.sc", "flowi/c/shaders/generated/vs_texture_r"),
-        build_fs("flowi/c/shaders/fs_texture.sc", "flowi/c/shaders/generated/fs_texture_r"),
+
+        build_vs("flowi/c/shaders/vs_texture_r.sc", "flowi/c/shaders/generated/vs_texture_r"),
+        build_fs("flowi/c/shaders/fs_texture_r.sc", "flowi/c/shaders/generated/fs_texture_r"),
     }
 }
 

@@ -154,7 +154,7 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
     for (int h = 0, height = self->info.height; h < height; ++h) {
         memcpy(dest, src, self->info.width * 4);
         src += self->info.width * 4;  // TODO: Calculate multiply
-        dest += stride;
+        dest += stride / 4;
     }
 
     self->texture_id = atlas->texture_id;

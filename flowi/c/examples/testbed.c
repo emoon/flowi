@@ -9,6 +9,7 @@
 typedef struct App {
     FlFont font_bold;
     FlFont font;
+    FlImage image;
 } App;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -18,6 +19,7 @@ void main_loop(struct FlContext* flowi_ctx, void* user_data) {
 
     FlVec2 pos = {40.0f, 80.0f};
     FlVec2 pos2 = {40.0f, 180.0f};
+    FlVec2 pos3 = {140.0f, 180.0f};
 
     fl_ui_set_pos(pos);
     fl_font_set(app->font_bold);
@@ -28,6 +30,9 @@ void main_loop(struct FlContext* flowi_ctx, void* user_data) {
     fl_font_set(app->font);
     fl_font_set_with_size(32);
     fl_ui_text("Hola");
+
+    fl_ui_set_pos(pos3);
+    fl_ui_image(app->image);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -43,6 +48,7 @@ int main() {
     App app = {
         .font_bold = fl_font_new_from_file("data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
         .font = fl_font_new_from_file("data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
+        .image = fl_image_create_from_file("data/uv.png"),
     };
 
     fl_application_main_loop(main_loop, &app);

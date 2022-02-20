@@ -23,8 +23,12 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const bgfx::EmbeddedShader s_shaders[] = {BGFX_EMBEDDED_SHADER(color_fill_vs),
-                                                 BGFX_EMBEDDED_SHADER(color_fill_fs), BGFX_EMBEDDED_SHADER(vs_texture),
-                                                 BGFX_EMBEDDED_SHADER(fs_texture), BGFX_EMBEDDED_SHADER_END()};
+                                                 BGFX_EMBEDDED_SHADER(color_fill_fs), 
+                                                 BGFX_EMBEDDED_SHADER(vs_texture),
+                                                 BGFX_EMBEDDED_SHADER(fs_texture), 
+                                                 BGFX_EMBEDDED_SHADER(vs_texture_r),
+                                                 BGFX_EMBEDDED_SHADER(fs_texture_r), 
+                                                 BGFX_EMBEDDED_SHADER_END()};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -61,7 +65,8 @@ struct ApplicationState {
     // layout and shader for rendering textured triangles
     bgfx::VertexLayout texture_layout;
     bgfx::ProgramHandle texture_shader;
-    //
+    bgfx::ProgramHandle texture_r_shader;
+
     bgfx::UniformHandle tex_handle;
     bgfx::UniformHandle u_inv_res_tex;
 
@@ -201,6 +206,9 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
     state->texture_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "vs_texture"),
                                                 bgfx::createEmbeddedShader(s_shaders, type, "fs_texture"));
 
+    state->texture_r_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "vs_texture_r"),
+                                                  bgfx::createEmbeddedShader(s_shaders, type, "fs_texture_r"));
+
     if (!bgfx::isValid(state->flat_shader)) {
         printf("failed to init flat_shader shaders\n");
         return NULL;
@@ -208,6 +216,11 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
 
     if (!bgfx::isValid(state->texture_shader)) {
         printf("failed to init texture_shader shaders\n");
+        return NULL;
+    }
+
+    if (!bgfx::isValid(state->texture_r_shader)) {
+        printf("failed to init texture_r_shader shaders\n");
         return NULL;
     }
 
@@ -252,7 +265,12 @@ static void render_textured_triangles(ApplicationState& ctx, const u8* render_da
     encoder->setTexture(0, ctx.tex_handle, texture.handle);
     encoder->setVertexBuffer(0, &tvb, 0, vertex_count);
     encoder->setIndexBuffer(&tib, 0, index_count);
-    encoder->submit(255, ctx.texture_shader);
+
+    if (texture.format == bgfx::TextureFormat::R8) {
+        encoder->submit(255, ctx.texture_r_shader);
+    } else {
+        encoder->submit(255, ctx.texture_shader);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
