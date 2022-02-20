@@ -171,6 +171,7 @@ UTEST(Image, render_image) {
     ASSERT_TRUE(found_update_texture);
     ASSERT_TRUE(found_render_texture);
 
+    fl_image_destroy(id);
     fl_context_destroy(flowi_ctx);
     fl_destroy(state);
 }
