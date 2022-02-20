@@ -53,7 +53,6 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
     bool found_update_texture = false;
 
     // process all the render commands
-    // TODO: We need to support skipping commands also
     for (int i = 0; i < count; ++i) {
         switch (fl_render_get_command(state, &cmd_data)) {
             case FlRenderCommand_CreateTexture: {

@@ -60,6 +60,8 @@ typedef struct FlVertPosColor {
 
 // Used for rendering triangles with a texture.
 typedef struct FlTexturedTriangles {
+    // Offset into the index buffer
+    uint32_t offset;
     // Vertices for the command
     FlVertPosUvColor* vertex_buffer;
     uint32_t vertex_buffer_size;
@@ -71,6 +73,8 @@ typedef struct FlTexturedTriangles {
 } FlTexturedTriangles;
 
 typedef struct FlSolidTriangles {
+    // Offset into the index buffer
+    uint32_t offset;
     // Vertices for the command
     FlVertPosColor* vertex_buffer;
     uint32_t vertex_buffer_size;

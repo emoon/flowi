@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.h"
 #include "render.h"
+#include "types.h"
 
 struct FlAllocator;
 struct FlGlobalState;
@@ -39,7 +39,8 @@ typedef struct Atlas {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalState* state, struct FlAllocator* allocator);
+Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalState* state,
+                    struct FlAllocator* allocator);
 void Atlas_destroy(Atlas* self);
 u8* Atlas_image_data_at(Atlas* self, int x, int y, int* stride);
 
@@ -50,4 +51,3 @@ void Atlas_end_add_rects(Atlas* self, struct FlGlobalState* state);
 u8* Atlas_add_rect(Atlas* self, int rw, int rh, int* rx, int* ry, int* stride);
 
 bool Atlas_expand(Atlas* self, int w, int h);
-

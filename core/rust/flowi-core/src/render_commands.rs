@@ -59,6 +59,8 @@ pub struct VertPosColor {
 #[repr(C)]
 #[derive(Debug)]
 pub struct TexturedTriangles {
+    /// Offset into the index buffer
+    offset: u32,
     /// Vertices for the command
     vertex_buffer: *const VertPosUvColor,
     vertex_buffer_size: u32,
@@ -72,6 +74,8 @@ pub struct TexturedTriangles {
 #[repr(C)]
 #[derive(Debug)]
 pub struct SolidTriangles {
+    /// Offset into the index buffer
+    offset: u32,
     /// Vertices for the command
     vertex_buffer: *const VertPosColor,
     vertex_buffer_size: u32,

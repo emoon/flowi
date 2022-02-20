@@ -57,6 +57,8 @@ bool VertexAllocator_alloc(VertexAllocator* self, VertexAllocType alloc_type, u8
         return false;
     }
 
+    self->index_offset += idx_size;
+
     *verts = verts_out;
     *indices = index_out;
 
@@ -67,6 +69,7 @@ bool VertexAllocator_alloc(VertexAllocator* self, VertexAllocType alloc_type, u8
 
 void VertexAllocator_end_frame(VertexAllocator* self) {
     self->frame_index = (self->frame_index + 1) % FL_FRAME_HISTORY;
+    self->index_offset = 0;
 
     // Rewind all allocators to the start
     for (u32 f = 0; f < FL_FRAME_HISTORY; ++f) {

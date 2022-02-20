@@ -26,6 +26,8 @@ struct VertPosColor {
 /// Used for rendering triangles with a texture.
 #[attributes(RenderCommand)]
 struct TexturedTriangles {
+    /// Offset into the index buffer 
+    offset: u32,
     /// Vertices for the command
     vertex_buffer: [VertPosUvColor],
     /// Index buffer for the command
@@ -36,6 +38,8 @@ struct TexturedTriangles {
 
 #[attributes(RenderCommand)]
 struct SolidTriangles {
+    /// Offset into the index buffer 
+    offset: u32,
     /// Vertices for the command
     vertex_buffer: [VertPosColor],
     /// Index buffer for the command

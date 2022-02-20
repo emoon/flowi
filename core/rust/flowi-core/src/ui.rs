@@ -5,6 +5,8 @@ use crate::*;
 
 extern "C" {
     fn fl_ui_text_impl(ctx: *const core::ffi::c_void, text: FlString);
+    fn fl_ui_image_impl(ctx: *const core::ffi::c_void, image: Image);
+    fn fl_ui_image_with_size_impl(ctx: *const core::ffi::c_void, image: Image, size: Vec2);
     fn fl_ui_set_pos_impl(ctx: *const core::ffi::c_void, pos: Vec2);
     fn fl_ui_get_last_widget_size_impl(ctx: *const core::ffi::c_void, pos: Vec2) -> Rect;
 }
@@ -20,6 +22,22 @@ impl Context {
         unsafe {
             let self_ = std::mem::transmute(self);
             fl_ui_text_impl(self_, FlString::new(text));
+        }
+    }
+
+    /// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
+    pub fn ui_image(&self, image: Image) {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            fl_ui_image_impl(self_, image);
+        }
+    }
+
+    /// Draw image with given size
+    pub fn ui_image_with_size(&self, image: Image, size: Vec2) {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            fl_ui_image_with_size_impl(self_, image, size);
         }
     }
 

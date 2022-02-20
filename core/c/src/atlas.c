@@ -325,8 +325,11 @@ Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalStat
 
     if (image_type == AtlasImageType_U8) {
         texture->format = FlTextureFormat_R8Linear;
+    } else if (image_type == AtlasImageType_RGBA8) {
+        texture->format = FlTextureFormat_Rgba8Srgb;
     } else {
-        texture->format = FlTextureFormat_Rgb8Srgb;
+        ERROR_ADD(FlError_Generic, "AtlasCrate: Unsupported texture format: %d", image_type);
+        return NULL;
     }
 
     texture->data = NULL;

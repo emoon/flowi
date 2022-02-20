@@ -301,11 +301,12 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
 
     FlTexturedTriangles* tri_data = Render_textured_triangles_cmd(ctx->global);
 
+    tri_data->offset = ctx->vertex_allocator.index_offset;
     tri_data->vertex_buffer = vertices;
     tri_data->index_buffer = indices;
     tri_data->vertex_buffer_size = text_len * 4;
     tri_data->index_buffer_size = text_len * 6;
-    tri_data->texture_id = 0;  // TODO: Fix me
+    tri_data->texture_id = ctx->global->mono_fonts_atlas->texture_id;  // TODO: Fix me
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -342,7 +343,7 @@ void fl_frame_end(struct FlContext* ctx) {
             }
 
             case Primitive_DrawImage: {
-                generate_glyphs(ctx, command_data);
+                Image_add_to_atlas(command_data, state->images_atlas);
                 break;
             }
         }
@@ -358,6 +359,11 @@ void fl_frame_end(struct FlContext* ctx) {
         switch (CommandBuffer_read_next_cmd(&state->primitive_commands, &command_data)) {
             case Primitive_DrawText: {
                 draw_text(ctx, command_data);
+                break;
+            }
+
+            case Primitive_DrawImage: {
+                Image_render(ctx, command_data);
                 break;
             }
         }

@@ -30,6 +30,7 @@ static const bgfx::EmbeddedShader s_shaders[] = {BGFX_EMBEDDED_SHADER(color_fill
 
 struct Texture {
     bgfx::TextureHandle handle;
+    bgfx::TextureFormat::Enum format;
     int size;
     int width;
     int height;
@@ -230,6 +231,7 @@ static void render_textured_triangles(ApplicationState& ctx, const u8* render_da
 
     const Texture& texture = ctx.textures[texture_id];
 
+    // TODO: We can remove all of these copies as the vertexbuffers are double buffered and can be passed as ref
     bgfx::allocTransientVertexBuffer(&tvb, vertex_count, ctx.texture_layout);
     bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(FlIdxSize) == 4);
 
@@ -301,13 +303,36 @@ static void create_texture(ApplicationState& ctx, const u8* render_data) {
                 mem = bgfx::makeRef(data, width * height);
             }
 
+            bgfx::TextureFormat::Enum format = bgfx::TextureFormat::R8;
+
             Texture* texture = &ctx.textures[id];
-            texture->handle = bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::R8, 0, mem);
+            texture->handle = bgfx::createTexture2D(width, height, false, 1, format, 0, mem);
             texture->inv_x = 1.0f / width;
             texture->inv_y = 1.0f / height;
             texture->size = width * height;
             texture->height = height;
             texture->width = width;
+            texture->format = format;
+            break;
+        }
+
+        case FlTextureFormat_Rgba8Srgb: {
+            const bgfx::Memory* mem = nullptr;
+
+            if (data) {
+                mem = bgfx::makeRef(data, width * height * 4);
+            }
+
+            bgfx::TextureFormat::Enum format = bgfx::TextureFormat::RGBA8;
+
+            Texture* texture = &ctx.textures[id];
+            texture->handle = bgfx::createTexture2D(width, height, false, 1, format, 0, mem);
+            texture->inv_x = 1.0f / width;
+            texture->inv_y = 1.0f / height;
+            texture->size = width * height * 4;
+            texture->height = height;
+            texture->width = width;
+            texture->format = format;
             break;
         }
 

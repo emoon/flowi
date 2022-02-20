@@ -10,6 +10,7 @@
 #include <string.h>
 #include "context.h"
 #include "idx.h"
+#include "image.h"
 #include "layout.h"
 #include "manual.h"
 #include "math_data.h"
@@ -30,6 +31,24 @@ FL_INLINE void fl_ui_text_ctx(struct FlContext* flowi_ctx, const char* text) {
 }
 
 #define fl_ui_text(text_) fl_ui_text_ctx(flowi_ctx, text_)
+
+// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
+void fl_ui_image_impl(struct FlContext* flowi_ctx, FlImage image);
+
+FL_INLINE void fl_ui_image_ctx(struct FlContext* flowi_ctx, FlImage image) {
+    fl_ui_image_impl(flowi_ctx, image);
+}
+
+#define fl_ui_image(image) fl_ui_image_ctx(flowi_ctx, image)
+
+// Draw image with given size
+void fl_ui_image_with_size_impl(struct FlContext* flowi_ctx, FlImage image, FlVec2 size);
+
+FL_INLINE void fl_ui_image_with_size_ctx(struct FlContext* flowi_ctx, FlImage image, FlVec2 size) {
+    fl_ui_image_with_size_impl(flowi_ctx, image, size);
+}
+
+#define fl_ui_image_with_size(image, size) fl_ui_image_with_size_ctx(flowi_ctx, image, size)
 
 // Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
 void fl_ui_set_pos_impl(struct FlContext* flowi_ctx, FlVec2 pos);

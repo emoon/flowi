@@ -1,8 +1,8 @@
 #pragma once
 
-#include "render.h"
 #include "allocator.h"
 #include "linear_allocator.h"
+#include "render.h"
 #include "types.h"
 
 #define FL_FRAME_HISTORY 2
@@ -31,6 +31,7 @@ typedef enum VertexAllocType {
 
 typedef struct VertexAllocator {
     LinearAllocator allocators[FL_FRAME_HISTORY][VertexAllocType_SIZEOF][VertexStreamAllocatorType_SIZEOF];
+    u32 index_offset;
     int frame_index;
 } VertexAllocator;
 

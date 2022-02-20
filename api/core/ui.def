@@ -1,9 +1,14 @@
 mod layout
 mod math_data
+mod image
 
 struct Ui {
     dummy: u32,
     [static] text(text: String),
+    /// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
+    [static] image(image: Image),
+    /// Draw image with given size
+    [static] image_with_size(image: Image, size: Vec2),
     /// Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
     [static] set_pos(pos: Vec2),
     /// Get the last widget size. This is usually used for doing manual layouting
