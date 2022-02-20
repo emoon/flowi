@@ -47,6 +47,7 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     image->info.width = x;
     image->info.height = y;
     image->format = FlTextureFormat_Rgba8Srgb;
+    image->texture_id = 0;
     image->name = StringAllocator_copy_string(&ctx->string_allocator, name);
 
     return image->handle;
