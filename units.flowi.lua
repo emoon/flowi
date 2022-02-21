@@ -18,6 +18,7 @@ local FLOWI_DIR = "core/c/src/"
 local FREETYPE2_LIB = "core/c/external/freetype2/"
 local STB_LIB = "core/c/external/stb/"
 local TLSF_LIB = "core/c/external/tlsf/"
+local NANOSVG_LIB = "core/c/external/nanosvg/"
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -102,6 +103,7 @@ StaticLibrary {
 
     Sources = {
         STB_LIB .. "stb.c",
+        NANOSVG_LIB .. "nanosvg.c",
         get_c_src(FLOWI_DIR),
     },
 }

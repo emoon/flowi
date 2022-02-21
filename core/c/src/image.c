@@ -151,10 +151,11 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
     //       image data instead
 
     const u8* src = self->data;
+    const int image_stride = self->info.width * 4;  // TODO: Calculate multiply
 
     for (int h = 0, height = self->info.height; h < height; ++h) {
-        memcpy(dest, src, self->info.width * 4);
-        src += self->info.width * 4;  // TODO: Calculate multiply
+        memcpy(dest, src, image_stride);
+        src += image_stride;
         dest += stride / 4;
     }
 
