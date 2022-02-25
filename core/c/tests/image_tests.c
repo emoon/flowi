@@ -6,11 +6,25 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-UTEST(Image, load_file_ok) {
+UTEST(Image, load_file_ok_stb) {
     struct FlGlobalState* state = fl_create(NULL);
     struct FlContext* flowi_ctx = fl_context_create(state);
 
     FlImage id = fl_image_create_from_file("data/uv.png");
+    ASSERT_NE(0, id);
+
+    fl_image_destroy(id);
+    fl_context_destroy(flowi_ctx);
+    fl_destroy(state);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(Image, load_file_ok_svg) {
+    struct FlGlobalState* state = fl_create(NULL);
+    struct FlContext* flowi_ctx = fl_context_create(state);
+
+    FlImage id = fl_image_create_from_file("data/Freesample.svg");
     ASSERT_NE(0, id);
 
     fl_image_destroy(id);
