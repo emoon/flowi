@@ -130,6 +130,8 @@ void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
     // INFO: No need to free string name here as it's beeing freed at the cleanup of the context
 
     stbi_image_free(image_data->data);
+    nsvgDelete(image_data->svg_image);
+
     Handles_remove_handle(&ctx->global->image_handles, image);
 }
 
