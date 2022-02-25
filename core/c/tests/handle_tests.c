@@ -2,6 +2,8 @@
 #include "../src/handles.h"
 #include "utest.h"
 
+extern FlAllocator g_malloc_allocator;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define HANDLE_SHIFT (32)
@@ -20,78 +22,17 @@ FL_INLINE u32 handle_inner(u64 handle) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int s_count_malloc_fail = 0;
-
-void* dummy_alloc_count(void* user_data, u64 size) {
-    FL_UNUSED(user_data);
-    if (s_count_malloc_fail <= 0) {
-        return NULL;
-    }
-
-    s_count_malloc_fail--;
-    return malloc(size);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void* realloc_null(void* user_data, void* ptr, u64 size) {
-    FL_UNUSED(user_data);
-    FL_UNUSED(ptr);
-    FL_UNUSED(size);
-    return NULL;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Malloc based allocator. We should use tslf or similar in a sandbox, but this is atleast in one place
-
-static void* alloc_malloc(void* user_data, u64 size) {
-    FL_UNUSED(user_data);
-    return malloc(size);
-}
-
-static void* realloc_malloc(void* user_data, void* ptr, u64 size) {
-    FL_UNUSED(user_data);
-    return realloc(ptr, size);
-}
-
-static void free_malloc(void* user_data, void* ptr) {
-    FL_UNUSED(user_data);
-    free(ptr);
-}
-
-static FlAllocator malloc_allocator = {
-    alloc_malloc, NULL, realloc_malloc, free_malloc, NULL,
-};
-
-static FlAllocator malloc_alloc_count_fail_allocator = {
-    dummy_alloc_count, NULL, realloc_malloc, free_malloc, NULL,
-};
-
-static FlAllocator malloc_realloc_fail_allocator = {
-    alloc_malloc, NULL, realloc_null, free_malloc, NULL,
-};
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(Handles, create_destroy) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 2, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 2, 8));
     Handles_destroy(&handles);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-UTEST(Handles, create_alloc_fail_destroy) {
-    s_count_malloc_fail = 0;
-    Handles handles;
-    ASSERT_FALSE(Handles_create_impl(&handles, &malloc_alloc_count_fail_allocator, 2, 8));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(Handles, create_destroy_validate_init) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 2, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 2, 8));
 
     ASSERT_EQ(handles.len, 0);
     ASSERT_EQ(handles.capacity, 2);
@@ -106,7 +47,7 @@ UTEST(Handles, create_destroy_validate_init) {
 
 UTEST(Handles, create_handles) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 4, 8));
 
     u64 h = *(u64*)Handles_create_handle(&handles);
 
@@ -127,7 +68,7 @@ UTEST(Handles, create_handles) {
 
 UTEST(Handles, create_handles_2) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 4, 8));
 
     u64 h = *(u64*)Handles_create_handle(&handles);
 
@@ -148,7 +89,7 @@ UTEST(Handles, create_handles_2) {
 
 UTEST(Handles, test_realloc) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 1, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 1, 8));
 
     ASSERT_EQ(1, handles.capacity);
     Handles_create_handle(&handles);
@@ -165,22 +106,9 @@ UTEST(Handles, test_realloc) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-UTEST(Handles, test_realloc_fail) {
-    Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_realloc_fail_allocator, 1, 8));
-
-    ASSERT_EQ(1, handles.capacity);
-    ASSERT_NE(NULL, Handles_create_handle(&handles));
-    ASSERT_EQ(NULL, Handles_create_handle(&handles));
-
-    Handles_destroy(&handles);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(Handles, create_remove_1) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 4, 8));
 
     u64 h = *(u64*)Handles_create_handle(&handles);
     ASSERT_EQ(1, handles.len);
@@ -198,7 +126,7 @@ UTEST(Handles, create_remove_1) {
 
 UTEST(Handles, create_remove_2) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 4, 8));
 
     Handles_create_handle(&handles);
     u64 h = *(u64*)Handles_create_handle(&handles);
@@ -224,7 +152,7 @@ UTEST(Handles, create_remove_2) {
 
 UTEST(Handles, test_valid_handle) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 4, 8));
 
     Handles_create_handle(&handles);
     u64 h = *(u64*)Handles_create_handle(&handles);
@@ -242,7 +170,7 @@ UTEST(Handles, test_valid_handle) {
 
 UTEST(Handles, test_remove_invalid) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 4, 8));
 
     u64 h = *(u64*)Handles_create_handle(&handles);
     Handles_remove_handle(&handles, h | 0x111);
@@ -257,7 +185,7 @@ UTEST(Handles, test_remove_invalid) {
 
 UTEST(Handles, test_get_data) {
     Handles handles;
-    ASSERT_TRUE(Handles_create_impl(&handles, &malloc_allocator, 4, 8));
+    ASSERT_TRUE(Handles_create_impl(&handles, &g_malloc_allocator, 4, 8));
 
     u64* d0 = Handles_create_handle(&handles);
     u64 h0 = *d0;
@@ -265,11 +193,10 @@ UTEST(Handles, test_get_data) {
     u64* d1 = Handles_create_handle(&handles);
     u64 h1 = *d1;
 
-	ASSERT_EQ(d0, Handles_get_data(&handles, h0));
-	ASSERT_EQ(d1, Handles_get_data(&handles, h1));
-	ASSERT_EQ(NULL, Handles_get_data(&handles, h0 | 0x333));
-	ASSERT_EQ(NULL, Handles_get_data(&handles, h1 | 0x222));
+    ASSERT_EQ(d0, Handles_get_data(&handles, h0));
+    ASSERT_EQ(d1, Handles_get_data(&handles, h1));
+    ASSERT_EQ(NULL, Handles_get_data(&handles, h0 | 0x333));
+    ASSERT_EQ(NULL, Handles_get_data(&handles, h1 | 0x222));
 
     Handles_destroy(&handles);
 }
-

@@ -307,7 +307,7 @@ Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalStat
     self->nodes = FlAllocator_alloc_array_type(allocator, PRE_ALLOC_COUNT, AtlasNode);
     self->capacity = PRE_ALLOC_COUNT;
     self->image_type = image_type;
-    self->image_stride = w * image_stride_mul;
+    self->image_stride = w;  // * image_stride_mul; TODO: Investigate why this isn't the case
     self->image_stride_mul = image_stride_mul;
     self->image_data = image_data;
 

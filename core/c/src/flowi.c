@@ -63,8 +63,15 @@ static void free_malloc(void* user_data, void* ptr) {
     free(ptr);
 }
 
+static void memory_error(void* user_data, const char* text, int text_len) {
+    FL_UNUSED(user_data);
+    FL_UNUSED(text);
+    FL_UNUSED(text_len);
+    printf("Ran out of memory! :(\n");
+}
+
 static FlAllocator malloc_allocator = {
-    alloc_malloc, NULL, realloc_malloc, free_malloc, NULL,
+    FlAllocatorError_Exit, NULL, memory_error, alloc_malloc, NULL, realloc_malloc, free_malloc,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,27 +79,13 @@ static FlAllocator malloc_allocator = {
 FlContext* fl_context_create(struct FlGlobalState* state) {
     // TODO: Custom allocator
     FlContext* ctx = FlAllocator_alloc_zero_type(&malloc_allocator, FlContext);
-    FL_TRY_ALLOC_NULL(ctx);
-
     // TODO: Configure these values
     int vertex_sizes[VertexAllocType_SIZEOF] = {1024 * 1024, 1024 * 1024};
     int index_sizes[VertexAllocType_SIZEOF] = {512 * 1024, 512 * 1024};
 
-    if (!VertexAllocator_create(&ctx->vertex_allocator, &malloc_allocator, vertex_sizes, index_sizes, true)) {
-        // TODO: Add error
-        return NULL;
-    }
-
-    if (!LinearAllocator_create_with_allocator(&ctx->layout_allocator, "layout allocator", &malloc_allocator, 1024,
-                                               true)) {
-        // TODO: Add error
-        return NULL;
-    }
-
-    if (!StringAllocator_create(&ctx->string_allocator, &malloc_allocator)) {
-        // TODO: Add error
-        return NULL;
-    }
+    VertexAllocator_create(&ctx->vertex_allocator, &malloc_allocator, vertex_sizes, index_sizes, true);
+    LinearAllocator_create_with_allocator(&ctx->layout_allocator, "layout allocator", &malloc_allocator, 1024, true);
+    StringAllocator_create(&ctx->string_allocator, &malloc_allocator);
 
     Layout_create_default(ctx);
     ctx->layout_mode = FlLayoutMode_Automatic;
@@ -107,25 +100,21 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
 // This to be called before using any other functions
 
 struct FlGlobalState* fl_create(const FlSettings* settings) {
-    FlGlobalState* state = NULL;
     FL_UNUSED(settings);
 
-    FL_TRY_ALLOC_NULL(state = FlAllocator_alloc_zero_type(&malloc_allocator, FlGlobalState));
+    FlGlobalState* state = FlAllocator_alloc_zero_type(&malloc_allocator, FlGlobalState);
     state->global_allocator = &malloc_allocator;
 
-    FL_TRY_ALLOC_NULL(
-        (CommandBuffer_create(&state->primitive_commands, "primitives", state->global_allocator, 4 * 1024)));
-    FL_TRY_ALLOC_NULL((CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024)));
-    FL_TRY_ALLOC_NULL((Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate)));
-    FL_TRY_ALLOC_NULL((Handles_create(&state->font_handles, state->global_allocator, 16, Font)));
+    CommandBuffer_create(&state->primitive_commands, "primitives", state->global_allocator, 4 * 1024);
+    CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024);
+    Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate);
+    Handles_create(&state->font_handles, state->global_allocator, 16, Font);
 
     // TODO: We should check settings for texture size
-    FL_TRY_ALLOC_NULL(
-        (state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, state, state->global_allocator)));
+    state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, state, state->global_allocator);
 
     // TODO: We should check settings for texture size
-    FL_TRY_ALLOC_NULL(
-        (state->images_atlas = Atlas_create(4096, 4096, AtlasImageType_RGBA8, state, state->global_allocator)));
+    state->images_atlas = Atlas_create(4096, 4096, AtlasImageType_RGBA8, state, state->global_allocator);
 
     Font_init(state);
 

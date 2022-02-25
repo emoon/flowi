@@ -138,7 +138,7 @@ FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString name, uint8_
         return 0;
     }
 
-    FL_TRY_ALLOC_NULL(font = font_create(ctx, face));
+    font = font_create(ctx, face);
 
     // Hack: do proper allocator
     font->font_data_to_free = (u8*)font_data;

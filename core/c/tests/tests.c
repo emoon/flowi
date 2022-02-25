@@ -4,6 +4,34 @@
 #include "utest.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Malloc based allocator. We should use tslf or similar in a sandbox, but this is atleast in one place
+
+static void* alloc_malloc(void* user_data, u64 size) {
+    FL_UNUSED(user_data);
+    return malloc(size);
+}
+
+static void* realloc_malloc(void* user_data, void* ptr, u64 size) {
+    FL_UNUSED(user_data);
+    return realloc(ptr, size);
+}
+
+static void free_malloc(void* user_data, void* ptr) {
+    FL_UNUSED(user_data);
+    free(ptr);
+}
+
+static void memory_error(void* user_data, const char* text, int text_len) {
+    FL_UNUSED(user_data);
+    FL_UNUSED(text);
+    FL_UNUSED(text_len);
+}
+
+FlAllocator g_malloc_allocator = {
+    FlAllocatorError_Exit, NULL, memory_error, alloc_malloc, NULL, realloc_malloc, free_malloc,
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(Io, load_file_fail) {
     struct FlGlobalState* state = fl_create(NULL);

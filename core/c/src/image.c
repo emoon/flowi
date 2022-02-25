@@ -1,4 +1,5 @@
 #include <flowi_core/image.h>
+#include <nanosvg.h>
 #include <stb_image.h>
 #include "atlas.h"
 #include "image_private.h"
@@ -14,6 +15,7 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     int y = 0;
     int channels_in_file = 0;
     u8* image_data = NULL;
+    NSVGimage* svg_image = NULL;
 
     char temp_buffer[2048];
     const char* filename =
@@ -28,22 +30,36 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     // if data is set we assume that we are going to load from memory
     if (data) {
         image_data = stbi_load_from_memory(data, size, &x, &y, &channels_in_file, 4);
+
+        if (!image_data) {
+            svg_image = nsvgParse((char*)data, "px", 256);
+        }
     } else {
         image_data = stbi_load(filename, &x, &y, &channels_in_file, 4);
+
+        if (!image_data) {
+            svg_image = nsvgParseFromFile(filename, "px", 96);
+        }
     }
 
-    if (!image_data) {
+    if (!image_data && !svg_image) {
         // TODO: Handle case where string is not null-terminated
         ERROR_ADD(FlError_Image, "Unable to load %s", filename);
         return 0;
     }
 
     ImagePrivate* image = Handles_create_handle(&ctx->global->image_handles);
-    FL_TRY_ALLOC_INT(image);
     // Fill image data
     // TODO: Currenty assumes 4 bytes per pixel
     // TODO: Make sure we pick the correct texture format
+
+    // for svg images we simply put an 256x256 as size and the user has to set the size that makes sense for them
+    if (svg_image) {
+        x = y = 256;
+    }
+
     image->data = image_data;
+    image->svg_image = svg_image;
     image->info.width = x;
     image->info.height = y;
     image->format = FlTextureFormat_Rgba8Srgb;
@@ -83,7 +99,9 @@ FlImage fl_image_create_from_memory_impl(struct FlContext* ctx, FlString name, u
 FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self) {
     ImagePrivate* data = NULL;
 
-    FL_TRY_ALLOC_NULL(data = get_handle(ctx, self));
+    if (!(data = get_handle(ctx, self))) {
+        return NULL;
+    }
 
     return &data->info;
 }
@@ -146,17 +164,21 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
         return false;
     }
 
+    const u8* src = self->data;
+
+    if (self->svg_image) {
+    }
+
     // Copy the the image data to the atlas
     // TODO: not doing a copy and only use the atlas for virtual data and copy directly from
     //       image data instead
 
-    const u8* src = self->data;
     const int image_stride = self->info.width * 4;  // TODO: Calculate multiply
 
     for (int h = 0, height = self->info.height; h < height; ++h) {
         memcpy(dest, src, image_stride);
         src += image_stride;
-        dest += stride / 4;
+        dest += stride;
     }
 
     self->texture_id = atlas->texture_id;

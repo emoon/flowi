@@ -30,7 +30,7 @@ bool Handles_create_impl(Handles* self, FlAllocator* allocator, int capacity, in
 
     // Lock_create(self->lock);
 
-    FL_TRY_ALLOC_BOOL(objs_free_slots = FlAllocator_alloc(allocator, object_size + free_slot_size));
+    objs_free_slots = FlAllocator_alloc(allocator, object_size + free_slot_size);
 
     self->allocator = allocator;
     self->objects = objs_free_slots;
@@ -92,7 +92,7 @@ void* Handles_create_handle(Handles* self) {
             const int free_slots_size = sizeof(u32) * cap;
             const int size = object_size + free_slots_size;
 
-            FL_TRY_ALLOC_NULL(objs_free_slots = FlAllocator_realloc(self->allocator, self->objects, size));
+            objs_free_slots = FlAllocator_realloc(self->allocator, self->objects, size);
 
             self->objects = objs_free_slots;
             self->free_slots = (u32*)(objs_free_slots + object_size);

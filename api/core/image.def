@@ -19,6 +19,7 @@ struct Image {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
+    /// SVG (Basic types only, non-color)
     [static] create_from_file(filename: String) -> Image?,
     /// Load image from memory. Supported formats are:
     /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
@@ -30,6 +31,7 @@ struct Image {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
+    /// SVG (Basic types only, non-color)
     [static] create_from_memory(name: String, data: [u8]) -> Image?,
     /// Get data amout the image
     get_info() -> *const ImageInfo?,

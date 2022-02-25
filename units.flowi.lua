@@ -99,6 +99,7 @@ StaticLibrary {
         "core/c/external/tslf",
         "core/c/include/",
         STB_LIB,
+        NANOSVG_LIB,
     },
 
     Sources = {
