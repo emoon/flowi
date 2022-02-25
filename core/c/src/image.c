@@ -1,5 +1,6 @@
 #include <flowi_core/image.h>
 #include <nanosvg.h>
+#include <nanosvgrast.h>
 #include <stb_image.h>
 #include "atlas.h"
 #include "image_private.h"
@@ -16,6 +17,7 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     int channels_in_file = 0;
     u8* image_data = NULL;
     NSVGimage* svg_image = NULL;
+    int svg_size = 96 / 2;
 
     char temp_buffer[2048];
     const char* filename =
@@ -26,13 +28,13 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
         image_data = stbi_load_from_memory(data, size, &x, &y, &channels_in_file, 4);
 
         if (!image_data) {
-            svg_image = nsvgParse((char*)data, "px", 256);
+            svg_image = nsvgParse((char*)data, "px", svg_size);
         }
     } else {
         image_data = stbi_load(filename, &x, &y, &channels_in_file, 4);
 
         if (!image_data) {
-            svg_image = nsvgParseFromFile(filename, "px", 96);
+            svg_image = nsvgParseFromFile(filename, "px", svg_size);
         }
     }
 
@@ -49,11 +51,13 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
 
     // for svg images we simply put an 256x256 as size and the user has to set the size that makes sense for them
     if (svg_image) {
-        x = y = 256;
+        x = svg_image->width;
+        y = svg_image->height;
     }
 
     image->data = image_data;
     image->svg_image = svg_image;
+    image->svg_raster = NULL;
     image->info.width = x;
     image->info.height = y;
     image->format = FlTextureFormat_Rgba8Srgb;
@@ -131,6 +135,7 @@ void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
 
     stbi_image_free(image_data->data);
     nsvgDelete(image_data->svg_image);
+    nsvgDeleteRasterizer(image_data->svg_raster);
 
     Handles_remove_handle(&ctx->global->image_handles, image);
 }
@@ -154,21 +159,32 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
         return false;
     }
 
-    const u8* src = self->data;
-
     if (self->svg_image) {
-    }
+        if (!self->svg_raster) {
+            self->svg_raster = nsvgCreateRasterizer();
+        }
 
-    // Copy the the image data to the atlas
-    // TODO: not doing a copy and only use the atlas for virtual data and copy directly from
-    //       image data instead
+        int width = self->svg_image->width;
+        int height = self->svg_image->height;
 
-    const int image_stride = self->info.width * 4;  // TODO: Calculate multiply
+        printf("%d %d\n", width, height);
 
-    for (int h = 0, height = self->info.height; h < height; ++h) {
-        memcpy(dest, src, image_stride);
-        src += image_stride;
-        dest += stride;
+        nsvgRasterize(self->svg_raster, self->svg_image, 0.0f, 0.0f, 1.0f, dest, width, height, stride);
+
+    } else {
+        // Copy the the image data to the atlas
+        // TODO: not doing a copy and only use the atlas for virtual data and copy directly from
+        //       image data instead
+        const u8* src = self->data;
+        const int image_stride = self->info.width * 4;  // TODO: Calculate multiply
+
+        for (int h = 0, height = self->info.height; h < height; ++h) {
+            memcpy(dest, src, image_stride);
+            src += image_stride;
+            dest += stride;
+        }
+
+        src = self->data;
     }
 
     self->texture_id = atlas->texture_id;

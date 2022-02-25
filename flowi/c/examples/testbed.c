@@ -48,7 +48,7 @@ int main() {
     App app = {
         .font_bold = fl_font_new_from_file("data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
         .font = fl_font_new_from_file("data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
-        .image = fl_image_create_from_file("data/uv.png"),
+        .image = fl_image_create_from_file("data/Freesample.svg"),
     };
 
     fl_application_main_loop(main_loop, &app);
