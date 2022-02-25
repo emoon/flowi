@@ -68,6 +68,26 @@ UTEST(Image, load_file_from_memory) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+UTEST(Image, load_file_from_memory_svg) {
+    struct FlGlobalState* state = fl_create(NULL);
+    struct FlContext* flowi_ctx = fl_context_create(state);
+
+    u32 size = 0;
+    u8* data = Io_load_file_to_memory(flowi_ctx, "data/Freesample.svg", &size);
+    ASSERT_NE(NULL, data);
+
+    FlImage id = fl_image_create_from_memory("svg", data, size);
+    ASSERT_NE(0, id);
+
+    FlAllocator_free(state->global_allocator, data);
+
+    fl_image_destroy(id);
+    fl_context_destroy(flowi_ctx);
+    fl_destroy(state);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 UTEST(Image, load_file_get_data_ok) {
     struct FlGlobalState* state = fl_create(NULL);
     struct FlContext* flowi_ctx = fl_context_create(state);
