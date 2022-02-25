@@ -156,3 +156,21 @@ UTEST(LinearAllocator, update_resize) {
 
     allocator_destroy(&alloc);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(LinearAllocator, realloc) {
+    LinearAllocator alloc;
+    LinearAllocator_create_with_allocator(&alloc, "alloc", &g_malloc_allocator, 1, true);
+
+    u8* t0 = LinearAllocator_alloc(&alloc, u8);
+    *t0 = 0xde;
+
+    // should be realloced here and contain the same data but different pointer
+    LinearAllocator_alloc(&alloc, u8);
+
+    ASSERT_EQ(t0, alloc.start_data);
+    ASSERT_EQ(0xde, alloc.start_data[0]);
+
+    LinearAllocator_destroy(&alloc);
+}
