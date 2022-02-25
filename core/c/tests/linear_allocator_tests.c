@@ -169,7 +169,7 @@ UTEST(LinearAllocator, realloc) {
     // should be realloced here and contain the same data but different pointer
     LinearAllocator_alloc(&alloc, u8);
 
-    ASSERT_EQ(t0, alloc.start_data);
+    ASSERT_NE(t0, alloc.start_data);
     ASSERT_EQ(0xde, alloc.start_data[0]);
 
     LinearAllocator_destroy(&alloc);
