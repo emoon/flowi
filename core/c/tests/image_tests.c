@@ -73,7 +73,7 @@ UTEST(Image, load_file_from_memory_svg) {
     struct FlContext* flowi_ctx = fl_context_create(state);
 
     u32 size = 0;
-    u8* data = Io_load_file_to_memory(flowi_ctx, "data/Freesample.svg", &size);
+    u8* data = Io_load_file_to_memory_null_term(flowi_ctx, "data/Freesample.svg", &size);
     ASSERT_NE(NULL, data);
 
     FlImage id = fl_image_create_from_memory("svg", data, size);

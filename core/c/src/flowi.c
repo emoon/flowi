@@ -83,9 +83,12 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
     int vertex_sizes[VertexAllocType_SIZEOF] = {1024 * 1024, 1024 * 1024};
     int index_sizes[VertexAllocType_SIZEOF] = {512 * 1024, 512 * 1024};
 
+    LinearAllocator_create_with_allocator(&ctx->frame_allocator, "string tracking allocator", &malloc_allocator,
+                                          10 * 1024, true);
+
     VertexAllocator_create(&ctx->vertex_allocator, &malloc_allocator, vertex_sizes, index_sizes, true);
     LinearAllocator_create_with_allocator(&ctx->layout_allocator, "layout allocator", &malloc_allocator, 1024, true);
-    StringAllocator_create(&ctx->string_allocator, &malloc_allocator);
+    StringAllocator_create(&ctx->string_allocator, &malloc_allocator, &ctx->frame_allocator);
 
     Layout_create_default(ctx);
     ctx->layout_mode = FlLayoutMode_Automatic;
@@ -360,7 +363,7 @@ void fl_frame_end(struct FlContext* ctx) {
 
     VertexAllocator_end_frame(&ctx->vertex_allocator);
     CommandBuffer_rewind(&state->primitive_commands);
-    StringAllocator_end_frame(&ctx->string_allocator);
+    LinearAllocator_rewind(&ctx->frame_allocator);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -393,6 +396,7 @@ void fl_context_destroy(struct FlContext* self) {
     LinearAllocator_destroy(&self->layout_allocator);
     VertexAllocator_destroy(&self->vertex_allocator);
     StringAllocator_destroy(&self->string_allocator);
+    LinearAllocator_destroy(&self->frame_allocator);
 
     FlAllocator_free(allocator, self);
 }

@@ -26,7 +26,7 @@ static FlString copy_cstr(StringAllocator* self, const char* str, int len, Alloc
     char* str_data = NULL;
 
     if (FL_LIKELY(type == AllocType_Frame)) {
-        str_data = LinearAllocator_alloc_array(&self->frame_allocator, char, len + 1);
+        str_data = LinearAllocator_alloc_array(self->frame_allocator, char, len + 1);
     } else if (type == AllocType_Persistant) {
         str_data = FlAllocator_alloc_array_type(self->allocator, len + 1, char);
         char** track = LinearAllocator_alloc(&self->tracking, char*);
@@ -49,16 +49,13 @@ static FlString copy_cstr(StringAllocator* self, const char* str, int len, Alloc
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool StringAllocator_create(StringAllocator* self, struct FlAllocator* allocator) {
+bool StringAllocator_create(StringAllocator* self, struct FlAllocator* allocator, LinearAllocator* frame_allocator) {
     memset(self, 0, sizeof(StringAllocator));
 
-    int intial_frame_allocator_size = 64 * 1024;
     int intial_tracking_size = 1024;
 
     self->allocator = allocator;
-
-    LinearAllocator_create_with_allocator(&self->frame_allocator, "frame string allocator", allocator,
-                                          intial_frame_allocator_size, true);
+    self->frame_allocator = frame_allocator;
 
     LinearAllocator_create_with_allocator(&self->tracking, "string tracking allocator", allocator, intial_tracking_size,
                                           true);
@@ -78,16 +75,9 @@ void StringAllocator_destroy(StringAllocator* self) {
         FlAllocator_free(self->allocator, s);
     }
 
-    LinearAllocator_destroy(&self->frame_allocator);
     LinearAllocator_destroy(&self->tracking);
 
     self->string_count = 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void StringAllocator_end_frame(StringAllocator* self) {
-    LinearAllocator_rewind(&self->frame_allocator);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

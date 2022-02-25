@@ -112,6 +112,7 @@ typedef struct FlContext {
     FlLayoutAreaId default_layout;
     FlLayoutAreaId active_layout;
     FlLayoutMode layout_mode;
+    LinearAllocator frame_allocator;
 
     StringAllocator string_allocator;
 
@@ -130,5 +131,6 @@ typedef struct FlContext {
 
 // TODO: Use custom io functions
 // TODO: Custom allocator
+u8* Io_load_file_to_memory_null_term(FlContext* ctx, const char* filename, u32* out_size);
 u8* Io_load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size);
 u8* Io_load_file_to_memory_flstring(FlContext* ctx, FlString name, u32* out_size);

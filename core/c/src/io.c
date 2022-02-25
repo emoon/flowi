@@ -69,10 +69,8 @@ u8* Io_load_file_to_memory_flstring(FlContext* ctx, FlString name, u32* out_size
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Add support to override IO functions
-// TODO: Add allocator
 
-u8* Io_load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size) {
-    // TODO: Use internal/sandboxed allocator
+static u8* load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size, int pad_memory_size) {
     FILE* f = open_file(filename, "rb");
     u8* data = NULL;
     *out_size = 0;
@@ -99,12 +97,7 @@ u8* Io_load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size) 
         goto cleanup;
     }
 
-    data = FlAllocator_alloc_array_type(ctx->global->global_allocator, filesize, u8);
-
-    if (!data) {
-        ERROR_ADD(FlError_Memory, "Unable to allocated %d bytes for reading file %s to memory", filesize, filename);
-        goto cleanup;
-    }
+    data = FlAllocator_alloc_array_type(ctx->global->global_allocator, filesize + pad_memory_size, u8);
 
     if (fread(data, 1, filesize, f) != (size_t)filesize) {
         ERROR_ADD(FlError_Io, "Unable to read the whole %s file to memory, size %d", filename, filesize);
@@ -120,7 +113,23 @@ cleanup:
         fclose(f);
     }
 
+    if (pad_memory_size > 0) {
+        data[filesize + (pad_memory_size - 1)] = 0;
+    }
+
     return data;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+u8* Io_load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size) {
+    return load_file_to_memory(ctx, filename, out_size, 0);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+u8* Io_load_file_to_memory_null_term(FlContext* ctx, const char* filename, u32* out_size) {
+    return load_file_to_memory(ctx, filename, out_size, 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -9,16 +9,15 @@ struct FlAllocator;
 
 typedef struct StringAllocator {
     struct FlAllocator* allocator;
-    LinearAllocator frame_allocator;
+    LinearAllocator* frame_allocator;
     LinearAllocator tracking;
     int string_count;
 } StringAllocator;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool StringAllocator_create(StringAllocator* self, struct FlAllocator* allocator);
+bool StringAllocator_create(StringAllocator* self, struct FlAllocator* allocator, LinearAllocator* frame_allocator);
 void StringAllocator_destroy(StringAllocator* self);
-void StringAllocator_end_frame(StringAllocator* self);
 
 /// Frame based allocator. FlString will be invalid after next update
 FlString StringAllocator_copy_cstr_frame(StringAllocator* self, const char* str);
