@@ -108,13 +108,13 @@ static u8* load_file_to_memory(FlContext* ctx, const char* filename, u32* out_si
 
     *out_size = (u32)filesize;
 
+    if (pad_memory_size > 0) {
+        data[filesize + (pad_memory_size - 1)] = 0;
+    }
+
 cleanup:
     if (f) {
         fclose(f);
-    }
-
-    if (pad_memory_size > 0) {
-        data[filesize + (pad_memory_size - 1)] = 0;
     }
 
     return data;
