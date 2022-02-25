@@ -21,12 +21,6 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     const char* filename =
         StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
 
-    if (!filename) {
-        // TODO: Handle case where string is not null-terminated
-        ERROR_ADD(FlError_Image, "Unable to load: %s", "fixme");
-        return 0;
-    }
-
     // if data is set we assume that we are going to load from memory
     if (data) {
         image_data = stbi_load_from_memory(data, size, &x, &y, &channels_in_file, 4);
@@ -117,12 +111,6 @@ void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
 
     PrimitiveImage* prim = Primitive_alloc_image(ctx->global);
 
-    if (FL_UNLIKELY(!prim)) {
-        ERROR_ADD(FlError_Font, "unable to draw from texture: %s out of memory in primitive allocator: %s",
-                  self->name.str);
-        return;
-    }
-
     prim->image = self;
     prim->position = ctx->cursor;
     prim->size.x = self->info.width;
@@ -196,9 +184,7 @@ bool Image_render(struct FlContext* ctx, const u8* cmd) {
     FlVertPosUvColor* vertices = NULL;
     FlIdxSize* index_buffer = NULL;
 
-    if (!VertexAllocator_alloc_pos_uv_color(&ctx->vertex_allocator, &vertices, &index_buffer, 4, 6)) {
-        return false;
-    }
+    VertexAllocator_alloc_pos_uv_color(&ctx->vertex_allocator, &vertices, &index_buffer, 4, 6);
 
     // TODO: fixme
     u32 color = 0xffffffff;

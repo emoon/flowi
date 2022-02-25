@@ -31,18 +31,8 @@ static FlString copy_cstr(StringAllocator* self, const char* str, int len, Alloc
         str_data = FlAllocator_alloc_array_type(self->allocator, len + 1, char);
         char** track = LinearAllocator_alloc(&self->tracking, char*);
 
-        if (FL_UNLIKELY(!track || !str_data)) {
-            ERROR_ADD(FlError_Generic, "Unable to allocate memory for string tracking: %d", sizeof(char*));
-            return ret_val;
-        }
-
         *track = str_data;
         self->string_count++;
-    }
-
-    if (FL_UNLIKELY(!str_data)) {
-        ERROR_ADD(FlError_Generic, "Unable to allocate memory for string: %s", str);
-        return ret_val;
     }
 
     memcpy(str_data, str, len);
@@ -67,17 +57,11 @@ bool StringAllocator_create(StringAllocator* self, struct FlAllocator* allocator
 
     self->allocator = allocator;
 
-    if (!LinearAllocator_create_with_allocator(&self->frame_allocator, "frame string allocator", allocator,
-                                               intial_frame_allocator_size, true)) {
-        ERROR_ADD(FlError_Memory, "Unable to allocate %d bytes for frame allocator", intial_frame_allocator_size);
-        return false;
-    }
+    LinearAllocator_create_with_allocator(&self->frame_allocator, "frame string allocator", allocator,
+                                          intial_frame_allocator_size, true);
 
-    if (!LinearAllocator_create_with_allocator(&self->tracking, "string tracking allocator", allocator,
-                                               intial_tracking_size, true)) {
-        ERROR_ADD(FlError_Memory, "Unable to allocate %d bytes for string tracking allocator", intial_tracking_size);
-        return false;
-    }
+    LinearAllocator_create_with_allocator(&self->tracking, "string tracking allocator", allocator, intial_tracking_size,
+                                          true);
 
     self->string_count = 0;
 
