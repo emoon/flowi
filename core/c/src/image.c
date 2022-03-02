@@ -1,4 +1,6 @@
 #include <flowi_core/image.h>
+#include <nanosvg.h>
+#include <nanosvgrast.h>
 #include <stb_image.h>
 #include "atlas.h"
 #include "image_private.h"
@@ -14,36 +16,47 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     int y = 0;
     int channels_in_file = 0;
     u8* image_data = NULL;
+    NSVGimage* svg_image = NULL;
+    int svg_size = 96;
 
     char temp_buffer[2048];
     const char* filename =
         StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
 
-    if (!filename) {
-        // TODO: Handle case where string is not null-terminated
-        ERROR_ADD(FlError_Image, "Unable to load: %s", "fixme");
-        return 0;
-    }
-
     // if data is set we assume that we are going to load from memory
     if (data) {
         image_data = stbi_load_from_memory(data, size, &x, &y, &channels_in_file, 4);
+
+        if (!image_data) {
+            svg_image = nsvgParse((char*)data, "px", svg_size);
+        }
     } else {
         image_data = stbi_load(filename, &x, &y, &channels_in_file, 4);
+
+        if (!image_data) {
+            svg_image = nsvgParseFromFile(filename, "px", svg_size);
+        }
     }
 
-    if (!image_data) {
+    if (!image_data && !svg_image) {
         // TODO: Handle case where string is not null-terminated
         ERROR_ADD(FlError_Image, "Unable to load %s", filename);
         return 0;
     }
 
     ImagePrivate* image = Handles_create_handle(&ctx->global->image_handles);
-    FL_TRY_ALLOC_INT(image);
     // Fill image data
     // TODO: Currenty assumes 4 bytes per pixel
     // TODO: Make sure we pick the correct texture format
+
+    if (svg_image) {
+        x = svg_image->width * 4;
+        y = svg_image->height * 4;
+    }
+
     image->data = image_data;
+    image->svg_image = svg_image;
+    image->svg_raster = NULL;
     image->info.width = x;
     image->info.height = y;
     image->format = FlTextureFormat_Rgba8Srgb;
@@ -83,7 +96,9 @@ FlImage fl_image_create_from_memory_impl(struct FlContext* ctx, FlString name, u
 FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self) {
     ImagePrivate* data = NULL;
 
-    FL_TRY_ALLOC_NULL(data = get_handle(ctx, self));
+    if (!(data = get_handle(ctx, self))) {
+        return NULL;
+    }
 
     return &data->info;
 }
@@ -98,12 +113,6 @@ void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
     }
 
     PrimitiveImage* prim = Primitive_alloc_image(ctx->global);
-
-    if (FL_UNLIKELY(!prim)) {
-        ERROR_ADD(FlError_Font, "unable to draw from texture: %s out of memory in primitive allocator: %s",
-                  self->name.str);
-        return;
-    }
 
     prim->image = self;
     prim->position = ctx->cursor;
@@ -124,6 +133,9 @@ void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
     // INFO: No need to free string name here as it's beeing freed at the cleanup of the context
 
     stbi_image_free(image_data->data);
+    nsvgDelete(image_data->svg_image);
+    nsvgDeleteRasterizer(image_data->svg_raster);
+
     Handles_remove_handle(&ctx->global->image_handles, image);
 }
 
@@ -146,17 +158,30 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
         return false;
     }
 
-    // Copy the the image data to the atlas
-    // TODO: not doing a copy and only use the atlas for virtual data and copy directly from
-    //       image data instead
+    if (self->svg_image) {
+        if (!self->svg_raster) {
+            self->svg_raster = nsvgCreateRasterizer();
+        }
 
-    const u8* src = self->data;
-    const int image_stride = self->info.width * 4;  // TODO: Calculate multiply
+        int width = self->info.width;
+        int height = self->info.height;
 
-    for (int h = 0, height = self->info.height; h < height; ++h) {
-        memcpy(dest, src, image_stride);
-        src += image_stride;
-        dest += stride / 4;
+        nsvgRasterize(self->svg_raster, self->svg_image, 0.0f, 0.0f, 4.0f, dest, width, height, stride);
+
+    } else {
+        // Copy the the image data to the atlas
+        // TODO: not doing a copy and only use the atlas for virtual data and copy directly from
+        //       image data instead
+        const u8* src = self->data;
+        const int image_stride = self->info.width * 4;  // TODO: Calculate multiply
+
+        for (int h = 0, height = self->info.height; h < height; ++h) {
+            memcpy(dest, src, image_stride);
+            src += image_stride;
+            dest += stride;
+        }
+
+        src = self->data;
     }
 
     self->texture_id = atlas->texture_id;
@@ -174,9 +199,7 @@ bool Image_render(struct FlContext* ctx, const u8* cmd) {
     FlVertPosUvColor* vertices = NULL;
     FlIdxSize* index_buffer = NULL;
 
-    if (!VertexAllocator_alloc_pos_uv_color(&ctx->vertex_allocator, &vertices, &index_buffer, 4, 6)) {
-        return false;
-    }
+    VertexAllocator_alloc_pos_uv_color(&ctx->vertex_allocator, &vertices, &index_buffer, 4, 6);
 
     // TODO: fixme
     u32 color = 0xffffffff;

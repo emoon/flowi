@@ -1,7 +1,9 @@
+#include <assert.h>
 #include "../src/internal.h"
 #include "../src/linear_allocator.h"
 #include "utest.h"
-#include <assert.h>
+
+extern FlAllocator g_malloc_allocator;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -14,7 +16,7 @@ static void allocator_create(LinearAllocator* alloc, const char* name, int size)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void allocator_destroy(LinearAllocator* allocator) {
-	free(allocator->start_data);
+    free(allocator->start_data);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -127,9 +129,9 @@ UTEST(LinearAllocator, size_left) {
     LinearAllocator alloc;
     allocator_create(&alloc, "test", 20);
 
-	ASSERT_EQ(LinearAllocator_memory_left(&alloc), 20);
+    ASSERT_EQ(LinearAllocator_memory_left(&alloc), 20);
     LinearAllocator_alloc(&alloc, u64);
-	ASSERT_EQ(LinearAllocator_memory_left(&alloc), 20 - 8);
+    ASSERT_EQ(LinearAllocator_memory_left(&alloc), 20 - 8);
 
     allocator_destroy(&alloc);
 }
@@ -140,148 +142,35 @@ UTEST(LinearAllocator, update_resize) {
     LinearAllocator alloc;
     allocator_create(&alloc, "test", 20);
 
-	ASSERT_EQ(LinearAllocator_current_position(&alloc), 0);
-	ASSERT_EQ(LinearAllocator_memory_left(&alloc), 20);
+    ASSERT_EQ(LinearAllocator_current_position(&alloc), 0);
+    ASSERT_EQ(LinearAllocator_memory_left(&alloc), 20);
 
     LinearAllocator_alloc(&alloc, u64);
 
     free(alloc.start_data);
 
-	LinearAllocator_update_resize(&alloc, 0, 40);
+    LinearAllocator_update_resize(&alloc, 0, 40);
 
-	ASSERT_EQ(LinearAllocator_current_position(&alloc), 8);
-	ASSERT_EQ(LinearAllocator_memory_left(&alloc), 40 - 8);
+    ASSERT_EQ(LinearAllocator_current_position(&alloc), 8);
+    ASSERT_EQ(LinearAllocator_memory_left(&alloc), 40 - 8);
 
     allocator_destroy(&alloc);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void* dummy_alloc_1(void* user_data, u64 count) {
-	assert(count == 10);
-	return (void*)2;
+UTEST(LinearAllocator, realloc) {
+    LinearAllocator alloc;
+    LinearAllocator_create_with_allocator(&alloc, "alloc", &g_malloc_allocator, 1, true);
+
+    u8* t0 = LinearAllocator_alloc(&alloc, u8);
+    *t0 = 0xde;
+
+    // should be realloced here and contain the same data but different pointer
+    u8* t1 = LinearAllocator_alloc(&alloc, u8);
+
+    ASSERT_NE(t1, alloc.start_data);
+    ASSERT_EQ(0xde, alloc.start_data[0]);
+
+    LinearAllocator_destroy(&alloc);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-UTEST(LinearAllocator, with_allocator) {
-	LinearAllocator linear_allocator;
-	FlAllocator allocator = { 0 };
-	allocator.alloc = dummy_alloc_1;
-	LinearAllocator_create_with_allocator(&linear_allocator, "with allocator", &allocator, 10, false);
-
-    u8* data = LinearAllocator_alloc(&linear_allocator, u8);
-    ASSERT_EQ((uintptr_t)data, 2);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void* dummy_alloc_2(void* user_data, u64 count) {
-	return (void*)3;
-}
-
-static void dummy_free_1(void* user_data, void* ptr) {
-	assert(((uintptr_t)ptr) == 3);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-UTEST(LinearAllocator, with_allocator_destroy) {
-	LinearAllocator linear_allocator;
-	FlAllocator allocator = { 0 };
-	allocator.alloc = dummy_alloc_2;
-	allocator.free = dummy_free_1;
-	LinearAllocator_create_with_allocator(&linear_allocator, "with allocator", &allocator, 10, false);
-	LinearAllocator_destroy(&linear_allocator);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void* dummy_alloc_3(void* user_data, u64 count) {
-	return (void*)3;
-}
-
-static void* dummy_realloc_1(void* user_data, void* ptr, u64 count) {
-	assert((uintptr_t)count == 20);
-	assert((uintptr_t)ptr == 3);
-	return (void*)4;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-UTEST(LinearAllocator, with_allocator_realloc) {
-	LinearAllocator linear_allocator;
-	FlAllocator allocator = { 0 };
-	allocator.alloc = dummy_alloc_3;
-	allocator.realloc = dummy_realloc_1;
-	LinearAllocator_create_with_allocator(&linear_allocator, "with allocator", &allocator, 10, true);
-
-	u8* data = LinearAllocator_alloc(&linear_allocator, u8);
-    ASSERT_EQ((uintptr_t)data, 3);
-
-	// allocate more memory than we have in the allocator, we expect it to realloc and return ptr + 1
-	// as we already have made 1 allocation
-	data = LinearAllocator_alloc_array(&linear_allocator, u8, 12);
-    ASSERT_EQ((uintptr_t)data, 5);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void* dummy_alloc_4(void* user_data, u64 count) {
-	return (void*)3;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-UTEST(LinearAllocator, with_allocator_no_realloc) {
-	LinearAllocator linear_allocator;
-	FlAllocator allocator = { 0 };
-	allocator.alloc = dummy_alloc_4;
-	LinearAllocator_create_with_allocator(&linear_allocator, "with allocator", &allocator, 10, false);
-
-	u8* data = LinearAllocator_alloc_array(&linear_allocator, u8, 11);
-    ASSERT_EQ(data, NULL);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void* dummy_alloc_5(void* user_data, u64 count) {
-	return (void*)1;
-}
-
-static void* dummy_realloc_2(void* user_data, void* ptr, u64 count) {
-	return NULL;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-UTEST(LinearAllocator, with_allocator_realloc_fail) {
-	LinearAllocator linear_allocator;
-	FlAllocator allocator = { 0 };
-	allocator.alloc = dummy_alloc_5;
-	allocator.realloc = dummy_realloc_2;
-	LinearAllocator_create_with_allocator(&linear_allocator, "with allocator", &allocator, 10, true);
-
-	u8* data = LinearAllocator_alloc(&linear_allocator, u8);
-    ASSERT_EQ((uintptr_t)data, 1);
-
-	// Expect realloc to fail as the allocator has no more memory and thus should return null
-	data = LinearAllocator_alloc_array(&linear_allocator, u8, 12);
-    ASSERT_EQ(data, NULL);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void* dummy_alloc_6(void* user_data, u64 count) {
-	return NULL;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-UTEST(LinearAllocator, with_allocator_fail) {
-	LinearAllocator linear_allocator;
-	FlAllocator allocator = { 0 };
-	allocator.alloc = dummy_alloc_6;
-	ASSERT_EQ(LinearAllocator_create_with_allocator(&linear_allocator, "with allocator", &allocator, 10, true), false);
-}
-

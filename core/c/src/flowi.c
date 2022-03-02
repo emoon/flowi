@@ -63,8 +63,15 @@ static void free_malloc(void* user_data, void* ptr) {
     free(ptr);
 }
 
+static void memory_error(void* user_data, const char* text, int text_len) {
+    FL_UNUSED(user_data);
+    FL_UNUSED(text);
+    FL_UNUSED(text_len);
+    printf("Ran out of memory! :(\n");
+}
+
 static FlAllocator malloc_allocator = {
-    alloc_malloc, NULL, realloc_malloc, free_malloc, NULL,
+    FlAllocatorError_Exit, NULL, memory_error, alloc_malloc, NULL, realloc_malloc, free_malloc,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,27 +79,16 @@ static FlAllocator malloc_allocator = {
 FlContext* fl_context_create(struct FlGlobalState* state) {
     // TODO: Custom allocator
     FlContext* ctx = FlAllocator_alloc_zero_type(&malloc_allocator, FlContext);
-    FL_TRY_ALLOC_NULL(ctx);
-
     // TODO: Configure these values
     int vertex_sizes[VertexAllocType_SIZEOF] = {1024 * 1024, 1024 * 1024};
     int index_sizes[VertexAllocType_SIZEOF] = {512 * 1024, 512 * 1024};
 
-    if (!VertexAllocator_create(&ctx->vertex_allocator, &malloc_allocator, vertex_sizes, index_sizes, true)) {
-        // TODO: Add error
-        return NULL;
-    }
+    LinearAllocator_create_with_allocator(&ctx->frame_allocator, "string tracking allocator", &malloc_allocator,
+                                          10 * 1024, true);
 
-    if (!LinearAllocator_create_with_allocator(&ctx->layout_allocator, "layout allocator", &malloc_allocator, 1024,
-                                               true)) {
-        // TODO: Add error
-        return NULL;
-    }
-
-    if (!StringAllocator_create(&ctx->string_allocator, &malloc_allocator)) {
-        // TODO: Add error
-        return NULL;
-    }
+    VertexAllocator_create(&ctx->vertex_allocator, &malloc_allocator, vertex_sizes, index_sizes, true);
+    LinearAllocator_create_with_allocator(&ctx->layout_allocator, "layout allocator", &malloc_allocator, 1024, true);
+    StringAllocator_create(&ctx->string_allocator, &malloc_allocator, &ctx->frame_allocator);
 
     Layout_create_default(ctx);
     ctx->layout_mode = FlLayoutMode_Automatic;
@@ -107,25 +103,21 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
 // This to be called before using any other functions
 
 struct FlGlobalState* fl_create(const FlSettings* settings) {
-    FlGlobalState* state = NULL;
     FL_UNUSED(settings);
 
-    FL_TRY_ALLOC_NULL(state = FlAllocator_alloc_zero_type(&malloc_allocator, FlGlobalState));
+    FlGlobalState* state = FlAllocator_alloc_zero_type(&malloc_allocator, FlGlobalState);
     state->global_allocator = &malloc_allocator;
 
-    FL_TRY_ALLOC_NULL(
-        (CommandBuffer_create(&state->primitive_commands, "primitives", state->global_allocator, 4 * 1024)));
-    FL_TRY_ALLOC_NULL((CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024)));
-    FL_TRY_ALLOC_NULL((Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate)));
-    FL_TRY_ALLOC_NULL((Handles_create(&state->font_handles, state->global_allocator, 16, Font)));
+    CommandBuffer_create(&state->primitive_commands, "primitives", state->global_allocator, 4 * 1024);
+    CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024);
+    Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate);
+    Handles_create(&state->font_handles, state->global_allocator, 16, Font);
 
     // TODO: We should check settings for texture size
-    FL_TRY_ALLOC_NULL(
-        (state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, state, state->global_allocator)));
+    state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, state, state->global_allocator);
 
     // TODO: We should check settings for texture size
-    FL_TRY_ALLOC_NULL(
-        (state->images_atlas = Atlas_create(4096, 4096, AtlasImageType_RGBA8, state, state->global_allocator)));
+    state->images_atlas = Atlas_create(4096, 4096, AtlasImageType_RGBA8, state, state->global_allocator);
 
     Font_init(state);
 
@@ -282,11 +274,7 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
         return;
     }
 
-    const int text_len = prim->text.len;
-
-    // TODO: LinearAllocator here instead of alloca and/or have treshhold
-    u32* codepoints = alloca(sizeof(u32) * text_len);
-    utf8_to_codepoints_u32(codepoints, (u8*)prim->text.str, text_len);
+    const int text_len = prim->codepoint_count;
 
     FlVertPosUvColor* vertices = NULL;
     FlIdxSize* indices = NULL;
@@ -296,8 +284,8 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
         assert(0);
     }
 
-    Text_generate_vertex_buffer_ref(vertices, indices, font, prim->font_size, codepoints, 0x0fffffff, prim->position, 0,
-                                    text_len);
+    Text_generate_vertex_buffer_ref(vertices, indices, font, prim->font_size, prim->codepoints, 0x0fffffff,
+                                    prim->position, 0, text_len);
 
     FlTexturedTriangles* tri_data = Render_textured_triangles_cmd(ctx->global);
 
@@ -313,15 +301,7 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
 
 void generate_glyphs(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
-
-    const int text_len = prim->text.len;
-
-    // TODO: we should hash the text, font, + size + dirty and don't
-    // don't try to regenerate glyphs if hash matches
-    u32* codepoints = alloca(sizeof(u32) * text_len);
-    utf8_to_codepoints_u32(codepoints, (u8*)prim->text.str, text_len);
-
-    Font_generate_glyphs(ctx, prim->font, codepoints, text_len, prim->font_size);
+    Font_generate_glyphs(ctx, prim->font, prim->codepoints, prim->codepoint_count, prim->font_size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -371,24 +351,27 @@ void fl_frame_end(struct FlContext* ctx) {
 
     VertexAllocator_end_frame(&ctx->vertex_allocator);
     CommandBuffer_rewind(&state->primitive_commands);
-    StringAllocator_end_frame(&ctx->string_allocator);
+    LinearAllocator_rewind(&ctx->frame_allocator);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
-    PrimitiveText* prim = Primitive_alloc_text(ctx->global);
+    Utf8Result res = Utf8_to_codepoints_u32(&ctx->frame_allocator, (u8*)text.str, text.len);
 
-#if FL_VALIDATE_RANGES
-    if (FL_UNLIKELY(!prim)) {
-        return NULL;
+    if (FL_UNLIKELY(res.error != FlError_None)) {
+        // TODO: Proper error
+        printf("String is mall-formed\n");
+        return;
     }
-#endif
+
+    PrimitiveText* prim = Primitive_alloc_text(ctx->global);
 
     prim->font = ctx->current_font;
     prim->position = ctx->cursor;
     prim->font_size = ctx->current_font_size != 0 ? ctx->current_font_size : ctx->current_font->default_size;
-    prim->text = StringAllocator_copy_string_frame(&ctx->string_allocator, text);
+    prim->codepoints = res.codepoints;
+    prim->codepoint_count = res.len;
     prim->position_index = 0;  // TODO: Fixme
 }
 
@@ -404,6 +387,7 @@ void fl_context_destroy(struct FlContext* self) {
     LinearAllocator_destroy(&self->layout_allocator);
     VertexAllocator_destroy(&self->vertex_allocator);
     StringAllocator_destroy(&self->string_allocator);
+    LinearAllocator_destroy(&self->frame_allocator);
 
     FlAllocator_free(allocator, self);
 }

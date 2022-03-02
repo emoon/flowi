@@ -39,6 +39,28 @@ UTEST(Font, load_font_ok) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+UTEST(Font, calc_text_size) {
+    struct FlGlobalState* state = fl_create(NULL);
+    struct FlContext* flowi_ctx = fl_context_create(state);
+
+    FlFont font_id = fl_font_new_from_file("data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
+
+    u32 codepoints[] = {'A', 'B', 'c', ' '};
+
+    flowi_ctx->current_font = (Font*)Handles_get_data(&state->font_handles, font_id);
+    flowi_ctx->current_font_size = 36;
+
+    FlVec2 size = Font_calc_text_size(flowi_ctx, codepoints, 4);
+
+    ASSERT_NEAR(66.0f, size.x, 0.01f);
+    ASSERT_NEAR(25.0f, size.y, 0.01f);
+
+    fl_context_destroy(flowi_ctx);
+    fl_destroy(state);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 UTEST(Font, gen_glyph_verify_render_cmds) {
     struct FlGlobalState* state = fl_create(NULL);
     struct FlContext* flowi_ctx = fl_context_create(state);

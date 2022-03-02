@@ -98,9 +98,7 @@ static int generate_corner(struct FlContext* ctx, float side, FlVec2 size, Corne
 
     int index_count = corner_triangle_list_calc(vertex_count - 1);
 
-    if (!VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &cverts, &indices, vertex_count, index_count)) {
-        return -1;
-    }
+    VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &cverts, &indices, vertex_count, index_count);
 
     Area_generate_corner_triangle_list(indices, vertex_offset, vertex_count - 1);
 
@@ -180,22 +178,18 @@ static int generate_corner(struct FlContext* ctx, float side, FlVec2 size, Corne
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: This isn't really generating optimial triangle layout (to minimize area usage so we need to fix that)
 
-bool join_corners(struct FlContext* ctx, CornerVerts* corners) {
+void join_corners(struct FlContext* ctx, CornerVerts* corners) {
     FlVertPosColor* vertices = NULL;
     FlIdxSize* indices = NULL;
 
     const int triangle_count = (corners->count - 2);
-
-    FL_TRY_ALLOC_BOOL(
-        VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, 0, triangle_count * 3));
+    VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, 0, triangle_count * 3);
 
     for (int i = 0; i < triangle_count; ++i) {
         *indices++ = corners->idx[0];
         *indices++ = corners->idx[i + 1];
         *indices++ = corners->idx[i + 2];
     }
-
-    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -224,7 +218,7 @@ bool generate_corners(struct FlContext* ctx, const FlStyle* style, FlVec2 offset
             FlVertPosColor* vertices = NULL;
             FlIdxSize* indices = NULL;
 
-            FL_TRY_ALLOC_BOOL(VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, 1, 0));
+            VertexAllocator_alloc_pos_color(&ctx->vertex_allocator, &vertices, &indices, 1, 0);
 
             vertices[0].x = offset.x + area_corners[i].x;
             vertices[0].y = offset.y + area_corners[i].y;
@@ -237,9 +231,7 @@ bool generate_corners(struct FlContext* ctx, const FlStyle* style, FlVec2 offset
         index += vertex_count;
     }
 
-    if (!join_corners(ctx, corners)) {
-        return false;
-    }
+    join_corners(ctx, corners);
 
     return true;
 }

@@ -28,8 +28,10 @@ typedef enum Primitive {
 typedef struct PrimitiveText {
     // Font to be used when generating the text
     struct Font* font;
-    // utf8 text
-    FlString text;
+    // Decoded utf8-text
+    u32* codepoints;
+    // Number of codepoints
+    int codepoint_count;
     // Where to draw the primitive. TODO: Separate data stream for positions
     FlVec2 position;
     // Size of the font when rendering

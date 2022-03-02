@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="20px" height="20px" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Combined Shape</title>
+    <g id="Symbols" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="ico/menu/compass" transform="translate(-2.000000, -2.000000)" fill="#5D6C76">
+            <path d="M12,2 C17.5228475,2 22,6.4771525 22,12 C22,17.5228475 17.5228475,22 12,22 C6.4771525,22 2,17.5228475 2,12 C2,6.4771525 6.4771525,2 12,2 Z M12,3 C7.02943725,3 3,7.02943725 3,12 C3,16.9705627 7.02943725,21 12,21 C16.9705627,21 21,16.9705627 21,12 C21,7.02943725 16.9705627,3 12,3 Z M16.24,7.76 L14.12,14.12 L7.76,16.24 L9.88,9.88 L16.24,7.76 Z M14.6588612,9.34113883 L10.6705694,10.6705694 L9.34113883,14.6588612 L13.3294306,13.3294306 L14.6588612,9.34113883 Z" id="Combined-Shape"></path>
+        </g>
+    </g>
+</svg>

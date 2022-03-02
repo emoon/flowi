@@ -1,4 +1,6 @@
+use argparse::parser::Var;
 use heck::ToSnakeCase;
+use liquid::partials::PartialSource;
 use pest::iterators::Pair;
 use pest::Parser;
 use std::borrow::Cow;
@@ -26,7 +28,7 @@ pub enum VariableType {
     /// Self (aka this pointer in C++ and self in Rust)
     SelfType,
     /// Enum type
-    //Enum,
+    Enum,
     /// Struct/other type
     Regular,
     /// String type
@@ -69,10 +71,10 @@ pub struct Variable {
     pub vtype: VariableType,
     /// Name of the variable type
     pub type_name: String,
+    /// Name of the variable type
+    pub default_value: String,
     /// Type of enum
     pub enum_type: EnumType,
-    /// Rest name of a enum. "test" in the case of Rute::test
-    pub enum_sub_type: String,
     /// If variable is an array
     pub array: Option<ArrayType>,
     /// If variable is optional (nullable)
@@ -98,8 +100,8 @@ impl Default for Variable {
             def_file: String::new(),
             vtype: VariableType::None,
             type_name: String::new(),
-            enum_sub_type: String::new(),
             enum_type: EnumType::Regular,
+            default_value: String::new(),
             array: None,
             optional: false,
             pointer: false,
@@ -609,6 +611,26 @@ impl ApiParser {
         variables
     }
 
+    fn get_default_value(var: &mut Variable, rule: Pair<Rule>) {
+        let mut default_value = String::new();
+        for entry in rule.into_inner() {
+            match entry.as_rule() {
+                Rule::name_or_num => {
+                    default_value = entry.as_str().to_owned();
+                    break;
+                }
+
+                Rule::string => {
+                    default_value = entry.as_str().to_owned();
+                    break;
+                }
+                _ => (),
+            }
+        }
+
+        var.default_value = default_value;
+    }
+
     ///
     /// Get variable
     ///
@@ -627,6 +649,8 @@ impl ApiParser {
                 Rule::const_ptr_exp => vtype = Rule::const_ptr_exp,
                 Rule::optional => var.optional = true,
                 Rule::vtype => type_name = entry.as_str().to_owned(),
+                Rule::default_val => Self::get_default_value(&mut var, entry),
+
                 Rule::array => {
                     var.array = Some(ArrayType::Unsized);
                     // Get the type if we have an array
@@ -648,6 +672,10 @@ impl ApiParser {
 
                 _ => (),
             }
+        }
+
+        if !var.default_value.is_empty() {
+            dbg!(&var.default_value);
         }
 
         // match up with the correct type
@@ -751,100 +779,6 @@ impl ApiParser {
         name_or_num
     }
 
-    //
-    // Recursive get the structs
-    //
-    /*
-       fn recursive_get_inherit_structs(
-    name: &str,
-    include_self: RecurseIncludeSelf,
-    lookup: &HashMap<String, Vec<String>>,
-    out_structs: &mut Vec<String>,
-    ) {
-    if let Some(values) = lookup.get(name) {
-    for v in values {
-    Self::recursive_get_inherit_structs(
-    v,
-    RecurseIncludeSelf::Yes,
-    lookup,
-    out_structs,
-    );
-    }
-    }
-
-    if include_self == RecurseIncludeSelf::Yes {
-    out_structs.push(name.to_owned());
-    }
-    }
-    */
-
-    //
-    // Get a list of all the traits
-    //
-    /*
-       fn get_inherit_structs(
-    name: &str,
-    include_self: RecurseIncludeSelf,
-    lookup: &HashMap<String, Vec<String>>,
-    ) -> Vec<String> {
-    let mut out_structs = Vec::new();
-
-    Self::recursive_get_inherit_structs(name, include_self, lookup, &mut out_structs);
-
-    out_structs
-    }
-    */
-
-    /*
-    fn update_variable(
-        arg: &mut Variable,
-        type_def_file: &HashMap<String, String>,
-        _enum_def_file_type: &HashMap<String, (String, EnumType)>,
-    ) {
-        let _type_name = arg.get_untyped_name();
-
-        match arg.vtype {
-            /*
-            VariableType::Enum => {
-            if let Some((def_file, enum_type)) = enum_def_file_type.get(&arg.enum_sub_type) {
-            arg.def_file = def_file.to_owned();
-            arg.enum_type = *enum_type;
-            } else {
-            println!("--> enum {} wasn't found in lookup", arg.enum_sub_type);
-            }
-            },
-            */
-            VariableType::Regular => {
-                if let Some(def_file) = type_def_file.get(&Self::get_trait_name(&arg.type_name)) {
-                    arg.def_file = def_file.to_owned();
-                } else {
-                    println!("--> type {:?} wasn't found in lookup", arg);
-                }
-            }
-
-            VariableType::Reference => {
-                if let Some(def_file) = type_def_file.get(&Self::get_trait_name(&arg.type_name)) {
-                    arg.def_file = def_file.to_owned();
-                } else {
-                    println!("--> type {:?} wasn't found in lookup", arg);
-                }
-            }
-
-            _ => (),
-        }
-    }
-    */
-
-    /*
-    fn get_trait_name(name: &str) -> String {
-        if let Some(trait_name) = name.strip_suffix("Type") {
-            format!("{}Trait", trait_name)
-        } else {
-            name.to_owned()
-        }
-    }
-     */
-
     pub fn second_pass(api_defs: &mut [ApiDef]) {
         // TODO: Investigate if we actually need this pass
         // Build a hash map of all type and their types
@@ -884,6 +818,12 @@ impl ApiParser {
                         s.name.to_snake_case(),
                         func.name
                     );
+
+                    for arg in &mut func.function_args {
+                        if enum_def_file_type.contains_key(&arg.type_name) {
+                            arg.vtype = VariableType::Enum;
+                        }
+                    }
                 }
             }
         }
@@ -900,10 +840,7 @@ impl ApiParser {
                             arg.is_handle_type = is_handle_type;
                         }
 
-                        dbg!(&arg.type_name);
-
                         if empty_structs.contains(&arg.type_name) {
-                            dbg!(&arg);
                             arg.is_empty_struct = true;
                         }
                     }
@@ -920,42 +857,7 @@ impl ApiParser {
                 }
             }
         }
-
-        // Patch up the names/def_file in the function arguments
-        /*
-        for func in api_defs
-            .iter_mut()
-            .flat_map(|api| api.structs.iter_mut())
-            .flat_map(|s| s.functions.iter_mut())
-        {
-            for arg in func.function_args.iter_mut() {
-                Self::update_variable(arg, &type_def_file, &enum_def_file_type);
-            }
-
-            if let Some(ref mut ret_val) = func.return_val {
-                Self::update_variable(ret_val, &type_def_file, &enum_def_file_type);
-            }
-        }
-        */
     }
-}
-
-///
-/// Some helper functions for ApiDef
-///
-impl ApiDef {
-    //
-    // Get functions from all structs that matches the filter
-    //
-    /*
-    pub fn get_functions<'a>(&'a self, func_type: FunctionType) -> Vec<&'a Function> {
-    self.structs
-    .iter()
-    .flat_map(|s| s.functions.iter())
-    .filter(|f| f.func_type == func_type)
-    .collect()
-    }
-    */
 }
 
 ///
@@ -967,6 +869,28 @@ impl Struct {
     ///
     pub fn has_attribute(&self, attrib: &str) -> bool {
         self.attributes.iter().any(|s| s == attrib)
+    }
+}
+
+/// Helper functions for funtctions
+impl Function {
+    pub fn get_default_args(&self) -> Vec<&Variable> {
+        self.function_args
+            .iter()
+            .filter(|arg| !arg.default_value.is_empty())
+            .collect()
+    }
+
+    pub fn is_type_manual_static(&self) -> bool {
+        self.func_type == FunctionType::Static || self.func_type == FunctionType::Manual
+    }
+
+    pub fn is_type_manual(&self) -> bool {
+        self.func_type == FunctionType::Manual
+    }
+
+    pub fn is_type_static(&self) -> bool {
+        self.func_type == FunctionType::Static
     }
 }
 
@@ -992,217 +916,6 @@ impl Variable {
             }
         }
     }
-
-    //
-    // If the typename ends with "Type" return a name without it
-    //
-    /*
-    pub fn get_untyped_name(&self) -> &str {
-        if self.type_name.ends_with("Type") {
-            &self.type_name[..self.type_name.len() - 4]
-        } else {
-            &self.type_name
-        }
-    }
-     */
-}
-
-//
-// This is used to replace the type of the first argument (self)
-//
-/*
-   pub enum FirstArgType {
-/// The agument as is
-Keep,
-// Remove the argument
-//Remove,
-// Replace the argument type with this
-//Replace(&'static str),
-}
-*/
-
-//
-// This is used to replace the name of the first argument (self)
-//
-/*
-   pub enum FirstArgName {
-// Keep the name
-//Keep,
-/// Remove the name
-Remove,
-// Replace the name with this
-//Replace(&'static str),
-}
-*/
-
-///
-/// Impl for Function. Helper functions to make C and Rust generation easier
-///
-impl Function {
-    //
-    // Takes a function definition and generates a C function def from it
-    //
-    // For example: "float test, uint32_t bar"
-    //
-    /*
-    pub fn generate_c_function_def(&self, replace_first: FirstArgType) -> String {
-        let mut function_args = String::with_capacity(128);
-        let len = self.function_args.len();
-
-        // write arguments
-        for (i, arg) in self.function_args.iter().enumerate() {
-            if i == 0 {
-                match replace_first {
-                    FirstArgType::Keep => function_args.push_str(&arg.get_c_type(IsReturnType::No)),
-                    //FirstArgType::Remove => continue,
-                    //FirstArgType::Event(ref arg) => function_args.push_str(&arg),
-                }
-            } else {
-                function_args.push_str(&arg.get_c_type(IsReturnType::No));
-            }
-
-            function_args.push_str(" ");
-            function_args.push_str(&arg.name);
-
-            if i != len - 1 {
-                function_args.push_str(", ");
-            }
-        }
-
-        function_args
-    }
-    */
-
-    //
-    // Takes a function definition and generates a C function def from it
-    //
-    // For example: "self, test, bar"
-    //
-    /*
-       pub fn generate_invoke(&self, replace_first_arg: FirstArgName) -> String {
-       let mut function_invoke = String::with_capacity(128);
-       let len = self.function_args.len();
-
-    // write arguments
-    for (i, arg) in self.function_args.iter().enumerate() {
-    if i == 0 {
-    match replace_first_arg {
-    //FirstArgName::Keep => function_invoke.push_str(&arg.name),
-    FirstArgName::Remove => continue,
-    //FirstArgName::Event(ref name) => function_invoke.push_str(name),
-    }
-    } else {
-    function_invoke.push_str(&arg.name);
-    }
-
-    if i != len - 1 {
-    function_invoke.push_str(", ");
-    }
-    }
-
-    function_invoke
-    }
-    */
-
-    //
-    // This function allows to replace any of the types when generating a c function declaration
-    // Type replacement depends highly on where the function is being use.
-    //
-    /*
-           pub fn gen_c_def_filter<F>(&self, replace_first: Option<Option<Cow<str>>>, filter: F) -> String
-           where
-    F: Fn(usize, &Variable) -> Option<Cow<str>>,
-    {
-    let mut output = String::with_capacity(256);
-    let arg_count = self.function_args.len();
-    let mut skip_first = false;
-
-        // This allows us to change the first parameter and it also supports to not have any parameter at all
-        replace_first
-        .map(|arg| {
-        skip_first = true;
-        arg
-        }).and_then(|v| v)
-        .map(|v| {
-        if arg_count > 0 {
-        output.push_str(&format!("{} {}", v, self.function_args[0].name));
-        }
-
-        if arg_count > 1 {
-        output.push_str(", ");
-        }
-        });
-
-        // iterater over all the parameters and run the filter
-
-        for (i, arg) in self.function_args.iter().enumerate() {
-        if i == 0 && skip_first {
-        continue;
-        }
-
-        let filter_arg = filter(i, &arg);
-        let current_arg = filter_arg.map_or_else(|| arg.get_c_type(IsReturnType::No), |v| v);
-
-        output.push_str(&format!("{} {}", current_arg, arg.name));
-
-        if i != arg_count - 1 {
-        output.push_str(", ");
-        }
-        }
-
-        output
-        }
-        */
-
-    //
-    // This function allows to replace any of the parameter names when generating a c function
-    // definition
-    //
-    /*
-       pub fn gen_c_invoke_filter<F>(&self, replace_first: FirstArgName, filter: F) -> String
-       where
-    F: Fn(usize, &Variable) -> Option<Cow<str>>,
-    {
-    let mut output = String::with_capacity(256);
-    let arg_count = self.function_args.len();
-
-    // iterater over all the parameters and run the filter
-
-    for (i, arg) in self.function_args.iter().enumerate() {
-    if i == 0 {
-    match replace_first {
-    FirstArgName::Remove => continue,
-    }
-    }
-
-    let filter_arg = filter(i, &arg);
-    let current_arg = filter_arg.map_or_else(|| arg.name.clone().into(), |v| v);
-
-    output.push_str(&format!("{}", current_arg));
-
-    if i != arg_count - 1 {
-    output.push_str(", ");
-    }
-    }
-
-    output
-    }
-    */
-
-    //
-    // This is kinda of a special case function but is useful to have here as it's
-    // being used in various parts of the code. It will return the name of the function (snake
-    // cased) without the _event if it has that at the end
-    //
-    /*
-    pub fn get_name_skip_event(&self) -> &str {
-    if self.name.ends_with("event") && self.name != "event" {
-    &self.name[..self.name.len() - 6]
-    } else {
-    &self.name
-    }
-    }
-    */
 }
 
 #[cfg(test)]

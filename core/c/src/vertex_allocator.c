@@ -14,15 +14,10 @@ bool VertexAllocator_create(VertexAllocator* self, FlAllocator* allocator,
             LinearAllocator* vertex_allocator = &self->allocators[f][va][VertexStreamAllocatorType_Vertex];
             LinearAllocator* indices_allocator = &self->allocators[f][va][VertexStreamAllocatorType_Index];
 
-            if (!LinearAllocator_create_with_allocator(vertex_allocator, "vertex allocator", allocator,
-                                                       vertex_initial_sizes[va], allow_realloc)) {
-                return false;
-            }
-
-            if (!LinearAllocator_create_with_allocator(indices_allocator, "indices allocator", allocator,
-                                                       index_initial_sizes[va], allow_realloc)) {
-                return false;
-            }
+            LinearAllocator_create_with_allocator(vertex_allocator, "vertex allocator", allocator,
+                                                  vertex_initial_sizes[va], allow_realloc);
+            LinearAllocator_create_with_allocator(indices_allocator, "indices allocator", allocator,
+                                                  index_initial_sizes[va], allow_realloc);
         }
     }
 
@@ -50,12 +45,6 @@ bool VertexAllocator_alloc(VertexAllocator* self, VertexAllocType alloc_type, u8
 
     u8* verts_out = LinearAllocator_internal_alloc(vertex_alloc, verts_size, 4);
     u8* index_out = LinearAllocator_internal_alloc(index_alloc, idx_size, sizeof(FlIdxSize));
-
-    if (FL_UNLIKELY(!verts_out || !index_out)) {
-        *verts = NULL;
-        *indices = NULL;
-        return false;
-    }
 
     self->index_offset += idx_size;
 

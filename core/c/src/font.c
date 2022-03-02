@@ -11,6 +11,7 @@
 
 // TODO: Support external functions
 #include <freetype/freetype.h>
+#include <freetype/ftglyph.h>
 #include <math.h>
 
 //#if fl_ALLOW_STDIO
@@ -138,7 +139,7 @@ FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString name, uint8_
         return 0;
     }
 
-    FL_TRY_ALLOC_NULL(font = font_create(ctx, face));
+    font = font_create(ctx, face);
 
     // Hack: do proper allocator
     font->font_data_to_free = (u8*)font_data;
@@ -415,4 +416,70 @@ void Font_init(FlGlobalState* state) {
     FL_UNUSED(error);
     //#elif defined(fl_FONTLIB_STBTYPE)
     //#endif
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FlVec2 Font_calc_text_size(struct FlContext* ctx, const u32* codepoints, int len) {
+    Font* font = ctx->current_font;
+    int font_size = ctx->current_font_size;
+
+    FlVec2 size = {0};
+
+    // TODO: Handle different directions
+
+    for (int i = 0; i < len; ++i) {
+        const u32 codepoint = *codepoints++;
+
+        Glyph* glyph = Font_get_glyph(font, codepoint, font_size);
+
+        if (glyph) {
+            size.x += glyph->advance_x;
+            size.y = FL_MAX(size.y, (float)(glyph->y1 - glyph->y0));
+        } else {
+            // If we don't find the glyph (happens when not generated get)
+            // We get the outline only, and do the full rendering later (optionally) multi-threaded.
+
+            int glyph_index = FT_Get_Char_Index(font->ft_face, codepoint);
+            if (glyph_index == 0) {
+                // Glyph not found in font,
+                printf("codepoint %d wasn't found in font, skipping...\n", codepoint);
+                continue;
+            }
+
+            FT_Error error = FT_Set_Pixel_Sizes(font->ft_face, 0, font_size);
+            if (error != 0) {
+                ERROR_ADD(FlError_Font, "Freetype error %s when setting size. font: %s", FT_Error_String(error),
+                          font->debug_name);
+                continue;
+            }
+
+            error = FT_Load_Glyph(font->ft_face, glyph_index, FT_LOAD_DEFAULT);
+            if (error != 0) {
+                ERROR_ADD(FlError_Font, "Freetype error %s when loading glyph %d. font: %s", FT_Error_String(error),
+                          glyph_index, font->debug_name);
+                continue;
+            }
+
+            FT_Glyph glyph;
+
+            error = FT_Get_Glyph(font->ft_face->glyph, &glyph);
+            if (error != 0) {
+                ERROR_ADD(FlError_Font, "Freetype error %s when getting glyph glyph %d. font: %s",
+                          FT_Error_String(error), glyph_index, font->debug_name);
+                continue;
+            }
+
+            FT_BBox bbox;
+            FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_PIXELS, &bbox);
+
+            int width = bbox.xMax - bbox.xMin;
+            int height = bbox.yMax - bbox.yMin;
+
+            size.x += (float)width;
+            size.y = FL_MAX(size.y, (float)height);
+        }
+    }
+
+    return size;
 }

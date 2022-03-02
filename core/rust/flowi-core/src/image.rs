@@ -41,6 +41,7 @@ impl Context {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
+    /// SVG (Basic types only, non-color)
     pub fn image_create_from_file(&self, filename: &str) -> Result<Image> {
         unsafe {
             let self_ = std::mem::transmute(self);
@@ -63,6 +64,7 @@ impl Context {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
+    /// SVG (Basic types only, non-color)
     pub fn image_create_from_memory(&self, name: &str, data: &[u8]) -> Result<Image> {
         unsafe {
             let self_ = std::mem::transmute(self);

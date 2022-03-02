@@ -14,5 +14,6 @@ pub enum Error {
     Font = 3,
     Style = 4,
     Image = 5,
-    Generic = 6,
+    Utf8Malformed = 6,
+    Generic = 7,
 }

@@ -28,9 +28,45 @@ bool Text_utf8_to_codepoints_u16(u16* output, const u8* input, int len) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+const u8* utf8_simple(const u8* s, u32* c) {
+    const u8* next = NULL;
+
+    if (s[0] < 0x80) {
+        *c = s[0];
+        next = s + 1;
+    } else if ((s[0] & 0xe0) == 0xc0) {
+        *c = ((long)(s[0] & 0x1f) << 6) | ((long)(s[1] & 0x3f) << 0);
+        next = s + 2;
+    } else if ((s[0] & 0xf0) == 0xe0) {
+        *c = ((long)(s[0] & 0x0f) << 12) | ((long)(s[1] & 0x3f) << 6) | ((long)(s[2] & 0x3f) << 0);
+        next = s + 3;
+    } else if ((s[0] & 0xf8) == 0xf0 && (s[0] <= 0xf4)) {
+        *c = ((long)(s[0] & 0x07) << 18) | ((long)(s[1] & 0x3f) << 12) | ((long)(s[2] & 0x3f) << 6) |
+             ((long)(s[3] & 0x3f) << 0);
+        next = s + 4;
+    } else {
+        *c = -1;       // invalid
+        next = s + 1;  // skip this byte
+    }
+    if (*c >= 0xd800 && *c <= 0xdfff)
+        *c = -1;  // surrogate half
+    return next;
+}
+*/
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Convert utf8 to codepoints (u32) Will return false if the input utf8 is is invalid
 // Output is to be expected to be 16 byte aligned and contain 32 bytes of extra data
 bool utf8_to_codepoints_u32(u32* output, const u8* input, int len) {
+    /*
+    const u8* end = input + len;
+    while (input < end) {
+        input = utf8_simple(input, output);
+        output++;
+    }
+    */
+
     for (int i = 0; i < len; ++i) {
         *output++ = *input++;
     }
@@ -209,3 +245,72 @@ void Text_generate_vertex_buffer_sse2(FlVertPosUvColor* __restrict out, FlIdxSiz
 }
 
 #endif
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Based on 
+// Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
+// but slightly rewritten to allow it to be fully branchless
+
+#define UTF8_ACCEPT 0
+#define UTF8_REJECT 1
+
+// clang-format off
+static const uint8_t utf8d[] = {
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 40..5f
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 60..7f
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, // 80..9f
+  7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, // a0..bf
+  8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, // c0..df
+  0xa,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x4,0x3,0x3, // e0..ef
+  0xb,0x6,0x6,0x6,0x5,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8, // f0..ff
+  0x0,0x1,0x2,0x3,0x5,0x8,0x7,0x1,0x1,0x1,0x4,0x6,0x1,0x1,0x1,0x1, // s0..s0
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1, // s1..s2
+  1,2,1,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1, // s3..s4
+  1,2,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,3,1,1,1,1,1,1, // s5..s6
+  1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
+};
+// clang-format on
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FL_INLINE u32 decode(u32 state, u32* codep, u32 byte) {
+    u32 type = utf8d[byte];
+    u32 t = *codep;
+
+    const u32 t0 = (byte & 0x3fu) | (t << 6);
+    const u32 t1 = (0xff >> type) & (byte);
+
+    t = (state != UTF8_ACCEPT) ? t0 : t1;
+    *codep = t;
+
+    state = utf8d[256 + state * 16 + type];
+    return state;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Converts utf8 string to codepoints
+
+Utf8Result Utf8_to_codepoints_u32(LinearAllocator* allocator, const uint8_t* input, int len) {
+    Utf8Result res = {0};
+    u32 state = 0;
+
+    u32* output = LinearAllocator_alloc_array(allocator, u32, len * 4);
+    u32* temp = output;
+
+    for (int i = 0; i < len; ++i) {
+        state = decode(state, output, input[i]);
+        output = state == UTF8_ACCEPT ? output + 1 : output;
+    }
+
+    if (state != UTF8_ACCEPT) {
+        res.error = FlError_Utf8Malformed;
+    } else {
+        res.codepoints = temp;
+        res.len = (output - temp);
+    }
+
+    return res;
+}

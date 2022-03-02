@@ -6,12 +6,16 @@
 
 struct Atlas;
 struct FlContext;
+struct NSVGimage;
+struct NSVGrasterizer;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct ImagePrivate {
     u64 handle;
     u8* data;
+    struct NSVGimage* svg_image;
+    struct NSVGrasterizer* svg_raster;
     FlString name;
     u32 texture_id;
     int atlas_x;

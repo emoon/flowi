@@ -1,5 +1,5 @@
 use crate::api_parser::*;
-use heck::ToSnakeCase;
+use heck::{ToSnakeCase, ToUpperCamelCase};
 ///
 ///
 use std::fs::File;
@@ -85,6 +85,10 @@ fn arg_line(args: &[String], with_context: Ctx) -> String {
     output
 }
 
+fn get_args_name(func: &Function) -> String {
+    format!("{}{}Args", C_API_SUFFIX, func.name.to_upper_camel_case())
+}
+
 impl Cgen {
     fn write_commment<W: Write>(
         f: &mut W,
@@ -151,6 +155,7 @@ impl Cgen {
                 }
             }
 
+            VariableType::Enum => output.push_str(&format!("{}{}", C_API_SUFFIX, var.type_name)),
             VariableType::Str => output.push_str("FlString"),
             VariableType::Primitive => output.push_str(&var.get_c_primitive_type()),
         }
@@ -208,6 +213,43 @@ impl Cgen {
         }
     }
 
+    /// Generate structure and _default macro for functions that has default parameters
+    fn generate_default_args_struct<W: Write>(
+        f: &mut W,
+        name: &str,
+        args: &[&Variable],
+    ) -> io::Result<()> {
+        writeln!(f, "typedef struct {} {{", name)?;
+
+        for var in args {
+            Self::write_struct_variable(f, var)?;
+        }
+
+        writeln!(f, "}} {};\n", name)?;
+
+        // Generate <StructName>_default macro for default value init of the struct such as
+        // #define FoobarArgs_default (FoobarArgs){ .foo = 1, .bar = 0 }
+
+        write!(f, "#define {}_default ({}){{", name, name)?;
+
+        for (i, var) in args.iter().enumerate() {
+            if i > 0 {
+                write!(f, ",")?;
+            }
+
+            match var.vtype {
+                VariableType::Enum => write!(
+                    f,
+                    " .{} = {}_{}",
+                    var.name, var.type_name, var.default_value
+                )?,
+                _ => write!(f, " .{} = {}", var.name, var.default_value)?,
+            }
+        }
+
+        writeln!(f, ")\n")
+    }
+
     ///
     /// This is used for generating internal render file
     ///
@@ -232,12 +274,6 @@ impl Cgen {
 
         Ok(())
     }
-    /*
-    func_args: Vec<String>,
-    internal_args: Vec<String>,
-    call_args: Vec<String>,
-    body: String,
-    */
 
     fn generate_function_args(func: &Function, self_name: &str) -> FuncArgs {
         let mut fa = FuncArgs::default();
@@ -245,11 +281,18 @@ impl Cgen {
         fa.call_args.push("flowi_ctx".to_owned());
 
         for (i, arg) in func.function_args.iter().enumerate() {
-            if i == 0
-                && (func.func_type == FunctionType::Static
-                    || func.func_type == FunctionType::Manual)
-            {
+            // skip first arg if type is manual or static
+            if i == 0 && func.is_type_manual_static() {
                 continue;
+            }
+
+            // If we have a default value we assemu the rest of of the args are default also
+            if !arg.default_value.is_empty() {
+                let args = format!("{} args", get_args_name(func));
+                fa.func_args.push(args.to_owned());
+                fa.internal_args.push(args.to_owned());
+                fa.call_args.push("args".to_owned());
+                break;
             }
 
             match arg.vtype {
@@ -414,6 +457,19 @@ impl Cgen {
             }
 
             Self::generate_struct(&mut f, sdef)?;
+        }
+
+        // Generate the structs for default arges
+        for sdef in &api_def.structs {
+            for func in &sdef.functions {
+                let default_args = func.get_default_args();
+
+                if !default_args.is_empty() {
+                    let name = get_args_name(func);
+                    Self::generate_default_args_struct(&mut f, &name, &default_args)?;
+                    let name = get_args_name(func);
+                }
+            }
         }
 
         // Generate callback defs

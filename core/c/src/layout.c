@@ -1,13 +1,12 @@
-#include "layout_private.h"
-#include "internal.h"
 #include <assert.h>
+#include "internal.h"
+#include "layout_private.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlLayoutAreaId fl_layout_area_create_impl(struct FlContext* self, FlString name, FlLayoutArea area) {
     const int id = self->layout_ids++;
     LayoutAreaPrivate* layout = LinearAllocator_alloc_zero(&self->layout_allocator, LayoutAreaPrivate);
-    FL_TRY_ALLOC_INT(layout);
     layout->area = area;
     layout->area.name = name;
     layout->id = id;
@@ -30,8 +29,8 @@ void fl_layout_area_set_layout_mode_impl(struct FlContext* self, FlLayoutMode mo
 
 void Layout_create_default(struct FlContext* self) {
     FlLayoutArea layout = {
-        .width = { .value = 0, .value_type = FlSizeType_Stretch },
-        .height = { .value = 0, .value_type = FlSizeType_Stretch },
+        .width = {.value = 0, .value_type = FlSizeType_Stretch},
+        .height = {.value = 0, .value_type = FlSizeType_Stretch},
         .direction = FlLayoutDirection_Verticial,
     };
 
@@ -45,8 +44,8 @@ void Layout_resolve(struct FlContext* self, FlLayoutAreaId id, FlRect* rect) {
     // TODO: Need to calculate children
     LayoutAreaPrivate* area = ((LayoutAreaPrivate*)self->layout_allocator.start_data) + id;
 
-    //int width = rect->x1 - rect->x0;
-    //int height = rect->y1 - rect->y0;
+    // int width = rect->x1 - rect->x0;
+    // int height = rect->y1 - rect->y0;
 
     // TODO:
     /*
@@ -79,8 +78,7 @@ bool Layout_add_item(struct FlContext* self, FlLayoutAreaId id, FlRect* out, int
     area->updating_size.y += height;
     *out = area->updating_size;
 
-    if ((area->updating_size.y + area->updating_size.height) >=
-        (area->total_size.y + area->total_size.height)) {
+    if ((area->updating_size.y + area->updating_size.height) >= (area->total_size.y + area->total_size.height)) {
         return false;
     }
 
@@ -126,5 +124,3 @@ void fl_layout_debug_render_current(struct FlContext* self) {
 
 }
 */
-
-

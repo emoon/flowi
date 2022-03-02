@@ -6,11 +6,25 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-UTEST(Image, load_file_ok) {
+UTEST(Image, load_file_ok_stb) {
     struct FlGlobalState* state = fl_create(NULL);
     struct FlContext* flowi_ctx = fl_context_create(state);
 
     FlImage id = fl_image_create_from_file("data/uv.png");
+    ASSERT_NE(0, id);
+
+    fl_image_destroy(id);
+    fl_context_destroy(flowi_ctx);
+    fl_destroy(state);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(Image, load_file_ok_svg) {
+    struct FlGlobalState* state = fl_create(NULL);
+    struct FlContext* flowi_ctx = fl_context_create(state);
+
+    FlImage id = fl_image_create_from_file("data/Freesample.svg");
     ASSERT_NE(0, id);
 
     fl_image_destroy(id);
@@ -43,6 +57,26 @@ UTEST(Image, load_file_from_memory) {
     ASSERT_NE(NULL, data);
 
     FlImage id = fl_image_create_from_memory("uv", data, size);
+    ASSERT_NE(0, id);
+
+    FlAllocator_free(state->global_allocator, data);
+
+    fl_image_destroy(id);
+    fl_context_destroy(flowi_ctx);
+    fl_destroy(state);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(Image, load_file_from_memory_svg) {
+    struct FlGlobalState* state = fl_create(NULL);
+    struct FlContext* flowi_ctx = fl_context_create(state);
+
+    u32 size = 0;
+    u8* data = Io_load_file_to_memory_null_term(flowi_ctx, "data/Freesample.svg", &size);
+    ASSERT_NE(NULL, data);
+
+    FlImage id = fl_image_create_from_memory("svg", data, size);
     ASSERT_NE(0, id);
 
     FlAllocator_free(state->global_allocator, data);
