@@ -69,6 +69,14 @@ typedef struct Rect {
     float x, y, width, height;
 } Rect;
 
+typedef struct IntRect {
+    int x, y, width, height;
+} IntRect;
+
+typedef struct IntAABB {
+    int min_x, min_y, max_x, max_y;
+} IntAABB;
+
 // TODO: We can lilkey do this better
 typedef struct ItemWithText {
     char text[1024];

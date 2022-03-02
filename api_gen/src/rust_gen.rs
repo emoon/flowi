@@ -106,6 +106,7 @@ impl RustGen {
             }
             VariableType::Reference => panic!("Shouldn't be here"),
             VariableType::Regular => output.push_str(&format!("{}", var.type_name)),
+            VariableType::Enum => output.push_str(&format!("{}", var.type_name)),
             VariableType::Str => output.push_str("FlString"),
             VariableType::Primitive => output.push_str(&Self::get_primitive_type(&var)),
         }
@@ -313,6 +314,7 @@ impl RustGen {
                 }
 
                 VariableType::Regular => Self::get_type(&mut fa, &arg, &arg.type_name),
+                VariableType::Enum => Self::get_type(&mut fa, &arg, &arg.type_name),
                 VariableType::Str => {
                     fa.func_args.push(format!("{}: &str", arg.name));
                     fa.ffi_args.push(format!("FlString::new({})", arg.name));

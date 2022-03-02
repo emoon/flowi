@@ -274,11 +274,7 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
         return;
     }
 
-    const int text_len = prim->text.len;
-
-    // TODO: LinearAllocator here instead of alloca and/or have treshhold
-    u32* codepoints = alloca(sizeof(u32) * text_len);
-    utf8_to_codepoints_u32(codepoints, (u8*)prim->text.str, text_len);
+    const int text_len = prim->codepoint_count;
 
     FlVertPosUvColor* vertices = NULL;
     FlIdxSize* indices = NULL;
@@ -288,8 +284,8 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
         assert(0);
     }
 
-    Text_generate_vertex_buffer_ref(vertices, indices, font, prim->font_size, codepoints, 0x0fffffff, prim->position, 0,
-                                    text_len);
+    Text_generate_vertex_buffer_ref(vertices, indices, font, prim->font_size, prim->codepoints, 0x0fffffff,
+                                    prim->position, 0, text_len);
 
     FlTexturedTriangles* tri_data = Render_textured_triangles_cmd(ctx->global);
 
@@ -305,15 +301,7 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
 
 void generate_glyphs(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;
-
-    const int text_len = prim->text.len;
-
-    // TODO: we should hash the text, font, + size + dirty and don't
-    // don't try to regenerate glyphs if hash matches
-    u32* codepoints = alloca(sizeof(u32) * text_len);
-    utf8_to_codepoints_u32(codepoints, (u8*)prim->text.str, text_len);
-
-    Font_generate_glyphs(ctx, prim->font, codepoints, text_len, prim->font_size);
+    Font_generate_glyphs(ctx, prim->font, prim->codepoints, prim->codepoint_count, prim->font_size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -369,18 +357,21 @@ void fl_frame_end(struct FlContext* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
-    PrimitiveText* prim = Primitive_alloc_text(ctx->global);
+    Utf8Result res = Utf8_to_codepoints_u32(&ctx->frame_allocator, (u8*)text.str, text.len);
 
-#if FL_VALIDATE_RANGES
-    if (FL_UNLIKELY(!prim)) {
-        return NULL;
+    if (FL_UNLIKELY(res.error != FlError_None)) {
+        // TODO: Proper error
+        printf("String is mall-formed\n");
+        return;
     }
-#endif
+
+    PrimitiveText* prim = Primitive_alloc_text(ctx->global);
 
     prim->font = ctx->current_font;
     prim->position = ctx->cursor;
     prim->font_size = ctx->current_font_size != 0 ? ctx->current_font_size : ctx->current_font->default_size;
-    prim->text = StringAllocator_copy_string_frame(&ctx->string_allocator, text);
+    prim->codepoints = res.codepoints;
+    prim->codepoint_count = res.len;
     prim->position_index = 0;  // TODO: Fixme
 }
 

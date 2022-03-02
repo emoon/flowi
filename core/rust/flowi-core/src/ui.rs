@@ -9,6 +9,20 @@ extern "C" {
     fn fl_ui_image_with_size_impl(ctx: *const core::ffi::c_void, image: Image, size: Vec2);
     fn fl_ui_set_pos_impl(ctx: *const core::ffi::c_void, pos: Vec2);
     fn fl_ui_get_last_widget_size_impl(ctx: *const core::ffi::c_void, pos: Vec2) -> Rect;
+    fn fl_ui_push_button_with_icon_impl(
+        ctx: *const core::ffi::c_void,
+        text: FlString,
+        image: Image,
+        image_alignment: ImageAlignment,
+        image_text_spacing: u32,
+    ) -> bool;
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub enum ImageAlignment {
+    Left = 0,
+    Right = 1,
 }
 
 #[repr(C)]
@@ -54,6 +68,27 @@ impl Context {
         unsafe {
             let self_ = std::mem::transmute(self);
             let ret_val = fl_ui_get_last_widget_size_impl(self_, pos);
+            ret_val
+        }
+    }
+
+    /// Push button widget that returns true if user has pressed it
+    pub fn ui_push_button_with_icon(
+        &self,
+        text: &str,
+        image: Image,
+        image_alignment: ImageAlignment,
+        image_text_spacing: u32,
+    ) -> bool {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_ui_push_button_with_icon_impl(
+                self_,
+                FlString::new(text),
+                image,
+                image_alignment,
+                image_text_spacing,
+            );
             ret_val
         }
     }

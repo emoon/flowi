@@ -11,8 +11,8 @@ mod api_parser;
 extern crate pest_derive;
 
 mod c_gen;
-mod rust_gen;
 mod lints;
+mod rust_gen;
 
 use crate::api_parser::{ApiDef, ApiParser};
 use crate::c_gen::Cgen;
@@ -71,17 +71,20 @@ fn run_clang_format(filename: &str) {
 fn main() {
     let wd = WalkDir::new("../api");
     // temporary set to one thread during debugging
-	//rayon::ThreadPoolBuilder::new().num_threads(1).build_global().unwrap();
+    //rayon::ThreadPoolBuilder::new()
+    // .num_threads(1)
+    // .build_global()
+    // .unwrap();
 
     // Dest directores for various langs
-	let c_core_dest_dir = "../core/c/include/flowi_core";
-	let c_flowi_dest_dir = "../flowi/c/include/flowi";
+    let c_core_dest_dir = "../core/c/include/flowi_core";
+    let c_flowi_dest_dir = "../flowi/c/include/flowi";
 
     let rust_core_dest = "../core/rust/flowi-core/src";
     let rust_flowi_dest = "../flowi/rust/flowi/src";
 
     // Used for generating internal headers
-	let c_core_src_dir = "../core/c/src";
+    let c_core_src_dir = "../core/c/src";
 
     //let rust_dest_dir = "../rute/src/auto";
     //let dest = "../rute/cpp/auto";
@@ -127,44 +130,48 @@ fn main() {
     // Pass 2:
     // Generate all the code.
 
-    api_defs_read.par_iter().enumerate().for_each(|(index, api_def)| {
-        let base_filename = &api_def.base_filename;
+    api_defs_read
+        .par_iter()
+        .enumerate()
+        .for_each(|(index, api_def)| {
+            let base_filename = &api_def.base_filename;
 
-        let c_filename;
-        let rust_filename;
+            let c_filename;
+            let rust_filename;
 
-        // On the first thread we start with generating a bunch of main files so we have this
-        // generation running threaded as well. Next time when index isn't 0 anymore regular work
-        // will come along here.
+            // On the first thread we start with generating a bunch of main files so we have this
+            // generation running threaded as well. Next time when index isn't 0 anymore regular work
+            // will come along here.
 
-        if index == 0 {
-            RustGen::generate_mod_files(rust_core_dest, rust_flowi_dest, &api_defs_read).unwrap();
-        }
+            if index == 0 {
+                RustGen::generate_mod_files(rust_core_dest, rust_flowi_dest, &api_defs_read)
+                    .unwrap();
+            }
 
-        if api_def.filename.contains("core") {
-            c_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
-            rust_filename = format!("{}/{}.rs", rust_core_dest, base_filename);
-        } else {
-            c_filename = format!("{}/{}.h", c_flowi_dest_dir, base_filename);
-            rust_filename = format!("{}/{}.rs", rust_flowi_dest , base_filename);
-        }
+            if api_def.filename.contains("core") {
+                c_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
+                rust_filename = format!("{}/{}.rs", rust_core_dest, base_filename);
+            } else {
+                c_filename = format!("{}/{}.h", c_flowi_dest_dir, base_filename);
+                rust_filename = format!("{}/{}.rs", rust_flowi_dest, base_filename);
+            }
 
-        // Generate C/C++ Header for FFI structs
-        if let Err(e) = Cgen::generate(&c_filename, &c_core_src_dir, api_def) {
-            println!("ERROR: Unable to write {}, error: {:?}", c_filename, e);
-        }
+            // Generate C/C++ Header for FFI structs
+            if let Err(e) = Cgen::generate(&c_filename, &c_core_src_dir, api_def) {
+                println!("ERROR: Unable to write {}, error: {:?}", c_filename, e);
+            }
 
-        // Generate C/C++ Header for FFI structs
-        if let Err(e) = RustGen::generate(&rust_filename, api_def) {
-            println!("ERROR: Unable to write {}, error: {:?}", rust_filename, e);
-        }
+            // Generate C/C++ Header for FFI structs
+            if let Err(e) = RustGen::generate(&rust_filename, api_def) {
+                println!("ERROR: Unable to write {}, error: {:?}", rust_filename, e);
+            }
 
-        // Rust Rustfmt on rust files
-        run_rustfmt(&rust_filename);
+            // Rust Rustfmt on rust files
+            run_rustfmt(&rust_filename);
 
-        // clang-format C files
-        run_clang_format(&c_filename);
-    });
+            // clang-format C files
+            run_clang_format(&c_filename);
+        });
 
     // All done!
     println!("Generation complete!");

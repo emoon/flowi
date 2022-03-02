@@ -1,5 +1,6 @@
 use argparse::parser::Var;
 use heck::ToSnakeCase;
+use liquid::partials::PartialSource;
 use pest::iterators::Pair;
 use pest::Parser;
 use std::borrow::Cow;
@@ -27,7 +28,7 @@ pub enum VariableType {
     /// Self (aka this pointer in C++ and self in Rust)
     SelfType,
     /// Enum type
-    //Enum,
+    Enum,
     /// Struct/other type
     Regular,
     /// String type
@@ -611,13 +612,23 @@ impl ApiParser {
     }
 
     fn get_default_value(var: &mut Variable, rule: Pair<Rule>) {
+        let mut default_value = String::new();
         for entry in rule.into_inner() {
             match entry.as_rule() {
-                Rule::name_or_num => var.default_value = entry.as_str().to_owned(),
-                Rule::string => var.default_value = entry.as_str().to_owned(),
+                Rule::name_or_num => {
+                    default_value = entry.as_str().to_owned();
+                    break;
+                }
+
+                Rule::string => {
+                    default_value = entry.as_str().to_owned();
+                    break;
+                }
                 _ => (),
             }
         }
+
+        var.default_value = default_value;
     }
 
     ///
@@ -661,6 +672,10 @@ impl ApiParser {
 
                 _ => (),
             }
+        }
+
+        if !var.default_value.is_empty() {
+            dbg!(&var.default_value);
         }
 
         // match up with the correct type
@@ -803,6 +818,12 @@ impl ApiParser {
                         s.name.to_snake_case(),
                         func.name
                     );
+
+                    for arg in &mut func.function_args {
+                        if enum_def_file_type.contains_key(&arg.type_name) {
+                            arg.vtype = VariableType::Enum;
+                        }
+                    }
                 }
             }
         }
@@ -820,7 +841,6 @@ impl ApiParser {
                         }
 
                         if empty_structs.contains(&arg.type_name) {
-                            dbg!(&arg);
                             arg.is_empty_struct = true;
                         }
                     }
@@ -849,6 +869,28 @@ impl Struct {
     ///
     pub fn has_attribute(&self, attrib: &str) -> bool {
         self.attributes.iter().any(|s| s == attrib)
+    }
+}
+
+/// Helper functions for funtctions
+impl Function {
+    pub fn get_default_args(&self) -> Vec<&Variable> {
+        self.function_args
+            .iter()
+            .filter(|arg| !arg.default_value.is_empty())
+            .collect()
+    }
+
+    pub fn is_type_manual_static(&self) -> bool {
+        self.func_type == FunctionType::Static || self.func_type == FunctionType::Manual
+    }
+
+    pub fn is_type_manual(&self) -> bool {
+        self.func_type == FunctionType::Manual
+    }
+
+    pub fn is_type_static(&self) -> bool {
+        self.func_type == FunctionType::Static
     }
 }
 

@@ -36,6 +36,7 @@ typedef uint64_t FlImage;
 // HDR (radiance rgbE format)
 // PIC (Softimage PIC)
 // PNM (PPM and PGM binary only)
+// SVG (Basic types only, non-color)
 FlImage fl_image_create_from_file_impl(struct FlContext* flowi_ctx, FlString filename);
 
 FL_INLINE FlImage fl_image_create_from_file_ctx(struct FlContext* flowi_ctx, const char* filename) {
@@ -55,6 +56,7 @@ FL_INLINE FlImage fl_image_create_from_file_ctx(struct FlContext* flowi_ctx, con
 // HDR (radiance rgbE format)
 // PIC (Softimage PIC)
 // PNM (PPM and PGM binary only)
+// SVG (Basic types only, non-color)
 FlImage fl_image_create_from_memory_impl(struct FlContext* flowi_ctx, FlString name, uint8_t* data, uint32_t data_size);
 
 FL_INLINE FlImage fl_image_create_from_memory_ctx(struct FlContext* flowi_ctx, const char* name, uint8_t* data,

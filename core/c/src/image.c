@@ -17,7 +17,7 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     int channels_in_file = 0;
     u8* image_data = NULL;
     NSVGimage* svg_image = NULL;
-    int svg_size = 96 / 2;
+    int svg_size = 96;
 
     char temp_buffer[2048];
     const char* filename =
@@ -49,10 +49,9 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     // TODO: Currenty assumes 4 bytes per pixel
     // TODO: Make sure we pick the correct texture format
 
-    // for svg images we simply put an 256x256 as size and the user has to set the size that makes sense for them
     if (svg_image) {
-        x = svg_image->width;
-        y = svg_image->height;
+        x = svg_image->width * 4;
+        y = svg_image->height * 4;
     }
 
     image->data = image_data;
@@ -164,12 +163,10 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
             self->svg_raster = nsvgCreateRasterizer();
         }
 
-        int width = self->svg_image->width;
-        int height = self->svg_image->height;
+        int width = self->info.width;
+        int height = self->info.height;
 
-        printf("%d %d\n", width, height);
-
-        nsvgRasterize(self->svg_raster, self->svg_image, 0.0f, 0.0f, 1.0f, dest, width, height, stride);
+        nsvgRasterize(self->svg_raster, self->svg_image, 0.0f, 0.0f, 4.0f, dest, width, height, stride);
 
     } else {
         // Copy the the image data to the atlas
