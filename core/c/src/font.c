@@ -478,6 +478,8 @@ FlVec2 Font_calc_text_size(struct FlContext* ctx, const u32* codepoints, int len
 
             size.x += (float)width;
             size.y = FL_MAX(size.y, (float)height);
+
+            FT_Done_Glyph(glyph);
         }
     }
 
