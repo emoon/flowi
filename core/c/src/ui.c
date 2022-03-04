@@ -32,7 +32,7 @@ bool fl_ui_push_button_with_icon_impl(FlContext* ctx, FlString text, FlImage ima
     FL_UNUSED(image_data);
 
     if (!image) {
-        printf("Illegal image id %lx\n", image);
+        printf("Illegal image id %llx\n", image);
         return false;
     }
 
