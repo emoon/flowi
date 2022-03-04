@@ -6,10 +6,10 @@ use crate::*;
 extern "C" {
     fn fl_style_create_impl(ctx: *const core::ffi::c_void, name: FlString) -> *mut Style;
     fn fl_style_get_default_impl(ctx: *const core::ffi::c_void) -> *mut Style;
-    fn fl_style_get_current_impl(ctx: *const core::ffi::c_void) -> *const Style;
+    fn fl_style_get_current_impl(ctx: *const core::ffi::c_void) -> Style;
     fn fl_style_end_changes_impl(self_c: *mut Style);
     fn fl_style_push_impl(self_c: *mut Style);
-    fn fl_style_pop_impl(self_c: *mut Style);
+    fn fl_style_pop_impl(ctx: *const core::ffi::c_void);
 }
 
 #[repr(C)]
@@ -21,6 +21,15 @@ pub enum LengthPercent {
 
 #[repr(C)]
 #[derive(Debug)]
+pub enum Corner {
+    TopLeft = 0,
+    TopRight = 1,
+    BottomRight = 2,
+    BottomLeft = 3,
+}
+
+#[repr(C)]
+#[derive(Debug)]
 pub struct LengthPercentValue {
     value: f32,
     typ: LengthPercent,
@@ -28,29 +37,10 @@ pub struct LengthPercentValue {
 
 #[repr(C)]
 #[derive(Debug)]
-pub struct Spacing {
-    top: u16,
-    right: u16,
-    bottom: u16,
-    left: u16,
-}
-
-#[repr(C)]
-#[derive(Debug)]
-pub struct Padding {
-    top: u16,
-    right: u16,
-    bottom: u16,
-    left: u16,
-}
-
-#[repr(C)]
-#[derive(Debug)]
 pub struct Border {
-    border_radius_top: LengthPercentValue,
-    border_radius_right: LengthPercentValue,
-    border_radius_bottom: LengthPercentValue,
-    border_radius_left: LengthPercentValue,
+    radius: [LengthPercentValue; 4],
+    colors: [u32; 4],
+    active: bool,
 }
 
 #[repr(C)]
@@ -58,11 +48,14 @@ pub struct Border {
 pub struct Style {
     name: FlString,
     border: Border,
-    padding: Padding,
+    margin: [u16; 4],
+    padding: [u16; 4],
     current_font: u32,
-    background_color: Color,
-    text_color: Color,
-    font_color: Color,
+    background_color: u32,
+    font: Font,
+    font_size: u32,
+    text_color: u32,
+    font_color: u32,
 }
 
 impl Context {
@@ -93,15 +86,19 @@ impl Context {
     }
 
     /// Get the current style which is based on what has been pushed on the style stack using push/pop
-    pub fn style_get_current<'a>(&self) -> Result<&'a Style> {
+    pub fn style_get_current(&self) -> Result<Style> {
         unsafe {
             let self_ = std::mem::transmute(self);
             let ret_val = fl_style_get_current_impl(self_);
-            if ret_val.is_null() {
-                Err(get_last_error())
-            } else {
-                Ok(&*ret_val)
-            }
+            ret_val
+        }
+    }
+
+    /// Pops the current style
+    pub fn style_pop(&self) {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            fl_style_pop_impl(self_);
         }
     }
 }
@@ -120,14 +117,6 @@ impl Style {
         unsafe {
             let self_ = std::mem::transmute(self);
             fl_style_push_impl(self_);
-        }
-    }
-
-    /// Pops the current style
-    pub fn pop(&self) {
-        unsafe {
-            let self_ = std::mem::transmute(self);
-            fl_style_pop_impl(self_);
         }
     }
 }

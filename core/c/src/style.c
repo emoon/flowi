@@ -1,8 +1,8 @@
-#include "style.h"
 #include <assert.h>
+#include <flowi_core/error.h>
+#include <flowi_core/style.h>
 #include <stdlib.h>
 #include <string.h>
-#include <flowi_core/error.h>
 #include "internal.h"
 #include "style_internal.h"
 
@@ -10,22 +10,12 @@
 // Default style
 
 static FlStyle s_default_style = {
-    "flowi_default",
+    .name = {"flowi_default", 1, strlen("flowi_default")},
     .border =
         {
-            .border_radius =
-                {
-                    {.value = 0.0f, FlLengthPercentType_Length},
-                    {.value = 0.0f, FlLengthPercentType_Length},
-                    {.value = 0.0f, FlLengthPercentType_Length},
-                    {.value = 0.0f, FlLengthPercentType_Length},
-                },
-
             .colors = {FL_RGB_RED, FL_RGB_RED, FL_RGB_RED, FL_RGB_RED},
-            .width = 0,
             .active = false,
         },
-
     .padding = {4, 4, 4, 4},
     .margin = {4, 4, 4, 4},
     .current_font = 0,
@@ -37,9 +27,8 @@ static FlStyle s_default_style = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Create a style to apply changes to with an optional name
 
-FlStyle* fl_style_create_name_len(struct FlContext* ctx, const char* name, int name_len) {
-	FL_UNUSED(name);
-	FL_UNUSED(name_len);
+FlStyle* fl_style_create_impl(struct FlContext* ctx, FlString name) {
+    FL_UNUSED(name);
 
     // TODO: Separate allocator
     StyleInternal* style_internal = malloc(sizeof(StyleInternal));
@@ -55,40 +44,39 @@ FlStyle* fl_style_create_name_len(struct FlContext* ctx, const char* name, int n
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Get the default style, not intended for
+// Get the default style
 
-FlStyle* fl_style_get_default(struct FlContext* ctx) {
-	FL_UNUSED(ctx);
-
+FlStyle* fl_style_get_default_impl(struct FlContext* ctx) {
+    FL_UNUSED(ctx);
     return &s_default_style;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Select the style to be used, to end using the style use 'fl_pop_style()'
 
-void fl_style_push(FlContext* ctx, FlStyle* style) {
+void fl_style_push_impl(struct FlContext* ctx, FlStyle* self) {
     int style_stack_depth = ctx->style_stack_depth;
 
     // as it doesn't make any sense to push the default style we will just exit here
-    if (style == &s_default_style) {
+    if (self == &s_default_style) {
         return;
     }
 
     if (ctx->style_stack_depth >= FL_STYLE_DEPTH) {
         ERROR_ADD(FlError_Style,
                   "Unable to push style %s as stack depth (%d) is full. Are you missing a pop of the style(s)?",
-                  style->name, FL_STYLE_DEPTH);
+                  self->name, FL_STYLE_DEPTH);
         return;
     }
 
-    ctx->style_stack[style_stack_depth++] = (StyleInternal*)style;
+    ctx->style_stack[style_stack_depth++] = (StyleInternal*)self;
     ctx->style_stack_depth = style_stack_depth;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pops the current style
 
-void fl_style_pop(FlContext* ctx) {
+void fl_style_pop_impl(struct FlContext* ctx) {
     const int depth = ctx->style_stack_depth - 1;
     ctx->style_stack_depth = FL_MAX(depth, 0);
 }
@@ -106,8 +94,10 @@ static void build_diff_bits(u8* FL_RESTRICT bits, const u8* FL_RESTRICT def, con
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mark the end of style changes
 
-void fl_style_end_changes(FlStyle* end_style) {
-    StyleInternal* style_internal = (StyleInternal*)end_style;
+void fl_style_end_changes_impl(struct FlContext* ctx, FlStyle* self) {
+    FL_UNUSED(ctx);
+
+    StyleInternal* style_internal = (StyleInternal*)self;
     const u8* style = (const u8*)&style_internal->style;
     const u8* def_style = (const u8*)&s_default_style;
 
@@ -135,16 +125,19 @@ static void apply_style_diff(u8* FL_RESTRICT target, const u8* FL_RESTRICT src, 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Get the current style which is based on what has been pushed on the style stack using push/pop
 
-void fl_style_get_current(struct FlContext* ctx, FlStyle* style) {
+FlStyle fl_style_get_current_impl(struct FlContext* ctx) {
+    FlStyle style;
     const u8* def_style = (u8*)&s_default_style;
 
     // first we copy the default style to the style as this will be our base line
-    memcpy(style, def_style, sizeof(FlStyle));
+    memcpy(&style, def_style, sizeof(FlStyle));
 
     for (int i = 0, count = ctx->style_stack_depth; i < count; ++i) {
         StyleInternal* int_style = ctx->style_stack[i];
         apply_style_diff((u8*)&int_style->style, def_style, int_style->diff_bits);
     }
 
-    style->name = "flowi_merged";  // indicated this is a merged style
+    style.name = fl_cstr_to_flstring("flowi_merged");  // indicated this is a merged style
+
+    return style;
 }

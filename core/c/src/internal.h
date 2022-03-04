@@ -10,7 +10,6 @@
 #include "primitives.h"
 #include "simd.h"
 #include "string_allocator.h"
-#include "style.h"
 #include "vertex_allocator.h"
 
 #if defined(FL_FONTLIB_FREETYPE)
@@ -21,6 +20,12 @@
 #define FL_MAX_STYLES 128
 #define FL_MAX_LAYOUTS 256
 #define FL_STYLE_DEPTH 128
+
+// TODO: Move
+#define FL_RGB(r, g, b) (((u32)b) << 16 | (((u32)g) << 8) | ((u32)r))
+#define FL_RGB_RED FL_RGB(255, 0, 0)
+#define FL_RGB_WHITE FL_RGB(255, 255, 255)
+#define FL_RGB_BLACK FL_RGB(0, 0, 0)
 
 struct Font;
 struct StyleInternal;

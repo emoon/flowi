@@ -4,17 +4,15 @@
 // INTERNAL ONLY HEADER
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include <flowi_core/style.h>
 #include "types.h"
-#include "style.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Used to track style changes so we can apply them and create a full new state to apply
 
 typedef struct StyleInternal {
-    FlStyle style; // has to be first
+    FlStyle style;  // has to be first
     // Extra states states for style
     bool has_generated_diff;
     u8 diff_bits[sizeof(FlStyle)];
 } StyleInternal;
-
-

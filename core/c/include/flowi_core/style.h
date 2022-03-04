@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "context.h"
+#include "font.h"
 #include "idx.h"
 #include "manual.h"
 
@@ -21,40 +22,35 @@ typedef enum FlLengthPercent {
     FlLengthPercent_Percent = 1,
 } FlLengthPercent;
 
+typedef enum FlCorner {
+    FlCorner_TopLeft = 0,
+    FlCorner_TopRight = 1,
+    FlCorner_BottomRight = 2,
+    FlCorner_BottomLeft = 3,
+} FlCorner;
+
 typedef struct FlLengthPercentValue {
     float value;
     FlLengthPercent typ;
 } FlLengthPercentValue;
 
-typedef struct FlSpacing {
-    uint16_t top;
-    uint16_t right;
-    uint16_t bottom;
-    uint16_t left;
-} FlSpacing;
-
-typedef struct FlPadding {
-    uint16_t top;
-    uint16_t right;
-    uint16_t bottom;
-    uint16_t left;
-} FlPadding;
-
 typedef struct FlBorder {
-    FlLengthPercentValue border_radius_top;
-    FlLengthPercentValue border_radius_right;
-    FlLengthPercentValue border_radius_bottom;
-    FlLengthPercentValue border_radius_left;
+    FlLengthPercentValue radius[4];
+    uint32_t colors[4];
+    bool active;
 } FlBorder;
 
 typedef struct FlStyle {
     FlString name;
     FlBorder border;
-    FlPadding padding;
+    uint16_t margin[4];
+    uint16_t padding[4];
     uint32_t current_font;
-    FlColor background_color;
-    FlColor text_color;
-    FlColor font_color;
+    uint32_t background_color;
+    FlFont font;
+    uint32_t font_size;
+    uint32_t text_color;
+    uint32_t font_color;
 } FlStyle;
 
 // Create a new style
@@ -77,9 +73,9 @@ FL_INLINE FlStyle* fl_style_get_default_ctx(struct FlContext* flowi_ctx) {
 #define fl_style_get_default() fl_style_get_default_ctx(flowi_ctx)
 
 // Get the current style which is based on what has been pushed on the style stack using push/pop
-FlStyle* fl_style_get_current_impl(struct FlContext* flowi_ctx);
+FlStyle fl_style_get_current_impl(struct FlContext* flowi_ctx);
 
-FL_INLINE FlStyle* fl_style_get_current_ctx(struct FlContext* flowi_ctx) {
+FL_INLINE FlStyle fl_style_get_current_ctx(struct FlContext* flowi_ctx) {
     return fl_style_get_current_impl(flowi_ctx);
 }
 
@@ -104,13 +100,13 @@ FL_INLINE void fl_style_push_ctx(struct FlContext* flowi_ctx, FlStyle* self) {
 #define fl_style_push(self) fl_style_push_ctx(flowi_ctx, self)
 
 // Pops the current style
-void fl_style_pop_impl(struct FlContext* flowi_ctx, FlStyle* self);
+void fl_style_pop_impl(struct FlContext* flowi_ctx);
 
-FL_INLINE void fl_style_pop_ctx(struct FlContext* flowi_ctx, FlStyle* self) {
-    fl_style_pop_impl(flowi_ctx, self);
+FL_INLINE void fl_style_pop_ctx(struct FlContext* flowi_ctx) {
+    fl_style_pop_impl(flowi_ctx);
 }
 
-#define fl_style_pop(self) fl_style_pop_ctx(flowi_ctx, self)
+#define fl_style_pop() fl_style_pop_ctx(flowi_ctx)
 
 #ifdef __cplusplus
 }

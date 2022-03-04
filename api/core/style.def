@@ -1,3 +1,5 @@
+mod font
+
 enum LengthPercent {
     Length = 0,
     Percent = 1,
@@ -8,35 +10,30 @@ struct LengthPercentValue {
     typ: LengthPercent,
 }
 
-struct Spacing {
-    top: u16,
-    right: u16,
-    bottom: u16,
-    left: u16,
-}
-
-struct Padding {
-    top: u16,
-    right: u16,
-    bottom: u16,
-    left: u16,
-}
-
 struct Border {
-    border_radius_top: LengthPercentValue,
-    border_radius_right: LengthPercentValue,
-    border_radius_bottom: LengthPercentValue,
-    border_radius_left: LengthPercentValue,
+    radius: [LengthPercentValue; 4],
+    colors: [u32; 4],
+    active: bool,
+}
+
+enum Corner {
+    TopLeft = 0,
+    TopRight = 1,
+    BottomRight = 2,
+    BottomLeft = 3,
 }
 
 struct Style {
     name: String,
     border: Border,
-    padding: Padding,
+    margin: [u16; 4],
+    padding: [u16; 4],
     current_font: u32,
-    background_color: Color,
-    text_color: Color,
-    font_color: Color,
+    background_color: u32,
+    font: Font,
+    font_size: u32,
+    text_color: u32,
+    font_color: u32,
 
     /// Create a new style
     [static] create(name: String) -> *Style?,
@@ -45,7 +42,7 @@ struct Style {
     [static] get_default() -> *Style?,
 
     /// Get the current style which is based on what has been pushed on the style stack using push/pop
-    [static] get_current() -> *const Style?,
+    [static] get_current() -> Style?,
 
     /// Mark the end of style changes
     end_changes(),
@@ -54,7 +51,7 @@ struct Style {
     push(),
 
     /// Pops the current style
-    pop(),
+    [static] pop(),
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

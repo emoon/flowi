@@ -1,11 +1,11 @@
 #include "area.h"
 #include <assert.h>
+#include <flowi_core/style.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "internal.h"
 #include "render.h"
-#include "style.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -80,11 +80,10 @@ static int generate_corner(struct FlContext* ctx, float side, FlVec2 size, Corne
 
     // const int segment_size = 2;
 
-    const FlLengthPercentValue border_radius = style->border.border_radius[corner_index];
+    const FlLengthPercentValue border_radius = style->border.radius[corner_index];
     const float pixel_side = border_radius.value;
     const int corner_pixels_percent = (int)(side * (border_radius.value * 0.01));
-    const int corner_pixels = border_radius.type == FlLengthPercentType_Length ? (int)pixel_side
-                                                                               : corner_pixels_percent;
+    const int corner_pixels = border_radius.typ == FlLengthPercent_Length ? (int)pixel_side : corner_pixels_percent;
     int vertex_count = corner_pixels;
 
     // with lots of vertices reducing to half is fine
@@ -307,17 +306,17 @@ Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool Area_generate_circle(struct FlContext* ctx) {
-    FlStyle* style = fl_style_get_default(ctx);
+    FlStyle* style = fl_style_get_default_ctx(ctx);
 
     FlVec2 offset = {10.0f, 10.f};
     FlVec2 size = {280.0f * 2, 280 * 2.0f};
 
     style->background_color = FL_RGB(0x19, 0xe, 0x23);
 
-    style->border.border_radius[0].value = 40.0f;
-    style->border.border_radius[1].value = 40.0f;
-    style->border.border_radius[2].value = 40.0f;
-    style->border.border_radius[3].value = 40.0f;
+    style->border.radius[0].value = 40.0f;
+    style->border.radius[1].value = 40.0f;
+    style->border.radius[2].value = 40.0f;
+    style->border.radius[3].value = 40.0f;
 
     generate_corners(ctx, style, offset, size);
 
