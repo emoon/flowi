@@ -11,7 +11,7 @@
 // Default style
 
 static FlStyle s_default_style = {
-    .name = {"flowi_default", strlen("flowi_default")},
+    .name = {"flowi_default", sizeof("flowi_default")},
     .border =
         {
             .colors = {FL_RGB_RED, FL_RGB_RED, FL_RGB_RED, FL_RGB_RED},
