@@ -10,6 +10,8 @@ fn main() {
     let flowi_in_tree_dir = "../../c";
     let flowi_internal_dir = "flowi_c";
 
+    // temp
+
     // First we try to build from the in the tree, if that doesn't exists we build from
     // with in the crate instead
 
@@ -20,8 +22,10 @@ fn main() {
     });
 
     let flowi_dir = Path::new(if Path::new(flowi_in_tree_dir).exists() {
+        println!("cargo:rerun-if-changed={}", flowi_in_tree_dir);
         flowi_in_tree_dir
     } else {
+        println!("cargo:rerun-if-changed={}", flowi_internal_dir);
         flowi_internal_dir
     });
 
@@ -92,9 +96,11 @@ fn main() {
 
     build.compile("freetype2");
 
-    // Build stb
+    // Build stb & nanosvg
     cc::Build::new()
+        .include(external_dir.join("nanosvg"))
         .file(external_dir.join("stb/stb.c"))
+        .file(external_dir.join("nanosvg/nanosvg.c"))
         .compile("stb");
 
     // Build flowi
@@ -125,6 +131,7 @@ fn main() {
 
     build.include(flowi_dir.join("include"));
     build.include(external_dir.join("freetype2/include"));
+    build.include(external_dir.join("nanosvg"));
     build.include(external_dir.join("tlslf"));
     build.include(external_dir.join("stb"));
 

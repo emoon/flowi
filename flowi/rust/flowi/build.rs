@@ -24,6 +24,8 @@ fn main() {
         ("", "", "", "")
     };
 
+    println!("cargo:rerun-if-changed={}", flowi_root);
+
     add_includes(
         &mut build,
         root,
