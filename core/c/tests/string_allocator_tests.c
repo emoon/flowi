@@ -61,7 +61,6 @@ UTEST(StringAllocator, copy_persistant_string) {
 
     ASSERT_NE(s.str, test_str.str);
     ASSERT_EQ(test_str.len, s.len);
-    ASSERT_EQ(0, s.str[test_str.len]);
     ASSERT_EQ(1, str_alloc.string_count);
 
     destroy_frame_allocator(&str_alloc);
@@ -183,13 +182,13 @@ UTEST(StringAllocator, copy_frame_rewind) {
     FlString s0 = StringAllocator_copy_cstr_frame(&str_alloc, test_str);
 
     // Expect these string to be the same
-    ASSERT_STREQ(s0.str, (char*)str_alloc.frame_allocator->start_data);
+    ASSERT_STRNEQ(s0.str, (char*)str_alloc.frame_allocator->start_data, strlen(test_str));
 
     LinearAllocator_rewind(str_alloc.frame_allocator);
 
     // Expect allocator memory now to point at the new string
     FlString s1 = StringAllocator_copy_cstr_frame(&str_alloc, test2_str);
-    ASSERT_STREQ(s1.str, (char*)str_alloc.frame_allocator->start_data);
+    ASSERT_STRNEQ(s1.str, (char*)str_alloc.frame_allocator->start_data, strlen(test2_str));
 
     destroy_frame_allocator(&str_alloc);
     StringAllocator_destroy(&str_alloc);
