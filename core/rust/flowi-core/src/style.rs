@@ -86,7 +86,7 @@ impl Context {
     }
 
     /// Get the current style which is based on what has been pushed on the style stack using push/pop
-    pub fn style_get_current(&self) -> Result<Style> {
+    pub fn style_get_current(&self) -> Style {
         unsafe {
             let self_ = std::mem::transmute(self);
             let ret_val = fl_style_get_current_impl(self_);

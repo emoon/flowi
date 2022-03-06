@@ -42,7 +42,7 @@ struct Style {
     [static] get_default() -> *Style?,
 
     /// Get the current style which is based on what has been pushed on the style stack using push/pop
-    [static] get_current() -> Style?,
+    [static] get_current() -> Style,
 
     /// Mark the end of style changes
     end_changes(),
