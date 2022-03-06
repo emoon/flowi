@@ -31,67 +31,56 @@ typedef struct FlUi {
 typedef struct FlPushButtonWithIconArgs {
     FlImageAlignment image_alignment;
     uint32_t image_text_spacing;
+    FlIVec2 image_size;
 } FlPushButtonWithIconArgs;
 
 #define FlPushButtonWithIconArgs_default \
-    (FlPushButtonWithIconArgs) { .image_alignment = ImageAlignment_Left, .image_text_spacing = 0)
+    (FlPushButtonWithIconArgs) { .image_alignment = ImageAlignment_Left, .image_text_spacing = 0, .image_size = 0)
 
-void fl_ui_text_impl(struct FlContext* flowi_ctx, FlString text);
+void fl_ui_text_impl(struct FlContext* ctx, FlString text);
 
-FL_INLINE void fl_ui_text_ctx(struct FlContext* flowi_ctx, const char* text) {
-    FlString text_ = {text, 1, (uint32_t)strlen(text)};
-    fl_ui_text_impl(flowi_ctx, text_);
+FL_INLINE void fl_ui_text(struct FlContext* ctx, const char* text) {
+    FlString text_ = fl_cstr_to_flstring(text);
+    fl_ui_text_impl(ctx, text_);
 }
-
-#define fl_ui_text(text_) fl_ui_text_ctx(flowi_ctx, text_)
 
 // Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
-void fl_ui_image_impl(struct FlContext* flowi_ctx, FlImage image);
+void fl_ui_image_impl(struct FlContext* ctx, FlImage image);
 
-FL_INLINE void fl_ui_image_ctx(struct FlContext* flowi_ctx, FlImage image) {
-    fl_ui_image_impl(flowi_ctx, image);
+FL_INLINE void fl_ui_image(struct FlContext* ctx, FlImage image) {
+    fl_ui_image_impl(ctx, image);
 }
-
-#define fl_ui_image(image) fl_ui_image_ctx(flowi_ctx, image)
 
 // Draw image with given size
-void fl_ui_image_with_size_impl(struct FlContext* flowi_ctx, FlImage image, FlVec2 size);
+void fl_ui_image_with_size_impl(struct FlContext* ctx, FlImage image, FlVec2 size);
 
-FL_INLINE void fl_ui_image_with_size_ctx(struct FlContext* flowi_ctx, FlImage image, FlVec2 size) {
-    fl_ui_image_with_size_impl(flowi_ctx, image, size);
+FL_INLINE void fl_ui_image_with_size(struct FlContext* ctx, FlImage image, FlVec2 size) {
+    fl_ui_image_with_size_impl(ctx, image, size);
 }
-
-#define fl_ui_image_with_size(image, size) fl_ui_image_with_size_ctx(flowi_ctx, image, size)
 
 // Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
-void fl_ui_set_pos_impl(struct FlContext* flowi_ctx, FlVec2 pos);
+void fl_ui_set_pos_impl(struct FlContext* ctx, FlVec2 pos);
 
-FL_INLINE void fl_ui_set_pos_ctx(struct FlContext* flowi_ctx, FlVec2 pos) {
-    fl_ui_set_pos_impl(flowi_ctx, pos);
+FL_INLINE void fl_ui_set_pos(struct FlContext* ctx, FlVec2 pos) {
+    fl_ui_set_pos_impl(ctx, pos);
 }
-
-#define fl_ui_set_pos(pos) fl_ui_set_pos_ctx(flowi_ctx, pos)
 
 // Get the last widget size. This is usually used for doing manual layouting
-FlRect fl_ui_get_last_widget_size_impl(struct FlContext* flowi_ctx, FlVec2 pos);
+FlRect fl_ui_get_last_widget_size_impl(struct FlContext* ctx, FlVec2 pos);
 
-FL_INLINE FlRect fl_ui_get_last_widget_size_ctx(struct FlContext* flowi_ctx, FlVec2 pos) {
-    return fl_ui_get_last_widget_size_impl(flowi_ctx, pos);
+FL_INLINE FlRect fl_ui_get_last_widget_size(struct FlContext* ctx, FlVec2 pos) {
+    return fl_ui_get_last_widget_size_impl(ctx, pos);
 }
-
-#define fl_ui_get_last_widget_size(pos) fl_ui_get_last_widget_size_ctx(flowi_ctx, pos)
 
 // Push button widget that returns true if user has pressed it
-bool fl_ui_push_button_with_icon_impl(struct FlContext* flowi_ctx, FlString text, FlImage image,
+bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlImage image,
                                       FlPushButtonWithIconArgs args);
 
-FL_INLINE bool fl_ui_push_button_with_icon_ctx(struct FlContext* flowi_ctx, const char* text, FlImage image,
-                                               FlPushButtonWithIconArgs args) {
-    FlString text_ = {text, 1, (uint32_t)strlen(text)};
-    return fl_ui_push_button_with_icon_impl(flowi_ctx, text_, image, args);
+FL_INLINE bool fl_ui_push_button_with_icon(struct FlContext* ctx, const char* text, FlImage image,
+                                           FlPushButtonWithIconArgs args) {
+    FlString text_ = fl_cstr_to_flstring(text);
+    return fl_ui_push_button_with_icon_impl(ctx, text_, image, args);
 }
-
-#define fl_ui_push_button_with_icon(text_, image, args) fl_ui_push_button_with_icon_ctx(flowi_ctx, text_, image, args)
 
 #ifdef __cplusplus
 }

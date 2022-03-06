@@ -38,59 +38,46 @@ typedef uint64_t FlFont;
 
 // Create a font from (TTF) file. To use the font use [Font::set] or [Font::set_with_size] before using text-based
 // widgets Returns >= 0 for valid handle, use fl_get_status(); for more detailed error message
-FlFont fl_font_new_from_file_impl(struct FlContext* flowi_ctx, FlString filename, uint32_t font_size,
+FlFont fl_font_new_from_file_impl(struct FlContext* ctx, FlString filename, uint32_t font_size,
                                   FlFontPlacementMode placement_mode);
 
-FL_INLINE FlFont fl_font_new_from_file_ctx(struct FlContext* flowi_ctx, const char* filename, uint32_t font_size,
-                                           FlFontPlacementMode placement_mode) {
-    FlString filename_ = {filename, 1, (uint32_t)strlen(filename)};
-    return fl_font_new_from_file_impl(flowi_ctx, filename_, font_size, placement_mode);
+FL_INLINE FlFont fl_font_new_from_file(struct FlContext* ctx, const char* filename, uint32_t font_size,
+                                       FlFontPlacementMode placement_mode) {
+    FlString filename_ = fl_cstr_to_flstring(filename);
+    return fl_font_new_from_file_impl(ctx, filename_, font_size, placement_mode);
 }
-
-#define fl_font_new_from_file(filename_, font_size, placement_mode) \
-    fl_font_new_from_file_ctx(flowi_ctx, filename_, font_size, placement_mode)
 
 // Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
 // Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
-FlFont fl_font_new_from_memory_impl(struct FlContext* flowi_ctx, FlString name, uint8_t* data, uint32_t data_size,
+FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size,
                                     uint32_t font_size, FlFontPlacementMode placement_mode);
 
-FL_INLINE FlFont fl_font_new_from_memory_ctx(struct FlContext* flowi_ctx, const char* name, uint8_t* data,
-                                             uint32_t data_size, uint32_t font_size,
-                                             FlFontPlacementMode placement_mode) {
-    FlString name_ = {name, 1, (uint32_t)strlen(name)};
-    return fl_font_new_from_memory_impl(flowi_ctx, name_, data, data_size, font_size, placement_mode);
+FL_INLINE FlFont fl_font_new_from_memory(struct FlContext* ctx, const char* name, uint8_t* data, uint32_t data_size,
+                                         uint32_t font_size, FlFontPlacementMode placement_mode) {
+    FlString name_ = fl_cstr_to_flstring(name);
+    return fl_font_new_from_memory_impl(ctx, name_, data, data_size, font_size, placement_mode);
 }
-
-#define fl_font_new_from_memory(name_, data, data_size, font_size, placement_mode) \
-    fl_font_new_from_memory_ctx(flowi_ctx, name_, data, data_size, font_size, placement_mode)
 
 // Set the font as active when drawing text
-void fl_font_set_impl(struct FlContext* flowi_ctx, FlFont font);
+void fl_font_set_impl(struct FlContext* ctx, FlFont font);
 
-FL_INLINE void fl_font_set_ctx(struct FlContext* flowi_ctx, FlFont font) {
-    fl_font_set_impl(flowi_ctx, font);
+FL_INLINE void fl_font_set(struct FlContext* ctx, FlFont font) {
+    fl_font_set_impl(ctx, font);
 }
-
-#define fl_font_set(font) fl_font_set_ctx(flowi_ctx, font)
 
 // Set font active with specific size in pixels
-void fl_font_set_with_size_impl(struct FlContext* flowi_ctx, uint32_t size);
+void fl_font_set_with_size_impl(struct FlContext* ctx, uint32_t size);
 
-FL_INLINE void fl_font_set_with_size_ctx(struct FlContext* flowi_ctx, uint32_t size) {
-    fl_font_set_with_size_impl(flowi_ctx, size);
+FL_INLINE void fl_font_set_with_size(struct FlContext* ctx, uint32_t size) {
+    fl_font_set_with_size_impl(ctx, size);
 }
-
-#define fl_font_set_with_size(size) fl_font_set_with_size_ctx(flowi_ctx, size)
 
 // Destory the current font, render the id invalid
-void fl_font_destroy_impl(struct FlContext* flowi_ctx, FlFont font);
+void fl_font_destroy_impl(struct FlContext* ctx, FlFont font);
 
-FL_INLINE void fl_font_destroy_ctx(struct FlContext* flowi_ctx, FlFont font) {
-    fl_font_destroy_impl(flowi_ctx, font);
+FL_INLINE void fl_font_destroy(struct FlContext* ctx, FlFont font) {
+    fl_font_destroy_impl(ctx, font);
 }
-
-#define fl_font_destroy(font) fl_font_destroy_ctx(flowi_ctx, font)
 
 #ifdef __cplusplus
 }

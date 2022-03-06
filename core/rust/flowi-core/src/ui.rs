@@ -15,6 +15,7 @@ extern "C" {
         image: Image,
         image_alignment: ImageAlignment,
         image_text_spacing: u32,
+        image_size: IVec2,
     ) -> bool;
 }
 
@@ -79,6 +80,7 @@ impl Context {
         image: Image,
         image_alignment: ImageAlignment,
         image_text_spacing: u32,
+        image_size: IVec2,
     ) -> bool {
         unsafe {
             let self_ = std::mem::transmute(self);
@@ -88,6 +90,7 @@ impl Context {
                 image,
                 image_alignment,
                 image_text_spacing,
+                image_size,
             );
             ret_val
         }

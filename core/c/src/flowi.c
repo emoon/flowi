@@ -434,6 +434,6 @@ static char s_dummy_buffer[512];
 
 FlString fl_error_last_error() {
     strcpy(s_dummy_buffer, "TODO: Correct error");
-    FlString ret = {s_dummy_buffer, 1, strlen(s_dummy_buffer)};
+    FlString ret = fl_cstr_to_flstring(s_dummy_buffer);
     return ret;
 }

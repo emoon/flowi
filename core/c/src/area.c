@@ -306,7 +306,7 @@ Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool Area_generate_circle(struct FlContext* ctx) {
-    FlStyle* style = fl_style_get_default_ctx(ctx);
+    FlStyle* style = fl_style_get_default(ctx);
 
     FlVec2 offset = {10.0f, 10.f};
     FlVec2 size = {280.0f * 2, 280 * 2.0f};

@@ -23,3 +23,13 @@ pub struct Vec2 {
     /// y position
     y: f32,
 }
+
+/// Used for setting a position in pixel space
+#[repr(C)]
+#[derive(Debug)]
+pub struct IVec2 {
+    /// x position
+    x: i32,
+    /// y position
+    y: i32,
+}

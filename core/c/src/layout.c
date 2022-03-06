@@ -34,7 +34,7 @@ void Layout_create_default(struct FlContext* self) {
         .direction = FlLayoutDirection_Verticial,
     };
 
-    self->default_layout = fl_layout_area_create_ctx(self, "flowi_default_layout", layout);
+    self->default_layout = fl_layout_area_create(self, "flowi_default_layout", layout);
     fl_layout_set(self, self->default_layout);
 }
 

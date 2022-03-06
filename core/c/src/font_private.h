@@ -62,4 +62,4 @@ void Font_generate_glyphs(struct FlContext* FL_RESTRICT ctx, Font* font, const u
 Glyph* Font_get_glyph(const Font* self, u32 codepoint, u32 font_size);
 void Font_destroy(struct FlGlobalState* state, Font* font);
 
-FlVec2 Font_calc_text_size(struct FlContext* ctx, const u32* codepoints, int len);
+FlIVec2 Font_calc_text_size(struct FlContext* ctx, const u32* codepoints, int len);

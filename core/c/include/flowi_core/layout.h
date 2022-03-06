@@ -50,35 +50,27 @@ typedef struct FlLayoutArea {
     FlLayoutDirection direction;
 } FlLayoutArea;
 
-FlLayoutAreaId fl_layout_area_create_impl(struct FlContext* flowi_ctx, FlString name, FlLayoutArea area);
+FlLayoutAreaId fl_layout_area_create_impl(struct FlContext* ctx, FlString name, FlLayoutArea area);
 
-FL_INLINE FlLayoutAreaId fl_layout_area_create_ctx(struct FlContext* flowi_ctx, const char* name, FlLayoutArea area) {
-    FlString name_ = {name, 1, (uint32_t)strlen(name)};
-    return fl_layout_area_create_impl(flowi_ctx, name_, area);
+FL_INLINE FlLayoutAreaId fl_layout_area_create(struct FlContext* ctx, const char* name, FlLayoutArea area) {
+    FlString name_ = fl_cstr_to_flstring(name);
+    return fl_layout_area_create_impl(ctx, name_, area);
 }
 
-#define fl_layout_area_create(name_, area) fl_layout_area_create_ctx(flowi_ctx, name_, area)
-
-FlLayoutAreaId fl_layout_area_from_children_impl(struct FlContext* flowi_ctx, FlString name, FlLayoutArea* children,
+FlLayoutAreaId fl_layout_area_from_children_impl(struct FlContext* ctx, FlString name, FlLayoutArea* children,
                                                  uint32_t children_size, int16_t row, int16_t cols);
 
-FL_INLINE FlLayoutAreaId fl_layout_area_from_children_ctx(struct FlContext* flowi_ctx, const char* name,
-                                                          FlLayoutArea* children, uint32_t children_size, int16_t row,
-                                                          int16_t cols) {
-    FlString name_ = {name, 1, (uint32_t)strlen(name)};
-    return fl_layout_area_from_children_impl(flowi_ctx, name_, children, children_size, row, cols);
+FL_INLINE FlLayoutAreaId fl_layout_area_from_children(struct FlContext* ctx, const char* name, FlLayoutArea* children,
+                                                      uint32_t children_size, int16_t row, int16_t cols) {
+    FlString name_ = fl_cstr_to_flstring(name);
+    return fl_layout_area_from_children_impl(ctx, name_, children, children_size, row, cols);
 }
 
-#define fl_layout_area_from_children(name_, children, children_size, row, cols) \
-    fl_layout_area_from_children_ctx(flowi_ctx, name_, children, children_size, row, cols)
+void fl_layout_area_set_layout_mode_impl(struct FlContext* ctx, FlLayoutMode mode);
 
-void fl_layout_area_set_layout_mode_impl(struct FlContext* flowi_ctx, FlLayoutMode mode);
-
-FL_INLINE void fl_layout_area_set_layout_mode_ctx(struct FlContext* flowi_ctx, FlLayoutMode mode) {
-    fl_layout_area_set_layout_mode_impl(flowi_ctx, mode);
+FL_INLINE void fl_layout_area_set_layout_mode(struct FlContext* ctx, FlLayoutMode mode) {
+    fl_layout_area_set_layout_mode_impl(ctx, mode);
 }
-
-#define fl_layout_area_set_layout_mode(mode) fl_layout_area_set_layout_mode_ctx(flowi_ctx, mode)
 
 #ifdef __cplusplus
 }

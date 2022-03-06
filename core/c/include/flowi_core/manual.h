@@ -9,8 +9,7 @@
 
 typedef struct FlString {
     const char* str;
-    unsigned int c_string;
-    unsigned int len;
+    uint32_t len;
 } FlString;
 
 typedef struct FlColor {
@@ -20,6 +19,6 @@ typedef struct FlColor {
 const char* fl_string_to_cstr(char* temp_target, int temp_size, FlString str);
 
 FL_INLINE FlString fl_cstr_to_flstring(const char* str) {
-    FlString ret = {str, 1, (unsigned int)strlen(str)};
+    FlString ret = {str, (unsigned int)strlen(str)};
     return ret;
 }

@@ -420,11 +420,11 @@ void Font_init(FlGlobalState* state) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlVec2 Font_calc_text_size(struct FlContext* ctx, const u32* codepoints, int len) {
+FlIVec2 Font_calc_text_size(struct FlContext* ctx, const u32* codepoints, int len) {
     Font* font = ctx->current_font;
     int font_size = ctx->current_font_size;
 
-    FlVec2 size = {0};
+    FlIVec2 size = {0};
 
     // TODO: Handle different directions
 
@@ -434,8 +434,8 @@ FlVec2 Font_calc_text_size(struct FlContext* ctx, const u32* codepoints, int len
         Glyph* glyph = Font_get_glyph(font, codepoint, font_size);
 
         if (glyph) {
-            size.x += glyph->advance_x;
-            size.y = FL_MAX(size.y, (float)(glyph->y1 - glyph->y0));
+            size.x += (int)glyph->advance_x;  // TODO: valudate if this is correct
+            size.y = FL_MAX(size.y, (glyph->y1 - glyph->y0));
         } else {
             // If we don't find the glyph (happens when not generated get)
             // We get the outline only, and do the full rendering later (optionally) multi-threaded.
@@ -476,8 +476,8 @@ FlVec2 Font_calc_text_size(struct FlContext* ctx, const u32* codepoints, int len
             int width = bbox.xMax - bbox.xMin;
             int height = bbox.yMax - bbox.yMin;
 
-            size.x += (float)width;
-            size.y = FL_MAX(size.y, (float)height);
+            size.x += width;
+            size.y = FL_MAX(size.y, height);
 
             FT_Done_Glyph(glyph);
         }

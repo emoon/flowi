@@ -10,14 +10,14 @@ struct FlContext;
 
 UTEST(Font, load_failed) {
     struct FlGlobalState* state = fl_create(NULL);
-    struct FlContext* flowi_ctx = fl_context_create(state);
+    struct FlContext* ctx = fl_context_create(state);
 
-    FlFont font_id = fl_font_new_from_file("unable_to_load.bin", 12, FlFontPlacementMode_Auto);
+    FlFont font_id = fl_font_new_from_file(ctx, "unable_to_load.bin", 12, FlFontPlacementMode_Auto);
 
     // Expect loading fail
     ASSERT_TRUE(font_id == 0);
 
-    fl_context_destroy(flowi_ctx);
+    fl_context_destroy(ctx);
     fl_destroy(state);
 }
 
@@ -25,15 +25,15 @@ UTEST(Font, load_failed) {
 
 UTEST(Font, load_font_ok) {
     struct FlGlobalState* state = fl_create(NULL);
-    struct FlContext* flowi_ctx = fl_context_create(state);
+    struct FlContext* ctx = fl_context_create(state);
 
-    FlFont font_id = fl_font_new_from_file("data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
+    FlFont font_id = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
 
     // Expect loading to work
     ASSERT_NE(0, font_id);
 
     // fl_font_destroy(font_id);
-    fl_context_destroy(flowi_ctx);
+    fl_context_destroy(ctx);
     fl_destroy(state);
 }
 
@@ -41,21 +41,21 @@ UTEST(Font, load_font_ok) {
 
 UTEST(Font, calc_text_size) {
     struct FlGlobalState* state = fl_create(NULL);
-    struct FlContext* flowi_ctx = fl_context_create(state);
+    struct FlContext* ctx = fl_context_create(state);
 
-    FlFont font_id = fl_font_new_from_file("data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
+    FlFont font_id = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
 
     u32 codepoints[] = {'A', 'B', 'c', ' '};
 
-    flowi_ctx->current_font = (Font*)Handles_get_data(&state->font_handles, font_id);
-    flowi_ctx->current_font_size = 36;
+    ctx->current_font = (Font*)Handles_get_data(&state->font_handles, font_id);
+    ctx->current_font_size = 36;
 
-    FlVec2 size = Font_calc_text_size(flowi_ctx, codepoints, 4);
+    FlIVec2 size = Font_calc_text_size(ctx, codepoints, 4);
 
-    ASSERT_NEAR(66.0f, size.x, 0.01f);
-    ASSERT_NEAR(25.0f, size.y, 0.01f);
+    ASSERT_EQ(66, size.x);
+    ASSERT_EQ(25, size.y);
 
-    fl_context_destroy(flowi_ctx);
+    fl_context_destroy(ctx);
     fl_destroy(state);
 }
 
@@ -63,9 +63,9 @@ UTEST(Font, calc_text_size) {
 
 UTEST(Font, gen_glyph_verify_render_cmds) {
     struct FlGlobalState* state = fl_create(NULL);
-    struct FlContext* flowi_ctx = fl_context_create(state);
+    struct FlContext* ctx = fl_context_create(state);
 
-    FlFont font_id = fl_font_new_from_file("data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
+    FlFont font_id = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 36, FlFontPlacementMode_Auto);
     u32 test[] = {64, 65};
 
     int count = fl_render_begin_commands(state);
@@ -94,13 +94,13 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
 
     // Begin frame and generate some glyphs and figure out the range to update
 
-    fl_frame_begin(flowi_ctx, 640, 480);
+    fl_frame_begin(ctx, 640, 480);
 
     Atlas_begin_add_rects(state->mono_fonts_atlas);
-    Font_generate_glyphs(flowi_ctx, (Font*)Handles_get_data(&state->font_handles, font_id), test, 2, 36);
+    Font_generate_glyphs(ctx, (Font*)Handles_get_data(&state->font_handles, font_id), test, 2, 36);
     Atlas_end_add_rects(state->mono_fonts_atlas, state);
 
-    fl_frame_end(flowi_ctx);
+    fl_frame_end(ctx);
 
     count = fl_render_begin_commands(state);
 
@@ -120,7 +120,7 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
     // validate that we have created some textures
     ASSERT_TRUE(found_update_texture);
 
-    fl_font_destroy(font_id);
-    fl_context_destroy(flowi_ctx);
+    fl_font_destroy(ctx, font_id);
+    fl_context_destroy(ctx);
     fl_destroy(state);
 }

@@ -19,7 +19,8 @@ struct Ui {
     /// Get the last widget size. This is usually used for doing manual layouting
     [static] get_last_widget_size(pos: Vec2) -> Rect,
     /// Push button widget that returns true if user has pressed it 
-    [static] push_button_with_icon(text: String, image: Image, image_alignment: ImageAlignment = Left, image_text_spacing: u32 = 0) -> bool,
+    [static] push_button_with_icon(text: String, image: Image, 
+             image_alignment: ImageAlignment = Left, image_text_spacing: u32 = 0, image_size: IVec2 = 0) -> bool,
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

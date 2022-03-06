@@ -26,9 +26,9 @@ static FlString copy_cstr(StringAllocator* self, const char* str, int len, Alloc
     char* str_data = NULL;
 
     if (FL_LIKELY(type == AllocType_Frame)) {
-        str_data = LinearAllocator_alloc_array(self->frame_allocator, char, len + 1);
+        str_data = LinearAllocator_alloc_array(self->frame_allocator, char, len);
     } else if (type == AllocType_Persistant) {
-        str_data = FlAllocator_alloc_array_type(self->allocator, len + 1, char);
+        str_data = FlAllocator_alloc_array_type(self->allocator, len, char);
         char** track = LinearAllocator_alloc(&self->tracking, char*);
 
         *track = str_data;
@@ -37,11 +37,7 @@ static FlString copy_cstr(StringAllocator* self, const char* str, int len, Alloc
 
     memcpy(str_data, str, len);
 
-    // we add 0 at the end to make things easier in case we want to use some C function to print
-    str_data[len] = 0;
-
     ret_val.str = str_data;
-    ret_val.c_string = 1;
     ret_val.len = len;
 
     return ret_val;
@@ -110,11 +106,6 @@ FlString StringAllocator_copy_string(StringAllocator* self, FlString str) {
 // Notice that this string is only valid for the local scope of the calling code
 
 const char* StringAllocator_temp_string_to_cstr(StringAllocator* self, char* temp_buffer, int temp_len, FlString str) {
-    if (str.c_string) {
-        temp_buffer[0] = 0;
-        return str.str;
-    }
-
     if (str.len + 1 < (u32)temp_len) {
         memcpy(temp_buffer, str.str, str.len);
         temp_buffer[str.len] = 0;

@@ -7,73 +7,6 @@
 #include <smmintrin.h>
 #include <xmmintrin.h>  // __m128
 
-// Convert utf8 to codepoints (u16) Will return false if the input utf8 is is invalid
-// Output is to be expected to be 16 byte aligned and contain 32 bytes of extra data
-// TODO: Support actual utf8 :)
-// TODO: Add utf8 validation pass
-// TODO: Currently only supports ascii
-// TODO: SIMD
-bool Text_utf8_to_codepoints_u16(u16* output, const u8* input, int len) {
-    for (int i = 0; i < len; ++i) {
-        u8 t = *input++;
-
-        if (t > 0x80) {
-            return false;
-        }
-
-        *output++ = t;
-    }
-
-    return true;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-const u8* utf8_simple(const u8* s, u32* c) {
-    const u8* next = NULL;
-
-    if (s[0] < 0x80) {
-        *c = s[0];
-        next = s + 1;
-    } else if ((s[0] & 0xe0) == 0xc0) {
-        *c = ((long)(s[0] & 0x1f) << 6) | ((long)(s[1] & 0x3f) << 0);
-        next = s + 2;
-    } else if ((s[0] & 0xf0) == 0xe0) {
-        *c = ((long)(s[0] & 0x0f) << 12) | ((long)(s[1] & 0x3f) << 6) | ((long)(s[2] & 0x3f) << 0);
-        next = s + 3;
-    } else if ((s[0] & 0xf8) == 0xf0 && (s[0] <= 0xf4)) {
-        *c = ((long)(s[0] & 0x07) << 18) | ((long)(s[1] & 0x3f) << 12) | ((long)(s[2] & 0x3f) << 6) |
-             ((long)(s[3] & 0x3f) << 0);
-        next = s + 4;
-    } else {
-        *c = -1;       // invalid
-        next = s + 1;  // skip this byte
-    }
-    if (*c >= 0xd800 && *c <= 0xdfff)
-        *c = -1;  // surrogate half
-    return next;
-}
-*/
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Convert utf8 to codepoints (u32) Will return false if the input utf8 is is invalid
-// Output is to be expected to be 16 byte aligned and contain 32 bytes of extra data
-bool utf8_to_codepoints_u32(u32* output, const u8* input, int len) {
-    /*
-    const u8* end = input + len;
-    while (input < end) {
-        input = utf8_simple(input, output);
-        output++;
-    }
-    */
-
-    for (int i = 0; i < len; ++i) {
-        *output++ = *input++;
-    }
-
-    return true;
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSize* FL_RESTRICT index_buffer,
@@ -140,26 +73,6 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
         out += 4;
         index_buffer += 6;
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Calculate AABB for the text
-// TODO: Supply styling for text spacing and stuff like that
-
-FlVec2 Text_calculate_size(const struct Glyph* FL_RESTRICT glyph_lookup, const u32* FL_RESTRICT codepoints, int count) {
-    FlVec2 size = {0.0f, 0.0f};
-
-    // TODO: Separate array for lookup_x for better cache locality?
-    // TODO: Support left -> right text
-
-    for (int i = 0; i < count; ++i) {
-        const Glyph* g = &glyph_lookup[*codepoints++];
-        u16 y_size = g->y1 - g->y0;
-        size.x += g->advance_x;
-        size.y = y_size > size.y ? y_size : size.y;
-    }
-
-    return size;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -247,7 +160,7 @@ void Text_generate_vertex_buffer_sse2(FlVertPosUvColor* __restrict out, FlIdxSiz
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Based on 
+// Based on
 // Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 // See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
 // but slightly rewritten to allow it to be fully branchless

@@ -71,7 +71,7 @@ fn arg_line(args: &[String], with_context: Ctx) -> String {
     let mut output = String::with_capacity(256);
 
     if with_context == Ctx::Yes {
-        output.push_str("struct FlContext* flowi_ctx");
+        output.push_str("struct FlContext* ctx");
     }
 
     for (i, a) in args.iter().enumerate() {
@@ -278,7 +278,7 @@ impl Cgen {
     fn generate_function_args(func: &Function, self_name: &str) -> FuncArgs {
         let mut fa = FuncArgs::default();
 
-        fa.call_args.push("flowi_ctx".to_owned());
+        fa.call_args.push("ctx".to_owned());
 
         for (i, arg) in func.function_args.iter().enumerate() {
             // skip first arg if type is manual or static
@@ -299,8 +299,8 @@ impl Cgen {
                 VariableType::Str => {
                     fa.func_args.push(format!("const char* {}", arg.name));
                     fa.body.push_str(&format!(
-                        "FlString {}_ = {{ {}, 1, (uint32_t)strlen({}) }};",
-                        arg.name, arg.name, arg.name
+                        "FlString {}_ = fl_cstr_to_flstring({});",
+                        arg.name, arg.name,
                     ));
 
                     fa.internal_args.push(format!("FlString {}", arg.name));
@@ -390,12 +390,9 @@ impl Cgen {
 
         #[rustfmt::skip]
         let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, self_name.to_snake_case(), func.name);
+        let func_name_c = &func_name;
 
-        let (func_name_c, arg_offset) = if with_ctx == Ctx::Yes {
-            (format!("{}_ctx", func_name), 0)
-        } else {
-            (func_name.to_owned(), 1)
-        };
+        let arg_offset = if with_ctx == Ctx::Yes { 0 } else { 1 };
 
         writeln!(
             f,
@@ -417,20 +414,7 @@ impl Cgen {
             writeln!(f, "{}({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
         }
 
-        writeln!(f, "}}\n")?;
-
-        if with_ctx == Ctx::Yes {
-            writeln!(
-                f,
-                "#define {}({}) {}({})\n",
-                func_name,
-                arg_line(&fa.call_args[1..], Ctx::No),
-                func_name_c,
-                arg_line(&fa.call_args, Ctx::No)
-            )
-        } else {
-            Ok(())
-        }
+        writeln!(f, "}}\n")
     }
 
     pub fn generate(filename: &str, render_filename_dir: &str, api_def: &ApiDef) -> io::Result<()> {

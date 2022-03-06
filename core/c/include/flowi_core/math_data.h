@@ -31,6 +31,14 @@ typedef struct FlVec2 {
     float y;
 } FlVec2;
 
+// Used for setting a position in pixel space
+typedef struct FlIVec2 {
+    // x position
+    int x;
+    // y position
+    int y;
+} FlIVec2;
+
 #ifdef __cplusplus
 }
 #endif

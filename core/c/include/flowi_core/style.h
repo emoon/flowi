@@ -54,59 +54,47 @@ typedef struct FlStyle {
 } FlStyle;
 
 // Create a new style
-FlStyle* fl_style_create_impl(struct FlContext* flowi_ctx, FlString name);
+FlStyle* fl_style_create_impl(struct FlContext* ctx, FlString name);
 
-FL_INLINE FlStyle* fl_style_create_ctx(struct FlContext* flowi_ctx, const char* name) {
-    FlString name_ = {name, 1, (uint32_t)strlen(name)};
-    return fl_style_create_impl(flowi_ctx, name_);
+FL_INLINE FlStyle* fl_style_create(struct FlContext* ctx, const char* name) {
+    FlString name_ = fl_cstr_to_flstring(name);
+    return fl_style_create_impl(ctx, name_);
 }
-
-#define fl_style_create(name_) fl_style_create_ctx(flowi_ctx, name_)
 
 // Get the default style. Changing this will apply the base style for the whole application
-FlStyle* fl_style_get_default_impl(struct FlContext* flowi_ctx);
+FlStyle* fl_style_get_default_impl(struct FlContext* ctx);
 
-FL_INLINE FlStyle* fl_style_get_default_ctx(struct FlContext* flowi_ctx) {
-    return fl_style_get_default_impl(flowi_ctx);
+FL_INLINE FlStyle* fl_style_get_default(struct FlContext* ctx) {
+    return fl_style_get_default_impl(ctx);
 }
-
-#define fl_style_get_default() fl_style_get_default_ctx(flowi_ctx)
 
 // Get the current style which is based on what has been pushed on the style stack using push/pop
-FlStyle fl_style_get_current_impl(struct FlContext* flowi_ctx);
+FlStyle fl_style_get_current_impl(struct FlContext* ctx);
 
-FL_INLINE FlStyle fl_style_get_current_ctx(struct FlContext* flowi_ctx) {
-    return fl_style_get_current_impl(flowi_ctx);
+FL_INLINE FlStyle fl_style_get_current(struct FlContext* ctx) {
+    return fl_style_get_current_impl(ctx);
 }
-
-#define fl_style_get_current() fl_style_get_current_ctx(flowi_ctx)
 
 // Mark the end of style changes
-void fl_style_end_changes_impl(struct FlContext* flowi_ctx, FlStyle* self);
+void fl_style_end_changes_impl(struct FlContext* ctx, FlStyle* self);
 
-FL_INLINE void fl_style_end_changes_ctx(struct FlContext* flowi_ctx, FlStyle* self) {
-    fl_style_end_changes_impl(flowi_ctx, self);
+FL_INLINE void fl_style_end_changes(struct FlContext* ctx, FlStyle* self) {
+    fl_style_end_changes_impl(ctx, self);
 }
-
-#define fl_style_end_changes(self) fl_style_end_changes_ctx(flowi_ctx, self)
 
 // Select the style to be used, to end using the style use 'fl_pop_style()'
-void fl_style_push_impl(struct FlContext* flowi_ctx, FlStyle* self);
+void fl_style_push_impl(struct FlContext* ctx, FlStyle* self);
 
-FL_INLINE void fl_style_push_ctx(struct FlContext* flowi_ctx, FlStyle* self) {
-    fl_style_push_impl(flowi_ctx, self);
+FL_INLINE void fl_style_push(struct FlContext* ctx, FlStyle* self) {
+    fl_style_push_impl(ctx, self);
 }
-
-#define fl_style_push(self) fl_style_push_ctx(flowi_ctx, self)
 
 // Pops the current style
-void fl_style_pop_impl(struct FlContext* flowi_ctx);
+void fl_style_pop_impl(struct FlContext* ctx);
 
-FL_INLINE void fl_style_pop_ctx(struct FlContext* flowi_ctx) {
-    fl_style_pop_impl(flowi_ctx);
+FL_INLINE void fl_style_pop(struct FlContext* ctx) {
+    fl_style_pop_impl(ctx);
 }
-
-#define fl_style_pop() fl_style_pop_ctx(flowi_ctx)
 
 #ifdef __cplusplus
 }

@@ -37,14 +37,12 @@ typedef uint64_t FlImage;
 // PIC (Softimage PIC)
 // PNM (PPM and PGM binary only)
 // SVG (Basic types only, non-color)
-FlImage fl_image_create_from_file_impl(struct FlContext* flowi_ctx, FlString filename);
+FlImage fl_image_create_from_file_impl(struct FlContext* ctx, FlString filename);
 
-FL_INLINE FlImage fl_image_create_from_file_ctx(struct FlContext* flowi_ctx, const char* filename) {
-    FlString filename_ = {filename, 1, (uint32_t)strlen(filename)};
-    return fl_image_create_from_file_impl(flowi_ctx, filename_);
+FL_INLINE FlImage fl_image_create_from_file(struct FlContext* ctx, const char* filename) {
+    FlString filename_ = fl_cstr_to_flstring(filename);
+    return fl_image_create_from_file_impl(ctx, filename_);
 }
-
-#define fl_image_create_from_file(filename_) fl_image_create_from_file_ctx(flowi_ctx, filename_)
 
 // Load image from memory. Supported formats are:
 // JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
@@ -57,34 +55,27 @@ FL_INLINE FlImage fl_image_create_from_file_ctx(struct FlContext* flowi_ctx, con
 // PIC (Softimage PIC)
 // PNM (PPM and PGM binary only)
 // SVG (Basic types only, non-color)
-FlImage fl_image_create_from_memory_impl(struct FlContext* flowi_ctx, FlString name, uint8_t* data, uint32_t data_size);
+FlImage fl_image_create_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size);
 
-FL_INLINE FlImage fl_image_create_from_memory_ctx(struct FlContext* flowi_ctx, const char* name, uint8_t* data,
-                                                  uint32_t data_size) {
-    FlString name_ = {name, 1, (uint32_t)strlen(name)};
-    return fl_image_create_from_memory_impl(flowi_ctx, name_, data, data_size);
+FL_INLINE FlImage fl_image_create_from_memory(struct FlContext* ctx, const char* name, uint8_t* data,
+                                              uint32_t data_size) {
+    FlString name_ = fl_cstr_to_flstring(name);
+    return fl_image_create_from_memory_impl(ctx, name_, data, data_size);
 }
-
-#define fl_image_create_from_memory(name_, data, data_size) \
-    fl_image_create_from_memory_ctx(flowi_ctx, name_, data, data_size)
 
 // Get data amout the image
-FlImageInfo* fl_image_get_info_impl(struct FlContext* flowi_ctx, FlImage self);
+FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self);
 
-FL_INLINE FlImageInfo* fl_image_get_info_ctx(struct FlContext* flowi_ctx, FlImage self) {
-    return fl_image_get_info_impl(flowi_ctx, self);
+FL_INLINE FlImageInfo* fl_image_get_info(struct FlContext* ctx, FlImage self) {
+    return fl_image_get_info_impl(ctx, self);
 }
-
-#define fl_image_get_info(self) fl_image_get_info_ctx(flowi_ctx, self)
 
 // Destroy the created image
-void fl_image_destroy_impl(struct FlContext* flowi_ctx, FlImage self);
+void fl_image_destroy_impl(struct FlContext* ctx, FlImage self);
 
-FL_INLINE void fl_image_destroy_ctx(struct FlContext* flowi_ctx, FlImage self) {
-    fl_image_destroy_impl(flowi_ctx, self);
+FL_INLINE void fl_image_destroy(struct FlContext* ctx, FlImage self) {
+    fl_image_destroy_impl(ctx, self);
 }
-
-#define fl_image_destroy(self) fl_image_destroy_ctx(flowi_ctx, self)
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <flowi_core/error.h>
+#include <flowi_core/manual.h>
 #include <flowi_core/style.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +11,7 @@
 // Default style
 
 static FlStyle s_default_style = {
-    .name = {"flowi_default", 1, strlen("flowi_default")},
+    .name = {"flowi_default", strlen("flowi_default")},
     .border =
         {
             .colors = {FL_RGB_RED, FL_RGB_RED, FL_RGB_RED, FL_RGB_RED},

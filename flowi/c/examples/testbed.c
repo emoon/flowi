@@ -12,9 +12,14 @@ typedef struct App {
     FlImage image;
 } App;
 
+#define FlPushButtonWithIconArgs_default2                                                      \
+    (FlPushButtonWithIconArgs) {                                                               \
+        .image_alignment = FlImageAlignment_Left, .image_text_spacing = 0, .image_size = { 0 } \
+    }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void main_loop(struct FlContext* flowi_ctx, void* user_data) {
+void main_loop(struct FlContext* ctx, void* user_data) {
     App* app = (App*)user_data;
 
     FlVec2 pos = {40.0f, 80.0f};
@@ -22,10 +27,16 @@ void main_loop(struct FlContext* flowi_ctx, void* user_data) {
     FlVec2 pos3 = {0.0f, 0.0f};
     const char* utf8_text = "®";
 
-    fl_ui_set_pos_ctx(flowi_ctx, (FlVec2){.x = 140.0f, .y = 80.0f});
+    /*
+    fl_ui_set_pos_ctx(ctx, (FlVec2){.x = 140.0f, .y = 80.0f});
     fl_font_set(app->font_bold);
     fl_font_set_with_size(64);
     fl_ui_text(utf8_text);
+    */
+
+    fl_font_set(ctx, app->font_bold);
+    fl_font_set_with_size(ctx, 64);
+    fl_ui_push_button_with_icon(ctx, "HippoMusic", app->image, FlPushButtonWithIconArgs_default2);
 
     /*
     fl_ui_set_pos(pos2);
@@ -34,24 +45,24 @@ void main_loop(struct FlContext* flowi_ctx, void* user_data) {
     fl_ui_text("Hola");
     */
 
-    fl_ui_set_pos(pos3);
-    fl_ui_image(app->image);
+    fl_ui_set_pos(ctx, pos3);
+    fl_ui_image(ctx, app->image);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int main() {
-    struct FlContext* flowi_ctx = NULL;
+    struct FlContext* ctx = NULL;
 
-    if (!(flowi_ctx = fl_application_create("Test", "Test"))) {
+    if (!(ctx = fl_application_create("Test", "Test"))) {
         printf("Failed to open application!\n");
         return 0;
     }
 
     App app = {
-        .font_bold = fl_font_new_from_file("data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
-        .font = fl_font_new_from_file("data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
-        .image = fl_image_create_from_file("data/recommendations.svg"),
+        .font_bold = fl_font_new_from_file(ctx, "data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
+        .font = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
+        .image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
     };
 
     fl_application_main_loop(main_loop, &app);
