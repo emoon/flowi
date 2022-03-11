@@ -13,9 +13,6 @@ UTEST(Style, default_create) {
     FlStyle* style = fl_style_create(ctx, "test");
     FlStyle* default_style = fl_style_get_default(ctx);
 
-    // int t = memcmp(style, default_style, sizeof(FlStyle));
-    // printf("defaul_create_style %d\n", t);
-
     ASSERT_TRUE(memcmp(style, default_style, sizeof(FlStyle)) == 0);
 
     fl_context_destroy(ctx);
@@ -121,7 +118,7 @@ UTEST(Style, push_style_1) {
     FlStyle* default_style = fl_style_get_default(ctx);
 
     // test change setting
-    style->background_color = 0xffff;
+    style->background_color = 0xff2211ff;
     fl_style_end_changes(ctx, style);
 
     FlStyle current = fl_style_get_current(ctx);
@@ -129,7 +126,7 @@ UTEST(Style, push_style_1) {
 
     fl_style_push(ctx, style);
     current = fl_style_get_current(ctx);
-    ASSERT_EQ(current.background_color, style->background_color);
+    ASSERT_EQ(0xff2211ff, current.background_color);
 
     fl_style_pop(ctx);
     current = fl_style_get_current(ctx);

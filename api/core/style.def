@@ -45,10 +45,10 @@ struct Style {
     [static] get_current() -> Style,
 
     /// Mark the end of style changes
-    end_changes(),
+    [static] end_changes(style: *Style),
 
     /// Select the style to be used, to end using the style use 'fl_pop_style()'
-    push(),
+    [static] push(style: *Style),
 
     /// Pops the current style
     [static] pop(),

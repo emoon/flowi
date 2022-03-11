@@ -76,17 +76,17 @@ FL_INLINE FlStyle fl_style_get_current(struct FlContext* ctx) {
 }
 
 // Mark the end of style changes
-void fl_style_end_changes_impl(struct FlContext* ctx, FlStyle* self);
+void fl_style_end_changes_impl(struct FlContext* ctx, FlStyle* style);
 
-FL_INLINE void fl_style_end_changes(struct FlContext* ctx, FlStyle* self) {
-    fl_style_end_changes_impl(ctx, self);
+FL_INLINE void fl_style_end_changes(struct FlContext* ctx, FlStyle* style) {
+    fl_style_end_changes_impl(ctx, style);
 }
 
 // Select the style to be used, to end using the style use 'fl_pop_style()'
-void fl_style_push_impl(struct FlContext* ctx, FlStyle* self);
+void fl_style_push_impl(struct FlContext* ctx, FlStyle* style);
 
-FL_INLINE void fl_style_push(struct FlContext* ctx, FlStyle* self) {
-    fl_style_push_impl(ctx, self);
+FL_INLINE void fl_style_push(struct FlContext* ctx, FlStyle* style) {
+    fl_style_push_impl(ctx, style);
 }
 
 // Pops the current style

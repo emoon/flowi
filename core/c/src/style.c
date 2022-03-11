@@ -20,8 +20,8 @@ static FlStyle s_default_style = {
     .padding = {4, 4, 4, 4},
     .margin = {4, 4, 4, 4},
     .current_font = 0,
-    .background_color = FL_RGB_WHITE,
-    .text_color = FL_RGB_BLACK,
+    .background_color = FL_RGB_BLACK,
+    .text_color = FL_RGB_WHITE,
     .font_size = 0,
 };
 
@@ -135,7 +135,7 @@ FlStyle fl_style_get_current_impl(struct FlContext* ctx) {
 
     for (int i = 0, count = ctx->style_stack_depth; i < count; ++i) {
         StyleInternal* int_style = ctx->style_stack[i];
-        apply_style_diff((u8*)&int_style->style, def_style, int_style->diff_bits);
+        apply_style_diff((u8*)&style, (u8*)&int_style->style, int_style->diff_bits);
     }
 
     style.name = fl_cstr_to_flstring("flowi_merged");  // indicated this is a merged style
