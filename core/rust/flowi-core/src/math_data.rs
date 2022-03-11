@@ -8,10 +8,10 @@ extern "C" {}
 #[repr(C)]
 #[derive(Debug)]
 pub struct Rect {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
 }
 
 /// Used for setting a position in pixel space
@@ -19,9 +19,9 @@ pub struct Rect {
 #[derive(Debug)]
 pub struct Vec2 {
     /// x position
-    x: f32,
+    pub x: f32,
     /// y position
-    y: f32,
+    pub y: f32,
 }
 
 /// Used for setting a position in pixel space
@@ -29,7 +29,7 @@ pub struct Vec2 {
 #[derive(Debug)]
 pub struct IVec2 {
     /// x position
-    x: i32,
+    pub x: i32,
     /// y position
-    y: i32,
+    pub y: i32,
 }

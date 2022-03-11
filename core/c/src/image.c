@@ -209,6 +209,11 @@ bool Image_render(struct FlContext* ctx, const u8* cmd) {
     u16 x1 = (u16)(x0 + prim->size.x);
     u16 y1 = (u16)(y0 + prim->size.y);
 
+    u16 u0 = (u16)prim->image->atlas_x;
+    u16 v0 = (u16)prim->image->atlas_y;
+    u16 u1 = (u16)(u0 + prim->image->info.width);
+    u16 v1 = (u16)(v0 + prim->image->info.height);
+
     float rx = prim->position.x;
     float ry = prim->position.y;
 
@@ -219,26 +224,26 @@ bool Image_render(struct FlContext* ctx, const u8* cmd) {
 
     vertices[0].x = nx0;
     vertices[0].y = ny0;
-    vertices[0].u = x0;
-    vertices[0].v = y0;
+    vertices[0].u = u0;
+    vertices[0].v = v0;
     vertices[0].color = color;
 
     vertices[1].x = nx1;
     vertices[1].y = ny0;
-    vertices[1].u = x1;
-    vertices[1].v = y0;
+    vertices[1].u = u1;
+    vertices[1].v = v0;
     vertices[1].color = color;
 
     vertices[2].x = nx1;
     vertices[2].y = ny1;
-    vertices[2].u = x1;
-    vertices[2].v = y1;
+    vertices[2].u = u1;
+    vertices[2].v = v1;
     vertices[2].color = color;
 
     vertices[3].x = nx0;
     vertices[3].y = ny1;
-    vertices[3].u = x0;
-    vertices[3].v = y1;
+    vertices[3].u = u0;
+    vertices[3].v = v1;
     vertices[3].color = color;
 
     // TODO: Shouldn't hardcode to start with index 0

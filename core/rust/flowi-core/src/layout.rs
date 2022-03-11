@@ -47,8 +47,8 @@ pub enum LayoutMode {
 #[repr(C)]
 #[derive(Debug)]
 pub struct Sizing {
-    value: i32,
-    value_type: SizeType,
+    pub value: i32,
+    pub value_type: SizeType,
 }
 
 #[repr(C)]
@@ -60,10 +60,10 @@ pub struct LayoutAreaId {
 #[repr(C)]
 #[derive(Debug)]
 pub struct LayoutArea {
-    name: FlString,
-    width: Sizing,
-    height: Sizing,
-    direction: LayoutDirection,
+    pub name: FlString,
+    pub width: Sizing,
+    pub height: Sizing,
+    pub direction: LayoutDirection,
 }
 
 impl Context {

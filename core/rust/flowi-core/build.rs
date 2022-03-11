@@ -114,6 +114,7 @@ fn main() {
         "src/array.c",
         "src/font.c",
         "src/io.c",
+        "src/ui.c",
         "src/text.c",
         "src/atlas.c",
         "src/font_cache.c",

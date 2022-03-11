@@ -19,9 +19,9 @@ extern "C" {
 #[derive(Debug)]
 pub struct ImageInfo {
     /// width of the image
-    width: u32,
+    pub width: u32,
     /// height of the Image
-    height: u32,
+    pub height: u32,
 }
 
 #[repr(C)]

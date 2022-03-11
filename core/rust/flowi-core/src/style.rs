@@ -7,8 +7,8 @@ extern "C" {
     fn fl_style_create_impl(ctx: *const core::ffi::c_void, name: FlString) -> *mut Style;
     fn fl_style_get_default_impl(ctx: *const core::ffi::c_void) -> *mut Style;
     fn fl_style_get_current_impl(ctx: *const core::ffi::c_void) -> Style;
-    fn fl_style_end_changes_impl(self_c: *mut Style);
-    fn fl_style_push_impl(self_c: *mut Style);
+    fn fl_style_end_changes_impl(ctx: *const core::ffi::c_void, style: *mut Style);
+    fn fl_style_push_impl(ctx: *const core::ffi::c_void, style: *mut Style);
     fn fl_style_pop_impl(ctx: *const core::ffi::c_void);
 }
 
@@ -31,31 +31,31 @@ pub enum Corner {
 #[repr(C)]
 #[derive(Debug)]
 pub struct LengthPercentValue {
-    value: f32,
-    typ: LengthPercent,
+    pub value: f32,
+    pub typ: LengthPercent,
 }
 
 #[repr(C)]
 #[derive(Debug)]
 pub struct Border {
-    radius: [LengthPercentValue; 4],
-    colors: [u32; 4],
-    active: bool,
+    pub radius: [LengthPercentValue; 4],
+    pub colors: [u32; 4],
+    pub active: bool,
 }
 
 #[repr(C)]
 #[derive(Debug)]
 pub struct Style {
-    name: FlString,
-    border: Border,
-    margin: [u16; 4],
-    padding: [u16; 4],
-    current_font: u32,
-    background_color: u32,
-    font: Font,
-    font_size: u32,
-    text_color: u32,
-    font_color: u32,
+    pub name: FlString,
+    pub border: Border,
+    pub margin: [u16; 4],
+    pub padding: [u16; 4],
+    pub current_font: u32,
+    pub background_color: u32,
+    pub font: Font,
+    pub font_size: u32,
+    pub text_color: u32,
+    pub font_color: u32,
 }
 
 impl Context {
@@ -94,29 +94,27 @@ impl Context {
         }
     }
 
+    /// Mark the end of style changes
+    pub fn style_end_changes(&self, style: &mut Style) {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            fl_style_end_changes_impl(self_, style as _);
+        }
+    }
+
+    /// Select the style to be used, to end using the style use 'fl_pop_style()'
+    pub fn style_push(&self, style: &mut Style) {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            fl_style_push_impl(self_, style as _);
+        }
+    }
+
     /// Pops the current style
     pub fn style_pop(&self) {
         unsafe {
             let self_ = std::mem::transmute(self);
             fl_style_pop_impl(self_);
-        }
-    }
-}
-
-impl Style {
-    /// Mark the end of style changes
-    pub fn end_changes(&self) {
-        unsafe {
-            let self_ = std::mem::transmute(self);
-            fl_style_end_changes_impl(self_);
-        }
-    }
-
-    /// Select the style to be used, to end using the style use 'fl_pop_style()'
-    pub fn push(&self) {
-        unsafe {
-            let self_ = std::mem::transmute(self);
-            fl_style_push_impl(self_);
         }
     }
 }

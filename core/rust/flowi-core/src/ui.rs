@@ -29,7 +29,7 @@ pub enum ImageAlignment {
 #[repr(C)]
 #[derive(Debug)]
 pub struct Ui {
-    dummy: u32,
+    pub dummy: u32,
 }
 
 impl Context {

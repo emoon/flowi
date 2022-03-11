@@ -227,11 +227,12 @@ impl RustGen {
             writeln!(f, "#[derive(Debug)]")?;
             writeln!(f, "pub struct {} {{", sdef.name)?;
 
+            // TODO: Some members we like want to be private.
             for var in &sdef.variables {
                 Self::write_commment(f, &var.doc_comments, 4)?;
                 writeln!(
                     f,
-                    "    {}: {},",
+                    "    pub {}: {},",
                     var.name,
                     Self::get_ffi_type(var, &sdef.name, &var.type_name, false)
                 )?;

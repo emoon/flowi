@@ -29,30 +29,30 @@ pub enum TextureFormat {
 #[repr(C)]
 #[derive(Debug)]
 pub struct RenderRect {
-    x0: i32,
-    y0: i32,
-    x1: i32,
-    y1: i32,
+    pub x0: i32,
+    pub y0: i32,
+    pub x1: i32,
+    pub y1: i32,
 }
 
 /// Vertex layout for textured triangles
 #[repr(C)]
 #[derive(Debug)]
 pub struct VertPosUvColor {
-    x: f32,
-    y: f32,
-    u: u16,
-    v: u16,
-    color: u32,
+    pub x: f32,
+    pub y: f32,
+    pub u: u16,
+    pub v: u16,
+    pub color: u32,
 }
 
 /// Vertex layout for solid triangles
 #[repr(C)]
 #[derive(Debug)]
 pub struct VertPosColor {
-    x: f32,
-    y: f32,
-    color: u32,
+    pub x: f32,
+    pub y: f32,
+    pub color: u32,
 }
 
 /// Used for rendering triangles with a texture.
@@ -60,27 +60,27 @@ pub struct VertPosColor {
 #[derive(Debug)]
 pub struct TexturedTriangles {
     /// Offset into the index buffer
-    offset: u32,
+    pub offset: u32,
     /// Vertices for the command
-    vertex_buffer: *const VertPosUvColor,
+    pub vertex_buffer: *const VertPosUvColor,
     vertex_buffer_size: u32,
     /// Index buffer for the command
-    index_buffer: *const IdxSize,
+    pub index_buffer: *const IdxSize,
     index_buffer_size: u32,
     /// Texture id used for the command
-    texture_id: u32,
+    pub texture_id: u32,
 }
 
 #[repr(C)]
 #[derive(Debug)]
 pub struct SolidTriangles {
     /// Offset into the index buffer
-    offset: u32,
+    pub offset: u32,
     /// Vertices for the command
-    vertex_buffer: *const VertPosColor,
+    pub vertex_buffer: *const VertPosColor,
     vertex_buffer_size: u32,
     /// Index buffer for the command
-    index_buffer: *const IdxSize,
+    pub index_buffer: *const IdxSize,
     index_buffer_size: u32,
 }
 
@@ -88,16 +88,16 @@ pub struct SolidTriangles {
 #[derive(Debug)]
 pub struct CreateTexture {
     /// Data upload (can be NULL if data is uploaded later)
-    data: *const u8,
+    pub data: *const u8,
     data_size: u32,
     /// This is the id that will later be used when refering to the texture
-    id: u16,
+    pub id: u16,
     /// See [TextureFormat] for the type
-    format: u16,
+    pub format: u16,
     /// width of the texture
-    width: u16,
+    pub width: u16,
     /// height of the texture
-    height: u16,
+    pub height: u16,
 }
 
 /// This is used to update an existing texture with some data. This usually happens when a new image/glyph/etc
@@ -106,12 +106,12 @@ pub struct CreateTexture {
 #[derive(Debug)]
 pub struct UpdateTexture {
     /// Data to upload
-    data: *const u8,
+    pub data: *const u8,
     data_size: u32,
     /// area to update
-    rect: RenderRect,
+    pub rect: RenderRect,
     /// Texture to update
-    texture_id: u16,
+    pub texture_id: u16,
 }
 
 /// Used when restricting an area for rendering. How this is to be implemented depends onthe GPU
@@ -120,5 +120,5 @@ pub struct UpdateTexture {
 #[derive(Debug)]
 pub struct ScissorRect {
     /// Area restricted for rendering
-    rect: RenderRect,
+    pub rect: RenderRect,
 }

@@ -76,8 +76,8 @@ bool fl_ui_push_button_with_icon_impl(FlContext* ctx, FlString text, FlImage ima
         prim->image = image_data;
         prim->position.x = pos.x;
         prim->position.x = pos.y + image_offset;
-        prim->size.x = image_size.x;
-        prim->size.y = image_size.y;
+        prim->size.x = 100;
+        prim->size.y = 100;
     }
 
     // Add text for rendering
