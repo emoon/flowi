@@ -5,6 +5,7 @@
 #include <bgfx/platform.h>
 #include <bx/math.h>
 #include <flowi/application.h>
+#include <flowi_core/style.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -324,7 +325,7 @@ static void create_texture(ApplicationState& ctx, const u8* render_data) {
             bgfx::TextureFormat::Enum format = bgfx::TextureFormat::R8;
 
             Texture* texture = &ctx.textures[id];
-            texture->handle = bgfx::createTexture2D(width, height, false, 1, format, 0, mem);
+            texture->handle = bgfx::createTexture2D(width, height, false, 1, format, BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP, mem);
             texture->inv_x = 1.0f / width;
             texture->inv_y = 1.0f / height;
             texture->size = width * height;
@@ -344,7 +345,7 @@ static void create_texture(ApplicationState& ctx, const u8* render_data) {
             bgfx::TextureFormat::Enum format = bgfx::TextureFormat::RGBA8;
 
             Texture* texture = &ctx.textures[id];
-            texture->handle = bgfx::createTexture2D(width, height, false, 1, format, 0, mem);
+            texture->handle = bgfx::createTexture2D(width, height, false, 1, format, BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP, mem);
             texture->inv_x = 1.0f / width;
             texture->inv_y = 1.0f / height;
             texture->size = width * height * 4;
@@ -379,6 +380,10 @@ static void update_texture(ApplicationState& ctx, const u8* render_data) {
 
 static void render_flowi(ApplicationState& state, uint16_t width, uint16_t height) {
     bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
+
+    FlStyle style = fl_style_get_current(state.ctx);
+
+    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, (style.background_color << 8) | 0xff, 1.0f, 0);
 
     int view_id = 255;
 
