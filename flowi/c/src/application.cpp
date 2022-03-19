@@ -46,8 +46,8 @@ struct Texture {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define MAX_TEXTURE_COUNT 128
-#define WINDOW_WIDTH 1280
-#define WINDOW_HEIGHT 720
+#define WINDOW_WIDTH 1920
+#define WINDOW_HEIGHT 1080
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -233,7 +233,7 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render triangles without texture
 
-static void render_textured_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+static void render_textured_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder, const FlStyle& style) {
     FlTexturedTriangles* draw_cmd = (FlTexturedTriangles*)render_data;
 
     bgfx::TransientVertexBuffer tvb;
@@ -277,7 +277,7 @@ static void render_textured_triangles(ApplicationState& ctx, const u8* render_da
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render triangles without texture
 
-static void render_flat_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder) {
+static void render_flat_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder, const FlStyle& style) {
     FlSolidTriangles* draw_cmd = (FlSolidTriangles*)render_data;
 
     bgfx::TransientVertexBuffer tvb;
@@ -406,12 +406,12 @@ static void render_flowi(ApplicationState& state, uint16_t width, uint16_t heigh
     for (int i = 0; i < count; ++i) {
         switch (cmd = fl_render_get_command(state.flowi_state, &render_cmd_data)) {
             case FlRenderCommand_TexturedTriangles: {
-                render_textured_triangles(state, render_cmd_data, encoder);
+                render_textured_triangles(state, render_cmd_data, encoder, style);
                 break;
             }
 
             case FlRenderCommand_SolidTriangles: {
-                render_flat_triangles(state, render_cmd_data, encoder);
+                render_flat_triangles(state, render_cmd_data, encoder, style);
                 break;
             }
 

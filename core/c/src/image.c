@@ -50,8 +50,8 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     // TODO: Make sure we pick the correct texture format
 
     if (svg_image) {
-        x = svg_image->width * 4;
-        y = svg_image->height * 4;
+        x = svg_image->width;
+        y = svg_image->height;
     }
 
     image->data = image_data;
@@ -122,6 +122,23 @@ void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void fl_ui_image_with_size_impl(struct FlContext* ctx, FlImage image, FlVec2 size) {
+    ImagePrivate* self = get_handle(ctx, image);
+
+    if (FL_UNLIKELY(!self)) {
+        return;
+    }
+
+    PrimitiveImage* prim = Primitive_alloc_image(ctx->global);
+
+    prim->image = self;
+    prim->position = ctx->cursor;
+    prim->size.x = size.x;
+    prim->size.y = size.y;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
     ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
 
@@ -152,7 +169,10 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
 
     int rx = 0, ry = 0, stride = 0;
 
-    u8* dest = Atlas_add_rect(atlas, self->info.width, self->info.height, &rx, &ry, &stride);
+    int width = prim->size.x;
+    int height = prim->size.y;
+
+    u8* dest = Atlas_add_rect(atlas, width, height, &rx, &ry, &stride);
     if (!dest) {
         ERROR_ADD(FlError_Image, "Unable to add %s to atlas. Likely out of space", self->name.str);
         return false;
@@ -163,10 +183,19 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
             self->svg_raster = nsvgCreateRasterizer();
         }
 
-        int width = self->info.width;
-        int height = self->info.height;
+        // int width = self->info.width;
+        // int height = self->info.height;
 
-        nsvgRasterize(self->svg_raster, self->svg_image, 0.0f, 0.0f, 4.0f, dest, width, height, stride);
+        int width = prim->size.x;
+        int height = prim->size.y;
+
+        // raster only takes one scale value so we use x
+        float scale_x = ((float)prim->size.x) / (float)self->info.width;
+        float scale = scale_x;
+
+        dest += (ry * stride) + (rx * 3);
+
+        nsvgRasterize(self->svg_raster, self->svg_image, 0.0f, 0.0f, scale, dest, width, height, stride);
 
     } else {
         // Copy the the image data to the atlas
@@ -211,8 +240,10 @@ bool Image_render(struct FlContext* ctx, const u8* cmd) {
 
     u16 u0 = (u16)prim->image->atlas_x;
     u16 v0 = (u16)prim->image->atlas_y;
-    u16 u1 = (u16)(u0 + prim->image->info.width);
-    u16 v1 = (u16)(v0 + prim->image->info.height);
+    u16 u1 = (u16)(u0 + prim->size.x);
+    u16 v1 = (u16)(v0 + prim->size.y);
+    // u16 u1 = (u16)(u0 + prim->image->info.width);
+    // u16 u1 = (u16)(u0 + prim->image->info.width);
 
     float rx = prim->position.x;
     float ry = prim->position.y;

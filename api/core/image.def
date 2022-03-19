@@ -34,7 +34,7 @@ struct Image {
     /// SVG (Basic types only, non-color)
     [static] create_from_memory(name: String, data: [u8]) -> Image?,
     /// Get data amout the image
-    get_info() -> *const ImageInfo?,
+    [static] get_info(image: Image) -> *const ImageInfo?,
     /// Destroy the created image
     destroy(),
 }

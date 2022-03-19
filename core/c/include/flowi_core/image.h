@@ -64,10 +64,10 @@ FL_INLINE FlImage fl_image_create_from_memory(struct FlContext* ctx, const char*
 }
 
 // Get data amout the image
-FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self);
+FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage image);
 
-FL_INLINE FlImageInfo* fl_image_get_info(struct FlContext* ctx, FlImage self) {
-    return fl_image_get_info_impl(ctx, self);
+FL_INLINE FlImageInfo* fl_image_get_info(struct FlContext* ctx, FlImage image) {
+    return fl_image_get_info_impl(ctx, image);
 }
 
 // Destroy the created image

@@ -12,10 +12,12 @@ typedef struct App {
     FlImage image;
 } App;
 
-#define FlPushButtonWithIconArgs_default2                                                      \
-    (FlPushButtonWithIconArgs) {                                                               \
-        .image_alignment = FlImageAlignment_Left, .image_text_spacing = 0, .image_size = { 0 } \
+/*
+#define FlPushButtonWithIconArgs_default2                                                          \
+    (FlPushButtonWithIconArgs) {                                                                   \
+        .image_alignment = FlImageAlignment_Left, .image_text_spacing = 0, .image_scale = { 1.0f } \
     }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -36,7 +38,7 @@ void main_loop(struct FlContext* ctx, void* user_data) {
 
     fl_font_set(ctx, app->font_bold);
     fl_font_set_with_size(ctx, 64);
-    fl_ui_push_button_with_icon(ctx, "HippoMusic", app->image, FlPushButtonWithIconArgs_default2);
+    // fl_ui_push_button_with_icon(ctx, "HippoMusic", app->image, FlPushButtonWithIconArgs_default2);
 
     /*
     fl_ui_set_pos(pos2);

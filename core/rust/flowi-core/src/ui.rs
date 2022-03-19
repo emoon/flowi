@@ -13,17 +13,9 @@ extern "C" {
         ctx: *const core::ffi::c_void,
         text: FlString,
         image: Image,
-        image_alignment: ImageAlignment,
-        image_text_spacing: u32,
-        image_size: IVec2,
+        text_pos: Vec2,
+        image_scale: f32,
     ) -> bool;
-}
-
-#[repr(C)]
-#[derive(Debug)]
-pub enum ImageAlignment {
-    Left = 0,
-    Right = 1,
 }
 
 #[repr(C)]
@@ -78,9 +70,8 @@ impl Context {
         &self,
         text: &str,
         image: Image,
-        image_alignment: ImageAlignment,
-        image_text_spacing: u32,
-        image_size: IVec2,
+        text_pos: Vec2,
+        image_scale: f32,
     ) -> bool {
         unsafe {
             let self_ = std::mem::transmute(self);
@@ -88,9 +79,8 @@ impl Context {
                 self_,
                 FlString::new(text),
                 image,
-                image_alignment,
-                image_text_spacing,
-                image_size,
+                text_pos,
+                image_scale,
             );
             ret_val
         }

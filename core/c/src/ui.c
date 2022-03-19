@@ -14,12 +14,8 @@ void fl_ui_set_pos_impl(struct FlContext* ctx, FlVec2 pos) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool fl_ui_push_button_with_icon_impl(FlContext* ctx, FlString text, FlImage image, FlPushButtonWithIconArgs args) {
-    FL_UNUSED(ctx);
-    FL_UNUSED(text);
-    FL_UNUSED(image);
-    FL_UNUSED(args);
-
+bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlImage image, FlVec2 text_pos,
+                                      float image_scale) {
     Utf8Result utf8_res = Utf8_to_codepoints_u32(&ctx->frame_allocator, (u8*)text.str, text.len);
 
     if (utf8_res.error == FlError_Utf8Malformed) {
@@ -37,36 +33,15 @@ bool fl_ui_push_button_with_icon_impl(FlContext* ctx, FlString text, FlImage ima
     }
 
     // Calculate the size of the text
-
     FlIVec2 text_size = Font_calc_text_size(ctx, utf8_res.codepoints, utf8_res.len);
-    FlIVec2 image_size;
-    // FlIVec2 total_size = {0};
 
-    if (args.image_size.x != 0) {
-        image_size = args.image_size;
-    } else {
-        image_size.x = image_data->info.width;
-        image_size.y = image_data->info.height;
-    }
+    FlIVec2 image_size = {
+        (int)(image_data->info.width * image_scale),
+        (int)(image_data->info.height * image_scale),
+    };
 
-    int text_offset = 0;
-    int image_offset = 0;
-
-    // TODO: This is incorrect with up -> down text
-
-    // Center image
-    if (image_size.y > text_size.y) {
-        text_offset = (image_size.y - text_size.y) * 0.5f;
-        // total_size.y = image_size.y;
-    } else {
-        image_offset = (text_size.y - image_size.y) * 0.5f;
-        // total_size.y = text_size.y;
-    }
-
-    FL_UNUSED(text_offset);
-
-    // TODO: Fix, remove hardcoded padding
-    // total_size.x = image_size.x + (text_size.x + 10.0f);
+    // adjust the text a bit to center with image
+    int text_offset = (image_size.y - text_size.y);  // * 0.5f;
 
     FlVec2 pos = ctx->cursor;
 
@@ -74,10 +49,9 @@ bool fl_ui_push_button_with_icon_impl(FlContext* ctx, FlString text, FlImage ima
     {
         PrimitiveImage* prim = Primitive_alloc_image(ctx->global);
         prim->image = image_data;
-        prim->position.x = pos.x;
-        prim->position.x = pos.y + image_offset;
-        prim->size.x = 100;
-        prim->size.y = 100;
+        prim->position = pos;
+        prim->size.x = image_size.x;
+        prim->size.y = image_size.y;
     }
 
     // Add text for rendering
@@ -85,8 +59,8 @@ bool fl_ui_push_button_with_icon_impl(FlContext* ctx, FlString text, FlImage ima
         PrimitiveText* prim = Primitive_alloc_text(ctx->global);
 
         prim->font = ctx->current_font;
-        prim->position.x = pos.x + image_size.x + 10;
-        prim->position.y = pos.y + text_size.y + text_offset;
+        prim->position.x = pos.x + text_pos.x;
+        prim->position.y = pos.y + text_pos.y + text_offset;
         prim->font_size = ctx->current_font_size != 0 ? ctx->current_font_size : ctx->current_font->default_size;
         prim->codepoints = utf8_res.codepoints;
         prim->codepoint_count = utf8_res.len;

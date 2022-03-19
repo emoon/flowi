@@ -19,23 +19,9 @@
 extern "C" {
 #endif
 
-typedef enum FlImageAlignment {
-    FlImageAlignment_Left = 0,
-    FlImageAlignment_Right = 1,
-} FlImageAlignment;
-
 typedef struct FlUi {
     uint32_t dummy;
 } FlUi;
-
-typedef struct FlPushButtonWithIconArgs {
-    FlImageAlignment image_alignment;
-    uint32_t image_text_spacing;
-    FlIVec2 image_size;
-} FlPushButtonWithIconArgs;
-
-#define FlPushButtonWithIconArgs_default \
-    (FlPushButtonWithIconArgs) { .image_alignment = ImageAlignment_Left, .image_text_spacing = 0, .image_size = 0)
 
 void fl_ui_text_impl(struct FlContext* ctx, FlString text);
 
@@ -73,13 +59,13 @@ FL_INLINE FlRect fl_ui_get_last_widget_size(struct FlContext* ctx, FlVec2 pos) {
 }
 
 // Push button widget that returns true if user has pressed it
-bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlImage image,
-                                      FlPushButtonWithIconArgs args);
+bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlImage image, FlVec2 text_pos,
+                                      float image_scale);
 
-FL_INLINE bool fl_ui_push_button_with_icon(struct FlContext* ctx, const char* text, FlImage image,
-                                           FlPushButtonWithIconArgs args) {
+FL_INLINE bool fl_ui_push_button_with_icon(struct FlContext* ctx, const char* text, FlImage image, FlVec2 text_pos,
+                                           float image_scale) {
     FlString text_ = fl_cstr_to_flstring(text);
-    return fl_ui_push_button_with_icon_impl(ctx, text_, image, args);
+    return fl_ui_push_button_with_icon_impl(ctx, text_, image, text_pos, image_scale);
 }
 
 #ifdef __cplusplus

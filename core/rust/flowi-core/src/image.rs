@@ -11,7 +11,7 @@ extern "C" {
         data: *const u8,
         data_size: u32,
     ) -> u64;
-    fn fl_image_get_info_impl(self_c: Image) -> *const ImageInfo;
+    fn fl_image_get_info_impl(ctx: *const core::ffi::c_void, image: u64) -> *const ImageInfo;
     fn fl_image_destroy_impl(self_c: Image);
 }
 
@@ -81,14 +81,12 @@ impl Context {
             }
         }
     }
-}
 
-impl Image {
     /// Get data amout the image
-    pub fn get_info<'a>(&self) -> Result<&'a ImageInfo> {
+    pub fn image_get_info<'a>(&self, image: Image) -> Result<&'a ImageInfo> {
         unsafe {
             let self_ = std::mem::transmute(self);
-            let ret_val = fl_image_get_info_impl(self_);
+            let ret_val = fl_image_get_info_impl(self_, image.handle);
             if ret_val.is_null() {
                 Err(get_last_error())
             } else {
@@ -96,7 +94,9 @@ impl Image {
             }
         }
     }
+}
 
+impl Image {
     /// Destroy the created image
     pub fn destroy(&self) {
         unsafe {
