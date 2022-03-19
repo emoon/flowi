@@ -1,6 +1,5 @@
 use argparse::parser::Var;
 use heck::ToSnakeCase;
-use liquid::partials::PartialSource;
 use pest::iterators::Pair;
 use pest::Parser;
 use std::borrow::Cow;

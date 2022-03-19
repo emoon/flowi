@@ -1,6 +1,5 @@
 extern crate argparse;
 extern crate heck;
-extern crate liquid;
 extern crate pest;
 extern crate rayon;
 extern crate walkdir;
