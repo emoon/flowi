@@ -458,7 +458,8 @@ static void generate_frame(void* user_data) {
     // if no other draw calls are submitted to view 0.
     bgfx::touch(0);
 
-    fl_frame_begin(state->ctx, display_w, display_h);
+    // TODO: Correct delta time.
+    fl_frame_begin(state->ctx, display_w, display_h, 1.0f/60.0f);
 
     if (state->main_callback) {
         state->main_callback(state->ctx, state->user_data);

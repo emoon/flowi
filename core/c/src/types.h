@@ -26,6 +26,10 @@ typedef double f64;
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef FLT_MAX
+#define FLT_MAX 3.402823466e+38F
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #include <stdalign.h>
 #define FL_LIKELY(x) __builtin_expect((x), 1)

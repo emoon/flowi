@@ -96,6 +96,19 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
     // TODO: Fixup
     ctx->global = state;
 
+    ctx->mouse.pos = (FlVec2){-FLT_MAX, -FLT_MAX};
+    ctx->mouse.pos_prev = (FlVec2){-FLT_MAX, -FLT_MAX};
+
+    // TODO: Grab from settings
+    // = 0.30f - Time for a double-click, in seconds.
+    ctx->mouse.double_click_time = 0.30f;
+    // = 6.0f - Distance threshold to stay in to validate a double-click, in pixels.
+    ctx->mouse.double_click_max_dist = 6.0f;
+
+    for (int i = 0; i < MAX_MOUSE_BUTTONS; i++) {
+        ctx->mouse.down_duration[i] = ctx->mouse.down_duration_prev[i] = -1.0f;
+    }
+
     return ctx;
 }
 
@@ -212,10 +225,10 @@ bool fl_button_ex_c(struct FlContext* ctx, const char* label, int label_len, FlV
         item->len = label_len;
     }
 
+    /*
     if (ctx->active_item == 0 && ctx->mouse_state.buttons[0]) {
         ctx->active_item = control_id;
     }
-    /*
     if (ctx->mouse_state.buttons[0] == 0 && ctx->hot_item == control_id && ctx->active_item == control_id) {
         return true;
     }
@@ -225,27 +238,219 @@ bool fl_button_ex_c(struct FlContext* ctx, const char* label, int label_len, FlV
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TODO: Vectorize
+
+static bool is_mouse_hovering_rect(const FlContext* ctx, FlRect rect) {
+    // TODO: Math function
+    // TODO: SIMD
+    FlVec2 pos = ctx->mouse.pos;
+
+    if (pos.x >= rect.x && pos.y >= rect.y) {
+        FlVec2 pos2 = (FlVec2){rect.x + rect.width, rect.y + rect.height};
+
+        if (pos.x < pos2.x && pos.y < pos2.y) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// clang-format off
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Borrows some ideas/code for Dear Imgui - MIT License (MIT) Copyright (c) 2014-2022 Omar Cornut
+//
+// The button_behavior() function is key to many interactions and used by many/most widgets.
+// Because we handle so many cases (keyboard/gamepad navigation, drag and drop) and many specific behavior (via ImGuiButtonFlags_),
+// this code is a little complex.
+// By far the most common path is interacting with the Mouse using the default ImGuiButtonFlags_PressedOnClickRelease button behavior.
+// See the series of events below and the corresponding state reported by dear imgui:
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// with PressedOnClickRelease:             return-value  IsItemHovered()  IsItemActive()  IsItemActivated()  IsItemDeactivated()  IsItemClicked()
+//   Frame N+0 (mouse is outside bb)        -             -                -               -                  -                    -
+//   Frame N+1 (mouse moves inside bb)      -             true             -               -                  -                    -
+//   Frame N+2 (mouse button is down)       -             true             true            true               -                    true
+//   Frame N+3 (mouse button is down)       -             true             true            -                  -                    -
+//   Frame N+4 (mouse moves outside bb)     -             -                true            -                  -                    -
+//   Frame N+5 (mouse moves inside bb)      -             true             true            -                  -                    -
+//   Frame N+6 (mouse button is released)   true          true             -               -                  true                 -
+//   Frame N+7 (mouse button is released)   -             true             -               -                  -                    -
+//   Frame N+8 (mouse moves outside bb)     -             -                -               -                  -                    -
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// with PressedOnClick:                    return-value  IsItemHovered()  IsItemActive()  IsItemActivated()  IsItemDeactivated()  IsItemClicked()
+//   Frame N+2 (mouse button is down)       true          true             true            true               -                    true
+//   Frame N+3 (mouse button is down)       -             true             true            -                  -                    -
+//   Frame N+6 (mouse button is released)   -             true             -               -                  true                 -
+//   Frame N+7 (mouse button is released)   -             true             -               -                  -                    -
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// with PressedOnRelease:                  return-value  IsItemHovered()  IsItemActive()  IsItemActivated()  IsItemDeactivated()  IsItemClicked()
+//   Frame N+2 (mouse button is down)       -             true             -               -                  -                    true
+//   Frame N+3 (mouse button is down)       -             true             -               -                  -                    -
+//   Frame N+6 (mouse button is released)   true          true             -               -                  -                    -
+//   Frame N+7 (mouse button is released)   -             true             -               -                  -                    -
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// with PressedOnDoubleClick:              return-value  IsItemHovered()  IsItemActive()  IsItemActivated()  IsItemDeactivated()  IsItemClicked()
+//   Frame N+0 (mouse button is down)       -             true             -               -                  -                    true
+//   Frame N+1 (mouse button is down)       -             true             -               -                  -                    -
+//   Frame N+2 (mouse button is released)   -             true             -               -                  -                    -
+//   Frame N+3 (mouse button is released)   -             true             -               -                  -                    -
+//   Frame N+4 (mouse button is down)       true          true             true            true               -                    true
+//   Frame N+5 (mouse button is down)       -             true             true            -                  -                    -
+//   Frame N+6 (mouse button is released)   -             true             -               -                  true                 -
+//   Frame N+7 (mouse button is released)   -             true             -               -                  -                    -
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// Note that some combinations are supported,
+// - PressedOnDragDropHold can generally be associated with any flag.
+// - PressedOnDoubleClick can be associated by PressedOnClickRelease/PressedOnRelease, in which case the second release event won't be reported.
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// The behavior of the return-value changes when ImGuiButtonFlags_Repeat is set:
+//                                         Repeat+                  Repeat+           Repeat+             Repeat+
+//                                         PressedOnClickRelease    PressedOnClick    PressedOnRelease    PressedOnDoubleClick
+//-------------------------------------------------------------------------------------------------------------------------------------------------
+//   Frame N+0 (mouse button is down)       -                        true              -                   true
+//   ...                                    -                        -                 -                   -
+//   Frame N + RepeatDelay                  true                     true              -                   true
+//   ...                                    -                        -                 -                   -
+//   Frame N + RepeatDelay + RepeatRate*N   true                     true              -                   true
+//-------------------------------------------------------------------------------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// clang-format on
+
+bool item_hoverable(FlContext* ctx, FlRect rect, FlowiID id) {
+    if (ctx->hovered_id != 0 && ctx->hovered_id != id) {
+        return false;
+    }
+
+    if (ctx->active_id != 0 && ctx->active_id != id) {
+        return false;
+    }
+
+    if (!is_mouse_hovering_rect(ctx, rect)) {
+        return false;
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool is_mouse_pos_valid(FlVec2 pos) {
+    const float MOUSE_INVALID = -256000.0f;
+    return pos.x >= MOUSE_INVALID && pos.y >= MOUSE_INVALID;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool button_behavior(struct FlContext* ctx, FlRect rect, u32 button_flags) {
+    FL_UNUSED(ctx);
+    FL_UNUSED(rect);
+    FL_UNUSED(button_flags);
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2, bool b3) {
     // Tracks the mouse state for this frame
-    ctx->mouse_state.pos = pos;
-    ctx->mouse_state.buttons[0] = b1;
-    ctx->mouse_state.buttons[1] = b2;
-    ctx->mouse_state.buttons[2] = b3;
+    ctx->mouse.pos = pos;
+    ctx->mouse.down[0] = b1;
+    ctx->mouse.down[1] = b2;
+    ctx->mouse.down[2] = b3;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void update_mouse_states(FlContext* ctx) {
+    MouseState* state = &ctx->mouse;
+    const double time = ctx->time;
+    const float delta_time = ctx->delta_time;
+    const float double_click_time = state->double_click_time;
+    const float double_click_max_dist_sqr = state->double_click_max_dist * state->double_click_max_dist;
+    bool valid_mouse_pos = false;
+
+    FlVec2 zero = vec2_zero();
+
+    // Round mouse position to avoid spreading non-rounded position
+    if (is_mouse_pos_valid(state->pos)) {
+        state->pos = vec2_floor(state->pos);
+        valid_mouse_pos = true;
+    }
+
+    // If mouse just appeared or disappeared (usually denoted by -FLT_MAX components) we cancel out movement in
+    // MouseDelta
+    if (is_mouse_pos_valid(state->pos) && is_mouse_pos_valid(state->pos_prev)) {
+        state->delta = vec2_sub(state->pos, state->pos_prev);
+    } else {
+        state->delta = zero;
+    }
+
+    if (state->delta.x != 0.0f || state->delta.y != 0.0f) {
+        state->nav_disable_hover = false;
+    }
+
+    const FlVec2 pos = state->pos;
+    state->pos_prev = pos;
+
+    for (int i = 0; i < MAX_MOUSE_BUTTONS; i++) {
+        const float down_dur = state->down_duration[i];
+        const bool is_down = state->down[i];
+
+        state->clicked[i] = is_down && down_dur < 0.0f;
+        state->released[i] = !is_down && down_dur >= 0.0f;
+        state->down_duration_prev[i] = down_dur;
+        state->down_duration[i] = is_down ? (down_dur < 0.0f ? 0.0f : down_dur + delta_time) : -1.0f;
+        state->double_clicked[i] = false;
+
+        if (state->clicked[i]) {
+            if ((float)(time - state->clicked_time[i]) < double_click_time) {
+                FlVec2 delta_click_pos = valid_mouse_pos ? (vec2_sub(pos, state->clicked_pos[i])) : zero;
+
+                if (vec2_length_sqr(delta_click_pos) < double_click_max_dist_sqr) {
+                    state->double_clicked[i] = true;
+                }
+
+                // Mark as "old enough" so the third click isn't turned into a double-click
+                state->clicked_time[i] = -double_click_time * 2.0f;
+            } else {
+                state->clicked_time[i] = time;
+            }
+
+            state->clicked_pos[i] = state->pos;
+            state->down_was_double_click[i] = state->double_clicked[i];
+            state->drag_max_distance_abs[i] = zero;
+            state->drag_max_distance_sqr[i] = 0.0f;
+        } else if (state->down[i]) {
+            // Maintain the maximum dist we reaching from the initial click pos, which is used with dragging threshold
+            const FlVec2 delta_click_pos = valid_mouse_pos ? vec2_sub(pos, state->clicked_pos[i]) : zero;
+            const float delta_len_sqr = vec2_length_sqr(delta_click_pos);
+            state->drag_max_distance_sqr[i] = f32_max(state->drag_max_distance_sqr[i], delta_len_sqr);
+            state->drag_max_distance_abs[i].x = f32_max(state->drag_max_distance_abs[i].x, f32_abs(delta_click_pos.x));
+            state->drag_max_distance_abs[i].y = f32_max(state->drag_max_distance_abs[i].y, f32_abs(delta_click_pos.y));
+        }
+
+        if (!state->down[i] && !state->released[i]) {
+            state->down_was_double_click[i] = false;
+        }
+
+        // Clicking any button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
+        if (state->clicked[i]) {
+            state->nav_disable_hover = false;
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool hack_first_frame = false;
 
-void fl_frame_begin(struct FlContext* ctx, int width, int height) {
+void fl_frame_begin(struct FlContext* ctx, int width, int height, float delta_time) {
     FL_UNUSED(width);
     FL_UNUSED(height);
 
     if (hack_first_frame) {
         CommandBuffer_rewind(&ctx->global->render_commands);
     }
+
+    update_mouse_states(ctx);
 
     // Update default layout
     // FlRect rect = { 0, 0, width, height };
@@ -257,6 +462,8 @@ void fl_frame_begin(struct FlContext* ctx, int width, int height) {
 
     ctx->active_layout = ctx->active_layout;
     ctx->frame_count++;
+    ctx->delta_time = delta_time;
+    ctx->time += delta_time;
 
     ctx->cursor.x = 0;
     ctx->cursor.y = 0;

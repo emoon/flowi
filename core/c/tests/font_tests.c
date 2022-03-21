@@ -94,7 +94,7 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
 
     // Begin frame and generate some glyphs and figure out the range to update
 
-    fl_frame_begin(ctx, 640, 480);
+    fl_frame_begin(ctx, 640, 480, 1.0f / 60.f);
 
     Atlas_begin_add_rects(state->mono_fonts_atlas);
     Font_generate_glyphs(ctx, (Font*)Handles_get_data(&state->font_handles, font_id), test, 2, 36);

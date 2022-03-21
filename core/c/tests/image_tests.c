@@ -173,7 +173,7 @@ UTEST(Image, render_image) {
 
     ASSERT_TRUE(found_create_texture);
 
-    fl_frame_begin(ctx, 640, 480);
+    fl_frame_begin(ctx, 640, 480, 1.0f / 60.0f);
     fl_ui_image(ctx, id);
     fl_frame_end(ctx);
 

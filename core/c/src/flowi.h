@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
-#include "types.h"
 #include "render.h"
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,7 +35,7 @@ bool fl_button_c(struct FlContext* ctx, const char* label);
 bool fl_button_size_c(struct FlContext* ctx, const char* label, FlVec2 size);
 bool fl_button_ex_c(struct FlContext* ctx, const char* label, int label_len, FlVec2 Size);
 
-void fl_frame_begin(struct FlContext* ctx, int width, int height);
+void fl_frame_begin(struct FlContext* ctx, int width, int height, float delta_time);
 void fl_frame_end(struct FlContext* ctx);
 
 void fl_text(struct FlContext* ctx, const char* text);
@@ -53,4 +53,3 @@ u16 fl_render_get_command(struct FlGlobalState* self, const u8** data);
 #ifdef __cplusplus
 }
 #endif
-
