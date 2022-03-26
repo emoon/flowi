@@ -255,14 +255,60 @@ static bool is_mouse_hovering_rect(const FlContext* ctx, FlRect rect) {
     return false;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void set_active_id(FlContext* ctx, FlowiID id) {
+    ctx->active_id_is_just_activated = ctx->active_id != id;
+
+    if (ctx->active_id_is_just_activated) {
+        ctx->active_id_timer = 0.0f;
+        ctx->active_id_has_been_pressed_before = false;
+        ctx->active_id_has_been_edited_before = false;
+        if (id != 0) {
+            ctx->last_active_id = id;
+            ctx->last_active_id_timer = 0.0f;
+        }
+    }
+
+    ctx->active_id = id;
+    ctx->active_id_allow_overlap = false;
+    ctx->active_id_no_clear_on_focus_loss = false;
+    ctx->active_id_has_been_edited_this_frame = false;
+
+    if (id) {
+        ctx->active_id_is_alive = id;
+        /*
+        ctx->active_id_source =
+            (ctx->nav_activate_id == id ||
+             ctx->nav_input_id == id ||
+             ctx->nav_just_tabbed_id == id ||
+             ctx->nav_just_moved_to_id  == id) ? InputSource_Nav : InputSource_Mouse;
+        */
+    }
+
+    // ctx->active_id_window = window;
+    // Clear declaration of inputs claimed by the widget
+    // (Please note that this is WIP and not all keys/inputs are thoroughly declared by all widgets yet)
+    // ctx->active_id_using_mouse_wheel = false;
+    // ctx->active_id_using_nav_dir_mask = 0x00;
+    // ctx->active_id_using_nav_input_mask = 0x00;
+    // ctx->active_id_using_key_input_mask = 0x00;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void clear_active_id(FlContext* ctx) {
+    set_active_id(ctx, 0);
+}
+
 // clang-format off
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Borrows some ideas/code for Dear Imgui - MIT License (MIT) Copyright (c) 2014-2022 Omar Cornut
 //
 // The button_behavior() function is key to many interactions and used by many/most widgets.
-// Because we handle so many cases (keyboard/gamepad navigation, drag and drop) and many specific behavior (via ImGuiButtonFlags_),
+// Because we handle so many cases (keyboard/gamepad navigation, drag and drop) and many specific behavior (via ButtonFlags_),
 // this code is a little complex.
-// By far the most common path is interacting with the Mouse using the default ImGuiButtonFlags_PressedOnClickRelease button behavior.
+// By far the most common path is interacting with the Mouse using the default ButtonFlags_PressedOnClickRelease button behavior.
 // See the series of events below and the corresponding state reported by dear imgui:
 //------------------------------------------------------------------------------------------------------------------------------------------------
 // with PressedOnClickRelease:             return-value  IsItemHovered()  IsItemActive()  IsItemActivated()  IsItemDeactivated()  IsItemClicked()
@@ -302,7 +348,7 @@ static bool is_mouse_hovering_rect(const FlContext* ctx, FlRect rect) {
 // - PressedOnDragDropHold can generally be associated with any flag.
 // - PressedOnDoubleClick can be associated by PressedOnClickRelease/PressedOnRelease, in which case the second release event won't be reported.
 //------------------------------------------------------------------------------------------------------------------------------------------------
-// The behavior of the return-value changes when ImGuiButtonFlags_Repeat is set:
+// The behavior of the return-value changes when ButtonFlags_Repeat is set:
 //                                         Repeat+                  Repeat+           Repeat+             Repeat+
 //                                         PressedOnClickRelease    PressedOnClick    PressedOnRelease    PressedOnDoubleClick
 //-------------------------------------------------------------------------------------------------------------------------------------------------
@@ -340,11 +386,99 @@ static bool is_mouse_pos_valid(FlVec2 pos) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool button_behavior(struct FlContext* ctx, FlRect rect, u32 button_flags) {
-    FL_UNUSED(ctx);
-    FL_UNUSED(rect);
-    FL_UNUSED(button_flags);
-    return false;
+bool button_behavior(struct FlContext* ctx, FlRect rect, FlowiID id, u32 flags) {
+    const MouseState* mouse_state = &ctx->mouse;
+
+    bool pressed = false;
+    bool hovered = item_hoverable(ctx, rect, id);
+
+    // Mouse handling
+    if (hovered) {
+        // Poll buttons
+        int button_clicked = -1;
+        int button_released = -1;
+
+        if ((flags & ButtonFlags_MouseButtonLeft) && mouse_state->clicked[0]) {
+            button_clicked = 0;
+        }
+
+        if ((flags & ButtonFlags_MouseButtonLeft) && mouse_state->released[0]) {
+            button_released = 0;
+        }
+
+        if (button_clicked != -1 && ctx->active_id != id) {
+            if (flags & (ButtonFlags_PressedOnClickRelease | ButtonFlags_PressedOnClickReleaseAnywhere)) {
+                set_active_id(ctx, id);
+            }
+
+            const bool pressed_on_click = flags & ButtonFlags_PressedOnClick;
+            const bool pressed_on_double_click = flags & ButtonFlags_PressedOnDoubleClick;
+            const bool double_clicked = mouse_state->double_clicked[button_clicked];
+
+            if (pressed_on_click || (pressed_on_double_click && double_clicked)) {
+                pressed = true;
+                set_active_id(ctx, id);
+            }
+        }
+
+        if ((flags & ButtonFlags_PressedOnRelease) && button_released != -1) {
+            // Repeat mode trumps on release behavior
+            const bool has_repeated_at_least_once = false;
+            if (!has_repeated_at_least_once)
+                pressed = true;
+
+            clear_active_id(ctx);
+        }
+    }
+
+    // Process while held
+    // bool held = false;
+    if (ctx->active_id == id) {
+        // if (g.active_id_source == InputSource_Mouse)
+        // always mouse for now
+        if (true) {
+            /*
+            if (ctx->active_id_is_just_activated) {
+                // g.active_id_click_offset = vec2_sub(ctx->mouse_state.pos, rect.min);
+            }
+            */
+
+            const int mouse_button = ctx->active_id_mouse_button;
+
+            if (ctx->mouse.down[mouse_button]) {
+                // held = true;
+            } else {
+                bool release_in = hovered && (flags & ButtonFlags_PressedOnClickRelease) != 0;
+                bool release_anywhere = (flags & ButtonFlags_PressedOnClickReleaseAnywhere) != 0;
+                const float repeat_delay = 0.025f;  // TODO: Configurable value
+                // if ((release_in || release_anywhere) && !ctx->drag_drop_active) {
+                if (release_in || release_anywhere) {
+                    // Report as pressed when releasing the mouse (this is the most common path)
+                    bool is_double_click_release =
+                        (flags & ButtonFlags_PressedOnDoubleClick) && ctx->mouse.down_was_double_click[mouse_button];
+                    // Repeat mode trumps <on release>
+                    bool is_repeating_already =
+                        (flags & ButtonFlags_Repeat) && ctx->mouse.down_duration_prev[mouse_button] >= repeat_delay;
+                    if (!is_double_click_release && !is_repeating_already)
+                        pressed = true;
+                }
+            }
+            clear_active_id(ctx);
+        }
+        // if (!(flags & ButtonFlags_NoNavFocus))
+        //     ctx->nav_disable_highlight = true;
+    }
+    /*
+    else if (g.active_id_source == im_gui_input_source_nav) {
+        // When activated using Nav, we hold on the ActiveID until activation button is released
+        if (ctx->nav_activate_down_id != id)
+            clear_active_id();
+    }
+    if (pressed) {
+        g.active_id_has_been_pressed_before = true;
+    }
+    */
+    return pressed;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -439,6 +573,63 @@ static void update_mouse_states(FlContext* ctx) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// update hovered_id data
+
+static void update_hover_active_id(FlContext* ctx, float delta_time) {
+    if (!ctx->hovered_id_previous_frame) {
+        ctx->hovered_id_timer = 0.0f;
+    }
+
+    if (!ctx->hovered_id_previous_frame || (ctx->hovered_id && ctx->active_id == ctx->hovered_id)) {
+        ctx->hovered_id_not_active_timer = 0.0f;
+    }
+
+    if (ctx->hovered_id) {
+        ctx->hovered_id_timer += delta_time;
+    }
+
+    if (ctx->hovered_id && ctx->active_id != ctx->hovered_id) {
+        ctx->hovered_id_not_active_timer += delta_time;
+    }
+
+    ctx->hovered_id_previous_frame = ctx->hovered_id;
+    ctx->hovered_id_previous_frame_using_mouse_wheel = ctx->hovered_id_using_mouse_wheel;
+    ctx->hovered_id = 0;
+    ctx->hovered_id_allow_overlap = false;
+    ctx->hovered_id_using_mouse_wheel = false;
+    ctx->hovered_id_disabled = false;
+
+    // update active_id data (clear reference to active widget if the widget isn't alive anymore)
+    if (ctx->active_id_is_alive != ctx->active_id && ctx->active_id_previous_frame == ctx->active_id &&
+        ctx->active_id != 0) {
+        clear_active_id(ctx);
+    }
+
+    if (ctx->active_id) {
+        ctx->active_id_timer += delta_time;
+    }
+
+    ctx->last_active_id_timer += delta_time;
+    ctx->active_id_previous_frame = ctx->active_id;
+    // ctx->active_id_previous_frame_window = ctx->active_id_window;
+    ctx->active_id_previous_frame_has_been_edited_before = ctx->active_id_has_been_edited_before;
+    ctx->active_id_is_alive = 0;
+    ctx->active_id_has_been_edited_this_frame = false;
+    ctx->active_id_previous_frame_is_alive = false;
+    ctx->active_id_is_just_activated = false;
+
+    if (ctx->temp_input_id != 0 && ctx->active_id != ctx->temp_input_id) {
+        ctx->temp_input_id = 0;
+    }
+
+    if (ctx->active_id == 0) {
+        ctx->active_id_using_nav_dir_mask = 0x00;
+        ctx->active_id_using_nav_input_mask = 0x00;
+        ctx->active_id_using_key_input_mask = 0x00;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool hack_first_frame = false;
 
@@ -450,6 +641,7 @@ void fl_frame_begin(struct FlContext* ctx, int width, int height, float delta_ti
         CommandBuffer_rewind(&ctx->global->render_commands);
     }
 
+    update_hover_active_id(ctx, delta_time);
     update_mouse_states(ctx);
 
     // Update default layout

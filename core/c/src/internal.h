@@ -85,6 +85,18 @@ typedef struct ItemWithText {
     int len;
 } ItemWithText;
 
+// Used to determine what kind of navigation we are doing
+typedef enum InputSource {
+    InputSource_None = 0,
+    InputSource_Mouse,
+    InputSource_Nav,
+    // Only used occasionally for storage, not tested/handled by most code
+    InputSource_NavKeyboard,
+    // Only used occasionally for storage, not tested/handled by most code
+    InputSource_NavGamepad,
+    ImGuiInputSource_COUNT
+} InputSource;
+
 #define MAX_MOUSE_BUTTONS 3
 
 typedef struct MouseState {
@@ -131,10 +143,69 @@ typedef struct FlContext {
     float delta_time;
     // Tracks the mouse state for this frame
     MouseState mouse;
-    // hash of the full context. Use for to skip rendering if nothing has changed
-    // XXH3_state_t context_hash;
-    // Previous frames hash. We can check against this to see if anything has changed
-    // XXH3_state_t prev_frame_hash;
+    // Temporary text input when CTRL+clicking on a slider, etc.
+    FlowiID temp_input_id;
+    // Hovered widget, filled during the frame
+    FlowiID hovered_id;
+    FlowiID hovered_id_previous_frame;
+    bool hovered_id_allow_overlap;
+    // Hovered widget will use mouse wheel. Blocks scrolling the underlying window.
+    bool hovered_id_using_mouse_wheel;
+    bool hovered_id_previous_frame_using_mouse_wheel;
+    // At least one widget passed the rect test, but has been discarded by disabled flag or popup inhibit. May be true
+    // even if HoveredId == 0.
+    bool hovered_id_disabled;
+    // Measure contiguous hovering time
+    float hovered_id_timer;
+    // Measure contiguous hovering time where the item has not been active
+    float hovered_id_not_active_timer;
+    // Data for tracking the active id
+    // Active widget
+    FlowiID active_id;
+    // Active widget has been seen this frame (we can't use a bool as the active_id may change within the frame)
+    FlowiID active_id_is_alive;
+    float active_id_timer;
+    // Store the last non-zero active_id, useful for animation.
+    FlowiID last_active_id;
+    // Store the last non-zero active_id timer since the beginning of activation, useful for animation.
+    float last_active_id_timer;
+    // Active widget will want to read those nav move requests (e.g. can activate a button and move away from it)
+    u32 active_id_using_nav_dir_mask;
+    // Active widget will want to read those nav inputs.
+    u32 active_id_using_nav_input_mask;
+    // Active widget will want to read those key inputs. When we grow the ImGuiKey enum we'll need to either to order
+    // the enum to make useful keys come first, either redesign this into e.g. a small array.
+    u32 active_id_using_key_input_mask;
+    // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
+    FlVec2 active_id_click_offset;
+    // Activating with mouse or nav (gamepad/keyboard) //InputSource Source;
+    int active_id_mouse_button;
+    FlowiID active_id_previous_frame;
+    // Store the last non-zero active_id, useful for animation.
+    FlowiID active_id_last;
+    // Store the last non-zero active_id timer since the beginning of activation, useful for animation.
+    float active_id_last_Timer;
+    // Set at the time of activation for one frame
+    bool active_id_is_just_activated;
+    // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
+    bool active_id_allow_overlap;
+    // Disable losing active id if the active id window gets unfocused.
+    bool active_id_no_clear_on_focus_loss;
+    // Track whether the active id led to a press (this is to allow changing between PressOnClick and PressOnRelease
+    // without pressing twice). Used by range_select branch.
+    bool active_id_has_been_pressed_before;
+    // Was the value associated to the widget Edited over the course of the Active state.
+    bool active_id_has_been_edited_before;
+    bool active_id_has_been_edited_this_frame;
+    // Active widget will want to read mouse wheel. Blocks scrolling the underlying window.
+    bool active_id_using_mouse_wheel;
+    bool active_id_previous_frame_is_alive;
+    bool active_id_previous_frame_has_been_edited_before;
+    // ActiveId active_id;
+    //  hash of the full context. Use for to skip rendering if nothing has changed
+    //  XXH3_state_t context_hash;
+    //  Previous frames hash. We can check against this to see if anything has changed
+    //  XXH3_state_t prev_frame_hash;
     FlVec2 cursor;
     // id from the previous frame
     u32 prev_active_item;
@@ -155,10 +226,6 @@ typedef struct FlContext {
     ItemWithText* items_with_text;
     // Active fade actions
     int fade_actions;
-
-    // Used for tracking active widgets
-    FlowiID hovered_id;
-    FlowiID active_id;
 
     FlGlobalState* global;
 
@@ -187,6 +254,12 @@ typedef struct FlContext {
 } FlContext;
 
 enum ButtonFlags {
+    // React on left mouse button (default)
+    ButtonFlags_MouseButtonLeft = 1 << 0,
+    // React on right mouse button
+    ButtonFlags_MouseButtonRight = 1 << 1,
+    // React on center mouse button
+    ButtonFlags_MouseButtonMiddle = 1 << 2,
     // return true on click (mouse down event)
     ButtonFlags_PressedOnClick = 1 << 4,
     // [Default] return true on click + release on same item <-- this is what the majority of Button are using
@@ -200,6 +273,12 @@ enum ButtonFlags {
     // return true when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing
     // headers)
     ButtonFlags_PressedOnDragDropHold = 1 << 9,
+    // hold to repeat
+    ButtonFlags_Repeat = 1 << 10,
+    // [Internal]
+    ButtonFlags_MouseButtonMask =
+        ButtonFlags_MouseButtonLeft | ButtonFlags_MouseButtonRight | ButtonFlags_MouseButtonMiddle,
+    ButtonFlags_MouseButtonDefault,
 };
 
 // TODO: Use custom io functions
