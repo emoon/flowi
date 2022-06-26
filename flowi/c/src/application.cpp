@@ -461,9 +461,9 @@ static void generate_frame(void* user_data) {
     double xpos, ypos;
     glfwGetCursorPos(state->default_window, &xpos, &ypos);
     const int mouse_state = glfwGetMouseButton(state->default_window, GLFW_MOUSE_BUTTON_LEFT);
+    FlVec2 pos = {float(xpos), float(ypos)};
 
-    fl_set_mouse_pos_state(state->ctx, (FlVec2){ (float)xpos, (float)ypos}, 
-        mouse_state == GLFW_PRESS ? true : false, false, false);
+    fl_set_mouse_pos_state(state->ctx, pos, mouse_state == GLFW_PRESS ? true : false, false, false);
 
     // TODO: Correct delta time.
     fl_frame_begin(state->ctx, display_w, display_h, 1.0f/60.0f);
