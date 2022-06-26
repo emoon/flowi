@@ -1,6 +1,7 @@
 #pragma once
 
 #include <flowi_core/math_data.h>
+#include <flowi_core/style.h>
 #include "command_buffer.h"
 #include "flowi.h"
 
@@ -54,13 +55,20 @@ typedef struct PrimitiveImage {
 // Used for rendering text
 
 typedef struct PrimitiveBox {
-    // Index into global position list
-    int position_index;
-    // Index into size list
-    int size_index;
+    // Border style of th box
+    FlBorder border;
+    // Postion of the box
+    FlVec2 pos;
+    // Size of the box
+    FlVec2 size;
+    // TODO: Color type
+    u32 color;
 } PrimitiveBox;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#define Primitive_alloc_box(state) \
+    (PrimitiveBox*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawBox, sizeof(PrimitiveBox))
 
 #define Primitive_alloc_text(state) \
     (PrimitiveText*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawText, sizeof(PrimitiveText))

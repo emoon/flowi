@@ -25,8 +25,8 @@ typedef enum FlLengthPercent {
 typedef enum FlCorner {
     FlCorner_TopLeft = 0,
     FlCorner_TopRight = 1,
-    FlCorner_BottomRight = 2,
-    FlCorner_BottomLeft = 3,
+    FlCorner_BottomLeft = 2,
+    FlCorner_BottomRight = 3,
 } FlCorner;
 
 typedef struct FlLengthPercentValue {

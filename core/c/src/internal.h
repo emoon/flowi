@@ -136,6 +136,15 @@ typedef struct MouseState {
     bool nav_disable_hover;
 } MouseState;
 
+typedef struct LastItemData {
+    FlowiID id;
+    u32 in_flags;         //
+    u32 status_flags;     //
+    FlRect rect;          // Full rectangle
+    FlRect nav_rect;      // Navigation scoring rectangle (not displayed)
+    FlRect display_rect;  // Display rectangle (only if ImGuiItemStatusFlags_HasDisplayRect is set)
+} LastItemData;
+
 typedef struct FlContext {
     // Current time
     double time;
@@ -184,7 +193,7 @@ typedef struct FlContext {
     // Store the last non-zero active_id, useful for animation.
     FlowiID active_id_last;
     // Store the last non-zero active_id timer since the beginning of activation, useful for animation.
-    float active_id_last_Timer;
+    float active_id_last_timer;
     // Set at the time of activation for one frame
     bool active_id_is_just_activated;
     // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
@@ -201,6 +210,7 @@ typedef struct FlContext {
     bool active_id_using_mouse_wheel;
     bool active_id_previous_frame_is_alive;
     bool active_id_previous_frame_has_been_edited_before;
+    LastItemData last_item_data;
     // ActiveId active_id;
     //  hash of the full context. Use for to skip rendering if nothing has changed
     //  XXH3_state_t context_hash;

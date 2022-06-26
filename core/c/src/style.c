@@ -9,6 +9,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Default style
+// Styling is based on the CSS Box Model: https://www.w3schools.com/css/css_boxmodel.asp
 
 static FlStyle s_default_style = {
     .name = {"flowi_default", sizeof("flowi_default")},

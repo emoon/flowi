@@ -68,6 +68,14 @@ FL_INLINE bool fl_ui_push_button_with_icon(struct FlContext* ctx, const char* te
     return fl_ui_push_button_with_icon_impl(ctx, text_, image, text_pos, image_scale);
 }
 
+// Push button widget that returns true if user has pressed it
+bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text);
+
+FL_INLINE bool fl_ui_push_button(struct FlContext* ctx, const char* text) {
+    FlString text_ = fl_cstr_to_flstring(text);
+    return fl_ui_push_button_impl(ctx, text_);
+}
+
 #ifdef __cplusplus
 }
 #endif

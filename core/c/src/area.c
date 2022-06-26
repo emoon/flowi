@@ -236,72 +236,25 @@ bool generate_corners(struct FlContext* ctx, const FlStyle* style, FlVec2 offset
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Generate area
 
-Area* Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 size) {
-    FL_UNUSED(ctx);
-    FL_UNUSED(style);
-    FL_UNUSED(size);
+/*
+void Area_generate(struct FlContext* ctx, const FlStyle* style, FlVec2 pos, FlVec2 size) {
+    FlStyle* style = fl_style_get_default(ctx);
 
-    return NULL;
+    generate_corners(ctx, style, pos, size);
 
-    /*
-    // TODO: Custom allocator
-    Area* area = calloc(1, sizeof(Area));
-    CornerVerts corner_verts[4];
+    VertsCounts counts = VertexAllocator_get_pos_color_counts(&ctx->vertex_allocator);
+    FlSolidTriangles* tri_data = Render_solid_triangles_cmd(ctx->global);
 
-    // Size up with the padding
-    size.x += style->padding[FlSide_Left] + style->padding[FlSide_Right];
-    size.y += style->padding[FlSide_Top] + style->padding[FlSide_Bottom];
+    tri_data->offset = ctx->vertex_allocator.frame_index;
+    tri_data->vertex_buffer = counts.vertex_data;
+    tri_data->index_buffer = counts.index_data;
 
-    area->content_start.x = style->padding[FlSide_Left];
-    area->content_start.y = style->padding[FlSide_Top];
-    area->content_end.x = style->padding[FlSide_Right];
-    area->content_end.y = style->padding[FlSide_Bottom];
-    */
-
-    // u32 color = style->background_color;
-
-    /*
-    // TODO: Custom a
-    area->vertex_buffer = malloc(sizeof(FlVertPosColor) * 4);
-    area->index_buffer = malloc(sizeof(FlIdxSize) * 6);
-
-    // Generate the vertex buffer with 2 triangles
-
-    area->vertex_buffer[0].x = 0.0f;
-    area->vertex_buffer[0].y = 0.0f;
-    area->vertex_buffer[0].color = color;
-
-    area->vertex_buffer[1].x = size.x;
-    area->vertex_buffer[1].y = 0.0f;
-    area->vertex_buffer[1].color = color;
-
-    area->vertex_buffer[2].x = size.x;
-    area->vertex_buffer[2].y = size.y;
-    area->vertex_buffer[2].color = color;
-
-    area->vertex_buffer[3].x = 0.0f;
-    area->vertex_buffer[3].y = size.y;
-    area->vertex_buffer[3].color = color;
-
-    // Write index buffer
-
-    area->index_buffer[0] = 0;
-    area->index_buffer[1] = 1;
-    area->index_buffer[2] = 2;
-
-    area->index_buffer[3] = 0;
-    area->index_buffer[4] = 2;
-    area->index_buffer[5] = 3;
-
-    // Counts
-
-    area->vertex_count = 4;
-    area->index_count = 6;
-    */
-
-    // return area;
+    tri_data->vertex_buffer_size = counts.vertex_count;
+    tri_data->index_buffer_size = counts.index_count;
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

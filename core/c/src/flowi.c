@@ -15,6 +15,7 @@
 #include "primitives.h"
 #include "render.h"
 #include "simd.h"
+#include "style_internal.h"
 #include "text.h"
 #include "vertex_allocator.h"
 
@@ -239,24 +240,6 @@ bool fl_button_ex_c(struct FlContext* ctx, const char* label, int label_len, FlV
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool is_mouse_hovering_rect(const FlContext* ctx, FlRect rect) {
-    // TODO: Math function
-    // TODO: SIMD
-    FlVec2 pos = ctx->mouse.pos;
-
-    if (pos.x >= rect.x && pos.y >= rect.y) {
-        FlVec2 pos2 = (FlVec2){rect.x + rect.width, rect.y + rect.height};
-
-        if (pos.x < pos2.x && pos.y < pos2.y) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void set_active_id(FlContext* ctx, FlowiID id) {
     ctx->active_id_is_just_activated = ctx->active_id != id;
 
@@ -361,134 +344,11 @@ static void clear_active_id(FlContext* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // clang-format on
 
-bool item_hoverable(FlContext* ctx, FlRect rect, FlowiID id) {
-    if (ctx->hovered_id != 0 && ctx->hovered_id != id) {
-        return false;
-    }
-
-    if (ctx->active_id != 0 && ctx->active_id != id) {
-        return false;
-    }
-
-    if (!is_mouse_hovering_rect(ctx, rect)) {
-        return false;
-    }
-
-    return true;
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool is_mouse_pos_valid(FlVec2 pos) {
     const float MOUSE_INVALID = -256000.0f;
     return pos.x >= MOUSE_INVALID && pos.y >= MOUSE_INVALID;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool button_behavior(struct FlContext* ctx, FlRect rect, FlowiID id, u32 flags) {
-    const MouseState* mouse_state = &ctx->mouse;
-
-    bool pressed = false;
-    bool hovered = item_hoverable(ctx, rect, id);
-
-    // Mouse handling
-    if (hovered) {
-        // Poll buttons
-        int button_clicked = -1;
-        int button_released = -1;
-
-        if ((flags & ButtonFlags_MouseButtonLeft) && mouse_state->clicked[0]) {
-            button_clicked = 0;
-        }
-
-        if ((flags & ButtonFlags_MouseButtonLeft) && mouse_state->released[0]) {
-            button_released = 0;
-        }
-
-        if (button_clicked != -1 && ctx->active_id != id) {
-            if (flags & (ButtonFlags_PressedOnClickRelease | ButtonFlags_PressedOnClickReleaseAnywhere)) {
-                set_active_id(ctx, id);
-            }
-
-            const bool pressed_on_click = flags & ButtonFlags_PressedOnClick;
-            const bool pressed_on_double_click = flags & ButtonFlags_PressedOnDoubleClick;
-            const bool double_clicked = mouse_state->double_clicked[button_clicked];
-
-            if (pressed_on_click || (pressed_on_double_click && double_clicked)) {
-                pressed = true;
-                set_active_id(ctx, id);
-            }
-        }
-
-        if ((flags & ButtonFlags_PressedOnRelease) && button_released != -1) {
-            // Repeat mode trumps on release behavior
-            const bool has_repeated_at_least_once = false;
-            if (!has_repeated_at_least_once)
-                pressed = true;
-
-            clear_active_id(ctx);
-        }
-    }
-
-    // Process while held
-    // bool held = false;
-    if (ctx->active_id == id) {
-        // if (g.active_id_source == InputSource_Mouse)
-        // always mouse for now
-        if (true) {
-            /*
-            if (ctx->active_id_is_just_activated) {
-                // g.active_id_click_offset = vec2_sub(ctx->mouse_state.pos, rect.min);
-            }
-            */
-
-            const int mouse_button = ctx->active_id_mouse_button;
-
-            if (ctx->mouse.down[mouse_button]) {
-                // held = true;
-            } else {
-                bool release_in = hovered && (flags & ButtonFlags_PressedOnClickRelease) != 0;
-                bool release_anywhere = (flags & ButtonFlags_PressedOnClickReleaseAnywhere) != 0;
-                const float repeat_delay = 0.025f;  // TODO: Configurable value
-                // if ((release_in || release_anywhere) && !ctx->drag_drop_active) {
-                if (release_in || release_anywhere) {
-                    // Report as pressed when releasing the mouse (this is the most common path)
-                    bool is_double_click_release =
-                        (flags & ButtonFlags_PressedOnDoubleClick) && ctx->mouse.down_was_double_click[mouse_button];
-                    // Repeat mode trumps <on release>
-                    bool is_repeating_already =
-                        (flags & ButtonFlags_Repeat) && ctx->mouse.down_duration_prev[mouse_button] >= repeat_delay;
-                    if (!is_double_click_release && !is_repeating_already)
-                        pressed = true;
-                }
-            }
-            clear_active_id(ctx);
-        }
-        // if (!(flags & ButtonFlags_NoNavFocus))
-        //     ctx->nav_disable_highlight = true;
-    }
-    /*
-    else if (g.active_id_source == im_gui_input_source_nav) {
-        // When activated using Nav, we hold on the ActiveID until activation button is released
-        if (ctx->nav_activate_down_id != id)
-            clear_active_id();
-    }
-    if (pressed) {
-        g.active_id_has_been_pressed_before = true;
-    }
-    */
-    return pressed;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2, bool b3) {
-    // Tracks the mouse state for this frame
-    ctx->mouse.pos = pos;
-    ctx->mouse.down[0] = b1;
-    ctx->mouse.down[1] = b2;
-    ctx->mouse.down[2] = b3;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -528,11 +388,18 @@ static void update_mouse_states(FlContext* ctx) {
         const float down_dur = state->down_duration[i];
         const bool is_down = state->down[i];
 
-        state->clicked[i] = is_down && down_dur < 0.0f;
-        state->released[i] = !is_down && down_dur >= 0.0f;
+        state->clicked[i] = is_down && (down_dur < 0.0f);
+        state->released[i] = !is_down && (down_dur >= 0.0f);
         state->down_duration_prev[i] = down_dur;
         state->down_duration[i] = is_down ? (down_dur < 0.0f ? 0.0f : down_dur + delta_time) : -1.0f;
         state->double_clicked[i] = false;
+
+        /*
+        if (i == 0) {
+            printf("is_down: %d - clicked %d %d\n", is_down, state->clicked[i], down_dur < 0.0f);
+            printf("%f %f %f\n", state->down_duration[i], state->down_duration_prev[i], delta_time);
+        }
+        */
 
         if (state->clicked[i]) {
             if ((float)(time - state->clicked_time[i]) < double_click_time) {
@@ -570,6 +437,18 @@ static void update_mouse_states(FlContext* ctx) {
             state->nav_disable_hover = false;
         }
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void fl_set_mouse_pos_state(struct FlContext* ctx, FlVec2 pos, bool b1, bool b2, bool b3) {
+    // Tracks the mouse state for this frame
+    ctx->mouse.pos = pos;
+    ctx->mouse.down[0] = b1;
+    ctx->mouse.down[1] = b2;
+    ctx->mouse.down[2] = b3;
+
+    update_mouse_states(ctx);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -642,7 +521,6 @@ void fl_frame_begin(struct FlContext* ctx, int width, int height, float delta_ti
     }
 
     update_hover_active_id(ctx, delta_time);
-    update_mouse_states(ctx);
 
     // Update default layout
     // FlRect rect = { 0, 0, width, height };

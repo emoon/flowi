@@ -16,6 +16,7 @@ extern "C" {
         text_pos: Vec2,
         image_scale: f32,
     ) -> bool;
+    fn fl_ui_push_button_impl(ctx: *const core::ffi::c_void, text: FlString) -> bool;
 }
 
 #[repr(C)]
@@ -82,6 +83,15 @@ impl Context {
                 text_pos,
                 image_scale,
             );
+            ret_val
+        }
+    }
+
+    /// Push button widget that returns true if user has pressed it
+    pub fn ui_push_button(&self, text: &str) -> bool {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            let ret_val = fl_ui_push_button_impl(self_, FlString::new(text));
             ret_val
         }
     }

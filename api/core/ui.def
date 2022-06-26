@@ -15,6 +15,8 @@ struct Ui {
     [static] get_last_widget_size(pos: Vec2) -> Rect,
     /// Push button widget that returns true if user has pressed it 
     [static] push_button_with_icon(text: String, image: Image, text_pos: Vec2, image_scale: f32) -> bool, 
+    /// Push button widget that returns true if user has pressed it 
+    [static] push_button(text: String) -> bool, 
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

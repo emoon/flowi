@@ -25,20 +25,26 @@ void main_loop(struct FlContext* ctx, void* user_data) {
     App* app = (App*)user_data;
 
     FlVec2 pos = {40.0f, 80.0f};
-    FlVec2 pos2 = {40.0f, 180.0f};
-    FlVec2 pos3 = {0.0f, 0.0f};
-    const char* utf8_text = "®";
+    // FlVec2 pos2 = {40.0f, 180.0f};
+    // FlVec2 pos3 = {0.0f, 0.0f};
+    //  const char* utf8_text = "®";
+
+    fl_font_set_impl(ctx, app->font_bold);
+    fl_font_set_with_size(ctx, 64);
+    fl_ui_set_pos(ctx, pos);
+
+    if (fl_ui_push_button(ctx, "Push me")) {
+        printf("Pushed\n");
+    }
 
     /*
     fl_ui_set_pos_ctx(ctx, (FlVec2){.x = 140.0f, .y = 80.0f});
-    fl_font_set(app->font_bold);
-    fl_font_set_with_size(64);
     fl_ui_text(utf8_text);
     */
 
-    fl_font_set(ctx, app->font_bold);
-    fl_font_set_with_size(ctx, 64);
-    // fl_ui_push_button_with_icon(ctx, "HippoMusic", app->image, FlPushButtonWithIconArgs_default2);
+    // fl_font_set(ctx, app->font_bold);
+    // fl_font_set_with_size(ctx, 64);
+    //  fl_ui_push_button_with_icon(ctx, "HippoMusic", app->image, FlPushButtonWithIconArgs_default2);
 
     /*
     fl_ui_set_pos(pos2);
@@ -47,8 +53,8 @@ void main_loop(struct FlContext* ctx, void* user_data) {
     fl_ui_text("Hola");
     */
 
-    fl_ui_set_pos(ctx, pos3);
-    fl_ui_image(ctx, app->image);
+    // fl_ui_set_pos(ctx, pos3);
+    // fl_ui_image(ctx, app->image);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

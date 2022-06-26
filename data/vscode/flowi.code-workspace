@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "../.."
+		},
+		{
+			"path": "../../../hippo/src/hippo_new_ui"
+		},
+		{
+			"path": "../../../../other/imgui_private"
 		}
 	],
 	"settings": {

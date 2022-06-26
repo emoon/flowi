@@ -458,6 +458,13 @@ static void generate_frame(void* user_data) {
     // if no other draw calls are submitted to view 0.
     bgfx::touch(0);
 
+    double xpos, ypos;
+    glfwGetCursorPos(state->default_window, &xpos, &ypos);
+    const int mouse_state = glfwGetMouseButton(state->default_window, GLFW_MOUSE_BUTTON_LEFT);
+
+    fl_set_mouse_pos_state(state->ctx, (FlVec2){ (float)xpos, (float)ypos}, 
+        mouse_state == GLFW_PRESS ? true : false, false, false);
+
     // TODO: Correct delta time.
     fl_frame_begin(state->ctx, display_w, display_h, 1.0f/60.0f);
 
