@@ -18,7 +18,7 @@ struct ImagePrivate;
 typedef enum Primitive {
     Primitive_DrawText = 1,
     Primitive_DrawImage,
-    Primitive_DrawBox,
+    Primitive_DrawRect,
     Primitive_DrawCircle,
 } Primitive;
 
@@ -54,7 +54,7 @@ typedef struct PrimitiveImage {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Used for rendering text
 
-typedef struct PrimitiveBox {
+typedef struct PrimitiveRect {
     // Border style of th box
     FlBorder border;
     // Postion of the box
@@ -63,12 +63,12 @@ typedef struct PrimitiveBox {
     FlVec2 size;
     // TODO: Color type
     u32 color;
-} PrimitiveBox;
+} PrimitiveRect;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define Primitive_alloc_box(state) \
-    (PrimitiveBox*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawBox, sizeof(PrimitiveBox))
+#define Primitive_alloc_rect(state) \
+    (PrimitiveRect*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawRect, sizeof(PrimitiveRect))
 
 #define Primitive_alloc_text(state) \
     (PrimitiveText*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawText, sizeof(PrimitiveText))

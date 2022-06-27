@@ -12,6 +12,7 @@
 #include "image_private.h"
 #include "internal.h"
 #include "layout_private.h"
+#include "primitive_rect.h"
 #include "primitives.h"
 #include "render.h"
 #include "simd.h"
@@ -615,6 +616,12 @@ void fl_frame_end(struct FlContext* ctx) {
     for (int i = 0; i < command_count; ++i) {
         switch (CommandBuffer_read_next_cmd(&state->primitive_commands, &command_data)) {
             case Primitive_DrawText: {
+                draw_text(ctx, command_data);
+                break;
+            }
+
+            case Primitive_DrawRect: {
+                PrimitiveRect_generate_render_data(ctx, (PrimitiveRect*)command_data);
                 draw_text(ctx, command_data);
                 break;
             }

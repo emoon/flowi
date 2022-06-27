@@ -18,7 +18,7 @@
 #include <flowi_core/font.h>
 
 // TODO: Should be in public core api
-#include "../../../core/c/src/area.h"
+//#include "../../../core/c/src/area.h"
 #include "../../../core/c/src/flowi.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -361,16 +361,16 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
     // TODO: Handle corners correctly
     uint16_t x_padding = style.padding[FlCorner_TopRight] + style.padding[FlCorner_BottomRight];
     uint16_t y_padding = style.padding[FlCorner_TopLeft] + style.padding[FlCorner_BottomLeft];
-    FlVec2 box_size = {text_size.x + x_padding, text_size.y + y_padding};
+    FlVec2 rect_size = {text_size.x + x_padding, text_size.y + y_padding};
 
     // static bool button_behavior(struct FlContext * ctx, FlRect rect, FlowiID id, u32 flags);
-    FlRect rect = {.x = (int)pos.x, .y = (int)pos.y, .width = (int)box_size.x, .height = (int)box_size.y};
+    FlRect rect = {.x = (int)pos.x, .y = (int)pos.y, .width = (int)rect_size.x, .height = (int)rect_size.y};
 
-    // Add box for rendering
+    // Add rect for rendering
     {
-        PrimitiveBox* prim = Primitive_alloc_box(ctx->global);
+        PrimitiveRect* prim = Primitive_alloc_rect(ctx->global);
         prim->pos = pos;
-        prim->size = box_size;
+        prim->size = rect_size;
         prim->color = 0x00ffffff;
     }
 

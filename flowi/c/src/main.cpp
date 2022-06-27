@@ -147,7 +147,7 @@ void ui_init(RenderContext& ctx) {
 void ui_update(FlContext* ctx) {
     fl_frame_begin(ctx);
 
-    Area_generate_circle(ctx);
+    //Area_generate_circle(ctx);
 
     fl_text(ctx, "Testing");
 

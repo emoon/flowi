@@ -53,7 +53,6 @@ UTEST(Area, area_default) {
 	ASSERT_NEAR(area->vertex_buffer[3].y, size.y, 0.001f);
 */
 }
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -76,3 +75,4 @@ UTEST(Area, verify_triangle_list) {
     ASSERT_EQ(index_list[7], 4);
     ASSERT_EQ(index_list[8], 2);
 }
+#endif
