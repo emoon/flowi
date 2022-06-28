@@ -24,7 +24,7 @@ typedef struct App {
 void main_loop(struct FlContext* ctx, void* user_data) {
     App* app = (App*)user_data;
 
-    FlVec2 pos = {40.0f, 80.0f};
+    FlVec2 pos = {40.0f, 0.0f};
     // FlVec2 pos2 = {40.0f, 180.0f};
     // FlVec2 pos3 = {0.0f, 0.0f};
     //  const char* utf8_text = "®";

@@ -148,7 +148,7 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_FLOATING, GL_TRUE);
+    glfwWindowHint(GLFW_FLOATING, GL_FALSE);
 
     state->default_window = glfwCreateWindow(state->window_width, state->window_height, "Fix me title", NULL, NULL);
     if (!state->default_window) {

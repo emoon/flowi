@@ -371,7 +371,7 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
         PrimitiveRect* prim = Primitive_alloc_rect(ctx->global);
         prim->pos = pos;
         prim->size = rect_size;
-        prim->color = 0x00ffffff;
+        prim->color = 0x00ff00ff;
     }
 
     // Add text for rendering
@@ -379,8 +379,8 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
         PrimitiveText* prim = Primitive_alloc_text(ctx->global);
 
         prim->font = ctx->current_font;
-        prim->position.x = pos.x + style.padding[FlCorner_TopLeft];
-        prim->position.y = pos.y + style.padding[FlCorner_TopRight];
+        prim->position.x = pos.x;  // + style.padding[FlCorner_TopLeft];
+        prim->position.y = pos.y;  //+ style.padding[FlCorner_TopRight];
         prim->font_size = ctx->current_font_size != 0 ? ctx->current_font_size : ctx->current_font->default_size;
         prim->codepoints = utf8_res.codepoints;
         prim->codepoint_count = utf8_res.len;
@@ -393,8 +393,6 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
     if (!item_add(ctx, id, rect)) {
         return false;
     }
-
-    printf("is hoviring rect 0x%x\n", id);
 
     return button_behavior(ctx, rect, id, ButtonFlags_PressedOnClickRelease | ButtonFlags_MouseButtonLeft);
 }

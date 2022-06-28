@@ -348,7 +348,7 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     // int advance = (int)adv_fixed;
     int x0 = g->bitmap_left;
     int x1 = x0 + g->bitmap.width;
-    int y0 = -g->bitmap_top;
+    int y0 = (-g->bitmap_top) + size;
     int y1 = y0 + g->bitmap.rows;
 
     int gw = x1 - x0;
