@@ -280,6 +280,8 @@ Glyph* Font_get_glyph(const Font* self, u32 codepoint, u32 font_size) {
 
 static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint, int size) {
     GlyphInfo* info = &font->glyph_info;
+    const int pad = 2;
+
     // TODO: Assign atlas to a font when creating
     Atlas* atlas = ctx->global->mono_fonts_atlas;
 
@@ -351,8 +353,8 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     int y0 = (-g->bitmap_top) + size;
     int y1 = y0 + g->bitmap.rows;
 
-    int gw = x1 - x0;
-    int gh = y1 - y0;
+    int gw = (x1 - x0) + (pad * 2);
+    int gh = (y1 - y0) + (pad * 2);
 
     int rx = 0, ry = 0, stride = 0;
 
@@ -365,6 +367,9 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
         ERROR_ADD(FlError_Memory, "Out of space in atlas when generating glyph for font %s", font->debug_name);
         return false;
     }
+
+    // adjust for padding
+    dest += pad + (pad * stride);
 
     const u8* src = g->bitmap.buffer;
     const int src_pitch = g->bitmap.pitch;
@@ -380,8 +385,8 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     glyph->y0 = ry;
     glyph->x1 = rx + gw;
     glyph->y1 = ry + gh;
-    glyph->x_offset = (u16)x0;
-    glyph->y_offset = (u16)y0;
+    glyph->x_offset = (u16)(x0 - pad);
+    glyph->y_offset = (u16)(y0 - pad);
     glyph->advance_x = (float)FT_CEIL(g->advance.x);
 
     return true;
