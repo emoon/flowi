@@ -72,7 +72,7 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
         index_buffer[4] = vertex_id + 2;
         index_buffer[5] = vertex_id + 3;
 
-        pos.x += g->advance_x;
+        pos.x += (int)g->advance_x;
 
         vertex_id += 4;
         out += 4;

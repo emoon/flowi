@@ -369,6 +369,7 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
     // Add rect for rendering
     {
         PrimitiveRect* prim = Primitive_alloc_rect(ctx->global);
+        memset(prim, 0, sizeof(PrimitiveRect));
         prim->pos = pos;
         prim->size = rect_size;
         prim->color = 0x00ff00ff;

@@ -43,6 +43,10 @@ typedef struct Font {
 
     FT_Face ft_face;
 
+	float ascender;
+	float descender;
+	int line_gap;
+
     // TODO: Special case for codepoints <= 0xff ? need to handle different sizes also
     int lut[HASH_LUT_SIZE];
 
