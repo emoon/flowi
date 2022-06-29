@@ -11,8 +11,8 @@
 
 // TODO: Support external functions
 #include <freetype/freetype.h>
-#include <freetype/ftglyph.h>
 #include <freetype/ftadvanc.h>
+#include <freetype/ftglyph.h>
 #include <math.h>
 
 //#if fl_ALLOW_STDIO
@@ -150,11 +150,11 @@ FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString name, uint8_
         return 0;
     }
 
-	const int ascent = font->ft_face->ascender;
-	const int descent = font->ft_face->descender;
-	const int fh = ascent - descent;
+    const int ascent = font->ft_face->ascender;
+    const int descent = font->ft_face->descender;
+    const int fh = ascent - descent;
 
-	font->ascender = (float)ascent / (float)fh;
+    font->ascender = (float)ascent / (float)fh;
     font->descender = (float)descent / (float)fh;
     font->default_size = font_size;
 
@@ -287,7 +287,7 @@ Glyph* Font_get_glyph(const Font* self, u32 codepoint, u32 font_size) {
 
 static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint, int size) {
     GlyphInfo* info = &font->glyph_info;
-    int adv_fixed = 0;
+    // int adv_fixed = 0;
     const int pad = 2;
 
     // TODO: Assign atlas to a font when creating
@@ -334,12 +334,14 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
         return false;
     }
 
+    /*
     error = FT_Get_Advance(font->ft_face, glyph_index, FT_LOAD_NO_SCALE, &adv_fixed);
     if (error != 0) {
         ERROR_ADD(FlError_Font, "Freetype error %s when getting advance glyph %d. font: %s", FT_Error_String(error),
                   glyph_index, font->debug_name);
         return false;
     }
+    */
 
     // Alloc glyph and insert into hashtable
     int alloc_index = allocate_glyph(ctx, font);
@@ -393,8 +395,8 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
     glyph->y1 = ry + gh;
     glyph->x_offset = (u16)(x0 - pad);
     glyph->y_offset = (u16)(y0 - pad);
-    //glyph->advance_x = (adv_scale * adv_fixed); 
-    glyph->advance_x = g->advance.x / 64.0f; 
+    // glyph->advance_x = (adv_scale * adv_fixed);
+    glyph->advance_x = g->advance.x / 64.0f;
 
     return true;
 }
