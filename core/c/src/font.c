@@ -368,7 +368,7 @@ static bool generate_glyph(FlContext* FL_RESTRICT ctx, Font* font, u32 codepoint
         return false;
     }
 
-    // adjust for padding
+    // adjust for padding. Assume that the area has been cleared already
     dest += pad + (pad * stride);
 
     const u8* src = g->bitmap.buffer;

@@ -22,13 +22,18 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
             continue;
         }
 
-        u16 x0 = g->x0;
-        u16 y0 = g->y0;
-        u16 x1 = g->x1;
-        u16 y1 = g->y1;
+        // Each glyph has 2px border to allow good interpolation,
+        // one pixel to prevent leaking, and one to allow good interpolation for rendering.
+        // Inset the texture region by one pixel for correct interpolation.
+        const u16 x0 = g->x0 + 1;
+        const u16 y0 = g->y0 + 1;
+        const u16 x1 = g->x1 + 1;
+        const u16 y1 = g->y1 + 1;
+        const s16 xoff = g->x_offset + 1; 
+        const s16 yoff = g->y_offset + 1; 
 
-        float rx = g->x_offset + pos.x;
-        float ry = g->y_offset + pos.y;
+        float rx = xoff + pos.x;
+        float ry = yoff + pos.y;
 
         float nx0 = rx;
         float ny0 = ry;
