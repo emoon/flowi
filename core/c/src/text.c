@@ -12,6 +12,8 @@
 void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSize* FL_RESTRICT index_buffer,
                                      const Font* FL_RESTRICT font, u32 font_size, const u32* FL_RESTRICT codepoints,
                                      u32 color, FlVec2 pos, FlIdxSize vertex_id, int count) {
+    const float y_top_offset = font->ascender * (float)font_size;
+
     for (int i = 0; i < count; ++i) {
         u32 cp = *codepoints++;
 
@@ -29,11 +31,11 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
         const u16 y0 = g->y0 + 1;
         const u16 x1 = g->x1 + 1;
         const u16 y1 = g->y1 + 1;
-        const s16 xoff = g->x_offset + 1; 
-        const s16 yoff = g->y_offset + 1; 
+        const s16 xoff = g->x_offset + 1;
+        const s16 yoff = g->y_offset + 1;
 
         float rx = xoff + pos.x;
-        float ry = yoff + pos.y;
+        float ry = yoff + pos.y + y_top_offset;
 
         float nx0 = rx;
         float ny0 = ry;

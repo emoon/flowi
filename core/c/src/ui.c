@@ -28,8 +28,6 @@ static bool is_mouse_hovering_rect(const FlContext* ctx, FlRect rect) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool item_hoverable(FlContext* ctx, FlRect rect, FlowiID id) {
-    printf("hovered id %d\n", ctx->hovered_id);
-
     if (ctx->hovered_id != 0 && ctx->hovered_id != id) {
         return false;
     }
@@ -372,7 +370,7 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
         memset(prim, 0, sizeof(PrimitiveRect));
         prim->pos = pos;
         prim->size = rect_size;
-        prim->color = 0x00ff00ff;
+        prim->color = 0x00310522;
     }
 
     // Add text for rendering
