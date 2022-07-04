@@ -1,6 +1,7 @@
 #include <flowi_core/math_data.h>
 #include <flowi_core/style.h>
 #include <flowi_core/ui.h>
+#include "color.h"
 #include "font_private.h"
 #include "image_private.h"
 #include "internal.h"
@@ -253,6 +254,58 @@ static bool item_add(struct FlContext* ctx, FlowiID id, FlRect rect) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+typedef enum ButtonState {
+    ButtonState_Default,
+    ButtonState_Fading,
+} ButtonState;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+typedef struct ButtonStateData {
+    ButtonState state;
+    FColor start_color;
+    FColor end_color;
+    FColor current_color;
+    float fade_progress;
+} ButtonStateData;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Updates button state
+
+static void button_state_update(ButtonStateData* state, const float delta_time, bool is_hovered) {
+    switch (state->state) {
+        case ButtonState_Default: {
+            if (is_hovered) {
+                state->fade_progress = 0.0f;
+                state->current_color = state->start_color;
+            } else {
+                state->state = ButtonState_Fading;
+            }
+
+            break;
+        }
+        case ButtonState_Fading: {
+            if (is_hovered) {
+                state->state = ButtonState_Default;
+                state->fade_progress = 0.0f;
+                state->current_color = state->start_color;
+                break;
+            } else {
+                state->current_color = FColor_lerp(state->start_color, state->end_color, state->fade_progress);
+                state->fade_progress += delta_time * 2.0f;
+                if (state->fade_progress >= 1.0f) {
+                    state->state = ButtonState_Default;
+                    state->current_color = state->end_color;
+                }
+            }
+
+            break;
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Push button widget that returns true if user has pressed it
 
 bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
@@ -286,13 +339,29 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
     // static bool button_behavior(struct FlContext * ctx, FlRect rect, FlowiID id, u32 flags);
     FlRect rect = {.x = (int)pos.x, .y = (int)pos.y, .width = (int)rect_size.x, .height = (int)rect_size.y};
 
+    // TODO: This is being called inside button behaviour also, maybe we can do this in a different way?
+
+    // TODO: Append "_button" to the end of the string for hashing id
+
+    ButtonStateData* button_state = hashmap_get(&ctx->widget_states, text.str, text.len);
+
+    if (!button_state) {
+        // TODO: Custom allocator
+        button_state = calloc(1, sizeof(ButtonStateData));
+        button_state->start_color = FColor_new_rgb(0.3f, 0.3f, 0.3f);
+        button_state->end_color = FColor_new_rgb(0.2f, 0.2f, 0.2f);
+        hashmap_put(&ctx->widget_states, text.str, text.len, button_state);
+    } else {
+        button_state_update(button_state, ctx->delta_time, item_hoverable(ctx, rect, id));
+    }
+
     // Add rect for rendering
     {
         PrimitiveRect* prim = Primitive_alloc_rect(ctx->global);
         memset(prim, 0, sizeof(PrimitiveRect));
         prim->pos = pos;
         prim->size = rect_size;
-        prim->color = 0x00310522;
+        prim->color = FColor_to_u32(button_state->current_color);
     }
 
     // Add text for rendering

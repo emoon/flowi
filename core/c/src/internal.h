@@ -21,6 +21,7 @@
 #define FL_MAX_STYLES 128
 #define FL_MAX_LAYOUTS 256
 #define FL_STYLE_DEPTH 128
+#define FL_MAX_WIDGET_IDS 1024  // has to be a power of two
 
 // TODO: Move
 #define FL_RGB(r, g, b) (((u32)b) << 16 | (((u32)g) << 8) | ((u32)r))
@@ -247,6 +248,9 @@ typedef struct FlContext {
     int style_stack_depth;
 
     int layout_ids;
+
+    // Used for tracking widgets id's and their state
+    struct hashmap_s widget_states;
 
 } FlContext;
 

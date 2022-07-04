@@ -108,6 +108,11 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
         ctx->mouse.down_duration[i] = ctx->mouse.down_duration_prev[i] = -1.0f;
     }
 
+    if (hashmap_create(FL_MAX_WIDGET_IDS, &ctx->widget_states) != 0) {
+        // TODO: Error
+        return NULL;
+    }
+
     return ctx;
 }
 
@@ -134,28 +139,6 @@ struct FlGlobalState* fl_create(const FlSettings* settings) {
     Font_init(state);
 
     return state;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// taken from:
-// http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-talk/142054
-//
-// djb  :: 99.8601 percent coverage (60 collisions out of 42884)
-// elf  :: 99.5430 percent coverage (196 collisions out of 42884)
-// sdbm :: 100.0000 percent coverage (0 collisions out of 42884) (this is the algo used)
-// ...
-
-u32 str_hash(const char* string, int len) {
-    u32 hash = 0;
-
-    const u8* str = (const u8*)string;
-
-    for (int i = 0; i < len; ++i) {
-        u32 c = *str++;
-        hash = c + (hash << 6) + (hash << 16) - hash;
-    }
-
-    return hash & 0x7FFFFFFF;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
