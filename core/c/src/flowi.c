@@ -574,6 +574,8 @@ void fl_context_destroy(struct FlContext* self) {
     StringAllocator_destroy(&self->string_allocator);
     LinearAllocator_destroy(&self->frame_allocator);
 
+    hashmap_destroy(&self->widget_states);
+
     FlAllocator_free(allocator, self);
 }
 
