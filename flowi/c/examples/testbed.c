@@ -25,6 +25,7 @@ void main_loop(struct FlContext* ctx, void* user_data) {
     App* app = (App*)user_data;
 
     FlVec2 pos = {40.0f, 0.0f};
+    FlVec2 pos2 = {40.0f, 80.0f};
     // FlVec2 pos2 = {40.0f, 180.0f};
     // FlVec2 pos3 = {0.0f, 0.0f};
     //  const char* utf8_text = "®";
@@ -35,6 +36,12 @@ void main_loop(struct FlContext* ctx, void* user_data) {
 
     if (fl_ui_push_button(ctx, "Push me")) {
         printf("Pushed\n");
+    }
+
+    fl_ui_set_pos(ctx, pos2);
+
+    if (fl_ui_push_button(ctx, "Push me 2")) {
+        printf("Pushed 2\n");
     }
 
     /*

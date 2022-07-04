@@ -194,8 +194,8 @@ static bool generate_corners(struct FlContext* ctx, const PrimitiveRect* rect) {
     const FlVec2 offset = rect->pos;
     const u32 color = rect->color;
 
-    // TODO: This should be passed in
-    int index = 0;
+    // TODO: Do this a bit nicer?
+    int index = ctx->vertex_allocator.index_offset;
 
     const float half_x = size.x * 0.5f;
     const float half_y = size.y * 0.5f;
@@ -228,6 +228,8 @@ static bool generate_corners(struct FlContext* ctx, const PrimitiveRect* rect) {
         index += vertex_count;
     }
 
+    ctx->vertex_allocator.index_offset = index;
+
     join_corners(ctx, corners);
 
     return true;
@@ -238,6 +240,7 @@ static bool generate_corners(struct FlContext* ctx, const PrimitiveRect* rect) {
 void PrimitiveRect_generate_render_data(struct FlContext* ctx, const struct PrimitiveRect* rect) {
     generate_corners(ctx, rect);
 
+    /*
     VertsCounts counts = VertexAllocator_get_pos_color_counts(&ctx->vertex_allocator);
     FlSolidTriangles* tri_data = Render_solid_triangles_cmd(ctx->global);
 
@@ -247,4 +250,5 @@ void PrimitiveRect_generate_render_data(struct FlContext* ctx, const struct Prim
 
     tri_data->vertex_buffer_size = counts.vertex_count;
     tri_data->index_buffer_size = counts.index_count;
+    */
 }

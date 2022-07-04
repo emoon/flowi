@@ -19,7 +19,7 @@ FL_INLINE FColor FColor_new(float a, float r, float g, float b) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FL_INLINE FColor FColor_new_rgb(float r, float g, float b) {
-    FColor c = {1.0f, r, g, b};
+    FColor c = {0.5f, r, g, b};
     return c;
 }
 

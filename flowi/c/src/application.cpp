@@ -296,6 +296,7 @@ static void render_flat_triangles(ApplicationState& ctx, const u8* render_data, 
     memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FlIdxSize));
 
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+    state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
 
     encoder->setState(state);
     encoder->setVertexBuffer(0, &tvb, 0, vertex_count);

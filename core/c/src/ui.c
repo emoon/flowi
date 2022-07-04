@@ -293,7 +293,7 @@ static void button_state_update(ButtonStateData* state, const float delta_time, 
                 break;
             } else {
                 state->current_color = FColor_lerp(state->start_color, state->end_color, state->fade_progress);
-                state->fade_progress += delta_time * 2.0f;
+                state->fade_progress += delta_time;
                 if (state->fade_progress >= 1.0f) {
                     state->state = ButtonState_Default;
                     state->current_color = state->end_color;

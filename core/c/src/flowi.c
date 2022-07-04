@@ -534,6 +534,16 @@ void fl_frame_end(struct FlContext* ctx) {
         }
     }
 
+    VertsCounts counts = VertexAllocator_get_pos_color_counts(&ctx->vertex_allocator);
+    FlSolidTriangles* tri_data = Render_solid_triangles_cmd(ctx->global);
+
+    tri_data->offset = ctx->vertex_allocator.frame_index;
+    tri_data->vertex_buffer = counts.vertex_data;
+    tri_data->index_buffer = counts.index_data;
+
+    tri_data->vertex_buffer_size = counts.vertex_count;
+    tri_data->index_buffer_size = counts.index_count;
+
     VertexAllocator_end_frame(&ctx->vertex_allocator);
     CommandBuffer_rewind(&state->primitive_commands);
     LinearAllocator_rewind(&ctx->frame_allocator);

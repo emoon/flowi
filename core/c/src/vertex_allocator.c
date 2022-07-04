@@ -46,7 +46,7 @@ bool VertexAllocator_alloc(VertexAllocator* self, VertexAllocType alloc_type, u8
     u8* verts_out = LinearAllocator_internal_alloc(vertex_alloc, verts_size, 4);
     u8* index_out = LinearAllocator_internal_alloc(index_alloc, idx_size, sizeof(FlIdxSize));
 
-    self->index_offset += idx_size;
+    // self->index_offset += idx_size;
 
     *verts = verts_out;
     *indices = index_out;
