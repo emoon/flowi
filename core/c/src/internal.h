@@ -3,6 +3,7 @@
 #include <flowi_core/config.h>
 #include <flowi_core/error.h>
 #include <flowi_core/layout.h>
+#include "../external/hashmap.h"
 #include "command_buffer.h"
 #include "flowi.h"
 #include "handles.h"
@@ -221,22 +222,8 @@ typedef struct FlContext {
     u32 prev_active_item;
     // current id
     u32 active_item;
-    // TODO: Likely need block allocator here instead
-    vec128* positions;
-    // TODO: Likely need block allocator here instead
-    vec128* colors;
-    // TODO: Likely need block allocator here instead
-    u32* widget_ids;
 
     struct Font* current_font;
-    // count of all widgets
-    int widget_count;
-    // Times with text (push button, labels, etc)
-    int items_with_text_count;
-    ItemWithText* items_with_text;
-    // Active fade actions
-    int fade_actions;
-
     FlGlobalState* global;
 
     // Used for building vertex / index output

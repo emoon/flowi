@@ -26,9 +26,6 @@
 #define aligned_alloc(align, size) _aligned_malloc(size, align)
 #endif
 
-// struct FlGlobalState* g_state = NULL;
-// extern FliGlobalCtx* g_global_ctx;
-
 // TODO: Block based allocations
 #define MAX_CONTROLS 1024
 #define WIDGET_SPACING 2
@@ -148,7 +145,7 @@ struct FlGlobalState* fl_create(const FlSettings* settings) {
 // sdbm :: 100.0000 percent coverage (0 collisions out of 42884) (this is the algo used)
 // ...
 
-static u32 str_hash(const char* string, int len) {
+u32 str_hash(const char* string, int len) {
     u32 hash = 0;
 
     const u8* str = (const u8*)string;
@@ -159,84 +156,6 @@ static u32 str_hash(const char* string, int len) {
     }
 
     return hash & 0x7FFFFFFF;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static int add_or_update_control(FlContext* ctx, u32 id, FlVec2 size) {
-    // TODO: Vector-based
-    // IDEA: Always add/resolve later instead
-
-    FlVec2 cursor = ctx->cursor;
-    ctx->cursor.y += size.y + WIDGET_SPACING;
-
-    vec128* positions = ctx->positions;
-    const u32* widget_ids = ctx->widget_ids;
-
-    for (int i = 0, count = ctx->widget_count; i < count; ++i) {
-        // Vectorize find
-        if (id == widget_ids[i]) {
-            positions[i] = simd_set_f32(cursor.x, cursor.y, size.x, size.y);
-            return i;
-        }
-    }
-
-    int index = ctx->widget_count++;
-    ctx->widget_ids[index] = id;
-
-    return -1;
-}
-
-// To be called before exit
-void fl_destroy();
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void fl_begin_c(FlContext* context) {
-    context->cursor.x = 0.0f;
-    context->cursor.y = 0.0f;
-    // XXH3_64bits_reset(context->context_hash);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// Create a push button with the given label
-
-bool fl_button_c(struct FlContext* context, const char* label) {
-    FlVec2 size = {100.0f, 100.0f};
-    int label_len = strlen(label);
-    return fl_button_ex_c(context, label, label_len, size);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool fl_button_size_c(struct FlContext* context, const char* label, FlVec2 size) {
-    int label_len = strlen(label);
-    return fl_button_ex_c(context, label, label_len, size);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool fl_button_ex_c(struct FlContext* ctx, const char* label, int label_len, FlVec2 size) {
-    u32 control_id = str_hash(label, label_len);
-
-    if (add_or_update_control(ctx, control_id, size) < 0) {
-        int item_index = ctx->items_with_text_count++;
-        // TODO: handle out of bounds
-        ItemWithText* item = &ctx->items_with_text[item_index];
-        memcpy(item->text, label, label_len);
-        item->len = label_len;
-    }
-
-    /*
-    if (ctx->active_item == 0 && ctx->mouse_state.buttons[0]) {
-        ctx->active_item = control_id;
-    }
-    if (ctx->mouse_state.buttons[0] == 0 && ctx->hot_item == control_id && ctx->active_item == control_id) {
-        return true;
-    }
-    */
-
-    return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -622,7 +541,6 @@ void fl_frame_end(struct FlContext* ctx) {
 
             case Primitive_DrawRect: {
                 PrimitiveRect_generate_render_data(ctx, (PrimitiveRect*)command_data);
-                draw_text(ctx, command_data);
                 break;
             }
 
