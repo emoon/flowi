@@ -208,8 +208,10 @@ static bool generate_corners(struct FlContext* ctx, const PrimitiveRect* rect) {
         {0.0f, size.y},
     };
 
+    int corner_order[4] = {0, 1, 3, 2};
+
     for (int i = 0; i < 4; ++i) {
-        int vertex_count = generate_corner(ctx, shortest_side, size, corners, rect, offset, index, i);
+        int vertex_count = generate_corner(ctx, shortest_side, size, corners, rect, offset, index, corner_order[i]);
         // if the vertex count is zero, it means that we only need to generate a single vertex
         if (vertex_count == 0) {
             FlVertPosColor* vertices = NULL;

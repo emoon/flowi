@@ -325,6 +325,14 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
 
     pos.x += style.margin[FlCorner_TopLeft];
     pos.y += style.margin[FlCorner_TopRight];
+    style.border.radius[0].typ = FlLengthPercent_Percent;
+    style.border.radius[0].value = 40.0f;
+    style.border.radius[1].typ = FlLengthPercent_Percent;
+    style.border.radius[1].value = 40.0f;
+    style.border.radius[2].typ = FlLengthPercent_Percent;
+    style.border.radius[2].value = 40.0f;
+    style.border.radius[3].typ = FlLengthPercent_Percent;
+    style.border.radius[3].value = 40.0f;
 
     // TODO: text alignment (currently assume text should be centered)
 
@@ -348,8 +356,8 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
     if (!button_state) {
         // TODO: Custom allocator
         button_state = calloc(1, sizeof(ButtonStateData));
-        button_state->start_color = FColor_new_rgb(0.3f, 0.3f, 0.3f);
-        button_state->end_color = FColor_new_rgb(0.2f, 0.2f, 0.2f);
+        button_state->start_color = FColor_new_rgb(0.8f, 0.8f, 0.8f);
+        button_state->end_color = FColor_new_rgb(0.6f, 0.6f, 0.6f);
         hashmap_put(&ctx->widget_states, text.str, text.len, button_state);
     } else {
         button_state_update(button_state, ctx->delta_time, item_hoverable(ctx, rect, id));
@@ -359,6 +367,7 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
     {
         PrimitiveRect* prim = Primitive_alloc_rect(ctx->global);
         memset(prim, 0, sizeof(PrimitiveRect));
+        prim->border = style.border;
         prim->pos = pos;
         prim->size = rect_size;
         prim->color = FColor_to_u32(button_state->current_color);

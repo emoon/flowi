@@ -38,11 +38,13 @@ void main_loop(struct FlContext* ctx, void* user_data) {
         printf("Pushed\n");
     }
 
+    /*
     fl_ui_set_pos(ctx, pos2);
 
     if (fl_ui_push_button(ctx, "Push me 2")) {
         printf("Pushed 2\n");
     }
+    */
 
     /*
     fl_ui_set_pos_ctx(ctx, (FlVec2){.x = 140.0f, .y = 80.0f});
