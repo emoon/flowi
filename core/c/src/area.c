@@ -7,6 +7,8 @@
 #include "internal.h"
 #include "render.h"
 
+#if 0
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Areas are used for generating an area around a widget/control.
@@ -285,3 +287,5 @@ bool Area_generate_circle(struct FlContext* ctx) {
 
     return true;
 }
+
+#endif

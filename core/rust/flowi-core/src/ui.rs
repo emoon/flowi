@@ -4,6 +4,7 @@
 use crate::*;
 
 extern "C" {
+    fn fl_ui_set_layer_impl(ctx: *const core::ffi::c_void, layer: LayerType);
     fn fl_ui_text_impl(ctx: *const core::ffi::c_void, text: FlString);
     fn fl_ui_image_impl(ctx: *const core::ffi::c_void, image: Image);
     fn fl_ui_image_with_size_impl(ctx: *const core::ffi::c_void, image: Image, size: Vec2);
@@ -21,11 +22,29 @@ extern "C" {
 
 #[repr(C)]
 #[derive(Debug)]
+pub enum LayerType {
+    Layer0 = 0,
+    Layer1 = 1,
+    Popup = 2,
+    Count = 3,
+}
+
+#[repr(C)]
+#[derive(Debug)]
 pub struct Ui {
     pub dummy: u32,
 }
 
 impl Context {
+    /// Set the active layer for rendering
+    pub fn ui_set_layer(&self, layer: LayerType) {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            fl_ui_set_layer_impl(self_, layer);
+        }
+    }
+
+    /// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
     pub fn ui_text(&self, text: &str) {
         unsafe {
             let self_ = std::mem::transmute(self);

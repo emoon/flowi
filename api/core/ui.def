@@ -2,8 +2,18 @@ mod layout
 mod math_data
 mod image
 
+enum LayerType {
+    Layer0 = 0,
+    Layer1 = 1,
+    Popup = 2,
+    Count = 3,
+}
+
 struct Ui {
     dummy: u32,
+    /// Set the active layer for rendering
+    [static] set_layer(layer: LayerType),
+    /// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
     [static] text(text: String),
     /// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
     [static] image(image: Image),

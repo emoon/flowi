@@ -19,10 +19,25 @@
 extern "C" {
 #endif
 
+typedef enum FlLayerType {
+    FlLayerType_Layer0 = 0,
+    FlLayerType_Layer1 = 1,
+    FlLayerType_Popup = 2,
+    FlLayerType_Count = 3,
+} FlLayerType;
+
 typedef struct FlUi {
     uint32_t dummy;
 } FlUi;
 
+// Set the active layer for rendering
+void fl_ui_set_layer_impl(struct FlContext* ctx, FlLayerType layer);
+
+FL_INLINE void fl_ui_set_layer(struct FlContext* ctx, FlLayerType layer) {
+    fl_ui_set_layer_impl(ctx, layer);
+}
+
+// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
 void fl_ui_text_impl(struct FlContext* ctx, FlString text);
 
 FL_INLINE void fl_ui_text(struct FlContext* ctx, const char* text) {

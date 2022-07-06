@@ -67,11 +67,11 @@ typedef struct PrimitiveRect {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define Primitive_alloc_rect(state) \
-    (PrimitiveRect*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawRect, sizeof(PrimitiveRect))
+#define Primitive_alloc_rect(layer) \
+    (PrimitiveRect*)CommandBuffer_alloc_cmd(&layer->primitive_commands, Primitive_DrawRect, sizeof(PrimitiveRect))
 
 #define Primitive_alloc_text(state) \
-    (PrimitiveText*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawText, sizeof(PrimitiveText))
+    (PrimitiveText*)CommandBuffer_alloc_cmd(&layer->primitive_commands, Primitive_DrawText, sizeof(PrimitiveText))
 
 #define Primitive_alloc_image(state) \
-    (PrimitiveImage*)CommandBuffer_alloc_cmd(&state->primitive_commands, Primitive_DrawImage, sizeof(PrimitiveImage))
+    (PrimitiveImage*)CommandBuffer_alloc_cmd(&layer->primitive_commands, Primitive_DrawImage, sizeof(PrimitiveImage))

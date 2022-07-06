@@ -7,6 +7,7 @@
 #include "command_buffer.h"
 #include "flowi.h"
 #include "handles.h"
+#include "layer.h"
 #include "layout_private.h"
 #include "primitives.h"
 #include "simd.h"
@@ -44,9 +45,6 @@ typedef struct FlGlobalState {
     // Handles
     Handles image_handles;
     Handles font_handles;
-
-    // Primitive commands
-    CommandBuffer primitive_commands;
 
     // Render commands that is generated for the rendering backend
     CommandBuffer render_commands;
@@ -229,6 +227,9 @@ typedef struct FlContext {
 
     // Used for building vertex / index output
     VertexAllocator vertex_allocator;
+    Layer layers[FlLayerType_Count];
+    FlLayerType active_layer;
+
     LinearAllocator layout_allocator;
     LayoutAreaPrivate* current_layout;
     FlLayoutAreaId default_layout;
@@ -282,8 +283,16 @@ enum ButtonFlags {
     ButtonFlags_MouseButtonDefault,
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FL_INLINE Layer* ctx_get_active_layer(FlContext* self) {
+    return &self->layers[self->active_layer];
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Use custom io functions
 // TODO: Custom allocator
+
 u8* Io_load_file_to_memory_null_term(FlContext* ctx, const char* filename, u32* out_size);
 u8* Io_load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size);
 u8* Io_load_file_to_memory_flstring(FlContext* ctx, FlString name, u32* out_size);

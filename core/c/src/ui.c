@@ -363,9 +363,11 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
         button_state_update(button_state, ctx->delta_time, item_hoverable(ctx, rect, id));
     }
 
+    Layer* layer = ctx_get_active_layer(ctx);
+
     // Add rect for rendering
     {
-        PrimitiveRect* prim = Primitive_alloc_rect(ctx->global);
+        PrimitiveRect* prim = Primitive_alloc_rect(layer);
         memset(prim, 0, sizeof(PrimitiveRect));
         prim->border = style.border;
         prim->pos = pos;
@@ -375,7 +377,7 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
 
     // Add text for rendering
     {
-        PrimitiveText* prim = Primitive_alloc_text(ctx->global);
+        PrimitiveText* prim = Primitive_alloc_text(layer);
 
         prim->font = ctx->current_font;
         prim->position.x = pos.x;  // + style.padding[FlCorner_TopLeft];
@@ -429,9 +431,11 @@ bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlIm
 
     FlVec2 pos = ctx->cursor;
 
+    Layer* layer = ctx_get_active_layer(ctx);
+
     // Add image for rendering
     {
-        PrimitiveImage* prim = Primitive_alloc_image(ctx->global);
+        PrimitiveImage* prim = Primitive_alloc_image(layer);
         prim->image = image_data;
         prim->position = pos;
         prim->size.x = image_size.x;
@@ -440,7 +444,7 @@ bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlIm
 
     // Add text for rendering
     {
-        PrimitiveText* prim = Primitive_alloc_text(ctx->global);
+        PrimitiveText* prim = Primitive_alloc_text(layer);
 
         prim->font = ctx->current_font;
         prim->position.x = pos.x + text_pos.x;
@@ -457,4 +461,11 @@ bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlIm
     // FlVec2 pos = Style_get_position(ctx);
 
     return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Set the active layer for rendering
+
+void fl_ui_set_layer_impl(struct FlContext* ctx, FlLayerType layer) {
+    ctx->active_layer = layer;
 }

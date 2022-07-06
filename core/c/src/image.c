@@ -112,7 +112,9 @@ void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
         return;
     }
 
-    PrimitiveImage* prim = Primitive_alloc_image(ctx->global);
+    Layer* layer = ctx_get_active_layer(ctx);
+
+    PrimitiveImage* prim = Primitive_alloc_image(layer);
 
     prim->image = self;
     prim->position = ctx->cursor;
@@ -129,7 +131,9 @@ void fl_ui_image_with_size_impl(struct FlContext* ctx, FlImage image, FlVec2 siz
         return;
     }
 
-    PrimitiveImage* prim = Primitive_alloc_image(ctx->global);
+    Layer* layer = ctx_get_active_layer(ctx);
+
+    PrimitiveImage* prim = Primitive_alloc_image(layer);
 
     prim->image = self;
     prim->position = ctx->cursor;

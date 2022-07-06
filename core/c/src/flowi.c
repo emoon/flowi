@@ -113,6 +113,10 @@ FlContext* fl_context_create(struct FlGlobalState* state) {
         return NULL;
     }
 
+    for (int i = 0; i < FlLayerType_Count; ++i) {
+        CommandBuffer_create(&ctx->layers[i].primitive_commands, "primitives", state->global_allocator, 4 * 1024);
+    }
+
     return ctx;
 }
 
@@ -125,7 +129,6 @@ struct FlGlobalState* fl_create(const FlSettings* settings) {
     FlGlobalState* state = FlAllocator_alloc_zero_type(&malloc_allocator, FlGlobalState);
     state->global_allocator = &malloc_allocator;
 
-    CommandBuffer_create(&state->primitive_commands, "primitives", state->global_allocator, 4 * 1024);
     CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024);
     Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate);
     Handles_create(&state->font_handles, state->global_allocator, 16, Font);
@@ -431,7 +434,9 @@ void fl_frame_begin(struct FlContext* ctx, int width, int height, float delta_ti
 
     hack_first_frame = true;
 
-    CommandBuffer_rewind(&ctx->global->primitive_commands);
+    for (int i = 0; i < FlLayerType_Count; ++i) {
+        CommandBuffer_rewind(&ctx->layers[i].primitive_commands);
+    }
 
     ctx->active_layout = ctx->active_layout;
     ctx->frame_count++;
@@ -488,23 +493,28 @@ void generate_glyphs(struct FlContext* ctx, const u8* cmd) {
 
 void fl_frame_end(struct FlContext* ctx) {
     FlGlobalState* state = ctx->global;
-    const u8* command_data = NULL;
-    const int command_count = CommandBuffer_begin_read_commands(&state->primitive_commands);
 
     // first do generation pass to build up all glyphs and other data
     Atlas_begin_add_rects(state->images_atlas);
     Atlas_begin_add_rects(state->mono_fonts_atlas);
 
-    for (int i = 0; i < command_count; ++i) {
-        switch (CommandBuffer_read_next_cmd(&state->primitive_commands, &command_data)) {
-            case Primitive_DrawText: {
-                generate_glyphs(ctx, command_data);
-                break;
-            }
+    for (int l = 0; l < FlLayerType_Count; ++l) {
+        Layer* layer = &ctx->layers[l];
 
-            case Primitive_DrawImage: {
-                Image_add_to_atlas(command_data, state->images_atlas);
-                break;
+        const u8* command_data = NULL;
+        const int command_count = CommandBuffer_begin_read_commands(&layer->primitive_commands);
+
+        for (int i = 0; i < command_count; ++i) {
+            switch (CommandBuffer_read_next_cmd(&layer->primitive_commands, &command_data)) {
+                case Primitive_DrawText: {
+                    generate_glyphs(ctx, command_data);
+                    break;
+                }
+
+                case Primitive_DrawImage: {
+                    Image_add_to_atlas(command_data, state->images_atlas);
+                    break;
+                }
             }
         }
     }
@@ -512,40 +522,57 @@ void fl_frame_end(struct FlContext* ctx) {
     Atlas_end_add_rects(state->images_atlas, state);
     Atlas_end_add_rects(state->mono_fonts_atlas, state);
 
-    CommandBuffer_begin_read_commands(&state->primitive_commands);
+    for (int l = 0; l < 1; ++l) {
+        Layer* layer = &ctx->layers[l];
 
-    // TODO: Function pointers instead of switch?
-    for (int i = 0; i < command_count; ++i) {
-        switch (CommandBuffer_read_next_cmd(&state->primitive_commands, &command_data)) {
-            case Primitive_DrawText: {
-                draw_text(ctx, command_data);
-                break;
-            }
+        const u8* command_data = NULL;
+        int command_count = CommandBuffer_begin_read_commands(&layer->primitive_commands);
 
-            case Primitive_DrawRect: {
-                PrimitiveRect_generate_render_data(ctx, (PrimitiveRect*)command_data);
-                break;
-            }
-
-            case Primitive_DrawImage: {
-                Image_render(ctx, command_data);
-                break;
+        // TODO: Function pointers instead of switch?
+        for (int i = 0; i < command_count; ++i) {
+            switch (CommandBuffer_read_next_cmd(&layer->primitive_commands, &command_data)) {
+                case Primitive_DrawRect: {
+                    PrimitiveRect_generate_render_data(ctx, (PrimitiveRect*)command_data);
+                    break;
+                }
             }
         }
+
+        // TODO: Fix this hack
+        if (l == 0) {
+            VertsCounts counts = VertexAllocator_get_pos_color_counts(&ctx->vertex_allocator);
+            FlSolidTriangles* tri_data = Render_solid_triangles_cmd(ctx->global);
+
+            tri_data->offset = ctx->vertex_allocator.frame_index;
+            tri_data->vertex_buffer = counts.vertex_data;
+            tri_data->index_buffer = counts.index_data;
+
+            tri_data->vertex_buffer_size = counts.vertex_count;
+            tri_data->index_buffer_size = counts.index_count;
+        }
+
+        command_data = NULL;
+        command_count = CommandBuffer_begin_read_commands(&layer->primitive_commands);
+
+        // TODO: Function pointers instead of switch?
+        for (int i = 0; i < command_count; ++i) {
+            switch (CommandBuffer_read_next_cmd(&layer->primitive_commands, &command_data)) {
+                case Primitive_DrawText: {
+                    draw_text(ctx, command_data);
+                    break;
+                }
+
+                case Primitive_DrawImage: {
+                    Image_render(ctx, command_data);
+                    break;
+                }
+            }
+        }
+
+        CommandBuffer_rewind(&layer->primitive_commands);
     }
 
-    VertsCounts counts = VertexAllocator_get_pos_color_counts(&ctx->vertex_allocator);
-    FlSolidTriangles* tri_data = Render_solid_triangles_cmd(ctx->global);
-
-    tri_data->offset = ctx->vertex_allocator.frame_index;
-    tri_data->vertex_buffer = counts.vertex_data;
-    tri_data->index_buffer = counts.index_data;
-
-    tri_data->vertex_buffer_size = counts.vertex_count;
-    tri_data->index_buffer_size = counts.index_count;
-
     VertexAllocator_end_frame(&ctx->vertex_allocator);
-    CommandBuffer_rewind(&state->primitive_commands);
     LinearAllocator_rewind(&ctx->frame_allocator);
 }
 
@@ -560,7 +587,9 @@ void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
         return;
     }
 
-    PrimitiveText* prim = Primitive_alloc_text(ctx->global);
+    Layer* layer = ctx_get_active_layer(ctx);
+
+    PrimitiveText* prim = Primitive_alloc_text(layer);
 
     prim->font = ctx->current_font;
     prim->position = ctx->cursor;
@@ -579,6 +608,11 @@ void fl_context_destroy(struct FlContext* self) {
         FlAllocator_free(allocator, self->styles[i]);
     }
 
+    for (int i = 0; i < FlLayerType_Count; ++i) {
+        Layer* layer = &self->layers[i];
+        CommandBuffer_destroy(&layer->primitive_commands);
+    }
+
     LinearAllocator_destroy(&self->layout_allocator);
     VertexAllocator_destroy(&self->vertex_allocator);
     StringAllocator_destroy(&self->string_allocator);
@@ -594,7 +628,6 @@ void fl_context_destroy(struct FlContext* self) {
 void fl_destroy(FlGlobalState* self) {
     FlAllocator* allocator = self->global_allocator;
 
-    CommandBuffer_destroy(&self->primitive_commands);
     CommandBuffer_destroy(&self->render_commands);
     Atlas_destroy(self->mono_fonts_atlas);
     Atlas_destroy(self->images_atlas);
