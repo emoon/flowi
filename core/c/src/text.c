@@ -15,8 +15,6 @@ void Text_generate_vertex_buffer_ref(FlVertPosUvColor* FL_RESTRICT out, FlIdxSiz
     const float y_top_offset = font->ascender * (float)font_size;
 
     for (int i = 0; i < count; ++i) {
-        u32 cp = *codepoints++;
-
         Glyph* g = Font_get_glyph(font, cp, font_size);
 
         // TODO: Should never happen, should log error here

@@ -30,6 +30,21 @@ typedef struct FlUi {
     uint32_t dummy;
 } FlUi;
 
+// Start a window
+void fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, uint32_t flags);
+
+FL_INLINE void fl_ui_window_begin(struct FlContext* ctx, const char* name, uint32_t flags) {
+    FlString name_ = fl_cstr_to_flstring(name);
+    fl_ui_window_begin_impl(ctx, name_, flags);
+}
+
+// End call for various types such as windows, lists, etc.
+void fl_ui_end_impl(struct FlContext* ctx);
+
+FL_INLINE void fl_ui_end(struct FlContext* ctx) {
+    fl_ui_end_impl(ctx);
+}
+
 // Set the active layer for rendering
 void fl_ui_set_layer_impl(struct FlContext* ctx, FlLayerType layer);
 

@@ -4,6 +4,8 @@
 use crate::*;
 
 extern "C" {
+    fn fl_ui_window_begin_impl(ctx: *const core::ffi::c_void, name: FlString, flags: u32);
+    fn fl_ui_end_impl(ctx: *const core::ffi::c_void);
     fn fl_ui_set_layer_impl(ctx: *const core::ffi::c_void, layer: LayerType);
     fn fl_ui_text_impl(ctx: *const core::ffi::c_void, text: FlString);
     fn fl_ui_image_impl(ctx: *const core::ffi::c_void, image: Image);
@@ -36,6 +38,22 @@ pub struct Ui {
 }
 
 impl Context {
+    /// Start a window
+    pub fn ui_window_begin(&self, name: &str, flags: u32) {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            fl_ui_window_begin_impl(self_, FlString::new(name), flags);
+        }
+    }
+
+    /// End call for various types such as windows, lists, etc.
+    pub fn ui_end(&self) {
+        unsafe {
+            let self_ = std::mem::transmute(self);
+            fl_ui_end_impl(self_);
+        }
+    }
+
     /// Set the active layer for rendering
     pub fn ui_set_layer(&self, layer: LayerType) {
         unsafe {

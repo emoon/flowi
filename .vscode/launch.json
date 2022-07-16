@@ -16,5 +16,6 @@
             "args": [],
             "stopAtEntry": true,
         }
-    ]
+    ],
+    "ispc.compilerPath": "/home/emoon/code/projects/flowi/bin/linux/ispc"
 }

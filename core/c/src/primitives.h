@@ -75,3 +75,4 @@ typedef struct PrimitiveRect {
 
 #define Primitive_alloc_image(state) \
     (PrimitiveImage*)CommandBuffer_alloc_cmd(&layer->primitive_commands, Primitive_DrawImage, sizeof(PrimitiveImage))
+
