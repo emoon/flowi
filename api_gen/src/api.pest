@@ -26,7 +26,7 @@ array        = { ("[") ~ (const_ptr_exp | refexp | pointer_exp)? ~ vtype ~ array
 retexp       = { ("->") ~ (const_ptr_exp | refexp | pointer_exp)? ~ (vtype | array) ~ optional? }
 var          = { name ~ (":") ~ (const_ptr_exp | refexp | pointer_exp)? ~ (vtype | array) ~ default_val? }
 varlist      = { (var | array) ~ ((",") ~ (var | array))* }
-enum_assign  = { ("=") ~ name_or_num }
+enum_assign  = { ("=") ~ string_to_end }
 enum_type    = { name ~ enum_assign }
 namelist     = { name ~ ((",") ~ name)* }
 function     = { (manual_typ | static_typ | drop_typ)*? ~ name ~ ("(") ~ varlist? ~ (")") ~ retexp? }
@@ -39,8 +39,12 @@ name_with_namespace = @{
 	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("::") | ("_") | ('0'..'9'))*
 }
 
+string_to_end = @{
+    (!(",") ~ ANY)*
+}
+
 name_or_num = @{
-	(('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*
+	(('a'..'z') | ('A'..'Z') | ("|") | ("<") | ("_") | ('0'..'9'))*
 }
 
 string = @{

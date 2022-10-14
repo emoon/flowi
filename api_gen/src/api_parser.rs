@@ -184,7 +184,7 @@ pub struct Struct {
 }
 
 ///
-/// C/C++ style enum
+/// Enum 
 ///
 #[derive(Debug)]
 pub struct EnumEntry {
@@ -193,7 +193,7 @@ pub struct EnumEntry {
     /// Name of the enum entry
     pub name: String,
     /// Value of the enum entry
-    pub value: u64,
+    pub value: String,
 }
 
 ///
@@ -329,24 +329,19 @@ impl ApiParser {
                     };
                     current_comments.clear();
 
+                    let mut attributes = Vec::new();
+
                     for entry in chunk.into_inner() {
                         match entry.as_rule() {
                             Rule::name => enum_def.name = entry.as_str().to_owned(),
+                            Rule::attributes => attributes = Self::get_attrbutes(entry),
                             Rule::fieldlist => enum_def.entries = Self::fill_field_list_enum(entry),
-                            Rule::enum_flags => {
-                                enum_def.flags_name = entry
-                                    .into_inner()
-                                    .next()
-                                    .map(|e| e.as_str())
-                                    .unwrap()
-                                    .to_owned();
-                            }
                             _ => (),
                         }
                     }
 
                     // Figure out enum type
-                    enum_def.enum_type = Self::determine_enum_type(&enum_def);
+                    enum_def.enum_type = Self::determine_enum_type(&attributes);
                     api_def.enums.push(enum_def);
                 }
 
@@ -354,87 +349,10 @@ impl ApiParser {
             }
         }
     }
-    ///
-    /// Check if the enum values are in a single sequnce
-    ///
-    fn check_sequential(enum_def: &Enum) -> bool {
-        if enum_def.entries.is_empty() {
-            return false;
-        }
 
-        let mut current = enum_def.entries[0].value;
-
-        for e in &enum_def.entries {
-            if current != e.value {
-                return false;
-            }
-
-            current += 1;
-        }
-
-        true
-    }
-
-    ///
-    /// Check if the enum values overlaps
-    ///
-    fn check_overlapping(enum_def: &Enum) -> bool {
-        let mut values = HashSet::<u64>::new();
-
-        for v in &enum_def.entries {
-            if values.contains(&v.value) {
-                return true;
-            } else {
-                values.insert(v.value);
-            }
-        }
-
-        false
-    }
-
-    ///
-    /// check if an enum only has power of two values in it. This function calculate in percent how
-    /// many values that happens to be power of two and returns true if it's a above a certain
-    /// threshold. The reason for this is that some enums also combinations of other values
-    /// so it's not possible to *only* check for single power of two values.
-    ///
-    fn check_power_of_two(enum_def: &Enum) -> bool {
-        if enum_def.entries.is_empty() {
-            return false;
-        }
-
-        let power_of_two_count: u32 = enum_def
-            .entries
-            .iter()
-            .filter(|e| e.value.is_power_of_two())
-            .map(|_v| 1)
-            .sum();
-
-        // if we have >= 50% of power of two values assume this enum is being used as bitflags
-        let percent = power_of_two_count as f32 / enum_def.entries.len() as f32;
-        percent > 0.5
-    }
-
-    ///
     /// Figures out the type of enum
-    ///
-    fn determine_enum_type(enum_def: &Enum) -> EnumType {
-        // if all number is in a single linear sequence. This currently misses if
-        // valid "breaks" in sequences
-        let sequential = Self::check_sequential(enum_def);
-        // if all numbers aren't overlapping
-        let overlapping = Self::check_overlapping(enum_def);
-        // check if all values are power of two
-        let power_of_two = Self::check_power_of_two(enum_def);
-
-        // If enum is sequential and has no overlapping we can use it as a regular enum
-        if sequential && !overlapping {
-            return EnumType::Regular;
-        }
-
-        // if all values are power of two we assume this should be used as bitfield
-        // or has overlapping values we
-        if power_of_two || overlapping {
+    fn determine_enum_type(attributes: &Vec<String>) -> EnumType {
+        if attributes.iter().find(|&t| *t == "bitflags").is_some() {
             EnumType::Bitflags
         } else {
             EnumType::Regular
@@ -454,9 +372,7 @@ impl ApiParser {
         func
     }
 
-    ///
     /// Fill struct def
-    ///
     fn fill_struct(chunk: Pair<Rule>, doc_comments: &Vec<String>, def_file: &str) -> Struct {
         let mut sdef = Struct {
             doc_comments: doc_comments.to_owned(),
@@ -482,9 +398,7 @@ impl ApiParser {
         sdef
     }
 
-    ///
     /// Get attributes for a struct
-    ///
     fn get_attrbutes(rule: Pair<Rule>) -> Vec<String> {
         let mut attribs = Vec::new();
         for entry in rule.into_inner() {
@@ -496,34 +410,13 @@ impl ApiParser {
         attribs
     }
 
-    ///
-    /// Get attributes for a struct
-    ///
-    /*
-    fn get_derive_list(rule: Pair<Rule>) -> Vec<String> {
-    let mut attribs = Vec::new();
-    for entry in rule.into_inner() {
-    if entry.as_rule() == Rule::namelist {
-    attribs = Self::get_namelist_list(entry);
-    }
-    }
-
-    attribs
-    }
-    */
-
-    ///
     /// collect namelist (array) of strings
-    ///
     fn get_namelist_list(rule: Pair<Rule>) -> Vec<String> {
         rule.into_inner().map(|e| e.as_str().to_owned()).collect()
     }
 
-    ///
     /// Fill the entries in a struct
-    ///
     /// Returns tuple with two ararys for variables and functions
-    ///
     fn fill_field_list(rule: Pair<Rule>) -> (Vec<Variable>, Vec<Function>) {
         let mut var_entries = Vec::new();
         let mut func_entries = Vec::new();
@@ -739,43 +632,37 @@ impl ApiParser {
     ///
     fn get_enum(doc_comments: &Vec<String>, rule: Pair<Rule>) -> EnumEntry {
         let mut name = String::new();
-        let mut assign = None;
+        let mut value = String::new();
 
         for entry in rule.into_inner() {
             match entry.as_rule() {
                 Rule::name => name = entry.as_str().to_owned(),
-                Rule::enum_assign => {
-                    assign = Some(Self::get_enum_assign(entry).parse::<u64>().unwrap())
-                }
+                Rule::enum_assign => value = Self::get_enum_assign(entry),
                 _ => (),
             }
         }
 
-        if let Some(value) = assign {
-            EnumEntry {
-                doc_comments: doc_comments.to_owned(),
-                name,
-                value,
-            }
-        } else {
-            panic!("Should not be here")
+        EnumEntry {
+            doc_comments: doc_comments.to_owned(),
+            name,
+            value
         }
     }
 
     ///
-    /// Get enum asign
+    /// Get enum assign
     ///
     fn get_enum_assign(rule: Pair<Rule>) -> String {
-        let mut name_or_num = String::new();
-
+        let mut enum_value = String::new();
+            
         for entry in rule.into_inner() {
-            if entry.as_rule() == Rule::name_or_num {
-                name_or_num = entry.as_str().to_owned();
+            if entry.as_rule() == Rule::string_to_end {
+                enum_value = entry.as_str().to_owned();
                 break;
             }
         }
 
-        name_or_num
+        enum_value
     }
 
     pub fn second_pass(api_defs: &mut [ApiDef]) {

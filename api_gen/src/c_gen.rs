@@ -104,6 +104,21 @@ impl Cgen {
         Ok(())
     }
 
+    fn get_enum_name(def_name: &str, entry_name: &str) -> String {
+        format!("{}{}_{}", C_API_SUFFIX, def_name, entry_name)
+    }
+
+    fn find_name_match(enum_def: &Enum, name: &str) -> bool {
+        for entry in &enum_def.entries {
+            if name.contains(&entry.name) {
+                println!("{} contains {}", name, entry.name);
+                return true;
+            }
+        }
+
+        false
+    }
+
     /// Generate enums in the style of
     ///
     /// typedef enum Fl<EnumName> {
@@ -118,11 +133,32 @@ impl Cgen {
 
         for entry in &enum_def.entries {
             Self::write_commment(f, &entry.doc_comments, 4)?;
+            let mut value = entry.value.to_owned();
+
+            // Check if an enum entry contains an enum name then we search and replace all those
+            // entries with a formatted name 
+            if Self::find_name_match(&enum_def, &value) {
+                value = String::new();
+                for s in entry.value.split(" ") {
+                    let mut found = false;
+                    for e in &enum_def.entries {
+                        if e.name == s {
+                            value.push_str(&format!(" {} ", Self::get_enum_name(&enum_def.name, &s)));
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if !found {
+                        value.push_str(&format!(" {} ", s)); 
+                    }
+                }
+            }
 
             writeln!(
                 f,
-                "    {}{}_{} = {},",
-                C_API_SUFFIX, enum_def.name, &entry.name, entry.value
+                "    {} = {},", 
+                Self::get_enum_name(&enum_def.name, &entry.name), value, 
             )?;
         }
 
