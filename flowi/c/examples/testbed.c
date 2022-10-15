@@ -1,14 +1,13 @@
 // TODO: flowi/font.h should just include tho core version
 #include <flowi/application.h>
-#include <flowi_core/font.h>
 #include <flowi_core/ui.h>
 #include <stdio.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct App {
-    FlFont font_bold;
-    FlFont font;
+    //FlFont font_bold;
+    //FlFont font;
     FlImage image;
 } App;
 
@@ -24,6 +23,7 @@ typedef struct App {
 void main_loop(struct FlContext* ctx, void* user_data) {
     App* app = (App*)user_data;
 
+    /*
     FlVec2 pos = {40.0f, 0.0f};
     FlVec2 pos2 = {40.0f, 80.0f};
     // FlVec2 pos2 = {40.0f, 180.0f};
@@ -43,6 +43,7 @@ void main_loop(struct FlContext* ctx, void* user_data) {
     if (fl_ui_push_button(ctx, "Push me 2")) {
         printf("Pushed 2\n");
     }
+    */
 
     /*
     fl_ui_set_pos_ctx(ctx, (FlVec2){.x = 140.0f, .y = 80.0f});
@@ -75,8 +76,8 @@ int main() {
     }
 
     App app = {
-        .font_bold = fl_font_new_from_file(ctx, "data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
-        .font = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
+        //.font_bold = fl_font_new_from_file(ctx, "data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
+        //.font = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
         .image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
     };
 

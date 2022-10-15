@@ -39,6 +39,8 @@ typedef struct FlIVec2 {
     int y;
 } FlIVec2;
 
+#include "math_data.inl"
+
 #ifdef __cplusplus
 }
 #endif

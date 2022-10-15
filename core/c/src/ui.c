@@ -8,6 +8,8 @@
 #include "style_internal.h"
 #include "text.h"
 
+#if 0
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool is_mouse_hovering_rect(const FlContext* ctx, FlRect rect) {
@@ -146,11 +148,18 @@ static bool item_add(struct FlContext* ctx, FlowiID id, FlRect rect) {
     return is_mouse_hovering_rect(ctx, rect);
 }
 
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlImage image, FlVec2 text_pos,
                                       float image_scale) {
+    (void)ctx;
+    (void)text;
+    (void)image;
+    (void)text_pos;
+    (void)image_scale;
+#if 0
     Utf8Result utf8_res = Utf8_to_codepoints_u32(&ctx->frame_allocator, (u8*)text.str, text.len);
 
     if (utf8_res.error == FlError_Utf8Malformed) {
@@ -208,6 +217,7 @@ bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlIm
 
     // Based on the current the the position where we should place the image and the text
     // FlVec2 pos = Style_get_position(ctx);
+#endif
 
     return false;
 }
@@ -215,17 +225,25 @@ bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlIm
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Set the active layer for rendering
 
+/*
 void fl_ui_set_layer_impl(struct FlContext* ctx, FlLayerType layer) {
-    ctx->active_layer = layer;
+    (void)ctx;
+    (void)layer;
+    //ctx->active_layer = layer;
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, uint32_t flags) {
+    (void)ctx;
+    (void)name;
+    (void)flags;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End call for various types such as windows, lists, etc.
 
 void fl_ui_end_impl(struct FlContext* ctx) {
+    (void)ctx;
 }

@@ -7,6 +7,8 @@
 #include "internal.h"
 #include "style_internal.h"
 
+#if 0
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Default style
 // Styling is based on the CSS Box Model: https://www.w3schools.com/css/css_boxmodel.asp
@@ -143,3 +145,5 @@ FlStyle fl_style_get_current_impl(struct FlContext* ctx) {
 
     return style;
 }
+
+#endif

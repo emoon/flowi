@@ -125,6 +125,8 @@ typedef enum FlRenderCommand {
     FlRenderCommand_ScissorRect,
 } FlRenderCommand;
 
+#include "render_commands.inl"
+
 #ifdef __cplusplus
 }
 #endif

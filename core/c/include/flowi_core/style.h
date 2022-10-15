@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <string.h>
 #include "context.h"
-#include "font.h"
 #include "idx.h"
 #include "manual.h"
 
@@ -47,54 +46,30 @@ typedef struct FlStyle {
     uint16_t padding[4];
     uint32_t current_font;
     uint32_t background_color;
-    FlFont font;
     uint32_t font_size;
     uint32_t text_color;
     uint32_t font_color;
 } FlStyle;
 
 // Create a new style
-FlStyle* fl_style_create_impl(struct FlContext* ctx, FlString name);
-
-FL_INLINE FlStyle* fl_style_create(struct FlContext* ctx, const char* name) {
-    FlString name_ = fl_cstr_to_flstring(name);
-    return fl_style_create_impl(ctx, name_);
-}
+static FlStyle* fl_style_create(struct FlContext* ctx, const char* name);
 
 // Get the default style. Changing this will apply the base style for the whole application
-FlStyle* fl_style_get_default_impl(struct FlContext* ctx);
-
-FL_INLINE FlStyle* fl_style_get_default(struct FlContext* ctx) {
-    return fl_style_get_default_impl(ctx);
-}
+static FlStyle* fl_style_get_default(struct FlContext* ctx);
 
 // Get the current style which is based on what has been pushed on the style stack using push/pop
-FlStyle fl_style_get_current_impl(struct FlContext* ctx);
-
-FL_INLINE FlStyle fl_style_get_current(struct FlContext* ctx) {
-    return fl_style_get_current_impl(ctx);
-}
+static FlStyle fl_style_get_current(struct FlContext* ctx);
 
 // Mark the end of style changes
-void fl_style_end_changes_impl(struct FlContext* ctx, FlStyle* style);
-
-FL_INLINE void fl_style_end_changes(struct FlContext* ctx, FlStyle* style) {
-    fl_style_end_changes_impl(ctx, style);
-}
+static void fl_style_end_changes(struct FlContext* ctx, FlStyle* style);
 
 // Select the style to be used, to end using the style use 'fl_pop_style()'
-void fl_style_push_impl(struct FlContext* ctx, FlStyle* style);
-
-FL_INLINE void fl_style_push(struct FlContext* ctx, FlStyle* style) {
-    fl_style_push_impl(ctx, style);
-}
+static void fl_style_push(struct FlContext* ctx, FlStyle* style);
 
 // Pops the current style
-void fl_style_pop_impl(struct FlContext* ctx);
+static void fl_style_pop(struct FlContext* ctx);
 
-FL_INLINE void fl_style_pop(struct FlContext* ctx) {
-    fl_style_pop_impl(ctx);
-}
+#include "style.inl"
 
 #ifdef __cplusplus
 }

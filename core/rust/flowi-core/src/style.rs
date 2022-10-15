@@ -52,7 +52,6 @@ pub struct Style {
     pub padding: [u16; 4],
     pub current_font: u32,
     pub background_color: u32,
-    pub font: Font,
     pub font_size: u32,
     pub text_color: u32,
     pub font_color: u32,

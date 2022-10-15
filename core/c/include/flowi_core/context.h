@@ -18,6 +18,8 @@ extern "C" {
 
 struct FlContext;
 
+#include "context.inl"
+
 #ifdef __cplusplus
 }
 #endif

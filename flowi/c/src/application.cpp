@@ -15,8 +15,6 @@
 #include <GLFW/glfw3native.h>
 // clang-format off
 
-#include <flowi_core/font.h>
-
 // TODO: Should be in public core api
 //#include "../../../core/c/src/area.h"
 #include "../../../core/c/src/flowi.h"
@@ -233,7 +231,7 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render triangles without texture
 
-static void render_textured_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder, const FlStyle& style) {
+static void render_textured_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder/*, const FlStyle& style*/) {
     FlTexturedTriangles* draw_cmd = (FlTexturedTriangles*)render_data;
 
     bgfx::TransientVertexBuffer tvb;
@@ -277,7 +275,7 @@ static void render_textured_triangles(ApplicationState& ctx, const u8* render_da
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render triangles without texture
 
-static void render_flat_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder, const FlStyle& style) {
+static void render_flat_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder/*, const FlStyle& style*/) {
     FlSolidTriangles* draw_cmd = (FlSolidTriangles*)render_data;
 
     bgfx::TransientVertexBuffer tvb;
@@ -382,9 +380,10 @@ static void update_texture(ApplicationState& ctx, const u8* render_data) {
 static void render_flowi(ApplicationState& state, uint16_t width, uint16_t height) {
     bgfx::setViewMode(0, bgfx::ViewMode::Sequential);
 
-    FlStyle style = fl_style_get_current(state.ctx);
+    //FlStyle style = fl_style_get_current(state.ctx);
 
-    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, (style.background_color << 8) | 0xff, 1.0f, 0);
+    //bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, (style.background_color << 8) | 0xff, 1.0f, 0);
+    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, (0x112233 << 8) | 0xff, 1.0f, 0);
 
     int view_id = 255;
 
@@ -407,12 +406,12 @@ static void render_flowi(ApplicationState& state, uint16_t width, uint16_t heigh
     for (int i = 0; i < count; ++i) {
         switch (cmd = fl_render_get_command(state.flowi_state, &render_cmd_data)) {
             case FlRenderCommand_TexturedTriangles: {
-                render_textured_triangles(state, render_cmd_data, encoder, style);
+                render_textured_triangles(state, render_cmd_data, encoder/*, style*/);
                 break;
             }
 
             case FlRenderCommand_SolidTriangles: {
-                render_flat_triangles(state, render_cmd_data, encoder, style);
+                render_flat_triangles(state, render_cmd_data, encoder/*, style*/);
                 break;
             }
 
@@ -461,10 +460,10 @@ static void generate_frame(void* user_data) {
 
     double xpos, ypos;
     glfwGetCursorPos(state->default_window, &xpos, &ypos);
-    const int mouse_state = glfwGetMouseButton(state->default_window, GLFW_MOUSE_BUTTON_LEFT);
-    FlVec2 pos = {float(xpos), float(ypos)};
+    //const int mouse_state = glfwGetMouseButton(state->default_window, GLFW_MOUSE_BUTTON_LEFT);
+    //FlVec2 pos = {float(xpos), float(ypos)};
 
-    fl_set_mouse_pos_state(state->ctx, pos, mouse_state == GLFW_PRESS ? true : false, false, false);
+    //fl_set_mouse_pos_state(state->ctx, pos, mouse_state == GLFW_PRESS ? true : false, false, false);
 
     // TODO: Correct delta time.
     fl_frame_begin(state->ctx, display_w, display_h, 1.0f/60.0f);

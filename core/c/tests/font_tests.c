@@ -1,10 +1,11 @@
-#include <flowi_core/font.h>
 #include "../src/atlas.h"
 #include "../src/font_private.h"
 #include "../src/internal.h"
 #include "utest.h"
 
 struct FlContext;
+
+#if 0
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -124,3 +125,5 @@ UTEST(Font, gen_glyph_verify_render_cmds) {
     fl_context_destroy(ctx);
     fl_destroy(state);
 }
+
+#endif

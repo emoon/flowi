@@ -2,6 +2,8 @@
 #include "internal.h"
 #include "layout_private.h"
 
+#if 0
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlLayoutAreaId fl_layout_area_create_impl(struct FlContext* self, FlString name, FlLayoutArea area) {
@@ -124,3 +126,5 @@ void fl_layout_debug_render_current(struct FlContext* self) {
 
 }
 */
+
+#endif

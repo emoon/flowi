@@ -6,6 +6,9 @@
 #include <emmintrin.h>  // __m128i
 #include <smmintrin.h>
 #include <xmmintrin.h>  // __m128
+                        //
+
+#if 0
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -232,3 +235,5 @@ Utf8Result Utf8_to_codepoints_u32(LinearAllocator* allocator, const uint8_t* inp
 
     return res;
 }
+
+#endif

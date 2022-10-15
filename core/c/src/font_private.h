@@ -2,7 +2,6 @@
 #pragma once
 
 #include <flowi_core/config.h>
-#include <flowi_core/font.h>
 #include <freetype/freetype.h>
 #include "flowi.h"
 #include "render.h"

@@ -18,6 +18,8 @@ extern "C" {
 
 typedef uint64_t FlWindow;
 
+#include "window.inl"
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,8 +1,11 @@
 #include "color.h"
 #include "internal.h"
+#include "../external/hashmap.h"
 #include "text.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if 0
 
 static bool button_behavior(struct FlContext* ctx, FlRect rect, FlowiID id, u32 flags) {
     const MouseState* mouse_state = &ctx->mouse;
@@ -110,6 +113,8 @@ static bool button_behavior(struct FlContext* ctx, FlRect rect, FlowiID id, u32 
     return pressed;
 }
 
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef enum ButtonState {
@@ -166,6 +171,23 @@ static void button_state_update(ButtonStateData* state, const float delta_time, 
 // Push button widget that returns true if user has pressed it
 
 bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
+    ButtonStateData* button_state = hashmap_get(&ctx->widget_states, text.str, text.len);
+
+    if (!button_state) {
+        // TODO: Custom allocator
+        button_state = calloc(1, sizeof(ButtonStateData));
+        button_state->start_color = FColor_new_rgb(0.8f, 0.8f, 0.8f);
+        button_state->end_color = FColor_new_rgb(0.6f, 0.6f, 0.6f);
+        hashmap_put(&ctx->widget_states, text.str, text.len, button_state);
+    } else {
+        //button_state_update(button_state, ctx->delta_time, item_hoverable(ctx, rect, id));
+        button_state_update(button_state, ctx->delta_time, false); 
+    }
+        
+    //prim->color = FColor_to_u32(button_state->current_color);
+
+
+    /*
     FlStyle style = fl_style_get_current(ctx);
 
     Utf8Result utf8_res = Utf8_to_codepoints_u32(&ctx->frame_allocator, (u8*)text.str, text.len);
@@ -208,18 +230,6 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
 
     // TODO: Append "_button" to the end of the string for hashing id
 
-    ButtonStateData* button_state = hashmap_get(&ctx->widget_states, text.str, text.len);
-
-    if (!button_state) {
-        // TODO: Custom allocator
-        button_state = calloc(1, sizeof(ButtonStateData));
-        button_state->start_color = FColor_new_rgb(0.8f, 0.8f, 0.8f);
-        button_state->end_color = FColor_new_rgb(0.6f, 0.6f, 0.6f);
-        hashmap_put(&ctx->widget_states, text.str, text.len, button_state);
-    } else {
-        button_state_update(button_state, ctx->delta_time, item_hoverable(ctx, rect, id));
-    }
-
     Layer* layer = ctx_get_active_layer(ctx);
 
     // Add rect for rendering
@@ -253,4 +263,7 @@ bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text) {
     }
 
     return button_behavior(ctx, rect, id, ButtonFlags_PressedOnClickRelease | ButtonFlags_MouseButtonLeft);
+    */
+
+    return false;
 }

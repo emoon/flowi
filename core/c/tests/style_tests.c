@@ -3,6 +3,8 @@
 #include "../src/internal.h"
 #include "utest.h"
 
+#if 0
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Validate that a new style has the default values
 
@@ -135,3 +137,5 @@ UTEST(Style, push_style_1) {
     fl_context_destroy(ctx);
     fl_destroy(state);
 }
+
+#endif

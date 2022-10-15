@@ -4,6 +4,8 @@
 #include "../src/internal.h"
 #include "utest.h"
 
+#if 0
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(Image, load_file_ok_stb) {
@@ -209,3 +211,5 @@ UTEST(Image, render_image) {
     fl_context_destroy(ctx);
     fl_destroy(state);
 }
+
+#endif

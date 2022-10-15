@@ -9,6 +9,8 @@
 #include "internal.h"
 #include "render.h"
 
+#if 0
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // generating triangles
 // The most common way is generating this with a fan from each new vertex. This quite bad for GPUs with many long thin
@@ -254,3 +256,5 @@ void PrimitiveRect_generate_render_data(struct FlContext* ctx, const struct Prim
     tri_data->index_buffer_size = counts.index_count;
     */
 }
+
+#endif

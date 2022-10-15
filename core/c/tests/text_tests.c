@@ -2,6 +2,8 @@
 #include "../src/text.h"
 #include "utest.h"
 
+#if 0
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(Text, test_utf8_decode_ascii) {
@@ -44,3 +46,5 @@ UTEST(Text, test_utf8_decode_illegal) {
     ASSERT_EQ(FlError_Utf8Malformed, Utf8_to_codepoints_u32(&alloc, (u8*)"\xed\xbe\x80", 3).error);
     ASSERT_EQ(FlError_Utf8Malformed, Utf8_to_codepoints_u32(&alloc, (u8*)"\xed\xbf\xbf", 3).error);
 }
+
+#endif

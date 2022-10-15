@@ -19,92 +19,93 @@
 extern "C" {
 #endif
 
-typedef enum FlLayerType {
-    FlLayerType_Layer0 = 0,
-    FlLayerType_Layer1 = 1,
-    FlLayerType_Popup = 2,
-    FlLayerType_Count = 3,
-} FlLayerType;
+typedef enum FlWindowFlags {
+    // Default flags
+    FlWindowFlags_None = 0,
+    // Disable title-bar
+    FlWindowFlags_NoTitleBar = 1 << 0,
+    // Disable user resizing with the lower-right grip
+    FlWindowFlags_NoResize = 1 << 1,
+    // Disable user moving the window
+    FlWindowFlags_NoMove = 1 << 2,
+    // Disable scrollbars (window can still scroll with mouse or programmatically)
+    FlWindowFlags_NoScrollbar = 1 << 3,
+    // Disable user vertically scrolling with mouse wheel. On child window, mouse wheel will be forwarded to the parent
+    // unless NoScrollbar is also set.
+    FlWindowFlags_NoScrollWithMouse = 1 << 4,
+    // Disable user collapsing window by double-clicking on it. Also referred to as Window Menu Button (e.g. within a
+    // docking node).
+    FlWindowFlags_NoCollapse = 1 << 5,
+    // Resize every window to its content every frame
+    FlWindowFlags_AlwaysAutoResize = 1 << 6,
+    // Disable drawing background color (WindowBg, etc.) and outside border. Similar as using
+    // SetNextWindowBgAlpha(0.0f).
+    FlWindowFlags_NoBackground = 1 << 7,
+    // Never load/save settings in .ini file
+    FlWindowFlags_NoSavedSettings = 1 << 8,
+    // Disable catching mouse, hovering test with pass through.
+    FlWindowFlags_NoMouseInputs = 1 << 9,
+    // Has a menu-bar
+    FlWindowFlags_MenuBar = 1 << 10,
+    // Allow horizontal scrollbar to appear (off by default).
+    FlWindowFlags_HorizontalScrollbar = 1 << 11,
+    // Disable taking focus when transitioning from hidden to visible state
+    FlWindowFlags_NoFocusOnAppearing = 1 << 12,
+    // Disable bringing window to front when taking focus (e.g. clicking on it or programmatically giving it focus)
+    FlWindowFlags_NoBringToFrontOnFocus = 1 << 13,
+    // Always show vertical scrollbar (even if content_size.y < size.y)
+    FlWindowFlags_AlwaysVerticalScrollbar = 1 << 14,
+    // Always show horizontal scrollbar (even if content_size.x < size.x)
+    FlWindowFlags_AlwaysHorizontalScrollbar = 1 << 15,
+    // Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows,
+    FlWindowFlags_AlwaysUseWindowPadding = 1 << 16,
+    // No gamepad/keyboard navigation within the window
+    FlWindowFlags_NoNavInputs = 1 << 17,
+    // No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
+    FlWindowFlags_NoNavFocus = 1 << 18,
+    // Display a dot next to the title. When used in a tab/docking context, tab is selected when clicking the X +
+    // closure is not assumed (will wait for user to stop submitting the tab). Otherwise closure is assumed when
+    // pressing the X, so if you keep submitting the tab may reappear at end of tab bar.
+    FlWindowFlags_UnsavedDocument = 1 << 19,
+    // No navigation
+    FlWindowFlags_NoNav = FlWindowFlags_NoNavInputs | FlWindowFlags_NoNavFocus,
+    // No decoration
+    FlWindowFlags_NoDecoration =
+        FlWindowFlags_NoTitleBar | FlWindowFlags_NoResize | FlWindowFlags_NoScrollbar | FlWindowFlags_NoCollapse,
+    // Skip all inputs
+    FlWindowFlags_NoInputs = FlWindowFlags_NoMouseInputs | FlWindowFlags_NoNavInputs | FlWindowFlags_NoNavFocus,
+} FlWindowFlags;
 
-typedef struct FlUi {
-    uint32_t dummy;
-} FlUi;
-
+struct FlUi;
 // Start a window
-void fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, uint32_t flags);
-
-FL_INLINE void fl_ui_window_begin(struct FlContext* ctx, const char* name, uint32_t flags) {
-    FlString name_ = fl_cstr_to_flstring(name);
-    fl_ui_window_begin_impl(ctx, name_, flags);
-}
+static void fl_ui_window_begin(struct FlContext* ctx, const char* name, FlWindowFlags flags);
 
 // End call for various types such as windows, lists, etc.
-void fl_ui_end_impl(struct FlContext* ctx);
+static void fl_ui_end(struct FlContext* ctx);
 
-FL_INLINE void fl_ui_end(struct FlContext* ctx) {
-    fl_ui_end_impl(ctx);
-}
-
-// Set the active layer for rendering
-void fl_ui_set_layer_impl(struct FlContext* ctx, FlLayerType layer);
-
-FL_INLINE void fl_ui_set_layer(struct FlContext* ctx, FlLayerType layer) {
-    fl_ui_set_layer_impl(ctx, layer);
-}
+// Draw static text with the selected font
+static void fl_ui_text(struct FlContext* ctx, const char* text);
 
 // Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
-void fl_ui_text_impl(struct FlContext* ctx, FlString text);
-
-FL_INLINE void fl_ui_text(struct FlContext* ctx, const char* text) {
-    FlString text_ = fl_cstr_to_flstring(text);
-    fl_ui_text_impl(ctx, text_);
-}
-
-// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
-void fl_ui_image_impl(struct FlContext* ctx, FlImage image);
-
-FL_INLINE void fl_ui_image(struct FlContext* ctx, FlImage image) {
-    fl_ui_image_impl(ctx, image);
-}
+static void fl_ui_image(struct FlContext* ctx, FlImage image);
 
 // Draw image with given size
-void fl_ui_image_with_size_impl(struct FlContext* ctx, FlImage image, FlVec2 size);
-
-FL_INLINE void fl_ui_image_with_size(struct FlContext* ctx, FlImage image, FlVec2 size) {
-    fl_ui_image_with_size_impl(ctx, image, size);
-}
+static void fl_ui_image_with_size(struct FlContext* ctx, FlImage image, FlVec2 size);
 
 // Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
-void fl_ui_set_pos_impl(struct FlContext* ctx, FlVec2 pos);
-
-FL_INLINE void fl_ui_set_pos(struct FlContext* ctx, FlVec2 pos) {
-    fl_ui_set_pos_impl(ctx, pos);
-}
+static void fl_ui_set_pos(struct FlContext* ctx, FlVec2 pos);
 
 // Get the last widget size. This is usually used for doing manual layouting
-FlRect fl_ui_get_last_widget_size_impl(struct FlContext* ctx, FlVec2 pos);
-
-FL_INLINE FlRect fl_ui_get_last_widget_size(struct FlContext* ctx, FlVec2 pos) {
-    return fl_ui_get_last_widget_size_impl(ctx, pos);
-}
+static FlRect fl_ui_get_last_widget_size(struct FlContext* ctx, FlVec2 pos);
 
 // Push button widget that returns true if user has pressed it
-bool fl_ui_push_button_with_icon_impl(struct FlContext* ctx, FlString text, FlImage image, FlVec2 text_pos,
-                                      float image_scale);
-
-FL_INLINE bool fl_ui_push_button_with_icon(struct FlContext* ctx, const char* text, FlImage image, FlVec2 text_pos,
-                                           float image_scale) {
-    FlString text_ = fl_cstr_to_flstring(text);
-    return fl_ui_push_button_with_icon_impl(ctx, text_, image, text_pos, image_scale);
-}
+static bool fl_ui_push_button_with_icon(struct FlContext* ctx, const char* text, FlImage image, FlVec2 text_pos,
+                                        float image_scale);
 
 // Push button widget that returns true if user has pressed it
-bool fl_ui_push_button_impl(struct FlContext* ctx, FlString text);
+static bool fl_ui_push_button(struct FlContext* ctx, const char* text);
 
-FL_INLINE bool fl_ui_push_button(struct FlContext* ctx, const char* text) {
-    FlString text_ = fl_cstr_to_flstring(text);
-    return fl_ui_push_button_impl(ctx, text_);
-}
+#include "ui.inl"
 
 #ifdef __cplusplus
 }

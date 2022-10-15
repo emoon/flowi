@@ -1,5 +1,3 @@
-mod font
-
 enum LengthPercent {
     Length = 0,
     Percent = 1,
@@ -30,7 +28,6 @@ struct Style {
     padding: [u16; 4],
     current_font: u32,
     background_color: u32,
-    font: Font,
     font_size: u32,
     text_color: u32,
     font_color: u32,

@@ -3,6 +3,7 @@
 #include "internal.h"
 #include "string_allocator.h"
 #include "types.h"
+#include <stdarg.h>
 
 // fix malloc
 #include <stdlib.h>

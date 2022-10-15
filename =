@@ -427,11 +427,9 @@ void fl_frame_begin(struct FlContext* ctx, int width, int height, float delta_ti
 
     hack_first_frame = true;
 
-    /*
     for (int i = 0; i < FlLayerType_Count; ++i) {
         CommandBuffer_rewind(&ctx->layers[i].primitive_commands);
     }
-    */
 
     //ctx->active_layout = ctx->active_layout;
     //ctx->frame_count++;
@@ -494,7 +492,6 @@ void fl_frame_end(struct FlContext* ctx) {
     // first do generation pass to build up all glyphs and other data
     Atlas_begin_add_rects(state->images_atlas);
 
-    /*
     for (int l = 0; l < FlLayerType_Count; ++l) {
         Layer* layer = &ctx->layers[l];
 
@@ -515,7 +512,6 @@ void fl_frame_end(struct FlContext* ctx) {
             }
         }
     }
-    */
 
     Atlas_end_add_rects(state->images_atlas, state);
     //Atlas_end_add_rects(state->mono_fonts_atlas, state);
@@ -578,7 +574,6 @@ void fl_frame_end(struct FlContext* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/*
 void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
     Utf8Result res = Utf8_to_codepoints_u32(&ctx->frame_allocator, (u8*)text.str, text.len);
 
@@ -599,14 +594,12 @@ void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
     prim->codepoint_count = res.len;
     prim->position_index = 0;  // TODO: Fixme
 }
-*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_context_destroy(struct FlContext* self) {
     FlAllocator* allocator = self->global->global_allocator;
 
-    /*
     for (int i = 0; i < self->style_count; ++i) {
         FlAllocator_free(allocator, self->styles[i]);
     }
@@ -618,7 +611,6 @@ void fl_context_destroy(struct FlContext* self) {
 
     LinearAllocator_destroy(&self->layout_allocator);
     VertexAllocator_destroy(&self->vertex_allocator);
-    */
     StringAllocator_destroy(&self->string_allocator);
     LinearAllocator_destroy(&self->frame_allocator);
 
@@ -633,19 +625,19 @@ void fl_destroy(FlGlobalState* self) {
     FlAllocator* allocator = self->global_allocator;
 
     CommandBuffer_destroy(&self->render_commands);
-    //Atlas_destroy(self->mono_fonts_atlas);
+    Atlas_destroy(self->mono_fonts_atlas);
     Atlas_destroy(self->images_atlas);
 
-    //Font* fonts = (Font*)self->font_handles.objects;
+    Font* fonts = (Font*)self->font_handles.objects;
 
-    //for (int i = 0; i < self->font_handles.len; ++i) {
-    //    Font_destroy(self, &fonts[i]);
-    //}
+    for (int i = 0; i < self->font_handles.len; ++i) {
+        Font_destroy(self, &fonts[i]);
+    }
 
     Handles_destroy(&self->image_handles);
-    //Handles_destroy(&self->font_handles);
+    Handles_destroy(&self->font_handles);
 
-    //FT_Done_FreeType(self->ft_library);
+    FT_Done_FreeType(self->ft_library);
     FlAllocator_free(allocator, self);
 }
 

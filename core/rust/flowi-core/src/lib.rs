@@ -10,9 +10,6 @@ pub use debug::*;
 pub mod error;
 pub use error::*;
 
-pub mod font;
-pub use font::*;
-
 pub mod image;
 pub use image::*;
 

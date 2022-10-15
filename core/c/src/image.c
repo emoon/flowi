@@ -106,6 +106,9 @@ FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
+    (void)ctx;
+    (void)image;
+/*
     ImagePrivate* self = get_handle(ctx, image);
 
     if (FL_UNLIKELY(!self)) {
@@ -120,11 +123,16 @@ void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
     prim->position = ctx->cursor;
     prim->size.x = self->info.width;
     prim->size.y = self->info.height;
+*/
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_ui_image_with_size_impl(struct FlContext* ctx, FlImage image, FlVec2 size) {
+    (void)ctx;
+    (void)image;
+    (void)size;
+    /*
     ImagePrivate* self = get_handle(ctx, image);
 
     if (FL_UNLIKELY(!self)) {
@@ -139,6 +147,7 @@ void fl_ui_image_with_size_impl(struct FlContext* ctx, FlImage image, FlVec2 siz
     prim->position = ctx->cursor;
     prim->size.x = size.x;
     prim->size.y = size.y;
+    */
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,6 +172,9 @@ void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
+    (void)cmd;
+    (void)atlas;
+/*
     PrimitiveImage* prim = (PrimitiveImage*)cmd;
     ImagePrivate* self = prim->image;
 
@@ -222,11 +234,16 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
     self->atlas_y = ry;
 
     return true;
+*/
+    return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool Image_render(struct FlContext* ctx, const u8* cmd) {
+    (void)ctx;
+    (void)cmd;
+/*
     PrimitiveImage* prim = (PrimitiveImage*)cmd;
 
     FlVertPosUvColor* vertices = NULL;
@@ -298,6 +315,7 @@ bool Image_render(struct FlContext* ctx, const u8* cmd) {
     tri_data->vertex_buffer_size = 4;
     tri_data->index_buffer_size = 6;
     tri_data->texture_id = prim->image->texture_id;
+*/
 
     return true;
 }

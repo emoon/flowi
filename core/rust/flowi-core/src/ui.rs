@@ -4,9 +4,8 @@
 use crate::*;
 
 extern "C" {
-    fn fl_ui_window_begin_impl(ctx: *const core::ffi::c_void, name: FlString, flags: u32);
+    fn fl_ui_window_begin_impl(ctx: *const core::ffi::c_void, name: FlString, flags: WindowFlags);
     fn fl_ui_end_impl(ctx: *const core::ffi::c_void);
-    fn fl_ui_set_layer_impl(ctx: *const core::ffi::c_void, layer: LayerType);
     fn fl_ui_text_impl(ctx: *const core::ffi::c_void, text: FlString);
     fn fl_ui_image_impl(ctx: *const core::ffi::c_void, image: Image);
     fn fl_ui_image_with_size_impl(ctx: *const core::ffi::c_void, image: Image, size: Vec2);
@@ -24,22 +23,68 @@ extern "C" {
 
 #[repr(C)]
 #[derive(Debug)]
-pub enum LayerType {
-    Layer0 = 0,
-    Layer1 = 1,
-    Popup = 2,
-    Count = 3,
+pub enum WindowFlags {
+    /// Default flags
+    None = 0,
+    /// Disable title-bar
+    NoTitleBar = 1 << 0,
+    /// Disable user resizing with the lower-right grip
+    NoResize = 1 << 1,
+    /// Disable user moving the window
+    NoMove = 1 << 2,
+    /// Disable scrollbars (window can still scroll with mouse or programmatically)
+    NoScrollbar = 1 << 3,
+    /// Disable user vertically scrolling with mouse wheel. On child window, mouse wheel will be forwarded to the parent unless NoScrollbar is also set.
+    NoScrollWithMouse = 1 << 4,
+    /// Disable user collapsing window by double-clicking on it. Also referred to as Window Menu Button (e.g. within a docking node).
+    NoCollapse = 1 << 5,
+    /// Resize every window to its content every frame
+    AlwaysAutoResize = 1 << 6,
+    /// Disable drawing background color (WindowBg, etc.) and outside border. Similar as using SetNextWindowBgAlpha(0.0f).
+    NoBackground = 1 << 7,
+    /// Never load/save settings in .ini file
+    NoSavedSettings = 1 << 8,
+    /// Disable catching mouse, hovering test with pass through.
+    NoMouseInputs = 1 << 9,
+    /// Has a menu-bar
+    MenuBar = 1 << 10,
+    /// Allow horizontal scrollbar to appear (off by default).
+    HorizontalScrollbar = 1 << 11,
+    /// Disable taking focus when transitioning from hidden to visible state
+    NoFocusOnAppearing = 1 << 12,
+    /// Disable bringing window to front when taking focus (e.g. clicking on it or programmatically giving it focus)
+    NoBringToFrontOnFocus = 1 << 13,
+    /// Always show vertical scrollbar (even if content_size.y < size.y)
+    AlwaysVerticalScrollbar = 1 << 14,
+    /// Always show horizontal scrollbar (even if content_size.x < size.x)
+    AlwaysHorizontalScrollbar = 1 << 15,
+    /// Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows,
+    AlwaysUseWindowPadding = 1 << 16,
+    /// No gamepad/keyboard navigation within the window
+    NoNavInputs = 1 << 17,
+    /// No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
+    NoNavFocus = 1 << 18,
+    /// Display a dot next to the title. When used in a tab/docking context, tab is selected when clicking the X +
+    /// closure is not assumed (will wait for user to stop submitting the tab). Otherwise closure is assumed when
+    /// pressing the X, so if you keep submitting the tab may reappear at end of tab bar.
+    UnsavedDocument = 1 << 19,
+    /// No navigation
+    NoNav = NoNavInputs | NoNavFocus,
+    /// No decoration
+    NoDecoration = NoTitleBar | NoResize | NoScrollbar | NoCollapse,
+    /// Skip all inputs
+    NoInputs = NoMouseInputs | NoNavInputs | NoNavFocus,
 }
 
 #[repr(C)]
 #[derive(Debug)]
 pub struct Ui {
-    pub dummy: u32,
+    _dummy: u32,
 }
 
 impl Context {
     /// Start a window
-    pub fn ui_window_begin(&self, name: &str, flags: u32) {
+    pub fn ui_window_begin(&self, name: &str, flags: WindowFlags) {
         unsafe {
             let self_ = std::mem::transmute(self);
             fl_ui_window_begin_impl(self_, FlString::new(name), flags);
@@ -54,15 +99,7 @@ impl Context {
         }
     }
 
-    /// Set the active layer for rendering
-    pub fn ui_set_layer(&self, layer: LayerType) {
-        unsafe {
-            let self_ = std::mem::transmute(self);
-            fl_ui_set_layer_impl(self_, layer);
-        }
-    }
-
-    /// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
+    /// Draw static text with the selected font
     pub fn ui_text(&self, text: &str) {
         unsafe {
             let self_ = std::mem::transmute(self);

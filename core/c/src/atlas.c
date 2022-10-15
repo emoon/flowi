@@ -1,4 +1,5 @@
 #include "atlas.h"
+#include <limits.h>
 #include <flowi_core/error.h>
 #include "allocator.h"
 #include "internal.h"
