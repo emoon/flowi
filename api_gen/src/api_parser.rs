@@ -184,7 +184,7 @@ pub struct Struct {
 }
 
 ///
-/// Enum 
+/// Enum
 ///
 #[derive(Debug)]
 pub struct EnumEntry {
@@ -645,7 +645,7 @@ impl ApiParser {
         EnumEntry {
             doc_comments: doc_comments.to_owned(),
             name,
-            value
+            value,
         }
     }
 
@@ -654,7 +654,7 @@ impl ApiParser {
     ///
     fn get_enum_assign(rule: Pair<Rule>) -> String {
         let mut enum_value = String::new();
-            
+
         for entry in rule.into_inner() {
             if entry.as_rule() == Rule::string_to_end {
                 enum_value = entry.as_str().to_owned();

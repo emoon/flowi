@@ -136,29 +136,33 @@ impl Cgen {
             let mut value = entry.value.to_owned();
 
             // Check if an enum entry contains an enum name then we search and replace all those
-            // entries with a formatted name 
+            // entries with a formatted name
             if Self::find_name_match(&enum_def, &value) {
                 value = String::new();
                 for s in entry.value.split(" ") {
                     let mut found = false;
                     for e in &enum_def.entries {
                         if e.name == s {
-                            value.push_str(&format!(" {} ", Self::get_enum_name(&enum_def.name, &s)));
+                            value.push_str(&format!(
+                                " {} ",
+                                Self::get_enum_name(&enum_def.name, &s)
+                            ));
                             found = true;
                             break;
                         }
                     }
 
                     if !found {
-                        value.push_str(&format!(" {} ", s)); 
+                        value.push_str(&format!(" {} ", s));
                     }
                 }
             }
 
             writeln!(
                 f,
-                "    {} = {},", 
-                Self::get_enum_name(&enum_def.name, &entry.name), value, 
+                "    {} = {},",
+                Self::get_enum_name(&enum_def.name, &entry.name),
+                value,
             )?;
         }
 
@@ -453,10 +457,37 @@ impl Cgen {
         writeln!(f, "}}\n")
     }
 
-    pub fn generate(filename: &str, render_filename_dir: &str, api_def: &ApiDef) -> io::Result<()> {
+    fn generate_function_def<W: Write>(
+        f: &mut W,
+        func: &Function,
+        self_name: &str,
+        with_ctx: Ctx,
+    ) -> io::Result<()> {
+        let fa = Self::generate_function_args(func, self_name);
+
+        Self::write_commment(f, &func.doc_comments, 0)?;
+
+        #[rustfmt::skip]
+        let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, self_name.to_snake_case(), func.name);
+
+        #[rustfmt::skip]
+        writeln!(f, "static {} {}({});\n", fa.return_value, func_name, arg_line(&fa.func_args, with_ctx))?;
+
+        Ok(())
+    }
+
+    pub fn generate(
+        filename: &str,
+        inl_filename: &str,
+        render_filename_dir: &str,
+        api_def: &ApiDef,
+    ) -> io::Result<()> {
         println!("    Generating Core C header: {}", filename);
+        println!("    Generating Core Inl header: {}", inl_filename);
 
         let mut f = BufWriter::new(File::create(filename)?);
+        let mut fi = BufWriter::new(File::create(inl_filename)?);
+
         writeln!(f, "{}", HEADER)?;
 
         for m in &api_def.mods {
@@ -487,7 +518,7 @@ impl Cgen {
                 if !default_args.is_empty() {
                     let name = get_args_name(func);
                     Self::generate_default_args_struct(&mut f, &name, &default_args)?;
-                    let name = get_args_name(func);
+                    //let name = get_args_name(func);
                 }
             }
         }
@@ -501,6 +532,7 @@ impl Cgen {
             writeln!(f)?;
         }
 
+        // generate defintion
         for sdef in &api_def.structs {
             for func in &sdef.functions {
                 let with_ctx = if sdef.has_attribute("NoContext") {
@@ -509,9 +541,25 @@ impl Cgen {
                     Ctx::Yes
                 };
                 if sdef.has_attribute("Handle") {
-                    Self::generate_function(&mut f, &func, &sdef.name, with_ctx)?;
+                    Self::generate_function_def(&mut f, &func, &sdef.name, with_ctx)?;
                 } else {
-                    Self::generate_function(&mut f, &func, &format!("{}*", sdef.name), with_ctx)?;
+                    Self::generate_function_def(&mut f, &func, &format!("{}*", sdef.name), with_ctx)?;
+                }
+            }
+        }
+
+
+        for sdef in &api_def.structs {
+            for func in &sdef.functions {
+                let with_ctx = if sdef.has_attribute("NoContext") {
+                    Ctx::No
+                } else {
+                    Ctx::Yes
+                };
+                if sdef.has_attribute("Handle") {
+                    Self::generate_function(&mut fi, &func, &sdef.name, with_ctx)?;
+                } else {
+                    Self::generate_function(&mut fi, &func, &format!("{}*", sdef.name), with_ctx)?;
                 }
             }
         }
@@ -534,6 +582,7 @@ impl Cgen {
             Self::generate_render_file(&render_filename, &render_commands)?;
         }
 
+        writeln!(f, "\n#include \"{}.inl\"", api_def.base_filename)?;
         writeln!(f, "{}", FOOTER)
     }
 }

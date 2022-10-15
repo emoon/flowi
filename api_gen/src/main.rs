@@ -136,6 +136,7 @@ fn main() {
             let base_filename = &api_def.base_filename;
 
             let c_filename;
+            let inl_filename;
             let rust_filename;
 
             // On the first thread we start with generating a bunch of main files so we have this
@@ -149,15 +150,17 @@ fn main() {
 
             if api_def.filename.contains("core") {
                 c_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
+                inl_filename = format!("{}/{}.inl", c_core_dest_dir, base_filename);
                 rust_filename = format!("{}/{}.rs", rust_core_dest, base_filename);
             } else {
                 c_filename = format!("{}/{}.h", c_flowi_dest_dir, base_filename);
+                inl_filename = format!("{}/{}.inl", c_flowi_dest_dir, base_filename);
                 rust_filename = format!("{}/{}.rs", rust_flowi_dest, base_filename);
             }
 
             // Generate C/C++ Header for FFI structs
-            if let Err(e) = Cgen::generate(&c_filename, &c_core_src_dir, api_def) {
-                println!("ERROR: Unable to write {}, error: {:?}", c_filename, e);
+            if let Err(e) = Cgen::generate(&c_filename, &inl_filename, &c_core_src_dir, api_def) {
+                println!("ERROR: Unable to write, error: {:?}", e);
             }
 
             // Generate C/C++ Header for FFI structs
@@ -170,6 +173,9 @@ fn main() {
 
             // clang-format C files
             run_clang_format(&c_filename);
+
+            // clang-format C files
+            run_clang_format(&inl_filename);
         });
 
     // All done!

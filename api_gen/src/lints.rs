@@ -73,7 +73,7 @@
     clippy::useless_transmute,
     clippy::verbose_file_reads,
     clippy::zero_sized_map_values,
-    nonstandard_style,
+    nonstandard_style
 )]
 // END - Embark standard lints v0.5 for Rust 1.55+
 // crate-specific exceptions:
