@@ -7,6 +7,10 @@
 
 #define FL_FRAME_HISTORY 2
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // INTERNAL HEADER
 // Used for allocating vertex and index data for internal "rendering"
@@ -67,7 +71,7 @@ FL_INLINE VertsCounts VertexAllocator_get_counts(VertexAllocator* self, VertexAl
 
     VertsCounts t = {vertex_alloc->start_data, index_alloc->start_data,
                      LinearAllocator_current_position(vertex_alloc) / vert_type_size,
-                     LinearAllocator_current_position(index_alloc) / sizeof(FlIdxSize)};
+                     LinearAllocator_current_position(index_alloc) / (int)sizeof(FlIdxSize)};
 
     return t;
 }
@@ -89,3 +93,8 @@ FL_INLINE VertsCounts VertexAllocator_get_counts(VertexAllocator* self, VertexAl
 
 #define VertexAllocator_get_pos_uv_color_counts(self) \
     VertexAllocator_get_counts(self, VertexAllocType_PosUvColor, sizeof(FlVertPosUvColor))
+
+#ifdef __cplusplus
+}
+#endif
+

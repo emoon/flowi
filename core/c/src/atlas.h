@@ -6,6 +6,10 @@
 struct FlAllocator;
 struct FlGlobalState;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // INTERNAL HEADER
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,3 +55,7 @@ void Atlas_end_add_rects(Atlas* self, struct FlGlobalState* state);
 u8* Atlas_add_rect(Atlas* self, int rw, int rh, int* rx, int* ry, int* stride);
 
 bool Atlas_expand(Atlas* self, int w, int h);
+
+#ifdef __cplusplus
+}
+#endif

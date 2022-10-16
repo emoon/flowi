@@ -4,10 +4,10 @@ require "tundra.util"
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local function get_c_src(dir)
+local function get_c_cpp_src(dir)
     return Glob {
         Dir = dir,
-        Extensions = { ".c", ".h" },
+        Extensions = { ".c", ".cpp", ".h" },
         Recursive = true,
 }
 end
@@ -19,6 +19,7 @@ local FREETYPE2_LIB = "core/c/external/freetype2/"
 local STB_LIB = "core/c/external/stb/"
 local TLSF_LIB = "core/c/external/tlsf/"
 local NANOSVG_LIB = "core/c/external/nanosvg/"
+local DEAR_IMGUI = "core/c/external/imgui/"
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -105,7 +106,8 @@ StaticLibrary {
     Sources = {
         STB_LIB .. "stb.c",
         NANOSVG_LIB .. "nanosvg.c",
-        get_c_src(FLOWI_DIR),
+        get_c_cpp_src(FLOWI_DIR),
+        get_c_cpp_src(DEAR_IMGUI),
     },
 }
 

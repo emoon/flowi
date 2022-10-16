@@ -22,6 +22,7 @@ struct Font;
 struct StyleInternal;
 struct Atlas;
 struct ImGuiContext;
+struct ImFontAtlas;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -34,6 +35,7 @@ typedef struct FlGlobalState {
     CommandBuffer render_commands;
 
     struct Atlas* images_atlas;
+    struct ImFontAtlas* font_atlas;
 
     u16 texture_ids;
 } FlGlobalState;

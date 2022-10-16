@@ -4,6 +4,10 @@
 
 struct FlAllocator;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Handles {
@@ -26,3 +30,7 @@ bool Handles_is_valid(Handles* self, uint64_t id);
 void Handles_destroy(Handles* self);
 
 #define Handles_create(self, allocator, cap, Type) Handles_create_impl(self, allocator, cap, sizeof(Type))
+
+#ifdef __cplusplus
+}
+#endif

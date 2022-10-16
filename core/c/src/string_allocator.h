@@ -5,6 +5,10 @@
 
 struct FlAllocator;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct StringAllocator {
@@ -30,3 +34,7 @@ const char* StringAllocator_temp_string_to_cstr(StringAllocator* self, char* tem
 
 // Ideally this should not be called unless if some really large buffer is being removed as the tracking is slow
 void StringAllocator_free_string(StringAllocator* ctx, FlString str);
+
+#ifdef __cplusplus
+}   
+#endif

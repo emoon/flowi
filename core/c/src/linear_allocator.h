@@ -4,6 +4,10 @@
 
 struct FlAllocator;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // TODO: VirtualAlloc based allocator
 typedef struct LinearAllocator {
     u8* start_data;
@@ -61,3 +65,7 @@ FL_INLINE int LinearAllocator_current_position(LinearAllocator* alloc) {
 
 #define LinearAllocator_alloc_unaligend(state, type) \
     (type*)LinearAllocator_internal_alloc_unaligned(state, sizeof(type))
+
+#ifdef __cplusplus
+}
+#endif
