@@ -148,11 +148,9 @@ extern "C" void fl_frame_begin(struct FlContext* ctx, int width, int height, flo
 
     hack_first_frame = true;
 
-    /*
     for (int i = 0; i < FlLayerType_Count; ++i) {
         CommandBuffer_rewind(&ctx->layers[i].primitive_commands);
     }
-    */
 
     // ctx->active_layout = ctx->active_layout;
     // ctx->frame_count++;
@@ -161,6 +159,23 @@ extern "C" void fl_frame_begin(struct FlContext* ctx, int width, int height, flo
 
     // ctx->cursor.x = 0;
     // ctx->cursor.y = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" bool fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, FlWindowFlags flags) {
+    char temp_buffer[2048];
+
+    const char* window_name =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
+
+    return ImGui::Begin(window_name, NULL, (ImGuiWindowFlags)flags);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void fl_ui_end_impl(struct FlContext* ctx) {
+    ImGui::End();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -215,7 +230,6 @@ extern "C" void fl_frame_end(struct FlContext* ctx) {
     // first do generation pass to build up all glyphs and other data
     Atlas_begin_add_rects(state->images_atlas);
 
-    /*
     for (int l = 0; l < FlLayerType_Count; ++l) {
         Layer* layer = &ctx->layers[l];
 
@@ -224,19 +238,15 @@ extern "C" void fl_frame_end(struct FlContext* ctx) {
 
         for (int i = 0; i < command_count; ++i) {
             switch (CommandBuffer_read_next_cmd(&layer->primitive_commands, &command_data)) {
-                //case Primitive_DrawText: {
-                //    generate_glyphs(ctx, command_data);
-                //    break;
-               // }
-
                 case Primitive_DrawImage: {
                     Image_add_to_atlas(command_data, state->images_atlas);
                     break;
                 }
             }
         }
+
+        CommandBuffer_rewind(&layer->primitive_commands);
     }
-    */
 
     Atlas_end_add_rects(state->images_atlas, state);
     // Atlas_end_add_rects(state->mono_fonts_atlas, state);

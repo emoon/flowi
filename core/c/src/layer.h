@@ -20,8 +20,8 @@ typedef struct Layer {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Pass in size of vertex and index buffers allocators
 
-void Layers_create(Layers* self, struct FlAllocator* allocator);
-void Layers_destroy(Layers* self);
+//void Layers_create(Layers* self, struct FlAllocator* allocator);
+//void Layers_destroy(Layers* self);
 
 #ifdef __cplusplus
 }

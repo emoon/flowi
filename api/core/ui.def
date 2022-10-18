@@ -58,7 +58,7 @@ enum WindowFlags {
 
 struct Ui {
     /// Start a window 
-    [static] window_begin(name: String, flags: WindowFlags),
+    [static] window_begin(name: String, flags: WindowFlags) -> bool,
     /// End call for various types such as windows, lists, etc. 
     [static] end(),
     /// Draw static text with the selected font 

@@ -4,7 +4,11 @@
 use crate::*;
 
 extern "C" {
-    fn fl_ui_window_begin_impl(ctx: *const core::ffi::c_void, name: FlString, flags: WindowFlags);
+    fn fl_ui_window_begin_impl(
+        ctx: *const core::ffi::c_void,
+        name: FlString,
+        flags: WindowFlags,
+    ) -> bool;
     fn fl_ui_end_impl(ctx: *const core::ffi::c_void);
     fn fl_ui_text_impl(ctx: *const core::ffi::c_void, text: FlString);
     fn fl_ui_image_impl(ctx: *const core::ffi::c_void, image: Image);
@@ -84,10 +88,11 @@ pub struct Ui {
 
 impl Context {
     /// Start a window
-    pub fn ui_window_begin(&self, name: &str, flags: WindowFlags) {
+    pub fn ui_window_begin(&self, name: &str, flags: WindowFlags) -> bool {
         unsafe {
             let self_ = std::mem::transmute(self);
-            fl_ui_window_begin_impl(self_, FlString::new(name), flags);
+            let ret_val = fl_ui_window_begin_impl(self_, FlString::new(name), flags);
+            ret_val
         }
     }
 

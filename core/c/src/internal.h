@@ -6,6 +6,7 @@
 #include "../external/hashmap.h"
 #include "command_buffer.h"
 #include "string_allocator.h"
+#include "layer.h"
 #include "flowi.h"
 #include "handles.h"
 #include "allocator.h"
@@ -23,6 +24,8 @@ struct StyleInternal;
 struct Atlas;
 struct ImGuiContext;
 struct ImFontAtlas;
+
+#define FlLayerType_Count 1
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -51,6 +54,7 @@ typedef struct FlContext {
     struct ImGuiContext* imgui_ctx;
     LinearAllocator frame_allocator;
     StringAllocator string_allocator;
+    Layer layers[FlLayerType_Count];
     struct FlGlobalState* global;
     struct hashmap_s widget_states;
     float delta_time;

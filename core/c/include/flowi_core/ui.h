@@ -78,7 +78,7 @@ typedef enum FlWindowFlags {
 
 struct FlUi;
 // Start a window
-static void fl_ui_window_begin(struct FlContext* ctx, const char* name, FlWindowFlags flags);
+static bool fl_ui_window_begin(struct FlContext* ctx, const char* name, FlWindowFlags flags);
 
 // End call for various types such as windows, lists, etc.
 static void fl_ui_end(struct FlContext* ctx);

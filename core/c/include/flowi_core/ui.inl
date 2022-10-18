@@ -1,9 +1,9 @@
 // Start a window
-void fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, FlWindowFlags flags);
+bool fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, FlWindowFlags flags);
 
-FL_INLINE void fl_ui_window_begin(struct FlContext* ctx, const char* name, FlWindowFlags flags) {
+FL_INLINE bool fl_ui_window_begin(struct FlContext* ctx, const char* name, FlWindowFlags flags) {
     FlString name_ = fl_cstr_to_flstring(name);
-    fl_ui_window_begin_impl(ctx, name_, flags);
+    return fl_ui_window_begin_impl(ctx, name_, flags);
 }
 
 // End call for various types such as windows, lists, etc.
