@@ -60,7 +60,7 @@
 //  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
 
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
+#include "glfw_input.h"
 
 // Clang warnings with -Weverything
 #if defined(__clang__)
@@ -1176,3 +1176,4 @@ static void ImGui_ImplGlfw_ShutdownPlatformInterface()
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+

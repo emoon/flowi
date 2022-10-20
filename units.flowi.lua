@@ -19,7 +19,8 @@ local FREETYPE2_LIB = "core/c/external/freetype2/"
 local STB_LIB = "core/c/external/stb/"
 local TLSF_LIB = "core/c/external/tlsf/"
 local NANOSVG_LIB = "core/c/external/nanosvg/"
-local DEAR_IMGUI = "core/c/external/imgui/"
+local EXTERNAL_PATH = "core/c/external"
+local DEAR_IMGUI = "core/c/external/dear-imgui/"
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -101,6 +102,8 @@ StaticLibrary {
         "core/c/include/",
         STB_LIB,
         NANOSVG_LIB,
+        EXTERNAL_PATH,
+        DEAR_IMGUI,
     },
 
     Sources = {

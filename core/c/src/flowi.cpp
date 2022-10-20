@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <flowi_core/ui.h>
-#include "../external/imgui/imgui.h"
+#include <dear-imgui/imgui.h>
 #include "allocator.h"
 #include "atlas.h"
 #include "flowi.h"
@@ -239,7 +239,7 @@ extern "C" void fl_frame_end(struct FlContext* ctx) {
         for (int i = 0; i < command_count; ++i) {
             switch (CommandBuffer_read_next_cmd(&layer->primitive_commands, &command_data)) {
                 case Primitive_DrawImage: {
-                    Image_add_to_atlas(command_data, state->images_atlas);
+                    //Image_add_to_atlas(command_data, state->images_atlas);
                     break;
                 }
             }

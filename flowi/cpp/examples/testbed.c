@@ -70,10 +70,12 @@ void main_loop(struct FlContext* ctx, void* user_data) {
 int main() {
     struct FlContext* ctx = NULL;
 
+    /*
     if (!(ctx = fl_application_create("Test", "Test"))) {
         printf("Failed to open application!\n");
         return 0;
     }
+    */
 
     App app = {
         //.font_bold = fl_font_new_from_file(ctx, "data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
@@ -81,7 +83,7 @@ int main() {
         .image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
     };
 
-    fl_application_main_loop(main_loop, &app);
+    //fl_application_main_loop(main_loop, &app);
 
     return 0;
 }

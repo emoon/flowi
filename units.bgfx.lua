@@ -5,9 +5,10 @@ require "tundra.syntax.rust-cargo"
 
 local native = require('tundra.native')
 
-local BIMG_DIR = "flowi/c/external/bimg/"
-local BX_DIR = "flowi/c/external/bx/"
-local BGFX_DIR = "flowi/c/external/bgfx/"
+local BIMG_DIR = "flowi/cpp/external/bimg/"
+local BX_DIR = "flowi/cpp/external/bx/"
+local BGFX_DIR = "flowi/cpp/external/bgfx/"
+local CORE_EXTERNAL_DIR = "core/cpp/external"
 
 local GLSL_OPTIMIZER = BGFX_DIR  .. "3rdparty/glsl-optimizer/"
 local FCPP_DIR = BGFX_DIR .. "3rdparty/fcpp/"
@@ -258,6 +259,7 @@ StaticLibrary {
         BIMG_DIR .. "3rdparty/iqa/include",
         BIMG_DIR .. "3rdparty/astc-codec/include",
         BIMG_DIR .. "3rdparty/tinyexr/deps/miniz",
+        CORE_EXTERNAL_DIR,
     },
 
     Env = {

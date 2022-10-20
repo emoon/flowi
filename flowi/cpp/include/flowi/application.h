@@ -8,7 +8,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include "context.h"
 #include "idx.h"
 #include "manual.h"
 

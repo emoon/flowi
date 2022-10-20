@@ -16,9 +16,11 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local GLFW_DIR = "flowi/c/external/glfw/"
-local BIMG_DIR = "flowi/c/external/bimg/"
-local BX_DIR = "flowi/c/external/bx/"
+local GLFW_DIR = "flowi/cpp/external/glfw/"
+local BIMG_DIR = "flowi/cpp/external/bimg/"
+local BX_DIR = "flowi/cpp/external/bx/"
+local DEAR_IMGUI_DIR = "core/c/external/dear-imgui"
+local CORE_EXTERNAL_DIR = "core/c/external"
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -180,13 +182,15 @@ StaticLibrary {
 
 	Includes = {
         BIMG_DIR .. "include",
-		"flowi/c/include",
+		"flowi/cpp/include",
 		"core/c/include",
 		"core/c/include/flowi_core",
-		"flowi/c/external/bx/include",
-		"flowi/c/external/bgfx/include",
-		"flowi/c/external/glfw/include",
-		"flowi/c/external",
+		"flowi/cpp/external/bx/include",
+		"flowi/cpp/external/bgfx/include",
+		"flowi/cpp/external/glfw/include",
+		"flowi/cpp/external",
+		DEAR_IMGUI_DIR,
+        CORE_EXTERNAL_DIR,
         { BX_DIR .. "/include/compat/msvc" ; Config = "win64-*-*" },
 	},
 
@@ -210,7 +214,7 @@ StaticLibrary {
 		{ "GLFW_EXPOSE_NATIVE_X11" ; Config = "linux-*-*" },
 	},
 
-    Sources = get_c_cpp_src("flowi/c/src"),
+    Sources = get_c_cpp_src("flowi/cpp/src"),
 }
 
 -----------------------------------------------------------------------------------------------------------------------
@@ -219,13 +223,13 @@ Program {
     Name = "flowi_testbed",
 
 	Includes = {
-		"flowi/c/include",
+		"flowi/cpp/include",
 		"core/c/include/flowi_core",
 		"core/c/include",
 	},
 
     Sources = {
-        "flowi/c/examples/testbed.c",
+        "flowi/cpp/examples/testbed.c",
     },
 
     Env = {
@@ -287,15 +291,16 @@ Program {
     Pass = "GenerateSources",
 
     Sources = {
-        "flowi/c/shaders/dummy.c",
-        build_vs("flowi/c/shaders/color_fill.vs", "flowi/c/shaders/generated/color_fill_vs"),
-        build_fs("flowi/c/shaders/color_fill.fs", "flowi/c/shaders/generated/color_fill_fs"),
+        "flowi/cpp/shaders/dummy.c",
 
-        build_vs("flowi/c/shaders/vs_texture.sc", "flowi/c/shaders/generated/vs_texture"),
-        build_fs("flowi/c/shaders/fs_texture.sc", "flowi/c/shaders/generated/fs_texture"),
+        build_vs("flowi/cpp/shaders/color_fill.vs", "flowi/cpp/shaders/generated/color_fill_vs"),
+        build_fs("flowi/cpp/shaders/color_fill.fs", "flowi/cpp/shaders/generated/color_fill_fs"),
 
-        build_vs("flowi/c/shaders/vs_texture_r.sc", "flowi/c/shaders/generated/vs_texture_r"),
-        build_fs("flowi/c/shaders/fs_texture_r.sc", "flowi/c/shaders/generated/fs_texture_r"),
+        build_vs("flowi/cpp/shaders/vs_texture.sc", "flowi/cpp/shaders/generated/vs_texture"),
+        build_fs("flowi/cpp/shaders/fs_texture.sc", "flowi/cpp/shaders/generated/fs_texture"),
+
+        build_vs("flowi/cpp/shaders/vs_texture_r.sc", "flowi/cpp/shaders/generated/vs_texture_r"),
+        build_fs("flowi/cpp/shaders/fs_texture_r.sc", "flowi/cpp/shaders/generated/fs_texture_r"),
     }
 }
 

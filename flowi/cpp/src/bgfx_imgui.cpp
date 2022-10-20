@@ -11,8 +11,9 @@
 #include <dear-imgui/imgui.h>
 #include <dear-imgui/imgui_internal.h>
 
+#include "bgfx_imgui.h"
 #include "imgui.h"
-#include "../bgfx_utils.h"
+//#include "../bgfx_utils.h"
 
 //#define USE_ENTRY 1
 
@@ -52,11 +53,11 @@ struct FontRangeMerge
 	ImWchar     ranges[3];
 };
 
-static FontRangeMerge s_fontRangeMerge[] =
-{
-	{ s_iconsKenneyTtf,      sizeof(s_iconsKenneyTtf),      { ICON_MIN_KI, ICON_MAX_KI, 0 } },
-	{ s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf), { ICON_MIN_FA, ICON_MAX_FA, 0 } },
-};
+// static FontRangeMerge s_fontRangeMerge[] =
+// {
+// 	{ s_iconsKenneyTtf,      sizeof(s_iconsKenneyTtf),      { ICON_MIN_KI, ICON_MAX_KI, 0 } },
+// 	{ s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf), { ICON_MIN_FA, ICON_MAX_FA, 0 } },
+// };
 
 static void* memAlloc(size_t _size, void* _userData);
 static void memFree(void* _ptr, void* _userData);
@@ -100,11 +101,13 @@ struct OcornutImguiContext
 			uint32_t numVertices = (uint32_t)drawList->VtxBuffer.size();
 			uint32_t numIndices  = (uint32_t)drawList->IdxBuffer.size();
 
+            /*
 			if (!checkAvailTransientBuffers(numVertices, m_layout, numIndices) )
 			{
 				// not enough space in transient buffer just quit drawing the rest...
 				break;
 			}
+			*/
 
 			bgfx::allocTransientVertexBuffer(&tvb, numVertices, m_layout);
 			bgfx::allocTransientIndexBuffer(&tib, numIndices, sizeof(ImDrawIdx) == 4);
@@ -359,13 +362,14 @@ struct OcornutImguiContext
 			config.MergeMode = false;
 //			config.MergeGlyphCenterV = true;
 
-			const ImWchar* ranges = io.Fonts->GetGlyphRangesCyrillic();
-			m_font[ImGui::Font::Regular] = io.Fonts->AddFontFromMemoryTTF( (void*)s_robotoRegularTtf,     sizeof(s_robotoRegularTtf),     _fontSize,      &config, ranges);
-			m_font[ImGui::Font::Mono   ] = io.Fonts->AddFontFromMemoryTTF( (void*)s_robotoMonoRegularTtf, sizeof(s_robotoMonoRegularTtf), _fontSize-3.0f, &config, ranges);
+			//const ImWchar* ranges = io.Fonts->GetGlyphRangesCyrillic();
+			//m_font[ImGui::Font::Regular] = io.Fonts->AddFontFromMemoryTTF( (void*)s_robotoRegularTtf,     sizeof(s_robotoRegularTtf),     _fontSize,      &config, ranges);
+			//m_font[ImGui::Font::Mono   ] = io.Fonts->AddFontFromMemoryTTF( (void*)s_robotoMonoRegularTtf, sizeof(s_robotoMonoRegularTtf), _fontSize-3.0f, &config, ranges);
 
-			config.MergeMode = true;
-			config.DstFont   = m_font[ImGui::Font::Regular];
+			//config.MergeMode = true;
+			//config.DstFont   = m_font[ImGui::Font::Regular];
 
+            /*
 			for (uint32_t ii = 0; ii < BX_COUNTOF(s_fontRangeMerge); ++ii)
 			{
 				const FontRangeMerge& frm = s_fontRangeMerge[ii];
@@ -377,6 +381,7 @@ struct OcornutImguiContext
 						, frm.ranges
 						);
 			}
+			*/
 		}
 
 		io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
@@ -391,12 +396,12 @@ struct OcornutImguiContext
 			, bgfx::copy(data, width*height*4)
 			);
 
-		ImGui::InitDockContext();
+		//ImGui::InitDockContext();
 	}
 
 	void destroy()
 	{
-		ImGui::ShutdownDockContext();
+		//ImGui::ShutdownDockContext();
 		ImGui::DestroyContext(m_imgui);
 
 		bgfx::destroy(s_tex);
@@ -476,7 +481,7 @@ struct OcornutImguiContext
 
 		ImGui::NewFrame();
 
-		ImGuizmo::BeginFrame();
+		//ImGuizmo::BeginFrame();
 	}
 
 	void endFrame()
@@ -493,7 +498,7 @@ struct OcornutImguiContext
 	bgfx::TextureHandle m_texture;
 	bgfx::UniformHandle s_tex;
 	bgfx::UniformHandle u_imageLodEnabled;
-	ImFont* m_font[ImGui::Font::Count];
+	//ImFont* m_font[ImGui::Font::Count];
 	int64_t m_last;
 	int32_t m_lastScroll;
 	bgfx::ViewId m_viewId;
@@ -538,10 +543,10 @@ void imguiEndFrame()
 
 namespace ImGui
 {
-	void PushFont(Font::Enum _font)
-	{
-		PushFont(s_ctx.m_font[_font]);
-	}
+	// void PushFont(Font::Enum _font)
+	// {
+	// 	PushFont(s_ctx.m_font[_font]);
+	// }
 
 	void PushEnabled(bool _enabled)
 	{
@@ -559,15 +564,16 @@ namespace ImGui
 
 } // namespace ImGui
 
-BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // error C4505: '' : unreferenced local function has been removed
-BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function"); // warning: 'int rect_width_compare(const void*, const void*)' defined but not used
-BX_PRAGMA_DIAGNOSTIC_PUSH();
-BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wunknown-pragmas")
-BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wtype-limits"); // warning: comparison is always true due to limited range of data type
-#define STBTT_malloc(_size, _userData) memAlloc(_size, _userData)
-#define STBTT_free(_ptr, _userData) memFree(_ptr, _userData)
-#define STB_RECT_PACK_IMPLEMENTATION
-#include <stb/stb_rect_pack.h>
-#define STB_TRUETYPE_IMPLEMENTATION
-#include <stb/stb_truetype.h>
-BX_PRAGMA_DIAGNOSTIC_POP();
+
+// BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // error C4505: '' : unreferenced local function has been removed
+// BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function"); // warning: 'int rect_width_compare(const void*, const void*)' defined but not used
+// BX_PRAGMA_DIAGNOSTIC_PUSH();
+// BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wunknown-pragmas")
+// BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wtype-limits"); // warning: comparison is always true due to limited range of data type
+// #define STBTT_malloc(_size, _userData) memAlloc(_size, _userData)
+// #define STBTT_free(_ptr, _userData) memFree(_ptr, _userData)
+// #define STB_RECT_PACK_IMPLEMENTATION
+// #include <stb/stb_rect_pack.h>
+// #define STB_TRUETYPE_IMPLEMENTATION
+// #include <stb/stb_truetype.h>
+// BX_PRAGMA_DIAGNOSTIC_POP();
