@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "idx.h"
+#include "context.h"
 #include "manual.h"
 
 #ifdef __cplusplus
