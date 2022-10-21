@@ -171,8 +171,7 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
     //io.ConfigViewportsNoTaskBarIcon = true;
 
     // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
+    //ImGui::StyleColorsDark();
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     ImGuiStyle& style = ImGui::GetStyle();
@@ -476,6 +475,8 @@ static void render_flowi(ApplicationState& state, uint16_t width, uint16_t heigh
 
 static void generate_frame(void* user_data) {
     ApplicationState* state = (ApplicationState*)user_data;
+    
+    ImGui::StyleColorsDark();
 
     int display_w, display_h;
     glfwGetWindowSize(state->default_window, &display_w, &display_h);

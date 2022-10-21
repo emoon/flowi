@@ -310,8 +310,6 @@ void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int acti
     if (bd->PrevUserCallbackMousebutton != nullptr && window == bd->Window)
         bd->PrevUserCallbackMousebutton(window, button, action, mods);
 
-    printf("ImGui_ImplGlfw_MouseButtonCallback %d %d %d\n", button, action, mods);
-
     ImGui_ImplGlfw_UpdateKeyModifiers(mods);
 
     ImGuiIO& io = ImGui::GetIO();
@@ -644,8 +642,6 @@ static void ImGui_ImplGlfw_UpdateMouseData()
                     mouse_x += window_x;
                     mouse_y += window_y;
                 }
-                printf("mouse x: %f, mouse y: %f\n", mouse_x, mouse_y);
-                bd->LastValidMousePos = ImVec2((float)mouse_x, (float)mouse_y);
                 io.AddMousePosEvent((float)mouse_x, (float)mouse_y);
             }
         }
