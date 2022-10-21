@@ -165,8 +165,8 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
     //io.ConfigViewportsNoAutoMerge = true;
     //io.ConfigViewportsNoTaskBarIcon = true;
 
@@ -480,7 +480,8 @@ static void generate_frame(void* user_data) {
     int display_w, display_h;
     glfwGetWindowSize(state->default_window, &display_w, &display_h);
 
-    const int reset_flags = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8;
+    //const int reset_flags = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8;
+    const int reset_flags = BGFX_RESET_VSYNC;
 
     if ((state->window_width != display_w) || (state->window_height != display_h) || state->counter != 0) {
         bgfx::reset(display_w, display_h, reset_flags);
@@ -505,6 +506,7 @@ static void generate_frame(void* user_data) {
     // TODO: Correct delta time.
     fl_frame_begin(state->ctx, display_w, display_h, 1.0f/60.0f);
     ImGui_ImplGlfw_NewFrame();
+
     imguiBeginFrame(0, 0, 0, 0, display_w, display_h);
 
     if (state->main_callback) {

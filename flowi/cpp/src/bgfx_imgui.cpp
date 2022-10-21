@@ -444,7 +444,7 @@ struct OcornutImguiContext
 		)
 	{
 		m_viewId = _viewId;
-
+		/*
 		ImGuiIO& io = ImGui::GetIO();
 		if (_inputChar >= 0)
 		{
@@ -478,6 +478,7 @@ struct OcornutImguiContext
 			io.SetKeyEventNativeData(m_keyMap[ii], 0, 0, ii);
 		}
 #endif // USE_ENTRY
+        */
 
 		ImGui::NewFrame();
 
