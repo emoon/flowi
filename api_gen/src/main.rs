@@ -21,6 +21,7 @@ use rayon::prelude::*;
 use std::process::Command;
 use std::sync::RwLock;
 use walkdir::WalkDir;
+use crate::c_gen::DynamicOutput;
 
 //
 // Function for creating a directory and just bail in case it already exists.
@@ -76,8 +77,11 @@ fn main() {
     // .unwrap();
 
     // Dest directores for various langs
-    let c_core_dest_dir = "../core/c/include/flowi_core";
-    let c_flowi_dest_dir = "../flowi/c/include/flowi";
+    let c_core_dest_static_dir = "../core/c/include/static/flowi_core";
+    let c_core_dest_dynamic_dir = "../core/c/include/dynamic/flowi_core";
+
+    let c_flowi_dest_static_dir = "../flowi/c/include/static/flowi";
+    let c_flowi_dest_dynamic_dir = "../flowi/c/include/dynamic/flowi";
 
     let rust_core_dest = "../core/rust/flowi-core/src";
     let rust_flowi_dest = "../flowi/rust/flowi/src";
@@ -135,8 +139,8 @@ fn main() {
         .for_each(|(index, api_def)| {
             let base_filename = &api_def.base_filename;
 
-            let c_filename;
-            let inl_filename;
+            let c_static_path;
+            let c_dynamic_path;
             let rust_filename;
 
             // On the first thread we start with generating a bunch of main files so we have this
@@ -149,17 +153,26 @@ fn main() {
             }
 
             if api_def.filename.contains("core") {
-                c_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
-                inl_filename = format!("{}/{}.inl", c_core_dest_dir, base_filename);
+                c_static_path = c_core_dest_static_dir ;
+                c_dynamic_path = c_core_dest_dynamic_dir;
+                //c_filename = format!("{}/{}.h", c_core_dest_dir, base_filename);
+                //inl_filename = format!("{}/{}.inl", c_core_dest_dir, base_filename);
                 rust_filename = format!("{}/{}.rs", rust_core_dest, base_filename);
             } else {
-                c_filename = format!("{}/{}.h", c_flowi_dest_dir, base_filename);
-                inl_filename = format!("{}/{}.inl", c_flowi_dest_dir, base_filename);
+                c_static_path = c_core_dest_static_dir ;
+                c_dynamic_path = c_core_dest_dynamic_dir;
+                //c_filename = format!("{}/{}.h", c_flowi_dest_dir, base_filename);
+                //inl_filename = format!("{}/{}.inl", c_flowi_dest_dir, base_filename);
                 rust_filename = format!("{}/{}.rs", rust_flowi_dest, base_filename);
             }
 
             // Generate C/C++ Header for FFI structs
-            if let Err(e) = Cgen::generate(&c_filename, &inl_filename, &c_core_src_dir, api_def) {
+            if let Err(e) = Cgen::generate(DynamicOutput::No, &c_static_path, &api_def) {
+                println!("ERROR: Unable to write, error: {:?}", e);
+            }
+
+            // Generate C/C++ Header for FFI structs
+            if let Err(e) = Cgen::generate(DynamicOutput::Yes, &c_dynamic_path, &api_def) {
                 println!("ERROR: Unable to write, error: {:?}", e);
             }
 
@@ -172,10 +185,10 @@ fn main() {
             run_rustfmt(&rust_filename);
 
             // clang-format C files
-            run_clang_format(&c_filename);
+            //run_clang_format(&c_filename);
 
             // clang-format C files
-            run_clang_format(&inl_filename);
+            //run_clang_format(&inl_filename);
         });
 
     // All done!

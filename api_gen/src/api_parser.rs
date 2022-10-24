@@ -699,7 +699,7 @@ impl ApiParser {
             for s in &mut api_def.structs {
                 for func in &mut s.functions {
                     func.c_name = format!(
-                        "{}_{}_{}_impl",
+                        "{}_{}_{}",
                         crate::c_gen::C_API_SUFIX_FUNCS,
                         s.name.to_snake_case(),
                         func.name
@@ -715,13 +715,11 @@ impl ApiParser {
         }
 
         // Patch up so handle types are marked as such
-
         for api_def in api_defs.iter_mut() {
             for s in &mut api_def.structs {
                 let is_handle_type = s.has_attribute("Handle");
                 for func in &mut s.functions {
                     for arg in &mut func.function_args {
-                        //if arg.type_name == s.name || arg.type_name == "self" {
                         if arg.type_name == s.name {
                             arg.is_handle_type = is_handle_type;
                         }
@@ -770,19 +768,9 @@ impl Function {
     pub fn is_type_manual_static(&self) -> bool {
         self.func_type == FunctionType::Static || self.func_type == FunctionType::Manual
     }
-
-    pub fn is_type_manual(&self) -> bool {
-        self.func_type == FunctionType::Manual
-    }
-
-    pub fn is_type_static(&self) -> bool {
-        self.func_type == FunctionType::Static
-    }
 }
 
-///
 /// Impl for Variable. Helper functions to make C and Rust generation easier
-///
 impl Variable {
     pub fn get_c_primitive_type(&self) -> Cow<str> {
         let tname = self.type_name.as_str();
