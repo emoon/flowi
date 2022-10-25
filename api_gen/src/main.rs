@@ -77,17 +77,12 @@ fn main() {
     // .unwrap();
 
     // Dest directores for various langs
-    let c_core_dest_static_dir = "../core/c/include/static/flowi_core";
-    let c_core_dest_dynamic_dir = "../core/c/include/dynamic/flowi_core";
-
-    let c_flowi_dest_static_dir = "../flowi/c/include/static/flowi";
-    let c_flowi_dest_dynamic_dir = "../flowi/c/include/dynamic/flowi";
-
-    let rust_core_dest = "../core/rust/flowi-core/src";
-    let rust_flowi_dest = "../flowi/rust/flowi/src";
+    let c_dest = "../include/flowi";
+    //let rust_core_dest = "../core/rust/flowi-core/src";
+    //let rust_flowi_dest = "../flowi/rust/flowi/src";
 
     // Used for generating internal headers
-    let c_core_src_dir = "../core/c/src";
+    //let c_core_src_dir = "../core/c/src";
 
     //let rust_dest_dir = "../rute/src/auto";
     //let dest = "../rute/cpp/auto";
@@ -136,22 +131,20 @@ fn main() {
     api_defs_read
         .par_iter()
         .enumerate()
-        .for_each(|(index, api_def)| {
-            let base_filename = &api_def.base_filename;
-
-            let c_static_path;
-            let c_dynamic_path;
-            let rust_filename;
+        .for_each(|(_index, api_def)| {
 
             // On the first thread we start with generating a bunch of main files so we have this
             // generation running threaded as well. Next time when index isn't 0 anymore regular work
             // will come along here.
 
+            /*
             if index == 0 {
                 RustGen::generate_mod_files(rust_core_dest, rust_flowi_dest, &api_defs_read)
                     .unwrap();
             }
+            */
 
+            /*
             if api_def.filename.contains("core") {
                 c_static_path = c_core_dest_static_dir ;
                 c_dynamic_path = c_core_dest_dynamic_dir;
@@ -165,24 +158,25 @@ fn main() {
                 //inl_filename = format!("{}/{}.inl", c_flowi_dest_dir, base_filename);
                 rust_filename = format!("{}/{}.rs", rust_flowi_dest, base_filename);
             }
+            */
 
             // Generate C/C++ Header for FFI structs
-            if let Err(e) = Cgen::generate(DynamicOutput::No, &c_static_path, &api_def) {
+            if let Err(e) = Cgen::generate(DynamicOutput::No, &c_dest, &api_def) {
                 println!("ERROR: Unable to write, error: {:?}", e);
             }
 
             // Generate C/C++ Header for FFI structs
-            if let Err(e) = Cgen::generate(DynamicOutput::Yes, &c_dynamic_path, &api_def) {
-                println!("ERROR: Unable to write, error: {:?}", e);
-            }
+            //if let Err(e) = Cgen::generate(DynamicOutput::Yes, &c_dynamic_path, &api_def) {
+            //    println!("ERROR: Unable to write, error: {:?}", e);
+            //}
 
             // Generate C/C++ Header for FFI structs
-            if let Err(e) = RustGen::generate(&rust_filename, api_def) {
-                println!("ERROR: Unable to write {}, error: {:?}", rust_filename, e);
-            }
+            // if let Err(e) = RustGen::generate(&rust_filename, api_def) {
+            //     println!("ERROR: Unable to write {}, error: {:?}", rust_filename, e);
+            // }
 
             // Rust Rustfmt on rust files
-            run_rustfmt(&rust_filename);
+            //run_rustfmt(&rust_filename);
 
             // clang-format C files
             //run_clang_format(&c_filename);

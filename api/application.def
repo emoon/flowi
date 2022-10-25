@@ -1,0 +1,8 @@
+callback MainLoopCallback(user_data: *void)
+
+#[attributes(NoContext)]
+struct Application {
+    /// TODO: More options
+    [static] create(application_name: String, developer: String) -> *const Context?,
+    [manual] main_loop(callback: MainLoopCallback, userdata: *void),
+}

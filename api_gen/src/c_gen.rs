@@ -17,8 +17,6 @@ static HEADER: &str = "
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include \"idx.h\"
-#include \"context.h\"
 #include \"manual.h\"";
 
 static HEADER2: &str = "
@@ -435,9 +433,9 @@ impl Cgen {
 
         if dynamic == DynamicOutput::No {
             if fa.return_value != "void" {
-                writeln!(f, "return {}({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
+                writeln!(f, "return {}_impl({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
             } else {
-                writeln!(f, "{}({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
+                writeln!(f, "{}_impl({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
             }
         } else {
             if fa.return_value != "void" {

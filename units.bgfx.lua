@@ -5,10 +5,10 @@ require "tundra.syntax.rust-cargo"
 
 local native = require('tundra.native')
 
-local BIMG_DIR = "flowi/cpp/external/bimg/"
-local BX_DIR = "flowi/cpp/external/bx/"
-local BGFX_DIR = "flowi/cpp/external/bgfx/"
-local CORE_EXTERNAL_DIR = "core/cpp/external"
+local BIMG_DIR = "external/bimg/"
+local BX_DIR = "external/bx/"
+local BGFX_DIR = "external/bgfx/"
+local EXTERNAL_DIR = "external"
 
 local GLSL_OPTIMIZER = BGFX_DIR  .. "3rdparty/glsl-optimizer/"
 local FCPP_DIR = BGFX_DIR .. "3rdparty/fcpp/"
@@ -236,6 +236,49 @@ Program {
 
 -----------------------------------------------------------------------------------------
 
+local bgfx_defines = { 
+        -- TODO: Don't duplicate
+        { "BX_CONFIG_DEBUG=1", "_DEBUG" ; Config = { "*-*-debug" } },
+        { "BX_CONFIG_DEBUG=0" ; Config = { "*-*-release" } },
+        "__STDC_LIMIT_MACROS",
+        "__STDC_FORMAT_MACROS",
+        "__STDC_CONSTANT_MACROS",
+
+        "BGFX_CONFIG_RENDERER_WEBGL=1",
+        "BGFX_CONFIG_RENDERER_WEBGPU=0",
+        "BGFX_CONFIG_RENDERER_GNM=0",
+        {   
+            "GLFW_EXPOSE_NATIVE_COCOA",
+            "BGFX_CONFIG_MULTITHREADED=0",
+            "BGFX_CONFIG_RENDERER_OPENGL=0", 
+            "BGFX_CONFIG_RENDERER_VULKAN=0", 
+            "BGFX_CONFIG_RENDERER_DIRECT3D11=0",
+            "BGFX_CONFIG_RENDERER_DIRECT3D12=0",
+            "BGFX_CONFIG_RENDERER_VULKAN=0",
+            "BGFX_CONFIG_RENDERER_METAL=1" ; Config = "macos-*-*" 
+        },
+        {
+            "BGFX_CONFIG_MULTITHREADED=1",
+            "BGFX_CONFIG_RENDERER_VULKAN=1", 
+            "BGFX_CONFIG_RENDERER_OPENGL=1", 
+            "BGFX_CONFIG_RENDERER_DIRECT3D11=1",
+            "BGFX_CONFIG_RENDERER_DIRECT3D12=1",
+            "BGFX_CONFIG_RENDERER_METAL=0",
+            "GLFW_EXPOSE_NATIVE_WIN32" ; Config = "win64-*-*" 
+        },
+        { 
+            "BGFX_CONFIG_MULTITHREADED=1",
+            "BGFX_CONFIG_RENDERER_VULKAN=1", 
+            "BGFX_CONFIG_RENDERER_OPENGL=1", 
+            "BGFX_CONFIG_RENDERER_DIRECT3D11=0", -- Enable when we have a solution for dx shaders
+            "BGFX_CONFIG_RENDERER_DIRECT3D12=0", -- Enable when we have a solution for dx shaders
+            "BGFX_CONFIG_RENDERER_METAL=0",
+            "GLFW_EXPOSE_NATIVE_X11"; Config = "linux-*-*" 
+        },
+}
+
+-----------------------------------------------------------------------------------------
+
 StaticLibrary {
     Name = "bgfx",
 
@@ -259,7 +302,7 @@ StaticLibrary {
         BIMG_DIR .. "3rdparty/iqa/include",
         BIMG_DIR .. "3rdparty/astc-codec/include",
         BIMG_DIR .. "3rdparty/tinyexr/deps/miniz",
-        CORE_EXTERNAL_DIR,
+        EXTERNAL_DIR,
     },
 
     Env = {
@@ -270,21 +313,10 @@ StaticLibrary {
         },
     },
 
-    Defines = {
-        { "BX_CONFIG_DEBUG=0", "_DEBUG" ; Config = { "*-*-debug" } },
-        { "BX_CONFIG_DEBUG=0" ; Config = { "*-*-release" } },
-        "__STDC_LIMIT_MACROS",
-        "__STDC_FORMAT_MACROS",
-        "__STDC_CONSTANT_MACROS",
-        "BGFX_CONFIG_RENDERER_WEBGPU=0",
-        "BGFX_CONFIG_RENDERER_GNM=0",
-        "BGFX_CONFIG_MULTITHREADED=0",
-        { "BGFX_CONFIG_RENDERER_VULKAN=1", "BGFX_CONFIG_RENDERER_OPENGL=1" ; Config = { "linux-*-*", "win64-*-*" } },
-        { "GLFW_EXPOSE_NATIVE_COCOA",
-          "BGFX_CONFIG_RENDERER_VULKAN=0",
-          "BGFX_CONFIG_RENDERER_METAL=1" ; Config = "macos-*-*" },
-		{ "BGFX_CONFIG_RENDERER_DIRECT3D11=1", "GLFW_EXPOSE_NATIVE_WIN32" ; Config = "win64-*-*" },
-		{ "GLFW_EXPOSE_NATIVE_X11" ; Config = "linux-*-*" },
+    Defines = bgfx_defines,
+
+    Propagate = {
+        Defines = bgfx_defines,
     },
 
     Sources = {

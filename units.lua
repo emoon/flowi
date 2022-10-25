@@ -16,11 +16,17 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local GLFW_DIR = "flowi/cpp/external/glfw/"
-local BIMG_DIR = "flowi/cpp/external/bimg/"
-local BX_DIR = "flowi/cpp/external/bx/"
-local DEAR_IMGUI_DIR = "core/c/external/dear-imgui"
-local CORE_EXTERNAL_DIR = "core/c/external"
+local GLFW_DIR = "external/glfw/"
+local BIMG_DIR = "external/bimg/"
+local BX_DIR = "external/bx/"
+local DEAR_IMGUI_DIR = "external/dear-imgui"
+local EXTERNAL_DIR = "external"
+local FREETYPE2_LIB = "external/freetype2/"
+local NANOSVG_LIB = "external/nanosvg/"
+local STB_LIB = "external/stb/"
+local TLSF_LIB = "external/tlsf/"
+local EXTERNAL_PATH = "external"
+local DEAR_IMGUI = "external/dear-imgui/"
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -83,25 +89,6 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local function gen_moc(src)
-    return Moc {
-        Pass = "GenerateSources",
-        Source = src
-    }
-end
-
------------------------------------------------------------------------------------------------------------------------
-
-local function get_rs_src(dir)
-    return Glob {
-        Dir = dir,
-        Extensions = { ".rs" },
-        Recursive = true,
-}
-end
-
------------------------------------------------------------------------------------------------------------------------
-
 local function get_c_cpp_src(dir)
     return Glob {
         Dir = dir,
@@ -113,19 +100,87 @@ end
 -----------------------------------------------------------------------------------------------------------------------
 
 StaticLibrary {
+    Name = "freetype2",
+
+    Includes = {
+        FREETYPE2_LIB .. "build/include",
+        FREETYPE2_LIB .. "include",
+        FREETYPE2_LIB .. "include/config",
+    },
+
+    Defines = {
+        "FT2_BUILD_LIBRARY",
+    },
+
+    Sources = {
+        FREETYPE2_LIB .. "src/autofit/autofit.c",
+        FREETYPE2_LIB .. "src/base/ftsystem.c",
+        FREETYPE2_LIB .. "src/base/ftbase.c",
+        FREETYPE2_LIB .. "src/base/ftbbox.c",
+        FREETYPE2_LIB .. "src/base/ftbdf.c",
+        FREETYPE2_LIB .. "src/base/ftbitmap.c",
+        FREETYPE2_LIB .. "src/base/ftcid.c",
+        FREETYPE2_LIB .. "src/base/ftfstype.c",
+        FREETYPE2_LIB .. "src/base/ftgasp.c",
+        FREETYPE2_LIB .. "src/base/ftglyph.c",
+        FREETYPE2_LIB .. "src/base/ftgxval.c",
+        FREETYPE2_LIB .. "src/base/ftinit.c",
+        FREETYPE2_LIB .. "src/base/ftmm.c",
+        FREETYPE2_LIB .. "src/base/ftotval.c",
+        FREETYPE2_LIB .. "src/base/ftpatent.c",
+        FREETYPE2_LIB .. "src/base/ftpfr.c",
+        FREETYPE2_LIB .. "src/base/ftstroke.c",
+        FREETYPE2_LIB .. "src/base/ftsynth.c",
+        FREETYPE2_LIB .. "src/base/fttype1.c",
+        FREETYPE2_LIB .. "src/base/ftwinfnt.c",
+        FREETYPE2_LIB .. "src/bdf/bdf.c",
+        FREETYPE2_LIB .. "src/bzip2/ftbzip2.c",
+        FREETYPE2_LIB .. "src/cache/ftcache.c",
+        FREETYPE2_LIB .. "src/cff/cff.c",
+        FREETYPE2_LIB .. "src/cid/type1cid.c",
+        FREETYPE2_LIB .. "src/gzip/ftgzip.c",
+        FREETYPE2_LIB .. "src/lzw/ftlzw.c",
+        FREETYPE2_LIB .. "src/pcf/pcf.c",
+        FREETYPE2_LIB .. "src/pfr/pfr.c",
+        FREETYPE2_LIB .. "src/psaux/psaux.c",
+        FREETYPE2_LIB .. "src/pshinter/pshinter.c",
+        FREETYPE2_LIB .. "src/psnames/psnames.c",
+        FREETYPE2_LIB .. "src/raster/raster.c",
+        FREETYPE2_LIB .. "src/sdf/sdf.c",
+        FREETYPE2_LIB .. "src/sfnt/sfnt.c",
+        FREETYPE2_LIB .. "src/smooth/smooth.c",
+        FREETYPE2_LIB .. "src/truetype/truetype.c",
+        FREETYPE2_LIB .. "src/type1/type1.c",
+        FREETYPE2_LIB .. "src/type42/type42.c",
+        FREETYPE2_LIB .. "src/winfonts/winfnt.c",
+        FREETYPE2_LIB .. "src/base/ftdebug.c",
+        -- TODO: windows
+        -- FREETYPE2_LIB .. "src/builds/windows/ftdebug.c",
+    },
+}
+
+-----------------------------------------------------------------------------------------------------------------------
+
+local glfw_defines = {
+    { "GLFW_EXPOSE_NATIVE_WIN32", "_GLFW_WIN32", "_GLFW_WGL", "WIN32"; Config = "win64-*-*" },
+    { "GLFW_EXPOSE_NATIVE_X11", "_GLFW_X11", "_GLFW_GFX", "LINUX"; Config = "linux-*-*" },
+    { "GLFW_EXPOSE_NATIVE_COCOA", "_GLFW_COCOA", "MACOSX"; Config = "macos-*-*" },
+}
+
+-----------------------------------------------------------------------------------------------------------------------
+
+StaticLibrary {
     Name = "glfw",
 
-    Env = {
-        CPPPATH = {
-            GLFW_DIR .. "src",
-            GLFW_DIR .. "include",
-        },
+    Includes = {
+        GLFW_DIR .. "src",
+        GLFW_DIR .. "include",
+    },
 
-        CPPDEFS = {
-            { "_GLFW_WIN32", "_GLFW_WGL", "WIN32"; Config = "win64-*-*" },
-            { "_GLFW_X11", "_GLFW_GFX", "LINUX"; Config = "linux-*-*" },
-            { "_GLFW_COCOA", "MACOSX"; Config = "macos-*-*" },
-        },
+    Defines = glfw_defines,
+
+    Propagate = {
+        Defines = glfw_defines,
     },
 
     Sources = {
@@ -177,44 +232,55 @@ StaticLibrary {
 
 -----------------------------------------------------------------------------------------------------------------------
 
+local flowi_includes = {
+    BIMG_DIR .. "include",
+    "external/bgfx/include",
+    "external/bx/include",
+    "flowi/cpp/external",
+    "flowi/cpp/external/bgfx/include",
+    "flowi/cpp/external/bx/include",
+    "flowi/cpp/external/glfw/include",
+    "include",
+    STB_LIB,
+    NANOSVG_LIB,
+    DEAR_IMGUI_DIR,
+    EXTERNAL_DIR,
+    { BX_DIR .. "/include/compat/msvc" ; Config = "win64-*-*" },
+}
+
+-----------------------------------------------------------------------------------------------------------------------
+
+local flowi_sources = {
+    get_c_cpp_src("src"),
+    STB_LIB .. "stb.c",
+    NANOSVG_LIB .. "nanosvg.c",
+    get_c_cpp_src(DEAR_IMGUI),
+}
+
+-----------------------------------------------------------------------------------------------------------------------
+
 StaticLibrary {
     Name = "flowi",
 
-	Includes = {
-        BIMG_DIR .. "include",
-		"flowi/cpp/include",
-		"core/c/include",
-		"core/c/include/flowi_core",
-		"flowi/cpp/external/bx/include",
-		"flowi/cpp/external/bgfx/include",
-		"flowi/cpp/external/glfw/include",
-		"flowi/cpp/external",
-		DEAR_IMGUI_DIR,
-        CORE_EXTERNAL_DIR,
-        { BX_DIR .. "/include/compat/msvc" ; Config = "win64-*-*" },
-	},
+	Includes = flowi_includes,
 
-	Defines = {
-	    -- TODO: Don't duplicate
-        { "BX_CONFIG_DEBUG=1", "_DEBUG" ; Config = { "*-*-debug" } },
-        { "BX_CONFIG_DEBUG=0" ; Config = { "*-*-release" } },
-        "__STDC_LIMIT_MACROS",
-        "__STDC_FORMAT_MACROS",
-        "__STDC_CONSTANT_MACROS",
-        "BGFX_CONFIG_RENDERER_WEBGPU=0",
-        "BGFX_CONFIG_RENDERER_GNM=0",
-        "BGFX_CONFIG_RENDERER_DIRECT3D11=0", -- Enable when we have a solution for dx shaders
-        "BGFX_CONFIG_RENDERER_DIRECT3D12=0", -- Enable when we have a solution for dx shaders
-        "BGFX_CONFIG_MULTITHREADED=0",
-        { "BGFX_CONFIG_RENDERER_VULKAN=0", "BGFX_CONFIG_RENDERER_OPENGL=1" ; Config = { "linux-*-*", "win64-*-*" } },
-        { "GLFW_EXPOSE_NATIVE_COCOA",
-          "BGFX_CONFIG_RENDERER_VULKAN=0",
-          "BGFX_CONFIG_RENDERER_METAL=1" ; Config = "macos-*-*" },
-		{ "GLFW_EXPOSE_NATIVE_WIN32" ; Config = "win64-*-*" },
-		{ "GLFW_EXPOSE_NATIVE_X11" ; Config = "linux-*-*" },
-	},
+	Defines = { "FLOWI_STATIC" },
 
-    Sources = get_c_cpp_src("flowi/cpp/src"),
+    Sources = flowi_sources,
+}
+
+-----------------------------------------------------------------------------------------------------------------------
+
+SharedLibrary {
+    Name = "flowi-shared",
+
+	Includes = flowi_includes,
+
+	Defines = { "FLOWI_SHARED" },
+
+    Depends = { "bgfx", "glfw", "freetype2" },
+
+    Sources = flowi_sources,
 }
 
 -----------------------------------------------------------------------------------------------------------------------
@@ -242,45 +308,7 @@ Program {
 
     Frameworks = { "Cocoa", "IOKit", "Metal", "QuartzCore", "MetalKit" },
 
-    Depends = { "flowi", "flowi-core", "bgfx", "glfw", "freetype2" },
-}
-
-local FREETYPE2_LIB = "core/c/external/freetype2/"
-
------------------------------------------------------------------------------------------------------------------------
-
-Program {
-    Name = "flowi_core_tests",
-
-    Includes = {
-        FREETYPE2_LIB .. "include",
-        "core/c/include",
-    },
-
-    Sources = get_c_src("core/c/tests"),
-
-    Env = {
-        PROGCOM = {
-            { "-lgcov"; Config = { "linux-gcc-*-test"} }
-        },
-    },
-
-    Depends = { "flowi-core", "freetype2" },
-}
-
------------------------------------------------------------------------------------------------------------------------
-
-Program {
-    Name = "flowi_core_bench",
-
-    Includes = {
-        FREETYPE2_LIB .. "include",
-        "core/c/include",
-    },
-
-    Sources = get_c_src("core/c/bench"),
-
-    Depends = { "flowi-core", "freetype2" },
+    Depends = { "flowi", "bgfx", "glfw", "freetype2" },
 }
 
 -----------------------------------------------------------------------------------------------------------------------
@@ -304,10 +332,11 @@ Program {
     }
 }
 
-Default "flowi_core_tests"
-Default "flowi_core_bench"
-Default "flowi_testbed"
-Default "build_shaders"
+-----------------------------------------------------------------------------------------------------------------------
+
+Default "flowi-shared"
+-- Default "flowi_testbed"
+-- Default "build_shaders"
 
 -- vim: ts=4:sw=4:sts=4
 
