@@ -284,6 +284,10 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 // [SECTION] Dear ImGui end-user API functions
 // (Note that ImGui:: being a namespace, you can add extra ImGui:: functions in your own separate file. Please don't modify imgui source files!)
 //-----------------------------------------------------------------------------
+//
+
+//#undef IMGUI_API
+//#define IMGUI_API static
 
 namespace ImGui
 {
@@ -982,6 +986,9 @@ namespace ImGui
     IMGUI_API ImGuiViewport*    FindViewportByPlatformHandle(void* platform_handle);            // this is a helper for backends. the type platform_handle is decided by the backend (e.g. HWND, MyWindow*, GLFWwindow* etc.)
 
 } // namespace ImGui
+//
+//#undef IMGUI_API
+//#define IMGUI_API
 
 //-----------------------------------------------------------------------------
 // [SECTION] Flags & Enumerations

@@ -266,6 +266,8 @@ StaticLibrary {
 
 	Defines = { "FLOWI_STATIC" },
 
+    Depends = { "bgfx" },
+
     Sources = flowi_sources,
 }
 
@@ -289,13 +291,11 @@ Program {
     Name = "flowi_testbed",
 
 	Includes = {
-		"flowi/cpp/include",
-		"core/c/include/flowi_core",
-		"core/c/include",
+		"include",
 	},
 
     Sources = {
-        "flowi/cpp/examples/testbed.c",
+        "examples/testbed.c",
     },
 
     Env = {
@@ -335,7 +335,7 @@ Program {
 -----------------------------------------------------------------------------------------------------------------------
 
 Default "flowi-shared"
--- Default "flowi_testbed"
+Default "flowi_testbed"
 -- Default "build_shaders"
 
 -- vim: ts=4:sw=4:sts=4

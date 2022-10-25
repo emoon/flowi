@@ -163,26 +163,6 @@ extern "C" void fl_frame_begin(struct FlContext* ctx, int width, int height, flo
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, FlWindowFlags flags) {
-    char temp_buffer[2048];
-
-    const char* window_name =
-        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
-
-    //ImGui::ShowDemoWindow();
-    //ImGui::SetNextWindowSize(ImVec2(500, 500));
-    return ImGui::Begin(window_name, NULL, (ImGuiWindowFlags)flags);
-    //return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" void fl_ui_end_impl(struct FlContext* ctx) {
-    ImGui::End();
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /*
 void draw_text(struct FlContext* ctx, const u8* cmd) {
     PrimitiveText* prim = (PrimitiveText*)cmd;

@@ -1,7 +1,7 @@
 // TODO: flowi/font.h should just include tho core version
 #include <flowi/application.h>
-#include <flowi_core/ui.h>
-#include <flowi_core/style.h>
+#include <flowi/ui.h>
+#include <flowi/style.h>
 #include <stdio.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -24,10 +24,10 @@ typedef struct App {
 void main_loop(struct FlContext* ctx, void* user_data) {
     App* app = (App*)user_data;
 
-    fl_style_push_color(ctx, FlStyleColor_TitleBg, FlColor_new_rgb(1.0f, 0.0f, 0.0f));
+    //fl_style_push_color(ctx, FlStyleColor_TitleBg, FlColor_new_rgb(1.0f, 0.0f, 0.0f));
     fl_ui_window_begin(ctx, "Test®", FlWindowFlags_None);
     fl_ui_end(ctx);
-    fl_style_pop_color(ctx);
+    //fl_style_pop_color(ctx);
 
     /*
 
@@ -81,12 +81,14 @@ int main() {
         printf("Failed to open application!\n");
         return 0;
     }
-
+    App app = { 0 };
+    /*
     App app = {
         //.font_bold = fl_font_new_from_file(ctx, "data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
         //.font = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
-        .image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
+        //.image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
     };
+    */
 
     fl_application_main_loop(main_loop, &app);
 
