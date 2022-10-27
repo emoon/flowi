@@ -31,7 +31,7 @@ struct TexturedTriangles {
     /// Vertices for the command
     vertex_buffer: [VertPosUvColor],
     /// Index buffer for the command
-    index_buffer: [IdxSize],
+    index_buffer: [u16],
     /// Texture id used for the command
     texture_id: u32,
 }
@@ -43,7 +43,7 @@ struct SolidTriangles {
     /// Vertices for the command
     vertex_buffer: [VertPosColor],
     /// Index buffer for the command
-    index_buffer: [IdxSize],
+    index_buffer: [u16],
 }
 
 /// Texture format specificed when using [CreateTexture] command

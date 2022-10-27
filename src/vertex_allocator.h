@@ -1,7 +1,5 @@
 #pragma once
 
-#if 0
-
 #include "allocator.h"
 #include "linear_allocator.h"
 #include "render.h"
@@ -73,7 +71,7 @@ FL_INLINE VertsCounts VertexAllocator_get_counts(VertexAllocator* self, VertexAl
 
     VertsCounts t = {vertex_alloc->start_data, index_alloc->start_data,
                      LinearAllocator_current_position(vertex_alloc) / vert_type_size,
-                     LinearAllocator_current_position(index_alloc) / (int)sizeof(FlIdxSize)};
+                     LinearAllocator_current_position(index_alloc) / (int)sizeof(u16)};
 
     return t;
 }
@@ -98,7 +96,5 @@ FL_INLINE VertsCounts VertexAllocator_get_counts(VertexAllocator* self, VertexAl
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif
 

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <flowi/image.h>
-//#include <flowi/render_commands.h>
+#include <flowi/render_commands.h>
 #include "types.h"
 
-#if 0
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct Atlas;
 struct FlContext;
@@ -31,4 +33,9 @@ typedef struct ImagePrivate {
 bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas);
 bool Image_render(struct FlContext* ctx, const u8* cmd);
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef __cplusplus
+}
 #endif
+

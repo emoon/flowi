@@ -13,7 +13,7 @@ struct FlAllocator;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Layer {
-    //VertexAllocator vertex_allocator;
+    VertexAllocator vertex_allocator;
     CommandBuffer primitive_commands;
 } Layer;
 

@@ -81,14 +81,12 @@ int main() {
         printf("Failed to open application!\n");
         return 0;
     }
-    App app = { 0 };
-    /*
+
     App app = {
         //.font_bold = fl_font_new_from_file(ctx, "data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
         //.font = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
-        //.image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
+        .image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
     };
-    */
 
     fl_application_main_loop(main_loop, &app);
 

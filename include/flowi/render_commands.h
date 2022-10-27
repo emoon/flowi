@@ -64,7 +64,7 @@ typedef struct FlTexturedTriangles {
     FlVertPosUvColor* vertex_buffer;
     uint32_t vertex_buffer_size;
     // Index buffer for the command
-    FlIdxSize* index_buffer;
+    uint16_t* index_buffer;
     uint32_t index_buffer_size;
     // Texture id used for the command
     uint32_t texture_id;
@@ -77,7 +77,7 @@ typedef struct FlSolidTriangles {
     FlVertPosColor* vertex_buffer;
     uint32_t vertex_buffer_size;
     // Index buffer for the command
-    FlIdxSize* index_buffer;
+    uint16_t* index_buffer;
     uint32_t index_buffer_size;
 } FlSolidTriangles;
 
@@ -119,3 +119,12 @@ typedef struct FlScissorRect {
 #ifdef __cplusplus
 }
 #endif
+
+// Commands that will be in the render stream
+typedef enum FlRenderCommand {
+    FlRenderCommand_TexturedTriangles,
+    FlRenderCommand_SolidTriangles,
+    FlRenderCommand_CreateTexture,
+    FlRenderCommand_UpdateTexture,
+    FlRenderCommand_ScissorRect,
+} FlRenderCommand;

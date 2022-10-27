@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <flowi/ui.h>
-#include <dear-imgui/imgui.h>
 #include "allocator.h"
 #include "atlas.h"
 #include "flowi.h"
@@ -14,6 +13,7 @@
 #include "layout_private.h"
 #include "primitive_rect.h"
 #include "primitives.h"
+#include <dear-imgui/imgui.h>
 //#include "render.h"
 #include "style_internal.h"
 #include "text.h"
@@ -113,17 +113,11 @@ extern "C" struct FlGlobalState* fl_create(const FlSettings* settings) {
     state->global_allocator = &malloc_allocator;
 
     CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024);
-    //Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate);
-    // Handles_create(&state->font_handles, state->global_allocator, 16, Font);
+    Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate);
 
     // TODO: We should check settings for texture size
-    // state->mono_fonts_atlas = Atlas_create(4096, 4096, AtlasImageType_U8, state, state->global_allocator);
-
-    // TODO: We should check settings for texture size
-    //state->images_atlas = Atlas_create(4096, 4096, AtlasImageType_RGBA8, state, state->global_allocator);
+    state->images_atlas = Atlas_create(4096, 4096, AtlasImageType_RGBA8, state, state->global_allocator);
     state->font_atlas = new ImFontAtlas();
-
-    // Font_init(state);
 
     return state;
 }
@@ -140,25 +134,13 @@ extern "C" void fl_frame_begin(struct FlContext* ctx, int width, int height, flo
         CommandBuffer_rewind(&ctx->global->render_commands);
     }
 
-    // update_hover_active_id(ctx, delta_time);
-
-    // Update default layout
-    // FlRect rect = { 0, 0, width, height };
-    // Layout_resolve(ctx, ctx->default_layout, &rect);
-
     hack_first_frame = true;
 
     for (int i = 0; i < FlLayerType_Count; ++i) {
         CommandBuffer_rewind(&ctx->layers[i].primitive_commands);
     }
 
-    // ctx->active_layout = ctx->active_layout;
-    // ctx->frame_count++;
     ctx->delta_time = delta_time;
-    // ctx->time += delta_time;
-
-    // ctx->cursor.x = 0;
-    // ctx->cursor.y = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -208,9 +190,8 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" void fl_frame_end(struct FlContext* ctx) {
-    //FlGlobalState* state = ctx->global;
+    FlGlobalState* state = ctx->global;
 
-#if 0
     // first do generation pass to build up all glyphs and other data
     Atlas_begin_add_rects(state->images_atlas);
 
@@ -223,7 +204,7 @@ extern "C" void fl_frame_end(struct FlContext* ctx) {
         for (int i = 0; i < command_count; ++i) {
             switch (CommandBuffer_read_next_cmd(&layer->primitive_commands, &command_data)) {
                 case Primitive_DrawImage: {
-                    //Image_add_to_atlas(command_data, state->images_atlas);
+                    Image_add_to_atlas(command_data, state->images_atlas);
                     break;
                 }
             }
@@ -233,8 +214,7 @@ extern "C" void fl_frame_end(struct FlContext* ctx) {
     }
 
     Atlas_end_add_rects(state->images_atlas, state);
-    // Atlas_end_add_rects(state->mono_fonts_atlas, state);
-#endif
+    //
 #if 0
     for (int l = 0; l < 1; ++l) {
         Layer* layer = &ctx->layers[l];

@@ -1,8 +1,6 @@
-#if 0
-
 #include "atlas.h"
 #include <limits.h>
-#include <flowi_core/error.h>
+#include <flowi/error.h>
 #include "allocator.h"
 #include "internal.h"
 #include "render.h"
@@ -346,5 +344,3 @@ Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalStat
 
     return self;
 }
-
-#endif

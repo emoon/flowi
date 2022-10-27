@@ -1,7 +1,4 @@
 #include <flowi/image.h>
-
-#if 0
-
 #include <nanosvg.h>
 #include <nanosvgrast.h>
 #include <stb_image.h>
@@ -10,6 +7,7 @@
 #include "internal.h"
 #include "string_allocator.h"
 #include "vertex_allocator.h"
+#include "primitives.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // load image from file or memory
@@ -108,76 +106,7 @@ FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
-    (void)ctx;
-    (void)image;
-/*
-    ImagePrivate* self = get_handle(ctx, image);
-
-    if (FL_UNLIKELY(!self)) {
-        return;
-    }
-
-    Layer* layer = ctx_get_active_layer(ctx);
-
-    PrimitiveImage* prim = Primitive_alloc_image(layer);
-
-    prim->image = self;
-    prim->position = ctx->cursor;
-    prim->size.x = self->info.width;
-    prim->size.y = self->info.height;
-*/
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void fl_ui_image_with_size_impl(struct FlContext* ctx, FlImage image, FlVec2 size) {
-    (void)ctx;
-    (void)image;
-    (void)size;
-    /*
-    ImagePrivate* self = get_handle(ctx, image);
-
-    if (FL_UNLIKELY(!self)) {
-        return;
-    }
-
-    Layer* layer = ctx_get_active_layer(ctx);
-
-    PrimitiveImage* prim = Primitive_alloc_image(layer);
-
-    prim->image = self;
-    prim->position = ctx->cursor;
-    prim->size.x = size.x;
-    prim->size.y = size.y;
-    */
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
-    ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
-
-    if (!image_data) {
-        ERROR_ADD(FlError_Image, "Invalid handle %s", "todo name");
-        return;
-    }
-
-    // INFO: No need to free string name here as it's beeing freed at the cleanup of the context
-
-    stbi_image_free(image_data->data);
-    nsvgDelete(image_data->svg_image);
-    nsvgDeleteRasterizer(image_data->svg_raster);
-
-    Handles_remove_handle(&ctx->global->image_handles, image);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
-    (void)cmd;
-    (void)atlas;
-/*
     PrimitiveImage* prim = (PrimitiveImage*)cmd;
     ImagePrivate* self = prim->image;
 
@@ -237,8 +166,49 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
     self->atlas_y = ry;
 
     return true;
-*/
-    return false;
+}
+
+#if 0
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
+    (void)ctx;
+    (void)image;
+
+    ImagePrivate* self = get_handle(ctx, image);
+
+    if (FL_UNLIKELY(!self)) {
+        return;
+    }
+
+    Layer* layer = ctx_get_active_layer(ctx);
+
+    PrimitiveImage* prim = Primitive_alloc_image(layer);
+
+    prim->image = self;
+    prim->position = ctx->cursor;
+    prim->size.x = self->info.width;
+    prim->size.y = self->info.height;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
+    ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
+
+    if (!image_data) {
+        ERROR_ADD(FlError_Image, "Invalid handle %s", "todo name");
+        return;
+    }
+
+    // INFO: No need to free string name here as it's beeing freed at the cleanup of the context
+
+    stbi_image_free(image_data->data);
+    nsvgDelete(image_data->svg_image);
+    nsvgDeleteRasterizer(image_data->svg_raster);
+
+    Handles_remove_handle(&ctx->global->image_handles, image);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -322,5 +292,31 @@ bool Image_render(struct FlContext* ctx, const u8* cmd) {
 
     return true;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void fl_ui_image_with_size_impl(struct FlContext* ctx, FlImage image, FlVec2 size) {
+    (void)ctx;
+    (void)image;
+    (void)size;
+    /*
+    ImagePrivate* self = get_handle(ctx, image);
+
+    if (FL_UNLIKELY(!self)) {
+        return;
+    }
+
+    Layer* layer = ctx_get_active_layer(ctx);
+
+    PrimitiveImage* prim = Primitive_alloc_image(layer);
+
+    prim->image = self;
+    prim->position = ctx->cursor;
+    prim->size.x = size.x;
+    prim->size.y = size.y;
+    */
+}
+
+
 
 #endif

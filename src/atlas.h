@@ -1,8 +1,6 @@
 #pragma once
 
-#if 0
-
-//#include "render.h"
+#include "render.h"
 #include "types.h"
 
 struct FlAllocator;
@@ -60,6 +58,4 @@ bool Atlas_expand(Atlas* self, int w, int h);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif
