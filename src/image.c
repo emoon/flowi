@@ -64,6 +64,8 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     image->texture_id = 0;
     image->name = StringAllocator_copy_string(&ctx->string_allocator, name);
 
+    printf("loadinged toehuso\n");
+
     return image->handle;
 }
 

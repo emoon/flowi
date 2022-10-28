@@ -44,6 +44,10 @@ local macosx = {
 }
 
 -----------------------------------------------------------------------------------------------------------------------
+--    Re -gdwarf-4 instead of -g:
+--    The oldest versions of supported compilers default to DWARF-4, but
+--    newer versions may default to DWARF-5 or newer (e.g. clang 14), which
+--    Valgrind doesn't support.
 
 local gcc_opts = {
     "-I.",
@@ -55,8 +59,8 @@ local gcc_opts = {
     "-Wall",
     "-fPIC",
     "-msse2",   -- TODO: Separate gcc options for x64/arm somehow?
-    { "-DFLOWI_TEST", "-O2", "-g"; Config = "*-*-test" },
-    { "-DFLOWI_DEBUG", "-O0", "-g"; Config = "*-*-debug" },
+    { "-DFLOWI_TEST", "-O2", "-gdwarf-4"; Config = "*-*-test" },
+    { "-DFLOWI_DEBUG", "-O0", "-gdwarf-4"; Config = "*-*-debug" },
     { "-DFLOWI_RELEASE", "-O3", Config = "*-*-release" },
 }
 

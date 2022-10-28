@@ -1,0 +1,1143 @@
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (3535): BGFX Init...
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (3542): BGFX Version 1.115.7816 (commit: e642efb03af78e04bec8e81118fe3dec88e0176e)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1730): BGFX Reset back-buffer swap chain:
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1739): BGFX 	1920x1080, format: RGBA8, numBackBuffers: 2, maxFrameLatency: 0
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1740): BGFX 	[x] MSAAx8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1741): BGFX 	[ ] Fullscreen
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1742): BGFX 	[x] V-sync
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1743): BGFX 	[ ] Max Anisotropy
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1744): BGFX 	[ ] Capture
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1745): BGFX 	[ ] Flush After Render
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1746): BGFX 	[ ] Flip After Render
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1747): BGFX 	[ ] sRGB Back Buffer
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1748): BGFX 	[ ] HDR10
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1749): BGFX 	[ ] Hi-DPI
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1750): BGFX 	[ ] Depth Clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1751): BGFX 	[ ] Suspend
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1924): BGFX Creating rendering thread.
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx_p.h (3006): BGFX render thread start
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1933): BGFX Running in multi-threaded mode
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (127): BGFX GLX extensions:
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_ARB_create_context
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_ARB_create_context_no_error
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_ARB_create_context_profile
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_ARB_create_context_robustness
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_ARB_fbconfig_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_ARB_framebuffer_sRGB
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_ARB_get_proc_address
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_ARB_multisample
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_buffer_age
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_create_context_es2_profile
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_create_context_es_profile
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_fbconfig_packed_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_framebuffer_sRGB
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_no_config_context
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_swap_control
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_swap_control_tear
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_texture_from_pixmap
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_visual_info
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_EXT_visual_rating
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_INTEL_swap_event
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_MESA_copy_sub_buffer
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_MESA_query_renderer
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_MESA_swap_control
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_OML_swap_method
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_OML_sync_control
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_SGIS_multisample
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_SGIX_fbconfig
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_SGIX_pbuffer
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_SGIX_visual_select_group
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_SGI_make_current_read
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_SGI_swap_control
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1167): BGFX 	GLX_SGI_video_sync
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (150): BGFX glX num configs 84
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (157): BGFX ---
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (171): BGFX glX 0/84  3:    8,        8 (       8)
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (171): BGFX glX 0/84  4:    a,        8 (       8)
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (171): BGFX glX 0/84  5:    9,        8 (       8)
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (171): BGFX glX 0/84  6:    c,       18 (      18)
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (171): BGFX glX 0/84  7:    d,        8 (       8)
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (185): BGFX Best config 0.
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (197): BGFX Create GL 2.1 context.
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (205): BGFX Create GL 2.1 context.
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (375): BGFX Import:
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (233): BGFX 0xc281a0e0 glActiveTexture (glActiveTexture)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (234): BGFX 0xc281a3c0 glAttachShader (glAttachShader)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (235): BGFX 0xc281a4e0 glBeginQuery (glBeginQuery)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (236): BGFX 0xc281a660 glBindBuffer (glBindBuffer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (237): BGFX 0xc281a6a0 glBindBufferBase (glBindBufferBase)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (238): BGFX 0xc281a740 glBindBufferRange (glBindBufferRange)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (239): BGFX 0xc281a7e0 glBindFragDataLocation (glBindFragDataLocation)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (240): BGFX 0xc281a880 glBindFramebuffer (glBindFramebuffer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (241): BGFX 0xc281a8e0 glBindImageTexture (glBindImageTexture)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (242): BGFX 0xc281aa40 glBindRenderbuffer (glBindRenderbuffer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (243): BGFX 0xc281aaa0 glBindSampler (glBindSampler)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (244): BGFX 0xc281ab20 glBindTexture (glBindTexture)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (245): BGFX 0xc281ac20 glBindVertexArray (glBindVertexArray)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (246): BGFX 0xc281af20 glBlendColor (glBlendColor)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (247): BGFX 0xc281af80 glBlendEquation (glBlendEquation)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (248): BGFX 0xc281b100 glBlendEquationi (glBlendEquationi)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (249): BGFX 0xc281b000 glBlendEquationSeparate (glBlendEquationSeparate)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (250): BGFX 0xc281b080 glBlendEquationSeparatei (glBlendEquationSeparatei)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (251): BGFX 0xc281b180 glBlendFunc (glBlendFunc)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (252): BGFX 0xc281b2e0 glBlendFunci (glBlendFunci)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (253): BGFX 0xc281b1c0 glBlendFuncSeparate (glBlendFuncSeparate)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (254): BGFX 0xc281b260 glBlendFuncSeparatei (glBlendFuncSeparatei)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (255): BGFX 0xc281b380 glBlitFramebuffer (glBlitFramebuffer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (256): BGFX 0xc281b460 glBufferData (glBufferData)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (257): BGFX 0xc281b580 glBufferSubData (glBufferSubData)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (258): BGFX 0xc281b620 glCheckFramebufferStatus (glCheckFramebufferStatus)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (259): BGFX 0xc281b700 glClear (glClear)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (260): BGFX 0xc281b7c0 glClearBufferfv (glClearBufferfv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (261): BGFX 0xc281b820 glClearColor (glClearColor)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (262): BGFX 0xc281bac0 glClearStencil (glClearStencil)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (263): BGFX 0xc281bc60 glClipControl (glClipControl)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (264): BGFX 0xc281c440 glColorMask (glColorMask)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (265): BGFX 0xc281c840 glCompileShader (glCompileShader)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (266): BGFX 0xc281c9a0 glCompressedTexImage2D (glCompressedTexImage2D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (267): BGFX 0xc281caa0 glCompressedTexSubImage2D (glCompressedTexSubImage2D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (268): BGFX 0xc281c9e0 glCompressedTexImage3D (glCompressedTexImage3D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (269): BGFX 0xc281cae0 glCompressedTexSubImage3D (glCompressedTexSubImage3D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (270): BGFX 0xc281cfc0 glCopyImageSubData (glCopyImageSubData)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (271): BGFX 0xc281d200 glCopyTexSubImage2D (glCopyTexSubImage2D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (272): BGFX 0xc281d580 glCreateProgram (glCreateProgram)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (273): BGFX 0xc281d660 glCreateShader (glCreateShader)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (274): BGFX 0xc281d7a0 glCullFace (glCullFace)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (275): BGFX 0xc281d8e0 glDebugMessageControl (glDebugMessageControl)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (276): BGFX 0xc281d980 glDebugMessageInsert (glDebugMessageInsert)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (277): BGFX 0xc281d840 glDebugMessageCallback (glDebugMessageCallback)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (278): BGFX 0xc281daa0 glDeleteBuffers (glDeleteBuffers)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (279): BGFX 0xc281db60 glDeleteFramebuffers (glDeleteFramebuffers)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (280): BGFX 0xc281dce0 glDeleteProgram (glDeleteProgram)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (281): BGFX 0xc281dd80 glDeleteQueries (glDeleteQueries)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (282): BGFX 0xc281de00 glDeleteRenderbuffers (glDeleteRenderbuffers)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (283): BGFX 0xc281de60 glDeleteSamplers (glDeleteSamplers)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (284): BGFX 0xc281dea0 glDeleteShader (glDeleteShader)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (285): BGFX 0xc281df20 glDeleteTextures (glDeleteTextures)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (286): BGFX 0xc281dfc0 glDeleteVertexArrays (glDeleteVertexArrays)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (287): BGFX 0xc281e080 glDepthFunc (glDepthFunc)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (288): BGFX 0xc281e0a0 glDepthMask (glDepthMask)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (289): BGFX 0xc281e2a0 glDetachShader (glDetachShader)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (290): BGFX 0xc281e320 glDisable (glDisable)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (291): BGFX 0xc281e4c0 glDisablei (glDisablei)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (292): BGFX 0xc281e480 glDisableVertexAttribArray (glDisableVertexAttribArray)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (293): BGFX 0xc281e560 glDispatchCompute (glDispatchCompute)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (294): BGFX 0xc281e5a0 glDispatchComputeIndirect (glDispatchComputeIndirect)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (295): BGFX 0xc281e5c0 glDrawArrays (glDrawArrays)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (296): BGFX 0xc281e600 glDrawArraysIndirect (glDrawArraysIndirect)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (297): BGFX 0xc281e620 glDrawArraysInstanced (glDrawArraysInstanced)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (298): BGFX 0xc281e700 glDrawBuffer (glDrawBuffer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (299): BGFX 0xc281e720 glDrawBuffers (glDrawBuffers)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (300): BGFX 0xc281e8a0 glDrawElements (glDrawElements)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (301): BGFX 0xc281e920 glDrawElementsIndirect (glDrawElementsIndirect)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (302): BGFX 0xc281e940 glDrawElementsInstanced (glDrawElementsInstanced)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (303): BGFX 0xc281efe0 glEnable (glEnable)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (304): BGFX 0xc281f180 glEnablei (glEnablei)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (305): BGFX 0xc281f140 glEnableVertexAttribArray (glEnableVertexAttribArray)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (306): BGFX 0xc281f320 glEndQuery (glEndQuery)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (307): BGFX 0xc281f920 glFinish (glFinish)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (308): BGFX 0xc281f9e0 glFlush (glFlush)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (309): BGFX 0xc2820160 glFramebufferRenderbuffer (glFramebufferRenderbuffer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (310): BGFX 0xc2820220 glFramebufferTexture (glFramebufferTexture)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (311): BGFX 0xc2820280 glFramebufferTexture2D (glFramebufferTexture2D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (312): BGFX 0xc2820420 glFramebufferTextureLayer (glFramebufferTextureLayer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (313): BGFX 0xc2820540 glFrontFace (glFrontFace)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (314): BGFX 0xc2820620 glGenBuffers (glGenBuffers)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (315): BGFX 0xc2820aa0 glGenerateMipmap (glGenerateMipmap)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (316): BGFX 0xc28206c0 glGenFramebuffers (glGenFramebuffers)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (317): BGFX 0xc28208c0 glGenRenderbuffers (glGenRenderbuffers)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (318): BGFX 0xc2820840 glGenQueries (glGenQueries)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (319): BGFX 0xc2820920 glGenSamplers (glGenSamplers)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (320): BGFX 0xc2820980 glGenTextures (glGenTextures)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (321): BGFX 0xc2820a20 glGenVertexArrays (glGenVertexArrays)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (322): BGFX 0xc2820b80 glGetActiveAttrib (glGetActiveAttrib)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (323): BGFX 0xc2820d80 glGetAttribLocation (glGetAttribLocation)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (324): BGFX 0xc2820c20 glGetActiveUniform (glGetActiveUniform)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (325): BGFX 0xc28211e0 glGetCompressedTexImage (glGetCompressedTexImage)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (326): BGFX 0xc28213a0 glGetDebugMessageLog (glGetDebugMessageLog)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (327): BGFX 0xc2821520 glGetError (glGetError)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (328): BGFX 0xc28216a0 glGetFloatv (glGetFloatv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (329): BGFX 0xc2821c20 glGetIntegerv (glGetIntegerv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (330): BGFX 0xc2821c80 glGetInternalformativ (glGetInternalformativ)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (331): BGFX 0xc2821c60 glGetInternalformati64v (glGetInternalformati64v)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (332): BGFX 0xc2822620 glGetObjectLabel (glGetObjectLabel)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (333): BGFX 0xc2822700 glGetObjectPtrLabel (glGetObjectPtrLabel)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (334): BGFX 0xc2822bc0 glGetPointerv (glGetPointerv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (335): BGFX 0xc2822c60 glGetProgramBinary (glGetProgramBinary)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (336): BGFX 0xc2823040 glGetProgramiv (glGetProgramiv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (337): BGFX 0xc2822d20 glGetProgramInfoLog (glGetProgramInfoLog)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (338): BGFX 0xc2822d40 glGetProgramInterfaceiv (glGetProgramInterfaceiv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (339): BGFX 0xc2822ee0 glGetProgramResourceIndex (glGetProgramResourceIndex)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (340): BGFX 0xc2822fa0 glGetProgramResourceiv (glGetProgramResourceiv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (341): BGFX 0xc2822f60 glGetProgramResourceName (glGetProgramResourceName)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (342): BGFX 0xc2822f00 glGetProgramResourceLocation (glGetProgramResourceLocation)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (343): BGFX 0xc2822f20 glGetProgramResourceLocationIndex (glGetProgramResourceLocationIndex)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (344): BGFX 0xc2823860 glGetTexImage (glGetTexImage)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (345): BGFX 0xc28232a0 glGetQueryiv (glGetQueryiv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (346): BGFX 0xc2823180 glGetQueryObjectiv (glGetQueryObjectiv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (347): BGFX 0xc2823140 glGetQueryObjecti64v (glGetQueryObjecti64v)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (348): BGFX 0xc2823240 glGetQueryObjectuiv (glGetQueryObjectuiv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (349): BGFX 0xc28231e0 glGetQueryObjectui64v (glGetQueryObjectui64v)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (350): BGFX 0xc2823540 glGetShaderiv (glGetShaderiv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (351): BGFX 0xc28234c0 glGetShaderInfoLog (glGetShaderInfoLog)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (352): BGFX 0xc28235e0 glGetString (glGetString)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (353): BGFX 0xc2823ea0 glGetUniformLocation (glGetUniformLocation)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (356): BGFX 0xc2823600 glGetStringi (glGetStringi)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (357): BGFX 0xc28252e0 glInvalidateFramebuffer (glInvalidateFramebuffer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (365): BGFX 0xc2825de0 glLinkProgram (glLinkProgram)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (366): BGFX 0xc2826b60 glMemoryBarrier (glMemoryBarrier)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (367): BGFX 0xc2826e00 glMultiDrawArraysIndirect (glMultiDrawArraysIndirect)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (368): BGFX 0xc2826f80 glMultiDrawElementsIndirect (glMultiDrawElementsIndirect)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (369): BGFX 0xc2828da0 glObjectLabel (glObjectLabel)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (370): BGFX 0xc2828e00 glObjectPtrLabel (glObjectPtrLabel)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (371): BGFX 0xc2829480 glPixelStorei (glPixelStorei)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (372): BGFX 0xc2829ac0 glPopDebugGroup (glPopDebugGroup)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (373): BGFX 0xc2829d20 glProgramBinary (glProgramBinary)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (374): BGFX 0xc282a180 glProgramParameteri (glProgramParameteri)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (375): BGFX 0xc282b420 glProvokingVertex (glProvokingVertex)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (376): BGFX 0xc282b4c0 glPushDebugGroup (glPushDebugGroup)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (377): BGFX 0xc282b580 glQueryCounter (glQueryCounter)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (378): BGFX 0xc282ba40 glReadBuffer (glReadBuffer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (379): BGFX 0xc282bac0 glReadPixels (glReadPixels)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (380): BGFX 0xc282bd40 glRenderbufferStorage (glRenderbufferStorage)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (381): BGFX 0xc282bd80 glRenderbufferStorageMultisample (glRenderbufferStorageMultisample)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (382): BGFX 0xc282c480 glSampleMaski (glSampleMaski)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (383): BGFX 0xc282c5e0 glSamplerParameteri (glSamplerParameteri)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (384): BGFX 0xc282c5a0 glSamplerParameterf (glSamplerParameterf)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (385): BGFX 0xc282c5c0 glSamplerParameterfv (glSamplerParameterfv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (386): BGFX 0xc282c6a0 glScissor (glScissor)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (387): BGFX 0xc282cf20 glShaderSource (glShaderSource)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (388): BGFX 0xc282d220 glStencilFunc (glStencilFunc)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (389): BGFX 0xc282d240 glStencilFuncSeparate (glStencilFuncSeparate)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (390): BGFX 0xc282d280 glStencilMask (glStencilMask)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (391): BGFX 0xc282d2a0 glStencilMaskSeparate (glStencilMaskSeparate)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (392): BGFX 0xc282d2c0 glStencilOp (glStencilOp)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (393): BGFX 0xc282d2e0 glStencilOpSeparate (glStencilOpSeparate)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (394): BGFX 0xc282e540 glTexImage2D (glTexImage2D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (395): BGFX 0xc282e5a0 glTexImage3D (glTexImage3D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (396): BGFX 0xc282e7c0 glTexParameteri (glTexParameteri)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (397): BGFX 0xc282e7e0 glTexParameteriv (glTexParameteriv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (398): BGFX 0xc282e780 glTexParameterf (glTexParameterf)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (399): BGFX 0xc282e7a0 glTexParameterfv (glTexParameterfv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (400): BGFX 0xc282e8e0 glTexStorage2D (glTexStorage2D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (401): BGFX 0xc282e940 glTexStorage3D (glTexStorage3D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (402): BGFX 0xc282eac0 glTexSubImage2D (glTexSubImage2D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (403): BGFX 0xc282eb00 glTexSubImage3D (glTexSubImage3D)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (404): BGFX 0xc282f560 glUniform1i (glUniform1i)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (405): BGFX 0xc282f620 glUniform1iv (glUniform1iv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (406): BGFX 0xc282f4e0 glUniform1f (glUniform1f)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (407): BGFX 0xc282f520 glUniform1fv (glUniform1fv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (408): BGFX 0xc282f7e0 glUniform2fv (glUniform2fv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (409): BGFX 0xc282faa0 glUniform3fv (glUniform3fv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (410): BGFX 0xc282fd60 glUniform4fv (glUniform4fv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (411): BGFX 0xc282fd20 glUniform4f (glUniform4f)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (412): BGFX 0xc28301e0 glUniformMatrix3fv (glUniformMatrix3fv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (413): BGFX 0xc2830300 glUniformMatrix4fv (glUniformMatrix4fv)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (414): BGFX 0xc28305a0 glUseProgram (glUseProgram)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (415): BGFX 0xc2832000 glVertexAttribDivisor (glVertexAttribDivisor)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (416): BGFX 0xc2832c40 glVertexAttribPointer (glVertexAttribPointer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (417): BGFX 0xc2832620 glVertexAttribIPointer (glVertexAttribIPointer)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (418): BGFX 0xc2831340 glVertexAttrib1f (glVertexAttrib1f)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (419): BGFX 0xc28315c0 glVertexAttrib2f (glVertexAttrib2f)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (420): BGFX 0xc2831840 glVertexAttrib3f (glVertexAttrib3f)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (421): BGFX 0xc2831cc0 glVertexAttrib4f (glVertexAttrib4f)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (422): BGFX 0xc28335c0 glViewport (glViewport)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (425): BGFX 0xc281b8c0 glClearDepth (glClearDepth)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (426): BGFX 0xc28298a0 glPointSize (glPointSize)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (427): BGFX 0xc2829960 glPolygonMode (glPolygonMode)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (448): BGFX 0xc2832080 glVertexAttribDivisorNV (glVertexAttribDivisorNV)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (449): BGFX 0xc281e6e0 glDrawArraysInstancedNV (glDrawArraysInstancedNV)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (450): BGFX 0xc281eaa0 glDrawElementsInstancedNV (glDrawElementsInstancedNV)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (473): BGFX 0xc282e560 glTexImage2DMultisample (glTexImage2DMultisample)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (474): BGFX 0xc282e5e0 glTexImage3DMultisample (glTexImage3DMultisample)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (484): BGFX 0xc28340c0 glInsertEventMarker (glInsertEventMarker)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (488): BGFX 0xc28340e0 glPushGroupMarker (glPushGroupMarker)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (489): BGFX 0xc2834100 glPopGroupMarker (glPopGroupMarker)
+/home/emoon/code/projects/flowi/external/bgfx/src/glimports.h (496): BGFX 0xc2823e20 glGetTranslatedShaderSourceANGLE (glGetTranslatedShaderSourceANGLE)
+/home/emoon/code/projects/flowi/external/bgfx/src/glcontext_glx.cpp (245): BGFX Using glXSwapIntervalEXT.
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2269): BGFX GL_NUM_COMPRESSED_TEXTURE_FORMATS 10
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     0:     83f0 <unknown>
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     1:     83f2 BC2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     2:     83f3 BC3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     3:     9274 ETC2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     4:     9278 ETC2A
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     5:     9270 <unknown>
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     6:     9272 <unknown>
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     7:     9271 <unknown>
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     8:     9273 <unknown>
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2292): BGFX     9:     9276 ETC2A1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2299): BGFX Defaults:
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2305): BGFX   GL_MAX_FRAGMENT_UNIFORM_COMPONENTS 16384 (min: 64)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2306): BGFX   GL_MAX_VERTEX_UNIFORM_COMPONENTS 16384 (min: 512)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2307): BGFX   GL_MAX_VARYING_FLOATS 128 (min: 32)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2309): BGFX   GL_MAX_VERTEX_ATTRIBS 16 (min: 8)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2310): BGFX   GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS 192 (min: 8)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2311): BGFX   GL_MAX_CUBE_MAP_TEXTURE_SIZE 16384 (min: 16)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2312): BGFX   GL_MAX_TEXTURE_IMAGE_UNITS 32 (min: 8)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2313): BGFX   GL_MAX_TEXTURE_SIZE 16384 (min: 64)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2314): BGFX   GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS 32 (min: 0)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2315): BGFX   GL_MAX_RENDERBUFFER_SIZE 16384 (min: 1)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2316): BGFX   GL_MAX_COLOR_ATTACHMENTS 8 (min: 1)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2317): BGFX   GL_MAX_DRAW_BUFFERS 8 (min: 1)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2321): BGFX       Vendor: AMD
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2322): BGFX     Renderer: AMD Radeon RX 6600 XT (dimgrey_cavefish, LLVM 13.0.1, DRM 3.42, 5.15.0-52-generic)
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2323): BGFX      Version: 4.6 (Compatibility Profile) Mesa 22.0.5
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2324): BGFX GLSL version: 4.60
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_multisample
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_abgr
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_bgra
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_blend_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_blend_minmax
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_blend_subtract
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_copy_texture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_subtexture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_vertex_array
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_compiled_vertex_array
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture3D
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_IBM_rasterpos_clip
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_point_parameters
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_draw_range_elements
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_packed_pixels
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_point_parameters
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_rescale_normal
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_separate_specular_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_edge_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_SGIS_generate_mipmap
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_SGIS_texture_border_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_SGIS_texture_edge_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_SGIS_texture_lod
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_framebuffer_sRGB
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_multitexture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_framebuffer_sRGB
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_IBM_multimode_draw_arrays
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_IBM_texture_mirrored_repeat
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_cube_map
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_env_add
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_transpose_matrix
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_blend_func_separate
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_fog_coord
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_multi_draw_arrays
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_secondary_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_env_add
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_filter_anisotropic
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_lod_bias
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_INGR_blend_func_separate
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_blend_square
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_light_max_exponent
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_texgen_reflection
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_texture_env_combine4
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_S3_s3tc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_SUN_multi_draw_arrays
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_border_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_compression
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_framebuffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_compression_s3tc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_env_combine
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_env_dot3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_MESA_window_pos
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_packed_depth_stencil
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_texture_rectangle
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_depth_texture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_occlusion_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shadow
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_env_combine
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_env_crossbar
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_env_dot3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_mirrored_repeat
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_window_pos
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ATI_fragment_shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_stencil_two_side
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_cube_map
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_copy_depth_to_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_depth_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_fog_distance
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_half_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_APPLE_packed_pixels
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_draw_buffers
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_fragment_program
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_fragment_shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_objects
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_vertex_program
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_vertex_shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ATI_draw_buffers
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ATI_texture_env_combine3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ATI_texture_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_depth_bounds_test
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_shadow_funcs
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_stencil_wrap
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_MESA_pack_invert
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_primitive_restart
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_depth_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_fragment_program_shadow
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_half_float_pixel
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_occlusion_query2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_point_sprite
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shading_language_100
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_sync
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_non_power_of_two
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_vertex_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ATI_blend_equation_separate
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_blend_equation_separate
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_OES_read_format
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_color_buffer_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_pixel_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_compression_rgtc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_rectangle
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ATI_texture_compression_3dc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_packed_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_pixel_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_compression_dxt1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_compression_rgtc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_mirror_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_rectangle
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_sRGB
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_shared_exponent
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_framebuffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_framebuffer_blit
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_framebuffer_multisample
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_packed_depth_stencil
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_vertex_array_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ATI_separate_stencil
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ATI_texture_mirror_once
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_draw_buffers2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_draw_instanced
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_gpu_program_parameters
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_gpu_shader4
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_array
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_compression_latc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_integer
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_sRGB_decode
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_timer_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_OES_EGL_image
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_performance_monitor
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_texture_texture4
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_copy_buffer
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_depth_buffer_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_draw_instanced
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_half_float_vertex
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_instanced_arrays
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_map_buffer_range
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_rg
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_swizzle
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_vertex_array_bgra
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_swizzle
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_vertex_array_bgra
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_conditional_render
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_AMD_conservative_depth
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_depth_clamp_separate
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_draw_buffers_blend
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_seamless_cubemap_per_texture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_shader_stencil_export
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_ES2_compatibility
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_blend_func_extended
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_compatibility
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_debug_output
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_draw_buffers_blend
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_draw_elements_base_vertex
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_explicit_attrib_location
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_fragment_coord_conventions
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_provoking_vertex
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_sample_shading
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_sampler_objects
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_seamless_cube_map
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_stencil_export
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_shader_texture_lod
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_tessellation_shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_buffer_object_rgb32
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_cube_map_array
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_gather
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_multisample
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_query_lod
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_rgb10_a2ui
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_uniform_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_vertex_type_2_10_10_10_rev
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ATI_meminfo
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_provoking_vertex
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_texture_snorm
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_MESA_texture_signed_rgba
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_NV_copy_image
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_texture_barrier
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_draw_indirect
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_get_program_binary
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_gpu_shader5
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_gpu_shader_fp64
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_robustness
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_separate_shader_objects
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_shader_bit_encoding
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_precision
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_subroutine
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_compression_bptc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_timer_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_transform_feedback2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_transform_feedback3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_vertex_attrib_64bit
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_viewport_array
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_direct_state_access
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_EXT_shader_image_load_store
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_vertex_attrib_64bit
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_vdpau_interop
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_AMD_multi_draw_indirect
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ANGLE_texture_compression_dxt3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ANGLE_texture_compression_dxt5
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_base_instance
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_compressed_texture_pixel_storage
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_conservative_depth
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_internalformat_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_map_buffer_alignment
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_atomic_counters
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_shader_image_load_store
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shading_language_420pack
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shading_language_packing
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_storage
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_transform_feedback_instanced
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_framebuffer_multisample_blit_scaled
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_transform_feedback
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_query_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_shader_trinary_minmax
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_vertex_shader_layer
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_vertex_shader_viewport_index
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_ES3_compatibility
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_arrays_of_arrays
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_clear_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_compute_shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_copy_image
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_explicit_uniform_location
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_fragment_layer_viewport
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_framebuffer_no_attachments
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_invalidate_subdata
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_multi_draw_indirect
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_program_interface_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_robust_buffer_access_behavior
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_image_size
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_shader_storage_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_stencil_texturing
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_buffer_range
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_query_levels
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_storage_multisample
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_view
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_vertex_attrib_binding
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_KHR_debug
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_KHR_robustness
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_KHR_texture_compression_astc_ldr
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_pinned_memory
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_bindless_texture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_buffer_storage
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_clear_texture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_compute_variable_group_size
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_enhanced_layouts
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_indirect_parameters
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_internalformat_query2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_multi_bind
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_query_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_seamless_cubemap_per_texture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_draw_parameters
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_group_vote
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shading_language_include
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_sparse_texture
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_mirror_clamp_to_edge
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_texture_stencil8
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_vertex_type_10f_11f_11f_rev
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_shader_integer_mix
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_NVX_gpu_memory_info
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_ES3_1_compatibility
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_clip_control
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_conditional_render_inverted
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_cull_distance
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_derivative_control
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_direct_state_access
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_get_texture_sub_image
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_pipeline_statistics_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_texture_image_samples
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_sparse_buffer
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_barrier
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_transform_feedback_overflow_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_polygon_offset_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_shader_image_load_formatted
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_KHR_blend_equation_advanced
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_KHR_context_flush_control
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_KHR_robust_buffer_access_behavior
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_shader_atomic_int64
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_ES3_2_compatibility
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_gpu_shader_int64
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_parallel_shader_compile
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_post_depth_coverage
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_atomic_counter_ops
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_ballot
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_shader_clock
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_ARB_shader_viewport_layer_array
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_sparse_texture2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_sparse_texture_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_shader_samples_identical
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_sRGB_R8
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION  (supported): GL_KHR_no_error
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_KHR_texture_compression_astc_sliced_3d
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_gl_spirv
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_spirv_extensions
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_window_rectangles
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_MESA_shader_integer_functions
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_polygon_offset_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_ARB_texture_filter_anisotropic
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_memory_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_memory_object_fd
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_semaphore
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_semaphore_fd
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_KHR_parallel_shader_compile
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_alpha_to_coverage_dither_control
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_AMD_framebuffer_multisample_advanced
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_EGL_image_storage
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_texture_shadow_lod
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_INTEL_blackhole_render
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_MESA_framebuffer_flip_y
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_NV_compute_shader_derivatives
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_EGL_sync
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2132): BGFX GL_EXTENSION : GL_EXT_demote_to_helper_invocation
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2382): BGFX Supported extensions:
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	 0: AMD_conservative_depth
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	 1: AMD_multi_draw_indirect
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	 7: ANGLE_texture_compression_dxt3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	 8: ANGLE_texture_compression_dxt5
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	13: ARB_clip_control
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	14: ARB_compute_shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	15: ARB_conservative_depth
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	16: ARB_copy_image
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	18: ARB_debug_output
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	19: ARB_depth_buffer_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	20: ARB_depth_clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	21: ARB_draw_buffers_blend
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	22: ARB_draw_indirect
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	23: ARB_draw_instanced
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	24: ARB_ES3_compatibility
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	25: ARB_framebuffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	26: ARB_framebuffer_sRGB
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	27: ARB_get_program_binary
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	28: ARB_half_float_pixel
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	29: ARB_half_float_vertex
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	30: ARB_instanced_arrays
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	31: ARB_internalformat_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	32: ARB_internalformat_query2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	33: ARB_invalidate_subdata
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	34: ARB_map_buffer_range
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	35: ARB_multi_draw_indirect
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	36: ARB_multisample
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	37: ARB_occlusion_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	38: ARB_occlusion_query2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	39: ARB_program_interface_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	40: ARB_provoking_vertex
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	41: ARB_sampler_objects
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	42: ARB_seamless_cube_map
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	43: ARB_shader_bit_encoding
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	44: ARB_shader_image_load_store
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	45: ARB_shader_storage_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	46: ARB_shader_texture_lod
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	47: ARB_shader_viewport_layer_array
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	48: ARB_texture_compression_bptc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	49: ARB_texture_compression_rgtc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	50: ARB_texture_cube_map_array
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	51: ARB_texture_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	52: ARB_texture_multisample
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	53: ARB_texture_rg
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	54: ARB_texture_rgb10_a2ui
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	55: ARB_texture_stencil8
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	56: ARB_texture_storage
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	57: ARB_texture_swizzle
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	58: ARB_timer_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	59: ARB_uniform_buffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	60: ARB_vertex_array_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	61: ARB_vertex_type_2_10_10_10_rev
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	62: ATI_meminfo
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	69: EXT_bgra
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	70: EXT_blend_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	71: EXT_blend_minmax
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	72: EXT_blend_subtract
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	83: EXT_draw_instanced
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	86: EXT_framebuffer_blit
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	87: EXT_framebuffer_object
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	88: EXT_framebuffer_sRGB
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	89: EXT_gpu_shader4
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	92: EXT_packed_float
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	94: EXT_shader_image_load_store
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	98: EXT_texture_array
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	99: EXT_texture_compression_dxt1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	10: EXT_texture_compression_latc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	10: EXT_texture_compression_rgtc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	10: EXT_texture_compression_s3tc
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	10: EXT_texture_filter_anisotropic
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	10: EXT_texture_shared_exponent
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	10: EXT_texture_snorm
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	10: EXT_texture_sRGB
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	11: EXT_texture_swizzle
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	11: EXT_timer_query
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	12: KHR_debug
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	12: KHR_no_error
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	13: NV_copy_image
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	13: NVX_gpu_memory_info
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (2387): BGFX 	14: OES_read_format
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC12 is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC14 is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC12A is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC14A is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC22 is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC24 is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ATC is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ATCE is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ATCI is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ASTC5x5 is not supported (501: GL_INVALID_VALUE).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ASTC6x6 is not supported (501: GL_INVALID_VALUE).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ASTC10x5 is not supported (501: GL_INVALID_VALUE).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::R32I is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG8I is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG8U is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG16I is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG16U is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG32I is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGB8I is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGB8U is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA8I is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA8U is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA16I is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA16U is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA32I is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ETC2A +sRGB is not supported (501: GL_INVALID_VALUE).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC12 +sRGB is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC14 +sRGB is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC12A +sRGB is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::PTC14A +sRGB is not supported (500: GL_INVALID_ENUM).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ASTC5x5 +sRGB is not supported (501: GL_INVALID_VALUE).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ASTC6x6 +sRGB is not supported (501: GL_INVALID_VALUE).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::ASTC10x5 +sRGB is not supported (501: GL_INVALID_VALUE).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::R32I +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG8I +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG8U +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG16I +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG16U +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RG32I +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGB8I +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGB8U +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA8I +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA8U +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA16I +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA16U +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (1822): BGFX WARN TextureFormat::RGBA32I +mipAutoGen is not supported (502: GL_INVALID_OPERATION).
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (420): BGFX Graphics debugger is not present.
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1571): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1597): BGFX Supported renderer backends (3):
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1600): BGFX 	 - Noop
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1600): BGFX 	 - OpenGL 2.1
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1600): BGFX 	 - Vulkan
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1603): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1604): BGFX Sort key masks:
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1605): BGFX 	   View     3fc0000000000000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1606): BGFX 	   Draw bit 0020000000000000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1608): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1609): BGFX 	D  Type     0018000000000000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1611): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1612): BGFX 	D0 Blend    0006000000000000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1613): BGFX 	D0 Program  0001ff0000000000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1614): BGFX 	D0 Depth    000000ffffffff00
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1616): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1617): BGFX 	D1 Depth    0007fffffff80000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1618): BGFX 	D1 Blend    0000000000060000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1619): BGFX 	D1 Program  000000000001ff00
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1621): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1622): BGFX 	D2 Seq      0007ffff80000000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1623): BGFX 	D2 Blend    0000000060000000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1624): BGFX 	D2 Program  000000001ff00000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1626): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1627): BGFX 	 C Seq      001ffffe00000000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1628): BGFX 	 C Program  00000001ff000000
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1630): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1635): BGFX Capabilities (renderer OpenGL 2.1, vendor 0x0000, device 0x0000):
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_ALPHA_TO_COVERAGE
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_BLEND_INDEPENDENT
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_COMPUTE
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[ ] BGFX_CAPS_CONSERVATIVE_RASTER
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_DRAW_INDIRECT
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_FRAGMENT_DEPTH
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[ ] BGFX_CAPS_FRAGMENT_ORDERING
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[ ] BGFX_CAPS_GRAPHICS_DEBUGGER
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[ ] BGFX_CAPS_HDR10
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[ ] BGFX_CAPS_HIDPI
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_IMAGE_RW
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_INDEX32
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_INSTANCING
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_OCCLUSION_QUERY
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_RENDERER_MULTITHREADED
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_SWAP_CHAIN
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_TEXTURE_2D_ARRAY
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_TEXTURE_3D
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_TEXTURE_BLIT
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_TEXTURE_COMPARE_ALL
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_TEXTURE_COMPARE_LEQUAL
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_TEXTURE_CUBE_ARRAY
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[ ] BGFX_CAPS_TEXTURE_DIRECT_ACCESS
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_TEXTURE_READ_BACK
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_VERTEX_ATTRIB_HALF
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_VERTEX_ATTRIB_UINT10
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_VERTEX_ID
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1641): BGFX 	[x] BGFX_CAPS_VIEWPORT_LAYER_ARRAY
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1645): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1646): BGFX Limits:
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1648): BGFX 	maxDrawCalls                 65535
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1649): BGFX 	maxBlits                      1024
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1650): BGFX 	maxTextureSize               16384
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1651): BGFX 	maxTextureLayers              8192
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1652): BGFX 	maxViews                       256
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1653): BGFX 	maxFrameBuffers                128
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1654): BGFX 	maxFBAttachments                 8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1655): BGFX 	maxPrograms                    512
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1656): BGFX 	maxShaders                     512
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1657): BGFX 	maxTextures                   4096
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1658): BGFX 	maxTextureSamplers              16
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1659): BGFX 	maxComputeBindings              16
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1660): BGFX 	maxVertexLayouts                64
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1661): BGFX 	maxVertexStreams                 4
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1662): BGFX 	maxIndexBuffers               4096
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1663): BGFX 	maxVertexBuffers              4096
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1664): BGFX 	maxDynamicIndexBuffers        4096
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1665): BGFX 	maxDynamicVertexBuffers       4096
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1666): BGFX 	maxUniforms                    512
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1667): BGFX 	maxOcclusionQueries            256
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1668): BGFX 	maxEncoders                      8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1669): BGFX 	minResourceCbSize            65536
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1670): BGFX 	transientVbSize            6291456
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1671): BGFX 	transientIbSize            2097152
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1674): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1675): BGFX Supported texture formats:
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1676): BGFX 	 +----------------   2D: x = supported / * = emulated
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1677): BGFX 	 |+---------------   2D: sRGB format
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1678): BGFX 	 ||+--------------   3D: x = supported / * = emulated
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1679): BGFX 	 |||+-------------   3D: sRGB format
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1680): BGFX 	 ||||+------------ Cube: x = supported / * = emulated
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1681): BGFX 	 |||||+----------- Cube: sRGB format
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1682): BGFX 	 ||||||+---------- vertex format
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1683): BGFX 	 |||||||+--------- image: i = read-write / r = read / w = write
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1684): BGFX 	 ||||||||+-------- framebuffer
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1685): BGFX 	 |||||||||+------- MSAA framebuffer
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1686): BGFX 	 ||||||||||+------ MSAA texture
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1687): BGFX 	 |||||||||||+----- Auto-generated mips
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1688): BGFX 	 ||||||||||||  +-- name
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl      ] BC1
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl      ] BC2
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl      ] BC3
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x       ] BC4
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x       ] BC5
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x       ] BC6H
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x       ] BC7
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x       ] ETC1
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x       ] ETC2
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x       ] ETC2A
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl      ] ETC2A1
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] PTC12
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] PTC14
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] PTC12A
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] PTC14A
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] PTC22
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] PTC24
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] ATC
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] ATCE
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] ATCI
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl      ] ASTC4x4
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] ASTC5x5
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] ASTC6x6
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl      ] ASTC8x5
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl      ] ASTC8x6
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *       ] ASTC10x5
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[            ] R1
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] A8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] R8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+m ] R8I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+m ] R8U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] R8S
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] R16
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+m ] R16I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+m ] R16U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] R16F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] R16S
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] R32I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+m ] R32U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] R32F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RG8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RG8I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RG8U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RG8S
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RG16
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RG16I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RG16U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RG16F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RG16S
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RG32I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+m ] RG32U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RG32F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl  f+mM] RGB8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *   f+m ] RGB8I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *   f+m ] RGB8U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] RGB8S
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] RGB9E5
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl if+mM] BGRA8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[xlxlxl if+mM] RGBA8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RGBA8I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RGBA8U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RGBA8S
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RGBA16
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RGBA16I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RGBA16U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RGBA16F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RGBA16S
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[* * *  if+m ] RGBA32I
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+m ] RGBA32U
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RGBA32F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] R5G6B5
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] RGBA4
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] RGB5A1
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RGB10A2
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x  if+mM] RG11B10F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] D16
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] D24
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+m ] D24S8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] D32
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] D16F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] D24F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] D32F
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1710): BGFX 	[x x x   f+mM] D0S8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1715): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1719): BGFX NDC depth [-1, 1], origin bottom left.
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1721): BGFX 
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx_p.h (4749): BGFX Creating uniform (handle   0) s_texColor
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx_p.h (4749): BGFX Creating uniform (handle   1) bgfx_clear_depth
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx_p.h (4749): BGFX Creating uniform (handle   2) bgfx_clear_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5514): BGFX Texture2D     0: R8 (requested: R8), layers 1, 2048x24x0.
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Vertex Shader consts 1
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL3: GL1, GL2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (4):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC4 a_color0 is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC4 a_color1 is at location 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC3 a_position is at location 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC2 a_texcoord0 is at location 3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_MAT4 u_modelViewProj* is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5014): BGFX Sampler #0 at location 1.
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store s_texColor 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_SAMPLER_2D s_texColor is at location 1, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_color0: 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_color1: 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_texcoord0: 3
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (538): BGFX VertexLayout 74c34f26 (d443ed7f), stride 28
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (558): BGFX 	attr  0: Attrib::Position     num 3, type 4, norm [ ], asint [ ], offset  0
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (558): BGFX 	attr  4: Attrib::Color0       num 4, type 0, norm [x], asint [ ], offset 12
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (558): BGFX 	attr  5: Attrib::Color1       num 4, type 0, norm [x], asint [ ], offset 16
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (558): BGFX 	attr 10: Attrib::TexCoord0    num 2, type 4, norm [ ], asint [ ], offset 20
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Vertex Shader consts 1
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL6: GL4, GL5
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 6
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (1):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC3 a_position is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_depth 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_depth is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4967): BGFX --- bgfx_clear_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_color 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_color is at location 1, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 0
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL8: GL4, GL7
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 8
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (1):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC3 a_position is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_depth 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_depth is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4967): BGFX --- bgfx_clear_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_color 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_color is at location 1, size 2, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 0
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL10: GL4, GL9
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 10
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (1):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC3 a_position is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_depth 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_depth is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4967): BGFX --- bgfx_clear_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_color 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_color is at location 1, size 3, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 0
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL12: GL4, GL11
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 12
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (1):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC3 a_position is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_depth 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_depth is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4967): BGFX --- bgfx_clear_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_color 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_color is at location 1, size 4, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 0
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL14: GL4, GL13
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 14
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (1):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC3 a_position is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_depth 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_depth is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4967): BGFX --- bgfx_clear_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_color 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_color is at location 1, size 5, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 0
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL16: GL4, GL15
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 16
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (1):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC3 a_position is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_depth 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_depth is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4967): BGFX --- bgfx_clear_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_color 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_color is at location 1, size 6, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 0
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL18: GL4, GL17
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 18
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (1):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC3 a_position is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_depth 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_depth is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4967): BGFX --- bgfx_clear_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_color 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_color is at location 1, size 7, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 0
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL20: GL4, GL19
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 20
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (1):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC3 a_position is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_depth 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_depth is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4967): BGFX --- bgfx_clear_color
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store bgfx_clear_color 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 bgfx_clear_color is at location 1, size 8, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 0
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (538): BGFX VertexLayout aaaa40da (e0896034), stride 8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (558): BGFX 	attr  0: Attrib::Position     num 2, type 4, norm [ ], asint [ ], offset  0
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (3549): BGFX Init complete.
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx_p.h (4749): BGFX Creating uniform (handle   3) s_tex
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx_p.h (4749): BGFX Creating uniform (handle   4) u_imageLodEnabled
+loadinged toehuso
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1730): BGFX Reset back-buffer swap chain:
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1739): BGFX 	1916x694, format: RGBA8, numBackBuffers: 2, maxFrameLatency: 0
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1740): BGFX 	[ ] MSAAx1
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1741): BGFX 	[ ] Fullscreen
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1742): BGFX 	[x] V-sync
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1743): BGFX 	[ ] Max Anisotropy
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1744): BGFX 	[ ] Capture
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1745): BGFX 	[ ] Flush After Render
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1746): BGFX 	[ ] Flip After Render
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1747): BGFX 	[ ] sRGB Back Buffer
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1748): BGFX 	[ ] HDR10
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1749): BGFX 	[ ] Hi-DPI
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1750): BGFX 	[ ] Depth Clamp
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (1751): BGFX 	[ ] Suspend
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Vertex Shader consts 1
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL23: GL21, GL22
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 23
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (3):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC4 a_color0 is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC2 a_position is at location 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC2 a_texcoord0 is at location 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_MAT4 u_viewProj* is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5014): BGFX Sampler #0 at location 1.
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store s_tex 3
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_SAMPLER_2D s_tex is at location 1, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_color0: 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_texcoord0: 2
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Vertex Shader consts 1
+create shader
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5995): BGFX Fragment Shader consts 2
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4768): BGFX Program create: GL26: GL24, GL25
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4878): BGFX Program 26
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4879): BGFX Attributes (2):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC2 a_position is at location 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4908): BGFX 	GL_FLOAT_VEC2 a_texcoord0 is at location 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (4914): BGFX Uniforms (3):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_MAT4 u_viewProj* is at location 0, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store u_imageLodEnabled 4
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_FLOAT_VEC4 u_imageLodEnabled is at location 1, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5014): BGFX Sampler #0 at location 2.
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5054): BGFX store s_texColor 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5065): BGFX 	uniform GL_SAMPLER_2D s_texColor is at location 2, size 1, offset 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5083): BGFX Buffers (0):
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_position: 0
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5119): BGFX attr a_texcoord0: 1
+/home/emoon/code/projects/flowi/external/bgfx/src/renderer_gl.cpp (5514): BGFX Texture2D     1: BGRA8 (requested: BGRA8), layers 1, 512x64x0.
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (538): BGFX VertexLayout 93597fa9 (21d0cb5a), stride 20
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (558): BGFX 	attr  0: Attrib::Position     num 2, type 4, norm [ ], asint [ ], offset  0
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (558): BGFX 	attr  4: Attrib::Color0       num 4, type 0, norm [x], asint [ ], offset 16
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (558): BGFX 	attr 10: Attrib::TexCoord0    num 2, type 4, norm [ ], asint [ ], offset  8
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (3587): BGFX Shutdown...
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx_p.h (3009): BGFX render thread exit
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2177): BGFX LEAK: ShaderHandle 4 (max: 512)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2177): BGFX 	  0:   14 fs_imgui_image (count 1)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2177): BGFX 	  1:   13 vs_imgui_image (count 1)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2177): BGFX 	  2:   11 vs_ocornut_imgui (count 1)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2177): BGFX 	  3:   12 fs_ocornut_imgui (count 1)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2178): BGFX LEAK: ProgramHandle 2 (max: 512)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2178): BGFX 	  0:   10
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2178): BGFX 	  1:    9
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2179): BGFX LEAK: TextureHandle 1 (max: 4096)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2179): BGFX 	  0:    1  (count 1)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2181): BGFX LEAK: UniformHandle 3 (max: 512)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2181): BGFX 	  0:    0 s_texColor (count 1)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2181): BGFX 	  1:    4 u_imageLodEnabled (count 2)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (2181): BGFX 	  2:    3 s_tex (count 2)
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (3596): BGFX Shutdown complete.
+/home/emoon/code/projects/flowi/external/bgfx/src/bgfx.cpp (345): BGFX WARN 
+
+
+########################################################
+
+MEMORY LEAK: Number of leaked blocks 8 (Max blocks: 113)
+
+########################################################
+
+
