@@ -64,8 +64,6 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     image->texture_id = 0;
     image->name = StringAllocator_copy_string(&ctx->string_allocator, name);
 
-    printf("loadinged toehuso\n");
-
     return image->handle;
 }
 
@@ -163,6 +161,18 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
         src = self->data;
     }
 
+    float inv_width = 1.0f / (float)atlas->width;
+    float inv_height = 1.0f / (float)atlas->height;
+
+    self->u0 = (float)rx * inv_width;
+    self->v0 = (float)ry * inv_height;
+    self->u1 = (float)(rx + width) * inv_width;
+    self->v1 = (float)(ry + height) * inv_height;
+
+    printf("Image %s added to atlas at %d %d %d %d\n", self->name.str, rx, ry, width, height);
+
+    // Setup u0, v0, u1, v1 for faster access when using ImGui::Image
+
     self->texture_id = atlas->texture_id;
     self->atlas_x = rx;
     self->atlas_y = ry;
@@ -171,28 +181,6 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
 }
 
 #if 0
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
-    (void)ctx;
-    (void)image;
-
-    ImagePrivate* self = get_handle(ctx, image);
-
-    if (FL_UNLIKELY(!self)) {
-        return;
-    }
-
-    Layer* layer = ctx_get_active_layer(ctx);
-
-    PrimitiveImage* prim = Primitive_alloc_image(layer);
-
-    prim->image = self;
-    prim->position = ctx->cursor;
-    prim->size.x = self->info.width;
-    prim->size.y = self->info.height;
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

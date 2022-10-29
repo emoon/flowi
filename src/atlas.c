@@ -1,4 +1,5 @@
 #include "atlas.h"
+#include <stdio.h>
 #include <limits.h>
 #include <flowi/error.h>
 #include "allocator.h"
@@ -258,9 +259,9 @@ void Atlas_end_add_rects(Atlas* self, FlGlobalState* state) {
         return;
     }
 
-    // Add command to update the texture with the added glyphs
-    // TODO: There is a potential race-condition here as the static texture may be uploaded at the same time
-    // as we are adding more glyphs to it. In practice it may not be a problem tho
+    //printf("atlas dirty rect %d %d %d %d\n", self->dirty_rect.x0, self->dirty_rect.y0, self->dirty_rect.x1, self->dirty_rect.y1);
+
+    // Add command to update the texture with the added image(s) 
     FlUpdateTexture* cmd = Render_update_texture_cmd(state);
     cmd->data = self->image_data;
     cmd->rect = self->dirty_rect;

@@ -82,6 +82,10 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     // LinearAllocator_create_with_allocator(&ctx->layout_allocator, "layout allocator", &malloc_allocator, 1024, true);
     StringAllocator_create(&ctx->string_allocator, &malloc_allocator, &ctx->frame_allocator);
 
+    for (int i = 0; i < FlLayerType_Count; ++i) {
+        CommandBuffer_create(&ctx->layers[i].primitive_commands, "primitives", state->global_allocator, 4 * 1024);
+    }
+
     // Layout_create_default(ctx);
     // ctx->layout_mode = FlLayoutMode_Automatic;
 
@@ -111,6 +115,8 @@ extern "C" struct FlGlobalState* fl_create(const FlSettings* settings) {
 
     FlGlobalState* state = FlAllocator_alloc_zero_type(&malloc_allocator, FlGlobalState);
     state->global_allocator = &malloc_allocator;
+
+    state->texture_ids = 1;
 
     CommandBuffer_create(&state->render_commands, "primitives", state->global_allocator, 4 * 1024);
     Handles_create(&state->image_handles, state->global_allocator, 16, ImagePrivate);
@@ -305,12 +311,14 @@ extern "C" void fl_context_destroy(struct FlContext* self) {
     for (int i = 0; i < self->style_count; ++i) {
         FlAllocator_free(allocator, self->styles[i]);
     }
+    */
 
     for (int i = 0; i < FlLayerType_Count; ++i) {
         Layer* layer = &self->layers[i];
         CommandBuffer_destroy(&layer->primitive_commands);
     }
 
+    /*
     LinearAllocator_destroy(&self->layout_allocator);
     VertexAllocator_destroy(&self->vertex_allocator);
     */
@@ -328,19 +336,9 @@ extern "C" void fl_destroy(FlGlobalState* self) {
     FlAllocator* allocator = self->global_allocator;
 
     CommandBuffer_destroy(&self->render_commands);
-    // Atlas_destroy(self->mono_fonts_atlas);
-    //Atlas_destroy(self->images_atlas);
-
-    // Font* fonts = (Font*)self->font_handles.objects;
-
-    // for (int i = 0; i < self->font_handles.len; ++i) {
-    //     Font_destroy(self, &fonts[i]);
-    // }
+    Atlas_destroy(self->images_atlas);
 
     Handles_destroy(&self->image_handles);
-    // Handles_destroy(&self->font_handles);
-
-    // FT_Done_FreeType(self->ft_library);
     FlAllocator_free(allocator, self);
 }
 

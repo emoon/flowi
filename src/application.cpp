@@ -14,6 +14,10 @@
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #include "glfw_input.h"
+#include "render.h"
+#include "image_private.h"
+#include "handles.h"
+#include "internal.h"
 // clang-format off
 
 // TODO: Should be in public core api
@@ -327,7 +331,7 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void render_dear_imgui(const DearImguiState& imgui_data, ImDrawData* draw_data) {
+static void render_dear_imgui(const ApplicationState& app_state, const DearImguiState& imgui_data, ImDrawData* draw_data) {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
@@ -385,20 +389,16 @@ static void render_dear_imgui(const DearImguiState& imgui_data, ImDrawData* draw
             bgfx::TextureHandle th = imgui_data.texture;
             bgfx::ProgramHandle program = imgui_data.program;
 
-            if (NULL != cmd->TextureId) {
-                /*
-                union { ImTextureID ptr; struct { bgfx::TextureHandle handle; uint8_t flags; uint8_t mip; } s; } texture = { cmd->TextureId };
-                state |= 0 != (IMGUI_FLAGS_ALPHA_BLEND & texture.s.flags)
-                    ? BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
-                    : BGFX_STATE_NONE;
+            if (cmd->TextureId != 0) {
+                ImagePrivate* image_data = (ImagePrivate*)Handles_get_data(&app_state.ctx->global->image_handles, cmd->TextureId);
 
-                th = texture.s.handle;
-                if (0 != texture.s.mip) {
-                    const float lodEnabled[4] = { float(texture.s.mip), 1.0f, 0.0f, 0.0f };
-                    bgfx::setUniform(imgui_data.u_image_lod_enabled, lodEnabled);
-                    program = imgui_data.image_program;
+                if (!image_data) {
+                    //ERROR_ADD(FlError_Image, "Invalid handle %s", "todo name");
+                    continue;
                 }
-                */
+
+                th = app_state.textures[image_data->texture_id].handle;
+                program = imgui_data.image_program;
             } else {
                 state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
             }
@@ -433,8 +433,6 @@ static void render_dear_imgui(const DearImguiState& imgui_data, ImDrawData* draw
 // Render triangles without texture
 //
 
-#if 0
-
 static void render_textured_triangles(ApplicationState& ctx, const u8* render_data, bgfx::Encoder* encoder/*, const FlStyle& style*/) {
     FlTexturedTriangles* draw_cmd = (FlTexturedTriangles*)render_data;
 
@@ -449,13 +447,13 @@ static void render_textured_triangles(ApplicationState& ctx, const u8* render_da
 
     // TODO: We can remove all of these copies as the vertexbuffers are double buffered and can be passed as ref
     bgfx::allocTransientVertexBuffer(&tvb, vertex_count, ctx.texture_layout);
-    bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(FlIdxSize) == 4);
+    bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(u16) == 4);
 
     void* verts = (void*)tvb.data;
     memcpy(verts, draw_cmd->vertex_buffer, vertex_count * sizeof(FlVertPosUvColor));
 
     u16* indices = (u16*)tib.data;
-    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FlIdxSize));
+    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(u16));
 
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
     state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
@@ -489,13 +487,13 @@ static void render_flat_triangles(ApplicationState& ctx, const u8* render_data, 
     const int index_count = draw_cmd->index_buffer_size;
 
     bgfx::allocTransientVertexBuffer(&tvb, vertex_count, ctx.flat_layout);
-    bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(FlIdxSize) == 4);
+    bgfx::allocTransientIndexBuffer(&tib, index_count, sizeof(u16) == 4);
 
     void* verts = (void*)tvb.data;
     memcpy(verts, draw_cmd->vertex_buffer, vertex_count * sizeof(FlVertPosColor));
 
     u16* indices = (u16*)tib.data;
-    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(FlIdxSize));
+    memcpy(indices, draw_cmd->index_buffer, index_count * sizeof(u16));
 
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
     state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
@@ -545,6 +543,8 @@ static void create_texture(ApplicationState& ctx, const u8* render_data) {
                 mem = bgfx::makeRef(data, width * height * 4);
             }
 
+            printf("Creating texture %d %d %d\n", width, height, id);
+
             bgfx::TextureFormat::Enum format = bgfx::TextureFormat::RGBA8;
 
             Texture* texture = &ctx.textures[id];
@@ -574,6 +574,8 @@ static void update_texture(ApplicationState& ctx, const u8* render_data) {
     const Texture* texture = &ctx.textures[cmd->texture_id];
     const bgfx::Memory* mem = bgfx::makeRef(cmd->data, texture->size);
     const FlRenderRect* rect = &cmd->rect;
+
+    printf("update texture %d - %d %d %d %d\n", cmd->texture_id, rect->x0, rect->y0, rect->x1, rect->y1);
 
     bgfx::updateTexture2D(texture->handle, 0, 0, rect->x0, rect->y0, rect->x1 - rect->x0, rect->y1 - rect->y0, mem,
                           texture->width);
@@ -640,7 +642,6 @@ static void render_flowi(ApplicationState& state, uint16_t width, uint16_t heigh
     bgfx::end(encoder);
 }
 
-#endif // if 0
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -688,8 +689,8 @@ static void generate_frame(void* user_data) {
     fl_frame_end(state->ctx);
     ImGui::Render();
 
-    render_dear_imgui(state->dear_imgui, ImGui::GetDrawData());
-    //render_flowi(*state, display_w, display_h);
+    render_flowi(*state, display_w, display_h);
+    render_dear_imgui(*state, state->dear_imgui, ImGui::GetDrawData());
 
     bgfx::frame();
 

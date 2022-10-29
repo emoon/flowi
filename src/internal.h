@@ -10,6 +10,10 @@
 #include "handles.h"
 #include "allocator.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define FL_MAX_WIDGET_IDS 2048
 
 // TODO: Move
@@ -18,7 +22,6 @@
 #define FL_RGB_WHITE FL_RGB(255, 255, 255)
 #define FL_RGB_BLACK FL_RGB(0, 0, 0)
 
-struct Font;
 struct StyleInternal;
 struct Atlas;
 struct ImGuiContext;
@@ -103,3 +106,10 @@ FL_INLINE FlVec2 vec2_floor(FlVec2 v) {
 FL_INLINE f32 f32_max(f32 v0, f32 v1) {
     return v0 > v1 ? v0 : v1;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef __cplusplus
+}
+#endif
+

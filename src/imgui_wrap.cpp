@@ -1,5 +1,9 @@
 #include <flowi/ui.h>
 #include <flowi/style.h>
+#include "image_private.h"
+#include "error.h"
+#include "primitives.h"
+#include "layer.h"
 #include "../external/dear-imgui/imgui.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -40,6 +44,30 @@ extern "C" bool fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, Fl
 
 extern "C" void fl_ui_end_impl(struct FlContext* ctx) {
     ImGui::End();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
+    ImagePrivate* image_data = (ImagePrivate*)Handles_get_data(&ctx->global->image_handles, image);
+
+    if (!image_data) {
+        ERROR_ADD(FlError_Image, "Invalid handle %s", "todo name");
+        return;
+    }
+
+    // TODO: Better way to do this?
+    PrimitiveImage* prim = (PrimitiveImage*)CommandBuffer_alloc_cmd(
+            &ctx->layers[0].primitive_commands, 
+            Primitive_DrawImage, 
+            sizeof(PrimitiveImage));
+    prim->image = image_data;
+    prim->size.x = image_data->info.width;
+    prim->size.y = image_data->info.height;
+
+    ImGui::Image((ImTextureID)image, ImVec2(image_data->info.width, image_data->info.height),
+                 ImVec2(image_data->u0, image_data->v0), ImVec2(image_data->u1, image_data->v1));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

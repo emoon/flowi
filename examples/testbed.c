@@ -22,10 +22,11 @@ typedef struct App {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void main_loop(struct FlContext* ctx, void* user_data) {
-    //App* app = (App*)user_data;
+    App* app = (App*)user_data;
 
     //fl_style_push_color(ctx, FlStyleColor_TitleBg, FlColor_new_rgb(1.0f, 0.0f, 0.0f));
     fl_ui_window_begin(ctx, "Test®", FlWindowFlags_None);
+    fl_ui_image(ctx, app->image);
     fl_ui_end(ctx);
     //fl_style_pop_color(ctx);
 
@@ -85,7 +86,9 @@ int main() {
     App app = {
         //.font_bold = fl_font_new_from_file(ctx, "data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
         //.font = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
-        .image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
+        // .image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
+        //.image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
+        .image = fl_image_create_from_file(ctx, "/home/emoon/code/projects/rust_minifb/resources/uv.png"),
     };
 
     fl_application_main_loop(main_loop, &app);

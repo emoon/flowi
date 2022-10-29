@@ -24,6 +24,7 @@ typedef struct ImagePrivate {
     u32 texture_id;
     int atlas_x;
     int atlas_y;
+    float u0,v0,u1,v1;
     FlImageInfo info;
     FlTextureFormat format;
 } ImagePrivate;
