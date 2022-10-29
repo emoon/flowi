@@ -126,6 +126,8 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
         return false;
     }
 
+    printf("adding to atlas at pos (%d %d : %d %d)\n", rx, ry, width, height);
+
     if (self->svg_image) {
         if (!self->svg_raster) {
             self->svg_raster = nsvgCreateRasterizer();

@@ -10,6 +10,7 @@ typedef struct App {
     //FlFont font_bold;
     //FlFont font;
     FlImage image;
+    FlImage image2;
 } App;
 
 /*
@@ -27,6 +28,7 @@ void main_loop(struct FlContext* ctx, void* user_data) {
     //fl_style_push_color(ctx, FlStyleColor_TitleBg, FlColor_new_rgb(1.0f, 0.0f, 0.0f));
     fl_ui_window_begin(ctx, "Test®", FlWindowFlags_None);
     fl_ui_image(ctx, app->image);
+    fl_ui_image(ctx, app->image2);
     fl_ui_end(ctx);
     //fl_style_pop_color(ctx);
 
@@ -89,6 +91,7 @@ int main() {
         // .image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
         //.image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
         .image = fl_image_create_from_file(ctx, "/home/emoon/code/projects/rust_minifb/resources/uv.png"),
+        .image2 = fl_image_create_from_file(ctx, "/home/emoon/code/projects/rust_minifb/resources/planet.png"),
     };
 
     fl_application_main_loop(main_loop, &app);

@@ -234,8 +234,10 @@ u8* Atlas_add_rect(Atlas* self, int rw, int rh, int* rx, int* ry, int* image_str
     self->dirty_rect.x1 = FL_MAX(self->dirty_rect.x1, bestx + rw);
     self->dirty_rect.y1 = FL_MAX(self->dirty_rect.y1, besty + rh);
 
+    printf("atlas offset write: %d %d: %d\n", bestx, besty, self->image_stride);
+
     // Return star ptr to fill with image data
-    u8* image_data = self->image_data + (besty * self->image_stride) + bestx;
+    u8* image_data = self->image_data + (besty * self->image_stride * 4) + bestx * 4;
 
     return image_data;
 }
@@ -280,7 +282,7 @@ void Atlas_destroy(Atlas* self) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalState* state, FlAllocator* allocator) {
-    int image_stride_mul = 0;
+    int image_stride_mul = 4;
 
     if (image_type == AtlasImageType_U8) {
         image_stride_mul = 1;
