@@ -1,9 +1,9 @@
 use crate::api_parser::*;
-use std::process::Command;
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use std::fs::File;
 use std::io;
 use std::io::{BufWriter, Write};
+use std::process::Command;
 
 static RENDER_CMD_HEADER: &str = "
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -13,7 +13,6 @@ static RENDER_CMD_HEADER: &str = "
 #include <flowi/render_commands.h>
 #include \"command_buffer.h\"
 ";
-
 
 /// Base header for all header files
 static HEADER: &str = "
@@ -323,7 +322,11 @@ impl Cgen {
         Ok(())
     }
 
-    fn generate_function_args(func: &Function, self_name: &str, dynamic: DynamicOutput) -> FuncArgs {
+    fn generate_function_args(
+        func: &Function,
+        self_name: &str,
+        dynamic: DynamicOutput,
+    ) -> FuncArgs {
         let mut fa = FuncArgs::default();
 
         if dynamic == DynamicOutput::Yes {
@@ -464,15 +467,35 @@ impl Cgen {
 
         if dynamic == DynamicOutput::No {
             if fa.return_value != "void" {
-                writeln!(f, "return {}_impl({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
+                writeln!(
+                    f,
+                    "return {}_impl({});",
+                    func.c_name,
+                    arg_line(&fa.call_args[arg_offset..], Ctx::No)
+                )?;
             } else {
-                writeln!(f, "{}_impl({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
+                writeln!(
+                    f,
+                    "{}_impl({});",
+                    func.c_name,
+                    arg_line(&fa.call_args[arg_offset..], Ctx::No)
+                )?;
             }
         } else {
             if fa.return_value != "void" {
-                writeln!(f, "return (api->{})({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
+                writeln!(
+                    f,
+                    "return (api->{})({});",
+                    func.c_name,
+                    arg_line(&fa.call_args[arg_offset..], Ctx::No)
+                )?;
             } else {
-                writeln!(f, "(api->{})({});", func.c_name, arg_line(&fa.call_args[arg_offset..], Ctx::No))?;
+                writeln!(
+                    f,
+                    "(api->{})({});",
+                    func.c_name,
+                    arg_line(&fa.call_args[arg_offset..], Ctx::No)
+                )?;
             }
         }
 
@@ -523,133 +546,148 @@ impl Cgen {
         println!("    Generating Core C header: {}", filename);
         println!("    Generating Core Inl header: {}", inl_filename);
 
-
         {
+            let mut f = BufWriter::new(File::create(&filename)?);
+            let mut fi = BufWriter::new(File::create(&inl_filename)?);
 
-        let mut f = BufWriter::new(File::create(&filename)?);
-        let mut fi = BufWriter::new(File::create(&inl_filename)?);
+            writeln!(f, "{}", HEADER)?;
 
-        writeln!(f, "{}", HEADER)?;
-
-        for m in &api_def.mods {
-            writeln!(f, "#include \"{}.h\"", m)?;
-        }
-
-        writeln!(f, "{}", HEADER2)?;
-
-        let mut render_commands = Vec::with_capacity(api_def.structs.len());
-
-        for enum_def in &api_def.enums {
-            Self::generate_enum(&mut f, enum_def)?;
-        }
-
-        for sdef in &api_def.structs {
-            if sdef.has_attribute("RenderCommand") {
-                render_commands.push(&sdef.name);
+            for m in &api_def.mods {
+                writeln!(f, "#include \"{}.h\"", m)?;
             }
 
-            Self::generate_struct(&mut f, sdef)?;
-        }
+            writeln!(f, "{}", HEADER2)?;
 
-        // Generate the structs for default arges
-        for sdef in &api_def.structs {
-            for func in &sdef.functions {
-                let default_args = func.get_default_args();
+            let mut render_commands = Vec::with_capacity(api_def.structs.len());
 
-                if !default_args.is_empty() {
-                    let name = get_args_name(func);
-                    Self::generate_default_args_struct(&mut f, &name, &default_args)?;
-                    //let name = get_args_name(func);
+            for enum_def in &api_def.enums {
+                Self::generate_enum(&mut f, enum_def)?;
+            }
+
+            for sdef in &api_def.structs {
+                if sdef.has_attribute("RenderCommand") {
+                    render_commands.push(&sdef.name);
+                }
+
+                Self::generate_struct(&mut f, sdef)?;
+            }
+
+            // Generate the structs for default arges
+            for sdef in &api_def.structs {
+                for func in &sdef.functions {
+                    let default_args = func.get_default_args();
+
+                    if !default_args.is_empty() {
+                        let name = get_args_name(func);
+                        Self::generate_default_args_struct(&mut f, &name, &default_args)?;
+                        //let name = get_args_name(func);
+                    }
                 }
             }
-        }
 
-        // Generate callback defs
+            // Generate callback defs
 
-        if !api_def.callbacks.is_empty() {
-            for func in &api_def.callbacks {
-                Self::generate_callback_function(&mut f, &func, "", dynamic)?;
+            if !api_def.callbacks.is_empty() {
+                for func in &api_def.callbacks {
+                    Self::generate_callback_function(&mut f, &func, "", dynamic)?;
+                }
+                writeln!(f)?;
             }
-            writeln!(f)?;
-        }
 
-        // generate defintion
-        for sdef in &api_def.structs {
-            let context_dynamic_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
-            let context_name = if dynamic == DynamicOutput::Yes {
-                &context_dynamic_name
-            } else {
-                "struct FlContext* ctx"
-            };
-
-            for func in &sdef.functions {
-                let with_ctx = if sdef.has_attribute("NoContext") {
-                    Ctx::No
+            // generate defintion
+            for sdef in &api_def.structs {
+                let context_dynamic_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
+                let context_name = if dynamic == DynamicOutput::Yes {
+                    &context_dynamic_name
                 } else {
-                    Ctx::Yes(context_name)
+                    "struct FlContext* ctx"
                 };
-                if sdef.has_attribute("Handle") {
-                    Self::generate_function_def(&mut f, &func, dynamic, &sdef.name, with_ctx)?;
-                } else {
-                    Self::generate_function_def(&mut f, &func, dynamic, &format!("{}*", sdef.name), with_ctx)?;
-                }
-            }
-        }
-
-
-        for sdef in &api_def.structs {
-            let context_dynamic_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
-            let context_name = if dynamic == DynamicOutput::Yes {
-                &context_dynamic_name
-            } else {
-                "struct FlContext* ctx"
-            };
-
-            // if we have functions for this struct and dynamic output we need to generate the
-            // dispatch table
-            if !sdef.functions.is_empty() && dynamic == DynamicOutput::Yes {
-                writeln!(fi, "struct {}{}Api {{", C_API_SUFFIX, sdef.name)?;
-                writeln!(fi, "    struct FlContext* ctx;")?;
 
                 for func in &sdef.functions {
-                    Self::generate_function_dynamic(&mut fi, &func, &sdef.name, Ctx::Yes("struct FlContext* ctx"))?;
+                    let with_ctx = if sdef.has_attribute("NoContext") {
+                        Ctx::No
+                    } else {
+                        Ctx::Yes(context_name)
+                    };
+                    if sdef.has_attribute("Handle") {
+                        Self::generate_function_def(&mut f, &func, dynamic, &sdef.name, with_ctx)?;
+                    } else {
+                        Self::generate_function_def(
+                            &mut f,
+                            &func,
+                            dynamic,
+                            &format!("{}*", sdef.name),
+                            with_ctx,
+                        )?;
+                    }
                 }
-
-                writeln!(fi, "}};\n")?;
             }
 
-            for func in &sdef.functions {
-                let with_ctx = if sdef.has_attribute("NoContext") {
-                    Ctx::No
+            for sdef in &api_def.structs {
+                let context_dynamic_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
+                let context_name = if dynamic == DynamicOutput::Yes {
+                    &context_dynamic_name
                 } else {
-                    Ctx::Yes(context_name)
+                    "struct FlContext* ctx"
                 };
-                if sdef.has_attribute("Handle") {
-                    Self::generate_function(&mut fi, &func, &sdef.name, dynamic, with_ctx)?;
-                } else {
-                    Self::generate_function(&mut fi, &func, &format!("{}*", sdef.name), dynamic, with_ctx)?;
+
+                // if we have functions for this struct and dynamic output we need to generate the
+                // dispatch table
+                if !sdef.functions.is_empty() && dynamic == DynamicOutput::Yes {
+                    writeln!(fi, "struct {}{}Api {{", C_API_SUFFIX, sdef.name)?;
+                    writeln!(fi, "    struct FlContext* ctx;")?;
+
+                    for func in &sdef.functions {
+                        Self::generate_function_dynamic(
+                            &mut fi,
+                            &func,
+                            &sdef.name,
+                            Ctx::Yes("struct FlContext* ctx"),
+                        )?;
+                    }
+
+                    writeln!(fi, "}};\n")?;
+                }
+
+                for func in &sdef.functions {
+                    let with_ctx = if sdef.has_attribute("NoContext") {
+                        Ctx::No
+                    } else {
+                        Ctx::Yes(context_name)
+                    };
+                    if sdef.has_attribute("Handle") {
+                        Self::generate_function(&mut fi, &func, &sdef.name, dynamic, with_ctx)?;
+                    } else {
+                        Self::generate_function(
+                            &mut fi,
+                            &func,
+                            &format!("{}*", sdef.name),
+                            dynamic,
+                            with_ctx,
+                        )?;
+                    }
                 }
             }
-        }
 
-        writeln!(f, "\n#include \"{}.inl\"", api_def.base_filename)?;
-        writeln!(f, "{}", FOOTER)?;
+            writeln!(f, "\n#include \"{}.inl\"", api_def.base_filename)?;
+            writeln!(f, "{}", FOOTER)?;
 
-        if !render_commands.is_empty() {
-            let render_filename = "../src/render.h";
-            println!(
-                "    Generating RenderCommands C header: {}",
-                render_filename
-            );
+            if !render_commands.is_empty() {
+                let render_filename = "../src/render.h";
+                println!(
+                    "    Generating RenderCommands C header: {}",
+                    render_filename
+                );
 
-            writeln!(f, "// Commands that will be in the render stream")?;
-            writeln!(f, "typedef enum FlRenderCommand {{")?;
-            for cmd in &render_commands {
-                writeln!(f, "    FlRenderCommand_{},", &cmd)?;
+                writeln!(f, "// Commands that will be in the render stream")?;
+                writeln!(f, "typedef enum FlRenderCommand {{")?;
+                for cmd in &render_commands {
+                    writeln!(f, "    FlRenderCommand_{},", &cmd)?;
+                }
+                writeln!(f, "}} FlRenderCommand;\n")?;
+
+                Self::generate_render_file(&render_filename, &render_commands)?;
             }
-            writeln!(f, "}} FlRenderCommand;\n")?;
-
-            Self::generate_render_file(&render_filename, &render_commands)?;
         }
 
         run_clang_format(&filename);
@@ -673,29 +711,4 @@ impl Cgen {
     }
 
     */
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -18,10 +18,10 @@ use crate::c_gen::Cgen;
 use crate::rust_gen::RustGen;
 use rayon::prelude::*;
 //use std::fs;
+use crate::c_gen::DynamicOutput;
 use std::process::Command;
 use std::sync::RwLock;
 use walkdir::WalkDir;
-use crate::c_gen::DynamicOutput;
 
 //
 // Function for creating a directory and just bail in case it already exists.
@@ -132,7 +132,6 @@ fn main() {
         .par_iter()
         .enumerate()
         .for_each(|(_index, api_def)| {
-
             // On the first thread we start with generating a bunch of main files so we have this
             // generation running threaded as well. Next time when index isn't 0 anymore regular work
             // will come along here.
