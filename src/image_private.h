@@ -21,6 +21,7 @@ typedef struct ImagePrivate {
     struct NSVGimage* svg_image;
     struct NSVGrasterizer* svg_raster;
     FlString name;
+    FlSvgFlags svg_flags;
     u32 texture_id;
     int atlas_x;
     int atlas_y;

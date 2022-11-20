@@ -18,7 +18,6 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     int channels_in_file = 0;
     u8* image_data = NULL;
     NSVGimage* svg_image = NULL;
-    int svg_size = 96;
 
     char temp_buffer[2048];
     const char* filename =
@@ -27,16 +26,8 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     // if data is set we assume that we are going to load from memory
     if (data) {
         image_data = stbi_load_from_memory(data, size, &x, &y, &channels_in_file, 4);
-
-        if (!image_data) {
-            svg_image = nsvgParse((char*)data, "px", svg_size);
-        }
     } else {
         image_data = stbi_load(filename, &x, &y, &channels_in_file, 4);
-
-        if (!image_data) {
-            svg_image = nsvgParseFromFile(filename, "px", svg_size);
-        }
     }
 
     if (!image_data && !svg_image) {
@@ -50,15 +41,49 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
     // TODO: Currenty assumes 4 bytes per pixel
     // TODO: Make sure we pick the correct texture format
 
-    if (svg_image) {
-        x = svg_image->width;
-        y = svg_image->height;
-    }
-
     image->data = image_data;
     image->svg_image = svg_image;
     image->svg_raster = NULL;
     image->info.width = x;
+    image->info.height = y;
+    image->format = FlTextureFormat_Rgba8Srgb;
+    image->texture_id = 0;
+    image->name = StringAllocator_copy_string(&ctx->string_allocator, name);
+
+    return image->handle;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlImage load_svg_image(struct FlContext* ctx, FlString name, u8* data, u32 data_size, u32 target_width, 
+                              FlSvgFlags flags) {
+    char temp_buffer[2048];
+    NSVGimage* svg_image = NULL;
+    const char* filename =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
+
+    // if data is set we assume that we are going to load from memory
+    if (data) {
+        svg_image = nsvgParse((char*)data, "px", 96);
+    } else {
+        svg_image = nsvgParseFromFile(filename, "px", 96);
+    }
+
+    if (!svg_image) {
+        // TODO: Handle case where string is not null-terminated
+        ERROR_ADD(FlError_Image, "Unable to load %s", filename);
+        return 0;
+    }
+
+    ImagePrivate* image = Handles_create_handle(&ctx->global->image_handles);
+
+    float scale = (float)target_width / (float)svg_image->width;
+    int y = (int)(svg_image->height * scale);
+
+    image->svg_image = svg_image;
+    image->svg_raster = NULL;
+    image->svg_flags = flags;
+    image->info.width = target_width;
     image->info.height = y;
     image->format = FlTextureFormat_Rgba8Srgb;
     image->texture_id = 0;
@@ -90,6 +115,20 @@ FlImage fl_image_create_from_file_impl(struct FlContext* ctx, FlString filename)
 
 FlImage fl_image_create_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size) {
     return load_image(ctx, name, data, data_size);
+}
+
+// Load SVG from file
+FlImage fl_image_create_svg_from_file_impl(struct FlContext* ctx, FlString filename, uint32_t target_width,
+                                           FlSvgFlags flags) {
+    return load_svg_image(ctx, filename, NULL, 0, target_width, flags);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Load SVG from memory
+
+FlImage fl_image_create_svg_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size,
+                                             uint32_t target_width, FlSvgFlags flags) {
+    return load_svg_image(ctx, name, data, data_size, target_width, flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -140,12 +179,34 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
         int height = prim->size.y;
 
         // raster only takes one scale value so we use x
-        float scale_x = ((float)prim->size.x) / (float)self->info.width;
+        float scale_x = (float)self->info.width / (float)self->svg_image->width;
         float scale = scale_x;
 
-        dest += (ry * stride) + (rx * 3);
+        //dest += (ry * stride) + (rx * 4);
+
+        printf("Rasterizing svg to %f %d %d %d\n", scale, width, height, stride);
 
         nsvgRasterize(self->svg_raster, self->svg_image, 0.0f, 0.0f, scale, dest, width, height, stride);
+
+        // As the above function alwyas render in RGBA we move over the alpha to all channels here if
+        // that is the mode we want
+        if (self->svg_flags == FlSvgFlags_Alpha) {
+            const int h = self->info.height;
+            const int w = self->info.width;
+
+            uint8_t* t = dest;
+
+            for (int y = 0; y < h; ++y) {
+                for (int x = 0; x < w; ++x) {
+                    t[0] = t[3];
+                    t[1] = t[3];
+                    t[2] = t[3];
+                    t += 4;
+                }
+
+                t += stride - (w * 4);
+            }
+        }
 
     } else {
         // Copy the the image data to the atlas

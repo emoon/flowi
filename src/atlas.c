@@ -301,6 +301,8 @@ Atlas* Atlas_create(int w, int h, AtlasImageType image_type, struct FlGlobalStat
         return NULL;
     }
 
+    memset(image_data, 0xff, image_memory_size);
+
     Atlas* self = FlAllocator_alloc_zero_type(allocator, Atlas);
     if (!self) {
         ERROR_ADD(FlError_Memory, "Unable to create atlas: %s", "out of memory");

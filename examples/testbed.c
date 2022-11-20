@@ -89,9 +89,9 @@ int main() {
         //.font_bold = fl_font_new_from_file(ctx, "data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
         //.font = fl_font_new_from_file(ctx, "data/montserrat-regular.ttf", 64, FlFontPlacementMode_Auto),
         // .image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
-        //.image = fl_image_create_from_file(ctx, "data/recommendations.svg"),
         .image = fl_image_create_from_file(ctx, "/home/emoon/code/projects/rust_minifb/resources/uv.png"),
-        .image2 = fl_image_create_from_file(ctx, "/home/emoon/code/projects/rust_minifb/resources/planet.png"),
+        //.image2 = fl_image_create_from_file(ctx, "/home/emoon/code/projects/rust_minifb/resources/planet.png"),
+        .image2 = fl_image_create_svg_from_file(ctx, "data/recommendations.svg", 512, FlSvgFlags_Alpha),
     };
 
     fl_application_main_loop(main_loop, &app);

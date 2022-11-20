@@ -238,7 +238,7 @@ Program {
 
 local bgfx_defines = { 
         -- TODO: Don't duplicate
-        { "BX_CONFIG_DEBUG=1", "_DEBUG" ; Config = { "*-*-debug" } },
+        { "BX_CONFIG_DEBUG=0", "_DEBUG" ; Config = { "*-*-debug" } },
         { "BX_CONFIG_DEBUG=0" ; Config = { "*-*-release" } },
         "__STDC_LIMIT_MACROS",
         "__STDC_FORMAT_MACROS",
