@@ -241,6 +241,7 @@ local flowi_includes = {
     "flowi/cpp/external/bx/include",
     "flowi/cpp/external/glfw/include",
     "include",
+    GLFW_DIR .. "include",
     STB_LIB,
     NANOSVG_LIB,
     DEAR_IMGUI_DIR,
