@@ -1,40 +1,61 @@
 use std::path::Path;
 
-
-fn add_source_file(path: &str, filename: &str, build: &mut cc::Build) {
-    let path = Path::new(path).join(filename);
-    build.file(path);
+fn add_source_files(path: &str, build: &mut cc::Build, filenames: &[&str]) {
+    for file in filenames {
+        let path = Path::new(path).join(file);
+        build.file(path);
+    }
 }
 
-fn add_include_dir(path: &str, filename: &str, build: &mut cc::Build) {
-    let path = Path::new(path).join(filename);
-    build.include(path);
+fn add_include_dirs(base_path: &str, build: &mut cc::Build, paths: &[&str]) {
+    for path in paths {
+        let path = Path::new(base_path).join(path);
+        build.include(path);
+    }
+}
+
+fn add_sources(build: &mut cc::Build, root: &str, files: &[&str]) {
+    let root = Path::new(root);
+    build.files(files.iter().map(|src| root.join(src)));
+}
+
+fn add_includes(build: &mut cc::Build, root: &str, files: &[&str]) {
+    let root = Path::new(root);
+    build.includes(files.iter().map(|src| root.join(src)));
+}
+
+fn add_defines<'a, V: Into<Option<&'a str>> + Copy>(build: &mut cc::Build, defines: &[(&str, V)]) {
+    for define in defines {
+        build.define(define.0, define.1);
+    }
 }
 
 /// Build the bgfx code
 fn build_bgfx(source_dir: &str, env: &str, build: &mut cc::Build) {
     // windows includes
     if env.contains("windows") {
-        add_include_dir(source_dir, "bx/include/compat/msvc", build);
-        add_include_dir(source_dir, "bgfx/3rdparty/directx-headers/include/directx", build);
+        add_include_dirs(source_dir, build, &[
+            "bx/include/compat/msvc", 
+            "bgfx/3rdparty/directx-headers/include/directx"]);
         build.flag("/Zc:__cplusplus");
     } else if env.contains("darwin") {
         // macOS includes
-        add_include_dir(source_dir, "bx/include/compat/osx", build);
+        add_include_dirs(source_dir, build, &["bx/include/compat/osx"]);
         build.flag("-std=c++14");
     }
 
     // add shared include dirs
-    add_include_dir(source_dir, "bgfx/3rdparty/khronos", build);
-    add_include_dir(source_dir, "bgfx/3rdparty", build);
-    add_include_dir(source_dir, "bgfx/include", build);
-    add_include_dir(source_dir, "bx/include", build);
-    add_include_dir(source_dir, "bx/3rdparty", build);
-    add_include_dir(source_dir, "bimg/include", build);
-    add_include_dir(source_dir, "bimg/3rdparty", build);
-    add_include_dir(source_dir, "bimg/3rdparty/iqa/include", build);
-    add_include_dir(source_dir, "bimg/3rdparty/astc-codec/include", build);
-    add_include_dir(source_dir, "bimg/3rdparty/tinyexr/deps/miniz", build);
+    add_include_dirs(source_dir, build, &[
+        "bgfx/3rdparty/khronos", 
+        "bgfx/3rdparty",
+        "bgfx/include",
+        "bx/include",
+        "bx/3rdparty",
+        "bimg/include",
+        "bimg/3rdparty",
+        "bimg/3rdparty/iqa/include",
+        "bimg/3rdparty/astc-codec/include",
+        "bimg/3rdparty/tinyexr/deps/miniz"]);
 
     // defines - Currently not supporting WebGPU, GNM and Vulkan
     // OS support:
@@ -71,20 +92,23 @@ fn build_bgfx(source_dir: &str, env: &str, build: &mut cc::Build) {
         build.define("BGFX_CONFIG_MULTITHREADED", "1");
     }
 
+
     if env.contains("windows") {
-        build.define("BGFX_CONFIG_RENDERER_VULKAN", "1");
-        build.define("BGFX_CONFIG_RENDERER_DIRECT3D11", "1");
-        build.define("BGFX_CONFIG_RENDERER_DIRECT3D12", "1");
-        build.define("BGFX_CONFIG_RENDERER_OPENGL", "1");
-        build.define("_WIN32", None);
-        build.define("_HAS_EXCEPTIONS", "0");
-        build.define("_SCL_SECURE", "0");
-        build.define("_SECURE_SCL", "0");
-        build.define("__STDC_LIMIT_MACROS", None);
-        build.define("__STDC_FORMAT_MACROS", None);
-        build.define("__STDC_CONSTANT_MACROS", None);
-        build.define("_CRT_SECURE_NO_WARNINGS", None);
-        build.define("_CRT_SECURE_NO_DEPRECATE", None);
+        add_defines(build, &[
+            ("BGFX_CONFIG_RENDERER_VULKAN", Some("1")),
+            ("BGFX_CONFIG_RENDERER_VULKAN", Some("1")),
+            ("BGFX_CONFIG_RENDERER_DIRECT3D11", Some("1")),
+            ("BGFX_CONFIG_RENDERER_DIRECT3D12", Some("1")),
+            ("BGFX_CONFIG_RENDERER_OPENGL", Some("1")),
+            ("_HAS_EXCEPTIONS", Some("0")),
+            ("_SCL_SECURE", Some("0")),
+            ("_SECURE_SCL", Some("0")),
+            ("__STDC_LIMIT_MACROS", None),
+            ("__STDC_FORMAT_MACROS", None),
+            ("__STDC_CONSTANT_MACROS", None),
+            ("_CRT_SECURE_NO_WARNINGS", None),
+            ("_CRT_SECURE_NO_DEPRECATE", None),
+        ]);
         build.warnings(false);
     } else if env.contains("darwin") {
         build.define("BGFX_CONFIG_RENDERER_VULKAN", "0");
@@ -98,41 +122,49 @@ fn build_bgfx(source_dir: &str, env: &str, build: &mut cc::Build) {
     }
 
     // sources
-    add_source_file(source_dir, "bx/src/amalgamated.cpp", build);
-    add_source_file(source_dir, "bimg/src/image.cpp", build);
-    add_source_file(source_dir, "bimg/src/image_cubemap_filter.cpp", build);
-    add_source_file(source_dir, "bimg/src/image_decode.cpp", build);
-    add_source_file(source_dir, "bimg/src/image_gnf.cpp", build);
-    add_source_file(source_dir, "bgfx/src/bgfx.cpp", build);
-    add_source_file(source_dir, "bgfx/src/vertexlayout.cpp", build);
-    add_source_file(source_dir, "bgfx/src/debug_renderdoc.cpp", build);
-    add_source_file(source_dir, "bgfx/src/topology.cpp", build);
-    add_source_file(source_dir, "bgfx/src/shader.cpp", build);
-    add_source_file(source_dir, "bgfx/src/shader_dxbc.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_agc.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_gnm.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_webgpu.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_nvn.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_gl.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_vk.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_noop.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_d3d9.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_d3d11.cpp", build);
-    add_source_file(source_dir, "bgfx/src/renderer_d3d12.cpp", build);
+    add_source_files(source_dir, build, &[
+        "bx/src/amalgamated.cpp",
+        "bimg/src/image.cpp",
+        "bimg/src/image_cubemap_filter.cpp",
+        "bimg/src/image_decode.cpp",
+        "bimg/src/image_gnf.cpp",
+        "bgfx/src/bgfx.cpp",
+        "bgfx/src/vertexlayout.cpp",
+        "bgfx/src/debug_renderdoc.cpp",
+        "bgfx/src/topology.cpp",
+        "bgfx/src/shader.cpp",
+        "bgfx/src/shader_dxbc.cpp",
+        "bgfx/src/renderer_agc.cpp",
+        "bgfx/src/renderer_gnm.cpp",
+        "bgfx/src/renderer_webgpu.cpp",
+        "bgfx/src/renderer_nvn.cpp",
+        "bgfx/src/renderer_gl.cpp",
+        "bgfx/src/renderer_vk.cpp",
+        "bgfx/src/renderer_noop.cpp",
+        "bgfx/src/renderer_d3d9.cpp",
+        "bgfx/src/renderer_d3d11.cpp",
+        "bgfx/src/renderer_d3d12.cpp"]);
 
     if env.contains("windows") {
-        add_source_file(source_dir, "bgfx/src/glcontext_wgl.cpp", build);
-        add_source_file(source_dir, "bgfx/src/nvapi.cpp", build);
-        add_source_file(source_dir, "bgfx/src/dxgi.cpp", build);
-        add_source_file(source_dir, "bgfx/src/shader_dx9bc.cpp", build);
-        add_source_file(source_dir, "bgfx/src/shader_spirv.cpp", build);
+        add_source_files(source_dir, build, &[
+            "bgfx/src/glcontext_wgl.cpp",
+            "bgfx/src/nvapi.cpp",
+            "bgfx/src/dxgi.cpp",
+            "bgfx/src/shader_dx9bc.cpp",
+            "bgfx/src/shader_spirv.cpp"]);
+
     } else if env.contains("darwin") {
-        add_source_file(source_dir, "bgfx/src/glcontext_nsgl.mm", build);
-        add_source_file(source_dir, "bgfx/src/renderer_mtl.mm", build);
+        add_source_files(source_dir, build, &[
+            "bgfx/src/glcontext_nsgl.mm",
+            "bgfx/src/renderer_mtl.mm"]);
     } else if env.contains("android") {
-        add_source_file(source_dir, "bgfx/src/glcontext_egl.cpp", build);
+        add_source_files(source_dir, build, &["bgfx/src/glcontext_egl.cpp"]);
     } else {
-        add_source_file(source_dir, "bgfx/src/glcontext_glx.cpp", build);
+        build.flag("-g");
+        build.flag("-msse2");
+        build.flag("-std=c++14");
+
+        add_source_files(source_dir, build, &["bgfx/src/glcontext_glx.cpp"]);
         build.cpp_link_stdlib("stdc++");
     }
 
@@ -158,9 +190,78 @@ fn build_bgfx(source_dir: &str, env: &str, build: &mut cc::Build) {
     }
 }
 
+/// Build the glfw code
+fn build_glfw(source_dir: &str, env: &str) {
+    let mut build = cc::Build::new();
+
+    add_includes(&mut build, source_dir, &["src", "include"]);
+    add_sources(&mut build, source_dir, &[
+        "src/window.c",
+        "src/context.c",
+        "src/init.c",
+        "src/input.c",
+        "src/monitor.c",
+        "src/vulkan.c",
+        "src/osmesa_context.c",
+        "src/egl_context.c"]);
+    
+    if env.contains("darwin") {
+        add_defines(&mut build, &[
+            ("GLFW_EXPOSE_NATIVE_COCOA", None),
+            ("_GLFW_COCOA", None), 
+            ("MACOSX", None)]);
+        add_source_files(source_dir, &mut build, &[
+            "src/cocoa_init.m",
+            "src/cocoa_joystick.m",
+            "src/cocoa_monitor.m",
+            "src/cocoa_time.c",
+            "src/cocoa_window.m",
+            "src/posix_thread.c",
+            "src/nsgl_context.h",
+            "src/nsgl_context.m"]);
+    } else if env.contains("windows") {
+        add_defines(&mut build, &[
+            ("GLFW_EXPOSE_NATIVE_WIN32", None),
+            ("_GLFW_WIN32", None), 
+            ("WIN32", None)]);
+        add_source_files(source_dir, &mut build, &[
+            "src/wgl_context.c",
+            "src/win32_init.c",
+            "src/win32_joystick.c",
+            "src/win32_monitor.c",
+            "src/win32_thread.c",
+            "src/win32_time.c",
+            "src/win32_window.c"]);
+    } else {
+        build.define("GLFW_EXPOSE_NATIVE_X11", None);
+        build.define("_GLFW_X11", None);
+        build.define("_GLFW_GFX", None);
+        build.define("LINUX", None);
+        build.flag("-Wno-unused-parameter");
+        build.flag("-Wno-missing-field-initializers");
+        build.flag("-Wno-sign-compare");
+
+        add_source_files(source_dir, &mut build, &[
+            "src/glx_context.c",
+            //"src/wl_init.c",
+            //"src/wl_monitor.c",
+            //"src/wl_window.c",
+            "src/x11_init.c",
+            "src/x11_monitor.c",
+            "src/x11_window.c",
+            "src/linux_joystick.c",
+            "src/posix_thread.c",
+            "src/posix_time.c",
+            "src/xkb_unicode.c"]);
+    }
+
+    build.compile("glfw");
+}
+
 fn main() {
     let mut build = cc::Build::new();
     let env = std::env::var("TARGET").unwrap();
     build_bgfx("external", &env, &mut build);
+    build_glfw("external/glfw", &env);
 }
 
