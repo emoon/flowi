@@ -1,0 +1,25 @@
+[package]
+name = "flowi-rust"
+version = "0.1.0"
+edition = "2021"
+
+exclude = [
+    "external/bgfx/bindings",
+    "external/bgfx/examples",
+    "external/bgfx/3rdparty/cgltf",
+    "external/bgfx/3rdparty/dear-imgui",
+    "external/bgfx/3rdparty/glslang",
+    "external/bgfx/3rdparty/fcpp",
+    "external/bgfx/3rdparty/glsl-optimizer",
+    "external/bgfx/3rdparty/spirv-cross",
+    "external/bgfx/3rdparty/spirv-headers",
+    "external/bgfx/3rdparty/spirv-tools",
+    "bgfx/tools",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[build-dependencies]
+cc = "1.0"
+
+[dependencies]
+
