@@ -56,11 +56,11 @@ static FlImage fl_image_create_from_memory(struct FlContext* ctx, const char* na
 
 // Load SVG from file
 static FlImage fl_image_create_svg_from_file(struct FlContext* ctx, const char* filename, uint32_t target_width,
-                                             FlSvgFlags format);
+                                             FlSvgFlags flags);
 
 // Load SVG from memory
 static FlImage fl_image_create_svg_from_memory(struct FlContext* ctx, const char* name, uint8_t* data,
-                                               uint32_t data_size, uint32_t target_width, FlSvgFlags format);
+                                               uint32_t data_size, uint32_t target_width, FlSvgFlags flags);
 
 // Get data amout the image
 static FlImageInfo* fl_image_get_info(struct FlContext* ctx, FlImage image);

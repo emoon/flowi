@@ -35,22 +35,22 @@ FL_INLINE FlImage fl_image_create_from_memory(struct FlContext* ctx, const char*
 
 // Load SVG from file
 FlImage fl_image_create_svg_from_file_impl(struct FlContext* ctx, FlString filename, uint32_t target_width,
-                                           FlSvgFlags format);
+                                           FlSvgFlags flags);
 
 FL_INLINE FlImage fl_image_create_svg_from_file(struct FlContext* ctx, const char* filename, uint32_t target_width,
-                                                FlSvgFlags format) {
+                                                FlSvgFlags flags) {
     FlString filename_ = fl_cstr_to_flstring(filename);
-    return fl_image_create_svg_from_file_impl(ctx, filename_, target_width, format);
+    return fl_image_create_svg_from_file_impl(ctx, filename_, target_width, flags);
 }
 
 // Load SVG from memory
 FlImage fl_image_create_svg_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size,
-                                             uint32_t target_width, FlSvgFlags format);
+                                             uint32_t target_width, FlSvgFlags flags);
 
 FL_INLINE FlImage fl_image_create_svg_from_memory(struct FlContext* ctx, const char* name, uint8_t* data,
-                                                  uint32_t data_size, uint32_t target_width, FlSvgFlags format) {
+                                                  uint32_t data_size, uint32_t target_width, FlSvgFlags flags) {
     FlString name_ = fl_cstr_to_flstring(name);
-    return fl_image_create_svg_from_memory_impl(ctx, name_, data, data_size, target_width, format);
+    return fl_image_create_svg_from_memory_impl(ctx, name_, data, data_size, target_width, flags);
 }
 
 // Get data amout the image
