@@ -13,18 +13,18 @@ fn add_includes(build: &mut cc::Build, root: &str, files: &[&str]) {
 fn main() {
     let mut build = cc::Build::new();
 
-    let bgfx_extern = "../../c/external";
-    let glfw_extern = "../../c/external/glfw";
-    let flowi_extern = "../../c";
-    let flowi_core_extern = "../../../core/c";
+    let bgfx_extern = "../../external";
+    let glfw_extern = "../../external/glfw";
+    let dear_imgui_extern = "../../external/dear_imgui";
+    let flowi_src = "../../src";
 
-    let (root, glfw_root, flowi_root, flowi_core_root) = if Path::new(bgfx_extern).exists() {
-        (bgfx_extern, glfw_extern, flowi_extern, flowi_core_extern)
+    let (root, glfw_root) = if Path::new(bgfx_extern).exists() {
+        (bgfx_extern, glfw_extern)
     } else {
-        ("", "", "", "")
+        ("", "")
     };
 
-    println!("cargo:rerun-if-changed={}", flowi_root);
+    println!("cargo:rerun-if-changed={}", root);
 
     add_includes(
         &mut build,
@@ -260,7 +260,7 @@ fn main() {
     build.compile("glfw");
 
     // Build flowi
-
+/*
     let mut build = cc::Build::new();
 
     build.define("BX_CONFIG_DEBUG", "0");
@@ -293,4 +293,5 @@ fn main() {
     }
 
     build.compile("flowi");
+*/
 }
