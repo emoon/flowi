@@ -439,7 +439,13 @@ impl Cgen {
         let arg_offset = if with_ctx == Ctx::No { 1 } else { 0 };
 
         if with_ctx == Ctx::No {
-            writeln!(f, "{} {}_impl({});\n", fa.return_value, &func_name, arg_line(&fa.internal_args, with_ctx))?;
+            writeln!(
+                f,
+                "{} {}_impl({});\n",
+                fa.return_value,
+                &func_name,
+                arg_line(&fa.internal_args, with_ctx)
+            )?;
         }
 
         writeln!(
@@ -521,7 +527,13 @@ impl Cgen {
         for api_def in api_defs {
             let base_filename = &api_def.base_filename;
 
-            writeln!(f, "#include \"{}.h\"", base_filename)?;
+            if api_def
+                .structs
+                .iter()
+                .any(|s| !s.functions.is_empty() && !s.has_attribute("NoContext"))
+            {
+                writeln!(f, "#include \"{}.h\"", base_filename)?;
+            }
         }
 
         writeln!(f)?;

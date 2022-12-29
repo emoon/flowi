@@ -5,6 +5,7 @@
 
 #include <flowi/ui.h>
 #include <flowi/flowi.h>
+#include <flowi/application.h>
 #include "allocator.h"
 #include "atlas.h"
 #include "flowi_internal.h"
