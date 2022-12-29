@@ -528,7 +528,6 @@ impl Cgen {
         writeln!(f, "struct FlInternalData;")?;
         writeln!(f, "\ntypedef struct FlContext {{")?;
         writeln!(f, "    struct FlInternalData* priv;")?;
-        writeln!(f, "    void (*main_loop)(FlMainLoopCallback callback, void* user_data);")?;
 
         // Generate accesors for the various APIs
         for s in &structs_with_funcs {
@@ -542,7 +541,6 @@ impl Cgen {
         }
 
         writeln!(f, "}} FlContext;\n")?;
-        writeln!(f,  "FL_INLINE void fl_application_main_loop(FlContext* ctx, FlMainLoopCallback callback, void* data) {{ (ctx->main_loop)(callback, data); }}")?;
 
         for s in &structs_with_funcs {
             let func_name = format!("{}_{}", C_API_SUFIX_FUNCS, s.name.to_snake_case());

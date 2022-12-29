@@ -99,7 +99,7 @@ int main() {
         .image2 = fl_image_create_svg_from_file(image_api, "data/recommendations.svg", 512, FlSvgFlags_Alpha),
     };
 
-    fl_application_main_loop(ctx, main_loop, &app);
+    fl_application_main_loop(main_loop, &app);
 
     return 0;
 }

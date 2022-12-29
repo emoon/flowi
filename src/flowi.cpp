@@ -84,7 +84,6 @@ static FlUiApi* get_ui_api(FlInternalData* data, int version) {
 
 static FlContext s_context = {
     NULL,
-    fl_application_main_loop_impl,
     NULL,
     get_image_api,
     NULL, // style api
