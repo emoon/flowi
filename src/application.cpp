@@ -6,6 +6,7 @@
 #include <bx/math.h>
 #include <flowi/application.h>
 #include <flowi/style.h>
+#include <flowi/flowi.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,7 @@
 
 // TODO: Should be in public core api
 //#include "../../../core/c/src/area.h"
-#include "flowi.h"
+#include "flowi_internal.h"
 
 #include "vs_ocornut_imgui.bin.h"
 #include "fs_ocornut_imgui.bin.h"
@@ -85,6 +86,7 @@ struct DearImguiState {
 struct ApplicationState {
     struct FlGlobalState* flowi_state;
     struct FlContext* ctx;
+    struct FlInternalData* data;
     int window_width;
     int window_height;
     int counter;
@@ -172,6 +174,7 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
     }
 
     state->ctx = fl_context_create(state->flowi_state);
+    state->data = state->ctx->priv;
 
     glfwSetErrorCallback(error_callback);
 
@@ -390,7 +393,7 @@ static void render_dear_imgui(const ApplicationState& app_state, const DearImgui
             bgfx::ProgramHandle program = imgui_data.program;
 
             if (cmd->TextureId != 0) {
-                ImagePrivate* image_data = (ImagePrivate*)Handles_get_data(&app_state.ctx->global->image_handles, cmd->TextureId);
+                ImagePrivate* image_data = (ImagePrivate*)Handles_get_data(&app_state.data->global->image_handles, cmd->TextureId);
 
                 if (!image_data) {
                     //ERROR_ADD(FlError_Image, "Invalid handle %s", "todo name");
@@ -677,7 +680,7 @@ static void generate_frame(void* user_data) {
     //fl_set_mouse_pos_state(state->ctx, pos, mouse_state == GLFW_PRESS ? true : false, false, false);
 
     // TODO: Correct delta time.
-    fl_frame_begin(state->ctx, display_w, display_h, 1.0f/60.0f);
+    fl_frame_begin(state->data, display_w, display_h, 1.0f/60.0f);
     ImGui_ImplGlfw_NewFrame();
 
     ImGui::NewFrame();
@@ -686,7 +689,7 @@ static void generate_frame(void* user_data) {
         state->main_callback(state->ctx, state->user_data);
     }
 
-    fl_frame_end(state->ctx);
+    fl_frame_end(state->data);
     ImGui::Render();
 
     render_flowi(*state, display_w, display_h);

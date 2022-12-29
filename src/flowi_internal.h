@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <stdbool.h>
@@ -35,8 +36,8 @@ bool fl_button_c(struct FlContext* ctx, const char* label);
 bool fl_button_size_c(struct FlContext* ctx, const char* label, FlVec2 size);
 bool fl_button_ex_c(struct FlContext* ctx, const char* label, int label_len, FlVec2 Size);
 
-void fl_frame_begin(struct FlContext* ctx, int width, int height, float delta_time);
-void fl_frame_end(struct FlContext* ctx);
+void fl_frame_begin(struct FlInternalData* data, int width, int height, float delta_time);
+void fl_frame_end(struct FlInternalData* data);
 
 void fl_text(struct FlContext* ctx, const char* text);
 void fl_text_len(struct FlContext* ctx, const char* text, int text_len);

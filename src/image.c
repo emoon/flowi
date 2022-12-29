@@ -13,7 +13,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // load image from file or memory
 
-static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 size) {
+static FlImage load_image(FlInternalData* ctx, FlString name, u8* data, u32 size) {
     int x = 0;
     int y = 0;
     int channels_in_file = 0;
@@ -56,7 +56,7 @@ static FlImage load_image(struct FlContext* ctx, FlString name, u8* data, u32 si
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlImage load_svg_image(struct FlContext* ctx, FlString name, u8* data, u32 data_size, u32 target_width, 
+static FlImage load_svg_image(FlInternalData* ctx, FlString name, u8* data, u32 data_size, u32 target_width, 
                               FlSvgFlags flags) {
     char temp_buffer[2048];
     NSVGimage* svg_image = NULL;
@@ -95,7 +95,7 @@ static FlImage load_svg_image(struct FlContext* ctx, FlString name, u8* data, u3
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static ImagePrivate* get_handle(FlContext* ctx, FlImage self) {
+static ImagePrivate* get_handle(FlInternalData* ctx, FlImage self) {
     ImagePrivate* data = Handles_get_data(&ctx->global->image_handles, self);
 
     if (!data) {
@@ -108,33 +108,32 @@ static ImagePrivate* get_handle(FlContext* ctx, FlImage self) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlImage create_from_file(struct FlContext* ctx, FlString filename) {
+static FlImage create_from_file(FlInternalData* ctx, FlString filename) {
     return load_image(ctx, filename, NULL, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlImage create_from_memory(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size) {
+static FlImage create_from_memory(FlInternalData* ctx, FlString name, uint8_t* data, uint32_t data_size) {
     return load_image(ctx, name, data, data_size);
 }
 
 // Load SVG from file
-static FlImage create_svg_from_file(struct FlContext* ctx, FlString filename, uint32_t target_width,
-                                           FlSvgFlags flags) {
+static FlImage create_svg_from_file(FlInternalData* ctx, FlString filename, uint32_t target_width, FlSvgFlags flags) {
     return load_svg_image(ctx, filename, NULL, 0, target_width, flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Load SVG from memory
 
-static FlImage create_svg_from_memory(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size,
+static FlImage create_svg_from_memory(FlInternalData* ctx, FlString name, uint8_t* data, uint32_t data_size,
                                              uint32_t target_width, FlSvgFlags flags) {
     return load_svg_image(ctx, name, data, data_size, target_width, flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlImageInfo* get_info(struct FlContext* ctx, FlImage self) {
+static FlImageInfo* get_info(FlInternalData* ctx, FlImage self) {
     ImagePrivate* data = NULL;
 
     if (!(data = get_handle(ctx, self))) {
@@ -245,7 +244,7 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void destroy(struct FlContext* ctx, FlImage image) {
+static void destroy(FlInternalData* ctx, FlImage image) {
     ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
 
     if (!image_data) {
@@ -276,7 +275,7 @@ struct FlImageApi g_image_funcs = {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-struct FlImageApi* fl_image_get_api(struct FlContext* ctx, int api_version) {
+struct FlImageApi* fl_image_get_api(FlInternalData* ctx, int api_version) {
     FL_UNUSED(api_version);
     return &ctx->image_funcs;
 }

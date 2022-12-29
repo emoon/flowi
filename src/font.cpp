@@ -4,7 +4,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlFont fl_font_new_from_file_impl(struct FlContext* ctx, FlString filename, uint32_t font_size) {
+extern "C" FlFont fl_font_new_from_file_impl(FlInternalData* ctx, FlString filename, uint32_t font_size) {
     char temp_buffer[2048];
 
     ImFontAtlas* atlas = ctx->global->font_atlas;
@@ -23,7 +23,7 @@ extern "C" FlFont fl_font_new_from_file_impl(struct FlContext* ctx, FlString fil
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size,
+extern "C" FlFont fl_font_new_from_memory_impl(FlInternalData* ctx, FlString name, uint8_t* data, uint32_t data_size,
                                                uint32_t font_size) {
     ImFontAtlas* atlas = ctx->global->font_atlas;
     // TODO: Note: Transfer ownership of 'ttf_data' to ImFontAtlas! Will be deleted after destruction of the atlas. Set
@@ -41,5 +41,5 @@ extern "C" FlFont fl_font_new_from_memory_impl(struct FlContext* ctx, FlString n
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Destory the current font, render the id invalid
 
-extern "C" void fl_font_destroy_impl(struct FlContext* ctx, FlFont font) {
+extern "C" void fl_font_destroy_impl(FlInternalData* ctx, FlFont font) {
 }

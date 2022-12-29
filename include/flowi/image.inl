@@ -1,12 +1,13 @@
 typedef struct FlImageApi {
-    struct FlContext* ctx;
-    FlImage (*create_from_file)(struct FlContext* ctx, FlString filename);
-    FlImage (*create_from_memory)(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size);
-    FlImage (*create_svg_from_file)(struct FlContext* ctx, FlString filename, uint32_t target_width, FlSvgFlags flags);
-    FlImage (*create_svg_from_memory)(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size,
+    struct FlInternalData* priv;
+    FlImage (*create_from_file)(struct FlInternalData* priv, FlString filename);
+    FlImage (*create_from_memory)(struct FlInternalData* priv, FlString name, uint8_t* data, uint32_t data_size);
+    FlImage (*create_svg_from_file)(struct FlInternalData* priv, FlString filename, uint32_t target_width,
+                                    FlSvgFlags flags);
+    FlImage (*create_svg_from_memory)(struct FlInternalData* priv, FlString name, uint8_t* data, uint32_t data_size,
                                       uint32_t target_width, FlSvgFlags flags);
-    FlImageInfo* (*get_info)(struct FlContext* ctx, FlImage image);
-    void (*destroy)(struct FlContext* ctx, FlImage self);
+    FlImageInfo* (*get_info)(struct FlInternalData* priv, FlImage image);
+    void (*destroy)(struct FlInternalData* priv, FlImage self);
 } FlImageApi;
 
 // Load image from file. Supported formats are:
@@ -21,7 +22,7 @@ typedef struct FlImageApi {
 // PNM (PPM and PGM binary only)
 FL_INLINE FlImage fl_image_create_from_file(struct FlImageApi* api, const char* filename) {
     FlString filename_ = fl_cstr_to_flstring(filename);
-    return (api->create_from_file)(api->ctx, filename_);
+    return (api->create_from_file)(api->priv, filename_);
 }
 
 // Load image from memory. Supported formats are:
@@ -37,29 +38,29 @@ FL_INLINE FlImage fl_image_create_from_file(struct FlImageApi* api, const char* 
 FL_INLINE FlImage fl_image_create_from_memory(struct FlImageApi* api, const char* name, uint8_t* data,
                                               uint32_t data_size) {
     FlString name_ = fl_cstr_to_flstring(name);
-    return (api->create_from_memory)(api->ctx, name_, data, data_size);
+    return (api->create_from_memory)(api->priv, name_, data, data_size);
 }
 
 // Load SVG from file
 FL_INLINE FlImage fl_image_create_svg_from_file(struct FlImageApi* api, const char* filename, uint32_t target_width,
                                                 FlSvgFlags flags) {
     FlString filename_ = fl_cstr_to_flstring(filename);
-    return (api->create_svg_from_file)(api->ctx, filename_, target_width, flags);
+    return (api->create_svg_from_file)(api->priv, filename_, target_width, flags);
 }
 
 // Load SVG from memory
 FL_INLINE FlImage fl_image_create_svg_from_memory(struct FlImageApi* api, const char* name, uint8_t* data,
                                                   uint32_t data_size, uint32_t target_width, FlSvgFlags flags) {
     FlString name_ = fl_cstr_to_flstring(name);
-    return (api->create_svg_from_memory)(api->ctx, name_, data, data_size, target_width, flags);
+    return (api->create_svg_from_memory)(api->priv, name_, data, data_size, target_width, flags);
 }
 
 // Get data amout the image
 FL_INLINE FlImageInfo* fl_image_get_info(struct FlImageApi* api, FlImage image) {
-    return (api->get_info)(api->ctx, image);
+    return (api->get_info)(api->priv, image);
 }
 
 // Destroy the created image
 FL_INLINE void fl_image_destroy(struct FlImageApi* api, FlImage self) {
-    (api->destroy)(api->ctx, self);
+    (api->destroy)(api->priv, self);
 }

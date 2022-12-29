@@ -31,7 +31,7 @@ static int s_vec2_style_lut[ImGuiStyleVar_COUNT];
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool begin(struct FlContext* ctx, FlString name, FlWindowFlags flags) {
+static bool begin(FlInternalData* ctx, FlString name, FlWindowFlags flags) {
     char temp_buffer[2048];
 
     const char* window_name =
@@ -42,14 +42,14 @@ static bool begin(struct FlContext* ctx, FlString name, FlWindowFlags flags) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void end(struct FlContext* ctx) {
+static void end(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::End();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void image(struct FlContext* ctx, FlImage image) {
+static void image(FlInternalData* ctx, FlImage image) {
     ImagePrivate* image_data = (ImagePrivate*)Handles_get_data(&ctx->global->image_handles, image);
 
     if (!image_data) {
@@ -73,7 +73,7 @@ static void image(struct FlContext* ctx, FlImage image) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Permantly set a color
 
-extern "C" void fl_style_set_color_impl(struct FlContext* ctx, FlStyleColor color, FlColor value) {
+extern "C" void fl_style_set_color_impl(FlInternalData* ctx, FlStyleColor color, FlColor value) {
     FL_UNUSED(ctx);
     ImGuiStyle* style = &ImGui::GetStyle();
     ImVec4* colors = style->Colors;
@@ -84,7 +84,7 @@ extern "C" void fl_style_set_color_impl(struct FlContext* ctx, FlStyleColor colo
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Permantly set a color (RGBA)
 
-extern "C" void fl_style_set_color_u32_impl(struct FlContext* ctx, FlStyleColor color, uint32_t value) {
+extern "C" void fl_style_set_color_u32_impl(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
     FL_UNUSED(ctx);
     ImGuiStyle* style = &ImGui::GetStyle();
     ImVec4* colors = style->Colors;
@@ -95,7 +95,7 @@ extern "C" void fl_style_set_color_u32_impl(struct FlContext* ctx, FlStyleColor 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Temporary push a color change (RGBA)
 
-extern "C" void fl_style_push_color_u32_impl(struct FlContext* ctx, FlStyleColor color, uint32_t value) {
+extern "C" void fl_style_push_color_u32_impl(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
     FL_UNUSED(ctx);
     int color_index = s_color_lut[color];
     ImGui::PushStyleColor(color_index, value);
@@ -104,7 +104,7 @@ extern "C" void fl_style_push_color_u32_impl(struct FlContext* ctx, FlStyleColor
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Temporary push a color change
 
-extern "C" void fl_style_push_color_impl(struct FlContext* ctx, FlStyleColor color, FlColor value) {
+extern "C" void fl_style_push_color_impl(FlInternalData* ctx, FlStyleColor color, FlColor value) {
     FL_UNUSED(ctx);
     int color_index = s_color_lut[color];
     ImGui::PushStyleColor(color_index, ImVec4(value.r, value.g, value.b, value.a));
@@ -113,14 +113,14 @@ extern "C" void fl_style_push_color_impl(struct FlContext* ctx, FlStyleColor col
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Temporary push a color change
 
-extern "C" void fl_style_pop_color_impl(struct FlContext* ctx) {
+extern "C" void fl_style_pop_color_impl(FlInternalData* ctx) {
     ImGui::PopStyleColor();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pushes a single style change
 
-extern "C" void fl_style_push_single_impl(struct FlContext* ctx, FlStyleSingle style, float value) {
+extern "C" void fl_style_push_single_impl(FlInternalData* ctx, FlStyleSingle style, float value) {
     FL_UNUSED(ctx);
     int style_index = s_single_style_lut[style];
     ImGui::PushStyleVar(style_index, value);
@@ -129,7 +129,7 @@ extern "C" void fl_style_push_single_impl(struct FlContext* ctx, FlStyleSingle s
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pushes a Vec2 style change
 
-extern "C" void fl_style_push_vec2_impl(struct FlContext* ctx, FlStyleVec2 style, FlVec2 value) {
+extern "C" void fl_style_push_vec2_impl(FlInternalData* ctx, FlStyleVec2 style, FlVec2 value) {
     FL_UNUSED(ctx);
     int style_index = s_vec2_style_lut[style];
     ImGui::PushStyleVar(style_index, ImVec2(value.x, value.y));
@@ -138,7 +138,7 @@ extern "C" void fl_style_push_vec2_impl(struct FlContext* ctx, FlStyleVec2 style
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pops single style change
 
-extern "C" void fl_style_pop_impl(struct FlContext* ctx) {
+extern "C" void fl_style_pop_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::PopStyleVar();
 }
@@ -160,7 +160,7 @@ FlUiApi g_ui_funcs = {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlUiApi* fl_ui_get_api(struct FlContext* ctx, int api_version) {
+extern "C" FlUiApi* fl_ui_get_api(FlInternalData* ctx, int api_version) {
     FL_UNUSED(api_version);
     return &ctx->ui_funcs;
 }

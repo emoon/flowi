@@ -328,7 +328,7 @@ impl Cgen {
     fn generate_function_args(func: &Function, self_name: &str) -> FuncArgs {
         let mut fa = FuncArgs::default();
 
-        fa.call_args.push("api->ctx".to_owned());
+        fa.call_args.push("api->priv".to_owned());
 
         for (i, arg) in func.function_args.iter().enumerate() {
             // skip first arg if type is manual or static
@@ -507,7 +507,7 @@ impl Cgen {
     }
 
     pub fn generate_main_file(path: &str, api_defs: &[ApiDef]) -> io::Result<()> {
-        let filename = format!("{}/{}.h", path, "flowi.h");
+        let filename = format!("{}/flowi.h", path);
 
         let mut f = BufWriter::new(File::create(&filename)?);
 
@@ -525,27 +525,33 @@ impl Cgen {
         }
 
         writeln!(f)?;
+        writeln!(f, "struct FlInternalData;")?;
+        writeln!(f, "\ntypedef struct FlContext {{")?;
+        writeln!(f, "    struct FlInternalData* priv;")?;
+        writeln!(f, "    void (*main_loop)(FlMainLoopCallback callback, void* user_data);")?;
 
         // Generate accesors for the various APIs
         for s in &structs_with_funcs {
             writeln!(
                 f,
-                "struct {}{}Api* {}_{}_get_api(struct FlContext* ctx, int api_version);",
+                "    struct {}{}Api* (*{}_get_api)(struct FlInternalData* data, int api_version);",
                 C_API_SUFFIX,
                 s.name,
-                C_API_SUFIX_FUNCS,
                 s.name.to_snake_case()
             )?;
         }
 
-        writeln!(f)?;
+        writeln!(f, "}} FlContext;\n")?;
+        writeln!(f,  "FL_INLINE void fl_application_main_loop(FlContext* ctx, FlMainLoopCallback callback, void* data) {{ (ctx->main_loop)(callback, data); }}")?;
 
         for s in &structs_with_funcs {
             let func_name = format!("{}_{}", C_API_SUFIX_FUNCS, s.name.to_snake_case());
             writeln!(
                 f,
-                "#define {}(ctx) {}_get_api(ctx, 0)",
-                func_name, func_name
+                "FL_INLINE struct {}{}Api* {}_api(FlContext* ctx) {{ return (ctx->{}_get_api)(ctx->priv, 0); }}",
+                C_API_SUFFIX,
+                s.name,
+                func_name, s.name.to_snake_case(),
             )?;
         }
 
@@ -639,14 +645,14 @@ impl Cgen {
                 // dispatch table
                 if !sdef.functions.is_empty() && !sdef.has_attribute("NoContext") {
                     writeln!(fi, "typedef struct {}{}Api {{", C_API_SUFFIX, sdef.name)?;
-                    writeln!(fi, "    struct FlContext* ctx;")?;
+                    writeln!(fi, "    struct FlInternalData* priv;")?;
 
                     for func in &sdef.functions {
                         Self::generate_function_dynamic(
                             &mut fi,
                             &func,
                             &sdef.name,
-                            Ctx::Yes("struct FlContext* ctx"),
+                            Ctx::Yes("struct FlInternalData* priv"),
                         )?;
                     }
 
@@ -705,7 +711,7 @@ impl Cgen {
     struct FlContext;
 
     struct StyleApi {
-        struct FlContext* private;
+        struct FlContext* priv;
         void (*fl_style_set_color)(struct FlContext* ctx, int color);
     };
 

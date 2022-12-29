@@ -4,9 +4,10 @@
 #include <string.h>
 
 #include <flowi/ui.h>
+#include <flowi/flowi.h>
 #include "allocator.h"
 #include "atlas.h"
-#include "flowi.h"
+#include "flowi_internal.h"
 #include "font_private.h"
 #include "image_private.h"
 #include "internal.h"
@@ -69,39 +70,66 @@ static FlAllocator malloc_allocator = {
 extern FlImageApi g_image_funcs;
 extern FlUiApi g_ui_funcs;
 
+extern "C" void fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data);
+
+static FlImageApi* get_image_api(FlInternalData* data, int version) {
+    FlImageApi* api = &data->image_funcs;
+    printf("getting image api %p %p\n", data, api);
+    return api; 
+}
+
+static FlUiApi* get_ui_api(FlInternalData* data, int version) {
+    return &data->ui_funcs;
+}
+
+static FlContext s_context = {
+    NULL,
+    fl_application_main_loop_impl,
+    NULL,
+    get_image_api,
+    NULL, // style api
+    get_ui_api,
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     // TODO: Custom allocator
-    FlContext* ctx = FlAllocator_alloc_zero_type(&malloc_allocator, FlContext);
+    FlContext*  ctx = FlAllocator_alloc_zero_type(&malloc_allocator, FlContext);
+    FlInternalData* data = FlAllocator_alloc_zero_type(&malloc_allocator, FlInternalData);
     // TODO: Configure these values
     // int vertex_sizes[VertexAllocType_SIZEOF] = {1024 * 1024, 1024 * 1024};
     // int index_sizes[VertexAllocType_SIZEOF] = {512 * 1024, 512 * 1024};
 
-    LinearAllocator_create_with_allocator(&ctx->frame_allocator, "string tracking allocator", &malloc_allocator,
+    LinearAllocator_create_with_allocator(&data->frame_allocator, "string tracking allocator", &malloc_allocator,
                                           10 * 1024, true);
 
     // VertexAllocator_create(&ctx->vertex_allocator, &malloc_allocator, vertex_sizes, index_sizes, true);
     // LinearAllocator_create_with_allocator(&ctx->layout_allocator, "layout allocator", &malloc_allocator, 1024, true);
-    StringAllocator_create(&ctx->string_allocator, &malloc_allocator, &ctx->frame_allocator);
+    StringAllocator_create(&data->string_allocator, &malloc_allocator, &data->frame_allocator);
 
     for (int i = 0; i < FlLayerType_Count; ++i) {
-        CommandBuffer_create(&ctx->layers[i].primitive_commands, "primitives", state->global_allocator, 4 * 1024);
+        CommandBuffer_create(&data->layers[i].primitive_commands, "primitives", state->global_allocator, 4 * 1024);
     }
 
-    ctx->ui_funcs = g_ui_funcs;
-    ctx->image_funcs = g_image_funcs;
+    printf("create context\n");
 
-    ctx->ui_funcs.ctx = ctx;
-    ctx->image_funcs.ctx = ctx;
+    *ctx = s_context;
+    ctx->priv = data;
+
+    data->ui_funcs = g_ui_funcs;
+    data->image_funcs = g_image_funcs;
+
+    data->ui_funcs.priv = data;
+    data->image_funcs.priv = data;
 
     // Layout_create_default(ctx);
     // ctx->layout_mode = FlLayoutMode_Automatic;
 
-    // TODO: Fixup
-    ctx->global = state;
+    // TODO: Fixuw
+    data->global = state;
 
-    if (hashmap_create(FL_MAX_WIDGET_IDS, &ctx->widget_states) != 0) {
+    if (hashmap_create(FL_MAX_WIDGET_IDS, &data->widget_states) != 0) {
         // TODO: Error
         return NULL;
     }
@@ -141,7 +169,7 @@ extern "C" struct FlGlobalState* fl_create(const FlSettings* settings) {
 
 static bool hack_first_frame = false;
 
-extern "C" void fl_frame_begin(struct FlContext* ctx, int width, int height, float delta_time) {
+extern "C" void fl_frame_begin(FlInternalData* ctx, int width, int height, float delta_time) {
     FL_UNUSED(width);
     FL_UNUSED(height);
 
@@ -204,14 +232,14 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_frame_end(struct FlContext* ctx) {
-    FlGlobalState* state = ctx->global;
+extern "C" void fl_frame_end(struct FlInternalData* data) {
+    FlGlobalState* state = data->global;
 
     // first do generation pass to build up all glyphs and other data
     Atlas_begin_add_rects(state->images_atlas);
 
     for (int l = 0; l < FlLayerType_Count; ++l) {
-        Layer* layer = &ctx->layers[l];
+        Layer* layer = &data->layers[l];
 
         const u8* command_data = NULL;
         const int command_count = CommandBuffer_begin_read_commands(&layer->primitive_commands);
@@ -283,7 +311,7 @@ extern "C" void fl_frame_end(struct FlContext* ctx) {
 #endif
 
     // VertexAllocator_end_frame(&ctx->vertex_allocator);
-    LinearAllocator_rewind(&ctx->frame_allocator);
+    LinearAllocator_rewind(&data->frame_allocator);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -313,8 +341,9 @@ void fl_ui_text_impl(struct FlContext* ctx, FlString text) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_context_destroy(struct FlContext* self) {
-    FlAllocator* allocator = self->global->global_allocator;
+extern "C" void fl_context_destroy(FlContext* self) {
+    FlInternalData* data = self->priv;
+    FlAllocator* allocator = data->global->global_allocator;
 
     /*
     for (int i = 0; i < self->style_count; ++i) {
@@ -323,7 +352,7 @@ extern "C" void fl_context_destroy(struct FlContext* self) {
     */
 
     for (int i = 0; i < FlLayerType_Count; ++i) {
-        Layer* layer = &self->layers[i];
+        Layer* layer = &data->layers[i];
         CommandBuffer_destroy(&layer->primitive_commands);
     }
 
@@ -331,12 +360,13 @@ extern "C" void fl_context_destroy(struct FlContext* self) {
     LinearAllocator_destroy(&self->layout_allocator);
     VertexAllocator_destroy(&self->vertex_allocator);
     */
-    StringAllocator_destroy(&self->string_allocator);
-    LinearAllocator_destroy(&self->frame_allocator);
+    StringAllocator_destroy(&data->string_allocator);
+    LinearAllocator_destroy(&data->frame_allocator);
 
-    hashmap_destroy(&self->widget_states);
+    hashmap_destroy(&data->widget_states);
 
     FlAllocator_free(allocator, self);
+    FlAllocator_free(allocator, data);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

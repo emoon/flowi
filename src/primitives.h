@@ -3,7 +3,7 @@
 #include <flowi/math_data.h>
 #include <flowi/style.h>
 #include "command_buffer.h"
-#include "flowi.h"
+#include "flowi_internal.h"
 
 struct Font;
 struct FlContext;

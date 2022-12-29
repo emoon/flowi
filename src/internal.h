@@ -8,7 +8,7 @@
 #include "command_buffer.h"
 #include "string_allocator.h"
 #include "layer.h"
-#include "flowi.h"
+#include "flowi_internal.h"
 #include "handles.h"
 #include "allocator.h"
 
@@ -54,7 +54,7 @@ typedef struct FlGlobalState {
 
 void Errors_add(FlError err, const char* filename, int line, const char* fmt, ...);
 
-typedef struct FlContext {
+typedef struct FlInternalData {
     struct ImGuiContext* imgui_ctx;
     struct FlImageApi image_funcs;
     struct FlUiApi ui_funcs;
@@ -65,15 +65,15 @@ typedef struct FlContext {
     struct FlGlobalState* global;
     struct hashmap_s widget_states;
     float delta_time;
-} FlContext;
+} FlInternalData;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Use custom io functions
 // TODO: Custom allocator
 
-u8* Io_load_file_to_memory_null_term(FlContext* ctx, const char* filename, u32* out_size);
-u8* Io_load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size);
-u8* Io_load_file_to_memory_flstring(FlContext* ctx, FlString name, u32* out_size);
+u8* Io_load_file_to_memory_null_term(FlInternalData* ctx, const char* filename, u32* out_size);
+u8* Io_load_file_to_memory(FlInternalData* ctx, const char* filename, u32* out_size);
+u8* Io_load_file_to_memory_flstring(FlInternalData* ctx, FlString name, u32* out_size);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Move

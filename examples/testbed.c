@@ -1,8 +1,5 @@
 // TODO: flowi/font.h should just include tho core version
-#include <flowi/application.h>
-#include <flowi/flowi.h.h>
-#include <flowi/ui.h>
-#include <flowi/style.h>
+#include <flowi/flowi.h>
 #include <stdio.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,7 +23,7 @@ typedef struct App {
 void main_loop(struct FlContext* ctx, void* user_data) {
     App* app = (App*)user_data;
 
-    FlUiApi* ui = fl_ui(ctx);
+    FlUiApi* ui = fl_ui_api(ctx);
 
     //fl_style_push_color(ctx, FlStyleColor_TitleBg, FlColor_new_rgb(1.0f, 0.0f, 0.0f));
     fl_ui_window_begin(ui, "Test®", FlWindowFlags_None);
@@ -79,6 +76,8 @@ void main_loop(struct FlContext* ctx, void* user_data) {
     // fl_ui_image(ctx, app->image);
 }
 
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int main() {
@@ -89,7 +88,7 @@ int main() {
         return 0;
     }
 
-    FlImageApi* image_api = fl_image(ctx);
+    FlImageApi* image_api = fl_image_api(ctx);
 
     App app = {
         //.font_bold = fl_font_new_from_file(ctx, "data/Montserrat-Bold.ttf", 64, FlFontPlacementMode_Auto),
@@ -100,7 +99,7 @@ int main() {
         .image2 = fl_image_create_svg_from_file(image_api, "data/recommendations.svg", 512, FlSvgFlags_Alpha),
     };
 
-    fl_application_main_loop(main_loop, &app);
+    fl_application_main_loop(ctx, main_loop, &app);
 
     return 0;
 }

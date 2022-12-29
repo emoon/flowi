@@ -54,7 +54,7 @@ static FILE* open_file(const char* filename, const char* mode) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* Io_load_file_to_memory_flstring(FlContext* ctx, FlString name, u32* out_size) {
+u8* Io_load_file_to_memory_flstring(FlInternalData* ctx, FlString name, u32* out_size) {
     char temp_buffer[2048];
 
     const char* filename =
@@ -71,7 +71,7 @@ u8* Io_load_file_to_memory_flstring(FlContext* ctx, FlString name, u32* out_size
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Add support to override IO functions
 
-static u8* load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size, int pad_memory_size) {
+static u8* load_file_to_memory(FlInternalData* ctx, const char* filename, u32* out_size, int pad_memory_size) {
     FILE* f = open_file(filename, "rb");
     u8* data = NULL;
     *out_size = 0;
@@ -123,13 +123,13 @@ cleanup:
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* Io_load_file_to_memory(FlContext* ctx, const char* filename, u32* out_size) {
+u8* Io_load_file_to_memory(FlInternalData* ctx, const char* filename, u32* out_size) {
     return load_file_to_memory(ctx, filename, out_size, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u8* Io_load_file_to_memory_null_term(FlContext* ctx, const char* filename, u32* out_size) {
+u8* Io_load_file_to_memory_null_term(FlInternalData* ctx, const char* filename, u32* out_size) {
     return load_file_to_memory(ctx, filename, out_size, 1);
 }
 

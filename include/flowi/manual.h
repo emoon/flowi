@@ -24,3 +24,4 @@ FL_INLINE FlString fl_cstr_to_flstring(const char* str) {
 }
 
 struct FlContext;
+struct FlInternalData;
