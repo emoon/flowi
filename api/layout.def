@@ -34,9 +34,9 @@ struct LayoutArea {
     height: Sizing,
     direction: LayoutDirection,
 
-    [static] create(name: String, area: LayoutArea) -> LayoutAreaId,
-    [static] from_children(name: String, children: *const [LayoutArea], row: i16, cols: i16) -> LayoutAreaId,
-    [static] set_layout_mode(mode: LayoutMode),
+    //[static] create(name: String, area: LayoutArea) -> LayoutAreaId,
+    //[static] from_children(name: String, children: *const [LayoutArea], row: i16, cols: i16) -> LayoutAreaId,
+    //[static] set_layout_mode(mode: LayoutMode),
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

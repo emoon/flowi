@@ -74,34 +74,37 @@ typedef enum FlWindowFlags {
     FlWindowFlags_NoInputs = FlWindowFlags_NoMouseInputs | FlWindowFlags_NoNavInputs | FlWindowFlags_NoNavFocus,
 } FlWindowFlags;
 
+struct FlUiApi;
+
 struct FlUi;
+
 // Start a window
-static bool fl_ui_window_begin(struct FlContext* ctx, const char* name, FlWindowFlags flags);
+static bool fl_ui_window_begin(struct FlUiApi* api, const char* name, FlWindowFlags flags);
 
 // End call for various types such as windows, lists, etc.
-static void fl_ui_end(struct FlContext* ctx);
+static void fl_ui_end(struct FlUiApi* api);
 
 // Draw static text with the selected font
-static void fl_ui_text(struct FlContext* ctx, const char* text);
+static void fl_ui_text(struct FlUiApi* api, const char* text);
 
 // Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
-static void fl_ui_image(struct FlContext* ctx, FlImage image);
+static void fl_ui_image(struct FlUiApi* api, FlImage image);
 
 // Draw image with given size
-static void fl_ui_image_with_size(struct FlContext* ctx, FlImage image, FlVec2 size);
+static void fl_ui_image_with_size(struct FlUiApi* api, FlImage image, FlVec2 size);
 
 // Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
-static void fl_ui_set_pos(struct FlContext* ctx, FlVec2 pos);
+static void fl_ui_set_pos(struct FlUiApi* api, FlVec2 pos);
 
 // Get the last widget size. This is usually used for doing manual layouting
-static FlRect fl_ui_get_last_widget_size(struct FlContext* ctx, FlVec2 pos);
+static FlRect fl_ui_get_last_widget_size(struct FlUiApi* api, FlVec2 pos);
 
 // Push button widget that returns true if user has pressed it
-static bool fl_ui_push_button_with_icon(struct FlContext* ctx, const char* text, FlImage image, FlVec2 text_pos,
+static bool fl_ui_push_button_with_icon(struct FlUiApi* api, const char* text, FlImage image, FlVec2 text_pos,
                                         float image_scale);
 
 // Push button widget that returns true if user has pressed it
-static bool fl_ui_push_button(struct FlContext* ctx, const char* text);
+static bool fl_ui_push_button(struct FlUiApi* api, const char* text);
 
 #include "ui.inl"
 

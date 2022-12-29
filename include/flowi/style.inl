@@ -1,55 +1,51 @@
-// Permantly set a color
-void fl_style_set_color_impl(struct FlContext* ctx, FlStyleColor color, FlColor value);
+typedef struct FlStyleApi {
+    struct FlContext* ctx;
+    void (*set_color)(struct FlContext* ctx, FlStyleColor color, FlColor value);
+    void (*set_color_u32)(struct FlContext* ctx, FlStyleColor color, uint32_t value);
+    void (*push_color_u32)(struct FlContext* ctx, FlStyleColor color, uint32_t value);
+    void (*push_color)(struct FlContext* ctx, FlStyleColor color, FlColor value);
+    void (*pop_color)(struct FlContext* ctx);
+    void (*push_single)(struct FlContext* ctx, FlStyleSingle style, float value);
+    void (*push_vec2)(struct FlContext* ctx, FlStyleVec2 style, FlVec2 value);
+    void (*pop)(struct FlContext* ctx);
+} FlStyleApi;
 
-FL_INLINE void fl_style_set_color(struct FlContext* ctx, FlStyleColor color, FlColor value) {
-    fl_style_set_color_impl(ctx, color, value);
+// Permantly set a color
+FL_INLINE void fl_style_set_color(struct FlStyleApi* api, FlStyleColor color, FlColor value) {
+    (api->set_color)(api->ctx, color, value);
 }
 
 // Permantly set a color (ARGB)
-void fl_style_set_color_u32_impl(struct FlContext* ctx, FlStyleColor color, uint32_t value);
-
-FL_INLINE void fl_style_set_color_u32(struct FlContext* ctx, FlStyleColor color, uint32_t value) {
-    fl_style_set_color_u32_impl(ctx, color, value);
+FL_INLINE void fl_style_set_color_u32(struct FlStyleApi* api, FlStyleColor color, uint32_t value) {
+    (api->set_color_u32)(api->ctx, color, value);
 }
 
 // Temporary push a color change (ARGB)
-void fl_style_push_color_u32_impl(struct FlContext* ctx, FlStyleColor color, uint32_t value);
-
-FL_INLINE void fl_style_push_color_u32(struct FlContext* ctx, FlStyleColor color, uint32_t value) {
-    fl_style_push_color_u32_impl(ctx, color, value);
+FL_INLINE void fl_style_push_color_u32(struct FlStyleApi* api, FlStyleColor color, uint32_t value) {
+    (api->push_color_u32)(api->ctx, color, value);
 }
 
 // Temporary push a color change
-void fl_style_push_color_impl(struct FlContext* ctx, FlStyleColor color, FlColor value);
-
-FL_INLINE void fl_style_push_color(struct FlContext* ctx, FlStyleColor color, FlColor value) {
-    fl_style_push_color_impl(ctx, color, value);
+FL_INLINE void fl_style_push_color(struct FlStyleApi* api, FlStyleColor color, FlColor value) {
+    (api->push_color)(api->ctx, color, value);
 }
 
 // Temporary push a color change
-void fl_style_pop_color_impl(struct FlContext* ctx);
-
-FL_INLINE void fl_style_pop_color(struct FlContext* ctx) {
-    fl_style_pop_color_impl(ctx);
+FL_INLINE void fl_style_pop_color(struct FlStyleApi* api) {
+    (api->pop_color)(api->ctx);
 }
 
 // Pushes a single style change
-void fl_style_push_single_impl(struct FlContext* ctx, FlStyleSingle style, float value);
-
-FL_INLINE void fl_style_push_single(struct FlContext* ctx, FlStyleSingle style, float value) {
-    fl_style_push_single_impl(ctx, style, value);
+FL_INLINE void fl_style_push_single(struct FlStyleApi* api, FlStyleSingle style, float value) {
+    (api->push_single)(api->ctx, style, value);
 }
 
 // Pushes a Vec2 style change
-void fl_style_push_vec2_impl(struct FlContext* ctx, FlStyleVec2 style, FlVec2 value);
-
-FL_INLINE void fl_style_push_vec2(struct FlContext* ctx, FlStyleVec2 style, FlVec2 value) {
-    fl_style_push_vec2_impl(ctx, style, value);
+FL_INLINE void fl_style_push_vec2(struct FlStyleApi* api, FlStyleVec2 style, FlVec2 value) {
+    (api->push_vec2)(api->ctx, style, value);
 }
 
 // Pops a style change
-void fl_style_pop_impl(struct FlContext* ctx);
-
-FL_INLINE void fl_style_pop(struct FlContext* ctx) {
-    fl_style_pop_impl(ctx);
+FL_INLINE void fl_style_pop(struct FlStyleApi* api) {
+    (api->pop)(api->ctx);
 }

@@ -45,15 +45,9 @@ pub static C_API_SUFIX_FUNCS: &str = "fl";
 
 pub struct Cgen;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 enum Ctx<'a> {
     Yes(&'a str),
-    No,
-}
-
-#[derive(PartialEq, Copy, Clone)]
-pub enum DynamicOutput {
-    Yes,
     No,
 }
 
@@ -246,11 +240,20 @@ impl Cgen {
     fn generate_struct<W: Write>(f: &mut W, sdef: &Struct) -> io::Result<()> {
         Self::write_commment(f, &sdef.doc_comments, 0)?;
 
+        if sdef.name == "Image" {
+            dbg!(sdef.variables.is_empty());
+            dbg!(sdef.functions.is_empty());
+        }
+
+        if sdef.variables.is_empty() && !sdef.functions.is_empty() {
+            writeln!(f, "struct {}{}Api;\n", C_API_SUFFIX, sdef.name)?;
+        }
+
         // if we have handle set we just generate it as a i32 instead
         if sdef.has_attribute("Handle") {
             writeln!(f, "typedef uint64_t {}{};\n", C_API_SUFFIX, sdef.name)
         } else if sdef.variables.is_empty() {
-            writeln!(f, "struct {}{};", C_API_SUFFIX, sdef.name)
+            writeln!(f, "struct {}{};\n", C_API_SUFFIX, sdef.name)
         } else {
             writeln!(f, "typedef struct {}{} {{", C_API_SUFFIX, sdef.name)?;
 
@@ -322,18 +325,10 @@ impl Cgen {
         Ok(())
     }
 
-    fn generate_function_args(
-        func: &Function,
-        self_name: &str,
-        dynamic: DynamicOutput,
-    ) -> FuncArgs {
+    fn generate_function_args(func: &Function, self_name: &str) -> FuncArgs {
         let mut fa = FuncArgs::default();
 
-        if dynamic == DynamicOutput::Yes {
-            fa.call_args.push("api->ctx".to_owned());
-        } else {
-            fa.call_args.push("ctx".to_owned());
-        }
+        fa.call_args.push("api->ctx".to_owned());
 
         for (i, arg) in func.function_args.iter().enumerate() {
             // skip first arg if type is manual or static
@@ -413,9 +408,8 @@ impl Cgen {
         f: &mut W,
         func: &Function,
         self_name: &str,
-        dynamic: DynamicOutput,
     ) -> io::Result<()> {
-        let fa = Self::generate_function_args(func, self_name, dynamic);
+        let fa = Self::generate_function_args(func, self_name);
         writeln!(
             f,
             "typedef {} (*{}{})({});",
@@ -430,28 +424,23 @@ impl Cgen {
         f: &mut W,
         func: &Function,
         self_name: &str,
-        dynamic: DynamicOutput,
         with_ctx: Ctx,
     ) -> io::Result<()> {
-        let fa = Self::generate_function_args(func, self_name, dynamic);
+        let fa = Self::generate_function_args(func, self_name);
 
         Self::write_commment(f, &func.doc_comments, 0)?;
 
         // write the implementation func
-
-        if dynamic == DynamicOutput::No {
-            #[rustfmt::skip]
-            writeln!(f, "{} {}_impl({});\n", fa.return_value, func.c_name, arg_line(&fa.internal_args, with_ctx))?;
-        }
-
-        // write the inline function
-        // TODO: Generate the internal inside a separate header to make things cleaner
 
         #[rustfmt::skip]
         let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, self_name.to_snake_case(), func.name);
         let func_name_c = &func_name;
 
         let arg_offset = if with_ctx == Ctx::No { 1 } else { 0 };
+
+        if with_ctx == Ctx::No {
+            writeln!(f, "{} {}_impl({});\n", fa.return_value, &func_name, arg_line(&fa.internal_args, with_ctx))?;
+        }
 
         writeln!(
             f,
@@ -465,37 +454,19 @@ impl Cgen {
             write!(f, "{}", &fa.body)?;
         }
 
-        if dynamic == DynamicOutput::No {
+        let argument_line = arg_line(&fa.call_args[arg_offset..], Ctx::No);
+
+        if with_ctx == Ctx::No {
             if fa.return_value != "void" {
-                writeln!(
-                    f,
-                    "return {}_impl({});",
-                    func.c_name,
-                    arg_line(&fa.call_args[arg_offset..], Ctx::No)
-                )?;
+                writeln!(f, "return {}_impl({});", func_name, argument_line)?;
             } else {
-                writeln!(
-                    f,
-                    "{}_impl({});",
-                    func.c_name,
-                    arg_line(&fa.call_args[arg_offset..], Ctx::No)
-                )?;
+                writeln!(f, "{}_impl({});", func_name, argument_line)?;
             }
         } else {
             if fa.return_value != "void" {
-                writeln!(
-                    f,
-                    "return (api->{})({});",
-                    func.c_name,
-                    arg_line(&fa.call_args[arg_offset..], Ctx::No)
-                )?;
+                writeln!(f, "return (api->{})({});", func.name, argument_line)?;
             } else {
-                writeln!(
-                    f,
-                    "(api->{})({});",
-                    func.c_name,
-                    arg_line(&fa.call_args[arg_offset..], Ctx::No)
-                )?;
+                writeln!(f, "(api->{})({});", func.name, argument_line)?;
             }
         }
 
@@ -505,11 +476,10 @@ impl Cgen {
     fn generate_function_def<W: Write>(
         f: &mut W,
         func: &Function,
-        dynamic: DynamicOutput,
         self_name: &str,
         with_ctx: Ctx,
     ) -> io::Result<()> {
-        let fa = Self::generate_function_args(func, self_name, dynamic);
+        let fa = Self::generate_function_args(func, self_name);
 
         Self::write_commment(f, &func.doc_comments, 0)?;
 
@@ -528,18 +498,63 @@ impl Cgen {
         self_name: &str,
         with_ctx: Ctx,
     ) -> io::Result<()> {
-        let fa = Self::generate_function_args(func, self_name, DynamicOutput::Yes);
+        let fa = Self::generate_function_args(func, self_name);
 
         #[rustfmt::skip]
-        let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, self_name.to_snake_case(), func.name);
-
-        #[rustfmt::skip]
-        writeln!(f, "{} (*{})({});", fa.return_value, func_name, arg_line(&fa.func_args, with_ctx))?;
+        writeln!(f, "{} (*{})({});", fa.return_value, &func.name, arg_line(&fa.internal_args, with_ctx))?;
 
         Ok(())
     }
 
-    pub fn generate(dynamic: DynamicOutput, path: &str, api_def: &ApiDef) -> io::Result<()> {
+    pub fn generate_main_file(path: &str, api_defs: &[ApiDef]) -> io::Result<()> {
+        let filename = format!("{}/{}.h", path, "flowi.h");
+
+        let mut f = BufWriter::new(File::create(&filename)?);
+
+        // Gather all the structs with functions in them
+        let structs_with_funcs: Vec<&Struct> = api_defs
+            .iter()
+            .flat_map(|a| &a.structs)
+            .filter(|s| !s.functions.is_empty() && !s.has_attribute("NoContext"))
+            .collect();
+
+        for api_def in api_defs {
+            let base_filename = &api_def.base_filename;
+
+            writeln!(f, "#include \"{}.h\"", base_filename)?;
+        }
+
+        writeln!(f)?;
+
+        // Generate accesors for the various APIs
+        for s in &structs_with_funcs {
+            writeln!(
+                f,
+                "struct {}{}Api* {}_{}_get_api(struct FlContext* ctx, int api_version);",
+                C_API_SUFFIX,
+                s.name,
+                C_API_SUFIX_FUNCS,
+                s.name.to_snake_case()
+            )?;
+        }
+
+        writeln!(f)?;
+
+        for s in &structs_with_funcs {
+            let func_name = format!("{}_{}", C_API_SUFIX_FUNCS, s.name.to_snake_case());
+            writeln!(
+                f,
+                "#define {}(ctx) {}_get_api(ctx, 0)",
+                func_name, func_name
+            )?;
+        }
+
+        writeln!(f)?;
+
+        Ok(())
+    }
+
+    pub fn generate(path: &str, api_def: &ApiDef) -> io::Result<()> {
         let filename = format!("{}/{}.h", path, api_def.base_filename);
         let inl_filename = format!("{}/{}.inl", path, api_def.base_filename);
 
@@ -589,33 +604,27 @@ impl Cgen {
 
             if !api_def.callbacks.is_empty() {
                 for func in &api_def.callbacks {
-                    Self::generate_callback_function(&mut f, &func, "", dynamic)?;
+                    Self::generate_callback_function(&mut f, &func, "")?;
                 }
                 writeln!(f)?;
             }
 
             // generate defintion
             for sdef in &api_def.structs {
-                let context_dynamic_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
-                let context_name = if dynamic == DynamicOutput::Yes {
-                    &context_dynamic_name
-                } else {
-                    "struct FlContext* ctx"
-                };
+                let context_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
 
                 for func in &sdef.functions {
                     let with_ctx = if sdef.has_attribute("NoContext") {
                         Ctx::No
                     } else {
-                        Ctx::Yes(context_name)
+                        Ctx::Yes(&context_name)
                     };
                     if sdef.has_attribute("Handle") {
-                        Self::generate_function_def(&mut f, &func, dynamic, &sdef.name, with_ctx)?;
+                        Self::generate_function_def(&mut f, &func, &sdef.name, with_ctx)?;
                     } else {
                         Self::generate_function_def(
                             &mut f,
                             &func,
-                            dynamic,
                             &format!("{}*", sdef.name),
                             with_ctx,
                         )?;
@@ -624,17 +633,12 @@ impl Cgen {
             }
 
             for sdef in &api_def.structs {
-                let context_dynamic_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
-                let context_name = if dynamic == DynamicOutput::Yes {
-                    &context_dynamic_name
-                } else {
-                    "struct FlContext* ctx"
-                };
+                let context_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
 
                 // if we have functions for this struct and dynamic output we need to generate the
                 // dispatch table
-                if !sdef.functions.is_empty() && dynamic == DynamicOutput::Yes {
-                    writeln!(fi, "struct {}{}Api {{", C_API_SUFFIX, sdef.name)?;
+                if !sdef.functions.is_empty() && !sdef.has_attribute("NoContext") {
+                    writeln!(fi, "typedef struct {}{}Api {{", C_API_SUFFIX, sdef.name)?;
                     writeln!(fi, "    struct FlContext* ctx;")?;
 
                     for func in &sdef.functions {
@@ -646,23 +650,22 @@ impl Cgen {
                         )?;
                     }
 
-                    writeln!(fi, "}};\n")?;
+                    writeln!(fi, "}} {}{}Api;\n", C_API_SUFFIX, sdef.name)?;
                 }
 
                 for func in &sdef.functions {
                     let with_ctx = if sdef.has_attribute("NoContext") {
                         Ctx::No
                     } else {
-                        Ctx::Yes(context_name)
+                        Ctx::Yes(&context_name)
                     };
                     if sdef.has_attribute("Handle") {
-                        Self::generate_function(&mut fi, &func, &sdef.name, dynamic, with_ctx)?;
+                        Self::generate_function(&mut fi, &func, &sdef.name, with_ctx)?;
                     } else {
                         Self::generate_function(
                             &mut fi,
                             &func,
                             &format!("{}*", sdef.name),
-                            dynamic,
                             with_ctx,
                         )?;
                     }

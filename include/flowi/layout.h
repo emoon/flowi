@@ -48,13 +48,6 @@ typedef struct FlLayoutArea {
     FlLayoutDirection direction;
 } FlLayoutArea;
 
-static FlLayoutAreaId fl_layout_area_create(struct FlContext* ctx, const char* name, FlLayoutArea area);
-
-static FlLayoutAreaId fl_layout_area_from_children(struct FlContext* ctx, const char* name, FlLayoutArea* children,
-                                                   uint32_t children_size, int16_t row, int16_t cols);
-
-static void fl_layout_area_set_layout_mode(struct FlContext* ctx, FlLayoutMode mode);
-
 #include "layout.inl"
 
 #ifdef __cplusplus

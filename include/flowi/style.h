@@ -104,30 +104,33 @@ typedef enum FlStyleVec2 {
     FlStyleVec2_SelectableTextAlign = 8,
 } FlStyleVec2;
 
+struct FlStyleApi;
+
 struct FlStyle;
+
 // Permantly set a color
-static void fl_style_set_color(struct FlContext* ctx, FlStyleColor color, FlColor value);
+static void fl_style_set_color(struct FlStyleApi* api, FlStyleColor color, FlColor value);
 
 // Permantly set a color (ARGB)
-static void fl_style_set_color_u32(struct FlContext* ctx, FlStyleColor color, uint32_t value);
+static void fl_style_set_color_u32(struct FlStyleApi* api, FlStyleColor color, uint32_t value);
 
 // Temporary push a color change (ARGB)
-static void fl_style_push_color_u32(struct FlContext* ctx, FlStyleColor color, uint32_t value);
+static void fl_style_push_color_u32(struct FlStyleApi* api, FlStyleColor color, uint32_t value);
 
 // Temporary push a color change
-static void fl_style_push_color(struct FlContext* ctx, FlStyleColor color, FlColor value);
+static void fl_style_push_color(struct FlStyleApi* api, FlStyleColor color, FlColor value);
 
 // Temporary push a color change
-static void fl_style_pop_color(struct FlContext* ctx);
+static void fl_style_pop_color(struct FlStyleApi* api);
 
 // Pushes a single style change
-static void fl_style_push_single(struct FlContext* ctx, FlStyleSingle style, float value);
+static void fl_style_push_single(struct FlStyleApi* api, FlStyleSingle style, float value);
 
 // Pushes a Vec2 style change
-static void fl_style_push_vec2(struct FlContext* ctx, FlStyleVec2 style, FlVec2 value);
+static void fl_style_push_vec2(struct FlStyleApi* api, FlStyleVec2 style, FlVec2 value);
 
 // Pops a style change
-static void fl_style_pop(struct FlContext* ctx);
+static void fl_style_pop(struct FlStyleApi* api);
 
 #include "style.inl"
 

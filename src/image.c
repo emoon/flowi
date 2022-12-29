@@ -8,6 +8,7 @@
 #include "string_allocator.h"
 #include "vertex_allocator.h"
 #include "primitives.h"
+#include "internal.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // load image from file or memory
@@ -107,18 +108,18 @@ static ImagePrivate* get_handle(FlContext* ctx, FlImage self) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlImage fl_image_create_from_file_impl(struct FlContext* ctx, FlString filename) {
+static FlImage create_from_file(struct FlContext* ctx, FlString filename) {
     return load_image(ctx, filename, NULL, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlImage fl_image_create_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size) {
+static FlImage create_from_memory(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size) {
     return load_image(ctx, name, data, data_size);
 }
 
 // Load SVG from file
-FlImage fl_image_create_svg_from_file_impl(struct FlContext* ctx, FlString filename, uint32_t target_width,
+static FlImage create_svg_from_file(struct FlContext* ctx, FlString filename, uint32_t target_width,
                                            FlSvgFlags flags) {
     return load_svg_image(ctx, filename, NULL, 0, target_width, flags);
 }
@@ -126,14 +127,14 @@ FlImage fl_image_create_svg_from_file_impl(struct FlContext* ctx, FlString filen
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Load SVG from memory
 
-FlImage fl_image_create_svg_from_memory_impl(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size,
+static FlImage create_svg_from_memory(struct FlContext* ctx, FlString name, uint8_t* data, uint32_t data_size,
                                              uint32_t target_width, FlSvgFlags flags) {
     return load_svg_image(ctx, name, data, data_size, target_width, flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlImageInfo* fl_image_get_info_impl(struct FlContext* ctx, FlImage self) {
+static FlImageInfo* get_info(struct FlContext* ctx, FlImage self) {
     ImagePrivate* data = NULL;
 
     if (!(data = get_handle(ctx, self))) {
@@ -207,7 +208,6 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
                 t += stride - (w * 4);
             }
         }
-
     } else {
         // Copy the the image data to the atlas
         // TODO: not doing a copy and only use the atlas for virtual data and copy directly from
@@ -243,11 +243,9 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
     return true;
 }
 
-#if 0
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
+static void destroy(struct FlContext* ctx, FlImage image) {
     ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
 
     if (!image_data) {
@@ -266,110 +264,21 @@ void fl_image_destroy_impl(struct FlContext* ctx, FlImage image) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool Image_render(struct FlContext* ctx, const u8* cmd) {
-    (void)ctx;
-    (void)cmd;
-/*
-    PrimitiveImage* prim = (PrimitiveImage*)cmd;
-
-    FlVertPosUvColor* vertices = NULL;
-    FlIdxSize* index_buffer = NULL;
-
-    VertexAllocator_alloc_pos_uv_color(&ctx->vertex_allocator, &vertices, &index_buffer, 4, 6);
-
-    // TODO: fixme
-    u32 color = 0xffffffff;
-
-    u16 x0 = (u16)prim->image->atlas_x;
-    u16 y0 = (u16)prim->image->atlas_y;
-    u16 x1 = (u16)(x0 + prim->size.x);
-    u16 y1 = (u16)(y0 + prim->size.y);
-
-    u16 u0 = (u16)prim->image->atlas_x;
-    u16 v0 = (u16)prim->image->atlas_y;
-    u16 u1 = (u16)(u0 + prim->size.x);
-    u16 v1 = (u16)(v0 + prim->size.y);
-    // u16 u1 = (u16)(u0 + prim->image->info.width);
-    // u16 u1 = (u16)(u0 + prim->image->info.width);
-
-    float rx = prim->position.x;
-    float ry = prim->position.y;
-
-    float nx0 = rx;
-    float ny0 = ry;
-    float nx1 = rx + (x1 - x0);
-    float ny1 = ry + (y1 - y0);
-
-    vertices[0].x = nx0;
-    vertices[0].y = ny0;
-    vertices[0].u = u0;
-    vertices[0].v = v0;
-    vertices[0].color = color;
-
-    vertices[1].x = nx1;
-    vertices[1].y = ny0;
-    vertices[1].u = u1;
-    vertices[1].v = v0;
-    vertices[1].color = color;
-
-    vertices[2].x = nx1;
-    vertices[2].y = ny1;
-    vertices[2].u = u1;
-    vertices[2].v = v1;
-    vertices[2].color = color;
-
-    vertices[3].x = nx0;
-    vertices[3].y = ny1;
-    vertices[3].u = u0;
-    vertices[3].v = v1;
-    vertices[3].color = color;
-
-    // TODO: Shouldn't hardcode to start with index 0
-    index_buffer[0] = 0;
-    index_buffer[1] = 1;
-    index_buffer[2] = 2;
-
-    index_buffer[3] = 0;
-    index_buffer[4] = 2;
-    index_buffer[5] = 3;
-
-    FlTexturedTriangles* tri_data = Render_textured_triangles_cmd(ctx->global);
-
-    tri_data->offset = ctx->vertex_allocator.index_offset;
-    tri_data->vertex_buffer = vertices;
-    tri_data->index_buffer = index_buffer;
-    tri_data->vertex_buffer_size = 4;
-    tri_data->index_buffer_size = 6;
-    tri_data->texture_id = prim->image->texture_id;
-*/
-
-    return true;
-}
+struct FlImageApi g_image_funcs = {
+    NULL,
+    create_from_file,
+    create_from_memory,
+    create_svg_from_file,
+    create_svg_from_memory,
+    get_info,
+    destroy,
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_ui_image_with_size_impl(struct FlContext* ctx, FlImage image, FlVec2 size) {
-    (void)ctx;
-    (void)image;
-    (void)size;
-    /*
-    ImagePrivate* self = get_handle(ctx, image);
-
-    if (FL_UNLIKELY(!self)) {
-        return;
-    }
-
-    Layer* layer = ctx_get_active_layer(ctx);
-
-    PrimitiveImage* prim = Primitive_alloc_image(layer);
-
-    prim->image = self;
-    prim->position = ctx->cursor;
-    prim->size.x = size.x;
-    prim->size.y = size.y;
-    */
+struct FlImageApi* fl_image_get_api(struct FlContext* ctx, int api_version) {
+    FL_UNUSED(api_version);
+    return &ctx->image_funcs;
 }
 
 
-
-#endif

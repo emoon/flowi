@@ -260,38 +260,38 @@ fn main() {
     build.compile("glfw");
 
     // Build flowi
-/*
-    let mut build = cc::Build::new();
+    /*
+        let mut build = cc::Build::new();
 
-    build.define("BX_CONFIG_DEBUG", "0");
+        build.define("BX_CONFIG_DEBUG", "0");
 
-    add_includes(&mut build, glfw_root, &["include"]);
-    add_includes(&mut build, flowi_root, &["include"]);
-    add_includes(&mut build, root, &["bx/include", "bgfx/include"]);
-    add_includes(
-        &mut build,
-        flowi_core_root,
-        &["include", "include/flowi_core"],
-    );
+        add_includes(&mut build, glfw_root, &["include"]);
+        add_includes(&mut build, flowi_root, &["include"]);
+        add_includes(&mut build, root, &["bx/include", "bgfx/include"]);
+        add_includes(
+            &mut build,
+            flowi_core_root,
+            &["include", "include/flowi_core"],
+        );
 
-    add_sources(&mut build, flowi_root, &["src/application.cpp"]);
+        add_sources(&mut build, flowi_root, &["src/application.cpp"]);
 
-    match target_os {
-        "linux" => {
-            build.define("GLFW_EXPOSE_NATIVE_X11", None);
+        match target_os {
+            "linux" => {
+                build.define("GLFW_EXPOSE_NATIVE_X11", None);
+            }
+
+            "windows" => {
+                build.define("GLFW_EXPOSE_NATIVE_WIN32", None);
+            }
+
+            "macos" => {
+                build.define("GLFW_EXPOSE_NATIVE_COCOA", None);
+            }
+
+            unsupported => unimplemented!("{} is not a supported target", unsupported),
         }
 
-        "windows" => {
-            build.define("GLFW_EXPOSE_NATIVE_WIN32", None);
-        }
-
-        "macos" => {
-            build.define("GLFW_EXPOSE_NATIVE_COCOA", None);
-        }
-
-        unsupported => unimplemented!("{} is not a supported target", unsupported),
-    }
-
-    build.compile("flowi");
-*/
+        build.compile("flowi");
+    */
 }

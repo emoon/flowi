@@ -14,13 +14,15 @@
 extern "C" {
 #endif
 
+struct FlApplicationApi;
+
 struct FlApplication;
+
 typedef void (*FlMainLoopCallback)(struct FlContext* ctx, void* user_data);
 
-// TODO: More options
 static struct FlContext* fl_application_create(const char* application_name, const char* developer);
 
-static void fl_application_main_loop(FlMainLoopCallback callback, void* userdata);
+static void fl_application_main_loop(FlMainLoopCallback callback, void* user_data);
 
 #include "application.inl"
 

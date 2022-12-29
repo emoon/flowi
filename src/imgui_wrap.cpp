@@ -31,7 +31,7 @@ static int s_vec2_style_lut[ImGuiStyleVar_COUNT];
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, FlWindowFlags flags) {
+static bool begin(struct FlContext* ctx, FlString name, FlWindowFlags flags) {
     char temp_buffer[2048];
 
     const char* window_name =
@@ -42,14 +42,14 @@ extern "C" bool fl_ui_window_begin_impl(struct FlContext* ctx, FlString name, Fl
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_ui_end_impl(struct FlContext* ctx) {
+static void end(struct FlContext* ctx) {
+    FL_UNUSED(ctx);
     ImGui::End();
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_ui_image_impl(struct FlContext* ctx, FlImage image) {
+static void image(struct FlContext* ctx, FlImage image) {
     ImagePrivate* image_data = (ImagePrivate*)Handles_get_data(&ctx->global->image_handles, image);
 
     if (!image_data) {
@@ -141,6 +141,28 @@ extern "C" void fl_style_push_vec2_impl(struct FlContext* ctx, FlStyleVec2 style
 extern "C" void fl_style_pop_impl(struct FlContext* ctx) {
     FL_UNUSED(ctx);
     ImGui::PopStyleVar();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FlUiApi g_ui_funcs = {
+    NULL,
+    begin,
+    end,
+    NULL, // TODO: Fix me
+    image,
+    NULL,
+    NULL, 
+    NULL,
+    NULL,
+    NULL,
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlUiApi* fl_ui_get_api(struct FlContext* ctx, int api_version) {
+    FL_UNUSED(api_version);
+    return &ctx->ui_funcs;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

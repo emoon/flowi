@@ -1,4 +1,3 @@
-// TODO: More options
 struct FlContext* fl_application_create_impl(FlString application_name, FlString developer);
 
 FL_INLINE struct FlContext* fl_application_create(const char* application_name, const char* developer) {
@@ -7,8 +6,8 @@ FL_INLINE struct FlContext* fl_application_create(const char* application_name, 
     return fl_application_create_impl(application_name_, developer_);
 }
 
-void fl_application_main_loop_impl(FlMainLoopCallback callback, void* userdata);
+void fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data);
 
-FL_INLINE void fl_application_main_loop(FlMainLoopCallback callback, void* userdata) {
-    fl_application_main_loop_impl(callback, userdata);
+FL_INLINE void fl_application_main_loop(FlMainLoopCallback callback, void* user_data) {
+    fl_application_main_loop_impl(callback, user_data);
 }

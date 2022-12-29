@@ -66,6 +66,9 @@ static FlAllocator malloc_allocator = {
     FlAllocatorError_Exit, NULL, memory_error, alloc_malloc, NULL, realloc_malloc, free_malloc,
 };
 
+extern FlImageApi g_image_funcs;
+extern FlUiApi g_ui_funcs;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
@@ -85,6 +88,12 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     for (int i = 0; i < FlLayerType_Count; ++i) {
         CommandBuffer_create(&ctx->layers[i].primitive_commands, "primitives", state->global_allocator, 4 * 1024);
     }
+
+    ctx->ui_funcs = g_ui_funcs;
+    ctx->image_funcs = g_image_funcs;
+
+    ctx->ui_funcs.ctx = ctx;
+    ctx->image_funcs.ctx = ctx;
 
     // Layout_create_default(ctx);
     // ctx->layout_mode = FlLayoutMode_Automatic;

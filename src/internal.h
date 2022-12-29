@@ -2,6 +2,8 @@
 
 #include <flowi/error.h>
 #include <flowi/layout.h>
+#include <flowi/image.h>
+#include <flowi/style.h>
 #include "../external/hashmap.h"
 #include "command_buffer.h"
 #include "string_allocator.h"
@@ -54,6 +56,9 @@ void Errors_add(FlError err, const char* filename, int line, const char* fmt, ..
 
 typedef struct FlContext {
     struct ImGuiContext* imgui_ctx;
+    struct FlImageApi image_funcs;
+    struct FlUiApi ui_funcs;
+    struct FlStyleApi style_funcs;
     LinearAllocator frame_allocator;
     StringAllocator string_allocator;
     Layer layers[FlLayerType_Count];

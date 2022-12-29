@@ -24,20 +24,3 @@ FL_INLINE FlString fl_cstr_to_flstring(const char* str) {
 }
 
 struct FlContext;
-
-#ifdef FLOWID_SHARED
-
-struct FlStyle;
-struct FlWindow;
-
-struct FlContext {
-    void* ctx;
-    struct FlStyle* style;
-    struct FlWindow* window;
-};
-
-
-}
-
-
-#endif
