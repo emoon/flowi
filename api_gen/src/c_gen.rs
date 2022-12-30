@@ -79,8 +79,7 @@ fn arg_line(args: &[String], with_context: Ctx) -> String {
     output
 }
 
-fn get_args_name(func: &Function) -> String {
-    format!("{}{}Args", C_API_SUFFIX, func.name.to_upper_camel_case())
+fn get_args_name(func: &Function) -> String { format!("{}{}Args", C_API_SUFFIX, func.name.to_upper_camel_case())
 }
 
 fn run_clang_format(filename: &str) {
@@ -140,15 +139,15 @@ impl Cgen {
 
             // Check if an enum entry contains an enum name then we search and replace all those
             // entries with a formatted name
-            if Self::find_name_match(&enum_def, &value) {
+            if Self::find_name_match(enum_def, &value) {
                 value = String::new();
-                for s in entry.value.split(" ") {
+                for s in entry.value.split(' ') {
                     let mut found = false;
                     for e in &enum_def.entries {
                         if e.name == s {
                             value.push_str(&format!(
                                 " {} ",
-                                Self::get_enum_name(&enum_def.name, &s)
+                                Self::get_enum_name(&enum_def.name, s)
                             ));
                             found = true;
                             break;
@@ -265,6 +264,8 @@ impl Cgen {
         }
     }
 
+    /// Generate function prototypes in the style of
+
     /// Generate structure and _default macro for functions that has default parameters
     fn generate_default_args_struct<W: Write>(
         f: &mut W,
@@ -302,7 +303,6 @@ impl Cgen {
         writeln!(f, ")\n")
     }
 
-    /// This is used for generating internal render file
     pub fn generate_render_file(filename: &str, render_commands: &[&String]) -> io::Result<()> {
         let mut f = BufWriter::new(File::create(filename)?);
 
@@ -325,6 +325,7 @@ impl Cgen {
         Ok(())
     }
 
+    /// Generate function prototypes in the style of
     fn generate_function_args(func: &Function, self_name: &str) -> FuncArgs {
         let mut fa = FuncArgs::default();
 
@@ -340,7 +341,7 @@ impl Cgen {
             if !arg.default_value.is_empty() {
                 let args = format!("{} args", get_args_name(func));
                 fa.func_args.push(args.to_owned());
-                fa.internal_args.push(args.to_owned());
+                fa.internal_args.push(args.to_owned()); // breaks editor coloring if not used
                 fa.call_args.push("args".to_owned());
                 break;
             }
@@ -359,14 +360,14 @@ impl Cgen {
 
                 _ => match arg.array {
                     None => {
-                        let carg = format!("{} {}", Self::get_variable(&arg, self_name), arg.name);
+                        let carg = format!("{} {}", Self::get_variable(arg, self_name), arg.name);
                         fa.func_args.push(carg.to_owned());
                         fa.internal_args.push(carg.to_owned());
                         fa.call_args.push(arg.name.to_owned());
                     }
 
                     Some(ArrayType::Unsized) => {
-                        let carg = format!("{}* {}", Self::get_variable(&arg, self_name), arg.name);
+                        let carg = format!("{}* {}", Self::get_variable(arg, self_name), arg.name);
                         fa.func_args.push(carg.to_owned());
                         fa.internal_args.push(carg.to_owned());
                         fa.call_args.push(arg.name.to_owned());
@@ -379,7 +380,7 @@ impl Cgen {
                     Some(ArrayType::SizedArray(ref size)) => {
                         let carg = format!(
                             "{} {}[{}]",
-                            Self::get_variable(&arg, self_name),
+                            Self::get_variable(arg, self_name),
                             arg.name,
                             size
                         );
@@ -393,9 +394,9 @@ impl Cgen {
 
         if let Some(ret) = &func.return_val {
             if ret.const_pointer {
-                fa.return_value = format!("{}*", Self::get_variable(&ret, self_name));
+                fa.return_value = format!("{}*", Self::get_variable(ret, self_name));
             } else {
-                fa.return_value = Self::get_variable(&ret, self_name);
+                fa.return_value = Self::get_variable(ret, self_name);
             }
         } else {
             fa.return_value = "void".to_owned();
@@ -436,7 +437,7 @@ impl Cgen {
         let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, self_name.to_snake_case(), func.name);
         let func_name_c = &func_name;
 
-        let arg_offset = if with_ctx == Ctx::No { 1 } else { 0 };
+        let arg_offset = usize::from(with_ctx == Ctx::No);
 
         if with_ctx == Ctx::No {
             writeln!(
@@ -468,12 +469,10 @@ impl Cgen {
             } else {
                 writeln!(f, "{}_impl({});", func_name, argument_line)?;
             }
+        } else if fa.return_value != "void" {
+            writeln!(f, "return (api->{})({});", func.name, argument_line)?;
         } else {
-            if fa.return_value != "void" {
-                writeln!(f, "return (api->{})({});", func.name, argument_line)?;
-            } else {
-                writeln!(f, "(api->{})({});", func.name, argument_line)?;
-            }
+            writeln!(f, "(api->{})({});", func.name, argument_line)?;
         }
 
         writeln!(f, "}}\n")
@@ -515,7 +514,7 @@ impl Cgen {
     pub fn generate_main_file(path: &str, api_defs: &[ApiDef]) -> io::Result<()> {
         let filename = format!("{}/flowi.h", path);
 
-        let mut f = BufWriter::new(File::create(&filename)?);
+        let mut f = BufWriter::new(File::create(filename)?);
 
         // Gather all the structs with functions in them
         let structs_with_funcs: Vec<&Struct> = api_defs
@@ -620,7 +619,7 @@ impl Cgen {
 
             if !api_def.callbacks.is_empty() {
                 for func in &api_def.callbacks {
-                    Self::generate_callback_function(&mut f, &func, "")?;
+                    Self::generate_callback_function(&mut f, func, "")?;
                 }
                 writeln!(f)?;
             }
@@ -636,11 +635,11 @@ impl Cgen {
                         Ctx::Yes(&context_name)
                     };
                     if sdef.has_attribute("Handle") {
-                        Self::generate_function_def(&mut f, &func, &sdef.name, with_ctx)?;
+                        Self::generate_function_def(&mut f, func, &sdef.name, with_ctx)?;
                     } else {
                         Self::generate_function_def(
                             &mut f,
-                            &func,
+                            func,
                             &format!("{}*", sdef.name),
                             with_ctx,
                         )?;
@@ -660,7 +659,7 @@ impl Cgen {
                     for func in &sdef.functions {
                         Self::generate_function_dynamic(
                             &mut fi,
-                            &func,
+                            func,
                             &sdef.name,
                             Ctx::Yes("struct FlInternalData* priv"),
                         )?;
@@ -676,11 +675,11 @@ impl Cgen {
                         Ctx::Yes(&context_name)
                     };
                     if sdef.has_attribute("Handle") {
-                        Self::generate_function(&mut fi, &func, &sdef.name, with_ctx)?;
+                        Self::generate_function(&mut fi, func, &sdef.name, with_ctx)?;
                     } else {
                         Self::generate_function(
                             &mut fi,
-                            &func,
+                            func,
                             &format!("{}*", sdef.name),
                             with_ctx,
                         )?;
@@ -705,7 +704,7 @@ impl Cgen {
                 }
                 writeln!(f, "}} FlRenderCommand;\n")?;
 
-                Self::generate_render_file(&render_filename, &render_commands)?;
+                Self::generate_render_file(render_filename, &render_commands)?;
             }
         }
 
@@ -714,20 +713,4 @@ impl Cgen {
 
         Ok(())
     }
-
-    /*
-    *
-    *
-    struct FlContext;
-
-    struct StyleApi {
-        struct FlContext* priv;
-        void (*fl_style_set_color)(struct FlContext* ctx, int color);
-    };
-
-    FL_INLINE void fl_style_set_color(StyleApi* api, int color) {
-        api->fl_style_set_color(api->ctx, color);
-    }
-
-    */
 }

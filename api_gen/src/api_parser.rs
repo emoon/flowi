@@ -1,4 +1,3 @@
-use argparse::parser::Var;
 use heck::ToSnakeCase;
 use pest::iterators::Pair;
 use pest::Parser;
@@ -310,9 +309,8 @@ impl ApiParser {
 
                 Rule::moddef => {
                     for entry in chunk.into_inner() {
-                        match entry.as_rule() {
-                            Rule::name => api_def.mods.push(entry.as_str().to_owned()),
-                            _ => (),
+                        if entry.as_rule() == Rule::name {
+                            api_def.mods.push(entry.as_str().to_owned());
                         }
                     }
                 }
@@ -351,8 +349,8 @@ impl ApiParser {
     }
 
     /// Figures out the type of enum
-    fn determine_enum_type(attributes: &Vec<String>) -> EnumType {
-        if attributes.iter().find(|&t| *t == "bitflags").is_some() {
+    fn determine_enum_type(attributes: &[String]) -> EnumType {
+        if attributes.iter().any(|t| t == "bitflags") {
             EnumType::Bitflags
         } else {
             EnumType::Regular
@@ -363,9 +361,8 @@ impl ApiParser {
         let mut func = Function::default();
 
         for entry in chunk.into_inner() {
-            match entry.as_rule() {
-                Rule::function => func = Self::get_function(entry, &doc_comments),
-                _ => (),
+            if entry.as_rule() == Rule::function {
+                func = Self::get_function(entry, doc_comments);
             }
         }
 
@@ -797,12 +794,12 @@ mod tests {
     use super::*;
     #[test]
     fn test_primitve_ok() {
-        assert_eq!(is_primitve("i32"), true);
+        assert!(is_primitve("i32"));
     }
 
     #[test]
     fn test_primitve_false() {
-        assert_eq!(is_primitve("dummy"), false);
+        assert!(is_primitve("dummy"));
     }
 
     ///
@@ -816,8 +813,8 @@ mod tests {
             "dummy_filename.def",
             &mut api_def,
         );
-        assert_eq!(api_def.structs.is_empty(), true);
-        assert_eq!(api_def.structs.is_empty(), false);
+        assert!(api_def.structs.is_empty());
+        assert!(api_def.structs.is_empty());
 
         let sdef = &api_def.structs[0];
 

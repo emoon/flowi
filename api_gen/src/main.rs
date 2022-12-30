@@ -16,6 +16,7 @@ mod rust_gen;
 use crate::api_parser::{ApiDef, ApiParser};
 use crate::c_gen::Cgen;
 use rayon::prelude::*;
+use rust_gen::RustGen;
 //use std::fs;
 use std::sync::RwLock;
 use walkdir::WalkDir;
@@ -57,7 +58,7 @@ fn main() {
     // Dest directores for various langs
     let c_dest = "../include/flowi";
     //let rust_core_dest = "../core/rust/flowi-core/src";
-    //let rust_flowi_dest = "../flowi/rust/flowi/src";
+    let rust_dest = "../flowi/rust/flowi/src";
 
     // Used for generating internal headers
     //let c_core_src_dir = "../core/c/src";
@@ -84,7 +85,7 @@ fn main() {
         let mut api_def = ApiDef::default();
 
         println!("Parsing file {:?}", f.path());
-        ApiParser::parse_file(&f.path(), &mut api_def);
+        ApiParser::parse_file(f.path(), &mut api_def);
 
         // Insert the api_def for later usage
         {
@@ -116,23 +117,20 @@ fn main() {
 
             if index == 0 {
                 Cgen::generate_main_file(c_dest, &api_defs_read).unwrap();
-                println!("generatedh main");
+                RustGen::generate_mod_files(rust_dest, &api_defs_read).unwrap();
+
+                println!("Generating {}/flowi.h", c_dest);
             }
 
             // Generate C/C++ Header for FFI structs
-            if let Err(e) = Cgen::generate(&c_dest, &api_def) {
+            if let Err(e) = Cgen::generate(c_dest, api_def) {
                 panic!("ERROR: Unable to write, error: {:?}", e);
             }
 
             // Generate C/C++ Header for FFI structs
-            //if let Err(e) = Cgen::generate(DynamicOutput::Yes, &c_dynamic_path, &api_def) {
-            //    println!("ERROR: Unable to write, error: {:?}", e);
-            //}
-
-            // Generate C/C++ Header for FFI structs
-            // if let Err(e) = RustGen::generate(&rust_filename, api_def) {
-            //     println!("ERROR: Unable to write {}, error: {:?}", rust_filename, e);
-            // }
+            if let Err(e) = RustGen::generate(rust_dest, api_def) {
+                println!("ERROR: Unable to write rust file, error: {:?}", e);
+            }
         });
 
     // All done!

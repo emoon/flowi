@@ -86,7 +86,7 @@ impl RustGen {
     fn get_ffi_type(
         var: &Variable,
         self_type: &str,
-        type_name: &str,
+        _type_name: &str,
         handle_struct: bool,
     ) -> String {
         if var.is_handle_type {
@@ -105,10 +105,10 @@ impl RustGen {
                 }
             }
             VariableType::Reference => panic!("Shouldn't be here"),
-            VariableType::Regular => output.push_str(&format!("{}", var.type_name)),
-            VariableType::Enum => output.push_str(&format!("{}", var.type_name)),
+            VariableType::Regular => output.push_str(&var.type_name),
+            VariableType::Enum => output.push_str(&var.type_name),
             VariableType::Str => output.push_str("FlString"),
-            VariableType::Primitive => output.push_str(&Self::get_primitive_type(&var)),
+            VariableType::Primitive => output.push_str(&Self::get_primitive_type(var)),
         }
 
         match var.array.as_ref() {
@@ -150,19 +150,19 @@ impl RustGen {
             if arg.name == "self" {
                 fa.ffi_args.push(format!(
                     "self_c: {}",
-                    Self::get_ffi_type(&arg, self_name, &arg.type_name, handle_struct)
+                    Self::get_ffi_type(arg, self_name, &arg.type_name, handle_struct)
                 ));
             } else {
                 fa.ffi_args.push(format!(
                     "{}: {}",
                     arg.name,
-                    Self::get_ffi_type(&arg, self_name, &arg.type_name, handle_struct)
+                    Self::get_ffi_type(arg, self_name, &arg.type_name, handle_struct)
                 ));
             }
         }
 
         if let Some(ret) = &func.return_val {
-            fa.ret_value = Self::get_ffi_type(&ret, self_name, "", handle_struct);
+            fa.ret_value = Self::get_ffi_type(ret, self_name, "", handle_struct);
         }
     }
 
@@ -208,7 +208,7 @@ impl RustGen {
                 .iter()
                 .filter(|&func| func.func_type != FunctionType::Manual)
             {
-                Self::generate_ffi_function(f, &func, &s.name, handle_struct, with_ctx)?;
+                Self::generate_ffi_function(f, func, &s.name, handle_struct, with_ctx)?;
             }
         }
 
@@ -267,21 +267,19 @@ impl RustGen {
                 fa.ffi_args.push(format!("{}.as_ptr()", var.name));
                 fa.ffi_args.push(format!("{}.len() as _", var.name));
             }
+        } else if var.const_pointer {
+            fa.func_args.push(format!("{}: &{}", var.name, type_name));
+            fa.ffi_args.push(format!("{} as _", var.name));
+        } else if var.pointer {
+            fa.func_args
+                .push(format!("{}: &mut {}", var.name, type_name));
+            fa.ffi_args.push(format!("{} as _", var.name));
         } else {
-            if var.const_pointer {
-                fa.func_args.push(format!("{}: &{}", var.name, type_name));
-                fa.ffi_args.push(format!("{} as _", var.name));
-            } else if var.pointer {
-                fa.func_args
-                    .push(format!("{}: &mut {}", var.name, type_name));
-                fa.ffi_args.push(format!("{} as _", var.name));
+            fa.func_args.push(format!("{}: {}", var.name, type_name));
+            if var.is_handle_type {
+                fa.ffi_args.push(format!("{}.handle", var.name));
             } else {
-                fa.func_args.push(format!("{}: {}", var.name, type_name));
-                if var.is_handle_type {
-                    fa.ffi_args.push(format!("{}.handle", var.name));
-                } else {
-                    fa.ffi_args.push(format!("{}", var.name));
-                }
+                fa.ffi_args.push(var.name.to_string());
             }
         }
     }
@@ -314,21 +312,21 @@ impl RustGen {
                     }
                 }
 
-                VariableType::Regular => Self::get_type(&mut fa, &arg, &arg.type_name),
-                VariableType::Enum => Self::get_type(&mut fa, &arg, &arg.type_name),
+                VariableType::Regular => Self::get_type(&mut fa, arg, &arg.type_name),
+                VariableType::Enum => Self::get_type(&mut fa, arg, &arg.type_name),
                 VariableType::Str => {
                     fa.func_args.push(format!("{}: &str", arg.name));
                     fa.ffi_args.push(format!("FlString::new({})", arg.name));
                 }
 
                 VariableType::Primitive => {
-                    Self::get_type(&mut fa, &arg, &Self::get_primitive_type(&arg));
+                    Self::get_type(&mut fa, arg, &Self::get_primitive_type(arg));
                 }
             }
         }
 
         if let Some(ret_val) = func.return_val.as_ref() {
-            let ret = Self::get_primitive_type(&ret_val);
+            let ret = Self::get_primitive_type(ret_val);
 
             if ret_val.optional {
                 if ret_val.const_pointer {
@@ -385,7 +383,7 @@ impl RustGen {
     ) -> io::Result<()> {
         Self::write_commment(f, &func.doc_comments, 0)?;
 
-        let func_args = Self::generate_func_impl(&func, with_ctx);
+        let func_args = Self::generate_func_impl(func, with_ctx);
 
         if func_args.ret_value.is_empty() {
             writeln!(
@@ -444,25 +442,23 @@ impl RustGen {
                 } else {
                     writeln!(f, "{} {{ handle: ret_value }}", ret_val.type_name)?;
                 }
-            } else {
-                if ret_val.const_pointer {
-                    if ret_val.optional {
-                        writeln!(
-                            f,
-                            "if ret_val.is_null() {{ Err(get_last_error()) }} else {{ Ok(&*ret_val) }}"
-                        )?;
-                    } else {
-                        writeln!(f, "ret_val.as_ref()")?;
-                    }
-                } else if ret_val.pointer {
-                    if ret_val.optional {
-                        writeln!(f, "if ret_val.is_null() {{ Err(get_last_error()) }} else {{ Ok(&mut *ret_val) }}")?;
-                    } else {
-                        writeln!(f, "ret_val.as_mut()")?;
-                    }
+            } else if ret_val.const_pointer {
+                if ret_val.optional {
+                    writeln!(
+                        f,
+                        "if ret_val.is_null() {{ Err(get_last_error()) }} else {{ Ok(&*ret_val) }}"
+                    )?;
                 } else {
-                    writeln!(f, "ret_val")?;
+                    writeln!(f, "ret_val.as_ref()")?;
                 }
+            } else if ret_val.pointer {
+                if ret_val.optional {
+                    writeln!(f, "if ret_val.is_null() {{ Err(get_last_error()) }} else {{ Ok(&mut *ret_val) }}")?;
+                } else {
+                    writeln!(f, "ret_val.as_mut()")?;
+                }
+            } else {
+                writeln!(f, "ret_val")?;
             }
         } else {
             writeln!(f, "{}({});", func.c_name, args)?;
@@ -479,8 +475,7 @@ impl RustGen {
         if sdef
             .functions
             .iter()
-            .find(|&func| func.func_type == FunctionType::Static)
-            .is_some()
+            .any(|func| func.func_type == FunctionType::Static)
         {
             let self_name = format!("{}_", sdef.name.to_snake_case());
             let with_ctx = if sdef.has_attribute("NoContext") {
@@ -496,7 +491,7 @@ impl RustGen {
                 .iter()
                 .filter(|func| func.func_type == FunctionType::Static && with_ctx == Ctx::Yes)
             {
-                Self::generate_func(&mut output_string, &func, &self_name, Ctx::Yes)?;
+                Self::generate_func(&mut output_string, func, &self_name, Ctx::Yes)?;
             }
 
             if !output_string.is_empty() {
@@ -509,8 +504,7 @@ impl RustGen {
         if sdef
             .functions
             .iter()
-            .find(|&func| func.func_type != FunctionType::Static || sdef.has_attribute("NoContext"))
-            .is_some()
+            .any(|func| func.func_type != FunctionType::Static || sdef.has_attribute("NoContext"))
         {
             writeln!(f, "impl {} {{", sdef.name)?;
             let with_ctx = if sdef.has_attribute("NoContext") {
@@ -523,7 +517,7 @@ impl RustGen {
                 (func.func_type != FunctionType::Static || with_ctx == Ctx::No)
                     && func.func_type != FunctionType::Manual
             }) {
-                Self::generate_func(f, &func, "", with_ctx)?;
+                Self::generate_func(f, func, "", with_ctx)?;
             }
 
             writeln!(f, "}}\n")?;
@@ -532,8 +526,10 @@ impl RustGen {
         Ok(())
     }
 
-    pub fn generate(filename: &str, api_def: &ApiDef) -> io::Result<()> {
-        let mut f = BufWriter::new(File::create(filename)?);
+    pub fn generate(path: &str, api_def: &ApiDef) -> io::Result<()> {
+        let filename = format!("{}/{}.rs", path, api_def.base_filename);
+
+        let mut f = BufWriter::new(File::create(&filename)?);
 
         println!("    Rust file Generating {}", filename);
 
@@ -550,7 +546,7 @@ impl RustGen {
 
         if !api_def.callbacks.is_empty() {
             for func in &api_def.callbacks {
-                Self::generate_callback_function(&mut f, &func, "")?;
+                Self::generate_callback_function(&mut f, func, "")?;
             }
             writeln!(f)?;
         }
@@ -572,44 +568,25 @@ impl RustGen {
     }
 
     pub fn generate_mod_files(
-        core_dir: &str,
-        flowi_dir: &str,
+        path: &str,
         api_defs: &[ApiDef],
     ) -> io::Result<()> {
-        let core_mod = format!("{}/lib.rs", core_dir);
-        let flowi_mod = format!("{}/lib.rs", flowi_dir);
-
-        println!("    Rust file mod: {}", core_mod);
+        let flowi_mod = format!("{}/lib.rs", path);
         println!("    Rust file mod: {}", flowi_mod);
 
-        let mut core_mod = BufWriter::new(File::create(core_mod)?);
         let mut flowi_mod = BufWriter::new(File::create(flowi_mod)?);
 
-        writeln!(core_mod, "{}", RUST_FILE_HEADER)?;
         writeln!(flowi_mod, "{}", RUST_FILE_HEADER)?;
 
         for api_def in api_defs {
             let base_filename = &api_def.base_filename;
-            let file_target;
-
-            if api_def.filename.contains("core") {
-                file_target = &mut core_mod;
-            } else {
-                file_target = &mut flowi_mod;
-            }
-
-            writeln!(file_target, "pub mod {};", base_filename)?;
-            writeln!(file_target, "pub use {}::*;\n", base_filename)?;
+            writeln!(flowi_mod, "pub mod {};", base_filename)?;
         }
 
         // manual is used implementing things that aren't auto-generated
 
-        writeln!(core_mod, "pub mod manual;")?;
-        writeln!(core_mod, "pub use manual::*;\n")?;
         writeln!(flowi_mod, "pub mod manual;")?;
-        writeln!(flowi_mod, "pub use manual::*;\n")?;
-
-        writeln!(flowi_mod, "pub use flowi_core::*;\n")
+        writeln!(flowi_mod, "pub use manual::*;\n")
     }
 }
 

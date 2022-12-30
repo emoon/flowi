@@ -9,8 +9,8 @@
     clippy::checked_conversions,
     clippy::dbg_macro,
     clippy::debug_assert_with_mut_call,
-    clippy::disallowed_method,
-    clippy::disallowed_type,
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
     clippy::doc_markdown,
     clippy::empty_enum,
     clippy::enum_glob_use,
@@ -75,6 +75,3 @@
     clippy::zero_sized_map_values,
     nonstandard_style
 )]
-// END - Embark standard lints v0.5 for Rust 1.55+
-// crate-specific exceptions:
-#![allow()]
