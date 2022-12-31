@@ -54,8 +54,8 @@ enum StyleColor {
     DragDropTarget = 50,        // Rectangle highlighting a drop target
     NavHighlight = 51,          // Gamepad/keyboard: current highlighted item
     NavWindowingHighlight = 52, // Highlight window when using CTRL+TAB
-    NavWindowingDimBg = 52,     // Darken/colorize entire screen behind the CTRL+TAB window list, when active
-    ModalWindowDimBg = 53,      // Darken/colorize entire screen behind a modal window, when one is active
+    NavWindowingDimBg = 53,     // Darken/colorize entire screen behind the CTRL+TAB window list, when active
+    ModalWindowDimBg = 54,      // Darken/colorize entire screen behind a modal window, when one is active
 }
 
 enum StyleSingle {

@@ -1,8 +1,7 @@
 use crate::api_parser::*;
 use heck::ToSnakeCase;
 use std::borrow::Cow;
-///
-///
+use std::process::Command;
 use std::fs::File;
 use std::io;
 use std::io::{BufWriter, Write};
@@ -34,6 +33,13 @@ fn get_arg_line(args: &[String]) -> String {
     }
 
     output
+}
+
+fn run_rustfmt(filename: &str) {
+    Command::new("rustfmt")
+        .arg(filename)
+        .output()
+        .expect("failed to execute cargo fmt");
 }
 
 impl RustGen {
@@ -142,7 +148,7 @@ impl RustGen {
         for (i, arg) in func.function_args.iter().enumerate() {
             if i == 0 && func.func_type == FunctionType::Static {
                 if with_ctx == Ctx::Yes {
-                    fa.ffi_args.push("ctx: *const core::ffi::c_void".to_owned());
+                    fa.ffi_args.push("data: *const core::ffi::c_void".to_owned());
                 }
                 continue;
             }
@@ -180,12 +186,12 @@ impl RustGen {
         // write arguments
 
         if fa.ret_value.is_empty() {
-            writeln!(f, "    fn {}({});", func.c_name, get_arg_line(&fa.ffi_args))
+            writeln!(f, "    {}: unsafe extern \"C\" fn({}),", func.name, get_arg_line(&fa.ffi_args))
         } else {
             writeln!(
                 f,
-                "    fn {}({}) -> {};",
-                func.c_name,
+                "    {}: unsafe extern \"C\" fn({}) -> {},",
+                func.name,
                 get_arg_line(&fa.ffi_args),
                 fa.ret_value
             )
@@ -193,26 +199,27 @@ impl RustGen {
     }
 
     fn generate_ffi_functions<W: Write>(f: &mut W, api_def: &ApiDef) -> io::Result<()> {
-        writeln!(f, "extern \"C\" {{")?;
-
         for s in &api_def.structs {
-            let handle_struct = s.has_attribute("Handle");
-            let with_ctx = if s.has_attribute("NoContext") {
-                Ctx::No
-            } else {
-                Ctx::Yes
-            };
+            if s.functions.is_empty() || s.has_attribute("NoContext") {
+                continue;
+            }
+        
+            writeln!(f, "#[repr(C)]")?;
+            writeln!(f, "pub struct {}FfiApi {{", s.name)?;
+            writeln!(f, "    pub(crate) data: *const core::ffi::c_void,")?;
 
             for func in s
                 .functions
                 .iter()
                 .filter(|&func| func.func_type != FunctionType::Manual)
             {
-                Self::generate_ffi_function(f, func, &s.name, handle_struct, with_ctx)?;
+                Self::generate_ffi_function(f, func, &s.name, false, Ctx::Yes)?;
             }
+        
+            writeln!(f, "}}\n")?;
         }
 
-        writeln!(f, "}}\n")
+        Ok(())
     }
 
     fn generate_struct<W: Write>(f: &mut W, sdef: &Struct) -> io::Result<()> {
@@ -286,14 +293,15 @@ impl RustGen {
 
     fn generate_func_impl(func: &Function, with_ctx: Ctx) -> FuncArgs {
         let mut fa = FuncArgs::default();
+        
+        fa.body.push_str("let _api = &*self.api;");
 
         for (i, arg) in func.function_args.iter().enumerate() {
             // Static for rust means we that we are in a Ctx/Ui instance
             if i == 0 && func.func_type == FunctionType::Static {
                 if with_ctx == Ctx::Yes {
                     fa.func_args.push("&self".to_owned());
-                    fa.body.push_str("let self_ = std::mem::transmute(self);\n");
-                    fa.ffi_args.push("self_".to_owned());
+                    fa.ffi_args.push("_api.data".to_owned());
                     //fa.ffi_args.push("self.handle as _".to_owned());
                 }
                 continue;
@@ -307,8 +315,7 @@ impl RustGen {
                     if arg.is_handle_type {
                         fa.ffi_args.push("self.handle".to_owned());
                     } else {
-                        fa.body.push_str("let self_ = std::mem::transmute(self);\n");
-                        fa.ffi_args.push("self_".to_owned());
+                        fa.ffi_args.push("_api.data".to_owned());
                     }
                 }
 
@@ -430,7 +437,7 @@ impl RustGen {
         let args = get_arg_line(&func_args.ffi_args);
 
         if let Some(ret_val) = func.return_val.as_ref() {
-            writeln!(f, "let ret_val = {}({});", func.c_name, args)?;
+            writeln!(f, "let ret_val = (_api.{})({});", func.name, args)?;
 
             if ret_val.is_handle_type {
                 if ret_val.optional {
@@ -461,85 +468,46 @@ impl RustGen {
                 writeln!(f, "ret_val")?;
             }
         } else {
-            writeln!(f, "{}({});", func.c_name, args)?;
+            writeln!(f, "(_api.{})({});", func.name, args)?;
         }
 
         writeln!(f, "}}\n}}\n")
     }
 
     fn generate_struct_impl<W: Write>(f: &mut W, sdef: &Struct) -> io::Result<()> {
-        if sdef.functions.is_empty() {
+        if sdef.functions.is_empty() || sdef.has_attribute("NoContext") {
             return Ok(());
         }
 
-        if sdef
-            .functions
-            .iter()
-            .any(|func| func.func_type == FunctionType::Static)
-        {
-            let self_name = format!("{}_", sdef.name.to_snake_case());
-            let with_ctx = if sdef.has_attribute("NoContext") {
-                Ctx::No
-            } else {
-                Ctx::Yes
-            };
+        writeln!(f, "#[repr(C)]")?;
+        writeln!(f, "pub struct {}Api {{", sdef.name)?;
+        writeln!(f, "   pub api: *const {}FfiApi,", sdef.name)?;
+        writeln!(f, "}}\n")?;
 
-            let mut output_string = Vec::with_capacity(1024);
+        writeln!(f, "impl {}Api {{", sdef.name)?;
 
-            for func in sdef
-                .functions
-                .iter()
-                .filter(|func| func.func_type == FunctionType::Static && with_ctx == Ctx::Yes)
-            {
-                Self::generate_func(&mut output_string, func, &self_name, Ctx::Yes)?;
-            }
-
-            if !output_string.is_empty() {
-                writeln!(f, "impl Context {{")?;
-                writeln!(f, "{}", std::str::from_utf8(&output_string).unwrap())?;
-                writeln!(f, "}}\n")?;
-            }
+        for func in &sdef.functions {
+            Self::generate_func(f, func, "", Ctx::Yes)?;
         }
 
-        if sdef
-            .functions
-            .iter()
-            .any(|func| func.func_type != FunctionType::Static || sdef.has_attribute("NoContext"))
-        {
-            writeln!(f, "impl {} {{", sdef.name)?;
-            let with_ctx = if sdef.has_attribute("NoContext") {
-                Ctx::No
-            } else {
-                Ctx::Yes
-            };
-
-            for func in sdef.functions.iter().filter(|func| {
-                (func.func_type != FunctionType::Static || with_ctx == Ctx::No)
-                    && func.func_type != FunctionType::Manual
-            }) {
-                Self::generate_func(f, func, "", with_ctx)?;
-            }
-
-            writeln!(f, "}}\n")?;
-        }
-
-        Ok(())
+        writeln!(f, "}}\n")
     }
 
     pub fn generate(path: &str, api_def: &ApiDef) -> io::Result<()> {
         let filename = format!("{}/{}.rs", path, api_def.base_filename);
 
+        {
         let mut f = BufWriter::new(File::create(&filename)?);
 
         println!("    Rust file Generating {}", filename);
 
         writeln!(f, "{}", RUST_FILE_HEADER)?;
         writeln!(f, "#[allow(unused_imports)]")?;
-        writeln!(f, "use crate::*;\n")?;
+        writeln!(f, "use crate::manual::{{Result, get_last_error, FlString, Color}};\n")?;
 
-        if !filename.contains("core") {
+        for m in &api_def.mods {
             writeln!(f, "#[allow(unused_imports)]")?;
-            writeln!(f, "use flowi_core::*;\n")?;
+            writeln!(f, "use crate::{}::*;\n", m)?;
         }
 
         Self::generate_ffi_functions(&mut f, api_def)?;
@@ -563,6 +531,10 @@ impl RustGen {
         for sdef in api_def.structs.iter() {
             Self::generate_struct_impl(&mut f, sdef)?;
         }
+        }
+
+        run_rustfmt(&filename);
+
 
         Ok(())
     }
@@ -571,22 +543,80 @@ impl RustGen {
         path: &str,
         api_defs: &[ApiDef],
     ) -> io::Result<()> {
+
         let flowi_mod = format!("{}/lib.rs", path);
+
+        {
         println!("    Rust file mod: {}", flowi_mod);
 
-        let mut flowi_mod = BufWriter::new(File::create(flowi_mod)?);
+        let mut f = BufWriter::new(File::create(&flowi_mod)?);
 
-        writeln!(flowi_mod, "{}", RUST_FILE_HEADER)?;
+        writeln!(f, "{}", RUST_FILE_HEADER)?;
+        writeln!(f, "use core::ffi::c_void;")?;
 
         for api_def in api_defs {
             let base_filename = &api_def.base_filename;
-            writeln!(flowi_mod, "pub mod {};", base_filename)?;
+            writeln!(f, "pub mod {};", base_filename)?;
         }
 
         // manual is used implementing things that aren't auto-generated
 
-        writeln!(flowi_mod, "pub mod manual;")?;
-        writeln!(flowi_mod, "pub use manual::*;\n")
+        writeln!(f, "pub mod manual;")?;
+        writeln!(f, "pub use manual::*;\n")?;
+
+        for api_def in api_defs {
+            let base_filename = &api_def.base_filename;
+
+            for s in &api_def.structs {
+                if !s.functions.is_empty() && !s.has_attribute("NoContext") {
+                    writeln!(f, "use crate::{}::{{{}FfiApi }};", base_filename, s.name)?;
+                    writeln!(f, "pub use crate::{}::{{{}Api}};", base_filename, s.name)?;
+                }
+            }
+        }
+
+        writeln!(f)?;
+
+        let structs_with_funcs: Vec<&Struct> = api_defs
+            .iter()
+            .flat_map(|a| &a.structs)
+            .filter(|s| !s.functions.is_empty() && !s.has_attribute("NoContext"))
+            .collect();
+
+        writeln!(f, "#[repr(C)]")?;
+        writeln!(f, "pub struct FlowiFfiApi {{")?;
+        writeln!(f, "    data: *const c_void,")?;
+
+        for s in &structs_with_funcs {
+            let name = &s.name;
+            writeln!(f, "   {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32) -> *const {}FfiApi,",
+                name.to_lowercase(), name)?;
+        }
+
+        writeln!(f, "}}\n")?;
+
+        writeln!(f, "#[repr(C)]")?;
+        writeln!(f, "pub struct Flowi {{")?;
+        writeln!(f, "   api: *const FlowiFfiApi,")?;
+        writeln!(f, "}}\n")?;
+
+        writeln!(f, "impl Flowi {{")?;
+
+        for s in &structs_with_funcs {
+            let name = s.name.to_snake_case();
+            writeln!(f, "pub fn {}(&self) -> {}Api {{", name, &s.name)?;
+            writeln!(f, "   let api_priv = unsafe {{ &*self.api }};")?;
+            writeln!(f, "   let api = unsafe {{ (api_priv.{}_get_api)(api_priv.data, 0) }};", name)?;
+            writeln!(f, "   {}Api {{ api }}", &s.name)?;
+            writeln!(f, "}}\n")?;
+        }
+
+        writeln!(f, "}}\n")?;
+        }
+
+        run_rustfmt(&flowi_mod);
+
+        Ok(())
     }
 }
 

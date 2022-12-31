@@ -45,7 +45,7 @@ struct Image {
     /// Get data amout the image
     [static] get_info(image: Image) -> *const ImageInfo?,
     /// Destroy the created image
-    destroy(),
+    //destroy(),
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

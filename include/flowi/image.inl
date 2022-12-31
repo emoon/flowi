@@ -7,7 +7,6 @@ typedef struct FlImageApi {
     FlImage (*create_svg_from_memory)(struct FlInternalData* priv, FlString name, uint8_t* data, uint32_t data_size,
                                       uint32_t target_width, FlSvgFlags flags);
     FlImageInfo* (*get_info)(struct FlInternalData* priv, FlImage image);
-    void (*destroy)(struct FlInternalData* priv, FlImage self);
 } FlImageApi;
 
 // Load image from file. Supported formats are:
@@ -58,9 +57,4 @@ FL_INLINE FlImage fl_image_create_svg_from_memory(struct FlImageApi* api, const 
 // Get data amout the image
 FL_INLINE FlImageInfo* fl_image_get_info(struct FlImageApi* api, FlImage image) {
     return (api->get_info)(api->priv, image);
-}
-
-// Destroy the created image
-FL_INLINE void fl_image_destroy(struct FlImageApi* api, FlImage self) {
-    (api->destroy)(api->priv, self);
 }

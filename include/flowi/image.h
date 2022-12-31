@@ -67,9 +67,6 @@ static FlImage fl_image_create_svg_from_memory(struct FlImageApi* api, const cha
 // Get data amout the image
 static FlImageInfo* fl_image_get_info(struct FlImageApi* api, FlImage image);
 
-// Destroy the created image
-static void fl_image_destroy(struct FlImageApi* api, FlImage self);
-
 #include "image.inl"
 
 #ifdef __cplusplus

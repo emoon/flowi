@@ -21,32 +21,7 @@ use rust_gen::RustGen;
 use std::sync::RwLock;
 use walkdir::WalkDir;
 
-//
-// Function for creating a directory and just bail in case it already exists.
-// If there is an error here this code will panic as these directories are required in order for
-// this program to work correctly.
-//
-/*
-fn create_dir(path: &str) {
-    // dir already existits so just bail
-    if let Ok(p) = fs::metadata(path) {
-        if p.is_dir() {
-            return;
-        }
-    }
-
-    // This function is expected to succed now when we have checked that the directory exists
-    fs::create_dir(path).unwrap();
-}
-*/
-
-//
-// Run Rustfmt on generated file
-//
-
-///
 /// Main
-///
 fn main() {
     let wd = WalkDir::new("../api");
     // temporary set to one thread during debugging
@@ -57,18 +32,7 @@ fn main() {
 
     // Dest directores for various langs
     let c_dest = "../include/flowi";
-    //let rust_core_dest = "../core/rust/flowi-core/src";
-    let rust_dest = "../flowi/rust/flowi/src";
-
-    // Used for generating internal headers
-    //let c_core_src_dir = "../core/c/src";
-
-    //let rust_dest_dir = "../rute/src/auto";
-    //let dest = "../rute/cpp/auto";
-
-    // Create the output dirs before doing anything else
-    //create_dir(dest);
-    //create_dir(rust_dest_dir);
+    let rust_dest = "../rust/flowi/src";
 
     // Collect all files that needs to be parsed
     let files = wd
@@ -80,7 +44,6 @@ fn main() {
     let api_defs = RwLock::new(Vec::with_capacity(files.len()));
 
     // Pass 1: Parse all the files
-
     files.par_iter().for_each(|f| {
         let mut api_def = ApiDef::default();
 
@@ -95,7 +58,6 @@ fn main() {
     });
 
     // patch up some refs, sort by filename for second pass
-
     {
         let mut data = api_defs.write().unwrap();
         ApiParser::second_pass(&mut data);
@@ -104,9 +66,7 @@ fn main() {
 
     let api_defs_read = api_defs.read().unwrap();
 
-    // Pass 2:
-    // Generate all the code.
-
+    // Pass 2: Generate all the code.
     api_defs_read
         .par_iter()
         .enumerate()

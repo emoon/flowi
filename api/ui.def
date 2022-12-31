@@ -48,12 +48,12 @@ enum WindowFlags {
     /// closure is not assumed (will wait for user to stop submitting the tab). Otherwise closure is assumed when
     /// pressing the X, so if you keep submitting the tab may reappear at end of tab bar.
     UnsavedDocument = 1 << 19,
-    /// No navigation
-    NoNav = NoNavInputs | NoNavFocus,
-    /// No decoration
-    NoDecoration = NoTitleBar | NoResize | NoScrollbar | NoCollapse, 
-    /// Skip all inputs
-    NoInputs = NoMouseInputs | NoNavInputs | NoNavFocus,
+    // No navigation
+    //NoNav = NoNavInputs | NoNavFocus,
+    // No decoration
+    //NoDecoration = NoTitleBar | NoResize | NoScrollbar | NoCollapse, 
+    // Skip all inputs
+    //NoInputs = NoMouseInputs | NoNavInputs | NoNavFocus,
 }
 
 struct Ui {

@@ -69,8 +69,8 @@ typedef enum FlStyleColor {
     FlStyleColor_DragDropTarget = 50,
     FlStyleColor_NavHighlight = 51,
     FlStyleColor_NavWindowingHighlight = 52,
-    FlStyleColor_NavWindowingDimBg = 52,
-    FlStyleColor_ModalWindowDimBg = 53,
+    FlStyleColor_NavWindowingDimBg = 53,
+    FlStyleColor_ModalWindowDimBg = 54,
 } FlStyleColor;
 
 typedef enum FlStyleSingle {
