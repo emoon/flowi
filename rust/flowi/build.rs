@@ -302,6 +302,12 @@ fn main() {
             "src/style.cpp",
             "src/text.c",
             "src/vertex_allocator.c",
+            "external/dear-imgui/imgui.cpp",
+            "external/dear-imgui/imgui_draw.cpp",
+            "external/dear-imgui/imgui_tables.cpp",
+            "external/dear-imgui/imgui_widgets.cpp",
+            "external/nanosvg/nanosvg.c",
+            "external/stb/stb.c",
         ],
     );
 

@@ -97,6 +97,7 @@ impl Debug for FlString {
     }
 }
 
+#[derive(Debug)]
 pub struct FlowiError {
     pub message: u32,
 }
@@ -114,3 +115,6 @@ pub fn get_last_error() -> FlowiError {
 }
 
 pub type Result<T> = std::result::Result<T, FlowiError>;
+
+
+
