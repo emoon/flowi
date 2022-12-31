@@ -4,11 +4,10 @@ use flowi::ui::WindowFlags;
 
 struct App {
     image: flowi::image::Image,
-    flowi: Flowi,
 }
 
-fn main_loop(_flowi: &Flowi, app: &mut App) {
-    let ui = app.flowi.ui();
+fn main_loop(flowi: &Flowi, app: &mut App) {
+    let ui = flowi.ui();
 
     ui.window_begin("Hello, world!", WindowFlags::None);
     ui.image(app.image);
@@ -20,7 +19,6 @@ fn main() {
 
     let mut app = App {
         image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
-        flowi,
     };
 
     Application::main_loop_ud(&mut app, main_loop);
