@@ -304,7 +304,7 @@ Program {
 	},
 
     Sources = {
-        "examples/testbed.c",
+        "examples/c/testbed.c",
     },
 
     Env = {
