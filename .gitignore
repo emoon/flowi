@@ -4,6 +4,7 @@
 /t2-output
 api_gen/target
 rust/flowi/target
+examples/rust/target
 .tundra2.*
 .cache
 compile_commands.json
