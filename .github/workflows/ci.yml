@@ -14,36 +14,36 @@ jobs:
     - uses: actions/checkout@v2
     - uses: codecov/codecov-action@v2
 
-    - name: Install deps (GCOV required)
-      run: sudo apt update && sudo apt-get install lcov
+      #- name: Install deps (GCOV required)
+      # run: sudo apt update && sudo apt-get install lcov
 
     - name: Install Tundra
       run: git clone --recursive https://github.com/deplinenoise/tundra.git && cd tundra && make -j2 && sudo make install && cd ..
 
-    - name: Build Core Tests (Debug - GCOV)
-      run: tundra2 linux-gcc-debug-test flowi_core_tests
+      # - name: Build Core Tests (Debug - GCOV)
+      # run: tundra2 linux-gcc-debug-test flowi_core_tests
 
-    - name: Run Core Tests (Debug - GCOV)
-      run: t2-output/linux-gcc-debug-test/flowi_core_tests && lcov --capture --directory . --output-file coverage.info && lcov --remove coverage.info '/usr/*' '/home/runner/work/flowi/flowi/core/c/external/*' '/home/runner/work/flow/flowi/flowi/c/external/*' -o coverage.info && lcov --list coverage.info
+      # - name: Run Core Tests (Debug - GCOV)
+      # run: t2-output/linux-gcc-debug-test/flowi_core_tests && lcov --capture --directory . --output-file coverage.info && lcov --remove coverage.info '/usr/*' '/home/runner/work/flowi/flowi/core/c/external/*' '/home/runner/work/flow/flowi/flowi/c/external/*' -o coverage.info && lcov --list coverage.info
 
-    - name: Upload Report to Codecov
-      uses: codecov/codecov-action@v1.3.2
-      with:
-        files: coverage.info
-        fail_ci_if_error: true
-        functionalities: fix
+      #- name: Upload Report to Codecov
+      # uses: codecov/codecov-action@v1.3.2
+      # with:
+      # files: coverage.info
+      # fail_ci_if_error: true
+      # functionalities: fix
 
-    - name: Build Core Tests (Optimized)
-      run: tundra2 linux-gcc-release flowi_core_tests
+      # - name: Build Core Tests (Optimized)
+        # run: tundra2 linux-gcc-release flowi_core_tests
 
-    - name: Run Core Tests (Optimized)
-      run: t2-output/linux-gcc-release-default/flowi_core_tests --enable-mixed-units
+      # - name: Run Core Tests (Optimized)
+        # run: t2-output/linux-gcc-release-default/flowi_core_tests --enable-mixed-units
 
-    - name: Install (Valgrind)
-      run: sudo apt-get install valgrind
+      # - name: Install (Valgrind)
+        # run: sudo apt-get install valgrind
 
-    - name: Run Core Tests (Optimized + Valgrind)
-      run: valgrind --leak-check=full --error-exitcode=1 t2-output/linux-gcc-release-default/flowi_core_tests --random-order
+      # - name: Run Core Tests (Optimized + Valgrind)
+        # run: valgrind --leak-check=full --error-exitcode=1 t2-output/linux-gcc-release-default/flowi_core_tests --random-order
 
     - name: Install deps (BGFX required)
       run: sudo apt-get install mesa-common-dev libx11-dev libxcursor-dev libxinerama-dev libxkbcommon-dev libxrandr-dev libxi-dev libgl1-mesa-dev
@@ -57,14 +57,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Build Core Tests (Debug)
-      run: bin/macos/tundra2 macosx-clang-debug flowi_core_tests
+      # - name: Build Core Tests (Debug)
+        # run: bin/macos/tundra2 macosx-clang-debug flowi_core_tests
 
-    - name: Run Core Tests (Debug)
-      run: t2-output/macos-clang-debug-default/flowi_core_tests --enable-mixed-units
+      # - name: Run Core Tests (Debug)
+        # run: t2-output/macos-clang-debug-default/flowi_core_tests --enable-mixed-units
 
-    - name: Build All (Debug)
-      run: bin/macos/tundra2 macos-clang-debug bgfx_shaderc && bin/macos/tundra2 macos-clang-debug build_shaders && bin/macos/tundra2 macos-clang-debug
+      # - name: Build All (Debug)
+        # run: bin/macos/tundra2 macos-clang-debug bgfx_shaderc && bin/macos/tundra2 macos-clang-debug build_shaders && bin/macos/tundra2 macos-clang-debug
 
     # - name: Build Core Tests (Optimized)
     #   run: bin/macos/tundra2 macosx-clang-release flowi_core_tests
@@ -78,17 +78,17 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Build Core Tests (Debug)
-      run: bin\windows\tundra2.exe --unprotected win64-msvc-debug flowi_core_tests
+      # - name: Build Core Tests (Debug)
+        # run: bin\windows\tundra2.exe --unprotected win64-msvc-debug flowi_core_tests
 
-    - name: Run Core Tests (Debug)
-      run: t2-output\win64-msvc-debug-default\flowi_core_tests --enable-mixed-units
+      # - name: Run Core Tests (Debug)
+        # run: t2-output\win64-msvc-debug-default\flowi_core_tests --enable-mixed-units
 
-    - name: Build Core Tests (Optimized)
-      run: bin\windows\tundra2.exe --unprotected win64-msvc-release flowi_core_tests
+      # - name: Build Core Tests (Optimized)
+        # run: bin\windows\tundra2.exe --unprotected win64-msvc-release flowi_core_tests
 
-    - name: Run Core Tests (Optimized)
-      run: t2-output\win64-msvc-release-default\flowi_core_tests --enable-mixed-units
+      # - name: Run Core Tests (Optimized)
+        # run: t2-output\win64-msvc-release-default\flowi_core_tests --enable-mixed-units
 
     - name: Build All (Debug)
       run: bin\windows\tundra2.exe --unprotected win64-msvc-debug bgfx_shaderc && bin\windows\tundra2.exe --unprotected win64-msvc-debug build_shaders && bin\windows\tundra2.exe --unprotected win64-msvc-debug
