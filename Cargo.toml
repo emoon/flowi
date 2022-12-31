@@ -1,0 +1,4 @@
+[workspace]
+members = ["rust/flowi"]
+exclude = ["api_gen"]
+
