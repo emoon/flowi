@@ -78,6 +78,7 @@ u8* Io_load_file_to_memory_flstring(FlInternalData* ctx, FlString name, u32* out
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO: Move
 
+/*
 FL_INLINE FlVec2 vec2_sub(FlVec2 a, FlVec2 b) {
     return (FlVec2){a.x - b.x, a.y - b.y};
 }
@@ -111,6 +112,7 @@ FL_INLINE FlVec2 vec2_floor(FlVec2 v) {
 FL_INLINE f32 f32_max(f32 v0, f32 v1) {
     return v0 > v1 ? v0 : v1;
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

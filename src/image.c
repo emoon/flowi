@@ -243,6 +243,7 @@ bool Image_add_to_atlas(const u8* cmd, struct Atlas* atlas) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
 
 static void destroy(FlInternalData* ctx, FlImage image) {
     ImagePrivate* image_data = Handles_get_data(&ctx->global->image_handles, image);
@@ -260,6 +261,7 @@ static void destroy(FlInternalData* ctx, FlImage image) {
 
     Handles_remove_handle(&ctx->global->image_handles, image);
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -270,7 +272,7 @@ struct FlImageApi g_image_funcs = {
     create_svg_from_file,
     create_svg_from_memory,
     get_info,
-    destroy,
+    //destroy,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
