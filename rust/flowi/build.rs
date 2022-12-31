@@ -17,6 +17,7 @@ fn main() {
     let glfw_extern = "../../external/glfw";
     let dear_imgui_extern = "../../external/dear_imgui";
     let flowi_src = "../../src";
+    let flowi_root = "../..";
 
     let (root, glfw_root) = if Path::new(bgfx_extern).exists() {
         (bgfx_extern, glfw_extern)
@@ -260,38 +261,65 @@ fn main() {
     build.compile("glfw");
 
     // Build flowi
-    /*
-        let mut build = cc::Build::new();
+    let mut build = cc::Build::new();
 
-        build.define("BX_CONFIG_DEBUG", "0");
+    build.define("BX_CONFIG_DEBUG", "0");
 
-        add_includes(&mut build, glfw_root, &["include"]);
-        add_includes(&mut build, flowi_root, &["include"]);
-        add_includes(&mut build, root, &["bx/include", "bgfx/include"]);
-        add_includes(
-            &mut build,
-            flowi_core_root,
-            &["include", "include/flowi_core"],
-        );
+    add_includes(&mut build, glfw_root, &["include"]);
+    add_includes(
+        &mut build,
+        root,
+        &[
+            "bx/include",
+            "bgfx/include",
+            "dear-imgui",
+            "",
+            "nanosvg",
+            "stb",
+        ],
+    );
+    add_includes(&mut build, flowi_root, &["include", "src"]);
 
-        add_sources(&mut build, flowi_root, &["src/application.cpp"]);
+    add_sources(
+        &mut build,
+        flowi_root,
+        &[
+            "src/application.cpp",
+            "src/area.c",
+            "src/array.c",
+            "src/atlas.c",
+            "src/command_buffer.c",
+            "src/flowi.cpp",
+            "src/glfw_input.cpp",
+            "src/handles.c",
+            "src/image.c",
+            "src/imgui_wrap.cpp",
+            "src/io.c",
+            "src/layer.c",
+            "src/linear_allocator.c",
+            "src/primitive_rect.c",
+            "src/string_allocator.c",
+            "src/style.cpp",
+            "src/text.c",
+            "src/vertex_allocator.c",
+        ],
+    );
 
-        match target_os {
-            "linux" => {
-                build.define("GLFW_EXPOSE_NATIVE_X11", None);
-            }
-
-            "windows" => {
-                build.define("GLFW_EXPOSE_NATIVE_WIN32", None);
-            }
-
-            "macos" => {
-                build.define("GLFW_EXPOSE_NATIVE_COCOA", None);
-            }
-
-            unsupported => unimplemented!("{} is not a supported target", unsupported),
+    match target_os {
+        "linux" => {
+            build.define("GLFW_EXPOSE_NATIVE_X11", None);
         }
 
-        build.compile("flowi");
-    */
+        "windows" => {
+            build.define("GLFW_EXPOSE_NATIVE_WIN32", None);
+        }
+
+        "macos" => {
+            build.define("GLFW_EXPOSE_NATIVE_COCOA", None);
+        }
+
+        unsupported => unimplemented!("{} is not a supported target", unsupported),
+    }
+
+    build.compile("flowi");
 }
