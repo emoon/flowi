@@ -1,34 +1,3 @@
-module(..., package.seeall)
-
-init_tundra_lua = [====[
-local CFiles = { ".c", ".h" }
-Build {
-  Configs = {
-    Config {
-      Name = "generic-gcc",
-      DefaultOnHost = "linux",
-      Tools = { "gcc" },
-    },
-    Config {
-      Name = "macosx-gcc",
-      DefaultOnHost = "macosx",
-      Tools = { "gcc-osx" },
-    },
-    Config {
-      Name = "win64-msvc",
-      DefaultOnHost = "windows",
-      Tools = { "msvc-vs2008"; TargetPlatform = "x64" },
-    },
-  },
-  Units = function()
-    require "tundra.syntax.glob"
-    Program {
-      Name = "a.out",
-      Sources = { Glob { Dir = ".", Extensions = CFiles } },
-    }
-
-    Default "a.out"
-  end,
-}
-]====]
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:8327f013e841b06d61ce616e4b3b7b3358dcbf175fdd9a84431cdfa6a4f76f89
+size 655

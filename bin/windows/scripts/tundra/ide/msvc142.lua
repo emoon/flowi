@@ -1,7 +1,3 @@
--- Microsoft Visual Studio 2019 Solution/Project file generation
-
-module(..., package.seeall)
-
-local msvc_common = require "tundra.ide.msvc-common"
-
-msvc_common.setup("12.00", "2019")
+version https://git-lfs.github.com/spec/v1
+oid sha256:1d59c33a5cda0d19300095edeb173385b0186cadd94adb6615185018a932c1f7
+size 184

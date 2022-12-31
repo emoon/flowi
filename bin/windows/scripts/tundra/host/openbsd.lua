@@ -1,11 +1,3 @@
-module(..., package.seeall)
-
-function apply_host(env)
-  env:set_many {
-    ["DOTNETRUN"] = "mono ",
-    ["HOSTPROGSUFFIX"] = "",
-    ["HOSTSHLIBSUFFIX"] = ".so",
-    ["_COPY_FILE"] = "cp -f $(<) $(@)",
-    ["_HARDLINK_FILE"] = "ln -f $(<) $(@)",
-  }
-end
+version https://git-lfs.github.com/spec/v1
+oid sha256:348ee54470295230a6819b0552dba399c4d86b3b7b32099ce37838e117407dfa
+size 254

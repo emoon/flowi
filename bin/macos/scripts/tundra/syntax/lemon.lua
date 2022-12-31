@@ -1,27 +1,3 @@
--- lemon.lua - Support for the Lemon parser generator
-
-module(..., package.seeall)
-
-local path     = require "tundra.path"
-
-DefRule {
-  Name = "Lemon",
-  Command = "lemon $(<)",
-  ConfigInvariant = true,
-
-  Blueprint = {
-    Source = { Required = true, Type = "string" },
-  },
-
-  Setup = function (env, data)
-    local src = data.Source
-    local base_name = path.drop_suffix(src)
-    local gen_c = base_name .. '.c'
-    local gen_h = base_name .. '.h'
-    local gen_out = base_name .. '.out'
-    return {
-      InputFiles = { src },
-      OutputFiles = { gen_c, gen_h, gen_out },
-    }
-  end,
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:19d277cdfd7955c09110b8825a1d11df864f6b8e95ce2cb72f774a8cbf818363
+size 596

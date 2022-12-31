@@ -1,12 +1,3 @@
-module(..., package.seeall)
-
-function apply(env, options)
-  -- load the generic assembly toolset first
-  tundra.unitgen.load_toolset("generic-asm", env)
-
-  env:set_many {
-    ["YASM"] = "yasm",
-    ["ASMCOM"] = "$(YASM) -o $(@) $(ASMDEFS:p-D ) $(ASMINCPATH:p-I ) $(ASMOPTS) $(<)",
-    ["ASMINC_KEYWORDS"] = { "%include" },
-  }
-end
+version https://git-lfs.github.com/spec/v1
+oid sha256:c58082c7c7aa4a156486bb0eb5fb453351430e50b26600c6da2ff739a20eb183
+size 331

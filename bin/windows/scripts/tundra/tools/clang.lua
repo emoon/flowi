@@ -1,11 +1,3 @@
-module(..., package.seeall)
-
-function apply(env, options)
-  tundra.unitgen.load_toolset("gcc", env)
-
-  env:set_many {
-    ["CC"] = "clang",
-    ["CXX"] = "clang++",
-    ["LD"] = "clang",
-  }
-end
+version https://git-lfs.github.com/spec/v1
+oid sha256:fbe5220693077bdad86561b551468b580c572c4abf0ab5a512ee35eb9fb0ff58
+size 195

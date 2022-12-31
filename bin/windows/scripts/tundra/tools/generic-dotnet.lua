@@ -1,17 +1,3 @@
-module(..., package.seeall)
-
-local function generic_dotnet_setup(env)
-
-end
-
-function apply(env, options)
-  env:add_setup_function(generic_dotnet_setup)
-
-  env:set_many {
-    ["CSLIBS"] = "", -- assembly references
-    ["CSLIBPATH"] = {}, -- assembly directories
-    ["CSCOPTS"] = "-optimize",
-    ["CSRESOURCES"] = "",
-    ["CSC_WARNING_LEVEL"] = "4",
-  }
-end
+version https://git-lfs.github.com/spec/v1
+oid sha256:1b36de79e216772240598c47af3f0423adb3a221145ed5763d7b423a9fd598fb
+size 360

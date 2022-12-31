@@ -1,29 +1,3 @@
--- flex.lua - Support for FLEX
-
-module(..., package.seeall)
-
-local path     = require "tundra.path"
-
-DefRule {
-  Name = "Flex",
-  Command = "flex --outfile=$(@:[1]) --header-file=$(@:[2]) $(<)",
-  ConfigInvariant = true,
-
-  Blueprint = {
-    Source           = { Required = true, Type = "string" },
-    OutputCFile      = { Required = false, Type = "string" },
-    OutputHeaderFile = { Required = false, Type = "string" },
-    Pass             = { Required = true, Type = "pass", }
-  },
-
-  Setup = function (env, data)
-    local src = data.Source
-    local base_name = path.drop_suffix(src)
-    local gen_c = data.OutputCFile or ('$(OBJECTROOT)$(SEP)flexgen_' .. base_name .. '.c')
-    local gen_h = data.OutputHeaderFile or ('$(OBJECTROOT)$(SEP)flexgen_' .. base_name .. '.h')
-    return {
-      InputFiles = { src },
-      OutputFiles = { gen_c, gen_h },
-    }
-  end,
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:7f7f0202988190475131a93698f159da2eac5b2d622b84a1d0f94fa1a1510e78
+size 872

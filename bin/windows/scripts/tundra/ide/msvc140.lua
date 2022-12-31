@@ -1,7 +1,3 @@
--- Microsoft Visual Studio 2015 Solution/Project file generation
-
-module(..., package.seeall)
-
-local msvc_common = require "tundra.ide.msvc-common"
-
-msvc_common.setup("14.00", "2015")
+version https://git-lfs.github.com/spec/v1
+oid sha256:5e70489183a3308da2edfea18f9c401185248181ffa7689fc92d261995293817
+size 184

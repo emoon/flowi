@@ -1,25 +1,3 @@
--- ispc.lua - Support for Intel SPMD Program Compiler
-
-module(..., package.seeall)
-
-local path     = require "tundra.path"
-
-DefRule {
-  Name = "ISPC",
-  Command = "$(ISPCCOM)",
-
-  Blueprint = {
-    Source = { Required = true, Type = "string" },
-  },
-
-  Setup = function (env, data)
-    local src = data.Source
-    local base_name = path.drop_suffix(src) 
-    local objFile = "$(OBJECTDIR)$(SEP)" .. base_name .. "__" .. path.get_extension(src):sub(2) .. "$(OBJECTSUFFIX)"
-    local hFile = "$(OBJECTDIR)$(SEP)" .. base_name .. "_ispc.h"
-    return {
-      InputFiles = { src },
-      OutputFiles = { objFile, hFile },
-    }
-  end,
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:86db9ff40c96f4a6af0bae479b1927409d87f43df268038b1d554dbc4c0a8c6c
+size 633

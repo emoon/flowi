@@ -1,8 +1,3 @@
-
-module(..., package.seeall)
-
-local vscommon = require "tundra.tools.msvc-vscommon"
-
-function apply(env, options)
-  vscommon.apply_msvc_visual_studio("10.0", env, options)
-end
+version https://git-lfs.github.com/spec/v1
+oid sha256:66dad310d4a419aaf518cb8674418ce61682640b05f00c28d6edb2f4170d6263
+size 176
