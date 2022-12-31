@@ -68,7 +68,7 @@ static FlAllocator malloc_allocator = {
     FlAllocatorError_Exit, NULL, memory_error, alloc_malloc, NULL, realloc_malloc, free_malloc,
 };
 
-extern FlImageApi g_image_funcs;
+extern "C" FlImageApi g_image_funcs;
 extern FlUiApi g_ui_funcs;
 
 extern "C" void fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data);
