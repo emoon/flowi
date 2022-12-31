@@ -3,8 +3,7 @@
 /target/
 /t2-output
 api_gen/target
-flowi/rust/flowi/target
-core/rust/flowi-core/target
+rust/flowi/target
 .tundra2.*
 .cache
 
