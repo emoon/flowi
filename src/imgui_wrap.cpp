@@ -1,7 +1,7 @@
 #include <flowi/ui.h>
 #include <flowi/style.h>
 #include "image_private.h"
-#include "error.h"
+#include "internal.h"
 #include "primitives.h"
 #include "layer.h"
 #include "../external/dear-imgui/imgui.h"
