@@ -1,0 +1,14 @@
+#[attributes(Handle)]
+struct Font {
+    /// Create a font from (TTF) file. To use the font use [ui::set_font] before using text-based widgets
+    /// Returns >= 0 for valid handle, use fl_get_status(); for more detailed error message
+    [static] new_from_file(filename: String, font_size: u32) -> Font?,
+    /// Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
+    /// Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
+    [static] new_from_memory(name: String, data: [u8], font_size: u32) -> Font?,
+    /// Destory the current font, render the id invalid
+    [static] destroy(font: Font),
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

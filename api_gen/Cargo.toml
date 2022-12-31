@@ -1,0 +1,13 @@
+[package]
+name = "api_gen"
+version = "0.1.0"
+authors = ["Daniel Collin <daniel@collin.com>"]
+edition = "2021"
+
+[dependencies]
+pest = "2"
+pest_derive = "2"
+heck = "0.4"
+argparse = "0.2.1"
+walkdir = "2"
+rayon = "1"

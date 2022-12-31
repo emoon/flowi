@@ -1,0 +1,119 @@
+mod math_data
+
+enum StyleColor {
+    Text = 0,
+    TextDisabled = 1,
+    WindowBg = 2,              // Background of normal windows
+    ChildBg = 3,               // Background of child windows
+    PopupBg = 4,               // Background of popups, menus, tooltips windows
+    Border = 5,
+    BorderShadow = 6,
+    FrameBg = 7,               // Background of checkbox, radio button, plot, slider, text input
+    FrameBgHovered = 8,
+    FrameBgActive = 9,
+    TitleBg = 10,
+    TitleBgActive = 11,
+    TitleBgCollapsed = 12,
+    MenuBarBg = 13,
+    ScrollbarBg = 14,
+    ScrollbarGrab = 15,
+    ScrollbarGrabHovered = 16,
+    ScrollbarGrabActive = 17,
+    CheckMark = 18,
+    SliderGrab = 19,
+    SliderGrabActive = 20,
+    Button = 21,
+    ButtonHovered = 22,
+    ButtonActive = 23,
+    Header = 24,                // Header* colors are used for CollapsingHeader, TreeNode, Selectable, MenuItem
+    HeaderHovered = 25,
+    HeaderActive = 26,
+    Separator = 27,
+    SeparatorHovered = 28,
+    SeparatorActive = 29,
+    ResizeGrip = 30,            // Resize grip in lower-right and lower-left corners of windows.
+    ResizeGripHovered = 31,
+    ResizeGripActive = 32,
+    Tab = 33,                   // TabItem in a TabBar
+    TabHovered = 34,
+    TabActive = 35,
+    TabUnfocused = 36,
+    TabUnfocusedActive = 37,
+    DockingPreview = 38,        // Preview overlay color when about to docking something
+    DockingEmptyBg = 39,        // Background color for empty node (e.g. CentralNode with no window docked into it)
+    PlotLines = 40,
+    PlotLinesHovered = 41,
+    PlotHistogram = 42,
+    PlotHistogramHovered = 43,
+    TableHeaderBg = 44,         // Table header background
+    TableBorderStrong = 45,     // Table outer and header borders (prefer using Alpha=1.0 here)
+    TableBorderLight = 46,      // Table inner borders (prefer using Alpha=1.0 here)
+    TableRowBg = 47,            // Table row background (even rows)
+    TableRowBgAlt = 48,         // Table row background (odd rows)
+    TextSelectedBg = 49,
+    DragDropTarget = 50,        // Rectangle highlighting a drop target
+    NavHighlight = 51,          // Gamepad/keyboard: current highlighted item
+    NavWindowingHighlight = 52, // Highlight window when using CTRL+TAB
+    NavWindowingDimBg = 53,     // Darken/colorize entire screen behind the CTRL+TAB window list, when active
+    ModalWindowDimBg = 54,      // Darken/colorize entire screen behind a modal window, when one is active
+}
+
+enum StyleSingle {
+    Alpha = 0,
+    DisabledAlpha = 1,
+    WindowRounding = 2,
+    WindowBorderSize = 3,
+    ChildRounding = 4,
+    ChildBorderSize = 5,
+    PopupRounding = 6,
+    PopupBorderSize = 7,
+    FrameRounding = 8,
+    FrameBorderSize = 9,
+    IndentSpacing = 10,
+    ScrollbarSize = 11,
+    ScrollbarRounding = 12,
+    GrabMinSize = 13,
+    GrabRounding = 14,
+    TabRounding = 15,
+}
+
+enum StyleVec2 {
+    WindowPadding = 0,
+    WindowMinSize = 1,
+    WindowTitleAlign = 2,
+    FramePadding = 3,
+    ItemSpacing = 4,
+    ItemInnerSpacing = 5,
+    CellPadding = 6,
+    ButtonTextAlign = 7,
+    SelectableTextAlign = 8,
+}
+
+struct Style {
+    /// Permantly set a color
+    [static] set_color(color: StyleColor, value: Color),
+
+    /// Permantly set a color (ARGB)
+    [static] set_color_u32(color: StyleColor, value: u32),
+
+    /// Temporary push a color change (ARGB)
+    [static] push_color_u32(color: StyleColor, value: u32),
+
+    /// Temporary push a color change
+    [static] push_color(color: StyleColor, value: Color),
+
+    /// Temporary push a color change
+    [static] pop_color(),
+
+    /// Pushes a single style change
+    [static] push_single(style: StyleSingle, value: f32),
+
+    /// Pushes a Vec2 style change
+    [static] push_vec2(style: StyleVec2, value: Vec2),
+
+    /// Pops a style change
+    [static] pop(),
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+
