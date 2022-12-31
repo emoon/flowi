@@ -12,6 +12,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        lfs: 'true' 
+
     - uses: codecov/codecov-action@v2
 
       #- name: Install deps (GCOV required)
@@ -56,6 +59,8 @@ jobs:
     runs-on: macOS-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        lfs: 'true' 
 
       # - name: Build Core Tests (Debug)
         # run: bin/macos/tundra2 macosx-clang-debug flowi_core_tests
@@ -77,7 +82,8 @@ jobs:
     runs-on: windows-2019
     steps:
     - uses: actions/checkout@v2
-
+      with:
+        lfs: 'true' 
       # - name: Build Core Tests (Debug)
         # run: bin\windows\tundra2.exe --unprotected win64-msvc-debug flowi_core_tests
 
