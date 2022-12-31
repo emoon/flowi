@@ -314,6 +314,7 @@ Program {
 
 -----------------------------------------------------------------------------------------------------------------------
 -- This is somewhat of a hack to generate the shader headers. There might be a better way to do this
+--[[
 
 Program {
     Name = "build_shaders",
@@ -332,6 +333,7 @@ Program {
         build_fs("flowi/cpp/shaders/fs_texture_r.sc", "flowi/cpp/shaders/generated/fs_texture_r"),
     }
 }
+--]]
 
 -----------------------------------------------------------------------------------------------------------------------
 
