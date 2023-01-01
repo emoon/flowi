@@ -4,6 +4,9 @@
 use crate::manual::{get_last_error, Color, FlString, Result};
 
 #[allow(unused_imports)]
+use bitflags::bitflags;
+
+#[allow(unused_imports)]
 use crate::math_data::*;
 
 #[repr(C)]

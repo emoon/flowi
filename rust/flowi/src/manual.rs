@@ -16,19 +16,19 @@ struct WrappedMainData {
     func: *const c_void,
 }
 
-unsafe extern "C" fn mainloop_trampoline_ud<T>(ctx: *const Flowi, user_data: *mut c_void) {
+unsafe extern "C" fn mainloop_trampoline_ud<T>(ctx: *const c_void, user_data: *mut c_void) {
     let wd: &WrappedMainData = transmute(user_data);
-    let context = &*ctx;
+    let flowi = Flowi { api: ctx as _ };
     let f: &&(dyn Fn(&Flowi, &mut T) + 'static) = transmute(wd.func);
     let data = wd.user_data as *mut T;
-    f(context, &mut *data);
+    f(&flowi, &mut *data);
 }
 
-unsafe extern "C" fn mainloop_trampoline(ctx: *const Flowi, user_data: *mut c_void) {
+unsafe extern "C" fn mainloop_trampoline(ctx: *const c_void, user_data: *mut c_void) {
     let wd: &WrappedMainData = transmute(user_data);
-    let context = &*ctx;
+    let flowi = Flowi { api: ctx as _ };
     let f: &&(dyn Fn(&Flowi) + 'static) = transmute(wd.func);
-    f(context);
+    f(&flowi);
 }
 
 impl Application {
@@ -115,6 +115,3 @@ pub fn get_last_error() -> FlowiError {
 }
 
 pub type Result<T> = std::result::Result<T, FlowiError>;
-
-
-

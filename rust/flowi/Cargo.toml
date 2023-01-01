@@ -8,6 +8,9 @@ edition = "2021"
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
 
+[dependencies]
+bitflags = "2.0.0-rc.1"
+
 [features]
 static = []
 dynamic = []

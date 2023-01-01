@@ -1,6 +1,6 @@
-use flowi::Application;
 use flowi::Flowi;
 use flowi::ui::WindowFlags;
+use flowi::application::Application;
 
 struct App {
     image: flowi::image::Image,
@@ -9,7 +9,7 @@ struct App {
 fn main_loop(flowi: &Flowi, app: &mut App) {
     let ui = flowi.ui();
 
-    ui.window_begin("Hello, world!", WindowFlags::None);
+    ui.window_begin("Hello, world!", WindowFlags::NO_TITLE_BAR);
     ui.image(app.image);
     ui.end();
 }

@@ -2,7 +2,7 @@ mod layout
 mod math_data
 mod image
 
-#[attributes(flags)]
+#[attributes(bitflags)]
 enum WindowFlags {
     /// Default flags
     None = 0,
@@ -49,11 +49,11 @@ enum WindowFlags {
     /// pressing the X, so if you keep submitting the tab may reappear at end of tab bar.
     UnsavedDocument = 1 << 19,
     // No navigation
-    //NoNav = NoNavInputs | NoNavFocus,
+    NoNav = NoNavInputs | NoNavFocus,
     // No decoration
-    //NoDecoration = NoTitleBar | NoResize | NoScrollbar | NoCollapse, 
+    NoDecoration = NoTitleBar | NoResize | NoScrollbar | NoCollapse, 
     // Skip all inputs
-    //NoInputs = NoMouseInputs | NoNavInputs | NoNavFocus,
+    NoInputs = NoMouseInputs | NoNavInputs | NoNavFocus,
 }
 
 struct Ui {

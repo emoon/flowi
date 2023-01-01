@@ -135,37 +135,17 @@ impl Cgen {
 
         for entry in &enum_def.entries {
             Self::write_commment(f, &entry.doc_comments, 4)?;
-            let mut value = entry.value.to_owned();
 
-            // Check if an enum entry contains an enum name then we search and replace all those
-            // entries with a formatted name
-            if Self::find_name_match(enum_def, &value) {
-                value = String::new();
-                for s in entry.value.split(' ') {
-                    let mut found = false;
-                    for e in &enum_def.entries {
-                        if e.name == s {
-                            value.push_str(&format!(
-                                " {} ",
-                                Self::get_enum_name(&enum_def.name, s)
-                            ));
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if !found {
-                        value.push_str(&format!(" {} ", s));
-                    }
-                }
+            match &entry.value {
+                EnumValue::Value(v) => writeln!(
+                    f,
+                    "    {} = {},",
+                    Self::get_enum_name(&enum_def.name, &entry.name),
+                    v
+                )?,
+                EnumValue::OrList(_) => writeln!(f)?,
+                _ => (), 
             }
-
-            writeln!(
-                f,
-                "    {} = {},",
-                Self::get_enum_name(&enum_def.name, &entry.name),
-                value,
-            )?;
         }
 
         writeln!(f, "}} {}{};\n", C_API_SUFFIX, enum_def.name)

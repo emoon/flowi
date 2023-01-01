@@ -3,6 +3,9 @@
 #[allow(unused_imports)]
 use crate::manual::{get_last_error, Color, FlString, Result};
 
+#[allow(unused_imports)]
+use bitflags::bitflags;
+
 /// Texture format specificed when using [CreateTexture] command
 #[repr(C)]
 #[derive(Debug)]

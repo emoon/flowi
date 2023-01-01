@@ -182,9 +182,17 @@ pub struct Struct {
     pub traits: Vec<String>,
 }
 
-///
+#[derive(Debug)]
+pub enum EnumValue {
+    /// Enum value with a value
+    None,
+    /// Enum value with a value
+    Value(String),
+    /// Values that or being or-ed together
+    OrList(Vec<String>),
+}
+
 /// Enum
-///
 #[derive(Debug)]
 pub struct EnumEntry {
     /// Documentation
@@ -192,7 +200,7 @@ pub struct EnumEntry {
     /// Name of the enum entry
     pub name: String,
     /// Value of the enum entry
-    pub value: String,
+    pub value: EnumValue,
 }
 
 ///
@@ -340,6 +348,10 @@ impl ApiParser {
 
                     // Figure out enum type
                     enum_def.enum_type = Self::determine_enum_type(&attributes);
+                    if enum_def.enum_type == EnumType::Bitflags {
+                        dbg!(&enum_def);
+                    }
+
                     api_def.enums.push(enum_def);
                 }
 
@@ -624,12 +636,10 @@ impl ApiParser {
         entries
     }
 
-    ///
     /// Get enum
-    ///
     fn get_enum(doc_comments: &Vec<String>, rule: Pair<Rule>) -> EnumEntry {
         let mut name = String::new();
-        let mut value = String::new();
+        let mut value = EnumValue::None;
 
         for entry in rule.into_inner() {
             match entry.as_rule() {
@@ -646,20 +656,27 @@ impl ApiParser {
         }
     }
 
-    ///
     /// Get enum assign
-    ///
-    fn get_enum_assign(rule: Pair<Rule>) -> String {
-        let mut enum_value = String::new();
+    fn get_enum_assign(rule: Pair<Rule>) -> EnumValue {
+        println!("start enum assign");
+
+        let mut strings = Vec::new();
 
         for entry in rule.into_inner() {
-            if entry.as_rule() == Rule::string_to_end {
-                enum_value = entry.as_str().to_owned();
-                break;
+            if entry.as_rule() == Rule::or_namelist {
+                for e in entry.into_inner() {
+                    if e.as_rule() == Rule::string_to_end {
+                        strings.push(e.as_str().trim().to_owned());
+                    }
+                }
             }
         }
 
-        enum_value
+        if strings.len() == 1 {
+            EnumValue::Value(strings[0].to_owned())
+        } else {
+            EnumValue::OrList(strings)
+        }
     }
 
     pub fn second_pass(api_defs: &mut [ApiDef]) {

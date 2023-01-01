@@ -16,7 +16,9 @@ pub mod ui;
 pub mod window;
 pub use manual::*;
 
-pub use crate::application::Application;
+extern "C" {
+    fn fl_application_create_impl(name: FlString, company: FlString) -> *const FlowiFfiApi;
+}
 pub use crate::font::FontApi;
 use crate::font::FontFfiApi;
 pub use crate::image::ImageApi;
@@ -25,10 +27,6 @@ pub use crate::style::StyleApi;
 use crate::style::StyleFfiApi;
 pub use crate::ui::UiApi;
 use crate::ui::UiFfiApi;
-
-extern "C" {
-    fn fl_application_create_impl(name: FlString, company: FlString) -> *const FlowiFfiApi;
-}
 
 #[repr(C)]
 pub struct FlowiFfiApi {
@@ -71,10 +69,7 @@ impl Flowi {
 
     pub fn new(name: &str, company: &str) -> Result<Self> {
         unsafe {
-            let api = fl_application_create_impl(
-                FlString::new(name),
-                FlString::new(company),
-            );
+            let api = fl_application_create_impl(FlString::new(name), FlString::new(company));
 
             if api.is_null() {
                 Err(get_last_error())

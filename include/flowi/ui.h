@@ -65,6 +65,7 @@ typedef enum FlWindowFlags {
     // closure is not assumed (will wait for user to stop submitting the tab). Otherwise closure is assumed when
     // pressing the X, so if you keep submitting the tab may reappear at end of tab bar.
     FlWindowFlags_UnsavedDocument = 1 << 19,
+
 } FlWindowFlags;
 
 struct FlUiApi;
