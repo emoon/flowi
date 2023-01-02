@@ -348,10 +348,6 @@ impl ApiParser {
 
                     // Figure out enum type
                     enum_def.enum_type = Self::determine_enum_type(&attributes);
-                    if enum_def.enum_type == EnumType::Bitflags {
-                        dbg!(&enum_def);
-                    }
-
                     api_def.enums.push(enum_def);
                 }
 
@@ -658,8 +654,6 @@ impl ApiParser {
 
     /// Get enum assign
     fn get_enum_assign(rule: Pair<Rule>) -> EnumValue {
-        println!("start enum assign");
-
         let mut strings = Vec::new();
 
         for entry in rule.into_inner() {
