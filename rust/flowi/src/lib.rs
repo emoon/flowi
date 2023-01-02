@@ -12,6 +12,7 @@ pub mod manual;
 pub mod math_data;
 pub mod render_commands;
 pub mod style;
+pub mod text;
 pub mod ui;
 pub mod window;
 pub use manual::*;
@@ -27,6 +28,8 @@ pub use crate::layout::CursorApi;
 use crate::layout::CursorFfiApi;
 pub use crate::style::StyleApi;
 use crate::style::StyleFfiApi;
+pub use crate::text::TextApi;
+use crate::text::TextFfiApi;
 pub use crate::ui::UiApi;
 use crate::ui::UiFfiApi;
 pub use crate::window::WindowApi;
@@ -39,6 +42,7 @@ pub struct FlowiFfiApi {
     font_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const FontFfiApi,
     image_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ImageFfiApi,
     style_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const StyleFfiApi,
+    text_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const TextFfiApi,
     ui_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const UiFfiApi,
     window_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const WindowFfiApi,
 }
@@ -71,6 +75,12 @@ impl Flowi {
         let api_priv = unsafe { &*self.api };
         let api = unsafe { (api_priv.style_get_api)(api_priv.data, 0) };
         StyleApi { api }
+    }
+
+    pub fn text(&self) -> TextApi {
+        let api_priv = unsafe { &*self.api };
+        let api = unsafe { (api_priv.text_get_api)(api_priv.data, 0) };
+        TextApi { api }
     }
 
     pub fn ui(&self) -> UiApi {

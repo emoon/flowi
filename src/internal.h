@@ -4,6 +4,7 @@
 #include <flowi/image.h>
 #include <flowi/layout.h>
 #include <flowi/layout.h>
+#include <flowi/text.h>
 #include <flowi/style.h>
 #include <flowi/window.h>
 #include "../external/hashmap.h"
@@ -63,6 +64,7 @@ typedef struct FlInternalData {
     struct FlStyleApi style_funcs;
     struct FlWindowApi window_funcs;
     struct FlCursorApi cursor_funcs;
+    struct FlTextApi text_funcs;
     LinearAllocator frame_allocator;
     StringAllocator string_allocator;
     Layer layers[FlLayerType_Count];

@@ -1,6 +1,7 @@
 #include <flowi/ui.h>
 #include <flowi/style.h>
 #include <flowi/window.h>
+#include <flowi/text.h>
 #include "image_private.h"
 #include "internal.h"
 #include "primitives.h"
@@ -432,6 +433,86 @@ struct FlCursorApi g_cursor_funcs = {
     cursor_get_text_line_height_with_spacing,
     cursor_get_frame_height,
     cursor_get_frame_height_with_spacing,
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void text_show(FlInternalData* ctx, FlString text) {
+    FL_UNUSED(ctx);
+    ImGui::TextUnformatted(text.str, text.str + text.len);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void text_bullet(FlInternalData* ctx, FlString text) {
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), text);
+
+    ImGui::BulletText("%s", temp_text);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void text_label(FlInternalData* ctx, FlString label, FlString text) {
+    char temp_buffer[2048];
+    char temp_buffer_2[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    const char* temp_text2 =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer_2, sizeof(temp_buffer), text);
+
+    ImGui::LabelText(temp_text, "%s", temp_text2);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void text_show_colored(FlInternalData* ctx, FlColor color, FlString text) {
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), text);
+
+    ImGui::TextColored(ImVec4(color.r, color.g, color.b, color.a), "%s", temp_text);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void text_show_disabled(FlInternalData* ctx, FlString text) {
+    FL_UNUSED(ctx);
+
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), text);
+
+    ImGui::TextDisabled("%s", temp_text);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+static void text_show_wrapped(FlInternalData* ctx, FlString text) {
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), text);
+
+    ImGui::TextWrapped("%s", temp_text);
+}
+*/
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct FlTextApi g_text_funcs = {
+    NULL,
+    text_bullet,
+    text_label,
+    text_show_colored,
+    text_show,
+    text_show_disabled,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

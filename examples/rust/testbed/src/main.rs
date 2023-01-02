@@ -10,9 +10,11 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     let ui = flowi.ui();
     let window = flowi.window();
     let cursor = flowi.cursor();
+    let text = flowi.text();
 
     window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR);
     cursor.set_pos_y(110.0);
+    text.show("Hello, world!");
     ui.image(app.image);
     window.end();
 }

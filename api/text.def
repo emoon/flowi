@@ -1,0 +1,15 @@
+mod math_data
+
+struct Text {
+    // Bullet text 
+    [static] bullet(text: String),
+    // Draw basic text 
+    // Label Text 
+    [static] label(label: String, text: String),
+    // Draw basic text with a color
+    [static] show_color(color: Color, text: String),
+    // Show basic text 
+    [static] show(text: String),
+    // Draw text disabled 
+    [static] text_disabled(text: String),
+}
