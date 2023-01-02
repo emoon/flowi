@@ -25,12 +25,13 @@ void main_loop(struct FlContext* ctx, void* user_data) {
     App* app = (App*)user_data;
 
     FlUiApi* ui = fl_ui_api(ctx);
+    FlWindowApi* window_api = fl_window_api(ctx);
 
     //fl_style_push_color(ctx, FlStyleColor_TitleBg, FlColor_new_rgb(1.0f, 0.0f, 0.0f));
-    fl_ui_window_begin(ui, "Test®", FlWindowFlags_None);
+    fl_window_begin(window_api, "Test®", FlWindowFlags_None);
     fl_ui_image(ui, app->image);
     fl_ui_image(ui, app->image2);
-    fl_ui_end(ui);
+    fl_window_end(window_api);
     //fl_style_pop_color(ctx);
 
 

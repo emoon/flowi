@@ -1,5 +1,6 @@
 #include <flowi/ui.h>
 #include <flowi/style.h>
+#include <flowi/window.h>
 #include "image_private.h"
 #include "internal.h"
 #include "primitives.h"
@@ -28,24 +29,6 @@
 static int s_color_lut[ImGuiCol_COUNT * 4];
 static int s_single_style_lut[ImGuiStyleVar_COUNT];
 static int s_vec2_style_lut[ImGuiStyleVar_COUNT];
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static bool begin(FlInternalData* ctx, FlString name, FlWindowFlags flags) {
-    char temp_buffer[2048];
-
-    const char* window_name =
-        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
-
-    return ImGui::Begin(window_name, NULL, (ImGuiWindowFlags)flags);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static void end(FlInternalData* ctx) {
-    FL_UNUSED(ctx);
-    ImGui::End();
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -147,8 +130,6 @@ extern "C" void fl_style_pop_impl(FlInternalData* ctx) {
 
 FlUiApi g_ui_funcs = {
     NULL,
-    begin,
-    end,
     NULL, // TODO: Fix me
     image,
     NULL,
@@ -164,6 +145,294 @@ extern "C" FlUiApi* fl_ui_get_api(FlInternalData* ctx, int api_version) {
     FL_UNUSED(api_version);
     return &ctx->ui_funcs;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool window_begin(FlInternalData* ctx, FlString name, FlWindowFlags flags) {
+    char temp_buffer[2048];
+
+    const char* window_name =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
+
+    return ImGui::Begin(window_name, NULL, (ImGuiWindowFlags)flags);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void window_end(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::End();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool window_begin_child(FlInternalData* ctx, FlString id, FlVec2 size, bool border, FlWindowFlags flags) {
+    char temp_buffer[2048];
+
+    const char* window_name =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), id);
+
+    return ImGui::BeginChild(window_name, ImVec2(size.x, size.y), border, (ImGuiWindowFlags)flags);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void window_end_child(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::EndChild();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool window_is_appearing(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsWindowAppearing();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool window_is_collapsed(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsWindowCollapsed();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool window_is_focused(FlInternalData* ctx, FlFocusedFlags flags) {
+    FL_UNUSED(ctx);
+    return ImGui::IsWindowFocused((ImGuiFocusedFlags)flags);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool window_is_hovered(FlInternalData* ctx, FlHoveredFlags flags) {
+    FL_UNUSED(ctx);
+    return ImGui::IsWindowHovered((ImGuiHoveredFlags)flags);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static float window_dpi_scale(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::GetWindowDpiScale();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlVec2 window_pos(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImVec2 pos = ImGui::GetWindowPos();
+    return { pos.x, pos.y };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlVec2 window_size(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImVec2 size = ImGui::GetWindowSize();
+    return { size.x, size.y };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FlWindowApi g_window_funcs = {
+    NULL,
+    window_begin,
+    window_end,
+    window_begin_child,
+    window_end_child,
+    window_is_appearing,
+    window_is_collapsed,
+    window_is_focused,
+    window_is_hovered,
+    window_dpi_scale,
+    window_pos,
+    window_size,
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_separator(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::Separator();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_same_line(FlInternalData* ctx, float offset_from_start_x, float spacing) {
+    FL_UNUSED(ctx);
+    ImGui::SameLine(offset_from_start_x, spacing);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_new_line(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::NewLine();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_spacing(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::Spacing();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_dummy(FlInternalData* ctx, FlVec2 size) {
+    FL_UNUSED(ctx);
+    ImGui::Dummy(ImVec2(size.x, size.y));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_indent(FlInternalData* ctx, float indent_w) {
+    FL_UNUSED(ctx);
+    ImGui::Indent(indent_w);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_unindent(FlInternalData* ctx, float indent_w) {
+    FL_UNUSED(ctx);
+    ImGui::Unindent(indent_w);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_begin_group(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::BeginGroup();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_end_group(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::EndGroup();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlVec2 cursor_get_pos(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImVec2 pos = ImGui::GetCursorPos();
+    return { pos.x, pos.y };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static float cursor_get_x(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::GetCursorPosX();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static float cursor_get_y(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::GetCursorPosY();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_set_pos(FlInternalData* ctx, FlVec2 local_pos) {
+    FL_UNUSED(ctx);
+    ImGui::SetCursorPos(ImVec2(local_pos.x, local_pos.y));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_set_x(FlInternalData* ctx, float x) {
+    FL_UNUSED(ctx);
+    ImGui::SetCursorPosX(x);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_set_y(FlInternalData* ctx, float y) {
+    FL_UNUSED(ctx);
+    ImGui::SetCursorPosY(y);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlVec2 cursor_screen_pos(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    return { pos.x, pos.y };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_set_screen_pos(FlInternalData* ctx, FlVec2 screen_pos) {
+    FL_UNUSED(ctx);
+    ImGui::SetCursorScreenPos(ImVec2(screen_pos.x, screen_pos.y));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void cursor_align_text_to_frame_padding(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::AlignTextToFramePadding();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static float cursor_get_text_line_height(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::GetTextLineHeight();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static float cursor_get_text_line_height_with_spacing(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::GetTextLineHeightWithSpacing();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static float cursor_get_frame_height(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::GetFrameHeight();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static float cursor_get_frame_height_with_spacing(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::GetFrameHeightWithSpacing();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct FlCursorApi g_cursor_funcs = {
+    NULL,
+    cursor_separator,
+    cursor_same_line,
+    cursor_new_line,
+    cursor_spacing,
+    cursor_dummy,
+    cursor_indent,
+    cursor_unindent,
+    cursor_begin_group,
+    cursor_end_group,
+    cursor_get_pos,
+    cursor_get_x,
+    cursor_get_y,
+    cursor_set_pos,
+    cursor_set_x,
+    cursor_set_y,
+    cursor_screen_pos,
+    cursor_set_screen_pos,
+    cursor_align_text_to_frame_padding,
+    cursor_get_text_line_height,
+    cursor_get_text_line_height_with_spacing,
+    cursor_get_frame_height,
+    cursor_get_frame_height_with_spacing,
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

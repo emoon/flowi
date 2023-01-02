@@ -800,6 +800,17 @@ impl Variable {
     }
 }
 
+pub fn get_structs_with_functions(api_defs: &[ApiDef]) -> Vec<&Struct> {
+    let mut data: Vec<&Struct> = api_defs
+        .iter()
+        .flat_map(|api_def| api_def.structs.iter())
+        .filter(|s| !s.functions.is_empty() && !s.has_attribute("NoContext"))
+        .collect();
+
+    data.sort_by(|a, b| a.name.cmp(&b.name));
+    data
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -70,25 +70,49 @@ static FlAllocator malloc_allocator = {
 
 extern "C" FlImageApi g_image_funcs;
 extern FlUiApi g_ui_funcs;
+extern FlWindowApi g_window_funcs;
+extern FlCursorApi g_cursor_funcs;
 
 extern "C" void fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data);
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static FlImageApi* get_image_api(FlInternalData* data, int version) {
     FlImageApi* api = &data->image_funcs;
-    printf("getting image api %p %p\n", data, api);
     return api; 
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static FlUiApi* get_ui_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
     return &data->ui_funcs;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlWindowApi* get_window_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->window_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlCursorApi* get_cursor_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->cursor_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static FlContext s_context = {
-    NULL,
-    NULL,
-    get_image_api,
-    NULL, // style api
-    get_ui_api,
+    NULL,           // data
+    get_cursor_api, // cursor api
+    NULL,           // font api
+    get_image_api,  // image api
+    NULL,           // style api
+    get_ui_api,     // ui api
+    get_window_api, // window api
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -119,9 +143,13 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
 
     data->ui_funcs = g_ui_funcs;
     data->image_funcs = g_image_funcs;
+    data->window_funcs = g_window_funcs;
+    data->cursor_funcs = g_cursor_funcs;
 
     data->ui_funcs.priv = data;
     data->image_funcs.priv = data;
+    data->window_funcs.priv = data;
+    data->cursor_funcs.priv = data;
 
     // Layout_create_default(ctx);
     // ctx->layout_mode = FlLayoutMode_Automatic;

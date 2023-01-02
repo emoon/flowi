@@ -23,18 +23,24 @@ pub use crate::font::FontApi;
 use crate::font::FontFfiApi;
 pub use crate::image::ImageApi;
 use crate::image::ImageFfiApi;
+pub use crate::layout::CursorApi;
+use crate::layout::CursorFfiApi;
 pub use crate::style::StyleApi;
 use crate::style::StyleFfiApi;
 pub use crate::ui::UiApi;
 use crate::ui::UiFfiApi;
+pub use crate::window::WindowApi;
+use crate::window::WindowFfiApi;
 
 #[repr(C)]
 pub struct FlowiFfiApi {
     data: *const c_void,
+    cursor_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const CursorFfiApi,
     font_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const FontFfiApi,
     image_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ImageFfiApi,
     style_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const StyleFfiApi,
     ui_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const UiFfiApi,
+    window_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const WindowFfiApi,
 }
 
 #[repr(C)]
@@ -43,6 +49,12 @@ pub struct Flowi {
 }
 
 impl Flowi {
+    pub fn cursor(&self) -> CursorApi {
+        let api_priv = unsafe { &*self.api };
+        let api = unsafe { (api_priv.cursor_get_api)(api_priv.data, 0) };
+        CursorApi { api }
+    }
+
     pub fn font(&self) -> FontApi {
         let api_priv = unsafe { &*self.api };
         let api = unsafe { (api_priv.font_get_api)(api_priv.data, 0) };
@@ -65,6 +77,12 @@ impl Flowi {
         let api_priv = unsafe { &*self.api };
         let api = unsafe { (api_priv.ui_get_api)(api_priv.data, 0) };
         UiApi { api }
+    }
+
+    pub fn window(&self) -> WindowApi {
+        let api_priv = unsafe { &*self.api };
+        let api = unsafe { (api_priv.window_get_api)(api_priv.data, 0) };
+        WindowApi { api }
     }
 
     pub fn new(name: &str, company: &str) -> Result<Self> {

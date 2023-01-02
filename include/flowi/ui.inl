@@ -1,7 +1,5 @@
 typedef struct FlUiApi {
     struct FlInternalData* priv;
-    bool (*window_begin)(struct FlInternalData* priv, FlString name, FlWindowFlags flags);
-    void (*end)(struct FlInternalData* priv);
     void (*text)(struct FlInternalData* priv, FlString text);
     void (*image)(struct FlInternalData* priv, FlImage image);
     void (*image_with_size)(struct FlInternalData* priv, FlImage image, FlVec2 size);
@@ -11,17 +9,6 @@ typedef struct FlUiApi {
                                   float image_scale);
     bool (*push_button)(struct FlInternalData* priv, FlString text);
 } FlUiApi;
-
-// Start a window
-FL_INLINE bool fl_ui_window_begin(struct FlUiApi* api, const char* name, FlWindowFlags flags) {
-    FlString name_ = fl_cstr_to_flstring(name);
-    return (api->window_begin)(api->priv, name_, flags);
-}
-
-// End call for various types such as windows, lists, etc.
-FL_INLINE void fl_ui_end(struct FlUiApi* api) {
-    (api->end)(api->priv);
-}
 
 // Draw static text with the selected font
 FL_INLINE void fl_ui_text(struct FlUiApi* api, const char* text) {

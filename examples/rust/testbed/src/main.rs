@@ -1,5 +1,5 @@
 use flowi::Flowi;
-use flowi::ui::WindowFlags;
+use flowi::window::WindowFlags;
 use flowi::application::Application;
 
 struct App {
@@ -8,10 +8,13 @@ struct App {
 
 fn main_loop(flowi: &Flowi, app: &mut App) {
     let ui = flowi.ui();
+    let window = flowi.window();
+    let cursor = flowi.cursor();
 
-    ui.window_begin("Hello, world!", WindowFlags::NO_TITLE_BAR);
+    window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR);
+    cursor.set_pos_y(110.0);
     ui.image(app.image);
-    ui.end();
+    window.end();
 }
 
 fn main() {

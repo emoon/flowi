@@ -495,13 +495,8 @@ impl Cgen {
         let filename = format!("{}/flowi.h", path);
 
         let mut f = BufWriter::new(File::create(filename)?);
-
-        // Gather all the structs with functions in them
-        let structs_with_funcs: Vec<&Struct> = api_defs
-            .iter()
-            .flat_map(|a| &a.structs)
-            .filter(|s| !s.functions.is_empty() && !s.has_attribute("NoContext"))
-            .collect();
+        
+        let structs_with_funcs = get_structs_with_functions(api_defs);
 
         for api_def in api_defs {
             let base_filename = &api_def.base_filename;

@@ -15,38 +15,78 @@
 extern "C" {
 #endif
 
-typedef enum FlLayoutDirection {
-    FlLayoutDirection_Horizontal = 0,
-    FlLayoutDirection_Verticial = 1,
-} FlLayoutDirection;
+// Layout Cursor
+// Cursor means the position of the widget.
+// By setting the cursor position, you can change the position of the widget.
+// You can call same_line() between widgets to undo the last carriage return and output at the right of the preceding
+// widget.
+struct FlCursorApi;
 
-typedef enum FlSizeType {
-    FlSizeType_Fixed = 0,
-    FlSizeType_Stretch = 1,
-} FlSizeType;
+struct FlCursor;
 
-// LayoutMode make it possible to select how ui elements are being layed out.
-typedef enum FlLayoutMode {
-    // Automatic (default) will use [LayoutArea] to do automatic positining. See [LayoutArea] for more info on how to
-    // use this.
-    FlLayoutMode_Automatic = 0,
-    // User will have to use the [Ui::set_position]
-    FlLayoutMode_Manual = 1,
-} FlLayoutMode;
+// Separator, generally horizontal. Inside a menu bar or in horizontal layout mode, this becomes a vertical separator.
+static void fl_cursor_separator(struct FlCursorApi* api);
 
-typedef struct FlSizing {
-    int value;
-    FlSizeType value_type;
-} FlSizing;
+// Call between widgets or groups to layout them horizontally. X position given in window coordinates.
+static void fl_cursor_same_line(struct FlCursorApi* api, float offset_from_start_x, float spacing);
 
-typedef uint64_t FlLayoutAreaId;
+// Undo a same_line() or force a new line when in a horizontal-layout context.
+static void fl_cursor_new_line(struct FlCursorApi* api);
 
-typedef struct FlLayoutArea {
-    FlString name;
-    FlSizing width;
-    FlSizing height;
-    FlLayoutDirection direction;
-} FlLayoutArea;
+// Undo a same_line() or force a new line when in a horizontal-layout context.
+static void fl_cursor_spacing(struct FlCursorApi* api);
+
+// Add a dummy item of given size. Unlike widgets.invisible_button(), dummmy() won't take the mouse click or be
+// navigable into.
+static void fl_cursor_dummy(struct FlCursorApi* api, FlVec2 size);
+
+// Move content position toward the right, by indent_w, or style.IndentSpacing if indent_w <= 0
+static void fl_cursor_indent(struct FlCursorApi* api, float indent);
+
+// Move content position back to the left, by indent_w, or style.IndentSpacing if indent_w <= 0
+static void fl_cursor_unindent(struct FlCursorApi* api, float indent_w);
+
+static void fl_cursor_begin_group(struct FlCursorApi* api);
+
+static void fl_cursor_end_group(struct FlCursorApi* api);
+
+// Cursor position in window coordinates (relative to window position)
+static FlVec2 fl_cursor_get_pos(struct FlCursorApi* api);
+
+static float fl_cursor_get_pos_x(struct FlCursorApi* api);
+
+static float fl_cursor_get_pos_y(struct FlCursorApi* api);
+
+// Set position in window coordinates (relative to window position)
+static void fl_cursor_set_pos(struct FlCursorApi* api, FlVec2 pos);
+
+static void fl_cursor_set_pos_x(struct FlCursorApi* api, float x);
+
+static void fl_cursor_set_pos_y(struct FlCursorApi* api, float y);
+
+// cursor position in absolute coordinates (useful to work with ImDrawList API).
+// generally top-left == GetMainViewport()->Pos == (0,0) in single viewport mode,
+// and bottom-right == GetMainViewport()->Pos+Size == io.DisplaySize in single-viewport mode.
+static FlVec2 fl_cursor_screen_pos(struct FlCursorApi* api);
+
+static void fl_cursor_set_screen_pos(struct FlCursorApi* api, FlVec2 pos);
+
+// vertically align upcoming text baseline to FramePadding.y so that it will align properly to regularly framed items
+// (call if you have text on a line before a framed item)
+static void fl_cursor_align_text_to_frame_padding(struct FlCursorApi* api);
+
+// ~ FontSize
+static float fl_cursor_get_text_line_height(struct FlCursorApi* api);
+
+// ~ FontSize + style.ItemSpacing.y (distance in pixels between 2 consecutive lines of text)
+static float fl_cursor_get_text_line_height_with_spacing(struct FlCursorApi* api);
+
+// ~ FontSize + style.FramePadding.y * 2
+static float fl_cursor_get_frame_height(struct FlCursorApi* api);
+
+// ~ FontSize + style.FramePadding.y * 2 + style.ItemSpacing.y (distance in pixels between 2 consecutive lines of framed
+// widgets)
+static float fl_cursor_get_frame_height_with_spacing(struct FlCursorApi* api);
 
 #include "layout.inl"
 

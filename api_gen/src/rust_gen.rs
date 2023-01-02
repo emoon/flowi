@@ -626,11 +626,7 @@ impl RustGen {
 
         writeln!(f)?;
 
-        let structs_with_funcs: Vec<&Struct> = api_defs
-            .iter()
-            .flat_map(|a| &a.structs)
-            .filter(|s| !s.functions.is_empty() && !s.has_attribute("NoContext"))
-            .collect();
+        let structs_with_funcs = get_structs_with_functions(api_defs);
 
         writeln!(f, "#[repr(C)]")?;
         writeln!(f, "pub struct FlowiFfiApi {{")?;

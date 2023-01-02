@@ -6,8 +6,246 @@ use crate::manual::{get_last_error, Color, FlString, Result};
 #[allow(unused_imports)]
 use bitflags::bitflags;
 
+#[allow(unused_imports)]
+use crate::math_data::*;
+
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+pub struct WindowFfiApi {
+    pub(crate) data: *const core::ffi::c_void,
+    begin: unsafe extern "C" fn(
+        data: *const core::ffi::c_void,
+        name: FlString,
+        flags: WindowFlags,
+    ) -> bool,
+    end: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    begin_child: unsafe extern "C" fn(
+        data: *const core::ffi::c_void,
+        id: FlString,
+        size: Vec2,
+        border: bool,
+        flags: WindowFlags,
+    ) -> bool,
+    end_child: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    is_appearing: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    is_collapsed: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    is_focused: unsafe extern "C" fn(data: *const core::ffi::c_void, flags: FocusedFlags) -> bool,
+    is_hovered: unsafe extern "C" fn(data: *const core::ffi::c_void, flags: HoveredFlags) -> bool,
+    dpi_scale: unsafe extern "C" fn(data: *const core::ffi::c_void) -> f32,
+    pos: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
+    size: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
+}
+
+bitflags! {
+ pub struct WindowFlags : u32 {
+    /// Default flags
+    const NONE = 0;
+    /// Disable title-bar
+    const NO_TITLE_BAR = 1 << 0;
+    /// Disable user resizing with the lower-right grip
+    const NO_RESIZE = 1 << 1;
+    /// Disable user moving the window
+    const NO_MOVE = 1 << 2;
+    /// Disable scrollbars (window can still scroll with mouse or programmatically)
+    const NO_SCROLLBAR = 1 << 3;
+    /// Disable user vertically scrolling with mouse wheel. On child window, mouse wheel will be forwarded to the parent unless NoScrollbar is also set.
+    const NO_SCROLL_WITH_MOUSE = 1 << 4;
+    /// Disable user collapsing window by double-clicking on it. Also referred to as Window Menu Button (e.g. within a docking node).
+    const NO_COLLAPSE = 1 << 5;
+    /// Resize every window to its content every frame
+    const ALWAYS_AUTO_RESIZE = 1 << 6;
+    /// Disable drawing background color (WindowBg, etc.) and outside border. Similar as using SetNextWindowBgAlpha(0.0f).
+    const NO_BACKGROUND = 1 << 7;
+    /// Never load/save settings in .ini file
+    const NO_SAVED_SETTINGS = 1 << 8;
+    /// Disable catching mouse, hovering test with pass through.
+    const NO_MOUSE_INPUTS = 1 << 9;
+    /// Has a menu-bar
+    const MENU_BAR = 1 << 10;
+    /// Allow horizontal scrollbar to appear (off by default).
+    const HORIZONTAL_SCROLLBAR = 1 << 11;
+    /// Disable taking focus when transitioning from hidden to visible state
+    const NO_FOCUS_ON_APPEARING = 1 << 12;
+    /// Disable bringing window to front when taking focus (e.g. clicking on it or programmatically giving it focus)
+    const NO_BRING_TO_FRONT_ON_FOCUS = 1 << 13;
+    /// Always show vertical scrollbar (even if content_size.y < size.y)
+    const ALWAYS_VERTICAL_SCROLLBAR = 1 << 14;
+    /// Always show horizontal scrollbar (even if content_size.x < size.x)
+    const ALWAYS_HORIZONTAL_SCROLLBAR = 1 << 15;
+    /// Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows,
+    const ALWAYS_USE_WINDOW_PADDING = 1 << 16;
+    /// No gamepad/keyboard navigation within the window
+    const NO_NAV_INPUTS = 1 << 17;
+    /// No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
+    const NO_NAV_FOCUS = 1 << 18;
+    /// Display a dot next to the title. When used in a tab/docking context, tab is selected when clicking the X +
+    /// closure is not assumed (will wait for user to stop submitting the tab). Otherwise closure is assumed when
+    /// pressing the X, so if you keep submitting the tab may reappear at end of tab bar.
+    const UNSAVED_DOCUMENT = 1 << 19;
+    const NO_NAV = Self::NO_NAV_INPUTS.bits() | Self::NO_NAV_FOCUS.bits();
+    const NO_DECORATION = Self::NO_TITLE_BAR.bits() | Self::NO_RESIZE.bits() | Self::NO_SCROLLBAR.bits() | Self::NO_COLLAPSE.bits();
+    const NO_INPUTS = Self::NO_MOUSE_INPUTS.bits() | Self::NO_NAV_INPUTS.bits() | Self::NO_NAV_FOCUS.bits();
+}}
+
+bitflags! {
+ pub struct FocusedFlags : u32 {
+    const NONE = 0;
+    /// Return true if any children of the window is focused
+    const CHILD_WINDOWS = 1 << 0;
+    /// Test from root window (top most parent of the current hierarchy)
+    const ROOT_WINDOW = 1 << 1;
+    /// Return true if any window is focused. Important: If you are trying to tell how to dispatch your low-level inputs, do NOT use this. Use 'io.WantCaptureMouse' instead! Please read the FAQ!
+    const ANY_WINDOW = 1 << 2;
+    /// Do not consider popup hierarchy (do not treat popup emitter as parent of popup) (when used with _ChildWindows or _RootWindow)
+    const NO_POPUP_HIERARCHY = 1 << 3;
+    /// Consider docking hierarchy (treat dockspace host as parent of docked window) (when used with _ChildWindows or _RootWindow)
+    const DOCK_HIERARCHY = 1 << 4;
+    const ROOT_AND_CHILD_WINDOWS = Self::ROOT_WINDOW.bits() | Self::CHILD_WINDOWS.bits();
+}}
+
+bitflags! {
+ pub struct HoveredFlags : u32 {
+    /// Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
+    const NONE = 0;
+    /// is_window_hovered() only: Return true if any children of the window is hovered
+    const CHILD_WINDOWS = 1 << 0;
+    /// is_window_hovered() only: Test from root window (top most parent of the current hierarchy)
+    const ROOT_WINDOW = 1 << 1;
+    /// is_window_hovered() only: Return true if any window is hovered
+    const ANY_WINDOW = 1 << 2;
+    /// is_window_hovered() only: Do not consider popup hierarchy (do not treat popup emitter as parent of popup) (when used with _ChildWindows or _RootWindow)
+    const NO_POPUP_HIERARCHY = 1 << 3;
+    /// is_window_hovered() only: Consider docking hierarchy (treat dockspace host as parent of docked window) (when used with _ChildWindows or _RootWindow)
+    const DOCK_HIERARCHY = 1 << 4;
+    /// Return true even if a popup window is normally blocking access to this item/window
+    const ALLOW_WHEN_BLOCKED_BY_POPUP = 1 << 5;
+    /// Return true even if an active item is blocking access to this item/window. Useful for Drag and Drop patterns.
+    const ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM = 1 << 7;
+    /// is_item_hovered() only: Return true even if the position is obstructed or overlapped by another window
+    const ALLOW_WHEN_OVERLAPPED = 1 << 8;
+    /// is_item_hovered() only: Return true even if the item is disabled
+    const ALLOW_WHEN_DISABLED = 1 << 9;
+    /// Disable using gamepad/keyboard navigation state when active, always query mouse.
+    const NO_NAV_OVERRIDE = 1 << 10;
+    const RECT_ONLY = Self::ALLOW_WHEN_BLOCKED_BY_POPUP.bits() | Self::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM.bits() | Self::ALLOW_WHEN_OVERLAPPED.bits();
+    const ROOT_AND_CHILD_WINDOWS = Self::ROOT_WINDOW.bits() | Self::CHILD_WINDOWS.bits();
+    /// Hovering delays (for tooltips)
+    /// Return true after io.HoverDelayNormal elapsed (~0.30 sec)
+    const DELAY_NORMAL = 1 << 11;
+    /// Return true after io.HoverDelayShort elapsed (~0.10 sec)
+    const DELAY_SHORT = 1 << 12;
+    /// Disable shared delay system where moving from one item to the next keeps the previous timer for a short time (standard for tooltips with long delays)
+    const NO_SHARED_DELAY = 1 << 13;
+}}
+
+#[repr(C)]
+#[derive(Debug)]
 pub struct Window {
-    pub handle: u64,
+    _dummy: u32,
+}
+
+#[repr(C)]
+pub struct WindowApi {
+    pub api: *const WindowFfiApi,
+}
+
+impl WindowApi {
+    /// You may append multiple times to the same window during the same frame by calling begin()/end() pairs multiple times.
+    /// Always call a matching end() for each begin() call, regardless of its return value!
+    pub fn begin(&self, name: &str, flags: WindowFlags) -> bool {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.begin)(_api.data, FlString::new(name), flags);
+            ret_val
+        }
+    }
+
+    /// End call for various types such as windows, lists, etc.
+    pub fn end(&self) {
+        unsafe {
+            let _api = &*self.api;
+            (_api.end)(_api.data);
+        }
+    }
+
+    /// Call between begin() and end() to create a child window. Child windows can embed their own child.
+    pub fn begin_child(&self, id: &str, size: Vec2, border: bool, flags: WindowFlags) -> bool {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.begin_child)(_api.data, FlString::new(id), size, border, flags);
+            ret_val
+        }
+    }
+
+    /// End call for various types such as windows, lists, etc.
+    pub fn end_child(&self) {
+        unsafe {
+            let _api = &*self.api;
+            (_api.end_child)(_api.data);
+        }
+    }
+
+    /// Returns true if the window is appearing after being hidden/inactive (or the first time)
+    pub fn is_appearing(&self) -> bool {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.is_appearing)(_api.data);
+            ret_val
+        }
+    }
+
+    /// Is current window collpased?
+    pub fn is_collapsed(&self) -> bool {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.is_collapsed)(_api.data);
+            ret_val
+        }
+    }
+
+    /// is current window focused? or its root/child, depending on flags. see flags for options.
+    pub fn is_focused(&self, flags: FocusedFlags) -> bool {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.is_focused)(_api.data, flags);
+            ret_val
+        }
+    }
+
+    /// is current window hovered (and typically: not blocked by a popup/modal)? see flags for options.
+    /// nb: if you are trying to check whether your mouse should be dispatched to imgui or to your app,
+    /// you should use the 'io.wantcapturemouse' boolean for that! please read the faq!
+    pub fn is_hovered(&self, flags: HoveredFlags) -> bool {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.is_hovered)(_api.data, flags);
+            ret_val
+        }
+    }
+
+    /// get dpi scale currently associated to the current window's viewport.
+    pub fn dpi_scale(&self) -> f32 {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.dpi_scale)(_api.data);
+            ret_val
+        }
+    }
+
+    /// get current window position in screen space (useful if you want to do your own drawing via the drawlist api)
+    pub fn pos(&self) -> Vec2 {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.pos)(_api.data);
+            ret_val
+        }
+    }
+
+    /// get current window size
+    pub fn size(&self) -> Vec2 {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.size)(_api.data);
+            ret_val
+        }
+    }
 }

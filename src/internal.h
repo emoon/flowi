@@ -1,9 +1,11 @@
 #pragma once
 
 #include <flowi/error.h>
-#include <flowi/layout.h>
 #include <flowi/image.h>
+#include <flowi/layout.h>
+#include <flowi/layout.h>
 #include <flowi/style.h>
+#include <flowi/window.h>
 #include "../external/hashmap.h"
 #include "command_buffer.h"
 #include "string_allocator.h"
@@ -59,6 +61,8 @@ typedef struct FlInternalData {
     struct FlImageApi image_funcs;
     struct FlUiApi ui_funcs;
     struct FlStyleApi style_funcs;
+    struct FlWindowApi window_funcs;
+    struct FlCursorApi cursor_funcs;
     LinearAllocator frame_allocator;
     StringAllocator string_allocator;
     Layer layers[FlLayerType_Count];
