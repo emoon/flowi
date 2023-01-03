@@ -11,10 +11,22 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     let window = flowi.window();
     let cursor = flowi.cursor();
     let text = flowi.text();
+    let menu = flowi.menu();
 
-    window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR);
+    window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR);
     cursor.set_pos_y(110.0);
     text.show("Hello, world!");
+
+    if menu.begin_main_bar() {
+        if menu.begin("File", true) {
+            if menu.item("Quit") {
+                println!("Quit");
+            }
+            menu.end();
+        }
+        menu.end_main_bar();
+    }
+
     ui.image(app.image);
     window.end();
 }

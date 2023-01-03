@@ -1,6 +1,7 @@
 #include "font.h"
 #include "image.h"
 #include "layout.h"
+#include "menu.h"
 #include "style.h"
 #include "text.h"
 #include "ui.h"
@@ -13,6 +14,7 @@ typedef struct FlContext {
     struct FlCursorApi* (*cursor_get_api)(struct FlInternalData* data, int api_version);
     struct FlFontApi* (*font_get_api)(struct FlInternalData* data, int api_version);
     struct FlImageApi* (*image_get_api)(struct FlInternalData* data, int api_version);
+    struct FlMenuApi* (*menu_get_api)(struct FlInternalData* data, int api_version);
     struct FlStyleApi* (*style_get_api)(struct FlInternalData* data, int api_version);
     struct FlTextApi* (*text_get_api)(struct FlInternalData* data, int api_version);
     struct FlUiApi* (*ui_get_api)(struct FlInternalData* data, int api_version);
@@ -22,6 +24,7 @@ typedef struct FlContext {
 FL_INLINE struct FlCursorApi* fl_cursor_api(FlContext* ctx) { return (ctx->cursor_get_api)(ctx->priv, 0); }
 FL_INLINE struct FlFontApi* fl_font_api(FlContext* ctx) { return (ctx->font_get_api)(ctx->priv, 0); }
 FL_INLINE struct FlImageApi* fl_image_api(FlContext* ctx) { return (ctx->image_get_api)(ctx->priv, 0); }
+FL_INLINE struct FlMenuApi* fl_menu_api(FlContext* ctx) { return (ctx->menu_get_api)(ctx->priv, 0); }
 FL_INLINE struct FlStyleApi* fl_style_api(FlContext* ctx) { return (ctx->style_get_api)(ctx->priv, 0); }
 FL_INLINE struct FlTextApi* fl_text_api(FlContext* ctx) { return (ctx->text_get_api)(ctx->priv, 0); }
 FL_INLINE struct FlUiApi* fl_ui_api(FlContext* ctx) { return (ctx->ui_get_api)(ctx->priv, 0); }

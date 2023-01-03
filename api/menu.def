@@ -1,0 +1,21 @@
+
+struct Menu {
+    /// Append to menu-bar of current window (requires [WindowFlags::MENU_BAR] flag set on parent window).
+    [static] begin_bar() -> bool,
+    /// only call end_bar() if begin_bar() returns true!
+    [static] end_bar(),
+    /// create and append to a full screen menu-bar.
+    [static] begin_main_bar() -> bool,
+    /// only call end_main_bar() if begin_main_bar() returns true!
+    [static] end_main_bar(),
+    /// create a sub-menu entry. only call EndMenu() if this returns true!
+    [static] begin(label: String, enabled: bool) -> bool,
+    /// only call end_menu() if begin_menu() returns true!
+    [static] end(),
+    /// return true when activated.
+    [static] item(label: String) -> bool,
+    /// return true when activated. Includes some extra info such as shortcut, etc
+    [static] item_ex(label: String, shortcut: String, selected: bool, enabled: bool) -> bool,
+    /// return true when activated + toggle selected
+    [static] item_toggle(label: String, shortcut: String, selected: *bool, enabled: bool) -> bool,
+}

@@ -10,6 +10,7 @@ pub mod image;
 pub mod layout;
 pub mod manual;
 pub mod math_data;
+pub mod menu;
 pub mod render_commands;
 pub mod style;
 pub mod text;
@@ -26,6 +27,8 @@ pub use crate::image::ImageApi;
 use crate::image::ImageFfiApi;
 pub use crate::layout::CursorApi;
 use crate::layout::CursorFfiApi;
+pub use crate::menu::MenuApi;
+use crate::menu::MenuFfiApi;
 pub use crate::style::StyleApi;
 use crate::style::StyleFfiApi;
 pub use crate::text::TextApi;
@@ -41,6 +44,7 @@ pub struct FlowiFfiApi {
     cursor_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const CursorFfiApi,
     font_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const FontFfiApi,
     image_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ImageFfiApi,
+    menu_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const MenuFfiApi,
     style_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const StyleFfiApi,
     text_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const TextFfiApi,
     ui_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const UiFfiApi,
@@ -69,6 +73,12 @@ impl Flowi {
         let api_priv = unsafe { &*self.api };
         let api = unsafe { (api_priv.image_get_api)(api_priv.data, 0) };
         ImageApi { api }
+    }
+
+    pub fn menu(&self) -> MenuApi {
+        let api_priv = unsafe { &*self.api };
+        let api = unsafe { (api_priv.menu_get_api)(api_priv.data, 0) };
+        MenuApi { api }
     }
 
     pub fn style(&self) -> StyleApi {

@@ -2,6 +2,7 @@
 #include <flowi/style.h>
 #include <flowi/window.h>
 #include <flowi/text.h>
+#include <flowi/menu.h>
 #include "image_private.h"
 #include "internal.h"
 #include "primitives.h"
@@ -513,6 +514,114 @@ struct FlTextApi g_text_funcs = {
     text_show_colored,
     text_show,
     text_show_disabled,
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool menu_begin_bar(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::BeginMenuBar();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void menu_end_bar(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::EndMenuBar();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool menu_begin_main_bar(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::BeginMainMenuBar();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void menu_end_main_bar(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::EndMainMenuBar();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool menu_begin(FlInternalData* ctx, FlString label, bool enabled) {
+    FL_UNUSED(ctx);
+    FL_UNUSED(enabled);
+
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    return ImGui::BeginMenu(temp_text, enabled);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void menu_end(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::EndMenu();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool menu_item(FlInternalData* ctx, FlString label) {
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    return ImGui::MenuItem(temp_text);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool menu_item_ex(FlInternalData* ctx, FlString label, FlString shortcut, bool selected, bool enabled) {
+    FL_UNUSED(ctx);
+    FL_UNUSED(enabled);
+
+    char temp_buffer[2048];
+    char temp_buffer_2[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    const char* temp_text2 =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer_2, sizeof(temp_buffer_2), shortcut);
+
+    return ImGui::MenuItem(temp_text, temp_text2, selected, enabled);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool menu_item_toogle(FlInternalData* ctx, FlString label, FlString shortcut, bool* selected, bool enabled) {
+    char temp_buffer[2048];
+    char temp_buffer_2[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    const char* temp_text2 =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer_2, sizeof(temp_buffer_2), shortcut);
+
+    return ImGui::MenuItem(temp_text, temp_text2, selected, enabled);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct FlMenuApi g_menu_funcs = {
+    NULL,
+    menu_begin_bar,
+    menu_end_bar,
+    menu_begin_main_bar,
+    menu_end_main_bar,
+    menu_begin,
+    menu_end,
+    menu_item,
+    menu_item_ex,
+    menu_item_toogle,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

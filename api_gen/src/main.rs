@@ -83,14 +83,15 @@ fn main() {
             }
 
             // Generate C/C++ Header for FFI structs
+            if let Err(e) = RustGen::generate(rust_dest, api_def) {
+                println!("ERROR: Unable to write rust file, error: {:?}", e);
+            }
+
+            // Generate C/C++ Header for FFI structs
             if let Err(e) = Cgen::generate(c_dest, api_def) {
                 panic!("ERROR: Unable to write, error: {:?}", e);
             }
 
-            // Generate C/C++ Header for FFI structs
-            if let Err(e) = RustGen::generate(rust_dest, api_def) {
-                println!("ERROR: Unable to write rust file, error: {:?}", e);
-            }
         });
 
     // All done!
