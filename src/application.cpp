@@ -176,158 +176,7 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
     state->ctx = fl_context_create(state->flowi_state);
     state->data = state->ctx->priv;
 
-    glfwSetErrorCallback(error_callback);
-
-    if (!glfwInit()) {
-        // TODO: Proper error
-        printf("failed to init glfw\n");
-        return NULL;
-    }
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_FLOATING, GL_FALSE);
-
-    state->default_window = glfwCreateWindow(state->window_width, state->window_height, "Fix me title", NULL, NULL);
-    if (!state->default_window) {
-        printf("failed to open window\n");
-        glfwTerminate();
-        return NULL;
-    }
-
-    glfwMakeContextCurrent(state->default_window);
-    glfwSwapInterval(1); // Enable vsync
-
-    // Setup Dear ImGui context
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
-    //io.ConfigViewportsNoAutoMerge = true;
-    //io.ConfigViewportsNoTaskBarIcon = true;
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
-    io.DisplaySize = ImVec2(1280.0f, 720.0f);
-    io.DeltaTime = 1.0f / 60.0f;
-    io.IniFilename = NULL;
-
-    // Setup Dear ImGui style
-    //ImGui::StyleColorsDark();
-
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
-
-    ImGui_ImplGlfw_InitForOther(state->default_window, true);
-
-    bgfx::PlatformData pd;
-#if defined(GLFW_EXPOSE_NATIVE_X11)
-    pd.ndt = glfwGetX11Display();
-#endif
-    pd.nwh = native_window_handle(state->default_window);
-    pd.context = NULL;
-    pd.backBuffer = NULL;
-    pd.backBufferDS = NULL;
-
-    glfwSetKeyCallback(state->default_window, key_callback);
-
-    bgfx::setPlatformData(pd);
-
-    int reset_flags = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8;
-
-    bgfx::Init bgfxInit;
-    bgfxInit.type = bgfx::RendererType::OpenGL;
-    bgfxInit.resolution.width = state->window_width;
-    bgfxInit.resolution.height = state->window_height;
-    bgfxInit.resolution.reset = reset_flags;
-    bgfxInit.platformData = pd;
-
-    if (!bgfx::init(bgfxInit)) {
-        printf("failed to init bgfx\n");
-        glfwDestroyWindow(state->default_window);
-        glfwTerminate();
-        return NULL;
-    }
-
-    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x2f2f2fff, 1.0f, 0);
-
-    bgfx::RendererType::Enum type = bgfx::getRendererType();
-
-    state->dear_imgui.program = bgfx::createProgram(
-            bgfx::createEmbeddedShader(s_dear_imgui_shaders, type, "vs_ocornut_imgui"), 
-            bgfx::createEmbeddedShader(s_dear_imgui_shaders, type, "fs_ocornut_imgui"), true);
-
-    state->dear_imgui.u_image_lod_enabled = bgfx::createUniform("u_imageLodEnabled", bgfx::UniformType::Vec4);
-
-    state->dear_imgui.image_program = bgfx::createProgram(
-            bgfx::createEmbeddedShader(s_dear_imgui_shaders, type, "vs_imgui_image"), 
-            bgfx::createEmbeddedShader(s_dear_imgui_shaders, type, "fs_imgui_image"), true);
-
-    state->dear_imgui.layout
-        .begin()
-        .add(bgfx::Attrib::Position,  2, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::Color0,    4, bgfx::AttribType::Uint8, true)
-        .end();
-
-    state->dear_imgui.tex = bgfx::createUniform("s_tex", bgfx::UniformType::Sampler);
-
-    uint8_t* data;
-    int32_t width;
-    int32_t height;
-    io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
-
-    state->dear_imgui.texture = bgfx::createTexture2D(
-          (uint16_t)width, (uint16_t)height, false, 1, bgfx::TextureFormat::BGRA8, 0, bgfx::copy(data, width*height*4));
-
-
-    /*
-    state->flat_layout.begin()
-        .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
-        .end();
-
-    state->texture_layout.begin()
-        .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Int16, false, true)
-        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
-        .end();
-
-    state->flat_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "color_fill_vs"),
-                                             bgfx::createEmbeddedShader(s_shaders, type, "color_fill_fs"));
-
-    state->texture_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "vs_texture"),
-                                                bgfx::createEmbeddedShader(s_shaders, type, "fs_texture"));
-
-    state->texture_r_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "vs_texture_r"),
-                                                  bgfx::createEmbeddedShader(s_shaders, type, "fs_texture_r"));
-
-    if (!bgfx::isValid(state->flat_shader)) {
-        printf("failed to init flat_shader shaders\n");
-        return NULL;
-    }
-
-    if (!bgfx::isValid(state->texture_shader)) {
-        printf("failed to init texture_shader shaders\n");
-        return NULL;
-    }
-
-    if (!bgfx::isValid(state->texture_r_shader)) {
-        printf("failed to init texture_r_shader shaders\n");
-        return NULL;
-    }
-
-    state->u_inv_res_tex = bgfx::createUniform("u_inv_res_tex", bgfx::UniformType::Vec4);
-
-    imguiCreate();
-    */
-
-    // void imguiBeginFrame(int32_t _mx, int32_t _my, uint8_t _button, int32_t _scroll, uint16_t _width, uint16_t _height, int _inputChar = -1, bgfx::ViewId _view = 255);
-    //imguiEndFrame();
 
     return state->ctx;
 }
@@ -702,8 +551,164 @@ static void generate_frame(void* user_data) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data) {
+extern "C" bool fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data) {
     ApplicationState* state = &s_state;
+
+    glfwSetErrorCallback(error_callback);
+
+    if (!glfwInit()) {
+        // TODO: Proper error
+        printf("failed to init glfw\n");
+        return false;
+    }
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_FLOATING, GL_FALSE);
+
+    state->default_window = glfwCreateWindow(state->window_width, state->window_height, "Fix me title", NULL, NULL);
+    if (!state->default_window) {
+        printf("failed to open window\n");
+        glfwTerminate();
+        return false;
+    }
+
+    glfwMakeContextCurrent(state->default_window);
+    glfwSwapInterval(1); // Enable vsync
+
+    // Setup Dear ImGui context
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+    //io.ConfigViewportsNoAutoMerge = true;
+    //io.ConfigViewportsNoTaskBarIcon = true;
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+    io.DisplaySize = ImVec2(1280.0f, 720.0f);
+    io.DeltaTime = 1.0f / 60.0f;
+    io.IniFilename = NULL;
+
+    // Setup Dear ImGui style
+    //ImGui::StyleColorsDark();
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    ImGuiStyle& style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
+
+    ImGui_ImplGlfw_InitForOther(state->default_window, true);
+
+    bgfx::PlatformData pd;
+#if defined(GLFW_EXPOSE_NATIVE_X11)
+    pd.ndt = glfwGetX11Display();
+#endif
+    pd.nwh = native_window_handle(state->default_window);
+    pd.context = NULL;
+    pd.backBuffer = NULL;
+    pd.backBufferDS = NULL;
+
+    glfwSetKeyCallback(state->default_window, key_callback);
+
+    bgfx::setPlatformData(pd);
+
+    int reset_flags = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8;
+
+    bgfx::Init bgfxInit;
+    bgfxInit.type = bgfx::RendererType::OpenGL;
+    bgfxInit.resolution.width = state->window_width;
+    bgfxInit.resolution.height = state->window_height;
+    bgfxInit.resolution.reset = reset_flags;
+    bgfxInit.platformData = pd;
+
+    if (!bgfx::init(bgfxInit)) {
+        printf("failed to init bgfx\n");
+        glfwDestroyWindow(state->default_window);
+        glfwTerminate();
+        return false;
+    }
+
+    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x2f2f2fff, 1.0f, 0);
+
+    bgfx::RendererType::Enum type = bgfx::getRendererType();
+
+    state->dear_imgui.program = bgfx::createProgram(
+            bgfx::createEmbeddedShader(s_dear_imgui_shaders, type, "vs_ocornut_imgui"), 
+            bgfx::createEmbeddedShader(s_dear_imgui_shaders, type, "fs_ocornut_imgui"), true);
+
+    state->dear_imgui.u_image_lod_enabled = bgfx::createUniform("u_imageLodEnabled", bgfx::UniformType::Vec4);
+
+    state->dear_imgui.image_program = bgfx::createProgram(
+            bgfx::createEmbeddedShader(s_dear_imgui_shaders, type, "vs_imgui_image"), 
+            bgfx::createEmbeddedShader(s_dear_imgui_shaders, type, "fs_imgui_image"), true);
+
+    state->dear_imgui.layout
+        .begin()
+        .add(bgfx::Attrib::Position,  2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0,    4, bgfx::AttribType::Uint8, true)
+        .end();
+
+    state->dear_imgui.tex = bgfx::createUniform("s_tex", bgfx::UniformType::Sampler);
+
+    //io.Fonts->AddFontFromFileTTF("../../../data/montserrat-regular.ttf", 24.0f);
+    //io.Fonts->AddFontFromFileTTF("../../../data/Montserrat-Bold.ttf", 24.0f);
+    io.Fonts->Build();
+
+    uint8_t* data;
+    int32_t width;
+    int32_t height;
+    io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
+
+    state->dear_imgui.texture = bgfx::createTexture2D(
+          (uint16_t)width, (uint16_t)height, false, 1, bgfx::TextureFormat::BGRA8, 0, bgfx::copy(data, width*height*4));
+
+
+    /*
+    state->flat_layout.begin()
+        .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
+        .end();
+
+    state->texture_layout.begin()
+        .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Int16, false, true)
+        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
+        .end();
+
+    state->flat_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "color_fill_vs"),
+                                             bgfx::createEmbeddedShader(s_shaders, type, "color_fill_fs"));
+
+    state->texture_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "vs_texture"),
+                                                bgfx::createEmbeddedShader(s_shaders, type, "fs_texture"));
+
+    state->texture_r_shader = bgfx::createProgram(bgfx::createEmbeddedShader(s_shaders, type, "vs_texture_r"),
+                                                  bgfx::createEmbeddedShader(s_shaders, type, "fs_texture_r"));
+
+    if (!bgfx::isValid(state->flat_shader)) {
+        printf("failed to init flat_shader shaders\n");
+        return NULL;
+    }
+
+    if (!bgfx::isValid(state->texture_shader)) {
+        printf("failed to init texture_shader shaders\n");
+        return NULL;
+    }
+
+    if (!bgfx::isValid(state->texture_r_shader)) {
+        printf("failed to init texture_r_shader shaders\n");
+        return NULL;
+    }
+
+    state->u_inv_res_tex = bgfx::createUniform("u_inv_res_tex", bgfx::UniformType::Vec4);
+
+    imguiCreate();
+    */
+
+    // void imguiBeginFrame(int32_t _mx, int32_t _my, uint8_t _button, int32_t _scroll, uint16_t _width, uint16_t _height, int _inputChar = -1, bgfx::ViewId _view = 255);
+    //imguiEndFrame();
 
     state->main_callback = callback;
     state->user_data = user_data;
@@ -724,4 +729,6 @@ extern "C" void fl_application_main_loop_impl(FlMainLoopCallback callback, void*
     glfwDestroyWindow(state->default_window);
     glfwTerminate();
 #endif
+
+    return true;
 }

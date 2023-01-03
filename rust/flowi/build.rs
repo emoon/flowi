@@ -290,6 +290,7 @@ fn main() {
             "src/array.c",
             "src/atlas.c",
             "src/command_buffer.c",
+            "src/font.cpp",
             "src/flowi.cpp",
             "src/glfw_input.cpp",
             "src/handles.c",

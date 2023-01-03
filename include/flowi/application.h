@@ -22,7 +22,7 @@ typedef void (*FlMainLoopCallback)(struct FlContext* ctx, void* user_data);
 
 static struct FlContext* fl_application_create(const char* application_name, const char* developer);
 
-static void fl_application_main_loop(FlMainLoopCallback callback, void* user_data);
+static bool fl_application_main_loop(FlMainLoopCallback callback, void* user_data);
 
 #include "application.inl"
 

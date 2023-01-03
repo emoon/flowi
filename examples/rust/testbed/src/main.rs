@@ -1,9 +1,11 @@
 use flowi::Flowi;
 use flowi::window::WindowFlags;
 use flowi::application::Application;
+use flowi::font::Font;
 
 struct App {
     image: flowi::image::Image,
+    font: Font,
 }
 
 fn main_loop(flowi: &Flowi, app: &mut App) {
@@ -33,10 +35,14 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
 
 fn main() {
     let flowi = Flowi::new("Test", "Test").unwrap();
+    let font = flowi.font();
 
     let mut app = App {
         image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
+        font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
     };
 
-    Application::main_loop_ud(&mut app, main_loop);
+    if !Application::main_loop_ud(&mut app, main_loop) {
+        println!("Failed to create main application");
+    }
 }

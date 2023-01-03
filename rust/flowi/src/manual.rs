@@ -7,7 +7,7 @@ use core::{
 use std::mem::transmute;
 
 extern "C" {
-    fn fl_application_main_loop_impl(callback: *const c_void, userdata: *mut c_void);
+    fn fl_application_main_loop_impl(callback: *const c_void, userdata: *mut c_void) -> bool;
 }
 
 #[repr(C)]
@@ -32,7 +32,7 @@ unsafe extern "C" fn mainloop_trampoline(ctx: *const c_void, user_data: *mut c_v
 }
 
 impl Application {
-    pub fn main_loop_ud<'a, F, T>(data: &'a mut T, func: F)
+    pub fn main_loop_ud<'a, F, T>(data: &'a mut T, func: F) -> bool
     where
         F: Fn(&Flowi, &mut T) + 'a,
         T: 'a,
@@ -48,12 +48,11 @@ impl Application {
         unsafe {
             fl_application_main_loop_impl(
                 transmute(mainloop_trampoline_ud::<T> as usize),
-                transmute(&wrapped_data),
-            );
+                transmute(&wrapped_data))
         }
     }
 
-    pub fn main_loop<'a, F>(func: F)
+    pub fn main_loop<'a, F>(func: F) -> bool
     where
         F: Fn(&Flowi) + 'a,
     {
@@ -67,8 +66,7 @@ impl Application {
         unsafe {
             fl_application_main_loop_impl(
                 transmute(mainloop_trampoline as usize),
-                transmute(&wrapped_data),
-            );
+                transmute(&wrapped_data))
         }
     }
 }

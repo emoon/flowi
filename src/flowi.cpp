@@ -74,8 +74,9 @@ extern FlWindowApi g_window_funcs;
 extern FlCursorApi g_cursor_funcs;
 extern FlTextApi g_text_funcs;
 extern FlMenuApi g_menu_funcs;
+extern FlFontApi g_font_funcs;
 
-extern "C" void fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data);
+extern "C" bool fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -121,10 +122,17 @@ static FlMenuApi* get_menu_api(FlInternalData* data, int version) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static FlFontApi* get_font_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->font_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static FlContext s_context = {
     NULL,           // data
     get_cursor_api, // cursor api
-    NULL,           // font api
+    get_font_api,   // font api
     get_image_api,  // image api
     get_menu_api,   // menu api
     NULL,           // style api
@@ -159,19 +167,21 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     *ctx = s_context;
     ctx->priv = data;
 
-    data->ui_funcs = g_ui_funcs;
-    data->image_funcs = g_image_funcs;
-    data->window_funcs = g_window_funcs;
     data->cursor_funcs = g_cursor_funcs;
-    data->text_funcs = g_text_funcs;
+    data->font_funcs = g_font_funcs;
+    data->image_funcs = g_image_funcs;
     data->menu_funcs = g_menu_funcs;
+    data->text_funcs = g_text_funcs;
+    data->ui_funcs = g_ui_funcs;
+    data->window_funcs = g_window_funcs;
 
-    data->ui_funcs.priv = data;
-    data->image_funcs.priv = data;
-    data->window_funcs.priv = data;
     data->cursor_funcs.priv = data;
-    data->text_funcs.priv = data;
+    data->font_funcs.priv = data;
+    data->image_funcs.priv = data;
     data->menu_funcs.priv = data;
+    data->text_funcs.priv = data;
+    data->ui_funcs.priv = data;
+    data->window_funcs.priv = data;
 
     // Layout_create_default(ctx);
     // ctx->layout_mode = FlLayoutMode_Automatic;
