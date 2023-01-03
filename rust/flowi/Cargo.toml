@@ -10,6 +10,7 @@ cc = { version = "1.0", features = ["parallel"] }
 
 [dependencies]
 bitflags = "2.0.0-rc.1"
+freetype-sys = "0.17.0"
 
 [features]
 static = []
