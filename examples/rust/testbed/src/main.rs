@@ -14,10 +14,14 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     let cursor = flowi.cursor();
     let text = flowi.text();
     let menu = flowi.menu();
+    let button = flowi.button();
 
     window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR);
     cursor.set_pos_y(110.0);
     text.show("Hello, world!");
+    if button.regular("Click me!") {
+        println!("Clicked!");
+    }
 
     if menu.begin_main_bar() {
         if menu.begin("File", true) {
