@@ -1,12 +1,14 @@
 #pragma once
 
+#include <flowi/button.h>
 #include <flowi/error.h>
-#include <flowi/image.h>
-#include <flowi/layout.h>
 #include <flowi/font.h>
-#include <flowi/text.h>
-#include <flowi/style.h>
+#include <flowi/image.h>
+#include <flowi/item.h>
+#include <flowi/layout.h>
 #include <flowi/menu.h>
+#include <flowi/style.h>
+#include <flowi/text.h>
 #include <flowi/window.h>
 #include "../external/hashmap.h"
 #include "command_buffer.h"
@@ -60,9 +62,11 @@ void Errors_add(FlError err, const char* filename, int line, const char* fmt, ..
 
 typedef struct FlInternalData {
     struct ImGuiContext* imgui_ctx;
+    struct FlButtonApi button_funcs;
     struct FlCursorApi cursor_funcs;
     struct FlFontApi font_funcs;
     struct FlImageApi image_funcs;
+    struct FlItemApi item_funcs;
     struct FlMenuApi menu_funcs;
     struct FlStyleApi style_funcs;
     struct FlTextApi text_funcs;

@@ -3,6 +3,8 @@
 #include <flowi/window.h>
 #include <flowi/text.h>
 #include <flowi/menu.h>
+#include <flowi/button.h>
+#include <flowi/item.h>
 #include "image_private.h"
 #include "internal.h"
 #include "primitives.h"
@@ -438,6 +440,14 @@ struct FlCursorApi g_cursor_funcs = {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static FlVec2 text_calc_size(FlInternalData* ctx, FlString text) {
+    FL_UNUSED(ctx);
+    ImVec2 size = ImGui::CalcTextSize(text.str, text.str + text.len);
+    return { size.x, size.y };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static void text_show(FlInternalData* ctx, FlString text) {
     FL_UNUSED(ctx);
     ImGui::TextUnformatted(text.str, text.str + text.len);
@@ -509,6 +519,7 @@ static void text_show_wrapped(FlInternalData* ctx, FlString text) {
 
 struct FlTextApi g_text_funcs = {
     NULL,
+    text_calc_size,
     text_bullet,
     text_label,
     text_show_colored,
@@ -622,6 +633,240 @@ struct FlMenuApi g_menu_funcs = {
     menu_item,
     menu_item_ex,
     menu_item_toogle,
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool button_regular(FlInternalData* ctx, FlString label) {
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    return ImGui::Button(temp_text);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool button_regular_size(FlInternalData* ctx, FlString label, FlVec2 size) {
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    return ImGui::Button(temp_text, ImVec2(size.x, size.y));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool button_small(FlInternalData* ctx, FlString label) {
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    return ImGui::SmallButton(temp_text);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool button_invisible(FlInternalData* ctx, FlString label, FlVec2 size, FlButtonFlags flags) {
+    FL_UNUSED(ctx);
+    FL_UNUSED(flags);
+
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    return ImGui::InvisibleButton(temp_text, ImVec2(size.x, size.y), (ImGuiButtonFlags)flags);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool button_check_box(FlInternalData* ctx, FlString label, bool* checked) {
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    return ImGui::Checkbox(temp_text, checked);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool button_radio(FlInternalData* ctx, FlString label, bool state) {
+    char temp_buffer[2048];
+
+    const char* temp_text =
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), label);
+
+    return ImGui::RadioButton(temp_text, state);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void button_bullet(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::Bullet();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FlButtonApi g_button_funcs = {
+    NULL,
+    button_regular,
+    button_regular_size,
+    button_small,
+    button_invisible,
+    button_check_box,
+    button_radio,
+    button_bullet,
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_hovered(FlInternalData* ctx, FlHoveredFlags flags) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemHovered((ImGuiHoveredFlags)flags);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_active(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemActive();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_focused(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemFocused();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_clicked(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemClicked();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_visible(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemVisible();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_edited(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemEdited();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_activated(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemActivated();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_deactivated(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemDeactivated();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_deactivated_after_edit(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemDeactivatedAfterEdit();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_toggled_open(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsItemToggledOpen();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_any_hovered(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsAnyItemHovered();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_any_active(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsAnyItemActive();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool item_is_any_focused(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    return ImGui::IsAnyItemFocused();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlVec2 item_get_rect_min(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImVec2 v = ImGui::GetItemRectMin();
+    return (FlVec2){v.x, v.y};
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlVec2 item_get_rect_max(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImVec2 v = ImGui::GetItemRectMax();
+    return (FlVec2){v.x, v.y};
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlVec2 item_get_rect_size(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImVec2 v = ImGui::GetItemRectSize();
+    return (FlVec2){v.x, v.y};
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void item_set_allow_overlap(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::SetItemAllowOverlap();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct FlItemApi g_item_funcs = {
+    NULL,
+    item_is_hovered,
+    item_is_active,
+    item_is_focused,
+    item_is_clicked,
+    item_is_visible,
+    item_is_edited,
+    item_is_activated,
+    item_is_deactivated,
+    item_is_deactivated_after_edit,
+    item_is_toggled_open,
+    item_is_any_hovered,
+    item_is_any_active,
+    item_is_any_focused,
+    item_get_rect_min,
+    item_get_rect_max,
+    item_get_rect_size,
+    item_set_allow_overlap,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

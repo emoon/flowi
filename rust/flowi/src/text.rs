@@ -12,6 +12,7 @@ use crate::math_data::*;
 #[repr(C)]
 pub struct TextFfiApi {
     pub(crate) data: *const core::ffi::c_void,
+    calc_size: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString) -> Vec2,
     bullet: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
     label: unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString, text: FlString),
     show_color: unsafe extern "C" fn(data: *const core::ffi::c_void, color: Color, text: FlString),
@@ -31,6 +32,16 @@ pub struct TextApi {
 }
 
 impl TextApi {
+    /// Calculate the size of a text string in pixels
+    pub fn calc_size(&self, text: &str) -> Vec2 {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.calc_size)(_api.data, FlString::new(text));
+            ret_val
+        }
+    }
+
+    /// Bullet text
     pub fn bullet(&self, text: &str) {
         unsafe {
             let _api = &*self.api;
@@ -38,6 +49,7 @@ impl TextApi {
         }
     }
 
+    /// Draw basic text
     pub fn label(&self, label: &str, text: &str) {
         unsafe {
             let _api = &*self.api;
@@ -45,6 +57,7 @@ impl TextApi {
         }
     }
 
+    /// Draw basic text with a color
     pub fn show_color(&self, color: Color, text: &str) {
         unsafe {
             let _api = &*self.api;
@@ -52,6 +65,7 @@ impl TextApi {
         }
     }
 
+    /// Show basic text
     pub fn show(&self, text: &str) {
         unsafe {
             let _api = &*self.api;
@@ -59,6 +73,7 @@ impl TextApi {
         }
     }
 
+    /// Draw text disabled
     pub fn text_disabled(&self, text: &str) {
         unsafe {
             let _api = &*self.api;

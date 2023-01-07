@@ -2,11 +2,13 @@
 
 use core::ffi::c_void;
 pub mod application;
+pub mod button;
 pub mod context;
 pub mod debug;
 pub mod error;
 pub mod font;
 pub mod image;
+pub mod item;
 pub mod layout;
 pub mod manual;
 pub mod math_data;
@@ -21,10 +23,14 @@ pub use manual::*;
 extern "C" {
     fn fl_application_create_impl(name: FlString, company: FlString) -> *const FlowiFfiApi;
 }
+pub use crate::button::ButtonApi;
+use crate::button::ButtonFfiApi;
 pub use crate::font::FontApi;
 use crate::font::FontFfiApi;
 pub use crate::image::ImageApi;
 use crate::image::ImageFfiApi;
+pub use crate::item::ItemApi;
+use crate::item::ItemFfiApi;
 pub use crate::layout::CursorApi;
 use crate::layout::CursorFfiApi;
 pub use crate::menu::MenuApi;
@@ -41,9 +47,11 @@ use crate::window::WindowFfiApi;
 #[repr(C)]
 pub struct FlowiFfiApi {
     data: *const c_void,
+    button_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ButtonFfiApi,
     cursor_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const CursorFfiApi,
     font_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const FontFfiApi,
     image_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ImageFfiApi,
+    item_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ItemFfiApi,
     menu_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const MenuFfiApi,
     style_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const StyleFfiApi,
     text_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const TextFfiApi,
@@ -57,6 +65,12 @@ pub struct Flowi {
 }
 
 impl Flowi {
+    pub fn button(&self) -> ButtonApi {
+        let api_priv = unsafe { &*self.api };
+        let api = unsafe { (api_priv.button_get_api)(api_priv.data, 0) };
+        ButtonApi { api }
+    }
+
     pub fn cursor(&self) -> CursorApi {
         let api_priv = unsafe { &*self.api };
         let api = unsafe { (api_priv.cursor_get_api)(api_priv.data, 0) };
@@ -73,6 +87,12 @@ impl Flowi {
         let api_priv = unsafe { &*self.api };
         let api = unsafe { (api_priv.image_get_api)(api_priv.data, 0) };
         ImageApi { api }
+    }
+
+    pub fn item(&self) -> ItemApi {
+        let api_priv = unsafe { &*self.api };
+        let api = unsafe { (api_priv.item_get_api)(api_priv.data, 0) };
+        ItemApi { api }
     }
 
     pub fn menu(&self) -> MenuApi {

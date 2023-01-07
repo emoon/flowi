@@ -1,5 +1,5 @@
 use flowi::Flowi;
-use flowi::window::WindowFlags;
+use flowi::window::{WindowFlags, HoveredFlags};
 use flowi::application::Application;
 use flowi::font::Font;
 
@@ -15,12 +15,17 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     let text = flowi.text();
     let menu = flowi.menu();
     let button = flowi.button();
+    let item = flowi.item();
 
     window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR);
     cursor.set_pos_y(110.0);
     text.show("Hello, world!");
     if button.regular("Click me!") {
         println!("Clicked!");
+    }
+
+    if item.is_hovered(HoveredFlags::RECT_ONLY) {
+        println!("Hovered!");
     }
 
     if menu.begin_main_bar() {

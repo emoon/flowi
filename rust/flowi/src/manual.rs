@@ -48,7 +48,8 @@ impl Application {
         unsafe {
             fl_application_main_loop_impl(
                 transmute(mainloop_trampoline_ud::<T> as usize),
-                transmute(&wrapped_data))
+                transmute(&wrapped_data),
+            )
         }
     }
 
@@ -66,7 +67,8 @@ impl Application {
         unsafe {
             fl_application_main_loop_impl(
                 transmute(mainloop_trampoline as usize),
-                transmute(&wrapped_data))
+                transmute(&wrapped_data),
+            )
         }
     }
 }
