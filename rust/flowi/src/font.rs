@@ -21,6 +21,8 @@ pub struct FontFfiApi {
         data_size: u32,
         font_size: u32,
     ) -> u64,
+    push: unsafe extern "C" fn(data: *const core::ffi::c_void, font: u64),
+    pop: unsafe extern "C" fn(data: *const core::ffi::c_void),
     destroy: unsafe extern "C" fn(data: *const core::ffi::c_void, font: u64),
 }
 
@@ -67,6 +69,22 @@ impl FontApi {
             } else {
                 Ok(Font { handle: ret_val })
             }
+        }
+    }
+
+    /// Push a font for usage
+    pub fn push(&self, font: Font) {
+        unsafe {
+            let _api = &*self.api;
+            (_api.push)(_api.data, font.handle);
+        }
+    }
+
+    /// Pop a font from the stack
+    pub fn pop(&self) {
+        unsafe {
+            let _api = &*self.api;
+            (_api.pop)(_api.data);
         }
     }
 

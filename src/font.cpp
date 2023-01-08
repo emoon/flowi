@@ -43,6 +43,20 @@ static FlFont new_from_memory(FlInternalData* ctx, FlString name, uint8_t* data,
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void font_push(FlInternalData* ctx, FlFont font) {
+    FL_UNUSED(ctx);
+    ImGui::PushFont((ImFont*)font);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void font_pop(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
+    ImGui::PopFont();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Destory the current font, render the id invalid
 
 static void destroy(FlInternalData* ctx, FlFont font) { }
@@ -53,5 +67,7 @@ struct FlFontApi g_font_funcs = {
     NULL,
     new_from_file,
     new_from_memory,
+    font_push,
+    font_pop,
     destroy,
 };

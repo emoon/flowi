@@ -6,6 +6,10 @@ struct Font {
     /// Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
     /// Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
     [static] new_from_memory(name: String, data: [u8], font_size: u32) -> Font?,
+    /// Push a font for usage
+    [static] push(font: Font),
+    /// Pop a font from the stack
+    [static] pop(),
     /// Destory the current font, render the id invalid
     [static] destroy(font: Font),
 }

@@ -5,7 +5,7 @@ use flowi::font::Font;
 
 struct App {
     image: flowi::image::Image,
-    font: Font,
+    _font: Font,
 }
 
 fn main_loop(flowi: &Flowi, app: &mut App) {
@@ -20,7 +20,7 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR);
     cursor.set_pos_y(110.0);
     text.show("Hello, world!");
-    if button.regular("Click me!") {
+    if button.image_with_text(app.image, "Click me!") {
         println!("Clicked!");
     }
 
@@ -48,7 +48,7 @@ fn main() {
 
     let mut app = App {
         image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
-        font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
+        _font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
     };
 
     if !Application::main_loop_ud(&mut app, main_loop) {

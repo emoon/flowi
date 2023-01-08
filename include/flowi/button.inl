@@ -7,6 +7,7 @@ typedef struct FlButtonApi {
     bool (*check_box)(struct FlInternalData* priv, FlString label, bool* state);
     bool (*radio)(struct FlInternalData* priv, FlString label, bool state);
     void (*bullet)(struct FlInternalData* priv);
+    bool (*image_with_text)(struct FlInternalData* priv, FlImage image, FlString label);
 } FlButtonApi;
 
 // Show a regular push button
@@ -48,4 +49,10 @@ FL_INLINE bool fl_button_radio(struct FlButtonApi* api, const char* label, bool 
 // TODO: Document
 FL_INLINE void fl_button_bullet(struct FlButtonApi* api) {
     (api->bullet)(api->priv);
+}
+
+// TODO: Document
+FL_INLINE bool fl_button_image_with_text(struct FlButtonApi* api, FlImage image, const char* label) {
+    FlString label_ = fl_cstr_to_flstring(label);
+    return (api->image_with_text)(api->priv, image, label_);
 }

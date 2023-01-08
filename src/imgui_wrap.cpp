@@ -36,7 +36,7 @@ static int s_vec2_style_lut[ImGuiStyleVar_COUNT];
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void image(FlInternalData* ctx, FlImage image) {
+static void image_show(FlInternalData* ctx, FlImage image) {
     ImagePrivate* image_data = (ImagePrivate*)Handles_get_data(&ctx->global->image_handles, image);
 
     if (!image_data) {
@@ -135,7 +135,7 @@ extern "C" void fl_style_pop_impl(FlInternalData* ctx) {
 FlUiApi g_ui_funcs = {
     NULL,
     NULL, // TODO: Fix me
-    image,
+    image_show,
     NULL,
     NULL, 
     NULL,
@@ -713,6 +713,15 @@ static void button_bullet(FlInternalData* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static bool button_image_with_label(FlInternalData* ctx, FlImage image, FlString label) {
+    image_show(ctx, image);
+    ImGui::SameLine();
+    ImGui::TextUnformatted(label.str, label.str + label.len);
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 FlButtonApi g_button_funcs = {
     NULL,
     button_regular,
@@ -722,6 +731,7 @@ FlButtonApi g_button_funcs = {
     button_check_box,
     button_radio,
     button_bullet,
+    button_image_with_label,
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

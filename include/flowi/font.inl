@@ -3,6 +3,8 @@ typedef struct FlFontApi {
     FlFont (*new_from_file)(struct FlInternalData* priv, FlString filename, uint32_t font_size);
     FlFont (*new_from_memory)(struct FlInternalData* priv, FlString name, uint8_t* data, uint32_t data_size,
                               uint32_t font_size);
+    void (*push)(struct FlInternalData* priv, FlFont font);
+    void (*pop)(struct FlInternalData* priv);
     void (*destroy)(struct FlInternalData* priv, FlFont font);
 } FlFontApi;
 
@@ -19,6 +21,16 @@ FL_INLINE FlFont fl_font_new_from_memory(struct FlFontApi* api, const char* name
                                          uint32_t font_size) {
     FlString name_ = fl_cstr_to_flstring(name);
     return (api->new_from_memory)(api->priv, name_, data, data_size, font_size);
+}
+
+// Push a font for usage
+FL_INLINE void fl_font_push(struct FlFontApi* api, FlFont font) {
+    (api->push)(api->priv, font);
+}
+
+// Pop a font from the stack
+FL_INLINE void fl_font_pop(struct FlFontApi* api) {
+    (api->pop)(api->priv);
 }
 
 // Destory the current font, render the id invalid

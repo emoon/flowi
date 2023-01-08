@@ -71,6 +71,7 @@ static FlImage load_svg_image(FlInternalData* ctx, FlString name, u8* data, u32 
     }
 
     if (!svg_image) {
+        printf("Unable to load %s\n", filename);
         // TODO: Handle case where string is not null-terminated
         ERROR_ADD(FlError_Image, "Unable to load %s", filename);
         return 0;

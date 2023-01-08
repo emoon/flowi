@@ -9,6 +9,9 @@ use bitflags::bitflags;
 #[allow(unused_imports)]
 use crate::math_data::*;
 
+#[allow(unused_imports)]
+use crate::image::*;
+
 #[repr(C)]
 pub struct ButtonFfiApi {
     pub(crate) data: *const core::ffi::c_void,
@@ -30,6 +33,8 @@ pub struct ButtonFfiApi {
     radio:
         unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString, state: bool) -> bool,
     bullet: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    image_with_text:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, image: Image, label: FlString) -> bool,
 }
 
 bitflags! {
@@ -115,6 +120,15 @@ impl ButtonApi {
         unsafe {
             let _api = &*self.api;
             (_api.bullet)(_api.data);
+        }
+    }
+
+    /// TODO: Document
+    pub fn image_with_text(&self, image: Image, label: &str) -> bool {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.image_with_text)(_api.data, image, FlString::new(label));
+            ret_val
         }
     }
 }

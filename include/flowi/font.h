@@ -27,6 +27,12 @@ static FlFont fl_font_new_from_file(struct FlFontApi* api, const char* filename,
 static FlFont fl_font_new_from_memory(struct FlFontApi* api, const char* name, uint8_t* data, uint32_t data_size,
                                       uint32_t font_size);
 
+// Push a font for usage
+static void fl_font_push(struct FlFontApi* api, FlFont font);
+
+// Pop a font from the stack
+static void fl_font_pop(struct FlFontApi* api);
+
 // Destory the current font, render the id invalid
 static void fl_font_destroy(struct FlFontApi* api, FlFont font);
 

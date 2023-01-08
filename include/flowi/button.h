@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include "image.h"
 #include "manual.h"
 #include "math_data.h"
 
@@ -50,6 +51,9 @@ static bool fl_button_radio(struct FlButtonApi* api, const char* label, bool sta
 
 // TODO: Document
 static void fl_button_bullet(struct FlButtonApi* api);
+
+// TODO: Document
+static bool fl_button_image_with_text(struct FlButtonApi* api, FlImage image, const char* label);
 
 #include "button.inl"
 
