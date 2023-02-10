@@ -8,6 +8,7 @@ use flowi::font::Font;
 struct App {
     image: flowi::image::Image,
     _font: Font,
+    icons: Font,
 }
 
 fn main_loop(flowi: &Flowi, app: &mut App) {
@@ -19,13 +20,21 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     let button = flowi.button();
     let item = flowi.item();
     let style = flowi.style();
+    let font = flowi.font();
 
     window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR);
     cursor.set_pos_y(110.0);
     text.show("Hello, world!");
-    if button.image_with_text(app.image, "Click me!") {
+
+    font.push(app.icons);
+
+    let test_string = std::str::from_utf8(&[0xEE, 0xA4, 0x80, 0, 0, 0, 0, 0]).unwrap();
+
+    if button.image_with_text(app.image, test_string) {
         println!("Clicked!");
     }
+
+    font.pop();
 
     if item.is_hovered(HoveredFlags::RECT_ONLY) {
         println!("Hovered!");
@@ -67,6 +76,7 @@ fn main() {
     let mut app = App {
         image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
         _font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
+        icons: font.new_from_file_range("../../../data/svgs.ttf", 32, 0xe900, 0xe905).unwrap(),
     };
 
     if !Application::main_loop_ud(&mut app, main_loop) {

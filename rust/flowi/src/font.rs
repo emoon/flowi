@@ -14,6 +14,13 @@ pub struct FontFfiApi {
         filename: FlString,
         font_size: u32,
     ) -> u64,
+    new_from_file_range: unsafe extern "C" fn(
+        data: *const core::ffi::c_void,
+        filename: FlString,
+        font_size: u32,
+        glyph_range_start: u16,
+        glyph_range_end: u16,
+    ) -> u64,
     new_from_memory: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         name: FlString,
@@ -44,6 +51,31 @@ impl FontApi {
         unsafe {
             let _api = &*self.api;
             let ret_val = (_api.new_from_file)(_api.data, FlString::new(filename), font_size);
+            if ret_val == 0 {
+                Err(get_last_error())
+            } else {
+                Ok(Font { handle: ret_val })
+            }
+        }
+    }
+
+    /// Create an new font from a FFT file with a range of characters that should be pre-generated
+    pub fn new_from_file_range(
+        &self,
+        filename: &str,
+        font_size: u32,
+        glyph_range_start: u16,
+        glyph_range_end: u16,
+    ) -> Result<Font> {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.new_from_file_range)(
+                _api.data,
+                FlString::new(filename),
+                font_size,
+                glyph_range_start,
+                glyph_range_end,
+            );
             if ret_val == 0 {
                 Err(get_last_error())
             } else {

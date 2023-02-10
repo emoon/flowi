@@ -6399,10 +6399,10 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     // FLOWI
     if (hovered || selected)
-        PushStyleColor(ImGuiCol_Text, 0);
+        PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
     // FLOWI_END
 
-    RenderTextClipped(text_min, text_max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
+    //RenderTextClipped(text_min, text_max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
 
     // FLOWI
     if (hovered || selected)

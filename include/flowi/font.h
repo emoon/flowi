@@ -22,6 +22,10 @@ typedef uint64_t FlFont;
 // Returns >= 0 for valid handle, use fl_get_status(); for more detailed error message
 static FlFont fl_font_new_from_file(struct FlFontApi* api, const char* filename, uint32_t font_size);
 
+// Create an new font from a FFT file with a range of characters that should be pre-generated
+static FlFont fl_font_new_from_file_range(struct FlFontApi* api, const char* filename, uint32_t font_size,
+                                          uint16_t glyph_range_start, uint16_t glyph_range_end);
+
 // Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
 // Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
 static FlFont fl_font_new_from_memory(struct FlFontApi* api, const char* name, uint8_t* data, uint32_t data_size,

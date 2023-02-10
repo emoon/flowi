@@ -1,6 +1,8 @@
 typedef struct FlFontApi {
     struct FlInternalData* priv;
     FlFont (*new_from_file)(struct FlInternalData* priv, FlString filename, uint32_t font_size);
+    FlFont (*new_from_file_range)(struct FlInternalData* priv, FlString filename, uint32_t font_size,
+                                  uint16_t glyph_range_start, uint16_t glyph_range_end);
     FlFont (*new_from_memory)(struct FlInternalData* priv, FlString name, uint8_t* data, uint32_t data_size,
                               uint32_t font_size);
     void (*push)(struct FlInternalData* priv, FlFont font);
@@ -13,6 +15,13 @@ typedef struct FlFontApi {
 FL_INLINE FlFont fl_font_new_from_file(struct FlFontApi* api, const char* filename, uint32_t font_size) {
     FlString filename_ = fl_cstr_to_flstring(filename);
     return (api->new_from_file)(api->priv, filename_, font_size);
+}
+
+// Create an new font from a FFT file with a range of characters that should be pre-generated
+FL_INLINE FlFont fl_font_new_from_file_range(struct FlFontApi* api, const char* filename, uint32_t font_size,
+                                             uint16_t glyph_range_start, uint16_t glyph_range_end) {
+    FlString filename_ = fl_cstr_to_flstring(filename);
+    return (api->new_from_file_range)(api->priv, filename_, font_size, glyph_range_start, glyph_range_end);
 }
 
 // Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases

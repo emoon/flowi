@@ -1,11 +1,18 @@
 #include <flowi/font.h>
 #include <dear-imgui/imgui.h>
 #include "internal.h"
+#include <stdio.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlFont new_from_file(FlInternalData* ctx, FlString filename, uint32_t font_size) {
+static FlFont new_from_file_range(FlInternalData* ctx, FlString filename, uint32_t font_size, 
+                                  uint16_t start, uint16_t end) {
     char temp_buffer[2048];
+    uint16_t ranges[] = { start, end, 0 };
+    uint16_t* range = ranges;
+
+    if (start == 0 && end == 0)
+        range = nullptr;
     
     ImGuiIO& io = ImGui::GetIO();
 
@@ -13,14 +20,24 @@ static FlFont new_from_file(FlInternalData* ctx, FlString filename, uint32_t fon
     const char* fname =
         StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), filename);
 
-    ImFont* font = io.Fonts->AddFontFromFileTTF(fname, font_size, NULL, NULL);
+    printf("Loading font: %s\n", fname);
+
+    ImFont* font = io.Fonts->AddFontFromFileTTF(fname, font_size, NULL, range);
 
     if (!font) {
-        ERROR_ADD(FlError_Io, "Unable to convert load filename cstr: %s", fname);
+        printf("Unable to convert load filename cstr: %s\n", fname);
         return 0;
     }
 
+    printf("Loaded font: %s %d\n", fname, font->IsLoaded());
+
     return (FlFont)font;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlFont new_from_file(FlInternalData* ctx, FlString filename, uint32_t font_size) {
+    return new_from_file_range(ctx, filename, font_size, 0, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -66,6 +83,7 @@ static void destroy(FlInternalData* ctx, FlFont font) { }
 struct FlFontApi g_font_funcs = {
     NULL,
     new_from_file,
+    new_from_file_range,
     new_from_memory,
     font_push,
     font_pop,
