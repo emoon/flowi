@@ -69,14 +69,15 @@ static FlAllocator malloc_allocator = {
 };
 
 extern "C" FlImageApi g_image_funcs;
+extern FlButtonApi g_button_funcs;
+extern FlCursorApi g_cursor_funcs;
+extern FlFontApi g_font_funcs;
+extern FlItemApi g_item_funcs;
+extern FlMenuApi g_menu_funcs;
+extern FlStyleApi g_style_funcs;
+extern FlTextApi g_text_funcs;
 extern FlUiApi g_ui_funcs;
 extern FlWindowApi g_window_funcs;
-extern FlCursorApi g_cursor_funcs;
-extern FlTextApi g_text_funcs;
-extern FlMenuApi g_menu_funcs;
-extern FlFontApi g_font_funcs;
-extern FlButtonApi g_button_funcs;
-extern FlItemApi g_item_funcs;
 
 extern "C" bool fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data);
 
@@ -145,6 +146,13 @@ static FlItemApi* get_item_api(FlInternalData* data, int version) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static FlStyleApi* get_style_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->style_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static FlContext s_context = {
     NULL,           // data
     get_button_api, // get_button_api
@@ -153,7 +161,7 @@ static FlContext s_context = {
     get_image_api,  // image api
     get_item_api,   // item api
     get_menu_api,   // menu api
-    NULL,           // style api
+    get_style_api,  // style api
     get_text_api,   // text api
     get_ui_api,     // ui api
     get_window_api, // window api
@@ -193,6 +201,7 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     data->menu_funcs = g_menu_funcs;
     data->text_funcs = g_text_funcs;
     data->ui_funcs = g_ui_funcs;
+    data->style_funcs = g_style_funcs;
     data->window_funcs = g_window_funcs;
 
     data->button_funcs.priv = data;
@@ -203,6 +212,7 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     data->menu_funcs.priv = data;
     data->text_funcs.priv = data;
     data->ui_funcs.priv = data;
+    data->style_funcs.priv = data;
     data->window_funcs.priv = data;
 
     // Layout_create_default(ctx);
@@ -226,11 +236,15 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
 }
 //
 
+void fl_style_init_priv();
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This to be called before using any other functions
 
 extern "C" struct FlGlobalState* fl_create(const FlSettings* settings) {
     FL_UNUSED(settings);
+
+    fl_style_init_priv();
 
     FlGlobalState* state = FlAllocator_alloc_zero_type(&malloc_allocator, FlGlobalState);
     state->global_allocator = &malloc_allocator;

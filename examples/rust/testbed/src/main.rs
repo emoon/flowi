@@ -1,5 +1,7 @@
 use flowi::Flowi;
 use flowi::window::{WindowFlags, HoveredFlags};
+use flowi::manual::Color;
+use flowi::style::StyleColor;
 use flowi::application::Application;
 use flowi::font::Font;
 
@@ -16,6 +18,7 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     let menu = flowi.menu();
     let button = flowi.button();
     let item = flowi.item();
+    let style = flowi.style();
 
     window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR);
     cursor.set_pos_y(110.0);
@@ -28,17 +31,32 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
         println!("Hovered!");
     }
 
+    style.push_color(StyleColor::HeaderHovered,
+        Color { r: 241.0 / 255.0, g: 105.0 / 255.0, b: 49.0 / 255.0, a: 1.0 });
+
     if menu.begin_main_bar() {
-        if menu.begin("File", true) {
-            if menu.item("Quit") {
+        if menu.begin("File  ", true) {
+            if menu.item("New Song") {
                 println!("Quit");
             }
+            menu.end();
+        }
+
+        if menu.begin("Edit  ", true) {
+            menu.item("Undo Changed Value");
+            menu.end();
+        }
+
+        if menu.begin("View  ", true) {
+            menu.item("Show Fullscreen");
             menu.end();
         }
         menu.end_main_bar();
     }
 
-    ui.image(app.image);
+    style.pop_color();
+
+    //ui.image(app.image);
     window.end();
 }
 

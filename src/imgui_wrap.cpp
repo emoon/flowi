@@ -60,7 +60,7 @@ static void image_show(FlInternalData* ctx, FlImage image) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Permantly set a color
 
-extern "C" void fl_style_set_color_impl(FlInternalData* ctx, FlStyleColor color, FlColor value) {
+static void style_set_color(FlInternalData* ctx, FlStyleColor color, FlColor value) {
     FL_UNUSED(ctx);
     ImGuiStyle* style = &ImGui::GetStyle();
     ImVec4* colors = style->Colors;
@@ -71,7 +71,7 @@ extern "C" void fl_style_set_color_impl(FlInternalData* ctx, FlStyleColor color,
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Permantly set a color (RGBA)
 
-extern "C" void fl_style_set_color_u32_impl(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
+static void style_set_color_u32(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
     FL_UNUSED(ctx);
     ImGuiStyle* style = &ImGui::GetStyle();
     ImVec4* colors = style->Colors;
@@ -82,7 +82,7 @@ extern "C" void fl_style_set_color_u32_impl(FlInternalData* ctx, FlStyleColor co
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Temporary push a color change (RGBA)
 
-extern "C" void fl_style_push_color_u32_impl(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
+static void style_push_color_u32(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
     FL_UNUSED(ctx);
     int color_index = s_color_lut[color];
     ImGui::PushStyleColor(color_index, value);
@@ -91,7 +91,7 @@ extern "C" void fl_style_push_color_u32_impl(FlInternalData* ctx, FlStyleColor c
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Temporary push a color change
 
-extern "C" void fl_style_push_color_impl(FlInternalData* ctx, FlStyleColor color, FlColor value) {
+static void style_push_color(FlInternalData* ctx, FlStyleColor color, FlColor value) {
     FL_UNUSED(ctx);
     int color_index = s_color_lut[color];
     ImGui::PushStyleColor(color_index, ImVec4(value.r, value.g, value.b, value.a));
@@ -100,14 +100,14 @@ extern "C" void fl_style_push_color_impl(FlInternalData* ctx, FlStyleColor color
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Temporary push a color change
 
-extern "C" void fl_style_pop_color_impl(FlInternalData* ctx) {
+static void style_pop_color(FlInternalData* ctx) {
     ImGui::PopStyleColor();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pushes a single style change
 
-extern "C" void fl_style_push_single_impl(FlInternalData* ctx, FlStyleSingle style, float value) {
+static void style_push_single(FlInternalData* ctx, FlStyleSingle style, float value) {
     FL_UNUSED(ctx);
     int style_index = s_single_style_lut[style];
     ImGui::PushStyleVar(style_index, value);
@@ -116,7 +116,7 @@ extern "C" void fl_style_push_single_impl(FlInternalData* ctx, FlStyleSingle sty
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pushes a Vec2 style change
 
-extern "C" void fl_style_push_vec2_impl(FlInternalData* ctx, FlStyleVec2 style, FlVec2 value) {
+static void style_push_vec2(FlInternalData* ctx, FlStyleVec2 style, FlVec2 value) {
     FL_UNUSED(ctx);
     int style_index = s_vec2_style_lut[style];
     ImGui::PushStyleVar(style_index, ImVec2(value.x, value.y));
@@ -125,10 +125,24 @@ extern "C" void fl_style_push_vec2_impl(FlInternalData* ctx, FlStyleVec2 style, 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pops single style change
 
-extern "C" void fl_style_pop_impl(FlInternalData* ctx) {
+static void style_pop(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::PopStyleVar();
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+FlStyleApi g_style_funcs = {
+    NULL,
+    style_set_color,
+    style_set_color_u32,
+    style_push_color_u32,
+    style_push_color,
+    style_pop_color,
+    style_push_single,
+    style_push_vec2,
+    style_pop,
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1061,7 +1075,7 @@ static int s_imgui_vec2_styles[] = {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_style_init_priv() {
+void fl_style_init_priv() {
     for (int i = 0; i < ImGuiCol_COUNT; ++i) {
         s_color_lut[s_imgui_colors[i]] = s_flowi_colors[i];
     }
