@@ -844,7 +844,8 @@ static bool item_is_any_focused(FlInternalData* ctx) {
 static FlVec2 item_get_rect_min(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 v = ImGui::GetItemRectMin();
-    return (FlVec2){v.x, v.y};
+    FlVec2 temp = {v.x, v.y};
+    return temp;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -852,7 +853,8 @@ static FlVec2 item_get_rect_min(FlInternalData* ctx) {
 static FlVec2 item_get_rect_max(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 v = ImGui::GetItemRectMax();
-    return (FlVec2){v.x, v.y};
+    FlVec2 temp = {v.x, v.y};
+    return temp;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -860,7 +862,8 @@ static FlVec2 item_get_rect_max(FlInternalData* ctx) {
 static FlVec2 item_get_rect_size(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 v = ImGui::GetItemRectSize();
-    return (FlVec2){v.x, v.y};
+    FlVec2 temp = {v.x, v.y};
+    return temp;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

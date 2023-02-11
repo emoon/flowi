@@ -6,8 +6,7 @@ fn add_sources(build: &mut cc::Build, root: &str, files: &[&str]) {
 }
 
 fn add_includes(build: &mut cc::Build, root: &str, files: &[&str]) {
-    let root = Path::new(root);
-    build.includes(files.iter().map(|src| root.join(src)));
+    build.includes(files.iter().map(|src| format!("{}/{}", root, src)));
 }
 
 fn build_freetype2() {
@@ -206,6 +205,12 @@ fn main() {
                     "bgfx/src/shader_spirv.cpp",
                 ],
             );
+            
+            println!("cargo:rustc-link-lib=opengl32");
+            println!("cargo:rustc-link-lib=kernel32");
+            println!("cargo:rustc-link-lib=user32");
+            println!("cargo:rustc-link-lib=gdi32");
+            println!("cargo:rustc-link-lib=shell32");
         }
 
         "macos" => {
@@ -382,6 +387,12 @@ fn main() {
         }
 
         "windows" => {
+            add_includes(
+                &mut build,
+                root,
+                &["bx/include/compat/msvc", "bgfx/3rdparty/dxsdk/include"],
+            );
+
             build.define("GLFW_EXPOSE_NATIVE_WIN32", None);
         }
 

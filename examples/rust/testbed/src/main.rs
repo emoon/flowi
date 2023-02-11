@@ -6,7 +6,7 @@ use flowi::application::Application;
 use flowi::font::Font;
 
 struct App {
-    image: flowi::image::Image,
+    //image: flowi::image::Image,
     _font: Font,
     icons: Font,
 }
@@ -29,10 +29,13 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     font.push(app.icons);
 
     let test_string = std::str::from_utf8(&[0xEE, 0xA4, 0x80, 0, 0, 0, 0, 0]).unwrap();
+    text.show(test_string);
 
+    /*
     if button.image_with_text(app.image, test_string) {
         println!("Clicked!");
     }
+    */
 
     font.pop();
 
@@ -74,7 +77,7 @@ fn main() {
     let font = flowi.font();
 
     let mut app = App {
-        image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
+        //image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
         _font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         icons: font.new_from_file_range("../../../data/svgs.ttf", 32, 0xe900, 0xe905).unwrap(),
     };
