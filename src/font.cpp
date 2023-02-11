@@ -13,6 +13,13 @@ static FlFont new_from_file_range(FlInternalData* ctx, FlString filename, uint32
 
     if (start == 0 && end == 0)
         range = nullptr;
+    else {
+        // TODO: fixme
+        range = new uint16_t[3];
+        range[0] = start;
+        range[1] = end;
+        range[2] = 0;
+    }
     
     ImGuiIO& io = ImGui::GetIO();
 

@@ -27,7 +27,6 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     text.show("Hello, world!");
 
     font.push(app.icons);
-
     let test_string = std::str::from_utf8(&[0xEE, 0xA4, 0x80, 0, 0, 0, 0, 0]).unwrap();
     text.show(test_string);
 
@@ -36,7 +35,6 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
         println!("Clicked!");
     }
     */
-
     font.pop();
 
     if item.is_hovered(HoveredFlags::RECT_ONLY) {
@@ -78,8 +76,10 @@ fn main() {
 
     let mut app = App {
         //image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
-        _font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
-        icons: font.new_from_file_range("../../../data/svgs.ttf", 32, 0xe900, 0xe905).unwrap(),
+        //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
+        //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
+        _font: font.new_from_file("/home/emoon/code/projects/flowi/data/Montserrat-Bold.ttf", 32).unwrap(),
+        icons: font.new_from_file_range("/home/emoon/code/projects/flowi/data/svgs.ttf", 32, 0xe900, 0xe905).unwrap(),
     };
 
     if !Application::main_loop_ud(&mut app, main_loop) {
