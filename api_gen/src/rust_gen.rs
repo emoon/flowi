@@ -89,7 +89,7 @@ impl RustGen {
 
         writeln!(
             f,
-            "bitflags! {{\n pub struct {} : u32 {{",
+            "bitflags! {{\n#[repr(C)]\npub struct {} : u32 {{",
             enum_def.name
         )?;
 
@@ -248,7 +248,7 @@ impl RustGen {
             for func in s
                 .functions
                 .iter()
-                .filter(|&func| func.func_type != FunctionType::Manual)
+                .filter(|&func| func.func_type != FunctionType::Manual && func.name != s.name)
             {
                 Self::generate_ffi_function(f, func, &s.name, false, Ctx::Yes)?;
             }
@@ -268,7 +268,13 @@ impl RustGen {
             writeln!(f, "pub struct {} {{ pub handle: u64 }}\n", sdef.name)
         } else {
             writeln!(f, "#[repr(C)]")?;
-            writeln!(f, "#[derive(Debug)]")?;
+
+            if sdef.has_attribute("Copy") {
+                writeln!(f, "#[derive(Copy, Clone, Debug)]")?;
+            } else {
+                writeln!(f, "#[derive(Debug)]")?;
+            }
+
             writeln!(f, "pub struct {} {{", sdef.name)?;
 
             // TODO: Some members we like want to be private.
@@ -524,6 +530,11 @@ impl RustGen {
         writeln!(f, "impl {}Api {{", sdef.name)?;
 
         for func in &sdef.functions {
+            // If the name is the same as the struct name, then it is the constructor
+            if func.name == sdef.name {
+                continue;
+            }
+
             Self::generate_func(f, func, "", Ctx::Yes)?;
         }
 
@@ -602,6 +613,7 @@ impl RustGen {
         for api_def in api_defs {
             let base_filename = &api_def.base_filename;
             writeln!(f, "pub mod {};", base_filename)?;
+            writeln!(f, "pub use {}::*;", base_filename)?;
         }
 
         // manual is used implementing things that aren't auto-generated
@@ -634,8 +646,18 @@ impl RustGen {
 
         for s in &structs_with_funcs {
             let name = &s.name;
-            writeln!(f, "   {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32) -> *const {}FfiApi,",
-                name.to_lowercase(), name)?;
+
+            if let Some(func) = s.functions.iter().find(|f| f.name == *name) {
+                let mut fa = FuncArgs::default();
+                Self::get_ffi_args(&mut fa, func, name, false, Ctx::No);
+                writeln!(f, "   {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32, {}) -> *const {}FfiApi,",
+                    name.to_lowercase(),
+                    get_arg_line(&fa.ffi_args),
+                    name)?;
+            } else {
+                writeln!(f, "   {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32) -> *const {}FfiApi,",
+                    name.to_lowercase(), name)?;
+            }
         }
 
         writeln!(f, "}}\n")?;
@@ -649,9 +671,21 @@ impl RustGen {
 
         for s in &structs_with_funcs {
             let name = s.name.to_snake_case();
-            writeln!(f, "pub fn {}(&self) -> {}Api {{", name, &s.name)?;
-            writeln!(f, "   let api_priv = unsafe {{ &*self.api }};")?;
-            writeln!(f, "   let api = unsafe {{ (api_priv.{}_get_api)(api_priv.data, 0) }};", name)?;
+
+            if let Some(func) = s.functions.iter().find(|f| f.name == s.name) {
+                let fa = Self::generate_func_impl(func, Ctx::No);
+
+                writeln!(f, "pub fn {}(&self, {}) -> {}Api {{", name, get_arg_line(&fa.func_args), &s.name)?;
+                writeln!(f, "   let api_priv = unsafe {{ &*self.api }};")?;
+                writeln!(f, "   let api = unsafe {{ (api_priv.{}_get_api)(api_priv.data, 0, {}) }};", 
+                        name, 
+                    get_arg_line(&fa.ffi_args))?;
+            } else {
+                writeln!(f, "pub fn {}(&self) -> {}Api {{", name, &s.name)?;
+                writeln!(f, "   let api_priv = unsafe {{ &*self.api }};")?;
+                writeln!(f, "   let api = unsafe {{ (api_priv.{}_get_api)(api_priv.data, 0) }};", name)?;
+            }
+
             writeln!(f, "   {}Api {{ api }}", &s.name)?;
             writeln!(f, "}}\n")?;
         }

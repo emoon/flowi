@@ -517,26 +517,53 @@ impl Cgen {
 
         // Generate accesors for the various APIs
         for s in &structs_with_funcs {
-            writeln!(
-                f,
-                "    struct {}{}Api* (*{}_get_api)(struct FlInternalData* data, int api_version);",
-                C_API_SUFFIX,
-                s.name,
-                s.name.to_snake_case()
-            )?;
+            if let Some(func) = s.functions.iter().find(|f| f.name == s.name) {
+                let fa = Self::generate_function_args(func, &s.name);
+                writeln!(
+                    f,
+                    "    struct {}{}Api* (*{}_get_api)(struct FlInternalData* data, int api_version, {});",
+                    C_API_SUFFIX,
+                    s.name,
+                    s.name.to_snake_case(),
+                    arg_line(&fa.func_args, Ctx::No)
+                )?;
+
+            } else {
+                writeln!(
+                    f,
+                    "    struct {}{}Api* (*{}_get_api)(struct FlInternalData* data, int api_version);",
+                    C_API_SUFFIX,
+                    s.name,
+                    s.name.to_snake_case()
+                )?;
+            }
         }
 
         writeln!(f, "}} FlContext;\n")?;
 
         for s in &structs_with_funcs {
-            let func_name = format!("{}_{}", C_API_SUFIX_FUNCS, s.name.to_snake_case());
-            writeln!(
-                f,
-                "FL_INLINE struct {}{}Api* {}_api(FlContext* ctx) {{ return (ctx->{}_get_api)(ctx->priv, 0); }}",
-                C_API_SUFFIX,
-                s.name,
-                func_name, s.name.to_snake_case(),
-            )?;
+             let func_name = format!("{}_{}", C_API_SUFIX_FUNCS, s.name.to_snake_case());
+            if let Some(func) = s.functions.iter().find(|f| f.name == s.name) {
+                let fa = Self::generate_function_args(func, &s.name);
+                writeln!(
+                    f,
+                    "FL_INLINE struct {}{}Api* {}_api(FlContext* ctx, {}) {{ return (ctx->{}_get_api)(ctx->priv, 0, {}); }}",
+                    C_API_SUFFIX,
+                    s.name,
+                    func_name, 
+                    arg_line(&fa.func_args, Ctx::No),
+                    s.name.to_snake_case(),
+                    arg_line(&fa.call_args[1..], Ctx::No)
+                )?;
+            } else {
+                writeln!(
+                    f,
+                    "FL_INLINE struct {}{}Api* {}_api(FlContext* ctx) {{ return (ctx->{}_get_api)(ctx->priv, 0); }}",
+                    C_API_SUFFIX,
+                    s.name,
+                    func_name, s.name.to_snake_case(),
+                )?;
+            }
         }
 
         writeln!(f)?;

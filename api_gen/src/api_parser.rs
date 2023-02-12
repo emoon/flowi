@@ -762,6 +762,10 @@ impl Struct {
     pub fn has_attribute(&self, attrib: &str) -> bool {
         self.attributes.iter().any(|s| s == attrib)
     }
+
+    pub fn has_constructor(&self) -> bool {
+        self.functions.iter().any(|f| f.name == self.name)
+    }
 }
 
 /// Helper functions for funtctions
