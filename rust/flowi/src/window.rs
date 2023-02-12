@@ -36,7 +36,8 @@ pub struct WindowFfiApi {
 }
 
 bitflags! {
- pub struct WindowFlags : u32 {
+#[repr(C)]
+pub struct WindowFlags : u32 {
     /// Default flags
     const NONE = 0;
     /// Disable title-bar
@@ -87,7 +88,8 @@ bitflags! {
 }}
 
 bitflags! {
- pub struct FocusedFlags : u32 {
+#[repr(C)]
+pub struct FocusedFlags : u32 {
     const NONE = 0;
     /// Return true if any children of the window is focused
     const CHILD_WINDOWS = 1 << 0;
@@ -103,7 +105,8 @@ bitflags! {
 }}
 
 bitflags! {
- pub struct HoveredFlags : u32 {
+#[repr(C)]
+pub struct HoveredFlags : u32 {
     /// Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
     const NONE = 0;
     /// is_window_hovered() only: Return true if any children of the window is hovered

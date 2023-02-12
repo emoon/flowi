@@ -38,7 +38,8 @@ pub struct ButtonFfiApi {
 }
 
 bitflags! {
- pub struct ButtonFlags : u32 {
+#[repr(C)]
+pub struct ButtonFlags : u32 {
     /// Default flags
     const NONE = 0;
     /// React on left mouse button (default)

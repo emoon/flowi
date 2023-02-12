@@ -27,16 +27,12 @@ static FlFont new_from_file_range(FlInternalData* ctx, FlString filename, uint32
     const char* fname =
         StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), filename);
 
-    printf("Loading font: %s\n", fname);
-
     ImFont* font = io.Fonts->AddFontFromFileTTF(fname, font_size, NULL, range);
 
     if (!font) {
         printf("Unable to convert load filename cstr: %s\n", fname);
         return 0;
     }
-
-    printf("Loaded font: %s %d\n", fname, font->IsLoaded());
 
     return (FlFont)font;
 }

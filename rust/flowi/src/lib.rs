@@ -2,22 +2,40 @@
 
 use core::ffi::c_void;
 pub mod application;
+pub use application::*;
 pub mod button;
+pub use button::*;
 pub mod context;
+pub use context::*;
 pub mod debug;
+pub use debug::*;
 pub mod error;
+pub use error::*;
 pub mod font;
+pub use font::*;
 pub mod image;
+pub use image::*;
 pub mod item;
+pub use item::*;
 pub mod layout;
-pub mod manual;
+pub use layout::*;
 pub mod math_data;
+pub use math_data::*;
 pub mod menu;
+pub use menu::*;
+pub mod painter;
+pub use painter::*;
 pub mod render_commands;
+pub use render_commands::*;
 pub mod style;
+pub use style::*;
 pub mod text;
+pub use text::*;
 pub mod ui;
+pub use ui::*;
 pub mod window;
+pub use window::*;
+pub mod manual;
 pub use manual::*;
 
 extern "C" {
@@ -35,6 +53,8 @@ pub use crate::layout::CursorApi;
 use crate::layout::CursorFfiApi;
 pub use crate::menu::MenuApi;
 use crate::menu::MenuFfiApi;
+pub use crate::painter::PainterApi;
+use crate::painter::PainterFfiApi;
 pub use crate::style::StyleApi;
 use crate::style::StyleFfiApi;
 pub use crate::text::TextApi;
@@ -53,6 +73,8 @@ pub struct FlowiFfiApi {
     image_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ImageFfiApi,
     item_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ItemFfiApi,
     menu_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const MenuFfiApi,
+    painter_get_api:
+        unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const PainterFfiApi,
     style_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const StyleFfiApi,
     text_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const TextFfiApi,
     ui_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const UiFfiApi,
@@ -99,6 +121,12 @@ impl Flowi {
         let api_priv = unsafe { &*self.api };
         let api = unsafe { (api_priv.menu_get_api)(api_priv.data, 0) };
         MenuApi { api }
+    }
+
+    pub fn painter(&self) -> PainterApi {
+        let api_priv = unsafe { &*self.api };
+        let api = unsafe { (api_priv.painter_get_api)(api_priv.data, 0) };
+        PainterApi { api }
     }
 
     pub fn style(&self) -> StyleApi {

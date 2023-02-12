@@ -27,8 +27,10 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     text.show("Hello, world!");
 
     font.push(app.icons);
-    let test_string = std::str::from_utf8(&[0xEE, 0xA4, 0x80, 0, 0, 0, 0, 0]).unwrap();
-    text.show(test_string);
+    let mut test_string = char::from_u32(0xe900).unwrap().to_string();
+    test_string.push(' ');
+    test_string.push(char::from_u32(0xe901).unwrap());
+    text.show(&test_string);
 
     /*
     if button.image_with_text(app.image, test_string) {
@@ -79,7 +81,7 @@ fn main() {
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         _font: font.new_from_file("/home/emoon/code/projects/flowi/data/Montserrat-Bold.ttf", 32).unwrap(),
-        icons: font.new_from_file_range("/home/emoon/code/projects/flowi/data/svgs.ttf", 32, 0xe900, 0xe905).unwrap(),
+        icons: font.new_from_file_range("/home/emoon/code/projects/flowi/data/svgs.ttf", 28, 0xe900, 0xe905).unwrap(),
     };
 
     if !Application::main_loop_ud(&mut app, main_loop) {

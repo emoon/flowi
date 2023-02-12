@@ -7,7 +7,7 @@ use crate::manual::{get_last_error, Color, FlString, Result};
 use bitflags::bitflags;
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Rect {
     pub x: i32,
     pub y: i32,
@@ -17,7 +17,7 @@ pub struct Rect {
 
 /// Used for setting a position in pixel space
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Vec2 {
     /// x position
     pub x: f32,
@@ -27,7 +27,7 @@ pub struct Vec2 {
 
 /// Used for setting a position in pixel space
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct IVec2 {
     /// x position
     pub x: i32,

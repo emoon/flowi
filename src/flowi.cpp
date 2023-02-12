@@ -161,6 +161,7 @@ static FlContext s_context = {
     get_image_api,  // image api
     get_item_api,   // item api
     get_menu_api,   // menu api
+    nullptr,
     get_style_api,  // style api
     get_text_api,   // text api
     get_ui_api,     // ui api
