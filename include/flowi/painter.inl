@@ -1,5 +1,6 @@
 typedef struct FlPainterApi {
     struct FlInternalData* priv;
+    void (*set_layer)(struct FlInternalData* priv, FlPainterLayer layer);
     void (*draw_line)(struct FlInternalData* priv, FlVec2 p1, FlVec2 p2, FlColor color, float thickness);
     void (*draw_rect)(struct FlInternalData* priv, FlVec2 p1, FlVec2 p2, FlColor color, float rounding);
     void (*draw_rect_filled)(struct FlInternalData* priv, FlVec2 p1, FlVec2 p2, FlColor color, float rounding);
@@ -7,7 +8,11 @@ typedef struct FlPainterApi {
                                       FlColor btm_right, FlColor btm_left);
 } FlPainterApi;
 
-// Pick the layer to be painted on when getting the API.
+// The current layer to draw on. Default is ActiveWindow.
+FL_INLINE void fl_painter_set_layer(struct FlPainterApi* api, FlPainterLayer layer) {
+    (api->set_layer)(api->priv, layer);
+}
+
 // Draw a line from `pos` to `end` with the given `color` and `thickness`.
 FL_INLINE void fl_painter_draw_line(struct FlPainterApi* api, FlVec2 p1, FlVec2 p2, FlColor color, float thickness) {
     (api->draw_line)(api->priv, p1, p2, color, thickness);

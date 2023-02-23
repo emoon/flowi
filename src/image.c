@@ -79,8 +79,16 @@ static FlImage load_svg_image(FlInternalData* ctx, FlString name, u8* data, u32 
 
     ImagePrivate* image = Handles_create_handle(&ctx->global->image_handles);
 
+    printf("SVG image size: %f %f\n", svg_image->width, svg_image->height);
+
+    // print target_width and with
+    printf("target_width: %d width: %f\n", target_width, svg_image->width);
+
     float scale = (float)target_width / (float)svg_image->width;
     int y = (int)(svg_image->height * scale);
+
+    // print scale and y
+    printf("scale: %f y: %d\n", scale, y);
 
     image->svg_image = svg_image;
     image->svg_raster = NULL;

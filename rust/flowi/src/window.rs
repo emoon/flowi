@@ -12,6 +12,7 @@ use crate::math_data::*;
 #[repr(C)]
 pub struct WindowFfiApi {
     pub(crate) data: *const core::ffi::c_void,
+    set_pos: unsafe extern "C" fn(data: *const core::ffi::c_void, pos: Vec2),
     begin: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         name: FlString,
@@ -152,7 +153,14 @@ pub struct WindowApi {
 }
 
 impl WindowApi {
-    /// You may append multiple times to the same window during the same frame by calling begin()/end() pairs multiple times.
+    /// Sets the position of the next window, call before begin()
+    pub fn set_pos(&self, pos: Vec2) {
+        unsafe {
+            let _api = &*self.api;
+            (_api.set_pos)(_api.data, pos);
+        }
+    }
+
     /// Always call a matching end() for each begin() call, regardless of its return value!
     pub fn begin(&self, name: &str, flags: WindowFlags) -> bool {
         unsafe {

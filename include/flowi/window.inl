@@ -1,5 +1,6 @@
 typedef struct FlWindowApi {
     struct FlInternalData* priv;
+    void (*set_pos)(struct FlInternalData* priv, FlVec2 pos);
     bool (*begin)(struct FlInternalData* priv, FlString name, FlWindowFlags flags);
     void (*end)(struct FlInternalData* priv);
     bool (*begin_child)(struct FlInternalData* priv, FlString id, FlVec2 size, bool border, FlWindowFlags flags);
@@ -13,7 +14,11 @@ typedef struct FlWindowApi {
     FlVec2 (*size)(struct FlInternalData* priv);
 } FlWindowApi;
 
-// You may append multiple times to the same window during the same frame by calling begin()/end() pairs multiple times.
+// Sets the position of the next window, call before begin()
+FL_INLINE void fl_window_set_pos(struct FlWindowApi* api, FlVec2 pos) {
+    (api->set_pos)(api->priv, pos);
+}
+
 // Always call a matching end() for each begin() call, regardless of its return value!
 FL_INLINE bool fl_window_begin(struct FlWindowApi* api, const char* name, FlWindowFlags flags) {
     FlString name_ = fl_cstr_to_flstring(name);

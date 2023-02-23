@@ -27,7 +27,9 @@ struct FlPainterApi;
 
 struct FlPainter;
 
-// Pick the layer to be painted on when getting the API.
+// The current layer to draw on. Default is ActiveWindow.
+static void fl_painter_set_layer(struct FlPainterApi* api, FlPainterLayer layer);
+
 // Draw a line from `pos` to `end` with the given `color` and `thickness`.
 static void fl_painter_draw_line(struct FlPainterApi* api, FlVec2 p1, FlVec2 p2, FlColor color, float thickness);
 

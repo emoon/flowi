@@ -166,6 +166,12 @@ extern "C" FlUiApi* fl_ui_get_api(FlInternalData* ctx, int api_version) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static void window_set_pos(FlInternalData* ctx, FlVec2 pos) {
+    ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static bool window_begin(FlInternalData* ctx, FlString name, FlWindowFlags flags) {
     char temp_buffer[2048];
 
@@ -255,6 +261,7 @@ static FlVec2 window_size(FlInternalData* ctx) {
 
 FlWindowApi g_window_funcs = {
     NULL,
+    window_set_pos,
     window_begin,
     window_end,
     window_begin_child,

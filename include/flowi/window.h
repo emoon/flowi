@@ -125,7 +125,9 @@ struct FlWindowApi;
 
 struct FlWindow;
 
-// You may append multiple times to the same window during the same frame by calling begin()/end() pairs multiple times.
+// Sets the position of the next window, call before begin()
+static void fl_window_set_pos(struct FlWindowApi* api, FlVec2 pos);
+
 // Always call a matching end() for each begin() call, regardless of its return value!
 static bool fl_window_begin(struct FlWindowApi* api, const char* name, FlWindowFlags flags);
 

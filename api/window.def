@@ -108,7 +108,8 @@ enum HoveredFlags {
 }
 
 struct Window {
-    /// You may append multiple times to the same window during the same frame by calling begin()/end() pairs multiple times.
+    /// Sets the position of the next window, call before begin()
+    [static] set_pos(pos: Vec2),
     /// Always call a matching end() for each begin() call, regardless of its return value!
     [static] begin(name: String, flags: WindowFlags) -> bool,
     /// End call for various types such as windows, lists, etc. 

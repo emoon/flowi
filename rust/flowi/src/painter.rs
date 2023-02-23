@@ -18,6 +18,7 @@ use crate::image::*;
 #[repr(C)]
 pub struct PainterFfiApi {
     pub(crate) data: *const core::ffi::c_void,
+    set_layer: unsafe extern "C" fn(data: *const core::ffi::c_void, layer: PainterLayer),
     draw_line: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         p1: Vec2,
@@ -70,7 +71,14 @@ pub struct PainterApi {
 }
 
 impl PainterApi {
-    /// Pick the layer to be painted on when getting the API.
+    /// The current layer to draw on. Default is ActiveWindow.
+    pub fn set_layer(&self, layer: PainterLayer) {
+        unsafe {
+            let _api = &*self.api;
+            (_api.set_layer)(_api.data, layer);
+        }
+    }
+
     /// Draw a line from `pos` to `end` with the given `color` and `thickness`.
     pub fn draw_line(&self, p1: Vec2, p2: Vec2, color: Color, thickness: f32) {
         unsafe {

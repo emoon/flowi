@@ -9,8 +9,8 @@ enum PainterLayer {
 }
 
 struct Painter {
-    /// Pick the layer to be painted on when getting the API.
-    //[static] Painter(layer: PainterLayer),
+    /// The current layer to draw on. Default is ActiveWindow.
+    [static] set_layer(layer: PainterLayer),
     /// Draw a line from `pos` to `end` with the given `color` and `thickness`.
     [static] draw_line(p1: Vec2, p2: Vec2, color: Color, thickness: f32),
     /// Draw a rectangle with the given `color` and `rounding`.
