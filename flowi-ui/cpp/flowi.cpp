@@ -222,10 +222,12 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     // TODO: Fixuw
     data->global = state;
 
+    /*
     if (hashmap_create(FL_MAX_WIDGET_IDS, &data->widget_states) != 0) {
         // TODO: Error
         return NULL;
     }
+    */
 
     /*
     for (int i = 0; i < FlLayerType_Count; ++i) {
@@ -460,7 +462,7 @@ extern "C" void fl_context_destroy(FlContext* self) {
     StringAllocator_destroy(&data->string_allocator);
     LinearAllocator_destroy(&data->frame_allocator);
 
-    hashmap_destroy(&data->widget_states);
+    //hashmap_destroy(&data->widget_states);
 
     FlAllocator_free(allocator, self);
     FlAllocator_free(allocator, data);

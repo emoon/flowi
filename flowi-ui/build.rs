@@ -12,7 +12,7 @@ fn add_includes(build: &mut cc::Build, root: &str, files: &[&str]) {
 fn main() {
     // Build flowi
     let mut build = cc::Build::new();
-    let root = "../../";
+    let root = "..";
 
     println!("cargo:rerun-if-changed=cpp");
 
@@ -36,6 +36,9 @@ fn main() {
         &[
             "include", 
             "src", 
+            "flowi-window/c/glfw/include",
+            "flowi-render/cpp/bgfx/include",
+            "flowi-render/cpp/bx/include",
             "flowi-dear-imgui/cpp", 
             "flowi-dear-imgui/cpp/dear-imgui",
             "flowi-dear-imgui/cpp/freetype2/include"
