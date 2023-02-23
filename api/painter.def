@@ -1,0 +1,25 @@
+mod layout
+mod math_data
+mod image
+
+enum PainterLayer {
+    ActiveWindow = 0,
+    Background = 1,
+    Foreground = 2,
+}
+
+struct Painter {
+    /// The current layer to draw on. Default is ActiveWindow.
+    [static] set_layer(layer: PainterLayer),
+    /// Draw a line from `pos` to `end` with the given `color` and `thickness`.
+    [static] draw_line(p1: Vec2, p2: Vec2, color: Color, thickness: f32),
+    /// Draw a rectangle with the given `color` and `rounding`.
+    [static] draw_rect(p1: Vec2, p2: Vec2, color: Color, rounding: f32),
+    /// Draw a filled rectangle with the given `color` and `rounding`.
+    [static] draw_rect_filled(p1: Vec2, p2: Vec2, color: Color, rounding: f32),
+    /// Draw a rectangle with a gradient
+    [static] draw_rect_filled_gradient(p1: Vec2, p2: Vec2, left: Color, right: Color, btm_right: Color, btm_left: Color),
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

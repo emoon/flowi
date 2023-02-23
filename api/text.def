@@ -1,0 +1,16 @@
+mod math_data
+
+struct Text {
+    /// Calculate the size of a text string in pixels 
+    [static] calc_size(text: String) -> Vec2,
+    /// Bullet text 
+    [static] bullet(text: String),
+    /// Draw basic text 
+    [static] label(label: String, text: String),
+    /// Draw basic text with a color
+    [static] show_color(color: Color, text: String),
+    /// Show basic text 
+    [static] show(text: String),
+    /// Draw text disabled 
+    [static] text_disabled(text: String),
+}

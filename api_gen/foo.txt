@@ -1,0 +1,109 @@
+   Compiling api_gen v0.1.0 (/home/emoon/code/projects/flowi/api_gen)
+error[E0308]: mismatched types
+   --> src/api_parser.rs:656:13
+    |
+656 |             value,
+    |             ^^^^^ expected enum `EnumValue`, found struct `String`
+    |
+help: try wrapping the expression in `api_parser::EnumValue::Value`
+    |
+656 |             value: api_parser::EnumValue::Value(value),
+    |             ++++++++++++++++++++++++++++++++++++     +
+
+error[E0599]: the method `to_owned` exists for enum `EnumValue`, but its trait bounds were not satisfied
+   --> src/c_gen.rs:138:41
+    |
+138 |             let mut value = entry.value.to_owned();
+    |                                         ^^^^^^^^ method cannot be called on `EnumValue` due to unsatisfied trait bounds
+    |
+   ::: src/api_parser.rs:186:1
+    |
+186 | pub enum EnumValue {
+    | ------------------
+    | |
+    | method `to_owned` not found for this enum
+    | doesn't satisfy `EnumValue: Clone`
+    | doesn't satisfy `EnumValue: ToOwned`
+    |
+    = note: the following trait bounds were not satisfied:
+            `EnumValue: Clone`
+            which is required by `EnumValue: ToOwned`
+help: consider annotating `EnumValue` with `#[derive(Clone)]`
+   --> |src/api_parser.rs:186:1
+    |
+186 | #[derive(Clone)]
+    |
+
+error[E0308]: mismatched types
+   --> src/c_gen.rs:143:25
+    |
+138 |             let mut value = entry.value.to_owned();
+    |                             ---------------------- expected due to this value
+...
+143 |                 value = String::new();
+    |                         ^^^^^^^^^^^^^ expected `str`, found struct `String`
+
+error[E0277]: the size for values of type `str` cannot be known at compilation time
+   --> src/c_gen.rs:143:17
+    |
+143 |                 value = String::new();
+    |                 ^^^^^ doesn't have a size known at compile-time
+    |
+    = help: the trait `Sized` is not implemented for `str`
+    = note: the left-hand-side of an assignment must have a statically known size
+
+error[E0599]: no method named `split` found for enum `EnumValue` in the current scope
+   --> src/c_gen.rs:144:38
+    |
+144 |                 for s in entry.value.split(' ') {
+    |                                      ^^^^^ method not found in `EnumValue`
+    |
+   ::: src/api_parser.rs:186:1
+    |
+186 | pub enum EnumValue {
+    | ------------------ method `split` not found for this enum
+    |
+    = help: items from traits can only be used if the trait is implemented and in scope
+    = note: the following traits define an item `split`, perhaps you need to implement one of them:
+            candidate #1: `BufRead`
+            candidate #2: `UnindexedProducer`
+
+error[E0599]: no method named `push_str` found for type `str` in the current scope
+   --> src/c_gen.rs:148:35
+    |
+148 | ...                   value.push_str(&format!(
+    |                             ^^^^^^^^ method not found in `str`
+
+error[E0599]: no method named `push_str` found for type `str` in the current scope
+   --> src/c_gen.rs:158:31
+    |
+158 |                         value.push_str(&format!(" {} ", s));
+    |                               ^^^^^^^^ method not found in `str`
+
+error[E0277]: the size for values of type `str` cannot be known at compilation time
+   --> src/c_gen.rs:167:17
+    |
+167 |                 value,
+    |                 ^^^^^ doesn't have a size known at compile-time
+    |
+    = help: the trait `Sized` is not implemented for `str`
+note: required by a bound in `ArgumentV1::<'a>::new_display`
+   --> /home/emoon/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/fmt/mod.rs:345:5
+    |
+345 |     arg_new!(new_display, Display);
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ArgumentV1::<'a>::new_display`
+    = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `arg_new` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: `EnumValue` doesn't implement `std::fmt::Display`
+  --> src/rust_gen.rs:77:54
+   |
+77 |             writeln!(f, "    {} = {},", &entry.name, entry.value)?;
+   |                                                      ^^^^^^^^^^^ `EnumValue` cannot be formatted with the default formatter
+   |
+   = help: the trait `std::fmt::Display` is not implemented for `EnumValue`
+   = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
+   = note: this error originates in the macro `$crate::format_args_nl` which comes from the expansion of the macro `writeln` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+Some errors have detailed explanations: E0277, E0308, E0599.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `api_gen` due to 9 previous errors

@@ -1,0 +1,39 @@
+mod math_data
+mod window
+
+struct Item {
+    /// Is the last item hovered? (and usable, aka not blocked by a popup, etc.). See ImGuiHoveredFlags for more options.
+    [static] is_hovered(flags: HoveredFlags) -> bool,
+    /// Is the last item active? (e.g. button being held, text field being edited. This will continuously return true while holding mouse button on an item. _s that don't interact will always return false)
+    [static] is_active() -> bool,
+    /// Is the last item focused for keyboard/gamepad navigation?
+    [static] is_focused() -> bool,
+    /// Is the last item hovered and mouse clicked on? (**)  == IsMouseClicked(mouse_button) && Is_Hovered()Important. (**) this is NOT equivalent to the behavior of e.g. Button(). Read comments in function definition.
+    [static] is_clicked() -> bool,
+    /// Is the last item visible? (items may be out of sight because of clipping/scrolling)
+    [static] is_visible() -> bool,
+    /// Did the last item modify its underlying value this frame? or was pressed? This is generally the same as the "bool" return value of many widgets.
+    [static] is_edited() -> bool,
+    /// Was the last item just made active (item was previously inactive).
+    [static] is_activated() -> bool,
+    /// Was the last item just made inactive (item was previously active). Useful for Undo/Redo patterns with widgets that require continuous editing.
+    [static] is_deactivated() -> bool,
+    /// Was the last item just made inactive and made a value change when it was active? (e.g. Slider/Drag moved). Useful for Undo/Redo patterns with widgets that require continuous editing. Note that you may get false positives (some widgets such as Combo()/ListBox()/Selectable() will return true even when clicking an already selected item).
+    [static] is_deactivated_after_edit() -> bool,
+    /// Was the last item open state toggled? set by TreeNode().
+    [static] is_toggled_open() -> bool,
+    /// Is any item hovered?
+    [static] is_any_hovered() -> bool,
+    /// Is any item active?
+    [static] is_any_active() -> bool,
+    /// Is any item focused?
+    [static] is_any_focused() -> bool,
+    /// Get upper-left bounding rectangle of the last item (screen space)
+    [static] get_rect_min() -> Vec2,
+    /// Get lower-right bounding rectangle of the last item (screen space)
+    [static] get_rect_max() -> Vec2,
+    /// Get size of last item
+    [static] get_rect_size() -> Vec2,
+    /// Allow last item to be overlapped by a subsequent item. sometimes useful with invisible buttons, selectables, etc. to catch unused area.
+    [static] set_allow_overlap(),
+}

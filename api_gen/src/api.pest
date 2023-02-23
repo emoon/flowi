@@ -1,0 +1,67 @@
+chunk = _{ SOI ~ (structdef | moddef | callbackdef | enumdef | doc_comment)+ ~ EOI }
+
+structdef   =  { attributes? ~ traits? ~ ("struct") ~ name ~ derive? ~ ("{") ~ fieldlist? ~ ("}") }
+callbackdef =  { ("callback") ~ function }
+moddef      =  { ("mod") ~ name }
+enumdef     =  { (attributes)*? ~ ("enum") ~ name ~ ("{") ~ fieldlist? ~ ("}") }
+fieldlist   =  { (doc_comment | field)*  }
+field       =  { (var | function | enum_type) ~ fieldsep? }
+fieldsep    = _{ (",") }
+
+rettype      = { name }
+attributes   = { ("#[attributes(") ~ namelist ~ (")]") }
+traits       = { ("[traits(") ~ namelist ~ (")]") }
+derive       = { (":") ~ namelist? }
+drop_typ     = { ("[drop]") }
+manual_typ   = { ("[manual]") }
+static_typ   = { ("[static]") }
+const_ptr_exp  = { ("*const ") }
+pointer_exp  = { ("*") }
+refexp       = { ("&") }
+default_val  = { ("=") ~ name_or_num? ~ string? }
+optional     = { ("?") }
+array_size   = { (";") ~ name_or_num }
+array        = { ("[") ~ (const_ptr_exp | refexp | pointer_exp)? ~ vtype ~ array_size? ~ ("]") ~ optional? }
+retexp       = { ("->") ~ (const_ptr_exp | refexp | pointer_exp)? ~ (vtype | array) ~ optional? }
+var          = { name ~ (":") ~ (const_ptr_exp | refexp | pointer_exp)? ~ (vtype | array) ~ default_val? }
+varlist      = { (var | array) ~ ((",") ~ (var | array))* }
+enum_assign  = { ("=") ~ or_namelist ~ (",") }
+enum_type    = { name ~ enum_assign }
+namelist     = { name ~ ((",") ~ name)* }
+or_namelist  = { string_to_end ~ (("|") ~ string_to_end)* }
+function     = { (manual_typ | static_typ | drop_typ)*? ~ name ~ ("(") ~ varlist? ~ (")") ~ retexp? }
+
+name = @{
+	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*
+}
+
+name_with_namespace = @{
+	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("::") | ("_") | ('0'..'9'))*
+}
+
+string_to_end = @{
+    (!(",") ~ !("|") ~ ANY)*
+}
+
+name_or_num = @{
+	(('a'..'z') | ('A'..'Z') | ("|") | ("<") | ("_") | ('0'..'9'))*
+}
+
+string = @{
+	( "\"" ~ name_or_num ~ "\"")*
+}
+
+vtype = @{
+	(('a'..'z') | ('A'..'Z') | ("_")) ~ (('a'..'z') | ('A'..'Z') | ("_") | ('0'..'9'))*
+}
+
+COMMENT = _{
+	("//") ~ !("/") ~ (!(("\r") | ("\n")) ~ ANY)* ~ (("\n") | ("\r\n") | ("\r") | EOI)
+}
+
+doc_comment = @{
+	((" ")*) ~ ("///") ~ (!NEWLINE ~ ANY)*
+}
+
+WHITESPACE = _{ (" ") | ("\t") | ("\u{000C}") | ("\r") | ("\n") }
+

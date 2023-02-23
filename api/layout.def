@@ -1,0 +1,47 @@
+mod math_data
+
+/// Layout Cursor
+/// Cursor means the position of the widget.
+/// By setting the cursor position, you can change the position of the widget.
+/// You can call same_line() between widgets to undo the last carriage return and output at the right of the preceding widget.
+struct Cursor {
+    /// Separator, generally horizontal. Inside a menu bar or in horizontal layout mode, this becomes a vertical separator.
+    [static] separator(),
+    /// Call between widgets or groups to layout them horizontally. X position given in window coordinates.
+    [static] same_line(offset_from_start_x: f32, spacing: f32),
+    /// Undo a same_line() or force a new line when in a horizontal-layout context.
+    [static] new_line(),
+    /// Undo a same_line() or force a new line when in a horizontal-layout context.
+    [static] spacing(),
+    /// Add a dummy item of given size. Unlike widgets.invisible_button(), dummmy() won't take the mouse click or be navigable into.
+    [static] dummy(size: Vec2),
+    /// Move content position toward the right, by indent_w, or style.IndentSpacing if indent_w <= 0
+    [static] indent(indent: f32),
+    /// Move content position back to the left, by indent_w, or style.IndentSpacing if indent_w <= 0
+    [static] unindent(indent_w: f32),
+    [static] begin_group(),
+    [static] end_group(),
+    /// Cursor position in window coordinates (relative to window position)
+    [static] get_pos() -> Vec2,
+    [static] get_pos_x() -> f32,
+    [static] get_pos_y() -> f32,
+    /// Set position in window coordinates (relative to window position)
+    [static] set_pos(pos: Vec2),
+    [static] set_pos_x(x: f32),
+    [static] set_pos_y(y: f32),
+    /// cursor position in absolute coordinates (useful to work with ImDrawList API).
+    /// generally top-left == GetMainViewport()->Pos == (0,0) in single viewport mode,
+    /// and bottom-right == GetMainViewport()->Pos+Size == io.DisplaySize in single-viewport mode.
+    [static] screen_pos() -> Vec2,
+    [static] set_screen_pos(pos: Vec2),
+    /// vertically align upcoming text baseline to FramePadding.y so that it will align properly to regularly framed items (call if you have text on a line before a framed item)
+    [static] align_text_to_frame_padding(),
+    /// ~ FontSize
+    [static] get_text_line_height() -> f32,
+    /// ~ FontSize + style.ItemSpacing.y (distance in pixels between 2 consecutive lines of text)
+    [static] get_text_line_height_with_spacing() -> f32,
+    /// ~ FontSize + style.FramePadding.y * 2
+    [static] get_frame_height() -> f32,
+    /// ~ FontSize + style.FramePadding.y * 2 + style.ItemSpacing.y (distance in pixels between 2 consecutive lines of framed widgets)
+    [static] get_frame_height_with_spacing() -> f32,
+}

@@ -1,0 +1,27 @@
+#[attributes(Copy)]
+struct Rect {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+}
+
+/// Used for setting a position in pixel space
+#[attributes(Copy)]
+struct Vec2 {
+    /// x position
+    x: f32,
+    /// y position
+    y: f32,
+}
+
+/// Used for setting a position in pixel space
+#[attributes(Copy)]
+struct IVec2 {
+    /// x position
+    x: i32,
+    /// y position
+    y: i32,
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4

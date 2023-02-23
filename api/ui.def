@@ -1,0 +1,23 @@
+mod layout
+mod math_data
+mod image
+
+struct Ui {
+    /// Draw static text with the selected font 
+    [static] text(text: String),
+    /// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
+    [static] image(image: Image),
+    /// Draw image with given size
+    [static] image_with_size(image: Image, size: Vec2),
+    /// Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
+    [static] set_pos(pos: Vec2),
+    /// Get the last widget size. This is usually used for doing manual layouting
+    [static] get_last_widget_size(pos: Vec2) -> Rect,
+    /// Push button widget that returns true if user has pressed it 
+    [static] push_button_with_icon(text: String, image: Image, text_pos: Vec2, image_scale: f32) -> bool, 
+    /// Push button widget that returns true if user has pressed it 
+    [static] push_button(text: String) -> bool, 
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

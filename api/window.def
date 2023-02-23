@@ -1,0 +1,138 @@
+mod math_data
+
+// vim: syntax=rust expandtab ts=4 sw=4
+
+#[attributes(bitflags)]
+enum WindowFlags {
+    /// Default flags
+    None = 0,
+    /// Disable title-bar
+    NoTitleBar = 1 << 0,
+    /// Disable user resizing with the lower-right grip
+    NoResize = 1 << 1,
+    /// Disable user moving the window
+    NoMove = 1 << 2,
+    /// Disable scrollbars (window can still scroll with mouse or programmatically)
+    NoScrollbar = 1 << 3,
+    /// Disable user vertically scrolling with mouse wheel. On child window, mouse wheel will be forwarded to the parent unless NoScrollbar is also set.
+    NoScrollWithMouse = 1 << 4,
+    /// Disable user collapsing window by double-clicking on it. Also referred to as Window Menu Button (e.g. within a docking node).
+    NoCollapse = 1 << 5,
+    /// Resize every window to its content every frame
+    AlwaysAutoResize = 1 << 6,
+    /// Disable drawing background color (WindowBg, etc.) and outside border. Similar as using SetNextWindowBgAlpha(0.0f).
+    NoBackground = 1 << 7,
+    /// Never load/save settings in .ini file
+    NoSavedSettings = 1 << 8,
+    /// Disable catching mouse, hovering test with pass through.
+    NoMouseInputs = 1 << 9,
+    /// Has a menu-bar
+    MenuBar = 1 << 10,
+    /// Allow horizontal scrollbar to appear (off by default).
+    HorizontalScrollbar = 1 << 11,
+    /// Disable taking focus when transitioning from hidden to visible state
+    NoFocusOnAppearing = 1 << 12,
+    /// Disable bringing window to front when taking focus (e.g. clicking on it or programmatically giving it focus)
+    NoBringToFrontOnFocus = 1 << 13,
+    /// Always show vertical scrollbar (even if content_size.y < size.y)
+    AlwaysVerticalScrollbar = 1 << 14,
+    /// Always show horizontal scrollbar (even if content_size.x < size.x)
+    AlwaysHorizontalScrollbar = 1 << 15,
+    /// Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows,
+    AlwaysUseWindowPadding = 1 << 16,
+    /// No gamepad/keyboard navigation within the window
+    NoNavInputs = 1 << 17,
+    /// No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
+    NoNavFocus = 1 << 18,
+    /// Display a dot next to the title. When used in a tab/docking context, tab is selected when clicking the X +
+    /// closure is not assumed (will wait for user to stop submitting the tab). Otherwise closure is assumed when
+    /// pressing the X, so if you keep submitting the tab may reappear at end of tab bar.
+    UnsavedDocument = 1 << 19,
+    // No navigation
+    NoNav = NoNavInputs | NoNavFocus,
+    // No decoration
+    NoDecoration = NoTitleBar | NoResize | NoScrollbar | NoCollapse, 
+    // Skip all inputs
+    NoInputs = NoMouseInputs | NoNavInputs | NoNavFocus,
+}
+
+#[attributes(bitflags)]
+enum FocusedFlags {
+    None = 0,
+    /// Return true if any children of the window is focused
+    ChildWindows = 1 << 0,   
+    /// Test from root window (top most parent of the current hierarchy)
+    RootWindow = 1 << 1,   
+    /// Return true if any window is focused. Important: If you are trying to tell how to dispatch your low-level inputs, do NOT use this. Use 'io.WantCaptureMouse' instead! Please read the FAQ!
+    AnyWindow = 1 << 2,   
+    /// Do not consider popup hierarchy (do not treat popup emitter as parent of popup) (when used with _ChildWindows or _RootWindow)
+    NoPopupHierarchy = 1 << 3,   
+    /// Consider docking hierarchy (treat dockspace host as parent of docked window) (when used with _ChildWindows or _RootWindow)
+    DockHierarchy = 1 << 4,   
+    RootAndChildWindows = RootWindow | ChildWindows,
+}
+
+#[attributes(bitflags)]
+enum HoveredFlags {
+    /// Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
+    None = 0,        
+    /// is_window_hovered() only: Return true if any children of the window is hovered
+    ChildWindows = 1 << 0,   
+    /// is_window_hovered() only: Test from root window (top most parent of the current hierarchy)
+    RootWindow = 1 << 1,   
+    /// is_window_hovered() only: Return true if any window is hovered
+    AnyWindow = 1 << 2,   
+    /// is_window_hovered() only: Do not consider popup hierarchy (do not treat popup emitter as parent of popup) (when used with _ChildWindows or _RootWindow)
+    NoPopupHierarchy = 1 << 3,   
+    /// is_window_hovered() only: Consider docking hierarchy (treat dockspace host as parent of docked window) (when used with _ChildWindows or _RootWindow)
+    DockHierarchy = 1 << 4,   
+    /// Return true even if a popup window is normally blocking access to this item/window
+    AllowWhenBlockedByPopup = 1 << 5,   
+    /// Return true even if an active item is blocking access to this item/window. Useful for Drag and Drop patterns.
+    AllowWhenBlockedByActiveItem  = 1 << 7,   
+    /// is_item_hovered() only: Return true even if the position is obstructed or overlapped by another window
+    AllowWhenOverlapped = 1 << 8,   
+    /// is_item_hovered() only: Return true even if the item is disabled
+    AllowWhenDisabled = 1 << 9,   
+    /// Disable using gamepad/keyboard navigation state when active, always query mouse.
+    NoNavOverride = 1 << 10,  
+    RectOnly = AllowWhenBlockedByPopup | AllowWhenBlockedByActiveItem | AllowWhenOverlapped,
+    RootAndChildWindows = RootWindow | ChildWindows,
+    /// Hovering delays (for tooltips)
+    /// Return true after io.HoverDelayNormal elapsed (~0.30 sec)
+    DelayNormal = 1 << 11,  
+    /// Return true after io.HoverDelayShort elapsed (~0.10 sec)
+    DelayShort = 1 << 12,  
+    /// Disable shared delay system where moving from one item to the next keeps the previous timer for a short time (standard for tooltips with long delays)
+    NoSharedDelay = 1 << 13,  
+}
+
+struct Window {
+    /// Sets the position of the next window, call before begin()
+    [static] set_pos(pos: Vec2),
+    /// Always call a matching end() for each begin() call, regardless of its return value!
+    [static] begin(name: String, flags: WindowFlags) -> bool,
+    /// End call for various types such as windows, lists, etc. 
+    [static] end(),
+    /// Call between begin() and end() to create a child window. Child windows can embed their own child.
+    [static] begin_child(id: String, size: Vec2, border: bool, flags: WindowFlags) -> bool,
+    /// End call for various types such as windows, lists, etc.
+    [static] end_child(),
+    /// Returns true if the window is appearing after being hidden/inactive (or the first time)
+    [static] is_appearing() -> bool,
+    /// Is current window collpased?
+    [static] is_collapsed() -> bool,
+    /// is current window focused? or its root/child, depending on flags. see flags for options.
+    [static] is_focused(flags: FocusedFlags) -> bool,
+    /// is current window hovered (and typically: not blocked by a popup/modal)? see flags for options. 
+    /// nb: if you are trying to check whether your mouse should be dispatched to imgui or to your app, 
+    /// you should use the 'io.wantcapturemouse' boolean for that! please read the faq!
+    [static] is_hovered(flags: HoveredFlags) -> bool,
+    /// get dpi scale currently associated to the current window's viewport.
+    [static] dpi_scale() -> f32,
+    /// get current window position in screen space (useful if you want to do your own drawing via the drawlist api)
+    [static] pos() -> Vec2,
+    /// get current window size
+    [static] size() -> Vec2,                            
+}
+

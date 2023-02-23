@@ -1,0 +1,8 @@
+
+enum DebugMode {
+    Off = 0,
+    Layout = 1,
+}
+
+// vim: syntax=rust expandtab ts=4 sw=4
+

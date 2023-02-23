@@ -1,0 +1,36 @@
+mod math_data
+mod image
+
+// vim: syntax=rust expandtab ts=4 sw=4
+
+#[attributes(bitflags)]
+enum ButtonFlags {
+    /// Default flags
+    None = 0,
+    /// React on left mouse button (default)
+    MouseButtonLeft = 1 << 0,
+    /// React on right mouse button
+    MouseButtonRight = 1 << 1,
+    /// React on center mouse button
+    MouseButtonMiddled = 1 << 2,
+}
+
+struct Button {
+    /// Show a regular push button
+    [static] regular(label: String) -> bool,
+    /// Show a regular push button with a specific size
+    [static] regular_size(label: String, size: Vec2) -> bool,
+    /// Show a regular push button without any frame padding.
+    [static] small(label: String) -> bool,
+    /// Invisible button that allows custom using drawing, but still acts like a button.
+    [static] invisible(label: String, size: Vec2, flags: ButtonFlags) -> bool,
+    /// Button with a check box state
+    [static] check_box(label: String, state: *bool) -> bool,
+    /// Radio button
+    [static] radio(label: String, state: bool) -> bool,
+    /// TODO: Document
+    [static] bullet(),
+    /// TODO: Document
+    [static] image_with_text(image: Image, label: String) -> bool,
+}
+
