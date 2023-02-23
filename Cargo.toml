@@ -1,4 +1,27 @@
+[package]
+name = "flowi"
+version = "0.0.1"
+edition = "2021"
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+flowi-dear-imgui = { path = "flowi-dear-imgui" }
+flowi-render = { path = "flowi-render" }
+flowi-ui = { path = "flowi-ui" }
+flowi-utils = { path = "flowi-utils" }
+flowi-window = { path = "flowi-window" }
+
 [workspace]
-members = ["rust/flowi"]
-exclude = ["api_gen", "examples/rust/testbed"]
+exclude = [
+    "tools/api_gen", 
+    "langs/rust/flowi"
+]
+
+members = [
+    "flowi-dear-imgui",
+    "flowi-render",
+    "flowi-ui",
+    "flowi-utils",
+    "flowi-window",
+]
 
