@@ -1,4 +1,23 @@
+[package]
+name = "flowi"
+version = "0.1.0"
+
+[dependencies]
+flowi-image = { path = "crates/image" }
+flowi-render = { path = "crates/render" }
+flowi-ui = { path = "crates/ui" }
+flowi-window = { path = "crates/window" }
+flowi-dear-imgui = { path = "crates/dear-imgui" }
+flowi-application = { path = "crates/application" }
+
 [workspace]
-members = ["rust/flowi"]
+members = [
+    "crates/application",
+    "crates/dear-imgui",
+    "crates/image",
+    "crates/render",
+    "crates/ui",
+    "crates/window",
+]
 exclude = ["api_gen", "examples/rust/testbed"]
 
