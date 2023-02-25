@@ -23,7 +23,7 @@ use walkdir::WalkDir;
 
 /// Main
 fn main() {
-    let wd = WalkDir::new("../api");
+    let wd = WalkDir::new("../../api");
     // temporary set to one thread during debugging
     //rayon::ThreadPoolBuilder::new()
     // .num_threads(1)
@@ -31,8 +31,8 @@ fn main() {
     // .unwrap();
 
     // Dest directores for various langs
-    let c_dest = "../include/flowi";
-    let rust_dest = "../rust/flowi/src";
+    let c_dest = "../../langs/c_cpp/include/flowi";
+    let rust_dest = "../../src";
 
     // Collect all files that needs to be parsed
     let files = wd

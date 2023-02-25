@@ -1,6 +1,6 @@
 chunk = _{ SOI ~ (structdef | moddef | callbackdef | enumdef | doc_comment)+ ~ EOI }
 
-structdef   =  { attributes? ~ traits? ~ ("struct") ~ name ~ derive? ~ ("{") ~ fieldlist? ~ ("}") }
+structdef   =  { attributes? ~ traits? ~ crate_target? ~ ("struct") ~ name ~ derive? ~ ("{") ~ fieldlist? ~ ("}") }
 callbackdef =  { ("callback") ~ function }
 moddef      =  { ("mod") ~ name }
 enumdef     =  { (attributes)*? ~ ("enum") ~ name ~ ("{") ~ fieldlist? ~ ("}") }
@@ -10,6 +10,7 @@ fieldsep    = _{ (",") }
 
 rettype      = { name }
 attributes   = { ("#[attributes(") ~ namelist ~ (")]") }
+crate_target = { ("#[crate(") ~ name ~ (")]") }
 traits       = { ("[traits(") ~ namelist ~ (")]") }
 derive       = { (":") ~ namelist? }
 drop_typ     = { ("[drop]") }

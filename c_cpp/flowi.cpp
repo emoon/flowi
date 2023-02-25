@@ -84,6 +84,7 @@ extern "C" bool fl_application_main_loop_impl(FlMainLoopCallback callback, void*
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlImageApi* get_image_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
     FlImageApi* api = &data->image_funcs;
     return api; 
 }

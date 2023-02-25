@@ -6288,7 +6288,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         size.x = ImMax(label_size.x, max_x - min_x);
 
     // Text stays at the submission position, but bounding box may be extended on both sides
-    const ImVec2 text_min = pos;
+    //const ImVec2 text_min = pos;
     const ImVec2 text_max(min_x + size.x, pos.y + size.y);
 
     // Selectables are meant to be tightly packed together with no click-gap, so we extend their box to cover spacing between selectable.

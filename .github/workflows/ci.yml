@@ -11,17 +11,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         lfs: 'true' 
 
-    - uses: codecov/codecov-action@v2
+      # - uses: codecov/codecov-action@v2
 
       #- name: Install deps (GCOV required)
       # run: sudo apt update && sudo apt-get install lcov
 
-    - name: Install Tundra
-      run: git clone --recursive https://github.com/deplinenoise/tundra.git && cd tundra && make -j2 && sudo make install && cd ..
 
       # - name: Build Core Tests (Debug - GCOV)
       # run: tundra2 linux-gcc-debug-test flowi_core_tests
@@ -52,18 +50,18 @@ jobs:
       run: sudo apt-get install mesa-common-dev libx11-dev libxcursor-dev libxinerama-dev libxkbcommon-dev libxrandr-dev libxi-dev libgl1-mesa-dev
 
     - name: Build All (Debug)
-      run: tundra2 linux-gcc-debug bgfx_shaderc && tundra2 build_shaders && tundra2 linux-gcc-debug
+      run: cargo build 
 
   # Build macOS
   build_macOS:
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         lfs: 'true' 
 
-      # - name: Build Core Tests (Debug)
-        # run: bin/macos/tundra2 macosx-clang-debug flowi_core_tests
+    - name: Build 
+      run: cargo build 
 
       # - name: Run Core Tests (Debug)
         # run: t2-output/macos-clang-debug-default/flowi_core_tests --enable-mixed-units
@@ -81,7 +79,7 @@ jobs:
   build_windows:
     runs-on: windows-2019
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         lfs: 'true' 
       # - name: Build Core Tests (Debug)
@@ -96,6 +94,6 @@ jobs:
       # - name: Run Core Tests (Optimized)
         # run: t2-output\win64-msvc-release-default\flowi_core_tests --enable-mixed-units
 
-    - name: Build All (Debug)
-      run: bin\windows\tundra2.exe --unprotected win64-msvc-debug bgfx_shaderc && bin\windows\tundra2.exe --unprotected win64-msvc-debug build_shaders && bin\windows\tundra2.exe --unprotected win64-msvc-debug
+    - name: Build 
+      run: cargo build 
 

@@ -30,6 +30,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // translate from FlColor to ImGuiCol_
 
+
 static int s_color_lut[ImGuiCol_COUNT * 4];
 static int s_single_style_lut[ImGuiStyleVar_COUNT];
 static int s_vec2_style_lut[ImGuiStyleVar_COUNT];
@@ -101,6 +102,7 @@ static void style_push_color(FlInternalData* ctx, FlStyleColor color, FlColor va
 // Temporary push a color change
 
 static void style_pop_color(FlInternalData* ctx) {
+    FL_UNUSED(ctx);
     ImGui::PopStyleColor();
 }
 
@@ -167,6 +169,7 @@ extern "C" FlUiApi* fl_ui_get_api(FlInternalData* ctx, int api_version) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void window_set_pos(FlInternalData* ctx, FlVec2 pos) {
+    FL_UNUSED(ctx);
     ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y));
 }
 
@@ -1090,11 +1093,11 @@ void fl_style_init_priv() {
         s_color_lut[s_imgui_colors[i]] = s_flowi_colors[i];
     }
 
-    for (int i = 0; i < FL_SIZEOF_ARRAY(s_fl_single_styles); ++i) {
+    for (uint32_t i = 0; i < FL_SIZEOF_ARRAY(s_fl_single_styles); ++i) {
         s_single_style_lut[s_fl_single_styles[i]] = s_imgui_single_styles[i];
     }
 
-    for (int i = 0; i < FL_SIZEOF_ARRAY(s_fl_vec2_styles); ++i) {
+    for (uint32_t i = 0; i < FL_SIZEOF_ARRAY(s_fl_vec2_styles); ++i) {
         s_vec2_style_lut[s_fl_vec2_styles[i]] = s_imgui_vec2_styles[i];
     }
 }

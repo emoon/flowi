@@ -47,6 +47,8 @@ static FlFont new_from_file(FlInternalData* ctx, FlString filename, uint32_t fon
 
 static FlFont new_from_memory(FlInternalData* ctx, FlString name, uint8_t* data, uint32_t data_size,
                                                uint32_t font_size) {
+    FL_UNUSED(ctx);
+
     ImGuiIO& io = ImGui::GetIO();
 
     //ImFontAtlas* atlas = ctx->global->font_atlas;
@@ -79,7 +81,10 @@ static void font_pop(FlInternalData* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Destory the current font, render the id invalid
 
-static void destroy(FlInternalData* ctx, FlFont font) { }
+static void destroy(FlInternalData* ctx, FlFont font) { 
+    FL_UNUSED(ctx);
+    FL_UNUSED(font);
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

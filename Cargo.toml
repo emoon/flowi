@@ -1,27 +1,11 @@
 [package]
 name = "flowi"
 version = "0.1.0"
+edition = "2018"
+build = "build.rs"
 
 [dependencies]
-flowi-image = { path = "crates/image" }
-flowi-render = { path = "crates/render" }
-flowi-ui = { path = "crates/ui" }
-flowi-window = { path = "crates/window" }
-flowi-dear-imgui = { path = "crates/dear-imgui" }
+bitflags = "2.0.0-rc.1"
 
-[workspace]
-members = [
-    "crates/dear-imgui",
-    "crates/image",
-    "crates/render",
-    "crates/ui",
-    "crates/window",
-]
-
-exclude = [
-    "langs/rust/flowi",
-    "crates/application",
-    "tools/api_gen", 
-    "examples/rust/testbed"
-]
-
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"] }

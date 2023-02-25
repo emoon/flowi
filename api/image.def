@@ -15,6 +15,7 @@ enum SvgFlags {
 }
 
 #[attributes(Handle, Drop)]
+#[crate(Image)]
 struct Image {
     /// Load image from file. Supported formats are:
     /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
