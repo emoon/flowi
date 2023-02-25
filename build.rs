@@ -15,7 +15,6 @@ fn build_freetype2(target_os: &str) {
     println!("cargo:rerun-if-changed=external/freetype2");
 
     build
-        .cpp(true)
         .warnings(false)
         .include(".")
         .include("external/freetype2/include")
@@ -85,10 +84,24 @@ fn build_freetype2(target_os: &str) {
     build.compile("freetype2");
 }
 
-fn build_dear_imgui(_target_os: &str) {
+fn build_dear_imgui(target_os: &str) {
     let mut build = cc::Build::new();
+
+    build.cpp(true);
     
     println!("cargo:rerun-if-changed=external/dear-imgui");
+
+    match target_os {
+        "linux" => {
+            build.flag("-std=c++11");
+        }
+
+        "macos" => {
+            build.flag("-std=c++11");    
+        }
+        
+        _ => (),
+    }
 
     add_includes(
         &mut build,
@@ -117,10 +130,23 @@ fn build_dear_imgui(_target_os: &str) {
 fn build_ui(target_os: &str) {
     // Build flowi
     let mut build = cc::Build::new();
+    let mut build_c = cc::Build::new();
 
     println!("cargo:rerun-if-changed=c_cpp");
 
     build.define("BX_CONFIG_DEBUG", "0");
+
+    match target_os {
+        "linux" => {
+            build.flag("-std=c++11");
+        }
+
+        "macos" => {
+            build.flag("-std=c++11");    
+        }
+        
+        _ => (),
+    }
 
     add_includes(&mut build, ".", 
         &[
@@ -134,31 +160,53 @@ fn build_ui(target_os: &str) {
         ],
     );
 
+    add_includes(&mut build_c, ".", 
+        &[
+            "langs/c_cpp/include",
+            "external/glfw/include",
+            "external/bgfx/include",
+            "external/bx/include",
+            "external", 
+            "external/dear-imgui",
+            "external/freetype2/include"
+        ],
+    );
+
+
     add_sources(
-        &mut build,
+        &mut build_c,
         "c_cpp",
         &[
-            "application.cpp",
             "area.c",
             "array.c",
             "atlas.c",
             "command_buffer.c",
-            "flowi.cpp",
-            "font.cpp",
-            "glfw_input.cpp",
             "handles.c",
             //"image.c",
-            "imgui_wrap.cpp",
             "io.c",
             "layer.c",
             "linear_allocator.c",
             "primitive_rect.c",
             "string_allocator.c",
-            "style.cpp",
             "text.c",
             "vertex_allocator.c",
         ],
     );
+
+    add_sources(
+        &mut build,
+        "c_cpp",
+        &[
+            "application.cpp",
+            "flowi.cpp",
+            "font.cpp",
+            "glfw_input.cpp",
+            //"image.c",
+            "imgui_wrap.cpp",
+            "style.cpp",
+        ],
+    );
+
 
     match target_os {
         "linux" => {
@@ -182,7 +230,8 @@ fn build_ui(target_os: &str) {
         unsupported => unimplemented!("{} is not a supported target", unsupported),
     }
 
-    build.compile("window");
+    build.compile("ui");
+    build_c.compile("ui-c");
 }
 
 fn build_bgfx(_target_os: &str) {
@@ -412,6 +461,7 @@ fn build_glfw(target_os: &str) {
         "macos" => {
             build.define("_GLFW_COCOA", None);
             build.define("MACOSX", None);
+            build.flag("-Wno-unused-parameter");
 
             add_sources(
                 &mut build,
