@@ -217,7 +217,7 @@ fn build_ui(target_os: &str) {
             add_includes(
                 &mut build,
                 "..",
-                &["render/c_cpp/bx/include/compat/msvc", "render/c_cpp/bgfx/3rdparty/dxsdk/include"],
+                &["external/bx/include/compat/msvc", "external/bgfx/3rdparty/dxsdk/include"],
             );
 
             build.define("GLFW_EXPOSE_NATIVE_WIN32", None);
