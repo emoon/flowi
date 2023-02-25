@@ -167,7 +167,9 @@ fn build_ui(target_os: &str) {
             "external/bgfx/include",
             "external/bx/include",
             "external", 
+            "external/nanosvg",
             "external/dear-imgui",
+            "external/stb",
             "external/freetype2/include"
         ],
     );
@@ -177,6 +179,7 @@ fn build_ui(target_os: &str) {
         &mut build_c,
         "c_cpp",
         &[
+            "image.c",
             "area.c",
             "array.c",
             "atlas.c",
@@ -190,6 +193,8 @@ fn build_ui(target_os: &str) {
             "string_allocator.c",
             "text.c",
             "vertex_allocator.c",
+            "../external/nanosvg/nanosvg.c",
+            "../external/stb/stb.c",
         ],
     );
 
@@ -334,7 +339,7 @@ fn build_bgfx(_target_os: &str) {
     build.file("external/bimg/src/image_gnf.cpp");
     build.file("external/bgfx/src/bgfx.cpp");
     build.file("external/bgfx/src/vertexlayout.cpp");
-    //build.file("external/bgfx/src/debug_renderdoc.cpp");
+    build.file("external/bgfx/src/debug_renderdoc.cpp");
     build.file("external/bgfx/src/topology.cpp");
     build.file("external/bgfx/src/shader.cpp");
     build.file("external/bgfx/src/shader_dxbc.cpp");
@@ -405,8 +410,14 @@ fn build_glfw(target_os: &str) {
             "src/input.c",
             "src/monitor.c",
             "src/vulkan.c",
+            "src/platform.c",
             "src/osmesa_context.c",
             "src/egl_context.c",
+            "src/null_init.c",
+            "src/null_window.c",
+            "src/null_monitor.c",
+            "src/null_joystick.c",
+            //"src/null_platform.c",
         ],
     );
 
@@ -433,6 +444,8 @@ fn build_glfw(target_os: &str) {
                     "src/linux_joystick.c",
                     "src/posix_thread.c",
                     "src/posix_time.c",
+                    "src/posix_module.c",
+                    "src/posix_poll.c",
                     "src/xkb_unicode.c",
                 ],
             );
