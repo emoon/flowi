@@ -216,7 +216,7 @@ fn build_ui(target_os: &str) {
         "windows" => {
             add_includes(
                 &mut build,
-                "..",
+                "",
                 &["external/bx/include/compat/msvc", "external/bgfx/3rdparty/dxsdk/include"],
             );
 
