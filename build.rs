@@ -473,7 +473,6 @@ fn build_glfw(target_os: &str) {
                     "src/cocoa_time.c",
                     "src/cocoa_window.m",
                     "src/posix_thread.c",
-                    "src/nsgl_context.h",
                     "src/nsgl_context.m",
                 ],
             );
