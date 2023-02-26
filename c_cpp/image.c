@@ -63,6 +63,8 @@ static FlImage load_svg_image(FlInternalData* ctx, FlString name, u8* data, u32 
     const char* filename =
         StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
 
+    FL_UNUSED(data_size);
+
     // if data is set we assume that we are going to load from memory
     if (data) {
         svg_image = nsvgParse((char*)data, "px", 96);

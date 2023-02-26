@@ -1,9 +1,9 @@
-use flowi::Flowi;
-use flowi::window::{WindowFlags, HoveredFlags};
-use flowi::manual::Color;
-use flowi::style::StyleColor;
 use flowi::application::Application;
 use flowi::font::Font;
+use flowi::manual::Color;
+use flowi::style::StyleColor;
+use flowi::window::{HoveredFlags, WindowFlags};
+use flowi::Flowi;
 
 struct App {
     //image: flowi::image::Image,
@@ -22,7 +22,10 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     let style = flowi.style();
     let font = flowi.font();
 
-    window.begin("Hello, world!", WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR);
+    window.begin(
+        "Hello, world!",
+        WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR,
+    );
     cursor.set_pos_y(110.0);
     text.show("Hello, world!");
 
@@ -43,8 +46,15 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
         println!("Hovered!");
     }
 
-    style.push_color(StyleColor::HeaderHovered,
-        Color { r: 241.0 / 255.0, g: 105.0 / 255.0, b: 49.0 / 255.0, a: 1.0 });
+    style.push_color(
+        StyleColor::HeaderHovered,
+        Color {
+            r: 241.0 / 255.0,
+            g: 105.0 / 255.0,
+            b: 49.0 / 255.0,
+            a: 1.0,
+        },
+    );
 
     if menu.begin_main_bar() {
         if menu.begin("File  ", true) {
@@ -73,15 +83,28 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
 }
 
 fn main() {
-    let flowi = Flowi::new("Test", "Test").unwrap();
+    //let flowi = Flowi::new("Test", "Test").unwrap();
+    let flowi = Flowi::new_from_dynamic("mylib.so", "Test", "Test").unwrap();
     let font = flowi.font();
 
     let mut app = App {
         //image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
-        _font: font.new_from_file("/home/emoon/code/projects/flowi/data/Montserrat-Bold.ttf", 32).unwrap(),
-        icons: font.new_from_file_range("/home/emoon/code/projects/flowi/data/svgs.ttf", 28, 0xe900, 0xe905).unwrap(),
+        _font: font
+            .new_from_file(
+                "/home/emoon/code/projects/flowi/data/Montserrat-Bold.ttf",
+                32,
+            )
+            .unwrap(),
+        icons: font
+            .new_from_file_range(
+                "/home/emoon/code/projects/flowi/data/svgs.ttf",
+                28,
+                0xe900,
+                0xe905,
+            )
+            .unwrap(),
     };
 
     if !Application::main_loop_ud(&mut app, main_loop) {

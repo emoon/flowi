@@ -17,13 +17,14 @@ drop_typ     = { ("[drop]") }
 manual_typ   = { ("[manual]") }
 static_typ   = { ("[static]") }
 const_ptr_exp  = { ("*const ") }
+async_exp    = { ("async") }
 pointer_exp  = { ("*") }
 refexp       = { ("&") }
 default_val  = { ("=") ~ name_or_num? ~ string? }
 optional     = { ("?") }
 array_size   = { (";") ~ name_or_num }
 array        = { ("[") ~ (const_ptr_exp | refexp | pointer_exp)? ~ vtype ~ array_size? ~ ("]") ~ optional? }
-retexp       = { ("->") ~ (const_ptr_exp | refexp | pointer_exp)? ~ (vtype | array) ~ optional? }
+retexp       = { ("->") ~ async? ~ (const_ptr_exp | refexp | pointer_exp)? ~ (vtype | array) ~ optional? }
 var          = { name ~ (":") ~ (const_ptr_exp | refexp | pointer_exp)? ~ (vtype | array) ~ default_val? }
 varlist      = { (var | array) ~ ((",") ~ (var | array))* }
 enum_assign  = { ("=") ~ or_namelist ~ (",") }

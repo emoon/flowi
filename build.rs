@@ -9,9 +9,10 @@ fn add_includes(build: &mut cc::Build, root: &str, files: &[&str]) {
     build.includes(files.iter().map(|src| format!("{}/{}", root, src)));
 }
 
+#[cfg(feature = "static")]
 fn build_freetype2(target_os: &str) {
     let mut build = cc::Build::new();
-    
+
     println!("cargo:rerun-if-changed=external/freetype2");
 
     build
@@ -84,11 +85,12 @@ fn build_freetype2(target_os: &str) {
     build.compile("freetype2");
 }
 
+#[cfg(feature = "static")]
 fn build_dear_imgui(target_os: &str) {
     let mut build = cc::Build::new();
 
     build.cpp(true);
-    
+
     println!("cargo:rerun-if-changed=external/dear-imgui");
 
     match target_os {
@@ -97,20 +99,13 @@ fn build_dear_imgui(target_os: &str) {
         }
 
         "macos" => {
-            build.flag("-std=c++11");    
+            build.flag("-std=c++11");
         }
-        
+
         _ => (),
     }
 
-    add_includes(
-        &mut build,
-        "external",
-        &[
-            "dear-imgui",
-            "freetype2/include",
-        ],
-    );
+    add_includes(&mut build, "external", &["dear-imgui", "freetype2/include"]);
 
     add_sources(
         &mut build,
@@ -127,6 +122,7 @@ fn build_dear_imgui(target_os: &str) {
     build.compile("dear-imgui");
 }
 
+#[cfg(feature = "static")]
 fn build_ui(target_os: &str) {
     // Build flowi
     let mut build = cc::Build::new();
@@ -142,38 +138,41 @@ fn build_ui(target_os: &str) {
         }
 
         "macos" => {
-            build.flag("-std=c++11");    
+            build.flag("-std=c++11");
         }
-        
+
         _ => (),
     }
 
-    add_includes(&mut build, ".", 
+    add_includes(
+        &mut build,
+        ".",
         &[
             "langs/c_cpp/include",
             "external/glfw/include",
             "external/bgfx/include",
             "external/bx/include",
-            "external", 
+            "external",
             "external/dear-imgui",
-            "external/freetype2/include"
+            "external/freetype2/include",
         ],
     );
 
-    add_includes(&mut build_c, ".", 
+    add_includes(
+        &mut build_c,
+        ".",
         &[
             "langs/c_cpp/include",
             "external/glfw/include",
             "external/bgfx/include",
             "external/bx/include",
-            "external", 
+            "external",
             "external/nanosvg",
             "external/dear-imgui",
             "external/stb",
-            "external/freetype2/include"
+            "external/freetype2/include",
         ],
     );
-
 
     add_sources(
         &mut build_c,
@@ -212,7 +211,6 @@ fn build_ui(target_os: &str) {
         ],
     );
 
-
     match target_os {
         "linux" => {
             build.define("GLFW_EXPOSE_NATIVE_X11", None);
@@ -222,7 +220,10 @@ fn build_ui(target_os: &str) {
             add_includes(
                 &mut build,
                 ".",
-                &["external/bx/include/compat/msvc", "external/bgfx/3rdparty/dxsdk/include"],
+                &[
+                    "external/bx/include/compat/msvc",
+                    "external/bgfx/3rdparty/dxsdk/include",
+                ],
             );
 
             build.define("GLFW_EXPOSE_NATIVE_WIN32", None);
@@ -239,6 +240,7 @@ fn build_ui(target_os: &str) {
     build_c.compile("ui-c");
 }
 
+#[cfg(feature = "static")]
 fn build_bgfx(_target_os: &str) {
     let mut build = cc::Build::new();
     let env = std::env::var("TARGET").unwrap();
@@ -392,6 +394,7 @@ fn build_bgfx(_target_os: &str) {
     }
 }
 
+#[cfg(feature = "static")]
 fn build_glfw(target_os: &str) {
     let mut build = cc::Build::new();
     let glfw_root = "external/glfw";
@@ -495,8 +498,24 @@ fn build_glfw(target_os: &str) {
     }
 
     build.compile("glfw");
-
 }
+
+// When building the dynamic build we don't compile any of the C/C++ code
+
+#[cfg(feature = "dynamic")]
+fn build_freetype2(_target_os: &str) {}
+
+#[cfg(feature = "dynamic")]
+fn build_dear_imgui(_target_os: &str) {}
+
+#[cfg(feature = "dynamic")]
+fn build_ui(_target_os: &str) {}
+
+#[cfg(feature = "dynamic")]
+fn build_bgfx(_target_os: &str) {}
+
+#[cfg(feature = "dynamic")]
+fn build_glfw(_target_os: &str) {}
 
 fn main() {
     let os = std::env::var("CARGO_CFG_TARGET_OS").expect("TARGET_OS not specified");

@@ -706,6 +706,7 @@ static RUST_FILE_HEADER: &str = "
 
 
 static HACK_FLOWI_NEW: &str = "
+    #[cfg(feature = \"static\")]
     pub fn new(name: &str, company: &str) -> Result<Self> {
         unsafe {
             let api = fl_application_create_impl(
@@ -720,5 +721,29 @@ static HACK_FLOWI_NEW: &str = "
             }
         }
     }
+
+    #[cfg(feature = \"dynamic\")]
+    pub fn new_from_dynamic(path: &str, name: &str, company: &str) -> Result<Self> {
+        unsafe {
+            // TODO: must store the lib
+            let lib = libloading::Library::new(path).unwrap();
+            let func: libloading::Symbol<unsafe extern fn(FlString, FlString) -> *const FlowiFfiApi> = lib.get(b\"fl_application_create_impl\").unwrap();
+            let api = func(FlString::new(name), FlString::new(company));
+
+            if api.is_null() {
+                Err(get_last_error())
+            } else {
+                Ok(Self { api })
+            }
+        }
+    }
+";
+
+static HACK_FLOWI_NEW_HEADER: &str = "
+    #[cfg(all(feature = \"static\", feature = \"dynamic\"))]
+    compile_error!(\"feature \"static\" and feature \"dynamic\" cannot be enabled at the same time\");
+
+    #[cfg(all(not(feature = \"static\"), not(feature = \"dynamic\")))]
+    compile_error!(\"one of the features \"static\" or \"dynamic\" has to be set\");
 ";
 
