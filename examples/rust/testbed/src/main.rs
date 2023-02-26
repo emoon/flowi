@@ -1,14 +1,16 @@
-use flowi::application::Application;
+//use flowi::application::Application;
 use flowi::font::Font;
 use flowi::manual::Color;
+use flowi::manual::Application;
 use flowi::style::StyleColor;
 use flowi::window::{HoveredFlags, WindowFlags};
 use flowi::Flowi;
 
 struct App {
+    dummy: u32,
     //image: flowi::image::Image,
-    _font: Font,
-    icons: Font,
+    //_font: Font,
+    //icons: Font,
 }
 
 fn main_loop(flowi: &Flowi, app: &mut App) {
@@ -29,18 +31,20 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     cursor.set_pos_y(110.0);
     text.show("Hello, world!");
 
+    /*
     font.push(app.icons);
     let mut test_string = char::from_u32(0xe900).unwrap().to_string();
     test_string.push(' ');
     test_string.push(char::from_u32(0xe901).unwrap());
     text.show(&test_string);
+    */
 
     /*
     if button.image_with_text(app.image, test_string) {
         println!("Clicked!");
     }
     */
-    font.pop();
+    //font.pop();
 
     if item.is_hovered(HoveredFlags::RECT_ONLY) {
         println!("Hovered!");
@@ -82,15 +86,21 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     window.end();
 }
 
+
 fn main() {
-    //let flowi = Flowi::new("Test", "Test").unwrap();
-    let flowi = Flowi::new_from_dynamic("mylib.so", "Test", "Test").unwrap();
-    let font = flowi.font();
+    let settings = flowi::application_settings::ApplicationSettings {
+        some_data: 0,
+    };
+    let flowi_app = Application::new(&settings).unwrap();
+    //let flowi_app = Application::new_from_lib("mylib.so", &settings).unwrap();
+    //let flowi = Flowi::new_from_dynamic("mylib.so", "Test", "Test").unwrap();
+    //let font = flowi.font();
 
     let mut app = App {
         //image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
+        /*
         _font: font
             .new_from_file(
                 "/home/emoon/code/projects/flowi/data/Montserrat-Bold.ttf",
@@ -105,9 +115,11 @@ fn main() {
                 0xe905,
             )
             .unwrap(),
+        */
+        dummy: 0,
     };
 
-    if !Application::main_loop_ud(&mut app, main_loop) {
-        println!("Failed to create main application");
+    if !flowi_app.main_loop_ud(&mut app, main_loop) {
+        //println!("Failed to create main application");
     }
 }

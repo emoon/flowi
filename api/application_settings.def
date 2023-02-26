@@ -1,0 +1,3 @@
+struct ApplicationSettings {
+    some_data: u32,
+}

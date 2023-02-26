@@ -1,4 +1,5 @@
-use crate::application::Application;
+use crate::application_settings::ApplicationSettings;
+use crate::io::IoFfiApi;
 use crate::Flowi;
 use core::{
     ffi::c_void,
@@ -6,14 +7,28 @@ use core::{
 };
 use std::mem::transmute;
 
-extern "C" {
-    fn fl_application_main_loop_impl(callback: *const c_void, userdata: *mut c_void) -> bool;
+#[repr(C)]
+struct AppFfi {
+    priv_data: *const c_void,
+    io_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const IoFfiApi,
+    main_loop: unsafe extern "C" fn(data: *const c_void, user_data: *mut c_void) -> bool,
 }
+
+extern "C" {
+    #[cfg(feature = "static")]
+    fn fl_application_create_impl(settings: *const ApplicationSettings) -> *const AppFfi;
+}
+
+type Mainloop = unsafe extern "C" fn(data: *const c_void, user_data: *mut c_void);
 
 #[repr(C)]
 struct WrappedMainData {
     user_data: *const c_void,
     func: *const c_void,
+}
+
+pub struct Application {
+    api: *const AppFfi,
 }
 
 unsafe extern "C" fn mainloop_trampoline_ud<T>(ctx: *const c_void, user_data: *mut c_void) {
@@ -32,7 +47,37 @@ unsafe extern "C" fn mainloop_trampoline(ctx: *const c_void, user_data: *mut c_v
 }
 
 impl Application {
-    pub fn main_loop_ud<'a, F, T>(data: &'a mut T, func: F) -> bool
+    #[cfg(feature = "static")]
+    pub fn new(settings: &ApplicationSettings) -> Result<Self> {
+        unsafe {
+            let api = fl_application_create_impl(settings);
+            if api.is_null() {
+                Err(get_last_error())
+            } else {
+                Ok(Self { api })
+            }
+        }
+    }
+
+    #[cfg(feature = "dynamic")]
+    pub fn new_from_lib(path: &str, settings: &ApplicationSettings) -> Result<Self> {
+        unsafe {
+            // TODO: must store the lib
+            let lib = libloading::Library::new(path).unwrap();
+            let func: libloading::Symbol<
+                unsafe extern "C" fn(*const ApplicationSettings) -> *const AppFfi,
+            > = lib.get(b"fl_application_create_impl").unwrap();
+            let api = func(settings);
+
+            if api.is_null() {
+                Err(get_last_error())
+            } else {
+                Ok(Self { api })
+            }
+        }
+    }
+
+    pub fn main_loop_ud<'a, F, T>(&self, data: &'a mut T, func: F) -> bool
     where
         F: Fn(&Flowi, &mut T) + 'a,
         T: 'a,
@@ -46,14 +91,15 @@ impl Application {
         };
 
         unsafe {
-            fl_application_main_loop_impl(
+            let api = &*self.api;
+            (api.main_loop)(
                 transmute(mainloop_trampoline_ud::<T> as usize),
                 transmute(&wrapped_data),
             )
         }
     }
 
-    pub fn main_loop<'a, F>(func: F) -> bool
+    pub fn main_loop<'a, F>(&self, func: F) -> bool
     where
         F: Fn(&Flowi) + 'a,
     {
@@ -65,7 +111,8 @@ impl Application {
         };
 
         unsafe {
-            fl_application_main_loop_impl(
+            let api = &*self.api;
+            (api.main_loop)(
                 transmute(mainloop_trampoline as usize),
                 transmute(&wrapped_data),
             )

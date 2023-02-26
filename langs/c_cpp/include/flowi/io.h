@@ -29,7 +29,7 @@ struct FlIo;
 // HDR (radiance rgbE format)
 // PIC (Softimage PIC)
 // PNM (PPM and PGM binary only)
-static FlImage fl_io_load_image_from_url(struct FlIoApi* api, const char* filename);
+static bool fl_io_load_image_from_url(struct FlIoApi* api, const char* filename);
 
 #include "io.inl"
 

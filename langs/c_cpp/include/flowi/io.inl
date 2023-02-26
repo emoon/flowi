@@ -1,6 +1,6 @@
 typedef struct FlIoApi {
     struct FlInternalData* priv;
-    FlImage (*load_image_from_url)(struct FlInternalData* priv, FlString filename);
+    bool (*load_image_from_url)(struct FlInternalData* priv, FlString filename);
 } FlIoApi;
 
 // Load image from file/url. Supported formats are:
@@ -13,7 +13,7 @@ typedef struct FlIoApi {
 // HDR (radiance rgbE format)
 // PIC (Softimage PIC)
 // PNM (PPM and PGM binary only)
-FL_INLINE FlImage fl_io_load_image_from_url(struct FlIoApi* api, const char* filename) {
+FL_INLINE bool fl_io_load_image_from_url(struct FlIoApi* api, const char* filename) {
     FlString filename_ = fl_cstr_to_flstring(filename);
     return (api->load_image_from_url)(api->priv, filename_);
 }

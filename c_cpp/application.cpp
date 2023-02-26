@@ -113,7 +113,9 @@ struct ApplicationState {
     void* user_data;
 };
 
+// TODO: We really shouldn't have any global state
 static ApplicationState s_state;
+static FlApplication s_app;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -144,18 +146,19 @@ static void error_callback(int error, const char* description) {
     fprintf(stderr, "Error: %d:%s\n", error, description);
 }
 
+static bool application_main_loop(FlMainLoopCallback callback, void* user_data);
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" struct FlContext* fl_application_create_impl(FlString application_name, FlString developer) {
-    (void)application_name;
-    (void)developer;
+extern "C" struct FlApplication* fl_application_create_impl(FlApplicationSettings* settings) {
+    FL_UNUSED(settings);
 
     ApplicationState* state = &s_state;
 
     // TODO: Error, we only support one application so make sure we only run this once.
-    if (state->ctx != NULL) {
+    if (state->ctx != nullptr) {
         printf("Application already created\n");
-        return NULL;
+        return nullptr;
     }
 
     if (state->window_width == 0) {
@@ -170,7 +173,7 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
     // TODO: Proper error
     if (!(state->flowi_state = fl_create(NULL))) {
         printf("Unable to create flowi state\n");
-        return 0;
+        return nullptr;
     }
 
     state->ctx = fl_context_create(state->flowi_state);
@@ -178,7 +181,11 @@ extern "C" struct FlContext* fl_application_create_impl(FlString application_nam
 
     ImGui::CreateContext();
 
-    return state->ctx;
+    s_app.main_loop = application_main_loop;
+    s_app.io_get_api = nullptr;
+    s_app.priv = state->data;
+
+    return &s_app; 
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -552,7 +559,7 @@ static void generate_frame(void* user_data) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data) {
+static bool application_main_loop(FlMainLoopCallback callback, void* user_data) {
     ApplicationState* state = &s_state;
 
     glfwSetErrorCallback(error_callback);
