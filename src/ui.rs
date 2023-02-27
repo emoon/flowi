@@ -19,14 +19,14 @@ use crate::image::*;
 pub struct UiFfiApi {
     pub(crate) data: *const core::ffi::c_void,
     text: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
-    image: unsafe extern "C" fn(data: *const core::ffi::c_void, image: Image),
-    image_with_size: unsafe extern "C" fn(data: *const core::ffi::c_void, image: Image, size: Vec2),
+    image: unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64),
+    image_with_size: unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64, size: Vec2),
     set_pos: unsafe extern "C" fn(data: *const core::ffi::c_void, pos: Vec2),
     get_last_widget_size: unsafe extern "C" fn(data: *const core::ffi::c_void, pos: Vec2) -> Rect,
     push_button_with_icon: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         text: FlString,
-        image: Image,
+        image: u64,
         text_pos: Vec2,
         image_scale: f32,
     ) -> bool,
@@ -57,7 +57,7 @@ impl UiApi {
     pub fn image(&self, image: Image) {
         unsafe {
             let _api = &*self.api;
-            (_api.image)(_api.data, image);
+            (_api.image)(_api.data, image.handle);
         }
     }
 
@@ -65,7 +65,7 @@ impl UiApi {
     pub fn image_with_size(&self, image: Image, size: Vec2) {
         unsafe {
             let _api = &*self.api;
-            (_api.image_with_size)(_api.data, image, size);
+            (_api.image_with_size)(_api.data, image.handle, size);
         }
     }
 
@@ -99,7 +99,7 @@ impl UiApi {
             let ret_val = (_api.push_button_with_icon)(
                 _api.data,
                 FlString::new(text),
-                image,
+                image.handle,
                 text_pos,
                 image_scale,
             );

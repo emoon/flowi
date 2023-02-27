@@ -5,6 +5,8 @@ use core::{
     ffi::c_void,
     fmt::{Debug, Formatter},
 };
+
+#[cfg(any(feature = "dynamic", feature = "static"))]
 use std::mem::transmute;
 
 #[repr(C)]
@@ -31,6 +33,7 @@ pub struct Application {
     api: *const AppFfi,
 }
 
+#[cfg(any(feature = "dynamic", feature = "static"))]
 unsafe extern "C" fn mainloop_trampoline_ud<T>(ctx: *const c_void, user_data: *mut c_void) {
     let wd: &WrappedMainData = transmute(user_data);
     let flowi = Flowi { api: ctx as _ };
@@ -39,6 +42,7 @@ unsafe extern "C" fn mainloop_trampoline_ud<T>(ctx: *const c_void, user_data: *m
     f(&flowi, &mut *data);
 }
 
+#[cfg(any(feature = "dynamic", feature = "static"))]
 unsafe extern "C" fn mainloop_trampoline(ctx: *const c_void, user_data: *mut c_void) {
     let wd: &WrappedMainData = transmute(user_data);
     let flowi = Flowi { api: ctx as _ };
@@ -77,6 +81,7 @@ impl Application {
         }
     }
 
+    #[cfg(any(feature = "dynamic", feature = "static"))]
     pub fn main_loop_ud<'a, F, T>(&self, data: &'a mut T, func: F) -> bool
     where
         F: Fn(&Flowi, &mut T) + 'a,
@@ -99,6 +104,7 @@ impl Application {
         }
     }
 
+    #[cfg(any(feature = "dynamic", feature = "static"))]
     pub fn main_loop<'a, F>(&self, func: F) -> bool
     where
         F: Fn(&Flowi) + 'a,
@@ -135,6 +141,7 @@ impl FlString {
     }
 }
 
+#[cfg(any(feature = "dynamic", feature = "static"))]
 impl Debug for FlString {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s =
@@ -163,4 +170,4 @@ pub fn get_last_error() -> FlowiError {
     FlowiError { message: 0 }
 }
 
-pub type Result<T> = std::result::Result<T, FlowiError>;
+pub type Result<T> = core::result::Result<T, FlowiError>;

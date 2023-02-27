@@ -11,7 +11,7 @@ struct Io {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
-    [static] load_image_from_url(filename: String) -> bool,
+    [static] load_image_from_url(filename: String) -> Image?,
     /// Same as load_image_from_url, but async and gives back a handle to check/access data later.
     //[static] load_imag_from_url_async(filename: String) -> async bool,
 }

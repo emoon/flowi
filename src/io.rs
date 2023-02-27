@@ -13,7 +13,7 @@ use crate::image::*;
 pub struct IoFfiApi {
     pub(crate) data: *const core::ffi::c_void,
     load_image_from_url:
-        unsafe extern "C" fn(data: *const core::ffi::c_void, filename: FlString) -> bool,
+        unsafe extern "C" fn(data: *const core::ffi::c_void, filename: FlString) -> u64,
 }
 
 #[repr(C)]
@@ -38,11 +38,15 @@ impl IoApi {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
-    pub fn load_image_from_url(&self, filename: &str) -> bool {
+    pub fn load_image_from_url(&self, filename: &str) -> Result<Image> {
         unsafe {
             let _api = &*self.api;
             let ret_val = (_api.load_image_from_url)(_api.data, FlString::new(filename));
-            ret_val
+            if ret_val == 0 {
+                Err(get_last_error())
+            } else {
+                Ok(Image { handle: ret_val })
+            }
         }
     }
 }

@@ -34,7 +34,7 @@ pub struct ButtonFfiApi {
         unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString, state: bool) -> bool,
     bullet: unsafe extern "C" fn(data: *const core::ffi::c_void),
     image_with_text:
-        unsafe extern "C" fn(data: *const core::ffi::c_void, image: Image, label: FlString) -> bool,
+        unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64, label: FlString) -> bool,
 }
 
 bitflags! {
@@ -128,7 +128,7 @@ impl ButtonApi {
     pub fn image_with_text(&self, image: Image, label: &str) -> bool {
         unsafe {
             let _api = &*self.api;
-            let ret_val = (_api.image_with_text)(_api.data, image, FlString::new(label));
+            let ret_val = (_api.image_with_text)(_api.data, image.handle, FlString::new(label));
             ret_val
         }
     }

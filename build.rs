@@ -502,19 +502,19 @@ fn build_glfw(target_os: &str) {
 
 // When building the dynamic build we don't compile any of the C/C++ code
 
-#[cfg(feature = "dynamic")]
+#[cfg(any(feature = "dynamic", feature = "plugin"))]
 fn build_freetype2(_target_os: &str) {}
 
-#[cfg(feature = "dynamic")]
+#[cfg(any(feature = "dynamic", feature = "plugin"))]
 fn build_dear_imgui(_target_os: &str) {}
 
-#[cfg(feature = "dynamic")]
+#[cfg(any(feature = "dynamic", feature = "plugin"))]
 fn build_ui(_target_os: &str) {}
 
-#[cfg(feature = "dynamic")]
+#[cfg(any(feature = "dynamic", feature = "plugin"))]
 fn build_bgfx(_target_os: &str) {}
 
-#[cfg(feature = "dynamic")]
+#[cfg(any(feature = "dynamic", feature = "plugin"))]
 fn build_glfw(_target_os: &str) {}
 
 fn main() {
