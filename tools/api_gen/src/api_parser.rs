@@ -681,9 +681,13 @@ impl ApiParser {
         let mut type_def_file = HashMap::new();
         let mut enum_def_file_type = HashMap::new();
         let mut empty_structs = HashSet::new();
+        let mut handle_types = HashSet::new();
 
         for api_def in api_defs.iter() {
             api_def.structs.iter().for_each(|s| {
+                if s.has_attribute("Handle") {
+                    handle_types.insert(s.name.to_owned());
+                }
                 if s.variables.is_empty() && !s.has_attribute("Handle") {
                     empty_structs.insert(s.name.to_owned());
                 }
@@ -725,11 +729,10 @@ impl ApiParser {
         // Patch up so handle types are marked as such
         for api_def in api_defs.iter_mut() {
             for s in &mut api_def.structs {
-                let is_handle_type = s.has_attribute("Handle");
                 for func in &mut s.functions {
                     for arg in &mut func.function_args {
-                        if arg.type_name == s.name {
-                            arg.is_handle_type = is_handle_type;
+                        if handle_types.contains(&arg.type_name) {
+                            arg.is_handle_type = true;
                         }
 
                         if empty_structs.contains(&arg.type_name) {
@@ -738,8 +741,8 @@ impl ApiParser {
                     }
 
                     if let Some(ret_var) = func.return_val.as_mut() {
-                        if ret_var.type_name == s.name {
-                            ret_var.is_handle_type = is_handle_type;
+                        if handle_types.contains(&ret_var.type_name) {
+                            ret_var.is_handle_type = true;
                         }
 
                         if empty_structs.contains(&ret_var.type_name) {
