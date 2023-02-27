@@ -219,11 +219,6 @@ impl Cgen {
     fn generate_struct<W: Write>(f: &mut W, sdef: &Struct) -> io::Result<()> {
         Self::write_commment(f, &sdef.doc_comments, 0)?;
 
-        if sdef.name == "Image" {
-            dbg!(sdef.variables.is_empty());
-            dbg!(sdef.functions.is_empty());
-        }
-
         if sdef.variables.is_empty() && !sdef.functions.is_empty() {
             writeln!(f, "struct {}{}Api;\n", C_API_SUFFIX, sdef.name)?;
         }
