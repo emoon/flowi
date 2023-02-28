@@ -153,6 +153,9 @@ fn build_ui(target_os: &str) {
             "external/bgfx/include",
             "external/bx/include",
             "external",
+            "external/nanosvg",
+            "external/dear-imgui",
+            "external/stb",
             "external/dear-imgui",
             "external/freetype2/include",
         ],
@@ -201,6 +204,7 @@ fn build_ui(target_os: &str) {
         &mut build,
         "c_cpp",
         &[
+            "io.cpp",
             "application.cpp",
             "flowi.cpp",
             "font.cpp",

@@ -8,7 +8,7 @@ use flowi::Flowi;
 
 struct App {
     dummy: u32,
-    //image: flowi::image::Image,
+    image: flowi::image::Image,
     //_font: Font,
     //icons: Font,
 }
@@ -92,12 +92,13 @@ fn main() {
         some_data: 0,
     };
     let flowi_app = Application::new(&settings).unwrap();
+    let io = flowi_app.io();
     //let flowi_app = Application::new_from_lib("mylib.so", &settings).unwrap();
     //let flowi = Flowi::new_from_dynamic("mylib.so", "Test", "Test").unwrap();
     //let font = flowi.font();
 
     let mut app = App {
-        //image: flowi.image().create_from_file("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
+        image: io.load_image_from_url("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         /*

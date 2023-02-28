@@ -7,6 +7,12 @@ use crate::manual::{get_last_error, Color, FlString, Result};
 use bitflags::bitflags;
 
 #[repr(C)]
+pub struct ImageFfiApi {
+    pub(crate) data: *const core::ffi::c_void,
+    get_info: unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64) -> *const ImageInfo,
+}
+
+#[repr(C)]
 #[derive(Debug)]
 pub enum SvgFlags {
     /// Render the SVG image using RGBA format
@@ -28,4 +34,46 @@ pub struct ImageInfo {
 #[derive(Debug, Copy, Clone)]
 pub struct Image {
     pub handle: u64,
+}
+
+#[repr(C)]
+pub struct ImageApi {
+    pub api: *const ImageFfiApi,
+}
+
+impl ImageApi {
+    /// Load image from file. Supported formats are:
+    /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
+    /// PNG 1/2/4/8/16-bit-per-channel
+    /// TGA
+    /// BMP non-1bpp, non-RLE
+    /// PSD (composited view only, no extra channels, 8/16 bit-per-channel)
+    /// GIF
+    /// HDR (radiance rgbE format)
+    /// PIC (Softimage PIC)
+    /// PNM (PPM and PGM binary only)
+    /// Load image from memory. Supported formats are:
+    /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
+    /// PNG 1/2/4/8/16-bit-per-channel
+    /// TGA
+    /// BMP non-1bpp, non-RLE
+    /// PSD (composited view only, no extra channels, 8/16 bit-per-channel)
+    /// GIF
+    /// HDR (radiance rgbE format)
+    /// PIC (Softimage PIC)
+    /// PNM (PPM and PGM binary only)
+    /// Load SVG from file
+    /// Load SVG from memory
+    /// Get data amout the image
+    pub fn get_info<'a>(&self, image: Image) -> Result<&'a ImageInfo> {
+        unsafe {
+            let _api = &*self.api;
+            let ret_val = (_api.get_info)(_api.data, image.handle);
+            if ret_val.is_null() {
+                Err(get_last_error())
+            } else {
+                Ok(&*ret_val)
+            }
+        }
+    }
 }

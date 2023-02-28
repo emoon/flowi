@@ -47,6 +47,8 @@ pub use crate::button::ButtonApi;
 use crate::button::ButtonFfiApi;
 pub use crate::font::FontApi;
 use crate::font::FontFfiApi;
+pub use crate::image::ImageApi;
+use crate::image::ImageFfiApi;
 pub use crate::io::IoApi;
 use crate::io::IoFfiApi;
 pub use crate::item::ItemApi;
@@ -72,6 +74,7 @@ pub struct FlowiFfiApi {
     button_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ButtonFfiApi,
     cursor_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const CursorFfiApi,
     font_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const FontFfiApi,
+    image_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ImageFfiApi,
     io_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const IoFfiApi,
     item_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ItemFfiApi,
     menu_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const MenuFfiApi,
@@ -105,6 +108,12 @@ impl Flowi {
         let api_priv = unsafe { &*self.api };
         let api = unsafe { (api_priv.font_get_api)(api_priv.data, 0) };
         FontApi { api }
+    }
+
+    pub fn image(&self) -> ImageApi {
+        let api_priv = unsafe { &*self.api };
+        let api = unsafe { (api_priv.image_get_api)(api_priv.data, 0) };
+        ImageApi { api }
     }
 
     pub fn io(&self) -> IoApi {

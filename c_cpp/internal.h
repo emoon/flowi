@@ -1,9 +1,11 @@
 #pragma once
 
+#include <flowi/image.h>
 #include <flowi/button.h>
 #include <flowi/error.h>
 #include <flowi/font.h>
 #include <flowi/image.h>
+#include <flowi/io.h>
 #include <flowi/item.h>
 #include <flowi/layout.h>
 #include <flowi/menu.h>
@@ -66,6 +68,7 @@ typedef struct FlInternalData {
     struct FlCursorApi cursor_funcs;
     struct FlFontApi font_funcs;
     struct FlImageApi image_funcs;
+    struct FlIoApi io_funcs;
     struct FlItemApi item_funcs;
     struct FlMenuApi menu_funcs;
     struct FlStyleApi style_funcs;

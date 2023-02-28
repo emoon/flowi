@@ -5,6 +5,7 @@
 
 #include <flowi/ui.h>
 #include <flowi/flowi.h>
+#include <flowi/io.h>
 #include <flowi/application.h>
 #include "allocator.h"
 #include "atlas.h"
@@ -78,6 +79,7 @@ extern FlStyleApi g_style_funcs;
 extern FlTextApi g_text_funcs;
 extern FlUiApi g_ui_funcs;
 extern FlWindowApi g_window_funcs;
+extern FlIoApi g_io_funcs;
 
 extern "C" bool fl_application_main_loop_impl(FlMainLoopCallback callback, void* user_data);
 
@@ -115,6 +117,13 @@ static FlCursorApi* get_cursor_api(FlInternalData* data, int version) {
 static FlTextApi* get_text_api(FlInternalData* data, int version) {
     FL_UNUSED(version);
     return &data->text_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlIoApi* get_io_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->io_funcs;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -160,7 +169,7 @@ static FlContext s_context = {
     get_cursor_api, // cursor api
     get_font_api,   // font api
     get_image_api,  // image api
-    nullptr,        // io api
+    get_io_api,        // io api
     get_item_api,   // item api
     get_menu_api,   // menu api
     nullptr,
@@ -200,6 +209,7 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     data->cursor_funcs = g_cursor_funcs;
     data->font_funcs = g_font_funcs;
     data->image_funcs = g_image_funcs;
+    data->io_funcs = g_io_funcs;
     data->item_funcs = g_item_funcs;
     data->menu_funcs = g_menu_funcs;
     data->text_funcs = g_text_funcs;
@@ -211,6 +221,7 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     data->cursor_funcs.priv = data;
     data->font_funcs.priv = data;
     data->image_funcs.priv = data;
+    data->io_funcs.priv = data;
     data->item_funcs.priv = data;
     data->menu_funcs.priv = data;
     data->text_funcs.priv = data;

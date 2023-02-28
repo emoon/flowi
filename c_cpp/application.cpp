@@ -150,6 +150,13 @@ static bool application_main_loop(FlMainLoopCallback callback, void* user_data);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static FlIoApi* get_io_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->io_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 extern "C" struct FlApplication* fl_application_create_impl(FlApplicationSettings* settings) {
     FL_UNUSED(settings);
 
@@ -182,7 +189,7 @@ extern "C" struct FlApplication* fl_application_create_impl(FlApplicationSetting
     ImGui::CreateContext();
 
     s_app.main_loop = application_main_loop;
-    s_app.io_get_api = nullptr;
+    s_app.io_get_api = get_io_api;
     s_app.priv = state->data;
 
     return &s_app; 

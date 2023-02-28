@@ -44,7 +44,7 @@ struct Image {
     /// Load SVG from memory
     //[static] create_svg_from_memory(name: String, data: [u8], target_width: u32, flags: SvgFlags) -> Image?,
     /// Get data amout the image
-    //[static] get_info(image: Image) -> *const ImageInfo?,
+    [static] get_info(image: Image) -> *const ImageInfo?,
     /// Destroy the created image
     //destroy(),
 }

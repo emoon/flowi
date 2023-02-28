@@ -1,5 +1,5 @@
 use crate::application_settings::ApplicationSettings;
-use crate::io::IoFfiApi;
+use crate::io::{IoFfiApi, IoApi};
 use crate::Flowi;
 use core::{
     ffi::c_void,
@@ -102,6 +102,12 @@ impl Application {
                 transmute(&wrapped_data),
             )
         }
+    }
+
+    pub fn io(&self) -> IoApi {
+        let api_priv = unsafe { &*self.api };
+        let api = unsafe { (api_priv.io_get_api)(api_priv.priv_data, 0) };
+        IoApi { api }
     }
 
     #[cfg(any(feature = "dynamic", feature = "static"))]
