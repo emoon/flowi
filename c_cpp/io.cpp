@@ -57,6 +57,7 @@ static FlImage load_image(FlInternalData* ctx, FlString name, u8* data, u32 size
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
 static FlImage load_svg_image(FlInternalData* ctx, FlString name, u8* data, u32 data_size, u32 target_width, 
                               FlSvgFlags flags) {
     char temp_buffer[2048];
@@ -104,19 +105,7 @@ static FlImage load_svg_image(FlInternalData* ctx, FlString name, u8* data, u32 
 
     return image->handle;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static ImagePrivate* get_handle(FlInternalData* ctx, FlImage self) {
-    ImagePrivate* data = (ImagePrivate*)Handles_get_data(&ctx->global->image_handles, self);
-
-    if (!data) {
-        ERROR_ADD(FlError_Image, "Invalid handle for image: %lx, has it been deleted?", self);
-        return NULL;
-    }
-
-    return data;
-}
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -125,7 +114,7 @@ static FlImage create_from_file(FlInternalData* ctx, FlString filename) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+/*
 static FlImage create_from_memory(FlInternalData* ctx, FlString name, uint8_t* data, uint32_t data_size) {
     return load_image(ctx, name, data, data_size);
 }
@@ -142,10 +131,11 @@ static FlImage create_svg_from_memory(FlInternalData* ctx, FlString name, uint8_
                                              uint32_t target_width, FlSvgFlags flags) {
     return load_svg_image(ctx, name, data, data_size, target_width, flags);
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlIoApi g_io_funcs = {
     NULL,
-    load_image_from_url = load_image_from_url,
+    create_from_file,
 };

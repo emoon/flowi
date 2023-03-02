@@ -13,6 +13,19 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static ImagePrivate* get_handle(FlInternalData* ctx, FlImage self) {
+    ImagePrivate* data = (ImagePrivate*)Handles_get_data(&ctx->global->image_handles, self);
+
+    if (!data) {
+        ERROR_ADD(FlError_Image, "Invalid handle for image: %lx, has it been deleted?", self);
+        return NULL;
+    }
+
+    return data;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static FlImageInfo* get_info(FlInternalData* ctx, FlImage self) {
     ImagePrivate* data = NULL;
 
