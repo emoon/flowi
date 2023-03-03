@@ -6,7 +6,7 @@ use core::{
     fmt::{Debug, Formatter},
 };
 
-#[cfg(any(feature = "dynamic", feature = "static"))]
+#[cfg(any(feature = "dynamic", feature = "static", feature = "tundra"))]
 use std::mem::transmute;
 
 #[repr(C)]
@@ -17,7 +17,7 @@ struct AppFfi {
 }
 
 extern "C" {
-    #[cfg(feature = "static")]
+    #[cfg(any(feature = "static", feature = "tundra"))]
     fn fl_application_create_impl(settings: *const ApplicationSettings) -> *const AppFfi;
 }
 
@@ -33,7 +33,7 @@ pub struct Application {
     api: *const AppFfi,
 }
 
-#[cfg(any(feature = "dynamic", feature = "static"))]
+#[cfg(any(feature = "dynamic", feature = "static", feature = "tundra"))]
 unsafe extern "C" fn mainloop_trampoline_ud<T>(ctx: *const c_void, user_data: *mut c_void) {
     let wd: &WrappedMainData = transmute(user_data);
     let flowi = Flowi { api: ctx as _ };
@@ -42,7 +42,7 @@ unsafe extern "C" fn mainloop_trampoline_ud<T>(ctx: *const c_void, user_data: *m
     f(&flowi, &mut *data);
 }
 
-#[cfg(any(feature = "dynamic", feature = "static"))]
+#[cfg(any(feature = "dynamic", feature = "static", feature = "tundra"))]
 unsafe extern "C" fn mainloop_trampoline(ctx: *const c_void, user_data: *mut c_void) {
     let wd: &WrappedMainData = transmute(user_data);
     let flowi = Flowi { api: ctx as _ };
@@ -51,7 +51,7 @@ unsafe extern "C" fn mainloop_trampoline(ctx: *const c_void, user_data: *mut c_v
 }
 
 impl Application {
-    #[cfg(feature = "static")]
+    #[cfg(any(feature = "static", feature = "tundra"))]
     pub fn new(settings: &ApplicationSettings) -> Result<Self> {
         unsafe {
             let api = fl_application_create_impl(settings);
@@ -81,7 +81,7 @@ impl Application {
         }
     }
 
-    #[cfg(any(feature = "dynamic", feature = "static"))]
+    #[cfg(any(feature = "dynamic", feature = "static", feature = "tundra"))]
     pub fn main_loop_ud<'a, F, T>(&self, data: &'a mut T, func: F) -> bool
     where
         F: Fn(&Flowi, &mut T) + 'a,
@@ -110,7 +110,7 @@ impl Application {
         IoApi { api }
     }
 
-    #[cfg(any(feature = "dynamic", feature = "static"))]
+    #[cfg(any(feature = "dynamic", feature = "static", feature = "tundra"))]
     pub fn main_loop<'a, F>(&self, func: F) -> bool
     where
         F: Fn(&Flowi) + 'a,
@@ -147,7 +147,7 @@ impl FlString {
     }
 }
 
-#[cfg(any(feature = "dynamic", feature = "static"))]
+#[cfg(any(feature = "dynamic", feature = "static", feature = "tundra"))]
 impl Debug for FlString {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s =

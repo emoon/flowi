@@ -169,6 +169,7 @@ local STB_DIR = "external/stb/"
 local NANOSVG_DIR = "external/nanosvg/"
 local EXTERNAL_PATH = "external"
 local DEAR_IMGUI = "external/dear-imgui/"
+local DEAR_IMGUI_DIR = "external/dear-imgui/"
 local BIMG_DIR = "external/bimg/"
 local BX_DIR = "external/bx/"
 local BGFX_DIR = "external/bgfx/"
@@ -221,6 +222,7 @@ Build {
                 FREETYPE2_LIB .. "src/lzw/ftlzw.c",
                 FREETYPE2_LIB .. "src/pcf/pcf.c",
                 FREETYPE2_LIB .. "src/pfr/pfr.c",
+                FREETYPE2_LIB .. "src/svg/ftsvg.c",
                 FREETYPE2_LIB .. "src/psaux/psaux.c",
                 FREETYPE2_LIB .. "src/pshinter/pshinter.c",
                 FREETYPE2_LIB .. "src/psnames/psnames.c",
@@ -340,6 +342,11 @@ Build {
                 GLFW_DIR .. "src/vulkan.c",
                 GLFW_DIR .. "src/osmesa_context.c",
                 GLFW_DIR .. "src/egl_context.c",
+                GLFW_DIR .. "src/platform.c",
+                GLFW_DIR .. "src/null_init.c",
+                GLFW_DIR .. "src/null_window.c",
+                GLFW_DIR .. "src/null_monitor.c",
+                GLFW_DIR .. "src/null_joystick.c",
 
                 {
                     GLFW_DIR .. "src/cocoa_init.m",
@@ -363,6 +370,8 @@ Build {
                     GLFW_DIR .. "src/linux_joystick.c",
                     GLFW_DIR .. "src/posix_thread.c",
                     GLFW_DIR .. "src/posix_time.c",
+                    GLFW_DIR .. "src/posix_module.c",
+                    GLFW_DIR .. "src/posix_poll.c",
                     GLFW_DIR .. "src/xkb_unicode.c" ; Config = "linux-*-*",
                 },
 
@@ -378,8 +387,8 @@ Build {
             },
         }
 
-        local flowi_lib = StaticLibrary {
-            Name = "flowi",
+        local ui_lib = StaticLibrary {
+            Name = "ui",
 
             Includes = {
                 "langs/c_cpp/include",
@@ -394,6 +403,11 @@ Build {
             },
 
             Sources = {
+                DEAR_IMGUI_DIR .. "imgui.cpp",
+                DEAR_IMGUI_DIR .. "imgui_draw.cpp",
+                DEAR_IMGUI_DIR .. "imgui_tables.cpp",
+                DEAR_IMGUI_DIR .. "imgui_widgets.cpp",
+                DEAR_IMGUI_DIR .. "misc/freetype/imgui_freetype.cpp",
                 FLOWI_DIR .. "io.cpp",
                 FLOWI_DIR .. "application.cpp",
                 FLOWI_DIR .. "flowi.cpp",
@@ -427,7 +441,7 @@ Build {
         Default(glfw_lib)
         Default(bgfx_lib)
         Default(freetype_lib)
-        Default(flowi_lib)
+        Default(ui_lib)
     end,
 
     Configs = {

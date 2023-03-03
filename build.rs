@@ -1,5 +1,8 @@
 use std::path::Path;
 
+#[cfg(feature = "tundra")]
+use std::process::Command;
+
 fn add_sources(build: &mut cc::Build, root: &str, files: &[&str]) {
     let root = Path::new(root);
     build.files(files.iter().map(|src| root.join(src)));
@@ -10,7 +13,7 @@ fn add_includes(build: &mut cc::Build, root: &str, files: &[&str]) {
 }
 
 #[cfg(feature = "static")]
-fn build_freetype2(target_os: &str) {
+fn build_cc(target_os: &str) {
     let mut build = cc::Build::new();
 
     println!("cargo:rerun-if-changed=external/freetype2");
@@ -83,10 +86,110 @@ fn build_freetype2(target_os: &str) {
     );
 
     build.compile("freetype2");
-}
 
-#[cfg(feature = "static")]
-fn build_dear_imgui(target_os: &str) {
+    let mut build = cc::Build::new();
+    let glfw_root = "external/glfw";
+
+    println!("cargo:rerun-if-changed=external/glfw");
+
+    add_includes(&mut build, glfw_root, &["src", "include"]);
+
+    add_sources(
+        &mut build,
+        glfw_root,
+        &[
+            "src/window.c",
+            "src/context.c",
+            "src/init.c",
+            "src/input.c",
+            "src/monitor.c",
+            "src/vulkan.c",
+            "src/platform.c",
+            "src/osmesa_context.c",
+            "src/egl_context.c",
+            "src/null_init.c",
+            "src/null_window.c",
+            "src/null_monitor.c",
+            "src/null_joystick.c",
+            //"src/null_platform.c",
+        ],
+    );
+
+    match target_os {
+        "linux" => {
+            build.define("_GLFW_X11", None);
+            build.define("_GLFW_GFX", None);
+            build.define("LINUX", None);
+            build.flag("-Wno-unused-parameter");
+            build.flag("-Wno-missing-field-initializers");
+            build.flag("-Wno-sign-compare");
+
+            add_sources(
+                &mut build,
+                glfw_root,
+                &[
+                    "src/glx_context.c",
+                    // "src/wl_init.c",
+                    // "src/wl_monitor.c",
+                    // "src/wl_window.c",
+                    "src/x11_init.c",
+                    "src/x11_monitor.c",
+                    "src/x11_window.c",
+                    "src/linux_joystick.c",
+                    "src/posix_thread.c",
+                    "src/posix_time.c",
+                    "src/posix_module.c",
+                    "src/posix_poll.c",
+                    "src/xkb_unicode.c",
+                ],
+            );
+        }
+
+        "windows" => {
+            build.define("_GLFW_WIN32", None);
+            build.define("_GLFW_WGL", None);
+            build.define("WIN32", None);
+
+            add_sources(
+                &mut build,
+                glfw_root,
+                &[
+                    "src/wgl_context.c",
+                    "src/win32_init.c",
+                    "src/win32_joystick.c",
+                    "src/win32_monitor.c",
+                    "src/win32_thread.c",
+                    "src/win32_time.c",
+                    "src/win32_window.c",
+                ],
+            );
+        }
+
+        "macos" => {
+            build.define("_GLFW_COCOA", None);
+            build.define("MACOSX", None);
+            build.flag("-Wno-unused-parameter");
+
+            add_sources(
+                &mut build,
+                glfw_root,
+                &[
+                    "src/cocoa_init.m",
+                    "src/cocoa_joystick.m",
+                    "src/cocoa_monitor.m",
+                    "src/cocoa_time.c",
+                    "src/cocoa_window.m",
+                    "src/posix_thread.c",
+                    "src/nsgl_context.m",
+                ],
+            );
+        }
+
+        unsupported => unimplemented!("{} is not a supported target", unsupported),
+    }
+
+    build.compile("glfw");
+
     let mut build = cc::Build::new();
 
     build.cpp(true);
@@ -120,10 +223,7 @@ fn build_dear_imgui(target_os: &str) {
     );
 
     build.compile("dear-imgui");
-}
 
-#[cfg(feature = "static")]
-fn build_ui(target_os: &str) {
     // Build flowi
     let mut build = cc::Build::new();
     let mut build_c = cc::Build::new();
@@ -242,10 +342,7 @@ fn build_ui(target_os: &str) {
 
     build.compile("ui");
     build_c.compile("ui-c");
-}
 
-#[cfg(feature = "static")]
-fn build_bgfx(_target_os: &str) {
     let mut build = cc::Build::new();
     let env = std::env::var("TARGET").unwrap();
 
@@ -398,136 +495,76 @@ fn build_bgfx(_target_os: &str) {
     }
 }
 
-#[cfg(feature = "static")]
-fn build_glfw(target_os: &str) {
-    let mut build = cc::Build::new();
-    let glfw_root = "external/glfw";
+#[cfg(feature = "tundra")]
+fn build_tundra(_target_os: &str) {
+    let output = Command::new("tundra2")
+        .arg("linux-clang-debug")
+        .output()
+        .expect("tundra2 failed");
 
-    println!("cargo:rerun-if-changed=external/glfw");
+    if !output.status.success() {
+        panic!("tundra2 failed:\n{}", String::from_utf8_lossy(&output.stderr));
+    } 
 
-    add_includes(&mut build, glfw_root, &["src", "include"]);
+    let target_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not specified");
+    let tundra_dir = format!("{}/t2-output/linux-clang-debug-default", target_dir);
 
-    add_sources(
-        &mut build,
-        glfw_root,
-        &[
-            "src/window.c",
-            "src/context.c",
-            "src/init.c",
-            "src/input.c",
-            "src/monitor.c",
-            "src/vulkan.c",
-            "src/platform.c",
-            "src/osmesa_context.c",
-            "src/egl_context.c",
-            "src/null_init.c",
-            "src/null_window.c",
-            "src/null_monitor.c",
-            "src/null_joystick.c",
-            //"src/null_platform.c",
-        ],
-    );
-
-    match target_os {
-        "linux" => {
-            build.define("_GLFW_X11", None);
-            build.define("_GLFW_GFX", None);
-            build.define("LINUX", None);
-            build.flag("-Wno-unused-parameter");
-            build.flag("-Wno-missing-field-initializers");
-            build.flag("-Wno-sign-compare");
-
-            add_sources(
-                &mut build,
-                glfw_root,
-                &[
-                    "src/glx_context.c",
-                    // "src/wl_init.c",
-                    // "src/wl_monitor.c",
-                    // "src/wl_window.c",
-                    "src/x11_init.c",
-                    "src/x11_monitor.c",
-                    "src/x11_window.c",
-                    "src/linux_joystick.c",
-                    "src/posix_thread.c",
-                    "src/posix_time.c",
-                    "src/posix_module.c",
-                    "src/posix_poll.c",
-                    "src/xkb_unicode.c",
-                ],
-            );
-        }
-
-        "windows" => {
-            build.define("_GLFW_WIN32", None);
-            build.define("_GLFW_WGL", None);
-            build.define("WIN32", None);
-
-            add_sources(
-                &mut build,
-                glfw_root,
-                &[
-                    "src/wgl_context.c",
-                    "src/win32_init.c",
-                    "src/win32_joystick.c",
-                    "src/win32_monitor.c",
-                    "src/win32_thread.c",
-                    "src/win32_time.c",
-                    "src/win32_window.c",
-                ],
-            );
-        }
-
-        "macos" => {
-            build.define("_GLFW_COCOA", None);
-            build.define("MACOSX", None);
-            build.flag("-Wno-unused-parameter");
-
-            add_sources(
-                &mut build,
-                glfw_root,
-                &[
-                    "src/cocoa_init.m",
-                    "src/cocoa_joystick.m",
-                    "src/cocoa_monitor.m",
-                    "src/cocoa_time.c",
-                    "src/cocoa_window.m",
-                    "src/posix_thread.c",
-                    "src/nsgl_context.m",
-                ],
-            );
-        }
-
-        unsupported => unimplemented!("{} is not a supported target", unsupported),
-    }
-
-    build.compile("glfw");
+    println!("cargo:rustc-link-search=native={}", tundra_dir);
+    println!("cargo:rustc-link-lib=static=bgfx");
+    println!("cargo:rustc-link-lib=static=ui");
+    println!("cargo:rustc-link-lib=static=freetype2");
+    //println!("cargo:rustc-link-lib=static=imgui");
+    println!("cargo:rustc-link-lib=static=glfw");
+    println!("cargo:rustc-link-lib=pthread");
+    println!("cargo:rustc-link-lib=stdc++");
+    println!("cargo:rustc-link-lib=GL");
+    println!("cargo:rustc-link-lib=X11");
 }
 
-// When building the dynamic build we don't compile any of the C/C++ code
 
-#[cfg(any(feature = "dynamic", feature = "plugin"))]
-fn build_freetype2(_target_os: &str) {}
+#[cfg(any(feature = "dynamic", feature = "plugin", feature = "tundra"))]
+fn build_cc(_target_os: &str) {}
 
-#[cfg(any(feature = "dynamic", feature = "plugin"))]
-fn build_dear_imgui(_target_os: &str) {}
-
-#[cfg(any(feature = "dynamic", feature = "plugin"))]
-fn build_ui(_target_os: &str) {}
-
-#[cfg(any(feature = "dynamic", feature = "plugin"))]
-fn build_bgfx(_target_os: &str) {}
-
-#[cfg(any(feature = "dynamic", feature = "plugin"))]
-fn build_glfw(_target_os: &str) {}
+#[cfg(not(feature = "tundra"))]
+fn build_tundra(_target_os: &str) {}
 
 fn main() {
     let os = std::env::var("CARGO_CFG_TARGET_OS").expect("TARGET_OS not specified");
     let target_os = os.as_str();
+    
+    println!("cargo:rerun-if-changed=external");
+    println!("cargo:rerun-if-changed=c_cpp");
+    println!("cargo:rerun-if-changed=tundra.lua");
 
-    build_freetype2(target_os);
-    build_dear_imgui(target_os);
-    build_ui(target_os);
-    build_bgfx(target_os);
-    build_glfw(target_os);
+    //build_cc(target_os);
+    build_tundra(target_os);
 }
+
+/*
+`rustc --crate-name flowi --edition=2018 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat 
+--crate-type rlib --crate-type cdylib --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --cfg 
+'feature="static"' -C metadata=4bcb93c0dbd7f975 --out-dir /home/emoon/code/projects/flowi/target/debug/deps 
+-C incremental=/home/emoon/code/projects/flowi/target/debug/incremental 
+-L dependency=/home/emoon/code/projects/flowi/target/debug/deps 
+--extern bitflags=/home/emoon/code/projects/flowi/target/debug/deps/libbitflags-a8a9b0e8461c804f.rlib 
+--extern png=/home/emoon/code/projects/flowi/target/debug/deps/libpng-63bbbf58a54a04a3.rlib 
+-L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
+-L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
+-L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
+-L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
+-L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
+-L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
+-l static=freetype2 -l static=glfw -l static=dear-imgui -l stdc++ -l static=ui -l static=ui-c -l static=bgfx_sys -l pthread -l stdc++ -l GL -l X11`
+*/
+
+/*
+*
+`rustc --crate-name flowi --edition=2018 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat 
+--crate-type rlib --crate-type cdylib --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --cfg 
+'feature="tundra"' -C metadata=09f88aa953aca67c --out-dir /home/emoon/code/projects/flowi/target/debug/deps 
+-C incremental=/home/emoon/code/projects/flowi/target/debug/incremental 
+-L dependency=/home/emoon/code/projects/flowi/target/debug/deps 
+--extern bitflags=/home/emoon/code/projects/flowi/target/debug/deps/libbitflags-a8a9b0e8461c804f.rlib 
+--extern png=/home/emoon/code/projects/flowi/target/debug/deps/libpng-63bbbf58a54a04a3.rlib 
+-L native=/home/emoon/code/projects/flowi/t2-output/linux-clang-debug-default -l static=bgfx -l static=ui -l static=freetype2 -l static=glfw`
+*/

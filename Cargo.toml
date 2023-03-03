@@ -24,6 +24,8 @@ static = []
 dynamic = ["libloading"]
 ### Only include the wrapper API
 plugin = []
+### Support incremental compilation of the C/C++ code
+tundra = []
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }

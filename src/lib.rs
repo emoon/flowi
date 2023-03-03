@@ -40,9 +40,6 @@ pub use window::*;
 pub mod manual;
 pub use manual::*;
 
-extern "C" {
-    fn fl_application_create_impl(name: FlString, company: FlString) -> *const FlowiFfiApi;
-}
 pub use crate::button::ButtonApi;
 use crate::button::ButtonFfiApi;
 pub use crate::font::FontApi;
@@ -162,36 +159,5 @@ impl Flowi {
         let api_priv = unsafe { &*self.api };
         let api = unsafe { (api_priv.window_get_api)(api_priv.data, 0) };
         WindowApi { api }
-    }
-
-    #[cfg(feature = "static")]
-    pub fn new(name: &str, company: &str) -> Result<Self> {
-        unsafe {
-            let api = fl_application_create_impl(FlString::new(name), FlString::new(company));
-
-            if api.is_null() {
-                Err(get_last_error())
-            } else {
-                Ok(Self { api })
-            }
-        }
-    }
-
-    #[cfg(feature = "dynamic")]
-    pub fn new_from_dynamic(path: &str, name: &str, company: &str) -> Result<Self> {
-        unsafe {
-            // TODO: must store the lib
-            let lib = libloading::Library::new(path).unwrap();
-            let func: libloading::Symbol<
-                unsafe extern "C" fn(FlString, FlString) -> *const FlowiFfiApi,
-            > = lib.get(b"fl_application_create_impl").unwrap();
-            let api = func(FlString::new(name), FlString::new(company));
-
-            if api.is_null() {
-                Err(get_last_error())
-            } else {
-                Ok(Self { api })
-            }
-        }
     }
 }
