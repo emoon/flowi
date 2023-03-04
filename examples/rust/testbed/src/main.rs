@@ -29,7 +29,7 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
         WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR,
     );
     cursor.set_pos_y(110.0);
-    text.show("Hello, world!");
+    text.show("Hello, world11111!");
 
     /*
     font.push(app.icons);
@@ -39,11 +39,10 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     text.show(&test_string);
     */
 
-    /*
-    if button.image_with_text(app.image, test_string) {
+    if button.image_with_text(app.image, "test") {
         println!("Clicked!");
     }
-    */
+
     //font.pop();
 
     if item.is_hovered(HoveredFlags::RECT_ONLY) {

@@ -503,7 +503,7 @@ fn build_tundra(_target_os: &str) {
         .expect("tundra2 failed");
 
     if !output.status.success() {
-        panic!("tundra2 failed:\n{}", String::from_utf8_lossy(&output.stderr));
+        panic!("tundra2 failed:\n {}", String::from_utf8_lossy(&output.stderr));
     } 
 
     let target_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not specified");
@@ -536,7 +536,7 @@ fn main() {
     println!("cargo:rerun-if-changed=c_cpp");
     println!("cargo:rerun-if-changed=tundra.lua");
 
-    //build_cc(target_os);
+    build_cc(target_os);
     build_tundra(target_os);
 }
 

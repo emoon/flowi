@@ -412,7 +412,7 @@ Build {
                 FLOWI_DIR .. "application.cpp",
                 FLOWI_DIR .. "flowi.cpp",
                 FLOWI_DIR .. "font.cpp",
-                FLOWI_DIR .. "glfw_input.cpp",
+                FLOWI_DIR .. "imgui_impl_glfw.cpp",
                 FLOWI_DIR .. "imgui_wrap.cpp",
                 FLOWI_DIR .. "style.cpp",
                 FLOWI_DIR .. "image.c",

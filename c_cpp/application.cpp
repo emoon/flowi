@@ -14,7 +14,7 @@
 //#include "../shaders/generated/color_fill.h"
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
-#include "glfw_input.h"
+#include "imgui_impl_glfw.h"
 #include "render.h"
 #include "image_private.h"
 #include "handles.h"
@@ -203,6 +203,7 @@ static void render_dear_imgui(const ApplicationState& app_state, const DearImgui
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     if (fb_width <= 0 || fb_height <= 0)
         return;
+
 
     int view_id = 255;
 
