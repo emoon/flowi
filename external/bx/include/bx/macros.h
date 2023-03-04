@@ -1,6 +1,6 @@
 /*
- * Copyright 2010-2021 Branimir Karadzic. All rights reserved.
- * License: https://github.com/bkaradzic/bx#license-bsd-2-clause
+ * Copyright 2010-2023 Branimir Karadzic. All rights reserved.
+ * License: https://github.com/bkaradzic/bx/blob/master/LICENSE
  */
 
 #ifndef BX_H_HEADER_GUARD
@@ -66,7 +66,7 @@
 #	define BX_UNLIKELY(_x) __builtin_expect(!!(_x), 0)
 #	define BX_NO_INLINE   __attribute__( (noinline) )
 #	define BX_NO_RETURN   __attribute__( (noreturn) )
-#	define BX_CONST_FUNC  __attribute__( (const) )
+#	define BX_CONST_FUNC  __attribute__( (pure) )
 
 #	if BX_COMPILER_GCC >= 70000
 #		define BX_FALLTHROUGH __attribute__( (fallthrough) )
@@ -109,11 +109,7 @@
 
 /// The return value of the function is solely a function of the arguments.
 ///
-#if __cplusplus < 201402
-#	define BX_CONSTEXPR_FUNC BX_CONST_FUNC
-#else
-#	define BX_CONSTEXPR_FUNC constexpr BX_CONST_FUNC
-#endif // __cplusplus < 201402
+#define BX_CONSTEXPR_FUNC constexpr BX_CONST_FUNC
 
 ///
 #define BX_STATIC_ASSERT(_condition, ...) static_assert(_condition, "" __VA_ARGS__)
@@ -201,16 +197,24 @@
 #	define BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC(_x)
 #endif // BX_COMPILER_
 
-///
+/// No default constructor.
 #define BX_CLASS_NO_DEFAULT_CTOR(_class) \
-	private: _class()
+	_class() = delete
 
-#define BX_CLASS_NO_COPY(_class) \
-	private: _class(const _class& _rhs)
+/// No copy constructor.
+#define BX_CLASS_NO_COPY_CTOR(_class) \
+	_class(const _class& _rhs) = delete
 
-#define BX_CLASS_NO_ASSIGNMENT(_class) \
-	private: _class& operator=(const _class& _rhs)
+/// No copy assignment operator.
+#define BX_CLASS_NO_COPY_ASSIGNMENT(_class) \
+	_class& operator=(const _class& _rhs) = delete
 
+/// No copy construcor, and copy assignment operator.
+#define BX_CLASS_NO_COPY(_class)   \
+	BX_CLASS_NO_COPY_CTOR(_class); \
+	BX_CLASS_NO_COPY_ASSIGNMENT(_class)
+
+///
 #define BX_CLASS_ALLOCATOR(_class)              \
 	public: void* operator new(size_t _size);   \
 	public: void  operator delete(void* _ptr);  \

@@ -1,6 +1,6 @@
 /*
- * Copyright 2010-2021 Branimir Karadzic. All rights reserved.
- * License: https://github.com/bkaradzic/bx#license-bsd-2-clause
+ * Copyright 2010-2023 Branimir Karadzic. All rights reserved.
+ * License: https://github.com/bkaradzic/bx/blob/master/LICENSE
  */
 
 #include <bx/os.h>
@@ -21,11 +21,12 @@
 	|| BX_PLATFORM_IOS     \
 	|| BX_PLATFORM_OSX     \
 	|| BX_PLATFORM_PS4     \
-	|| BX_PLATFORM_RPI
+	|| BX_PLATFORM_RPI     \
+	|| BX_PLATFORM_NX
 #	include <pthread.h>
-#	if defined(__FreeBSD__)
+#	if BX_PLATFORM_BSD
 #		include <pthread_np.h>
-#	endif
+#	endif // BX_PLATFORM_BSD
 #	if BX_PLATFORM_LINUX && (BX_CRT_GLIBC < 21200)
 #		include <sys/prctl.h>
 #	endif // BX_PLATFORM_

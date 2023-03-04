@@ -261,7 +261,7 @@ Build {
                 BIMG_DIR .. "include",
                 BIMG_DIR .. "3rdparty",
                 BIMG_DIR .. "3rdparty/iqa/include",
-                BIMG_DIR .. "3rdparty/astc-codec/include",
+                BIMG_DIR .. "3rdparty/astc-encoder/include",
                 BIMG_DIR .. "3rdparty/tinyexr/deps/miniz",
                 EXTERNAL_DIR,
             },

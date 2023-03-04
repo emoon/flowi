@@ -1,6 +1,6 @@
 /*
- * Copyright 2011-2021 Branimir Karadzic. All rights reserved.
- * License: https://github.com/bkaradzic/bimg#license-bsd-2-clause
+ * Copyright 2011-2023 Branimir Karadzic. All rights reserved.
+ * License: https://github.com/bkaradzic/bimg/blob/master/LICENSE
  */
 
 #include "bimg_p.h"
@@ -18,8 +18,8 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4389) // warning C4389 : '==' : signed / unsig
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // warning C4505: 'tinyexr::miniz::def_realloc_func': unreferenced local function has been removed
 #define MINIZ_NO_ARCHIVE_APIS
 #define MINIZ_NO_STDIO
-//#define TINYEXR_IMPLEMENTATION
-//#include <tinyexr/tinyexr.h>
+#define TINYEXR_IMPLEMENTATION
+#include <tinyexr/tinyexr.h>
 BX_PRAGMA_DIAGNOSTIC_POP()
 
 BX_PRAGMA_DIAGNOSTIC_PUSH();
@@ -430,7 +430,6 @@ namespace bimg
 		return output;
 	}
 
-	/*
 	static ImageContainer* imageParseTinyExr(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
@@ -492,7 +491,6 @@ namespace bimg
 				if (UINT8_MAX != idxR)
 				{
 					const bool asFloat = exrHeader.pixel_types[idxR] == TINYEXR_PIXELTYPE_FLOAT;
-					uint32_t srcBpp = 32;
 					uint32_t dstBpp = asFloat ? 32 : 16;
 					format = asFloat ? TextureFormat::R32F : TextureFormat::R16F;
 					uint32_t stepR = 1;
@@ -502,7 +500,6 @@ namespace bimg
 
 					if (UINT8_MAX != idxG)
 					{
-						srcBpp += 32;
 						dstBpp = asFloat ? 64 : 32;
 						format = asFloat ? TextureFormat::RG32F : TextureFormat::RG16F;
 						stepG  = 1;
@@ -510,7 +507,6 @@ namespace bimg
 
 					if (UINT8_MAX != idxB)
 					{
-						srcBpp += 32;
 						dstBpp = asFloat ? 128 : 64;
 						format = asFloat ? TextureFormat::RGBA32F : TextureFormat::RGBA16F;
 						stepB  = 1;
@@ -518,7 +514,6 @@ namespace bimg
 
 					if (UINT8_MAX != idxA)
 					{
-						srcBpp += 32;
 						dstBpp = asFloat ? 128 : 64;
 						format = asFloat ? TextureFormat::RGBA32F : TextureFormat::RGBA16F;
 						stepA  = 1;
@@ -639,7 +634,6 @@ namespace bimg
 
 		return output;
 	}
-	*/
 
 	static ImageContainer* imageParseStbImage(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
@@ -842,7 +836,7 @@ namespace bimg
 		input = NULL == input ? imageParsePvr3    (_allocator, _data, _size, _err) : input;
 		input = NULL == input ? imageParseGnf     (_allocator, _data, _size, _err) : input;
 		input = NULL == input ? imageParseLodePng (_allocator, _data, _size, _err) : input;
-		//input = NULL == input ? imageParseTinyExr (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseTinyExr (_allocator, _data, _size, _err) : input;
 		input = NULL == input ? imageParseJpeg    (_allocator, _data, _size, _err) : input;
 		input = NULL == input ? imageParseStbImage(_allocator, _data, _size, _err) : input;
 
@@ -868,4 +862,3 @@ namespace bimg
 	}
 
 } // namespace bimg
-

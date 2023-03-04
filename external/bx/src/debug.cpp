@@ -1,6 +1,6 @@
 /*
- * Copyright 2010-2021 Branimir Karadzic. All rights reserved.
- * License: https://github.com/bkaradzic/bx#license-bsd-2-clause
+ * Copyright 2010-2023 Branimir Karadzic. All rights reserved.
+ * License: https://github.com/bkaradzic/bx/blob/master/LICENSE
  */
 
 #include <bx/debug.h>
@@ -124,7 +124,7 @@ namespace bx
 		va_end(argList);
 	}
 
-#define DBG_ADDRESS "%" "%p"
+#define DBG_ADDRESS "%" PRIxPTR
 
 	void debugPrintfData(const void* _data, uint32_t _size, const char* _format, ...)
 	{
