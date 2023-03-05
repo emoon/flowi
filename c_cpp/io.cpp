@@ -133,9 +133,12 @@ static FlImage create_svg_from_memory(FlInternalData* ctx, FlString name, uint8_
 }
 */
 
+extern "C" FlShader load_fragment_shader(FlInternalData* ctx, FlString name);
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlIoApi g_io_funcs = {
     NULL,
-    create_from_file,
+    load_fragment_shader,
+    //create_from_file,
 };

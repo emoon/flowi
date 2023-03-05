@@ -169,7 +169,7 @@ static FlContext s_context = {
     get_cursor_api, // cursor api
     get_font_api,   // font api
     get_image_api,  // image api
-    get_io_api,        // io api
+    get_io_api,     // io api
     get_item_api,   // item api
     get_menu_api,   // menu api
     nullptr,
@@ -178,6 +178,9 @@ static FlContext s_context = {
     get_ui_api,     // ui api
     get_window_api, // window api
 };
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void* io_handler_create();
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -199,6 +202,8 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     for (int i = 0; i < FlLayerType_Count; ++i) {
         CommandBuffer_create(&data->layers[i].primitive_commands, "primitives", state->global_allocator, 4 * 1024);
     }
+    
+    data->io_handler = io_handler_create();
 
     printf("create context\n");
 
@@ -221,7 +226,7 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     data->cursor_funcs.priv = data;
     data->font_funcs.priv = data;
     data->image_funcs.priv = data;
-    data->io_funcs.priv = data;
+    data->io_funcs.priv = (FlInternalData*)data->io_handler;
     data->item_funcs.priv = data;
     data->menu_funcs.priv = data;
     data->text_funcs.priv = data;

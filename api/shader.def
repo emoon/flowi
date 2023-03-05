@@ -1,0 +1,8 @@
+
+#[attributes(Handle)]
+struct Shader { }
+
+#[attributes(Handle)]
+struct ShaderProgram { }
+
+

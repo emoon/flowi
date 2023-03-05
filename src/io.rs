@@ -9,10 +9,13 @@ use bitflags::bitflags;
 #[allow(unused_imports)]
 use crate::image::*;
 
+#[allow(unused_imports)]
+use crate::shader::*;
+
 #[repr(C)]
 pub struct IoFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    load_image_from_url:
+    load_fragment_shader_comp:
         unsafe extern "C" fn(data: *const core::ffi::c_void, filename: FlString) -> u64,
 }
 
@@ -38,14 +41,17 @@ impl IoApi {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
-    pub fn load_image_from_url(&self, filename: &str) -> Result<Image> {
+    /// Same as load_image_from_url, but async and gives back a handle to check/access data later.
+    /// Load a vertex shader be used for rendering. This will also compile the shader.
+    /// Load a pixel shader to be used for rendering. This will also compile the shader.
+    pub fn load_fragment_shader_comp(&self, filename: &str) -> Result<Shader> {
         unsafe {
             let _api = &*self.api;
-            let ret_val = (_api.load_image_from_url)(_api.data, FlString::new(filename));
+            let ret_val = (_api.load_fragment_shader_comp)(_api.data, FlString::new(filename));
             if ret_val == 0 {
                 Err(get_last_error())
             } else {
-                Ok(Image { handle: ret_val })
+                Ok(Shader { handle: ret_val })
             }
         }
     }

@@ -42,17 +42,6 @@ static const bgfx::EmbeddedShader s_dear_imgui_shaders[] = {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/*
-static const bgfx::EmbeddedShader s_shaders[] = {BGFX_EMBEDDED_SHADER(color_fill_vs),
-                                                 BGFX_EMBEDDED_SHADER(color_fill_fs), 
-                                                 BGFX_EMBEDDED_SHADER(vs_texture),
-                                                 BGFX_EMBEDDED_SHADER(fs_texture), 
-                                                 BGFX_EMBEDDED_SHADER(vs_texture_r),
-                                                 BGFX_EMBEDDED_SHADER(fs_texture_r), 
-                                                 BGFX_EMBEDDED_SHADER_END()};
-*/
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct Texture {
     bgfx::TextureHandle handle;
     bgfx::TextureFormat::Enum format;

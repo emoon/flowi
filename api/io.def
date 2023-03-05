@@ -1,4 +1,5 @@
 mod image
+mod shader
 
 struct Io {
     /// Load image from file/url. Supported formats are:
@@ -11,12 +12,16 @@ struct Io {
     /// HDR (radiance rgbE format)
     /// PIC (Softimage PIC)
     /// PNM (PPM and PGM binary only)
-    [static] load_image_from_url(filename: String) -> Image?,
+    //[static] load_image_from_url(filename: String) -> Image?,
     /// Same as load_image_from_url, but async and gives back a handle to check/access data later.
     //[static] load_imag_from_url_async(filename: String) -> async bool,
+    /// Load a vertex shader be used for rendering. This will also compile the shader. 
+    //[static] load_vs_shader_comp(filename: String) -> Shader?,
+    /// Load a pixel shader to be used for rendering. This will also compile the shader.
+    [static] load_fragment_shader_comp(filename: String) -> Shader?,
+    /// Load a vertex shader and pixel shader to be used as a shader program. This will also compile the shaders.
+    //[static] load_program_shader_comp(vs_filename: String, ps_filename: String) -> ShaderProgram?,
 }
-
-
 
 // vim: syntax=rust expandtab ts=4 sw=4
 

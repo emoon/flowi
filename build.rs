@@ -503,8 +503,11 @@ fn build_tundra(_target_os: &str) {
         .expect("tundra2 failed");
 
     if !output.status.success() {
-        panic!("tundra2 failed:\n {}", String::from_utf8_lossy(&output.stderr));
-    } 
+        panic!(
+            "tundra2 failed:\n {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 
     let target_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not specified");
     let tundra_dir = format!("{}/t2-output/linux-clang-debug-default", target_dir);
@@ -521,7 +524,6 @@ fn build_tundra(_target_os: &str) {
     println!("cargo:rustc-link-lib=X11");
 }
 
-
 #[cfg(any(feature = "dynamic", feature = "plugin", feature = "tundra"))]
 fn build_cc(_target_os: &str) {}
 
@@ -531,40 +533,11 @@ fn build_tundra(_target_os: &str) {}
 fn main() {
     let os = std::env::var("CARGO_CFG_TARGET_OS").expect("TARGET_OS not specified");
     let target_os = os.as_str();
-    
+
     println!("cargo:rerun-if-changed=external");
     println!("cargo:rerun-if-changed=c_cpp");
     println!("cargo:rerun-if-changed=tundra.lua");
 
-    build_cc(target_os);
+    //build_cc(target_os);
     build_tundra(target_os);
 }
-
-/*
-`rustc --crate-name flowi --edition=2018 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat 
---crate-type rlib --crate-type cdylib --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --cfg 
-'feature="static"' -C metadata=4bcb93c0dbd7f975 --out-dir /home/emoon/code/projects/flowi/target/debug/deps 
--C incremental=/home/emoon/code/projects/flowi/target/debug/incremental 
--L dependency=/home/emoon/code/projects/flowi/target/debug/deps 
---extern bitflags=/home/emoon/code/projects/flowi/target/debug/deps/libbitflags-a8a9b0e8461c804f.rlib 
---extern png=/home/emoon/code/projects/flowi/target/debug/deps/libpng-63bbbf58a54a04a3.rlib 
--L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
--L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
--L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
--L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
--L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
--L native=/home/emoon/code/projects/flowi/target/debug/build/flowi-54f30ecbcad99524/out 
--l static=freetype2 -l static=glfw -l static=dear-imgui -l stdc++ -l static=ui -l static=ui-c -l static=bgfx_sys -l pthread -l stdc++ -l GL -l X11`
-*/
-
-/*
-*
-`rustc --crate-name flowi --edition=2018 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat 
---crate-type rlib --crate-type cdylib --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --cfg 
-'feature="tundra"' -C metadata=09f88aa953aca67c --out-dir /home/emoon/code/projects/flowi/target/debug/deps 
--C incremental=/home/emoon/code/projects/flowi/target/debug/incremental 
--L dependency=/home/emoon/code/projects/flowi/target/debug/deps 
---extern bitflags=/home/emoon/code/projects/flowi/target/debug/deps/libbitflags-a8a9b0e8461c804f.rlib 
---extern png=/home/emoon/code/projects/flowi/target/debug/deps/libpng-63bbbf58a54a04a3.rlib 
--L native=/home/emoon/code/projects/flowi/t2-output/linux-clang-debug-default -l static=bgfx -l static=ui -l static=freetype2 -l static=glfw`
-*/

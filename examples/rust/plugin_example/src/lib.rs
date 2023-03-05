@@ -18,4 +18,4 @@ fn panic(_panic: &PanicInfo<'_>) -> ! {
 pub fn update(flowi: &Flowi) {
     let button = flowi.button();
     button.regular("Hello, world!");
-} 
+}

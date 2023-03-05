@@ -10,6 +10,7 @@
 #include <string.h>
 #include "image.h"
 #include "manual.h"
+#include "shader.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +30,10 @@ struct FlIo;
 // HDR (radiance rgbE format)
 // PIC (Softimage PIC)
 // PNM (PPM and PGM binary only)
-static FlImage fl_io_load_image_from_url(struct FlIoApi* api, const char* filename);
+// Same as load_image_from_url, but async and gives back a handle to check/access data later.
+// Load a vertex shader be used for rendering. This will also compile the shader.
+// Load a pixel shader to be used for rendering. This will also compile the shader.
+static FlShader fl_io_load_fragment_shader_comp(struct FlIoApi* api, const char* filename);
 
 #include "io.inl"
 

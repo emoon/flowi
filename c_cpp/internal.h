@@ -79,6 +79,7 @@ typedef struct FlInternalData {
     StringAllocator string_allocator;
     Layer layers[FlLayerType_Count];
     struct FlGlobalState* global;
+    void* io_handler;
     //struct hashmap_s widget_states;
     float delta_time;
 } FlInternalData;

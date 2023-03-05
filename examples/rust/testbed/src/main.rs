@@ -1,14 +1,15 @@
 //use flowi::application::Application;
 use flowi::font::Font;
-use flowi::manual::Color;
 use flowi::manual::Application;
+use flowi::manual::Color;
 use flowi::style::StyleColor;
 use flowi::window::{HoveredFlags, WindowFlags};
 use flowi::Flowi;
 
 struct App {
     dummy: u32,
-    image: flowi::image::Image,
+    //image: flowi::image::Image,
+    shader: flowi::shader::Shader,
     //_font: Font,
     //icons: Font,
 }
@@ -39,15 +40,19 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     text.show(&test_string);
     */
 
+    /*
     if button.image_with_text(app.image, "test") {
         println!("Clicked!");
     }
+    */
 
     //font.pop();
 
+    /*
     if item.is_hovered(HoveredFlags::RECT_ONLY) {
         println!("Hovered!");
     }
+    */
 
     style.push_color(
         StyleColor::HeaderHovered,
@@ -85,11 +90,8 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
     window.end();
 }
 
-
 fn main() {
-    let settings = flowi::application_settings::ApplicationSettings {
-        some_data: 0,
-    };
+    let settings = flowi::application_settings::ApplicationSettings { some_data: 0 };
     let flowi_app = Application::new(&settings).unwrap();
     let io = flowi_app.io();
     //let flowi_app = Application::new_from_lib("mylib.so", &settings).unwrap();
@@ -97,7 +99,14 @@ fn main() {
     //let font = flowi.font();
 
     let mut app = App {
-        image: io.load_image_from_url("/home/emoon/code/projects/rust_minifb/resources/uv.png").unwrap(),
+        /*
+        image: io
+            .load_image_from_url("/home/emoon/code/projects/rust_minifb/resources/uv.png")
+            .unwrap(),
+        */
+        shader: io
+            .load_fragment_shader_comp("../../../data/shaders/fs_ocornut_imgui.sc")
+            .unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         /*

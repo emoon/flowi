@@ -29,6 +29,8 @@ pub mod painter;
 pub use painter::*;
 pub mod render_commands;
 pub use render_commands::*;
+pub mod shader;
+pub use shader::*;
 pub mod style;
 pub use style::*;
 pub mod text;
@@ -39,6 +41,9 @@ pub mod window;
 pub use window::*;
 pub mod manual;
 pub use manual::*;
+
+pub mod io_handler;
+pub use io_handler::*;
 
 pub use crate::button::ButtonApi;
 use crate::button::ButtonFfiApi;

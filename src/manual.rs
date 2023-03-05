@@ -1,5 +1,5 @@
 use crate::application_settings::ApplicationSettings;
-use crate::io::{IoFfiApi, IoApi};
+use crate::io::{IoApi, IoFfiApi};
 use crate::Flowi;
 use core::{
     ffi::c_void,
@@ -144,6 +144,12 @@ impl FlString {
             string: s.as_ptr() as *const c_void,
             length: s.len() as u32,
         }
+    }
+
+    pub fn as_str(&self) -> &str {
+        let s =
+            unsafe { std::slice::from_raw_parts(self.string as *const u8, self.length as usize) };
+        std::str::from_utf8(s).unwrap()
     }
 }
 
