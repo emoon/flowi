@@ -223,11 +223,11 @@ impl RustGen {
         // write arguments
 
         if fa.ret_value.is_empty() {
-            writeln!(f, "    {}: unsafe extern \"C\" fn({}),", func.name, get_arg_line(&fa.ffi_args))
+            writeln!(f, "    pub(crate) {}: unsafe extern \"C\" fn({}),", func.name, get_arg_line(&fa.ffi_args))
         } else {
             writeln!(
                 f,
-                "    {}: unsafe extern \"C\" fn({}) -> {},",
+                "    pub(crate) {}: unsafe extern \"C\" fn({}) -> {},",
                 func.name,
                 get_arg_line(&fa.ffi_args),
                 fa.ret_value
@@ -569,8 +569,6 @@ impl RustGen {
             writeln!(f)?;
         }
 
-
-
         for enum_def in &api_def.enums {
             if enum_def.enum_type == EnumType::Regular {
                 Self::generate_enum(&mut f, enum_def)?;
@@ -600,7 +598,7 @@ impl RustGen {
         api_defs: &[ApiDef],
     ) -> io::Result<()> {
 
-        let flowi_mod = format!("{}/lib.rs", path);
+        let flowi_mod = format!("{}/mod.rs", path);
 
         {
         println!("    Rust file mod: {}", flowi_mod);
@@ -615,14 +613,6 @@ impl RustGen {
             writeln!(f, "pub mod {};", base_filename)?;
             writeln!(f, "pub use {}::*;", base_filename)?;
         }
-
-        // manual is used implementing things that aren't auto-generated
-
-        writeln!(f, "pub mod manual;")?;
-        writeln!(f, "pub use manual::*;\n")?;
-
-        writeln!(f, "pub mod io_handler;")?;
-        writeln!(f, "pub use io_handler;\n")?;
 
         for api_def in api_defs {
             let base_filename = &api_def.base_filename;
@@ -663,7 +653,7 @@ impl RustGen {
 
         writeln!(f, "#[repr(C)]")?;
         writeln!(f, "pub struct Flowi {{")?;
-        writeln!(f, "   api: *const FlowiFfiApi,")?;
+        writeln!(f, "   pub(crate) api: *const FlowiFfiApi,")?;
         writeln!(f, "}}\n")?;
 
         writeln!(f, "impl Flowi {{")?;

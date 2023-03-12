@@ -9,7 +9,8 @@ use bitflags::bitflags;
 #[repr(C)]
 pub struct ImageFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    get_info: unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64) -> *const ImageInfo,
+    pub(crate) get_info:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64) -> *const ImageInfo,
 }
 
 #[repr(C)]

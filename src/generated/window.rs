@@ -12,28 +12,30 @@ use crate::math_data::*;
 #[repr(C)]
 pub struct WindowFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    set_pos: unsafe extern "C" fn(data: *const core::ffi::c_void, pos: Vec2),
-    begin: unsafe extern "C" fn(
+    pub(crate) set_pos: unsafe extern "C" fn(data: *const core::ffi::c_void, pos: Vec2),
+    pub(crate) begin: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         name: FlString,
         flags: WindowFlags,
     ) -> bool,
-    end: unsafe extern "C" fn(data: *const core::ffi::c_void),
-    begin_child: unsafe extern "C" fn(
+    pub(crate) end: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) begin_child: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         id: FlString,
         size: Vec2,
         border: bool,
         flags: WindowFlags,
     ) -> bool,
-    end_child: unsafe extern "C" fn(data: *const core::ffi::c_void),
-    is_appearing: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_collapsed: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_focused: unsafe extern "C" fn(data: *const core::ffi::c_void, flags: FocusedFlags) -> bool,
-    is_hovered: unsafe extern "C" fn(data: *const core::ffi::c_void, flags: HoveredFlags) -> bool,
-    dpi_scale: unsafe extern "C" fn(data: *const core::ffi::c_void) -> f32,
-    pos: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
-    size: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
+    pub(crate) end_child: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) is_appearing: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_collapsed: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_focused:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, flags: FocusedFlags) -> bool,
+    pub(crate) is_hovered:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, flags: HoveredFlags) -> bool,
+    pub(crate) dpi_scale: unsafe extern "C" fn(data: *const core::ffi::c_void) -> f32,
+    pub(crate) pos: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
+    pub(crate) size: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
 }
 
 bitflags! {

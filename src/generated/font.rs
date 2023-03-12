@@ -9,28 +9,28 @@ use bitflags::bitflags;
 #[repr(C)]
 pub struct FontFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    new_from_file: unsafe extern "C" fn(
+    pub(crate) new_from_file: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         filename: FlString,
         font_size: u32,
     ) -> u64,
-    new_from_file_range: unsafe extern "C" fn(
+    pub(crate) new_from_file_range: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         filename: FlString,
         font_size: u32,
         glyph_range_start: u16,
         glyph_range_end: u16,
     ) -> u64,
-    new_from_memory: unsafe extern "C" fn(
+    pub(crate) new_from_memory: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         name: FlString,
         data: *const u8,
         data_size: u32,
         font_size: u32,
     ) -> u64,
-    push: unsafe extern "C" fn(data: *const core::ffi::c_void, font: u64),
-    pop: unsafe extern "C" fn(data: *const core::ffi::c_void),
-    destroy: unsafe extern "C" fn(data: *const core::ffi::c_void, font: u64),
+    pub(crate) push: unsafe extern "C" fn(data: *const core::ffi::c_void, font: u64),
+    pub(crate) pop: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) destroy: unsafe extern "C" fn(data: *const core::ffi::c_void, font: u64),
 }
 
 #[repr(C)]

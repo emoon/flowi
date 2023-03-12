@@ -15,23 +15,25 @@ use crate::window::*;
 #[repr(C)]
 pub struct ItemFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    is_hovered: unsafe extern "C" fn(data: *const core::ffi::c_void, flags: HoveredFlags) -> bool,
-    is_active: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_focused: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_clicked: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_visible: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_edited: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_activated: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_deactivated: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_deactivated_after_edit: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_toggled_open: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_any_hovered: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_any_active: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    is_any_focused: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    get_rect_min: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
-    get_rect_max: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
-    get_rect_size: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
-    set_allow_overlap: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) is_hovered:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, flags: HoveredFlags) -> bool,
+    pub(crate) is_active: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_focused: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_clicked: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_visible: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_edited: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_activated: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_deactivated: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_deactivated_after_edit:
+        unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_toggled_open: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_any_hovered: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_any_active: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) is_any_focused: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) get_rect_min: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
+    pub(crate) get_rect_max: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
+    pub(crate) get_rect_size: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
+    pub(crate) set_allow_overlap: unsafe extern "C" fn(data: *const core::ffi::c_void),
 }
 
 #[repr(C)]

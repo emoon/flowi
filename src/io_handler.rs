@@ -8,7 +8,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::mpsc::Receiver;
-use crate::IoFfiApi;
+use crate::io::IoFfiApi;
 
 pub struct IoHandler {
     watcher: RecommendedWatcher,
@@ -79,7 +79,6 @@ impl IoHandler {
             }
         }
 
-        dbg!(temp_path);
 
         //self.shaders_comp
         //    .insert(filename.to_string(), Shader::new());
@@ -106,6 +105,5 @@ pub extern "C" fn load_fragment_shader_comp(
     filename: FlString,
 ) -> u64 {
     let io_handler = unsafe { &mut *(ctx as *mut IoHandler) };
-    dbg!("load_fragment_shader");
     io_handler.load_fragment_shader_comp(filename.as_str())
 }

@@ -9,25 +9,25 @@ use bitflags::bitflags;
 #[repr(C)]
 pub struct MenuFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    begin_bar: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    end_bar: unsafe extern "C" fn(data: *const core::ffi::c_void),
-    begin_main_bar: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
-    end_main_bar: unsafe extern "C" fn(data: *const core::ffi::c_void),
-    begin: unsafe extern "C" fn(
+    pub(crate) begin_bar: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) end_bar: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) begin_main_bar: unsafe extern "C" fn(data: *const core::ffi::c_void) -> bool,
+    pub(crate) end_main_bar: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) begin: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         label: FlString,
         enabled: bool,
     ) -> bool,
-    end: unsafe extern "C" fn(data: *const core::ffi::c_void),
-    item: unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString) -> bool,
-    item_ex: unsafe extern "C" fn(
+    pub(crate) end: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) item: unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString) -> bool,
+    pub(crate) item_ex: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         label: FlString,
         shortcut: FlString,
         selected: bool,
         enabled: bool,
     ) -> bool,
-    item_toggle: unsafe extern "C" fn(
+    pub(crate) item_toggle: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         label: FlString,
         shortcut: FlString,

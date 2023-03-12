@@ -3,11 +3,13 @@ use std::path::Path;
 #[cfg(feature = "tundra")]
 use std::process::Command;
 
+#[cfg(feature = "static")]
 fn add_sources(build: &mut cc::Build, root: &str, files: &[&str]) {
     let root = Path::new(root);
     build.files(files.iter().map(|src| root.join(src)));
 }
 
+#[cfg(feature = "static")]
 fn add_includes(build: &mut cc::Build, root: &str, files: &[&str]) {
     build.includes(files.iter().map(|src| format!("{}/{}", root, src)));
 }

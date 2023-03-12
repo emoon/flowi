@@ -15,25 +15,26 @@ use crate::image::*;
 #[repr(C)]
 pub struct ButtonFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    regular: unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString) -> bool,
-    regular_size:
+    pub(crate) regular:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString) -> bool,
+    pub(crate) regular_size:
         unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString, size: Vec2) -> bool,
-    small: unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString) -> bool,
-    invisible: unsafe extern "C" fn(
+    pub(crate) small: unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString) -> bool,
+    pub(crate) invisible: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         label: FlString,
         size: Vec2,
         flags: ButtonFlags,
     ) -> bool,
-    check_box: unsafe extern "C" fn(
+    pub(crate) check_box: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         label: FlString,
         state: *mut bool,
     ) -> bool,
-    radio:
+    pub(crate) radio:
         unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString, state: bool) -> bool,
-    bullet: unsafe extern "C" fn(data: *const core::ffi::c_void),
-    image_with_text:
+    pub(crate) bullet: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) image_with_text:
         unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64, label: FlString) -> bool,
 }
 

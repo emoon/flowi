@@ -18,19 +18,22 @@ use crate::image::*;
 #[repr(C)]
 pub struct UiFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    text: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
-    image: unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64),
-    image_with_size: unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64, size: Vec2),
-    set_pos: unsafe extern "C" fn(data: *const core::ffi::c_void, pos: Vec2),
-    get_last_widget_size: unsafe extern "C" fn(data: *const core::ffi::c_void, pos: Vec2) -> Rect,
-    push_button_with_icon: unsafe extern "C" fn(
+    pub(crate) text: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
+    pub(crate) image: unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64),
+    pub(crate) image_with_size:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64, size: Vec2),
+    pub(crate) set_pos: unsafe extern "C" fn(data: *const core::ffi::c_void, pos: Vec2),
+    pub(crate) get_last_widget_size:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, pos: Vec2) -> Rect,
+    pub(crate) push_button_with_icon: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         text: FlString,
         image: u64,
         text_pos: Vec2,
         image_scale: f32,
     ) -> bool,
-    push_button: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString) -> bool,
+    pub(crate) push_button:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString) -> bool,
 }
 
 #[repr(C)]

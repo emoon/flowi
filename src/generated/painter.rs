@@ -18,29 +18,29 @@ use crate::image::*;
 #[repr(C)]
 pub struct PainterFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    set_layer: unsafe extern "C" fn(data: *const core::ffi::c_void, layer: PainterLayer),
-    draw_line: unsafe extern "C" fn(
+    pub(crate) set_layer: unsafe extern "C" fn(data: *const core::ffi::c_void, layer: PainterLayer),
+    pub(crate) draw_line: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         p1: Vec2,
         p2: Vec2,
         color: Color,
         thickness: f32,
     ),
-    draw_rect: unsafe extern "C" fn(
+    pub(crate) draw_rect: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         p1: Vec2,
         p2: Vec2,
         color: Color,
         rounding: f32,
     ),
-    draw_rect_filled: unsafe extern "C" fn(
+    pub(crate) draw_rect_filled: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         p1: Vec2,
         p2: Vec2,
         color: Color,
         rounding: f32,
     ),
-    draw_rect_filled_gradient: unsafe extern "C" fn(
+    pub(crate) draw_rect_filled_gradient: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         p1: Vec2,
         p2: Vec2,

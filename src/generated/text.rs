@@ -12,12 +12,15 @@ use crate::math_data::*;
 #[repr(C)]
 pub struct TextFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    calc_size: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString) -> Vec2,
-    bullet: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
-    label: unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString, text: FlString),
-    show_color: unsafe extern "C" fn(data: *const core::ffi::c_void, color: Color, text: FlString),
-    show: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
-    text_disabled: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
+    pub(crate) calc_size:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString) -> Vec2,
+    pub(crate) bullet: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
+    pub(crate) label:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, label: FlString, text: FlString),
+    pub(crate) show_color:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, color: Color, text: FlString),
+    pub(crate) show: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
+    pub(crate) text_disabled: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
 }
 
 #[repr(C)]

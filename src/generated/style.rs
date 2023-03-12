@@ -12,19 +12,20 @@ use crate::math_data::*;
 #[repr(C)]
 pub struct StyleFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    set_color:
+    pub(crate) set_color:
         unsafe extern "C" fn(data: *const core::ffi::c_void, color: StyleColor, value: Color),
-    set_color_u32:
+    pub(crate) set_color_u32:
         unsafe extern "C" fn(data: *const core::ffi::c_void, color: StyleColor, value: u32),
-    push_color_u32:
+    pub(crate) push_color_u32:
         unsafe extern "C" fn(data: *const core::ffi::c_void, color: StyleColor, value: u32),
-    push_color:
+    pub(crate) push_color:
         unsafe extern "C" fn(data: *const core::ffi::c_void, color: StyleColor, value: Color),
-    pop_color: unsafe extern "C" fn(data: *const core::ffi::c_void),
-    push_single:
+    pub(crate) pop_color: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) push_single:
         unsafe extern "C" fn(data: *const core::ffi::c_void, style: StyleSingle, value: f32),
-    push_vec2: unsafe extern "C" fn(data: *const core::ffi::c_void, style: StyleVec2, value: Vec2),
-    pop: unsafe extern "C" fn(data: *const core::ffi::c_void),
+    pub(crate) push_vec2:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, style: StyleVec2, value: Vec2),
+    pub(crate) pop: unsafe extern "C" fn(data: *const core::ffi::c_void),
 }
 
 #[repr(C)]

@@ -33,7 +33,7 @@ fn main() {
 
     // Dest directores for various langs
     let c_dest = "../../langs/c_cpp/include/flowi";
-    let rust_dest = "../../src";
+    let rust_dest = "../../src/generated";
 
     // Collect all files that needs to be parsed
     let files = wd
