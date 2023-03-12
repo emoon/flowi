@@ -498,7 +498,6 @@ static void render_flowi(ApplicationState& state, uint16_t width, uint16_t heigh
     bgfx::end(encoder);
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void generate_frame(void* user_data) {

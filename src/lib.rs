@@ -70,6 +70,9 @@ use crate::ui::UiFfiApi;
 pub use crate::window::WindowApi;
 use crate::window::WindowFfiApi;
 
+//#[cfg(any(feature = "static", feature = "tundra"))]
+pub mod application;
+
 #[repr(C)]
 pub struct FlowiFfiApi {
     data: *const c_void,

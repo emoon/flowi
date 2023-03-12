@@ -15,7 +15,7 @@ use crate::shader::*;
 #[repr(C)]
 pub struct IoFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    load_fragment_shader_comp:
+    pub(crate) load_fragment_shader_comp:
         unsafe extern "C" fn(data: *const core::ffi::c_void, filename: FlString) -> u64,
 }
 

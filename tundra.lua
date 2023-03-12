@@ -409,7 +409,7 @@ Build {
                 DEAR_IMGUI_DIR .. "imgui_widgets.cpp",
                 DEAR_IMGUI_DIR .. "misc/freetype/imgui_freetype.cpp",
                 FLOWI_DIR .. "io.cpp",
-                FLOWI_DIR .. "application.cpp",
+                --FLOWI_DIR .. "application.cpp",
                 FLOWI_DIR .. "flowi.cpp",
                 FLOWI_DIR .. "font.cpp",
                 FLOWI_DIR .. "imgui_impl_glfw.cpp",

@@ -8,6 +8,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::mpsc::Receiver;
+use crate::IoFfiApi;
 
 pub struct IoHandler {
     watcher: RecommendedWatcher,
@@ -38,7 +39,7 @@ impl IoHandler {
         }
     }
 
-    pub fn load_fragment_shader_comp(&mut self, filename: &str) -> Shader {
+    pub fn load_fragment_shader_comp(&mut self, filename: &str) -> u64 {
         // TODO: Clean this up
 
         let mut file = File::open(filename).unwrap();
@@ -87,28 +88,23 @@ impl IoHandler {
             .watch(Path::new(filename), RecursiveMode::Recursive)
             .unwrap();
 
-        Shader { handle: 1 }
+        1
+    }
+
+    pub fn get_ffi_api(&self) -> IoFfiApi {
+        IoFfiApi {
+            data: self as *const IoHandler as *const std::ffi::c_void,
+            load_fragment_shader_comp
+        }
     }
 }
 
-#[no_mangle]
-pub extern "C" fn io_handler_create() -> *const IoHandler {
-    dbg!("IoHandler::new");
-    Box::into_raw(Box::new(IoHandler::new()))
-}
 
 #[no_mangle]
-pub extern "C" fn io_handler_update(ctx: *const core::ffi::c_void) {
-    dbg!("IoHandler::new");
-    let io_handler = unsafe { &mut *(ctx as *mut IoHandler) };
-    io_handler.update();
-}
-
-#[no_mangle]
-pub extern "C" fn load_fragment_shader(
+pub extern "C" fn load_fragment_shader_comp(
     ctx: *const core::ffi::c_void,
     filename: FlString,
-) -> Shader {
+) -> u64 {
     let io_handler = unsafe { &mut *(ctx as *mut IoHandler) };
     dbg!("load_fragment_shader");
     io_handler.load_fragment_shader_comp(filename.as_str())

@@ -10,10 +10,10 @@ use core::{
 use std::mem::transmute;
 
 #[repr(C)]
-struct AppFfi {
-    priv_data: *const c_void,
-    io_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const IoFfiApi,
-    main_loop: unsafe extern "C" fn(data: *const c_void, user_data: *mut c_void) -> bool,
+pub struct AppFfi {
+    pub(crate) priv_data: *const c_void,
+    pub(crate) io_get_api: unsafe extern "Rust" fn(data: *const c_void, api_ver: u32) -> *const IoFfiApi,
+    pub(crate) main_loop: unsafe extern "Rust" fn(data: *const c_void, user_data: *mut c_void) -> bool,
 }
 
 extern "C" {
