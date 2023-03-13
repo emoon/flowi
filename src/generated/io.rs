@@ -15,8 +15,11 @@ use crate::shader::*;
 #[repr(C)]
 pub struct IoFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    pub(crate) load_fragment_shader_comp:
-        unsafe extern "C" fn(data: *const core::ffi::c_void, filename: FlString) -> u64,
+    pub(crate) load_shader_program_comp: unsafe extern "C" fn(
+        data: *const core::ffi::c_void,
+        vs_filename: FlString,
+        ps_filename: FlString,
+    ) -> u64,
 }
 
 #[repr(C)]
@@ -44,14 +47,23 @@ impl IoApi {
     /// Same as load_image_from_url, but async and gives back a handle to check/access data later.
     /// Load a vertex shader be used for rendering. This will also compile the shader.
     /// Load a pixel shader to be used for rendering. This will also compile the shader.
-    pub fn load_fragment_shader_comp(&self, filename: &str) -> Result<Shader> {
+    /// Load a vertex shader and pixel shader to be used as a shader program. This will also compile the shaders.
+    pub fn load_shader_program_comp(
+        &self,
+        vs_filename: &str,
+        ps_filename: &str,
+    ) -> Result<ShaderProgram> {
         unsafe {
             let _api = &*self.api;
-            let ret_val = (_api.load_fragment_shader_comp)(_api.data, FlString::new(filename));
+            let ret_val = (_api.load_shader_program_comp)(
+                _api.data,
+                FlString::new(vs_filename),
+                FlString::new(ps_filename),
+            );
             if ret_val == 0 {
                 Err(get_last_error())
             } else {
-                Ok(Shader { handle: ret_val })
+                Ok(ShaderProgram { handle: ret_val })
             }
         }
     }

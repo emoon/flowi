@@ -77,13 +77,14 @@
 )]
 
 pub mod generated;
+pub mod manual;
+
+mod internal_error;
+//use internal_error::*;
+
+pub use manual::*;
 pub use generated::*;
 
-pub mod application;
-pub use application::*;
-
-pub mod manual;
-pub use manual::*;
-
-pub mod io_handler;
-pub use io_handler::*;
+mod application;
+mod io_handler;
+mod shaders;

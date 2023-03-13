@@ -18,9 +18,9 @@ struct Io {
     /// Load a vertex shader be used for rendering. This will also compile the shader. 
     //[static] load_vs_shader_comp(filename: String) -> Shader?,
     /// Load a pixel shader to be used for rendering. This will also compile the shader.
-    [static] load_fragment_shader_comp(filename: String) -> Shader?,
+    //[static] load_fragment_shader_comp(filename: String) -> Shader?,
     /// Load a vertex shader and pixel shader to be used as a shader program. This will also compile the shaders.
-    //[static] load_program_shader_comp(vs_filename: String, ps_filename: String) -> ShaderProgram?,
+    [static] load_shader_program_comp(vs_filename: String, ps_filename: String) -> ShaderProgram?,
 }
 
 // vim: syntax=rust expandtab ts=4 sw=4

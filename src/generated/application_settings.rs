@@ -7,7 +7,7 @@ use crate::manual::{get_last_error, Color, FlString, Result};
 use bitflags::bitflags;
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct ApplicationSettings {
     pub some_data: u32,
 }

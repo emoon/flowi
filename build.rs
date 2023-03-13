@@ -1,11 +1,9 @@
-use std::path::Path;
-
 #[cfg(feature = "tundra")]
 use std::process::Command;
 
 #[cfg(feature = "static")]
 fn add_sources(build: &mut cc::Build, root: &str, files: &[&str]) {
-    let root = Path::new(root);
+    let root = std::Path::new(root);
     build.files(files.iter().map(|src| root.join(src)));
 }
 
@@ -526,8 +524,8 @@ fn build_tundra(_target_os: &str) {
     println!("cargo:rustc-link-lib=X11");
 }
 
-#[cfg(any(feature = "dynamic", feature = "plugin", feature = "tundra"))]
-fn build_cc(_target_os: &str) {}
+//#[cfg(any(feature = "dynamic", feature = "plugin", feature = "tundra"))]
+//fn build_cc(_target_os: &str) {}
 
 #[cfg(not(feature = "tundra"))]
 fn build_tundra(_target_os: &str) {}

@@ -9,7 +9,7 @@ use flowi::Flowi;
 struct App {
     dummy: u32,
     //image: flowi::image::Image,
-    shader: flowi::shader::Shader,
+    //shader: flowi::shader::Shader,
     //_font: Font,
     //icons: Font,
 }
@@ -104,9 +104,9 @@ fn main() {
             .load_image_from_url("/home/emoon/code/projects/rust_minifb/resources/uv.png")
             .unwrap(),
         */
-        shader: io
-            .load_fragment_shader_comp("../../../data/shaders/fs_ocornut_imgui.sc")
-            .unwrap(),
+        //shader: io
+        //    .load_fragment_shader_comp("../../../data/shaders/fs_ocornut_imgui.sc")
+        //    .unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         //_font: font.new_from_file("../../../data/Montserrat-Bold.ttf", 32).unwrap(),
         /*

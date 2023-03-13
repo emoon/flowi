@@ -1,6 +1,9 @@
-use crate::application_settings::ApplicationSettings;
-use crate::io::{IoApi, IoFfiApi};
-use crate::Flowi;
+use crate::{
+    application_settings::ApplicationSettings,
+    io::{IoApi, IoFfiApi},
+    Flowi,
+};
+
 use core::{
     ffi::c_void,
     fmt::{Debug, Formatter},
@@ -21,12 +24,13 @@ extern "C" {
     fn fl_application_create_impl(settings: *const ApplicationSettings) -> *const AppFfi;
 }
 
-type Mainloop = unsafe extern "C" fn(data: *const c_void, user_data: *mut c_void);
+pub(crate) type Mainloop = unsafe extern "C" fn(data: *const c_void, user_data: *mut c_void);
 
 #[repr(C)]
-struct WrappedMainData {
-    user_data: *const c_void,
-    func: *const c_void,
+pub(crate) struct WrappedMainData {
+    pub(crate) priv_data: *const c_void,
+    pub(crate) user_data: *const c_void,
+    pub(crate) func: *const c_void,
 }
 
 pub struct Application {
@@ -90,13 +94,15 @@ impl Application {
         // Having the data on the stack is safe as the mainloop only exits after the application is about to end
         let f: Box<Box<dyn Fn(&Flowi, &mut T) + 'a>> = Box::new(Box::new(func));
         let user_data = data as *const _ as *const c_void;
+        let api = unsafe { &*self.api };
+
         let wrapped_data = WrappedMainData {
+            priv_data: api.priv_data,
             user_data,
             func: Box::into_raw(f) as *const _,
         };
 
         unsafe {
-            let api = &*self.api;
             (api.main_loop)(
                 transmute(mainloop_trampoline_ud::<T> as usize),
                 transmute(&wrapped_data),
@@ -117,13 +123,15 @@ impl Application {
     {
         // Having the data on the stack is safe as the mainloop only exits after the application is about to end
         let f: Box<Box<dyn Fn(&Flowi) + 'a>> = Box::new(Box::new(func));
+        let api = unsafe { &*self.api };
+
         let wrapped_data = WrappedMainData {
-            user_data: ::std::ptr::null(),
+            priv_data: api.priv_data, 
+            user_data: std::ptr::null(),
             func: Box::into_raw(f) as *const _,
         };
 
         unsafe {
-            let api = &*self.api;
             (api.main_loop)(
                 transmute(mainloop_trampoline as usize),
                 transmute(&wrapped_data),

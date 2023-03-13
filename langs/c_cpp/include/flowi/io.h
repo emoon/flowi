@@ -33,7 +33,9 @@ struct FlIo;
 // Same as load_image_from_url, but async and gives back a handle to check/access data later.
 // Load a vertex shader be used for rendering. This will also compile the shader.
 // Load a pixel shader to be used for rendering. This will also compile the shader.
-static FlShader fl_io_load_fragment_shader_comp(struct FlIoApi* api, const char* filename);
+// Load a vertex shader and pixel shader to be used as a shader program. This will also compile the shaders.
+static FlShaderProgram fl_io_load_shader_program_comp(struct FlIoApi* api, const char* vs_filename,
+                                                      const char* ps_filename);
 
 #include "io.inl"
 

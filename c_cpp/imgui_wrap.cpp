@@ -1,43 +1,259 @@
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 #include <flowi/ui.h>
 #include <flowi/style.h>
 #include <flowi/window.h>
+#include <flowi/application_settings.h>
 #include <flowi/text.h>
 #include <flowi/menu.h>
 #include <flowi/button.h>
 #include <flowi/item.h>
 #include "image_private.h"
 #include "internal.h"
-#include "primitives.h"
+//#include "primitives.h"
 #include "layer.h"
 #include <dear-imgui/imgui.h>
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// we include the dear-imgui code here to get better inilining/codegen/code removal as the bellow code
-// is the interface between flowi and dear-imgui
-//
-
-/*
-// Can be used for extra opt 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#include "../external/dear-imgui/imgui.cpp"
-#include "../external/dear-imgui/imgui_draw.cpp"
-#include "../external/dear-imgui/imgui_widgets.cpp"
-#include "../external/dear-imgui/imgui_tables.cpp"
-*/
+#include <stdio.h>
+#include "imgui_impl_glfw.h"
 #include "internal.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // translate from FlColor to ImGuiCol_
 
-
 static int s_color_lut[ImGuiCol_COUNT * 4];
 static int s_single_style_lut[ImGuiStyleVar_COUNT];
 static int s_vec2_style_lut[ImGuiStyleVar_COUNT];
 
+struct TempState {
+    GLFWwindow* window;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void error_callback(int error, const char* description) {
+    fprintf(stderr, "Error: %d:%s\n", error, description);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    FL_UNUSED(key);
+    FL_UNUSED(scancode);
+    FL_UNUSED(action);
+    FL_UNUSED(mods);
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" bool c_should_close(TempState* state) { 
+    return glfwWindowShouldClose(state->window);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void c_pre_update(TempState* state) {
+    glfwPollEvents();
+    //ImGui_ImplGlfw_NewFrame();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void* c_create(const FlApplicationSettings* settings) {
+    glfwSetErrorCallback(error_callback);
+
+    if (!glfwInit()) {
+        // TODO: Proper error
+        printf("failed to init glfw\n");
+        return nullptr;
+    }
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_FLOATING, GL_FALSE);
+
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Fix me title", NULL, NULL);
+    if (!window) {
+        printf("failed to open window\n");
+        glfwTerminate();
+        return nullptr;
+    }
+
+    // TODO: Should be done after BGFX init
+    //glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
+    
+    ImGui::CreateContext();
+
+    // Setup Dear ImGui context
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+    //io.ConfigViewportsNoAutoMerge = true;
+    //io.ConfigViewportsNoTaskBarIcon = true;
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+    io.DisplaySize = ImVec2(1280.0f, 720.0f);
+    io.DeltaTime = 1.0f / 60.0f;
+    io.IniFilename = NULL;
+
+    ImVec4* colors = ImGui::GetStyle().Colors;
+    colors[ImGuiCol_Text]                   = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.19f, 0.19f, 0.19f, 0.92f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.19f, 0.19f, 0.19f, 0.29f);
+    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.24f);
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
+    colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.40f, 0.54f);
+    colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
+    colors[ImGuiCol_SliderGrab]             = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
+    colors[ImGuiCol_Button]                 = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+    colors[ImGuiCol_Header]                 = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.00f, 0.00f, 0.00f, 0.36f);
+    colors[ImGuiCol_HeaderActive]           = ImVec4(0.20f, 0.22f, 0.23f, 0.33f);
+    colors[ImGuiCol_Separator]              = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
+    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
+    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
+    colors[ImGuiCol_ResizeGrip]             = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
+    colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
+    colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
+    colors[ImGuiCol_Tab]                    = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_TabHovered]             = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+    colors[ImGuiCol_TabActive]              = ImVec4(0.20f, 0.20f, 0.20f, 0.36f);
+    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+    colors[ImGuiCol_DockingPreview]         = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
+    colors[ImGuiCol_DockingEmptyBg]         = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotLines]              = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotLinesHovered]       = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogram]          = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_TableHeaderBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_TableBorderStrong]      = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_TableBorderLight]       = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
+    colors[ImGuiCol_TableRowBg]             = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_TableRowBgAlt]          = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+    colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+    colors[ImGuiCol_DragDropTarget]         = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
+    colors[ImGuiCol_NavHighlight]           = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 0.00f, 0.00f, 0.70f);
+    colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(1.00f, 0.00f, 0.00f, 0.20f);
+    colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(1.00f, 0.00f, 0.00f, 0.35f);
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowPadding                     = ImVec2(8.00f, 8.00f);
+    style.FramePadding                      = ImVec2(5.00f, 2.00f);
+    style.CellPadding                       = ImVec2(6.00f, 6.00f);
+    style.ItemSpacing                       = ImVec2(6.00f, 6.00f);
+    style.ItemInnerSpacing                  = ImVec2(6.00f, 6.00f);
+    style.TouchExtraPadding                 = ImVec2(0.00f, 0.00f);
+    style.IndentSpacing                     = 25;
+    style.ScrollbarSize                     = 15;
+    style.GrabMinSize                       = 10;
+    style.WindowBorderSize                  = 1;
+    style.ChildBorderSize                   = 1;
+    style.PopupBorderSize                   = 1;
+    style.FrameBorderSize                   = 1;
+    style.TabBorderSize                     = 1;
+    style.WindowRounding                    = 7;
+    style.ChildRounding                     = 4;
+    style.FrameRounding                     = 3;
+    style.PopupRounding                     = 4;
+    style.ScrollbarRounding                 = 9;
+    style.GrabRounding                      = 3;
+    style.LogSliderDeadzone                 = 4;
+    style.TabRounding                       = 4;
+
+    // Setup Dear ImGui style
+    //ImGui::StyleColorsDark();
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
+
+    ImGui_ImplGlfw_InitForOther(window, true);
+    glfwSetKeyCallback(window, key_callback);
+
+    TempState* state = new TempState;
+    state->window = window;
+
+    return state;
+
+/*
+    bgfx::PlatformData pd;
+#if defined(GLFW_EXPOSE_NATIVE_X11)
+    pd.ndt = glfwGetX11Display();
+#endif
+    pd.nwh = native_window_handle(state->default_window);
+    pd.context = NULL;
+    pd.backBuffer = NULL;
+    pd.backBufferDS = NULL;
+I'm bisecting this down to the broken commit and sending it to Fedora and someone else can deal with this shit. I don't have time for this nonsense.
+
+    bgfx::setPlatformData(pd);
+
+    int reset_flags = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8;
+
+    bgfx::Init bgfxInit;
+    bgfxInit.type = bgfx::RendererType::OpenGL;
+    bgfxInit.resolution.width = state->window_width;
+    bgfxInit.resolution.height = state->window_height;
+    bgfxInit.resolution.reset = reset_flags;
+    bgfxInit.platformData = pd;
+
+    if (!bgfx::init(bgfxInit)) {
+        printf("failed to init bgfx\n");
+        glfwDestroyWindow(state->default_window);
+        glfwTerminate();
+        return false;
+    }
+*/
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+extern "C" void* c_raw_window_handle(TempState* data) {
+#if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+    return (void*)(uintptr_t)glfwGetX11Window(data->window);
+    #elif BX_PLATFORM_OSX
+    return glfwGetCocoaWindow(data->window);
+    #elif BX_PLATFORM_WINDOWS
+    return glfwGetWin32Window(data->window);
+#endif  // BX_PLATFORM_
+    return (void*)(uintptr_t)glfwGetX11Window(data->window);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void c_destroy(TempState* data) {
+    ImGui::DestroyContext();
+    glfwDestroyWindow(data->window);
+    glfwTerminate();
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void image_show(FlInternalData* ctx, FlImage image) {
+    /*
     ImagePrivate* image_data = (ImagePrivate*)Handles_get_data(&ctx->global->image_handles, image);
 
     if (!image_data) {
@@ -56,6 +272,7 @@ static void image_show(FlInternalData* ctx, FlImage image) {
 
     ImGui::Image((ImTextureID)image, ImVec2(image_data->info.width, image_data->info.height),
                  ImVec2(image_data->u0, image_data->v0), ImVec2(image_data->u1, image_data->v1));
+    */
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
