@@ -346,9 +346,9 @@ fn build_cc(target_os: &str) {
     let mut build = cc::Build::new();
     let env = std::env::var("TARGET").unwrap();
 
-    println!("cargo:rerun-if-changed=external/bgfx");
-    println!("cargo:rerun-if-changed=external/bx");
-    println!("cargo:rerun-if-changed=external/bimg");
+    //println!("cargo:rerun-if-changed=external/bgfx");
+    //println!("cargo:rerun-if-changed=external/bx");
+    //println!("cargo:rerun-if-changed=external/bimg");
 
     // windows includes
     if env.contains("windows") {
@@ -513,7 +513,7 @@ fn build_tundra(_target_os: &str) {
     let tundra_dir = format!("{}/t2-output/linux-clang-debug-default", target_dir);
 
     println!("cargo:rustc-link-search=native={}", tundra_dir);
-    println!("cargo:rustc-link-lib=static=bgfx");
+    //println!("cargo:rustc-link-lib=static=bgfx");
     println!("cargo:rustc-link-lib=static=ui");
     println!("cargo:rustc-link-lib=static=freetype2");
     //println!("cargo:rustc-link-lib=static=imgui");

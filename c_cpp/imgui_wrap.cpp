@@ -56,6 +56,36 @@ extern "C" bool c_should_close(TempState* state) {
 
 extern "C" void c_pre_update(TempState* state) {
     glfwPollEvents();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    //ImGui_ImplGlfw_NewFrame();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void c_post_update(TempState* state) {
+    ImGui::Begin("Hello, world!");
+    ImGui::End();
+
+    ImGui::Render();
+
+    //glfwPollEvents();
+    //ImGui_ImplGlfw_NewFrame();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void c_pre_update_create(TempState* state) {
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->Build();
+
+    //uint8_t* data;
+    //int32_t width;
+    //int32_t height;
+    //io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
+
     //ImGui_ImplGlfw_NewFrame();
 }
 
@@ -196,6 +226,7 @@ extern "C" void* c_create(const FlApplicationSettings* settings) {
     TempState* state = new TempState;
     state->window = window;
 
+
     return state;
 
 /*
@@ -227,6 +258,12 @@ I'm bisecting this down to the broken commit and sending it to Fedora and someon
         return false;
     }
 */
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" ImDrawData imgui_get_draw_data() {
+    return *ImGui::GetDrawData();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

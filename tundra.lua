@@ -240,6 +240,7 @@ Build {
             },
         }
 
+        --[[
         local bgfx_lib = StaticLibrary {
             Name = "bgfx",
 
@@ -318,6 +319,7 @@ Build {
                 },
             },
         }
+        --]]
 
         local glfw_lib = StaticLibrary {
             Name = "glfw",
@@ -434,12 +436,12 @@ Build {
 
             Depends = {
                 glfw_lib,
-                bgfx_lib,
+                -- bgfx_lib,
             },
         }
 
         Default(glfw_lib)
-        Default(bgfx_lib)
+        -- Default(bgfx_lib)
         Default(freetype_lib)
         Default(ui_lib)
     end,

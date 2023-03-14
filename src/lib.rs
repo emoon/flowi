@@ -73,7 +73,7 @@
 #![allow(
     clippy::new_without_default,
     clippy::let_and_return,
-    clippy::doc_markdown,
+    clippy::doc_markdown
 )]
 
 pub mod generated;
@@ -82,9 +82,10 @@ pub mod manual;
 mod internal_error;
 //use internal_error::*;
 
-pub use manual::*;
 pub use generated::*;
+pub use manual::*;
 
+mod imgui;
 mod application;
 mod io_handler;
 mod shaders;

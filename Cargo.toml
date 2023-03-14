@@ -8,8 +8,10 @@ build = "build.rs"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
+glam = "0.23.0"
 thiserror = "1.0"
-bgfx-rs = "0.17"
+# bgfx-rs = "0.17"
+bgfx-rs = { path = "../bgfx-rs" } 
 bitflags = "2.0.0-rc.1"
 libloading = { version = "0.7.4", optional = true }
 notify = "5.1.0"

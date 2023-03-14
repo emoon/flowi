@@ -11,11 +11,8 @@ use std::{
 };
 
 use crate::{
-    io::IoFfiApi,
-    shaders::ShaderHandler,
-    internal_error::InternalResult as Result,
-    manual::FlString,
-    ShaderProgram,
+    internal_error::InternalResult as Result, io::IoFfiApi, manual::FlString,
+    shaders::ShaderHandler, ShaderProgram,
 };
 
 pub struct IoHandler {
@@ -159,11 +156,10 @@ impl IoHandler {
     pub fn get_ffi_api(&self) -> IoFfiApi {
         IoFfiApi {
             data: self as *const IoHandler as *const std::ffi::c_void,
-            load_shader_program_comp
+            load_shader_program_comp,
         }
     }
 }
-
 
 #[no_mangle]
 pub extern "C" fn load_shader_program_comp(
@@ -172,7 +168,9 @@ pub extern "C" fn load_shader_program_comp(
     fs_filename: FlString,
 ) -> u64 {
     let io_handler = unsafe { &mut *(ctx as *mut IoHandler) };
-    // TODO: correct handling 
-    let shader_handle = io_handler.load_shader_program_comp(vs_filename.as_str(), fs_filename.as_str()).unwrap();
+    // TODO: correct handling
+    let shader_handle = io_handler
+        .load_shader_program_comp(vs_filename.as_str(), fs_filename.as_str())
+        .unwrap();
     shader_handle.handle
 }

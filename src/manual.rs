@@ -15,8 +15,8 @@ use std::mem::transmute;
 #[repr(C)]
 pub struct AppFfi {
     pub(crate) priv_data: *const c_void,
-    pub(crate) io_get_api: unsafe extern "Rust" fn(data: *const c_void, api_ver: u32) -> *const IoFfiApi,
-    pub(crate) main_loop: unsafe extern "Rust" fn(data: *const c_void, user_data: *mut c_void) -> bool,
+    pub(crate) io_get_api: unsafe fn(data: *const c_void, api_ver: u32) -> *const IoFfiApi,
+    pub(crate) main_loop: unsafe fn(data: *const c_void, user_data: *mut c_void) -> bool,
 }
 
 extern "C" {
@@ -126,7 +126,7 @@ impl Application {
         let api = unsafe { &*self.api };
 
         let wrapped_data = WrappedMainData {
-            priv_data: api.priv_data, 
+            priv_data: api.priv_data,
             user_data: std::ptr::null(),
             func: Box::into_raw(f) as *const _,
         };

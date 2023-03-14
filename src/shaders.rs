@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use crate::internal_error::InternalResult as Result;
 use crate::internal_error::InternalError;
+use crate::internal_error::InternalResult as Result;
 use crate::ShaderProgram;
-use bgfx_rs::bgfx;
 use bgfx::*;
+use bgfx_rs::bgfx;
+use std::collections::HashMap;
 
 pub struct ShaderHandler {
     programs: HashMap<u64, bgfx::Program>,
@@ -11,7 +11,7 @@ pub struct ShaderHandler {
 }
 
 impl ShaderHandler {
-    pub fn new () -> Self {
+    pub fn new() -> Self {
         Self {
             programs: HashMap::new(),
             shader_id: 1,
@@ -26,21 +26,23 @@ impl ShaderHandler {
         let fs_shader = bgfx::create_shader(&fs_data);
 
         let shader_id = self.shader_id;
-        
+
         // TODO: Check if shader is valid
         let program = bgfx::create_program(&vs_shader, &fs_shader, false);
+
         self.programs.insert(shader_id, program);
         self.shader_id += 1;
 
         Ok(ShaderProgram { handle: shader_id })
     }
 
-    pub fn get_shader_program(&mut self, id: u64) -> Result<bgfx::Program> {
+    pub fn get_shader_program(&self, id: u64) -> Result<&bgfx::Program> {
         if let Some(program) = self.programs.get(&id) {
-            Ok(program.clone())
+            Ok(program)
         } else {
-            Err(InternalError::GenericError { text: "Shader program not found".into() })
+            Err(InternalError::GenericError {
+                text: "Shader program not found".into(),
+            })
         }
     }
 }
-
