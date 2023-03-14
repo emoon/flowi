@@ -46,6 +46,43 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     }
 }
 
+struct FontAtlas {
+    uint16_t width;
+    uint16_t height;
+    uint32_t data_size;
+    void* data;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FontAtlas imgui_build_rgba32_texture() {
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.Fonts->Build();
+
+    uint8_t* data;
+    int32_t width;
+    int32_t height;
+    io.Fonts->GetTexDataAsRGBA32(&data, &width, &height);
+
+    FontAtlas atlas = { (uint16_t)width, (uint16_t)height, (uint32_t)(width * height * 4), data };
+    return atlas;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FontAtlas imgui_build_r8_texture() {
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.Fonts->Build();
+
+    uint8_t* data;
+    int32_t width;
+    int32_t height;
+    io.Fonts->GetTexDataAsAlpha8(&data, &width, &height);
+
+    FontAtlas atlas = { (uint16_t)width, (uint16_t)height, (uint32_t)(width * height * 1), data };
+    return atlas;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" bool c_should_close(TempState* state) { 
@@ -79,7 +116,7 @@ extern "C" void c_post_update(TempState* state) {
 
 extern "C" void c_pre_update_create(TempState* state) {
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->Build();
+    //io.Fonts->Build();
 
     //uint8_t* data;
     //int32_t width;

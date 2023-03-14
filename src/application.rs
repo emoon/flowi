@@ -7,40 +7,6 @@ use bgfx_rs::bgfx;
 use core::ffi::c_void;
 use crate::imgui;
 
-#[repr(packed)]
-struct PosColorVertex {
-    _x: f32,
-    _y: f32,
-    _z: f32,
-    _abgr: u32,
-}
-#[rustfmt::skip]
-static CUBE_VERTICES: [PosColorVertex; 8] = [
-    PosColorVertex { _x: -1.0, _y:  1.0, _z:  1.0, _abgr: 0xff000000 },
-    PosColorVertex { _x:  1.0, _y:  1.0, _z:  1.0, _abgr: 0xff0000ff },
-    PosColorVertex { _x: -1.0, _y: -1.0, _z:  1.0, _abgr: 0xff00ff00 },
-    PosColorVertex { _x:  1.0, _y: -1.0, _z:  1.0, _abgr: 0xff00ffff },
-    PosColorVertex { _x: -1.0, _y:  1.0, _z: -1.0, _abgr: 0xffff0000 },
-    PosColorVertex { _x:  1.0, _y:  1.0, _z: -1.0, _abgr: 0xffff00ff },
-    PosColorVertex { _x: -1.0, _y: -1.0, _z: -1.0, _abgr: 0xffffff00 },
-    PosColorVertex { _x:  1.0, _y: -1.0, _z: -1.0, _abgr: 0xffffffff },
-];
-
-#[rustfmt::skip]
-static CUBE_INDICES: [u16; 36] = [
-    0, 1, 2, // 0
-    1, 3, 2,
-    4, 6, 5, // 2
-    5, 6, 7,
-    0, 2, 4, // 4
-    4, 2, 6,
-    1, 5, 3, // 6
-    5, 7, 3,
-    0, 4, 1, // 8
-    4, 5, 1,
-    2, 3, 6, // 10
-    6, 3, 7,
-];
 extern "C" {
     fn c_create(settings: *const ApplicationSettings) -> *const c_void;
     fn c_destroy(data: *const c_void);
@@ -51,15 +17,178 @@ extern "C" {
     fn c_raw_window_handle(data: *const c_void) -> *mut c_void;
 }
 
+const WIDTH: u16 = 1280;
+const HEIGHT: u16 = 720;
+
 struct DearImguiRenderer {
     shader_program: ShaderProgram,
     layout: BuiltVertexLayout,
+    sampler_uniform : bgfx::Uniform,
+    font_atlas : bgfx::Texture,
     view_id: u16,
 }
 
+impl DearImguiRenderer {
+    pub fn new(io_handler: &mut IoHandler) -> Self {
+        let layout = bgfx::VertexLayoutBuilder::begin(bgfx::RendererType::Noop)
+            .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float, AddArgs { normalized: true, as_int: false, })
+            .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float, AddArgs { normalized: true, as_int: false, })
+            .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, AddArgs { normalized: true, as_int: true, })
+            .end();
+            
+        let shader_program = io_handler.load_shader_program_comp(
+            "data/shaders/vs_ocornut_imgui.sc",
+            "data/shaders/fs_ocornut_imgui.sc")
+            .unwrap();
 
-const WIDTH: u16 = 1280;
-const HEIGHT: u16 = 720;
+        let sampler_uniform = bgfx::Uniform::create("s_tex", bgfx::UniformType::Sampler, 1);
+        let font_atlas = imgui::FontAtlas::build_r8_texture();
+
+        let font_atlas = bgfx::create_texture_2d(
+            font_atlas.width, 
+            font_atlas.height, 
+            false, 1, 
+            bgfx::TextureFormat::R8, 
+            0, 
+            &Memory::copy(&font_atlas.data()));
+
+        Self {
+            shader_program,
+            font_atlas,
+            sampler_uniform,
+            layout,
+            view_id: 0xFF,
+        }
+    }
+
+    fn render(&self, shader_prog: &bgfx::Program) {
+        let draw_data = imgui::DrawData::get_data();
+        let index_32 = false;
+
+        let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
+        let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
+
+        if fb_width <= 0.0 || fb_height <= 0.0 {
+            return;
+        }
+
+        {
+            let x = draw_data.display_pos[0];
+            let y = draw_data.display_pos[1];
+            let width = draw_data.display_size[0];
+            let height = draw_data.display_size[1];
+            let projection = glam::Mat4::orthographic_lh(x, x + width, y + height, y, 0.0f32, 1000.0f32);
+            bgfx::set_view_transform(self.view_id, &glam::Mat4::IDENTITY.as_ref(), &projection.as_ref());
+            bgfx::set_view_rect(self.view_id, 0, 0, width as u16, height as u16);
+        }
+
+        bgfx::set_view_mode(self.view_id, bgfx::ViewMode::Sequential);
+
+        let clip_pos = draw_data.display_pos;       // (0,0) unless using multi-viewports
+        let clip_scale = draw_data.framebuffer_scale; // (1,1) unless using retina display which are often (2,2)
+
+        for draw_list in draw_data.draw_lists() {
+            let vertices_count = draw_list.vtx_buffer().len() as u32;
+            let indices_count = draw_list.idx_buffer().len() as u32;
+
+            if bgfx::get_avail_transient_vertex_buffer(vertices_count, &self.layout)
+                != vertices_count
+                || bgfx::get_avail_transient_index_buffer(indices_count, index_32) != indices_count
+            {
+                break;
+            }
+
+            let mut tvb = bgfx::TransientVertexBuffer::new();
+            let mut tib = bgfx::TransientIndexBuffer::new();
+
+            bgfx::alloc_transient_vertex_buffer(&mut tvb, vertices_count, &self.layout);
+            bgfx::alloc_transient_index_buffer(&mut tib, indices_count, index_32);
+
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    draw_list.vtx_buffer().as_ptr() as *const u8,
+                    tvb.data as *mut u8,
+                    std::mem::size_of::<imgui::DrawVert>() * vertices_count as usize,
+                );
+            }
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    draw_list.idx_buffer().as_ptr() as *const u8,
+                    tib.data as *mut u8,
+                    std::mem::size_of::<imgui::ImDrawIdx>() * indices_count as usize,
+                );
+            }
+
+            let encoder = bgfx::encoder_begin(false);
+            for command in draw_list.commands() {
+                match command {
+                    imgui::DrawCmd::Elements { count, cmd_params } => {
+                        let state = StateWriteFlags::RGB.bits()
+                            | StateWriteFlags::A.bits()
+                            | StateFlags::MSAA.bits()
+                            | StateBlendFlags::SRC_ALPHA.bits()
+                            | (StateBlendFlags::INV_SRC_ALPHA.bits() << 4)
+                            | (StateBlendFlags::SRC_ALPHA.bits() << 8)
+                            | (StateBlendFlags::INV_SRC_ALPHA.bits() << 12);
+                        let clip_rect = [
+                            (cmd_params.clip_rect[0] - clip_pos[0]) * clip_scale[0],
+                            (cmd_params.clip_rect[1] - clip_pos[1]) * clip_scale[1],
+                            (cmd_params.clip_rect[2] - clip_pos[0]) * clip_scale[0],
+                            (cmd_params.clip_rect[3] - clip_pos[1]) * clip_scale[1],
+                        ];
+                        if clip_rect[0] < fb_width
+                            && clip_rect[1] < fb_height
+                            && clip_rect[2] >= 0.0f32
+                            && clip_rect[3] >= 0.0f32
+                        {
+                            let xx = clip_rect[0].max(0.0f32) as u16;
+                            let yy = clip_rect[1].max(0.0f32) as u16;
+                            encoder.set_scissor(
+                                xx,
+                                yy,
+                                (clip_rect[2].min(f32::MAX) as u16) - xx,
+                                (clip_rect[3].min(f32::MAX) as u16) - yy,
+                            );
+                            encoder.set_state(state, 0);
+                            encoder.set_texture(
+                                0,
+                                &self.sampler_uniform,
+                                &self.font_atlas,
+                                u32::MAX,
+                            );
+                            encoder.set_transient_vertex_buffer(
+                                0,
+                                &tvb,
+                                cmd_params.vtx_offset as u32,
+                                vertices_count,
+                            );
+                            encoder.set_transient_index_buffer(
+                                &tib,
+                                cmd_params.idx_offset as u32,
+                                count as u32,
+                            );
+                            encoder.submit(
+                                self.view_id,
+                                shader_prog,
+                                SubmitArgs::default(),
+                            );
+            
+                            //dbg!("Render stuff");
+                        }
+                    }
+                    imgui::DrawCmd::RawCallback { callback, raw_cmd } => unsafe {
+                        //callback(draw_list.raw(), raw_cmd);
+                    },
+                    imgui::DrawCmd::ResetRenderState => {
+                        //bgfx::reset(fb_width as u32, fb_height as u32, ResetArgs::default());
+                    }
+                }
+            }
+            bgfx::encoder_end(&encoder);
+        }
+    }
+}
+
 
 struct ApplicationState {
     c_data: *const c_void,
@@ -68,7 +197,7 @@ struct ApplicationState {
     io_api: IoFfiApi,
     main_loop: Option<Mainloop>,
     settings: ApplicationSettings,
-    imgui: DearImguiRenderer,
+    imgui: Option<DearImguiRenderer>,
 }
 
 /*
@@ -130,56 +259,13 @@ impl ApplicationState {
             panic!("failed to init bgfx");
         }
 
-        let layout = bgfx::VertexLayoutBuilder::begin(bgfx::RendererType::Noop)
-            .add(
-                bgfx::Attrib::Position,
-                2,
-                bgfx::AttribType::Float,
-                AddArgs {
-                    normalized: true,
-                    as_int: false,
-                },
-            )
-            .add(
-                bgfx::Attrib::TexCoord0,
-                2,
-                bgfx::AttribType::Float,
-                AddArgs {
-                    normalized: true,
-                    as_int: false,
-                },
-            )
-            .add(
-                bgfx::Attrib::Color0,
-                4,
-                bgfx::AttribType::Uint8,
-                AddArgs {
-                    normalized: true,
-                    as_int: true,
-                },
-            )
-            .end();
-
-        let imgui = DearImguiRenderer {
-            shader_program: io_handler
-                .load_shader_program_comp(
-                    //"../../../data/shaders/vs_ocornut_imgui.sc",
-                    //"../../../data/shaders/fs_ocornut_imgui.sc",
-                    "data/shaders/vs_ocornut_imgui.sc",
-                    "data/shaders/fs_ocornut_imgui.sc",
-                )
-                .unwrap(),
-            layout,
-            view_id: 0xFF,
-        };
-
         Self {
             c_data,
             c_user_data: std::ptr::null(),
             io_handler,
             main_loop: None,
             io_api: ffi_api,
-            imgui,
+            imgui: None,
             settings: settings.clone(),
         }
     }
@@ -227,147 +313,21 @@ impl ApplicationState {
 
         unsafe { c_post_update(self.c_data) };
 
-        self.render_imgui();
+        if let Some(ref imgui) = self.imgui.as_ref() {
+            // TODO: Fix me
+            let shader_program = self.io_handler.shaders.get_shader_program(imgui.shader_program.handle).unwrap();
+            imgui.render(shader_program);
+        }
 
         bgfx::frame(false);
-    }
-
-    fn render_imgui(&self) {
-        let draw_data = unsafe { imgui::imgui_get_draw_data() };
-        let index_32 = false;
-
-        // TODO: Fix me
-        let shader_program = self.io_handler.shaders.get_shader_program(self.imgui.shader_program.handle).unwrap();
-
-        let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
-        let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
-
-        if fb_width <= 0.0 || fb_height <= 0.0 {
-            return;
-        }
-
-        {
-            let x = draw_data.display_pos[0];
-            let y = draw_data.display_pos[1];
-            let width = draw_data.display_size[0];
-            let height = draw_data.display_size[1];
-            let projection = glam::Mat4::orthographic_lh(x, x + width, y + height, y, 0.0f32, 1000.0f32);
-            bgfx::set_view_transform(self.imgui.view_id, &glam::Mat4::IDENTITY.as_ref(), &projection.as_ref());
-            bgfx::set_view_rect(self.imgui.view_id, 0, 0, width as u16, height as u16);
-        }
-
-        bgfx::set_view_mode(self.imgui.view_id, bgfx::ViewMode::Sequential);
-
-        let clip_pos = draw_data.display_pos;       // (0,0) unless using multi-viewports
-        let clip_scale = draw_data.framebuffer_scale; // (1,1) unless using retina display which are often (2,2)
-
-        for draw_list in draw_data.draw_lists() {
-            let vertices_count = draw_list.vtx_buffer().len() as u32;
-            let indices_count = draw_list.idx_buffer().len() as u32;
-
-            if bgfx::get_avail_transient_vertex_buffer(vertices_count, &self.imgui.layout)
-                != vertices_count
-                || bgfx::get_avail_transient_index_buffer(indices_count, index_32) != indices_count
-            {
-                break;
-            }
-
-            let mut tvb = bgfx::TransientVertexBuffer::new();
-            let mut tib = bgfx::TransientIndexBuffer::new();
-
-            bgfx::alloc_transient_vertex_buffer(&mut tvb, vertices_count, &self.imgui.layout);
-            bgfx::alloc_transient_index_buffer(&mut tib, indices_count, index_32);
-
-
-            unsafe {
-                std::ptr::copy_nonoverlapping(
-                    draw_list.vtx_buffer().as_ptr() as *const u8,
-                    tvb.data as *mut u8,
-                    std::mem::size_of::<imgui::DrawVert>() * vertices_count as usize,
-                );
-            }
-            unsafe {
-                std::ptr::copy_nonoverlapping(
-                    draw_list.idx_buffer().as_ptr() as *const u8,
-                    tib.data as *mut u8,
-                    std::mem::size_of::<imgui::ImDrawIdx>() * indices_count as usize,
-                );
-            }
-
-            let encoder = bgfx::encoder_begin(false);
-            for command in draw_list.commands() {
-                match command {
-                    imgui::DrawCmd::Elements { count, cmd_params } => {
-                        let state = StateWriteFlags::RGB.bits()
-                            | StateWriteFlags::A.bits()
-                            | StateFlags::MSAA.bits()
-                            | StateBlendFlags::SRC_ALPHA.bits()
-                            | (StateBlendFlags::INV_SRC_ALPHA.bits() << 4)
-                            | (StateBlendFlags::SRC_ALPHA.bits() << 8)
-                            | (StateBlendFlags::INV_SRC_ALPHA.bits() << 12);
-                        let clip_rect = [
-                            (cmd_params.clip_rect[0] - clip_pos[0]) * clip_scale[0],
-                            (cmd_params.clip_rect[1] - clip_pos[1]) * clip_scale[1],
-                            (cmd_params.clip_rect[2] - clip_pos[0]) * clip_scale[0],
-                            (cmd_params.clip_rect[3] - clip_pos[1]) * clip_scale[1],
-                        ];
-                        if clip_rect[0] < fb_width
-                            && clip_rect[1] < fb_height
-                            && clip_rect[2] >= 0.0f32
-                            && clip_rect[3] >= 0.0f32
-                        {
-                            let xx = clip_rect[0].max(0.0f32) as u16;
-                            let yy = clip_rect[1].max(0.0f32) as u16;
-                            encoder.set_scissor(
-                                xx,
-                                yy,
-                                (clip_rect[2].min(f32::MAX) as u16) - xx,
-                                (clip_rect[3].min(f32::MAX) as u16) - yy,
-                            );
-                            encoder.set_state(state, 0);
-                            /*
-                            encoder.set_texture(
-                                0,
-                                &self.sampler_uniform,
-                                &self.font_atlas,
-                                u32::MAX,
-                            );
-                            */
-                            encoder.set_transient_vertex_buffer(
-                                0,
-                                &tvb,
-                                cmd_params.vtx_offset as u32,
-                                vertices_count,
-                            );
-                            encoder.set_transient_index_buffer(
-                                &tib,
-                                cmd_params.idx_offset as u32,
-                                count as u32,
-                            );
-                            encoder.submit(
-                                self.imgui.view_id,
-                                shader_program,
-                                SubmitArgs::default(),
-                            );
-            
-                            //dbg!("Render stuff");
-                        }
-                    }
-                    imgui::DrawCmd::RawCallback { callback, raw_cmd } => unsafe {
-                        //callback(draw_list.raw(), raw_cmd);
-                    },
-                    imgui::DrawCmd::ResetRenderState => {
-                        //bgfx::reset(fb_width as u32, fb_height as u32, ResetArgs::default());
-                    }
-                }
-            }
-            bgfx::encoder_end(&encoder);
-        }
     }
 
     //pub fn mainloop(&mut self, callback: Mainloop, user_data: *mut c_void) {
     pub fn mainloop(&mut self, user_data: *mut c_void) {
         unsafe { c_pre_update_create(self.c_data) };
+
+        let imgui = Some(DearImguiRenderer::new(& mut self.io_handler));
+        self.imgui = imgui; 
 
         bgfx::set_view_clear(
             0,

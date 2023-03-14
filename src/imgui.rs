@@ -25,7 +25,9 @@ use core::ffi as cty;
 use std::slice;
 
 extern "C" {
-    pub fn imgui_get_draw_data() -> DrawData;
+    fn imgui_get_draw_data() -> DrawData;
+    fn imgui_build_rgba32_texture() -> FontAtlas;
+    fn imgui_build_r8_texture() -> FontAtlas;
 }
 
 pub type TextureID = u64;
@@ -189,6 +191,33 @@ pub struct DrawList {
     _FringeScale: f32,
 }
 
+#[repr(C)]
+pub(crate) struct FontAtlas {
+    pub(crate) width: u16,
+    pub(crate) height: u16,
+    data_size: u32,
+    data: *const cty::c_void, 
+}
+
+impl FontAtlas {
+    pub(crate) fn build_rgba32_texture() -> Self {
+        unsafe { imgui_build_rgba32_texture() }
+    }
+
+    pub(crate) fn build_r8_texture() -> Self {
+        unsafe { imgui_build_r8_texture() }
+    }
+
+    pub(crate) fn data(&self) -> &[u8] {
+        unsafe {
+            slice::from_raw_parts(
+                self.data as *const u8,
+                self.data_size as usize,
+            )
+        }
+    }
+}
+
 
 /// All draw data to render a Dear ImGui frame. Taken from imgui-rs
 #[repr(C)]
@@ -222,6 +251,11 @@ pub struct DrawData {
 }
 
 impl DrawData {
+    #[inline]
+    pub fn get_data() -> DrawData {
+        unsafe { imgui_get_draw_data() } 
+    }
+
     /// Returns an iterator over the draw lists included in the draw data.
     #[inline]
     pub fn draw_lists(&self) -> DrawListIterator<'_> {
