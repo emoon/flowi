@@ -11,48 +11,88 @@ typedef struct FlButtonApi {
 } FlButtonApi;
 
 // Show a regular push button
-FL_INLINE bool fl_button_regular(struct FlButtonApi* api, const char* label) {
+FL_INLINE bool fl_button_regular(const char* label) {
     FlString label_ = fl_cstr_to_flstring(label);
-    return (api->regular)(api->priv, label_);
+#ifdef FLOWI_STATIC
+
+        return fl_button_regular_impl(void* ctx, label_);
+#else
+    return (api->regular)(void* ctx, label_);
+#endif
 }
 
 // Show a regular push button with a specific size
-FL_INLINE bool fl_button_regular_size(struct FlButtonApi* api, const char* label, FlVec2 size) {
+FL_INLINE bool fl_button_regular_size(const char* label, FlVec2 size) {
     FlString label_ = fl_cstr_to_flstring(label);
-    return (api->regular_size)(api->priv, label_, size);
+#ifdef FLOWI_STATIC
+
+        return fl_button_regular_size_impl(void* ctx, label_, size);
+#else
+    return (api->regular_size)(void* ctx, label_, size);
+#endif
 }
 
 // Show a regular push button without any frame padding.
-FL_INLINE bool fl_button_small(struct FlButtonApi* api, const char* label) {
+FL_INLINE bool fl_button_small(const char* label) {
     FlString label_ = fl_cstr_to_flstring(label);
-    return (api->small)(api->priv, label_);
+#ifdef FLOWI_STATIC
+
+        return fl_button_small_impl(void* ctx, label_);
+#else
+    return (api->small)(void* ctx, label_);
+#endif
 }
 
 // Invisible button that allows custom using drawing, but still acts like a button.
-FL_INLINE bool fl_button_invisible(struct FlButtonApi* api, const char* label, FlVec2 size, FlButtonFlags flags) {
+FL_INLINE bool fl_button_invisible(const char* label, FlVec2 size, FlButtonFlags flags) {
     FlString label_ = fl_cstr_to_flstring(label);
-    return (api->invisible)(api->priv, label_, size, flags);
+#ifdef FLOWI_STATIC
+
+        return fl_button_invisible_impl(void* ctx, label_, size, flags);
+#else
+    return (api->invisible)(void* ctx, label_, size, flags);
+#endif
 }
 
 // Button with a check box state
-FL_INLINE bool fl_button_check_box(struct FlButtonApi* api, const char* label, bool* state) {
+FL_INLINE bool fl_button_check_box(const char* label, bool* state) {
     FlString label_ = fl_cstr_to_flstring(label);
-    return (api->check_box)(api->priv, label_, state);
+#ifdef FLOWI_STATIC
+
+        return fl_button_check_box_impl(void* ctx, label_, state);
+#else
+    return (api->check_box)(void* ctx, label_, state);
+#endif
 }
 
 // Radio button
-FL_INLINE bool fl_button_radio(struct FlButtonApi* api, const char* label, bool state) {
+FL_INLINE bool fl_button_radio(const char* label, bool state) {
     FlString label_ = fl_cstr_to_flstring(label);
-    return (api->radio)(api->priv, label_, state);
+#ifdef FLOWI_STATIC
+
+        return fl_button_radio_impl(void* ctx, label_, state);
+#else
+    return (api->radio)(void* ctx, label_, state);
+#endif
 }
 
 // TODO: Document
-FL_INLINE void fl_button_bullet(struct FlButtonApi* api) {
-    (api->bullet)(api->priv);
+FL_INLINE void fl_button_bullet() {
+#ifdef FLOWI_STATIC
+
+    fl_button_bullet_impl(void* ctx);
+#else
+    (api->bullet)(void* ctx);
+#endif
 }
 
 // TODO: Document
-FL_INLINE bool fl_button_image_with_text(struct FlButtonApi* api, FlImage image, const char* label) {
+FL_INLINE bool fl_button_image_with_text(FlImage image, const char* label) {
     FlString label_ = fl_cstr_to_flstring(label);
-    return (api->image_with_text)(api->priv, image, label_);
+#ifdef FLOWI_STATIC
+
+        return fl_button_image_with_text_impl(void* ctx, image, label_);
+#else
+    return (api->image_with_text)(void* ctx, image, label_);
+#endif
 }

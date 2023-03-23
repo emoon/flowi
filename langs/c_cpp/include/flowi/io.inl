@@ -18,9 +18,13 @@ typedef struct FlIoApi {
 // Load a vertex shader be used for rendering. This will also compile the shader.
 // Load a pixel shader to be used for rendering. This will also compile the shader.
 // Load a vertex shader and pixel shader to be used as a shader program. This will also compile the shaders.
-FL_INLINE FlShaderProgram fl_io_load_shader_program_comp(struct FlIoApi* api, const char* vs_filename,
-                                                         const char* ps_filename) {
+FL_INLINE FlShaderProgram fl_io_load_shader_program_comp(const char* vs_filename, const char* ps_filename) {
     FlString vs_filename_ = fl_cstr_to_flstring(vs_filename);
     FlString ps_filename_ = fl_cstr_to_flstring(ps_filename);
-    return (api->load_shader_program_comp)(api->priv, vs_filename_, ps_filename_);
+#ifdef FLOWI_STATIC
+
+        return fl_io_load_shader_program_comp_impl(void* ctx, vs_filename_, ps_filename_);
+#else
+    return (api->load_shader_program_comp)(void* ctx, vs_filename_, ps_filename_);
+#endif
 }

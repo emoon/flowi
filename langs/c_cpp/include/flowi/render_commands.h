@@ -5,11 +5,10 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include "manual.h"
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,7 +58,7 @@ typedef struct FlVertPosColor {
 
 // Used for rendering triangles with a texture.
 typedef struct FlTexturedTriangles {
-    // Offset into the index buffer 
+    // Offset into the index buffer
     uint32_t offset;
     // Vertices for the command
     FlVertPosUvColor* vertex_buffer;
@@ -72,7 +71,7 @@ typedef struct FlTexturedTriangles {
 } FlTexturedTriangles;
 
 typedef struct FlSolidTriangles {
-    // Offset into the index buffer 
+    // Offset into the index buffer
     uint32_t offset;
     // Vertices for the command
     FlVertPosColor* vertex_buffer;
@@ -115,19 +114,8 @@ typedef struct FlScissorRect {
     FlRenderRect rect;
 } FlScissorRect;
 
-
 #include "render_commands.inl"
 
 #ifdef __cplusplus
 }
 #endif
-
-// Commands that will be in the render stream
-typedef enum FlRenderCommand {
-    FlRenderCommand_TexturedTriangles,
-    FlRenderCommand_SolidTriangles,
-    FlRenderCommand_CreateTexture,
-    FlRenderCommand_UpdateTexture,
-    FlRenderCommand_ScissorRect,
-} FlRenderCommand;
-

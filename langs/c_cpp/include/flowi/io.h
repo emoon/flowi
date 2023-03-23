@@ -34,8 +34,7 @@ struct FlIo;
 // Load a vertex shader be used for rendering. This will also compile the shader.
 // Load a pixel shader to be used for rendering. This will also compile the shader.
 // Load a vertex shader and pixel shader to be used as a shader program. This will also compile the shaders.
-static FlShaderProgram fl_io_load_shader_program_comp(struct FlIoApi* api, const char* vs_filename,
-                                                      const char* ps_filename);
+static FlShaderProgram fl_io_load_shader_program_comp(const char* vs_filename, const char* ps_filename);
 
 #include "io.inl"
 

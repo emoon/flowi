@@ -26,6 +26,11 @@ typedef struct FlImageApi {
 // Load SVG from file
 // Load SVG from memory
 // Get data amout the image
-FL_INLINE FlImageInfo* fl_image_get_info(struct FlImageApi* api, FlImage image) {
-    return (api->get_info)(api->priv, image);
+FL_INLINE FlImageInfo* fl_image_get_info(FlImage image) {
+#ifdef FLOWI_STATIC
+
+    return fl_image_get_info_impl(void* ctx, image);
+#else
+    return (api->get_info)(void* ctx, image);
+#endif
 }

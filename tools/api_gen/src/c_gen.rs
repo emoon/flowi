@@ -278,6 +278,7 @@ impl Cgen {
         writeln!(f, ")\n")
     }
 
+    /*
     pub fn generate_render_file(filename: &str, render_commands: &[&String]) -> io::Result<()> {
         let mut f = BufWriter::new(File::create(filename)?);
 
@@ -299,6 +300,7 @@ impl Cgen {
 
         Ok(())
     }
+    */
 
     /// Generate function prototypes in the style of
     fn generate_function_args(func: &Function, self_name: &str) -> FuncArgs {
@@ -414,6 +416,7 @@ impl Cgen {
 
         let arg_offset = usize::from(with_ctx == Ctx::No);
 
+        /*
         if with_ctx == Ctx::No {
             writeln!(
                 f,
@@ -423,6 +426,7 @@ impl Cgen {
                 arg_line(&fa.internal_args, with_ctx)
             )?;
         }
+        */
 
         writeln!(
             f,
@@ -436,20 +440,25 @@ impl Cgen {
             write!(f, "{}", &fa.body)?;
         }
 
-        let argument_line = arg_line(&fa.call_args[arg_offset..], Ctx::No);
+        let argument_line = arg_line(&fa.call_args[arg_offset..], Ctx::Yes("void* ctx"));
 
-        if with_ctx == Ctx::No {
-            if fa.return_value != "void" {
-                writeln!(f, "return {}_impl({});", func_name, argument_line)?;
-            } else {
-                writeln!(f, "{}_impl({});", func_name, argument_line)?;
-            }
-        } else if fa.return_value != "void" {
+        writeln!(f, "#ifdef FLOWI_STATIC\n")?;
+
+        if fa.return_value != "void" {
+            writeln!(f, "return {}_impl({});", func_name, argument_line)?;
+        } else {
+            writeln!(f, "{}_impl({});", func_name, argument_line)?;
+        }
+
+        writeln!(f, "#else")?;
+
+        if fa.return_value != "void" {
             writeln!(f, "return (api->{})({});", func.name, argument_line)?;
         } else {
             writeln!(f, "(api->{})({});", func.name, argument_line)?;
         }
 
+        writeln!(f, "#endif")?;
         writeln!(f, "}}\n")
     }
 
@@ -504,11 +513,11 @@ impl Cgen {
                 writeln!(f, "#include \"{}.h\"", base_filename)?;
             }
         }
+        /*
 
         writeln!(f)?;
         writeln!(f, "struct FlInternalData;")?;
         writeln!(f, "\ntypedef struct FlContext {{")?;
-        writeln!(f, "    struct FlInternalData* priv;")?;
 
         // Generate accesors for the various APIs
         for s in &structs_with_funcs {
@@ -535,7 +544,9 @@ impl Cgen {
         }
 
         writeln!(f, "}} FlContext;\n")?;
+        */
 
+        /*
         for s in &structs_with_funcs {
              let func_name = format!("{}_{}", C_API_SUFIX_FUNCS, s.name.to_snake_case());
             if let Some(func) = s.functions.iter().find(|f| f.name == s.name) {
@@ -560,6 +571,7 @@ impl Cgen {
                 )?;
             }
         }
+        */
 
         writeln!(f)?;
 
@@ -585,17 +597,11 @@ impl Cgen {
 
             writeln!(f, "{}", HEADER2)?;
 
-            let mut render_commands = Vec::with_capacity(api_def.structs.len());
-
             for enum_def in &api_def.enums {
                 Self::generate_enum(&mut f, enum_def)?;
             }
 
             for sdef in &api_def.structs {
-                if sdef.has_attribute("RenderCommand") {
-                    render_commands.push(&sdef.name);
-                }
-
                 Self::generate_struct(&mut f, sdef)?;
             }
 
@@ -623,14 +629,11 @@ impl Cgen {
 
             // generate defintion
             for sdef in &api_def.structs {
-                let context_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
+                //let context_name = format!("struct {}{}Api* api", C_API_SUFFIX, sdef.name);
 
                 for func in &sdef.functions {
-                    let with_ctx = if sdef.has_attribute("NoContext") {
-                        Ctx::No
-                    } else {
-                        Ctx::Yes(&context_name)
-                    };
+                    let with_ctx = Ctx::No;
+
                     if sdef.has_attribute("Handle") {
                         Self::generate_function_def(&mut f, func, &sdef.name, with_ctx)?;
                     } else {
@@ -666,11 +669,14 @@ impl Cgen {
                 }
 
                 for func in &sdef.functions {
+                    let with_ctx = Ctx::No;
+                    /*
                     let with_ctx = if sdef.has_attribute("NoContext") {
                         Ctx::No
                     } else {
                         Ctx::Yes(&context_name)
                     };
+                    */
                     if sdef.has_attribute("Handle") {
                         Self::generate_function(&mut fi, func, &sdef.name, with_ctx)?;
                     } else {
@@ -687,6 +693,7 @@ impl Cgen {
             writeln!(f, "\n#include \"{}.inl\"", api_def.base_filename)?;
             writeln!(f, "{}", FOOTER)?;
 
+            /*
             if !render_commands.is_empty() {
                 let render_filename = "../src/render.h";
                 println!(
@@ -703,6 +710,7 @@ impl Cgen {
 
                 Self::generate_render_file(render_filename, &render_commands)?;
             }
+            */
         }
 
         run_clang_format(&filename);

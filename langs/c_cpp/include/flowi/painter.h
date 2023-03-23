@@ -28,20 +28,20 @@ struct FlPainterApi;
 struct FlPainter;
 
 // The current layer to draw on. Default is ActiveWindow.
-static void fl_painter_set_layer(struct FlPainterApi* api, FlPainterLayer layer);
+static void fl_painter_set_layer(FlPainterLayer layer);
 
 // Draw a line from `pos` to `end` with the given `color` and `thickness`.
-static void fl_painter_draw_line(struct FlPainterApi* api, FlVec2 p1, FlVec2 p2, FlColor color, float thickness);
+static void fl_painter_draw_line(FlVec2 p1, FlVec2 p2, FlColor color, float thickness);
 
 // Draw a rectangle with the given `color` and `rounding`.
-static void fl_painter_draw_rect(struct FlPainterApi* api, FlVec2 p1, FlVec2 p2, FlColor color, float rounding);
+static void fl_painter_draw_rect(FlVec2 p1, FlVec2 p2, FlColor color, float rounding);
 
 // Draw a filled rectangle with the given `color` and `rounding`.
-static void fl_painter_draw_rect_filled(struct FlPainterApi* api, FlVec2 p1, FlVec2 p2, FlColor color, float rounding);
+static void fl_painter_draw_rect_filled(FlVec2 p1, FlVec2 p2, FlColor color, float rounding);
 
 // Draw a rectangle with a gradient
-static void fl_painter_draw_rect_filled_gradient(struct FlPainterApi* api, FlVec2 p1, FlVec2 p2, FlColor left,
-                                                 FlColor right, FlColor btm_right, FlColor btm_left);
+static void fl_painter_draw_rect_filled_gradient(FlVec2 p1, FlVec2 p2, FlColor left, FlColor right, FlColor btm_right,
+                                                 FlColor btm_left);
 
 #include "painter.inl"
 

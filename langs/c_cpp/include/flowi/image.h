@@ -55,7 +55,7 @@ typedef uint64_t FlImage;
 // Load SVG from file
 // Load SVG from memory
 // Get data amout the image
-static FlImageInfo* fl_image_get_info(struct FlImageApi* api, FlImage image);
+static FlImageInfo* fl_image_get_info(FlImage image);
 
 #include "image.inl"
 

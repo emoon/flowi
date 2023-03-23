@@ -12,54 +12,97 @@ typedef struct FlMenuApi {
 } FlMenuApi;
 
 // Append to menu-bar of current window (requires [WindowFlags::MENU_BAR] flag set on parent window).
-FL_INLINE bool fl_menu_begin_bar(struct FlMenuApi* api) {
-    return (api->begin_bar)(api->priv);
+FL_INLINE bool fl_menu_begin_bar() {
+#ifdef FLOWI_STATIC
+
+    return fl_menu_begin_bar_impl(void* ctx);
+#else
+    return (api->begin_bar)(void* ctx);
+#endif
 }
 
 // only call end_bar() if begin_bar() returns true!
-FL_INLINE void fl_menu_end_bar(struct FlMenuApi* api) {
-    (api->end_bar)(api->priv);
+FL_INLINE void fl_menu_end_bar() {
+#ifdef FLOWI_STATIC
+
+    fl_menu_end_bar_impl(void* ctx);
+#else
+    (api->end_bar)(void* ctx);
+#endif
 }
 
 // create and append to a full screen menu-bar.
-FL_INLINE bool fl_menu_begin_main_bar(struct FlMenuApi* api) {
-    return (api->begin_main_bar)(api->priv);
+FL_INLINE bool fl_menu_begin_main_bar() {
+#ifdef FLOWI_STATIC
+
+    return fl_menu_begin_main_bar_impl(void* ctx);
+#else
+    return (api->begin_main_bar)(void* ctx);
+#endif
 }
 
 // only call end_main_bar() if begin_main_bar() returns true!
-FL_INLINE void fl_menu_end_main_bar(struct FlMenuApi* api) {
-    (api->end_main_bar)(api->priv);
+FL_INLINE void fl_menu_end_main_bar() {
+#ifdef FLOWI_STATIC
+
+    fl_menu_end_main_bar_impl(void* ctx);
+#else
+    (api->end_main_bar)(void* ctx);
+#endif
 }
 
 // create a sub-menu entry. only call EndMenu() if this returns true!
-FL_INLINE bool fl_menu_begin(struct FlMenuApi* api, const char* label, bool enabled) {
+FL_INLINE bool fl_menu_begin(const char* label, bool enabled) {
     FlString label_ = fl_cstr_to_flstring(label);
-    return (api->begin)(api->priv, label_, enabled);
+#ifdef FLOWI_STATIC
+
+        return fl_menu_begin_impl(void* ctx, label_, enabled);
+#else
+    return (api->begin)(void* ctx, label_, enabled);
+#endif
 }
 
 // only call end_menu() if begin_menu() returns true!
-FL_INLINE void fl_menu_end(struct FlMenuApi* api) {
-    (api->end)(api->priv);
+FL_INLINE void fl_menu_end() {
+#ifdef FLOWI_STATIC
+
+    fl_menu_end_impl(void* ctx);
+#else
+    (api->end)(void* ctx);
+#endif
 }
 
 // return true when activated.
-FL_INLINE bool fl_menu_item(struct FlMenuApi* api, const char* label) {
+FL_INLINE bool fl_menu_item(const char* label) {
     FlString label_ = fl_cstr_to_flstring(label);
-    return (api->item)(api->priv, label_);
+#ifdef FLOWI_STATIC
+
+        return fl_menu_item_impl(void* ctx, label_);
+#else
+    return (api->item)(void* ctx, label_);
+#endif
 }
 
 // return true when activated. Includes some extra info such as shortcut, etc
-FL_INLINE bool fl_menu_item_ex(struct FlMenuApi* api, const char* label, const char* shortcut, bool selected,
-                               bool enabled) {
+FL_INLINE bool fl_menu_item_ex(const char* label, const char* shortcut, bool selected, bool enabled) {
     FlString label_ = fl_cstr_to_flstring(label);
     FlString shortcut_ = fl_cstr_to_flstring(shortcut);
-    return (api->item_ex)(api->priv, label_, shortcut_, selected, enabled);
+#ifdef FLOWI_STATIC
+
+        return fl_menu_item_ex_impl(void* ctx, label_, shortcut_, selected, enabled);
+#else
+    return (api->item_ex)(void* ctx, label_, shortcut_, selected, enabled);
+#endif
 }
 
 // return true when activated + toggle selected
-FL_INLINE bool fl_menu_item_toggle(struct FlMenuApi* api, const char* label, const char* shortcut, bool* selected,
-                                   bool enabled) {
+FL_INLINE bool fl_menu_item_toggle(const char* label, const char* shortcut, bool* selected, bool enabled) {
     FlString label_ = fl_cstr_to_flstring(label);
     FlString shortcut_ = fl_cstr_to_flstring(shortcut);
-    return (api->item_toggle)(api->priv, label_, shortcut_, selected, enabled);
+#ifdef FLOWI_STATIC
+
+        return fl_menu_item_toggle_impl(void* ctx, label_, shortcut_, selected, enabled);
+#else
+    return (api->item_toggle)(void* ctx, label_, shortcut_, selected, enabled);
+#endif
 }
