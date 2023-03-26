@@ -28,8 +28,6 @@ typedef struct FlImageInfo {
     uint32_t height;
 } FlImageInfo;
 
-struct FlImageApi;
-
 typedef uint64_t FlImage;
 
 // Load image from file. Supported formats are:

@@ -23,8 +23,6 @@ typedef enum FlPainterLayer {
     FlPainterLayer_Foreground = 2,
 } FlPainterLayer;
 
-struct FlPainterApi;
-
 struct FlPainter;
 
 // The current layer to draw on. Default is ActiveWindow.

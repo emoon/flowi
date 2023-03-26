@@ -79,7 +79,8 @@ fn arg_line(args: &[String], with_context: Ctx) -> String {
     output
 }
 
-fn get_args_name(func: &Function) -> String { format!("{}{}Args", C_API_SUFFIX, func.name.to_upper_camel_case())
+fn get_args_name(func: &Function) -> String {
+    format!("{}{}Args", C_API_SUFFIX, func.name.to_upper_camel_case())
 }
 
 fn run_clang_format(filename: &str) {
@@ -144,7 +145,7 @@ impl Cgen {
                     v
                 )?,
                 EnumValue::OrList(_) => writeln!(f)?,
-                _ => (), 
+                _ => (),
             }
         }
 
@@ -219,9 +220,11 @@ impl Cgen {
     fn generate_struct<W: Write>(f: &mut W, sdef: &Struct) -> io::Result<()> {
         Self::write_commment(f, &sdef.doc_comments, 0)?;
 
+        /*
         if sdef.variables.is_empty() && !sdef.functions.is_empty() {
             writeln!(f, "struct {}{}Api;\n", C_API_SUFFIX, sdef.name)?;
         }
+        */
 
         // if we have handle set we just generate it as a i32 instead
         if sdef.has_attribute("Handle") {
@@ -408,10 +411,12 @@ impl Cgen {
 
         Self::write_commment(f, &func.doc_comments, 0)?;
 
+        let self_name_snake = self_name.to_snake_case();
+
         // write the implementation func
 
         #[rustfmt::skip]
-        let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, self_name.to_snake_case(), func.name);
+        let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, &self_name_snake, func.name);
         let func_name_c = &func_name;
 
         let arg_offset = usize::from(with_ctx == Ctx::No);
@@ -437,12 +442,15 @@ impl Cgen {
         )?;
 
         if !fa.body.is_empty() {
-            write!(f, "{}", &fa.body)?;
+            writeln!(f, "{}", &fa.body)?;
         }
 
-        let argument_line = arg_line(&fa.call_args[arg_offset..], Ctx::Yes("void* ctx"));
+        let argument_line = arg_line(
+            &fa.call_args[arg_offset..],
+            Ctx::Yes(&format!("g_flowi_{}_api->priv", self_name_snake)),
+        );
 
-        writeln!(f, "#ifdef FLOWI_STATIC\n")?;
+        writeln!(f, "#ifdef FLOWI_STATIC")?;
 
         if fa.return_value != "void" {
             writeln!(f, "return {}_impl({});", func_name, argument_line)?;
@@ -453,9 +461,17 @@ impl Cgen {
         writeln!(f, "#else")?;
 
         if fa.return_value != "void" {
-            writeln!(f, "return (api->{})({});", func.name, argument_line)?;
+            writeln!(
+                f,
+                "return (g_flowi_{}_api->{})({});",
+                self_name_snake, func.name, argument_line
+            )?;
         } else {
-            writeln!(f, "(api->{})({});", func.name, argument_line)?;
+            writeln!(
+                f,
+                "(g_flowi_{}_api->{})({});",
+                self_name_snake, func.name, argument_line
+            )?;
         }
 
         writeln!(f, "#endif")?;
@@ -499,7 +515,7 @@ impl Cgen {
         let filename = format!("{}/flowi.h", path);
 
         let mut f = BufWriter::new(File::create(filename)?);
-        
+
         let structs_with_funcs = get_structs_with_functions(api_defs);
 
         for api_def in api_defs {
@@ -556,7 +572,7 @@ impl Cgen {
                     "FL_INLINE struct {}{}Api* {}_api(FlContext* ctx, {}) {{ return (ctx->{}_get_api)(ctx->priv, 0, {}); }}",
                     C_API_SUFFIX,
                     s.name,
-                    func_name, 
+                    func_name,
                     arg_line(&fa.func_args, Ctx::No),
                     s.name.to_snake_case(),
                     arg_line(&fa.call_args[1..], Ctx::No)
@@ -666,51 +682,36 @@ impl Cgen {
                     }
 
                     writeln!(fi, "}} {}{}Api;\n", C_API_SUFFIX, sdef.name)?;
+
+                    writeln!(
+                        fi,
+                        "extern Fl{}Api* g_flowi_{}_api;\n",
+                        sdef.name, sdef.name.to_snake_case()
+                    )?;
+
+                    writeln!(fi, "#ifdef FLOWI_STATIC")?;
+
+                    for func in &sdef.functions {
+                        let with_ctx = Ctx::Yes("struct FlInternalData* priv");
+                        let fa = Self::generate_function_args(func, &sdef.name);
+            
+                        let func_name = format!("{}_{}_{}", C_API_SUFIX_FUNCS, &sdef.name.to_snake_case(), func.name);
+
+                        #[rustfmt::skip]
+                        writeln!(fi, "{} {}_impl({});", fa.return_value, &func_name, arg_line(&fa.internal_args, with_ctx))?;
+                    }
+
+                    writeln!(fi, "#endif\n")?;
                 }
 
                 for func in &sdef.functions {
                     let with_ctx = Ctx::No;
-                    /*
-                    let with_ctx = if sdef.has_attribute("NoContext") {
-                        Ctx::No
-                    } else {
-                        Ctx::Yes(&context_name)
-                    };
-                    */
-                    if sdef.has_attribute("Handle") {
-                        Self::generate_function(&mut fi, func, &sdef.name, with_ctx)?;
-                    } else {
-                        Self::generate_function(
-                            &mut fi,
-                            func,
-                            &format!("{}*", sdef.name),
-                            with_ctx,
-                        )?;
-                    }
+                    Self::generate_function(&mut fi, func, &sdef.name, with_ctx)?;
                 }
             }
 
             writeln!(f, "\n#include \"{}.inl\"", api_def.base_filename)?;
             writeln!(f, "{}", FOOTER)?;
-
-            /*
-            if !render_commands.is_empty() {
-                let render_filename = "../src/render.h";
-                println!(
-                    "    Generating RenderCommands C header: {}",
-                    render_filename
-                );
-
-                writeln!(f, "// Commands that will be in the render stream")?;
-                writeln!(f, "typedef enum FlRenderCommand {{")?;
-                for cmd in &render_commands {
-                    writeln!(f, "    FlRenderCommand_{},", &cmd)?;
-                }
-                writeln!(f, "}} FlRenderCommand;\n")?;
-
-                Self::generate_render_file(render_filename, &render_commands)?;
-            }
-            */
         }
 
         run_clang_format(&filename);

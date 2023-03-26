@@ -104,8 +104,6 @@ typedef enum FlStyleVec2 {
     FlStyleVec2_SelectableTextAlign = 8,
 } FlStyleVec2;
 
-struct FlStyleApi;
-
 struct FlStyle;
 
 // Permantly set a color

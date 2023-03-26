@@ -17,8 +17,6 @@
 extern "C" {
 #endif
 
-struct FlUiApi;
-
 struct FlUi;
 
 // Draw static text with the selected font

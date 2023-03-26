@@ -121,8 +121,6 @@ typedef enum FlHoveredFlags {
     FlHoveredFlags_NoSharedDelay = 1 << 13,
 } FlHoveredFlags;
 
-struct FlWindowApi;
-
 struct FlWindow;
 
 // Sets the position of the next window, call before begin()

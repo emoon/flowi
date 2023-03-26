@@ -16,8 +16,6 @@
 extern "C" {
 #endif
 
-struct FlIoApi;
-
 struct FlIo;
 
 // Load image from file/url. Supported formats are:

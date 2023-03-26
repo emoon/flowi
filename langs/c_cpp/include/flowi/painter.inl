@@ -8,43 +8,50 @@ typedef struct FlPainterApi {
                                       FlColor btm_right, FlColor btm_left);
 } FlPainterApi;
 
+extern FlPainterApi* g_flowi_painter_api;
+
+#ifdef FLOWI_STATIC
+void fl_painter_set_layer_impl(struct FlInternalData* priv, FlPainterLayer layer);
+void fl_painter_draw_line_impl(struct FlInternalData* priv, FlVec2 p1, FlVec2 p2, FlColor color, float thickness);
+void fl_painter_draw_rect_impl(struct FlInternalData* priv, FlVec2 p1, FlVec2 p2, FlColor color, float rounding);
+void fl_painter_draw_rect_filled_impl(struct FlInternalData* priv, FlVec2 p1, FlVec2 p2, FlColor color, float rounding);
+void fl_painter_draw_rect_filled_gradient_impl(struct FlInternalData* priv, FlVec2 p1, FlVec2 p2, FlColor left,
+                                               FlColor right, FlColor btm_right, FlColor btm_left);
+#endif
+
 // The current layer to draw on. Default is ActiveWindow.
 FL_INLINE void fl_painter_set_layer(FlPainterLayer layer) {
 #ifdef FLOWI_STATIC
-
-    fl_painter_set_layer_impl(void* ctx, layer);
+    fl_painter_set_layer_impl(g_flowi_painter_api->priv, layer);
 #else
-    (api->set_layer)(void* ctx, layer);
+    (g_flowi_painter_api->set_layer)(g_flowi_painter_api->priv, layer);
 #endif
 }
 
 // Draw a line from `pos` to `end` with the given `color` and `thickness`.
 FL_INLINE void fl_painter_draw_line(FlVec2 p1, FlVec2 p2, FlColor color, float thickness) {
 #ifdef FLOWI_STATIC
-
-    fl_painter_draw_line_impl(void* ctx, p1, p2, color, thickness);
+    fl_painter_draw_line_impl(g_flowi_painter_api->priv, p1, p2, color, thickness);
 #else
-    (api->draw_line)(void* ctx, p1, p2, color, thickness);
+    (g_flowi_painter_api->draw_line)(g_flowi_painter_api->priv, p1, p2, color, thickness);
 #endif
 }
 
 // Draw a rectangle with the given `color` and `rounding`.
 FL_INLINE void fl_painter_draw_rect(FlVec2 p1, FlVec2 p2, FlColor color, float rounding) {
 #ifdef FLOWI_STATIC
-
-    fl_painter_draw_rect_impl(void* ctx, p1, p2, color, rounding);
+    fl_painter_draw_rect_impl(g_flowi_painter_api->priv, p1, p2, color, rounding);
 #else
-    (api->draw_rect)(void* ctx, p1, p2, color, rounding);
+    (g_flowi_painter_api->draw_rect)(g_flowi_painter_api->priv, p1, p2, color, rounding);
 #endif
 }
 
 // Draw a filled rectangle with the given `color` and `rounding`.
 FL_INLINE void fl_painter_draw_rect_filled(FlVec2 p1, FlVec2 p2, FlColor color, float rounding) {
 #ifdef FLOWI_STATIC
-
-    fl_painter_draw_rect_filled_impl(void* ctx, p1, p2, color, rounding);
+    fl_painter_draw_rect_filled_impl(g_flowi_painter_api->priv, p1, p2, color, rounding);
 #else
-    (api->draw_rect_filled)(void* ctx, p1, p2, color, rounding);
+    (g_flowi_painter_api->draw_rect_filled)(g_flowi_painter_api->priv, p1, p2, color, rounding);
 #endif
 }
 
@@ -52,9 +59,9 @@ FL_INLINE void fl_painter_draw_rect_filled(FlVec2 p1, FlVec2 p2, FlColor color, 
 FL_INLINE void fl_painter_draw_rect_filled_gradient(FlVec2 p1, FlVec2 p2, FlColor left, FlColor right,
                                                     FlColor btm_right, FlColor btm_left) {
 #ifdef FLOWI_STATIC
-
-    fl_painter_draw_rect_filled_gradient_impl(void* ctx, p1, p2, left, right, btm_right, btm_left);
+    fl_painter_draw_rect_filled_gradient_impl(g_flowi_painter_api->priv, p1, p2, left, right, btm_right, btm_left);
 #else
-    (api->draw_rect_filled_gradient)(void* ctx, p1, p2, left, right, btm_right, btm_left);
+    (g_flowi_painter_api->draw_rect_filled_gradient)(g_flowi_painter_api->priv, p1, p2, left, right, btm_right,
+                                                     btm_left);
 #endif
 }

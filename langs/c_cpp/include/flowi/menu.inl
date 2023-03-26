@@ -11,43 +11,54 @@ typedef struct FlMenuApi {
     bool (*item_toggle)(struct FlInternalData* priv, FlString label, FlString shortcut, bool* selected, bool enabled);
 } FlMenuApi;
 
+extern FlMenuApi* g_flowi_menu_api;
+
+#ifdef FLOWI_STATIC
+bool fl_menu_begin_bar_impl(struct FlInternalData* priv);
+void fl_menu_end_bar_impl(struct FlInternalData* priv);
+bool fl_menu_begin_main_bar_impl(struct FlInternalData* priv);
+void fl_menu_end_main_bar_impl(struct FlInternalData* priv);
+bool fl_menu_begin_impl(struct FlInternalData* priv, FlString label, bool enabled);
+void fl_menu_end_impl(struct FlInternalData* priv);
+bool fl_menu_item_impl(struct FlInternalData* priv, FlString label);
+bool fl_menu_item_ex_impl(struct FlInternalData* priv, FlString label, FlString shortcut, bool selected, bool enabled);
+bool fl_menu_item_toggle_impl(struct FlInternalData* priv, FlString label, FlString shortcut, bool* selected,
+                              bool enabled);
+#endif
+
 // Append to menu-bar of current window (requires [WindowFlags::MENU_BAR] flag set on parent window).
 FL_INLINE bool fl_menu_begin_bar() {
 #ifdef FLOWI_STATIC
-
-    return fl_menu_begin_bar_impl(void* ctx);
+    return fl_menu_begin_bar_impl(g_flowi_menu_api->priv);
 #else
-    return (api->begin_bar)(void* ctx);
+    return (g_flowi_menu_api->begin_bar)(g_flowi_menu_api->priv);
 #endif
 }
 
 // only call end_bar() if begin_bar() returns true!
 FL_INLINE void fl_menu_end_bar() {
 #ifdef FLOWI_STATIC
-
-    fl_menu_end_bar_impl(void* ctx);
+    fl_menu_end_bar_impl(g_flowi_menu_api->priv);
 #else
-    (api->end_bar)(void* ctx);
+    (g_flowi_menu_api->end_bar)(g_flowi_menu_api->priv);
 #endif
 }
 
 // create and append to a full screen menu-bar.
 FL_INLINE bool fl_menu_begin_main_bar() {
 #ifdef FLOWI_STATIC
-
-    return fl_menu_begin_main_bar_impl(void* ctx);
+    return fl_menu_begin_main_bar_impl(g_flowi_menu_api->priv);
 #else
-    return (api->begin_main_bar)(void* ctx);
+    return (g_flowi_menu_api->begin_main_bar)(g_flowi_menu_api->priv);
 #endif
 }
 
 // only call end_main_bar() if begin_main_bar() returns true!
 FL_INLINE void fl_menu_end_main_bar() {
 #ifdef FLOWI_STATIC
-
-    fl_menu_end_main_bar_impl(void* ctx);
+    fl_menu_end_main_bar_impl(g_flowi_menu_api->priv);
 #else
-    (api->end_main_bar)(void* ctx);
+    (g_flowi_menu_api->end_main_bar)(g_flowi_menu_api->priv);
 #endif
 }
 
@@ -55,20 +66,18 @@ FL_INLINE void fl_menu_end_main_bar() {
 FL_INLINE bool fl_menu_begin(const char* label, bool enabled) {
     FlString label_ = fl_cstr_to_flstring(label);
 #ifdef FLOWI_STATIC
-
-        return fl_menu_begin_impl(void* ctx, label_, enabled);
+    return fl_menu_begin_impl(g_flowi_menu_api->priv, label_, enabled);
 #else
-    return (api->begin)(void* ctx, label_, enabled);
+    return (g_flowi_menu_api->begin)(g_flowi_menu_api->priv, label_, enabled);
 #endif
 }
 
 // only call end_menu() if begin_menu() returns true!
 FL_INLINE void fl_menu_end() {
 #ifdef FLOWI_STATIC
-
-    fl_menu_end_impl(void* ctx);
+    fl_menu_end_impl(g_flowi_menu_api->priv);
 #else
-    (api->end)(void* ctx);
+    (g_flowi_menu_api->end)(g_flowi_menu_api->priv);
 #endif
 }
 
@@ -76,10 +85,9 @@ FL_INLINE void fl_menu_end() {
 FL_INLINE bool fl_menu_item(const char* label) {
     FlString label_ = fl_cstr_to_flstring(label);
 #ifdef FLOWI_STATIC
-
-        return fl_menu_item_impl(void* ctx, label_);
+    return fl_menu_item_impl(g_flowi_menu_api->priv, label_);
 #else
-    return (api->item)(void* ctx, label_);
+    return (g_flowi_menu_api->item)(g_flowi_menu_api->priv, label_);
 #endif
 }
 
@@ -88,10 +96,9 @@ FL_INLINE bool fl_menu_item_ex(const char* label, const char* shortcut, bool sel
     FlString label_ = fl_cstr_to_flstring(label);
     FlString shortcut_ = fl_cstr_to_flstring(shortcut);
 #ifdef FLOWI_STATIC
-
-        return fl_menu_item_ex_impl(void* ctx, label_, shortcut_, selected, enabled);
+    return fl_menu_item_ex_impl(g_flowi_menu_api->priv, label_, shortcut_, selected, enabled);
 #else
-    return (api->item_ex)(void* ctx, label_, shortcut_, selected, enabled);
+    return (g_flowi_menu_api->item_ex)(g_flowi_menu_api->priv, label_, shortcut_, selected, enabled);
 #endif
 }
 
@@ -100,9 +107,8 @@ FL_INLINE bool fl_menu_item_toggle(const char* label, const char* shortcut, bool
     FlString label_ = fl_cstr_to_flstring(label);
     FlString shortcut_ = fl_cstr_to_flstring(shortcut);
 #ifdef FLOWI_STATIC
-
-        return fl_menu_item_toggle_impl(void* ctx, label_, shortcut_, selected, enabled);
+    return fl_menu_item_toggle_impl(g_flowi_menu_api->priv, label_, shortcut_, selected, enabled);
 #else
-    return (api->item_toggle)(void* ctx, label_, shortcut_, selected, enabled);
+    return (g_flowi_menu_api->item_toggle)(g_flowi_menu_api->priv, label_, shortcut_, selected, enabled);
 #endif
 }

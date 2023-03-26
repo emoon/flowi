@@ -14,8 +14,6 @@
 extern "C" {
 #endif
 
-struct FlFontApi;
-
 typedef uint64_t FlFont;
 
 // Create a font from (TTF) file. To use the font use [ui::set_font] before using text-based widgets

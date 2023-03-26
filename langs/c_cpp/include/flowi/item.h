@@ -16,8 +16,6 @@
 extern "C" {
 #endif
 
-struct FlItemApi;
-
 struct FlItem;
 
 // Is the last item hovered? (and usable, aka not blocked by a popup, etc.). See ImGuiHoveredFlags for more options.

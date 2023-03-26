@@ -10,15 +10,27 @@ typedef struct FlFontApi {
     void (*destroy)(struct FlInternalData* priv, FlFont font);
 } FlFontApi;
 
+extern FlFontApi* g_flowi_font_api;
+
+#ifdef FLOWI_STATIC
+FlFont fl_font_new_from_file_impl(struct FlInternalData* priv, FlString filename, uint32_t font_size);
+FlFont fl_font_new_from_file_range_impl(struct FlInternalData* priv, FlString filename, uint32_t font_size,
+                                        uint16_t glyph_range_start, uint16_t glyph_range_end);
+FlFont fl_font_new_from_memory_impl(struct FlInternalData* priv, FlString name, uint8_t* data, uint32_t data_size,
+                                    uint32_t font_size);
+void fl_font_push_impl(struct FlInternalData* priv, FlFont font);
+void fl_font_pop_impl(struct FlInternalData* priv);
+void fl_font_destroy_impl(struct FlInternalData* priv, FlFont font);
+#endif
+
 // Create a font from (TTF) file. To use the font use [ui::set_font] before using text-based widgets
 // Returns >= 0 for valid handle, use fl_get_status(); for more detailed error message
 FL_INLINE FlFont fl_font_new_from_file(const char* filename, uint32_t font_size) {
     FlString filename_ = fl_cstr_to_flstring(filename);
 #ifdef FLOWI_STATIC
-
-        return fl_font_new_from_file_impl(void* ctx, filename_, font_size);
+    return fl_font_new_from_file_impl(g_flowi_font_api->priv, filename_, font_size);
 #else
-    return (api->new_from_file)(void* ctx, filename_, font_size);
+    return (g_flowi_font_api->new_from_file)(g_flowi_font_api->priv, filename_, font_size);
 #endif
 }
 
@@ -27,10 +39,11 @@ FL_INLINE FlFont fl_font_new_from_file_range(const char* filename, uint32_t font
                                              uint16_t glyph_range_end) {
     FlString filename_ = fl_cstr_to_flstring(filename);
 #ifdef FLOWI_STATIC
-
-        return fl_font_new_from_file_range_impl(void* ctx, filename_, font_size, glyph_range_start, glyph_range_end);
+    return fl_font_new_from_file_range_impl(g_flowi_font_api->priv, filename_, font_size, glyph_range_start,
+                                            glyph_range_end);
 #else
-    return (api->new_from_file_range)(void* ctx, filename_, font_size, glyph_range_start, glyph_range_end);
+    return (g_flowi_font_api->new_from_file_range)(g_flowi_font_api->priv, filename_, font_size, glyph_range_start,
+                                                   glyph_range_end);
 #endif
 }
 
@@ -39,39 +52,35 @@ FL_INLINE FlFont fl_font_new_from_file_range(const char* filename, uint32_t font
 FL_INLINE FlFont fl_font_new_from_memory(const char* name, uint8_t* data, uint32_t data_size, uint32_t font_size) {
     FlString name_ = fl_cstr_to_flstring(name);
 #ifdef FLOWI_STATIC
-
-        return fl_font_new_from_memory_impl(void* ctx, name_, data, data_size, font_size);
+    return fl_font_new_from_memory_impl(g_flowi_font_api->priv, name_, data, data_size, font_size);
 #else
-    return (api->new_from_memory)(void* ctx, name_, data, data_size, font_size);
+    return (g_flowi_font_api->new_from_memory)(g_flowi_font_api->priv, name_, data, data_size, font_size);
 #endif
 }
 
 // Push a font for usage
 FL_INLINE void fl_font_push(FlFont font) {
 #ifdef FLOWI_STATIC
-
-    fl_font_push_impl(void* ctx, font);
+    fl_font_push_impl(g_flowi_font_api->priv, font);
 #else
-    (api->push)(void* ctx, font);
+    (g_flowi_font_api->push)(g_flowi_font_api->priv, font);
 #endif
 }
 
 // Pop a font from the stack
 FL_INLINE void fl_font_pop() {
 #ifdef FLOWI_STATIC
-
-    fl_font_pop_impl(void* ctx);
+    fl_font_pop_impl(g_flowi_font_api->priv);
 #else
-    (api->pop)(void* ctx);
+    (g_flowi_font_api->pop)(g_flowi_font_api->priv);
 #endif
 }
 
 // Destory the current font, render the id invalid
 FL_INLINE void fl_font_destroy(FlFont font) {
 #ifdef FLOWI_STATIC
-
-    fl_font_destroy_impl(void* ctx, font);
+    fl_font_destroy_impl(g_flowi_font_api->priv, font);
 #else
-    (api->destroy)(void* ctx, font);
+    (g_flowi_font_api->destroy)(g_flowi_font_api->priv, font);
 #endif
 }

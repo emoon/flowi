@@ -4,6 +4,13 @@ typedef struct FlIoApi {
                                                 FlString ps_filename);
 } FlIoApi;
 
+extern FlIoApi* g_flowi_io_api;
+
+#ifdef FLOWI_STATIC
+FlShaderProgram fl_io_load_shader_program_comp_impl(struct FlInternalData* priv, FlString vs_filename,
+                                                    FlString ps_filename);
+#endif
+
 // Load image from file/url. Supported formats are:
 // JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
 // PNG 1/2/4/8/16-bit-per-channel
@@ -22,9 +29,8 @@ FL_INLINE FlShaderProgram fl_io_load_shader_program_comp(const char* vs_filename
     FlString vs_filename_ = fl_cstr_to_flstring(vs_filename);
     FlString ps_filename_ = fl_cstr_to_flstring(ps_filename);
 #ifdef FLOWI_STATIC
-
-        return fl_io_load_shader_program_comp_impl(void* ctx, vs_filename_, ps_filename_);
+    return fl_io_load_shader_program_comp_impl(g_flowi_io_api->priv, vs_filename_, ps_filename_);
 #else
-    return (api->load_shader_program_comp)(void* ctx, vs_filename_, ps_filename_);
+    return (g_flowi_io_api->load_shader_program_comp)(g_flowi_io_api->priv, vs_filename_, ps_filename_);
 #endif
 }

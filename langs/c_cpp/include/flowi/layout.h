@@ -20,8 +20,6 @@ extern "C" {
 // By setting the cursor position, you can change the position of the widget.
 // You can call same_line() between widgets to undo the last carriage return and output at the right of the preceding
 // widget.
-struct FlCursorApi;
-
 struct FlCursor;
 
 // Separator, generally horizontal. Inside a menu bar or in horizontal layout mode, this becomes a vertical separator.

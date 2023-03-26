@@ -1,10 +1,10 @@
 use crate::api_parser::*;
-use heck::{ToSnakeCase, ToShoutySnakeCase};
+use heck::{ToShoutySnakeCase, ToSnakeCase};
 use std::borrow::Cow;
-use std::process::Command;
 use std::fs::File;
 use std::io;
 use std::io::{BufWriter, Write};
+use std::process::Command;
 
 pub struct RustGen;
 
@@ -96,7 +96,12 @@ impl RustGen {
         for entry in &enum_def.entries {
             Self::write_commment(f, &entry.doc_comments, 4)?;
             match &entry.value {
-                EnumValue::Value(v) => writeln!(f, "    const {} = {};", entry.name.to_shouty_snake_case(), v)?,
+                EnumValue::Value(v) => writeln!(
+                    f,
+                    "    const {} = {};",
+                    entry.name.to_shouty_snake_case(),
+                    v
+                )?,
                 EnumValue::OrList(v) => {
                     write!(f, "    const {} = ", entry.name.to_shouty_snake_case())?;
                     for (i, v) in v.iter().enumerate() {
@@ -108,7 +113,7 @@ impl RustGen {
                     }
 
                     writeln!(f, ";")?;
-                },
+                }
 
                 _ => (),
             }
@@ -185,7 +190,8 @@ impl RustGen {
         for (i, arg) in func.function_args.iter().enumerate() {
             if i == 0 && func.func_type == FunctionType::Static {
                 if with_ctx == Ctx::Yes {
-                    fa.ffi_args.push("data: *const core::ffi::c_void".to_owned());
+                    fa.ffi_args
+                        .push("data: *const core::ffi::c_void".to_owned());
                 }
                 continue;
             }
@@ -223,7 +229,12 @@ impl RustGen {
         // write arguments
 
         if fa.ret_value.is_empty() {
-            writeln!(f, "    pub(crate) {}: unsafe extern \"C\" fn({}),", func.name, get_arg_line(&fa.ffi_args))
+            writeln!(
+                f,
+                "    pub(crate) {}: unsafe extern \"C\" fn({}),",
+                func.name,
+                get_arg_line(&fa.ffi_args)
+            )
         } else {
             writeln!(
                 f,
@@ -240,7 +251,7 @@ impl RustGen {
             if s.functions.is_empty() || s.has_attribute("NoContext") {
                 continue;
             }
-        
+
             writeln!(f, "#[repr(C)]")?;
             writeln!(f, "pub struct {}FfiApi {{", s.name)?;
             writeln!(f, "    pub(crate) data: *const core::ffi::c_void,")?;
@@ -252,7 +263,7 @@ impl RustGen {
             {
                 Self::generate_ffi_function(f, func, &s.name, false, Ctx::Yes)?;
             }
-        
+
             writeln!(f, "}}\n")?;
         }
 
@@ -336,7 +347,7 @@ impl RustGen {
 
     fn generate_func_impl(func: &Function, with_ctx: Ctx) -> FuncArgs {
         let mut fa = FuncArgs::default();
-        
+
         fa.body.push_str("let _api = &*self.api;");
 
         for (i, arg) in func.function_args.iter().enumerate() {
@@ -545,141 +556,152 @@ impl RustGen {
         let filename = format!("{}/{}.rs", path, api_def.base_filename);
 
         {
-        let mut f = BufWriter::new(File::create(&filename)?);
+            let mut f = BufWriter::new(File::create(&filename)?);
 
-        println!("    Rust file Generating {}", filename);
+            println!("    Rust file Generating {}", filename);
 
-        writeln!(f, "{}", RUST_FILE_HEADER)?;
-        writeln!(f, "#[allow(unused_imports)]")?;
-        writeln!(f, "use crate::manual::{{Result, get_last_error, FlString, Color}};\n")?;
-        writeln!(f, "#[allow(unused_imports)]")?;
-        writeln!(f, "use bitflags::bitflags;\n")?;
-
-        for m in &api_def.mods {
+            writeln!(f, "{}", RUST_FILE_HEADER)?;
             writeln!(f, "#[allow(unused_imports)]")?;
-            writeln!(f, "use crate::{}::*;\n", m)?;
-        }
+            writeln!(
+                f,
+                "use crate::manual::{{Result, get_last_error, FlString, Color}};\n"
+            )?;
+            writeln!(f, "#[allow(unused_imports)]")?;
+            writeln!(f, "use bitflags::bitflags;\n")?;
 
-        Self::generate_ffi_functions(&mut f, api_def)?;
-
-        if !api_def.callbacks.is_empty() {
-            for func in &api_def.callbacks {
-                Self::generate_callback_function(&mut f, func, "")?;
+            for m in &api_def.mods {
+                writeln!(f, "#[allow(unused_imports)]")?;
+                writeln!(f, "use crate::{}::*;\n", m)?;
             }
-            writeln!(f)?;
-        }
 
-        for enum_def in &api_def.enums {
-            if enum_def.enum_type == EnumType::Regular {
-                Self::generate_enum(&mut f, enum_def)?;
-            } else {
-                Self::generate_bitflags(&mut f, enum_def)?;
-           }
-        }
+            Self::generate_ffi_functions(&mut f, api_def)?;
 
-        for sdef in &api_def.structs {
-            Self::generate_struct(&mut f, sdef)?;
-        }
+            if !api_def.callbacks.is_empty() {
+                for func in &api_def.callbacks {
+                    Self::generate_callback_function(&mut f, func, "")?;
+                }
+                writeln!(f)?;
+            }
 
-        //for sdef in api_def.structs.iter().filter(|s| s.functions.is_empty()) {
-        for sdef in api_def.structs.iter() {
-            Self::generate_struct_impl(&mut f, sdef)?;
-        }
+            for enum_def in &api_def.enums {
+                if enum_def.enum_type == EnumType::Regular {
+                    Self::generate_enum(&mut f, enum_def)?;
+                } else {
+                    Self::generate_bitflags(&mut f, enum_def)?;
+                }
+            }
+
+            for sdef in &api_def.structs {
+                Self::generate_struct(&mut f, sdef)?;
+            }
+
+            //for sdef in api_def.structs.iter().filter(|s| s.functions.is_empty()) {
+            for sdef in api_def.structs.iter() {
+                Self::generate_struct_impl(&mut f, sdef)?;
+            }
         }
 
         run_rustfmt(&filename);
 
-
         Ok(())
     }
 
-    pub fn generate_mod_files(
-        path: &str,
-        api_defs: &[ApiDef],
-    ) -> io::Result<()> {
-
+    pub fn generate_mod_files(path: &str, api_defs: &[ApiDef]) -> io::Result<()> {
         let flowi_mod = format!("{}/mod.rs", path);
 
         {
-        println!("    Rust file mod: {}", flowi_mod);
+            println!("    Rust file mod: {}", flowi_mod);
 
-        let mut f = BufWriter::new(File::create(&flowi_mod)?);
+            let mut f = BufWriter::new(File::create(&flowi_mod)?);
 
-        writeln!(f, "{}", RUST_FILE_HEADER)?;
-        writeln!(f, "use core::ffi::c_void;")?;
+            writeln!(f, "{}", RUST_FILE_HEADER)?;
+            writeln!(f, "use core::ffi::c_void;")?;
 
-        for api_def in api_defs {
-            let base_filename = &api_def.base_filename;
-            writeln!(f, "pub mod {};", base_filename)?;
-            writeln!(f, "pub use {}::*;", base_filename)?;
-        }
+            for api_def in api_defs {
+                let base_filename = &api_def.base_filename;
+                writeln!(f, "pub mod {};", base_filename)?;
+                writeln!(f, "pub use {}::*;", base_filename)?;
+            }
 
-        for api_def in api_defs {
-            let base_filename = &api_def.base_filename;
+            for api_def in api_defs {
+                let base_filename = &api_def.base_filename;
 
-            for s in &api_def.structs {
-                if !s.functions.is_empty() && !s.has_attribute("NoContext") {
-                    writeln!(f, "use crate::{}::{{{}FfiApi }};", base_filename, s.name)?;
-                    writeln!(f, "pub use crate::{}::{{{}Api}};", base_filename, s.name)?;
+                for s in &api_def.structs {
+                    if !s.functions.is_empty() && !s.has_attribute("NoContext") {
+                        writeln!(f, "use crate::{}::{{{}FfiApi }};", base_filename, s.name)?;
+                        writeln!(f, "pub use crate::{}::{{{}Api}};", base_filename, s.name)?;
+                    }
                 }
             }
-        }
 
-        writeln!(f)?;
+            writeln!(f)?;
 
-        let structs_with_funcs = get_structs_with_functions(api_defs);
+            let structs_with_funcs = get_structs_with_functions(api_defs);
 
-        writeln!(f, "#[repr(C)]")?;
-        writeln!(f, "pub struct FlowiFfiApi {{")?;
-        writeln!(f, "    data: *const c_void,")?;
+            writeln!(f, "#[repr(C)]")?;
+            writeln!(f, "pub struct FlowiFfiApi {{")?;
+            writeln!(f, "    data: *const c_void,")?;
 
-        for s in &structs_with_funcs {
-            let name = &s.name;
+            for s in &structs_with_funcs {
+                let name = &s.name;
 
-            if let Some(func) = s.functions.iter().find(|f| f.name == *name) {
-                let mut fa = FuncArgs::default();
-                Self::get_ffi_args(&mut fa, func, name, false, Ctx::No);
-                writeln!(f, "   {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32, {}) -> *const {}FfiApi,",
+                if let Some(func) = s.functions.iter().find(|f| f.name == *name) {
+                    let mut fa = FuncArgs::default();
+                    Self::get_ffi_args(&mut fa, func, name, false, Ctx::No);
+                    writeln!(f, "   {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32, {}) -> *const {}FfiApi,",
                     name.to_lowercase(),
                     get_arg_line(&fa.ffi_args),
                     name)?;
-            } else {
-                writeln!(f, "   {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32) -> *const {}FfiApi,",
+                } else {
+                    writeln!(f, "   {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32) -> *const {}FfiApi,",
                     name.to_lowercase(), name)?;
-            }
-        }
-
-        writeln!(f, "}}\n")?;
-
-        writeln!(f, "#[repr(C)]")?;
-        writeln!(f, "pub struct Flowi {{")?;
-        writeln!(f, "   pub(crate) api: *const FlowiFfiApi,")?;
-        writeln!(f, "}}\n")?;
-
-        writeln!(f, "impl Flowi {{")?;
-
-        for s in &structs_with_funcs {
-            let name = s.name.to_snake_case();
-
-            if let Some(func) = s.functions.iter().find(|f| f.name == s.name) {
-                let fa = Self::generate_func_impl(func, Ctx::No);
-
-                writeln!(f, "pub fn {}(&self, {}) -> {}Api {{", name, get_arg_line(&fa.func_args), &s.name)?;
-                writeln!(f, "   let api_priv = unsafe {{ &*self.api }};")?;
-                writeln!(f, "   let api = unsafe {{ (api_priv.{}_get_api)(api_priv.data, 0, {}) }};", 
-                        name, 
-                    get_arg_line(&fa.ffi_args))?;
-            } else {
-                writeln!(f, "pub fn {}(&self) -> {}Api {{", name, &s.name)?;
-                writeln!(f, "   let api_priv = unsafe {{ &*self.api }};")?;
-                writeln!(f, "   let api = unsafe {{ (api_priv.{}_get_api)(api_priv.data, 0) }};", name)?;
+                }
             }
 
-            writeln!(f, "   {}Api {{ api }}", &s.name)?;
             writeln!(f, "}}\n")?;
-        }
 
-        writeln!(f, "}}\n")?;
+            writeln!(f, "#[repr(C)]")?;
+            writeln!(f, "pub struct Flowi {{")?;
+            writeln!(f, "   pub(crate) api: *const FlowiFfiApi,")?;
+            writeln!(f, "}}\n")?;
+
+            writeln!(f, "impl Flowi {{")?;
+
+            for s in &structs_with_funcs {
+                let name = s.name.to_snake_case();
+
+                if let Some(func) = s.functions.iter().find(|f| f.name == s.name) {
+                    let fa = Self::generate_func_impl(func, Ctx::No);
+
+                    writeln!(
+                        f,
+                        "pub fn {}(&self, {}) -> {}Api {{",
+                        name,
+                        get_arg_line(&fa.func_args),
+                        &s.name
+                    )?;
+                    writeln!(f, "   let api_priv = unsafe {{ &*self.api }};")?;
+                    writeln!(
+                        f,
+                        "   let api = unsafe {{ (api_priv.{}_get_api)(api_priv.data, 0, {}) }};",
+                        name,
+                        get_arg_line(&fa.ffi_args)
+                    )?;
+                } else {
+                    writeln!(f, "pub fn {}(&self) -> {}Api {{", name, &s.name)?;
+                    writeln!(f, "   let api_priv = unsafe {{ &*self.api }};")?;
+                    writeln!(
+                        f,
+                        "   let api = unsafe {{ (api_priv.{}_get_api)(api_priv.data, 0) }};",
+                        name
+                    )?;
+                }
+
+                writeln!(f, "   {}Api {{ api }}", &s.name)?;
+                writeln!(f, "}}\n")?;
+            }
+
+            writeln!(f, "}}\n")?;
         }
 
         run_rustfmt(&flowi_mod);
@@ -691,4 +713,3 @@ impl RustGen {
 static RUST_FILE_HEADER: &str = "
 // This file is auto-generated by api_gen. DO NOT EDIT!
 ";
-

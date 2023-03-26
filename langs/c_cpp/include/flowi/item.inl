@@ -19,13 +19,34 @@ typedef struct FlItemApi {
     void (*set_allow_overlap)(struct FlInternalData* priv);
 } FlItemApi;
 
+extern FlItemApi* g_flowi_item_api;
+
+#ifdef FLOWI_STATIC
+bool fl_item_is_hovered_impl(struct FlInternalData* priv, FlHoveredFlags flags);
+bool fl_item_is_active_impl(struct FlInternalData* priv);
+bool fl_item_is_focused_impl(struct FlInternalData* priv);
+bool fl_item_is_clicked_impl(struct FlInternalData* priv);
+bool fl_item_is_visible_impl(struct FlInternalData* priv);
+bool fl_item_is_edited_impl(struct FlInternalData* priv);
+bool fl_item_is_activated_impl(struct FlInternalData* priv);
+bool fl_item_is_deactivated_impl(struct FlInternalData* priv);
+bool fl_item_is_deactivated_after_edit_impl(struct FlInternalData* priv);
+bool fl_item_is_toggled_open_impl(struct FlInternalData* priv);
+bool fl_item_is_any_hovered_impl(struct FlInternalData* priv);
+bool fl_item_is_any_active_impl(struct FlInternalData* priv);
+bool fl_item_is_any_focused_impl(struct FlInternalData* priv);
+FlVec2 fl_item_get_rect_min_impl(struct FlInternalData* priv);
+FlVec2 fl_item_get_rect_max_impl(struct FlInternalData* priv);
+FlVec2 fl_item_get_rect_size_impl(struct FlInternalData* priv);
+void fl_item_set_allow_overlap_impl(struct FlInternalData* priv);
+#endif
+
 // Is the last item hovered? (and usable, aka not blocked by a popup, etc.). See ImGuiHoveredFlags for more options.
 FL_INLINE bool fl_item_is_hovered(FlHoveredFlags flags) {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_hovered_impl(void* ctx, flags);
+    return fl_item_is_hovered_impl(g_flowi_item_api->priv, flags);
 #else
-    return (api->is_hovered)(void* ctx, flags);
+    return (g_flowi_item_api->is_hovered)(g_flowi_item_api->priv, flags);
 #endif
 }
 
@@ -33,20 +54,18 @@ FL_INLINE bool fl_item_is_hovered(FlHoveredFlags flags) {
 // holding mouse button on an item. _s that don't interact will always return false)
 FL_INLINE bool fl_item_is_active() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_active_impl(void* ctx);
+    return fl_item_is_active_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_active)(void* ctx);
+    return (g_flowi_item_api->is_active)(g_flowi_item_api->priv);
 #endif
 }
 
 // Is the last item focused for keyboard/gamepad navigation?
 FL_INLINE bool fl_item_is_focused() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_focused_impl(void* ctx);
+    return fl_item_is_focused_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_focused)(void* ctx);
+    return (g_flowi_item_api->is_focused)(g_flowi_item_api->priv);
 #endif
 }
 
@@ -54,20 +73,18 @@ FL_INLINE bool fl_item_is_focused() {
 // this is NOT equivalent to the behavior of e.g. Button(). Read comments in function definition.
 FL_INLINE bool fl_item_is_clicked() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_clicked_impl(void* ctx);
+    return fl_item_is_clicked_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_clicked)(void* ctx);
+    return (g_flowi_item_api->is_clicked)(g_flowi_item_api->priv);
 #endif
 }
 
 // Is the last item visible? (items may be out of sight because of clipping/scrolling)
 FL_INLINE bool fl_item_is_visible() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_visible_impl(void* ctx);
+    return fl_item_is_visible_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_visible)(void* ctx);
+    return (g_flowi_item_api->is_visible)(g_flowi_item_api->priv);
 #endif
 }
 
@@ -75,20 +92,18 @@ FL_INLINE bool fl_item_is_visible() {
 // return value of many widgets.
 FL_INLINE bool fl_item_is_edited() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_edited_impl(void* ctx);
+    return fl_item_is_edited_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_edited)(void* ctx);
+    return (g_flowi_item_api->is_edited)(g_flowi_item_api->priv);
 #endif
 }
 
 // Was the last item just made active (item was previously inactive).
 FL_INLINE bool fl_item_is_activated() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_activated_impl(void* ctx);
+    return fl_item_is_activated_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_activated)(void* ctx);
+    return (g_flowi_item_api->is_activated)(g_flowi_item_api->priv);
 #endif
 }
 
@@ -96,10 +111,9 @@ FL_INLINE bool fl_item_is_activated() {
 // require continuous editing.
 FL_INLINE bool fl_item_is_deactivated() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_deactivated_impl(void* ctx);
+    return fl_item_is_deactivated_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_deactivated)(void* ctx);
+    return (g_flowi_item_api->is_deactivated)(g_flowi_item_api->priv);
 #endif
 }
 
@@ -108,80 +122,72 @@ FL_INLINE bool fl_item_is_deactivated() {
 // such as Combo()/ListBox()/Selectable() will return true even when clicking an already selected item).
 FL_INLINE bool fl_item_is_deactivated_after_edit() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_deactivated_after_edit_impl(void* ctx);
+    return fl_item_is_deactivated_after_edit_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_deactivated_after_edit)(void* ctx);
+    return (g_flowi_item_api->is_deactivated_after_edit)(g_flowi_item_api->priv);
 #endif
 }
 
 // Was the last item open state toggled? set by TreeNode().
 FL_INLINE bool fl_item_is_toggled_open() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_toggled_open_impl(void* ctx);
+    return fl_item_is_toggled_open_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_toggled_open)(void* ctx);
+    return (g_flowi_item_api->is_toggled_open)(g_flowi_item_api->priv);
 #endif
 }
 
 // Is any item hovered?
 FL_INLINE bool fl_item_is_any_hovered() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_any_hovered_impl(void* ctx);
+    return fl_item_is_any_hovered_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_any_hovered)(void* ctx);
+    return (g_flowi_item_api->is_any_hovered)(g_flowi_item_api->priv);
 #endif
 }
 
 // Is any item active?
 FL_INLINE bool fl_item_is_any_active() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_any_active_impl(void* ctx);
+    return fl_item_is_any_active_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_any_active)(void* ctx);
+    return (g_flowi_item_api->is_any_active)(g_flowi_item_api->priv);
 #endif
 }
 
 // Is any item focused?
 FL_INLINE bool fl_item_is_any_focused() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_is_any_focused_impl(void* ctx);
+    return fl_item_is_any_focused_impl(g_flowi_item_api->priv);
 #else
-    return (api->is_any_focused)(void* ctx);
+    return (g_flowi_item_api->is_any_focused)(g_flowi_item_api->priv);
 #endif
 }
 
 // Get upper-left bounding rectangle of the last item (screen space)
 FL_INLINE FlVec2 fl_item_get_rect_min() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_get_rect_min_impl(void* ctx);
+    return fl_item_get_rect_min_impl(g_flowi_item_api->priv);
 #else
-    return (api->get_rect_min)(void* ctx);
+    return (g_flowi_item_api->get_rect_min)(g_flowi_item_api->priv);
 #endif
 }
 
 // Get lower-right bounding rectangle of the last item (screen space)
 FL_INLINE FlVec2 fl_item_get_rect_max() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_get_rect_max_impl(void* ctx);
+    return fl_item_get_rect_max_impl(g_flowi_item_api->priv);
 #else
-    return (api->get_rect_max)(void* ctx);
+    return (g_flowi_item_api->get_rect_max)(g_flowi_item_api->priv);
 #endif
 }
 
 // Get size of last item
 FL_INLINE FlVec2 fl_item_get_rect_size() {
 #ifdef FLOWI_STATIC
-
-    return fl_item_get_rect_size_impl(void* ctx);
+    return fl_item_get_rect_size_impl(g_flowi_item_api->priv);
 #else
-    return (api->get_rect_size)(void* ctx);
+    return (g_flowi_item_api->get_rect_size)(g_flowi_item_api->priv);
 #endif
 }
 
@@ -189,9 +195,8 @@ FL_INLINE FlVec2 fl_item_get_rect_size() {
 // catch unused area.
 FL_INLINE void fl_item_set_allow_overlap() {
 #ifdef FLOWI_STATIC
-
-    fl_item_set_allow_overlap_impl(void* ctx);
+    fl_item_set_allow_overlap_impl(g_flowi_item_api->priv);
 #else
-    (api->set_allow_overlap)(void* ctx);
+    (g_flowi_item_api->set_allow_overlap)(g_flowi_item_api->priv);
 #endif
 }

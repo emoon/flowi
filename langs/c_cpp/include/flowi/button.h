@@ -27,8 +27,6 @@ typedef enum FlButtonFlags {
     FlButtonFlags_MouseButtonMiddled = 1 << 2,
 } FlButtonFlags;
 
-struct FlButtonApi;
-
 struct FlButton;
 
 // Show a regular push button

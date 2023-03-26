@@ -15,8 +15,6 @@
 extern "C" {
 #endif
 
-struct FlTextApi;
-
 struct FlText;
 
 // Calculate the size of a text string in pixels
