@@ -33,23 +33,50 @@ pub struct FontFfiApi {
     pub(crate) destroy: unsafe extern "C" fn(data: *const core::ffi::c_void, font: u64),
 }
 
+#[cfg(any(feature = "static", feature = "tundra"))]
+extern "C" {
+    fn fl_font_new_from_file_impl(
+        data: *const core::ffi::c_void,
+        filename: FlString,
+        font_size: u32,
+    ) -> u64;
+    fn fl_font_new_from_file_range_impl(
+        data: *const core::ffi::c_void,
+        filename: FlString,
+        font_size: u32,
+        glyph_range_start: u16,
+        glyph_range_end: u16,
+    ) -> u64;
+    fn fl_font_new_from_memory_impl(
+        data: *const core::ffi::c_void,
+        name: FlString,
+        data: *const u8,
+        data_size: u32,
+        font_size: u32,
+    ) -> u64;
+    fn fl_font_push_impl(data: *const core::ffi::c_void, font: u64);
+    fn fl_font_pop_impl(data: *const core::ffi::c_void);
+    fn fl_font_destroy_impl(data: *const core::ffi::c_void, font: u64);
+}
+
+#[no_mangle]
+pub static mut g_flowi_font_api: *const FontFfiApi = std::ptr::null_mut();
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Font {
     pub handle: u64,
 }
 
-#[repr(C)]
-pub struct FontApi {
-    pub api: *const FontFfiApi,
-}
-
-impl FontApi {
+impl Font {
     /// Create a font from (TTF) file. To use the font use [ui::set_font] before using text-based widgets
     /// Returns >= 0 for valid handle, use fl_get_status(); for more detailed error message
-    pub fn new_from_file(&self, filename: &str, font_size: u32) -> Result<Font> {
+    pub fn new_from_file(filename: &str, font_size: u32) -> Result<Font> {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_font_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_font_new_from_file_impl(_api.data, FlString::new(filename), font_size);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.new_from_file)(_api.data, FlString::new(filename), font_size);
             if ret_val == 0 {
                 Err(get_last_error())
@@ -61,14 +88,22 @@ impl FontApi {
 
     /// Create an new font from a FFT file with a range of characters that should be pre-generated
     pub fn new_from_file_range(
-        &self,
         filename: &str,
         font_size: u32,
         glyph_range_start: u16,
         glyph_range_end: u16,
     ) -> Result<Font> {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_font_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_font_new_from_file_range_impl(
+                _api.data,
+                FlString::new(filename),
+                font_size,
+                glyph_range_start,
+                glyph_range_end,
+            );
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.new_from_file_range)(
                 _api.data,
                 FlString::new(filename),
@@ -86,9 +121,18 @@ impl FontApi {
 
     /// Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
     /// Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
-    pub fn new_from_memory(&self, name: &str, data: &[u8], font_size: u32) -> Result<Font> {
+    pub fn new_from_memory(name: &str, data: &[u8], font_size: u32) -> Result<Font> {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_font_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_font_new_from_memory_impl(
+                _api.data,
+                FlString::new(name),
+                data.as_ptr(),
+                data.len() as _,
+                font_size,
+            );
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.new_from_memory)(
                 _api.data,
                 FlString::new(name),
@@ -105,25 +149,25 @@ impl FontApi {
     }
 
     /// Push a font for usage
-    pub fn push(&self, font: Font) {
+    pub fn push(font: Font) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_font_api;
             (_api.push)(_api.data, font.handle);
         }
     }
 
     /// Pop a font from the stack
-    pub fn pop(&self) {
+    pub fn pop() {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_font_api;
             (_api.pop)(_api.data);
         }
     }
 
     /// Destory the current font, render the id invalid
-    pub fn destroy(&self, font: Font) {
+    pub fn destroy(font: Font) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_font_api;
             (_api.destroy)(_api.data, font.handle);
         }
     }

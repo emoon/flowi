@@ -65,8 +65,9 @@ use crate::window::WindowFfiApi;
 pub use window::*;
 
 #[repr(C)]
-pub struct FlowiFfiApi {
+pub(crate) struct AppFfi {
     data: *const c_void,
+    main_loop: unsafe fn(data: *const c_void, user_data: *mut c_void) -> bool,
     button_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const ButtonFfiApi,
     cursor_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const CursorFfiApi,
     font_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const FontFfiApi,
@@ -82,81 +83,19 @@ pub struct FlowiFfiApi {
     window_get_api: unsafe extern "C" fn(data: *const c_void, api_ver: u32) -> *const WindowFfiApi,
 }
 
-#[repr(C)]
-pub struct Flowi {
-    pub(crate) api: *const FlowiFfiApi,
-}
-
-impl Flowi {
-    pub fn button(&self) -> ButtonApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.button_get_api)(api_priv.data, 0) };
-        ButtonApi { api }
-    }
-
-    pub fn cursor(&self) -> CursorApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.cursor_get_api)(api_priv.data, 0) };
-        CursorApi { api }
-    }
-
-    pub fn font(&self) -> FontApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.font_get_api)(api_priv.data, 0) };
-        FontApi { api }
-    }
-
-    pub fn image(&self) -> ImageApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.image_get_api)(api_priv.data, 0) };
-        ImageApi { api }
-    }
-
-    pub fn io(&self) -> IoApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.io_get_api)(api_priv.data, 0) };
-        IoApi { api }
-    }
-
-    pub fn item(&self) -> ItemApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.item_get_api)(api_priv.data, 0) };
-        ItemApi { api }
-    }
-
-    pub fn menu(&self) -> MenuApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.menu_get_api)(api_priv.data, 0) };
-        MenuApi { api }
-    }
-
-    pub fn painter(&self) -> PainterApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.painter_get_api)(api_priv.data, 0) };
-        PainterApi { api }
-    }
-
-    pub fn style(&self) -> StyleApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.style_get_api)(api_priv.data, 0) };
-        StyleApi { api }
-    }
-
-    pub fn text(&self) -> TextApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.text_get_api)(api_priv.data, 0) };
-        TextApi { api }
-    }
-
-    pub fn ui(&self) -> UiApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.ui_get_api)(api_priv.data, 0) };
-        UiApi { api }
-    }
-
-    pub fn window(&self) -> WindowApi {
-        let api_priv = unsafe { &*self.api };
-        let api = unsafe { (api_priv.window_get_api)(api_priv.data, 0) };
-        WindowApi { api }
+pub(crate) fn init_function_ptrs(api: *const AppFfi) {
+    unsafe {
+        g_flowi_button_api = (api.button_get_api)(api_priv.data, 0);
+        g_flowi_cursor_api = (api.cursor_get_api)(api_priv.data, 0);
+        g_flowi_font_api = (api.font_get_api)(api_priv.data, 0);
+        g_flowi_image_api = (api.image_get_api)(api_priv.data, 0);
+        g_flowi_io_api = (api.io_get_api)(api_priv.data, 0);
+        g_flowi_item_api = (api.item_get_api)(api_priv.data, 0);
+        g_flowi_menu_api = (api.menu_get_api)(api_priv.data, 0);
+        g_flowi_painter_api = (api.painter_get_api)(api_priv.data, 0);
+        g_flowi_style_api = (api.style_get_api)(api_priv.data, 0);
+        g_flowi_text_api = (api.text_get_api)(api_priv.data, 0);
+        g_flowi_ui_api = (api.ui_get_api)(api_priv.data, 0);
+        g_flowi_window_api = (api.window_get_api)(api_priv.data, 0);
     }
 }

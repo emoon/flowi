@@ -28,6 +28,21 @@ pub struct StyleFfiApi {
     pub(crate) pop: unsafe extern "C" fn(data: *const core::ffi::c_void),
 }
 
+#[cfg(any(feature = "static", feature = "tundra"))]
+extern "C" {
+    fn fl_style_set_color_impl(data: *const core::ffi::c_void, color: StyleColor, value: Color);
+    fn fl_style_set_color_u32_impl(data: *const core::ffi::c_void, color: StyleColor, value: u32);
+    fn fl_style_push_color_u32_impl(data: *const core::ffi::c_void, color: StyleColor, value: u32);
+    fn fl_style_push_color_impl(data: *const core::ffi::c_void, color: StyleColor, value: Color);
+    fn fl_style_pop_color_impl(data: *const core::ffi::c_void);
+    fn fl_style_push_single_impl(data: *const core::ffi::c_void, style: StyleSingle, value: f32);
+    fn fl_style_push_vec2_impl(data: *const core::ffi::c_void, style: StyleVec2, value: Vec2);
+    fn fl_style_pop_impl(data: *const core::ffi::c_void);
+}
+
+#[no_mangle]
+pub static mut g_flowi_style_api: *const StyleFfiApi = std::ptr::null_mut();
+
 #[repr(C)]
 #[derive(Debug)]
 pub enum StyleColor {
@@ -129,72 +144,67 @@ pub struct Style {
     _dummy: u32,
 }
 
-#[repr(C)]
-pub struct StyleApi {
-    pub api: *const StyleFfiApi,
-}
-
-impl StyleApi {
+impl Style {
     /// Permantly set a color
-    pub fn set_color(&self, color: StyleColor, value: Color) {
+    pub fn set_color(color: StyleColor, value: Color) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_style_api;
             (_api.set_color)(_api.data, color, value);
         }
     }
 
     /// Permantly set a color (ARGB)
-    pub fn set_color_u32(&self, color: StyleColor, value: u32) {
+    pub fn set_color_u32(color: StyleColor, value: u32) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_style_api;
             (_api.set_color_u32)(_api.data, color, value);
         }
     }
 
     /// Temporary push a color change (ARGB)
-    pub fn push_color_u32(&self, color: StyleColor, value: u32) {
+    pub fn push_color_u32(color: StyleColor, value: u32) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_style_api;
             (_api.push_color_u32)(_api.data, color, value);
         }
     }
 
     /// Temporary push a color change
-    pub fn push_color(&self, color: StyleColor, value: Color) {
+    pub fn push_color(color: StyleColor, value: Color) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_style_api;
             (_api.push_color)(_api.data, color, value);
         }
     }
 
     /// Temporary push a color change
-    pub fn pop_color(&self) {
+    pub fn pop_color() {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_style_api;
             (_api.pop_color)(_api.data);
         }
     }
 
     /// Pushes a single style change
-    pub fn push_single(&self, style: StyleSingle, value: f32) {
+    pub fn push_single(style: StyleSingle, value: f32) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_style_api;
             (_api.push_single)(_api.data, style, value);
         }
     }
 
     /// Pushes a Vec2 style change
-    pub fn push_vec2(&self, style: StyleVec2, value: Vec2) {
+    pub fn push_vec2(style: StyleVec2, value: Vec2) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_style_api;
             (_api.push_vec2)(_api.data, style, value);
         }
     }
 
     /// Pops a style change
-    pub fn pop(&self) {
+    pub fn pop() {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_style_api;
             (_api.pop)(_api.data);
         }
     }

@@ -38,6 +38,35 @@ pub struct WindowFfiApi {
     pub(crate) size: unsafe extern "C" fn(data: *const core::ffi::c_void) -> Vec2,
 }
 
+#[cfg(any(feature = "static", feature = "tundra"))]
+extern "C" {
+    fn fl_window_set_pos_impl(data: *const core::ffi::c_void, pos: Vec2);
+    fn fl_window_begin_impl(
+        data: *const core::ffi::c_void,
+        name: FlString,
+        flags: WindowFlags,
+    ) -> bool;
+    fn fl_window_end_impl(data: *const core::ffi::c_void);
+    fn fl_window_begin_child_impl(
+        data: *const core::ffi::c_void,
+        id: FlString,
+        size: Vec2,
+        border: bool,
+        flags: WindowFlags,
+    ) -> bool;
+    fn fl_window_end_child_impl(data: *const core::ffi::c_void);
+    fn fl_window_is_appearing_impl(data: *const core::ffi::c_void) -> bool;
+    fn fl_window_is_collapsed_impl(data: *const core::ffi::c_void) -> bool;
+    fn fl_window_is_focused_impl(data: *const core::ffi::c_void, flags: FocusedFlags) -> bool;
+    fn fl_window_is_hovered_impl(data: *const core::ffi::c_void, flags: HoveredFlags) -> bool;
+    fn fl_window_dpi_scale_impl(data: *const core::ffi::c_void) -> f32;
+    fn fl_window_pos_impl(data: *const core::ffi::c_void) -> Vec2;
+    fn fl_window_size_impl(data: *const core::ffi::c_void) -> Vec2;
+}
+
+#[no_mangle]
+pub static mut g_flowi_window_api: *const WindowFfiApi = std::ptr::null_mut();
+
 bitflags! {
 #[repr(C)]
 pub struct WindowFlags : u32 {
@@ -149,76 +178,87 @@ pub struct Window {
     _dummy: u32,
 }
 
-#[repr(C)]
-pub struct WindowApi {
-    pub api: *const WindowFfiApi,
-}
-
-impl WindowApi {
+impl Window {
     /// Sets the position of the next window, call before begin()
-    pub fn set_pos(&self, pos: Vec2) {
+    pub fn set_pos(pos: Vec2) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
             (_api.set_pos)(_api.data, pos);
         }
     }
 
     /// Always call a matching end() for each begin() call, regardless of its return value!
-    pub fn begin(&self, name: &str, flags: WindowFlags) -> bool {
+    pub fn begin(name: &str, flags: WindowFlags) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_window_begin_impl(_api.data, FlString::new(name), flags);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.begin)(_api.data, FlString::new(name), flags);
             ret_val
         }
     }
 
     /// End call for various types such as windows, lists, etc.
-    pub fn end(&self) {
+    pub fn end() {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
             (_api.end)(_api.data);
         }
     }
 
     /// Call between begin() and end() to create a child window. Child windows can embed their own child.
-    pub fn begin_child(&self, id: &str, size: Vec2, border: bool, flags: WindowFlags) -> bool {
+    pub fn begin_child(id: &str, size: Vec2, border: bool, flags: WindowFlags) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val =
+                fl_window_begin_child_impl(_api.data, FlString::new(id), size, border, flags);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.begin_child)(_api.data, FlString::new(id), size, border, flags);
             ret_val
         }
     }
 
     /// End call for various types such as windows, lists, etc.
-    pub fn end_child(&self) {
+    pub fn end_child() {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
             (_api.end_child)(_api.data);
         }
     }
 
     /// Returns true if the window is appearing after being hidden/inactive (or the first time)
-    pub fn is_appearing(&self) -> bool {
+    pub fn is_appearing() -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_window_is_appearing_impl(_api.data);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.is_appearing)(_api.data);
             ret_val
         }
     }
 
     /// Is current window collpased?
-    pub fn is_collapsed(&self) -> bool {
+    pub fn is_collapsed() -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_window_is_collapsed_impl(_api.data);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.is_collapsed)(_api.data);
             ret_val
         }
     }
 
     /// is current window focused? or its root/child, depending on flags. see flags for options.
-    pub fn is_focused(&self, flags: FocusedFlags) -> bool {
+    pub fn is_focused(flags: FocusedFlags) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_window_is_focused_impl(_api.data, flags);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.is_focused)(_api.data, flags);
             ret_val
         }
@@ -227,36 +267,48 @@ impl WindowApi {
     /// is current window hovered (and typically: not blocked by a popup/modal)? see flags for options.
     /// nb: if you are trying to check whether your mouse should be dispatched to imgui or to your app,
     /// you should use the 'io.wantcapturemouse' boolean for that! please read the faq!
-    pub fn is_hovered(&self, flags: HoveredFlags) -> bool {
+    pub fn is_hovered(flags: HoveredFlags) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_window_is_hovered_impl(_api.data, flags);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.is_hovered)(_api.data, flags);
             ret_val
         }
     }
 
     /// get dpi scale currently associated to the current window's viewport.
-    pub fn dpi_scale(&self) -> f32 {
+    pub fn dpi_scale() -> f32 {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_window_dpi_scale_impl(_api.data);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.dpi_scale)(_api.data);
             ret_val
         }
     }
 
     /// get current window position in screen space (useful if you want to do your own drawing via the drawlist api)
-    pub fn pos(&self) -> Vec2 {
+    pub fn pos() -> Vec2 {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_window_pos_impl(_api.data);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.pos)(_api.data);
             ret_val
         }
     }
 
     /// get current window size
-    pub fn size(&self) -> Vec2 {
+    pub fn size() -> Vec2 {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_window_size_impl(_api.data);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.size)(_api.data);
             ret_val
         }

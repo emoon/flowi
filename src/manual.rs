@@ -12,13 +12,6 @@ use core::{
 #[cfg(any(feature = "dynamic", feature = "static", feature = "tundra"))]
 use std::mem::transmute;
 
-#[repr(C)]
-pub struct AppFfi {
-    pub(crate) priv_data: *const c_void,
-    pub(crate) io_get_api: unsafe fn(data: *const c_void, api_ver: u32) -> *const IoFfiApi,
-    pub(crate) main_loop: unsafe fn(data: *const c_void, user_data: *mut c_void) -> bool,
-}
-
 extern "C" {
     #[cfg(any(feature = "static", feature = "tundra"))]
     fn fl_application_create_impl(settings: *const ApplicationSettings) -> *const AppFfi;
@@ -62,6 +55,7 @@ impl Application {
             if api.is_null() {
                 Err(get_last_error())
             } else {
+                init_function_ptrs(api);
                 Ok(Self { api })
             }
         }
@@ -80,6 +74,7 @@ impl Application {
             if api.is_null() {
                 Err(get_last_error())
             } else {
+                init_function_ptrs(api);
                 Ok(Self { api })
             }
         }

@@ -51,6 +51,44 @@ pub struct PainterFfiApi {
     ),
 }
 
+#[cfg(any(feature = "static", feature = "tundra"))]
+extern "C" {
+    fn fl_painter_set_layer_impl(data: *const core::ffi::c_void, layer: PainterLayer);
+    fn fl_painter_draw_line_impl(
+        data: *const core::ffi::c_void,
+        p1: Vec2,
+        p2: Vec2,
+        color: Color,
+        thickness: f32,
+    );
+    fn fl_painter_draw_rect_impl(
+        data: *const core::ffi::c_void,
+        p1: Vec2,
+        p2: Vec2,
+        color: Color,
+        rounding: f32,
+    );
+    fn fl_painter_draw_rect_filled_impl(
+        data: *const core::ffi::c_void,
+        p1: Vec2,
+        p2: Vec2,
+        color: Color,
+        rounding: f32,
+    );
+    fn fl_painter_draw_rect_filled_gradient_impl(
+        data: *const core::ffi::c_void,
+        p1: Vec2,
+        p2: Vec2,
+        left: Color,
+        right: Color,
+        btm_right: Color,
+        btm_left: Color,
+    );
+}
+
+#[no_mangle]
+pub static mut g_flowi_painter_api: *const PainterFfiApi = std::ptr::null_mut();
+
 #[repr(C)]
 #[derive(Debug)]
 pub enum PainterLayer {
@@ -65,47 +103,41 @@ pub struct Painter {
     _dummy: u32,
 }
 
-#[repr(C)]
-pub struct PainterApi {
-    pub api: *const PainterFfiApi,
-}
-
-impl PainterApi {
+impl Painter {
     /// The current layer to draw on. Default is ActiveWindow.
-    pub fn set_layer(&self, layer: PainterLayer) {
+    pub fn set_layer(layer: PainterLayer) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_painter_api;
             (_api.set_layer)(_api.data, layer);
         }
     }
 
     /// Draw a line from `pos` to `end` with the given `color` and `thickness`.
-    pub fn draw_line(&self, p1: Vec2, p2: Vec2, color: Color, thickness: f32) {
+    pub fn draw_line(p1: Vec2, p2: Vec2, color: Color, thickness: f32) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_painter_api;
             (_api.draw_line)(_api.data, p1, p2, color, thickness);
         }
     }
 
     /// Draw a rectangle with the given `color` and `rounding`.
-    pub fn draw_rect(&self, p1: Vec2, p2: Vec2, color: Color, rounding: f32) {
+    pub fn draw_rect(p1: Vec2, p2: Vec2, color: Color, rounding: f32) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_painter_api;
             (_api.draw_rect)(_api.data, p1, p2, color, rounding);
         }
     }
 
     /// Draw a filled rectangle with the given `color` and `rounding`.
-    pub fn draw_rect_filled(&self, p1: Vec2, p2: Vec2, color: Color, rounding: f32) {
+    pub fn draw_rect_filled(p1: Vec2, p2: Vec2, color: Color, rounding: f32) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_painter_api;
             (_api.draw_rect_filled)(_api.data, p1, p2, color, rounding);
         }
     }
 
     /// Draw a rectangle with a gradient
     pub fn draw_rect_filled_gradient(
-        &self,
         p1: Vec2,
         p2: Vec2,
         left: Color,
@@ -114,7 +146,7 @@ impl PainterApi {
         btm_left: Color,
     ) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_painter_api;
             (_api.draw_rect_filled_gradient)(_api.data, p1, p2, left, right, btm_right, btm_left);
         }
     }

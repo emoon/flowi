@@ -36,54 +36,72 @@ pub struct UiFfiApi {
         unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString) -> bool,
 }
 
+#[cfg(any(feature = "static", feature = "tundra"))]
+extern "C" {
+    fn fl_ui_text_impl(data: *const core::ffi::c_void, text: FlString);
+    fn fl_ui_image_impl(data: *const core::ffi::c_void, image: u64);
+    fn fl_ui_image_with_size_impl(data: *const core::ffi::c_void, image: u64, size: Vec2);
+    fn fl_ui_set_pos_impl(data: *const core::ffi::c_void, pos: Vec2);
+    fn fl_ui_get_last_widget_size_impl(data: *const core::ffi::c_void, pos: Vec2) -> Rect;
+    fn fl_ui_push_button_with_icon_impl(
+        data: *const core::ffi::c_void,
+        text: FlString,
+        image: u64,
+        text_pos: Vec2,
+        image_scale: f32,
+    ) -> bool;
+    fn fl_ui_push_button_impl(data: *const core::ffi::c_void, text: FlString) -> bool;
+}
+
+#[no_mangle]
+pub static mut g_flowi_ui_api: *const UiFfiApi = std::ptr::null_mut();
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct Ui {
     _dummy: u32,
 }
 
-#[repr(C)]
-pub struct UiApi {
-    pub api: *const UiFfiApi,
-}
-
-impl UiApi {
+impl Ui {
     /// Draw static text with the selected font
-    pub fn text(&self, text: &str) {
+    pub fn text(text: &str) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_ui_api;
             (_api.text)(_api.data, FlString::new(text));
         }
     }
 
     /// Draw image. Images can be created with [Image::create_from_file] and [Image::create_from_memory]
-    pub fn image(&self, image: Image) {
+    pub fn image(image: Image) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_ui_api;
             (_api.image)(_api.data, image.handle);
         }
     }
 
     /// Draw image with given size
-    pub fn image_with_size(&self, image: Image, size: Vec2) {
+    pub fn image_with_size(image: Image, size: Vec2) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_ui_api;
             (_api.image_with_size)(_api.data, image.handle, size);
         }
     }
 
     /// Set position for the next ui-element (this is used when [LayoutMode::Manual] is used)
-    pub fn set_pos(&self, pos: Vec2) {
+    pub fn set_pos(pos: Vec2) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_ui_api;
             (_api.set_pos)(_api.data, pos);
         }
     }
 
     /// Get the last widget size. This is usually used for doing manual layouting
-    pub fn get_last_widget_size(&self, pos: Vec2) -> Rect {
+    pub fn get_last_widget_size(pos: Vec2) -> Rect {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_ui_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_ui_get_last_widget_size_impl(_api.data, pos);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.get_last_widget_size)(_api.data, pos);
             ret_val
         }
@@ -91,14 +109,22 @@ impl UiApi {
 
     /// Push button widget that returns true if user has pressed it
     pub fn push_button_with_icon(
-        &self,
         text: &str,
         image: Image,
         text_pos: Vec2,
         image_scale: f32,
     ) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_ui_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_ui_push_button_with_icon_impl(
+                _api.data,
+                FlString::new(text),
+                image.handle,
+                text_pos,
+                image_scale,
+            );
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.push_button_with_icon)(
                 _api.data,
                 FlString::new(text),
@@ -111,9 +137,12 @@ impl UiApi {
     }
 
     /// Push button widget that returns true if user has pressed it
-    pub fn push_button(&self, text: &str) -> bool {
+    pub fn push_button(text: &str) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_ui_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_ui_push_button_impl(_api.data, FlString::new(text));
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.push_button)(_api.data, FlString::new(text));
             ret_val
         }

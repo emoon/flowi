@@ -36,82 +36,126 @@ pub struct MenuFfiApi {
     ) -> bool,
 }
 
+#[cfg(any(feature = "static", feature = "tundra"))]
+extern "C" {
+    fn fl_menu_begin_bar_impl(data: *const core::ffi::c_void) -> bool;
+    fn fl_menu_end_bar_impl(data: *const core::ffi::c_void);
+    fn fl_menu_begin_main_bar_impl(data: *const core::ffi::c_void) -> bool;
+    fn fl_menu_end_main_bar_impl(data: *const core::ffi::c_void);
+    fn fl_menu_begin_impl(data: *const core::ffi::c_void, label: FlString, enabled: bool) -> bool;
+    fn fl_menu_end_impl(data: *const core::ffi::c_void);
+    fn fl_menu_item_impl(data: *const core::ffi::c_void, label: FlString) -> bool;
+    fn fl_menu_item_ex_impl(
+        data: *const core::ffi::c_void,
+        label: FlString,
+        shortcut: FlString,
+        selected: bool,
+        enabled: bool,
+    ) -> bool;
+    fn fl_menu_item_toggle_impl(
+        data: *const core::ffi::c_void,
+        label: FlString,
+        shortcut: FlString,
+        selected: *mut bool,
+        enabled: bool,
+    ) -> bool;
+}
+
+#[no_mangle]
+pub static mut g_flowi_menu_api: *const MenuFfiApi = std::ptr::null_mut();
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct Menu {
     _dummy: u32,
 }
 
-#[repr(C)]
-pub struct MenuApi {
-    pub api: *const MenuFfiApi,
-}
-
-impl MenuApi {
+impl Menu {
     /// Append to menu-bar of current window (requires [WindowFlags::MENU_BAR] flag set on parent window).
-    pub fn begin_bar(&self) -> bool {
+    pub fn begin_bar() -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_menu_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_menu_begin_bar_impl(_api.data);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.begin_bar)(_api.data);
             ret_val
         }
     }
 
     /// only call end_bar() if begin_bar() returns true!
-    pub fn end_bar(&self) {
+    pub fn end_bar() {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_menu_api;
             (_api.end_bar)(_api.data);
         }
     }
 
     /// create and append to a full screen menu-bar.
-    pub fn begin_main_bar(&self) -> bool {
+    pub fn begin_main_bar() -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_menu_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_menu_begin_main_bar_impl(_api.data);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.begin_main_bar)(_api.data);
             ret_val
         }
     }
 
     /// only call end_main_bar() if begin_main_bar() returns true!
-    pub fn end_main_bar(&self) {
+    pub fn end_main_bar() {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_menu_api;
             (_api.end_main_bar)(_api.data);
         }
     }
 
     /// create a sub-menu entry. only call EndMenu() if this returns true!
-    pub fn begin(&self, label: &str, enabled: bool) -> bool {
+    pub fn begin(label: &str, enabled: bool) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_menu_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_menu_begin_impl(_api.data, FlString::new(label), enabled);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.begin)(_api.data, FlString::new(label), enabled);
             ret_val
         }
     }
 
     /// only call end_menu() if begin_menu() returns true!
-    pub fn end(&self) {
+    pub fn end() {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_menu_api;
             (_api.end)(_api.data);
         }
     }
 
     /// return true when activated.
-    pub fn item(&self, label: &str) -> bool {
+    pub fn item(label: &str) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_menu_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_menu_item_impl(_api.data, FlString::new(label));
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.item)(_api.data, FlString::new(label));
             ret_val
         }
     }
 
     /// return true when activated. Includes some extra info such as shortcut, etc
-    pub fn item_ex(&self, label: &str, shortcut: &str, selected: bool, enabled: bool) -> bool {
+    pub fn item_ex(label: &str, shortcut: &str, selected: bool, enabled: bool) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_menu_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_menu_item_ex_impl(
+                _api.data,
+                FlString::new(label),
+                FlString::new(shortcut),
+                selected,
+                enabled,
+            );
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.item_ex)(
                 _api.data,
                 FlString::new(label),
@@ -124,15 +168,18 @@ impl MenuApi {
     }
 
     /// return true when activated + toggle selected
-    pub fn item_toggle(
-        &self,
-        label: &str,
-        shortcut: &str,
-        selected: &mut bool,
-        enabled: bool,
-    ) -> bool {
+    pub fn item_toggle(label: &str, shortcut: &str, selected: &mut bool, enabled: bool) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_menu_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_menu_item_toggle_impl(
+                _api.data,
+                FlString::new(label),
+                FlString::new(shortcut),
+                selected as _,
+                enabled,
+            );
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.item_toggle)(
                 _api.data,
                 FlString::new(label),

@@ -529,11 +529,12 @@ impl Cgen {
                 writeln!(f, "#include \"{}.h\"", base_filename)?;
             }
         }
-        /*
 
         writeln!(f)?;
-        writeln!(f, "struct FlInternalData;")?;
-        writeln!(f, "\ntypedef struct FlContext {{")?;
+        writeln!(f, "struct App;")?;
+        writeln!(f, "\ntypedef struct FlApp {{")?;
+        writeln!(f, "   struct FlInternalData* priv;")?;
+        writeln!(f, "    bool (*main_loop)(FlMainLoopCallback callback, void* user_data);")?;
 
         // Generate accesors for the various APIs
         for s in &structs_with_funcs {
@@ -559,37 +560,22 @@ impl Cgen {
             }
         }
 
-        writeln!(f, "}} FlContext;\n")?;
-        */
+        writeln!(f, "}} FlApp;\n")?;
 
-        /*
+        writeln!(f, "FL_INLINE bool fl_application_create(FlApplicationSettings* settings) {{")?;
+        writeln!(f, "    FlApp* api = fl_application_create_impl(settings, 0);")?;
+
         for s in &structs_with_funcs {
-             let func_name = format!("{}_{}", C_API_SUFIX_FUNCS, s.name.to_snake_case());
-            if let Some(func) = s.functions.iter().find(|f| f.name == s.name) {
-                let fa = Self::generate_function_args(func, &s.name);
-                writeln!(
-                    f,
-                    "FL_INLINE struct {}{}Api* {}_api(FlContext* ctx, {}) {{ return (ctx->{}_get_api)(ctx->priv, 0, {}); }}",
-                    C_API_SUFFIX,
-                    s.name,
-                    func_name,
-                    arg_line(&fa.func_args, Ctx::No),
-                    s.name.to_snake_case(),
-                    arg_line(&fa.call_args[1..], Ctx::No)
-                )?;
-            } else {
-                writeln!(
-                    f,
-                    "FL_INLINE struct {}{}Api* {}_api(FlContext* ctx) {{ return (ctx->{}_get_api)(ctx->priv, 0); }}",
-                    C_API_SUFFIX,
-                    s.name,
-                    func_name, s.name.to_snake_case(),
-                )?;
-            }
+            let name_snake = s.name.to_snake_case(); 
+            writeln!(
+                f,
+                "    g_flowi_{}_api = api->{}_get_api(api->priv, 0);",
+                name_snake, name_snake
+            )?;
         }
-        */
-
-        writeln!(f)?;
+        
+        writeln!(f, "    return api;")?;
+        writeln!(f, "}}\n")?;
 
         Ok(())
     }

@@ -23,63 +23,74 @@ pub struct TextFfiApi {
     pub(crate) text_disabled: unsafe extern "C" fn(data: *const core::ffi::c_void, text: FlString),
 }
 
+#[cfg(any(feature = "static", feature = "tundra"))]
+extern "C" {
+    fn fl_text_calc_size_impl(data: *const core::ffi::c_void, text: FlString) -> Vec2;
+    fn fl_text_bullet_impl(data: *const core::ffi::c_void, text: FlString);
+    fn fl_text_label_impl(data: *const core::ffi::c_void, label: FlString, text: FlString);
+    fn fl_text_show_color_impl(data: *const core::ffi::c_void, color: Color, text: FlString);
+    fn fl_text_show_impl(data: *const core::ffi::c_void, text: FlString);
+    fn fl_text_text_disabled_impl(data: *const core::ffi::c_void, text: FlString);
+}
+
+#[no_mangle]
+pub static mut g_flowi_text_api: *const TextFfiApi = std::ptr::null_mut();
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct Text {
     _dummy: u32,
 }
 
-#[repr(C)]
-pub struct TextApi {
-    pub api: *const TextFfiApi,
-}
-
-impl TextApi {
+impl Text {
     /// Calculate the size of a text string in pixels
-    pub fn calc_size(&self, text: &str) -> Vec2 {
+    pub fn calc_size(text: &str) -> Vec2 {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_text_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_text_calc_size_impl(_api.data, FlString::new(text));
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.calc_size)(_api.data, FlString::new(text));
             ret_val
         }
     }
 
     /// Bullet text
-    pub fn bullet(&self, text: &str) {
+    pub fn bullet(text: &str) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_text_api;
             (_api.bullet)(_api.data, FlString::new(text));
         }
     }
 
     /// Draw basic text
-    pub fn label(&self, label: &str, text: &str) {
+    pub fn label(label: &str, text: &str) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_text_api;
             (_api.label)(_api.data, FlString::new(label), FlString::new(text));
         }
     }
 
     /// Draw basic text with a color
-    pub fn show_color(&self, color: Color, text: &str) {
+    pub fn show_color(color: Color, text: &str) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_text_api;
             (_api.show_color)(_api.data, color, FlString::new(text));
         }
     }
 
     /// Show basic text
-    pub fn show(&self, text: &str) {
+    pub fn show(text: &str) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_text_api;
             (_api.show)(_api.data, FlString::new(text));
         }
     }
 
     /// Draw text disabled
-    pub fn text_disabled(&self, text: &str) {
+    pub fn text_disabled(text: &str) {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_text_api;
             (_api.text_disabled)(_api.data, FlString::new(text));
         }
     }

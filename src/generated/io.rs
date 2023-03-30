@@ -22,18 +22,25 @@ pub struct IoFfiApi {
     ) -> u64,
 }
 
+#[cfg(any(feature = "static", feature = "tundra"))]
+extern "C" {
+    fn fl_io_load_shader_program_comp_impl(
+        data: *const core::ffi::c_void,
+        vs_filename: FlString,
+        ps_filename: FlString,
+    ) -> u64;
+}
+
+#[no_mangle]
+pub static mut g_flowi_io_api: *const IoFfiApi = std::ptr::null_mut();
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct Io {
     _dummy: u32,
 }
 
-#[repr(C)]
-pub struct IoApi {
-    pub api: *const IoFfiApi,
-}
-
-impl IoApi {
+impl Io {
     /// Load image from file/url. Supported formats are:
     /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
     /// PNG 1/2/4/8/16-bit-per-channel
@@ -48,13 +55,16 @@ impl IoApi {
     /// Load a vertex shader be used for rendering. This will also compile the shader.
     /// Load a pixel shader to be used for rendering. This will also compile the shader.
     /// Load a vertex shader and pixel shader to be used as a shader program. This will also compile the shaders.
-    pub fn load_shader_program_comp(
-        &self,
-        vs_filename: &str,
-        ps_filename: &str,
-    ) -> Result<ShaderProgram> {
+    pub fn load_shader_program_comp(vs_filename: &str, ps_filename: &str) -> Result<ShaderProgram> {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_io_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_io_load_shader_program_comp_impl(
+                _api.data,
+                FlString::new(vs_filename),
+                FlString::new(ps_filename),
+            );
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.load_shader_program_comp)(
                 _api.data,
                 FlString::new(vs_filename),

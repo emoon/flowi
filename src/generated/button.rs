@@ -38,6 +38,38 @@ pub struct ButtonFfiApi {
         unsafe extern "C" fn(data: *const core::ffi::c_void, image: u64, label: FlString) -> bool,
 }
 
+#[cfg(any(feature = "static", feature = "tundra"))]
+extern "C" {
+    fn fl_button_regular_impl(data: *const core::ffi::c_void, label: FlString) -> bool;
+    fn fl_button_regular_size_impl(
+        data: *const core::ffi::c_void,
+        label: FlString,
+        size: Vec2,
+    ) -> bool;
+    fn fl_button_small_impl(data: *const core::ffi::c_void, label: FlString) -> bool;
+    fn fl_button_invisible_impl(
+        data: *const core::ffi::c_void,
+        label: FlString,
+        size: Vec2,
+        flags: ButtonFlags,
+    ) -> bool;
+    fn fl_button_check_box_impl(
+        data: *const core::ffi::c_void,
+        label: FlString,
+        state: *mut bool,
+    ) -> bool;
+    fn fl_button_radio_impl(data: *const core::ffi::c_void, label: FlString, state: bool) -> bool;
+    fn fl_button_bullet_impl(data: *const core::ffi::c_void);
+    fn fl_button_image_with_text_impl(
+        data: *const core::ffi::c_void,
+        image: u64,
+        label: FlString,
+    ) -> bool;
+}
+
+#[no_mangle]
+pub static mut g_flowi_button_api: *const ButtonFfiApi = std::ptr::null_mut();
+
 bitflags! {
 #[repr(C)]
 pub struct ButtonFlags : u32 {
@@ -57,78 +89,95 @@ pub struct Button {
     _dummy: u32,
 }
 
-#[repr(C)]
-pub struct ButtonApi {
-    pub api: *const ButtonFfiApi,
-}
-
-impl ButtonApi {
+impl Button {
     /// Show a regular push button
-    pub fn regular(&self, label: &str) -> bool {
+    pub fn regular(label: &str) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_button_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_button_regular_impl(_api.data, FlString::new(label));
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.regular)(_api.data, FlString::new(label));
             ret_val
         }
     }
 
     /// Show a regular push button with a specific size
-    pub fn regular_size(&self, label: &str, size: Vec2) -> bool {
+    pub fn regular_size(label: &str, size: Vec2) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_button_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_button_regular_size_impl(_api.data, FlString::new(label), size);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.regular_size)(_api.data, FlString::new(label), size);
             ret_val
         }
     }
 
     /// Show a regular push button without any frame padding.
-    pub fn small(&self, label: &str) -> bool {
+    pub fn small(label: &str) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_button_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_button_small_impl(_api.data, FlString::new(label));
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.small)(_api.data, FlString::new(label));
             ret_val
         }
     }
 
     /// Invisible button that allows custom using drawing, but still acts like a button.
-    pub fn invisible(&self, label: &str, size: Vec2, flags: ButtonFlags) -> bool {
+    pub fn invisible(label: &str, size: Vec2, flags: ButtonFlags) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_button_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_button_invisible_impl(_api.data, FlString::new(label), size, flags);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.invisible)(_api.data, FlString::new(label), size, flags);
             ret_val
         }
     }
 
     /// Button with a check box state
-    pub fn check_box(&self, label: &str, state: &mut bool) -> bool {
+    pub fn check_box(label: &str, state: &mut bool) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_button_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_button_check_box_impl(_api.data, FlString::new(label), state as _);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.check_box)(_api.data, FlString::new(label), state as _);
             ret_val
         }
     }
 
     /// Radio button
-    pub fn radio(&self, label: &str, state: bool) -> bool {
+    pub fn radio(label: &str, state: bool) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_button_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val = fl_button_radio_impl(_api.data, FlString::new(label), state);
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.radio)(_api.data, FlString::new(label), state);
             ret_val
         }
     }
 
     /// TODO: Document
-    pub fn bullet(&self) {
+    pub fn bullet() {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_button_api;
             (_api.bullet)(_api.data);
         }
     }
 
     /// TODO: Document
-    pub fn image_with_text(&self, image: Image, label: &str) -> bool {
+    pub fn image_with_text(image: Image, label: &str) -> bool {
         unsafe {
-            let _api = &*self.api;
+            let _api = &*g_flowi_button_api;
+            #[cfg(any(feature = "static"), feature = "tundra")]
+            let ret_val =
+                fl_button_image_with_text_impl(_api.data, image.handle, FlString::new(label));
+            #[cfg(any(feature = "dynamic"), feature = "plugin")]
             let ret_val = (_api.image_with_text)(_api.data, image.handle, FlString::new(label));
             ret_val
         }
