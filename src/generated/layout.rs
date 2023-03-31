@@ -160,9 +160,9 @@ impl Cursor {
     pub fn get_pos() -> Vec2 {
         unsafe {
             let _api = &*g_flowi_cursor_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_cursor_get_pos_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.get_pos)(_api.data);
             ret_val
         }
@@ -171,9 +171,9 @@ impl Cursor {
     pub fn get_pos_x() -> f32 {
         unsafe {
             let _api = &*g_flowi_cursor_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_cursor_get_pos_x_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.get_pos_x)(_api.data);
             ret_val
         }
@@ -182,9 +182,9 @@ impl Cursor {
     pub fn get_pos_y() -> f32 {
         unsafe {
             let _api = &*g_flowi_cursor_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_cursor_get_pos_y_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.get_pos_y)(_api.data);
             ret_val
         }
@@ -218,9 +218,9 @@ impl Cursor {
     pub fn screen_pos() -> Vec2 {
         unsafe {
             let _api = &*g_flowi_cursor_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_cursor_screen_pos_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.screen_pos)(_api.data);
             ret_val
         }
@@ -245,9 +245,9 @@ impl Cursor {
     pub fn get_text_line_height() -> f32 {
         unsafe {
             let _api = &*g_flowi_cursor_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_cursor_get_text_line_height_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.get_text_line_height)(_api.data);
             ret_val
         }
@@ -257,9 +257,9 @@ impl Cursor {
     pub fn get_text_line_height_with_spacing() -> f32 {
         unsafe {
             let _api = &*g_flowi_cursor_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_cursor_get_text_line_height_with_spacing_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.get_text_line_height_with_spacing)(_api.data);
             ret_val
         }
@@ -269,9 +269,9 @@ impl Cursor {
     pub fn get_frame_height() -> f32 {
         unsafe {
             let _api = &*g_flowi_cursor_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_cursor_get_frame_height_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.get_frame_height)(_api.data);
             ret_val
         }
@@ -281,9 +281,9 @@ impl Cursor {
     pub fn get_frame_height_with_spacing() -> f32 {
         unsafe {
             let _api = &*g_flowi_cursor_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_cursor_get_frame_height_with_spacing_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.get_frame_height_with_spacing)(_api.data);
             ret_val
         }

@@ -58,13 +58,13 @@ impl Io {
     pub fn load_shader_program_comp(vs_filename: &str, ps_filename: &str) -> Result<ShaderProgram> {
         unsafe {
             let _api = &*g_flowi_io_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_io_load_shader_program_comp_impl(
                 _api.data,
                 FlString::new(vs_filename),
                 FlString::new(ps_filename),
             );
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.load_shader_program_comp)(
                 _api.data,
                 FlString::new(vs_filename),

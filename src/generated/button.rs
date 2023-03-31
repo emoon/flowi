@@ -94,9 +94,9 @@ impl Button {
     pub fn regular(label: &str) -> bool {
         unsafe {
             let _api = &*g_flowi_button_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_button_regular_impl(_api.data, FlString::new(label));
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.regular)(_api.data, FlString::new(label));
             ret_val
         }
@@ -106,9 +106,9 @@ impl Button {
     pub fn regular_size(label: &str, size: Vec2) -> bool {
         unsafe {
             let _api = &*g_flowi_button_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_button_regular_size_impl(_api.data, FlString::new(label), size);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.regular_size)(_api.data, FlString::new(label), size);
             ret_val
         }
@@ -118,9 +118,9 @@ impl Button {
     pub fn small(label: &str) -> bool {
         unsafe {
             let _api = &*g_flowi_button_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_button_small_impl(_api.data, FlString::new(label));
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.small)(_api.data, FlString::new(label));
             ret_val
         }
@@ -130,9 +130,9 @@ impl Button {
     pub fn invisible(label: &str, size: Vec2, flags: ButtonFlags) -> bool {
         unsafe {
             let _api = &*g_flowi_button_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_button_invisible_impl(_api.data, FlString::new(label), size, flags);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.invisible)(_api.data, FlString::new(label), size, flags);
             ret_val
         }
@@ -142,9 +142,9 @@ impl Button {
     pub fn check_box(label: &str, state: &mut bool) -> bool {
         unsafe {
             let _api = &*g_flowi_button_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_button_check_box_impl(_api.data, FlString::new(label), state as _);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.check_box)(_api.data, FlString::new(label), state as _);
             ret_val
         }
@@ -154,9 +154,9 @@ impl Button {
     pub fn radio(label: &str, state: bool) -> bool {
         unsafe {
             let _api = &*g_flowi_button_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_button_radio_impl(_api.data, FlString::new(label), state);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.radio)(_api.data, FlString::new(label), state);
             ret_val
         }
@@ -174,10 +174,10 @@ impl Button {
     pub fn image_with_text(image: Image, label: &str) -> bool {
         unsafe {
             let _api = &*g_flowi_button_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val =
                 fl_button_image_with_text_impl(_api.data, image.handle, FlString::new(label));
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.image_with_text)(_api.data, image.handle, FlString::new(label));
             ret_val
         }

@@ -74,9 +74,9 @@ impl Font {
     pub fn new_from_file(filename: &str, font_size: u32) -> Result<Font> {
         unsafe {
             let _api = &*g_flowi_font_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_font_new_from_file_impl(_api.data, FlString::new(filename), font_size);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.new_from_file)(_api.data, FlString::new(filename), font_size);
             if ret_val == 0 {
                 Err(get_last_error())
@@ -95,7 +95,7 @@ impl Font {
     ) -> Result<Font> {
         unsafe {
             let _api = &*g_flowi_font_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_font_new_from_file_range_impl(
                 _api.data,
                 FlString::new(filename),
@@ -103,7 +103,7 @@ impl Font {
                 glyph_range_start,
                 glyph_range_end,
             );
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.new_from_file_range)(
                 _api.data,
                 FlString::new(filename),
@@ -124,7 +124,7 @@ impl Font {
     pub fn new_from_memory(name: &str, data: &[u8], font_size: u32) -> Result<Font> {
         unsafe {
             let _api = &*g_flowi_font_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_font_new_from_memory_impl(
                 _api.data,
                 FlString::new(name),
@@ -132,7 +132,7 @@ impl Font {
                 data.len() as _,
                 font_size,
             );
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.new_from_memory)(
                 _api.data,
                 FlString::new(name),

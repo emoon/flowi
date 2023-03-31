@@ -1,7 +1,7 @@
 use crate::{
     application_settings::ApplicationSettings,
-    io::{IoApi, IoFfiApi},
-    Flowi,
+    AppFfi,
+    //Flowi,
 };
 
 use core::{
@@ -33,18 +33,16 @@ pub struct Application {
 #[cfg(any(feature = "dynamic", feature = "static", feature = "tundra"))]
 unsafe extern "C" fn mainloop_trampoline_ud<T>(ctx: *const c_void, user_data: *mut c_void) {
     let wd: &WrappedMainData = transmute(user_data);
-    let flowi = Flowi { api: ctx as _ };
-    let f: &&(dyn Fn(&Flowi, &mut T) + 'static) = transmute(wd.func);
+    let f: &&(dyn Fn(&mut T) + 'static) = transmute(wd.func);
     let data = wd.user_data as *mut T;
-    f(&flowi, &mut *data);
+    f(&mut *data);
 }
 
 #[cfg(any(feature = "dynamic", feature = "static", feature = "tundra"))]
 unsafe extern "C" fn mainloop_trampoline(ctx: *const c_void, user_data: *mut c_void) {
     let wd: &WrappedMainData = transmute(user_data);
-    let flowi = Flowi { api: ctx as _ };
-    let f: &&(dyn Fn(&Flowi) + 'static) = transmute(wd.func);
-    f(&flowi);
+    let f: &&(dyn Fn() + 'static) = transmute(wd.func);
+    f();
 }
 
 impl Application {

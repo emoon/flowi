@@ -15,6 +15,17 @@ extern "C" {
     fn c_post_update(data: *const c_void);
     fn c_should_close(data: *const c_void) -> bool;
     fn c_raw_window_handle(data: *const c_void) -> *mut c_void;
+    fn fl_get_button_api(data: *const void, version: u32);
+    fn fl_get_cursor_api(data: *const void, version: u32);
+    fn fl_get_font_api(data: *const void, version: u32);
+    fn fl_get_image_api(data: *const void, version: u32);
+    fn fl_get_io_api(data: *const void, version: u32);
+    fn fl_get_item_api(data: *const void, version: u32);
+    fn fl_get_menu_api(data: *const void, version: u32);
+    fn fl_get_style_api(data: *const void, version: u32);
+    fn fl_get_text_api(data: *const void, version: u32);
+    fn fl_get_ui_api(data: *const void, version: u32);
+    fn fl_get_window_api(data: *const void, version: u32);
 }
 
 const WIDTH: u16 = 1280;
@@ -385,7 +396,7 @@ fn generate_frame(data: *mut ApplicationState) {
 }
 
 #[no_mangle]
-fn fl_application_create_impl(settings: *const ApplicationSettings) -> *const AppFfi {
+fn fl_application_create_impl(settings: *const ApplicationSettings, version: u32) -> *const AppFfi {
     let settings = unsafe { &*settings };
     let app = ApplicationState::new(settings);
 
@@ -393,7 +404,17 @@ fn fl_application_create_impl(settings: *const ApplicationSettings) -> *const Ap
 
     Box::into_raw(Box::new(AppFfi {
         priv_data: Box::into_raw(Box::new(app)) as *const _,
-        io_get_api: get_io_api,
         main_loop: create_main_loop,
+        button_get_api: fl_get_button_api,
+        cursor_get_api: fl_get_cursor_api,
+        font_get_api: fl_get_font_api,
+        image_get_api: fl_get_image_api,
+        io_get_api: fl_get_io_api,
+        item_get_api: fl_get_item_api,
+        menu_get_api: fl_get_menu_api,
+        style_get_api: fl_get_style_api,
+        text_get_api: fl_get_text_api,
+        ui_get_api: fl_get_ui_api,
+        window_get_api: fl_get_window_api,
     }))
 }

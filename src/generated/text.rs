@@ -47,9 +47,9 @@ impl Text {
     pub fn calc_size(text: &str) -> Vec2 {
         unsafe {
             let _api = &*g_flowi_text_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_text_calc_size_impl(_api.data, FlString::new(text));
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.calc_size)(_api.data, FlString::new(text));
             ret_val
         }

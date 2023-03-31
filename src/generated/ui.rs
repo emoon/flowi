@@ -99,9 +99,9 @@ impl Ui {
     pub fn get_last_widget_size(pos: Vec2) -> Rect {
         unsafe {
             let _api = &*g_flowi_ui_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_ui_get_last_widget_size_impl(_api.data, pos);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.get_last_widget_size)(_api.data, pos);
             ret_val
         }
@@ -116,7 +116,7 @@ impl Ui {
     ) -> bool {
         unsafe {
             let _api = &*g_flowi_ui_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_ui_push_button_with_icon_impl(
                 _api.data,
                 FlString::new(text),
@@ -124,7 +124,7 @@ impl Ui {
                 text_pos,
                 image_scale,
             );
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.push_button_with_icon)(
                 _api.data,
                 FlString::new(text),
@@ -140,9 +140,9 @@ impl Ui {
     pub fn push_button(text: &str) -> bool {
         unsafe {
             let _api = &*g_flowi_ui_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_ui_push_button_impl(_api.data, FlString::new(text));
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.push_button)(_api.data, FlString::new(text));
             ret_val
         }

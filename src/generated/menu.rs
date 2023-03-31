@@ -75,9 +75,9 @@ impl Menu {
     pub fn begin_bar() -> bool {
         unsafe {
             let _api = &*g_flowi_menu_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_menu_begin_bar_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.begin_bar)(_api.data);
             ret_val
         }
@@ -95,9 +95,9 @@ impl Menu {
     pub fn begin_main_bar() -> bool {
         unsafe {
             let _api = &*g_flowi_menu_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_menu_begin_main_bar_impl(_api.data);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.begin_main_bar)(_api.data);
             ret_val
         }
@@ -115,9 +115,9 @@ impl Menu {
     pub fn begin(label: &str, enabled: bool) -> bool {
         unsafe {
             let _api = &*g_flowi_menu_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_menu_begin_impl(_api.data, FlString::new(label), enabled);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.begin)(_api.data, FlString::new(label), enabled);
             ret_val
         }
@@ -135,9 +135,9 @@ impl Menu {
     pub fn item(label: &str) -> bool {
         unsafe {
             let _api = &*g_flowi_menu_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_menu_item_impl(_api.data, FlString::new(label));
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.item)(_api.data, FlString::new(label));
             ret_val
         }
@@ -147,7 +147,7 @@ impl Menu {
     pub fn item_ex(label: &str, shortcut: &str, selected: bool, enabled: bool) -> bool {
         unsafe {
             let _api = &*g_flowi_menu_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_menu_item_ex_impl(
                 _api.data,
                 FlString::new(label),
@@ -155,7 +155,7 @@ impl Menu {
                 selected,
                 enabled,
             );
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.item_ex)(
                 _api.data,
                 FlString::new(label),
@@ -171,7 +171,7 @@ impl Menu {
     pub fn item_toggle(label: &str, shortcut: &str, selected: &mut bool, enabled: bool) -> bool {
         unsafe {
             let _api = &*g_flowi_menu_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_menu_item_toggle_impl(
                 _api.data,
                 FlString::new(label),
@@ -179,7 +179,7 @@ impl Menu {
                 selected as _,
                 enabled,
             );
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.item_toggle)(
                 _api.data,
                 FlString::new(label),

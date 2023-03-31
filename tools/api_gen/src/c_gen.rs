@@ -512,7 +512,7 @@ impl Cgen {
     }
 
     pub fn generate_main_file(path: &str, api_defs: &[ApiDef]) -> io::Result<()> {
-        let filename = format!("{}/flowi.h", path);
+        let filename = format!("{}/application.h", path);
 
         let mut f = BufWriter::new(File::create(filename)?);
 
@@ -531,10 +531,11 @@ impl Cgen {
         }
 
         writeln!(f)?;
-        writeln!(f, "struct App;")?;
-        writeln!(f, "\ntypedef struct FlApp {{")?;
+        writeln!(f, "struct FlInternalData;")?;
+        writeln!(f, "typedef void (*FlMainLoopCallback)(void* user_data);")?;
+        writeln!(f, "\ntypedef struct FlApplication {{")?;
         writeln!(f, "   struct FlInternalData* priv;")?;
-        writeln!(f, "    bool (*main_loop)(FlMainLoopCallback callback, void* user_data);")?;
+        writeln!(f, "    void (*main_loop)(FlMainLoopCallback callback, void* user_data);")?;
 
         // Generate accesors for the various APIs
         for s in &structs_with_funcs {
@@ -560,8 +561,8 @@ impl Cgen {
             }
         }
 
-        writeln!(f, "}} FlApp;\n")?;
-
+        writeln!(f, "}} FlApplication;\n")?;
+        writeln!(f, "FlApplication* fl_application_create_impl(FlApplicationSettings* settings, int version);\n")?;
         writeln!(f, "FL_INLINE bool fl_application_create(FlApplicationSettings* settings) {{")?;
         writeln!(f, "    FlApp* api = fl_application_create_impl(settings, 0);")?;
 

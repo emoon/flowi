@@ -5,48 +5,6 @@ require "tundra.util"
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local bgfx_defines = { 
-        { "BX_CONFIG_DEBUG=0", "_DEBUG" ; Config = { "*-*-debug" } },
-        { "BX_CONFIG_DEBUG=0" ; Config = { "*-*-release" } },
-        "__STDC_LIMIT_MACROS",
-        "__STDC_FORMAT_MACROS",
-        "__STDC_CONSTANT_MACROS",
-
-        "BGFX_CONFIG_RENDERER_WEBGL=1",
-        "BGFX_CONFIG_RENDERER_WEBGPU=0",
-        "BGFX_CONFIG_RENDERER_GNM=0",
-        {   
-            "GLFW_EXPOSE_NATIVE_COCOA",
-            "BGFX_CONFIG_MULTITHREADED=0",
-            "BGFX_CONFIG_RENDERER_OPENGL=0", 
-            "BGFX_CONFIG_RENDERER_VULKAN=0", 
-            "BGFX_CONFIG_RENDERER_DIRECT3D11=0",
-            "BGFX_CONFIG_RENDERER_DIRECT3D12=0",
-            "BGFX_CONFIG_RENDERER_VULKAN=0",
-            "BGFX_CONFIG_RENDERER_METAL=1" ; Config = "macos-*-*" 
-        },
-        {
-            "BGFX_CONFIG_MULTITHREADED=1",
-            "BGFX_CONFIG_RENDERER_VULKAN=1", 
-            "BGFX_CONFIG_RENDERER_OPENGL=1", 
-            "BGFX_CONFIG_RENDERER_DIRECT3D11=1",
-            "BGFX_CONFIG_RENDERER_DIRECT3D12=1",
-            "BGFX_CONFIG_RENDERER_METAL=0",
-            "GLFW_EXPOSE_NATIVE_WIN32" ; Config = "win64-*-*" 
-        },
-        { 
-            "BGFX_CONFIG_MULTITHREADED=1",
-            "BGFX_CONFIG_RENDERER_VULKAN=1", 
-            "BGFX_CONFIG_RENDERER_OPENGL=1", 
-            "BGFX_CONFIG_RENDERER_DIRECT3D11=0", -- Enable when we have a solution for dx shaders
-            "BGFX_CONFIG_RENDERER_DIRECT3D12=0", -- Enable when we have a solution for dx shaders
-            "BGFX_CONFIG_RENDERER_METAL=0",
-            "GLFW_EXPOSE_NATIVE_X11"; Config = "linux-*-*" 
-        },
-}
-
------------------------------------------------------------------------------------------------------------------------
-
 local glfw_defines = {
     { "GLFW_EXPOSE_NATIVE_WIN32", "_GLFW_WIN32", "_GLFW_WGL", "WIN32"; Config = "win64-*-*" },
     { "GLFW_EXPOSE_NATIVE_X11", "_GLFW_X11", "_GLFW_GFX", "LINUX"; Config = "linux-*-*" },
@@ -392,6 +350,10 @@ Build {
         local ui_lib = StaticLibrary {
             Name = "ui",
 
+            Defines = {
+                glfw_defines,
+            },
+
             Includes = {
                 "langs/c_cpp/include",
                 "external/glfw/include",
@@ -412,7 +374,7 @@ Build {
                 DEAR_IMGUI_DIR .. "misc/freetype/imgui_freetype.cpp",
                 FLOWI_DIR .. "io.cpp",
                 --FLOWI_DIR .. "application.cpp",
-                FLOWI_DIR .. "flowi.cpp",
+                --FLOWI_DIR .. "flowi.cpp",
                 FLOWI_DIR .. "font.cpp",
                 FLOWI_DIR .. "imgui_impl_glfw.cpp",
                 FLOWI_DIR .. "imgui_wrap.cpp",
@@ -420,7 +382,7 @@ Build {
                 FLOWI_DIR .. "image.c",
                 FLOWI_DIR .. "area.c",
                 FLOWI_DIR .. "array.c",
-                FLOWI_DIR .. "atlas.c",
+                --FLOWI_DIR .. "atlas.c",
                 FLOWI_DIR .. "command_buffer.c",
                 FLOWI_DIR .. "handles.c",
                 FLOWI_DIR .. "io.c",

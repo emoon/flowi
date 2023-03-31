@@ -72,9 +72,9 @@ impl Image {
     pub fn get_info<'a>(image: Image) -> Result<&'a ImageInfo> {
         unsafe {
             let _api = &*g_flowi_image_api;
-            #[cfg(any(feature = "static"), feature = "tundra")]
+            #[cfg(any(feature = "static", feature = "tundra"))]
             let ret_val = fl_image_get_info_impl(_api.data, image.handle);
-            #[cfg(any(feature = "dynamic"), feature = "plugin")]
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             let ret_val = (_api.get_info)(_api.data, image.handle);
             if ret_val.is_null() {
                 Err(get_last_error())

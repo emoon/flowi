@@ -115,7 +115,7 @@ extern "C" void c_post_update(TempState* state) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" void c_pre_update_create(TempState* state) {
-    ImGuiIO& io = ImGui::GetIO();
+    //ImGuiIO& io = ImGui::GetIO();
     //io.Fonts->Build();
 
     //uint8_t* data;
@@ -306,14 +306,16 @@ extern "C" ImDrawData imgui_get_draw_data() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
 extern "C" void* c_raw_window_handle(TempState* data) {
-#if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
-    return (void*)(uintptr_t)glfwGetX11Window(data->window);
-    #elif BX_PLATFORM_OSX
+//#if GLFW_EXPOSE_NATIVE_X11
+//    return (void*)(uintptr_t)glfwGetX11Window(data->window);
+//#elif GLFW_EXPOSE_NATIVE_COCOA
     return glfwGetCocoaWindow(data->window);
-    #elif BX_PLATFORM_WINDOWS
-    return glfwGetWin32Window(data->window);
-#endif  // BX_PLATFORM_
-    return (void*)(uintptr_t)glfwGetX11Window(data->window);
+//#elif GLFW_EXPOSE_NATIVE_WIN32
+//    return glfwGetWin32Window(data->window);
+//#else  // BX_PLATFORM_
+//#error "Unsupported platform"
+//#endif
+    //return (void*)(uintptr_t)glfwGetX11Window(data->window);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1391,5 +1393,96 @@ void fl_style_init_priv() {
     for (uint32_t i = 0; i < FL_SIZEOF_ARRAY(s_fl_vec2_styles); ++i) {
         s_vec2_style_lut[s_fl_vec2_styles[i]] = s_imgui_vec2_styles[i];
     }
+}
+
+
+//extern "C" FlImageApi g_image_funcs;
+//extern FlButtonApi g_button_funcs;
+//extern FlCursorApi g_cursor_funcs;
+//extern FlFontApi g_font_funcs;
+//extern FlItemApi g_item_funcs;
+//extern FlMenuApi g_menu_funcs;
+//extern FlStyleApi g_style_funcs;
+//extern FlTextApi g_text_funcs;
+//extern FlUiApi g_ui_funcs;
+//extern FlWindowApi g_window_funcs;
+//extern FlIoApi g_io_funcs;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlImageApi* fl_get_image_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    FlImageApi* api = &data->image_funcs;
+    return api; 
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlUiApi* fl_get_ui_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->ui_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlWindowApi* fl_get_window_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->window_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlCursorApi* fl_get_cursor_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->cursor_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlTextApi* fl_get_text_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->text_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlIoApi* fl_get_io_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->io_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlMenuApi* fl_get_menu_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->menu_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlFontApi* fl_get_font_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->font_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlButtonApi* fl_get_button_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->button_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlItemApi* fl_get_item_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->item_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlStyleApi* fl_get_style_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    return &data->style_funcs;
 }
 

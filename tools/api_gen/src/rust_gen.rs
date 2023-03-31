@@ -553,10 +553,10 @@ impl RustGen {
         let args = get_arg_line(&func_args.ffi_args);
 
         if let Some(ret_val) = func.return_val.as_ref() {
-            writeln!(f, "#[cfg(any(feature = \"static\"), feature = \"tundra\")]")?;
+            writeln!(f, "#[cfg(any(feature = \"static\", feature = \"tundra\"))]")?;
             writeln!(f, "let ret_val = fl_{}_{}_impl({});", struct_name, func.name, args)?;
 
-            writeln!(f, "#[cfg(any(feature = \"dynamic\"), feature = \"plugin\")]")?;
+            writeln!(f, "#[cfg(any(feature = \"dynamic\", feature = \"plugin\"))]")?;
             writeln!(f, "let ret_val = (_api.{})({});", func.name, args)?;
 
             if ret_val.is_handle_type {
@@ -697,8 +697,8 @@ impl RustGen {
 
                 for s in &api_def.structs {
                     if !s.functions.is_empty() && !s.has_attribute("NoContext") {
-                        writeln!(f, "use crate::{}::{{{}FfiApi }};", base_filename, s.name)?;
-                        writeln!(f, "pub use crate::{}::{{{}Api}};", base_filename, s.name)?;
+                        writeln!(f, "use crate::{}::{}FfiApi;", base_filename, s.name)?;
+                        writeln!(f, "pub use crate::generated::{}::{} as {};", base_filename, s.name, s.name)?;
                     }
                 }
             }
