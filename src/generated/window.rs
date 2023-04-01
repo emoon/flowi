@@ -183,6 +183,9 @@ impl Window {
     pub fn set_pos(pos: Vec2) {
         unsafe {
             let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_window_set_pos_impl(_api.data, pos);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.set_pos)(_api.data, pos);
         }
     }
@@ -203,6 +206,9 @@ impl Window {
     pub fn end() {
         unsafe {
             let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_window_end_impl(_api.data);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.end)(_api.data);
         }
     }
@@ -224,6 +230,9 @@ impl Window {
     pub fn end_child() {
         unsafe {
             let _api = &*g_flowi_window_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_window_end_child_impl(_api.data);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.end_child)(_api.data);
         }
     }

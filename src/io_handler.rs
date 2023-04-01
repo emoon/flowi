@@ -6,7 +6,7 @@ use std::{
     fs::File,
     io::Read,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Output},
     sync::mpsc::Receiver,
 };
 
@@ -21,6 +21,56 @@ pub struct IoHandler {
     pub shaders: ShaderHandler,
     //shaders_comp: HashMap<String, Shader>,
     temp_dir: PathBuf,
+}
+
+#[cfg(target_os = "macos")]
+fn build_shader(filename: &str, output_path: &PathBuf, shader_type: &str) -> Result<Output> {
+    Ok(Command::new(
+        "/Users/emoon/code/projects/flowi/bin/shaderc_macos",
+    )
+    .arg("-f")
+    .arg(filename)
+    .arg("-i")
+    .arg("/Users/emoon/code/other/bgfx/bgfx/src")
+    .arg("--type")
+    .arg(shader_type)
+    .arg("--platform")
+    .arg("osx")
+    .arg("-p")
+    .arg("metal")
+    .arg("-o")
+    .arg(output_path)
+    .output()
+    .unwrap())
+}
+
+#[cfg(target_os = "linux")]
+fn build_shader(filename: &str, output_path: &PathBuf, shader_type: &str) -> Result<Output> {
+    Ok(Command::new(
+        "/Users/emoon/code/projects/flowi/bin/shaderc_linux",
+    )
+    .arg("-f")
+    .arg(filename)
+    .arg("-i")
+    .arg("/home/emoon/code/other/bgfx/bgfx/src")
+    .arg("--type")
+    .arg(shader_type)
+    .arg("--platform")
+    .arg("linux")
+    .arg("-p")
+    .arg("120")
+    .arg("-o")
+    .arg(output_path)
+    .output()
+    .unwrap())
+}
+
+fn build_fragment_shader(filename: &str, output_path: &PathBuf) -> Result<Output> {
+    build_shader(filename, output_path, "fragment")
+}
+
+fn build_vertex_shader(filename: &str, output_path: &PathBuf) -> Result<Output> {
+    build_shader(filename, output_path, "vertex")
 }
 
 impl IoHandler {
@@ -56,26 +106,7 @@ impl IoHandler {
         let temp_path = self.temp_dir.join(hash_str);
         // if the shader doesn't exist in the temp dir we need to generate it
         if !temp_path.exists() {
-            // Command = "$(BGFX_SHADERC) $(COMPILE_PARAMS) -i core/c/external/bgfx/src -f $(<) --bin2c -o $(@)",
-            // ShaderC { Source = src, OutName = dest .. "_glsl.h", Parameters = "--type fragment --platform linux -p 120" },
-            // TODO: This should be called async
-            let output = Command::new(
-                "/home/emoon/code/other/bgfx/bgfx/.build/linux64_gcc/bin/shadercRelease",
-            )
-            .arg("-f")
-            .arg(filename)
-            .arg("-i")
-            .arg("/home/emoon/code/other/bgfx/bgfx/src")
-            .arg("--type")
-            .arg("fragment")
-            .arg("--platform")
-            .arg("linux")
-            .arg("-p")
-            .arg("120")
-            .arg("-o")
-            .arg(&temp_path)
-            .output()
-            .expect("shaderc failed");
+            let output = build_fragment_shader(filename, &temp_path).unwrap();   
 
             if !output.status.success() {
                 println!("{}", String::from_utf8_lossy(&output.stdout));
@@ -107,26 +138,9 @@ impl IoHandler {
         let temp_path = self.temp_dir.join(hash_str);
         // if the shader doesn't exist in the temp dir we need to generate it
         if !temp_path.exists() {
-            // Command = "$(BGFX_SHADERC) $(COMPILE_PARAMS) -i core/c/external/bgfx/src -f $(<) --bin2c -o $(@)",
-            // ShaderC { Source = src, OutName = dest .. "_glsl.h", Parameters = "--type fragment --platform linux -p 120" },
-            // TODO: This should be called async
-            let output = Command::new(
-                "/home/emoon/code/other/bgfx/bgfx/.build/linux64_gcc/bin/shadercRelease",
-            )
-            .arg("-f")
-            .arg(filename)
-            .arg("-i")
-            .arg("/home/emoon/code/other/bgfx/bgfx/src")
-            .arg("--type")
-            .arg("vertex")
-            .arg("--platform")
-            .arg("linux")
-            .arg("-p")
-            .arg("120")
-            .arg("-o")
-            .arg(&temp_path)
-            .output()
-            .expect("shaderc failed");
+            let output = build_vertex_shader(filename, &temp_path).unwrap();
+
+            println!("vertext shader at: {:?}", temp_path);
 
             if !output.status.success() {
                 println!("{}", String::from_utf8_lossy(&output.stdout));
@@ -156,13 +170,13 @@ impl IoHandler {
     pub fn get_ffi_api(&self) -> IoFfiApi {
         IoFfiApi {
             data: self as *const IoHandler as *const std::ffi::c_void,
-            load_shader_program_comp,
+            load_shader_program_comp: fl_load_shader_program_comp,
         }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn load_shader_program_comp(
+pub extern "C" fn fl_load_shader_program_comp(
     ctx: *const core::ffi::c_void,
     vs_filename: FlString,
     fs_filename: FlString,
@@ -173,4 +187,10 @@ pub extern "C" fn load_shader_program_comp(
         .load_shader_program_comp(vs_filename.as_str(), fs_filename.as_str())
         .unwrap();
     shader_handle.handle
+}
+
+#[no_mangle]
+pub extern "C" fn fl_get_io_api(app_state: *const core::ffi::c_void, version: u32) -> *const IoFfiApi { 
+    let app_state = unsafe { &*(app_state as *const crate::application::ApplicationState) };
+    &app_state.io_ffi_api
 }

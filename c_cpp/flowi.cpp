@@ -69,117 +69,6 @@ static FlAllocator malloc_allocator = {
     FlAllocatorError_Exit, NULL, memory_error, alloc_malloc, NULL, realloc_malloc, free_malloc,
 };
 
-extern "C" FlImageApi g_image_funcs;
-extern FlButtonApi g_button_funcs;
-extern FlCursorApi g_cursor_funcs;
-extern FlFontApi g_font_funcs;
-extern FlItemApi g_item_funcs;
-extern FlMenuApi g_menu_funcs;
-extern FlStyleApi g_style_funcs;
-extern FlTextApi g_text_funcs;
-extern FlUiApi g_ui_funcs;
-extern FlWindowApi g_window_funcs;
-extern FlIoApi g_io_funcs;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlImageApi* fl_get_image_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    FlImageApi* api = &data->image_funcs;
-    return api; 
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlUiApi* fl_get_ui_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->ui_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlWindowApi* fl_get_window_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->window_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlCursorApi* fl_get_cursor_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->cursor_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlTextApi* fl_get_text_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->text_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlIoApi* fl_get_io_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->io_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlMenuApi* fl_get_menu_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->menu_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlFontApi* fl_get_font_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->font_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlButtonApi* fl_get_button_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->button_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlItemApi* fl_get_item_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->item_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlStyleApi* fl_get_style_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->style_funcs;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static FlContext s_context = {
-    NULL,           // data
-    get_button_api, // get_button_api
-    get_cursor_api, // cursor api
-    get_font_api,   // font api
-    get_image_api,  // image api
-    get_io_api,     // io api
-    get_item_api,   // item api
-    get_menu_api,   // menu api
-    nullptr,
-    get_style_api,  // style api
-    get_text_api,   // text api
-    get_ui_api,     // ui api
-    get_window_api, // window api
-};
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" void* io_handler_create();
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
@@ -201,13 +90,12 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
         CommandBuffer_create(&data->layers[i].primitive_commands, "primitives", state->global_allocator, 4 * 1024);
     }
     
-    data->io_handler = io_handler_create();
-
     printf("create context\n");
 
-    *ctx = s_context;
+    //*ctx = s_context;
     ctx->priv = data;
 
+    /*
     data->button_funcs = g_button_funcs;
     data->cursor_funcs = g_cursor_funcs;
     data->font_funcs = g_font_funcs;
@@ -231,6 +119,7 @@ extern "C" FlContext* fl_context_create(struct FlGlobalState* state) {
     data->ui_funcs.priv = data;
     data->style_funcs.priv = data;
     data->window_funcs.priv = data;
+    */
 
     // Layout_create_default(ctx);
     // ctx->layout_mode = FlLayoutMode_Automatic;
@@ -282,21 +171,17 @@ extern "C" struct FlGlobalState* fl_create(const FlSettings* settings) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool hack_first_frame = false;
-
 extern "C" void fl_frame_begin(FlInternalData* ctx, int width, int height, float delta_time) {
     FL_UNUSED(width);
     FL_UNUSED(height);
 
-    if (hack_first_frame) {
-        CommandBuffer_rewind(&ctx->global->render_commands);
-    }
-
-    hack_first_frame = true;
-
+    /*
     for (int i = 0; i < FlLayerType_Count; ++i) {
         CommandBuffer_rewind(&ctx->layers[i].primitive_commands);
     }
+    */
+
+    CommandBuffer_rewind(&ctx->string_allocator.commands);
 
     ctx->delta_time = delta_time;
 }
@@ -348,6 +233,7 @@ void draw_text(struct FlContext* ctx, const u8* cmd) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" void fl_frame_end(struct FlInternalData* data) {
+#if 0
     FlGlobalState* state = data->global;
 
     // first do generation pass to build up all glyphs and other data
@@ -372,6 +258,7 @@ extern "C" void fl_frame_end(struct FlInternalData* data) {
     }
 
     Atlas_end_add_rects(state->images_atlas, state);
+#endif
     //
 #if 0
     for (int l = 0; l < 1; ++l) {

@@ -1,11 +1,22 @@
 use crate::manual::Mainloop;
 use crate::ShaderProgram;
-use crate::{io::IoFfiApi, io_handler::IoHandler};
-use crate::{AppFfi, ApplicationSettings};
+use crate::{AppFfi, io_handler::IoHandler, generated::io::IoFfiApi, ApplicationSettings};
 use bgfx::*;
 use bgfx_rs::bgfx;
 use core::ffi::c_void;
 use crate::imgui;
+
+use crate::button::ButtonFfiApi;
+use crate::image::ImageFfiApi;
+use crate::item::ItemFfiApi;
+use crate::layout::CursorFfiApi;
+use crate::menu::MenuFfiApi;
+use crate::painter::PainterFfiApi;
+use crate::style::StyleFfiApi;
+use crate::font::FontFfiApi;
+use crate::text::TextFfiApi;
+use crate::ui::UiFfiApi;
+use crate::window::WindowFfiApi;
 
 extern "C" {
     fn c_create(settings: *const ApplicationSettings) -> *const c_void;
@@ -15,17 +26,18 @@ extern "C" {
     fn c_post_update(data: *const c_void);
     fn c_should_close(data: *const c_void) -> bool;
     fn c_raw_window_handle(data: *const c_void) -> *mut c_void;
-    fn fl_get_button_api(data: *const void, version: u32);
-    fn fl_get_cursor_api(data: *const void, version: u32);
-    fn fl_get_font_api(data: *const void, version: u32);
-    fn fl_get_image_api(data: *const void, version: u32);
-    fn fl_get_io_api(data: *const void, version: u32);
-    fn fl_get_item_api(data: *const void, version: u32);
-    fn fl_get_menu_api(data: *const void, version: u32);
-    fn fl_get_style_api(data: *const void, version: u32);
-    fn fl_get_text_api(data: *const void, version: u32);
-    fn fl_get_ui_api(data: *const void, version: u32);
-    fn fl_get_window_api(data: *const void, version: u32);
+    fn fl_get_button_api(data: *const c_void, version: u32) -> *const ButtonFfiApi;
+    fn fl_get_cursor_api(data: *const c_void, version: u32) -> *const CursorFfiApi;
+    fn fl_get_font_api(data: *const c_void, version: u32) -> *const FontFfiApi;
+    fn fl_get_image_api(data: *const c_void, version: u32) -> *const ImageFfiApi;
+    fn fl_get_painter_api(data: *const c_void, version: u32) -> *const PainterFfiApi;
+    fn fl_get_io_api(data: *const c_void, version: u32) -> *const IoFfiApi;
+    fn fl_get_item_api(data: *const c_void, version: u32) -> *const ItemFfiApi;
+    fn fl_get_menu_api(data: *const c_void, version: u32) -> *const MenuFfiApi;
+    fn fl_get_style_api(data: *const c_void, version: u32) -> *const StyleFfiApi;
+    fn fl_get_text_api(data: *const c_void, version: u32) -> *const TextFfiApi;
+    fn fl_get_ui_api(data: *const c_void, version: u32) -> *const UiFfiApi;
+    fn fl_get_window_api(data: *const c_void, version: u32) -> *const WindowFfiApi;
 }
 
 const WIDTH: u16 = 1280;
@@ -187,7 +199,7 @@ impl DearImguiRenderer {
                             //dbg!("Render stuff");
                         }
                     }
-                    imgui::DrawCmd::RawCallback { callback, raw_cmd } => unsafe {
+                    imgui::DrawCmd::RawCallback { callback: _, raw_cmd: _ } => {
                         //callback(draw_list.raw(), raw_cmd);
                     },
                     imgui::DrawCmd::ResetRenderState => {
@@ -201,14 +213,16 @@ impl DearImguiRenderer {
 }
 
 
-struct ApplicationState {
+#[repr(C)]
+pub(crate) struct ApplicationState {
+    // This field has to be first, because it it's expected on the C side 
     c_data: *const c_void,
     c_user_data: *const c_void,
     io_handler: Box<IoHandler>,
-    io_api: IoFfiApi,
     main_loop: Option<Mainloop>,
     settings: ApplicationSettings,
     imgui: Option<DearImguiRenderer>,
+    pub(crate) io_ffi_api: IoFfiApi,
 }
 
 /*
@@ -249,10 +263,9 @@ struct ApplicationState {
 
 impl ApplicationState {
     pub fn new(settings: &ApplicationSettings) -> Self {
-        let mut io_handler = Box::new(IoHandler::new());
-        let ffi_api = io_handler.get_ffi_api();
-
         let c_data = unsafe { c_create(settings) };
+        let mut io_handler = Box::new(IoHandler::new());
+        let io_ffi_api = io_handler.get_ffi_api();
 
         if c_data.is_null() {
             panic!("Failed to create application");
@@ -274,8 +287,8 @@ impl ApplicationState {
             c_data,
             c_user_data: std::ptr::null(),
             io_handler,
+            io_ffi_api,
             main_loop: None,
-            io_api: ffi_api,
             imgui: None,
             settings: settings.clone(),
         }
@@ -295,7 +308,7 @@ impl ApplicationState {
         let ibh = bgfx::create_index_buffer(&index_mem, BufferFlags::NONE.bits());
         */
 
-        let state = (StateWriteFlags::R
+        let _state = (StateWriteFlags::R
             | StateWriteFlags::G
             | StateWriteFlags::B
             | StateWriteFlags::A
@@ -315,12 +328,12 @@ impl ApplicationState {
         bgfx::submit(0, &shader_program, SubmitArgs::default());
         */
 
-
-        /*
         if let Some(main_callback) = self.main_loop {
-            main_callback(self.c_user_data);
+            dbg!("Calling main loop");
+            unsafe {
+                main_callback(std::ptr::null(), self.c_user_data as *mut c_void);
+            };
         }
-        */
 
         unsafe { c_post_update(self.c_data) };
 
@@ -334,7 +347,7 @@ impl ApplicationState {
     }
 
     //pub fn mainloop(&mut self, callback: Mainloop, user_data: *mut c_void) {
-    pub fn mainloop(&mut self, user_data: *mut c_void) {
+    pub fn mainloop(&mut self, _user_data: *mut c_void) {
         unsafe { c_pre_update_create(self.c_data) };
 
         let imgui = Some(DearImguiRenderer::new(& mut self.io_handler));
@@ -349,7 +362,6 @@ impl ApplicationState {
             },
         );
         
-
         while !unsafe { c_should_close(self.c_data) } {
             self.generate_frame();
         }
@@ -366,17 +378,14 @@ fn get_platform_data(c_data: *const c_void) -> PlatformData {
     return pd;
 }
 
-fn get_io_api(data: *const c_void, _api_ver: u32) -> *const IoFfiApi {
-    println!("get_io_api()");
-    let app = data.cast::<ApplicationState>();
-    unsafe { &(*app).io_api }
-}
-
 //fn main_loop(callback: Mainloop, data: *const c_void, user_data: *mut c_void) -> bool {
-fn create_main_loop(_callback: *const c_void, user_data: *mut c_void) -> bool {
+fn create_main_loop(callback: *const c_void, user_data: *mut c_void) -> bool {
     let wrapped_data = unsafe { &*(user_data as *const crate::manual::WrappedMainData) };
     let app = unsafe { &mut *(wrapped_data.priv_data as *mut ApplicationState) };
+    dbg!("Create main loop");
     //app.mainloop(generate_frame, user_data);
+    app.c_user_data = user_data;
+    app.main_loop = Some(unsafe { std::mem::transmute(callback) });
     app.mainloop(user_data);
     //let flowi = Flowi { api: app.c_data };
     //callback(&flowi, user_data)
@@ -396,14 +405,14 @@ fn generate_frame(data: *mut ApplicationState) {
 }
 
 #[no_mangle]
-fn fl_application_create_impl(settings: *const ApplicationSettings, version: u32) -> *const AppFfi {
+fn fl_application_create_impl(settings: *const ApplicationSettings, _version: u32) -> *const AppFfi {
     let settings = unsafe { &*settings };
     let app = ApplicationState::new(settings);
 
     println!("fl_application_create_impl()");
 
     Box::into_raw(Box::new(AppFfi {
-        priv_data: Box::into_raw(Box::new(app)) as *const _,
+        data: Box::into_raw(Box::new(app)) as *const _,
         main_loop: create_main_loop,
         button_get_api: fl_get_button_api,
         cursor_get_api: fl_get_cursor_api,
@@ -412,6 +421,7 @@ fn fl_application_create_impl(settings: *const ApplicationSettings, version: u32
         io_get_api: fl_get_io_api,
         item_get_api: fl_get_item_api,
         menu_get_api: fl_get_menu_api,
+        painter_get_api: fl_get_painter_api,
         style_get_api: fl_get_style_api,
         text_get_api: fl_get_text_api,
         ui_get_api: fl_get_ui_api,

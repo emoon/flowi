@@ -12,6 +12,7 @@ fn add_includes(build: &mut cc::Build, root: &str, files: &[&str]) {
     build.includes(files.iter().map(|src| format!("{}/{}", root, src)));
 }
 
+/*
 #[cfg(feature = "static")]
 fn build_cc(target_os: &str) {
     let mut build = cc::Build::new();
@@ -362,9 +363,10 @@ fn build_cc(target_os: &str) {
         println!("cargo:rustc-link-lib=X11");
     }
 }
+*/
 
 #[cfg(feature = "tundra")]
-fn build_tundra(_target_os: &str) {
+fn build_tundra(target_os: &str) {
     let output = Command::new("tundra2")
         //.arg("linux-clang-debug")
         .arg("macos-clang-debug")
@@ -379,7 +381,12 @@ fn build_tundra(_target_os: &str) {
     }
 
     let target_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not specified");
-    let tundra_dir = format!("{}/t2-output/linux-clang-debug-default", target_dir);
+    //let tundra_dir = format!("{}/t2-output/linux-clang-debug-default", target_dir);
+    //println!("cargo:rustc-link-lib=stdc++");
+    //println!("cargo:rustc-link-lib=GL");
+    //println!("cargo:rustc-link-lib=X11");
+    //
+    /*
 
     println!("cargo:rustc-link-search=native={}", tundra_dir);
     //println!("cargo:rustc-link-lib=static=bgfx");
@@ -388,9 +395,38 @@ fn build_tundra(_target_os: &str) {
     //println!("cargo:rustc-link-lib=static=imgui");
     println!("cargo:rustc-link-lib=static=glfw");
     println!("cargo:rustc-link-lib=pthread");
-    println!("cargo:rustc-link-lib=stdc++");
-    println!("cargo:rustc-link-lib=GL");
-    println!("cargo:rustc-link-lib=X11");
+    */
+
+
+    match target_os {
+        "linux" => {
+            let tundra_dir = format!("{}/t2-output/linux-clang-debug-default", target_dir);
+            println!("cargo:rustc-link-search=native={}", tundra_dir);
+            println!("cargo:rustc-link-lib=pthread");
+            println!("cargo:rustc-link-lib=stdc++");
+            println!("cargo:rustc-link-lib=GL");
+            println!("cargo:rustc-link-lib=X11");
+        }
+
+        "macos" => {
+            let tundra_dir = format!("{}/t2-output/macos-clang-debug-default", target_dir);
+            println!("cargo:rustc-link-search=native={}", tundra_dir);
+            println!("cargo:rustc-link-lib=framework=Cocoa");
+            println!("cargo:rustc-link-lib=framework=CoreGraphics");
+            println!("cargo:rustc-link-lib=framework=IOKit");
+            println!("cargo:rustc-link-lib=framework=CoreFoundation");
+            println!("cargo:rustc-link-lib=framework=QuartzCore");
+            println!("cargo:rustc-link-lib=framework=Metal");
+            println!("cargo:rustc-link-lib=framework=MetalKit");
+            println!("cargo:rustc-link-lib=c++");
+        }
+
+        _ => {}
+    }
+
+    println!("cargo:rustc-link-lib=static=glfw");
+    println!("cargo:rustc-link-lib=static=ui");
+    println!("cargo:rustc-link-lib=static=freetype2");
 }
 
 //#[cfg(any(feature = "dynamic", feature = "plugin", feature = "tundra"))]

@@ -108,6 +108,9 @@ impl Painter {
     pub fn set_layer(layer: PainterLayer) {
         unsafe {
             let _api = &*g_flowi_painter_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_painter_set_layer_impl(_api.data, layer);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.set_layer)(_api.data, layer);
         }
     }
@@ -116,6 +119,9 @@ impl Painter {
     pub fn draw_line(p1: Vec2, p2: Vec2, color: Color, thickness: f32) {
         unsafe {
             let _api = &*g_flowi_painter_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_painter_draw_line_impl(_api.data, p1, p2, color, thickness);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.draw_line)(_api.data, p1, p2, color, thickness);
         }
     }
@@ -124,6 +130,9 @@ impl Painter {
     pub fn draw_rect(p1: Vec2, p2: Vec2, color: Color, rounding: f32) {
         unsafe {
             let _api = &*g_flowi_painter_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_painter_draw_rect_impl(_api.data, p1, p2, color, rounding);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.draw_rect)(_api.data, p1, p2, color, rounding);
         }
     }
@@ -132,6 +141,9 @@ impl Painter {
     pub fn draw_rect_filled(p1: Vec2, p2: Vec2, color: Color, rounding: f32) {
         unsafe {
             let _api = &*g_flowi_painter_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_painter_draw_rect_filled_impl(_api.data, p1, p2, color, rounding);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.draw_rect_filled)(_api.data, p1, p2, color, rounding);
         }
     }
@@ -147,6 +159,11 @@ impl Painter {
     ) {
         unsafe {
             let _api = &*g_flowi_painter_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_painter_draw_rect_filled_gradient_impl(
+                _api.data, p1, p2, left, right, btm_right, btm_left,
+            );
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.draw_rect_filled_gradient)(_api.data, p1, p2, left, right, btm_right, btm_left);
         }
     }

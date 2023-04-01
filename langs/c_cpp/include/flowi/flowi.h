@@ -11,6 +11,7 @@
 #include "ui.h"
 #include "window.h"
 
+/*
 struct App;
 
 typedef struct FlApp {
@@ -46,4 +47,6 @@ FL_INLINE bool fl_application_create(FlApplicationSettings* settings) {
     g_flowi_window_api = api->window_get_api(api->priv, 0);
     return api;
 }
+*/
+
 

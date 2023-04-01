@@ -8,14 +8,46 @@
 #include <flowi/menu.h>
 #include <flowi/button.h>
 #include <flowi/item.h>
+#include <flowi/painter.h>
 #include "image_private.h"
 #include "internal.h"
 //#include "primitives.h"
+#include "allocator.h"
+#include "string_allocator.h"
 #include "layer.h"
 #include <dear-imgui/imgui.h>
 #include <stdio.h>
 #include "imgui_impl_glfw.h"
 #include "internal.h"
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Malloc based allocator. We should use tslf or similar in a sandbox, but this is atleast in one place
+
+static void* alloc_malloc(void* user_data, u64 size) {
+    FL_UNUSED(user_data);
+    return malloc(size);
+}
+
+static void* realloc_malloc(void* user_data, void* ptr, u64 size) {
+    FL_UNUSED(user_data);
+    return realloc(ptr, size);
+}
+
+static void free_malloc(void* user_data, void* ptr) {
+    FL_UNUSED(user_data);
+    free(ptr);
+}
+
+static void memory_error(void* user_data, const char* text, int text_len) {
+    FL_UNUSED(user_data);
+    FL_UNUSED(text);
+    FL_UNUSED(text_len);
+    printf("Ran out of memory! :(\n");
+}
+
+static FlAllocator malloc_allocator = {
+    FlAllocatorError_Exit, NULL, memory_error, alloc_malloc, NULL, realloc_malloc, free_malloc,
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // translate from FlColor to ImGuiCol_
@@ -24,8 +56,17 @@ static int s_color_lut[ImGuiCol_COUNT * 4];
 static int s_single_style_lut[ImGuiStyleVar_COUNT];
 static int s_vec2_style_lut[ImGuiStyleVar_COUNT];
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 struct TempState {
     GLFWwindow* window;
+    LinearAllocator frame_allocator;
+    StringAllocator string_allocator;
+    FlWindowApi window_api;   
+};
+
+struct AppState {
+    TempState* state;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,10 +144,12 @@ extern "C" void c_pre_update(TempState* state) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" void c_post_update(TempState* state) {
-    ImGui::Begin("Hello, world!");
-    ImGui::End();
+    //ImGui::Begin("Hello, world!");
+    //ImGui::End();
 
     ImGui::Render();
+
+    LinearAllocator_rewind(&state->frame_allocator);
 
     //glfwPollEvents();
     //ImGui_ImplGlfw_NewFrame();
@@ -263,6 +306,10 @@ extern "C" void* c_create(const FlApplicationSettings* settings) {
     TempState* state = new TempState;
     state->window = window;
 
+    LinearAllocator_create_with_allocator(&state->frame_allocator, "string tracking allocator", &malloc_allocator,
+                                          10 * 1024, true);
+
+    StringAllocator_create(&state->string_allocator, &malloc_allocator, &state->frame_allocator);
 
     return state;
 
@@ -468,19 +515,26 @@ static void window_set_pos(FlInternalData* ctx, FlVec2 pos) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool window_begin(FlInternalData* ctx, FlString name, FlWindowFlags flags) {
+extern "C" bool fl_window_begin_impl(FlInternalData* ctx, FlString name, FlWindowFlags flags) {
+    // TODO: Fixme
+    TempState* state = (TempState*)ctx; 
     char temp_buffer[2048];
 
     const char* window_name =
-        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
+        StringAllocator_temp_string_to_cstr(&state->string_allocator, temp_buffer, sizeof(temp_buffer), name);
+
+    printf("window_name: %s\n", temp_buffer);
 
     return ImGui::Begin(window_name, NULL, (ImGuiWindowFlags)flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void window_end(FlInternalData* ctx) {
+extern "C" void fl_window_end_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
+
+    printf("window_end\n");
+
     ImGui::End();
 }
 
@@ -558,8 +612,8 @@ static FlVec2 window_size(FlInternalData* ctx) {
 FlWindowApi g_window_funcs = {
     NULL,
     window_set_pos,
-    window_begin,
-    window_end,
+    fl_window_begin_impl,
+    fl_window_end_impl,
     window_begin_child,
     window_end_child,
     window_is_appearing,
@@ -1425,9 +1479,11 @@ extern "C" FlUiApi* fl_get_ui_api(FlInternalData* data, int version) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlWindowApi* fl_get_window_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->window_funcs;
+extern "C" FlWindowApi* fl_get_window_api(AppState* app_state, int version) {
+    TempState* state = app_state->state;
+    state->window_api = g_window_funcs;
+    state->window_api.priv = (FlInternalData*)state; // TODO: Fix me
+    return &state->window_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1446,10 +1502,12 @@ extern "C" FlTextApi* fl_get_text_api(FlInternalData* data, int version) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
 extern "C" FlIoApi* fl_get_io_api(FlInternalData* data, int version) {
     FL_UNUSED(version);
     return &data->io_funcs;
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1484,5 +1542,13 @@ extern "C" FlItemApi* fl_get_item_api(FlInternalData* data, int version) {
 extern "C" FlStyleApi* fl_get_style_api(FlInternalData* data, int version) {
     FL_UNUSED(version);
     return &data->style_funcs;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" FlPainterApi* fl_get_painter_api(FlInternalData* data, int version) {
+    FL_UNUSED(version);
+    FL_UNUSED(data);
+    return nullptr;
 }
 

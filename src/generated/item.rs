@@ -263,6 +263,9 @@ impl Item {
     pub fn set_allow_overlap() {
         unsafe {
             let _api = &*g_flowi_item_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_item_set_allow_overlap_impl(_api.data);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.set_allow_overlap)(_api.data);
         }
     }

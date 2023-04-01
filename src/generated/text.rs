@@ -59,6 +59,9 @@ impl Text {
     pub fn bullet(text: &str) {
         unsafe {
             let _api = &*g_flowi_text_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_text_bullet_impl(_api.data, FlString::new(text));
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.bullet)(_api.data, FlString::new(text));
         }
     }
@@ -67,6 +70,9 @@ impl Text {
     pub fn label(label: &str, text: &str) {
         unsafe {
             let _api = &*g_flowi_text_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_text_label_impl(_api.data, FlString::new(label), FlString::new(text));
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.label)(_api.data, FlString::new(label), FlString::new(text));
         }
     }
@@ -75,6 +81,9 @@ impl Text {
     pub fn show_color(color: Color, text: &str) {
         unsafe {
             let _api = &*g_flowi_text_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_text_show_color_impl(_api.data, color, FlString::new(text));
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.show_color)(_api.data, color, FlString::new(text));
         }
     }
@@ -83,6 +92,9 @@ impl Text {
     pub fn show(text: &str) {
         unsafe {
             let _api = &*g_flowi_text_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_text_show_impl(_api.data, FlString::new(text));
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.show)(_api.data, FlString::new(text));
         }
     }
@@ -91,6 +103,9 @@ impl Text {
     pub fn text_disabled(text: &str) {
         unsafe {
             let _api = &*g_flowi_text_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_text_text_disabled_impl(_api.data, FlString::new(text));
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.text_disabled)(_api.data, FlString::new(text));
         }
     }

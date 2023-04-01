@@ -152,6 +152,9 @@ impl Font {
     pub fn push(font: Font) {
         unsafe {
             let _api = &*g_flowi_font_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_font_push_impl(_api.data, font.handle);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.push)(_api.data, font.handle);
         }
     }
@@ -160,6 +163,9 @@ impl Font {
     pub fn pop() {
         unsafe {
             let _api = &*g_flowi_font_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_font_pop_impl(_api.data);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.pop)(_api.data);
         }
     }
@@ -168,6 +174,9 @@ impl Font {
     pub fn destroy(font: Font) {
         unsafe {
             let _api = &*g_flowi_font_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_font_destroy_impl(_api.data, font.handle);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.destroy)(_api.data, font.handle);
         }
     }

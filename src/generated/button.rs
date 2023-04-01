@@ -166,6 +166,9 @@ impl Button {
     pub fn bullet() {
         unsafe {
             let _api = &*g_flowi_button_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_button_bullet_impl(_api.data);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.bullet)(_api.data);
         }
     }

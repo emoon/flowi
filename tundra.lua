@@ -315,6 +315,7 @@ Build {
                     GLFW_DIR .. "src/cocoa_time.c",
                     GLFW_DIR .. "src/cocoa_window.m",
                     GLFW_DIR .. "src/posix_thread.c",
+                    GLFW_DIR .. "src/posix_module.c",
                     GLFW_DIR .. "src/nsgl_context.h",
                     GLFW_DIR .. "src/nsgl_context.m" ; Config = "macos-*-*"
                 },

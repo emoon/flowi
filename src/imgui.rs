@@ -26,7 +26,7 @@ use std::slice;
 
 extern "C" {
     fn imgui_get_draw_data() -> DrawData;
-    fn imgui_build_rgba32_texture() -> FontAtlas;
+    //fn imgui_build_rgba32_texture() -> FontAtlas;
     fn imgui_build_r8_texture() -> FontAtlas;
 }
 
@@ -200,9 +200,11 @@ pub(crate) struct FontAtlas {
 }
 
 impl FontAtlas {
+    /*
     pub(crate) fn build_rgba32_texture() -> Self {
         unsafe { imgui_build_rgba32_texture() }
     }
+    */
 
     pub(crate) fn build_r8_texture() -> Self {
         unsafe { imgui_build_r8_texture() }

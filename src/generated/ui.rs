@@ -67,6 +67,9 @@ impl Ui {
     pub fn text(text: &str) {
         unsafe {
             let _api = &*g_flowi_ui_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_ui_text_impl(_api.data, FlString::new(text));
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.text)(_api.data, FlString::new(text));
         }
     }
@@ -75,6 +78,9 @@ impl Ui {
     pub fn image(image: Image) {
         unsafe {
             let _api = &*g_flowi_ui_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_ui_image_impl(_api.data, image.handle);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.image)(_api.data, image.handle);
         }
     }
@@ -83,6 +89,9 @@ impl Ui {
     pub fn image_with_size(image: Image, size: Vec2) {
         unsafe {
             let _api = &*g_flowi_ui_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_ui_image_with_size_impl(_api.data, image.handle, size);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.image_with_size)(_api.data, image.handle, size);
         }
     }
@@ -91,6 +100,9 @@ impl Ui {
     pub fn set_pos(pos: Vec2) {
         unsafe {
             let _api = &*g_flowi_ui_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_ui_set_pos_impl(_api.data, pos);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.set_pos)(_api.data, pos);
         }
     }

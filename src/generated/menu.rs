@@ -87,6 +87,9 @@ impl Menu {
     pub fn end_bar() {
         unsafe {
             let _api = &*g_flowi_menu_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_menu_end_bar_impl(_api.data);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.end_bar)(_api.data);
         }
     }
@@ -107,6 +110,9 @@ impl Menu {
     pub fn end_main_bar() {
         unsafe {
             let _api = &*g_flowi_menu_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_menu_end_main_bar_impl(_api.data);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.end_main_bar)(_api.data);
         }
     }
@@ -127,6 +133,9 @@ impl Menu {
     pub fn end() {
         unsafe {
             let _api = &*g_flowi_menu_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            fl_menu_end_impl(_api.data);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
             (_api.end)(_api.data);
         }
     }

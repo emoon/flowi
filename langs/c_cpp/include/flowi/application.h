@@ -11,6 +11,8 @@
 #include "ui.h"
 #include "window.h"
 
+/*
+
 struct FlInternalData;
 typedef void (*FlMainLoopCallback)(void* user_data);
 
@@ -50,3 +52,4 @@ FL_INLINE bool fl_application_create(FlApplicationSettings* settings) {
     return api;
 }
 
+*/

@@ -588,6 +588,10 @@ impl RustGen {
                 writeln!(f, "ret_val")?;
             }
         } else {
+            writeln!(f, "#[cfg(any(feature = \"static\", feature = \"tundra\"))]")?;
+            writeln!(f, "fl_{}_{}_impl({});", struct_name, func.name, args)?;
+
+            writeln!(f, "#[cfg(any(feature = \"dynamic\", feature = \"plugin\"))]")?;
             writeln!(f, "(_api.{})({});", func.name, args)?;
         }
 
@@ -709,24 +713,25 @@ impl RustGen {
 
             writeln!(f, "#[repr(C)]")?;
             writeln!(f, "pub(crate) struct AppFfi {{")?;
-            writeln!(f, "    data: *const c_void,")?;
-            writeln!(f, "    main_loop: unsafe fn(data: *const c_void, user_data: *mut c_void) -> bool,")?;
+            writeln!(f, "    pub(crate) data: *const c_void,")?;
+            writeln!(f, "    pub(crate) main_loop: unsafe fn(data: *const c_void, user_data: *mut c_void) -> bool,")?;
 
             for s in &structs_with_funcs {
                 let name = &s.name;
-                writeln!(f, "   {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32) -> *const {}FfiApi,",
+                writeln!(f, "   pub(crate) {}_get_api: unsafe extern \"C\" fn(data: *const c_void, api_ver: u32) -> *const {}FfiApi,",
                 name.to_lowercase(), name)?;
             }
 
             writeln!(f, "}}\n")?;
             writeln!(f, "pub(crate) fn init_function_ptrs(api: *const AppFfi) {{")?;
             writeln!(f, "    unsafe {{")?;
+            writeln!(f, "    let api = &*api;")?;
 
             for s in &structs_with_funcs {
                 let name = s.name.to_snake_case();
                 writeln!(
                     f,
-                    "   g_flowi_{}_api = (api.{}_get_api)(api_priv.data, 0);",
+                    "   g_flowi_{}_api = (api.{}_get_api)(api.data, 0);",
                     name,
                     name,
                 )?;

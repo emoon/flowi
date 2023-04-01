@@ -3,8 +3,8 @@ use flowi::font::Font;
 use flowi::manual::Application;
 use flowi::manual::Color;
 use flowi::style::StyleColor;
-use flowi::window::{HoveredFlags, WindowFlags};
-use flowi::Flowi;
+use flowi::window::{HoveredFlags, WindowFlags, Window};
+//use flowi::Flowi;
 
 struct App {
     dummy: u32,
@@ -14,7 +14,10 @@ struct App {
     //icons: Font,
 }
 
-fn main_loop(flowi: &Flowi, app: &mut App) {
+fn main_loop(app: &mut App) {
+    Window::begin("Testing foobar", WindowFlags::NONE);
+    Window::end();
+    /*
     let ui = flowi.ui();
     let window = flowi.window();
     let cursor = flowi.cursor();
@@ -88,12 +91,13 @@ fn main_loop(flowi: &Flowi, app: &mut App) {
 
     //ui.image(app.image);
     window.end();
+    */
 }
 
 fn main() {
     let settings = flowi::application_settings::ApplicationSettings { some_data: 0 };
     let flowi_app = Application::new(&settings).unwrap();
-    let io = flowi_app.io();
+
     //let flowi_app = Application::new_from_lib("mylib.so", &settings).unwrap();
     //let flowi = Flowi::new_from_dynamic("mylib.so", "Test", "Test").unwrap();
     //let font = flowi.font();
