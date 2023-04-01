@@ -329,7 +329,6 @@ impl ApplicationState {
         */
 
         if let Some(main_callback) = self.main_loop {
-            dbg!("Calling main loop");
             unsafe {
                 main_callback(std::ptr::null(), self.c_user_data as *mut c_void);
             };
@@ -382,7 +381,6 @@ fn get_platform_data(c_data: *const c_void) -> PlatformData {
 fn create_main_loop(callback: *const c_void, user_data: *mut c_void) -> bool {
     let wrapped_data = unsafe { &*(user_data as *const crate::manual::WrappedMainData) };
     let app = unsafe { &mut *(wrapped_data.priv_data as *mut ApplicationState) };
-    dbg!("Create main loop");
     //app.mainloop(generate_frame, user_data);
     app.c_user_data = user_data;
     app.main_loop = Some(unsafe { std::mem::transmute(callback) });

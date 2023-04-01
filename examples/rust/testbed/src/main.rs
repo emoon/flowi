@@ -4,6 +4,8 @@ use flowi::manual::Application;
 use flowi::manual::Color;
 use flowi::style::StyleColor;
 use flowi::window::{HoveredFlags, WindowFlags, Window};
+use flowi::text::Text;
+use flowi::button::Button;
 //use flowi::Flowi;
 
 struct App {
@@ -15,8 +17,16 @@ struct App {
 }
 
 fn main_loop(app: &mut App) {
-    Window::begin("Testing foobar", WindowFlags::NONE);
-    Window::end();
+    //Window::begin("Testing foobar", WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR);
+
+    /*
+    if Button::regular("Hello, world!") {
+        println!("Clicked!");
+    }
+    */
+
+    //Window::end();
+
     /*
     let ui = flowi.ui();
     let window = flowi.window();

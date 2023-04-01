@@ -58,15 +58,17 @@ static int s_vec2_style_lut[ImGuiStyleVar_COUNT];
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-struct TempState {
+/*
+struct FlInternalData {
     GLFWwindow* window;
     LinearAllocator frame_allocator;
     StringAllocator string_allocator;
     FlWindowApi window_api;   
 };
+*/
 
 struct AppState {
-    TempState* state;
+    FlInternalData* state;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,13 +128,13 @@ extern "C" FontAtlas imgui_build_r8_texture() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool c_should_close(TempState* state) { 
+extern "C" bool c_should_close(FlInternalData* state) { 
     return glfwWindowShouldClose(state->window);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void c_pre_update(TempState* state) {
+extern "C" void c_pre_update(FlInternalData* state) {
     glfwPollEvents();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -143,9 +145,14 @@ extern "C" void c_pre_update(TempState* state) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void c_post_update(TempState* state) {
-    //ImGui::Begin("Hello, world!");
-    //ImGui::End();
+extern "C" void c_post_update(FlInternalData* state) {
+    /*
+    ImGui::Begin("Hello, world!");
+    ImGui::SetCursorPos(ImVec2(10, 10));
+    ImGui::End();
+    */
+
+    //ImGui::Text("This is some useful text.");
 
     ImGui::Render();
 
@@ -157,7 +164,7 @@ extern "C" void c_post_update(TempState* state) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void c_pre_update_create(TempState* state) {
+extern "C" void c_pre_update_create(FlInternalData* state) {
     //ImGuiIO& io = ImGui::GetIO();
     //io.Fonts->Build();
 
@@ -171,188 +178,13 @@ extern "C" void c_pre_update_create(TempState* state) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void* c_create(const FlApplicationSettings* settings) {
-    glfwSetErrorCallback(error_callback);
-
-    if (!glfwInit()) {
-        // TODO: Proper error
-        printf("failed to init glfw\n");
-        return nullptr;
-    }
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_FLOATING, GL_FALSE);
-
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Fix me title", NULL, NULL);
-    if (!window) {
-        printf("failed to open window\n");
-        glfwTerminate();
-        return nullptr;
-    }
-
-    // TODO: Should be done after BGFX init
-    //glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // Enable vsync
-    
-    ImGui::CreateContext();
-
-    // Setup Dear ImGui context
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
-    //io.ConfigViewportsNoAutoMerge = true;
-    //io.ConfigViewportsNoTaskBarIcon = true;
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
-    io.DisplaySize = ImVec2(1280.0f, 720.0f);
-    io.DeltaTime = 1.0f / 60.0f;
-    io.IniFilename = NULL;
-
-    ImVec4* colors = ImGui::GetStyle().Colors;
-    colors[ImGuiCol_Text]                   = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-    colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-    colors[ImGuiCol_WindowBg]               = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
-    colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-    colors[ImGuiCol_PopupBg]                = ImVec4(0.19f, 0.19f, 0.19f, 0.92f);
-    colors[ImGuiCol_Border]                 = ImVec4(0.19f, 0.19f, 0.19f, 0.29f);
-    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.24f);
-    colors[ImGuiCol_FrameBg]                = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
-    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
-    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
-    colors[ImGuiCol_TitleBg]                = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
-    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
-    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
-    colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.40f, 0.54f);
-    colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
-    colors[ImGuiCol_CheckMark]              = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
-    colors[ImGuiCol_SliderGrab]             = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
-    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
-    colors[ImGuiCol_Button]                 = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
-    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
-    colors[ImGuiCol_ButtonActive]           = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
-    colors[ImGuiCol_Header]                 = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.00f, 0.00f, 0.00f, 0.36f);
-    colors[ImGuiCol_HeaderActive]           = ImVec4(0.20f, 0.22f, 0.23f, 0.33f);
-    colors[ImGuiCol_Separator]              = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
-    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
-    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
-    colors[ImGuiCol_ResizeGrip]             = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
-    colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
-    colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
-    colors[ImGuiCol_Tab]                    = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-    colors[ImGuiCol_TabHovered]             = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-    colors[ImGuiCol_TabActive]              = ImVec4(0.20f, 0.20f, 0.20f, 0.36f);
-    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-    colors[ImGuiCol_DockingPreview]         = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
-    colors[ImGuiCol_DockingEmptyBg]         = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-    colors[ImGuiCol_PlotLines]              = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-    colors[ImGuiCol_PlotLinesHovered]       = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-    colors[ImGuiCol_PlotHistogram]          = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-    colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-    colors[ImGuiCol_TableHeaderBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-    colors[ImGuiCol_TableBorderStrong]      = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-    colors[ImGuiCol_TableBorderLight]       = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
-    colors[ImGuiCol_TableRowBg]             = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-    colors[ImGuiCol_TableRowBgAlt]          = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
-    colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
-    colors[ImGuiCol_DragDropTarget]         = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
-    colors[ImGuiCol_NavHighlight]           = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-    colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 0.00f, 0.00f, 0.70f);
-    colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(1.00f, 0.00f, 0.00f, 0.20f);
-    colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(1.00f, 0.00f, 0.00f, 0.35f);
-
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.WindowPadding                     = ImVec2(8.00f, 8.00f);
-    style.FramePadding                      = ImVec2(5.00f, 2.00f);
-    style.CellPadding                       = ImVec2(6.00f, 6.00f);
-    style.ItemSpacing                       = ImVec2(6.00f, 6.00f);
-    style.ItemInnerSpacing                  = ImVec2(6.00f, 6.00f);
-    style.TouchExtraPadding                 = ImVec2(0.00f, 0.00f);
-    style.IndentSpacing                     = 25;
-    style.ScrollbarSize                     = 15;
-    style.GrabMinSize                       = 10;
-    style.WindowBorderSize                  = 1;
-    style.ChildBorderSize                   = 1;
-    style.PopupBorderSize                   = 1;
-    style.FrameBorderSize                   = 1;
-    style.TabBorderSize                     = 1;
-    style.WindowRounding                    = 7;
-    style.ChildRounding                     = 4;
-    style.FrameRounding                     = 3;
-    style.PopupRounding                     = 4;
-    style.ScrollbarRounding                 = 9;
-    style.GrabRounding                      = 3;
-    style.LogSliderDeadzone                 = 4;
-    style.TabRounding                       = 4;
-
-    // Setup Dear ImGui style
-    //ImGui::StyleColorsDark();
-
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
-
-    ImGui_ImplGlfw_InitForOther(window, true);
-    glfwSetKeyCallback(window, key_callback);
-
-    TempState* state = new TempState;
-    state->window = window;
-
-    LinearAllocator_create_with_allocator(&state->frame_allocator, "string tracking allocator", &malloc_allocator,
-                                          10 * 1024, true);
-
-    StringAllocator_create(&state->string_allocator, &malloc_allocator, &state->frame_allocator);
-
-    return state;
-
-/*
-    bgfx::PlatformData pd;
-#if defined(GLFW_EXPOSE_NATIVE_X11)
-    pd.ndt = glfwGetX11Display();
-#endif
-    pd.nwh = native_window_handle(state->default_window);
-    pd.context = NULL;
-    pd.backBuffer = NULL;
-    pd.backBufferDS = NULL;
-I'm bisecting this down to the broken commit and sending it to Fedora and someone else can deal with this shit. I don't have time for this nonsense.
-
-    bgfx::setPlatformData(pd);
-
-    int reset_flags = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X8;
-
-    bgfx::Init bgfxInit;
-    bgfxInit.type = bgfx::RendererType::OpenGL;
-    bgfxInit.resolution.width = state->window_width;
-    bgfxInit.resolution.height = state->window_height;
-    bgfxInit.resolution.reset = reset_flags;
-    bgfxInit.platformData = pd;
-
-    if (!bgfx::init(bgfxInit)) {
-        printf("failed to init bgfx\n");
-        glfwDestroyWindow(state->default_window);
-        glfwTerminate();
-        return false;
-    }
-*/
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 extern "C" ImDrawData imgui_get_draw_data() {
     return *ImGui::GetDrawData();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
-extern "C" void* c_raw_window_handle(TempState* data) {
+extern "C" void* c_raw_window_handle(FlInternalData* data) {
 //#if GLFW_EXPOSE_NATIVE_X11
 //    return (void*)(uintptr_t)glfwGetX11Window(data->window);
 //#elif GLFW_EXPOSE_NATIVE_COCOA
@@ -367,7 +199,7 @@ extern "C" void* c_raw_window_handle(TempState* data) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void c_destroy(TempState* data) {
+extern "C" void c_destroy(FlInternalData* data) {
     ImGui::DestroyContext();
     glfwDestroyWindow(data->window);
     glfwTerminate();
@@ -501,9 +333,9 @@ FlUiApi g_ui_funcs = {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlUiApi* fl_ui_get_api(FlInternalData* ctx, int api_version) {
+extern "C" FlUiApi* fl_ui_get_api(AppState* app_state, int api_version) {
     FL_UNUSED(api_version);
-    return &ctx->ui_funcs;
+    return &app_state->state->ui_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -516,14 +348,10 @@ static void window_set_pos(FlInternalData* ctx, FlVec2 pos) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" bool fl_window_begin_impl(FlInternalData* ctx, FlString name, FlWindowFlags flags) {
-    // TODO: Fixme
-    TempState* state = (TempState*)ctx; 
     char temp_buffer[2048];
 
     const char* window_name =
-        StringAllocator_temp_string_to_cstr(&state->string_allocator, temp_buffer, sizeof(temp_buffer), name);
-
-    printf("window_name: %s\n", temp_buffer);
+        StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), name);
 
     return ImGui::Begin(window_name, NULL, (ImGuiWindowFlags)flags);
 }
@@ -532,8 +360,6 @@ extern "C" bool fl_window_begin_impl(FlInternalData* ctx, FlString name, FlWindo
 
 extern "C" void fl_window_end_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
-
-    printf("window_end\n");
 
     ImGui::End();
 }
@@ -819,8 +645,9 @@ static FlVec2 text_calc_size(FlInternalData* ctx, FlString text) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void text_show(FlInternalData* ctx, FlString text) {
+extern "C" void fl_text_show_impl(FlInternalData* ctx, FlString text) {
     FL_UNUSED(ctx);
+    printf("fl_text_show_impl\n");
     ImGui::TextUnformatted(text.str, text.str + text.len);
 }
 
@@ -852,7 +679,7 @@ static void text_label(FlInternalData* ctx, FlString label, FlString text) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void text_show_colored(FlInternalData* ctx, FlColor color, FlString text) {
+extern "C" void fl_text_show_colored_impl(FlInternalData* ctx, FlColor color, FlString text) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -893,8 +720,8 @@ struct FlTextApi g_text_funcs = {
     text_calc_size,
     text_bullet,
     text_label,
-    text_show_colored,
-    text_show,
+    fl_text_show_colored_impl,
+    fl_text_show_impl,
     text_show_disabled,
 };
 
@@ -1008,7 +835,7 @@ struct FlMenuApi g_menu_funcs = {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool button_regular(FlInternalData* ctx, FlString label) {
+extern "C" bool fl_button_regular_impl(FlInternalData* ctx, FlString label) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -1019,7 +846,7 @@ static bool button_regular(FlInternalData* ctx, FlString label) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool button_regular_size(FlInternalData* ctx, FlString label, FlVec2 size) {
+extern "C" bool fl_button_regular_size_impl(FlInternalData* ctx, FlString label, FlVec2 size) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -1030,7 +857,7 @@ static bool button_regular_size(FlInternalData* ctx, FlString label, FlVec2 size
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool button_small(FlInternalData* ctx, FlString label) {
+extern "C" bool fl_button_small_impl(FlInternalData* ctx, FlString label) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -1041,7 +868,7 @@ static bool button_small(FlInternalData* ctx, FlString label) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool button_invisible(FlInternalData* ctx, FlString label, FlVec2 size, FlButtonFlags flags) {
+extern "C" bool fl_button_invisible_impl(FlInternalData* ctx, FlString label, FlVec2 size, FlButtonFlags flags) {
     FL_UNUSED(ctx);
     FL_UNUSED(flags);
 
@@ -1055,7 +882,7 @@ static bool button_invisible(FlInternalData* ctx, FlString label, FlVec2 size, F
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool button_check_box(FlInternalData* ctx, FlString label, bool* checked) {
+extern "C" bool fl_button_check_box_impl(FlInternalData* ctx, FlString label, bool* checked) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -1066,7 +893,7 @@ static bool button_check_box(FlInternalData* ctx, FlString label, bool* checked)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool button_radio(FlInternalData* ctx, FlString label, bool state) {
+extern "C" bool fl_button_radio_impl(FlInternalData* ctx, FlString label, bool state) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -1077,14 +904,14 @@ static bool button_radio(FlInternalData* ctx, FlString label, bool state) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void button_bullet(FlInternalData* ctx) {
+extern "C" void fl_button_bullet_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::Bullet();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool button_image_with_label(FlInternalData* ctx, FlImage image, FlString label) {
+extern "C" bool fl_button_image_with_label_impl(FlInternalData* ctx, FlImage image, FlString label) {
     image_show(ctx, image);
     ImGui::SameLine();
     ImGui::TextUnformatted(label.str, label.str + label.len);
@@ -1095,14 +922,14 @@ static bool button_image_with_label(FlInternalData* ctx, FlImage image, FlString
 
 FlButtonApi g_button_funcs = {
     NULL,
-    button_regular,
-    button_regular_size,
-    button_small,
-    button_invisible,
-    button_check_box,
-    button_radio,
-    button_bullet,
-    button_image_with_label,
+    fl_button_regular_impl,
+    fl_button_regular_size_impl,
+    fl_button_small_impl,
+    fl_button_invisible_impl,
+    fl_button_check_box_impl,
+    fl_button_radio_impl,
+    fl_button_bullet_impl,
+    fl_button_image_with_label_impl,
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1450,10 +1277,10 @@ void fl_style_init_priv() {
 }
 
 
+extern FlFontApi g_font_funcs;
 //extern "C" FlImageApi g_image_funcs;
 //extern FlButtonApi g_button_funcs;
 //extern FlCursorApi g_cursor_funcs;
-//extern FlFontApi g_font_funcs;
 //extern FlItemApi g_item_funcs;
 //extern FlMenuApi g_menu_funcs;
 //extern FlStyleApi g_style_funcs;
@@ -1464,91 +1291,261 @@ void fl_style_init_priv() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlImageApi* fl_get_image_api(FlInternalData* data, int version) {
+extern "C" FlImageApi* fl_get_image_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    FlImageApi* api = &data->image_funcs;
-    return api; 
+    return &app_state->state->image_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlUiApi* fl_get_ui_api(FlInternalData* data, int version) {
+extern "C" FlUiApi* fl_get_ui_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    return &data->ui_funcs;
+    return &app_state->state->ui_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 extern "C" FlWindowApi* fl_get_window_api(AppState* app_state, int version) {
-    TempState* state = app_state->state;
-    state->window_api = g_window_funcs;
-    state->window_api.priv = (FlInternalData*)state; // TODO: Fix me
-    return &state->window_api;
+    FL_UNUSED(version);
+    return &app_state->state->window_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlCursorApi* fl_get_cursor_api(FlInternalData* data, int version) {
+extern "C" FlCursorApi* fl_get_cursor_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    return &data->cursor_funcs;
+    return &app_state->state->cursor_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlTextApi* fl_get_text_api(FlInternalData* data, int version) {
+extern "C" FlTextApi* fl_get_text_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    return &data->text_funcs;
+    return &app_state->state->text_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/*
-extern "C" FlIoApi* fl_get_io_api(FlInternalData* data, int version) {
+extern "C" FlMenuApi* fl_get_menu_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    return &data->io_funcs;
-}
-*/
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-extern "C" FlMenuApi* fl_get_menu_api(FlInternalData* data, int version) {
-    FL_UNUSED(version);
-    return &data->menu_funcs;
+    return &app_state->state->menu_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlFontApi* fl_get_font_api(FlInternalData* data, int version) {
+extern "C" FlFontApi* fl_get_font_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    return &data->font_funcs;
+    return &app_state->state->font_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlButtonApi* fl_get_button_api(FlInternalData* data, int version) {
+extern "C" FlButtonApi* fl_get_button_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    return &data->button_funcs;
+    return &app_state->state->button_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlItemApi* fl_get_item_api(FlInternalData* data, int version) {
+extern "C" FlItemApi* fl_get_item_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    return &data->item_funcs;
+    return &app_state->state->item_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlStyleApi* fl_get_style_api(FlInternalData* data, int version) {
+extern "C" FlStyleApi* fl_get_style_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    return &data->style_funcs;
+    return &app_state->state->style_api;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" FlPainterApi* fl_get_painter_api(FlInternalData* data, int version) {
+extern "C" FlPainterApi* fl_get_painter_api(AppState* app_state, int version) {
     FL_UNUSED(version);
-    FL_UNUSED(data);
+    FL_UNUSED(app_state);
     return nullptr;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+extern "C" void* c_create(const FlApplicationSettings* settings) {
+    glfwSetErrorCallback(error_callback);
+
+    if (!glfwInit()) {
+        // TODO: Proper error
+        printf("failed to init glfw\n");
+        return nullptr;
+    }
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_FLOATING, GL_FALSE);
+
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Fix me title", NULL, NULL);
+    if (!window) {
+        printf("failed to open window\n");
+        glfwTerminate();
+        return nullptr;
+    }
+
+    // TODO: Should be done after BGFX init
+    //glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
+    
+    ImGui::CreateContext();
+
+    // Setup Dear ImGui context
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+    //io.ConfigViewportsNoAutoMerge = true;
+    //io.ConfigViewportsNoTaskBarIcon = true;
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+    io.DisplaySize = ImVec2(1280.0f, 720.0f);
+    io.DeltaTime = 1.0f / 60.0f;
+    io.IniFilename = NULL;
+
+    ImVec4* colors = ImGui::GetStyle().Colors;
+    colors[ImGuiCol_Text]                   = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.19f, 0.19f, 0.19f, 0.92f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.19f, 0.19f, 0.19f, 0.29f);
+    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.24f);
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
+    colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.40f, 0.54f);
+    colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
+    colors[ImGuiCol_SliderGrab]             = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
+    colors[ImGuiCol_Button]                 = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+    colors[ImGuiCol_Header]                 = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.00f, 0.00f, 0.00f, 0.36f);
+    colors[ImGuiCol_HeaderActive]           = ImVec4(0.20f, 0.22f, 0.23f, 0.33f);
+    colors[ImGuiCol_Separator]              = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
+    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
+    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
+    colors[ImGuiCol_ResizeGrip]             = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
+    colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
+    colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
+    colors[ImGuiCol_Tab]                    = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_TabHovered]             = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+    colors[ImGuiCol_TabActive]              = ImVec4(0.20f, 0.20f, 0.20f, 0.36f);
+    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+    colors[ImGuiCol_DockingPreview]         = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
+    colors[ImGuiCol_DockingEmptyBg]         = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotLines]              = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotLinesHovered]       = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogram]          = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_TableHeaderBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_TableBorderStrong]      = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+    colors[ImGuiCol_TableBorderLight]       = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
+    colors[ImGuiCol_TableRowBg]             = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_TableRowBgAlt]          = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+    colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+    colors[ImGuiCol_DragDropTarget]         = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
+    colors[ImGuiCol_NavHighlight]           = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 0.00f, 0.00f, 0.70f);
+    colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(1.00f, 0.00f, 0.00f, 0.20f);
+    colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(1.00f, 0.00f, 0.00f, 0.35f);
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowPadding                     = ImVec2(8.00f, 8.00f);
+    style.FramePadding                      = ImVec2(5.00f, 2.00f);
+    style.CellPadding                       = ImVec2(6.00f, 6.00f);
+    style.ItemSpacing                       = ImVec2(6.00f, 6.00f);
+    style.ItemInnerSpacing                  = ImVec2(6.00f, 6.00f);
+    style.TouchExtraPadding                 = ImVec2(0.00f, 0.00f);
+    style.IndentSpacing                     = 25;
+    style.ScrollbarSize                     = 15;
+    style.GrabMinSize                       = 10;
+    style.WindowBorderSize                  = 1;
+    style.ChildBorderSize                   = 1;
+    style.PopupBorderSize                   = 1;
+    style.FrameBorderSize                   = 1;
+    style.TabBorderSize                     = 1;
+    style.WindowRounding                    = 7;
+    style.ChildRounding                     = 4;
+    style.FrameRounding                     = 3;
+    style.PopupRounding                     = 4;
+    style.ScrollbarRounding                 = 9;
+    style.GrabRounding                      = 3;
+    style.LogSliderDeadzone                 = 4;
+    style.TabRounding                       = 4;
+
+    // Setup Dear ImGui style
+    //ImGui::StyleColorsDark();
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
+
+    ImGui_ImplGlfw_InitForOther(window, true);
+    glfwSetKeyCallback(window, key_callback);
+
+    FlInternalData* state = new FlInternalData;
+    state->window = window;
+
+    state->button_api = g_button_funcs;
+    state->cursor_api = g_cursor_funcs;
+    state->font_api = g_font_funcs;
+    //state->image_api = g_image_funcs;
+    state->item_api = g_item_funcs;
+    state->menu_api = g_menu_funcs;
+    state->text_api = g_text_funcs;
+    state->ui_api = g_ui_funcs;
+    state->style_api = g_style_funcs;
+    state->window_api = g_window_funcs;
+
+    state->button_api.priv = state;
+    state->cursor_api.priv = state;
+    state->font_api.priv = state;
+    state->image_api.priv = state;
+    state->item_api.priv = state;
+    state->menu_api.priv = state;
+    state->text_api.priv = state;
+    state->ui_api.priv = state;
+    state->style_api.priv = state;
+    state->window_api.priv = state;
+
+    LinearAllocator_create_with_allocator(&state->frame_allocator, "string tracking allocator", &malloc_allocator,
+                                          10 * 1024, true);
+
+    StringAllocator_create(&state->string_allocator, &malloc_allocator, &state->frame_allocator);
+
+    return state;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+extern "C" void Errors_add(FlError err, const char* filename, int line, const char* fmt, ...) {
+    FL_UNUSED(err);
+    FL_UNUSED(line);
+    FL_UNUSED(filename);
+    char buffer[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    // printf("ERROR:%d | %s:%d: %s\n", err, filename, line, buffer);
+    va_end(args);
 }
 
