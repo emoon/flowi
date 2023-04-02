@@ -24,6 +24,14 @@
 extern "C" {
 #endif
 
+
+// If Flowi is compiled as dynamic library 
+#if defined(FLOWI_DYNAMIC)
+#define FL_PUBLIC_SYMBOL static
+#else
+#define FL_PUBLIC_SYMBOL extern "C"
+#endif
+
 struct GLFWwindow;
 
 // These are for internal library wise functions. This header should never

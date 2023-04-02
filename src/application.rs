@@ -146,13 +146,16 @@ impl DearImguiRenderer {
             for command in draw_list.commands() {
                 match command {
                     imgui::DrawCmd::Elements { count, cmd_params } => {
+                        dbg!(count);
                         let state = StateWriteFlags::RGB.bits()
                             | StateWriteFlags::A.bits()
-                            | StateFlags::MSAA.bits()
+                            | StateFlags::MSAA.bits();
+                        /*
                             | StateBlendFlags::SRC_ALPHA.bits()
                             | (StateBlendFlags::INV_SRC_ALPHA.bits() << 4)
                             | (StateBlendFlags::SRC_ALPHA.bits() << 8)
                             | (StateBlendFlags::INV_SRC_ALPHA.bits() << 12);
+                        */   
                         let clip_rect = [
                             (cmd_params.clip_rect[0] - clip_pos[0]) * clip_scale[0],
                             (cmd_params.clip_rect[1] - clip_pos[1]) * clip_scale[1],

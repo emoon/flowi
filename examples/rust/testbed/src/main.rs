@@ -17,15 +17,13 @@ struct App {
 }
 
 fn main_loop(app: &mut App) {
-    //Window::begin("Testing foobar", WindowFlags::NO_TITLE_BAR | WindowFlags::MENU_BAR);
+    Window::begin("Testing foobar", WindowFlags::NONE);
 
-    /*
     if Button::regular("Hello, world!") {
         println!("Clicked!");
     }
-    */
 
-    //Window::end();
+    Window::end();
 
     /*
     let ui = flowi.ui();

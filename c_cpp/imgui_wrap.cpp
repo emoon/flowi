@@ -148,7 +148,7 @@ extern "C" void c_pre_update(FlInternalData* state) {
 extern "C" void c_post_update(FlInternalData* state) {
     /*
     ImGui::Begin("Hello, world!");
-    ImGui::SetCursorPos(ImVec2(10, 10));
+    ImGui::Text("This is some useful text.");
     ImGui::End();
     */
 
@@ -233,7 +233,7 @@ static void image_show(FlInternalData* ctx, FlImage image) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Permantly set a color
 
-static void style_set_color(FlInternalData* ctx, FlStyleColor color, FlColor value) {
+FL_PUBLIC_SYMBOL void fl_style_set_color_impl(FlInternalData* ctx, FlStyleColor color, FlColor value) {
     FL_UNUSED(ctx);
     ImGuiStyle* style = &ImGui::GetStyle();
     ImVec4* colors = style->Colors;
@@ -244,7 +244,7 @@ static void style_set_color(FlInternalData* ctx, FlStyleColor color, FlColor val
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Permantly set a color (RGBA)
 
-static void style_set_color_u32(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
+FL_PUBLIC_SYMBOL void fl_style_set_color_u32_impl(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
     FL_UNUSED(ctx);
     ImGuiStyle* style = &ImGui::GetStyle();
     ImVec4* colors = style->Colors;
@@ -255,7 +255,7 @@ static void style_set_color_u32(FlInternalData* ctx, FlStyleColor color, uint32_
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Temporary push a color change (RGBA)
 
-static void style_push_color_u32(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
+FL_PUBLIC_SYMBOL void fl_style_push_color_u32_impl(FlInternalData* ctx, FlStyleColor color, uint32_t value) {
     FL_UNUSED(ctx);
     int color_index = s_color_lut[color];
     ImGui::PushStyleColor(color_index, value);
@@ -264,7 +264,7 @@ static void style_push_color_u32(FlInternalData* ctx, FlStyleColor color, uint32
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Temporary push a color change
 
-static void style_push_color(FlInternalData* ctx, FlStyleColor color, FlColor value) {
+FL_PUBLIC_SYMBOL void fl_style_push_color_impl(FlInternalData* ctx, FlStyleColor color, FlColor value) {
     FL_UNUSED(ctx);
     int color_index = s_color_lut[color];
     ImGui::PushStyleColor(color_index, ImVec4(value.r, value.g, value.b, value.a));
@@ -273,7 +273,7 @@ static void style_push_color(FlInternalData* ctx, FlStyleColor color, FlColor va
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Temporary push a color change
 
-static void style_pop_color(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_style_pop_color_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::PopStyleColor();
 }
@@ -281,7 +281,7 @@ static void style_pop_color(FlInternalData* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pushes a single style change
 
-static void style_push_single(FlInternalData* ctx, FlStyleSingle style, float value) {
+FL_PUBLIC_SYMBOL void fl_style_push_single_impl(FlInternalData* ctx, FlStyleSingle style, float value) {
     FL_UNUSED(ctx);
     int style_index = s_single_style_lut[style];
     ImGui::PushStyleVar(style_index, value);
@@ -290,7 +290,7 @@ static void style_push_single(FlInternalData* ctx, FlStyleSingle style, float va
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pushes a Vec2 style change
 
-static void style_push_vec2(FlInternalData* ctx, FlStyleVec2 style, FlVec2 value) {
+FL_PUBLIC_SYMBOL void fl_style_push_vec2_impl(FlInternalData* ctx, FlStyleVec2 style, FlVec2 value) {
     FL_UNUSED(ctx);
     int style_index = s_vec2_style_lut[style];
     ImGui::PushStyleVar(style_index, ImVec2(value.x, value.y));
@@ -299,7 +299,7 @@ static void style_push_vec2(FlInternalData* ctx, FlStyleVec2 style, FlVec2 value
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pops single style change
 
-static void style_pop(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_style_pop_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::PopStyleVar();
 }
@@ -308,14 +308,14 @@ static void style_pop(FlInternalData* ctx) {
 
 FlStyleApi g_style_funcs = {
     NULL,
-    style_set_color,
-    style_set_color_u32,
-    style_push_color_u32,
-    style_push_color,
-    style_pop_color,
-    style_push_single,
-    style_push_vec2,
-    style_pop,
+    fl_style_set_color_impl,
+    fl_style_set_color_u32_impl,
+    fl_style_push_color_u32_impl,
+    fl_style_push_color_impl,
+    fl_style_pop_color_impl,
+    fl_style_push_single_impl,
+    fl_style_push_vec2_impl,
+    fl_style_pop_impl,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -340,14 +340,14 @@ extern "C" FlUiApi* fl_ui_get_api(AppState* app_state, int api_version) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void window_set_pos(FlInternalData* ctx, FlVec2 pos) {
+FL_PUBLIC_SYMBOL void fl_window_set_pos_impl(FlInternalData* ctx, FlVec2 pos) {
     FL_UNUSED(ctx);
     ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_window_begin_impl(FlInternalData* ctx, FlString name, FlWindowFlags flags) {
+FL_PUBLIC_SYMBOL bool fl_window_begin_impl(FlInternalData* ctx, FlString name, FlWindowFlags flags) {
     char temp_buffer[2048];
 
     const char* window_name =
@@ -358,15 +358,14 @@ extern "C" bool fl_window_begin_impl(FlInternalData* ctx, FlString name, FlWindo
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_window_end_impl(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_window_end_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
-
     ImGui::End();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool window_begin_child(FlInternalData* ctx, FlString id, FlVec2 size, bool border, FlWindowFlags flags) {
+FL_PUBLIC_SYMBOL bool fl_window_begin_child_impl(FlInternalData* ctx, FlString id, FlVec2 size, bool border, FlWindowFlags flags) {
     char temp_buffer[2048];
 
     const char* window_name =
@@ -377,49 +376,49 @@ static bool window_begin_child(FlInternalData* ctx, FlString id, FlVec2 size, bo
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void window_end_child(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_window_end_child_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::EndChild();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool window_is_appearing(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_window_is_appearing_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsWindowAppearing();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool window_is_collapsed(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_window_is_collapsed_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsWindowCollapsed();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool window_is_focused(FlInternalData* ctx, FlFocusedFlags flags) {
+FL_PUBLIC_SYMBOL bool fl_window_is_focused_impl(FlInternalData* ctx, FlFocusedFlags flags) {
     FL_UNUSED(ctx);
     return ImGui::IsWindowFocused((ImGuiFocusedFlags)flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool window_is_hovered(FlInternalData* ctx, FlHoveredFlags flags) {
+FL_PUBLIC_SYMBOL bool fl_window_is_hovered_impl(FlInternalData* ctx, FlHoveredFlags flags) {
     FL_UNUSED(ctx);
     return ImGui::IsWindowHovered((ImGuiHoveredFlags)flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static float window_dpi_scale(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL float fl_window_dpi_scale_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::GetWindowDpiScale();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlVec2 window_pos(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL FlVec2 fl_window_pos_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 pos = ImGui::GetWindowPos();
     return { pos.x, pos.y };
@@ -427,7 +426,7 @@ static FlVec2 window_pos(FlInternalData* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlVec2 window_size(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL FlVec2 fl_window_size_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 size = ImGui::GetWindowSize();
     return { size.x, size.y };
@@ -437,86 +436,86 @@ static FlVec2 window_size(FlInternalData* ctx) {
 
 FlWindowApi g_window_funcs = {
     NULL,
-    window_set_pos,
+    fl_window_set_pos_impl,
     fl_window_begin_impl,
     fl_window_end_impl,
-    window_begin_child,
-    window_end_child,
-    window_is_appearing,
-    window_is_collapsed,
-    window_is_focused,
-    window_is_hovered,
-    window_dpi_scale,
-    window_pos,
-    window_size,
+    fl_window_begin_child_impl,
+    fl_window_end_child_impl,
+    fl_window_is_appearing_impl,
+    fl_window_is_collapsed_impl,
+    fl_window_is_focused_impl,
+    fl_window_is_hovered_impl,
+    fl_window_dpi_scale_impl,
+    fl_window_pos_impl,
+    fl_window_size_impl,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_separator(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_cursor_separator_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::Separator();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_same_line(FlInternalData* ctx, float offset_from_start_x, float spacing) {
+FL_PUBLIC_SYMBOL void fl_cursor_same_line_impl(FlInternalData* ctx, float offset_from_start_x, float spacing) {
     FL_UNUSED(ctx);
     ImGui::SameLine(offset_from_start_x, spacing);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_new_line(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_cursor_new_line_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::NewLine();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_spacing(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_cursor_spacing_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::Spacing();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_dummy(FlInternalData* ctx, FlVec2 size) {
+FL_PUBLIC_SYMBOL void fl_cursor_dummy_impl(FlInternalData* ctx, FlVec2 size) {
     FL_UNUSED(ctx);
     ImGui::Dummy(ImVec2(size.x, size.y));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_indent(FlInternalData* ctx, float indent_w) {
+FL_PUBLIC_SYMBOL void fl_cursor_indent_impl(FlInternalData* ctx, float indent_w) {
     FL_UNUSED(ctx);
     ImGui::Indent(indent_w);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_unindent(FlInternalData* ctx, float indent_w) {
+FL_PUBLIC_SYMBOL void fl_cursor_unindent_impl(FlInternalData* ctx, float indent_w) {
     FL_UNUSED(ctx);
     ImGui::Unindent(indent_w);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_begin_group(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_cursor_begin_group_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::BeginGroup();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_end_group(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_cursor_end_group_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::EndGroup();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlVec2 cursor_get_pos(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL FlVec2 fl_cursor_get_pos_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 pos = ImGui::GetCursorPos();
     return { pos.x, pos.y };
@@ -524,42 +523,42 @@ static FlVec2 cursor_get_pos(FlInternalData* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static float cursor_get_x(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL float fl_cursor_get_x_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::GetCursorPosX();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static float cursor_get_y(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL float fl_cursor_get_y_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::GetCursorPosY();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_set_pos(FlInternalData* ctx, FlVec2 local_pos) {
+FL_PUBLIC_SYMBOL void fl_cursor_set_pos_impl(FlInternalData* ctx, FlVec2 local_pos) {
     FL_UNUSED(ctx);
     ImGui::SetCursorPos(ImVec2(local_pos.x, local_pos.y));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_set_x(FlInternalData* ctx, float x) {
+FL_PUBLIC_SYMBOL void fl_cursor_set_x_impl(FlInternalData* ctx, float x) {
     FL_UNUSED(ctx);
     ImGui::SetCursorPosX(x);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_set_y(FlInternalData* ctx, float y) {
+FL_PUBLIC_SYMBOL void fl_cursor_set_y_impl(FlInternalData* ctx, float y) {
     FL_UNUSED(ctx);
     ImGui::SetCursorPosY(y);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlVec2 cursor_screen_pos(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL FlVec2 fl_cursor_screen_pos_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 pos = ImGui::GetCursorScreenPos();
     return { pos.x, pos.y };
@@ -567,42 +566,42 @@ static FlVec2 cursor_screen_pos(FlInternalData* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_set_screen_pos(FlInternalData* ctx, FlVec2 screen_pos) {
+FL_PUBLIC_SYMBOL void fl_cursor_set_screen_pos_impl(FlInternalData* ctx, FlVec2 screen_pos) {
     FL_UNUSED(ctx);
     ImGui::SetCursorScreenPos(ImVec2(screen_pos.x, screen_pos.y));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void cursor_align_text_to_frame_padding(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_cursor_align_text_to_frame_padding_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::AlignTextToFramePadding();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static float cursor_get_text_line_height(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL float fl_cursor_get_text_line_height_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::GetTextLineHeight();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static float cursor_get_text_line_height_with_spacing(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL float fl_cursor_get_text_line_height_with_spacing_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::GetTextLineHeightWithSpacing();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static float cursor_get_frame_height(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL float fl_cursor_get_frame_height_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::GetFrameHeight();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static float cursor_get_frame_height_with_spacing(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL float fl_cursor_get_frame_height_with_spacing_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::GetFrameHeightWithSpacing();
 }
@@ -611,33 +610,33 @@ static float cursor_get_frame_height_with_spacing(FlInternalData* ctx) {
 
 struct FlCursorApi g_cursor_funcs = {
     NULL,
-    cursor_separator,
-    cursor_same_line,
-    cursor_new_line,
-    cursor_spacing,
-    cursor_dummy,
-    cursor_indent,
-    cursor_unindent,
-    cursor_begin_group,
-    cursor_end_group,
-    cursor_get_pos,
-    cursor_get_x,
-    cursor_get_y,
-    cursor_set_pos,
-    cursor_set_x,
-    cursor_set_y,
-    cursor_screen_pos,
-    cursor_set_screen_pos,
-    cursor_align_text_to_frame_padding,
-    cursor_get_text_line_height,
-    cursor_get_text_line_height_with_spacing,
-    cursor_get_frame_height,
-    cursor_get_frame_height_with_spacing,
+    fl_cursor_separator_impl,
+    fl_cursor_same_line_impl,
+    fl_cursor_new_line_impl,
+    fl_cursor_spacing_impl,
+    fl_cursor_dummy_impl,
+    fl_cursor_indent_impl,
+    fl_cursor_unindent_impl,
+    fl_cursor_begin_group_impl,
+    fl_cursor_end_group_impl,
+    fl_cursor_get_pos_impl,
+    fl_cursor_get_x_impl,
+    fl_cursor_get_y_impl,
+    fl_cursor_set_pos_impl,
+    fl_cursor_set_x_impl,
+    fl_cursor_set_y_impl,
+    fl_cursor_screen_pos_impl,
+    fl_cursor_set_screen_pos_impl,
+    fl_cursor_align_text_to_frame_padding_impl,
+    fl_cursor_get_text_line_height_impl,
+    fl_cursor_get_text_line_height_with_spacing_impl,
+    fl_cursor_get_frame_height_impl,
+    fl_cursor_get_frame_height_with_spacing_impl,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlVec2 text_calc_size(FlInternalData* ctx, FlString text) {
+FL_PUBLIC_SYMBOL FlVec2 fl_text_calc_size_impl(FlInternalData* ctx, FlString text) {
     FL_UNUSED(ctx);
     ImVec2 size = ImGui::CalcTextSize(text.str, text.str + text.len);
     return { size.x, size.y };
@@ -645,7 +644,7 @@ static FlVec2 text_calc_size(FlInternalData* ctx, FlString text) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_text_show_impl(FlInternalData* ctx, FlString text) {
+FL_PUBLIC_SYMBOL void fl_text_show_impl(FlInternalData* ctx, FlString text) {
     FL_UNUSED(ctx);
     printf("fl_text_show_impl\n");
     ImGui::TextUnformatted(text.str, text.str + text.len);
@@ -653,7 +652,7 @@ extern "C" void fl_text_show_impl(FlInternalData* ctx, FlString text) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void text_bullet(FlInternalData* ctx, FlString text) {
+FL_PUBLIC_SYMBOL void fl_text_bullet_impl(FlInternalData* ctx, FlString text) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -664,7 +663,7 @@ static void text_bullet(FlInternalData* ctx, FlString text) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void text_label(FlInternalData* ctx, FlString label, FlString text) {
+FL_PUBLIC_SYMBOL void fl_text_label_impl(FlInternalData* ctx, FlString label, FlString text) {
     char temp_buffer[2048];
     char temp_buffer_2[2048];
 
@@ -679,7 +678,7 @@ static void text_label(FlInternalData* ctx, FlString label, FlString text) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_text_show_colored_impl(FlInternalData* ctx, FlColor color, FlString text) {
+FL_PUBLIC_SYMBOL void fl_text_show_colored_impl(FlInternalData* ctx, FlColor color, FlString text) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -690,7 +689,7 @@ extern "C" void fl_text_show_colored_impl(FlInternalData* ctx, FlColor color, Fl
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void text_show_disabled(FlInternalData* ctx, FlString text) {
+FL_PUBLIC_SYMBOL void fl_text_show_disabled_impl(FlInternalData* ctx, FlString text) {
     FL_UNUSED(ctx);
 
     char temp_buffer[2048];
@@ -717,45 +716,45 @@ static void text_show_wrapped(FlInternalData* ctx, FlString text) {
 
 struct FlTextApi g_text_funcs = {
     NULL,
-    text_calc_size,
-    text_bullet,
-    text_label,
+    fl_text_calc_size_impl,
+    fl_text_bullet_impl,
+    fl_text_label_impl,
     fl_text_show_colored_impl,
     fl_text_show_impl,
-    text_show_disabled,
+    fl_text_show_disabled_impl,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menu_begin_bar(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_menu_begin_bar_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::BeginMenuBar();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menu_end_bar(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_menu_end_bar_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::EndMenuBar();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menu_begin_main_bar(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_menu_begin_main_bar_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::BeginMainMenuBar();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menu_end_main_bar(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_menu_end_main_bar_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::EndMainMenuBar();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menu_begin(FlInternalData* ctx, FlString label, bool enabled) {
+FL_PUBLIC_SYMBOL bool fl_menu_begin_impl(FlInternalData* ctx, FlString label, bool enabled) {
     FL_UNUSED(ctx);
     FL_UNUSED(enabled);
 
@@ -769,14 +768,14 @@ static bool menu_begin(FlInternalData* ctx, FlString label, bool enabled) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menu_end(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_menu_end_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::EndMenu();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menu_item(FlInternalData* ctx, FlString label) {
+FL_PUBLIC_SYMBOL bool fl_menu_item_impl(FlInternalData* ctx, FlString label) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -787,7 +786,7 @@ static bool menu_item(FlInternalData* ctx, FlString label) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menu_item_ex(FlInternalData* ctx, FlString label, FlString shortcut, bool selected, bool enabled) {
+FL_PUBLIC_SYMBOL bool fl_menu_item_ex_impl(FlInternalData* ctx, FlString label, FlString shortcut, bool selected, bool enabled) {
     FL_UNUSED(ctx);
     FL_UNUSED(enabled);
 
@@ -805,7 +804,7 @@ static bool menu_item_ex(FlInternalData* ctx, FlString label, FlString shortcut,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menu_item_toogle(FlInternalData* ctx, FlString label, FlString shortcut, bool* selected, bool enabled) {
+FL_PUBLIC_SYMBOL bool fl_menu_item_toogle_impl(FlInternalData* ctx, FlString label, FlString shortcut, bool* selected, bool enabled) {
     char temp_buffer[2048];
     char temp_buffer_2[2048];
 
@@ -822,20 +821,20 @@ static bool menu_item_toogle(FlInternalData* ctx, FlString label, FlString short
 
 struct FlMenuApi g_menu_funcs = {
     NULL,
-    menu_begin_bar,
-    menu_end_bar,
-    menu_begin_main_bar,
-    menu_end_main_bar,
-    menu_begin,
-    menu_end,
-    menu_item,
-    menu_item_ex,
-    menu_item_toogle,
+    fl_menu_begin_bar_impl,
+    fl_menu_end_bar_impl,
+    fl_menu_begin_main_bar_impl,
+    fl_menu_end_main_bar_impl,
+    fl_menu_begin_impl,
+    fl_menu_end_impl,
+    fl_menu_item_impl,
+    fl_menu_item_ex_impl,
+    fl_menu_item_toogle_impl,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_button_regular_impl(FlInternalData* ctx, FlString label) {
+FL_PUBLIC_SYMBOL bool fl_button_regular_impl(FlInternalData* ctx, FlString label) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -846,7 +845,7 @@ extern "C" bool fl_button_regular_impl(FlInternalData* ctx, FlString label) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_button_regular_size_impl(FlInternalData* ctx, FlString label, FlVec2 size) {
+FL_PUBLIC_SYMBOL bool fl_button_regular_size_impl(FlInternalData* ctx, FlString label, FlVec2 size) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -857,7 +856,7 @@ extern "C" bool fl_button_regular_size_impl(FlInternalData* ctx, FlString label,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_button_small_impl(FlInternalData* ctx, FlString label) {
+FL_PUBLIC_SYMBOL bool fl_button_small_impl(FlInternalData* ctx, FlString label) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -868,7 +867,7 @@ extern "C" bool fl_button_small_impl(FlInternalData* ctx, FlString label) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_button_invisible_impl(FlInternalData* ctx, FlString label, FlVec2 size, FlButtonFlags flags) {
+FL_PUBLIC_SYMBOL bool fl_button_invisible_impl(FlInternalData* ctx, FlString label, FlVec2 size, FlButtonFlags flags) {
     FL_UNUSED(ctx);
     FL_UNUSED(flags);
 
@@ -882,7 +881,7 @@ extern "C" bool fl_button_invisible_impl(FlInternalData* ctx, FlString label, Fl
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_button_check_box_impl(FlInternalData* ctx, FlString label, bool* checked) {
+FL_PUBLIC_SYMBOL bool fl_button_check_box_impl(FlInternalData* ctx, FlString label, bool* checked) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -893,7 +892,7 @@ extern "C" bool fl_button_check_box_impl(FlInternalData* ctx, FlString label, bo
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_button_radio_impl(FlInternalData* ctx, FlString label, bool state) {
+FL_PUBLIC_SYMBOL bool fl_button_radio_impl(FlInternalData* ctx, FlString label, bool state) {
     char temp_buffer[2048];
 
     const char* temp_text =
@@ -904,14 +903,14 @@ extern "C" bool fl_button_radio_impl(FlInternalData* ctx, FlString label, bool s
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" void fl_button_bullet_impl(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_button_bullet_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::Bullet();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" bool fl_button_image_with_label_impl(FlInternalData* ctx, FlImage image, FlString label) {
+FL_PUBLIC_SYMBOL bool fl_button_image_with_label_impl(FlInternalData* ctx, FlImage image, FlString label) {
     image_show(ctx, image);
     ImGui::SameLine();
     ImGui::TextUnformatted(label.str, label.str + label.len);
@@ -934,98 +933,98 @@ FlButtonApi g_button_funcs = {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_hovered(FlInternalData* ctx, FlHoveredFlags flags) {
+FL_PUBLIC_SYMBOL bool fl_item_is_hovered_impl(FlInternalData* ctx, FlHoveredFlags flags) {
     FL_UNUSED(ctx);
     return ImGui::IsItemHovered((ImGuiHoveredFlags)flags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_active(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_active_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsItemActive();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_focused(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_focused_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsItemFocused();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_clicked(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_clicked_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsItemClicked();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_visible(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_visible_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsItemVisible();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_edited(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_edited_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsItemEdited();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_activated(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_activated_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsItemActivated();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_deactivated(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_deactivated_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsItemDeactivated();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_deactivated_after_edit(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_deactivated_after_edit_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsItemDeactivatedAfterEdit();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_toggled_open(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_toggled_open_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsItemToggledOpen();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_any_hovered(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_any_hovered_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsAnyItemHovered();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_any_active(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_any_active_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsAnyItemActive();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool item_is_any_focused(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL bool fl_item_is_any_focused_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     return ImGui::IsAnyItemFocused();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlVec2 item_get_rect_min(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL FlVec2 fl_item_get_rect_min_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 v = ImGui::GetItemRectMin();
     FlVec2 temp = {v.x, v.y};
@@ -1034,7 +1033,7 @@ static FlVec2 item_get_rect_min(FlInternalData* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlVec2 item_get_rect_max(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL FlVec2 fl_item_get_rect_max_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 v = ImGui::GetItemRectMax();
     FlVec2 temp = {v.x, v.y};
@@ -1043,7 +1042,7 @@ static FlVec2 item_get_rect_max(FlInternalData* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlVec2 item_get_rect_size(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL FlVec2 fl_item_get_rect_size_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImVec2 v = ImGui::GetItemRectSize();
     FlVec2 temp = {v.x, v.y};
@@ -1052,7 +1051,7 @@ static FlVec2 item_get_rect_size(FlInternalData* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void item_set_allow_overlap(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_item_set_allow_overlap_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::SetItemAllowOverlap();
 }
@@ -1061,23 +1060,23 @@ static void item_set_allow_overlap(FlInternalData* ctx) {
 
 struct FlItemApi g_item_funcs = {
     NULL,
-    item_is_hovered,
-    item_is_active,
-    item_is_focused,
-    item_is_clicked,
-    item_is_visible,
-    item_is_edited,
-    item_is_activated,
-    item_is_deactivated,
-    item_is_deactivated_after_edit,
-    item_is_toggled_open,
-    item_is_any_hovered,
-    item_is_any_active,
-    item_is_any_focused,
-    item_get_rect_min,
-    item_get_rect_max,
-    item_get_rect_size,
-    item_set_allow_overlap,
+    fl_item_is_hovered_impl,
+    fl_item_is_active_impl,
+    fl_item_is_focused_impl,
+    fl_item_is_clicked_impl,
+    fl_item_is_visible_impl,
+    fl_item_is_edited_impl,
+    fl_item_is_activated_impl,
+    fl_item_is_deactivated_impl,
+    fl_item_is_deactivated_after_edit_impl,
+    fl_item_is_toggled_open_impl,
+    fl_item_is_any_hovered_impl,
+    fl_item_is_any_active_impl,
+    fl_item_is_any_focused_impl,
+    fl_item_get_rect_min_impl,
+    fl_item_get_rect_max_impl,
+    fl_item_get_rect_size_impl,
+    fl_item_set_allow_overlap_impl,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
