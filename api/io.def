@@ -1,18 +1,19 @@
 mod image
 mod shader
 
+/// Selects to load the data immediately or asynchronously.
+enum LoaderType {
+    /// Load data asynchonously.
+    Async,
+    /// Load data immediately.
+    Immediate,
+}
+
 struct Io {
-    /// Load image from file/url. Supported formats are:
-    /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
-    /// PNG 1/2/4/8/16-bit-per-channel
-    /// TGA
-    /// BMP non-1bpp, non-RLE
-    /// PSD (composited view only, no extra channels, 8/16 bit-per-channel)
-    /// GIF
-    /// HDR (radiance rgbE format)
-    /// PIC (Softimage PIC)
-    /// PNM (PPM and PGM binary only)
-    //[static] load_image_from_url(filename: String) -> Image?,
+    /// Load image from file/url. Supported formats are: JPG, PNG, WEBP
+    [static] load_image(filename: String, loader_type: LoaderType) -> async Image?,
+    /// Load image from file/url
+    [static] load_file(filename: String, loader_type: LoaderType) -> async Image?,
     /// Same as load_image_from_url, but async and gives back a handle to check/access data later.
     //[static] load_imag_from_url_async(filename: String) -> async bool,
     /// Load a vertex shader be used for rendering. This will also compile the shader. 

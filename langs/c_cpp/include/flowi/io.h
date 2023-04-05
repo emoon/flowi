@@ -18,6 +18,18 @@ extern "C" {
 
 struct FlIo;
 
+/*
+struct AsyncState {
+    bool done;
+
+}
+
+struct AsyncImage {
+    FlImage image;
+    AsyncState state;
+};
+*/
+
 // Load image from file/url. Supported formats are:
 // JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
 // PNG 1/2/4/8/16-bit-per-channel

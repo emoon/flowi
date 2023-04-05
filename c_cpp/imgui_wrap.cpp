@@ -186,9 +186,9 @@ extern "C" ImDrawData imgui_get_draw_data() {
     
 extern "C" void* c_raw_window_handle(FlInternalData* data) {
 //#if GLFW_EXPOSE_NATIVE_X11
-//    return (void*)(uintptr_t)glfwGetX11Window(data->window);
+    return (void*)(uintptr_t)glfwGetX11Window(data->window);
 //#elif GLFW_EXPOSE_NATIVE_COCOA
-    return glfwGetCocoaWindow(data->window);
+//    return glfwGetCocoaWindow(data->window);
 //#elif GLFW_EXPOSE_NATIVE_WIN32
 //    return glfwGetWin32Window(data->window);
 //#else  // BX_PLATFORM_

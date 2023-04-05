@@ -207,18 +207,13 @@ pub struct EnumEntry {
 /// Enums in C++ can have same value for different enum ids. This isn't supported in Rust.
 /// Also Rust doesn't support that your "or" enums flags so we need to handle that.
 ///
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub enum EnumType {
     /// All values are in sequantial order and no overlap
+    #[default]
     Regular,
     /// This enum is constructed with bitflags due to being power of two or overlapping values
     Bitflags,
-}
-
-impl Default for EnumType {
-    fn default() -> EnumType {
-        EnumType::Regular
-    }
 }
 
 ///

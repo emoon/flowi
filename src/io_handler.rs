@@ -47,7 +47,7 @@ fn build_shader(filename: &str, output_path: &PathBuf, shader_type: &str) -> Res
 #[cfg(target_os = "linux")]
 fn build_shader(filename: &str, output_path: &PathBuf, shader_type: &str) -> Result<Output> {
     Ok(Command::new(
-        "/Users/emoon/code/projects/flowi/bin/shaderc_linux",
+        "/home/emoon/code/projects/flowi/bin/shaderc_linux",
     )
     .arg("-f")
     .arg(filename)
