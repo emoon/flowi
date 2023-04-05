@@ -95,6 +95,8 @@ impl DearImguiRenderer {
             return;
         }
 
+        bgfx::set_view_mode(self.view_id, bgfx::ViewMode::Sequential);
+
         {
             let x = draw_data.display_pos[0];
             let y = draw_data.display_pos[1];
@@ -104,8 +106,6 @@ impl DearImguiRenderer {
             bgfx::set_view_transform(self.view_id, &glam::Mat4::IDENTITY.as_ref(), &projection.as_ref());
             bgfx::set_view_rect(self.view_id, 0, 0, width as u16, height as u16);
         }
-
-        bgfx::set_view_mode(self.view_id, bgfx::ViewMode::Sequential);
 
         let clip_pos = draw_data.display_pos;       // (0,0) unless using multi-viewports
         let clip_scale = draw_data.framebuffer_scale; // (1,1) unless using retina display which are often (2,2)
@@ -147,15 +147,26 @@ impl DearImguiRenderer {
                 match command {
                     imgui::DrawCmd::Elements { count, cmd_params } => {
                         dbg!(count);
+                        /*
                         let state = StateWriteFlags::RGB.bits()
                             | StateWriteFlags::A.bits()
                             | StateFlags::MSAA.bits();
+                        */
+
                         /*
                             | StateBlendFlags::SRC_ALPHA.bits()
                             | (StateBlendFlags::INV_SRC_ALPHA.bits() << 4)
                             | (StateBlendFlags::SRC_ALPHA.bits() << 8)
                             | (StateBlendFlags::INV_SRC_ALPHA.bits() << 12);
                         */   
+                        let state = 
+                            StateWriteFlags::RGB.bits()
+                            | StateWriteFlags::A.bits()
+                            | StateFlags::MSAA.bits()
+                            | bgfx::state_blend_func(
+                                StateBlendFlags::SRC_ALPHA, 
+                                StateBlendFlags::INV_SRC_ALPHA);
+
                         let clip_rect = [
                             (cmd_params.clip_rect[0] - clip_pos[0]) * clip_scale[0],
                             (cmd_params.clip_rect[1] - clip_pos[1]) * clip_scale[1],

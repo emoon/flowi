@@ -11,7 +11,9 @@ enum LoaderType {
 
 struct Io {
     /// Load image from file/url. Supported formats are: JPG, PNG, WEBP
-    [static] load_image(filename: String, loader_type: LoaderType) -> async Image?,
+    [static] load_image(filename: String) -> Image,
+    /// Load image async from file/url. Supported formats are: JPG, PNG, WEBP
+    [static] load_image_async(filename: String, loader_type: LoaderType) -> async Image?,
     /// Load image from file/url
     [static] load_file(filename: String, loader_type: LoaderType) -> async Image?,
     /// Same as load_image_from_url, but async and gives back a handle to check/access data later.
