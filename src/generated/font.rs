@@ -9,19 +9,19 @@ use bitflags::bitflags;
 #[repr(C)]
 pub struct FontFfiApi {
     pub(crate) data: *const core::ffi::c_void,
-    pub(crate) new_from_file: unsafe extern "C" fn(
+    pub(crate) load: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         filename: FlString,
         font_size: u32,
     ) -> u64,
-    pub(crate) new_from_file_range: unsafe extern "C" fn(
+    pub(crate) load_with_range: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         filename: FlString,
         font_size: u32,
         glyph_range_start: u16,
         glyph_range_end: u16,
     ) -> u64,
-    pub(crate) new_from_memory: unsafe extern "C" fn(
+    pub(crate) load_from_memory: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         name: FlString,
         data: *const u8,
@@ -35,19 +35,16 @@ pub struct FontFfiApi {
 
 #[cfg(any(feature = "static", feature = "tundra"))]
 extern "C" {
-    fn fl_font_new_from_file_impl(
-        data: *const core::ffi::c_void,
-        filename: FlString,
-        font_size: u32,
-    ) -> u64;
-    fn fl_font_new_from_file_range_impl(
+    fn fl_font_load_impl(data: *const core::ffi::c_void, filename: FlString, font_size: u32)
+        -> u64;
+    fn fl_font_load_with_range_impl(
         data: *const core::ffi::c_void,
         filename: FlString,
         font_size: u32,
         glyph_range_start: u16,
         glyph_range_end: u16,
     ) -> u64;
-    fn fl_font_new_from_memory_impl(
+    fn fl_font_load_from_memory_impl(
         data: *const core::ffi::c_void,
         name: FlString,
         data: *const u8,
@@ -69,15 +66,15 @@ pub struct Font {
 }
 
 impl Font {
-    /// Create a font from (TTF) file. To use the font use [ui::set_font] before using text-based widgets
+    /// Create a font from (TTF) file. To use the font use [Font::set_font] before using text-based widgets
     /// Returns >= 0 for valid handle, use fl_get_status(); for more detailed error message
-    pub fn new_from_file(filename: &str, font_size: u32) -> Result<Font> {
+    pub fn load(filename: &str, font_size: u32) -> Result<Font> {
         unsafe {
             let _api = &*g_flowi_font_api;
             #[cfg(any(feature = "static", feature = "tundra"))]
-            let ret_val = fl_font_new_from_file_impl(_api.data, FlString::new(filename), font_size);
+            let ret_val = fl_font_load_impl(_api.data, FlString::new(filename), font_size);
             #[cfg(any(feature = "dynamic", feature = "plugin"))]
-            let ret_val = (_api.new_from_file)(_api.data, FlString::new(filename), font_size);
+            let ret_val = (_api.load)(_api.data, FlString::new(filename), font_size);
             if ret_val == 0 {
                 Err(get_last_error())
             } else {
@@ -87,7 +84,7 @@ impl Font {
     }
 
     /// Create an new font from a FFT file with a range of characters that should be pre-generated
-    pub fn new_from_file_range(
+    pub fn load_with_range(
         filename: &str,
         font_size: u32,
         glyph_range_start: u16,
@@ -96,7 +93,7 @@ impl Font {
         unsafe {
             let _api = &*g_flowi_font_api;
             #[cfg(any(feature = "static", feature = "tundra"))]
-            let ret_val = fl_font_new_from_file_range_impl(
+            let ret_val = fl_font_load_with_range_impl(
                 _api.data,
                 FlString::new(filename),
                 font_size,
@@ -104,7 +101,7 @@ impl Font {
                 glyph_range_end,
             );
             #[cfg(any(feature = "dynamic", feature = "plugin"))]
-            let ret_val = (_api.new_from_file_range)(
+            let ret_val = (_api.load_with_range)(
                 _api.data,
                 FlString::new(filename),
                 font_size,
@@ -121,11 +118,11 @@ impl Font {
 
     /// Create a font from memory. Data is expected to point to a TTF file. Fl will take a copy of this data in some cases
     /// Like when needing the accurate placement mode used by Harzbuff that needs to original ttf data
-    pub fn new_from_memory(name: &str, data: &[u8], font_size: u32) -> Result<Font> {
+    pub fn load_from_memory(name: &str, data: &[u8], font_size: u32) -> Result<Font> {
         unsafe {
             let _api = &*g_flowi_font_api;
             #[cfg(any(feature = "static", feature = "tundra"))]
-            let ret_val = fl_font_new_from_memory_impl(
+            let ret_val = fl_font_load_from_memory_impl(
                 _api.data,
                 FlString::new(name),
                 data.as_ptr(),
@@ -133,7 +130,7 @@ impl Font {
                 font_size,
             );
             #[cfg(any(feature = "dynamic", feature = "plugin"))]
-            let ret_val = (_api.new_from_memory)(
+            let ret_val = (_api.load_from_memory)(
                 _api.data,
                 FlString::new(name),
                 data.as_ptr(),

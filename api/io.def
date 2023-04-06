@@ -1,14 +1,6 @@
 mod image
 mod shader
 
-/// Selects to load the data immediately or asynchronously.
-enum LoaderType {
-    /// Load data asynchonously.
-    Async,
-    /// Load data immediately.
-    Immediate,
-}
-
 struct Io {
     /// Load image from file/url. Supported formats are: JPG, PNG, WEBP
     [static] load_image(filename: String) -> Image,

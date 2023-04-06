@@ -15,6 +15,18 @@ use crate::shader::*;
 #[repr(C)]
 pub struct IoFfiApi {
     pub(crate) data: *const core::ffi::c_void,
+    pub(crate) load_image:
+        unsafe extern "C" fn(data: *const core::ffi::c_void, filename: FlString) -> u64,
+    pub(crate) load_image_async: unsafe extern "C" fn(
+        data: *const core::ffi::c_void,
+        filename: FlString,
+        loader_type: LoaderType,
+    ) -> u64,
+    pub(crate) load_file: unsafe extern "C" fn(
+        data: *const core::ffi::c_void,
+        filename: FlString,
+        loader_type: LoaderType,
+    ) -> u64,
     pub(crate) load_shader_program_comp: unsafe extern "C" fn(
         data: *const core::ffi::c_void,
         vs_filename: FlString,
@@ -24,6 +36,17 @@ pub struct IoFfiApi {
 
 #[cfg(any(feature = "static", feature = "tundra"))]
 extern "C" {
+    fn fl_io_load_image_impl(data: *const core::ffi::c_void, filename: FlString) -> u64;
+    fn fl_io_load_image_async_impl(
+        data: *const core::ffi::c_void,
+        filename: FlString,
+        loader_type: LoaderType,
+    ) -> u64;
+    fn fl_io_load_file_impl(
+        data: *const core::ffi::c_void,
+        filename: FlString,
+        loader_type: LoaderType,
+    ) -> u64;
     fn fl_io_load_shader_program_comp_impl(
         data: *const core::ffi::c_void,
         vs_filename: FlString,
@@ -41,16 +64,51 @@ pub struct Io {
 }
 
 impl Io {
-    /// Load image from file/url. Supported formats are:
-    /// JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
-    /// PNG 1/2/4/8/16-bit-per-channel
-    /// TGA
-    /// BMP non-1bpp, non-RLE
-    /// PSD (composited view only, no extra channels, 8/16 bit-per-channel)
-    /// GIF
-    /// HDR (radiance rgbE format)
-    /// PIC (Softimage PIC)
-    /// PNM (PPM and PGM binary only)
+    /// Load image from file/url. Supported formats are: JPG, PNG, WEBP
+    pub fn load_image(filename: &str) -> Image {
+        unsafe {
+            let _api = &*g_flowi_io_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            let ret_val = fl_io_load_image_impl(_api.data, FlString::new(filename));
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
+            let ret_val = (_api.load_image)(_api.data, FlString::new(filename));
+            Image { handle: ret_value }
+        }
+    }
+
+    /// Load image async from file/url. Supported formats are: JPG, PNG, WEBP
+    pub fn load_image_async(filename: &str, loader_type: LoaderType) -> Result<Image> {
+        unsafe {
+            let _api = &*g_flowi_io_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            let ret_val =
+                fl_io_load_image_async_impl(_api.data, FlString::new(filename), loader_type);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
+            let ret_val = (_api.load_image_async)(_api.data, FlString::new(filename), loader_type);
+            if ret_val == 0 {
+                Err(get_last_error())
+            } else {
+                Ok(Image { handle: ret_val })
+            }
+        }
+    }
+
+    /// Load image from file/url
+    pub fn load_file(filename: &str, loader_type: LoaderType) -> Result<Image> {
+        unsafe {
+            let _api = &*g_flowi_io_api;
+            #[cfg(any(feature = "static", feature = "tundra"))]
+            let ret_val = fl_io_load_file_impl(_api.data, FlString::new(filename), loader_type);
+            #[cfg(any(feature = "dynamic", feature = "plugin"))]
+            let ret_val = (_api.load_file)(_api.data, FlString::new(filename), loader_type);
+            if ret_val == 0 {
+                Err(get_last_error())
+            } else {
+                Ok(Image { handle: ret_val })
+            }
+        }
+    }
+
     /// Same as load_image_from_url, but async and gives back a handle to check/access data later.
     /// Load a vertex shader be used for rendering. This will also compile the shader.
     /// Load a pixel shader to be used for rendering. This will also compile the shader.

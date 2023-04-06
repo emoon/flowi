@@ -5,8 +5,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlFont new_from_file_range(FlInternalData* ctx, FlString filename, uint32_t font_size, 
-                                  uint16_t start, uint16_t end) {
+FL_PUBLIC_SYMBOL FlFont fl_font_load_with_range_impl(FlInternalData* ctx, FlString filename, uint32_t font_size, 
+                                                    uint16_t start, uint16_t end) {
     char temp_buffer[2048];
     uint16_t ranges[] = { start, end, 0 };
     uint16_t* range = ranges;
@@ -23,7 +23,6 @@ static FlFont new_from_file_range(FlInternalData* ctx, FlString filename, uint32
     
     ImGuiIO& io = ImGui::GetIO();
 
-    //ImFontAtlas* atlas = ctx->global->font_atlas;
     const char* fname =
         StringAllocator_temp_string_to_cstr(&ctx->string_allocator, temp_buffer, sizeof(temp_buffer), filename);
 
@@ -39,13 +38,13 @@ static FlFont new_from_file_range(FlInternalData* ctx, FlString filename, uint32
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlFont new_from_file(FlInternalData* ctx, FlString filename, uint32_t font_size) {
-    return new_from_file_range(ctx, filename, font_size, 0, 0);
+FL_PUBLIC_SYMBOL FlFont fl_font_load_impl(FlInternalData* ctx, FlString filename, uint32_t font_size) {
+    return fl_font_load_with_range_impl(ctx, filename, font_size, 0, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlFont new_from_memory(FlInternalData* ctx, FlString name, uint8_t* data, uint32_t data_size,
+FL_PUBLIC_SYMBOL FlFont fl_font_load_from_memory_impl(FlInternalData* ctx, FlString name, uint8_t* data, uint32_t data_size,
                                                uint32_t font_size) {
     FL_UNUSED(ctx);
 
@@ -66,14 +65,14 @@ static FlFont new_from_memory(FlInternalData* ctx, FlString name, uint8_t* data,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void font_push(FlInternalData* ctx, FlFont font) {
+FL_PUBLIC_SYMBOL void fl_font_push_impl(FlInternalData* ctx, FlFont font) {
     FL_UNUSED(ctx);
     ImGui::PushFont((ImFont*)font);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void font_pop(FlInternalData* ctx) {
+FL_PUBLIC_SYMBOL void fl_font_pop_impl(FlInternalData* ctx) {
     FL_UNUSED(ctx);
     ImGui::PopFont();
 }
@@ -81,7 +80,7 @@ static void font_pop(FlInternalData* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Destory the current font, render the id invalid
 
-static void destroy(FlInternalData* ctx, FlFont font) { 
+FL_PUBLIC_SYMBOL void fl_font_destroy_impl(FlInternalData* ctx, FlFont font) { 
     FL_UNUSED(ctx);
     FL_UNUSED(font);
 }
@@ -90,10 +89,10 @@ static void destroy(FlInternalData* ctx, FlFont font) {
 
 struct FlFontApi g_font_funcs = {
     NULL,
-    new_from_file,
-    new_from_file_range,
-    new_from_memory,
-    font_push,
-    font_pop,
-    destroy,
+    fl_font_load_impl,
+    fl_font_load_with_range_impl,
+    fl_font_load_from_memory_impl,
+    fl_font_push_impl,
+    fl_font_pop_impl,
+    fl_font_destroy_impl,
 };
