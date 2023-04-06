@@ -188,7 +188,8 @@ extern "C" void* c_raw_window_handle(FlInternalData* data) {
 #if GLFW_EXPOSE_NATIVE_X11
     return (void*)(uintptr_t)glfwGetX11Window(data->window);
 #elif GLFW_EXPOSE_NATIVE_COCOA
-    return glfwGetCocoaWindow(data->window);
+    void* metal_get_layer(void* window); 
+    return metal_get_layer(glfwGetCocoaWindow(data->window));
 #else
 #error "Unsupported platform"
 #endif

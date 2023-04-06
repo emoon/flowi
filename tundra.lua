@@ -395,6 +395,7 @@ Build {
                 FLOWI_DIR .. "vertex_allocator.c",
                 NANOSVG_DIR .. "nanosvg.c",
                 STB_DIR .. "stb.c",
+                { FLOWI_DIR .. "metal_workaround.mm" ; Config = "macos-*-*" },
             },
 
             Depends = {
