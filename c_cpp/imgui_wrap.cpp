@@ -182,13 +182,14 @@ extern "C" ImDrawData imgui_get_draw_data() {
     return *ImGui::GetDrawData();
 }
 
+extern "C" void* metal_get_layer(void* window); 
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
 extern "C" void* c_raw_window_handle(FlInternalData* data) {
 #if GLFW_EXPOSE_NATIVE_X11
     return (void*)(uintptr_t)glfwGetX11Window(data->window);
 #elif GLFW_EXPOSE_NATIVE_COCOA
-    void* metal_get_layer(void* window); 
     return metal_get_layer(glfwGetCocoaWindow(data->window));
 #else
 #error "Unsupported platform"

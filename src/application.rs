@@ -142,11 +142,12 @@ impl DearImguiRenderer {
                 );
             }
 
+            //dbg!(clip_scale);
+
             let encoder = bgfx::encoder_begin(false);
             for command in draw_list.commands() {
                 match command {
                     imgui::DrawCmd::Elements { count, cmd_params } => {
-                        dbg!(count);
                         /*
                         let state = StateWriteFlags::RGB.bits()
                             | StateWriteFlags::A.bits()
@@ -183,7 +184,7 @@ impl DearImguiRenderer {
                             let ww = (clip_rect[2].min(65535.0) - xx as f32) as u16;
                             let hh = (clip_rect[3].min(65535.0) - yy as f32) as u16;
 
-                            dbg!(xx, yy, ww, hh);
+                            //dbg!(xx, yy, ww, hh);
 
                             encoder.set_scissor(xx, yy, ww, hh);
                             encoder.set_state(state, 0);
