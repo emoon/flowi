@@ -180,12 +180,12 @@ impl DearImguiRenderer {
                         {
                             let xx = clip_rect[0].max(0.0f32) as u16;
                             let yy = clip_rect[1].max(0.0f32) as u16;
-                            encoder.set_scissor(
-                                xx,
-                                yy,
-                                (clip_rect[2].min(f32::MAX) as u16) - xx,
-                                (clip_rect[3].min(f32::MAX) as u16) - yy,
-                            );
+                            let ww = (clip_rect[2].min(65535.0) - xx as f32) as u16;
+                            let hh = (clip_rect[3].min(65535.0) - yy as f32) as u16;
+
+                            dbg!(xx, yy, ww, hh);
+
+                            encoder.set_scissor(xx, yy, ww, hh);
                             encoder.set_state(state, 0);
                             encoder.set_texture(
                                 0,
@@ -209,15 +209,13 @@ impl DearImguiRenderer {
                                 shader_prog,
                                 SubmitArgs::default(),
                             );
-            
-                            //dbg!("Render stuff");
                         }
                     }
                     imgui::DrawCmd::RawCallback { callback: _, raw_cmd: _ } => {
                         //callback(draw_list.raw(), raw_cmd);
                     },
                     imgui::DrawCmd::ResetRenderState => {
-                        //bgfx::reset(fb_width as u32, fb_height as u32, ResetArgs::default());
+                        bgfx::reset(fb_width as u32, fb_height as u32, ResetArgs::default());
                     }
                 }
             }
@@ -239,46 +237,10 @@ pub(crate) struct ApplicationState {
     pub(crate) io_ffi_api: IoFfiApi,
 }
 
-/*
-        imgui_context.set_ini_filename(None);
-        let mut io = imgui_context.io_mut();
-        io.backend_flags = imgui::BackendFlags::RENDERER_HAS_VTX_OFFSET;
-        let texture = {
-            let mut fonts = imgui_context.fonts();
-            let font_atlas = fonts.build_rgba32_texture();
-            bgfx::create_texture_2d(font_atlas.width as u16, font_atlas.height as u16, false, 1, bgfx::TextureFormat::BGRA8, 0, &Memory::copy(&font_atlas.data))
-        };
-        Self {
-            shader_program: {
-                let vsh = bgfx::create_shader(&Memory::copy(get_shader_code!(VS_OCORNUT_IMGUI)));
-                let fsh = bgfx::create_shader(&Memory::copy(get_shader_code!(FS_OCORNUT_IMGUI)));
-                //let vsh = bgfx::create_shader(&Memory::copy(&vs_ocornut_imgui::vs_ocornut_imgui_glsl));
-                //let fsh = bgfx::create_shader(&Memory::copy(&fs_ocornut_imgui::fs_ocornut_imgui_glsl));
-                bgfx::create_program(&vsh, &fsh, false)
-                //bgfx::create_program(&vsh, &fsh, true) //TODO: Why Segmentation fault if we destroy the shaders?
-            },
-            vertex_layout: {
-                let layout = bgfx::VertexLayoutBuilder::new();
-                layout.begin(bgfx::RendererType::Noop);
-                layout.add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float, AddArgs{ normalized: true, as_int: false });
-                layout.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float, AddArgs{ normalized: true, as_int: false });
-                layout.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, AddArgs{ normalized: true, as_int: true });
-                layout.end();
-                layout
-            },
-            sampler_uniform: {
-                bgfx::Uniform::create("s_tex", bgfx::UniformType::Sampler, 1)
-            },
-            font_atlas: texture,
-            view_id: 0xFF,
-            frame_time: Instant::now()
-        }
-*/
-
 impl ApplicationState {
     pub fn new(settings: &ApplicationSettings) -> Self {
         let c_data = unsafe { c_create(settings) };
-        let mut io_handler = Box::new(IoHandler::new());
+        let io_handler = Box::new(IoHandler::new());
         let io_ffi_api = io_handler.get_ffi_api();
 
         if c_data.is_null() {
@@ -322,6 +284,7 @@ impl ApplicationState {
         let ibh = bgfx::create_index_buffer(&index_mem, BufferFlags::NONE.bits());
         */
 
+        /*
         let _state = (StateWriteFlags::R
             | StateWriteFlags::G
             | StateWriteFlags::B
@@ -330,6 +293,7 @@ impl ApplicationState {
             .bits()
             | StateDepthTestFlags::LESS.bits()
             | StateCullFlags::CW.bits();
+        */
 
         /*
         let shader_program = self.io_handler.shaders.get_shader_program(self.imgui.shader_program.handle).unwrap();

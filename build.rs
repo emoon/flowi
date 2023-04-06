@@ -365,11 +365,21 @@ fn build_cc(target_os: &str) {
 }
 */
 
+#[cfg(target_os = "macos")]
+fn tundra_target() -> &'static str {
+    "macos-clang-debug"
+}
+
+#[cfg(target_os = "linux")]
+fn tundra_target() -> &'static str {
+    "linux-clang-debug"
+}
+
 #[cfg(feature = "tundra")]
 fn build_tundra(target_os: &str) {
     let output = Command::new("tundra2")
-        .arg("linux-clang-debug")
-        //.arg("macos-clang-debug")
+        //.arg("linux-clang-debug")
+        .arg(tundra_target())
         .output()
         .expect("tundra2 failed");
 

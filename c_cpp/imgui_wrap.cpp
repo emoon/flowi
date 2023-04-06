@@ -185,10 +185,13 @@ extern "C" ImDrawData imgui_get_draw_data() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
 extern "C" void* c_raw_window_handle(FlInternalData* data) {
-//#if GLFW_EXPOSE_NATIVE_X11
+#if GLFW_EXPOSE_NATIVE_X11
     return (void*)(uintptr_t)glfwGetX11Window(data->window);
-//#elif GLFW_EXPOSE_NATIVE_COCOA
-//    return glfwGetCocoaWindow(data->window);
+#elif GLFW_EXPOSE_NATIVE_COCOA
+    return glfwGetCocoaWindow(data->window);
+#else
+#error "Unsupported platform"
+#endif
 //#elif GLFW_EXPOSE_NATIVE_WIN32
 //    return glfwGetWin32Window(data->window);
 //#else  // BX_PLATFORM_
@@ -1394,7 +1397,7 @@ extern "C" void* c_create(const FlApplicationSettings* settings) {
     ImGui::CreateContext();
 
     // Setup Dear ImGui context
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
@@ -1406,6 +1409,7 @@ extern "C" void* c_create(const FlApplicationSettings* settings) {
     io.DeltaTime = 1.0f / 60.0f;
     io.IniFilename = NULL;
 
+    /*
     ImVec4* colors = ImGui::GetStyle().Colors;
     colors[ImGuiCol_Text]                   = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
@@ -1486,16 +1490,19 @@ extern "C" void* c_create(const FlApplicationSettings* settings) {
     style.GrabRounding                      = 3;
     style.LogSliderDeadzone                 = 4;
     style.TabRounding                       = 4;
+    */
 
     // Setup Dear ImGui style
     //ImGui::StyleColorsDark();
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    /*
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
+    */
 
     ImGui_ImplGlfw_InitForOther(window, true);
     glfwSetKeyCallback(window, key_callback);
