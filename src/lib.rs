@@ -1,3 +1,4 @@
+/*
 #![warn(
     clippy::all,
     clippy::await_holding_lock,
@@ -89,3 +90,9 @@ mod imgui;
 mod application;
 mod io_handler;
 mod shaders;
+*/
+
+pub use flowi_core::*;
+
+pub mod application; 
+pub use application::Application;

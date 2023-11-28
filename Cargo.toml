@@ -2,45 +2,16 @@
 name = "flowi"
 version = "0.1.0"
 edition = "2018"
-build = "build.rs"
-
-[lib]
-crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-glam = "0.23.0"
-thiserror = "1.0"
 bgfx-rs = "0.17"
+glfw = "0.51"
+raw-window-handle = "0.5"
 bitflags = "2.0.0-rc.1"
-libloading = { version = "0.7.4", optional = true }
-notify = "5.1.0"
-png = "0.17.7"
-sha2 = "0.10.6"
-base64ct = { version = "1.6.0", features = ["alloc"] }
-
-[profile.dev.package.png]
-opt-level = 3
-
-[features]
-## reload_assets = ["notify"]
-### Build and link all the code the code the program
-static = []
-### Only include wrapping functionally, but allow for loading the shared object 
-dynamic = ["libloading"]
-### Only include the wrapper API
-plugin = []
-### Support incremental compilation of the C/C++ code
-tundra = []
-
-[build-dependencies]
-cc = { version = "1.0", features = ["parallel"] }
+flowi_core = { path = "../flowi_core", features = ["static"] }
 
 [workspace]
 members = [
     "examples/rust/testbed",
-    "examples/rust/plugin_example",
+    # "examples/rust/plugin_example",
 ]
-exclude = [
-    "tools/api_gen", 
-]
-

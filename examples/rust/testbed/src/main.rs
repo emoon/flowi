@@ -1,12 +1,14 @@
 //use flowi::application::Application;
-use flowi::font::Font;
-use flowi::manual::Application;
-use flowi::manual::Color;
-use flowi::style::StyleColor;
-use flowi::window::{HoveredFlags, WindowFlags, Window};
-use flowi::text::Text;
-use flowi::button::Button;
+//use flowi::font::Font;
+//use flowi::manual::Application;
+//use flowi::manual::Color;
+//use flowi::style::StyleColor;
+//use flowi::window::{HoveredFlags, WindowFlags, Window};
+//use flowi::text::Text;
+//use flowi::button::Button;
 //use flowi::Flowi;
+
+use flowi::Application;
 
 struct App {
     dummy: u32,
@@ -17,6 +19,9 @@ struct App {
 }
 
 fn main_loop(app: &mut App) {
+    //println!("main_loop {}", app.dummy);
+    /*
+
     Window::begin("Testing foobar", WindowFlags::NONE);
 
     if Button::regular("Hello, world!") {
@@ -24,6 +29,7 @@ fn main_loop(app: &mut App) {
     }
 
     Window::end();
+    */
 
     /*
     let ui = flowi.ui();
@@ -103,14 +109,17 @@ fn main_loop(app: &mut App) {
 }
 
 fn main() {
-    let settings = flowi::application_settings::ApplicationSettings { some_data: 0 };
-    let flowi_app = Application::new(&settings).unwrap();
+    let settings = flowi::ApplicationSettings { 
+        width: 1280,
+        height: 720,
+    };
+    let mut flowi_app = Application::new(&settings).unwrap();
 
     //let flowi_app = Application::new_from_lib("mylib.so", &settings).unwrap();
     //let flowi = Flowi::new_from_dynamic("mylib.so", "Test", "Test").unwrap();
     //let font = flowi.font();
 
-    let mut app = App {
+    let app = Box::new(App {
         /*
         image: io
             .load_image_from_url("/home/emoon/code/projects/rust_minifb/resources/uv.png")
@@ -137,10 +146,10 @@ fn main() {
             )
             .unwrap(),
         */
-        dummy: 0,
-    };
+        dummy: 1337,
+    });
 
-    if !flowi_app.main_loop_ud(&mut app, main_loop) {
+    if !flowi_app.run(app, main_loop) {
         //println!("Failed to create main application");
     }
 }
