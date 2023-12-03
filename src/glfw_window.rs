@@ -109,26 +109,27 @@ fn translate_glfw_to_flowi_key(key: glfw::Key) -> Option<Key> {
 
 pub(crate) struct GlfwWindow {
     glfw: glfw::Glfw,
-    window: glfw::Window,
-    events: std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>,
+    window: glfw::PWindow,
+    events: glfw::GlfwReceiver<(f64, glfw::WindowEvent)>,
     time: f64,
     should_close: bool,
 }
 
 impl GlfwWindow {
     fn update_input(&mut self) {
+        self.glfw.poll_events();
         for (_, event) in glfw::flush_messages(&self.events) {
             match event {
                 glfw::WindowEvent::Key(key, _, action, _) => {
                     if let Some(key) = translate_glfw_to_flowi_key(key) {
+                        // TODO: Hack to close window with esc
+                        if key == Key::Escape && action == Action::Press { 
+                            self.should_close = true;
+                        }
                         Input::add_key_event(key, action == Action::Press);
                     } else {
                         println!("Unknown key: {:?}", key);
                     }
-                }
-
-                glfw::WindowEvent::Key(glfw::Key::Escape, _, glfw::Action::Press, _) => {
-                    self.should_close = true;
                 }
 
                 glfw::WindowEvent::Focus(focus) => {
@@ -152,8 +153,6 @@ impl GlfwWindow {
                 _ => {}
             }
         }
-
-        self.update_pad();
     }
 
     // TODO: Support Emscripten pad
@@ -236,7 +235,7 @@ impl GlfwWindow {
 
 impl Window for GlfwWindow {
     fn new(settings: &ApplicationSettings) -> Self {
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+        let mut glfw = glfw::init_no_callbacks().unwrap();
         glfw.window_hint(glfw::WindowHint::ClientApi(glfw::ClientApiHint::NoApi));
 
         let width = core::cmp::max(settings.width as _, 800);
@@ -247,6 +246,7 @@ impl Window for GlfwWindow {
             .expect("Failed to create GLFW window.");
 
         window.set_key_polling(true);
+        window.set_mouse_button_polling(true);
 
         Self {
             glfw,
@@ -257,7 +257,6 @@ impl Window for GlfwWindow {
         }
     }
 
-
     fn update(&mut self) {
         let current_time = f64::max(self.time + 0.00001, self.glfw.get_time());
         let delta_time = if self.time > 0.0 { current_time - self.time } else { 1.0 / 60.0 };
@@ -265,18 +264,17 @@ impl Window for GlfwWindow {
         let display_size = self.window.get_framebuffer_size();
         let window_size = self.window.get_size();
 
-        /*
-        self.core.set_display_size(display_size.0 as _, display_size.1 as _);
-        self.core.set_display_buffer_scale(
-            display_size.0 as f32 / window_size.0 as f32,
-            display_size.1 as f32 / window_size.1 as f32,
-        );
-        */
+        Input::update_screen_size_time(
+            display_size.0 as _, 
+            display_size.1 as _, 
+            window_size.0 as _,
+            window_size.1 as _,
+            delta_time as _);
 
         self.time = current_time;
-        //self.core.set_delta_time(delta_time as _);
 
         self.update_input();
+        self.update_mouse_data();
         self.update_modifiers();
         self.update_pad();
     }

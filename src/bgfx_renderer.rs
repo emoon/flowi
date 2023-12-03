@@ -26,6 +26,7 @@ pub(crate) struct BgfxRenderer {
     layout: BuiltVertexLayout,
     sampler_uniform : bgfx::Uniform,
     font_atlas : bgfx::Texture,
+    old_size: (u32, u32),
     view_id: u16,
 }
 
@@ -150,6 +151,7 @@ impl Renderer for BgfxRenderer {
             sampler_uniform,
             layout,
             view_id: 0xFF,
+            old_size: (0, 0),
         }
     }
 
@@ -164,7 +166,22 @@ impl Renderer for BgfxRenderer {
             return;
         }
 
+        let size = (draw_data.display_size[0] as _, draw_data.display_size[1] as _);
+
+        if self.old_size != size {
+            bgfx::reset(size.0 as _, size.1 as _, ResetArgs::default());
+            self.old_size = size;
+        }
+
         bgfx::set_view_mode(self.view_id, bgfx::ViewMode::Sequential);
+        bgfx::set_view_clear(
+            self.view_id,
+            ClearFlags::COLOR.bits() | ClearFlags::DEPTH.bits(),
+            SetViewClearArgs {
+                rgba: 0x103030ff,
+                ..Default::default()
+            },
+        );
 
         {
             let x = draw_data.display_pos[0];
@@ -280,6 +297,7 @@ impl Renderer for BgfxRenderer {
             bgfx::encoder_end(&encoder);
         }
 
+        /*
         //bgfx::set_view_rect(0, 0, 0, size.0 as _, size.1 as _);
         bgfx::touch(0);
 
@@ -294,6 +312,7 @@ impl Renderer for BgfxRenderer {
             0x3f,
             "Description: Initialization and debug text with bgfx-rs Rust API.",
         );
+        */
         
         bgfx::frame(false);
     }

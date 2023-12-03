@@ -5,7 +5,7 @@ edition = "2018"
 
 [dependencies]
 bgfx-rs = "0.17"
-glfw = "0.51"
+glfw = "0.54"
 glam = "0.24"
 raw-window-handle = "0.5"
 bitflags = "2.0.0-rc.1"

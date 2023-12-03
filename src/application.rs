@@ -53,6 +53,9 @@ unsafe extern "C" fn mainloop_app<T>(user_data: *mut c_void) {
 
         state.core.post_update();
         state.renderer.render();
+
+        // TODO: This is a hack to not use 100% CPU
+        std::thread::sleep(std::time::Duration::from_millis(1));
     }
 }
 
