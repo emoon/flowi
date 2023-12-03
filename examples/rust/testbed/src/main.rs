@@ -19,7 +19,7 @@ struct App {
 }
 
 fn main_loop(app: &mut App) {
-    //println!("main_loop {}", app.dummy);
+    println!("main_loop {}", app.dummy);
     /*
 
     Window::begin("Testing foobar", WindowFlags::NONE);
