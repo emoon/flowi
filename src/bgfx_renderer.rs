@@ -3,11 +3,26 @@ use bgfx_rs::bgfx;
 use flowi_core::ApplicationSettings;
 use raw_window_handle::RawWindowHandle;
 use crate::application::Renderer;
-use flowi_core::imgui::{DrawData, FontAtlas};
+use flowi_core::imgui::{DrawData, DrawCmd, FontAtlas, DrawVert, ImDrawIdx};
 use glam;
 
+static VS_IMGUI_GLSL: &[u8] = include_bytes!("../data/shaders/vs_ocornut_imgui_glsl.bin");
+static FS_IMGUI_GLSL: &[u8] = include_bytes!("../data/shaders/fs_ocornut_imgui_glsl.bin");
+
+static VS_IMGUI_ESSL: &[u8] = include_bytes!("../data/shaders/vs_ocornut_imgui_essl.bin");
+static FS_IMGUI_ESSL: &[u8] = include_bytes!("../data/shaders/fs_ocornut_imgui_essl.bin");
+
+static VS_IMGUI_DX11: &[u8] = include_bytes!("../data/shaders/vs_ocornut_imgui_dx11.bin");
+static FS_IMGUI_DX11: &[u8] = include_bytes!("../data/shaders/fs_ocornut_imgui_dx11.bin");
+
+static VS_IMGUI_MTL: &[u8] = include_bytes!("../data/shaders/vs_ocornut_imgui_mtl.bin");
+static FS_IMGUI_MTL: &[u8] = include_bytes!("../data/shaders/fs_ocornut_imgui_mtl.bin");
+
+static VS_IMGUI_SPV: &[u8] = include_bytes!("../data/shaders/vs_ocornut_imgui_spv.bin");
+static FS_IMGUI_SPV: &[u8] = include_bytes!("../data/shaders/fs_ocornut_imgui_spv.bin");
+
 pub(crate) struct BgfxRenderer {
-    //shader_program: ShaderProgram,
+    shader_program: bgfx::Program,
     layout: BuiltVertexLayout,
     sampler_uniform : bgfx::Uniform,
     font_atlas : bgfx::Texture,
@@ -64,20 +79,26 @@ pub fn get_platform_data(handle: &RawWindowHandle) -> PlatformData {
 }
 
 impl BgfxRenderer {
-    /*
-    pub fn load_program(&mut self, vs: &[u8], fs: &[u8]) -> Result<u64> {
-        let vs_data = Memory::copy(&vs);
-        let fs_data = Memory::copy(&fs);
+    fn get_imgui_shader() -> (&'static [u8], &'static [u8]) { 
+        match bgfx::get_renderer_type() {
+            RendererType::Direct3D11 => (VS_IMGUI_DX11, FS_IMGUI_DX11), 
+            RendererType::OpenGL => (VS_IMGUI_GLSL, FS_IMGUI_GLSL), 
+            RendererType::OpenGLES => (VS_IMGUI_ESSL, FS_IMGUI_ESSL), 
+            RendererType::Metal => (VS_IMGUI_MTL, FS_IMGUI_MTL), 
+            RendererType::Vulkan => (VS_IMGUI_SPV, FS_IMGUI_SPV), 
+            e => panic!("Unsupported render type {:#?}", e),
+        }
+    }
+
+    fn compile_program(vs_ps: (&[u8], &[u8])) -> bgfx::Program {
+        let vs_data = Memory::copy(vs_ps.0);
+        let ps_data = Memory::copy(vs_ps.1);
 
         let vs_shader = bgfx::create_shader(&vs_data);
-        let fs_shader = bgfx::create_shader(&fs_data);
+        let ps_shader = bgfx::create_shader(&ps_data);
 
-        let shader_id = self.shader_id;
-
-        // TODO: Check if shader is valid
-        Ok(bgfx::create_program(&vs_shader, &fs_shader, false))
+        bgfx::create_program(&vs_shader, &ps_shader, false)
     }
-    */
 }
 
 impl Renderer for BgfxRenderer {
@@ -110,27 +131,21 @@ impl Renderer for BgfxRenderer {
             .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, AddArgs { normalized: true, as_int: true, })
             .end();
             
-        /*
-        let shader_program = io_handler.load_shader_program_comp(
-            "data/shaders/vs_ocornut_imgui.sc",
-            "data/shaders/fs_ocornut_imgui.sc")
-            .unwrap();
-        */
+        let shader_program = Self::compile_program(Self::get_imgui_shader());
 
         let sampler_uniform = bgfx::Uniform::create("s_tex", bgfx::UniformType::Sampler, 1);
-        let font_atlas = FontAtlas::build_r8_texture();
+        let font_atlas = FontAtlas::build_rgba32_texture();
 
         let font_atlas = bgfx::create_texture_2d(
             font_atlas.width, 
             font_atlas.height, 
             false, 1, 
-            bgfx::TextureFormat::R8, 
+            bgfx::TextureFormat::RGBA8,
             0, 
             &Memory::copy(&font_atlas.data()));
 
         Self {
-            
-            //shader_program,
+            shader_program,
             font_atlas,
             sampler_uniform,
             layout,
@@ -140,7 +155,7 @@ impl Renderer for BgfxRenderer {
 
     fn render(&mut self) {
         let draw_data = DrawData::get_data();
-        let _index_32 = false;
+        let index_32 = false;
 
         let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
         let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
@@ -161,7 +176,6 @@ impl Renderer for BgfxRenderer {
             bgfx::set_view_rect(self.view_id, 0, 0, width as u16, height as u16);
         }
 
-        /*
         let clip_pos = draw_data.display_pos;       // (0,0) unless using multi-viewports
         let clip_scale = draw_data.framebuffer_scale; // (1,1) unless using retina display which are often (2,2)
 
@@ -186,14 +200,14 @@ impl Renderer for BgfxRenderer {
                 std::ptr::copy_nonoverlapping(
                     draw_list.vtx_buffer().as_ptr() as *const u8,
                     tvb.data as *mut u8,
-                    std::mem::size_of::<imgui::DrawVert>() * vertices_count as usize,
+                    std::mem::size_of::<DrawVert>() * vertices_count as usize,
                 );
             }
             unsafe {
                 std::ptr::copy_nonoverlapping(
                     draw_list.idx_buffer().as_ptr() as *const u8,
                     tib.data as *mut u8,
-                    std::mem::size_of::<imgui::ImDrawIdx>() * indices_count as usize,
+                    std::mem::size_of::<ImDrawIdx>() * indices_count as usize,
                 );
             }
 
@@ -202,7 +216,7 @@ impl Renderer for BgfxRenderer {
             let encoder = bgfx::encoder_begin(false);
             for command in draw_list.commands() {
                 match command {
-                    imgui::DrawCmd::Elements { count, cmd_params } => {
+                    DrawCmd::Elements { count, cmd_params } => {
                         let state = 
                             StateWriteFlags::RGB.bits()
                             | StateWriteFlags::A.bits()
@@ -250,22 +264,21 @@ impl Renderer for BgfxRenderer {
                             );
                             encoder.submit(
                                 self.view_id,
-                                shader_prog,
+                                &self.shader_program,
                                 SubmitArgs::default(),
                             );
                         }
                     }
-                    imgui::DrawCmd::RawCallback { callback: _, raw_cmd: _ } => {
+                    DrawCmd::RawCallback { callback: _, raw_cmd: _ } => {
                         //callback(draw_list.raw(), raw_cmd);
                     },
-                    imgui::DrawCmd::ResetRenderState => {
+                    DrawCmd::ResetRenderState => {
                         bgfx::reset(fb_width as u32, fb_height as u32, ResetArgs::default());
                     }
                 }
             }
             bgfx::encoder_end(&encoder);
         }
-        */
 
         //bgfx::set_view_rect(0, 0, 0, size.0 as _, size.1 as _);
         bgfx::touch(0);

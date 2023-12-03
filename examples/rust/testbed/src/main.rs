@@ -3,9 +3,9 @@
 //use flowi::manual::Application;
 //use flowi::manual::Color;
 //use flowi::style::StyleColor;
-//use flowi::window::{HoveredFlags, WindowFlags, Window};
+use flowi::window::{WindowFlags, Window};
 //use flowi::text::Text;
-//use flowi::button::Button;
+use flowi::button::Button;
 //use flowi::Flowi;
 
 use flowi::Application;
@@ -20,7 +20,6 @@ struct App {
 
 fn main_loop(app: &mut App) {
     println!("main_loop {}", app.dummy);
-    /*
 
     Window::begin("Testing foobar", WindowFlags::NONE);
 
@@ -29,7 +28,6 @@ fn main_loop(app: &mut App) {
     }
 
     Window::end();
-    */
 
     /*
     let ui = flowi.ui();
