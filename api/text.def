@@ -1,0 +1,42 @@
+/// Single-line text styling shared by measurement and painter-drawn styled text: font, fractional
+/// pixel size, and letter spacing. A zero field means "use the fallback" (font_id 0 = active
+/// font, font_size 0 = the font's default size).
+#[attributes(Copy)]
+struct TextStyle {
+    /// Font to use (0 = active font).
+    font_id: u32,
+    /// Pixel size, fractional allowed (0 = font's default size).
+    font_size: f32,
+    /// Extra px between glyphs: n−1 gaps for n glyphs, no trailing gap.
+    letter_spacing: f32,
+}
+
+/// Measured extents of a single-line string. All values are logical px.
+#[attributes(Copy)]
+struct TextMetrics {
+    /// Summed glyph advances plus letter spacing (n−1 gaps).
+    width: f32,
+    /// Line height at this size.
+    height: f32,
+    /// Distance from baseline to top.
+    ascent: f32,
+    /// Distance from baseline to bottom (positive).
+    descent: f32,
+}
+
+/// Text emission: emit adds a plain layout element, and styled adds a configurable run controlled by
+/// a TextConfig.
+#[frame_context]
+api Text {
+    /// Emit a plain layout-participating text element in the theme primary color: laid out as a normal child of
+    /// the current container.
+    emit(text: String)
+    /// Emit a configurable layout-participating text element: config carries font, size, color, spacing,
+    /// vertical alignment, and wrap control.
+    styled(text: String, config: TextConfig)
+    /// Measure a single-line string without drawing it: summed glyph advances plus letter spacing
+    /// (n−1 gaps), and the line's vertical metrics at the styled size. Uses the same styling inputs
+    /// as the painter styled draw, so a measured run matches what gets drawn. An unloaded font
+    /// measures as all zeroes; missing glyphs measure via the fallback face, same as rendering.
+    [borrowed] measure(text: String, style: TextStyle) -> TextMetrics
+}

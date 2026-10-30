@@ -1,0 +1,6 @@
+/// Dynamic image widget - draws a per-frame caller-updated image buffer described by DynamicImage.
+api DynamicImage {
+    /// Draw the dynamic image image whose buffer the caller refreshes each frame. opts tints and selects
+    /// fill-container scaling. Call inside a frame callback.
+    [manual] new(image: *DynamicImage, opts: ImageOpts)
+}

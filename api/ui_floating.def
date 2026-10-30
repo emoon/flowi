@@ -1,0 +1,9 @@
+/// Floating elements: start opens one, configure applies its FloatingConfig, and it is
+/// closed with UiLayout::end.
+#[frame_context]
+api Floating {
+    /// Open a floating element identified by id. Closed with UiLayout::end.
+    start(id: LayoutId)
+    /// Apply config to the currently-open floating element.
+    configure(config: FloatingConfig)
+}

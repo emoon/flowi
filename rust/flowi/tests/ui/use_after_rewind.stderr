@@ -1,0 +1,9 @@
+error[E0502]: cannot borrow `arena` as mutable because it is also borrowed as immutable
+  --> tests/ui/use_after_rewind.rs:10:5
+   |
+ 9 |     let r = arena.alloc(1u32);
+   |             ----- immutable borrow occurs here
+10 |     arena.rewind();
+   |     ^^^^^^^^^^^^^^ mutable borrow occurs here
+11 |     let _ = *r;
+   |             -- immutable borrow later used here

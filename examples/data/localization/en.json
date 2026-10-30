@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "strings": {
+    // Settings screen
+    "SID_settings_title": "Settings",
+    "SID_greeting": "Hello, {0}!",
+    // Untranslated on purpose: the other tables leave this one to the default-language fallback.
+    "SID_untranslated": "Untranslated",
+    "SID_file_count": { "one": "{0} file", "other": "{0} files" },
+    // Plural shapes the fl_localize_plural cases select from. Default table only.
+    "SID_plural_other_only": { "other": "{0} items" },
+    "SID_plural_args": { "one": "{0} file in {1}", "other": "{0} files in {1}" },
+    // Placeholder shapes the fl_localize_fmt cases substitute into. Default table only.
+    "SID_fmt_reordered": "{1} then {0}",
+    "SID_fmt_repeated": "{0}, {0} and {0}",
+    "SID_fmt_escaped": "{{0}} shows {0}",
+    "SID_fmt_two_slots": "have {0} of {1}",
+    "SID_fmt_stray_braces": "a } b {c",
+    "SID_fmt_eight": "{0} {1} {2} {3} {4} {5} {6} {7}",
+  },
+}

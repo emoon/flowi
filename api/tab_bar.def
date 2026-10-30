@@ -1,0 +1,7 @@
+/// Tab bar widget - horizontal or vertical tab navigation across a set of labels.
+#[frame_context]
+api TabBar {
+    /// Emit a tab bar over tabs; clicking a tab writes its index to `*selected_index`. config selects
+    /// vertical mode and colors. Returns true the frame the selection changes. Call inside a frame callback.
+    new_impl(tabs: [*const String], selected_index: *i32, config: TabBarConfig) -> bool
+}

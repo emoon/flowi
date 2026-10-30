@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "default": "en",
+  "languages": [
+    { "tag": "en", "name": "English", "file": "en.json" },
+    { "tag": "de", "name": "Deutsch", "file": "de.json" },
+    { "tag": "pt-br", "name": "Português (Brasil)", "file": "pt-br.json" },
+  ],
+}

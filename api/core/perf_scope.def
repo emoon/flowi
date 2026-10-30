@@ -1,0 +1,21 @@
+#[module(core)]
+
+/// Always-on lightweight per-frame profiler that records a hierarchical scope tree
+/// per thread. Pair frame_begin/frame_end around each frame and begin/end
+/// around timed scopes; the tree auto-prints when a main-thread frame exceeds its budget.
+api PerfScope {
+    /// Initialize the profiler for the calling (main) thread. Call once at startup.
+    [manual] init()
+    /// Reset the profiler's thread-local state. Call at application shutdown.
+    [manual] destroy()
+    /// Open a timing scope named name and return its stack index (pass it to
+    /// end). Returns UINT32_MAX on overflow (the matching end is a no-op).
+    [manual] begin(name: *const char) -> u32
+    /// Close the timing scope at stack_index (the value begin returned).
+    [manual] end(stack_index: u32)
+    /// Begin a frame: clear the per-thread scope tree for the new frame.
+    [manual] frame_begin()
+    /// End a frame: on the main thread, print the scope tree if the frame exceeded
+    /// the budget.
+    [manual] frame_end()
+}

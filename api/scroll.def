@@ -1,0 +1,25 @@
+/// Configuration for a scroll area: a clipping container with managed scroll
+/// state, consumed by fl_scroll_area_begin.
+#[attributes(Copy)]
+struct ScrollAreaConfig {
+    /// Container sizing (default: grow/grow).
+    sizing: LayoutSizing,
+    /// Layout direction (default: TopToBottom).
+    direction: LayoutDirection,
+    /// Gap between child elements.
+    child_gap: u16,
+    /// Container padding.
+    padding: LayoutPadding,
+    /// Background color (default: transparent).
+    background_color: Color,
+    /// Corner radius.
+    corner_radius: CornerRadius,
+    /// Show a scrollbar when content overflows.
+    show_scrollbar: bool,
+    /// When to show the scrollbar.
+    scrollbar_mode: ScrollbarDisplayMode,
+    /// Enable smooth scroll animation.
+    smooth_scroll: bool,
+    /// Pixels per mouse-wheel tick.
+    scroll_speed: f32,
+}

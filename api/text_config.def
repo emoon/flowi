@@ -1,0 +1,43 @@
+/// Vertical alignment of a text run within its line box. Baseline is the default.
+enum TextVAlign {
+    /// Text baseline at the bottom of the bounding box (the C zero default).
+    Baseline = 0,
+    /// Text top (ascender) at the top of the bounding box.
+    Top = 1,
+    /// Text vertically centered.
+    Center = 2,
+    /// Text bottom (descender) at the bottom of the bounding box.
+    Bottom = 3,
+}
+
+/// How a single-line text run that overflows its box is handled. Clip is the default
+/// (hard-clip); Elide truncates to the longest fitting prefix and appends an ellipsis (U+2026).
+enum Overflow {
+    /// Hard-clip: the run keeps its full width and the remainder is scissored away (the C zero default).
+    Clip = 0,
+    /// Truncate to the longest fitting prefix and append an ellipsis (U+2026).
+    Elide = 1,
+}
+
+/// Per-call styled-text configuration: font, size, color, spacing, vertical alignment, and wrap
+/// control. A zero field means "use the fallback" (font_id = 0 → active font, font_size = 0 →
+/// font default size); color has no fallback - a zeroed color is transparent, so set it explicitly.
+#[attributes(Copy)]
+struct TextConfig {
+    /// Font to use (0 = active font).
+    font_id: u32,
+    /// Pixel size (0 = font's default size).
+    font_size: u16,
+    /// Text color (zeroed = transparent).
+    color: Color,
+    /// Extra spacing between glyphs, in px.
+    letter_spacing: u16,
+    /// Line height in px (0 = font metric).
+    line_height: u16,
+    /// Vertical alignment within the line box (0 = baseline).
+    valign: TextVAlign,
+    /// Disable wrapping (single line) when true.
+    no_wrap: bool,
+    /// Single-line overflow handling (0 = clip).
+    overflow: Overflow,
+}

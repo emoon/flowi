@@ -1,0 +1,245 @@
+/// Visual treatment for shared widget chrome. Solid is the filled accent background and the zero default.
+enum WidgetVariant {
+    /// Filled accent background (the C zero default).
+    Solid = 0,
+    /// Border only, transparent background.
+    Outline = 1,
+    /// Fully transparent until hover.
+    Ghost = 2,
+    /// Subtle tinted background (accent at low opacity).
+    Soft = 3,
+}
+
+/// Widget size token for interactive control dimensions. Default is the zero default and lets the widget choose its normal size.
+enum WidgetSize {
+    /// Use the widget's default size (typically medium).
+    Default = 0,
+    /// Small compact controls.
+    SM = 1,
+    /// Medium standard controls.
+    MD = 2,
+    /// Large prominent controls.
+    LG = 3,
+}
+
+/// Scrollbar orientation. Vertical is the zero default.
+enum ScrollbarOrientation {
+    /// Vertical scrollbar (the C zero default).
+    Vertical = 0,
+    /// Horizontal scrollbar.
+    Horizontal = 1,
+}
+
+/// Whether a widget joins the keyboard focus order. Three-valued: Default is the zero value and keeps each
+/// widget family's normal behaviour, so a zeroed config never reads as an explicit opt-out. Most families
+/// are focusable by default; a few that are pointer-driven (the scrollbar) are not, and Yes opts those in.
+enum Focusable {
+    /// Keep the widget family's normal focus behaviour (the C zero default).
+    Default = 0,
+    /// Opt a family that is not focusable by default (the scrollbar) into the focus order. Families that are
+    /// already focusable read the same as Default.
+    Yes = 1,
+    /// Keep the widget out of the focus order entirely: it is skipped by tab and spatial navigation, is
+    /// never picked by focus auto-restore, and never strokes a focus border.
+    No = 2,
+}
+
+/// Shared per-widget configuration for id, colors, sizing, focus, tab order, and per-widget theme override.
+#[attributes(Mirror)]
+struct WidgetConfig {
+    /// Optional id override (FlString); empty means use the widget's normal id source.
+    id_override: String,
+    /// Explicit widget color; when set by callers it bypasses themed color resolution.
+    color: Color,
+    /// Explicit widget text color.
+    text_color: Color,
+    /// Visual style for widget chrome (0 = solid).
+    variant: WidgetVariant,
+    /// Widget size token (0 = widget default).
+    size: WidgetSize,
+    /// Extra child padding in pixels.
+    child_padding: u16,
+    /// Whether the widget joins the keyboard focus order (0 = the widget family's normal behaviour).
+    focusable: Focusable,
+    /// Request focus automatically when the widget appears.
+    auto_focus: bool,
+    /// Explicit tab order index.
+    tab_index: i32,
+    /// Optional per-widget state-slot theme override; null means none. This is a sparse FlThemeOverride
+    /// layered over the resolved theme for this widget only - siblings are unaffected, and it composes with
+    /// scoped subtree overrides with widget-level slots winning. The explicit per-object color field still
+    /// bypasses the theme entirely.
+    theme_override: *const ThemeOverride,
+}
+
+/// Slider configuration for value display, stepping, scale, orientation, track/thumb geometry, and shared
+/// widget settings.
+struct SliderConfig {
+    /// Printf format for value display (for example "%.2f", "%.0f dB", or "%d%%").
+    format: *const char,
+    /// Step size for keyboard/gamepad adjustment (0 = auto).
+    step: f32,
+    /// Use logarithmic scale, useful for volume sliders.
+    logarithmic: bool,
+    /// Vertical orientation: up/down adjust value, left/right navigate away.
+    vertical: bool,
+    /// Track bar thickness in pixels (0 = 8). A track thinner than thumb_size centers vertically against
+    /// the thumb; the row stays thumb_size tall either way.
+    track_height: f32,
+    /// Thumb diameter in pixels (0 = 24). Also the track row's height and the span the thumb travels
+    /// short of, so it reaches neither edge.
+    thumb_size: f32,
+    /// Shared widget config (color, focusability, theme override, and id).
+    widget: WidgetConfig,
+}
+
+/// Checkbox configuration for label placement and shared widget settings.
+#[attributes(Mirror)]
+struct CheckboxConfig {
+    /// Label position: false = right side, true = left side.
+    label_on_left: bool,
+    /// Shared widget config (color, focusability, theme override, and id).
+    widget: WidgetConfig,
+}
+
+/// Switch configuration for track geometry, label placement, and shared widget settings. A switch drives
+/// a bool like a checkbox but renders as a pill track with a sliding knob. The knob is not sized
+/// directly: it is the circle that fits the track height inside knob_inset on every side.
+#[attributes(Mirror)]
+struct SwitchConfig {
+    /// Label position: false = right side, true = left side.
+    label_on_left: bool,
+    /// Track width in pixels (0 = twice track_height).
+    track_width: f32,
+    /// Track height in pixels (0 = 24). Also the switch's row height.
+    track_height: f32,
+    /// Gap between the knob and each track edge in pixels (0 = 2); the knob is
+    /// `track_height - 2 * knob_inset` across.
+    knob_inset: f32,
+    /// Shared widget config (color, focusability, theme override, and id).
+    widget: WidgetConfig,
+}
+
+/// Radio group configuration for exclusive single-choice selection.
+#[attributes(Mirror)]
+struct RadioConfig {
+    /// Shared widget config (color, focusability, theme override, and id).
+    widget: WidgetConfig,
+}
+
+/// Progress bar configuration for a determinate progress track. The fraction is passed as a direct
+/// argument, not stored here.
+#[attributes(Mirror)]
+struct ProgressConfig {
+    /// Shared widget config (color overrides the fill, theme override retints slots, and id is available).
+    widget: WidgetConfig,
+}
+
+/// Dropdown configuration for cancel affordance, sizing, trigger geometry, search, and shared widget
+/// settings.
+#[attributes(Mirror)]
+struct DropdownConfig {
+    /// Show cancel button (default: true, for single-button gamepads).
+    show_cancel: bool = true,
+    /// Cancel button text (default: "Cancel").
+    cancel_label: String,
+    /// Minimum dropdown width in pixels (default: 200).
+    min_width: f32 = 200,
+    /// Horizontal padding inside the trigger button, in pixels (0 = 16). The trigger grows to its row
+    /// either way, so this only insets its contents.
+    padding_h: f32,
+    /// Vertical padding inside the trigger button, in pixels (0 = 8). Setting it switches the trigger off
+    /// its fixed 60px height onto padding-driven sizing, which is what a compact pill needs.
+    padding_v: f32,
+    /// Corner radius of the trigger button, in pixels (0 = 8). The open popup keeps its own.
+    corner_radius: f32,
+    /// Type to filter options while the popup is open.
+    searchable: bool,
+    /// Buffer for search text; required when searchable is true. Opaque state the callee owns and
+    /// mutates; null disables search regardless of searchable. Reachable only from C for now - the Rust
+    /// binding has no safe wrapper for the opaque FlTextInputState.
+    search_state: *TextInputState,
+    /// Max option rows the open popup shows before it scrolls (0 = default ~10); the List virtualizes the rest.
+    max_visible_rows: i32,
+    /// Shared widget config (color, focusability, theme override, and id).
+    widget: WidgetConfig,
+}
+
+/// Tab bar configuration for orientation, tab and strip geometry, label text, and shared widget settings.
+#[attributes(Mirror)]
+struct TabBarConfig {
+    /// false = horizontal tabs (the C zero default), true = vertical sidebar style.
+    vertical: bool,
+    /// Horizontal padding inside a tab, in pixels (0 = 16). Either padding set switches the tab off its
+    /// fixed 60px height onto padding-driven sizing, which is what a compact segmented control needs.
+    item_padding_h: f32,
+    /// Vertical padding inside a tab, in pixels (0 = 8). See item_padding_h for the sizing switch.
+    item_padding_v: f32,
+    /// Corner radius of a tab, in pixels (0 = 8).
+    item_radius: f32,
+    /// Padding between the strip's edge and its tabs, in pixels (0 = none). Set either this or
+    /// container_radius and the strip paints as a surface-colored pill behind the tabs; leave both zero
+    /// and it stays the bare layout row it has always been.
+    container_padding: f32,
+    /// Corner radius of that pill, in pixels (0 = square corners).
+    container_radius: f32,
+    /// Gap between adjacent tabs, in pixels (0 = 4). A negative value asks for a flush strip with no gap
+    /// at all - the shape of a segmented control - which 0 cannot express while it stands for the default.
+    child_gap: f32,
+    /// Label pixel size (0 = the font's default size).
+    font_size: u16,
+    /// Extra spacing between label glyphs, in px (0 = none).
+    letter_spacing: u16,
+    /// Shared widget config (color, focusability, theme override, and id).
+    widget: WidgetConfig,
+}
+
+/// Link configuration for font-size override and shared widget settings.
+#[attributes(Mirror)]
+struct LinkConfig {
+    /// Font size override (0 = default).
+    font_size: u16,
+    /// Shared widget config (color, focusability, theme override, and id).
+    widget: WidgetConfig,
+}
+
+/// Scrollbar configuration for orientation, range, thumb sizing, width, and shared widget settings.
+#[attributes(Mirror)]
+struct ScrollbarConfig {
+    /// Vertical or horizontal orientation (0 = vertical).
+    orientation: ScrollbarOrientation,
+    /// Minimum scroll position (usually 0).
+    min: f32,
+    /// Maximum scroll position (content size - viewport size).
+    max: f32,
+    /// Viewport/content ratio for thumb size (0-1, default: 0.2).
+    viewport_ratio: f32,
+    /// Scrollbar width (default: small spacing token, 8 px).
+    width: f32,
+    /// Minimum thumb size in pixels (default: 32).
+    min_thumb_size: f32,
+    /// Shared widget config (color, focusability, theme override, and id).
+    widget: WidgetConfig,
+}
+
+/// Text input configuration for length, accepted characters, password display, placeholder, width, character
+/// count, and shared widget settings.
+#[attributes(Mirror)]
+struct TextInputConfig {
+    /// Character limit (0 = unlimited).
+    max_length: u32,
+    /// Allowed character set (FlString); empty means all printable characters. Read per keypress while
+    /// the field has focus, so it need only live for the frame - the one consumer that outlives the frame,
+    /// the on-screen keyboard, copies the bytes into its own arena (ui_virtual_keyboard_create).
+    allowed_chars: String,
+    /// Show bullets instead of text.
+    password_mode: bool,
+    /// Text shown when empty, dimmed.
+    placeholder: String,
+    /// Minimum width in pixels (default: 200.0).
+    min_width: f32,
+    /// Show a character counter such as "15/100".
+    show_character_count: bool,
+    /// Shared widget config (color, focusability, theme override, and id).
+    widget: WidgetConfig,
+}

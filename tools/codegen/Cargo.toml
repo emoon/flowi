@@ -1,0 +1,17 @@
+# flowi's codegen entry point. Dev-only: nothing flowi ships depends on it, and it is
+# deliberately its OWN workspace so api_gen's dependency tree never reaches the Cargo.lock
+# of the shipped flowi crate.
+#
+# Run it with `cargo regen` (aliased in .cargo/config.toml).
+[package]
+name = "flowi-codegen"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Pinned to an exact commit: the generator that produced the committed output is the one
+# that runs. Bump `rev`, run `cargo regen`, and commit the regenerated output with it.
+api_gen = { git = "https://github.com/emoon/api-gen", rev = "a998d1239191b60989036f74b2d85a9b73155e2e" }
+
+[workspace]

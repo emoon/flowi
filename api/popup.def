@@ -1,0 +1,77 @@
+/// How a popup is positioned.
+enum PopupAnchor {
+    /// Anchor to the element identified by ui_popup's anchor id.
+    Element = 0,
+    /// Anchor to an absolute screen point captured by the caller.
+    Point = 1,
+}
+
+/// Popup scope configuration for positioning, z-order, input capture, and dismissal.
+#[attributes(Copy, Mirror)]
+struct PopupConfig {
+    /// Position offset from anchor (default: {0, 0}).
+    offset: Vec2,
+    /// Render order (default: 100, higher = on top).
+    z_index: i16,
+    /// Block input to widgets behind the popup (default: true).
+    capture_input: bool,
+    /// Auto-close on ESC/B/click-outside (default: true).
+    auto_close: bool,
+    /// Positioning mode (default: element).
+    anchor: PopupAnchor,
+    /// Absolute screen anchor point, used when anchor == Point.
+    point: Vec2,
+}
+
+/// Tooltip configuration for hover-dwell timing, placement, and z-order.
+#[attributes(Copy, Mirror)]
+struct TooltipConfig {
+    /// Hover-dwell seconds before reveal (default: 0.5).
+    delay: f32,
+    /// Position offset from the anchor's bottom-left (default: {0, 4}).
+    offset: Vec2,
+    /// Render order; higher = on top (default: 1000, above popups).
+    z_index: i16,
+}
+
+/// One-shot outcome of a dialog.
+enum DialogResult {
+    /// Still open (or not open) - no decision this frame.
+    None = 0,
+    /// Dismissed via the confirm (OK) button.
+    Confirmed = 1,
+    /// Dismissed via the cancel button or ESC.
+    Cancelled = 2,
+}
+
+/// Message-box / confirm-dialog configuration.
+#[attributes(Copy, Mirror)]
+struct MessageBoxConfig {
+    /// Confirm (OK) button text (default: "OK").
+    confirm_label: String,
+    /// Cancel button text; empty means single-button alert with no Cancel.
+    cancel_label: String,
+    /// Panel width in logical px (default: 400).
+    width: f32,
+    /// Render order; higher = on top (default: 1000, above popups).
+    z_index: i16,
+}
+
+/// Popups, tooltips, and message boxes, rendered after the main UI. begin/end bracket a popup scope;
+/// tooltip and message_box are standalone calls.
+#[frame_context]
+api Popup {
+    /// Begin a popup scope anchored to anchor_id with config; content declared within the scope is rendered
+    /// after the main UI. The scope closes when the returned guard drops, or explicitly by passing that guard to
+    /// end, which consumes it - so it can never close twice.
+    [scope_begin] begin(anchor_id: LayoutId, config: PopupConfig)
+    /// End the popup scope opened by begin, consuming its guard so the scope closes exactly once.
+    [scope_end] end()
+    /// Emit a hover-dwell tooltip anchored to anchor_id showing text, positioned and timed by config. Call
+    /// after the anchor widget has been emitted.
+    tooltip(anchor_id: LayoutId, text: String, config: TooltipConfig)
+    /// Drive the modal confirm/alert dialog titled title with message, gated by the caller-owned open flag
+    /// (call it unconditionally every frame: it early-returns None while `!*open`). Returns the one-shot
+    /// DialogResult on dismissal and clears `*open`.
+    message_box(title: String, message: String, open: *bool, config: MessageBoxConfig) -> DialogResult
+}

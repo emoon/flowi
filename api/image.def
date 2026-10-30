@@ -1,0 +1,184 @@
+/// Image widget drawing options. color tints the image (zero means transparent, so callers normally pass
+/// white for no tint); fill_container scales the image to its layout box instead of native size.
+#[attributes(Copy)]
+struct ImageOpts {
+    /// Multiplicative tint color.
+    color: Color,
+    /// If true, image grows to fill the parent container.
+    fill_container: bool,
+}
+
+/// Backend-neutral image readiness state returned by image query helpers.
+enum ImageStatus {
+    /// Decode/realization is still in flight.
+    Pending = 0,
+    /// The active backend has realized the image and logical dimensions are valid.
+    Ready = 1,
+    /// Loading or realization failed.
+    Error = 2,
+}
+
+/// Background composition mode used by image thumbnail/background loading.
+enum BackgroundMode {
+    /// Display the decoded image as-is.
+    Regular = 0,
+    /// Apply a left-to-right tint gradient during loading.
+    Tint = 1,
+    /// Center on the target canvas with black fill, preserving the original image.
+    Center = 2,
+}
+
+/// Scheduling priority for an in-flight image load. Visible content is raised so it decodes ahead of
+/// prefetched or off-screen work already queued.
+enum ImageLoadPriority {
+    /// Background or prefetch work; yields to everything else.
+    Low = 0,
+    /// The default an image load starts at.
+    Normal = 1,
+    /// Content the user is looking at right now.
+    High = 2,
+}
+
+/// Resize sampling mode for image loading.
+enum ResizeFilter {
+    /// Bilinear interpolation, the default for photos and artwork.
+    Linear = 0,
+    /// Nearest-neighbor sampling, useful for pixel art and screenshots.
+    Nearest = 1,
+}
+
+/// Sampling filter used when a texture is drawn at a size other than its own - the render IR's per-primitive
+/// filter and the per-draw filter a Viewport3d mesh samples with. Distinct from ResizeFilter, which picks
+/// how pixels are resampled once at load time.
+enum ImageFilter {
+    /// Bilinear interpolation between neighboring texels.
+    Linear = 0,
+    /// Nearest-neighbor sampling, so individual texels stay visible under magnification.
+    Nearest = 1,
+}
+
+/// Decoded/realized image format used at load time; it is not exposed in public image query results.
+enum ImageFormat {
+    /// Keep the decoded source format.
+    Default = 0,
+    /// Interleaved RGB.
+    RGB = 1,
+    /// Interleaved RGBA.
+    RGBA = 2,
+    /// Single-channel alpha.
+    Alpha = 3,
+    /// Backend/SW planar representation.
+    Deinterleaved = 4,
+    /// XRGB8888, where the X byte is unused.
+    XRGB = 5,
+}
+
+/// Image load options for decode, resize, thumbnail composition, and cache overrides.
+struct ImageLoadOptions {
+    /// Resize width (0 = no explicit resize).
+    target_width: i32,
+    /// Resize height (0 = no explicit resize).
+    target_height: i32,
+    /// Maximum output width.
+    max_width: i32,
+    /// Maximum output height.
+    max_height: i32,
+    /// Target decode/realization format (0 = source/default).
+    format: ImageFormat,
+    /// SVG scale factor for DPI-aware rasterization (default = 1.0).
+    svg_scale_factor: f32,
+    /// Preserve SVG aspect ratio (default = true).
+    svg_preserve_aspect_ratio: bool,
+    /// Detect and remove black borders while preparing thumbnails.
+    detect_black_border: bool,
+    /// Preserve aspect ratio when resizing.
+    preserve_aspect_ratio: bool,
+    /// Background/thumbnail composition mode.
+    background_mode: BackgroundMode,
+    /// Resize sampling algorithm.
+    resize_filter: ResizeFilter,
+    /// Apply a vertical fade from the image toward `fade_*`.
+    apply_vertical_fade: bool,
+    /// Fade start position, 0.0 = top, 1.0 = bottom.
+    fade_start: f32,
+    /// Target fade red channel.
+    fade_r: u8,
+    /// Target fade green channel.
+    fade_g: u8,
+    /// Target fade blue channel.
+    fade_b: u8,
+    /// Optional cache path override for downloaded files.
+    override_cache_path: String,
+}
+
+// Pointer-only dependency: mounted loads borrow an existing VFS mount for the
+// duration of the asynchronous operation.
+extern opaque FlVfsMount
+
+/// Public image metadata: logical dimensions only. No pixel data, stride, channel count, or format crosses the
+/// public image query boundary.
+#[attributes(Copy)]
+struct ImageData {
+    /// Logical width in pixels.
+    width: i32,
+    /// Logical height in pixels.
+    height: i32,
+}
+
+/// Public image query result. status is the raw VFS operation status; use image_get_status to interpret it.
+/// data is valid when the status resolves to ImageStatus::Ready.
+#[attributes(Copy)]
+struct ImageResult {
+    /// Logical image dimensions.
+    data: ImageData,
+    /// Raw VfsOpStatus value.
+    status: u32,
+}
+
+/// Dynamic image buffer for per-frame updated images. The caller writes into user_buffer each frame.
+struct DynamicImage {
+    /// RGBA or alpha buffer owned by the caller/arena.
+    user_buffer: *u8,
+    /// Logical width in pixels.
+    width: i32,
+    /// Logical height in pixels.
+    height: i32,
+    /// Stride of user_buffer in bytes.
+    user_stride: i32,
+    /// If true, user_buffer is single-channel alpha.
+    is_alpha_only: bool,
+}
+
+/// Image loading and drawing: load starts an async load, is_ready polls completion, and the bare image call
+/// draws it as a layout widget with options.
+api Image {
+    /// Draw handle as a layout widget. opts tints the image and selects fill-container scaling. No-op
+    /// until the image is ready. Call inside a frame callback.
+    [frame] new(handle: ImageHandle, opts: ImageOpts)
+    /// Start an async image load from path. Returns the image handle (0 = invalid); poll is_ready for
+    /// completion.
+    [borrowed] load(path: String) -> ImageHandle
+    /// True once the image has finished decoding and is renderable.
+    is_ready(handle: ImageHandle) -> bool
+    /// Copy raw pixels into a backend-owned static image and return a handle that is ready immediately.
+    /// Supports RGB, RGBA, Alpha, and XRGB input. The caller may free pixels after this returns.
+    [manual] create_from_pixels(pixels: *const void, width: i32, height: i32, format: ImageFormat) -> ImageHandle
+    /// Like create_from_pixels, but the image always gets a texture of its own and never enters the shared
+    /// image atlas. Required for anything a mesh samples, because mesh UVs address the whole texture. The flag
+    /// is fixed at creation - an image cannot be pulled out of the atlas afterwards.
+    [manual] create_dedicated(pixels: *const void, width: i32, height: i32, format: ImageFormat) -> ImageHandle
+    /// Re-upload pixels into an existing handle, keeping its identity stable across the update. The
+    /// dimensions and format are the ones the image was created with; the caller may free pixels after this
+    /// returns. Returns false when the handle was not created from pixels or the backend cannot realize it.
+    [manual] update_pixels(handle: ImageHandle, pixels: *const void) -> bool
+    /// Start an asynchronous image load relative to mount, applying options. The mount is borrowed by the
+    /// operation. Returns zero when the request cannot be started.
+    [borrowed] load_mount(mount: *FlVfsMount, relative_path: String, options: ImageLoadOptions) -> ImageHandle
+    /// Return the semantic state of an image handle. Invalid and failed handles report Error; terminal states
+    /// remain stable across repeated queries.
+    status(handle: ImageHandle) -> ImageStatus
+    /// Re-prioritize an image load that is still in flight. A view raises the images it is actually showing so
+    /// they decode ahead of work queued earlier for content that has since scrolled away. No-op once the load
+    /// has finished or if the handle is invalid.
+    set_load_priority(handle: ImageHandle, priority: ImageLoadPriority)
+}

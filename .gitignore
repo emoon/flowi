@@ -1,0 +1,16 @@
+# CMake build directories
+/build/
+/build-*/
+
+# clangd index cache
+/.cache/
+
+# Frame dumps written by unit_tests when DUMP_FRAMES is set
+frame_dump_*.ppm
+
+# Cargo build output. The submodules carry their own per-directory ignores
+# (rust/.gitignore, tools/codegen/.gitignore); this covers the workspace root.
+/target/
+
+# Local agent tooling state
+.aider*

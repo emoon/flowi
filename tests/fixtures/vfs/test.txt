@@ -1,0 +1,3 @@
+Test file content for VFS testing.
+Line 2
+Line 3

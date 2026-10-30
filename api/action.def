@@ -1,0 +1,71 @@
+/// A semantic UI action - the logical verb a widget responds to, decoupled from the physical input
+/// that triggers it. The toolkit owns this vocabulary (Confirm, Cancel, the directional nav set, ...);
+/// which key or gamepad button maps onto each action is app-level binding configuration and is not
+/// part of this public surface. The discriminant order is a stable plugin ABI.
+///
+/// The text-editing, drag, and scroll members below are public in the enum for completeness but are
+/// internal-use: no public query function meaningfully consumes them, and they are not a supported
+/// external query target.
+enum Action {
+    /// No action / unset.
+    None = 0,
+
+    // Navigation
+    /// Move focus up.
+    Nav_Up,
+    /// Move focus down.
+    Nav_Down,
+    /// Move focus left.
+    Nav_Left,
+    /// Move focus right.
+    Nav_Right,
+    /// Move focus to the next item (Tab forward).
+    Nav_Next,
+    /// Move focus to the previous item (Shift+Tab backward).
+    Nav_Prev,
+
+    // Confirmation / Cancel
+    /// Activate the focused item (Enter, Space, Gamepad A, Left Click).
+    Confirm,
+    /// Dismiss / go back (ESC, Gamepad B).
+    Cancel,
+    /// Open the system menu (Start button, ESC).
+    Menu,
+
+    // Interaction
+    /// Begin a drag (left mouse button down). Internal-use.
+    Drag_Start,
+    /// End a drag (left mouse button up). Internal-use.
+    Drag_End,
+    /// Scroll up (mouse wheel up). Internal-use.
+    Scroll_Up,
+    /// Scroll down (mouse wheel down). Internal-use.
+    Scroll_Down,
+
+    // Widget-specific
+    /// Increment the focused value (Arrow right, +).
+    Increment,
+    /// Decrement the focused value (Arrow left, -).
+    Decrement,
+    /// Toggle the focused item (Space for checkboxes).
+    Toggle,
+
+    // Text editing (internal-use)
+    Text_Backspace,
+    Text_Delete,
+    Text_Home,
+    Text_End,
+    Text_Move_Left,
+    Text_Move_Right,
+    Text_Move_Word_Left,
+    Text_Move_Word_Right,
+    Text_Select_All,
+    Text_Copy,
+    Text_Cut,
+    Text_Paste,
+    Text_Undo,
+    Text_Redo,
+
+    /// Size sentinel: number of actions, not an action itself.
+    Count,
+}

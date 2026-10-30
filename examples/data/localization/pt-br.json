@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "strings": {
+    // Settings screen
+    "SID_settings_title": "Configurações",
+    "SID_greeting": "Olá, {0}!",
+    "SID_file_count": { "one": "{0} arquivo", "other": "{0} arquivos" },
+  },
+}

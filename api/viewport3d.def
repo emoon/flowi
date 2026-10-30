@@ -1,0 +1,80 @@
+/// Handle to a retained mesh. Backend-shared: one mesh draws from any viewport.
+#[handle(u32, invalid = 0)]
+struct MeshHandle {}
+
+/// One mesh vertex, in the single fixed vertex format the 3D API accepts: position, texture
+/// coordinate, and a vertex color that multiplies whatever the draw samples.
+#[attributes(Copy)]
+struct MeshVertex {
+    /// x position in model space
+    x: f32,
+    /// y position in model space
+    y: f32,
+    /// z position in model space
+    z: f32,
+    /// u texture coordinate, addressing the whole texture (a mesh texture is never atlased)
+    u: f32,
+    /// v texture coordinate
+    v: f32,
+    /// per-vertex color, multiplied with the sampled texel
+    color: Color,
+}
+
+/// How a mesh's indices are grouped into primitives. Fixed at creation: a mesh is triangles or lines for
+/// its whole life, because the index array only means one of the two.
+enum MeshTopology {
+    /// Three indices per triangle.
+    Triangles = 0,
+    /// Two indices per line segment.
+    Lines = 1,
+}
+
+/// Retained geometry, created once and drawn from any Viewport3d. Vertices use the one fixed format
+/// (MeshVertex); indices are 16-bit and address vertices. Triangles and lines are the same resource with
+/// different index grouping - create makes one of the first, create_lines one of the second.
+#[frame_context]
+api Mesh {
+    /// Create a triangle mesh from vertices and 16-bit indices (three per triangle). The caller may free both
+    /// arrays after this returns. Returns MeshHandle::INVALID when the active backend has no 3D
+    /// support or the geometry is malformed.
+    create(vertices: [*const MeshVertex], indices: [*const u16]) -> MeshHandle
+    /// Create a line mesh - wireframes, voxel boxes, gizmos, camera paths - from vertices and 16-bit
+    /// indices (two per segment). Lines are drawn with Viewport3d::draw_lines, take their color from the
+    /// vertices, and are never textured. Same lifetime and sharing rules as create.
+    create_lines(vertices: [*const MeshVertex], indices: [*const u16]) -> MeshHandle
+    /// Destroy a mesh and release its backend buffers. The handle is invalid afterwards: drawing it renders
+    /// nothing - until a later create reuses its slot and hands the same value back out, at which point the
+    /// stale handle silently draws the new mesh. Drop your copies when you destroy one.
+    destroy(mesh: MeshHandle)
+}
+
+/// A 3D scene rendered into a regular layout element: a view-projection matrix plus depth-tested
+/// triangle draws, rasterized by the render backend into the element's own color+depth target, which
+/// the UI then samples as an ordinary image.
+///
+/// Bracket a frame's draws with begin/end. begin returns the element's size in device pixels so
+/// the caller can build its projection matrix; that size is the previous frame's, because layout runs
+/// after the frame callback, so it is zero on an element's first frame and one frame stale across a
+/// resize. Lighting, materials and cameras are not flowi's: the shading is fixed and unlit, and camera
+/// math, picking and gizmos live in the caller. A backend without a 3D path draws a placeholder.
+#[frame_context]
+api Viewport3d {
+    /// Declare the 3D viewport element id and open its draw list. Returns the element's device-pixel
+    /// size from the previous frame ((0, 0) on its first). Call inside a frame callback and pair with end.
+    [borrowed] begin(id: LayoutId) -> Vec2
+    /// Set the view-projection matrix applied to every following draw in this viewport: 16 floats,
+    /// column-major, the same convention `gl_Position = matrix * vec4(pos, 1.0)` implies.
+    set_view_projection(matrix: [*const f32])
+    /// Draw a triangle mesh with depth testing, modulating its vertex colors by texture sampled with
+    /// filter - pass ImageFilter::Nearest to see a lightmap's individual texels rather than a smoothed
+    /// blend. Pass ImageHandle::INVALID to draw with vertex colors alone. Draws render in submission order
+    /// with no sorting; a textured draw needs a dedicated image (Image::create_dedicated), because mesh UVs
+    /// address the whole texture.
+    draw_mesh(mesh: MeshHandle, texture: ImageHandle, filter: ImageFilter)
+    /// Draw a line mesh (Mesh::create_lines) in its vertex colors, untextured. depth_test false makes an
+    /// annotation stay visible through the geometry it annotates; true lets the scene occlude it. Lines are
+    /// one pixel wide and draw in submission order like every other draw.
+    draw_lines(mesh: MeshHandle, depth_test: bool)
+    /// Close the draw list opened by begin and submit it to the backend.
+    end()
+}

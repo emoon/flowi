@@ -1,0 +1,18 @@
+/// Controls properties captured in the active UI frame envelope. Frame opacity affects UI content only;
+/// full-screen background composition remains unaffected.
+#[frame_context]
+api Frame {
+    /// Copy bytes into the active frame arena and return the frame-lifetime string.
+    [manual] str(ptr: *const char, len: usize) -> String
+    /// Reserve count uninitialized frame-lifetime string slots in the active frame arena. The array
+    /// counterpart of str, for the widgets taking a counted string array; the caller fills every slot.
+    [manual] str_array(count: u32) -> *String
+    /// Set frame-wide UI opacity (0 = transparent, 255 = opaque; default 255). Persists until changed.
+    set_alpha(alpha: u8)
+    /// Seconds elapsed since the previous frame. The frame-rate-independent step an animation or smooth-scroll
+    /// integrator multiplies into its per-second rate.
+    delta_time() -> f32
+    /// Size of the drawable screen this frame, in logical pixels. The viewport a full-screen layout sizes itself
+    /// against, and the extent a virtualizing container measures its visible window from.
+    screen_size() -> Vec2
+}

@@ -1,0 +1,9 @@
+/// Controls when a scroll area shows its scrollbar. Names the values that ScrollAreaConfig.scrollbar_mode takes.
+enum ScrollbarDisplayMode {
+    /// Never show the scrollbar.
+    Never = 0,
+    /// Show on hover when content overflows.
+    Auto = 1,
+    /// Always show when content overflows.
+    Always = 2,
+}

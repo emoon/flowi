@@ -1,0 +1,10 @@
+/// Spacer widgets - fixed empty gaps, useful for list-clipper padding and virtualization spacers.
+#[frame_context]
+api Spacer {
+    /// Add fixed empty vertical space height px (the spacer in a vertical layout). Call inside a frame
+    /// callback.
+    new(height: f32)
+    /// Add fixed empty horizontal space width px (the spacer in a horizontal layout). Call inside a frame
+    /// callback.
+    h(width: f32)
+}

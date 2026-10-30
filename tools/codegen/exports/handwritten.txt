@@ -1,0 +1,36 @@
+# Public C symbols declared by flowi's HAND-WRITTEN public headers. The IDL only knows the
+# generated headers; names that don't fit the `fl_<api>_<method>` scheme live in hand-written
+# headers (include/flowi/ui/nav.h, core/assert.h, ui/feedback.h, ui/inspector.h, vfs/drivers.h) and would
+# otherwise be public-by-declaration but absent from the dynamic symbol table. api_gen merges
+# this file into flowi.version and flowi.def (see tools/codegen/src/lib.rs). One
+# symbol per line; `#` starts a comment; every entry must be a C identifier.
+#
+# core/assert.h - every FL_ASSERT* macro expands to a call to one of these, so a
+# consumer that includes the header and asserts cannot link without them.
+fl_assert_fatal_handler
+fl_assert_handler
+
+# ui/feedback.h
+fl_ui_set_feedback_hook
+
+# ui/nav.h
+fl_action_pressed
+fl_consume_nav_down
+fl_consume_nav_left
+fl_consume_nav_right
+fl_consume_nav_up
+fl_get_nav_frame
+fl_nav_down_pressed
+fl_nav_up_pressed
+fl_set_focus
+fl_set_focus_id
+
+# ui/inspector.h
+fl_inspector_element_count
+fl_inspector_element_get
+fl_inspector_hit_test_id
+fl_inspector_hit_test_name
+fl_inspector_snapshot
+
+# vfs/drivers.h
+fl_vfs_register_builtin_drivers

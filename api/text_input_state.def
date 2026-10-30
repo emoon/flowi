@@ -1,0 +1,3 @@
+/// Opaque cross-frame text-input editor state. Apps own it only through the TextInput create/destroy handle API.
+#[attributes(Opaque)]
+struct TextInputState {}

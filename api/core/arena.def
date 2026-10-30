@@ -1,0 +1,69 @@
+#[module(arena)]
+
+/// Opaque region allocator owned by flowi core. Never crossed by value: every allocation entry point
+/// takes a `*Arena`, and the toolkit and the app hold it solely behind that pointer.
+#[attributes(Opaque)]
+struct Arena {}
+
+/// A savepoint in an arena, restored in bulk to free everything allocated after it (a temp/scratch
+/// scope). A POD value type crossed by value through the public ABI; arena points at the saved arena and
+/// pos is its byte offset at capture.
+struct TempArena {
+    arena: *Arena,
+    pos: u64,
+}
+
+/// The `fl_arena_*` plugin service API - flowi core's bump/region allocator, exported as plain C symbols. Slots take only their own params. Plugins link the shared library and call these symbols directly.
+#[attributes(service)]
+api Arena {
+    /// Initialize flowi's process-wide core services and return the main arena. Idempotent: a
+    /// second call returns the live arena and leaves the running services alone. fl_app_create
+    /// calls this itself, so an app only calls it directly to pick a job_threads count or to
+    /// reach the arena before there is an application.
+    fl_init(job_threads: i32) -> *Arena
+    /// Shut flowi's process-wide core services down and release the arenas fl_init reserved:
+    /// the main arena it returned and the calling thread's scratch arenas. Every flowi object
+    /// must already be gone, and the returned arena is dangling afterwards. A no-op when the
+    /// services are already down; a later fl_init brings them back up.
+    fl_destroy()
+
+    /// Reserve a new arena (reserved_size virtual bytes, committed on demand); file/line identify
+    /// the allocation site. Wrapper over arena_new_.
+    fl_arena_create(reserved_size: u64, file: *const char, line: i32) -> *Arena
+    /// Destroy an arena and free all its memory.
+    fl_arena_destroy(arena: *Arena)
+    /// Reset an arena to empty, reusing its memory (per-frame pattern).
+    fl_arena_rewind(arena: *Arena)
+
+    /// Allocate raw bytes (thread-safe, CAS).
+    fl_arena_alloc_raw(arena: *Arena, size: u64, alignment: u64) -> *void
+    /// Allocate zero-initialized bytes (thread-safe, CAS).
+    fl_arena_alloc_raw_zero(arena: *Arena, size: u64, alignment: u64) -> *void
+    /// Allocate raw bytes (single-threaded, no atomics).
+    fl_arena_alloc_raw_st(arena: *Arena, size: u64, alignment: u64) -> *void
+    /// Allocate zero-initialized bytes (single-threaded, no atomics).
+    fl_arena_alloc_raw_zero_st(arena: *Arena, size: u64, alignment: u64) -> *void
+
+    /// Advance the arena position to an alignment boundary without allocating.
+    fl_arena_align(arena: *Arena, alignment: u64)
+    /// Current (next) allocation address.
+    fl_arena_current_pos(arena: *Arena) -> *void
+    /// Next aligned allocation address, without advancing.
+    fl_arena_aligned_pos(arena: *Arena, alignment: u64) -> *void
+
+    /// Begin a temporary scope (save the current position).
+    [scope_begin] fl_arena_temp_begin(arena: *Arena) -> TempArena
+    /// End a temporary scope (restore the saved position).
+    [scope_end] fl_arena_temp_end(temp: TempArena)
+    /// Acquire a thread-local scratch arena scope.
+    [scope_begin] fl_arena_scratch_begin() -> TempArena
+    /// Acquire a thread-local scratch arena scope that avoids conflict_arena.
+    [scope_begin] fl_arena_scratch_begin_conflict(conflict_arena: *const Arena) -> TempArena
+    /// End a scratch arena scope.
+    [scope_end] fl_arena_scratch_end(temp: TempArena)
+
+    /// Release bytes_to_release bytes from the end of the arena.
+    fl_arena_compact_bytes(arena: *Arena, bytes_to_release: u64)
+    /// Count complete element_size-sized elements between start_ptr and the current position.
+    fl_arena_count_elements(arena: *const Arena, start_ptr: *const void, element_size: u64) -> u64
+}

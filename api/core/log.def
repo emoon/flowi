@@ -1,0 +1,46 @@
+#[module(core)]
+
+/// Severity of a log message, ordered low to high.
+enum LogLevel {
+    /// Most verbose: fine-grained tracing.
+    Trace = 0,
+    /// Debugging detail.
+    Debug = 1,
+    /// Informational progress.
+    Info = 2,
+    /// Recoverable problem / something unexpected.
+    Warning = 3,
+    /// Error: an operation failed.
+    Error = 4,
+    /// Fatal: unrecoverable.
+    Fatal = 5,
+}
+
+/// Channel-based logging. Register named channels, gate each by level, then emit
+/// messages that carry a source file/line and a LogLevel.
+api Log {
+    /// Register a logging channel named name; returns its id.
+    [manual] register_channel(name: String) -> u32
+    /// Set the minimum level a channel emits.
+    [manual] channel_set_level(id: u32, level: LogLevel)
+    /// Enable or disable a channel entirely.
+    [manual] channel_enable(id: u32, enabled: bool)
+    /// Log a pre-formatted FlString on a channel (skips printf formatting).
+    [manual] c_message_formatted(id: u32, level: LogLevel, file: *const char, line: i32, message: String)
+    /// Globally toggle whether the source file:line is shown in output.
+    [manual] set_show_location(show: bool)
+    /// Initialize file logging under base_dir (empty -> default dir). Returns true on success.
+    [manual] file_init(base_dir: String) -> bool
+    /// Shut file logging down, flushing and closing the log file.
+    [manual] file_shutdown()
+    /// Path of the active log file (empty if file logging is off).
+    [manual] file_get_path() -> String
+    /// Flush buffered log output.
+    [manual] flush()
+    /// Set the global (channel-less) minimum log level.
+    [manual] set_level(level: LogLevel)
+    /// printf-style channel log capturing a source file/line.
+    [manual] c_message(id: u32, level: LogLevel, file: *const char, line: i32, format: *const char, ...)
+    /// printf-style channel-less log.
+    [manual] message(level: LogLevel, file: *const char, line: i32, format: *const char, ...)
+}

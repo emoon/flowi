@@ -1,0 +1,49 @@
+extern opaque FlVfsMount
+
+/// String-independent vertical metrics of a font at a given size, for stable vertical centering of
+/// dynamic readouts (the values don't change with the text). All values are logical px.
+#[attributes(Copy)]
+struct FontMetrics {
+    /// Distance from baseline to top.
+    ascent: f32,
+    /// Distance from baseline to bottom (positive).
+    descent: f32,
+    /// Line height at this size.
+    line_height: f32,
+}
+
+/// Font loading and selection: load fonts (including default/fallback), set the active font or a
+/// registered weight/style for rendering, and check or wait for their asynchronous loads to complete.
+#[frame_context]
+api Font {
+    /// Load a TTF from path at default_size (unscaled px; 0 selects a built-in default).
+    /// Returns the font id (0 = invalid). Async - poll is_loaded for completion.
+    [borrowed] load(path: String, default_size: u16) -> FontId
+    /// Load a TTF from mount/relative_path at default_size (unscaled px; 0 selects a built-in
+    /// default). The mount-relative counterpart to load, for a host that serves fonts out of its own
+    /// data mount rather than the working directory. Returns the font id (0 = invalid). Async - poll
+    /// is_loaded for completion.
+    [borrowed] load_mount(mount: *FlVfsMount, relative_path: String, default_size: u16) -> FontId
+    /// Load the built-in default font at default_size (unscaled px; 0 selects a built-in default).
+    /// Returns the font id (0 = invalid).
+    load_default(default_size: u16) -> FontId
+    /// Load a fallback font from mount/relative_path for Unicode glyphs missing in primary fonts
+    /// (typically Noto Sans for full Latin Extended coverage). Returns false on failure.
+    [borrowed] load_fallback(mount: *FlVfsMount, relative_path: String) -> bool
+    /// Make font the active font for text that uses font 0.
+    set(font: FontId)
+    /// Register font as the font used for the given weight/style slot.
+    style_register(font: FontId, style: FontStyle)
+    /// Make the font registered for style the active font for text that uses font 0.
+    style_set(style: FontStyle)
+    /// True once font's async load has completed and it is ready to render.
+    is_loaded(font: FontId) -> bool
+    /// Block until every kicked-off font has finished loading (metrics ready or failed), pumping I/O
+    /// meanwhile. Returns false if any font failed. Other async loads (images) keep streaming. Call once
+    /// after kicking off font loads in setup, before the first rendered frame.
+    ensure_loaded() -> bool
+    /// Vertical metrics of font at size px (fractional allowed; 0 = the font's default size,
+    /// font 0 = the active font). String-independent, for stable vertical centering of dynamic
+    /// readouts. An unloaded font reports all zeroes.
+    metrics(font: FontId, size: f32) -> FontMetrics
+}

@@ -1,0 +1,37 @@
+#[module(platform)]
+
+extern opaque FlUiCtx
+extern opaque FlArena
+
+/// Input Backend Interface - the platform input seam a host implements and
+/// injects. Backends poll OS events and push them straight into the UI context.
+struct InputBackend {
+    /// Backend-private state, passed back to every function-field.
+    ctx: *void,
+    /// Tear the backend down and free ctx.
+    destroy(ctx: *void),
+    /// Poll OS events and push them directly to the UI context. Returns false if
+    /// the application should quit (window closed, etc.).
+    poll_events(ctx: *void, ui_ctx: *FlUiCtx) -> bool,
+    /// Enable text input (on-screen keyboard on mobile, IME, etc.).
+    start_text_input(ctx: *void),
+    /// Disable text input.
+    stop_text_input(ctx: *void),
+    /// Flush the per-frame resolved cursor shape to the platform.
+    set_cursor(ctx: *void, cursor: Cursor),
+    /// Flush the cursor-visibility request to the platform.
+    set_cursor_visible(ctx: *void, visible: bool),
+    /// Enter (true) / exit (false) raw relative/unbounded mouse motion - the
+    /// hidden-drag mechanic; while enabled the backend stops moving the cursor.
+    set_relative_mouse_mode(ctx: *void, enabled: bool),
+    /// Move the OS cursor to (x, y) in window coordinates (restore on drag end).
+    warp_mouse(ctx: *void, x: f32, y: f32),
+    /// Read the clipboard text, allocated from arena.
+    get_clipboard_text(ctx: *void, arena: *FlArena) -> String,
+    /// Set the clipboard text. Returns false on failure.
+    set_clipboard_text(ctx: *void, text: String) -> bool,
+    /// Set gamepad rumble for the gamepad at index.
+    set_gamepad_rumble(ctx: *void, index: i32, low_freq: f32, high_freq: f32, duration_ms: u32),
+    /// The most recently active input device (for UI button-prompt hints).
+    get_last_active_device(ctx: *void) -> InputDevice,
+}

@@ -1,0 +1,27 @@
+error[E0451]: fields `activated_id`, `focused_id`, `context_menu_id`, `requests`, `nav_up_edge`, `nav_down_edge`, `drag_active`, `reorder_emitted`, `drag_from_ids`, `drag_target_id` and `drag_rel` of struct `ListResult` are private
+  --> tests/ui/list_result_forged.rs:3:9
+   |
+ 2 |     let _forged = flowi::ListResult {
+   |                   ----------------- in this type
+ 3 |         activated_id: 1,
+   |         ^^^^^^^^^^^^ private field
+ 4 |         focused_id: 1,
+   |         ^^^^^^^^^^ private field
+ 5 |         context_menu_id: 0,
+   |         ^^^^^^^^^^^^^^^ private field
+ 6 |         requests: Vec::new(),
+   |         ^^^^^^^^ private field
+ 7 |         nav_up_edge: false,
+   |         ^^^^^^^^^^^ private field
+ 8 |         nav_down_edge: false,
+   |         ^^^^^^^^^^^^^ private field
+ 9 |         drag_active: false,
+   |         ^^^^^^^^^^^ private field
+10 |         reorder_emitted: false,
+   |         ^^^^^^^^^^^^^^^ private field
+11 |         drag_from_ids: Vec::new(),
+   |         ^^^^^^^^^^^^^ private field
+12 |         drag_target_id: 0,
+   |         ^^^^^^^^^^^^^^ private field
+13 |         drag_rel: flowi::DropRelationship::Before,
+   |         ^^^^^^^^ private field

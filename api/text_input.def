@@ -1,0 +1,26 @@
+mod text_input_state
+
+/// An editable text field (inline rename, search box, any editable value). Construct with new /
+/// with_capacity, mutate with set_text / clear, read with text, and emit the widget each frame with show.
+api TextInput {
+    /// Create a text-input handle backed by a dedicated arena. capacity is the requested initial buffer size
+    /// in bytes; a built-in floor applies for small values. Returns the handle pointer; pair with destroy.
+    [manual] create(capacity: u32) -> *TextInputState
+    /// Destroy a handle from create, freeing its dedicated arena (and with it the state, buffer, and editor
+    /// state). No-op on a null handle.
+    [drop] destroy(state: *TextInputState)
+    /// Replace the handle's text with text (copied into the handle's buffer).
+    [borrowed] set_text(state: *TextInputState, text: String)
+    /// Read the handle's current text. The returned string points into the handle's buffer and is valid until
+    /// the next mutation or destroy.
+    [const] [rename(text)] get_text(state: *TextInputState) -> String
+    /// Clear the handle's text and reset its cursor/selection.
+    clear(state: *TextInputState)
+    /// Emit the text-input widget for this handle labelled label and return its interaction Signal.
+    /// The Signal's text_changed, submitted (Enter) and cancelled (Escape or gamepad B) are true only on the frame they
+    /// happen. Call inside a frame callback.
+    [manual] [rename(show_default)] show(label: String, state: *TextInputState) -> Signal
+    /// Emit the text-input widget with per-call configuration. config controls placeholder text, width,
+    /// maximum length, and shared focus behavior. A zero configuration preserves the default behavior.
+    [manual] [rename(show)] show_impl(label: String, state: *TextInputState, config: TextInputConfig) -> Signal
+}

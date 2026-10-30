@@ -1,0 +1,31 @@
+#[module(heap)]
+
+/// The `fl_heap_*` plugin service API - flowi core's malloc-family heap allocator (mimalloc, or the
+/// system allocator when sanitizers are enabled or on Windows), exported as plain C symbols. This is
+/// the individually-owned counterpart to the arena service: every allocation must be released, and the
+/// two are not interchangeable. Plugins wrapping an external C library typically hand these slots to it
+/// as its allocator callbacks. Plugins link the shared library and call these symbols directly.
+///
+/// Allocator statistics are not part of this surface - fl_memory_tracker_get_stats already reports
+/// mimalloc's allocated/freed totals alongside the arena ones.
+#[attributes(service)]
+api Heap {
+    /// Allocate size bytes. Returns null on failure.
+    fl_heap_alloc(size: u64) -> *void
+    /// Allocate count * size zero-initialized bytes. Returns null on failure.
+    fl_heap_calloc(count: u64, size: u64) -> *void
+    /// Resize an allocation (ptr may be null). The original pointer may be invalidated - always use
+    /// the returned one.
+    fl_heap_realloc(ptr: *void, new_size: u64) -> *void
+    /// Release an allocation from fl_heap_alloc / fl_heap_calloc / fl_heap_realloc (null is a no-op).
+    fl_heap_free(ptr: *void)
+
+    /// Allocate size bytes on an alignment-byte boundary (alignment must be a power of two).
+    fl_heap_alloc_aligned(alignment: u64, size: u64) -> *void
+    /// Release an allocation from fl_heap_alloc_aligned (null is a no-op).
+    fl_heap_free_aligned(ptr: *void)
+
+    /// Usable size of an allocation, which may exceed the requested size. Zero when the allocator in
+    /// use cannot report it.
+    fl_heap_usable_size(ptr: *void) -> u64
+}

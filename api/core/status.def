@@ -1,0 +1,69 @@
+#[module(core)]
+
+/// General-purpose status code, for subsystems that don't warrant their own status enum
+/// (arenas, memory, strings, the job system, settings, plugin loading). Success is always 0,
+/// so if (status) tests for failure. Errors are grouped in ranges of 100 per category, with
+/// gaps left for growth inside each. Subsystems with many specific failure modes define their
+/// own enum instead (VfsStatus for file operations, StringParseStatus for parsing).
+// error_enum: also emits the shared Rust FlError companion (one named variant per
+// non-success code + Unknown catch-all) into the generated module, so an added code
+// gets a named variant on regeneration instead of silently decoding to Unknown.
+#[attributes(error_enum)]
+enum Status {
+    /// The operation succeeded.
+    Success = 0,
+
+    /// Generic invalid argument.
+    InvalidArgument = 1,
+    /// A null pointer was passed where a valid pointer is required.
+    NullPointer = 2,
+    /// A value fell outside its valid range.
+    OutOfRange = 3,
+    /// The operation is invalid in the current state.
+    InvalidState = 4,
+    /// An enum value outside the defined set.
+    InvalidEnum = 5,
+
+    /// Memory allocation failed.
+    OutOfMemory = 100,
+    /// Generic resource exhaustion.
+    ResourceExhausted = 101,
+    /// The operation exceeded a system or configured limit.
+    LimitExceeded = 102,
+
+    /// The plugin file was not found.
+    PluginNotFound = 200,
+    /// The plugin's shared library failed to load.
+    PluginLoadFailed = 201,
+    /// The plugin is malformed or missing required symbols.
+    PluginInvalid = 202,
+    /// The plugin's API version is incompatible.
+    PluginVersionMismatch = 203,
+    /// The plugin's initialization failed.
+    PluginInitFailed = 204,
+
+    /// The job queue is at capacity.
+    JobQueueFull = 300,
+    /// The job was canceled before it completed.
+    JobCanceled = 301,
+    /// The job exceeded its timeout.
+    JobTimeout = 302,
+    /// The job's execution failed.
+    JobFailed = 303,
+
+    /// The setting key was not found.
+    SettingNotFound = 400,
+    /// The setting's value failed to parse.
+    SettingParseError = 401,
+    /// The setting exists but holds a different type.
+    SettingTypeMismatch = 402,
+    /// The setting is read-only.
+    SettingReadOnly = 403,
+
+    /// The feature is not implemented yet.
+    NotImplemented = 900,
+    /// The operation is not supported.
+    Unsupported = 901,
+    /// Generic or unknown error.
+    GenericError = 999,
+}

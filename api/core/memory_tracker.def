@@ -1,0 +1,47 @@
+#[module(core)]
+
+/// Memory-tracking statistics snapshot: arena allocator usage across all threads
+/// plus the mimalloc allocation/free balance. Filled on demand by
+/// fl_memory_tracker_get_stats and read field-wise.
+#[attributes(Copy)]
+struct MemoryStats {
+    /// Number of live arenas across all threads.
+    live_arena_count: u32,
+    /// Total reserved capacity of all arenas, in bytes.
+    total_arena_capacity: u64,
+    /// Total currently used memory across all arenas, in bytes.
+    total_arena_used: u64,
+    /// Total peak memory usage across all arenas, in bytes.
+    total_arena_peak: u64,
+    /// Current mimalloc memory (allocated - freed), in bytes.
+    mimalloc_current: u64,
+    /// Total bytes allocated via mimalloc.
+    mimalloc_total_allocated: u64,
+    /// Total bytes freed via mimalloc.
+    mimalloc_total_freed: u64,
+    /// Number of mimalloc allocations. Block counts cover the calling thread's heap and exited threads.
+    mimalloc_alloc_count: u64,
+    /// Number of mimalloc frees. A block freed while the thread that allocated it is still running counts as live
+    /// until that thread next allocates or collects.
+    mimalloc_free_count: u64,
+}
+
+/// Memory leak-detection and profiling surface. Call init/destroy to bracket the
+/// tracker's lifetime, then use the `dump_*` / `export_json_*` calls or get_stats to
+/// read a snapshot.
+api MemoryTracker {
+    /// Initialize the memory-tracking system. Call early in application startup.
+    [manual] init()
+    /// Destroy the memory-tracking system. Call at application shutdown.
+    [manual] destroy()
+    /// Dump a memory snapshot as a text FlString allocated from arena.
+    [manual] dump_string(arena: *Arena) -> String
+    /// Dump a memory snapshot to filepath in text format (overwriting). Returns true on success.
+    [manual] dump_to_file(filepath: String) -> bool
+    /// Export a memory snapshot as a JSON FlString allocated from arena.
+    [manual] export_json_string(arena: *Arena) -> String
+    /// Export a memory snapshot to filepath in JSON format (overwriting). Returns true on success.
+    [manual] export_json_to_file(filepath: String) -> bool
+    /// Fill stats with the current memory statistics. Reclaims empty pages in the calling thread's heap.
+    [manual] get_stats(stats: *MemoryStats)
+}

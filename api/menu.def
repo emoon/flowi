@@ -1,0 +1,74 @@
+/// Per-item close policy on menu-item activation. Each item kind has a natural default
+/// (Default): an action item closes the chain, a checkable/radio item keeps it open.
+/// Close / KeepOpen force the rare exception either way. Default is the zero value.
+enum MenuClosePolicy {
+    /// Use the item kind's natural default: action closes, checkable/radio keep open.
+    Default = 0,
+    /// Force close on activation.
+    Close = 1,
+    /// Force keep-open on activation.
+    KeepOpen = 2,
+}
+
+/// Configuration for a context menu panel. A zeroed config uses the defaults
+/// (min_width 0 → 180, z_index 0 → 1000).
+#[attributes(Copy, Default, Mirror)]
+struct MenuConfig {
+    /// Menu panel width in logical px (0 = C default, 180).
+    min_width: f32,
+    /// Render order; higher = on top (0 = C default, 1000, above popups).
+    z_index: i16,
+}
+
+/// Shared configuration for the menu leaf item kinds. The close_policy resolves against the
+/// kind's natural default (see MenuClosePolicy); shortcut is display-only right-aligned text
+/// (no dispatch). A zeroed config uses the defaults.
+#[attributes(Copy, Mirror)]
+struct MenuItemConfig {
+    /// Close behaviour on activation (0 = the item kind's natural default).
+    close_policy: MenuClosePolicy,
+    /// Optional shortcut text shown right-aligned (display only - no dispatch).
+    shortcut: String,
+    /// Greyed out and non-interactive.
+    disabled: bool,
+}
+
+/// Configuration for a submenu parent. A submenu parent is a pure container - it never carries
+/// a close policy or shortcut, only the child panel's min_width and a disabled (greyed,
+/// non-opening) flag. A zeroed config uses the defaults (min_width 0 → 180, same as the root menu).
+#[attributes(Copy, Default, Mirror)]
+struct SubmenuConfig {
+    /// Child panel width in logical px (0 = C default, 180 - same as the root menu).
+    min_width: f32,
+    /// Greyed out and non-opening.
+    disabled: bool,
+}
+
+/// Configuration for a right-click menu region. A zeroed sizing means grow/grow - the region
+/// covers its parent area.
+#[attributes(Copy)]
+struct MenuRegionConfig {
+    /// Region element sizing (zeroed = grow/grow, covering the parent area).
+    sizing: LayoutSizing,
+}
+
+/// Configuration for the menu-bar strip - the persistent File/Edit/View surface. The bar carries
+/// only the dropdowns' render order; the per-dropdown width lives on MenuBarMenuConfig. A zeroed
+/// config uses the default (z_index 0 → 1000, same as a context menu).
+#[attributes(Copy, Default, Mirror)]
+struct MenuBarConfig {
+    /// Dropdown render order; higher = on top (0 = C default, 1000, same as a context menu).
+    z_index: i16,
+}
+
+/// Configuration for one top-level entry in the menu bar. Like a submenu parent it is a pure
+/// container - it never carries a close policy or shortcut, only the dropdown panel's min_width
+/// and a disabled (greyed, non-opening) flag. A zeroed config uses the default
+/// (min_width 0 → 180, same as a context menu).
+#[attributes(Copy, Default, Mirror)]
+struct MenuBarMenuConfig {
+    /// Dropdown panel width in logical px (0 = C default, 180 - same as a context menu).
+    min_width: f32,
+    /// Greyed-out top that never highlights, opens, or accepts a switch.
+    disabled: bool,
+}

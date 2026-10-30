@@ -1,0 +1,8 @@
+/// Checkbox widget. Call inside a frame callback and read the returned Signal to react to interaction.
+#[frame_context]
+api Checkbox {
+    /// Emit a checkbox labelled label bound to `*checked`; activation toggles the bool. config selects
+    /// label side, colors, and id overrides. Returns its interaction Signal (.clicked the frame it
+    /// toggles). Call inside a frame callback.
+    new_impl(label: String, checked: *bool, config: CheckboxConfig) -> Signal
+}

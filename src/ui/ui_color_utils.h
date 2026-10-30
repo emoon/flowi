@@ -1,0 +1,24 @@
+#pragma once
+
+#include <core/types.h>
+#include <flowi/core/math_data.h>
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI Color Utility Functions
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline FlColor ui_color_lerp(FlColor a, FlColor b, f32 t) {
+    return (FlColor) {
+        .r = (u8)(a.r + (b.r - a.r) * t),
+        .g = (u8)(a.g + (b.g - a.g) * t),
+        .b = (u8)(a.b + (b.b - a.b) * t),
+        .a = (u8)(a.a + (b.a - a.a) * t),
+    };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline FlColor ui_color_with_alpha(FlColor color, u8 alpha) {
+    return (FlColor) { .r = color.r, .g = color.g, .b = color.b, .a = alpha };
+}

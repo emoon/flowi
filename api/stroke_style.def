@@ -1,0 +1,11 @@
+/// Dash pattern for a stroked outline - one dash/gap pair repeated along the stroke, both lengths in
+/// logical px. A zero dash_len or gap_len means a solid stroke, so a zeroed style is the plain
+/// default. The pattern is not positional: renderers rescale the period slightly so a whole number of
+/// dashes closes the ring or edge exactly, leaving no stub at the seam.
+#[attributes(Copy)]
+struct StrokeStyle {
+    /// Length of each dash (0 = solid).
+    dash_len: f32,
+    /// Length of the gap between dashes (0 = solid).
+    gap_len: f32,
+}

@@ -1,0 +1,152 @@
+/// Arc end-cap flags, combined with bitwise OR. With no flag set the arc has butt caps, which keep sector pie
+/// edges clean.
+#[attributes(bitflags)]
+enum ArcFlags {
+    /// Round the arc ends.
+    round_caps = 1,
+}
+
+/// Polyline draw flags, combined with bitwise OR.
+#[attributes(bitflags)]
+enum PolylineFlags {
+    /// Fill between the curve and baseline_y with fill_color.
+    filled = 1,
+    /// Add a last->first closing segment.
+    closed = 2,
+}
+
+/// One polyline vertex. intensity is always present (1.0 = plain): it modulates the stroke alpha, lerped
+/// along segments, and scales the fill alpha when the polyline is FILLED.
+#[attributes(Copy)]
+struct PolyPoint {
+    /// x position in logical (authoring) space
+    x: f32,
+    /// y position in logical (authoring) space
+    y: f32,
+    /// per-vertex stroke/fill alpha multiplier (1.0 = plain)
+    intensity: f32,
+}
+
+/// One bar of a bar set, in logical (authoring) space. Height extends from the set's shared baseline upward;
+/// a negative h draws downward. Width is per-bar so log-spaced spectrum bins fit without a stride rule.
+#[attributes(Copy)]
+struct Bar {
+    /// left edge
+    x: f32,
+    /// bar width
+    w: f32,
+    /// height from the baseline; negative draws downward
+    h: f32,
+}
+
+/// Decorative effect kind. Drop-shadow and glow share one shape - a glow is a centered, additive shadow.
+/// Packed to one byte so Effect can hold it typed without growing the record.
+#[attributes(packed)]
+enum EffectKind {
+    /// No effect.
+    None = 0,
+    /// A blurred copy of the shape, offset by (off_x, off_y) and drawn behind it.
+    DropShadow = 1,
+    /// A blurred copy of the shape, centered on it and blended additively.
+    Glow = 2,
+}
+
+/// A decorative shadow or glow attached to a painter draw. Appearance only - it never changes geometry or
+/// hit-testing, and a backend that does not support effects skips it (today: the software backend, and text
+/// runs on every backend). A zeroed effect is EffectKind::None, i.e. no effect.
+/// Offsets and blur are logical (authoring) px and scale like every other painter length.
+#[attributes(Copy)]
+struct Effect {
+    /// Which effect to draw.
+    kind: EffectKind,
+    /// Shadow / glow color.
+    color: Color,
+    /// Horizontal shadow offset; ignored by Glow, which is centered.
+    off_x: f32,
+    /// Vertical shadow offset; ignored by Glow, which is centered.
+    off_y: f32,
+    /// Blur radius; 0 draws a hard-edged copy.
+    blur: f32,
+}
+
+/// Fill styling for one rectangle: per-corner radius and per-corner colors, the two things the fill-rect
+/// primitive can do at once. A solid fill is four equal corner colors (corner = {c, c, c, c}); differing
+/// colors interpolate bilinearly across the quad. There is deliberately no single-color field: a zeroed
+/// Color is legitimately transparent, so a fallback could not tell "unset" from "invisible".
+#[attributes(Copy)]
+struct RectConfig {
+    /// Per-corner radius in logical (authoring) px; zeroed = square corners.
+    radius: CornerRadius,
+    /// Corner colors in TL, TR, BL, BR order.
+    corner: [Color; 4],
+}
+
+/// Custom-drawing primitives: the painter's shape, line, text, and image commands. Call these to draw
+/// directly into the current frame.
+#[frame_context]
+api Painter {
+    /// Set the effect every later painter call in the current element carries - effects are group-shaped, so
+    /// one shadow covers a cluster of draws instead of being repeated per primitive. A zeroed effect
+    /// (kind = EffectKind::None) clears it. The effect is scoped to the element it was set in: it clears
+    /// when that element's layout scope closes and at the start of each frame, so it can never reach a
+    /// sibling, a nested child, or a later frame. Text draws ignore it - no backend resolves an effect on
+    /// a text run.
+    set_effect(effect: Effect)
+    /// Draw a filled rectangle: top-left (x, y), size (w, h), in logical (authoring) space.
+    rect(x: f32, y: f32, w: f32, h: f32, color: Color)
+    /// Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
+    rect_rounded(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color)
+    /// Draw a filled rectangle with a four-corner color gradient (bilinear), corners named clockwise from
+    /// top-left.
+    gradient_rect(x: f32, y: f32, w: f32, h: f32, top_left: Color, top_right: Color, bottom_left: Color, bottom_right: Color)
+    /// Draw a filled rectangle styled by config: per-corner radius and a per-corner color gradient in one
+    /// draw, which is what rect_rounded (solid only) and gradient_rect (square only) cannot express
+    /// together. Top-left (x, y), size (w, h), in logical space. Each radius clamps to half the smaller
+    /// dimension, so an over-large radius gives a pill rather than an artifact.
+    rect_styled(x: f32, y: f32, w: f32, h: f32, config: RectConfig)
+    /// Draw a crisp 1px horizontal hairline of length from (x, y). Device-pixel snapped, so it stays sharp at
+    /// fractional scroll/zoom.
+    hline(x: f32, y: f32, length: f32, color: Color)
+    /// Draw a crisp 1px vertical hairline of length from (x, y). Device-pixel snapped, so it stays sharp at
+    /// fractional scroll/zoom.
+    vline(x: f32, y: f32, length: f32, color: Color)
+    /// Draw text with font (FontId::INVALID = active font) in color, top-left at (x, y).
+    text(x: f32, y: f32, text: String, font: FontId, color: Color)
+    /// Draw single-line text styled by style (font, fractional pixel size, letter spacing; zero fields
+    /// fall back: font_id 0 = active font, font_size 0 = the font's default size), in color, top-left
+    /// at (x, y). Sizes quantize internally to quarter-pixel steps - the same quantizer Text::measure
+    /// uses, so a measured run matches what gets drawn.
+    text_styled(x: f32, y: f32, text: String, style: TextStyle, color: Color)
+    /// Draw image image into the rect at top-left (x, y), size (w, h). image is the
+    /// `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
+    /// (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
+    image(x: f32, y: f32, w: f32, h: f32, image: ImageHandle, color: Color) -> bool
+    /// Draw a filled circle centered at (cx, cy) with radius, plus an optional border
+    /// (border_color, border_width).
+    circle(cx: f32, cy: f32, radius: f32, color: Color, border_color: Color, border_width: f32)
+    /// Draw a filled circle like circle, with the border ring dashed by stroke (a zeroed stroke
+    /// draws the same solid ring circle does). The dash period is rescaled slightly so a whole
+    /// number of dashes closes the ring - no stub where the pattern wraps.
+    circle_stroked(cx: f32, cy: f32, radius: f32, color: Color, border_color: Color, border_width: f32, stroke: StrokeStyle)
+    /// Draw a filled diamond centered at (cx, cy) with half-extents (rx, ry), plus an optional border
+    /// (border_color, border_width).
+    diamond(cx: f32, cy: f32, rx: f32, ry: f32, color: Color, border_color: Color, border_width: f32)
+    /// Draw a stroked arc centered at (cx, cy): radius, stroke thickness, from start_angle sweeping
+    /// sweep radians. flags selects the end caps (empty = butt caps).
+    arc(cx: f32, cy: f32, radius: f32, thickness: f32, start_angle: f32, sweep: f32, color: Color, flags: ArcFlags)
+    /// Draw a polyline. points are
+    /// vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
+    /// segments) and scales fill alpha. width is the stroke width (caps/joins always round). flags selects
+    /// filling and closing (empty = an open stroke).
+    polyline(points: [*const PolyPoint], width: f32, color: Color, flags: PolylineFlags, fill_color: Color, baseline_y: f32)
+    /// Draw a row of bars off the shared baseline baseline_y - meters, spectrum analyzers, step sequencers.
+    /// The whole row is one draw, which is what a bar row buys over a rect per bar. Each bar carries its own
+    /// x, width, and height, all in logical (authoring) space; a negative height draws downward. This is an
+    /// optional-tier primitive: a backend may skip it (today the software backend does).
+    bars(baseline_y: f32, bars: [*const Bar], color: Color)
+    /// Draw source rectangle (sx, sy, sw, sh), in source image pixels, into destination rectangle
+    /// (dx, dy, dw, dh), in logical (authoring) space. A non-positive destination width or height uses the
+    /// source width or height, respectively. color multiplicatively tints color images and colorizes alpha
+    /// atlases. Returns false (and draws nothing) until the image is ready or when the source rect is empty.
+    image_sub(dx: f32, dy: f32, dw: f32, dh: f32, sx: f32, sy: f32, sw: f32, sh: f32, image: ImageHandle, color: Color) -> bool
+}

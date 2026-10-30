@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = ["flowi", "flowi_macros"]
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "deny"

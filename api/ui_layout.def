@@ -1,0 +1,13 @@
+/// Build and nest layout containers. Use start/end to open and close a container,
+/// with configure applying a LayoutConfig to the currently-open one.
+#[frame_context]
+api Layout {
+    /// Open a layout container identified by id. Must be paired with end.
+    start(id: LayoutId)
+    /// Open a no-id layout container (auto-assigned id). Must be paired with end.
+    start_auto()
+    /// Apply config to the currently-open container.
+    configure(config: LayoutConfig)
+    /// Close the most recently opened container.
+    end()
+}

@@ -1,0 +1,53 @@
+/// Where a floating element attaches.
+enum FloatingAttachTo {
+    /// Floating disabled - the element lays out inline.
+    None = 0,
+    /// Attach to the parent element.
+    Parent = 1,
+    /// Attach to the element with parent_id.
+    Element = 2,
+    /// Attach to the layout root (absolute positioning).
+    Root = 3,
+}
+
+/// How a floating element handles pointer events.
+enum FloatingPointerCapture {
+    /// Capture pointer events (modal default).
+    Capture = 0,
+    /// Pass pointer events through to elements underneath.
+    Passthrough = 1,
+}
+
+/// Anchor point on a parent or on the floating element itself.
+enum FloatingAttachPoint {
+    LeftTop = 0,
+    LeftCenter = 1,
+    LeftBottom = 2,
+    CenterTop = 3,
+    CenterCenter = 4,
+    CenterBottom = 5,
+    RightTop = 6,
+    RightCenter = 7,
+    RightBottom = 8,
+}
+
+/// Configuration for a floating element such as a modal dialog, popup, or tooltip.
+#[attributes(Copy)]
+struct FloatingConfig {
+    /// Where to attach (default: None disables floating).
+    attach_to: FloatingAttachTo,
+    /// Pointer-event handling.
+    pointer_capture: FloatingPointerCapture,
+    /// Layer order; higher draws on top.
+    z_index: i16,
+    /// Position offset from the resolved attach point.
+    offset: Vec2,
+    /// Anchor point on this element.
+    element_attach: FloatingAttachPoint,
+    /// Anchor point on the parent.
+    parent_attach: FloatingAttachPoint,
+    /// Parent element id (for Element attach).
+    parent_id: u32,
+    /// Sizing behaviour (default: Fit).
+    sizing: LayoutSizing,
+}

@@ -1,0 +1,7 @@
+/// Progress bar widget - determinate, non-interactive. Paints a track plus a fill sized to fraction.
+#[frame_context]
+api ProgressBar {
+    /// Paint a progress bar filled to fraction (normalized [0,1], clamped). config selects colors and
+    /// sizing. Pure paint: no id, no interaction. The caller owns the fraction. Call inside a frame callback.
+    new_impl(fraction: f32, config: ProgressConfig)
+}

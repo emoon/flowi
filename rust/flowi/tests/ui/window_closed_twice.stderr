@@ -1,0 +1,9 @@
+error[E0382]: use of moved value: `window`
+ --> tests/ui/window_closed_twice.rs:5:22
+  |
+3 | fn close_twice(app: &mut Application, window: Window) {
+  |                                       ------ move occurs because `window` has type `flowi::Window`, which does not implement the `Copy` trait
+4 |     app.close_window(window);
+  |                      ------ value moved here
+5 |     app.close_window(window);
+  |                      ^^^^^^ value used here after move

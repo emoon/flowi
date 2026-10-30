@@ -1,0 +1,18 @@
+/// Keyboard modifier flags - the bitmask reported alongside key/text input (Shift, Control, Alt, ...).
+#[attributes(bitflags)]
+enum KeyModifier {
+    /// No modifiers held.
+    None = 0,
+    /// Shift.
+    Shift = 1,
+    /// Control.
+    Control = 2,
+    /// Alt / Option.
+    Alt = 4,
+    /// Super / Command / Windows.
+    Super = 8,
+    /// Caps Lock active.
+    Caps_Lock = 16,
+    /// Num Lock active.
+    Num_Lock = 32,
+}

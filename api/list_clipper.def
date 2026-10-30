@@ -1,0 +1,28 @@
+/// Helper for efficiently rendering long uniform-height lists - the caller advances it each frame and only emits
+/// the rows in `[display_start, display_end)`. The leading three fields are the caller-facing outputs; the rest
+/// is internal cursor state the clipper maintains across frames.
+#[attributes(Copy)]
+struct ListClipper {
+    /// First visible item index.
+    display_start: i32,
+    /// Last visible item index (exclusive).
+    display_end: i32,
+    /// Total height of all items.
+    items_height: f32,
+    /// Total number of items (internal).
+    items_count: i32,
+    /// Per-item height (internal).
+    item_height: f32,
+    /// Current vertical scroll offset (internal).
+    scroll_offset_y: f32,
+    /// Viewport height (internal).
+    viewport_height: f32,
+}
+
+/// Build a list clipper for one frame.
+api ListClipper {
+    /// Compute the visible row window for a uniform-height list: total_items rows of item_height, scrolled
+    /// by scroll_offset_y inside a viewport_height viewport. The returned clipper's display_start/
+    /// display_end bound the rows to emit.
+    create(total_items: i32, item_height: f32, scroll_offset_y: f32, viewport_height: f32) -> ListClipper
+}

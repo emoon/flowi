@@ -1,0 +1,80 @@
+# Architecture decision records
+
+One line per ADR: number, title and status. Decisions are never renumbered; a superseded ADR is kept for its rationale.
+
+- [0001](0001-pluggable-render-backends.md) Pluggable render backends via a neutral render-command IR — Accepted
+- [0002](0002-dynamic-images-sampled-interleaved.md) Dynamic images are sampled interleaved, never deinterleaved to planar — Accepted
+- [0003](0003-naming-prefixes.md) Naming prefixes: `Em` for the core, `EmUi` for the UI API — Superseded by 0031
+- [0004](0004-widget-state-colors-stay-rgb.md) Widget state colors stay RGB; the OKLCH module is removed — Superseded by 0015
+- [0005](0005-gpu-backend-opengl-compute.md) OpenGL compute (not Vulkan) for the GPU render backend — Accepted
+- [0006](0006-gpu-raster-and-classification-in-compute.md) GPU backend rasterizes and classifies tiles in compute, not fragment — Accepted
+- [0007](0007-gpu-glyphs-compute-coverage-light-hinted.md) GPU glyphs: compute coverage from light-hinted outlines, grayscale only — Accepted
+- [0008](0008-arc-angles-knob-convention.md) Arc angles use the knob convention, not the math convention — Accepted
+- [0009](0009-canvas-paint-in-layout-zorder.md) Canvas paint participates in layout z-order (no global painter-on-top layer) — Accepted
+- [0010](0010-two-stacked-coordinate-spaces.md) Two stacked coordinate spaces: logical-pixel UI scaled once, per-canvas content transform beneath — Accepted (partly superseded by 0020; per-canvas content transform not implemented)
+- [0011](0011-gpu-backend-owns-resources-surfaces-per-window.md) GPU backend owns shared resources; surfaces are per-window (multi-window shape adopted early) — Accepted
+- [0012](0012-fork-clay-as-em-layout.md) Fork Clay into an owned layout engine — Superseded by 0075
+- [0013](0013-gpu-presentation-host-owns-composite-over-surface-texture.md) GPU presentation: host owns the composite over a surface-texture seam; windowed hosts never live in the bundle — Accepted
+- [0014](0014-design-system-data-driven-presets.md) Design system: data-driven theme presets; shadcn/Radix as reference, not foundation — Accepted (partly realised)
+- [0015](0015-oklch-perceptual-state-color.md) Adopt OKLCH perceptual color for state derivation — Accepted
+- [0016](0016-gpu-svg-partial-reraster-on-zoom.md) GPU SVG: partial per-icon re-raster on zoom, not wholesale regeneration — Accepted (implemented)
+- [0017](0017-message-box-single-call-over-modal-scope.md) Message box is a single-call widget over the modal scope (no begin-frame split) — Accepted (amended by 0067)
+- [0018](0018-painter-bitmap-text-bypass-for-canvas-grids.md) The painter bitmap-text path deliberately coexists with the font_cache/IR path — Obsolete (the bitmap-text path was removed)
+- [0019](0019-menu-builder-one-scope-open-path.md) Menu system: immediate-mode builder, one focus scope with an open path, point/element anchoring — Accepted
+- [0020](0020-scale-is-app-policy-core-takes-one-absolute-scale.md) Scaling is app policy: the core takes one absolute scale, the app composes it — Accepted
+- [0021](0021-wheel-input-scoped-delta-consume-takes-all.md) Wheel input is a scoped per-frame delta, routed consume-takes-all to the hot scroll target — Accepted
+- [0022](0022-mouse-buttons-global-unrouted-app-owns-drag-latch.md) Mouse buttons are global, unrouted free queries; the drag latch is owned by the app — Accepted
+- [0023](0023-element-state-pulled-by-id-in-logical-space.md) Element state is pulled by id, in logical space — Accepted
+- [0024](0024-font-readiness-no-poison-cache-opt-in-load-barrier.md) Font readiness for layout: no-poison measure cache + opt-in load barrier — Accepted
+- [0025](0025-image-pixels-are-backend-owned-core-keeps-a-readiness-registry.md) Image pixels are backend-owned; the core keeps a readiness registry — Accepted
+- [0026](0026-api-gen-bitflags-mirror-guards-define-values.md) api_gen bitflags-mirror guards #define values, not a mirrored enum — Partly superseded (the flag type is now a generated enum)
+- [0027](0027-rust-bindings-drop-c-name-prefixes.md) Rust bindings drop the C `Fl` name prefix — Accepted
+- [0028](0028-list-mechanics-not-policy-selection-request-protocol.md) List widget: interaction mechanics, not model policy; selection crosses as requests — Accepted
+- [0029](0029-pointer-cursor-seam-hidden-relative-drag-per-frame-cursor.md) Pointer/cursor platform seam: hidden relative drag + per-frame cursor request — Accepted
+- [0030](0030-api-idl-single-source-generates-c-and-rust.md) The API IDL is the single source of truth; api_gen generates both C and Rust — Accepted (revised by 0032, 0035 and 0051)
+- [0031](0031-rebrand-to-flowi-absorb-base-fl-prefix.md) One library, one `Fl`/`fl_` prefix, five source modules — Accepted
+- [0032](0032-plugin-vtable-moves-to-host-flowi-direct-calls.md) The plugin vtable belongs to the host: flowi calls direct, api_gen emits per-consumer profiles — Accepted (ownership revised by 0051, which 0058 superseded)
+- [0033](0033-flowi-physical-layout-split-include-src-generated-public.md) flowi physical layout: split `include`/`src`, generated-is-the-public-surface, two-prefix includes — Accepted
+- [0034](0034-evict-host-subsystem-vfs-driver-stays-flowi.md) Evict the host plugin/service subsystem by deletion; the VFS driver interface stays in flowi — Accepted
+- [0035](0035-api-gen-generates-public-extension-interfaces.md) api_gen generates the public extension interfaces, not only the call API — Accepted
+- [0036](0036-placed-children-explicit-content-offset-in-scroll-viewport.md) Placed children: explicit content-space offset inside a scroll viewport — Accepted
+- [0037](0037-window-backend-neutral-multi-window-os-seam.md) WindowBackend: a neutral multi-window OS-integration seam (absorbs input + present) — Accepted
+- [0038](0038-multi-window-ui-context-split-shared-store.md) Multi-window UI context: per-window context over a shared resource + persistent-state tier — Accepted
+- [0039](0039-docking-framework-layer-over-clay-tiled-dock-tree.md) Docking: a framework layer over a Clay-tiled retained logical dock tree — Accepted
+- [0040](0040-detach-internal-floating-first-compositor-placed-promotion.md) Detach/promotion is internal-floating-first with explicit compositor-placed OS-window promotion — Accepted
+- [0041](0041-dock-os-window-promotion-injected-host-seam.md) Dock OS-window promotion via an injected host seam; flowi owns the decision, the host owns the mechanics — Accepted
+- [0042](0042-plugin-sdk-exposes-flowi-types-directly.md) An embedding host's plugin SDK exposes flowi types directly; no prefix aliasing — Accepted
+- [0043](0043-generated-data-type-layouts-are-a-downstream-plugin-abi.md) flowi's generated data-type layouts are a downstream `.so` plugin ABI — Accepted
+- [0044](0044-api-doc-comments-are-caller-facing-reference-only.md) API doc comments are caller-facing reference only; api_gen rejects rationale refs — Accepted
+- [0045](0045-public-ui-api-naming-convention.md) Public UI API naming: no `_ui_` infix, `_impl` is a generated symbol only, uniform config-struct calls — Accepted
+- [0046](0046-foundation-service-vtables-generated-in-flowi.md) Foundation-service vtables are generated in flowi, beside the host's composed plugin vtable — Superseded by 0058
+- [0047](0047-render-ir-debug-inspector-belongs-in-flowi.md) The render-IR debug inspector belongs in flowi; the IR stays internal — Accepted
+- [0048](0048-actions-public-bindings-app.md) Semantic actions are public (`FlAction`); bindings stay an internal, app-level mechanism — Accepted
+- [0049](0049-dropdown-reuses-list-engine.md) Dropdown is implemented on the List engine; it reinterprets selection as a single commit — Accepted
+- [0050](0050-list-focus-request-imperative-claims-global-ring.md) List focus-request is an imperative seam that claims the global focus ring — Accepted
+- [0051](0051-composed-ui-plugin-api-flowi-owned-grouped-subapis.md) The composed UI plugin API is flowi-owned and grouped into per-domain sub-APIs — Superseded by 0058
+- [0052](0052-scroll-core-shared-primitives-not-one-engine.md) Scroll consolidation is a shared pure `scroll_core`, not one stateful engine — and `FlListClipper` stays a separate public shim — Accepted (partly superseded by later code)
+- [0053](0053-performance-tests-three-tier-deterministic-gate.md) Performance tests gate on deterministic work, not wall-clock — Accepted (partly implemented; tier 2 not implemented)
+- [0054](0054-single-source-compute-shaders-per-backend-compat-header.md) Compute shaders stay one file per shader, bridged by a per-backend compat header — Accepted
+- [0055](0055-metal-surface-texture-single-name-platform-conditional-struct.md) Metal Surface Texture: one accessor name, a platform-conditional struct with a neutrally-named handle — Accepted
+- [0056](0056-ui-feedback-event-seam.md) UI feedback is a semantic event seam; flowi reports what happened, the app owns the effect — Accepted
+- [0057](0057-localfs-builtin-vfs-driver.md) LocalFS is a built-in VFS driver, registered by fl_vfs_init() — Accepted
+- [0058](0058-foundation-services-as-exported-symbols.md) flowi ships as a shared library exporting its API; api_gen stops emitting service vtables — Accepted (amends 0044)
+- [0059](0059-windowed-by-default-headless-opt-out.md) The shipped shared library is windowed by default; headless is an opt-out cargo feature — Accepted (follows 0058)
+- [0060](0060-gpu-3d-viewport-hardware-raster-path.md) The 3D viewport uses the hardware raster pipeline; the GPU backend is no longer compute-only — Accepted
+- [0061](0061-3d-textures-are-images-dedicated-flag.md) 3D textures are ordinary images; a dedicated-texture flag keeps them out of the atlas — Accepted (extends 0060)
+- [0062](0062-focusable-is-tri-state-not-bool.md) `FlWidgetConfig.focusable` is tri-state, not a bool — Accepted
+- [0063](0063-never-size-content-from-your-own-rect.md) Never size your content from your own element's rect — Accepted
+- [0064](0064-overlay-z-bands.md) Overlay z bands — Accepted
+- [0065](0065-text-overflow-core-stateless-mode-marquee-deferred.md) Text overflow is a core stateless text-config mode; marquee is a deferred stateful widget — Accepted
+- [0066](0066-api-gen-restores-function-arg-array-slices.md) api_gen restores function-arg array slices, ported from flowi_core — Accepted
+- [0067](0067-modal-scope-public-fl-modal.md) Modal scope is public (`fl_modal_*`); the message box stays the canned widget over it — Accepted (amends 0017)
+- [0068](0068-vfs-handle-lifetime-snapshot-reads-job-pinned-frees.md) VFS handle lifetime: snapshot reads, job-pinned frees — Superseded by 0074
+- [0069](0069-marquee-id-keyed-stateful-widget-contract.md) Marquee is an id-keyed stateful widget: own state map, embedded text config force-clipped, mandatory sizing — Accepted as a design; not yet implemented
+- [0070](0070-rust-async-owned-handles-drop-cancels.md) The Rust async surface: owning handles, drop-cancellation, one frame-ticked executor — Accepted
+- [0071](0071-rust-closures-across-the-c-job-boundary.md) Rust closures cross the C job boundary as a boxed trampoline that owns its own free — Accepted
+- [0072](0072-rust-and-c-share-the-native-heap.md) Rust and C share Flowi's native heap — Accepted
+- [0073](0073-api-gen-lives-in-its-own-public-repo.md) api_gen lives in its own public repo and is consumed as a library — Accepted (partly superseded: `flowi-core` and `flowi-vfs` were folded back into this repository)
+- [0074](0074-vfs-immutable-mounts-and-refcounted-ops.md) VFS: one lock per mount, single-handle tree nodes, refcounted operations — Accepted
+- [0075](0075-clay-is-vendored-with-documented-local-patches.md) Clay is vendored with documented local patches — Accepted
+- [0076](0076-one-rust-crate-with-a-private-raw-binding-layer.md) One Rust crate with a private raw-binding layer — Accepted (supersedes the crate split in ADR-0031 and ADR-0033)

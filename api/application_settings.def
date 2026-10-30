@@ -1,0 +1,30 @@
+/// Which render backend an application uses. Software is the default and always available; Gpu requires the
+/// EGL/GL build and fails app creation with a log on a build without it. On Apple platforms a windowed host
+/// that leaves Software selected is promoted to Metal.
+enum AppRenderer {
+    /// The software renderer's offscreen RGB24 buffer.
+    Software = 0,
+    /// The GPU compute backend: headless EGL-surfaceless or a windowed SDL-GL surface.
+    Gpu = 1,
+    /// The Metal compute backend: headless MTLDevice or a windowed CAMetalLayer.
+    Metal = 2,
+}
+
+/// Settings for creating an application, passed to fl_app_create.
+struct AppSettings {
+    /// Window title.
+    window_title: String,
+    /// Window width in logical (authoring) pixels; the window is created at this times the display content scale.
+    width: i32,
+    /// Window height in logical (authoring) pixels; the window is created at this times the display content scale.
+    height: i32,
+    /// Offscreen mode: headless display+input backends, no window.
+    headless: bool,
+    /// Render backend; Software by default.
+    renderer: AppRenderer,
+    /// Open the main window fullscreen on its display at the desktop resolution; width and height
+    /// are the size it restores to. Ignored when headless.
+    fullscreen: bool,
+    /// When true, the window cannot be resized by the user; default false.
+    fixed_size: bool,
+}

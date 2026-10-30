@@ -1,0 +1,47 @@
+/// The mouse pointer's system shape. Arrow is the default and the per-frame fallback when
+/// nothing requests a shape.
+enum CursorShape {
+    /// Default arrow pointer.
+    Arrow = 0,
+    /// Pointing hand (links, draggable affordances).
+    Hand = 1,
+    /// Horizontal resize (left/right).
+    ResizeH = 2,
+    /// Vertical resize (up/down).
+    ResizeV = 3,
+    /// Top-left/bottom-right diagonal resize ("\").
+    ResizeDiagonal1 = 4,
+    /// Top-right/bottom-left diagonal resize ("/").
+    ResizeDiagonal2 = 5,
+    /// I-beam text caret.
+    Text = 6,
+    /// Crosshair.
+    Crosshair = 7,
+    /// Not-allowed / blocked.
+    NotAllowed = 8,
+    /// Number of cursor shapes; not a real shape.
+    Count = 9,
+}
+
+/// The opaque cursor handle fl_cursor_set takes, carrying a system CursorShape.
+#[attributes(Copy)]
+struct Cursor {
+    /// The requested system shape.
+    shape: CursorShape,
+}
+
+/// Cursor shape and visibility requests. Pair set/get_requested for the shape and
+/// set_visible/get_visible for visibility.
+#[frame_context]
+api Cursor {
+    /// Request a pointer shape for this frame: per-frame, last-writer-wins, reset to the arrow at frame start.
+    /// A widget wanting a non-arrow cursor re-requests it every active frame; with no request the cursor falls
+    /// back to the arrow.
+    set(cursor: Cursor)
+    /// The cursor resolved for this frame: the last set request, or the arrow if none.
+    get_requested() -> Cursor
+    /// Toggle cursor visibility. Unlike the shape request this is a sticky toggle (not reset per frame).
+    set_visible(visible: bool)
+    /// The current cursor-visibility request (sticky).
+    get_visible() -> bool
+}

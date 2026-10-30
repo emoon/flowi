@@ -1,0 +1,30 @@
+/// Per-element interaction and geometry state, returned by value from ui_get_element_state
+/// for any laid-out element. Works for a plain area as well as a widget: pos/size are the
+/// element's rect, found/visible its layout presence, and hot/focused/active (with
+/// their _t animation interpolators) its interaction state. A non-widget area reports the
+/// rect plus visible/hot/found and zeros for the rest. The rect is in physical px; the Rust
+/// binding divides by the absolute UI scale to report logical px, the same space mouse_position
+/// and the Painter use.
+#[attributes(Copy)]
+struct ElementState {
+    /// Element origin (physical px; the Rust binding reports logical px).
+    pos: Vec2,
+    /// Element size (physical px; the Rust binding reports logical px).
+    size: Vec2,
+    /// Hover animation phase, 0..1.
+    hot_t: f32,
+    /// Active/press animation phase, 0..1.
+    active_t: f32,
+    /// Focus animation phase, 0..1.
+    focused_t: f32,
+    /// The element was present in this frame's layout state (else the rect/flags are zero).
+    found: bool,
+    /// The element is within the visible/clip region.
+    visible: bool,
+    /// The cursor is over this element (flowi's own hit-test).
+    hot: bool,
+    /// The element holds keyboard/gamepad focus.
+    focused: bool,
+    /// The element is being pressed/activated.
+    active: bool,
+}

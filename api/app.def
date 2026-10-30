@@ -1,0 +1,92 @@
+#[module(app)]
+
+/// Opaque handle for the app runner that owns the window, the per-frame update loop, and presentation. Every
+/// `fl_app_*` entry point takes a `*App`; the host holds it solely behind that pointer. Created by
+/// fl_app_create, destroyed by fl_app_destroy.
+#[attributes(Opaque)]
+struct App {}
+
+/// Opaque handle for one window owned by an App.
+#[attributes(Opaque)]
+struct AppWindow {}
+
+/// Initial settings for a host-opened window.
+struct WindowSettings {
+    title: String,
+    width: i32,
+    height: i32,
+    x: i32,
+    y: i32,
+}
+
+/// Per-frame host callback. The host emits its UI inside this call (between the core's update_begin/update_end);
+/// the per-frame fl_frame_str arena is valid for its duration. user_data is the opaque pointer the host
+/// passed to fl_app_tick / fl_app_run.
+callback AppFrameFn(user_data: *void)
+
+/// The app runner: create it, drive it one frame at a time with tick or block in run until quit, and emit
+/// UI inside the supplied AppFrameFn. The `inject_*` / `headless_*` calls form the headless-test harness.
+api App {
+    /// Create an fl_app from settings. Returns NULL on failure (e.g. GPU requested on a build without it).
+    [manual] create(settings: *const AppSettings) -> *App
+    /// Tear the app down and free it. No-op on a null handle.
+    [drop] destroy(app: *App)
+
+    /// Run one frame: pump input, invoke the frame callback, and present. Returns false once a quit /
+    /// window-close has been seen.
+    [manual] tick(app: *App, user_data: *void, frame: AppFrameFn) -> bool
+    /// Blocking convenience: while (fl_app_tick(...)) {}.
+    [manual] run(app: *App, user_data: *void, frame: AppFrameFn)
+
+    /// Open another window owned and driven by app.
+    [manual] window_open(app: *App, settings: *const WindowSettings, frame: AppFrameFn, user_data: *void) -> *AppWindow
+    /// Request deferred closure of a host-opened window.
+    [manual] window_close(app: *App, window: *AppWindow)
+
+    /// User UI-zoom preference: a relative multiplier on top of monitor DPI. 1.0 is DPI-correct; 1.25 makes the
+    /// whole UI 25% bigger regardless of monitor. Recomposed immediately against this app's monitor content
+    /// scale. Default 1.0.
+    [manual] set_ui_zoom(app: *App, zoom: f32)
+
+    /// Headless harness: move the injected mouse cursor to (x, y) in window pixels. Captured by the next
+    /// tick's input pump and applied that tick, so it becomes the following frame's hit-test position.
+    inject_mouse_move(app: *App, x: i32, y: i32)
+    /// Headless harness: inject a mouse-button transition. button is the MouseButton; down is press vs. release.
+    /// Drives click detection a frame later.
+    [manual] inject_mouse_button(app: *App, button: MouseButton, down: bool)
+    /// Headless harness: inject a raw relative-motion delta - a hidden-drag scrub. The delta is read that frame
+    /// (scaled) via the drag-delta query.
+    inject_mouse_delta(app: *App, delta_x: f32, delta_y: f32)
+    /// Headless harness: inject a mouse-wheel delta. x/y are the per-frame wheel deltas (positive y =
+    /// scrolled up). Cached for that frame's scoped wheel-delta read, observed on the following tick.
+    inject_wheel(app: *App, x: f32, y: f32)
+    /// Headless harness: inject a key transition. key is an FlKey; down is press vs. release. Observed by
+    /// the next tick's key queries.
+    inject_key(app: *App, key: Key, down: bool)
+    /// Headless harness: inject a text-input string for the active frame.
+    [manual] inject_text(app: *App, text: String)
+    /// Headless harness: inject a window-close request - the next tick observes it and returns false.
+    [manual] inject_window_close(app: *App)
+    /// Headless harness: inject an OS file drop at (x, y) in window pixels. Observed by the next tick's
+    /// dropped-file queries.
+    [manual] inject_drop_file(app: *App, path: String, x: f32, y: f32)
+
+    /// Headless harness: read back the CursorShape the core flushed to the
+    /// input backend on the last tick; a value outside the real shapes reads back as Arrow. The readback companion to the `inject_*` calls.
+    [manual] headless_cursor_shape(app: *App) -> CursorShape
+    /// Headless harness: read back the sticky relative-mouse-mode toggle the core flushed to the input backend
+    /// on the last tick (on for the whole of a hidden drag).
+    [const] headless_relative_mouse_mode(app: *App) -> bool
+    /// Headless harness: read back the most recent warp-back target the core flushed to the input backend on
+    /// the last tick (set on a drag end).
+    [const] headless_last_warp(app: *App) -> Vec2
+
+    /// Pin the per-frame delta-time to a fixed step (headless only) so time-based behavior is reproducible:
+    /// every subsequent tick advances time by exactly dt seconds instead of sampling the wall clock. Pass
+    /// `dt <= 0` to return to wall-clock timing.
+    [manual] set_test_dt(app: *App, dt: f32)
+
+    /// Read back the current frame's rendered pixels from the software backend (native interleaved RGB24).
+    /// Works in either mode; the headless harness uses it as the golden-comparison surface.
+    [manual] read_pixels(app: *App, out: *PixelReadback) -> bool
+}

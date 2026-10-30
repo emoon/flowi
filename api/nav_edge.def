@@ -1,0 +1,18 @@
+/// Navigation edges a UI plugin reports reaching - a bitmask returned from a plugin's update telling the
+/// host which navigation boundaries were hit (so it can show/hide chrome such as a side panel). With None
+/// the host auto-detects edges by watching focus changes; Override lets the plugin drive edges explicitly.
+#[attributes(bitflags)]
+enum NavEdge {
+    /// Default: use automatic boundary detection.
+    None = 0,
+    /// Left edge reached (can't navigate further left).
+    Left = 1,
+    /// Right edge reached (can't navigate further right).
+    Right = 2,
+    /// Top edge reached (can't navigate further up).
+    Up = 4,
+    /// Bottom edge reached (can't navigate further down).
+    Down = 8,
+    /// Plugin is handling navigation explicitly (use the edge flags above).
+    Override = 16,
+}

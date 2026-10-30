@@ -1,0 +1,4 @@
+/// Handle to a loaded font, where 0 means invalid or the currently active font.
+/// Returned by Font::load and consumed by Font::set, Font::is_loaded and Painter::text.
+#[handle(u32, invalid = 0)]
+struct FontId {}

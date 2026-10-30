@@ -1,0 +1,53 @@
+/// Spacing token (logical pixels) - a consistent scale for gaps, padding and margins.
+enum Spacing {
+    /// No spacing.
+    None = 0,
+    /// Extra small - tight spacing (icon gaps).
+    XS = 4,
+    /// Small - compact layouts.
+    SM = 8,
+    /// Medium - default gap between elements.
+    MD = 16,
+    /// Large - section spacing.
+    LG = 24,
+    /// Extra large - major section breaks.
+    XL = 32,
+}
+
+/// Corner radius token (logical pixels) - a consistent rounding scale; Full is the pill/circle radius.
+enum Radius {
+    /// Square corners.
+    None = 0,
+    /// Small - subtle rounding (inputs, cards).
+    SM = 4,
+    /// Medium - default for buttons.
+    MD = 8,
+    /// Large - prominent cards, dialogs.
+    LG = 12,
+    /// Extra large - hero cards.
+    XL = 16,
+    /// Pill shape - tags, toggle pills.
+    Full = 999,
+}
+
+/// Widget height token (logical pixels, 1080p reference) - consistent sizing for interactive elements.
+enum WidgetHeight {
+    /// Small - compact buttons, chips (WCAG AA touch target).
+    SM = 44,
+    /// Medium - default button height.
+    MD = 60,
+    /// Large - prominent buttons, list items.
+    LG = 80,
+}
+
+/// Border width token (logical pixels).
+enum BorderWidth {
+    /// No border.
+    None = 0,
+    /// Default border.
+    Thin = 1,
+    /// Focus rings, emphasized borders.
+    Medium = 2,
+    /// Strong visual separation.
+    Thick = 4,
+}

@@ -1,0 +1,3 @@
+/// Handle to an image.
+#[handle(u32, invalid = 0)]
+struct ImageHandle {}

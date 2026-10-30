@@ -1,0 +1,241 @@
+#[module(platform)]
+
+extern opaque FlUiCtx
+extern opaque FlInputState
+
+/// A mouse button. The discriminant carried on a button Mouse Button State
+/// event; Count is the array-size sentinel (not a button).
+enum MouseButton {
+    Left = 0,
+    Right,
+    Middle,
+    X1,
+    X2,
+    Count,
+}
+
+/// A gamepad button. The discriminant carried on a gamepad button event; Count
+/// is the array-size sentinel (not a button).
+enum GamepadButton {
+    A = 0,
+    B,
+    X,
+    Y,
+    Left_Bumper,
+    Right_Bumper,
+    Back,
+    Start,
+    Guide,
+    Left_Thumb,
+    Right_Thumb,
+    Dpad_Up,
+    Dpad_Right,
+    Dpad_Down,
+    Dpad_Left,
+    Count,
+}
+
+/// A gamepad analog axis. The discriminant carried on an axis-motion event;
+/// Count is the array-size sentinel (not an axis).
+enum GamepadAxis {
+    Left_X = 0,
+    Left_Y,
+    Right_X,
+    Right_Y,
+    Left_Trigger,
+    Right_Trigger,
+    Count,
+}
+
+/// What a KeyEvent represents. Constants spell `FlKeyEvent_*` while the type is
+/// FlKeyEventType.
+#[enumerators(KeyEvent)]
+enum KeyEventType {
+    Down = 0,
+    Up,
+    Repeat,
+}
+
+/// What a MouseEvent represents (which union arm is live). Constants spell
+/// `FlMouseEvent_*` while the type is FlMouseEventType.
+#[enumerators(MouseEvent)]
+enum MouseEventType {
+    Move = 0,
+    Button_Down,
+    Button_Up,
+    Wheel,
+    Enter,
+    Leave,
+    /// Raw relative motion delivered while the mouse is in relative/unbounded mode
+    /// (a hidden drag). Carries a raw delta only - no absolute position.
+    Relative_Motion,
+}
+
+/// What a GamepadEvent represents (which union arm is live). Constants spell
+/// `FlGamepadEvent_*` while the type is FlGamepadEventType.
+#[enumerators(GamepadEvent)]
+enum GamepadEventType {
+    Button_Down = 0,
+    Button_Up,
+    Axis_Motion,
+    Connected,
+    Disconnected,
+}
+
+/// What a WindowEvent represents. Constants spell `FlWindowEvent_*` while the
+/// type is FlWindowEventType.
+#[enumerators(WindowEvent)]
+enum WindowEventType {
+    None = 0,
+    Focus_Gained,
+    Focus_Lost,
+    Resize,
+    Close,
+    /// One file dropped onto the window from the OS. A multi-file drop delivers one
+    /// event per file.
+    Drop_File,
+}
+
+/// Absolute-motion arm of MouseEvent: the cursor position plus the
+/// position-derived delta since the previous move, in window pixels.
+#[attributes(Copy)]
+struct MouseMoveData {
+    x: f32,
+    y: f32,
+    delta_x: f32,
+    delta_y: f32,
+}
+
+/// Button-transition arm of MouseEvent: which button, where, and the
+/// running click count (for double-click detection).
+#[attributes(Copy)]
+struct MouseButtonData {
+    button: MouseButton,
+    x: f32,
+    y: f32,
+    click_count: u32,
+}
+
+/// Wheel arm of MouseEvent: the per-event wheel delta (positive y =
+/// scrolled up).
+#[attributes(Copy)]
+struct MouseWheelData {
+    x: f32,
+    y: f32,
+}
+
+/// Relative-motion arm of MouseEvent: the raw hidden-drag delta, carried
+/// with no absolute position.
+#[attributes(Copy)]
+struct MouseRelativeData {
+    delta_x: f32,
+    delta_y: f32,
+}
+
+/// Button-transition arm of GamepadEvent.
+#[attributes(Copy)]
+struct GamepadButtonData {
+    button: GamepadButton,
+}
+
+/// Axis-motion arm of GamepadEvent: which axis and its normalized value.
+#[attributes(Copy)]
+struct GamepadAxisData {
+    axis: GamepadAxis,
+    value: f32,
+}
+
+/// Resize arm of WindowEvent: the new window size in pixels.
+#[attributes(Copy)]
+struct WindowResizeData {
+    width: u32,
+    height: u32,
+}
+
+/// Drop arm of WindowEvent: the dropped file's OS path, and the cursor position in
+/// window pixels at the moment it was released.
+#[attributes(Copy)]
+struct WindowDropData {
+    path: String,
+    x: f32,
+    y: f32,
+}
+
+/// A keyboard event pushed from the platform into the UI context.
+#[attributes(Copy)]
+struct KeyEvent {
+    type: KeyEventType,
+    key: Key,
+    modifiers: KeyModifier,
+    repeat: bool,
+    timestamp: u64,
+}
+
+/// A text-input (composed character) event. text is a per-frame FlString.
+#[attributes(Copy)]
+struct TextInputEvent {
+    text: String,
+    timestamp: u64,
+}
+
+/// A mouse event. type selects the live arm of the anonymous union (move for
+/// Move, button for Button_Down/Button_Up, wheel for Wheel,
+/// relative for Relative_Motion; Enter/Leave carry no payload).
+#[attributes(Copy)]
+struct MouseEvent {
+    type: MouseEventType,
+    union {
+        move: MouseMoveData,
+        button: MouseButtonData,
+        wheel: MouseWheelData,
+        relative: MouseRelativeData
+    },
+    timestamp: u64,
+}
+
+/// A gamepad event. type selects the live arm of the anonymous union (button
+/// for the button transitions, axis for Axis_Motion; connect/disconnect carry
+/// no payload). gamepad_id names the device.
+#[attributes(Copy)]
+struct GamepadEvent {
+    type: GamepadEventType,
+    gamepad_id: u32,
+    union {
+        button: GamepadButtonData,
+        axis: GamepadAxisData
+    },
+    timestamp: u64,
+}
+
+/// A window event. type selects the live arm of the anonymous union (resize
+/// for Resize, drop for Drop_File; the focus/close types carry no payload).
+#[attributes(Copy)]
+struct WindowEvent {
+    type: WindowEventType,
+    union {
+        resize: WindowResizeData,
+        drop: WindowDropData
+    },
+    timestamp: u64,
+}
+
+/// The input push API: backends poll OS events and push them into the UI context,
+/// and update advances per-frame input state once per frame.
+api PlatformInput {
+    /// Initialize a per-context input state to defaults.
+    [manual] state_init(state: *FlInputState)
+    /// Push a keyboard event onto the context's input queue.
+    [manual] push_key_event(ctx: *FlUiCtx, event: KeyEvent)
+    /// Push a text-input (composed character) event.
+    [manual] push_text_input_event(ctx: *FlUiCtx, event: TextInputEvent)
+    /// Push a mouse event (move / button / wheel / relative motion).
+    [manual] push_mouse_event(ctx: *FlUiCtx, event: MouseEvent)
+    /// Push a gamepad event (button / axis / connect / disconnect).
+    [manual] push_gamepad_event(ctx: *FlUiCtx, event: GamepadEvent)
+    /// Push a window event (focus / resize / close).
+    [manual] push_window_event(ctx: *FlUiCtx, event: WindowEvent)
+    /// Set the absolute mouse position directly, bypassing event delivery.
+    [manual] set_mouse_position(ctx: *FlUiCtx, x: f32, y: f32)
+    /// Advance per-frame input state by dt seconds (called once per frame).
+    [manual] update(ctx: *FlUiCtx, dt: f64)
+}

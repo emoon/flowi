@@ -1,0 +1,8 @@
+/// Scroll-area API: area_begin opens a scroll area and area_end closes it.
+#[frame_context]
+api Scroll {
+    /// Open a scroll area identified by id, applying config. Pair with area_end.
+    area_begin(id: LayoutId, config: ScrollAreaConfig)
+    /// Close the most recently opened scroll area.
+    area_end()
+}

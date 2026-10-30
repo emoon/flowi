@@ -1,0 +1,21 @@
+#[module(ui)]
+
+/// Optional pixel readback target.
+///
+/// Filled by fl_app_read_pixels / fl_host_read_pixels: SW returns its buffer, GPU
+/// does an explicit readback. Pixels are interleaved 8-bit in the renderer's
+/// native channel layout (SW: RGB24; GPU: RGBA8); stride is bytes per row. Used
+/// off the per-frame present path (smoke tests, screenshots).
+///
+/// Contract: readback rows are tightly packed - `stride == width * channels`
+/// with no per-row padding, so a consumer recovers the channel count as
+/// stride / width. A renderer that pads rows (e.g. for alignment) must repack
+/// to tight before filling this struct.
+struct PixelReadback {
+    /// renderer-owned, valid until the next frame/readback; native interleaved layout
+    pixels: *void,
+    width: u32,
+    height: u32,
+    /// bytes per row
+    stride: u32,
+}

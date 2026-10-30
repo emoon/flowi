@@ -1,0 +1,143 @@
+/// Interactive (accent/brand) state colors for buttons, toggles, sliders, and focused inputs.
+struct ThemeInteractive {
+    /// Primary accent color (button backgrounds, slider fills, checkmarks).
+    base: Color,
+    /// Mouse-hover state (derived: lighten base by 15%).
+    hover: Color,
+    /// Click/press state (derived: darken base by 15%).
+    press: Color,
+    /// Keyboard focus ring (derived: lighten base by 25%).
+    focus: Color,
+    /// Grayed-out state (derived: base at 50% opacity).
+    disabled: Color,
+}
+
+/// Surface (background) colors for the app's UI layers.
+struct ThemeSurface {
+    /// Main window/app background (darkest in the dark theme).
+    base: Color,
+    /// Cards, buttons, inputs - sits above base (slightly lighter).
+    elevated: Color,
+    /// Modals, popups, dropdowns - darkened backdrop.
+    overlay: Color,
+    /// Selected-item highlight (often the interactive accent).
+    selected: Color,
+}
+
+/// Border and divider colors.
+struct ThemeBorder {
+    /// Subtle borders around inputs and cards.
+    default_color: Color,
+    /// Visible focus ring (derived from the interactive focus when unset).
+    focus: Color,
+    /// Horizontal/vertical divider lines.
+    separator: Color,
+}
+
+/// Typography colors.
+struct ThemeText {
+    /// Main readable text (high contrast).
+    primary: Color,
+    /// Labels, hints, less important text (dimmed).
+    secondary: Color,
+    /// Links and highlighted text (usually the interactive accent).
+    accent: Color,
+}
+
+/// Status/feedback colors for success, warning, error, and info banners.
+struct ThemeFeedback {
+    /// Positive actions, confirmations (green).
+    success: Color,
+    /// Caution, non-blocking issues (orange/yellow).
+    warning: Color,
+    /// Errors, destructive actions (red).
+    error: Color,
+    /// Informational, neutral highlights (blue).
+    info: Color,
+}
+
+/// The resolved theme palette read when laying out and painting widgets - interactive, surface, border,
+/// text, and feedback color groups.
+struct ThemeColors {
+    /// Interactive accent state colors.
+    interactive: ThemeInteractive,
+    /// Surface/background colors.
+    surface: ThemeSurface,
+    /// Border and divider colors.
+    border: ThemeBorder,
+    /// Typography colors.
+    text: ThemeText,
+    /// Status/feedback colors.
+    feedback: ThemeFeedback,
+}
+
+/// One bit per semantic slot of ThemeColors. OR these into a ThemeOverride.slots mask to select which slots
+/// an override replaces; the bit order matches the field order in ThemeColors.
+enum ThemeSlot {
+    /// interactive.base.
+    InteractiveBase = 1,
+    /// interactive.hover.
+    InteractiveHover = 2,
+    /// interactive.press.
+    InteractivePress = 4,
+    /// interactive.focus.
+    InteractiveFocus = 8,
+    /// interactive.disabled.
+    InteractiveDisabled = 16,
+    /// surface.base.
+    SurfaceBase = 32,
+    /// surface.elevated.
+    SurfaceElevated = 64,
+    /// surface.overlay.
+    SurfaceOverlay = 128,
+    /// surface.selected.
+    SurfaceSelected = 256,
+    /// border.default_color.
+    BorderDefault = 512,
+    /// border.focus.
+    BorderFocus = 1024,
+    /// border.separator.
+    BorderSeparator = 2048,
+    /// text.primary.
+    TextPrimary = 4096,
+    /// text.secondary.
+    TextSecondary = 8192,
+    /// text.accent.
+    TextAccent = 16384,
+    /// feedback.success.
+    FeedbackSuccess = 32768,
+    /// feedback.warning.
+    FeedbackWarning = 65536,
+    /// feedback.error.
+    FeedbackError = 131072,
+    /// feedback.info.
+    FeedbackInfo = 262144,
+}
+
+/// A sparse theme override: only the slots flagged in slots are read from colors; the rest are inherited from
+/// the resolved parent theme at push time. Push it to retheme a subtree without touching the global theme.
+struct ThemeOverride {
+    /// Bitwise-OR of ThemeSlot - which slots to replace.
+    slots: u32,
+    /// Slot values, read only where the matching slots bit is set.
+    colors: ThemeColors,
+}
+
+/// Set and override the active UI theme: update replaces the base palette, while push/pop layer a
+/// sparse override onto a subtree.
+#[frame_context]
+api Theme {
+    /// Inject the resolved theme palette flowi reads when painting widgets, replacing the active base theme.
+    /// flowi stores the pointer and reads it every subsequent frame: C callers pass storage that outlives every
+    /// frame, while the Rust binding copies colors into storage it owns, so a reference to a stack temporary
+    /// is fine and each call replaces the previously stored palette.
+    [manual] update(colors: *const ThemeColors)
+    /// Push a sparse override onto the active theme, retheming the subtree until the matching pop.
+    push(theme_override: ThemeOverride)
+    /// Pop the most recently pushed override, restoring the parent theme.
+    pop()
+    /// Read the live resolved theme palette flowi is currently painting with - the innermost active push
+    /// override, or the base palette set by update. The read half of update/push/pop. The returned pointer has no safe Rust
+    /// wrapper.
+    [manual] colors() -> *const ThemeColors
+}

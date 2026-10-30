@@ -1,0 +1,249 @@
+#[module(vfs)]
+
+extern opaque FlVfsPluginInfo
+extern opaque FlArena
+
+/// VFS operation status - hierarchical error codes drivers return. Drivers set
+/// the most specific code possible. Codes are grouped in hundreds (file/IO/
+/// permission/resource/archive/network/HTTP/generic).
+enum VfsStatus {
+    /// Success.
+    Success = 0,
+
+    /// File or path not found.
+    FileNotFound = 100,
+    /// Path is malformed.
+    PathInvalid = 101,
+    /// Path exceeds the platform limit.
+    PathTooLong = 102,
+    /// Expected a directory, found a file.
+    NotADirectory = 103,
+    /// Expected a file, found a directory.
+    IsADirectory = 104,
+
+    /// Read failed.
+    ReadError = 200,
+    /// Write failed.
+    WriteError = 201,
+    /// Seek failed.
+    SeekError = 202,
+    /// End of file.
+    Eof = 203,
+    /// Destination buffer too small.
+    BufferTooSmall = 204,
+
+    /// Access denied.
+    AccessDenied = 300,
+    /// Permission denied.
+    PermissionDenied = 301,
+
+    /// Out of memory.
+    OutOfMemory = 400,
+    /// Too many open files.
+    TooManyOpenFiles = 401,
+    /// Resource busy.
+    ResourceBusy = 402,
+    /// Disk full.
+    DiskFull = 403,
+
+    /// Generic archive error.
+    ArchiveError = 500,
+    /// Archive is corrupt.
+    ArchiveCorrupt = 501,
+    /// Archive format unsupported.
+    ArchiveUnsupported = 502,
+    /// Archive requires a password.
+    ArchivePasswordRequired = 503,
+
+    /// Generic network error.
+    NetworkError = 600,
+    /// Network timed out.
+    NetworkTimeout = 601,
+    /// Network unavailable.
+    NetworkUnavailable = 602,
+    /// DNS resolution failed.
+    NetworkDns = 603,
+    /// Connection refused.
+    NetworkConnectionRefused = 604,
+    /// SSL/TLS error.
+    NetworkSsl = 605,
+
+    /// HTTP 400 - bad request (base of the 700-799 HTTP range).
+    NetworkBadRequest = 700,
+    /// HTTP 401 - unauthorized.
+    NetworkUnauthorized = 701,
+    /// HTTP 403 - forbidden.
+    NetworkForbidden = 703,
+    /// HTTP 404 - not found.
+    NetworkNotFound = 704,
+    /// HTTP 5xx - server error.
+    NetworkServerError = 750,
+
+    /// Generic error.
+    GenericError = 900,
+    /// Operation not implemented by this driver.
+    NotImplemented = 901,
+    /// Invalid handle passed to the driver.
+    InvalidHandle = 902,
+    /// Operation was canceled.
+    OperationCanceled = 903,
+}
+
+/// Driver capability flags - the feature bitmask get_capabilities() returns. VFS
+/// core uses these to decide which operations are available. Power-of-two flags,
+/// OR-combined.
+#[attributes(bitflags)]
+enum VfsDriverCapabilities {
+    /// Can read files.
+    Read = 1,
+    /// Can list directories.
+    List = 4,
+    /// Can open from memory (nested archives).
+    Memory = 16,
+    /// Can provide OS file paths (optimization).
+    DirectPath = 32,
+    /// Has caching support.
+    Cache = 64,
+    /// Is an archive format.
+    Archive = 256,
+    /// Is a network filesystem.
+    Network = 512,
+}
+
+/// File open flags - the mode bitmask open() takes. Power-of-two flags,
+/// OR-combined.
+#[attributes(bitflags)]
+enum VfsOpenFlags {
+    /// Open for reading.
+    Read = 1,
+}
+
+/// Driver error detail. Always check vfs_status first; native_error carries
+/// the underlying errno / HTTP status / driver code for additional context.
+struct VfsDriverError {
+    /// VFS-level error code (always set).
+    vfs_status: VfsStatus,
+    /// Native error code (errno, HTTP status, etc.) or 0.
+    native_error: i32,
+    /// Driver-specific additional data (optional).
+    additional_data: u64,
+}
+
+/// Plugin creation result. Check error.vfs_status == FlVfsStatus_Success before
+/// using instance. Shared across plugin types (VFS, UI, etc.).
+struct PluginCreateResult {
+    /// Plugin instance handle, or nullptr on error.
+    instance: *void,
+    /// Error details.
+    error: VfsDriverError,
+}
+
+/// Open result - a driver handle or nullptr on error.
+struct VfsOpenResult {
+    /// Driver-specific handle, or nullptr on error.
+    handle: *void,
+    /// true if the handle is a directory/archive (can be listed).
+    is_directory: bool,
+    /// Error details.
+    error: VfsDriverError,
+}
+
+/// Read result - bytes read, or -1 on error.
+struct VfsReadResult {
+    /// Number of bytes read, or -1 on error.
+    bytes_read: i64,
+    /// Error details.
+    error: VfsDriverError,
+}
+
+/// Size result - file size in bytes, or -1 on error.
+struct VfsSizeResult {
+    /// File size in bytes, or -1 on error.
+    size: i64,
+    /// Error details.
+    error: VfsDriverError,
+}
+
+/// A single file/directory entry - used in directory listings and metadata
+/// queries.
+struct VfsEntry {
+    /// Entry name (not a full path).
+    name: String,
+    /// File size in bytes (0 for directories).
+    size: i64,
+    /// Platform-specific attributes.
+    attributes: u32,
+    /// true if the entry is a directory.
+    is_directory: bool,
+    /// true if the entry can be opened as an archive (e.g. a .zip file).
+    is_archive: bool,
+}
+
+/// Mount-level options controlling behavior for all files accessed through a
+/// mount. Passed by value into a driver's open; VFS core supplies it, not user
+/// code. The real C type is single-sourced here - `<flowi/vfs/vfs_types.h>` only
+/// forward-declares it (like FlVfsEntry).
+struct VfsMountOptions {
+    /// If set, caching plugins write here instead of the default cache. The
+    /// filename is derived from the URL; the directory must exist.
+    cache_dir: String,
+    /// If true, validate cached files against the server (ETag) before use - for
+    /// mutable remote files. Default (false) uses the cache without validation.
+    cache_validation: bool,
+}
+
+/// VFS Driver Plugin interface - the set of operations a driver implements to
+/// provide filesystem access for local files, archives, network filesystems, and
+/// virtual filesystems.
+struct VfsPlugin {
+    /// Should be set to FL_VFS_PLUGIN_API_VERSION.
+    api_version: u64,
+    /// Name of the plugin.
+    plugin_name: String,
+    /// Plugin metadata (version, author, ...). Optional; nullptr if none.
+    plugin_info: *FlVfsPluginInfo,
+
+    /// Create a driver instance.
+    create() -> PluginCreateResult,
+    /// Destroy a driver instance from create().
+    destroy(driver_instance: *void),
+
+    /// Fast path-type check (no I/O) - used for driver selection.
+    supports_path(path: String) -> bool,
+    /// Check whether this driver can actually open the path (may do I/O).
+    can_open(path: String) -> bool,
+
+    /// Open a file or directory (relative to parent_handle, or absolute when it is
+    /// nullptr). mount_options is supplied by VFS core, not user code.
+    open(driver_instance: *void, parent_handle: *void, path: String, flags: u32, mount_options: VfsMountOptions) -> VfsOpenResult,
+    /// Whether an opened handle is a directory/archive.
+    is_directory(driver_instance: *void, handle: *void) -> bool,
+
+    /// Read file contents into the caller-owned buffer. A non-empty relative_path
+    /// names a file below handle and is read from its start; an empty one reads
+    /// the file handle was opened on, continuing from its current offset.
+    read(driver_instance: *void, handle: *void, relative_path: String, buffer: *u8, size: i64) -> VfsReadResult,
+    /// Get a file's size. relative_path resolves against handle as it does for
+    /// read(). Returns -1 for a directory or a path that does not exist.
+    get_size(driver_instance: *void, handle: *void, relative_path: String) -> VfsSizeResult,
+
+    /// List directory contents, invoking callback once per entry discovered;
+    /// listing stops when the callback returns false.
+    list_directory(driver_instance: *void, handle: *void, relative_path: String, callback: VfsListingCallback, user_data: *void),
+    /// Close a handle and free its resources.
+    close(driver_instance: *void, handle: *void),
+
+    /// Driver capability flags.
+    get_capabilities() -> VfsDriverCapabilities,
+
+    /// Open an archive from a memory buffer (FlVfsDriverCapabilities_Memory). On
+    /// success the driver takes ownership of data; on failure the caller retains
+    /// it. nullptr if unsupported.
+    open_memory(driver_instance: *void, data: *const u8, size: u64, original_path: String) -> VfsOpenResult,
+    /// Get an OS filesystem path for a resource (FlVfsDriverCapabilities_DirectPath),
+    /// allocated from arena. Empty string if unavailable. nullptr if unsupported.
+    get_file_path(driver_instance: *void, handle: *void, relative_path: String, arena: *FlArena) -> String,
+    /// Whether a path is cached and fresh (FlVfsDriverCapabilities_Cache). nullptr
+    /// if unsupported.
+    is_cached(driver_instance: *void, path: String) -> bool,
+}

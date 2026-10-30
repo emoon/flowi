@@ -1,0 +1,101 @@
+/// One declarative row descriptor for `ui_list`: a stable id, the label the List draws and type-aheads on, and an
+/// optional leading icon.
+#[attributes(Copy)]
+struct ListItem {
+    /// Opaque stable id - pure identity, the selection/result key.
+    id: u64,
+    /// Row text the List draws (and type-aheads on); borrowed for the `ui_list` call.
+    label: String,
+    /// Optional leading icon; `ImageHandle` invalid (or a not-ready handle) draws nothing.
+    icon: ImageHandle,
+}
+
+/// Configuration for a List, consumed by ui_list_begin.
+#[attributes(Copy)]
+struct ListConfig {
+    /// Uniform row height in logical pixels (0 -> default 32).
+    row_height: f32,
+    /// Gap between rows in logical pixels (0 -> default 8).
+    gap: f32,
+    /// Optional labels parallel to the begin id slice (count entries) for keyboard type-ahead; NULL disables it.
+    labels: *const String,
+    /// Drag-reorder visuals: false (default) draws the built-in ghost + insertion line; true suppresses them
+    /// so the caller overrides the look from the live `drag_*` fields on `ListResult`. Gates only the drawing.
+    suppress_drag_visuals: bool,
+}
+
+/// Options for `ui_list`: the layout knobs plus the two policy toggles the caller chooses.
+#[attributes(Copy)]
+struct ListOpts {
+    /// Uniform row height in logical pixels (0 -> default 32).
+    row_height: f32,
+    /// Gap between rows in logical pixels (0 -> default 8).
+    gap: f32,
+    /// false -> single-selection (plain replace only; no ctrl/shift/marquee/Ctrl+A). true -> full multi-select.
+    multi_select: bool,
+    /// true -> a row press can begin a drag-reorder. false -> rows never start a reorder drag.
+    reorderable: bool,
+    /// true -> the caller draws its own ghost/insertion line from the result's `drag_*` fields; false -> the
+    /// List draws the built-in affordances.
+    suppress_drag_visuals: bool,
+}
+
+/// Where a `List` drag-reorder lands, relative to a target stable id. A flat list produces only
+/// Before/After (sibling reorder); Into (reparent) is reserved for the tree view and never produced.
+enum DropRelationship {
+    /// Insert the dragged item(s) immediately before the target.
+    Before = 0,
+    /// Insert the dragged item(s) immediately after the target.
+    After,
+    /// Reparent onto the target - reserved for the tree view; never produced.
+    Into,
+}
+
+/// The visible index window a List emits, returned by ui_list_begin. The caller iterates `[start, end)`
+/// and emits one row per index; total echoes the full item count.
+#[attributes(Copy)]
+struct ListRange {
+    /// First visible index (inclusive).
+    start: u32,
+    /// One past the last visible index (exclusive).
+    end: u32,
+    /// Total item count passed to ui_list_begin.
+    total: u32,
+}
+
+/// The per-frame result a List hands back from ui_list_end. Keyed on the app-supplied opaque u64
+/// stable ids, never on dense position; 0 means "none".
+#[attributes(Copy)]
+struct ListResult {
+    /// Stable id of the item activated this frame (double-click / Enter), or 0.
+    activated_id: u64,
+    /// Stable id of the focused item, or 0.
+    focused_id: u64,
+    /// Stable id of the item right-clicked this frame, or 0. The List opens no menu - it reports the row so the
+    /// app opens its own context menu at the cursor.
+    context_menu_id: u64,
+    /// The Selection Requests the List emitted this frame; always populated, even when the List auto-applied
+    /// them into a non-NULL set. Valid for this frame only. Read request_count entries; NULL when none.
+    requests: *const SelectionRequest,
+    /// Number of entries in requests (0 = no selection change this frame).
+    request_count: u32,
+    /// Nav-Up pressed while the focus cursor was already on the first row (keyboard navigation hit the top edge).
+    nav_up_edge: bool,
+    /// Nav-Down pressed while the focus cursor was already on the last row (keyboard navigation hit the bottom edge).
+    nav_down_edge: bool,
+    /// A reorder drag is in flight this frame (ghost + insertion line shown). The `drag_*` payload below is the
+    /// live CANDIDATE, so a suppress_drag_visuals caller can draw its own affordances.
+    drag_active: bool,
+    /// A reorder request was produced this frame (the drag was released onto a drop). The `drag_*` payload is the
+    /// COMMITTED request the app applies. Never true in the same frame as drag_active.
+    reorder_emitted: bool,
+    /// The dragged stable ids (`const uint64_t*`): the whole selection when the pressed row was selected, else
+    /// just the pressed row. NULL / 0 entries when no drag is active or emitting.
+    drag_from_ids: *const u64,
+    /// The stable id the drop is positioned relative to (candidate while dragging, committed on release).
+    drag_target_id: u64,
+    /// Number of entries in drag_from_ids (0 = no drag this frame).
+    drag_from_count: u32,
+    /// Where the drop lands relative to the target: Before/After (Into is reserved, never produced).
+    drag_rel: DropRelationship,
+}

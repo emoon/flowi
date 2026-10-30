@@ -1,0 +1,49 @@
+#[module(app)]
+
+extern opaque FlArena
+
+/// Settings for bringing up an embedded flowi host, passed to fl_host_create.
+struct HostSettings {
+    /// Render width in pixels. The host opens its window at this size and renders every frame into it.
+    render_width: i32,
+    /// Render height in pixels.
+    render_height: i32,
+    /// Mount the process working directory as the hidden default asset mount, so Font::load and
+    /// Image::load resolve plain filesystem paths against it. A host that mounts its own data directory
+    /// and loads through Font::load_mount leaves this false.
+    mount_working_directory: bool,
+}
+
+/// Opaque handle for the embedded host tier: the render backend, the shared resource tier, the VFS and
+/// image-system singletons, and the shared font cache. Every `fl_host_*` entry point takes a `*Host`; the
+/// caller holds it solely behind that pointer. Created by fl_host_create, destroyed by fl_host_destroy.
+#[attributes(Opaque)]
+struct Host {}
+
+/// Everything fl_app brings up except the window, the input pump and presentation - the tier an
+/// embedding host needs when it owns its own OS integration.
+///
+/// A host with its own display/input/audio backends (a kiosk shell, a bare-metal frontend) calls
+/// fl_host_create directly, creates a surface per window, attaches a UI context to it, and drives the
+/// frame itself. fl_app is the same bring-up plus a window backend, a tick loop and a present path.
+///
+/// Ownership: the host allocates from the caller's arena and never frees it. The VFS and image-system
+/// singletons are process-global and first-caller-wins, so fl_host_destroy tears down only what this
+/// host actually brought up.
+api Host {
+    /// Bring up the embedded tier on arena and open its window at the settings' render size: render
+    /// backend, shared resource tier, VFS, image system, font cache, render surface and UI context.
+    /// Returns NULL on failure, having logged the reason.
+    [manual] create(arena: *FlArena, settings: *const HostSettings) -> *Host
+    /// Tear the host down and release everything it owns, its window included. No-op on a null handle.
+    [manual] destroy(host: *Host)
+
+    /// Advance one frame. The first call opens the host's frame; every one after it closes the frame just
+    /// emitted, pumps delta_time seconds of input into the next, and opens that. Everything the host
+    /// draws happens between two of these calls - it is the entire frame boundary.
+    [manual] frame_update(host: *Host, delta_time: f64)
+
+    /// Read back the last-rendered pixels (native interleaved - RGB24 software, RGBA8 GPU) so the host can
+    /// copy them into its own framebuffer. False when the backend has no readback capability.
+    [manual] read_pixels(host: *Host, out: *PixelReadback) -> bool
+}

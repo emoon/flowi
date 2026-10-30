@@ -1,0 +1,31 @@
+/// Opaque caller-owned set of selected List stable ids. The host holds it solely behind a `*SelectionSet`.
+/// Created by create, destroyed by destroy.
+#[attributes(Opaque)]
+struct SelectionSet {}
+
+/// Caller-owned storage of selected List stable ids. Feed it the List's per-frame SelectionRequests with
+/// apply, query membership per row with contains, and read the whole selection with copy_ids.
+api SelectionSet {
+    /// Create an empty selection set. initial_capacity is a hint for the id count (0 -> built-in default; a
+    /// floor applies). Returns the handle; pair with destroy.
+    [manual] create(initial_capacity: u32) -> *SelectionSet
+    /// Destroy a handle from create. No-op on a null handle.
+    [drop] destroy(set: *SelectionSet)
+    /// True if id is currently selected.
+    [const] contains(set: *SelectionSet, id: u64) -> bool
+    /// Select (selected = true) or deselect (false) a single id.
+    set(set: *SelectionSet, id: u64, selected: bool)
+    /// Remove every id (empty the set).
+    [rename(clear)] clear_all(set: *SelectionSet)
+    /// Replace the set's contents with exactly the count ids at ids. Resolves SetAll(true).
+    set_all(set: *SelectionSet, [slice(u64)] ids: *const u64, count: u64)
+    /// Fold req_count requests at reqs into the set, in array order. ordered_ids (id_count entries) is the
+    /// app's full ordered model, used to resolve a SetRange span / SetAll(true); may be null/0 when no such
+    /// request is present. A missing range endpoint applies nothing.
+    [manual] apply(set: *SelectionSet, [slice(SelectionRequest)] reqs: *const SelectionRequest, req_count: u64, [slice(u64)] ordered_ids: *const u64, id_count: u64)
+    /// Number of selected ids.
+    [manual] len(set: *SelectionSet) -> u64
+    /// Snapshot the selected ids into out (its slice length is the capacity); returns the number written (min of
+    /// len and capacity). Order is unspecified.
+    [const] copy_ids(set: *SelectionSet, [slice_mut(u64)] out: *u64, cap: u64) -> u64
+}

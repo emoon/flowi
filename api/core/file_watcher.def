@@ -1,0 +1,77 @@
+#[module(core)]
+
+extern opaque FlArena
+
+/// Kinds of file system change, reported as a bitmask in FlFileChange::change_types.
+#[attributes(bitflags)]
+enum FileChangeType {
+    /// No change.
+    None = 0,
+    /// File or directory was created.
+    Created = 1,
+    /// File or directory was modified.
+    Modified = 2,
+    /// File or directory was deleted.
+    Deleted = 4,
+    /// File or directory was renamed.
+    Renamed = 8,
+    /// File or directory was moved.
+    Moved = 16,
+}
+
+/// What a watcher should report, passed to FileWatcher::start.
+struct FileWatcherConfig {
+    /// Watch subdirectories too.
+    recursive: bool,
+    /// Report changes to files.
+    watch_files: bool,
+    /// Report changes to directories.
+    watch_directories: bool,
+    /// Maximum changes to buffer between polls (0 = platform default).
+    max_changes: u32,
+}
+
+/// One file system change event. Paths are borrowed from the batch's arena and stay valid until that
+/// arena is reset.
+struct FileChange {
+    /// Full path to the changed file or directory.
+    path: String,
+    /// The previous path for a rename or move; empty otherwise.
+    old_path: String,
+    /// Bitmask of FileChangeType values.
+    change_types: FileChangeType,
+    /// When the change occurred, in microseconds since the epoch.
+    timestamp: u64,
+    /// True when the change affects a directory rather than a file.
+    is_directory: bool,
+}
+
+/// A batch of pending changes taken from a watcher: a counted array allocated in the caller's arena.
+/// Valid until that arena is reset.
+struct FileChanges {
+    /// The changes (nullptr when count is 0).
+    changes: *const FileChange,
+    /// Number of changes in changes.
+    count: u32,
+    /// True when the watcher dropped changes because its buffer filled between polls.
+    has_overflow: bool,
+}
+
+/// Platform-independent file system monitoring for a host that reloads content when it changes on disk.
+///
+/// Start a watcher on a directory, poll has_changes each frame, and take the pending batch into a
+/// scratch arena when there is something to look at. Taking a batch clears it - each change is reported
+/// once.
+api FileWatcher {
+    /// Start watching path. Returns a watcher handle, or 0 when the path cannot be watched or
+    /// config is null.
+    [manual] start(path: String, config: *const FileWatcherConfig) -> u32
+    /// Stop watching and release the watcher's resources. No-op on a 0 handle.
+    [manual] stop(handle: u32)
+    /// True while the watcher is alive and its path still exists.
+    [manual] is_active(handle: u32) -> bool
+    /// True when changes are pending. Allocates nothing, so it is the cheap per-frame poll.
+    [manual] has_changes(handle: u32) -> bool
+    /// Take the pending changes into arena and clear them from the watcher.
+    [manual] take_changes(handle: u32, arena: *FlArena) -> FileChanges
+}

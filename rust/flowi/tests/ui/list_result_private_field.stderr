@@ -1,0 +1,10 @@
+error[E0616]: field `activated_id` of struct `ListResult` is private
+ --> tests/ui/list_result_private_field.rs:2:12
+  |
+2 |     result.activated_id
+  |            ^^^^^^^^^^^^ private field
+  |
+help: a method `activated_id` also exists, call it with parentheses
+  |
+2 |     result.activated_id()
+  |                        ++

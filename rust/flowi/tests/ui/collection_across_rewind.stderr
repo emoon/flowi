@@ -1,0 +1,10 @@
+error[E0502]: cannot borrow `arena` as mutable because it is also borrowed as immutable
+  --> tests/ui/collection_across_rewind.rs:11:5
+   |
+ 9 |     let mut v = ArenaVec::new(&arena);
+   |                               ------ immutable borrow occurs here
+10 |     v.push(1u32);
+11 |     arena.rewind();
+   |     ^^^^^^^^^^^^^^ mutable borrow occurs here
+12 |     let _ = v.len();
+   |             - immutable borrow later used here

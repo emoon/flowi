@@ -1,0 +1,37 @@
+# Internal core symbols that flowi's OWN Rust facade wraps, and that are exported
+# for no other reason. These are NOT public-header API: they are declared in
+# internal headers under src/core/, have no .def entry, and no C consumer is
+# invited to call them. They are here only because the Rust crates link
+# libflowi.so, so a safe wrapper in the `flowi` crate over a symbol the curated
+# list omits does not link at all - which makes the wrapper a public Rust API that
+# no standalone consumer can use. Keeping the symbol hidden and letting each host
+# declare the extern itself is the workaround the facade exists to remove, so the
+# export is the lesser of the two.
+#
+# Self-erasing: an entry leaves when its
+# facade does, or when the underlying API is promoted into the IDL and api_gen
+# starts emitting it into flowi.version. Adding one is a deliberate widening of
+# libflowi.so's ABI - do it only for a symbol a flowi-side facade genuinely needs,
+# never as a shortcut for a host that wants to reach flowi's internals.
+#
+# Same mechanics as handwritten.txt: api_gen merges it into the export list,
+# one symbol per line, `#` starts a comment, every entry a C identifier.
+
+# core/cpu_topology.h - behind `flowi::performance_cores` / `flowi::pin_current_thread`.
+fl_cpu_query_by_type
+fl_cpu_set_thread_affinity
+
+# core/hash.h - behind the `flowi::hash` module (`crc32`, `sha1`, `md5`, `Sha256`).
+fl_hash_crc32
+fl_hash_md5
+fl_hash_sha1
+fl_hash_sha256_digest_hex
+fl_hash_sha256_final
+fl_hash_sha256_hex
+fl_hash_sha256_init
+fl_hash_sha256_update
+
+# vfs/vfs.h - behind `flowi::Vfs::init` and `flowi::Mount::job_handle`. The rest of the
+# VFS is public .def API; these two leaves are not.
+fl_vfs_init
+fl_vfs_mount_get_job_handle

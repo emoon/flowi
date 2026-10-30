@@ -1,0 +1,37 @@
+/// Widget interaction result - the response struct every interactive widget returns by value.
+/// Each flag and vector exposes a hover/focus/press/drag channel; clicked is the common case.
+#[attributes(Copy)]
+struct Signal {
+    /// Mouse clicked (or keyboard activated) this frame.
+    clicked: bool,
+    /// Mouse is hovering over the widget.
+    hovered: bool,
+    /// Widget holds keyboard/gamepad focus.
+    focused: bool,
+    /// Activated via keyboard/gamepad (Enter/Space/Gamepad A).
+    activated: bool,
+    /// Double-click detected (if the widget opts into it).
+    double_clicked: bool,
+    /// Right mouse button clicked (if the widget opts into it).
+    right_clicked: bool,
+    /// Mouse/key went down this frame.
+    pressed: bool,
+    /// Mouse/key went up this frame.
+    released: bool,
+    /// Currently dragging (if the widget is draggable).
+    dragging: bool,
+    /// Row is in the current selection set.
+    selected: bool,
+    /// Mouse position relative to the widget bounds.
+    mouse_pos: Vec2,
+    /// Movement since the drag started.
+    drag_delta: Vec2,
+    /// Mouse wheel delta (if the widget is a scroll target).
+    wheel_delta: Vec2,
+    /// Text input only: the text was edited this frame.
+    text_changed: bool,
+    /// Text input only: Enter was pressed this frame.
+    submitted: bool,
+    /// Text input only: Escape was pressed this frame, or the gamepad Cancel button (B).
+    cancelled: bool,
+}

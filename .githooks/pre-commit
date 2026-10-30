@@ -1,0 +1,64 @@
+#!/bin/bash
+#
+# Format staged sources before they land, so formatter drift never shows up as
+# a separate churn commit.
+#
+# Rust: generated mirrors are excluded on purpose -- api_gen emits them
+# pre-canonicalised with no formatter post-pass, and CI runs
+# `cargo regen-check` to assert the committed output is current, so a rustfmt
+# pass there fails the build. (rustfmt's `ignore` option is nightly-only and
+# this project is on stable.)
+#
+# C: delegated to tools/scripts/format.sh, which owns the exclusion list.
+
+set -e
+
+cd "$(git rev-parse --show-toplevel)"
+
+mapfile -t staged < <(
+    git diff --cached --name-only --diff-filter=ACM \
+        | grep -E '\.(rs|c|cpp|h|hpp)$' \
+        || true
+)
+
+if [ ${#staged[@]} -eq 0 ]; then
+    exit 0
+fi
+
+# ponytail: a file staged with unstaged edits on top would get those edits
+# swept into the commit by the `git add` below. Refuse instead of silently
+# widening the commit -- matters if you stage with `git add -p`.
+mapfile -t partial < <(git diff --name-only -- "${staged[@]}")
+
+if [ ${#partial[@]} -gt 0 ]; then
+    echo "pre-commit: staged with unstaged changes on top, refusing to reformat:" >&2
+    printf '  %s\n' "${partial[@]}" >&2
+    echo >&2
+    echo "Format them by hand and re-stage, or stage the rest." >&2
+    exit 1
+fi
+
+mapfile -t rs < <(printf '%s\n' "${staged[@]}" | grep '\.rs$' | grep -v '/generated/' || true)
+
+if [ ${#rs[@]} -gt 0 ]; then
+    # rustfmt follows `mod` declarations, so formatting a crate root drags the
+    # generated tree in with it (rust/flowi/src/lib.rs reaches all of them). Stable rustfmt has no
+    # --skip-children, so instead: note which generated files were already
+    # dirty, then put back only the ones rustfmt itself touched. Anything you
+    # dirtied on purpose (a `cargo regen` run you have not staged yet) is
+    # left alone.
+    gen_dirty() { git diff --name-only | grep '/generated/' | sort; }
+
+    before="$(gen_dirty)"
+    rustfmt --edition 2021 "${rs[@]}"
+    comm -13 <(echo "$before") <(gen_dirty) | tr '\n' '\0' | xargs -0 -r git checkout --
+fi
+
+if printf '%s\n' "${staged[@]}" | grep -qE '\.(c|cpp|h|hpp)$'; then
+    tools/scripts/format.sh staged >/dev/null
+fi
+
+# Only paths already in the index, so this picks up the formatters' edits
+# without widening the commit (the partial-stage check above guarantees there
+# is nothing else in the worktree for these paths).
+git add -- "${staged[@]}"

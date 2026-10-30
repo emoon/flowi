@@ -1,0 +1,52 @@
+#[module(path)]
+
+/// The `fl_path_*` plugin service API - flowi core's cross-platform path manipulation, exported as plain C symbols. Paths are UTF-8 FlStrings using forward slashes as the canonical separator;
+/// backslashes are folded to forward slashes on normalization. Every slot that builds a new path
+/// allocates it from the caller's arena, so nothing here needs freeing; the extraction slots that
+/// return a view into their input (fl_path_get_extension, fl_path_get_filename) take no arena. Plugins link the shared library and call these symbols directly.
+///
+/// Core's path surface is wider than this (segment splitting, PathComponents, current-directory and
+/// directory-search helpers); those stay internal - they are VFS resolution machinery, not something a
+/// plugin manipulating file names needs.
+#[attributes(service)]
+api Path {
+    /// Fold backslashes to forward slashes and collapse duplicate separators.
+    fl_path_normalize(arena: *Arena, path: String) -> String
+    /// Normalize, then resolve "." and ".." components.
+    fl_path_normalize_full(arena: *Arena, path: String) -> String
+    /// Convert a path to forward slashes only.
+    fl_path_to_forward_slashes(arena: *Arena, path: String) -> String
+
+    /// Join relative onto base, handling trailing separators. An absolute relative wins outright.
+    fl_path_join(arena: *Arena, base: String, relative: String) -> String
+
+    /// The file extension without its leading dot, as a view into path (empty if there is none).
+    fl_path_get_extension(path: String) -> String
+    /// The filename component after the last separator, as a view into path (empty if path ends in
+    /// a separator).
+    fl_path_get_filename(path: String) -> String
+    /// The directory component: everything before the last separator.
+    fl_path_get_directory(arena: *Arena, path: String) -> String
+    /// The basename: the filename without its extension.
+    fl_path_get_basename(arena: *Arena, path: String) -> String
+    /// The parent directory, or an empty string if path has none.
+    fl_path_get_parent(arena: *Arena, path: String) -> String
+
+    /// Whether path is absolute (Unix: leading "/"; Windows: a drive letter or a UNC prefix).
+    fl_path_is_absolute(path: String) -> bool
+    /// Whether path is relative - the complement of fl_path_is_absolute.
+    fl_path_is_relative(path: String) -> bool
+    /// Whether path ends in extension (given without its dot, e.g. "zip"), ignoring ASCII case.
+    fl_path_has_extension(path: String, extension: String) -> bool
+    /// Whether path contains any directory separator.
+    fl_path_has_separator(path: String) -> bool
+    /// Whether two paths are equivalent once normalized.
+    fl_path_equals(path1: String, path2: String) -> bool
+
+    /// Resolve path against base; an already-absolute path is copied through unchanged.
+    fl_path_make_absolute(arena: *Arena, base: String, path: String) -> String
+    /// Drop the trailing separator, if path has one.
+    fl_path_remove_trailing_separator(arena: *Arena, path: String) -> String
+    /// Add a trailing separator, if path lacks one (marking it as a directory).
+    fl_path_ensure_trailing_separator(arena: *Arena, path: String) -> String
+}

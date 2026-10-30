@@ -1,0 +1,49 @@
+[package]
+name = "flowi"
+version = "0.0.0"
+edition = "2021"
+license = "MIT"
+description = "Safe Rust API for the flowi immediate-mode UI library"
+publish = false
+# Reserves the native flowi library link name.
+links = "flowi"
+build = "build.rs"
+
+[features]
+# Windowed (SDL) by default; `--no-default-features` builds the SDL-free library.
+default = ["windowed"]
+windowed = []
+# Link `libflowi` statically instead of as a shared library.
+static = []
+# Route Rust allocations through the native heap as the global allocator.
+global-allocator = []
+# Test-only, thread-local allocation counting.
+allocation-probe = ["global-allocator"]
+
+[dependencies]
+flowi_macros = { path = "../flowi_macros" }
+# The `Zeroable` bound on `Arena::alloc_zeroed<T>`.
+bytemuck = { version = "1", default-features = false }
+# Public logging facade; flowi bridges `log` records into its own log channels.
+log = "0.4"
+# Backs the generated bitflags-mirror types (FileChangeType).
+bitflags = "2"
+
+[build-dependencies]
+cmake = "0.1"
+# Compiles the C FlString ABI probe linked into this crate's test binaries.
+cc = "1"
+
+[[example]]
+name = "window"
+# Opens a real window; needs a display.
+
+[dev-dependencies]
+trybuild = "1.0"
+
+[lib]
+doctest = false
+
+# Inherit the workspace lint policy (see rust/Cargo.toml).
+[lints]
+workspace = true

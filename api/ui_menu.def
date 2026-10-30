@@ -1,0 +1,74 @@
+/// Context menus: build a menu from a begin/item/end group, add right-click regions, and
+/// drive it imperatively with open/close/is_open.
+#[frame_context]
+api Menu {
+    /// Begin the menu menu_id with config; returns true (opening the floating panel and
+    /// driving ESC / click-outside dismissal) only while the menu is open. Pair with
+    /// end only when it returned true.
+    begin_impl(menu_id: LayoutId, config: MenuConfig) -> bool
+    /// End the menu panel opened by begin_impl.
+    end()
+    /// Emit one action item labelled label with config; returns its interaction signal
+    /// (.clicked true the frame it activates).
+    item_impl(label: String, config: MenuItemConfig) -> Signal
+    /// Emit a checkable item labelled label bound to `*checked`: toggles it on activation and shows a check
+    /// marker while it is true. Keep-open by default. Returns the row's signal (.clicked the frame it toggles).
+    check_impl(label: String, checked: *bool, config: MenuItemConfig) -> Signal
+    /// Emit a radio item labelled label bound to `*selected`: activation sets `*selected = value`; the bullet
+    /// shows while `*selected == value`. Keep-open by default. Returns the row's signal.
+    radio_impl(label: String, selected: *i32, value: i32, config: MenuItemConfig) -> Signal
+    /// Emit a non-interactive separator rule. Occupies a row but is skipped by navigation and never
+    /// activates; a click on it stays inside the menu (it is part of the surface, not click-outside).
+    separator()
+    /// Emit a non-interactive section-header caption label (dimmed, left-aligned). Like a separator it
+    /// occupies a row, is skipped by navigation, and never activates.
+    header(label: String)
+    /// Begin a right-click region region_id that opens menu_id at the cursor on a
+    /// right-click inside. Returns the region's signal. Pair with region_end.
+    [manual] region_begin_impl(region_id: LayoutId, menu_id: LayoutId, config: MenuRegionConfig) -> Signal
+    /// End the right-click region opened by region_begin_impl.
+    region_end()
+    /// Open the menu chain menu_id at the absolute screen point (captured once).
+    open(menu_id: LayoutId, point: Vec2)
+    /// Close the menu chain menu_id (no-op if it is not the open chain).
+    close(menu_id: LayoutId)
+    /// True while the menu chain menu_id is open.
+    is_open(menu_id: LayoutId) -> bool
+}
+
+/// Nested submenus: a begin/end group whose parent row, when expanded, hosts the nested menu items.
+#[frame_context]
+api Submenu {
+    /// Begin a submenu parent labelled label with config; emits the parent row and returns true ONLY while
+    /// this submenu is expanded, opening the nested panel beside the parent. Pair with end only when it
+    /// returned true.
+    begin_impl(label: String, config: SubmenuConfig) -> bool
+    /// End the submenu panel opened by begin_impl.
+    end()
+}
+
+/// Horizontal menu bar: a begin/end group hosting top-level entries, with is_open to query
+/// whether the bar owns the open menu chain.
+#[frame_context]
+api Menubar {
+    /// Begin the bar strip bar_id with config and run its per-frame input (click-open, hover-switch-while-open,
+    /// Left/Right/Down/ESC). Always opens the strip. Pair unconditionally with end.
+    begin_impl(bar_id: LayoutId, config: MenuBarConfig)
+    /// End the bar strip opened by begin_impl.
+    end()
+    /// True while the bar bar_id owns the open chain (a dropdown is open, or the bar is keyboard-focused after an
+    /// ESC collapsed the dropdown back to the strip).
+    is_open(bar_id: LayoutId) -> bool
+}
+
+/// Menu-bar top entries: a begin/end group whose top button, when its dropdown is open, hosts the
+/// dropdown's menu items.
+#[frame_context]
+api MenubarMenu {
+    /// Begin a top labelled label with config; emits the top button and returns true ONLY while this top's
+    /// dropdown is open, opening the dropdown panel anchored under the button. Pair with end only when it
+    /// returned true.
+    begin_impl(label: String, config: MenuBarMenuConfig) -> bool
+    /// End the dropdown panel opened by begin_impl.
+    end()
+}

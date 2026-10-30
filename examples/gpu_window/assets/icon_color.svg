@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- Multi-color play icon: a dark disc and a green triangle are two distinct solid fills, so
+       vector_image_parse classifies it multi-color -> baked RGBA (record tint is ignored). -->
+  <circle cx="24" cy="24" r="20" fill="#3a4a6b"/>
+  <polygon points="19,14 36,24 19,34" fill="#78c878"/>
+</svg>

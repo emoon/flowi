@@ -1,0 +1,15 @@
+error[E0596]: cannot borrow data in dereference of `BaseArena` as mutable
+ --> tests/ui/base_arena_rewind.rs:4:5
+  |
+4 |     base.rewind();
+  |     ^^^^ cannot borrow as mutable
+  |
+  = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `BaseArena`
+
+error[E0596]: cannot borrow data in dereference of `BaseArena` as mutable
+ --> tests/ui/base_arena_rewind.rs:5:5
+  |
+5 |     base.temp(|_| ());
+  |     ^^^^ cannot borrow as mutable
+  |
+  = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `BaseArena`

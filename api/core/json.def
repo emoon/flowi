@@ -1,0 +1,176 @@
+#[module(core)]
+
+/// The various types JSON values can be. Used to identify what a value is
+/// (JsonValue.type).
+enum JsonType {
+    String = 0,
+    Number = 1,
+    Object = 2,
+    Array = 3,
+    True = 4,
+    False = 5,
+    Null = 6,
+}
+
+/// Result of a JSON parse: the error code (FlJsonParseResult.error) and the
+/// value returned by fl_json_get_error_description.
+enum JsonParseError {
+    /// no error occurred (huzzah!).
+    None = 0,
+    /// expected either a comma or a closing '}' or ']' to close an object or array.
+    ExpectedCommaOrClosingBracket = 1,
+    /// colon separating name/value pair was missing.
+    ExpectedColon = 2,
+    /// expected string to begin with '"'.
+    ExpectedOpeningQuote = 3,
+    /// invalid escaped sequence in string.
+    InvalidStringEscapeSequence = 4,
+    /// invalid number format.
+    InvalidNumberFormat = 5,
+    /// invalid value.
+    InvalidValue = 6,
+    /// reached end of buffer before object/array was complete.
+    PrematureEndOfBuffer = 7,
+    /// string was malformed.
+    InvalidString = 8,
+    /// a size_t is not large enough to record the allocation.
+    AllocatorFailed = 9,
+    /// the JSON input had unexpected trailing characters.
+    UnexpectedTrailingCharacters = 10,
+    /// catch-all error for everything else that exploded (real bad chi!).
+    Unknown = 11,
+    /// input was nested deeper than the parser's depth limit.
+    TooDeep = 12,
+}
+
+/// A JSON number value.
+struct JsonNumber {
+    /// ASCII string containing representation of the number.
+    number: *const char,
+    /// the size (in bytes) of the number.
+    number_size: usize,
+}
+
+/// An element of a JSON object.
+struct JsonObjectElement {
+    /// the name of this element.
+    name: *String,
+    /// the value of this element.
+    value: *JsonValue,
+    /// the next object element (can be nullptr if the last element in the object).
+    next: *JsonObjectElement,
+}
+
+/// A JSON object value.
+struct JsonObject {
+    /// a linked list of the elements in the object.
+    start: *JsonObjectElement,
+    /// the number of elements in the object.
+    length: usize,
+}
+
+/// An element of a JSON array.
+struct JsonArrayElement {
+    /// the value of this element.
+    value: *JsonValue,
+    /// the next array element (can be nullptr if the last element in the array).
+    next: *JsonArrayElement,
+}
+
+/// A JSON array value.
+struct JsonArray {
+    /// a linked list of the elements in the array.
+    start: *JsonArrayElement,
+    /// the number of elements in the array.
+    length: usize,
+}
+
+/// A JSON value.
+struct JsonValue {
+    /// a pointer to either a FlString, FlJsonNumber, FlJsonObject, or FlJsonArray.
+    /// Should be cast to the appropriate struct type based on the value's type.
+    payload: *void,
+    /// the JsonType. If type is True/False/Null, payload is nullptr.
+    type: JsonType,
+}
+
+/// A JSON parse result.
+struct JsonParseResult {
+    /// the error code (one of FlJsonParseError).
+    error: JsonParseError,
+    /// the character offset for the error in the JSON input.
+    error_offset: usize,
+    /// the line number for the error in the JSON input.
+    error_line_no: usize,
+    /// the row number for the error in the JSON input.
+    error_row_no: usize,
+}
+
+/// The `fl_json_*` arena-backed JSON parser / DOM. Parse a buffer into a tree of
+/// FlJsonValue, navigate and type-extract from it, then write it back out.
+api Json {
+    /// Parse a JSON buffer into a DOM allocated from arena. Returns nullptr on error.
+    [manual] parse(arena: *Arena, src: *const void, src_size: usize) -> *JsonValue
+    /// Parse without location tracking (faster; for validated JSON that won't be edited).
+    [manual] parse_no_location(arena: *Arena, src: *const void, src_size: usize) -> *JsonValue
+    /// Parse with explicit flags_bitset (FlJsonParseFlags OR-combined) and an optional result out-param.
+    [manual] parse_with_flags(arena: *Arena, src: *const void, src_size: usize, flags_bitset: usize, result: *JsonParseResult) -> *JsonValue
+    /// Deep-copy value (and all it references) into a fresh value allocated from arena.
+    [manual] extract_value(arena: *Arena, value: *const JsonValue) -> *JsonValue
+    /// Write value out as a minified UTF-8 JSON string, allocated from arena.
+    [manual] write_minified(arena: *Arena, value: *const JsonValue) -> String
+    /// Write value out as a pretty UTF-8 JSON string (indent/newline may be nullptr), allocated from arena.
+    [manual] write_pretty(arena: *Arena, value: *const JsonValue, indent: *const char, newline: *const char) -> String
+    /// Reinterpret a value as a string. Returns empty if not a string.
+    [manual] value_as_string(value: *JsonValue) -> String
+    /// Reinterpret a value as a number. Returns nullptr if not a number.
+    [manual] value_as_number(value: *JsonValue) -> *JsonNumber
+    /// Reinterpret a value as an object. Returns nullptr if not an object.
+    [manual] value_as_object(value: *JsonValue) -> *JsonObject
+    /// Reinterpret a value as an array. Returns nullptr if not an array.
+    [manual] value_as_fixed_array(value: *JsonValue) -> *JsonArray
+    /// Whether the value is true.
+    [manual] value_is_true(value: *const JsonValue) -> i32
+    /// Whether the value is false.
+    [manual] value_is_false(value: *const JsonValue) -> i32
+    /// Whether the value is null.
+    [manual] value_is_null(value: *const JsonValue) -> i32
+    /// Whether the value is a boolean (true or false).
+    [manual] value_is_bool(value: *const JsonValue) -> i32
+    /// Get a boolean from a value. Returns 0 if not a boolean or if false.
+    [manual] value_get_bool(value: *const JsonValue) -> i32
+    /// Get an unsigned 64-bit integer from a number (0x hex supported). Returns 0 if not a number.
+    [manual] value_get_u64(value: *const JsonValue) -> u64
+    /// Get a signed 32-bit integer from a number. Returns 0 if not a number.
+    [manual] value_get_i32(value: *const JsonValue) -> i32
+    /// Get a 64-bit float from a number. Returns 0.0 if not a number.
+    [manual] value_get_f64(value: *const JsonValue) -> f64
+    /// Find a property in an object by key. Returns nullptr if absent.
+    [manual] find_property(object: *const JsonValue, key: String) -> *JsonValue
+    /// Extract a string-typed property by key (empty if absent / wrong type).
+    [manual] get_string_prop(object: *const JsonValue, key: String) -> String
+    /// Extract a u32-typed property by key (0 if absent / wrong type).
+    [manual] get_u32_prop(object: *const JsonValue, key: String) -> u32
+    /// Extract an f64-typed property by key (0.0 if absent / wrong type).
+    [manual] get_f64_prop(object: *const JsonValue, key: String) -> f64
+    /// Extract a bool-typed property by key (0 if absent / wrong type).
+    [manual] get_bool_prop(object: *const JsonValue, key: String) -> i32
+    /// Extract an object-typed property by key (nullptr if absent / wrong type).
+    [manual] get_object_prop(object: *const JsonValue, key: String) -> *JsonValue
+    /// Extract an array-typed property by key (nullptr if absent / wrong type).
+    [manual] get_array_prop(object: *const JsonValue, key: String) -> *JsonArray
+    /// Source line where value starts (1-based, 0 if unknown).
+    [manual] get_line_number(value: *const JsonValue) -> usize
+    /// Source column where value starts (1-based, 0 if unknown).
+    [manual] get_column_number(value: *const JsonValue) -> usize
+    /// Whether position information is available for value.
+    [manual] has_position_info(value: *const JsonValue) -> i32
+    /// Format a parse error with source context, allocated from arena.
+    [manual] format_parse_error(arena: *Arena, result: *const JsonParseResult, source_text: *const char, source_size: usize) -> String
+    /// Human-readable description of a parse error code.
+    [manual] get_error_description(error: JsonParseError) -> String
+    /// Format a value-anchored error with full context, allocated from arena.
+    [manual] format_value_error(arena: *Arena, value: *const JsonValue, error_message: String, file_path: String, help_text: String) -> String
+    /// Navigate a nested path like "metadata.shortname" (nullptr if not found).
+    [manual] get_path(root: *const JsonValue, path: String) -> *JsonValue
+}

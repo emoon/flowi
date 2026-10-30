@@ -1,0 +1,5 @@
+[alias]
+# Regenerate the committed codegen from api/*.def. The codegen crate is its own
+# workspace, so it needs an explicit manifest path; the alias hides that.
+regen = "run --quiet --manifest-path tools/codegen/Cargo.toml"
+regen-check = "test --manifest-path tools/codegen/Cargo.toml"

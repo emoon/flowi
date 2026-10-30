@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- Single-fill (monochrome) speech-bubble icon: a rounded body plus a tail, both the same
+       solid color, so vector_image_parse classifies it monochrome -> tintable coverage. -->
+  <rect x="6" y="8" width="36" height="26" rx="6" fill="#5aa0dc"/>
+  <polygon points="14,33 14,44 25,33" fill="#5aa0dc"/>
+</svg>

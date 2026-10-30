@@ -1,0 +1,13 @@
+error: lifetime may not live long enough
+ --> tests/ui/temp_scope_escape.rs:9:34
+  |
+9 |     let escaped = arena.temp(|t| t.alloc(1u32));
+  |                               -- ^^^^^^^^^^^^^ returning this value requires that `'1` must outlive `'2`
+  |                               ||
+  |                               |return type of closure is &'2 mut u32
+  |                               has type `&'1 Arena`
+  |
+help: dereference the return value
+  |
+9 |     let escaped = arena.temp(|t| *t.alloc(1u32));
+  |                                  +

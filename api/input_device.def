@@ -1,0 +1,13 @@
+#[module(platform)]
+
+/// Input device type - a UI hint for which prompt glyphs to show (keyboard vs
+/// gamepad). Reported by the input backend through
+/// InputBackend.get_last_active_device.
+enum InputDevice {
+    /// Keyboard last produced input.
+    Keyboard,
+    /// Mouse last produced input.
+    Mouse,
+    /// Gamepad last produced input.
+    Gamepad,
+}

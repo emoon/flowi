@@ -1,0 +1,90 @@
+#[module(core)]
+
+// The opaque scratch arena a job receives per-invocation (FlJobsWorkerInfo.scratch)
+// and that jobs_create() builds the system from. Referenced only by pointer; the
+// real cache-aligned body lives in hand-written core (arena.def owns the name).
+
+/// Job result status - what fl_jobs_is_finished reports for a handle.
+enum JobsResult {
+    /// Job is still running or pending.
+    NotFinished = 0,
+    /// Job has completed.
+    Finished = 1,
+    /// Job handle is invalid or expired.
+    Invalid = 2,
+}
+
+/// Job priority levels. Higher-priority jobs are dequeued before lower-priority
+/// ones.
+enum JobPriority {
+    /// Background / prefetch work.
+    Low = 0,
+    /// Default priority.
+    Normal = 1,
+    /// Visible content, user-facing operations.
+    High = 2,
+    /// Not a priority: what get_priority reports for an invalid or expired handle. Scheduling calls treat it as
+    /// High.
+    Invalid = -1,
+}
+
+/// Opaque handle to a scheduled job. FL_JOB_HANDLE_INVALID (0) is an
+/// invalid/uninitialized handle. A u64 the scheduler hands out and the caller
+/// passes back to query/wait.
+#[handle(u64, invalid = 0)]
+struct JobHandle {}
+
+/// Worker-thread context handed to a job function. worker_index identifies the
+/// worker (0..num_threads-1); scratch is a temporary arena, rewound after the
+/// job completes.
+struct JobsWorkerInfo {
+    /// Index of the worker thread (0 to num_threads-1).
+    worker_index: i32,
+    /// Temporary arena for scratch allocations, rewound after the job completes.
+    scratch: *Arena,
+}
+
+/// Callback a job runs on a worker thread. Receives the caller's opaque
+/// user_data and the worker context by value.
+callback JobsFunc(user_data: *void, info: JobsWorkerInfo)
+
+/// Work-stealing job system. Create it, schedule jobs (optionally with a priority
+/// or a dependency), query or wait on their handles, then destroy it.
+api Jobs {
+    /// Create the global job system with num_threads workers, backed by arena.
+    [manual] create(arena: *Arena, num_threads: i32)
+    /// Schedule a job; returns its handle (or the immediate-complete sentinel when
+    /// run synchronously from a worker).
+    [manual] add_job(func: JobsFunc, user_data: *void) -> JobHandle
+    /// Schedule a job that runs only after dependency completes. A dependency of
+    /// zero, the immediate-complete sentinel, or an expired handle counts as
+    /// already satisfied and the job is scheduled as if it had none. Scheduled
+    /// from a worker against an unfinished dependency the job is deferred rather
+    /// than run inline, so the returned handle is genuinely pending.
+    [manual] add_job_with_dependency(func: JobsFunc, user_data: *void, dependency: JobHandle) -> JobHandle
+    /// Query whether a job has finished.
+    [manual] is_finished(handle: JobHandle) -> JobsResult
+    /// Block until handle completes. Only the main thread blocks: called from any
+    /// other thread this returns at once without waiting, since a worker blocking
+    /// on a job that still needs a worker to run would deadlock the pool. Poll
+    /// fl_jobs_is_finished there instead.
+    [manual] wait(handle: JobHandle)
+    /// Destroy the global job system, joining all workers.
+    [manual] destroy()
+    /// Number of worker threads in the global job system.
+    [manual] num_threads() -> i32
+    /// Schedule a job at a given priority.
+    [manual] add_job_with_priority(func: JobsFunc, user_data: *void, priority: JobPriority) -> JobHandle
+    /// Schedule a priority job that runs only after dependency completes - see
+    /// add_job_with_dependency for how the dependency is honored.
+    [manual] add_job_with_priority_and_dependency(func: JobsFunc, user_data: *void, priority: JobPriority, dependency: JobHandle) -> JobHandle
+    /// Change a pending job's priority. Returns true if changed, false if it already
+    /// started/completed or the handle is invalid.
+    [manual] set_priority(handle: JobHandle, new_priority: JobPriority) -> bool
+    /// Current priority of a job, or Invalid if the handle is invalid.
+    [manual] get_priority(handle: JobHandle) -> JobPriority
+    /// Allocate per-job context memory of size bytes.
+    [manual] alloc_context(size: usize) -> *void
+    /// Whether the caller is executing on the main thread.
+    [manual] is_main_thread() -> bool
+}
