@@ -1,6 +1,7 @@
 // software/GPU render, image and font-cache tests
 
 #include "unit_tests_common.h"
+#include <limits.h>
 
 #include <core/jobsys.h>
 #include <flowi/core/memory_tracker.h>

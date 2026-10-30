@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, ci-fix]
   pull_request:
 
 jobs:
@@ -135,7 +135,7 @@ jobs:
       - name: Configure (headless shared library)
         run: >-
           cmake -S . -B build -A x64 -T ClangCL
-          -DFLOWI_SDL_BACKEND=OFF
+          -DFLOWI_SDL_BACKEND=OFF -DFLOWI_GPU_BACKEND=OFF
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows-static
       - name: Build shared library and CPU test executable
@@ -161,7 +161,8 @@ jobs:
       - name: Install deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libsdl2-dev clang
+          sudo apt-get install -y cmake ninja-build libsdl2-dev clang \
+            libegl1-mesa-dev libgl1-mesa-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy

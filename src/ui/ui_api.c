@@ -236,12 +236,12 @@ void fl_painter_diamond(float cx, float cy, float rx, float ry, FlColor color, F
 }
 
 void fl_painter_arc(float cx, float cy, float radius, float thickness, float start_angle, float sweep, FlColor color,
-                    uint32_t flags) {
+                    FlArcFlags flags) {
     painter_arc(ui_get_painter(), cx, cy, radius, thickness, start_angle, sweep, color, flags);
 }
 
-void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, float width, FlColor color, uint32_t flags,
-                         FlColor fill_color, float baseline_y) {
+void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, float width, FlColor color,
+                         FlPolylineFlags flags, FlColor fill_color, float baseline_y) {
     painter_polyline(ui_get_painter(), points, points_size, width, color, flags, fill_color, baseline_y);
 }
 

@@ -51,6 +51,10 @@ if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
         list(APPEND WARNING_FLAGS -Wno-initializer-overrides)
     endif()
+    if(CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        set(WARNING_FLAGS /clang:-Wall /clang:-Werror /clang:-Wno-initializer-overrides)
+        add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+    endif()
 endif()
 
 ################################################################################
