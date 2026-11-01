@@ -443,7 +443,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
         switch (e.type) {
             case SDL_QUIT: {
                 FlWindowEvent event = { .type = FlWindowEvent_Close, .timestamp = timestamp };
-                fl_platform_input_push_window_event(ctx, event);
+                platform_input_push_window_event(ctx, event);
                 break;
             }
 
@@ -451,17 +451,17 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                 switch (e.window.event) {
                     case SDL_WINDOWEVENT_CLOSE: {
                         FlWindowEvent event = { .type = FlWindowEvent_Close, .timestamp = timestamp };
-                        fl_platform_input_push_window_event(ctx, event);
+                        platform_input_push_window_event(ctx, event);
                         break;
                     }
                     case SDL_WINDOWEVENT_FOCUS_GAINED: {
                         FlWindowEvent event = { .type = FlWindowEvent_Focus_Gained, .timestamp = timestamp };
-                        fl_platform_input_push_window_event(ctx, event);
+                        platform_input_push_window_event(ctx, event);
                         break;
                     }
                     case SDL_WINDOWEVENT_FOCUS_LOST: {
                         FlWindowEvent event = { .type = FlWindowEvent_Focus_Lost, .timestamp = timestamp };
-                        fl_platform_input_push_window_event(ctx, event);
+                        platform_input_push_window_event(ctx, event);
                         break;
                     }
                     case SDL_WINDOWEVENT_SIZE_CHANGED: {
@@ -469,7 +469,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                             = { .type = FlWindowEvent_Resize,
                                 .resize = { .width = (u32)e.window.data1, .height = (u32)e.window.data2 },
                                 .timestamp = timestamp };
-                        fl_platform_input_push_window_event(ctx, event);
+                        platform_input_push_window_event(ctx, event);
                         break;
                     }
                 }
@@ -484,7 +484,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                                          .modifiers = sdl_keymod_to_fl_keymod(e.key.keysym.mod),
                                          .repeat = e.key.repeat != 0,
                                          .timestamp = timestamp };
-                    fl_platform_input_push_key_event(ctx, event);
+                    platform_input_push_key_event(ctx, event);
                 }
                 break;
             }
@@ -497,7 +497,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                                          .modifiers = sdl_keymod_to_fl_keymod(e.key.keysym.mod),
                                          .repeat = false,
                                          .timestamp = timestamp };
-                    fl_platform_input_push_key_event(ctx, event);
+                    platform_input_push_key_event(ctx, event);
                 }
                 break;
             }
@@ -525,7 +525,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                             .x = (float)(global_x - window_x) * scale,
                             .y = (float)(global_y - window_y) * scale },
                         .timestamp = timestamp };
-                fl_platform_input_push_window_event(ctx, event);
+                platform_input_push_window_event(ctx, event);
                 SDL_free(e.drop.file);
                 break;
             }
@@ -534,7 +534,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                 FlTextInputEvent event
                     = { .text = (FlString) { .data = e.text.text, .length = strlen(e.text.text), .is_static = 1 },
                         .timestamp = timestamp };
-                fl_platform_input_push_text_input_event(ctx, event);
+                platform_input_push_text_input_event(ctx, event);
                 break;
             }
 
@@ -545,7 +545,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                         = { .type = FlMouseEvent_Relative_Motion,
                             .relative = { .delta_x = (float)e.motion.xrel, .delta_y = (float)e.motion.yrel },
                             .timestamp = timestamp };
-                    fl_platform_input_push_mouse_event(ctx, event);
+                    platform_input_push_mouse_event(ctx, event);
                     break;
                 }
                 const float scale = sdl_pointer_scale(e.motion.windowID);
@@ -555,7 +555,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                                                  .delta_x = (float)e.motion.xrel * scale,
                                                  .delta_y = (float)e.motion.yrel * scale },
                                        .timestamp = timestamp };
-                fl_platform_input_push_mouse_event(ctx, event);
+                platform_input_push_mouse_event(ctx, event);
                 break;
             }
 
@@ -571,7 +571,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                                                    .y = (float)e.button.y * scale,
                                                    .click_count = e.button.clicks },
                                        .timestamp = timestamp };
-                fl_platform_input_push_mouse_event(ctx, event);
+                platform_input_push_mouse_event(ctx, event);
                 break;
             }
 
@@ -587,7 +587,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                                                    .y = (float)e.button.y * scale,
                                                    .click_count = 0 },
                                        .timestamp = timestamp };
-                fl_platform_input_push_mouse_event(ctx, event);
+                platform_input_push_mouse_event(ctx, event);
                 break;
             }
 
@@ -595,7 +595,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                 FlMouseEvent event = { .type = FlMouseEvent_Wheel,
                                        .wheel = { .x = e.wheel.preciseX, .y = e.wheel.preciseY },
                                        .timestamp = timestamp };
-                fl_platform_input_push_mouse_event(ctx, event);
+                platform_input_push_mouse_event(ctx, event);
                 break;
             }
 
@@ -616,7 +616,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
 
                         FlGamepadEvent event
                             = { .type = FlGamepadEvent_Connected, .gamepad_id = (u32)slot, .timestamp = timestamp };
-                        fl_platform_input_push_gamepad_event(ctx, event);
+                        platform_input_push_gamepad_event(ctx, event);
                     }
                 }
                 break;
@@ -632,7 +632,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
 
                     FlGamepadEvent event
                         = { .type = FlGamepadEvent_Disconnected, .gamepad_id = (u32)slot, .timestamp = timestamp };
-                    fl_platform_input_push_gamepad_event(ctx, event);
+                    platform_input_push_gamepad_event(ctx, event);
                 }
                 break;
             }
@@ -644,7 +644,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                                              .gamepad_id = (u32)slot,
                                              .button = { .button = sdl_gamepad_button_to_ui_button(e.cbutton.button) },
                                              .timestamp = timestamp };
-                    fl_platform_input_push_gamepad_event(ctx, event);
+                    platform_input_push_gamepad_event(ctx, event);
                 }
                 break;
             }
@@ -656,7 +656,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                                              .gamepad_id = (u32)slot,
                                              .button = { .button = sdl_gamepad_button_to_ui_button(e.cbutton.button) },
                                              .timestamp = timestamp };
-                    fl_platform_input_push_gamepad_event(ctx, event);
+                    platform_input_push_gamepad_event(ctx, event);
                 }
                 break;
             }
@@ -671,7 +671,7 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
                             .gamepad_id = (u32)slot,
                             .axis = { .axis = sdl_gamepad_axis_to_fl_axis(e.caxis.axis), .value = value },
                             .timestamp = timestamp };
-                    fl_platform_input_push_gamepad_event(ctx, event);
+                    platform_input_push_gamepad_event(ctx, event);
                 }
                 break;
             }
@@ -693,7 +693,7 @@ void sdl_input_common_pump_multi(SdlInputCommon* self, const u32* window_ids, Fl
             self->gamepad_connect_pending[i] = false;
             FlGamepadEvent event
                 = { .type = FlGamepadEvent_Connected, .gamepad_id = (u32)i, .timestamp = get_current_time_ms_os() };
-            fl_platform_input_push_gamepad_event(contexts[0], event);
+            platform_input_push_gamepad_event(contexts[0], event);
         }
     }
 

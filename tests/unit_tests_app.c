@@ -168,9 +168,9 @@ UTEST(window_backend, headless_inject_text_back_to_back_keeps_distinct_text) {
 
 static FlString typed_snapshot_after_pushing(FlUiCtx* ctx, const FlString* events, u32 count) {
     for_count(i, count) {
-        fl_platform_input_push_text_input_event(ctx, (FlTextInputEvent) { .text = events[i] });
+        platform_input_push_text_input_event(ctx, (FlTextInputEvent) { .text = events[i] });
     }
-    fl_platform_input_update(ctx, 1.0f / 60.0f);
+    platform_input_update(ctx, 1.0f / 60.0f);
     return ctx->text_input_this_frame;
 }
 
@@ -270,7 +270,7 @@ UTEST(app, frame_str_outside_a_frame_terminates) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // A pointer/keyboard edge pumped before a tick's event poll must be visible to that SAME tick's frame() body. The
-// per-frame edge snapshot (fl_platform_input_update, which derives mouse_pressed_this_frame from the pumped
+// per-frame edge snapshot (platform_input_update, which derives mouse_pressed_this_frame from the pumped
 // buttons_pressed and then clears it) has to run AFTER fl_app_pump_events and BEFORE the frame callback.
 typedef struct InputLatState {
     int tick;              // bumped at the top of each frame() call (1-based)
@@ -856,7 +856,7 @@ UTEST(app, multi_window_per_window_scale) {
 
 // Keyboard focus is per-window (each window's FlUiCtx holds its own focused_id) and restored on activation:
 // deactivating a window clears its focus ring; reactivating it restores the exact field it had. The probe snapshots
-// focused_id at the top of the frame, i.e. after fl_platform_input_update has applied that tick's activation edge.
+// focused_id at the top of the frame, i.e. after platform_input_update has applied that tick's activation edge.
 typedef struct FocusProbe {
     bool set_once;  // request focus on the next frame
     u32 focused_id; // focused_id snapshot at frame start

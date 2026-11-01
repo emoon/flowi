@@ -87,5 +87,5 @@ bool ui_action_repeated(FlUiCtx* ctx, FlAction action);
 // Called during UI context creation.
 void ui_actions_init(FlUiCtx* ctx);
 
-// Called at the start of fl_platform_input_update.
+// Called at the start of platform_input_update.
 void ui_actions_update(FlUiCtx* ctx);

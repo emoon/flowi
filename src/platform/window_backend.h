@@ -59,7 +59,7 @@ typedef struct FlWindowBackend {
     void (*destroy_window)(void* ud, FlWindow* window);
 
     // Event pump - drain the OS event queue ONCE, demux every window-addressed event by OS window id, and
-    // translate it into fl_platform_input_push_* on the matching window's FlUiCtx. windows[i] pairs with contexts[i];
+    // translate it into platform_input_push_* on the matching window's FlUiCtx. windows[i] pairs with contexts[i];
     // count is the live window count. windows[0]/contexts[0] is the main window: events that are not
     // window-addressed (SDL_QUIT, gamepad device/axis) route there. A per-window close pushes FlWindowEvent_Close
     // onto only that window's context. Quit/close travels via the per-context quit_requested, which the host polls;

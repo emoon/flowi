@@ -92,16 +92,16 @@ static void headless_drain_window(FlWindow* window, FlUiCtx* ctx) {
         QueuedEvent* qe = &window->events[i];
         switch (qe->type) {
             case QueuedEvent_Key:
-                fl_platform_input_push_key_event(ctx, qe->key);
+                platform_input_push_key_event(ctx, qe->key);
                 break;
             case QueuedEvent_Mouse:
-                fl_platform_input_push_mouse_event(ctx, qe->mouse);
+                platform_input_push_mouse_event(ctx, qe->mouse);
                 break;
             case QueuedEvent_Text:
-                fl_platform_input_push_text_input_event(ctx, qe->text);
+                platform_input_push_text_input_event(ctx, qe->text);
                 break;
             case QueuedEvent_Window:
-                fl_platform_input_push_window_event(ctx, qe->window);
+                platform_input_push_window_event(ctx, qe->window);
                 break;
         }
     }

@@ -331,14 +331,6 @@ EXPORTS
     fl_perf_scope_frame_end
     fl_perf_scope_init
     fl_pill_impl
-    fl_platform_input_push_gamepad_event
-    fl_platform_input_push_key_event
-    fl_platform_input_push_mouse_event
-    fl_platform_input_push_text_input_event
-    fl_platform_input_push_window_event
-    fl_platform_input_set_mouse_position
-    fl_platform_input_state_init
-    fl_platform_input_update
     fl_popup_begin
     fl_popup_end
     fl_popup_message_box

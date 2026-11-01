@@ -333,7 +333,7 @@ static void handle_text_input_keyboard(FlTextInputState* state, FlUiCtx* ctx, Fl
     FlInputState* input = &ctx->input_state;
     KeyboardState* kb = &input->keyboard;
 
-    // Read the per-frame snapshot, not the raw kb->text_input, which fl_platform_input_update has already
+    // Read the per-frame snapshot, not the raw kb->text_input, which platform_input_update has already
     // cleared by the time the frame runs.
     FlString typed = ctx->text_input_this_frame;
     if (typed.length > 0) {

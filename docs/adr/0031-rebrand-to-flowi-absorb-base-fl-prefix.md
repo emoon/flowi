@@ -67,5 +67,4 @@ an earlier research prototype. The consolidation to a single prefix is complete.
 
 - ADR-0003 is superseded on naming; the `Em`/`EmUi` two-tier split is gone.
 - ADR-0030's standalone-profile prefix is `Fl`/`fl_`.
-- CONTEXT.md's runtime vocabulary is unaffected; only symbol spellings changed. The "Backend" family
-  (`DisplayBackend`/`InputBackend`) keeps its meaning and lives under `flowi/platform`.
+- CONTEXT.md's runtime vocabulary is unaffected; only symbol spellings changed.

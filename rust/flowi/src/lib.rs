@@ -487,10 +487,6 @@ pub use crate::foundation::{
 /// Raw C ABI item; prefer [`Mount`]. The opaque C FlVfsMount behind `*mut FlVfsMount`.
 pub use crate::sys::FlVfsMount;
 
-/// Raw C ABI item. The display rectangle a backend is asked to present into - the argument
-/// backend_set_display_rect takes.
-pub use crate::sys::DisplayRect;
-
 /// Compile-time check that each flowi path names the same type as its flowi_sys counterpart.
 mod public_surface_guard {
     macro_rules! nameable_from_flowi {
@@ -613,7 +609,6 @@ mod public_surface_guard {
         crate::RawStr = crate::sys::RawStr,
         crate::FlArena = crate::sys::Arena,
         crate::FlVfsMount = crate::sys::FlVfsMount,
-        crate::DisplayRect = crate::sys::DisplayRect,
         crate::JobsWorkerInfo = crate::sys::JobsWorkerInfo,
     }
 }

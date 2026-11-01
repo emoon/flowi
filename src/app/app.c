@@ -111,7 +111,7 @@ struct FlApp {
     bool have_last_time;
 
     // Deterministic delta-time override for headless timing tests: fl_app_tick feeds this fixed dt to
-    // fl_platform_input_update / ui_update_end instead of sampling the wall clock.
+    // platform_input_update / ui_update_end instead of sampling the wall clock.
     bool use_test_dt;
     float test_dt;
 
@@ -524,14 +524,14 @@ void fl_app_destroy(FlApp* app) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Frame loop. Ordering within a tick: pump -> fl_platform_input_update -> begin -> frame -> end -> present.
-// fl_platform_input_update is the edge snapshot - it derives mouse_pressed_this_frame / mouse_released_this_frame
+// Frame loop. Ordering within a tick: pump -> platform_input_update -> begin -> frame -> end -> present.
+// platform_input_update is the edge snapshot - it derives mouse_pressed_this_frame / mouse_released_this_frame
 // from the buttons_pressed / buttons_released flags the pump just set, then clears those raw flags. It MUST run
 // after the pump and before the frame body, so an edge pumped this tick is visible to this tick's widgets and to
 // ui_update_end's hot/active transition.
 //
 // fl_app calls it directly, exactly once per frame, and must NOT route through ui_frame_end_and_update_input:
-// that helper calls fl_platform_input_update itself, double-updating the input deltas.
+// that helper calls platform_input_update itself, double-updating the input deltas.
 
 static void fl_app_pump_events(FlApp* app) {
     // Pump the shared OS queue ONCE and demux it across every live window by id. Build the parallel
@@ -683,7 +683,7 @@ static void fl_app_tick_window(FlApp* app, FlAppWindow* win, float dt, FlAppFram
 
     // Edge snapshot: this tick's press/release edges must be derived before any widget code or hit testing reads
     // the flags.
-    fl_platform_input_update(win->ctx, (double)dt); // exactly once per window per tick
+    platform_input_update(win->ctx, (double)dt); // exactly once per window per tick
 
     ui_update_begin(win->ctx);
     s_frame_active = true;
@@ -763,7 +763,7 @@ bool fl_app_tick(FlApp* app, void* user_data, FlAppFrameFn frame) {
 
     // The main window's close is the app quit - unless its on_close hook vetoes it. Fed identically by both
     // backends (SDL SDL_QUIT/WINDOWEVENT_CLOSE, headless inject_window_close, both via
-    // fl_platform_input_push_window_event).
+    // platform_input_push_window_event).
     if (app_window_close_approved(app->windows[0])) {
         return false;
     }
@@ -892,7 +892,7 @@ void fl_app_inject_mouse_delta(FlApp* app, f32 delta_x, f32 delta_y) {
     window_backend_headless_inject_mouse_delta(&app->window_backend, app_main_os_window(app), delta_x, delta_y);
 }
 
-// Queue a mouse-wheel delta (x/y), cached by fl_platform_input_update for the scoped ui_mouse_wheel_delta() read.
+// Queue a mouse-wheel delta (x/y), cached by platform_input_update for the scoped ui_mouse_wheel_delta() read.
 // Routed through the window backend, not straight to input state, so it is observed on the following tick.
 void fl_app_inject_wheel(FlApp* app, f32 x, f32 y) {
     FL_APP_REQUIRE_HEADLESS(app);

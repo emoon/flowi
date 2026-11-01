@@ -137,12 +137,6 @@ pub use toolkit::viewport3d::*;
 pub use toolkit::pixel_readback::PixelReadback;
 
 pub use toolkit::application_settings::{AppRenderer, AppSettings};
-/// The display-backend ABI: the `DisplayBackend` function-pointer table plus its envelopes.
-pub use toolkit::backend_display::{
-    DisplayBackend, DisplayConfig, DisplayFrameCaptureCallback, DisplayFramebuffer, DisplayRect,
-};
-/// The input-backend ABI: the `InputBackend` function-pointer table.
-pub use toolkit::backend_input::InputBackend;
 /// The `fl_background_*` functions.
 pub use toolkit::background::{
     fl_background_set, fl_background_set_alpha, fl_background_set_blend,
@@ -191,7 +185,6 @@ pub use toolkit::input::{
     MouseWheelData, TextInputEvent, WindowDropData, WindowEvent, WindowEventPayload,
     WindowEventType, WindowResizeData,
 };
-pub use toolkit::input_device::InputDevice;
 pub use toolkit::item_behavior::*;
 /// The per-element behavior opt-in mask taken by `fl_item_behavior`.
 pub use toolkit::item_flags::ItemFlags;

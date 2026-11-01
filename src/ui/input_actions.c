@@ -350,7 +350,7 @@ void ui_actions_update(FlUiCtx* ctx) {
     }
 
     // Mouse wheel has no "held" state, just up/down events. Reads the per-frame cached value (set by
-    // fl_platform_input_update before it calls this, and before the live accumulator is cleared), so the actions
+    // platform_input_update before it calls this, and before the live accumulator is cleared), so the actions
     // observe the same values - including the Shift axis swap - as every other wheel consumer.
     state->actions[FlAction_Scroll_Up].pressed = (input->mouse.wheel_y_cached > 0.0f);
     state->actions[FlAction_Scroll_Up].held = false;

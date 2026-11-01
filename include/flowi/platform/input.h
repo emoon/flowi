@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <flowi/fl_api.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <flowi/core/string.h>
@@ -101,10 +100,6 @@ typedef enum FlWindowEventType {
     // event per file.
     FlWindowEvent_Drop_File = 5,
 } FlWindowEventType;
-
-typedef struct FlUiCtx FlUiCtx;
-
-typedef struct FlInputState FlInputState;
 
 // Absolute-motion arm of MouseEvent: the cursor position plus the
 // position-derived delta since the previous move, in window pixels.
@@ -215,25 +210,6 @@ typedef struct FlWindowEvent {
     };
     uint64_t timestamp;
 } FlWindowEvent;
-
-// The input push API: backends poll OS events and push them into the UI context,
-// and update advances per-frame input state once per frame.
-// Initialize a per-context input state to defaults.
-FL_API void fl_platform_input_state_init(FlInputState* state);
-// Push a keyboard event onto the context's input queue.
-FL_API void fl_platform_input_push_key_event(FlUiCtx* ctx, FlKeyEvent event);
-// Push a text-input (composed character) event.
-FL_API void fl_platform_input_push_text_input_event(FlUiCtx* ctx, FlTextInputEvent event);
-// Push a mouse event (move / button / wheel / relative motion).
-FL_API void fl_platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event);
-// Push a gamepad event (button / axis / connect / disconnect).
-FL_API void fl_platform_input_push_gamepad_event(FlUiCtx* ctx, FlGamepadEvent event);
-// Push a window event (focus / resize / close).
-FL_API void fl_platform_input_push_window_event(FlUiCtx* ctx, FlWindowEvent event);
-// Set the absolute mouse position directly, bypassing event delivery.
-FL_API void fl_platform_input_set_mouse_position(FlUiCtx* ctx, float x, float y);
-// Advance per-frame input state by dt seconds (called once per frame).
-FL_API void fl_platform_input_update(FlUiCtx* ctx, double dt);
 
 
 #ifdef __cplusplus
