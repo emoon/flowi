@@ -462,8 +462,8 @@ The core's backend-agnostic record of each image handle's readiness and logical
 dimensions (`image_registry_is_ready` returns readiness plus width/height) — the single
 source the public image query and [[#Layout Engine]] read. It holds **no pixels**: realized
 pixels are a backend [[#Representation]]. Presence in the registry *is* readiness: an image
-becomes **ready** when the active backend has *realized* it and acks it via
-`image_registry_mark_realized` (see [[#Resource Readiness]]). Pending and error states are
+becomes **ready** when the active backend has *realized* it: `prepare_image` returns true and
+the core records it with `image_registry_mark_realized` (see [[#Resource Readiness]]). Pending and error states are
 not tracked here — they stay in the load/decode path. Backend-owned pool pressure (SW
 eviction + reload) is invisible here — a once-realized image stays "ready," and a
 transient pool miss self-heals inside the backend.

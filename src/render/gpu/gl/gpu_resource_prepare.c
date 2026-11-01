@@ -4,7 +4,7 @@
 #include "gpu_renderer_internal.h"
 #include "gpu_svg_color_lower.h"
 #include <ui/font_cache.h>
-#include <ui/image_registry.h>
+#include <ui/image_decode.h>
 #include <ui/vector_image.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -38,29 +38,26 @@ static bool prepare_large_image(GpuShared* self, FlImageHandle handle, const FlI
     return true;
 }
 
-void prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+bool prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                    FlArena* scratch, const FlImageLoadRequest* request) {
     GpuShared* self = user_data;
 
     if (!gpu_prepare_image_decode_valid(request_id, decoded, request)) {
-        return;
+        return false;
     }
 
     if (gpu_prepare_image_wants_slot_tier(decoded, request)) {
-        if (prepare_large_image(self, (FlImageHandle)request_id, decoded, scratch)) {
-            image_registry_mark_realized((ImageHandle)request_id, decoded->width, decoded->height);
-        }
-        return;
+        return prepare_large_image(self, (FlImageHandle)request_id, decoded, scratch);
     }
 
     GpuAtlasImageUpload upload;
     if (!gpu_prepare_image_place_atlas(&self->cpu.image_atlas, request_id, decoded, scratch, &upload)) {
-        return;
+        return false;
     }
     glBindTexture(GL_TEXTURE_2D, self->atlas_tex);
     tex_sub_image_strided(scratch, upload.x, upload.y, upload.w, upload.h, upload.stride, 4, GL_RGBA, upload.pixels);
 
-    image_registry_mark_realized((ImageHandle)request_id, decoded->width, decoded->height);
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

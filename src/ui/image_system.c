@@ -58,7 +58,7 @@ struct ImageSystem {
     // decode-complete in the job worker thread when prepare_on_job is set, else from the begin-frame pump on
     // the main/render thread.
     void* backend_user_data;
-    void (*prepare_image)(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+    bool (*prepare_image)(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                           FlArena* scratch, const FlImageLoadRequest* request);
     void (*release_image)(void* user_data, FlImageHandle handle);
     bool prepare_on_job;
@@ -122,6 +122,17 @@ typedef struct ImageLoadContext {
 } ImageLoadContext;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Call the backend's prepare_image seam and mark the handle ready once the backend reports it realized. Runs on
+// whichever thread the backend prepares on (prepare_on_job).
+
+static void prepare_and_mark(ImageSystem* sys, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+                             FlArena* scratch, const FlImageLoadRequest* request) {
+    if (sys->prepare_image(sys->backend_user_data, request_id, decoded, scratch, request)) {
+        image_registry_mark_realized((ImageHandle)request_id, decoded->width, decoded->height);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hand a completed decode to the backend's prepare_image seam, from the job worker thread.
 //
 // With prepare_on_job the call happens here against the job's scratch arena; otherwise decode_arena owns the
@@ -135,7 +146,7 @@ static void dispatch_prepare_image(ImageSystem* sys, FlArena* decode_arena, FlAr
         if (atomic_load(&sys->closing)) {
             return;
         }
-        sys->prepare_image(sys->backend_user_data, request_id, decoded, scratch, request);
+        prepare_and_mark(sys, request_id, decoded, scratch, request);
         return;
     }
 
@@ -376,8 +387,7 @@ void image_system_begin_frame(ImageSystem* sys) {
         DeferredPrepare* next = entry->next;
         {
             arena_scratch_auto(scratch);
-            sys->prepare_image(sys->backend_user_data, entry->request_id, entry->decoded, scratch.arena,
-                               &entry->request);
+            prepare_and_mark(sys, entry->request_id, entry->decoded, scratch.arena, &entry->request);
         }
         settle_synthetic_load(sys, entry->request_id);
         fl_arena_destroy(entry->arena);
@@ -862,7 +872,7 @@ static bool realize_raw_pixels(ImageSystem* sys, FlImageLoadRequestId request_id
         .dedicated = dedicated,
     };
 
-    sys->prepare_image(sys->backend_user_data, request_id, &decoded, scratch.arena, &request);
+    prepare_and_mark(sys, request_id, &decoded, scratch.arena, &request);
 
     int realized_w = 0;
     int realized_h = 0;

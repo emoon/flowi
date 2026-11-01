@@ -95,3 +95,13 @@ The decision is to split the one object along the ownership line:
   self-healing internal event, never a core-visible state.
 - The core exposes one backend-agnostic realization ack, `image_registry_mark_realized` (handle +
   dimensions); both backends call it at the end of `prepare_image` and the registry consumes it.
+
+## Amendment (2026-11-01): the core marks the registry, not the backend
+
+`prepare_image` now returns whether the image was realized. ui's image system calls
+`image_registry_mark_realized` with the decode's dimensions when it returns true, on the same thread
+the backend prepared on: the job worker for an SW decode, the begin-frame pump for a GPU decode,
+and the caller's thread for an image created from raw pixels. The backends no longer
+write the registry from `prepare_image`. The GPU 3D viewport color target is the exception: it is
+not a `prepare_image` image, and the GPU backend still marks and drops its registry entry. See the
+2026-11-01 amendment to ADR-0031.

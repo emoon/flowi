@@ -177,7 +177,7 @@ void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resource-prepare seams (gpu_resource_prepare.c): image/glyph/SVG realization.
 
-void prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+bool prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                    FlArena* scratch, const FlImageLoadRequest* request);
 void prepare_glyph(void* user_data, FlFontId font, u16 size, u32 glyph_id, const struct FlGlyphOutline* outline);
 void prepare_vector(void* user_data, FlImageHandle handle, u16 size, const FlVectorImage* vector);

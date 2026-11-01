@@ -1984,7 +1984,7 @@ typedef struct PrepareStats {
 // Raised around image_system_begin_frame so the stub can tell a pump call from a job call.
 static _Atomic bool s_in_pump = false;
 
-static void stub_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+static bool stub_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                                FlArena* scratch, const FlImageLoadRequest* request) {
     (void)request_id;
     (void)scratch;
@@ -1995,6 +1995,7 @@ static void stub_prepare_image(void* user_data, FlImageLoadRequestId request_id,
     stats->decoded_valid = (decoded != nullptr);
     stats->during_pump = atomic_load(&s_in_pump);
     atomic_fetch_add(&stats->call_count, 1);
+    return false;
 }
 
 // A tiny valid image so image_decode succeeds (SVG keeps it embeddable as text).
@@ -2164,7 +2165,7 @@ typedef struct PathCaptureStats {
     int path_len;
 } PathCaptureStats;
 
-static void capture_path_prepare_image(void* user_data, FlImageLoadRequestId request_id,
+static bool capture_path_prepare_image(void* user_data, FlImageLoadRequestId request_id,
                                        const FlImageDecodeResult* decoded, FlArena* scratch,
                                        const FlImageLoadRequest* request) {
     (void)request_id;
@@ -2179,6 +2180,7 @@ static void capture_path_prepare_image(void* user_data, FlImageLoadRequestId req
     stats->path[n] = '\0';
     stats->path_len = n;
     atomic_fetch_add(&stats->call_count, 1);
+    return false;
 }
 
 UTEST(image_load, copies_caller_path_before_async_read) {
@@ -2295,7 +2297,7 @@ typedef struct GatedBackend {
     _Atomic int finished;   // prepare_image calls that returned
 } GatedBackend;
 
-static void gated_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+static bool gated_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                                 FlArena* scratch, const FlImageLoadRequest* request) {
     (void)request_id;
     (void)decoded;
@@ -2308,6 +2310,7 @@ static void gated_prepare_image(void* user_data, FlImageLoadRequestId request_id
         sleep_ms(1);
     }
     atomic_fetch_add(&b->finished, 1);
+    return false;
 }
 
 // Runs image_system_destroy (or only image_system_close) off the test thread so the test can observe it
@@ -2532,11 +2535,11 @@ static GatedBackend s_host_gate;
 static _Atomic bool s_host_surface_destroyed;
 static void (*s_host_real_destroy_surface)(void*, FlSurface*);
 
-static void host_gated_prepare_image(void* user_data, FlImageLoadRequestId request_id,
+static bool host_gated_prepare_image(void* user_data, FlImageLoadRequestId request_id,
                                      const FlImageDecodeResult* decoded, FlArena* scratch,
                                      const FlImageLoadRequest* request) {
     (void)user_data;
-    gated_prepare_image(&s_host_gate, request_id, decoded, scratch, request);
+    return gated_prepare_image(&s_host_gate, request_id, decoded, scratch, request);
 }
 
 static void host_recording_destroy_surface(void* user_data, FlSurface* surface) {

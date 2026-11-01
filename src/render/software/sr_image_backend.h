@@ -16,5 +16,5 @@ struct FlArena;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // prepare_image seam - realize a decoded static image into the SW cache (job-thread context).
 
-void sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+bool sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                       struct FlArena* scratch, const FlImageLoadRequest* request);
