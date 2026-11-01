@@ -3,6 +3,7 @@ name = "flowi_macros"
 version = "0.0.0"
 edition = "2021"
 license = "MIT"
+repository = "https://github.com/emoon/flowi"
 description = "Procedural macros for the flowi Rust bindings"
 publish = false
 

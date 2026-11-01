@@ -51,8 +51,9 @@ int main(void) {
 That is the `fl_*` C ABI the shared library exports, from the public headers in
 `include/flowi`. `fl_app_create` brings the process-wide core services up itself; a host that
 wants a specific job-thread count, or the main arena before there is an application, calls
-`fl_init(job_threads)` first. The programs in `examples/` are built inside the tree and call the
-same toolkit through its internal `ui_*` headers instead.
+`fl_init(job_threads)` first. flowi keeps its state in process-wide globals, so a process runs one
+flowi instance; that one application can open several windows. The programs in `examples/` are
+built inside the tree and call the same toolkit through its internal `ui_*` headers instead.
 
 Rust, over the same core:
 
