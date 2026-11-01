@@ -273,7 +273,7 @@ static bool menu_typeahead(FlUiCtx* ctx, UiMenuState* m, UiMenuFrame* mf, int le
     UiMenuLevel* lvl = &m->levels[level];
     const UiMenuLevelFrame* lf = &mf->levels[level];
 
-    // Per-frame snapshot, not the raw kb->text_input which platform_input_update clears before the
+    // Per-frame snapshot, not the raw kb->text_input which ui_input_update clears before the
     // frame body runs under the fl_app tick order.
     FlString typed = ctx->text_input_this_frame;
     if (typed.length == 0 || typed.data == nullptr) {
@@ -776,7 +776,7 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
     }
 
     // Self-owned dismissal, past the opening-frame guard (see UiMenuState.open_frame).
-    // ESC is read through the action system (FlAction_Cancel), not keys_pressed, which platform_input_update
+    // ESC is read through the action system (FlAction_Cancel), not keys_pressed, which ui_input_update
     // clears before the frame body runs. ESC pops ONE level (closing the chain only at the root); a click outside the
     // union of all open rects closes the whole chain. Leaving the cursor in empty space is sticky and does NOT close.
     if (ctx->frame_counter > m->open_frame) {

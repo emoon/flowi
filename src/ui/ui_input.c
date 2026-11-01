@@ -1,22 +1,23 @@
-#include "input_types.h"
+#include "ui_input.h"
+#include <platform/input_types.h>
 #include <core/string.h>
 #include <core/log.h>
 #include <core/memory.h>
-#include "ui/input_actions.h"
-#include "ui/ui_private.h"
+#include "input_actions.h"
+#include "ui_private.h"
 #include <math.h>
 #include <string.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void platform_input_state_reset(FlInputState* state) {
+static void ui_input_state_reset(FlInputState* state) {
     memory_zero(state, sizeof(FlInputState));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void platform_input_state_init(FlInputState* state) {
-    platform_input_state_reset(state);
+void ui_input_state_init(FlInputState* state) {
+    ui_input_state_reset(state);
     for_count(i, UI_INPUT_MAX_GAMEPADS) {
         state->gamepads[i].dead_zone = UI_INPUT_GAMEPAD_DEFAULT_DEAD_ZONE;
     }
@@ -96,7 +97,7 @@ void platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
         case FlMouseEvent_Move:
             mouse->x = event.move.x;
             mouse->y = event.move.y;
-            // Delta is not accumulated here; platform_input_update_mouse derives it from the position difference
+            // Delta is not accumulated here; ui_input_update_mouse derives it from the position difference
             break;
 
         case FlMouseEvent_Button_Down:
@@ -247,7 +248,7 @@ void platform_input_push_window_event(FlUiCtx* ctx, FlWindowEvent event) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void platform_input_set_mouse_position(FlUiCtx* ctx, float x, float y) {
+void ui_input_set_mouse_position(FlUiCtx* ctx, float x, float y) {
     FlInputState* state = &ctx->input_state;
     state->mouse.x = x;
     state->mouse.y = y;
@@ -269,7 +270,7 @@ static float mouse_distance_sqr(float x1, float y1, float x2, float y2) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void platform_input_update_mouse(FlInputState* state, double dt) {
+static void ui_input_update_mouse(FlInputState* state, double dt) {
     MouseState* mouse = &state->mouse;
 
     if (is_mouse_pos_valid(mouse->x, mouse->y)) {
@@ -338,7 +339,7 @@ static void platform_input_update_mouse(FlInputState* state, double dt) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void platform_input_update(FlUiCtx* ctx, double dt) {
+void ui_input_update(FlUiCtx* ctx, double dt) {
     FlInputState* state = &ctx->input_state;
     KeyboardState* kb = &state->keyboard;
 
@@ -465,7 +466,7 @@ void platform_input_update(FlUiCtx* ctx, double dt) {
     state->mouse.raw_delta_x = 0.0f;
     state->mouse.raw_delta_y = 0.0f;
 
-    platform_input_update_mouse(state, dt);
+    ui_input_update_mouse(state, dt);
 
     for_count(i, FlMouseButton_Count) {
         if (state->mouse.buttons[i]) {

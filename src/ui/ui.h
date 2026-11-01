@@ -18,6 +18,7 @@
 #include "layout.h"
 #include <ui/ui_types.h>
 #include "ui_ids.h"
+#include "ui_input.h"
 #include "ui_tokens.h"
 #include "ui_variant_helpers.h"
 #include <vfs/vfs.h>
