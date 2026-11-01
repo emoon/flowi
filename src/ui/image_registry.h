@@ -5,8 +5,8 @@
 //
 // A small, backend-agnostic map from image handle -> realized logical dimensions. It holds NO pixels - the
 // decoded/realized pixels live in the active backend (the SW TLSF pool, the GPU atlas/slots). Presence in
-// the registry IS readiness: an image is ready only once the active backend has acked it via
-// image_registry_mark_realized. Pending / error are NOT tracked here - they stay in the load/decode path
+// the registry IS readiness: an image is ready only once the active backend has reported it realized
+// (prepare_image returning true). Pending / error are NOT tracked here - they stay in the load/decode path
 // (image.c reads the VFS status for the not-yet-realized case).
 //
 // mark_realized runs on the job-worker thread (SW) or the render thread (GPU); the readiness query runs on the
@@ -29,9 +29,9 @@ ImageRegistry* image_registry_new(struct FlArena* arena);
 /// the caller's arena.
 void image_registry_destroy(ImageRegistry* self);
 
-/// Backend-agnostic realization ack. Called at the END of each backend's prepare_image once the handle's
-/// pixels are realized into the backend's representation (SW pool / GPU atlas-or-slot). Marks the handle
-/// ready with its logical dimensions.
+/// Realization ack, once the handle's pixels are realized into the backend's representation (SW pool / GPU
+/// atlas-or-slot). The image system calls it when the backend's prepare_image returns true; the GPU backend
+/// calls it directly for a 3D viewport's color target. Marks the handle ready with its logical dimensions.
 void image_registry_mark_realized(ImageHandle handle, int width, int height);
 
 /// Drop a handle's realization. Idempotent.

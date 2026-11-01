@@ -794,7 +794,7 @@ UTEST(list_focus_request, seed_validated_with_first_row_fallback) {
 // so the covered span reaches rows that were never instantiated on the press frame. Coverage must resolve to MODEL
 // POSITIONS (arithmetic on content Y), never per-item state.
 //
-// This drives an app-owned context via the REAL input layer every frame (platform_input_update), so the
+// This drives an app-owned context via the REAL input layer every frame (ui_input_update), so the
 // click-vs-drag threshold and the empty-space hit-test are genuine. It is grouped with the other fl_app cases
 // because fl_app_destroy tears down the global UI context - a render-fixture case must never follow it.
 
@@ -804,17 +804,17 @@ UTEST(list_focus_request, seed_validated_with_first_row_fallback) {
 // Lays list_id out as a 100-row List in a fixed 120px viewport at the window origin. row_height 24 + gap 12 ->
 // 36px stride, so the gap region after row 0 is screen y [24, 36] - empty space a press can land in. modifiers
 // (FlKeyModifier_*) feeds ui_keyboard_modifiers; it - and nav_down, for the focus-retention case - is stamped
-// AFTER platform_input_update so the input layer can't clear it. out_result, if non-NULL, captures the List
+// AFTER ui_input_update so the input layer can't clear it. out_result, if non-NULL, captures the List
 // result so has_focus-gated outcomes (the roving cursor on result.focused_id) are observable.
 static FlListRange marquee_frame_ex(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* set, const u64* ids, u32 count,
                                     u32 modifiers, float mx, float my, bool held, bool pressed, bool released,
                                     bool nav_down, FlListResult* out_result) {
     FlInputState* in = &ctx->input_state;
-    platform_input_set_mouse_position(ctx, mx, my);
+    ui_input_set_mouse_position(ctx, mx, my);
     in->mouse.buttons[FlMouseButton_Left] = held;
     in->mouse.buttons_pressed[FlMouseButton_Left] = pressed;
     in->mouse.buttons_released[FlMouseButton_Left] = released;
-    platform_input_update(ctx, 1.0f / 60.0f);
+    ui_input_update(ctx, 1.0f / 60.0f);
     in->keyboard.modifiers = modifiers;
     ctx->nav_frame.nav_down = nav_down;
 
@@ -1017,11 +1017,11 @@ UTEST(list_marquee, press_keeps_keyboard_focus) {
 static FlListResult drag_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* set, const u64* ids, u32 count,
                                float mx, float my, bool held, bool pressed, bool released) {
     FlInputState* in = &ctx->input_state;
-    platform_input_set_mouse_position(ctx, mx, my);
+    ui_input_set_mouse_position(ctx, mx, my);
     in->mouse.buttons[FlMouseButton_Left] = held;
     in->mouse.buttons_pressed[FlMouseButton_Left] = pressed;
     in->mouse.buttons_released[FlMouseButton_Left] = released;
-    platform_input_update(ctx, 1.0f / 60.0f);
+    ui_input_update(ctx, 1.0f / 60.0f);
 
     FlListResult lr = { 0 };
     ui_update_begin(ctx);
@@ -1145,7 +1145,7 @@ static FlListResult decl_frame_ex(FlUiCtx* ctx, FlLayoutId list_id, const FlList
                                   FlSelectionSet* set, float mx, float my, bool held, bool pressed, bool released,
                                   bool right_held, bool enter, u32 mods, FlListOpts opts) {
     FlInputState* in = &ctx->input_state;
-    platform_input_set_mouse_position(ctx, mx, my);
+    ui_input_set_mouse_position(ctx, mx, my);
     in->mouse.buttons[FlMouseButton_Left] = held;
     in->mouse.buttons_pressed[FlMouseButton_Left] = pressed;
     in->mouse.buttons_released[FlMouseButton_Left] = released;
@@ -1153,9 +1153,9 @@ static FlListResult decl_frame_ex(FlUiCtx* ctx, FlLayoutId list_id, const FlList
     // right_clicked is edge-triggered (fires once on press), so synthesize the press edge too. The declarative
     // cases only ever pulse right for a single frame (a context-menu right-click), so right_held doubles as the edge.
     in->mouse.buttons_pressed[FlMouseButton_Right] = right_held;
-    in->keyboard.keys_pressed[FlKey_Enter] = enter; // one-frame edge (platform_input_update clears it afterward)
+    in->keyboard.keys_pressed[FlKey_Enter] = enter; // one-frame edge (ui_input_update clears it afterward)
     in->keyboard.modifiers = mods;                  // a level (ctrl/shift held), read by the click gesture machine
-    platform_input_update(ctx, 1.0f / 60.0f);
+    ui_input_update(ctx, 1.0f / 60.0f);
 
     FlListResult lr = { 0 };
     ui_update_begin(ctx);

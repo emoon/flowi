@@ -4,7 +4,6 @@
 #include <core/simd.h>
 #include <ui/image_decode.h>
 #include <ui/image_private.h>
-#include <ui/image_registry.h>
 #include <ui/image_system.h>
 #include <core/memory.h>
 #include "sr_image_convert.h"
@@ -92,14 +91,14 @@ static void deinterleave_image(InternalImageData* image_data, FlArena* arena) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SW backend prepare_image seam. Runs on a job worker thread after image_decode() completes.
 
-void sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+bool sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                       FlArena* scratch, const FlImageLoadRequest* request) {
     (void)user_data;
 
     if (!decoded) {
         log_error("sw_prepare_image: decode was null for '%.*s' (request_id=%u)", (int)request->relative_path.length,
                   request->relative_path.data, (unsigned)request_id);
-        return;
+        return false;
     }
 
     InternalImageData temp_data = {
@@ -133,7 +132,7 @@ void sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const Fl
         log_error("sw_prepare_image: cache alloc failed for '%.*s' (request_id=%u, %dx%d, ch=%d)",
                   (int)request->relative_path.length, request->relative_path.data, (unsigned)request_id,
                   temp_data.padded_width, temp_data.padded_height, temp_data.channels);
-        return;
+        return false;
     }
 
     entry->public_data.format = temp_data.format;
@@ -162,6 +161,5 @@ void sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const Fl
 
     image_cache_mark_request_finished((ImageHandle)request_id, entry);
 
-    // Readiness flips only once the pixels are resident in the SW pool.
-    image_registry_mark_realized((ImageHandle)request_id, temp_data.width, temp_data.height);
+    return true;
 }

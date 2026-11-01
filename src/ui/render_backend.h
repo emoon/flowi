@@ -96,8 +96,10 @@ typedef struct FlRenderBackend {
     void (*set_font_cache)(void* ud, FlFontCache* font_cache);
     // Image preparation seam for static images, called on decode-complete. Runs
     // in the job worker (SW) or the begin-frame pump (GL/D3D) per
-    // prepare_image_on_job.
-    void (*prepare_image)(void* ud, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded, FlArena* scratch, const FlImageLoadRequest* request);
+    // prepare_image_on_job. Returns true once the image is realized in the
+    // backend's representation; the caller then marks it ready at the decode's
+    // dimensions.
+    bool (*prepare_image)(void* ud, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded, FlArena* scratch, const FlImageLoadRequest* request);
     void (*release_image)(void* ud, FlImageHandle h);
     // Glyph preparation seam - the core hands the shared outline; the backend
     // caches its own representation. No release_glyph: atlases regenerate wholesale.

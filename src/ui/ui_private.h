@@ -22,8 +22,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define UI_INPUT_MAX_GAMEPADS 16
-
 #define UI_INPUT_GAMEPAD_DEFAULT_DEAD_ZONE 0.15f
 
 #define UI_MOUSE_DOUBLE_CLICK_TIME 0.3f
@@ -67,7 +65,7 @@ typedef struct MouseState {
     float delta_x;
     float delta_y;
     float raw_delta_x; // Accumulated raw relative-motion delta this frame (hidden drag); cleared in
-                       // platform_input_update
+                       // ui_input_update
     float raw_delta_y;
     float raw_delta_x_cached; // Cached per-frame raw delta read by ui_mouse_drag_delta (set before clearing)
     float raw_delta_y_cached;
@@ -154,7 +152,7 @@ typedef struct WindowEventState {
     bool close_requested;
 
     // Files the OS dropped since the last update. The paths ride render_frame_allocator, so
-    // platform_input_update snapshots them into stable FlUiCtx storage before the frame body runs.
+    // ui_input_update snapshots them into stable FlUiCtx storage before the frame body runs.
     u32 dropped_file_count;
     FlString dropped_files[UI_DROPPED_FILES_CAP];
     FlVec2 dropped_file_positions[UI_DROPPED_FILES_CAP];
@@ -501,7 +499,7 @@ typedef struct FlUiCtx {
     bool gamepad_buttons_pressed_this_frame[UI_INPUT_MAX_GAMEPADS][FlGamepadButton_Count];
     bool gamepad_buttons_released_this_frame[UI_INPUT_MAX_GAMEPADS][FlGamepadButton_Count];
 
-    // This-frame typed text, snapshotted before platform_input_update clears the raw kb fields. Consumers
+    // This-frame typed text, snapshotted before ui_input_update clears the raw kb fields. Consumers
     // (ui_text_input, dropdown search, list type-ahead) read it.
     FlString text_input_this_frame;
     char text_input_buffer[UI_TEXT_INPUT_THIS_FRAME_CAP];

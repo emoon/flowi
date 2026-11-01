@@ -32,7 +32,7 @@ One line per ADR: number, title and status. Decisions are never renumbered; a su
 - [0028](0028-list-mechanics-not-policy-selection-request-protocol.md) List widget: interaction mechanics, not model policy; selection crosses as requests — Accepted
 - [0029](0029-pointer-cursor-seam-hidden-relative-drag-per-frame-cursor.md) Pointer/cursor platform seam: hidden relative drag + per-frame cursor request — Accepted
 - [0030](0030-api-idl-single-source-generates-c-and-rust.md) The API IDL is the single source of truth; api_gen generates both C and Rust — Accepted (revised by 0032, 0035 and 0051)
-- [0031](0031-rebrand-to-flowi-absorb-base-fl-prefix.md) One library, one `Fl`/`fl_` prefix, five source modules — Accepted
+- [0031](0031-rebrand-to-flowi-absorb-base-fl-prefix.md) One library, one `Fl`/`fl_` prefix, five source modules — Accepted (amended 2026-11-01: seams are owned by their consumer)
 - [0032](0032-plugin-vtable-moves-to-host-flowi-direct-calls.md) The plugin vtable belongs to the host: flowi calls direct, api_gen emits per-consumer profiles — Accepted (ownership revised by 0051, which 0058 superseded)
 - [0033](0033-flowi-physical-layout-split-include-src-generated-public.md) flowi physical layout: split `include`/`src`, generated-is-the-public-surface, two-prefix includes — Accepted
 - [0034](0034-evict-host-subsystem-vfs-driver-stays-flowi.md) Evict the host plugin/service subsystem by deletion; the VFS driver interface stays in flowi — Accepted

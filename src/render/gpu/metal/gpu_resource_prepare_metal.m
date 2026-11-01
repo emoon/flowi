@@ -10,7 +10,6 @@
 #include <core/log.h>
 #include <ui/font_cache.h>     // FlGlyphOutline
 #include <ui/image_decode.h>   // FlImageDecodeResult
-#include <ui/image_registry.h> // image_registry_mark_realized
 #include <ui/vector_image.h>   // FlVectorImage
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,14 +86,14 @@ static bool metal_dispatch_cell(MetalShared* self, const MetalCellDispatch* d) {
 }
 
 // Image preparation seam: place a decoded static image into the RGBA8 atlas and upload its cell, or realize it on
-// its own slot texture (gpu_prepare_image_wants_slot_tier), then ack the shared registry. Runs on the render
-// thread.
-void metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+// its own slot texture (gpu_prepare_image_wants_slot_tier). Returns true once the image is realized. Runs on the
+// render thread.
+bool metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                          FlArena* scratch, const FlImageLoadRequest* request) {
     MetalShared* self = user_data;
 
     if (!gpu_prepare_image_decode_valid(request_id, decoded, request)) {
-        return;
+        return false;
     }
 
     u32 w = (u32)decoded->width;
@@ -103,12 +102,12 @@ void metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const
         if (w > METAL_SLOT_MAX_TEXTURE_DIM || h > METAL_SLOT_MAX_TEXTURE_DIM) {
             log_error("metal backend: %ux%u image exceeds the texture limit (%d) - dropped", w, h,
                       METAL_SLOT_MAX_TEXTURE_DIM);
-            return;
+            return false;
         }
         bool alpha_only = decoded->channels == 1;
         u32 tex = metal_slot_realize(self, w, h, alpha_only, false); // +1 owned by the pool; 0 = failed (logged)
         if (tex == 0) {
-            return;
+            return false;
         }
         // An alpha-coverage source stays R8; the texture's swizzle (metal_slot_realize) makes it white x coverage.
         metal_texture_upload(self->slot_tex_pool[tex - 1], 0, 0, w, h, (u32)decoded->stride, alpha_only ? 1u : 4u,
@@ -116,19 +115,18 @@ void metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const
         if (gpu_image_slots_register_static(&self->cpu.image_slots, (FlImageHandle)request_id, w, h, tex) < 0) {
             // Table full or the handle is already registered - gpu_image_slots_register_static logged the reason.
             METAL_RELEASE(self->slot_tex_pool[tex - 1]);
-            return;
+            return false;
         }
-        image_registry_mark_realized((ImageHandle)request_id, decoded->width, decoded->height);
-        return;
+        return true;
     }
 
     GpuAtlasImageUpload upload;
     if (!gpu_prepare_image_place_atlas(&self->cpu.image_atlas, request_id, decoded, scratch, &upload)) {
-        return;
+        return false;
     }
     metal_texture_upload(self->image_atlas_tex, upload.x, upload.y, upload.w, upload.h, upload.stride, 4,
                          upload.pixels);
-    image_registry_mark_realized((ImageHandle)request_id, decoded->width, decoded->height);
+    return true;
 }
 
 // Glyph preparation seam: place the glyph and rasterize its lowered outline into the R8 glyph atlas with one

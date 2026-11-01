@@ -2917,7 +2917,8 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
         .channels = 4,
         .premultiplied = true,
     };
-    backend->prepare_image(backend->user_data, 101, &color_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 101, &color_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     // Alpha-coverage source: 4x4, one alpha step per column (0, 85, 170, 255).
     static u8 alpha_px[4 * 4];
@@ -2927,12 +2928,14 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
         }
     }
     FlImageDecodeResult alpha_decode = { .pixels = alpha_px, .width = 4, .height = 4, .stride = 4, .channels = 1 };
-    backend->prepare_image(backend->user_data, 102, &alpha_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 102, &alpha_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     // Filter probe: 2x1 black|white, scaled 8x so linear and nearest sampling are distinguishable.
     static u8 ramp_px[2 * 4] = { 0, 0, 0, 255, 255, 255, 255, 255 };
     FlImageDecodeResult ramp_decode = { .pixels = ramp_px, .width = 2, .height = 1, .stride = 8, .channels = 4 };
-    backend->prepare_image(backend->user_data, 103, &ramp_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 103, &ramp_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     // Strided source: 2x2 RGBA whose rows carry 4 bytes of padding (stride 12 over a tight 8) - the upload
     // path must repack rows, never read the padding.
@@ -2948,7 +2951,8 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
         .channels = 4,
         .premultiplied = true,
     };
-    backend->prepare_image(backend->user_data, 104, &strided_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 104, &strided_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     // Oversized source: past the per-image cap the seam routes to a dedicated slot texture instead of the
     // atlas - the handle keeps rendering. The slot-image section owns the thorough coverage.
@@ -2962,7 +2966,8 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
         .channels = 4,
         .premultiplied = true,
     };
-    backend->prepare_image(backend->user_data, 105, &big_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 105, &big_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     FlRenderFrame frame = test_frame();
     FlPixelReadback buf;
@@ -3103,7 +3108,8 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
         .channels = 4,
         .premultiplied = true,
     };
-    backend->prepare_image(backend->user_data, 201, &large_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 201, &large_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     // Large alpha-coverage source: 300x4 single-channel, one alpha per column.
     static u8 large_alpha[LW * 4];
@@ -3115,7 +3121,8 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     // Stride 0 = tightly packed, so the upload derives the row pitch as w * bpp itself - the single-channel
     // side of that fallback, which a source spelling its tight stride explicitly never reaches.
     FlImageDecodeResult alpha_decode = { .pixels = large_alpha, .width = LW, .height = 4, .stride = 0, .channels = 1 };
-    backend->prepare_image(backend->user_data, 202, &alpha_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 202, &alpha_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     FlRenderFrame frame = test_frame();
     FlPixelReadback buf;
@@ -3449,8 +3456,11 @@ static int run_background_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
         .channels = 4,
         .premultiplied = true,
     };
-    backend->prepare_image(backend->user_data, 301, &prev_decode, scratch, &req); // prev = solid red
-    backend->prepare_image(backend->user_data, 302, &curr_decode, scratch, &req); // current = solid blue
+    // prev = solid red, current = solid blue
+    CHECK(backend->prepare_image(backend->user_data, 301, &prev_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
+    CHECK(backend->prepare_image(backend->user_data, 302, &curr_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     FlRenderFrame frame = test_frame();
     FlPixelReadback buf;
@@ -3873,8 +3883,10 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     const FlImageHandle atlased_handle = 8002;
     FlImageLoadRequest dedicated_req = { .relative_path = FL_S("lightmap"), .dedicated = true };
     FlImageLoadRequest atlased_req = { .relative_path = FL_S("lightmap"), .dedicated = false };
-    backend->prepare_image(backend->user_data, dedicated_handle, &lightmap_decode, scratch, &dedicated_req);
-    backend->prepare_image(backend->user_data, atlased_handle, &lightmap_decode, scratch, &atlased_req);
+    CHECK(backend->prepare_image(backend->user_data, dedicated_handle, &lightmap_decode, scratch, &dedicated_req),
+          "prepare_image: the backend reports the image realized");
+    CHECK(backend->prepare_image(backend->user_data, atlased_handle, &lightmap_decode, scratch, &atlased_req),
+          "prepare_image: the backend reports the image realized");
 
     CHECK(!gpu_debug_image_in_atlas(backend->user_data, dedicated_handle),
           "viewport3d: a dedicated image must never enter the image atlas, whatever its size");
@@ -5768,7 +5780,8 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
         .channels = 4,
         .premultiplied = true,
     };
-    backend->prepare_image(backend->user_data, 301, &color_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 301, &color_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     // Alpha-coverage source: 4x4, one alpha step per column (0, 85, 170, 255) - the white x alpha atlas form.
     static u8 alpha_px[4 * 4];
@@ -5778,12 +5791,14 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
         }
     }
     FlImageDecodeResult alpha_decode = { .pixels = alpha_px, .width = 4, .height = 4, .stride = 4, .channels = 1 };
-    backend->prepare_image(backend->user_data, 302, &alpha_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 302, &alpha_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     // Filter probe: 2x1 black|white scaled 8x so linear and nearest sampling are distinguishable.
     static u8 ramp_px[2 * 4] = { 0, 0, 0, 255, 255, 255, 255, 255 };
     FlImageDecodeResult ramp_decode = { .pixels = ramp_px, .width = 2, .height = 1, .stride = 8, .channels = 4 };
-    backend->prepare_image(backend->user_data, 303, &ramp_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 303, &ramp_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     // The two row-pitch forms the atlas-cell upload must handle, checked on whichever backend runs this case:
     //  - a padded source (stride 12 over a tight 8, 0xAA sentinel padding) - the pitch rides the upload, so none
@@ -5796,7 +5811,8 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     };
     FlImageDecodeResult padded_decode
         = { .pixels = padded_px, .width = 2, .height = 2, .stride = 12, .channels = 4, .premultiplied = true };
-    backend->prepare_image(backend->user_data, 304, &padded_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 304, &padded_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     static u8 tight_px[2 * 2 * 4] = {
         255, 0, 0,   255, 0,   255, 0, 255, //
@@ -5804,7 +5820,8 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     };
     FlImageDecodeResult tight_decode
         = { .pixels = tight_px, .width = 2, .height = 2, .stride = 0, .channels = 4, .premultiplied = true };
-    backend->prepare_image(backend->user_data, 305, &tight_decode, scratch, &req);
+    CHECK(backend->prepare_image(backend->user_data, 305, &tight_decode, scratch, &req),
+          "prepare_image: the backend reports the image realized");
 
     const FlImageSource img_color = { .kind = FlImageKind_Static, .handle = 301 };
     const FlImageSource img_alpha = { .kind = FlImageKind_Static, .handle = 302 };

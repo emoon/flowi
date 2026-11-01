@@ -9,7 +9,6 @@
 
 #include "../input_types.h"
 #include <SDL.h>
-#include <ui/ui_private.h>
 
 typedef struct SdlInputCommon {
     SDL_GameController* gamepads[UI_INPUT_MAX_GAMEPADS];

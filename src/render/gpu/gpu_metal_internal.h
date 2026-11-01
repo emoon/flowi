@@ -152,7 +152,7 @@ id<MTLBuffer> metal_upload_ssbo(id<MTLDevice> device, const void* data, NSUInteg
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resource-prepare seams (gpu_resource_prepare_metal.m): image / glyph / SVG realization.
 
-void metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
+bool metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                          FlArena* scratch, const FlImageLoadRequest* request);
 void metal_prepare_glyph(void* user_data, FlFontId font, uint16_t size, uint32_t glyph_id,
                          const FlGlyphOutline* outline);

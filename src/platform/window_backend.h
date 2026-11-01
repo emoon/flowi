@@ -11,6 +11,7 @@
 
 #include <core/string.h>
 #include <core/types.h>
+#include <flowi/core/math_data.h>
 #include "input_types.h"
 
 struct FlArena;
