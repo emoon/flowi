@@ -3,6 +3,7 @@ name = "flowi"
 version = "0.0.0"
 edition = "2021"
 license = "MIT"
+repository = "https://github.com/emoon/flowi"
 description = "Safe Rust API for the flowi immediate-mode UI library"
 publish = false
 # Reserves the native flowi library link name.
