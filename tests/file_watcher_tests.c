@@ -818,6 +818,63 @@ UTEST(file_watcher, multiple_watchers_same_path) {
     fl_arena_destroy(arena);
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// macOS delivers changes on the stream's dispatch queue, so a stop can arrive while a callback is still running.
+
+#if PLATFORM_MACOS
+
+typedef struct FwInFlightCtx {
+    _Atomic u32 entered;
+    _Atomic u32 finished;
+} FwInFlightCtx;
+
+static void fw_in_flight_on_change(const FileChange* change, void* user_data) {
+    (void)change;
+    FwInFlightCtx* ctx = (FwInFlightCtx*)user_data;
+    if (atomic_exchange(&ctx->entered, 1) == 0) {
+        sleep_us(200000);
+        atomic_store(&ctx->finished, 1);
+    }
+}
+
+UTEST(file_watcher, stop_waits_for_a_callback_in_flight) {
+    FlArena* arena = arena_new(.reserved_size = MB(4));
+
+    const char* dir = build_temp_cstr_fw(arena, "file_watcher_test_in_flight");
+    FlString target_rel = build_temp_path_fw(arena, "file_watcher_test_in_flight/target.txt");
+    cleanup_path(fl_string_to_cstr(arena, target_rel));
+    cleanup_path(dir);
+    ASSERT_TRUE(create_temp_directory(dir));
+
+    FlFileWatcherConfig config
+        = { .recursive = false, .watch_files = true, .watch_directories = false, .max_changes = 16 };
+    FlFileWatcherHandle handle = file_watcher_start(string_from_cstr(dir), config);
+    ASSERT_NE(handle, FL_FILE_WATCHER_INVALID);
+
+    FileWatcherState* state = find_watcher_state(handle);
+    ASSERT_TRUE(state != nullptr);
+    FlString target = fl_sprintf_arena(arena, "%.*s/target.txt", (int)state->watch_path.length, state->watch_path.data);
+
+    FwInFlightCtx ctx = { 0 };
+    ASSERT_NE(file_watcher_register_callback(handle, target, fw_in_flight_on_change, &ctx),
+              FILE_WATCHER_CALLBACK_INVALID);
+    ASSERT_TRUE(create_test_file(fl_string_to_cstr(arena, target), "payload"));
+
+    for (int i = 0; i < 500 && atomic_load(&ctx.entered) == 0; ++i) {
+        sleep_us(10000);
+    }
+    ASSERT_EQ_MSG(1u, atomic_load(&ctx.entered), "FSEvents never delivered the change");
+
+    file_watcher_stop(handle);
+    EXPECT_EQ_MSG(1u, atomic_load(&ctx.finished), "stop returned while the callback was still running");
+
+    cleanup_path(fl_string_to_cstr(arena, target));
+    cleanup_path(dir);
+    fl_arena_destroy(arena);
+}
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The registry is process-wide, so starting, polling and stopping distinct watchers from several threads all walk the
 // same watcher array. Four workers churn their own watcher while the main thread keeps polling one of its own, which
 // is the shape of a host that starts and stops watchers on job threads while the main thread polls.

@@ -61,6 +61,8 @@ bool file_watcher_is_active(FlFileWatcherHandle handle);
 
 // Register a callback for a specific file path within the watched directory.
 // Returns a callback handle for unregistering, or FILE_WATCHER_CALLBACK_INVALID on error.
+// On macOS the callback runs on the watcher's dispatch queue and file_watcher_stop waits for it, so the callback
+// must not call back into the file watcher.
 FileWatcherCallbackHandle file_watcher_register_callback(FlFileWatcherHandle handle, FlString file_path,
                                                          FileChangeCallback callback, void* user_data);
 
