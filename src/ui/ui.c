@@ -224,6 +224,7 @@ FlUiCtx* ui_create(FlArena* arena, UiShared* shared) {
     // Cursor starts visible (zero-init leaves requested_cursor at the arrow, the per-frame default).
     ctx->cursor_visible = true;
 
+    ui_input_state_init(&ctx->input_state);
     // OS-focused until a focus-lost event says otherwise.
     ctx->input_state.window_focused = true;
 

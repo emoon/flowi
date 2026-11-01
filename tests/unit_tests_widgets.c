@@ -372,6 +372,21 @@ UTEST(input, out_of_range_gamepad_button_or_axis_is_ignored) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(input, new_context_gamepads_start_at_default_dead_zone) {
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+
+    FlUiCtx* ctx = ui_create(s_arena, fixture->shared);
+    ASSERT_TRUE_MSG(ctx != nullptr, "ui_create failed");
+    for (u32 slot = 0; slot < UI_INPUT_MAX_GAMEPADS; slot++) {
+        EXPECT_EQ(UI_INPUT_GAMEPAD_DEFAULT_DEAD_ZONE, ctx->input_state.gamepads[slot].dead_zone);
+    }
+    EXPECT_TRUE(ctx->input_state.window_focused);
+    ui_destroy(ctx);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // text_buffer: shared character filter / grow helpers (ui/ui_text_buffer.h), used by both the text-input widget
 // and the virtual keyboard so their newline policy cannot drift apart.
 
