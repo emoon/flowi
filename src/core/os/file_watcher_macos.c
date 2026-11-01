@@ -159,6 +159,12 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static void drain_queue_noop(void* context) {
+    (void)context;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void platform_stop_watching(FileWatcherState* state) {
     if (!state || !state->platform_data) {
         return;
@@ -169,6 +175,14 @@ void platform_stop_watching(FileWatcherState* state) {
     if (data->stream) {
         FSEventStreamStop(data->stream);
         FSEventStreamInvalidate(data->stream);
+    }
+
+    // Returns once every callback already queued or running on the stream's serial queue has finished.
+    if (data->queue) {
+        dispatch_sync_f(data->queue, nullptr, drain_queue_noop);
+    }
+
+    if (data->stream) {
         FSEventStreamRelease(data->stream);
     }
 
