@@ -523,7 +523,7 @@ void ui_update_begin(FlUiCtx* self) {
     // (last-writer-wins); when nobody does, the app flushes the arrow. Visibility is sticky and not reset here.
     self->requested_cursor = (FlCursor) { .shape = FlCursorShape_Arrow };
 
-    // Runs AFTER fl_platform_input_update() has captured mouse_pressed_this_frame.
+    // Runs AFTER platform_input_update() has captured mouse_pressed_this_frame.
     ui_popup_check_auto_close(self);
 
     Clay_Vector2 pointer_pos = { self->input_state.mouse.x, self->input_state.mouse.y };
@@ -531,7 +531,7 @@ void ui_update_begin(FlUiCtx* self) {
     Clay_SetPointerState(pointer_pos, pointer_down);
 
     // Scroll containers must be updated BEFORE BeginLayout (as per Clay docs), from the cached wheel values
-    // (set in fl_platform_input_update before clearing).
+    // (set in platform_input_update before clearing).
     Clay_Vector2 scroll_delta = { -self->input_state.mouse.wheel_x_cached, -self->input_state.mouse.wheel_y_cached };
 
     // The previous frame's hot_id decides the wheel's arbiter.
@@ -773,7 +773,7 @@ bool ui_gamepad_button_down(u32 slot, FlGamepadButton button) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The pad's edge, or false when the slot or button is out of range or the slot is empty. Callers pass the
-// per-frame snapshot (gamepad_buttons_*_this_frame), not the raw arrays fl_platform_input_update has cleared.
+// per-frame snapshot (gamepad_buttons_*_this_frame), not the raw arrays platform_input_update has cleared.
 static bool gamepad_edge_get(bool edges[UI_INPUT_MAX_GAMEPADS][FlGamepadButton_Count], u32 slot,
                              FlGamepadButton button) {
     return ui_gamepad_connected(slot) && (u32)button < FlGamepadButton_Count && edges[slot][button];
@@ -1187,7 +1187,7 @@ void ui_update_end(FlUiCtx* self, float dt) {
 
     ui_hit_test_frame(self, commands, dt);
 
-    // Mouse edges come from the state captured in fl_platform_input_update, before input cleared the flags.
+    // Mouse edges come from the state captured in platform_input_update, before input cleared the flags.
     if (self->mouse_pressed_this_frame && self->hot_id != 0) {
         self->active_id = self->hot_id;
     }
@@ -1253,8 +1253,8 @@ void ui_frame_end_and_update_input(FlUiCtx* ctx, double dt) {
     ui_update_end(ctx, dt);
 
     {
-        perf_scope("fl_platform_input_update");
-        fl_platform_input_update(ctx, dt);
+        perf_scope("platform_input_update");
+        platform_input_update(ctx, dt);
     }
     {
         perf_scope("ui_update_begin");

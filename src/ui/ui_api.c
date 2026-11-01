@@ -469,14 +469,14 @@ f32 fl_input_gamepad_axis(u32 slot, FlGamepadAxis axis) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The input push surface, aimed at the current context; events pushed with no context are dropped. The
-// multi-window form is fl_platform_input_push_* (flowi/platform/input.h).
+// window backends push into a named context with the internal platform_input_push_* (platform/input_types.h).
 
 void fl_input_push_key_event(FlKeyEvent event) {
     FlUiCtx* self = g_ui_ctx;
     if (self == nullptr) {
         return;
     }
-    fl_platform_input_push_key_event(self, event);
+    platform_input_push_key_event(self, event);
 }
 
 void fl_input_push_text_input_event(FlTextInputEvent event) {
@@ -484,7 +484,7 @@ void fl_input_push_text_input_event(FlTextInputEvent event) {
     if (self == nullptr) {
         return;
     }
-    fl_platform_input_push_text_input_event(self, event);
+    platform_input_push_text_input_event(self, event);
 }
 
 void fl_input_push_mouse_event(FlMouseEvent event) {
@@ -492,7 +492,7 @@ void fl_input_push_mouse_event(FlMouseEvent event) {
     if (self == nullptr) {
         return;
     }
-    fl_platform_input_push_mouse_event(self, event);
+    platform_input_push_mouse_event(self, event);
 }
 
 void fl_input_push_gamepad_event(FlGamepadEvent event) {
@@ -500,7 +500,7 @@ void fl_input_push_gamepad_event(FlGamepadEvent event) {
     if (self == nullptr) {
         return;
     }
-    fl_platform_input_push_gamepad_event(self, event);
+    platform_input_push_gamepad_event(self, event);
 }
 
 void fl_input_push_window_event(FlWindowEvent event) {
@@ -508,7 +508,7 @@ void fl_input_push_window_event(FlWindowEvent event) {
     if (self == nullptr) {
         return;
     }
-    fl_platform_input_push_window_event(self, event);
+    platform_input_push_window_event(self, event);
 }
 
 // Declarative List one-call face - the list slot on the UiInput domain (ui_input.def).

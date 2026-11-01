@@ -1,8 +1,5 @@
 #[module(platform)]
 
-extern opaque FlUiCtx
-extern opaque FlInputState
-
 /// A mouse button. The discriminant carried on a button Mouse Button State
 /// event; Count is the array-size sentinel (not a button).
 enum MouseButton {
@@ -217,25 +214,4 @@ struct WindowEvent {
         drop: WindowDropData
     },
     timestamp: u64,
-}
-
-/// The input push API: backends poll OS events and push them into the UI context,
-/// and update advances per-frame input state once per frame.
-api PlatformInput {
-    /// Initialize a per-context input state to defaults.
-    [manual] state_init(state: *FlInputState)
-    /// Push a keyboard event onto the context's input queue.
-    [manual] push_key_event(ctx: *FlUiCtx, event: KeyEvent)
-    /// Push a text-input (composed character) event.
-    [manual] push_text_input_event(ctx: *FlUiCtx, event: TextInputEvent)
-    /// Push a mouse event (move / button / wheel / relative motion).
-    [manual] push_mouse_event(ctx: *FlUiCtx, event: MouseEvent)
-    /// Push a gamepad event (button / axis / connect / disconnect).
-    [manual] push_gamepad_event(ctx: *FlUiCtx, event: GamepadEvent)
-    /// Push a window event (focus / resize / close).
-    [manual] push_window_event(ctx: *FlUiCtx, event: WindowEvent)
-    /// Set the absolute mouse position directly, bypassing event delivery.
-    [manual] set_mouse_position(ctx: *FlUiCtx, x: f32, y: f32)
-    /// Advance per-frame input state by dt seconds (called once per frame).
-    [manual] update(ctx: *FlUiCtx, dt: f64)
 }

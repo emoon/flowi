@@ -7,8 +7,6 @@
 pub mod action;
 pub mod app;
 pub mod application_settings;
-pub mod backend_display;
-pub mod backend_input;
 pub mod background;
 pub mod button;
 pub mod checkbox;
@@ -32,7 +30,6 @@ pub mod icon;
 pub mod image;
 pub mod image_handle;
 pub mod input;
-pub mod input_device;
 pub mod item_behavior;
 pub mod item_flags;
 pub mod key;

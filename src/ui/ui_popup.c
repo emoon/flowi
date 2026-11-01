@@ -104,7 +104,7 @@ void ui_popup_end(void) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Auto-close logic (called from ui_update_begin, AFTER fl_platform_input_update captures mouse state)
+// Auto-close logic (called from ui_update_begin, AFTER platform_input_update captures mouse state)
 
 void ui_popup_check_auto_close(FlUiCtx* ctx) {
     if (ctx->popup_focus_scope_id == 0) {

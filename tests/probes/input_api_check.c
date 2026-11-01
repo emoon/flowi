@@ -9,21 +9,6 @@
 #include <core/string.h>
 #include <flowi/platform/input.h>
 
-// Per-prototype signature identity: a reordered/retyped arg or changed return fails the build.
-#define FL_INPUT_FN_MATCHES(fn, ...) \
-    _Static_assert(__builtin_types_compatible_p(__typeof__(fn), __VA_ARGS__), #fn " signature drift")
-
-FL_INPUT_FN_MATCHES(fl_platform_input_state_init, void(FlInputState*));
-FL_INPUT_FN_MATCHES(fl_platform_input_push_key_event, void(FlUiCtx*, FlKeyEvent));
-FL_INPUT_FN_MATCHES(fl_platform_input_push_text_input_event, void(FlUiCtx*, FlTextInputEvent));
-FL_INPUT_FN_MATCHES(fl_platform_input_push_mouse_event, void(FlUiCtx*, FlMouseEvent));
-FL_INPUT_FN_MATCHES(fl_platform_input_push_gamepad_event, void(FlUiCtx*, FlGamepadEvent));
-FL_INPUT_FN_MATCHES(fl_platform_input_push_window_event, void(FlUiCtx*, FlWindowEvent));
-FL_INPUT_FN_MATCHES(fl_platform_input_set_mouse_position, void(FlUiCtx*, float, float));
-FL_INPUT_FN_MATCHES(fl_platform_input_update, void(FlUiCtx*, double));
-
-#undef FL_INPUT_FN_MATCHES
-
 // Anonymous-union drop-in: every arm is reachable directly off the event, with no intermediate member.
 _Static_assert(offsetof(FlMouseEvent, move) == offsetof(FlMouseEvent, button), "mouse arms share the union offset");
 _Static_assert(offsetof(FlMouseEvent, move) == offsetof(FlMouseEvent, wheel), "mouse arms share the union offset");

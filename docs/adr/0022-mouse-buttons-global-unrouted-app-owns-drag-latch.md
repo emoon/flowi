@@ -30,7 +30,7 @@ Two facts about the C core decided the shape:
   because `ui_update_begin` routed the cached wheel to scroll containers — no such arbitration is
   needed for buttons.
 - **But the edges are cleared before frame code runs, so they must be snapshotted.** The tick order
-  is `pump -> fl_platform_input_update -> begin -> frame`, and `fl_platform_input_update` clears the per-frame edge
+  is `pump -> platform_input_update -> begin -> frame`, and `platform_input_update` clears the per-frame edge
   arrays (`buttons_pressed` / `buttons_released`) *before* any frame code runs — so a raw read of
   those arrays from a frame query always sees `false`. The core already solves this for the
   Left-only `mouse_pressed_this_frame`: it snapshots the edge into the context before the clear.
@@ -49,7 +49,7 @@ Mouse buttons are a **raw, global, unrouted free query**, and the drag latch liv
   edge), `ui_mouse_down(button)` (held level), `ui_mouse_released(button)` (up edge). They are
   **not** scoped to an element and need no arbitration. The *level* reads the surviving
   `MouseState.buttons[]`; the *edges* read a per-button snapshot the context captures before
-  `fl_platform_input_update` clears the raw edge arrays — generalizing the core's existing Left-only
+  `platform_input_update` clears the raw edge arrays — generalizing the core's existing Left-only
   `mouse_pressed_this_frame` cache so a frame-time read is reliable.
 - **Global, not scoped.** Every reader sees the same button state regardless of what is under the
   cursor. There is no Scroll-Target-style routing — it would be ceremony with no payoff, since the

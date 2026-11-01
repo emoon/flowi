@@ -9,14 +9,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void fl_platform_input_state_reset(FlInputState* state) {
+static void platform_input_state_reset(FlInputState* state) {
     memory_zero(state, sizeof(FlInputState));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_platform_input_state_init(FlInputState* state) {
-    fl_platform_input_state_reset(state);
+void platform_input_state_init(FlInputState* state) {
+    platform_input_state_reset(state);
     for_count(i, UI_INPUT_MAX_GAMEPADS) {
         state->gamepads[i].dead_zone = UI_INPUT_GAMEPAD_DEFAULT_DEAD_ZONE;
     }
@@ -24,7 +24,7 @@ void fl_platform_input_state_init(FlInputState* state) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_platform_input_push_key_event(FlUiCtx* ctx, FlKeyEvent event) {
+void platform_input_push_key_event(FlUiCtx* ctx, FlKeyEvent event) {
     FlInputState* state = &ctx->input_state;
     KeyboardState* kb = &state->keyboard;
 
@@ -58,7 +58,7 @@ void fl_platform_input_push_key_event(FlUiCtx* ctx, FlKeyEvent event) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_platform_input_push_text_input_event(FlUiCtx* ctx, FlTextInputEvent event) {
+void platform_input_push_text_input_event(FlUiCtx* ctx, FlTextInputEvent event) {
     FlInputState* state = &ctx->input_state;
 
     // Append each event's text into the frame's buffer, keeping the earliest text on overflow.
@@ -81,7 +81,7 @@ void fl_platform_input_push_text_input_event(FlUiCtx* ctx, FlTextInputEvent even
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
+void platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
     FlInputState* state = &ctx->input_state;
     MouseState* mouse = &state->mouse;
 
@@ -96,7 +96,7 @@ void fl_platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
         case FlMouseEvent_Move:
             mouse->x = event.move.x;
             mouse->y = event.move.y;
-            // Delta is not accumulated here; fl_platform_input_update_mouse derives it from the position difference
+            // Delta is not accumulated here; platform_input_update_mouse derives it from the position difference
             break;
 
         case FlMouseEvent_Button_Down:
@@ -138,7 +138,7 @@ void fl_platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_platform_input_push_gamepad_event(FlUiCtx* ctx, FlGamepadEvent event) {
+void platform_input_push_gamepad_event(FlUiCtx* ctx, FlGamepadEvent event) {
     FlInputState* state = &ctx->input_state;
 
     if (event.gamepad_id >= UI_INPUT_MAX_GAMEPADS) {
@@ -212,7 +212,7 @@ static void push_dropped_file(FlUiCtx* ctx, WindowEventState* window_events, FlW
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_platform_input_push_window_event(FlUiCtx* ctx, FlWindowEvent event) {
+void platform_input_push_window_event(FlUiCtx* ctx, FlWindowEvent event) {
     FlInputState* state = &ctx->input_state;
     WindowEventState* window_events = &state->window_events;
 
@@ -247,7 +247,7 @@ void fl_platform_input_push_window_event(FlUiCtx* ctx, FlWindowEvent event) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_platform_input_set_mouse_position(FlUiCtx* ctx, float x, float y) {
+void platform_input_set_mouse_position(FlUiCtx* ctx, float x, float y) {
     FlInputState* state = &ctx->input_state;
     state->mouse.x = x;
     state->mouse.y = y;
@@ -269,7 +269,7 @@ static float mouse_distance_sqr(float x1, float y1, float x2, float y2) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void fl_platform_input_update_mouse(FlInputState* state, double dt) {
+static void platform_input_update_mouse(FlInputState* state, double dt) {
     MouseState* mouse = &state->mouse;
 
     if (is_mouse_pos_valid(mouse->x, mouse->y)) {
@@ -338,7 +338,7 @@ static void fl_platform_input_update_mouse(FlInputState* state, double dt) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void fl_platform_input_update(FlUiCtx* ctx, double dt) {
+void platform_input_update(FlUiCtx* ctx, double dt) {
     FlInputState* state = &ctx->input_state;
     KeyboardState* kb = &state->keyboard;
 
@@ -465,7 +465,7 @@ void fl_platform_input_update(FlUiCtx* ctx, double dt) {
     state->mouse.raw_delta_x = 0.0f;
     state->mouse.raw_delta_y = 0.0f;
 
-    fl_platform_input_update_mouse(state, dt);
+    platform_input_update_mouse(state, dt);
 
     for_count(i, FlMouseButton_Count) {
         if (state->mouse.buttons[i]) {

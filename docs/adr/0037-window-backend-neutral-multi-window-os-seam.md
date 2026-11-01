@@ -35,8 +35,8 @@ windowing library.
   + one per-window `FlUiCtx`.
 - SDL is one implementation (`sdl_window_backend_create`, with GL, Metal and software
   presentation modes); a **headless** implementation (`headless_window_backend_create`) makes
-  multi-window CI-testable. `FlDisplayBackend` / `FlInputBackend` survive only for the
-  embedded/host fullscreen path.
+  multi-window CI-testable. `FlDisplayBackend` / `FlInputBackend` have since been removed: an
+  embedded host owns its own display and input and feeds flowi through `fl_input_push_*`.
 
 Input lives in this seam because input is intrinsically a property of a window (true even
 for a future console window), and demuxing OS events by window id needs the window backend

@@ -138,10 +138,6 @@ const _: () = {
     assert!(core::mem::align_of::<WindowEventType>() == 4, "WindowEventType align drift");
 };
 
-pub enum FlUiCtx {}
-
-pub enum FlInputState {}
-
 /// Absolute-motion arm of MouseEvent: the cursor position plus the
 /// position-derived delta since the previous move, in window pixels.
 #[repr(C)]
@@ -406,25 +402,4 @@ const _: () = {
     assert!(core::mem::offset_of!(WindowEvent, payload) == 8, "WindowEvent.payload offset drift");
     assert!(core::mem::offset_of!(WindowEvent, timestamp) == 32, "WindowEvent.timestamp offset drift");
 };
-
-// The input push API: backends poll OS events and push them into the UI context,
-// and update advances per-frame input state once per frame.
-extern "C" {
-    /// Initialize a per-context input state to defaults.
-    pub fn fl_platform_input_state_init(state: *mut FlInputState);
-    /// Push a keyboard event onto the context's input queue.
-    pub fn fl_platform_input_push_key_event(ctx: *mut FlUiCtx, event: crate::sys::KeyEvent);
-    /// Push a text-input (composed character) event.
-    pub fn fl_platform_input_push_text_input_event(ctx: *mut FlUiCtx, event: crate::sys::TextInputEvent);
-    /// Push a mouse event (move / button / wheel / relative motion).
-    pub fn fl_platform_input_push_mouse_event(ctx: *mut FlUiCtx, event: crate::sys::MouseEvent);
-    /// Push a gamepad event (button / axis / connect / disconnect).
-    pub fn fl_platform_input_push_gamepad_event(ctx: *mut FlUiCtx, event: crate::sys::GamepadEvent);
-    /// Push a window event (focus / resize / close).
-    pub fn fl_platform_input_push_window_event(ctx: *mut FlUiCtx, event: crate::sys::WindowEvent);
-    /// Set the absolute mouse position directly, bypassing event delivery.
-    pub fn fl_platform_input_set_mouse_position(ctx: *mut FlUiCtx, x: f32, y: f32);
-    /// Advance per-frame input state by dt seconds (called once per frame).
-    pub fn fl_platform_input_update(ctx: *mut FlUiCtx, dt: f64);
-}
 

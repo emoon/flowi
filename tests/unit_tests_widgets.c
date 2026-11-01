@@ -295,7 +295,7 @@ UTEST(input_key_event, out_of_range_key_is_ignored) {
     for (u32 k = 0; k < sizeof_array(bad_keys); k++) {
         for (u32 t = 0; t < sizeof_array(types); t++) {
             FlKeyEvent event = { .type = types[t], .key = bad_keys[k], .modifiers = FlKeyModifier_Shift };
-            fl_platform_input_push_key_event(ctx, event);
+            platform_input_push_key_event(ctx, event);
         }
     }
 
@@ -303,7 +303,7 @@ UTEST(input_key_event, out_of_range_key_is_ignored) {
     EXPECT_EQ(0, memcmp(kb, &zero, sizeof(KeyboardState)));
 
     FlKeyEvent good = { .type = FlKeyEvent_Down, .key = FlKey_A, .modifiers = FlKeyModifier_Shift };
-    fl_platform_input_push_key_event(ctx, good);
+    platform_input_push_key_event(ctx, good);
     EXPECT_TRUE(kb->keys[FlKey_A]);
     EXPECT_TRUE(kb->keys_pressed[FlKey_A]);
     EXPECT_EQ((u32)FlKeyModifier_Shift, kb->modifiers);
@@ -320,7 +320,7 @@ UTEST(input, out_of_range_mouse_button_is_ignored) {
     for (u32 b = 0; b < sizeof_array(bad); b++) {
         for (u32 t = 0; t < sizeof_array(types); t++) {
             FlMouseEvent event = { .type = types[t], .button = { .button = bad[b] } };
-            fl_platform_input_push_mouse_event(ctx, event);
+            platform_input_push_mouse_event(ctx, event);
         }
     }
 
@@ -328,7 +328,7 @@ UTEST(input, out_of_range_mouse_button_is_ignored) {
     EXPECT_EQ(0, memcmp(mouse, &zero, sizeof(MouseState)));
 
     FlMouseEvent good = { .type = FlMouseEvent_Button_Down, .button = { .button = FlMouseButton_Right } };
-    fl_platform_input_push_mouse_event(ctx, good);
+    platform_input_push_mouse_event(ctx, good);
     EXPECT_TRUE(mouse->buttons[FlMouseButton_Right]);
     EXPECT_TRUE(mouse->buttons_pressed[FlMouseButton_Right]);
 }
@@ -344,7 +344,7 @@ UTEST(input, out_of_range_gamepad_button_or_axis_is_ignored) {
     for (u32 b = 0; b < sizeof_array(bad_buttons); b++) {
         for (u32 t = 0; t < sizeof_array(types); t++) {
             FlGamepadEvent event = { .type = types[t], .gamepad_id = 0, .button = { .button = bad_buttons[b] } };
-            fl_platform_input_push_gamepad_event(ctx, event);
+            platform_input_push_gamepad_event(ctx, event);
         }
     }
 
@@ -353,7 +353,7 @@ UTEST(input, out_of_range_gamepad_button_or_axis_is_ignored) {
     for (u32 a = 0; a < sizeof_array(bad_axes); a++) {
         FlGamepadEvent event
             = { .type = FlGamepadEvent_Axis_Motion, .gamepad_id = 0, .axis = { .axis = bad_axes[a], .value = 1.0f } };
-        fl_platform_input_push_gamepad_event(ctx, event);
+        platform_input_push_gamepad_event(ctx, event);
     }
 
     GamepadState zero = { 0 };
@@ -361,13 +361,13 @@ UTEST(input, out_of_range_gamepad_button_or_axis_is_ignored) {
 
     FlGamepadEvent good_button
         = { .type = FlGamepadEvent_Button_Down, .gamepad_id = 0, .button = { .button = FlGamepadButton_Start } };
-    fl_platform_input_push_gamepad_event(ctx, good_button);
+    platform_input_push_gamepad_event(ctx, good_button);
     EXPECT_TRUE(gamepad->buttons[FlGamepadButton_Start]);
 
     FlGamepadEvent good_axis = { .type = FlGamepadEvent_Axis_Motion,
                                  .gamepad_id = 0,
                                  .axis = { .axis = FlGamepadAxis_Left_X, .value = 0.5f } };
-    fl_platform_input_push_gamepad_event(ctx, good_axis);
+    platform_input_push_gamepad_event(ctx, good_axis);
     EXPECT_EQ(0.5f, gamepad->axes[FlGamepadAxis_Left_X]);
 }
 
@@ -723,7 +723,7 @@ UTEST(input, modifiers_readback) {
     canvas_fixture_reset(ctx);
 }
 
-// Shift+wheel axis swap: fl_platform_input_update swaps the frame's accumulated wheel axes when Shift is
+// Shift+wheel axis swap: platform_input_update swaps the frame's accumulated wheel axes when Shift is
 // held, and the swap must land in the cached values consumers actually read (Clay scroll, ui_mouse_wheel,
 // hover signals) - the live accumulators are cleared each frame. The Scroll_Up/Scroll_Down actions derive
 // from the same cached value, so they fire under the real tick order, swapped and unswapped alike.
@@ -737,7 +737,7 @@ UTEST(input, shift_wheel_axis_swap_lands_in_cache) {
     in->keyboard.modifiers = FlKeyModifier_None;
     in->mouse.wheel_x = 3.0f;
     in->mouse.wheel_y = 7.0f;
-    fl_platform_input_update(ctx, 1.0 / 60.0);
+    platform_input_update(ctx, 1.0 / 60.0);
     ASSERT_FALSE_MSG(in->mouse.wheel_axis_swap_requested, "no swap requested without Shift");
     ASSERT_NEAR_MSG(3.0, (double)in->mouse.wheel_x_cached, 0.001, "x caches unswapped without Shift");
     ASSERT_NEAR_MSG(7.0, (double)in->mouse.wheel_y_cached, 0.001, "y caches unswapped without Shift");
@@ -749,7 +749,7 @@ UTEST(input, shift_wheel_axis_swap_lands_in_cache) {
     in->keyboard.modifiers = FlKeyModifier_Shift;
     in->mouse.wheel_x = 5.0f;
     in->mouse.wheel_y = -2.0f;
-    fl_platform_input_update(ctx, 1.0 / 60.0);
+    platform_input_update(ctx, 1.0 / 60.0);
     ASSERT_TRUE_MSG(in->mouse.wheel_axis_swap_requested, "swap requested while Shift held");
     ASSERT_NEAR_MSG(-2.0, (double)in->mouse.wheel_x_cached, 0.001, "x caches the accumulated y under Shift");
     ASSERT_NEAR_MSG(5.0, (double)in->mouse.wheel_y_cached, 0.001, "y caches the accumulated x under Shift");
@@ -758,7 +758,7 @@ UTEST(input, shift_wheel_axis_swap_lands_in_cache) {
 
     // One quiet update: the cached wheel, swap flag, and scroll-action state clear.
     in->keyboard.modifiers = FlKeyModifier_None;
-    fl_platform_input_update(ctx, 1.0 / 60.0);
+    platform_input_update(ctx, 1.0 / 60.0);
     ASSERT_FALSE_MSG(ui_action_pressed(ctx, FlAction_Scroll_Up), "scroll action clears on a wheel-quiet frame");
 }
 
@@ -784,19 +784,19 @@ UTEST(input, click_count_window_is_per_gap) {
 
     for (u32 expected = 1; expected <= 4; expected++) {
         mouse->buttons_pressed[FlMouseButton_Left] = true;
-        fl_platform_input_update(ctx, gap);
+        platform_input_update(ctx, gap);
         ASSERT_EQ_MSG((int)expected, (int)mouse->click_count[FlMouseButton_Left], "click run keeps accumulating");
     }
 
     // A gap wider than the window still starts a fresh run.
     mouse->buttons_pressed[FlMouseButton_Left] = true;
-    fl_platform_input_update(ctx, UI_MOUSE_DOUBLE_CLICK_TIME * 1.5);
+    platform_input_update(ctx, UI_MOUSE_DOUBLE_CLICK_TIME * 1.5);
     ASSERT_EQ_MSG(1, (int)mouse->click_count[FlMouseButton_Left], "a gap past the window resets the run");
 
     // A click far from its predecessor starts a fresh run even inside the window.
     mouse->x = 100.0f + UI_MOUSE_DOUBLE_CLICK_MAX_DIST * 2.0f;
     mouse->buttons_pressed[FlMouseButton_Left] = true;
-    fl_platform_input_update(ctx, gap);
+    platform_input_update(ctx, gap);
     ASSERT_EQ_MSG(1, (int)mouse->click_count[FlMouseButton_Left], "a click past the distance limit resets the run");
 
     mouse->click_count[FlMouseButton_Left] = 0;
@@ -805,7 +805,7 @@ UTEST(input, click_count_window_is_per_gap) {
 }
 
 // Mouse-button readback: ui_mouse_pressed/released read the context's per-frame edge snapshot
-// (mouse_buttons_*_this_frame, captured before fl_platform_input_update clears the raw buttons_pressed/released
+// (mouse_buttons_*_this_frame, captured before platform_input_update clears the raw buttons_pressed/released
 // arrays), and ui_mouse_down reads the surviving input_state.mouse.buttons[] level. Buttons are global and
 // unrouted, so the bare render fixture drives the context fields straight.
 UTEST(input, mouse_button_readback) {
@@ -858,7 +858,7 @@ UTEST(input, mouse_button_readback) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Gamepad readback through the public fl_input_* queries, driven the way a backend does: push events, then
-// fl_platform_input_update closes the frame. Slot 3 keeps clear of the pad 0 the nav cases drive, and the slot
+// platform_input_update closes the frame. Slot 3 keeps clear of the pad 0 the nav cases drive, and the slot
 // is handed back exactly as found.
 UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     FlUiCtx* ctx = render_fixture_get();
@@ -875,17 +875,17 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
 
     const FlGamepadEvent b_down
         = { .type = FlGamepadEvent_Button_Down, .gamepad_id = slot, .button = { FlGamepadButton_B } };
-    fl_platform_input_push_gamepad_event(ctx,
+    platform_input_push_gamepad_event(ctx,
                                          (FlGamepadEvent) { .type = FlGamepadEvent_Connected, .gamepad_id = slot });
-    fl_platform_input_push_gamepad_event(ctx, b_down);
-    fl_platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Axis_Motion,
+    platform_input_push_gamepad_event(ctx, b_down);
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Axis_Motion,
                                                                  .gamepad_id = slot,
                                                                  .axis = { FlGamepadAxis_Left_Trigger, 0.75f } });
     // Inside the default dead zone: the read is the raw value, not a dead-zoned 0.
-    fl_platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Axis_Motion,
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Axis_Motion,
                                                                  .gamepad_id = slot,
                                                                  .axis = { FlGamepadAxis_Right_X, -0.1f } });
-    fl_platform_input_update(ctx, dt);
+    platform_input_update(ctx, dt);
 
     EXPECT_TRUE_MSG(fl_input_gamepad_button_pressed(slot, FlGamepadButton_B), "press edge reads on the press frame");
     EXPECT_FALSE_MSG(fl_input_gamepad_button_released(slot, FlGamepadButton_B), "no release on the press frame");
@@ -898,7 +898,7 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     EXPECT_EQ(0.0f, fl_input_gamepad_axis(slot, FlGamepadAxis_Left_X));
 
     for_count(i, 3) {
-        fl_platform_input_update(ctx, dt);
+        platform_input_update(ctx, dt);
     }
     EXPECT_FALSE_MSG(fl_input_gamepad_button_pressed(slot, FlGamepadButton_B), "the press edge lasts one frame");
     EXPECT_TRUE_MSG(fl_input_gamepad_button_down(slot, FlGamepadButton_B), "the button is still held");
@@ -907,13 +907,13 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
 
     const FlGamepadEvent b_up
         = { .type = FlGamepadEvent_Button_Up, .gamepad_id = slot, .button = { FlGamepadButton_B } };
-    fl_platform_input_push_gamepad_event(ctx, b_up);
-    fl_platform_input_update(ctx, dt);
+    platform_input_push_gamepad_event(ctx, b_up);
+    platform_input_update(ctx, dt);
     EXPECT_TRUE_MSG(fl_input_gamepad_button_released(slot, FlGamepadButton_B), "release edge reads on release");
     EXPECT_FALSE_MSG(fl_input_gamepad_button_pressed(slot, FlGamepadButton_B), "no press on the release frame");
     EXPECT_EQ(0.0f, fl_input_gamepad_button_hold_duration(slot, FlGamepadButton_B));
 
-    fl_platform_input_update(ctx, dt);
+    platform_input_update(ctx, dt);
     EXPECT_FALSE_MSG(fl_input_gamepad_button_released(slot, FlGamepadButton_B), "the release edge lasts one frame");
 
     // Same-frame tap: down and up land before one update, so both edges read and nothing is held.
@@ -921,9 +921,9 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
         = { .type = FlGamepadEvent_Button_Down, .gamepad_id = slot, .button = { FlGamepadButton_X } };
     const FlGamepadEvent x_up
         = { .type = FlGamepadEvent_Button_Up, .gamepad_id = slot, .button = { FlGamepadButton_X } };
-    fl_platform_input_push_gamepad_event(ctx, x_down);
-    fl_platform_input_push_gamepad_event(ctx, x_up);
-    fl_platform_input_update(ctx, dt);
+    platform_input_push_gamepad_event(ctx, x_down);
+    platform_input_push_gamepad_event(ctx, x_up);
+    platform_input_update(ctx, dt);
     EXPECT_TRUE_MSG(fl_input_gamepad_button_pressed(slot, FlGamepadButton_X), "tap: pressed set");
     EXPECT_TRUE_MSG(fl_input_gamepad_button_released(slot, FlGamepadButton_X), "tap: released set in the same frame");
     EXPECT_EQ(0.0f, fl_input_gamepad_button_hold_duration(slot, FlGamepadButton_X));
@@ -943,9 +943,9 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     // A pad unplugged mid-press reads as an empty slot: no edge, no hold, every axis at 0.
     const FlGamepadEvent y_down
         = { .type = FlGamepadEvent_Button_Down, .gamepad_id = slot, .button = { FlGamepadButton_Y } };
-    fl_platform_input_push_gamepad_event(ctx, y_down);
-    fl_platform_input_update(ctx, dt);
-    fl_platform_input_push_gamepad_event(ctx,
+    platform_input_push_gamepad_event(ctx, y_down);
+    platform_input_update(ctx, dt);
+    platform_input_push_gamepad_event(ctx,
                                          (FlGamepadEvent) { .type = FlGamepadEvent_Disconnected, .gamepad_id = slot });
     EXPECT_FALSE_MSG(fl_input_gamepad_button_pressed(slot, FlGamepadButton_Y), "an empty slot has no press edge");
     EXPECT_EQ(0.0f, fl_input_gamepad_button_hold_duration(slot, FlGamepadButton_Y));
@@ -957,7 +957,7 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     EXPECT_EQ(0.0f, fl_input_gamepad_axis(UI_INPUT_MAX_GAMEPADS, FlGamepadAxis_Left_X));
 
     ctx->input_state.gamepads[slot] = saved;
-    fl_platform_input_update(ctx, dt);
+    platform_input_update(ctx, dt);
     canvas_fixture_reset(ctx);
 }
 
@@ -1399,16 +1399,16 @@ UTEST(ui_slider, geometry_follows_config) {
 }
 
 // One frame of a synthetic gesture over a slider: place the cursor, set the left-button state, run the real
-// input layer, then lay the slider out and let it consume the click. Going through fl_platform_input_update
+// input layer, then lay the slider out and let it consume the click. Going through platform_input_update
 // rather than poking the context means signal.clicked/hovered come from the genuine hit-testing path.
 static void slider_click_frame(FlUiCtx* ctx, FlString label, float thumb_size, float* value, float mx, float my,
                                bool held, bool pressed, bool released) {
     FlInputState* in = &ctx->input_state;
-    fl_platform_input_set_mouse_position(ctx, mx, my);
+    platform_input_set_mouse_position(ctx, mx, my);
     in->mouse.buttons[FlMouseButton_Left] = held;
-    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed; // fl_platform_input_update consumes + clears this edge
+    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed; // platform_input_update consumes + clears this edge
     in->mouse.buttons_released[FlMouseButton_Left] = released;
-    fl_platform_input_update(ctx, 1.0f / 60.0f);
+    platform_input_update(ctx, 1.0f / 60.0f);
 
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
@@ -1803,7 +1803,7 @@ UTEST(ui_message_box, result_paths) {
         MB_FRAME(&open);
         ASSERT_EQ_MSG((int)result, (int)FlDialogResult_None, "opening frame returns None");
 
-        // ui_key_pressed reads the per-frame edge snapshot, normally captured by fl_platform_input_update, which
+        // ui_key_pressed reads the per-frame edge snapshot, normally captured by platform_input_update, which
         // this direct-FlUiCtx fixture never runs.
         ctx->keys_pressed_this_frame[FlKey_Escape] = true;
         MB_FRAME(&open);
@@ -3930,7 +3930,7 @@ UTEST(wheel_input, container_and_scroll_target_no_double_consume) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Click-vs-drag threshold (FlItem_DragThreshold): an item that opts into the flag only starts dragging once the
 // cursor has moved a few pixels from the press point, so a press-and-release in place reads as a click rather than
-// a one-pixel drag. These cases drive the real input layer (fl_platform_input_update) every frame, so signal.dragging
+// a one-pixel drag. These cases drive the real input layer (platform_input_update) every frame, so signal.dragging
 // is gated by the genuine drag-distance tracking - not a value poked straight into the context.
 
 typedef struct DragGesture {
@@ -3941,11 +3941,11 @@ typedef struct DragGesture {
 static void drag_threshold_frame(FlUiCtx* ctx, float x, float y, bool held, bool pressed, bool released,
                                  FlSignal* out_sig) {
     FlInputState* in = &ctx->input_state;
-    fl_platform_input_set_mouse_position(ctx, x, y);
+    platform_input_set_mouse_position(ctx, x, y);
     in->mouse.buttons[FlMouseButton_Left] = held;
-    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed; // fl_platform_input_update consumes + clears this edge
+    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed; // platform_input_update consumes + clears this edge
     in->mouse.buttons_released[FlMouseButton_Left] = released;
-    fl_platform_input_update(ctx, 1.0f / 60.0f);
+    platform_input_update(ctx, 1.0f / 60.0f);
 
     FlSignal sig = { 0 };
     ui_update_begin(ctx);
@@ -5039,7 +5039,7 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     FlString bailed = fl_format_frame_string("%d", 1);
     ASSERT_TRUE_MSG(bailed.length == 0, "no context yields an empty frame string");
 
-    // The push surface guards here rather than in the callee: fl_platform_input_push_* opens with
+    // The push surface guards here rather than in the callee: platform_input_push_* opens with
     // `&ctx->input_state` and takes a non-null context as a precondition, so an unguarded forwarder would
     // write through null instead of dropping the event. Every payload below is chosen to reach a branch that
     // actually writes - a zero-valued FlTextInputEvent (length 0) and a zero-valued FlWindowEvent
@@ -5341,8 +5341,8 @@ UTEST(virtual_keyboard, close_out_commits_on_submit_and_discards_on_cancel) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Typed text must survive the real fl_app tick order (pump -> fl_platform_input_update -> frame body).
-// fl_platform_input_update snapshots kb->text_input into ctx->text_input_this_frame before clearing the raw field,
+// Typed text must survive the real fl_app tick order (pump -> platform_input_update -> frame body).
+// platform_input_update snapshots kb->text_input into ctx->text_input_this_frame before clearing the raw field,
 // and ui_text_input reads that snapshot - so a character
 // injected before the tick reaches the widget's buffer.
 
@@ -5462,7 +5462,7 @@ UTEST(input, typed_text_reaches_widget_under_app_tick_order) {
     ASSERT_TRUE_MSG(st.ctx != nullptr, "frame did not run / no UI context");
 
     // Type one character. inject_text queues it into the headless backend; the NEXT tick's pump drains it into
-    // kb->text_input BEFORE fl_platform_input_update runs.
+    // kb->text_input BEFORE platform_input_update runs.
     fl_app_inject_text(app, FL_S("a"));
     fl_app_tick(app, &st, typed_text_frame);
 

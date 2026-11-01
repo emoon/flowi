@@ -19,9 +19,7 @@ and 3D preparation on backends that support them). The **host constructs it** (w
 `ui_create(arena, UiShared*)` then draws through it. The UI core never names a concrete
 backend. Concrete backends live under `src/render/` (`software`, and `gpu` with its
 `gl` and `metal` implementations), never under `src/ui/`.
-_Avoid_: bare `Backend`/`backend` for this object — that name is taken by the platform/host
-layer (`DisplayBackend`, `InputBackend`, the `backend_*` API). The render
-object is always `FlRenderBackend`.
+_Avoid_: bare `Backend`/`backend` for this object. The render object is always `FlRenderBackend`.
 The `FlRenderBackend` type and the render IR are internal to flowi: no public header or public Rust API names
 them. Embedders choose a renderer through the `fl_app` settings (`renderer`: Software, Gpu or Metal),
 never by supplying a backend; `fl_host` creates the software renderer.
@@ -411,11 +409,9 @@ renderers**: it presents a GPU [[#Surface Texture]] *and* a software CPU pixel b
 modes (`FlWindowBackendMode`: GL, Software, Metal) chosen by how the backend was constructed, so
 windowed-GPU and windowed-software share one seam. Each host-level [[#Window]] pairs one Window
 Backend window + one [[#Surface]] + one per-window [[#UI Context]].
-_Avoid_: overloading the embedded `DisplayBackend`/`InputBackend` — those are the single-fullscreen
-host video-plane path and are **host-implemented, not shipped by flowi**: flowi keeps only the
-generated `DisplayBackend`/`InputBackend` *interface* (the vtable a host implements against) and
-no desktop Display/Input implementation of its own. _Avoid_: putting present in
-[[#RenderInterface]].
+A host that owns its own screen and input (a fullscreen DRM frontend, a plugin inside another
+window) does not implement a Window Backend: it embeds flowi through `fl_host` and feeds input with
+the `fl_input_push_*` family. _Avoid_: putting present in [[#RenderInterface]].
 
 **Surface Texture** (GPU host-composite seam):
 The GPU backend's host-facing accessor to a [[#Surface]]'s offscreen RGBA8 target — its
