@@ -684,6 +684,221 @@ UTEST(feedback, null_hook_no_emit) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// nav_input - the default bindings turn raw keyboard and gamepad events into the navigation intents the focus
+// system reads (Tab / Shift+Tab / RB / LB = next/prev, Enter / Space / A = activate, D-pad = spatial nav), and
+// the tab order wraps at both ends.
+
+typedef struct NavIntents {
+    bool next;
+    bool prev;
+    bool activate;
+    bool up;
+    bool down;
+} NavIntents;
+
+// Pushes a key press, runs one input update and reads back the intents that frame produced, then releases the key
+// and runs a second update so the next case starts from a clean state.
+static NavIntents nav_input_key(FlUiCtx* ctx, FlKey key, u32 modifiers) {
+    platform_input_push_key_event(ctx, (FlKeyEvent) { .type = FlKeyEvent_Down, .key = key, .modifiers = modifiers });
+    ui_input_update(ctx, 1.0 / 60.0);
+    NavIntents seen = { .next = ctx->nav_next_pressed,
+                        .prev = ctx->nav_prev_pressed,
+                        .activate = ctx->nav_activate_pressed,
+                        .up = ctx->nav_frame.nav_up,
+                        .down = ctx->nav_frame.nav_down };
+    platform_input_push_key_event(ctx, (FlKeyEvent) { .type = FlKeyEvent_Up, .key = key, .modifiers = 0 });
+    ui_input_update(ctx, 1.0 / 60.0);
+    return seen;
+}
+
+static NavIntents nav_input_pad(FlUiCtx* ctx, FlGamepadButton button) {
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Button_Down,
+                                                              .gamepad_id = 0,
+                                                              .button = { button } });
+    ui_input_update(ctx, 1.0 / 60.0);
+    NavIntents seen = { .next = ctx->nav_next_pressed,
+                        .prev = ctx->nav_prev_pressed,
+                        .activate = ctx->nav_activate_pressed,
+                        .up = ctx->nav_frame.nav_up,
+                        .down = ctx->nav_frame.nav_down };
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Button_Up,
+                                                              .gamepad_id = 0,
+                                                              .button = { button } });
+    ui_input_update(ctx, 1.0 / 60.0);
+    return seen;
+}
+
+UTEST(nav_input, keys_and_pad_buttons_map_to_intents) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    canvas_fixture_reset(ctx);
+    ui_update_begin(ctx);
+    ui_update_end(ctx, 1.0f / 60.0f);
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Connected, .gamepad_id = 0 });
+
+    NavIntents tab = nav_input_key(ctx, FlKey_Tab, 0);
+    EXPECT_TRUE_MSG(tab.next && !tab.prev, "Tab moves forward");
+
+    NavIntents shift_tab = nav_input_key(ctx, FlKey_Tab, FlKeyModifier_Shift);
+    EXPECT_TRUE_MSG(shift_tab.prev && !shift_tab.next, "Shift+Tab moves backward");
+
+    NavIntents enter = nav_input_key(ctx, FlKey_Enter, 0);
+    EXPECT_TRUE_MSG(enter.activate, "Enter activates");
+
+    NavIntents space = nav_input_key(ctx, FlKey_Space, 0);
+    EXPECT_TRUE_MSG(space.activate, "Space activates");
+
+    NavIntents pad_a = nav_input_pad(ctx, FlGamepadButton_A);
+    EXPECT_TRUE_MSG(pad_a.activate, "Gamepad A activates");
+
+    NavIntents rb = nav_input_pad(ctx, FlGamepadButton_Right_Bumper);
+    EXPECT_TRUE_MSG(rb.next && !rb.prev, "Right bumper moves forward");
+
+    NavIntents lb = nav_input_pad(ctx, FlGamepadButton_Left_Bumper);
+    EXPECT_TRUE_MSG(lb.prev && !lb.next, "Left bumper moves backward");
+
+    NavIntents down = nav_input_pad(ctx, FlGamepadButton_Dpad_Down);
+    EXPECT_TRUE_MSG(down.down && !down.up, "D-pad down is spatial nav down");
+
+    NavIntents up = nav_input_pad(ctx, FlGamepadButton_Dpad_Up);
+    EXPECT_TRUE_MSG(up.up && !up.down, "D-pad up is spatial nav up");
+
+    NavIntents idle = nav_input_key(ctx, FlKey_A, 0);
+    EXPECT_TRUE_MSG(!idle.next && !idle.prev && !idle.activate && !idle.up && !idle.down,
+                    "an unbound key produces no navigation intent");
+}
+
+// The gamepad table holds UI_INPUT_MAX_GAMEPADS slots: the highest valid slot receives events, and ids at or above
+// the ceiling are dropped without touching it.
+UTEST(nav_input, gamepad_top_slot_is_live_and_ids_past_the_ceiling_are_dropped) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    canvas_fixture_reset(ctx);
+
+    const int top_slot = UI_INPUT_MAX_GAMEPADS - 1;
+    GamepadState* top = &ctx->input_state.gamepads[top_slot];
+    top->buttons[FlGamepadButton_A] = false;
+
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Button_Down,
+                                                              .gamepad_id = top_slot,
+                                                              .button = { FlGamepadButton_A } });
+    EXPECT_TRUE_MSG(top->buttons[FlGamepadButton_A], "the highest valid slot receives input");
+
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Button_Up,
+                                                              .gamepad_id = top_slot,
+                                                              .button = { FlGamepadButton_A } });
+    EXPECT_FALSE_MSG(top->buttons[FlGamepadButton_A], "release clears it");
+
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Button_Down,
+                                                              .gamepad_id = UI_INPUT_MAX_GAMEPADS,
+                                                              .button = { FlGamepadButton_A } });
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Button_Down,
+                                                              .gamepad_id = UI_INPUT_MAX_GAMEPADS + 7,
+                                                              .button = { FlGamepadButton_A } });
+    EXPECT_FALSE_MSG(top->buttons[FlGamepadButton_A], "ids at or above the ceiling are dropped, not wrapped in");
+}
+
+#define NAV_WRAP_COUNT 3
+
+static void nav_wrap_frame(FlUiCtx* ctx, const FlLayoutId* ids) {
+    ctx->layout_width = 256.0f;
+    ctx->layout_height = 256.0f;
+    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 256.0f, .height = 256.0f });
+
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
+                   .direction = FlLayoutDirection_TopToBottom) {
+        for_count(i, NAV_WRAP_COUNT) {
+            ui_layout_area_id(ids[i], .sizing = { sizing_fixed(40), sizing_fixed(20) },
+                              .color = ui_color(40, 40, 60, 255)) {
+                fl_item_behavior(ids[i], FlItemFlags_focusable);
+            }
+        }
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+}
+
+// Tab walks the declared order and wraps from the last widget to the first; Shift+Tab wraps from the first to the
+// last.
+UTEST(nav_input, tab_order_wraps_in_both_directions) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+
+    const FlLayoutId ids[NAV_WRAP_COUNT]
+        = { ID("wrap_a"), ID("wrap_b"), ID("wrap_c") };
+    u32 clay[NAV_WRAP_COUNT];
+    for_count(i, NAV_WRAP_COUNT) {
+        clay[i] = ui_layout_id_to_clay_id(ids[i]);
+    }
+
+    nav_wrap_frame(ctx, ids); // establishes the focus order
+    ctx->focused_id = clay[0];
+
+    const u32 forward_expected[] = { clay[1], clay[2], clay[0] };
+    for_count(step, NAV_WRAP_COUNT) {
+        ctx->nav_next_pressed = true;
+        nav_wrap_frame(ctx, ids);
+        ctx->nav_next_pressed = false;
+        ASSERT_EQ_MSG(ctx->focused_id, forward_expected[step], "Tab advances in declared order and wraps last -> first");
+    }
+
+    ctx->nav_prev_pressed = true;
+    nav_wrap_frame(ctx, ids);
+    ctx->nav_prev_pressed = false;
+    ASSERT_EQ_MSG(ctx->focused_id, clay[2], "Shift+Tab from the first widget wraps to the last");
+}
+
+// An activate press on the focused button reports clicked, and on a focused checkbox it flips the bound bool.
+UTEST(nav_input, activate_clicks_a_focused_button_and_toggles_a_focused_checkbox) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+
+    const FlLayoutId button_id = ID("act_button");
+    const FlLayoutId checkbox_id = ID("act_checkbox");
+    bool checked = false;
+    FlSignal button_signal = { 0 };
+
+#define NAV_ACTIVATE_FRAME()                                                                         \
+    do {                                                                                              \
+        ctx->layout_width = 256.0f;                                                                   \
+        ctx->layout_height = 256.0f;                                                                  \
+        Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 256.0f, .height = 256.0f });            \
+        ui_update_begin(ctx);                                                                         \
+        ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {                                  \
+            button_signal = ui_button(FL_S("act_button"), .focusable = true, .id_override = FL_S("act_button")); \
+            ui_checkbox(FL_S("act_checkbox"), &checked, .widget.focusable = true,                     \
+                        .widget.id_override = FL_S("act_checkbox"));                                  \
+        }                                                                                             \
+        ui_update_end(ctx, 1.0f / 60.0f);                                                             \
+    } while (0)
+
+    // Warm-up: focus the button for a few frames so it is past the just-gained-focus guard.
+    for (int frame = 0; frame < 3; ++frame) {
+        ctx->nav_activate_pressed = false;
+        NAV_ACTIVATE_FRAME();
+        ctx->focused_id = ui_layout_id_to_clay_id(button_id);
+    }
+
+    ctx->nav_activate_pressed = true;
+    NAV_ACTIVATE_FRAME();
+    ctx->nav_activate_pressed = false;
+    ASSERT_TRUE_MSG(button_signal.clicked || button_signal.activated, "activating the focused button reports a click");
+    ASSERT_FALSE_MSG(checked, "activating the button leaves the unfocused checkbox alone");
+
+    for (int frame = 0; frame < 3; ++frame) {
+        NAV_ACTIVATE_FRAME();
+        ctx->focused_id = ui_layout_id_to_clay_id(checkbox_id);
+    }
+
+    ctx->nav_activate_pressed = true;
+    NAV_ACTIVATE_FRAME();
+    ctx->nav_activate_pressed = false;
+    ASSERT_TRUE_MSG(checked, "activating the focused checkbox toggles it on");
+
+#undef NAV_ACTIVATE_FRAME
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // widget_state_colors.variant_base_derivation - the variant->color base derivation: Solid pulls
 // interactive.base / text.primary, Outline its surface.base background, Ghost the secondary text, Soft the
 // accent text.
