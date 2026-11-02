@@ -81,6 +81,22 @@ struct RectConfig {
     corner: [Color; 4],
 }
 
+/// One solid filled rectangle of a Painter::rects batch: top-left (x, y), size (w, h), in logical (authoring)
+/// space, filled with color.
+#[attributes(Copy)]
+struct ColoredRect {
+    /// left edge
+    x: f32,
+    /// top edge
+    y: f32,
+    /// width
+    w: f32,
+    /// height
+    h: f32,
+    /// fill color
+    color: Color,
+}
+
 /// Custom-drawing primitives: the painter's shape, line, text, and image commands. Call these to draw
 /// directly into the current frame.
 #[frame_context]
@@ -94,6 +110,12 @@ api Painter {
     set_effect(effect: Effect)
     /// Draw a filled rectangle: top-left (x, y), size (w, h), in logical (authoring) space.
     rect(x: f32, y: f32, w: f32, h: f32, color: Color)
+    /// Draw a batch of solid filled rectangles in one call - dense visuals such as a scope waveform's
+    /// one-rectangle-per-pixel columns. The result is exactly that of calling rect() for each entry in
+    /// order: call order (later entries paint over earlier ones), alpha compositing, clipping, UI scaling,
+    /// the current effect and Canvas z-order all behave as in the scalar loop, on every render backend.
+    /// An empty batch draws nothing.
+    rects(rects: [*const ColoredRect])
     /// Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
     rect_rounded(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color)
     /// Draw a filled rectangle with a four-corner color gradient (bilinear), corners named clockwise from

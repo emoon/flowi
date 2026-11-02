@@ -171,6 +171,10 @@ void fl_painter_rect(float x, float y, float w, float h, FlColor color) {
     painter_rect(ui_get_painter(), x, y, w, h, color);
 }
 
+void fl_painter_rects(const FlColoredRect* rects, uint32_t rects_size) {
+    painter_rects(ui_get_painter(), rects, rects_size);
+}
+
 void fl_painter_rect_rounded(float x, float y, float w, float h, float radius, FlColor color) {
     painter_rect_rounded(ui_get_painter(), x, y, w, h, radius, color);
 }

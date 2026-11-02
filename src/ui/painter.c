@@ -266,7 +266,16 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rectangle drawing
 
-// The one fill-rect emitter: every rectangle entry point below funnels through here.
+// The one fill-rect record writer: logical-space geometry and radii are scaled to pixels here, so every rectangle
+// entry point (single or batched) emits the same bytes. The caller owns the span bracket.
+static void painter_emit_fill_rect(Painter* p, float x, float y, float w, float h, FlCornerRadius radius,
+                                   const FlColor corners[4], const FlEffect* effect) {
+    // Radii are lengths, so they scale like the geometry; the backend clamps each to half the smaller
+    // dimension (pill shapes).
+    FlCornerRadius scaled = { scale(p, radius.tl), scale(p, radius.tr), scale(p, radius.bl), scale(p, radius.br) };
+    fl_ir_fill_rect(p->arena, (FlRect) { scale(p, x), scale(p, y), scale(p, w), scale(p, h) }, scaled, corners, effect);
+}
+
 void painter_rect_styled(Painter* p, float x, float y, float w, float h, FlRectConfig config) {
     if (p == nullptr) {
         return;
@@ -276,16 +285,7 @@ void painter_rect_styled(Painter* p, float x, float y, float w, float h, FlRectC
     if (span == nullptr) {
         return;
     }
-    float sx = scale(p, x);
-    float sy = scale(p, y);
-    float sw = scale(p, w);
-    float sh = scale(p, h);
-
-    // Radii are lengths, so they scale like the geometry; the backend clamps each to half the smaller
-    // dimension (pill shapes).
-    FlCornerRadius radius = { scale(p, config.radius.tl), scale(p, config.radius.tr), scale(p, config.radius.bl),
-                              scale(p, config.radius.br) };
-    fl_ir_fill_rect(p->arena, (FlRect) { sx, sy, sw, sh }, radius, config.corner, painter_current_effect(p));
+    painter_emit_fill_rect(p, x, y, w, h, config.radius, config.corner, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
@@ -293,6 +293,26 @@ void painter_rect_styled(Painter* p, float x, float y, float w, float h, FlRectC
 
 void painter_rect(Painter* p, float x, float y, float w, float h, FlColor color) {
     painter_rect_styled(p, x, y, w, h, (FlRectConfig) { .corner = { color, color, color, color } });
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count) {
+    if (p == nullptr || rects == nullptr || rect_count == 0) {
+        return;
+    }
+    void* start;
+    FlPaintSpan* span = painter_record_begin(p, &start);
+    if (span == nullptr) {
+        return;
+    }
+    const FlEffect* effect = painter_current_effect(p);
+    for (u32 i = 0; i < rect_count; i++) {
+        const FlColoredRect* r = &rects[i];
+        const FlColor corners[4] = { r->color, r->color, r->color, r->color };
+        painter_emit_fill_rect(p, r->x, r->y, r->w, r->h, (FlCornerRadius) { 0 }, corners, effect);
+    }
+    painter_record_end(p, span, start);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

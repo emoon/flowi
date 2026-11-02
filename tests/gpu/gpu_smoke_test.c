@@ -28,6 +28,7 @@
 #include "ui/image_registry.h"
 #include "ui/font_cache.h"
 #include "ui/layout.h"
+#include "ui/clay_to_render_ir.h"
 #include "ui/painter.h"
 #include "ui/dock.h"
 #include <flowi/ui/dock.h>
@@ -47,6 +48,7 @@
 #include <math.h>
 #include <stdatomic.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "fixtures/fonts/fallback_test_font.h"
@@ -5746,6 +5748,107 @@ static int run_clip_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Painter::rects renders exactly what the Painter::rect loop renders on the GPU backend: overlapping translucent
+// columns (src-over order), a fractional UI scale, a scissor that cuts one canvas, and a later canvas that must
+// land over the first (Canvas z-order). The frame goes through the real splice (fl_clay_to_render_ir) once per
+// recording, and the two readbacks are compared byte for byte.
+
+#define RECTS_TEST_COUNT 48
+
+static void rects_test_record(Painter* p, bool batch, FlColoredRect* rects, u32 count, void** slot) {
+    painter_scope_push(p, slot);
+    if (batch) {
+        painter_rects(p, rects, count);
+    } else {
+        for (u32 i = 0; i < count; i++) {
+            painter_rect(p, rects[i].x, rects[i].y, rects[i].w, rects[i].h, rects[i].color);
+        }
+    }
+    painter_scope_pop(p);
+}
+
+static int run_painter_rects_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
+    const int w = 256;
+    const int h = 256;
+    FlSurface* surface = backend->create_surface(backend->user_data, w, h);
+
+    FlColoredRect a[RECTS_TEST_COUNT];
+    FlColoredRect b[RECTS_TEST_COUNT];
+    for (u32 i = 0; i < RECTS_TEST_COUNT; i++) {
+        f32 f = (f32)i;
+        a[i] = (FlColoredRect) { 2.0f + f * 0.9f,
+                                 4.0f + (f32)(i % 5),
+                                 2.5f,
+                                 30.0f - (f32)(i % 7) * 2.0f,
+                                 { (u8)(30 + i * 4), (u8)(220 - i * 3), 80, (u8)(90 + (i % 6) * 30) } };
+        b[i] = (FlColoredRect) { 6.0f + f * 0.9f,
+                                 10.0f + (f32)(i % 4),
+                                 2.5f,
+                                 28.0f,
+                                 { 220, (u8)(40 + i * 2), (u8)(60 + i), (u8)(100 + (i % 5) * 35) } };
+    }
+
+    FlArena* scratch = arena_new();
+    Painter* p = painter_create(scratch);
+    painter_begin_frame(p, nullptr, 1.5f, 1.0f, scratch);
+
+    u8* readback[2] = { nullptr, nullptr };
+    size_t readback_bytes = 0;
+    for (int batch = 0; batch < 2; batch++) {
+        void* slot_a = nullptr;
+        void* slot_b = nullptr;
+        rects_test_record(p, batch != 0, a, RECTS_TEST_COUNT, &slot_a);
+        rects_test_record(p, batch != 0, b, RECTS_TEST_COUNT, &slot_b);
+
+        // Canvas A under a scissor of device pixels x 20..60, y 10..40, which cuts its columns (they run to about
+        // x = 90, y = 67); canvas B declared later at a fractional origin, so it composes over A where they
+        // overlap.
+        Clay_RenderCommand cmds[4] = {
+            { .commandType = CLAY_RENDER_COMMAND_TYPE_SCISSOR_START, .boundingBox = { 20.0f, 10.0f, 40.0f, 30.0f } },
+            { .commandType = CLAY_RENDER_COMMAND_TYPE_CUSTOM,
+              .boundingBox = { 20.0f, 10.0f, 150.0f, 100.0f },
+              .renderData = { .custom = { .customData = slot_a } } },
+            { .commandType = CLAY_RENDER_COMMAND_TYPE_SCISSOR_END },
+            { .commandType = CLAY_RENDER_COMMAND_TYPE_CUSTOM,
+              .boundingBox = { 60.25f, 30.5f, 150.0f, 100.0f },
+              .renderData = { .custom = { .customData = slot_b } } },
+        };
+
+        void* start = ir_rewind_begin(ir_arena);
+        fl_clay_to_render_ir(ir_arena, scratch, nullptr, cmds, 4);
+        FlRenderFrame frame = test_frame();
+        ir_frame_render(backend, surface, &frame, ir_arena, start);
+
+        FlPixelReadback buf;
+        CHECK(render_seam_read_pixels(backend, surface, &buf), "painter rects: read_pixels failed");
+        readback_bytes = (size_t)buf.stride * (size_t)buf.height;
+        readback[batch] = (u8*)malloc(readback_bytes);
+        CHECK(readback[batch] != nullptr, "painter rects: readback copy allocation failed");
+        memcpy(readback[batch], buf.pixels, readback_bytes);
+    }
+
+    int drawn = 0;
+    for (size_t i = 0; i + 3 < readback_bytes; i += 4) {
+        drawn += readback[0][i + 3] != 0;
+    }
+    CHECK(drawn > 500, "painter rects: the scalar reference frame must actually draw");
+    // Scissor really clips: (65, 20) is inside canvas A's unclipped columns but outside the scissor and clear of
+    // canvas B (which starts at y = 45); (40, 20) is inside the scissor.
+    const size_t row_stride = readback_bytes / (size_t)h;
+    CHECK(readback[0][20 * row_stride + 65 * 4 + 3] == 0, "painter rects: the scissor clips the scalar columns");
+    CHECK(readback[0][20 * row_stride + 40 * 4 + 3] != 0, "painter rects: columns draw inside the scissor");
+    CHECK(memcmp(readback[0], readback[1], readback_bytes) == 0,
+          "painter rects: the batched frame must match the scalar rect loop pixel for pixel");
+
+    free(readback[0]);
+    free(readback[1]);
+    fl_arena_destroy(scratch);
+    backend->destroy_surface(backend->user_data, surface);
+    printf("gpu_smoke_test: painter rects batch vs scalar loop PASS\n");
+    return 0;
+}
+
 static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     const int w = 256;
     const int h = 256;
@@ -6479,6 +6582,9 @@ int main(void) {
     CHECK(backend.render != nullptr, "create_gpu_renderer (Metal) failed — no MTLDevice or queue");
 
     FlArena* ir_arena = arena_new();
+    if (run_painter_rects_pixel_test(&backend, ir_arena) != 0) {
+        return 1;
+    }
     if (run_clear_screen_test(&backend, ir_arena) != 0 || run_rect_pixel_test(&backend, ir_arena) != 0
         || run_border_pixel_test(&backend, ir_arena) != 0 || run_polyline_pixel_tests(&backend, ir_arena) != 0
         || run_arc_pixel_tests(&backend, ir_arena) != 0 || run_circle_diamond_pixel_tests(&backend, ir_arena) != 0
@@ -6524,6 +6630,9 @@ int main(void) {
     // Lifecycle must run last: its change_resolution(640, 360) would invalidate the 1920x1080 pixel
     // coordinates and tile grid the earlier sections assert against.
     FlArena* ir_arena = arena_new();
+    if (run_painter_rects_pixel_test(&backend, ir_arena) != 0) {
+        return 1;
+    }
     if (run_clear_screen_test(&backend, ir_arena) != 0 || run_rect_pixel_test(&backend, ir_arena) != 0
         || run_border_pixel_test(&backend, ir_arena) != 0 || run_gradient_pixel_test(&backend, ir_arena) != 0
         || run_clip_pixel_test(&backend, ir_arena) != 0 || run_image_pixel_test(&backend, ir_arena) != 0

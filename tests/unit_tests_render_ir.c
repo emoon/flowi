@@ -997,3 +997,181 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     fl_arena_destroy(arena);
     font_cache_destroy(cache);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// painter_rects: one batched call must leave exactly the records a painter_rect loop leaves. The backends only
+// ever see the IR, so identical bytes at every stage below are identical output on every backend: the span
+// itself (UI scaling, effect), the spliced frame stream (Canvas z-order, clipping), and each backend's decode
+// of that stream (alpha compositing inputs).
+
+#define RECT_BATCH_COUNT 40
+
+// Overlapping rects with varying fractional geometry and alpha, so call order and compositing both matter.
+static void rect_batch_fill(FlColoredRect* rects, u32 count, float seed) {
+    for (u32 i = 0; i < count; i++) {
+        float f = (float)i;
+        rects[i]
+            = (FlColoredRect) { seed + f * 1.5f, 3.25f + f * 0.5f, 6.0f + f * 0.125f, 20.0f - f * 0.25f,
+                                (FlColor) { (u8)(40 + i * 5), (u8)(200 - i * 3), (u8)(90 + i), (u8)(255 - i * 6) } };
+    }
+}
+
+// The scalar reference: the same rects through painter_rect, one call each, in order.
+static void rect_batch_scalar(Painter* p, const FlColoredRect* rects, u32 count) {
+    for (u32 i = 0; i < count; i++) {
+        painter_rect(p, rects[i].x, rects[i].y, rects[i].w, rects[i].h, rects[i].color);
+    }
+}
+
+UTEST(render_ir, painter_rects_emit_the_scalar_record_stream) {
+    FlArena* arena = arena_new();
+    Painter* p = painter_create(arena);
+    painter_begin_frame(p, nullptr, 1.5f, 1.0f, arena); // fractional UI scale
+
+    FlColoredRect rects[RECT_BATCH_COUNT];
+    rect_batch_fill(rects, RECT_BATCH_COUNT, 2.0f);
+    const FlColor edge = { 1, 2, 3, 255 };
+    const FlEffect shadow = { .kind = FlEffectKind_DropShadow, .color = { 0, 0, 0, 255 }, .off_y = 4.0f, .blur = 9.0f };
+
+    // A record before and after the batch: the batch must coalesce into the surrounding segment, as the loop does.
+    void* scalar_slot = nullptr;
+    painter_scope_push(p, &scalar_slot);
+    painter_set_effect(p, shadow);
+    painter_rect(p, 0.0f, 0.0f, 1.0f, 1.0f, edge);
+    rect_batch_scalar(p, rects, RECT_BATCH_COUNT);
+    painter_rect(p, 9.0f, 9.0f, 1.0f, 1.0f, edge);
+    painter_scope_pop(p);
+
+    void* batch_slot = nullptr;
+    painter_scope_push(p, &batch_slot);
+    painter_set_effect(p, shadow);
+    painter_rect(p, 0.0f, 0.0f, 1.0f, 1.0f, edge);
+    painter_rects(p, rects, RECT_BATCH_COUNT);
+    painter_rect(p, 9.0f, 9.0f, 1.0f, 1.0f, edge);
+    painter_scope_pop(p);
+
+    const FlPaintSpan* scalar = (const FlPaintSpan*)scalar_slot;
+    const FlPaintSpan* batch = (const FlPaintSpan*)batch_slot;
+    ASSERT_TRUE_MSG(scalar != nullptr && batch != nullptr, "both scopes recorded a span");
+    ASSERT_TRUE_MSG(scalar->first == scalar->last && batch->first == batch->last,
+                    "each stream is one coalesced segment");
+    ASSERT_EQ_MSG(batch->first->size, scalar->first->size, "the batch records exactly as many bytes as the loop");
+    ASSERT_TRUE_MSG(memcmp(batch->first->ir, scalar->first->ir, scalar->first->size) == 0,
+                    "the batch's records are byte-identical to the scalar loop's (scaling and effect included)");
+
+    // The first batched record is a plain scaled fill rect carrying the scope's effect.
+    const FlCmdHeader* h = ir_next((const FlCmdHeader*)batch->first->ir);
+    ASSERT_TRUE_MSG(h->kind == FlCmd_FillRect && (h->flags & FL_HAS_EFFECT) != 0, "batched rects carry the effect");
+    const FlCmdFillRect* first = (const FlCmdFillRect*)(h + 1);
+    ASSERT_TRUE_MSG(first->rect.x == 3.0f && first->rect.y == 4.875f, "batched positions scale by ui_scale");
+    ASSERT_TRUE_MSG(first->corner[0].a == 255 && first->corner[3].a == 255, "color lands in all four corners");
+
+    fl_arena_destroy(arena);
+}
+
+UTEST(render_ir, painter_rects_noop_cases_record_nothing) {
+    FlArena* arena = arena_new();
+    Painter* p = painter_create(arena);
+    painter_begin_frame(p, nullptr, 1.0f, 1.0f, arena);
+    FlColoredRect one = { 0.0f, 0.0f, 1.0f, 1.0f, { 1, 2, 3, 4 } };
+
+    painter_rects(nullptr, &one, 1);
+    painter_rects(p, &one, 1); // no open scope
+
+    void* slot = nullptr;
+    painter_scope_push(p, &slot);
+    painter_rects(p, nullptr, 1);
+    painter_rects(p, &one, 0);
+    painter_scope_pop(p);
+    ASSERT_TRUE_MSG(slot == nullptr, "a null or empty batch never attaches a span, like an empty scalar loop");
+
+    fl_arena_destroy(arena);
+}
+
+// Splice the spans of two sibling canvases (one under a scissor, at fractional origins) and compare the frame
+// IR and both backends' decode of it between the scalar and the batched recording.
+UTEST(render_ir, painter_rects_frame_stream_matches_scalar_loop) {
+    FlArena* arena = arena_new();
+    Painter* p = painter_create(arena);
+    painter_begin_frame(p, nullptr, 2.0f, 1.0f, arena);
+
+    FlColoredRect a_rects[RECT_BATCH_COUNT];
+    FlColoredRect b_rects[RECT_BATCH_COUNT];
+    rect_batch_fill(a_rects, RECT_BATCH_COUNT, 0.0f);
+    rect_batch_fill(b_rects, RECT_BATCH_COUNT, 5.0f);
+
+    void* scalar_a = nullptr;
+    void* scalar_b = nullptr;
+    void* batch_a = nullptr;
+    void* batch_b = nullptr;
+    painter_scope_push(p, &scalar_a);
+    rect_batch_scalar(p, a_rects, RECT_BATCH_COUNT);
+    painter_scope_pop(p);
+    painter_scope_push(p, &scalar_b);
+    rect_batch_scalar(p, b_rects, RECT_BATCH_COUNT);
+    painter_scope_pop(p);
+    painter_scope_push(p, &batch_a);
+    painter_rects(p, a_rects, RECT_BATCH_COUNT);
+    painter_scope_pop(p);
+    painter_scope_push(p, &batch_b);
+    painter_rects(p, b_rects, RECT_BATCH_COUNT);
+    painter_scope_pop(p);
+
+    // Canvas A under a scissor, canvas B declared later (z-order: B over A), both at fractional origins.
+    Clay_RenderCommand scalar_cmds[4] = {
+        { .commandType = CLAY_RENDER_COMMAND_TYPE_SCISSOR_START, .boundingBox = { 10.5f, 8.25f, 40.0f, 30.0f } },
+        { .commandType = CLAY_RENDER_COMMAND_TYPE_CUSTOM,
+          .boundingBox = { 10.5f, 8.25f, 80.0f, 60.0f },
+          .renderData = { .custom = { .customData = scalar_a } } },
+        { .commandType = CLAY_RENDER_COMMAND_TYPE_SCISSOR_END },
+        { .commandType = CLAY_RENDER_COMMAND_TYPE_CUSTOM,
+          .boundingBox = { 30.25f, 20.5f, 80.0f, 60.0f },
+          .renderData = { .custom = { .customData = scalar_b } } },
+    };
+    Clay_RenderCommand batch_cmds[4];
+    memcpy(batch_cmds, scalar_cmds, sizeof(scalar_cmds));
+    batch_cmds[1].renderData.custom.customData = batch_a;
+    batch_cmds[3].renderData.custom.customData = batch_b;
+
+    FlArena* out = arena_new();
+    fl_arena_align(out, 8);
+    const u8* scalar_start = (const u8*)fl_arena_current_pos(out);
+    fl_clay_to_render_ir(out, arena, nullptr, scalar_cmds, 4);
+    size_t scalar_bytes = (size_t)((const u8*)fl_arena_current_pos(out) - scalar_start);
+    fl_arena_align(out, 8);
+    const u8* batch_start = (const u8*)fl_arena_current_pos(out);
+    fl_clay_to_render_ir(out, arena, nullptr, batch_cmds, 4);
+    size_t batch_bytes = (size_t)((const u8*)fl_arena_current_pos(out) - batch_start);
+
+    ASSERT_TRUE_MSG(scalar_bytes > 0, "the scalar frame produced IR");
+    ASSERT_EQ_MSG(batch_bytes, scalar_bytes, "the batched frame has the scalar frame's size");
+    ASSERT_TRUE_MSG(memcmp(batch_start, scalar_start, scalar_bytes) == 0,
+                    "scissor, z-order and origin splicing give a byte-identical frame stream");
+
+    // Alpha compositing happens backend-side on the decoded commands: the decode must agree too.
+    FlArena* commands_arena = arena_new();
+    FlArena* state_arena = arena_new();
+    UiRenderCommandsArray sw_scalar
+        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, scalar_start, scalar_bytes, 255);
+    UiRenderCommandsArray sw_batch
+        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, batch_start, batch_bytes, 255);
+    ASSERT_TRUE_MSG(sw_scalar.count >= 2 * RECT_BATCH_COUNT, "the software decode kept every rect");
+    ASSERT_EQ_MSG(sw_batch.count, sw_scalar.count, "software decode: same command count");
+    ASSERT_TRUE_MSG(memcmp(sw_batch.commands, sw_scalar.commands, sizeof(RenderCommand) * (size_t)sw_scalar.count) == 0,
+                    "software decode: identical commands");
+
+    GpuDrawList gpu_scalar = gpu_ir_to_draw_cmds(commands_arena, scalar_start, scalar_bytes, 255, 1920, 1080, nullptr,
+                                                 nullptr, nullptr, nullptr, nullptr, nullptr);
+    GpuDrawList gpu_batch = gpu_ir_to_draw_cmds(commands_arena, batch_start, batch_bytes, 255, 1920, 1080, nullptr,
+                                                nullptr, nullptr, nullptr, nullptr, nullptr);
+    ASSERT_TRUE_MSG(gpu_scalar.count >= RECT_BATCH_COUNT,
+                    "the GPU decode kept the unclipped canvas (the scissor culls part of the other)");
+    ASSERT_EQ_MSG(gpu_batch.count, gpu_scalar.count, "GPU decode: same draw count");
+    ASSERT_TRUE_MSG(memcmp(gpu_batch.cmds, gpu_scalar.cmds, sizeof(GpuDrawCmd) * (size_t)gpu_scalar.count) == 0,
+                    "GPU decode: identical draw commands");
+
+    fl_arena_destroy(state_arena);
+    fl_arena_destroy(commands_arena);
+    fl_arena_destroy(out);
+    fl_arena_destroy(arena);
+}
