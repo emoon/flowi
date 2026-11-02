@@ -63,7 +63,7 @@ loading and the service registry.**
 
 - **New public seam: direct registration.** `vfs_init` drops its `VfsPluginRegistry` and
   `FlServiceAPI*` parameters; drivers are handed to vfs directly (resurrecting a
-  `vfs_register_driver(... const FlVfsPlugin*, void* instance)` form). The static/dynamic
+  `fl_vfs_register_driver(... const FlVfsPlugin*, void* instance)` form). The static/dynamic
   `VfsPluginRegistry` indirection — whose only purpose was hiding static-vs-dynamic behind one
   interface — is deleted; its dynamic mode was the host concern that's leaving. `flowi`'s vfs is
   **always static**: it is handed drivers, it never loads them. `VFS_STATIC_ONLY` disappears (it
@@ -77,14 +77,14 @@ loading and the service registry.**
 
 - **The embedding host absorbs from history.** Because the embedding host is live, the host removal
   lands as an **isolated, cherry-pickable commit**; a migration guide documents the new
-  `vfs_register_driver` seam (and `create`'s dropped `FlServiceAPI*`) and the registry that moved
+  `fl_vfs_register_driver` seam (and `create`'s dropped `FlServiceAPI*`) and the registry that moved
   out. flowi keeps no service registry.
 
 ### Sequencing (single-repo, green at each step)
 
 1. Move `FlVfsPlugin` + the vfs types into `flowi/src/vfs/` and drop the `const FlServiceAPI*`
    parameter from `create`; repoint vfs internals, `app/localfs`, and tests onto
-   `vfs_register_driver`; drop the `service_api`/registry params from `vfs_init`; remove the
+   `fl_vfs_register_driver`; drop the `service_api`/registry params from `vfs_init`; remove the
    vestigial UI plugin-manager fields and call. flowi green; `host/` now orphaned.
 2. **Isolated commit:** delete `flowi/src/host/`, `core/message_queue`, the `flowi_host` target,
    `VFS_STATIC_ONLY`, and the `LINK_GROUP:RESCAN`. flowi green.
@@ -110,7 +110,7 @@ loading and the service registry.**
 
 - The `vfs → host` cycle and `LINK_GROUP:RESCAN` are gone; `vfs` depends only on `core`.
 - `FlServiceAPI` and the dynamic plugin system no longer exist in flowi; flowi's vfs contract is the
-  `FlVfsPlugin` interface (with a parameterless `create`) + `vfs_register_driver`. Dynamic `.so`
+  `FlVfsPlugin` interface (with a parameterless `create`) + `fl_vfs_register_driver`. Dynamic `.so`
   loading is 100% a host concern.
 - The ADR-0033 bucket-3 transient is resolved: `FlVfsPlugin` and the vfs types are authored in
   `api/vfs/*.def` and generated into `flowi/include/flowi/vfs/`.

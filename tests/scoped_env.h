@@ -16,7 +16,7 @@ typedef struct ScopedEnv {
 
 static inline ScopedEnv scoped_env_set(const char* name, const char* value) {
     ScopedEnv scope = { .name = name, .saved = nullptr };
-    const char* current = getenv_os(name);
+    const char* current = fl_os_getenv(name);
     if (current != nullptr) {
         const size_t length = strlen(current) + 1;
         scope.saved = (char*)malloc(length);

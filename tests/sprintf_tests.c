@@ -554,14 +554,14 @@ UTEST(sprintf, shared_arena_concurrent_contiguous) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     SprintfSharedWorker workers[SPRINTF_SHARED_THREADS];
-    Thread threads[SPRINTF_SHARED_THREADS];
+    FlOsThread threads[SPRINTF_SHARED_THREADS];
     for (int t = 0; t < SPRINTF_SHARED_THREADS; ++t) {
         workers[t] = (SprintfSharedWorker) { .arena = arena, .id = t, .ok = false };
-        ASSERT_TRUE(os_thread_create(&threads[t], sprintf_shared_worker, &workers[t]));
+        ASSERT_TRUE(fl_os_thread_create(&threads[t], sprintf_shared_worker, &workers[t]));
     }
 
     for (int t = 0; t < SPRINTF_SHARED_THREADS; ++t) {
-        os_thread_join(&threads[t]);
+        fl_os_thread_join(&threads[t]);
         ASSERT_TRUE_MSG(workers[t].ok, "a worker saw a corrupt/non-contiguous fl_sprintf_arena result");
     }
 

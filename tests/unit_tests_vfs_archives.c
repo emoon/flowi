@@ -27,16 +27,16 @@ static bool expect_reads(FlVfsMount* mount, const char* const* names, const char
 UTEST(vfs_libarchive, a_zip_mounts_and_its_files_read_back_with_their_exact_content) {
     ASSERT_TRUE(vfs_test_begin());
 
-    FlVfsMount* mount = vfs_mount(vfs_fixture_path(s_arena, FL_S("test.zip"))).mount;
+    FlVfsMount* mount = fl_vfs_mount(vfs_fixture_path(s_arena, FL_S("test.zip"))).mount;
     ASSERT_NE(mount, nullptr);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount));
     ASSERT_EQ((int)fl_vfs_mount_get_status(mount), (int)FlVfsMountStatus_Ready);
 
     ASSERT_TRUE(expect_reads(mount, k_fixture_async_names, k_fixture_async_contents, FIXTURE_ASYNC_COUNT));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -65,7 +65,7 @@ UTEST(vfs_libarchive, a_zip_made_by_another_tool_reads_files_at_every_depth) {
     ASSERT_TRUE(vfs_expect_list(mount, FL_S("level1/level2/level3"), "deep.txt"));
     fl_vfs_mount_close(mount);
 
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,7 +80,7 @@ UTEST(vfs_libarchive, all_files_of_a_zip_can_be_in_flight_at_once) {
     static const char* const contents[] = { "Content 1\n", "Content 2\n", "Content 3\n", "Content 4\n" };
     FlVfsHandle handles[sizeof_array(names)];
     for_count(i, sizeof_array(names)) {
-        handles[i] = vfs_mount_read_all(mount, string_from_cstr(names[i]));
+        handles[i] = fl_vfs_mount_read_all(mount, string_from_cstr(names[i]));
         ASSERT_NE(handles[i], FL_VFS_HANDLE_INVALID);
     }
     for_count(i, sizeof_array(names)) {
@@ -93,7 +93,7 @@ UTEST(vfs_libarchive, all_files_of_a_zip_can_be_in_flight_at_once) {
     }
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,7 +108,7 @@ UTEST(vfs_libarchive, a_standalone_gzip_mounts_as_one_file_without_the_gz_suffix
                                 FL_S("This is test content for single-file compression testing.\n")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,7 +125,7 @@ UTEST(vfs_libarchive, a_tar_gz_mounts_as_its_members_not_as_one_file) {
     ASSERT_TRUE(vfs_expect_read(mount, FL_S("sub/inner.txt"), FL_S("Inside a directory of the tarball\n")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -139,7 +139,7 @@ UTEST(vfs_libarchive, a_file_that_is_not_in_the_zip_fails_to_read) {
     ASSERT_TRUE(vfs_expect_read_fails(mount, FL_S("nonexistent.txt")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -149,16 +149,16 @@ UTEST(vfs_libarchive, files_named_zip_that_are_not_archives_end_in_a_mount_error
 
     static const char* const names[] = { "test_zipfs_not_zip.zip", "test_zipfs_corrupt.zip" };
     for_count(i, sizeof_array(names)) {
-        FlVfsMount* mount = vfs_mount(vfs_fixture_path(s_arena, string_from_cstr(names[i]))).mount;
+        FlVfsMount* mount = fl_vfs_mount(vfs_fixture_path(s_arena, string_from_cstr(names[i]))).mount;
         ASSERT_NE(mount, nullptr);
-        vfs_wait_all();
+        fl_vfs_wait_all();
         ASSERT_EQ((int)fl_vfs_mount_get_status(mount), (int)FlVfsMountStatus_Error);
         ASSERT_FALSE(fl_vfs_mount_is_ready(mount));
         ASSERT_TRUE(vfs_expect_read_fails(mount, FL_S("anything.txt")));
         fl_vfs_mount_close(mount);
     }
 
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -178,7 +178,7 @@ UTEST(vfs_libarchive, listing_a_directory_that_is_not_in_the_zip_gives_an_empty_
     fl_vfs_close(handle);
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -205,7 +205,7 @@ UTEST(vfs_libarchive, a_zip_lists_its_files_with_their_sizes_in_natural_order) {
     fl_vfs_close(handle);
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -231,7 +231,7 @@ UTEST(vfs_libarchive, a_zip_shows_its_directories_and_lists_into_them) {
     ASSERT_TRUE(vfs_expect_read(mount, FL_S("tmp/another.txt"), FL_S("Another file\n")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -255,7 +255,7 @@ UTEST(vfs_libarchive, a_zip_with_more_than_256_entries_in_one_directory_lists_ev
     ASSERT_TRUE(dir.length > 0);
     ASSERT_TRUE(vfs_test_write_file(arena, dir, FL_S("many.zip"), zip));
 
-    FlVfsMount* mount = vfs_test_mount(file_build_path_os(arena, dir, FL_S("many.zip")));
+    FlVfsMount* mount = vfs_test_mount(fl_os_build_path(arena, dir, FL_S("many.zip")));
     ASSERT_NE(mount, nullptr);
 
     FlVfsDirHandle handle = fl_vfs_get_listing(mount, FL_S(""), 0);
@@ -270,8 +270,8 @@ UTEST(vfs_libarchive, a_zip_with_more_than_256_entries_in_one_directory_lists_ev
     fl_vfs_close(handle);
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
-    file_remove_directory_recursive_os(dir);
+    fl_vfs_destroy();
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -292,15 +292,15 @@ UTEST(vfs_libarchive, a_macosx_directory_entry_in_a_zip_does_not_nest_a_second_m
     ASSERT_TRUE(dir.length > 0);
     ASSERT_TRUE(vfs_test_write_file(arena, dir, FL_S("party.zip"), zip));
 
-    FlVfsMount* mount = vfs_test_mount(file_build_path_os(arena, dir, FL_S("party.zip")));
+    FlVfsMount* mount = vfs_test_mount(fl_os_build_path(arena, dir, FL_S("party.zip")));
     ASSERT_NE(mount, nullptr);
     ASSERT_TRUE(vfs_expect_list(mount, FL_S(""), "__MACOSX/ a.png b.png c.png"));
     ASSERT_TRUE(vfs_expect_list(mount, FL_S("__MACOSX"), "._a.png ._b.png ._c.png"));
     ASSERT_TRUE(vfs_expect_read(mount, FL_S("__MACOSX/._b.png"), FL_S("resource b")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
-    file_remove_directory_recursive_os(dir);
+    fl_vfs_destroy();
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -348,7 +348,7 @@ UTEST(vfs_libarchive, a_directory_mount_lists_archives_flagged_and_reads_through
     ASSERT_TRUE(vfs_expect_read(mount, FL_S("test.zip/async_test2.txt"), FL_S("Content 2 is longer")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -365,7 +365,7 @@ UTEST(vfs_libarchive, a_zip_inside_a_zip_mounts_lists_and_reads) {
     ASSERT_TRUE(vfs_expect_list(mount, FL_S("tmp"), "inner.zip*"));
 
     // The inner archive is a file as well as a directory: its raw bytes read back...
-    FlVfsHandle raw = vfs_mount_read_all(mount, FL_S("tmp/inner.zip"));
+    FlVfsHandle raw = fl_vfs_mount_read_all(mount, FL_S("tmp/inner.zip"));
     fl_vfs_wait(raw);
     FlVfsData raw_data = fl_vfs_get_data(raw);
     ASSERT_TRUE(raw_data.success);
@@ -380,7 +380,7 @@ UTEST(vfs_libarchive, a_zip_inside_a_zip_mounts_lists_and_reads) {
     ASSERT_TRUE(vfs_expect_read_fails(mount, FL_S("tmp/inner.zip/tmp/missing.txt")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -401,7 +401,7 @@ UTEST(vfs_libarchive, three_levels_of_zips_read_through_one_mount) {
     ASSERT_TRUE(vfs_expect_read_fails(mount, FL_S("tmp/level2.zip/tmp/level3.zip/tmp/level4_file.txt")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -419,7 +419,7 @@ UTEST(vfs_libarchive, a_nested_zip_path_mounts_directly) {
     ASSERT_TRUE(vfs_expect_read(level3, FL_S("tmp/level3_file.txt"), FL_S("Content of level3 file\n")));
     fl_vfs_mount_close(level3);
 
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -460,7 +460,7 @@ static FlVfsMount* mount_generated_large_zip(FlArena* arena, FlString* dir_out) 
     if (dir_out->length == 0 || !vfs_test_write_file(arena, *dir_out, FL_S("large.zip"), zip)) {
         return nullptr;
     }
-    return vfs_test_mount(file_build_path_os(arena, *dir_out, FL_S("large.zip")));
+    return vfs_test_mount(fl_os_build_path(arena, *dir_out, FL_S("large.zip")));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -473,15 +473,15 @@ UTEST(vfs_libarchive, a_one_megabyte_member_reads_back_byte_for_byte) {
     FlVfsMount* mount = mount_generated_large_zip(arena, &dir);
     ASSERT_NE(mount, nullptr);
 
-    FlVfsHandle handle = vfs_mount_read_all(mount, FL_S("large.txt"));
+    FlVfsHandle handle = fl_vfs_mount_read_all(mount, FL_S("large.txt"));
     fl_vfs_wait(handle);
     FlVfsData data = fl_vfs_get_data(handle);
     ASSERT_TRUE(large_file_matches(&data));
     fl_vfs_close(handle);
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
-    file_remove_directory_recursive_os(dir);
+    fl_vfs_destroy();
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -501,7 +501,7 @@ UTEST(vfs_libarchive, many_reads_of_one_large_member_in_flight_each_get_the_whol
     for (int round = 0; round < SAME_FILE_ROUNDS; round++) {
         FlVfsHandle handles[SAME_FILE_READS];
         for_count(i, SAME_FILE_READS) {
-            handles[i] = vfs_mount_read_all(mount, FL_S("large.txt"));
+            handles[i] = fl_vfs_mount_read_all(mount, FL_S("large.txt"));
             ASSERT_NE(handles[i], FL_VFS_HANDLE_INVALID);
         }
         for_count(i, SAME_FILE_READS) {
@@ -513,8 +513,8 @@ UTEST(vfs_libarchive, many_reads_of_one_large_member_in_flight_each_get_the_whol
     }
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
-    file_remove_directory_recursive_os(dir);
+    fl_vfs_destroy();
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -564,7 +564,7 @@ UTEST(vfs_libarchive, reads_across_several_archives_in_flight_together_return_th
         for_count(a, ARCHIVE_COUNT) {
             for (int f = 0; f < k_archive_reads[a].count; f++) {
                 for (int dup = 0; dup < MULTI_ARCHIVE_DUPLICATES; dup++) {
-                    handles[count] = vfs_mount_read_all(mounts[a], string_from_cstr(k_archive_reads[a].names[f]));
+                    handles[count] = fl_vfs_mount_read_all(mounts[a], string_from_cstr(k_archive_reads[a].names[f]));
                     expected[count] = k_archive_reads[a].contents[f];
                     ASSERT_NE(handles[count], FL_VFS_HANDLE_INVALID);
                     count++;
@@ -584,7 +584,7 @@ UTEST(vfs_libarchive, reads_across_several_archives_in_flight_together_return_th
     for_count(a, ARCHIVE_COUNT) {
         fl_vfs_mount_close(mounts[a]);
     }
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 #endif // FLOWI_VFS_DRIVER_LIBARCHIVE

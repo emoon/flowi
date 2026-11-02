@@ -220,7 +220,7 @@ FlUiCtx* render_fixture_get(void);
 void render_fixture_teardown(void);
 // Releases the render fixture and the VFS and image system singletons, so the calling case starts from none.
 void process_singletons_reset(void);
-// vfs_register_driver for a plugin the live VFS has not registered yet, so repeated cases do not stack copies.
+// fl_vfs_register_driver for a plugin the live VFS has not registered yet, so repeated cases do not stack copies.
 void vfs_test_register_driver(const FlVfsPlugin* plugin);
 void scene_many_elements(FlUiCtx* ctx, int n);
 bool color_eq(FlColor a, FlColor b);

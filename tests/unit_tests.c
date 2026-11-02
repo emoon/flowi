@@ -75,7 +75,7 @@ UTEST(fl_app, create_destroy_create_reinitializes_global_singletons) {
         // Owner-gated teardown proof: destroy reset the globals, so a fresh init claims ownership (returns
         // true). Release immediately so the next cycle's fl_app_create is again the sole owner.
         ASSERT_TRUE_MSG(fl_vfs_init(s_arena), "fl_app_destroy left the VFS singleton initialized");
-        vfs_destroy();
+        fl_vfs_destroy();
         FlRenderBackend dummy = { 0 };
         ASSERT_TRUE_MSG(image_create_system(s_arena, &dummy), "fl_app_destroy left the image system initialized");
         image_destroy_system();

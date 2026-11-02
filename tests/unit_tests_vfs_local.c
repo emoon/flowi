@@ -19,9 +19,9 @@ static FlVfsMount* fixture_mount(void) {
 UTEST(vfs_local, a_directory_mount_becomes_ready_and_reports_its_path) {
     ASSERT_TRUE(vfs_test_begin());
 
-    FlVfsMount* mount = vfs_mount(FL_S(VFS_FIXTURE_DIR)).mount;
+    FlVfsMount* mount = fl_vfs_mount(FL_S(VFS_FIXTURE_DIR)).mount;
     ASSERT_NE(mount, nullptr);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount));
     ASSERT_EQ((int)fl_vfs_mount_get_status(mount), (int)FlVfsMountStatus_Ready);
@@ -31,7 +31,7 @@ UTEST(vfs_local, a_directory_mount_becomes_ready_and_reports_its_path) {
     ASSERT_TRUE(fl_string_equals(info.path, FL_S(VFS_FIXTURE_DIR)));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -45,7 +45,7 @@ UTEST(vfs_local, files_read_back_with_their_exact_content) {
     ASSERT_TRUE(vfs_expect_read(mount, FL_S("readme.txt"), FL_S(README_TXT_CONTENT)));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,12 +54,12 @@ UTEST(vfs_local, a_read_issued_right_after_the_mount_waits_for_it) {
     // No wait on the mount: the read is chained behind the mount job and still sees the file.
     ASSERT_TRUE(vfs_test_begin());
 
-    FlVfsMount* mount = vfs_mount(FL_S(VFS_FIXTURE_DIR)).mount;
+    FlVfsMount* mount = fl_vfs_mount(FL_S(VFS_FIXTURE_DIR)).mount;
     ASSERT_NE(mount, nullptr);
     ASSERT_TRUE(vfs_expect_read(mount, FL_S("test.txt"), FL_S(TEST_TXT_CONTENT)));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,7 +72,7 @@ UTEST(vfs_local, reads_in_flight_together_each_return_their_own_file) {
 
     FlVfsHandle handles[FIXTURE_ASYNC_COUNT];
     for_count(i, FIXTURE_ASYNC_COUNT) {
-        handles[i] = vfs_mount_read_all(mount, string_from_cstr(k_fixture_async_names[i]));
+        handles[i] = fl_vfs_mount_read_all(mount, string_from_cstr(k_fixture_async_names[i]));
         ASSERT_NE(handles[i], FL_VFS_HANDLE_INVALID);
     }
     for_count(i, FIXTURE_ASYNC_COUNT) {
@@ -86,7 +86,7 @@ UTEST(vfs_local, reads_in_flight_together_each_return_their_own_file) {
     }
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,7 +97,7 @@ UTEST(vfs_local, a_missing_file_fails_with_a_message_naming_it) {
     FlVfsMount* mount = fixture_mount();
     ASSERT_NE(mount, nullptr);
 
-    FlVfsHandle handle = vfs_mount_read_all(mount, FL_S("nonexistent_file.txt"));
+    FlVfsHandle handle = fl_vfs_mount_read_all(mount, FL_S("nonexistent_file.txt"));
     ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(handle);
 
@@ -109,7 +109,7 @@ UTEST(vfs_local, a_missing_file_fails_with_a_message_naming_it) {
     fl_vfs_close(handle);
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -120,7 +120,7 @@ UTEST(vfs_local, a_successful_read_has_no_error_message) {
     FlVfsMount* mount = fixture_mount();
     ASSERT_NE(mount, nullptr);
 
-    FlVfsHandle handle = vfs_mount_read_all(mount, FL_S("test.txt"));
+    FlVfsHandle handle = fl_vfs_mount_read_all(mount, FL_S("test.txt"));
     fl_vfs_wait(handle);
     FlVfsData data = fl_vfs_get_data(handle);
     ASSERT_TRUE(data.success);
@@ -128,7 +128,7 @@ UTEST(vfs_local, a_successful_read_has_no_error_message) {
     fl_vfs_close(handle);
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -167,7 +167,7 @@ UTEST(vfs_local, a_read_callback_transforms_the_data_and_its_release_hook_runs_o
     ASSERT_NE(mount, nullptr);
 
     UppercaseStats stats = { 0 };
-    FlVfsHandle handle = vfs_mount_read_all(mount, FL_S("test.txt"), .callback = uppercase_callback,
+    FlVfsHandle handle = fl_vfs_mount_read_all(mount, FL_S("test.txt"), .callback = uppercase_callback,
                                             .user_data = &stats, .release = uppercase_release);
     ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(handle);
@@ -183,7 +183,7 @@ UTEST(vfs_local, a_read_callback_transforms_the_data_and_its_release_hook_runs_o
     ASSERT_EQ(atomic_load(&stats.releases), 1);
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -199,7 +199,7 @@ UTEST(vfs_local, every_priority_level_still_delivers_the_right_bytes) {
         = { FlVfsLoadPriority_Low, FlVfsLoadPriority_Normal, FlVfsLoadPriority_High, FlVfsLoadPriority_Highest };
     FlVfsHandle handles[sizeof_array(levels)];
     for_count(i, sizeof_array(levels)) {
-        handles[i] = vfs_mount_read_all(mount, FL_S("test.txt"));
+        handles[i] = fl_vfs_mount_read_all(mount, FL_S("test.txt"));
         ASSERT_NE(handles[i], FL_VFS_HANDLE_INVALID);
         fl_vfs_set_priority(handles[i], levels[i]);
     }
@@ -213,7 +213,7 @@ UTEST(vfs_local, every_priority_level_still_delivers_the_right_bytes) {
     }
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -231,7 +231,7 @@ UTEST(vfs_local, two_mounts_of_one_directory_are_independent) {
     ASSERT_TRUE(vfs_expect_read(second, FL_S("test.txt"), FL_S(TEST_TXT_CONTENT)));
 
     fl_vfs_mount_close(second);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -243,10 +243,10 @@ UTEST(vfs_local, sources_that_do_not_exist_mount_to_distinct_mounts_that_end_in_
                                            "/vfs_test_missing/document.txt", "/vfs_test_missing/directory" };
     FlVfsMount* mounts[sizeof_array(sources)];
     for_count(i, sizeof_array(sources)) {
-        mounts[i] = vfs_mount(string_from_cstr(sources[i])).mount;
+        mounts[i] = fl_vfs_mount(string_from_cstr(sources[i])).mount;
         ASSERT_NE(mounts[i], nullptr);
     }
-    vfs_wait_all();
+    fl_vfs_wait_all();
     for_count(i, sizeof_array(sources)) {
         ASSERT_EQ((int)fl_vfs_mount_get_status(mounts[i]), (int)FlVfsMountStatus_Error);
         ASSERT_FALSE(fl_vfs_mount_is_ready(mounts[i]));
@@ -258,7 +258,7 @@ UTEST(vfs_local, sources_that_do_not_exist_mount_to_distinct_mounts_that_end_in_
         fl_vfs_mount_close(mounts[i]);
     }
 
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -270,12 +270,12 @@ UTEST(vfs_local, a_directory_lists_directories_first_then_files_in_natural_order
     FlArena* arena = arena_new();
     FlString dir = vfs_test_temp_dir(arena, FL_S("unit_test_vfs_local_list_tmp"));
     ASSERT_TRUE(dir.length > 0);
-    ASSERT_TRUE(file_create_directory_os(file_build_path_os(arena, dir, FL_S("b_dir"))));
-    ASSERT_TRUE(file_create_directory_os(file_build_path_os(arena, dir, FL_S("a_dir"))));
+    ASSERT_TRUE(fl_os_create_directory(fl_os_build_path(arena, dir, FL_S("b_dir"))));
+    ASSERT_TRUE(fl_os_create_directory(fl_os_build_path(arena, dir, FL_S("a_dir"))));
     static const char* const files[] = { "file10.txt", "file2.txt", "file1.txt" };
     for_count(i, sizeof_array(files)) {
-        FlString path = file_build_path_os(arena, dir, string_from_cstr(files[i]));
-        ASSERT_EQ(file_write_os(path, (const u8*)"x", 1), 1);
+        FlString path = fl_os_build_path(arena, dir, string_from_cstr(files[i]));
+        ASSERT_EQ(fl_os_file_write(path, (const u8*)"x", 1), 1);
     }
 
     FlVfsMount* mount = vfs_test_mount(dir);
@@ -292,8 +292,8 @@ UTEST(vfs_local, a_directory_lists_directories_first_then_files_in_natural_order
     fl_vfs_close(handle);
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
-    file_remove_directory_recursive_os(dir);
+    fl_vfs_destroy();
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -313,5 +313,5 @@ UTEST(vfs_local, listing_a_directory_that_is_not_there_gives_an_empty_listing) {
     fl_vfs_close(handle);
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }

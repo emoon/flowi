@@ -21,7 +21,7 @@ UTEST(vfs_lhasa, an_lha_on_disk_reads_whole_and_in_pieces_of_any_size) {
     ASSERT_TRUE(dir.length > 0);
     ASSERT_TRUE(vfs_test_write_file(arena, dir, FL_S("song.lha"), lha));
 
-    FlVfsMount* mount = vfs_test_mount(file_build_path_os(arena, dir, FL_S("song.lha")));
+    FlVfsMount* mount = vfs_test_mount(fl_os_build_path(arena, dir, FL_S("song.lha")));
     ASSERT_NE(mount, nullptr);
 
     FlString content = FL_S(LHA_TEST_CONTENT);
@@ -34,8 +34,8 @@ UTEST(vfs_lhasa, an_lha_on_disk_reads_whole_and_in_pieces_of_any_size) {
     ASSERT_TRUE(vfs_expect_chunked_read(mount, FL_S(LHA_TEST_NAME), content, content.length + 5));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
-    file_remove_directory_recursive_os(dir);
+    fl_vfs_destroy();
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -100,14 +100,14 @@ UTEST(vfs_lhasa, a_directory_entry_lists_as_a_directory_and_an_empty_stored_file
     ASSERT_TRUE(dir.length > 0);
     ASSERT_TRUE(vfs_test_write_file(arena, dir, FL_S("dirs.lha"), lha));
 
-    FlVfsMount* mount = vfs_test_mount(file_build_path_os(arena, dir, FL_S("dirs.lha")));
+    FlVfsMount* mount = vfs_test_mount(fl_os_build_path(arena, dir, FL_S("dirs.lha")));
     ASSERT_NE(mount, nullptr);
     ASSERT_TRUE(vfs_expect_list(mount, FL_S(""), "docs/ vacant/ empty.txt"));
     ASSERT_TRUE(vfs_expect_list(mount, FL_S("docs"), "note.txt"));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
-    file_remove_directory_recursive_os(dir);
+    fl_vfs_destroy();
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 

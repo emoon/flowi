@@ -148,16 +148,16 @@ UTEST(arena_alloc_tracker, thread_safety) {
     ArenaAllocTracker* tracker = arena_alloc_tracker_create();
 
     TrackerThreadData thread_data[4];
-    Thread threads[4];
+    FlOsThread threads[4];
 
     for (int i = 0; i < 4; i++) {
         thread_data[i].tracker = tracker;
         thread_data[i].thread_id = i;
-        ASSERT_TRUE(os_thread_create(&threads[i], tracker_thread_func, &thread_data[i]));
+        ASSERT_TRUE(fl_os_thread_create(&threads[i], tracker_thread_func, &thread_data[i]));
     }
 
     for (int i = 0; i < 4; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
 
     // Verify total: 4 threads * 1000 allocs * 64 bytes = 256000 total bytes

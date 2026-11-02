@@ -179,7 +179,7 @@ FlArena* arena_new_(const ArenaSettings* settings) {
     self->prev_tracked = nullptr;
     atomic_store_explicit(&self->peak_offset, ARENA_SIZE, memory_order_relaxed);
     self->owner_thread_id = (u32)os_thread_get_current_id();
-    self->creation_timestamp_us = (u64)get_current_time_us_os();
+    self->creation_timestamp_us = (u64)fl_os_time_us();
 
     self->alloc_tracker = nullptr;
 

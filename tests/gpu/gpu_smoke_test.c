@@ -716,17 +716,17 @@ static int run_translator_tests(void) {
     bad->byte_size = 0;
     emit_solid_rect(ir_arena, 5.0f, 6.0f, 7.0f, 8.0f, red); // after the corruption: must be dropped
     MalformedTranslateJob job = { .out_arena = out_arena, .commands = start, .bytes = ir_bytes(ir_arena, start) };
-    Thread worker;
-    CHECK(os_thread_create(&worker, malformed_translate_thread, &job), "malformed guard: worker thread must start");
+    FlOsThread worker;
+    CHECK(fl_os_thread_create(&worker, malformed_translate_thread, &job), "malformed guard: worker thread must start");
     bool finished = false;
     for (int i = 0; i < 5000 && !finished; i++) { // ~5s bound; the passing path finishes on the first poll
         finished = atomic_load(&job.done);
         if (!finished) {
-            sleep_ms(1);
+            fl_os_sleep_ms(1);
         }
     }
     CHECK(finished, "malformed guard: a zero-byte_size header must terminate the IR walks, not hang them");
-    os_thread_join(&worker);
+    fl_os_thread_join(&worker);
     CHECK(job.list.count == 1, "malformed guard: records ahead of the zero-size header still translate");
     CHECK(job.list.cmds[0].rect[0] == 1.0f && job.list.cmds[0].rect[1] == 2.0f,
           "malformed guard: the surviving record is the one before the corruption");
@@ -2042,7 +2042,7 @@ static int run_ui_image_widget_test(FlArena* arena, FlRenderBackend* backend) {
             drew_red = p[0] > 150 && p[0] > p[1] && p[0] > p[2] && p[3] == 255;
         }
         if (!drew_red) {
-            sleep_ms(1);
+            fl_os_sleep_ms(1);
         }
     }
 
@@ -6231,9 +6231,9 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
 
     // Frame 2 - a UI-scale change wipes the atlas, so this re-render re-rasterizes the whole resident set.
     backend->scale_changed(ud, 2.0f);
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
     GpuFrameStats zoom;
     gpu_debug_read_frame_stats(ud, surface, arena, &zoom);
 

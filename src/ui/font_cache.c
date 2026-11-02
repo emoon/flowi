@@ -197,7 +197,7 @@ FlFontId font_cache_load_font(FlFontCache* self, FlVfsMount* mount, FlString rel
     ctx->face = face;
     ctx->font_size = font_size;
 
-    face->vfs_handle = vfs_mount_read_all(mount, relative_path, .callback = font_load_callback, .user_data = ctx);
+    face->vfs_handle = fl_vfs_mount_read_all(mount, relative_path, .callback = font_load_callback, .user_data = ctx);
 
     if (face->vfs_handle == FL_VFS_HANDLE_INVALID) {
         log_error("Failed to start async font load for %S", relative_path);
@@ -365,7 +365,7 @@ void font_cache_update(FlFontCache* self) {
 void font_cache_wait_loaded(FlFontCache* self, FlFontId id) {
     while (font_cache_get_font_status(self, id) == FontStatus_Loading) {
         font_cache_update(self);
-        sleep_us(500);
+        fl_os_sleep_us(500);
     }
 }
 
@@ -387,7 +387,7 @@ bool font_cache_ensure_all_loaded(FlFontCache* self) {
             break;
         }
         font_cache_update(self);
-        sleep_us(500);
+        fl_os_sleep_us(500);
     }
 
     bool all_ready = true;

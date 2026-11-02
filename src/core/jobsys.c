@@ -65,7 +65,7 @@ typedef struct Jobs {
     Mutex free_list_mutex; // Guards first_free_entity and job arena growth. Contended from any thread: jobs
                            // are added and polled off the main thread (e.g. an I/O subsystem issuing work),
                            // and a worker takes it too when it parks a dependent behind a live dependency
-    Thread* threads;
+    FlOsThread* threads;
     bool* threads_created; // Per-slot creation success; failed slots must never be joined
     JobInfo* start_jobs;
     struct WorkerData* thread_info;
@@ -135,7 +135,7 @@ static void schedule_job_with_priority(Jobs* self, JobInfo* job, JobPriority pri
         // Non-worker producer (main thread, a subsystem's own threads): apply backpressure until a slot frees.
         // Workers never block on a full queue, so the queue keeps draining while queued jobs terminate.
         while (!try_enqueue(&self->work_queues[queue], &job)) {
-            sleep_us(50);
+            fl_os_sleep_us(50);
         }
     }
 
@@ -281,7 +281,7 @@ static void* worker_thread(void* arg) {
 
     char thread_name[16];
     snprintf(thread_name, sizeof(thread_name), "job-worker-%d", worker_info->index);
-    os_thread_set_name(thread_name);
+    fl_os_thread_set_name(thread_name);
 
     s_is_main_thread = false;
 
@@ -334,7 +334,7 @@ void fl_jobs_create(FlArena* arena, const int num_threads) {
     condvar_init(&self->work_available);
     atomic_store(&self->idle_workers, 0);
 
-    self->threads = arena_alloc_array_zero(self->arena, Thread, num_threads);
+    self->threads = arena_alloc_array_zero(self->arena, FlOsThread, num_threads);
     self->threads_created = arena_alloc_array_zero(self->arena, bool, num_threads);
     self->num_threads = num_threads;
     self->thread_info = arena_alloc_array(self->arena, struct WorkerData, num_threads);
@@ -358,7 +358,7 @@ void fl_jobs_create(FlArena* arena, const int num_threads) {
     for_count(i, num_threads) {
         self->thread_info[i].jobs = self;
         self->thread_info[i].index = i;
-        bool success = os_thread_create(&self->threads[i], worker_thread, &self->thread_info[i]);
+        bool success = fl_os_thread_create(&self->threads[i], worker_thread, &self->thread_info[i]);
         self->threads_created[i] = success;
         if (!success) {
             log_error("Failed to create worker thread %d", i);
@@ -590,7 +590,7 @@ void fl_jobs_wait(FlJobHandle handle) {
     }
 
     while (fl_jobs_is_finished(handle) == FlJobsResult_NotFinished) {
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
 }
 
@@ -608,7 +608,7 @@ void fl_jobs_destroy(void) {
 
     for_count(i, self->num_threads) {
         if (self->threads_created[i]) {
-            os_thread_join(&self->threads[i]);
+            fl_os_thread_join(&self->threads[i]);
         }
     }
 

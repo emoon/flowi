@@ -27,3 +27,24 @@ typedef FlVfsHandle FlVfsDirHandle;
 // Convenience: mount with default options (fl_vfs_mount_with_options takes options explicitly).
 
 #define fl_vfs_mount(source) fl_vfs_mount_with_options(source, (FlVfsMountOptions) { 0 })
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Convenience: read a whole file from a mount. Options are optional designated initializers:
+//   fl_vfs_mount_read_all(mount, path)
+//   fl_vfs_mount_read_all(mount, path, .callback = on_read, .user_data = state)
+
+typedef struct FlVfsReadOptions {
+    FlVfsReadCallback callback;
+    void* user_data;
+    // Runs once with user_data when the handle is freed.
+    FlVfsReleaseCallback release;
+    // A handle to reuse, or FL_VFS_HANDLE_INVALID.
+    FlVfsHandle reuse_handle;
+} FlVfsReadOptions;
+
+#define fl_vfs_mount_read_all(mount, path, ...)                                                           \
+    ({                                                                                                    \
+        FlVfsReadOptions _opts = { __VA_ARGS__ };                                                         \
+        fl_vfs_mount_read_all_with_options(mount, path, _opts.callback, _opts.user_data, _opts.release, \
+                                           _opts.reuse_handle);                                           \
+    })

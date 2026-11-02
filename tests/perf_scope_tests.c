@@ -10,7 +10,7 @@
 // Burn enough time to be measurable on platforms with coarse timer resolution (macOS, arm64 Linux).
 
 static void burn_measurable_time(void) {
-    sleep_ms(1);
+    fl_os_sleep_ms(1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

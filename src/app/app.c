@@ -771,7 +771,7 @@ bool fl_app_tick(FlApp* app, void* user_data, FlAppFrameFn frame) {
     app_close_requested_secondaries(app);
 
     // One shared delta-time for the whole tick: every window advances time by the same step.
-    u64 now = get_monotonic_time_ns_os();
+    u64 now = fl_os_monotonic_ns();
     float dt = 0.0f; // first tick has no previous timestamp
     if (app->have_last_time) {
         dt = (float)((double)(now - app->last_time_ns) / 1.0e9);

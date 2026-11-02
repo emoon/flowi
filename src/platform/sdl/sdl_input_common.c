@@ -692,14 +692,14 @@ void sdl_input_common_pump_multi(SdlInputCommon* self, const u32* window_ids, Fl
         if (self->gamepad_connect_pending[i]) {
             self->gamepad_connect_pending[i] = false;
             FlGamepadEvent event
-                = { .type = FlGamepadEvent_Connected, .gamepad_id = (u32)i, .timestamp = get_current_time_ms_os() };
+                = { .type = FlGamepadEvent_Connected, .gamepad_id = (u32)i, .timestamp = fl_os_time_ms() };
             platform_input_push_gamepad_event(contexts[0], event);
         }
     }
 
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
-        u64 timestamp = get_current_time_ms_os();
+        u64 timestamp = fl_os_time_ms();
         u32 target_id = sdl_event_window_id(&e);
         FlUiCtx* ctx = contexts[0]; // default: main window (non-addressed events, or an id with no live match)
         if (target_id != 0) {

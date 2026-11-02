@@ -319,7 +319,7 @@ void image_system_close(ImageSystem* sys) {
 
     // Producers only enqueue or call the backend and never wait on the render thread, so they always finish.
     while (atomic_load(&sys->producers_inflight) != 0) {
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
     wait_pending_jobs(sys);
 

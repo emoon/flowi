@@ -130,7 +130,7 @@ UTEST_F(error_report_fixture, thread_safety) {
 #define NUM_TEST_THREADS 4
 #define ITERATIONS_PER_THREAD 1000
 
-    Thread threads[NUM_TEST_THREADS];
+    FlOsThread threads[NUM_TEST_THREADS];
     ThreadTestData thread_data[NUM_TEST_THREADS];
 
     for (int i = 0; i < NUM_TEST_THREADS; i++) {
@@ -139,12 +139,12 @@ UTEST_F(error_report_fixture, thread_safety) {
         thread_data[i].num_iterations = ITERATIONS_PER_THREAD;
         atomic_store(&thread_data[i].success_count, 0);
 
-        bool result = os_thread_create(&threads[i], thread_test_worker, &thread_data[i]);
+        bool result = fl_os_thread_create(&threads[i], thread_test_worker, &thread_data[i]);
         ASSERT_TRUE(result);
     }
 
     for (int i = 0; i < NUM_TEST_THREADS; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
 
     int total_success = 0;

@@ -224,7 +224,7 @@ CpuTopology cpu_query_topology(FlArena* arena) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool fl_cpu_set_thread_affinity(Thread* thread, CpuIdList cpus) {
+bool fl_cpu_set_thread_affinity(FlOsThread* thread, CpuIdList cpus) {
     return os_thread_set_affinity(thread, cpus.ids, cpus.count);
 }
 

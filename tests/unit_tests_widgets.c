@@ -6512,11 +6512,11 @@ UTEST(hit_clip, a_push_past_the_stack_capacity_does_not_pop_a_live_clip) {
 
 static FlVfsMount* localization_mount(void) {
     fl_vfs_init(s_arena);
-    FlVfsMountResult mount = vfs_mount(FL_S(FLOWI_TEST_DATA_DIR "/localization"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S(FLOWI_TEST_DATA_DIR "/localization"));
     if (mount.status != FlVfsMountErrorStatus_Success) {
         return nullptr;
     }
-    vfs_wait_all();
+    fl_vfs_wait_all();
     return mount.mount;
 }
 
@@ -6528,7 +6528,7 @@ static void localization_settle(struct Localization* loc) {
         if (!localization_is_loading(loc)) {
             return;
         }
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
 }
 
@@ -6712,18 +6712,18 @@ UTEST(localization, unparseable_manifest_disables_localization) {
     // A manifest that reads fine but is not JSON takes the parse-failure branch, distinct from the
     // file-not-found branch above.
     FlArena* arena = arena_new();
-    FlString dir_path = file_build_path_os(arena, get_current_directory_os(arena), FL_S("unit_test_localization_tmp"));
-    file_remove_directory_recursive_os(dir_path); // clean any leftover from an aborted run
-    ASSERT_TRUE(file_create_directory_os(dir_path));
+    FlString dir_path = fl_os_build_path(arena, fl_os_current_directory(arena), FL_S("unit_test_localization_tmp"));
+    fl_os_remove_directory_recursive(dir_path); // clean any leftover from an aborted run
+    ASSERT_TRUE(fl_os_create_directory(dir_path));
 
     const u8 broken[] = "{ this is not json";
-    FlString manifest_path = file_build_path_os(arena, dir_path, FL_S("manifest.json"));
-    ASSERT_EQ((int)sizeof(broken) - 1, (int)file_write_os(manifest_path, broken, (i64)sizeof(broken) - 1));
+    FlString manifest_path = fl_os_build_path(arena, dir_path, FL_S("manifest.json"));
+    ASSERT_EQ((int)sizeof(broken) - 1, (int)fl_os_file_write(manifest_path, broken, (i64)sizeof(broken) - 1));
 
     fl_vfs_init(s_arena);
-    FlVfsMountResult mount = vfs_mount(dir_path);
+    FlVfsMountResult mount = fl_vfs_mount(dir_path);
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "the scratch directory should mount through LocalFS");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     fl_localization_init(mount.mount, FL_S("manifest.json"), false);
     localization_settle(ctx->shared->localization);
@@ -6734,7 +6734,7 @@ UTEST(localization, unparseable_manifest_disables_localization) {
                     "an unparseable manifest must leave every SID rendering as itself");
 
     localization_fixture_release(ctx, mount.mount);
-    file_remove_directory_recursive_os(dir_path);
+    fl_os_remove_directory_recursive(dir_path);
     fl_arena_destroy(arena);
 }
 
@@ -6924,7 +6924,7 @@ UTEST(localization, an_in_flight_switch_keeps_the_old_language_until_it_lands) {
                         "a frame with the table still loading resolves entirely against the old language");
         ASSERT_EQ_MSG((u32)1, localization_resident_table_count(loc),
                       "a table still being built on the worker is not resident");
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
 
     ASSERT_TRUE_MSG(frames > 0, "the read is started at a frame boundary, so at least one frame sees it in flight");
@@ -6954,7 +6954,7 @@ UTEST(localization, a_tag_set_while_a_switch_is_in_flight_is_applied_after_it) {
         ASSERT_TRUE_MSG(!fl_string_equals(text, FL_S_UTF8("Configurações")),
                         "a tag set during a switch never overtakes the table already loading");
         landed = fl_string_equals(text, FL_S_UTF8("Einstellungen"));
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
     ASSERT_TRUE_MSG(landed, "the switch that was in flight is the one that lands first");
 
@@ -6990,29 +6990,29 @@ UTEST(localization, a_table_the_worker_cannot_build_keeps_the_current_language) 
     // the manifest names but that does not exist.
     FlArena* arena = arena_new();
     FlString dir_path
-        = file_build_path_os(arena, get_current_directory_os(arena), FL_S("unit_test_localization_badtable"));
-    file_remove_directory_recursive_os(dir_path); // clean any leftover from an aborted run
-    ASSERT_TRUE(file_create_directory_os(dir_path));
+        = fl_os_build_path(arena, fl_os_current_directory(arena), FL_S("unit_test_localization_badtable"));
+    fl_os_remove_directory_recursive(dir_path); // clean any leftover from an aborted run
+    ASSERT_TRUE(fl_os_create_directory(dir_path));
 
     const u8 manifest[] = "{\"version\":1,\"default\":\"en\","
                           "\"languages\":[{\"tag\":\"en\",\"file\":\"en.json\"},"
                           "{\"tag\":\"broken\",\"file\":\"broken.json\"},"
                           "{\"tag\":\"gone\",\"file\":\"gone.json\"}]}";
-    FlString manifest_path = file_build_path_os(arena, dir_path, FL_S("manifest.json"));
-    ASSERT_EQ((int)sizeof(manifest) - 1, (int)file_write_os(manifest_path, manifest, (i64)sizeof(manifest) - 1));
+    FlString manifest_path = fl_os_build_path(arena, dir_path, FL_S("manifest.json"));
+    ASSERT_EQ((int)sizeof(manifest) - 1, (int)fl_os_file_write(manifest_path, manifest, (i64)sizeof(manifest) - 1));
 
     const u8 en[] = "{\"version\":1,\"strings\":{\"SID_settings_title\":\"Settings\"}}";
-    FlString en_path = file_build_path_os(arena, dir_path, FL_S("en.json"));
-    ASSERT_EQ((int)sizeof(en) - 1, (int)file_write_os(en_path, en, (i64)sizeof(en) - 1));
+    FlString en_path = fl_os_build_path(arena, dir_path, FL_S("en.json"));
+    ASSERT_EQ((int)sizeof(en) - 1, (int)fl_os_file_write(en_path, en, (i64)sizeof(en) - 1));
 
     const u8 broken[] = "{ this is not json";
-    FlString broken_path = file_build_path_os(arena, dir_path, FL_S("broken.json"));
-    ASSERT_EQ((int)sizeof(broken) - 1, (int)file_write_os(broken_path, broken, (i64)sizeof(broken) - 1));
+    FlString broken_path = fl_os_build_path(arena, dir_path, FL_S("broken.json"));
+    ASSERT_EQ((int)sizeof(broken) - 1, (int)fl_os_file_write(broken_path, broken, (i64)sizeof(broken) - 1));
 
     fl_vfs_init(s_arena);
-    FlVfsMountResult mount = vfs_mount(dir_path);
+    FlVfsMountResult mount = fl_vfs_mount(dir_path);
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "the scratch directory should mount through LocalFS");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     fl_localization_init(mount.mount, FL_S("manifest.json"), false);
     struct Localization* loc = ctx->shared->localization;
@@ -7031,7 +7031,7 @@ UTEST(localization, a_table_the_worker_cannot_build_keeps_the_current_language) 
     ASSERT_EQ_MSG((u32)1, localization_resident_table_count(loc), "a failed read leaves no table behind");
 
     localization_fixture_release(ctx, mount.mount);
-    file_remove_directory_recursive_os(dir_path);
+    fl_os_remove_directory_recursive(dir_path);
     fl_arena_destroy(arena);
 }
 
@@ -7115,24 +7115,24 @@ UTEST(localization, a_default_table_that_fails_to_load_leaves_no_fallback_layer)
     // run can still put an active language on top of the missing fallback layer.
     FlArena* arena = arena_new();
     FlString dir_path
-        = file_build_path_os(arena, get_current_directory_os(arena), FL_S("unit_test_localization_nodef"));
-    file_remove_directory_recursive_os(dir_path); // clean any leftover from an aborted run
-    ASSERT_TRUE(file_create_directory_os(dir_path));
+        = fl_os_build_path(arena, fl_os_current_directory(arena), FL_S("unit_test_localization_nodef"));
+    fl_os_remove_directory_recursive(dir_path); // clean any leftover from an aborted run
+    ASSERT_TRUE(fl_os_create_directory(dir_path));
 
     const u8 manifest[]
         = "{\"version\":1,\"default\":\"en\","
           "\"languages\":[{\"tag\":\"en\",\"file\":\"en.json\"},{\"tag\":\"de\",\"file\":\"de.json\"}]}";
-    FlString manifest_path = file_build_path_os(arena, dir_path, FL_S("manifest.json"));
-    ASSERT_EQ((int)sizeof(manifest) - 1, (int)file_write_os(manifest_path, manifest, (i64)sizeof(manifest) - 1));
+    FlString manifest_path = fl_os_build_path(arena, dir_path, FL_S("manifest.json"));
+    ASSERT_EQ((int)sizeof(manifest) - 1, (int)fl_os_file_write(manifest_path, manifest, (i64)sizeof(manifest) - 1));
 
     const u8 de[] = "{\"version\":1,\"strings\":{\"SID_settings_title\":\"Einstellungen\"}}";
-    FlString de_path = file_build_path_os(arena, dir_path, FL_S("de.json"));
-    ASSERT_EQ((int)sizeof(de) - 1, (int)file_write_os(de_path, de, (i64)sizeof(de) - 1));
+    FlString de_path = fl_os_build_path(arena, dir_path, FL_S("de.json"));
+    ASSERT_EQ((int)sizeof(de) - 1, (int)fl_os_file_write(de_path, de, (i64)sizeof(de) - 1));
 
     fl_vfs_init(s_arena);
-    FlVfsMountResult mount = vfs_mount(dir_path);
+    FlVfsMountResult mount = fl_vfs_mount(dir_path);
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "the scratch directory should mount through LocalFS");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     fl_localization_init(mount.mount, FL_S("manifest.json"), false);
     struct Localization* loc = ctx->shared->localization;
@@ -7151,7 +7151,7 @@ UTEST(localization, a_default_table_that_fails_to_load_leaves_no_fallback_layer)
                     "the active language still works without a fallback layer beneath it");
 
     localization_fixture_release(ctx, mount.mount);
-    file_remove_directory_recursive_os(dir_path);
+    fl_os_remove_directory_recursive(dir_path);
     fl_arena_destroy(arena);
 }
 
@@ -7163,23 +7163,23 @@ UTEST(localization, a_default_tag_the_manifest_does_not_list_never_starts_a_tabl
     // reaches its ready state without passing through a default-table load at all.
     FlArena* arena = arena_new();
     FlString dir_path
-        = file_build_path_os(arena, get_current_directory_os(arena), FL_S("unit_test_localization_notag"));
-    file_remove_directory_recursive_os(dir_path); // clean any leftover from an aborted run
-    ASSERT_TRUE(file_create_directory_os(dir_path));
+        = fl_os_build_path(arena, fl_os_current_directory(arena), FL_S("unit_test_localization_notag"));
+    fl_os_remove_directory_recursive(dir_path); // clean any leftover from an aborted run
+    ASSERT_TRUE(fl_os_create_directory(dir_path));
 
     const u8 manifest[] = "{\"version\":1,\"default\":\"en\","
                           "\"languages\":[{\"tag\":\"de\",\"file\":\"de.json\"}]}";
-    FlString manifest_path = file_build_path_os(arena, dir_path, FL_S("manifest.json"));
-    ASSERT_EQ((int)sizeof(manifest) - 1, (int)file_write_os(manifest_path, manifest, (i64)sizeof(manifest) - 1));
+    FlString manifest_path = fl_os_build_path(arena, dir_path, FL_S("manifest.json"));
+    ASSERT_EQ((int)sizeof(manifest) - 1, (int)fl_os_file_write(manifest_path, manifest, (i64)sizeof(manifest) - 1));
 
     const u8 de[] = "{\"version\":1,\"strings\":{\"SID_settings_title\":\"Einstellungen\"}}";
-    FlString de_path = file_build_path_os(arena, dir_path, FL_S("de.json"));
-    ASSERT_EQ((int)sizeof(de) - 1, (int)file_write_os(de_path, de, (i64)sizeof(de) - 1));
+    FlString de_path = fl_os_build_path(arena, dir_path, FL_S("de.json"));
+    ASSERT_EQ((int)sizeof(de) - 1, (int)fl_os_file_write(de_path, de, (i64)sizeof(de) - 1));
 
     fl_vfs_init(s_arena);
-    FlVfsMountResult mount = vfs_mount(dir_path);
+    FlVfsMountResult mount = fl_vfs_mount(dir_path);
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "the scratch directory should mount through LocalFS");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     fl_localization_init(mount.mount, FL_S("manifest.json"), false);
     struct Localization* loc = ctx->shared->localization;
@@ -7195,7 +7195,7 @@ UTEST(localization, a_default_tag_the_manifest_does_not_list_never_starts_a_tabl
                     "localization is ready enough for a switch even though the default never loaded");
 
     localization_fixture_release(ctx, mount.mount);
-    file_remove_directory_recursive_os(dir_path);
+    fl_os_remove_directory_recursive(dir_path);
     fl_arena_destroy(arena);
 }
 
@@ -7441,13 +7441,13 @@ UTEST(localization, malformed_plural_entries_are_skipped_per_key) {
 
     FlArena* arena = arena_new();
     FlString dir_path
-        = file_build_path_os(arena, get_current_directory_os(arena), FL_S("unit_test_localization_plural"));
-    file_remove_directory_recursive_os(dir_path); // clean any leftover from an aborted run
-    ASSERT_TRUE(file_create_directory_os(dir_path));
+        = fl_os_build_path(arena, fl_os_current_directory(arena), FL_S("unit_test_localization_plural"));
+    fl_os_remove_directory_recursive(dir_path); // clean any leftover from an aborted run
+    ASSERT_TRUE(fl_os_create_directory(dir_path));
 
     const u8 manifest[] = "{\"version\":1,\"default\":\"en\",\"languages\":[{\"tag\":\"en\",\"file\":\"en.json\"}]}";
-    FlString manifest_path = file_build_path_os(arena, dir_path, FL_S("manifest.json"));
-    ASSERT_EQ((int)sizeof(manifest) - 1, (int)file_write_os(manifest_path, manifest, (i64)sizeof(manifest) - 1));
+    FlString manifest_path = fl_os_build_path(arena, dir_path, FL_S("manifest.json"));
+    ASSERT_EQ((int)sizeof(manifest) - 1, (int)fl_os_file_write(manifest_path, manifest, (i64)sizeof(manifest) - 1));
 
     const u8 en[] = "{\"version\":1,\"strings\":{"
                     "\"SID_ok\":{\"one\":\"{0} thing\",\"other\":\"{0} things\"},"
@@ -7455,13 +7455,13 @@ UTEST(localization, malformed_plural_entries_are_skipped_per_key) {
                     "\"SID_unknown_variant\":{\"lots\":\"{0} lots\",\"other\":\"{0} others\"},"
                     "\"SID_non_string_variant\":{\"one\":5,\"other\":\"{0} others\"},"
                     "\"SID_not_a_value\":5}}";
-    FlString en_path = file_build_path_os(arena, dir_path, FL_S("en.json"));
-    ASSERT_EQ((int)sizeof(en) - 1, (int)file_write_os(en_path, en, (i64)sizeof(en) - 1));
+    FlString en_path = fl_os_build_path(arena, dir_path, FL_S("en.json"));
+    ASSERT_EQ((int)sizeof(en) - 1, (int)fl_os_file_write(en_path, en, (i64)sizeof(en) - 1));
 
     fl_vfs_init(s_arena);
-    FlVfsMountResult mount = vfs_mount(dir_path);
+    FlVfsMountResult mount = fl_vfs_mount(dir_path);
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "the scratch directory should mount through LocalFS");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     fl_localization_init(mount.mount, FL_S("manifest.json"), false);
     localization_settle(ctx->shared->localization);
@@ -7480,7 +7480,7 @@ UTEST(localization, malformed_plural_entries_are_skipped_per_key) {
         "a value that is neither a string nor an object is skipped");
 
     localization_fixture_release(ctx, mount.mount);
-    file_remove_directory_recursive_os(dir_path);
+    fl_os_remove_directory_recursive(dir_path);
     fl_arena_destroy(arena);
 }
 
@@ -7490,22 +7490,22 @@ UTEST(localization, a_language_with_no_built_in_rules_selects_the_other_variant)
 
     FlArena* arena = arena_new();
     FlString dir_path
-        = file_build_path_os(arena, get_current_directory_os(arena), FL_S("unit_test_localization_norule"));
-    file_remove_directory_recursive_os(dir_path); // clean any leftover from an aborted run
-    ASSERT_TRUE(file_create_directory_os(dir_path));
+        = fl_os_build_path(arena, fl_os_current_directory(arena), FL_S("unit_test_localization_norule"));
+    fl_os_remove_directory_recursive(dir_path); // clean any leftover from an aborted run
+    ASSERT_TRUE(fl_os_create_directory(dir_path));
 
     const u8 manifest[] = "{\"version\":1,\"default\":\"xx\",\"languages\":[{\"tag\":\"xx\",\"file\":\"xx.json\"}]}";
-    FlString manifest_path = file_build_path_os(arena, dir_path, FL_S("manifest.json"));
-    ASSERT_EQ((int)sizeof(manifest) - 1, (int)file_write_os(manifest_path, manifest, (i64)sizeof(manifest) - 1));
+    FlString manifest_path = fl_os_build_path(arena, dir_path, FL_S("manifest.json"));
+    ASSERT_EQ((int)sizeof(manifest) - 1, (int)fl_os_file_write(manifest_path, manifest, (i64)sizeof(manifest) - 1));
 
     const u8 xx[] = "{\"version\":1,\"strings\":{\"SID_count\":{\"one\":\"{0} thing\",\"other\":\"{0} things\"}}}";
-    FlString xx_path = file_build_path_os(arena, dir_path, FL_S("xx.json"));
-    ASSERT_EQ((int)sizeof(xx) - 1, (int)file_write_os(xx_path, xx, (i64)sizeof(xx) - 1));
+    FlString xx_path = fl_os_build_path(arena, dir_path, FL_S("xx.json"));
+    ASSERT_EQ((int)sizeof(xx) - 1, (int)fl_os_file_write(xx_path, xx, (i64)sizeof(xx) - 1));
 
     fl_vfs_init(s_arena);
-    FlVfsMountResult mount = vfs_mount(dir_path);
+    FlVfsMountResult mount = fl_vfs_mount(dir_path);
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "the scratch directory should mount through LocalFS");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     fl_localization_init(mount.mount, FL_S("manifest.json"), false);
     localization_settle(ctx->shared->localization);
@@ -7518,7 +7518,7 @@ UTEST(localization, a_language_with_no_built_in_rules_selects_the_other_variant)
                     "and keeps doing so once it has warned");
 
     localization_fixture_release(ctx, mount.mount);
-    file_remove_directory_recursive_os(dir_path);
+    fl_os_remove_directory_recursive(dir_path);
     fl_arena_destroy(arena);
 }
 
@@ -7637,18 +7637,18 @@ typedef struct LocalizationHotReload {
 } LocalizationHotReload;
 
 static bool hot_reload_write(const LocalizationHotReload* fixture, FlString name, const char* text) {
-    FlString path = file_build_path_os(fixture->arena, fixture->dir, name);
+    FlString path = fl_os_build_path(fixture->arena, fixture->dir, name);
     const i64 length = (i64)strlen(text);
-    return file_write_os(path, (const u8*)text, length) == length;
+    return fl_os_file_write(path, (const u8*)text, length) == length;
 }
 
 // A scratch localization directory the case can rewrite mid-run, mounted with file watching on so hot reload has
 // something to hear, with the default language already up.
 static bool hot_reload_fixture_create(LocalizationHotReload* fixture, FlString dir_name, bool hot_reload) {
     fixture->arena = arena_new();
-    fixture->dir = file_build_path_os(fixture->arena, get_current_directory_os(fixture->arena), dir_name);
-    file_remove_directory_recursive_os(fixture->dir); // clean any leftover from an aborted run
-    if (!file_create_directory_os(fixture->dir)) {
+    fixture->dir = fl_os_build_path(fixture->arena, fl_os_current_directory(fixture->arena), dir_name);
+    fl_os_remove_directory_recursive(fixture->dir); // clean any leftover from an aborted run
+    if (!fl_os_create_directory(fixture->dir)) {
         return false;
     }
 
@@ -7664,12 +7664,12 @@ static bool hot_reload_fixture_create(LocalizationHotReload* fixture, FlString d
     }
 
     fl_vfs_init(s_arena);
-    FlVfsMountResult mount = vfs_mount(fixture->dir);
+    FlVfsMountResult mount = fl_vfs_mount(fixture->dir);
     if (mount.status != FlVfsMountErrorStatus_Success) {
         return false;
     }
     fixture->mount = mount.mount;
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     fl_localization_init(fixture->mount, FL_S("manifest.json"), hot_reload);
     localization_settle(fixture->ctx->shared->localization);
@@ -7678,7 +7678,7 @@ static bool hot_reload_fixture_create(LocalizationHotReload* fixture, FlString d
 
 static void hot_reload_fixture_release(LocalizationHotReload* fixture) {
     localization_fixture_release(fixture->ctx, fixture->mount);
-    file_remove_directory_recursive_os(fixture->dir);
+    fl_os_remove_directory_recursive(fixture->dir);
     fl_arena_destroy(fixture->arena);
 }
 
@@ -7693,7 +7693,7 @@ static bool hot_reload_wait_for_request(const LocalizationHotReload* fixture, u6
         if (localization_hot_reload_request_count(loc) > requests_before && !localization_is_loading(loc)) {
             return true;
         }
-        sleep_us(1000);
+        fl_os_sleep_us(1000);
     }
 
     return false;
@@ -7714,7 +7714,7 @@ static bool hot_reload_wait_for(const LocalizationHotReload* fixture, FlString s
         if (!localization_is_loading(loc) && fl_string_equals(localization_lookup(loc, sid), expected)) {
             return true;
         }
-        sleep_us(1000);
+        fl_os_sleep_us(1000);
     }
 
     return false;
@@ -7897,7 +7897,7 @@ UTEST(localization, a_file_change_does_not_drop_a_language_switch_that_has_not_b
     for (u32 i = 0; i < HOT_RELOAD_WAIT_ITERATIONS && !delivered; i++) {
         delivered = file_watcher_has_changes(barrier);
         if (!delivered) {
-            sleep_us(1000);
+            fl_os_sleep_us(1000);
         }
     }
     file_watcher_stop(barrier);

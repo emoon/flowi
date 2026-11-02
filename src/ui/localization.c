@@ -275,7 +275,7 @@ static StringTable* table_start(Localization* self, FlString tag) {
     }
     hashmap_string_new(&table->strings, arena, 256);
 
-    table->handle = vfs_mount_read_all(self->mount, table->path, .callback = table_load_callback, .user_data = table);
+    table->handle = fl_vfs_mount_read_all(self->mount, table->path, .callback = table_load_callback, .user_data = table);
     if (table->handle == FL_VFS_HANDLE_INVALID) {
         log_warning("Localization could not start reading table %S", table->path);
         fl_arena_destroy(arena);
@@ -316,7 +316,7 @@ static Manifest* manifest_start(Localization* self) {
     Manifest* manifest = arena_alloc_zero(arena, Manifest);
     manifest->arena = arena;
 
-    manifest->handle = vfs_mount_read_all(self->mount, self->manifest_path, .callback = manifest_load_callback,
+    manifest->handle = fl_vfs_mount_read_all(self->mount, self->manifest_path, .callback = manifest_load_callback,
                                           .user_data = manifest);
     if (manifest->handle == FL_VFS_HANDLE_INVALID) {
         fl_arena_destroy(arena);

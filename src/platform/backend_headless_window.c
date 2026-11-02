@@ -236,7 +236,7 @@ static void queue_event(FlWindow* window, QueuedEvent event) {
 
 void window_backend_headless_inject_mouse_move(FlWindowBackend* backend, FlWindow* window, i32 x, i32 y) {
     UNUSED(backend);
-    u64 timestamp = get_current_time_ms_os();
+    u64 timestamp = fl_os_time_ms();
     QueuedEvent event = { .type = QueuedEvent_Mouse,
                           .mouse = { .type = FlMouseEvent_Move,
                                      .move = { .x = (float)x, .y = (float)y, .delta_x = 0, .delta_y = 0 },
@@ -250,7 +250,7 @@ void window_backend_headless_inject_mouse_button(FlWindowBackend* backend, FlWin
     if (button < 0 || button >= FlMouseButton_Count) {
         return;
     }
-    u64 timestamp = get_current_time_ms_os();
+    u64 timestamp = fl_os_time_ms();
     QueuedEvent event = { .type = QueuedEvent_Mouse,
                           .mouse = { .type = down ? FlMouseEvent_Button_Down : FlMouseEvent_Button_Up,
                                      .button = { .button = button, .x = 0, .y = 0 },
@@ -260,7 +260,7 @@ void window_backend_headless_inject_mouse_button(FlWindowBackend* backend, FlWin
 
 void window_backend_headless_inject_mouse_delta(FlWindowBackend* backend, FlWindow* window, f32 delta_x, f32 delta_y) {
     UNUSED(backend);
-    u64 timestamp = get_current_time_ms_os();
+    u64 timestamp = fl_os_time_ms();
     QueuedEvent event = { .type = QueuedEvent_Mouse,
                           .mouse = { .type = FlMouseEvent_Relative_Motion,
                                      .relative = { .delta_x = delta_x, .delta_y = delta_y },
@@ -270,7 +270,7 @@ void window_backend_headless_inject_mouse_delta(FlWindowBackend* backend, FlWind
 
 void window_backend_headless_inject_wheel(FlWindowBackend* backend, FlWindow* window, f32 x, f32 y) {
     UNUSED(backend);
-    u64 timestamp = get_current_time_ms_os();
+    u64 timestamp = fl_os_time_ms();
     QueuedEvent event
         = { .type = QueuedEvent_Mouse,
             .mouse = { .type = FlMouseEvent_Wheel, .wheel = { .x = x, .y = y }, .timestamp = timestamp } };
@@ -312,7 +312,7 @@ void window_backend_headless_inject_key(FlWindowBackend* backend, FlWindow* wind
             window->modifiers &= ~bit;
         }
     }
-    u64 timestamp = get_current_time_ms_os();
+    u64 timestamp = fl_os_time_ms();
     QueuedEvent event = { .type = QueuedEvent_Key,
                           .key = { .type = down ? FlKeyEvent_Down : FlKeyEvent_Up,
                                    .key = key,
@@ -354,7 +354,7 @@ void window_backend_headless_inject_text(FlWindowBackend* backend, FlWindow* win
 
     slot->type = QueuedEvent_Text;
     slot->text = (FlTextInputEvent) { .text = { .data = slot->text_storage, .length = copy_len, .is_static = 1 },
-                                      .timestamp = get_current_time_ms_os() };
+                                      .timestamp = fl_os_time_ms() };
 }
 
 void window_backend_headless_inject_drop_file(FlWindowBackend* backend, FlWindow* window, FlString path, f32 x, f32 y) {
@@ -369,13 +369,13 @@ void window_backend_headless_inject_drop_file(FlWindowBackend* backend, FlWindow
     slot->window = (FlWindowEvent) {
         .type = FlWindowEvent_Drop_File,
         .drop = { .path = { .data = slot->text_storage, .length = copy_len, .is_static = 1 }, .x = x, .y = y },
-        .timestamp = get_current_time_ms_os(),
+        .timestamp = fl_os_time_ms(),
     };
 }
 
 void window_backend_headless_inject_window_close(FlWindowBackend* backend, FlWindow* window) {
     UNUSED(backend);
-    u64 timestamp = get_current_time_ms_os();
+    u64 timestamp = fl_os_time_ms();
     QueuedEvent event
         = { .type = QueuedEvent_Window, .window = { .type = FlWindowEvent_Close, .timestamp = timestamp } };
     queue_event(window, event);
@@ -383,7 +383,7 @@ void window_backend_headless_inject_window_close(FlWindowBackend* backend, FlWin
 
 void window_backend_headless_inject_window_focus(FlWindowBackend* backend, FlWindow* window, bool gained) {
     UNUSED(backend);
-    u64 timestamp = get_current_time_ms_os();
+    u64 timestamp = fl_os_time_ms();
     QueuedEvent event = { .type = QueuedEvent_Window,
                           .window = { .type = gained ? FlWindowEvent_Focus_Gained : FlWindowEvent_Focus_Lost,
                                       .timestamp = timestamp } };

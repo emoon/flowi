@@ -107,15 +107,15 @@ static int add_watch_for_directory(LinuxWatcherData* data, FlString path, FlAren
 // Returns 0 when every directory under base_path was watched, otherwise the errno that stopped the
 // walk. Stops at the first failure. An unreadable directory is skipped, not treated as a failure.
 static int add_watches_recursive(LinuxWatcherData* data, FlString base_path, FlArena* temp_arena) {
-    DirHandle dir = dir_open_os(temp_arena, base_path);
+    FlOsDir dir = fl_os_dir_open(temp_arena, base_path);
     if (!dir.is_valid) {
         return 0;
     }
 
     int result = 0;
 
-    FileStat entry;
-    while ((entry = dir_read_next_os(temp_arena, &dir)).is_valid) {
+    FlOsFileStat entry;
+    while ((entry = fl_os_dir_read_next(temp_arena, &dir)).is_valid) {
         if (!entry.is_directory) {
             continue;
         }
@@ -136,7 +136,7 @@ static int add_watches_recursive(LinuxWatcherData* data, FlString base_path, FlA
         }
     }
 
-    dir_close_os(&dir);
+    fl_os_dir_close(&dir);
     return result;
 }
 

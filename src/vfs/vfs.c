@@ -57,7 +57,7 @@ bool fl_vfs_init(FlArena* arena) {
     g_vfs_state = self;
 
     // The built-in LocalFS driver is the catch-all fallback and stays last (see builtin_fallback).
-    vfs_register_driver(localfs_plugin(), nullptr);
+    fl_vfs_register_driver(localfs_plugin(), nullptr);
     self->builtin_fallback = self->plugin_last;
 
     logc_info(VFS_ID, "VFS initialized");
@@ -67,12 +67,12 @@ bool fl_vfs_init(FlArena* arena) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
-    profile_function_auto_nc("vfs:vfs_register_driver", PROFILE_COLOR_CYAN);
+void fl_vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
+    profile_function_auto_nc("vfs:fl_vfs_register_driver", PROFILE_COLOR_CYAN);
     VfsState* self = g_vfs_state;
 
     if (self == nullptr) {
-        logc_error(VFS_ID, "vfs_register_driver called before fl_vfs_init");
+        logc_error(VFS_ID, "fl_vfs_register_driver called before fl_vfs_init");
         return;
     }
     if (plugin == nullptr) {
@@ -617,8 +617,8 @@ void fl_vfs_wait(FlVfsHandle handle) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void vfs_wait_all(void) {
-    profile_function_auto_nc("vfs:vfs_wait_all", PROFILE_COLOR_CYAN);
+void fl_vfs_wait_all(void) {
+    profile_function_auto_nc("vfs:fl_vfs_wait_all", PROFILE_COLOR_CYAN);
     VfsState* self = g_vfs_state;
 
     FL_VALIDATE(self != nullptr);
@@ -926,7 +926,7 @@ FlVfsHandle fl_vfs_read(FlVfsHandle file_handle, void* buffer, i64 size) {
 
 // Caller holds handle_lock. Marks a listed mount closing and reports whether it was open. A mount that is not listed,
 // or already closing, is a double-close or a use-after-free. It stays listed until its last reference goes, so
-// vfs_wait_all and vfs_destroy still see the ops it has running.
+// fl_vfs_wait_all and fl_vfs_destroy still see the ops it has running.
 static bool vfs_mount_begin_close_locked(VfsState* self, FlVfsMount* mount) {
     for_each_list(m, self->mount_first) {
         if (m == mount) {
@@ -951,7 +951,7 @@ static void vfs_mount_drain(VfsState* self, FlVfsMount* mount) {
         // An op between scheduling and recording its job, or between its last job and its destruction, has nothing
         // waitable, so this is a poll: back off rather than spin on it.
         if (atomic_load_explicit(&mount->refs, memory_order_acquire) > 1) {
-            sleep_us(100);
+            fl_os_sleep_us(100);
         }
     }
 }
@@ -1015,13 +1015,13 @@ static bool vfs_has_mounts(VfsState* self) {
     return self->mount_first != nullptr;
 }
 
-void vfs_destroy(void) {
-    profile_function_auto_nc("vfs:vfs_destroy", PROFILE_COLOR_CYAN);
+void fl_vfs_destroy(void) {
+    profile_function_auto_nc("vfs:fl_vfs_destroy", PROFILE_COLOR_CYAN);
     VfsState* self = g_vfs_state;
 
     FL_VALIDATE(self != nullptr);
 
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     for (FlVfsMount* mount = vfs_first_open_mount(self); mount != nullptr; mount = vfs_first_open_mount(self)) {
         fl_vfs_mount_close(mount);
@@ -1030,7 +1030,7 @@ void vfs_destroy(void) {
     // A mount closed from a worker is freed by its last op, so it leaves the list on its own once the jobs are done.
     while (vfs_has_mounts(self)) {
         vfs_wait_jobs(self, nullptr);
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
 
     // The hashmaps are allocated from main_arena

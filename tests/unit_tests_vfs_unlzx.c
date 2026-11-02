@@ -213,8 +213,8 @@ static FlString lzx_temp_dir(FlArena* arena) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlString lzx_write_temp_archive(FlArena* arena, FlString dir, LzxTestArchive archive) {
-    FlString path = file_build_path_os(arena, dir, FL_S("member.lzx"));
-    return file_write_os(path, archive.data, (i64)archive.size) == (i64)archive.size ? path : FL_S("");
+    FlString path = fl_os_build_path(arena, dir, FL_S("member.lzx"));
+    return fl_os_file_write(path, archive.data, (i64)archive.size) == (i64)archive.size ? path : FL_S("");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -228,7 +228,7 @@ UTEST(vfs_unlzx, a_member_of_the_checked_in_archive_lists_and_reads) {
     ASSERT_TRUE(vfs_expect_read(mount, FL_S(LZX_FIXTURE_MEMBER), FL_S(LZX_FIXTURE_CONTENT)));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -241,7 +241,7 @@ UTEST(vfs_unlzx, a_member_that_is_not_in_the_archive_fails_to_read) {
     ASSERT_TRUE(vfs_expect_read_fails(mount, FL_S("nonexistent.txt")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -252,18 +252,18 @@ UTEST(vfs_unlzx, a_file_named_lzx_that_is_not_an_archive_ends_in_a_mount_error) 
     FlArena* arena = arena_new();
     FlString dir = lzx_temp_dir(arena);
     ASSERT_TRUE(dir.length > 0);
-    FlString path = file_build_path_os(arena, dir, FL_S("not_lzx.lzx"));
-    ASSERT_EQ(file_write_os(path, (const u8*)"This is not an LZX archive", 26), 26);
+    FlString path = fl_os_build_path(arena, dir, FL_S("not_lzx.lzx"));
+    ASSERT_EQ(fl_os_file_write(path, (const u8*)"This is not an LZX archive", 26), 26);
 
-    FlVfsMount* mount = vfs_mount(path).mount;
+    FlVfsMount* mount = fl_vfs_mount(path).mount;
     ASSERT_NE(mount, nullptr);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_EQ((int)fl_vfs_mount_get_status(mount), (int)FlVfsMountStatus_Error);
     ASSERT_TRUE(vfs_expect_read_fails(mount, FL_S("anything.txt")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
-    file_remove_directory_recursive_os(dir);
+    fl_vfs_destroy();
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -281,7 +281,7 @@ UTEST(vfs_unlzx, a_buffer_shorter_than_the_member_takes_what_fits_and_the_next_r
     ASSERT_TRUE(vfs_expect_chunked_read(mount, FL_S(LZX_FIXTURE_MEMBER), content, content.length + 1));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -302,7 +302,7 @@ UTEST(vfs_unlzx, chunks_that_do_not_line_up_with_the_decoder_blocks_join_up_into
     FlVfsMount* mount = vfs_test_mount(path);
     ASSERT_NE(mount, nullptr);
 
-    FlVfsHandle all_handle = vfs_mount_read_all(mount, FL_S("chunks.bin"));
+    FlVfsHandle all_handle = fl_vfs_mount_read_all(mount, FL_S("chunks.bin"));
     fl_vfs_wait(all_handle);
     FlVfsData all = fl_vfs_get_data(all_handle);
     ASSERT_TRUE(all.success);
@@ -314,9 +314,9 @@ UTEST(vfs_unlzx, chunks_that_do_not_line_up_with_the_decoder_blocks_join_up_into
 
     fl_vfs_close(all_handle);
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
     free(archive.data);
-    file_remove_directory_recursive_os(dir);
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -361,16 +361,16 @@ UTEST(vfs_unlzx, a_member_with_a_bad_crc_fails_the_read_that_ends_it) {
     ASSERT_LT(total, (i64)archive.unpack_size);
     ASSERT_GE(total + LZX_ODD_CHUNK_SIZE, (i64)archive.unpack_size);
 
-    FlVfsHandle all_handle = vfs_mount_read_all(mount, FL_S("corrupt.bin"));
+    FlVfsHandle all_handle = fl_vfs_mount_read_all(mount, FL_S("corrupt.bin"));
     fl_vfs_wait(all_handle);
     ASSERT_FALSE(fl_vfs_get_data(all_handle).success);
     fl_vfs_close(all_handle);
 
     fl_vfs_close(file);
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
     free(archive.data);
-    file_remove_directory_recursive_os(dir);
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -419,9 +419,9 @@ UTEST(vfs_unlzx, a_large_member_hashes_through_fixed_size_reads) {
 
     fl_vfs_close(file);
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
     free(archive.data);
-    file_remove_directory_recursive_os(dir);
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -531,8 +531,8 @@ UTEST(vfs_unlzx, an_empty_member_lists_as_a_file) {
     ASSERT_TRUE(vfs_expect_list(mount, FL_S(""), "empty.bin"));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
-    file_remove_directory_recursive_os(dir);
+    fl_vfs_destroy();
+    fl_os_remove_directory_recursive(dir);
     free(archive.data);
     fl_arena_destroy(arena);
 }

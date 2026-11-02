@@ -110,7 +110,7 @@ How the contract is met:
   jobs of what is left, until the last op has been destroyed, which is how the old guarantee that every release hook has
   run when the close returns still holds. From a worker it returns without waiting. The mount closes its root handle and
   frees itself on the last reference, so an op's file handle is always closed before the root it was opened from. A closed
-  mount stays on the mount list until it is freed, so `vfs_wait_all` and `vfs_destroy` still cover the ops it has running.
+  mount stays on the mount list until it is freed, so `fl_vfs_wait_all` and `fl_vfs_destroy` still cover the ops it has running.
 - Known remaining wait: `vfs_mount_close` on the main thread still waits (`fl_jobs_wait`, then a short poll) until the
   mount's last op has ended. The baseline did the same, and the Rust `Mount` drop relies on it: every read's release
   hook has run, and the slots it frees are back, when the close returns. Making it non-blocking is possible, since
@@ -120,8 +120,8 @@ How the contract is met:
   An op that has been prepared but not dispatched is therefore not ready, where the old check treated "no job yet" as
   finished.
 
-`vfs_wait_all` is kept. `fl_host` calls it after mounting the working directory, because the first frame may issue a
-load against that mount and nothing public returns the mount's own job to wait on; `vfs_destroy` and the tests use it
+`fl_vfs_wait_all` is kept. `fl_host` calls it after mounting the working directory, because the first frame may issue a
+load against that mount and nothing public returns the mount's own job to wait on; `fl_vfs_destroy` and the tests use it
 too. It collects the jobs of every live op under `handle_lock` and waits for them outside it. The ops it waits for
 include ones whose id was already closed but whose job has not finished, which is what a shutdown needs.
 

@@ -16,7 +16,7 @@
 
 static bool create_temp_directory(const char* path) {
     FlString path_str = string_from_cstr(path);
-    return file_create_directory_os(path_str);
+    return fl_os_create_directory(path_str);
 }
 
 static bool create_test_file(const char* path, const char* content) {
@@ -37,18 +37,18 @@ static void cleanup_path(const char* path) {
 }
 
 static FlString get_test_temp_dir(FlArena* arena) {
-    return get_temp_directory_os(arena);
+    return fl_os_temp_directory(arena);
 }
 
 static FlString create_unique_test_dir(FlArena* arena, const char* base_name) {
     FlString temp_dir = get_test_temp_dir(arena);
-    u32 pid = get_process_id_os();
+    u32 pid = fl_os_process_id();
     FlString unique_name = fl_sprintf_arena(arena, "%s_%u", base_name, pid);
-    return file_build_path_os(arena, temp_dir, unique_name);
+    return fl_os_build_path(arena, temp_dir, unique_name);
 }
 
 static FlString build_temp_path_fw(FlArena* arena, const char* relative_path) {
-    FlString temp_dir = get_temp_directory_os(arena);
+    FlString temp_dir = fl_os_temp_directory(arena);
     FlString rel_str;
     rel_str.data = relative_path;
     rel_str.length = strlen(relative_path);
@@ -66,7 +66,7 @@ static bool wait_for_file_watcher_changes(FlFileWatcherHandle handle, int max_po
         if (file_watcher_has_changes(handle)) {
             return true;
         }
-        sleep_us(poll_sleep_us);
+        fl_os_sleep_us(poll_sleep_us);
     }
     return false;
 }
@@ -78,7 +78,7 @@ UTEST(file_watcher, create_and_destroy) {
 
     FlString test_dir_path = create_unique_test_dir(arena, "file_watcher_test_create");
 
-    bool created = file_create_directory_os(test_dir_path);
+    bool created = fl_os_create_directory(test_dir_path);
     ASSERT_TRUE(created);
 
     FlFileWatcherConfig config
@@ -91,7 +91,7 @@ UTEST(file_watcher, create_and_destroy) {
     file_watcher_stop(handle);
     ASSERT_FALSE(file_watcher_is_active(handle));
 
-    file_remove_directory_os(test_dir_path);
+    fl_os_remove_directory(test_dir_path);
 
     fl_arena_destroy(arena);
 }
@@ -439,11 +439,11 @@ UTEST(file_watcher, event_coalescing_rapid_changes) {
 
     // Rapid changes to the same file; the 5ms gaps stay well inside the coalescing window.
     create_test_file(test_file, "version 1");
-    sleep_us(5000);
+    fl_os_sleep_us(5000);
     create_test_file(test_file, "version 2");
-    sleep_us(5000);
+    fl_os_sleep_us(5000);
     create_test_file(test_file, "version 3");
-    sleep_us(5000);
+    fl_os_sleep_us(5000);
     create_test_file(test_file, "version 4");
 
     ASSERT_TRUE(wait_for_file_watcher_changes(handle, 200, 10000));
@@ -508,7 +508,7 @@ UTEST(file_watcher, buffer_overflow_handling) {
         const char* base_dir = fl_string_to_cstr(arena, file_path);
         snprintf(filename, sizeof(filename), "%s/file%d.txt", base_dir, i);
         create_test_file(filename, "content");
-        sleep_us(50000); // 50ms between files
+        fl_os_sleep_us(50000); // 50ms between files
     }
 
     ASSERT_TRUE(wait_for_file_watcher_changes(handle, 200, 10000));
@@ -641,7 +641,7 @@ UTEST(file_watcher, config_variations) {
 static bool create_subdirectories(FlArena* arena, FlString root, u32 count) {
     for (u32 i = 0; i < count; i++) {
         FlString name = fl_sprintf_arena(arena, "sub_%u", i);
-        if (!file_create_directory_os(fl_path_join(arena, root, name))) {
+        if (!fl_os_create_directory(fl_path_join(arena, root, name))) {
             return false;
         }
     }
@@ -651,21 +651,21 @@ static bool create_subdirectories(FlArena* arena, FlString root, u32 count) {
 static void remove_subdirectories(FlArena* arena, FlString root, u32 count) {
     for (u32 i = 0; i < count; i++) {
         FlString name = fl_sprintf_arena(arena, "sub_%u", i);
-        file_remove_directory_os(fl_path_join(arena, root, name));
+        fl_os_remove_directory(fl_path_join(arena, root, name));
     }
-    file_remove_directory_os(root);
+    fl_os_remove_directory(root);
 }
 
 static u32 count_open_descriptors(void) {
     FlArena* arena = arena_new(.reserved_size = MB(1));
     u32 count = 0;
-    DirHandle dir = dir_open_os(arena, FL_S("/proc/self/fd"));
+    FlOsDir dir = fl_os_dir_open(arena, FL_S("/proc/self/fd"));
     if (dir.is_valid) {
-        FileStat entry;
-        while ((entry = dir_read_next_os(arena, &dir)).is_valid) {
+        FlOsFileStat entry;
+        while ((entry = fl_os_dir_read_next(arena, &dir)).is_valid) {
             count++;
         }
-        dir_close_os(&dir);
+        fl_os_dir_close(&dir);
     }
     fl_arena_destroy(arena);
     return count;
@@ -675,7 +675,7 @@ UTEST(file_watcher, recursive_watch_at_capacity_starts) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     FlString root = create_unique_test_dir(arena, "file_watcher_test_at_capacity");
-    ASSERT_TRUE(file_create_directory_os(root));
+    ASSERT_TRUE(fl_os_create_directory(root));
 
     // The root takes one slot, so the tree exactly fills the table.
     const u32 subdir_count = FW_WATCH_TABLE_CAPACITY - 1;
@@ -711,7 +711,7 @@ UTEST(file_watcher, recursive_watch_over_capacity_fails) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     FlString root = create_unique_test_dir(arena, "file_watcher_test_over_capacity");
-    ASSERT_TRUE(file_create_directory_os(root));
+    ASSERT_TRUE(fl_os_create_directory(root));
 
     // Comfortably past the cap, so the walk cannot finish whatever order it reads directories in.
     const u32 subdir_count = FW_WATCH_TABLE_CAPACITY + 8;
@@ -744,7 +744,7 @@ UTEST(file_watcher, recursive_watch_over_capacity_leaves_no_descriptors) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     FlString root = create_unique_test_dir(arena, "file_watcher_test_over_capacity_fds");
-    ASSERT_TRUE(file_create_directory_os(root));
+    ASSERT_TRUE(fl_os_create_directory(root));
 
     const u32 subdir_count = FW_WATCH_TABLE_CAPACITY + 8;
     ASSERT_TRUE(create_subdirectories(arena, root, subdir_count));
@@ -831,7 +831,7 @@ static void fw_in_flight_on_change(const FileChange* change, void* user_data) {
     (void)change;
     FwInFlightCtx* ctx = (FwInFlightCtx*)user_data;
     if (atomic_exchange(&ctx->entered, 1) == 0) {
-        sleep_us(200000);
+        fl_os_sleep_us(200000);
         atomic_store(&ctx->finished, 1);
     }
 }
@@ -860,7 +860,7 @@ UTEST(file_watcher, stop_waits_for_a_callback_in_flight) {
     ASSERT_TRUE(create_test_file(fl_string_to_cstr(arena, target), "payload"));
 
     for (int i = 0; i < 500 && atomic_load(&ctx.entered) == 0; ++i) {
-        sleep_us(10000);
+        fl_os_sleep_us(10000);
     }
     ASSERT_EQ_MSG(1u, atomic_load(&ctx.entered), "FSEvents never delivered the change");
 
@@ -902,7 +902,7 @@ static void* fw_concurrent_worker(void* user) {
     // Every worker is inside the registry at the same time, not one after another.
     atomic_fetch_add(&s_fw_concurrent_ready, 1);
     while (atomic_load(&s_fw_concurrent_ready) < FW_CONCURRENT_THREADS) {
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
 
     for (int round = 0; round < FW_CONCURRENT_ROUNDS; ++round) {
@@ -949,14 +949,14 @@ UTEST(file_watcher, concurrent_start_poll_stop) {
     atomic_store(&s_fw_concurrent_running, FW_CONCURRENT_THREADS);
 
     FwConcurrentWorker workers[FW_CONCURRENT_THREADS];
-    Thread threads[FW_CONCURRENT_THREADS];
+    FlOsThread threads[FW_CONCURRENT_THREADS];
     for (int t = 0; t < FW_CONCURRENT_THREADS; ++t) {
         FlString dir = fl_sprintf_arena(arena, "%s/%d", root, t);
         const char* dir_cstr = fl_string_to_cstr(arena, dir);
         ASSERT_TRUE(create_temp_directory(dir_cstr));
 
         workers[t] = (FwConcurrentWorker) { .dir = dir_cstr, .id = t, .ok = false };
-        ASSERT_TRUE(os_thread_create(&threads[t], fw_concurrent_worker, &workers[t]));
+        ASSERT_TRUE(fl_os_thread_create(&threads[t], fw_concurrent_worker, &workers[t]));
     }
 
     while (atomic_load(&s_fw_concurrent_running) > 0) {
@@ -964,11 +964,11 @@ UTEST(file_watcher, concurrent_start_poll_stop) {
         if (file_watcher_has_changes(poller)) {
             file_watcher_clear_changes(poller);
         }
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
 
     for (int t = 0; t < FW_CONCURRENT_THREADS; ++t) {
-        os_thread_join(&threads[t]);
+        fl_os_thread_join(&threads[t]);
         ASSERT_TRUE_MSG(workers[t].ok, "a worker failed to start or activate a watcher of its own");
     }
 

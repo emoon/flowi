@@ -483,9 +483,9 @@ UTEST(arena, tracker_iterate_scratch_callback_no_self_deadlock) {
     FlArena* a = arena_new();
 
     int visited = 0;
-    Thread thread;
-    ASSERT_TRUE(os_thread_create(&thread, iterate_fresh_thread, &visited));
-    os_thread_join(&thread);
+    FlOsThread thread;
+    ASSERT_TRUE(fl_os_thread_create(&thread, iterate_fresh_thread, &visited));
+    fl_os_thread_join(&thread);
 
     ASSERT_GT(visited, 0);
     fl_arena_destroy(a);
@@ -636,14 +636,14 @@ UTEST(sprintf, arena_mt_concurrent_contiguous) {
     FlArenaMt* arena = arena_mt_new();
 
     SprintfMtWorker workers[SPRINTF_MT_THREADS];
-    Thread threads[SPRINTF_MT_THREADS];
+    FlOsThread threads[SPRINTF_MT_THREADS];
     for (int t = 0; t < SPRINTF_MT_THREADS; ++t) {
         workers[t] = (SprintfMtWorker) { .arena = arena, .id = t, .ok = false };
-        ASSERT_TRUE(os_thread_create(&threads[t], sprintf_mt_worker, &workers[t]));
+        ASSERT_TRUE(fl_os_thread_create(&threads[t], sprintf_mt_worker, &workers[t]));
     }
 
     for (int t = 0; t < SPRINTF_MT_THREADS; ++t) {
-        os_thread_join(&threads[t]);
+        fl_os_thread_join(&threads[t]);
         ASSERT_TRUE_MSG(workers[t].ok, "a worker saw a corrupt/non-contiguous sprintf_arena_mt result");
     }
 
@@ -1150,9 +1150,9 @@ UTEST(jobsys, no_lost_wakeup_under_rapid_idle_transitions) {
         // Bounded spin-wait for this job to run. If the wakeup is lost the worker never picks it up and the
         // counter never reaches i+1, so the 5s deadline turns the hang into a test failure.
         const u64 target = i + 1;
-        u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+        u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
         while (atomic_load(&s_jobsys_stress_counter) < target) {
-            ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns,
+            ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns,
                             "job was stranded — worker slept with a job queued (lost wakeup)");
         }
     }
@@ -1200,9 +1200,9 @@ UTEST(jobsys, dependent_promoted_when_dependency_completes_concurrently) {
         // Bounded wait for the dependent. If it was orphaned (lost between promote and completion) it
         // never runs and the 5s deadline turns the hang into a clean failure.
         const u64 target = i + 1;
-        u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+        u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
         while (atomic_load(&s_jobsys_dep_ran) < target) {
-            ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns,
+            ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns,
                             "dependent was orphaned — promoted after the dependency was recycled");
         }
     }
@@ -1226,7 +1226,7 @@ static void jobsys_sat_gate_job(void* user_data, FlJobsWorkerInfo worker_info) {
     (void)worker_info;
     atomic_store(&s_jobsys_sat_gate_started, 1);
     while (atomic_load(&s_jobsys_sat_gate_release) == 0) {
-        sleep_us(10);
+        fl_os_sleep_us(10);
     }
 }
 
@@ -1239,7 +1239,7 @@ static void jobsys_sat_count_job(void* user_data, FlJobsWorkerInfo worker_info) 
 // so the main thread can be deterministically blocked in a saturated add when the release happens.
 static void* jobsys_sat_delayed_release_thread(void* arg) {
     (void)arg;
-    sleep_ms(50);
+    fl_os_sleep_ms(50);
     atomic_store(&s_jobsys_sat_gate_release, 1);
     return nullptr;
 }
@@ -1255,9 +1255,9 @@ UTEST(jobsys, producer_backpressure_when_queue_saturated) {
     // Occupy the worker so nothing drains the queue while we fill it.
     FlJobHandle gate = fl_jobs_add_job(jobsys_sat_gate_job, nullptr);
     ASSERT_TRUE(gate != 0);
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     while (atomic_load(&s_jobsys_sat_gate_started) == 0) {
-        ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns, "gate job never started");
+        ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns, "gate job never started");
     }
 
     // The worker dequeued the gate, so exactly SLOTS entries fit without saturating.
@@ -1268,15 +1268,15 @@ UTEST(jobsys, producer_backpressure_when_queue_saturated) {
     // Queue is now full and the worker is still held, so the add below deterministically hits the
     // saturated path and blocks. Only the helper thread's delayed release lets the worker start
     // draining, which is what allows the blocked add to complete.
-    Thread releaser;
-    ASSERT_TRUE(os_thread_create(&releaser, jobsys_sat_delayed_release_thread, nullptr));
+    FlOsThread releaser;
+    ASSERT_TRUE(fl_os_thread_create(&releaser, jobsys_sat_delayed_release_thread, nullptr));
     ASSERT_TRUE(fl_jobs_add_job(jobsys_sat_count_job, &ran) != 0);
-    os_thread_join(&releaser);
+    fl_os_thread_join(&releaser);
 
-    deadline_ns = get_monotonic_time_ns_os() + 10000000000ull;
+    deadline_ns = fl_os_monotonic_ns() + 10000000000ull;
     while (atomic_load(&ran) < SLOTS + 1) {
-        ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns, "not every job ran after saturation");
-        sleep_us(100);
+        ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns, "not every job ran after saturation");
+        fl_os_sleep_us(100);
     }
     ASSERT_EQ_MSG(atomic_load(&ran), (u64)SLOTS + 1, "not every job ran after saturation");
 }
@@ -1295,9 +1295,9 @@ UTEST(jobsys, dependents_execute_inline_when_queue_saturated) {
 
     FlJobHandle gate = fl_jobs_add_job(jobsys_sat_gate_job, nullptr);
     ASSERT_TRUE(gate != 0);
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     while (atomic_load(&s_jobsys_sat_gate_started) == 0) {
-        ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns, "gate job never started");
+        ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns, "gate job never started");
     }
 
     // Fill the queue to capacity while the worker is held on the gate.
@@ -1314,11 +1314,11 @@ UTEST(jobsys, dependents_execute_inline_when_queue_saturated) {
 
     atomic_store(&s_jobsys_sat_gate_release, 1);
 
-    deadline_ns = get_monotonic_time_ns_os() + 10000000000ull;
+    deadline_ns = fl_os_monotonic_ns() + 10000000000ull;
     while (atomic_load(&dep_ran) < num_dependents || atomic_load(&filler_ran) < SLOTS) {
-        ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns,
+        ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns,
                         "saturated promotion deadlocked — dependents or fillers never ran");
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
 }
 
@@ -1364,7 +1364,7 @@ static void jobsys_nested_outer_job(void* user_data, FlJobsWorkerInfo worker_inf
 
     atomic_store(&ctx->outer_started, 1);
     while (atomic_load(&ctx->queue_saturated) == 0) {
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
 
     // A finished-but-never-polled dependency gets past the early-outs and registers, so the add ends in a
@@ -1405,15 +1405,15 @@ UTEST(jobsys, nested_inline_job_leaves_the_outer_jobs_scratch_alone) {
     ASSERT_TRUE(ctx.settled_dependency != 0);
     ASSERT_TRUE(fl_jobs_add_job(jobsys_nested_flag_job, &ordering_flag) != 0);
 
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     while (atomic_load(&ordering_flag) == 0) {
-        ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns, "the dependency never completed");
+        ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns, "the dependency never completed");
     }
 
     ASSERT_TRUE(fl_jobs_add_job(jobsys_nested_outer_job, &ctx) != 0);
-    deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     while (atomic_load(&ctx.outer_started) == 0) {
-        ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns, "the outer job never started");
+        ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns, "the outer job never started");
     }
 
     // No assertion from here until the outer job is released: it holds the only worker, and an ASSERT
@@ -1431,13 +1431,13 @@ UTEST(jobsys, nested_inline_job_leaves_the_outer_jobs_scratch_alone) {
     atomic_store(&ctx.queue_saturated, 1);
 
     bool outer_finished = true;
-    deadline_ns = get_monotonic_time_ns_os() + 10000000000ull;
+    deadline_ns = fl_os_monotonic_ns() + 10000000000ull;
     while (atomic_load(&ctx.outer_done) == 0) {
-        if (get_monotonic_time_ns_os() >= deadline_ns) {
+        if (fl_os_monotonic_ns() >= deadline_ns) {
             outer_finished = false;
             break;
         }
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
 
     ASSERT_TRUE_MSG(queue_filled, "the queue could not be filled to capacity");
@@ -1450,10 +1450,10 @@ UTEST(jobsys, nested_inline_job_leaves_the_outer_jobs_scratch_alone) {
                   "a nested job freed the outer job's scratch allocation out from under it");
 
     // Let the fillers drain so the next case starts against an empty queue.
-    deadline_ns = get_monotonic_time_ns_os() + 15000000000ull;
+    deadline_ns = fl_os_monotonic_ns() + 15000000000ull;
     while (atomic_load(&filler_ran) < SLOTS) {
-        ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns, "the saturating fillers never drained");
-        sleep_us(100);
+        ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns, "the saturating fillers never drained");
+        fl_os_sleep_us(100);
     }
 }
 
@@ -1704,9 +1704,9 @@ UTEST(mimalloc_stats, huge_blocks_freed_on_another_thread_count_as_freed) {
     ASSERT_EQ((held.alloc_count - held.free_count) - (before.alloc_count - before.free_count), (u64)HUGE_COUNT);
 
     CrossThreadFree job = { .blocks = blocks, .count = HUGE_COUNT };
-    Thread thread;
-    ASSERT_TRUE(os_thread_create(&thread, cross_thread_free_worker, &job));
-    os_thread_join(&thread);
+    FlOsThread thread;
+    ASSERT_TRUE(fl_os_thread_create(&thread, cross_thread_free_worker, &job));
+    fl_os_thread_join(&thread);
 
     MimallocStats after = mem_get_mimalloc_stats();
     ASSERT_TRUE(after.free_count <= after.alloc_count);

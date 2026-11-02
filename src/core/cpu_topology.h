@@ -3,7 +3,7 @@
 #include "types.h"
 
 struct FlArena;
-struct Thread;
+struct FlOsThread;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CPU Topology Detection
@@ -67,4 +67,4 @@ CpuIdList fl_cpu_query_by_type(CoreType type, struct FlArena* arena);
 // the pinning was applied; false on error, on a cpu id the platform does not have, and on platforms
 // with no affinity support. An empty list is a no-op that succeeds where affinity is supported.
 
-bool fl_cpu_set_thread_affinity(struct Thread* thread, CpuIdList cpus);
+bool fl_cpu_set_thread_affinity(struct FlOsThread* thread, CpuIdList cpus);

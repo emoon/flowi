@@ -7,13 +7,13 @@
 #include <time.h>
 
 UTEST(timestamp, get_current_time_us_os_basic) {
-    i64 timestamp1 = get_current_time_us_os();
+    i64 timestamp1 = fl_os_time_us();
     ASSERT_GT(timestamp1, 0);
 
     i64 year_2020_us = 1577836800000000LL; // Jan 1, 2020 in microseconds
     ASSERT_GT(timestamp1, year_2020_us);
 
-    i64 timestamp2 = get_current_time_us_os();
+    i64 timestamp2 = fl_os_time_us();
     ASSERT_GE(timestamp2, timestamp1);
 }
 
@@ -23,7 +23,7 @@ UTEST(timestamp, get_current_time_us_os_precision) {
     i64 timestamps[10];
 
     for (int i = 0; i < 10; i++) {
-        timestamps[i] = get_current_time_us_os();
+        timestamps[i] = fl_os_time_us();
     }
 
     for (int i = 1; i < 10; i++) {
@@ -61,7 +61,7 @@ UTEST(timestamp, timestamp_format_os_basic) {
 UTEST(timestamp, timestamp_format_os_current_time) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    i64 current_time = get_current_time_us_os();
+    i64 current_time = fl_os_time_us();
     FlString formatted = timestamp_format_os(arena, current_time);
 
     ASSERT_GT((u64)formatted.length, (u64)0);

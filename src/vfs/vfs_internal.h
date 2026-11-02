@@ -165,14 +165,14 @@ typedef struct VfsState {
     FlVfsMount* mount_last;
 
     struct FlArena* main_arena; // The arena VfsState lives in; owned by VFS only when owns_main_arena is set
-    bool owns_main_arena;       // fl_vfs_init created main_arena itself, so vfs_destroy destroys it
+    bool owns_main_arena;       // fl_vfs_init created main_arena itself, so fl_vfs_destroy destroys it
 
-    // Registered drivers, in registration order. Handed in directly via vfs_register_driver().
+    // Registered drivers, in registration order. Handed in directly via fl_vfs_register_driver().
     VfsPluginEntry* plugin_first;
     VfsPluginEntry* plugin_last;
 
     // The built-in LocalFS driver, registered by fl_vfs_init(). It is the catch-all fallback and stays last:
-    // vfs_register_driver() inserts other drivers ahead of it.
+    // fl_vfs_register_driver() inserts other drivers ahead of it.
     VfsPluginEntry* builtin_fallback;
 
     // The one lock around the registry: the mount list, each mount's operation list and closing flag, the slot table

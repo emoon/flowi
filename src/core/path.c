@@ -611,22 +611,22 @@ FlString path_reconstruct_from_segments(const PathComponents* components, const 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Directory searching and current directory utilities
 
-FlString path_get_current_directory(struct FlArena* arena) {
-    return get_current_directory_os(arena);
+FlString fl_path_get_current_directory(struct FlArena* arena) {
+    return fl_os_current_directory(arena);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlString path_find_directory(struct FlArena* arena, FlString start_directory) {
+FlString fl_path_find_directory(struct FlArena* arena, FlString start_directory) {
     if (start_directory.length == 0) {
         return (FlString) { 0 };
     }
 
-    if (file_directory_exists_os(start_directory)) {
+    if (fl_os_directory_exists(start_directory)) {
         return fl_string_copy(arena, start_directory);
     }
 
-    FlString current_dir = path_get_current_directory(arena);
+    FlString current_dir = fl_path_get_current_directory(arena);
     if (current_dir.length == 0) {
         return (FlString) { 0 };
     }
@@ -640,7 +640,7 @@ FlString path_find_directory(struct FlArena* arena, FlString start_directory) {
 
         FlString candidate_path = fl_path_join(arena, parent_path, start_directory);
 
-        if (file_directory_exists_os(candidate_path)) {
+        if (fl_os_directory_exists(candidate_path)) {
             return candidate_path;
         }
     }
@@ -659,7 +659,7 @@ FlString path_find_directory(struct FlArena* arena, FlString start_directory) {
             return (FlString) { 0 }; // Unknown absolute path format
         }
 
-        if (file_directory_exists_os(root_path)) {
+        if (fl_os_directory_exists(root_path)) {
             return root_path;
         }
     }

@@ -36,13 +36,13 @@ static const char* k_usage
 // Whole file into arena. Empty on any failure, which the checker reports as an unreadable table.
 
 static FlString read_file(FlArena* arena, FlString path) {
-    const i64 size = file_get_size_os(path);
+    const i64 size = fl_os_file_size(path);
     if (size <= 0) {
         return string_empty();
     }
 
     u8* data = arena_alloc_array(arena, u8, (u64)size);
-    if (file_read_os(data, path, size) != size) {
+    if (fl_os_file_read(data, path, size) != size) {
         return string_empty();
     }
     return string_from_cstr_len((const char*)data, (u64)size);
@@ -79,18 +79,18 @@ static void source_list_add(SourceList* self, FlString path) {
 // extension, so a single file can be pointed at directly.
 
 static void collect_sources(SourceList* self, FlString path) {
-    if (!file_directory_exists_os(path)) {
+    if (!fl_os_directory_exists(path)) {
         source_list_add(self, path);
         return;
     }
 
-    DirHandle dir = dir_open_os(self->arena, path);
+    FlOsDir dir = fl_os_dir_open(self->arena, path);
     if (!dir.is_valid) {
         return;
     }
 
-    for (FileStat entry = dir_read_next_os(self->arena, &dir); entry.is_valid;
-         entry = dir_read_next_os(self->arena, &dir)) {
+    for (FlOsFileStat entry = fl_os_dir_read_next(self->arena, &dir); entry.is_valid;
+         entry = fl_os_dir_read_next(self->arena, &dir)) {
         // Hidden entries are build and VCS scaffolding, never checked-in source worth scanning.
         if (entry.name.length == 0 || entry.name.data[0] == '.') {
             continue;
@@ -104,7 +104,7 @@ static void collect_sources(SourceList* self, FlString path) {
         }
     }
 
-    dir_close_os(&dir);
+    fl_os_dir_close(&dir);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

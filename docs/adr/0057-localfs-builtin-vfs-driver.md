@@ -31,15 +31,15 @@ Two facts make a built-in driver clean rather than a layering violation:
 
 Ship **LocalFS as a built-in driver in the vfs library** (`flowi/src/vfs/drivers/localfs.c`), registered by
 `fl_vfs_init()`. The VFS reads the native filesystem out of the box; hosts add archive/network drivers
-via `vfs_register_driver()` as before.
+via `fl_vfs_register_driver()` as before.
 
 - The driver is stateless and self-describing (each handle carries its absolute OS path plus, for
   files, an OS fd). All I/O goes through `os.h` — no platform code in the driver.
 - LocalFS is the **catch-all fallback** (`can_open` accepts any existing path), so it must stay last
-  in the driver list. `VfsState::builtin_fallback` pins it at the tail: `vfs_register_driver()`
+  in the driver list. `VfsState::builtin_fallback` pins it at the tail: `fl_vfs_register_driver()`
   splices host drivers in *ahead* of it, preserving "specific drivers (archives, network) tried
   before LocalFS."
-- `app/localfs.c` and its manual `vfs_register_driver(localfs_plugin(), …)` in the runner are
+- `app/localfs.c` and its manual `fl_vfs_register_driver(localfs_plugin(), …)` in the runner are
   deleted; the runner relies on the built-in.
 
 ## Consequences

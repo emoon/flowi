@@ -18,7 +18,7 @@ decided the lifetime contract has exactly two legs:
    no free path runs while the job does. The mount-close sweep and watcher-driven removal wait
    for the job. A plain `vfs_close` on the main thread does not: it marks the handle closed -
    absent to every caller, id not recycled, job left to finish - and a reclaim sweep
-   (`vfs_update`, `vfs_wait_all`, the start of the next `vfs_close`) frees it once its jobs are
+   (`vfs_update`, `fl_vfs_wait_all`, the start of the next `vfs_close`) frees it once its jobs are
    observed finished. The one close that still waits is of a `vfs_read` / `vfs_write` op, whose
    job runs against memory the caller lent it and takes the close as leave to free.
 

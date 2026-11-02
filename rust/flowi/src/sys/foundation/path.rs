@@ -5,9 +5,8 @@
 // allocates it from the caller's arena, so nothing here needs freeing; the extraction slots that
 // return a view into their input (fl_path_get_extension, fl_path_get_filename) take no arena. Plugins link the shared library and call these symbols directly.
 //
-// Core's path surface is wider than this (segment splitting, PathComponents, current-directory and
-// directory-search helpers); those stay internal - they are VFS resolution machinery, not something a
-// plugin manipulating file names needs.
+// Core's path surface is wider than this (segment splitting, PathComponents); those stay internal - they
+// are VFS resolution machinery, not something a plugin manipulating file names needs.
 extern "C" {
     /// Fold backslashes to forward slashes and collapse duplicate separators.
     pub fn fl_path_normalize(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
@@ -44,5 +43,10 @@ extern "C" {
     pub fn fl_path_remove_trailing_separator(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
     /// Add a trailing separator, if path lacks one (marking it as a directory).
     pub fn fl_path_ensure_trailing_separator(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
+    /// The process working directory.
+    pub fn fl_path_get_current_directory(arena: *mut crate::sys::Arena) -> crate::sys::RawStr;
+    /// Search the working directory and then each ancestor for a directory named start_directory. Returns
+    /// its full path, or an empty string if none exists.
+    pub fn fl_path_find_directory(arena: *mut crate::sys::Arena, start_directory: crate::sys::RawStr) -> crate::sys::RawStr;
 }
 

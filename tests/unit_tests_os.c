@@ -68,46 +68,46 @@ UTEST(file_watcher, path_is_direct_child_rejects_deep_and_unrelated_paths) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A directory entry's name must stay valid across subsequent reads and close of the same handle:
-// POSIX readdir reuses its internal dirent buffer, so dir_read_next_os must copy the name into the
+// POSIX readdir reuses its internal dirent buffer, so fl_os_dir_read_next must copy the name into the
 // caller's arena (as Windows does) instead of aliasing that buffer.
 
 UTEST(os_dir, entry_name_survives_next_read_and_close) {
     FlArena* arena = arena_new();
 
     FlString dir_path = FL_S("unit_test_dir_iter_tmp");
-    file_remove_directory_recursive_os(dir_path); // clean any leftover from an aborted run
-    ASSERT_TRUE(file_create_directory_os(dir_path));
-    ASSERT_EQ(1, (int)file_write_os(FL_S("unit_test_dir_iter_tmp/aaaa.txt"), (const u8*)"a", 1));
-    ASSERT_EQ(1, (int)file_write_os(FL_S("unit_test_dir_iter_tmp/bbbb.txt"), (const u8*)"b", 1));
+    fl_os_remove_directory_recursive(dir_path); // clean any leftover from an aborted run
+    ASSERT_TRUE(fl_os_create_directory(dir_path));
+    ASSERT_EQ(1, (int)fl_os_file_write(FL_S("unit_test_dir_iter_tmp/aaaa.txt"), (const u8*)"a", 1));
+    ASSERT_EQ(1, (int)fl_os_file_write(FL_S("unit_test_dir_iter_tmp/bbbb.txt"), (const u8*)"b", 1));
 
-    DirHandle dir = dir_open_os(arena, dir_path);
+    FlOsDir dir = fl_os_dir_open(arena, dir_path);
     ASSERT_TRUE(dir.is_valid);
 
-    FileStat first = dir_read_next_os(arena, &dir);
+    FlOsFileStat first = fl_os_dir_read_next(arena, &dir);
     ASSERT_TRUE(first.is_valid);
     FlString snapshot = fl_string_copy(arena, first.name);
 
-    FileStat second = dir_read_next_os(arena, &dir);
+    FlOsFileStat second = fl_os_dir_read_next(arena, &dir);
     ASSERT_TRUE(second.is_valid);
     ASSERT_FALSE(fl_string_equals(first.name, second.name)); // distinct entries, distinct storage
 
-    dir_close_os(&dir);
+    fl_os_dir_close(&dir);
     ASSERT_TRUE(fl_string_equals(first.name, snapshot)); // still intact after next read + close
 
-    file_remove_directory_recursive_os(dir_path);
+    fl_os_remove_directory_recursive(dir_path);
     fl_arena_destroy(arena);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// file_get_size_os returns -1 when stat() fails; file_read_from_handle_os must reject that
+// fl_os_file_size returns -1 when stat() fails; file_read_from_handle_os must reject that
 // sentinel instead of letting min(buffer_size, -1) reach read() as a size_t (SIZE_MAX), which
 // would over-read past dest. A stat failure after a successful open can't be constructed
-// deterministically (both syscalls see the same path back-to-back inside file_read_os), so the
-// test injects the sentinel directly - the value file_read_os would forward on stat failure.
+// deterministically (both syscalls see the same path back-to-back inside fl_os_file_read), so the
+// test injects the sentinel directly - the value fl_os_file_read would forward on stat failure.
 
 UTEST(os_file, negative_file_size_fails_without_reading) {
     FlString path = FL_S("unit_test_negative_size_tmp.txt");
-    ASSERT_EQ(4, (int)file_write_os(path, (const u8*)"data", 4));
+    ASSERT_EQ(4, (int)fl_os_file_write(path, (const u8*)"data", 4));
 
     const i64 fd = file_open_os(path, 0);
     ASSERT_TRUE(fd >= 0);
@@ -120,8 +120,8 @@ UTEST(os_file, negative_file_size_fails_without_reading) {
         ASSERT_EQ(0xAB, buffer[i]); // dest untouched - no read happened
     }
 
-    file_close_handle_os(fd);
-    file_delete_os(path);
+    fl_os_file_close_handle(fd);
+    fl_os_file_delete(path);
 }
 
 #if !PLATFORM_WINDOWS
@@ -165,7 +165,7 @@ UTEST(os_disk_space, existing_path_immediate_hit) {
 #endif // !PLATFORM_WINDOWS
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// file_create_directory_recursive_os checks each path component's existence before creating it, so a
+// fl_os_create_directory_recursive checks each path component's existence before creating it, so a
 // concurrent creator can win the race between that check and the create call. Two threads rendezvous
 // per iteration and create the same nested path simultaneously; every call must succeed.
 
@@ -184,7 +184,7 @@ static void* mkdir_race_thread(void* user_data) {
         atomic_fetch_add(&ctx->gate, 1);
         while (atomic_load(&ctx->gate) < 2 * (i + 1)) {}
         snprintf(path, sizeof(path), "flowi_mkdir_race_tmp/%d/a/b/c", i);
-        if (!file_create_directory_recursive_os(string_from_cstr(path))) {
+        if (!fl_os_create_directory_recursive(string_from_cstr(path))) {
             atomic_fetch_add(&ctx->failures, 1);
         }
     }
@@ -192,23 +192,23 @@ static void* mkdir_race_thread(void* user_data) {
 }
 
 UTEST(os_file, recursive_mkdir_survives_concurrent_creator) {
-    file_remove_directory_recursive_os(FL_S("flowi_mkdir_race_tmp"));
+    fl_os_remove_directory_recursive(FL_S("flowi_mkdir_race_tmp"));
 
     MkdirRaceCtx ctx = { 0 };
-    Thread thread_a;
-    Thread thread_b;
-    ASSERT_TRUE(os_thread_create(&thread_a, mkdir_race_thread, &ctx));
-    ASSERT_TRUE(os_thread_create(&thread_b, mkdir_race_thread, &ctx));
-    os_thread_join(&thread_a);
-    os_thread_join(&thread_b);
+    FlOsThread thread_a;
+    FlOsThread thread_b;
+    ASSERT_TRUE(fl_os_thread_create(&thread_a, mkdir_race_thread, &ctx));
+    ASSERT_TRUE(fl_os_thread_create(&thread_b, mkdir_race_thread, &ctx));
+    fl_os_thread_join(&thread_a);
+    fl_os_thread_join(&thread_b);
 
     ASSERT_EQ(0, atomic_load(&ctx.failures));
 
     char last_path[128];
     snprintf(last_path, sizeof(last_path), "flowi_mkdir_race_tmp/%d/a/b/c", MKDIR_RACE_ITERATIONS - 1);
-    ASSERT_TRUE(file_directory_exists_os(string_from_cstr(last_path)));
+    ASSERT_TRUE(fl_os_directory_exists(string_from_cstr(last_path)));
 
-    file_remove_directory_recursive_os(FL_S("flowi_mkdir_race_tmp"));
+    fl_os_remove_directory_recursive(FL_S("flowi_mkdir_race_tmp"));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -217,13 +217,13 @@ UTEST(os_file, recursive_mkdir_survives_concurrent_creator) {
 // so the helper still reports the error.
 
 UTEST(os_file, recursive_mkdir_still_fails_on_file_component) {
-    file_remove_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp"));
-    ASSERT_TRUE(file_create_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp")));
-    ASSERT_EQ(4, (int)file_write_os(FL_S("flowi_mkdir_fail_tmp/blocker"), (const u8*)"data", 4));
+    fl_os_remove_directory_recursive(FL_S("flowi_mkdir_fail_tmp"));
+    ASSERT_TRUE(fl_os_create_directory_recursive(FL_S("flowi_mkdir_fail_tmp")));
+    ASSERT_EQ(4, (int)fl_os_file_write(FL_S("flowi_mkdir_fail_tmp/blocker"), (const u8*)"data", 4));
 
-    ASSERT_FALSE(file_create_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp/blocker/sub")));
+    ASSERT_FALSE(fl_os_create_directory_recursive(FL_S("flowi_mkdir_fail_tmp/blocker/sub")));
 
-    file_remove_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp"));
+    fl_os_remove_directory_recursive(FL_S("flowi_mkdir_fail_tmp"));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -236,7 +236,7 @@ UTEST(os_file, recursive_mkdir_still_fails_on_file_component) {
 
 UTEST(log_file, reinit_closes_previous_fd) {
     FlString dir = FL_S("/tmp/flowi_log_reinit_test");
-    file_remove_directory_recursive_os(dir); // clean any leftover from an aborted run
+    fl_os_remove_directory_recursive(dir); // clean any leftover from an aborted run
 
     ASSERT_TRUE(fl_log_file_init(dir));
 
@@ -255,11 +255,11 @@ UTEST(log_file, reinit_closes_previous_fd) {
 
     arena_scratch_auto(temp);
     u8* buffer = arena_alloc_array_zero(temp.arena, u8, LOG_FILE_READ_CAP);
-    const i64 bytes = file_read_os(buffer, fl_log_file_get_path(), (i64)LOG_FILE_READ_CAP - 1);
+    const i64 bytes = fl_os_file_read(buffer, fl_log_file_get_path(), (i64)LOG_FILE_READ_CAP - 1);
     ASSERT_TRUE(bytes > 0);
     ASSERT_TRUE(strstr((const char*)buffer, "log reinit smoke 42") != nullptr);
 
-    file_remove_directory_recursive_os(dir);
+    fl_os_remove_directory_recursive(dir);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -268,7 +268,7 @@ UTEST(log_file, reinit_closes_previous_fd) {
 
 UTEST(log_file, path_converts_to_valid_cstr) {
     FlString dir = FL_S("/tmp/flowi_log_cstr_test");
-    file_remove_directory_recursive_os(dir); // clean any leftover from an aborted run
+    fl_os_remove_directory_recursive(dir); // clean any leftover from an aborted run
 
     ASSERT_TRUE(fl_log_file_init(dir));
 
@@ -284,12 +284,12 @@ UTEST(log_file, path_converts_to_valid_cstr) {
     // The converted path is usable as a filesystem path: it names the file the logger writes to.
     fl_log_message(LogLevel_Fatal, __FILE__, __LINE__, "cstr path smoke %d", 7);
     u8* buffer = arena_alloc_array_zero(arena, u8, LOG_FILE_READ_CAP);
-    const i64 bytes = file_read_os(buffer, string_from_cstr(log_path_cstr), (i64)LOG_FILE_READ_CAP - 1);
+    const i64 bytes = fl_os_file_read(buffer, string_from_cstr(log_path_cstr), (i64)LOG_FILE_READ_CAP - 1);
     ASSERT_TRUE(bytes > 0);
     ASSERT_TRUE(strstr((const char*)buffer, "cstr path smoke 7") != nullptr);
 
     fl_arena_destroy(arena);
-    file_remove_directory_recursive_os(dir);
+    fl_os_remove_directory_recursive(dir);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -311,13 +311,13 @@ UTEST(app_identity, defaults_override_and_log_routing) {
 
     // fl_log_file_init builds the log file from the seam's name, so the override lands on disk.
     FlString dir = FL_S("/tmp/flowi_app_identity_test");
-    file_remove_directory_recursive_os(dir);
+    fl_os_remove_directory_recursive(dir);
     ASSERT_TRUE(fl_log_file_init(dir));
     FlArena* path_arena = arena_new();
-    FlString expected = file_build_path_os(path_arena, dir, FL_S("myapp.log"));
+    FlString expected = fl_os_build_path(path_arena, dir, FL_S("myapp.log"));
     ASSERT_TRUE(fl_string_equals(fl_log_file_get_path(), expected));
     fl_arena_destroy(path_arena);
-    file_remove_directory_recursive_os(dir);
+    fl_os_remove_directory_recursive(dir);
 
     FlAppIdentity replacement = { .log_file_name = FL_S("other.log") };
     fl_app_identity_set(&replacement);
@@ -443,8 +443,8 @@ UTEST(file_watcher, callback_registration_does_not_race_dispatch) {
     ctx.watcher = find_watcher_state(handle);
     ASSERT_TRUE(ctx.watcher != nullptr);
 
-    Thread change_thread;
-    ASSERT_TRUE(os_thread_create(&change_thread, fw_race_change_thread, &ctx));
+    FlOsThread change_thread;
+    ASSERT_TRUE(fl_os_thread_create(&change_thread, fw_race_change_thread, &ctx));
 
     for (int i = 0; i < 5000; i++) {
         FileWatcherCallbackHandle cb
@@ -454,7 +454,7 @@ UTEST(file_watcher, callback_registration_does_not_race_dispatch) {
     }
 
     atomic_store(&ctx.stop, true);
-    os_thread_join(&change_thread);
+    fl_os_thread_join(&change_thread);
 
     ASSERT_TRUE(file_watcher_is_active(handle)); // watcher state survived the hammering intact
     file_watcher_stop(handle);
@@ -549,10 +549,10 @@ static void fw_moved_in_on_change(const FileChange* change, void* user_data) {
 
 UTEST(file_watcher, moved_in_directory_becomes_watched) {
 #if defined(__linux__)
-    file_remove_directory_recursive_os(FL_S("fw_moved_root")); // clean any leftover from an aborted run
-    file_remove_directory_recursive_os(FL_S("fw_moved_src"));
-    ASSERT_TRUE(file_create_directory_os(FL_S("fw_moved_root")));
-    ASSERT_TRUE(file_create_directory_os(FL_S("fw_moved_src")));
+    fl_os_remove_directory_recursive(FL_S("fw_moved_root")); // clean any leftover from an aborted run
+    fl_os_remove_directory_recursive(FL_S("fw_moved_src"));
+    ASSERT_TRUE(fl_os_create_directory(FL_S("fw_moved_root")));
+    ASSERT_TRUE(fl_os_create_directory(FL_S("fw_moved_src")));
 
     FlFileWatcherConfig config = { .recursive = true, .watch_files = true, .watch_directories = true };
     FlFileWatcherHandle handle = file_watcher_start(FL_S("fw_moved_root"), config);
@@ -569,13 +569,13 @@ UTEST(file_watcher, moved_in_directory_becomes_watched) {
     file_watcher_has_changes(handle); // poll: consumes IN_MOVED_TO, adds the subtree watch
 
     // A file created inside the moved-in directory must reach the registered callback
-    ASSERT_EQ(1, (int)file_write_os(FL_S("fw_moved_root/fw_moved_src/inner.txt"), (const u8*)"x", 1));
+    ASSERT_EQ(1, (int)fl_os_file_write(FL_S("fw_moved_root/fw_moved_src/inner.txt"), (const u8*)"x", 1));
     file_watcher_has_changes(handle); // poll: the create/modify events fire the callback
     ASSERT_TRUE(ctx.fired);
 
     file_watcher_unregister_callback(handle, cb);
     file_watcher_stop(handle);
-    file_remove_directory_recursive_os(FL_S("fw_moved_root"));
+    fl_os_remove_directory_recursive(FL_S("fw_moved_root"));
 #else
     UTEST_SKIP("inotify move-in recursion is Linux-only");
 #endif

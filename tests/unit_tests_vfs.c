@@ -9,24 +9,24 @@
 // Spins until flag is set or the deadline passes; false on the deadline. Every wait on a flag another thread sets goes
 // through it, so a failed case reports instead of leaving the only worker spinning.
 static bool vfs_await_flag(_Atomic bool* flag) {
-    u64 deadline_ns = get_monotonic_time_ns_os() + VFS_AWAIT_FLAG_TIMEOUT_NS;
+    u64 deadline_ns = fl_os_monotonic_ns() + VFS_AWAIT_FLAG_TIMEOUT_NS;
     while (!atomic_load(flag)) {
-        if (get_monotonic_time_ns_os() >= deadline_ns) {
+        if (fl_os_monotonic_ns() >= deadline_ns) {
             return false;
         }
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     return true;
 }
 
-// vfs_destroy must close each leaked plugin file handle exactly once and release operation-owned heap
+// fl_vfs_destroy must close each leaked plugin file handle exactly once and release operation-owned heap
 // allocations and listing arenas.
 //
 // This deliberately does NOT diff mimalloc's byte counters across the cycle. mi_stats_get() copies
 // _mi_stats_main, which only ever accumulates the stats of threads that have called mi_stats_merge()
 // (or exited): mimalloc credits an allocation to the allocating thread and the matching free to the
 // freeing thread. The VFS runs operations on job workers - fl_vfs_mount_read_all_with_options allocates
-// its buffer on a worker, vfs_destroy frees it on this thread - so the worker's `+` sits in
+// its buffer on a worker, fl_vfs_destroy frees it on this thread - so the worker's `+` sits in
 // thread-local stats that are never merged while the worker lives, and only the `-` lands in the
 // numbers we can read. The counter therefore drops ~216 bytes per cycle indefinitely, which says
 // nothing about whether anything leaked. Heap release is covered instead by the close accounting
@@ -48,12 +48,12 @@ UTEST(vfs, destroy_closes_leaked_handles_across_cycles) {
 
         int allocs_before = s_stub_vfs_alloc_count;
         int closes_before = s_stub_vfs_close_count;
-        FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+        FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
         ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-        vfs_wait_all();
+        fl_vfs_wait_all();
         ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
-        // Every resource-owning operation variant is left open on purpose: vfs_destroy must reap them all.
+        // Every resource-owning operation variant is left open on purpose: fl_vfs_destroy must reap them all.
         FlVfsHandle file = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
         ASSERT_NE(file, FL_VFS_HANDLE_INVALID);
         uint8_t read_buffer[sizeof(k_stub_vfs_data)] = { 0 };
@@ -64,18 +64,18 @@ UTEST(vfs, destroy_closes_leaked_handles_across_cycles) {
         ASSERT_NE(read_all, FL_VFS_HANDLE_INVALID);
         FlVfsDirHandle list = fl_vfs_get_listing(mount.mount, FL_S(""), 0);
         ASSERT_NE(list, FL_VFS_DIR_HANDLE_INVALID);
-        vfs_wait_all();
+        fl_vfs_wait_all();
 
         ASSERT_TRUE(fl_vfs_get_data(read).success);
         ASSERT_TRUE(fl_vfs_get_data(read_all).success);
         ASSERT_TRUE(fl_vfs_get_file_list(list).success);
 
-        vfs_destroy();
+        fl_vfs_destroy();
 
         int allocated = s_stub_vfs_alloc_count - allocs_before;
         int closed = s_stub_vfs_close_count - closes_before;
         ASSERT_GT_MSG(allocated, 0, "cycle should have opened plugin handles");
-        ASSERT_EQ_MSG(closed, allocated, "vfs_destroy must close every leaked plugin handle exactly once");
+        ASSERT_EQ_MSG(closed, allocated, "fl_vfs_destroy must close every leaked plugin handle exactly once");
 #if defined(__linux__)
         u64 maps_after_cycle = count_proc_self_maps();
         if (cycle == 0) {
@@ -90,26 +90,26 @@ UTEST(vfs, destroy_closes_leaked_handles_across_cycles) {
 UTEST(vfs, builtin_localfs_reads_real_file) {
     FlArena* arena = arena_new();
 
-    FlString cwd = get_current_directory_os(arena);
-    FlString dir_path = file_build_path_os(arena, cwd, FL_S("unit_test_localfs_builtin_tmp"));
-    FlString file_path = file_build_path_os(arena, dir_path, FL_S("hello.bin"));
+    FlString cwd = fl_os_current_directory(arena);
+    FlString dir_path = fl_os_build_path(arena, cwd, FL_S("unit_test_localfs_builtin_tmp"));
+    FlString file_path = fl_os_build_path(arena, dir_path, FL_S("hello.bin"));
 
-    file_remove_directory_recursive_os(dir_path); // clean any leftover from an aborted run
-    ASSERT_TRUE(file_create_directory_os(dir_path));
+    fl_os_remove_directory_recursive(dir_path); // clean any leftover from an aborted run
+    ASSERT_TRUE(fl_os_create_directory(dir_path));
 
     // A fixed pattern, so a truncated or misordered read is caught by the byte compare below.
     uint8_t payload[8192];
     for (size_t i = 0; i < sizeof(payload); i++) {
         payload[i] = (uint8_t)(i * 31u + 7u);
     }
-    ASSERT_EQ((int)sizeof(payload), (int)file_write_os(file_path, payload, (i64)sizeof(payload)));
+    ASSERT_EQ((int)sizeof(payload), (int)fl_os_file_write(file_path, payload, (i64)sizeof(payload)));
 
     fl_vfs_init(s_arena); // registers the built-in LocalFS driver
 
-    FlVfsMountResult mount = vfs_mount(dir_path);
+    FlVfsMountResult mount = fl_vfs_mount(dir_path);
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "LocalFS should mount a real directory");
     ASSERT_TRUE(mount.mount != NULL);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     FlVfsHandle read
@@ -151,9 +151,9 @@ UTEST(vfs, builtin_localfs_reads_real_file) {
 
     fl_vfs_close(list);
     fl_vfs_close(read);
-    vfs_destroy();
+    fl_vfs_destroy();
 
-    file_remove_directory_recursive_os(dir_path);
+    fl_os_remove_directory_recursive(dir_path);
     fl_arena_destroy(arena);
 }
 
@@ -161,18 +161,18 @@ UTEST(vfs, builtin_localfs_reads_real_file) {
 UTEST(vfs, builtin_localfs_read_resolves_relative_path) {
     FlArena* arena = arena_new();
 
-    FlString cwd = get_current_directory_os(arena);
-    FlString dir_path = file_build_path_os(arena, cwd, FL_S("unit_test_localfs_relpath_tmp"));
-    FlString file_path = file_build_path_os(arena, dir_path, FL_S("child.bin"));
+    FlString cwd = fl_os_current_directory(arena);
+    FlString dir_path = fl_os_build_path(arena, cwd, FL_S("unit_test_localfs_relpath_tmp"));
+    FlString file_path = fl_os_build_path(arena, dir_path, FL_S("child.bin"));
 
-    file_remove_directory_recursive_os(dir_path);
-    ASSERT_TRUE(file_create_directory_os(dir_path));
+    fl_os_remove_directory_recursive(dir_path);
+    ASSERT_TRUE(fl_os_create_directory(dir_path));
 
     uint8_t payload[64];
     for (size_t i = 0; i < sizeof(payload); i++) {
         payload[i] = (uint8_t)(i * 13u + 3u);
     }
-    ASSERT_EQ((int)sizeof(payload), (int)file_write_os(file_path, payload, (i64)sizeof(payload)));
+    ASSERT_EQ((int)sizeof(payload), (int)fl_os_file_write(file_path, payload, (i64)sizeof(payload)));
 
     const FlVfsPlugin* driver = localfs_plugin();
 
@@ -202,7 +202,7 @@ UTEST(vfs, builtin_localfs_read_resolves_relative_path) {
     driver->close(NULL, file.handle);
 
     driver->close(NULL, dir.handle);
-    file_remove_directory_recursive_os(dir_path);
+    fl_os_remove_directory_recursive(dir_path);
     fl_arena_destroy(arena);
 }
 
@@ -210,10 +210,10 @@ UTEST(vfs, read_through_generated_plugin) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
     ASSERT_TRUE(mount.mount != NULL);
-    vfs_wait_all(); // drain the async mount before reading
+    fl_vfs_wait_all(); // drain the async mount before reading
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     FlVfsHandle handle
@@ -670,9 +670,9 @@ UTEST(vfs, close_during_pending_read_no_deadlock) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all(); // drain the async mount before reading
+    fl_vfs_wait_all(); // drain the async mount before reading
 
     for (int i = 0; i < 64; ++i) {
         FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
@@ -704,9 +704,9 @@ UTEST(vfs, mount_close_drains_inflight_and_reaps_handles) {
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
     for (int i = 0; i < 32; ++i) {
-        FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+        FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
         ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-        vfs_wait_all(); // make the mount ready so the reads below are the in-flight jobs
+        fl_vfs_wait_all(); // make the mount ready so the reads below are the in-flight jobs
 
         // Neither waited nor closed: still in-flight and still leaked when the mount closes.
         for (int j = 0; j < 4; ++j) {
@@ -719,9 +719,9 @@ UTEST(vfs, mount_close_drains_inflight_and_reaps_handles) {
     }
 
     // The VFS is still usable after all that: a fresh mount + read round-trips.
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     FlVfsHandle handle
         = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
     ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
@@ -809,9 +809,9 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     VfsChurnCtx ctx = { .mount = mount.mount };
@@ -819,20 +819,20 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
         atomic_init(&ctx.slots[i], FL_VFS_HANDLE_INVALID);
     }
 
-    Thread churn[3];
-    Thread closer;
+    FlOsThread churn[3];
+    FlOsThread closer;
     for (int i = 0; i < 3; i++) {
-        ASSERT_TRUE(os_thread_create(&churn[i], vfs_churn_thread, &ctx));
+        ASSERT_TRUE(fl_os_thread_create(&churn[i], vfs_churn_thread, &ctx));
     }
-    ASSERT_TRUE(os_thread_create(&closer, vfs_closer_thread, &ctx));
+    ASSERT_TRUE(fl_os_thread_create(&closer, vfs_closer_thread, &ctx));
 
     // Mid-churn: close a second mount with reads still in flight, so the drain + reap sweep runs while the
     // other threads hammer the handle map. The churn threads never touch this mount.
     for (int i = 0; i < 8; i++) {
-        FlVfsMountResult second = vfs_mount(FL_S("/stub"));
+        FlVfsMountResult second = fl_vfs_mount(FL_S("/stub"));
         ASSERT_EQ(second.status, FlVfsMountErrorStatus_Success);
         for (int waited = 0; !fl_vfs_mount_is_ready(second.mount) && waited < 2000; waited++) {
-            sleep_ms(1);
+            fl_os_sleep_ms(1);
         }
         ASSERT_TRUE(fl_vfs_mount_is_ready(second.mount));
         for (int j = 0; j < 4; j++) {
@@ -842,16 +842,16 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
         const int cycles_at_close = atomic_load(&ctx.cycles);
         for (int waited = 0; waited < VFS_CHURN_WAIT_MS && atomic_load(&ctx.cycles) < cycles_at_close + VFS_CHURN_BATCH;
              waited++) {
-            sleep_ms(1);
+            fl_os_sleep_ms(1);
         }
         fl_vfs_mount_close(second.mount);
     }
 
     atomic_store(&ctx.stop, true);
     for (int i = 0; i < 3; i++) {
-        os_thread_join(&churn[i]);
+        fl_os_thread_join(&churn[i]);
     }
-    os_thread_join(&closer);
+    fl_os_thread_join(&closer);
 
     // Reap any handle still parked in a slot when the loops stopped
     for (int i = 0; i < 4; i++) {
@@ -877,7 +877,7 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// vfs_wait_all collects the jobs of every live op while other threads create and close ops. Each churn thread owns
+// fl_vfs_wait_all collects the jobs of every live op while other threads create and close ops. Each churn thread owns
 // its handles through close, isolating the collection race from the same-handle races covered above.
 
 typedef struct VfsWaitAllChurnCtx {
@@ -908,7 +908,7 @@ static void* vfs_wait_all_handle_churn_thread(void* user_data) {
 static void* vfs_wait_all_churn_thread(void* user_data) {
     VfsWaitAllChurnCtx* ctx = user_data;
     while (!atomic_load(&ctx->stop)) {
-        vfs_wait_all();
+        fl_vfs_wait_all();
         atomic_fetch_add(&ctx->wait_cycles, 1);
     }
     return nullptr;
@@ -920,29 +920,29 @@ UTEST(vfs, wait_all_concurrent_op_churn) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     VfsWaitAllChurnCtx ctx = { .mount = mount.mount };
-    Thread churn[3];
-    Thread waiter;
+    FlOsThread churn[3];
+    FlOsThread waiter;
     for (int i = 0; i < 3; ++i) {
-        ASSERT_TRUE(os_thread_create(&churn[i], vfs_wait_all_handle_churn_thread, &ctx));
+        ASSERT_TRUE(fl_os_thread_create(&churn[i], vfs_wait_all_handle_churn_thread, &ctx));
     }
-    ASSERT_TRUE(os_thread_create(&waiter, vfs_wait_all_churn_thread, &ctx));
+    ASSERT_TRUE(fl_os_thread_create(&waiter, vfs_wait_all_churn_thread, &ctx));
 
     for (int waited = 0; waited < VFS_CHURN_WAIT_MS
                          && (atomic_load(&ctx.handle_cycles) < VFS_WAIT_ALL_CHURN_HANDLE_TARGET
                              || atomic_load(&ctx.wait_cycles) < VFS_WAIT_ALL_CHURN_WAIT_TARGET);
          waited++) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     atomic_store(&ctx.stop, true);
     for (int i = 0; i < 3; ++i) {
-        os_thread_join(&churn[i]);
+        fl_os_thread_join(&churn[i]);
     }
-    os_thread_join(&waiter);
+    fl_os_thread_join(&waiter);
 
     ASSERT_GE(atomic_load(&ctx.handle_cycles), VFS_WAIT_ALL_CHURN_HANDLE_TARGET);
     ASSERT_GE(atomic_load(&ctx.wait_cycles), VFS_WAIT_ALL_CHURN_WAIT_TARGET);
@@ -957,9 +957,9 @@ UTEST(vfs, file_handle_chained_reads_survive_file_close) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     FlVfsHandle file = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
@@ -1010,9 +1010,9 @@ UTEST(vfs, read_all_over_cap_reports_error_and_closes_handle) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     const int allocs_before = s_stub_vfs_alloc_count;
@@ -1072,9 +1072,9 @@ UTEST(vfs, missing_file_read_failure_and_over_cap_file_report_distinct_statuses)
     wrapped.get_size = maybe_failing_size;
     vfs_test_register_driver(&wrapped);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     const VfsOpStatus missing = read_all_status(mount.mount, FL_S("no_such_file.txt"));
@@ -1125,7 +1125,7 @@ UTEST(vfs, builtin_drivers_are_probed_lhasa_unlzx_libarchive_then_localfs) {
     ASSERT_EQ(entry, g_vfs_state->builtin_fallback);
     ASSERT_EQ(entry->next, nullptr);
 
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1183,7 +1183,7 @@ UTEST(vfs, resolve_without_a_memory_driver_does_not_read_the_file) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// fl_vfs_init without an arena makes its own; vfs_destroy has to give it back.
+// fl_vfs_init without an arena makes its own; fl_vfs_destroy has to give it back.
 
 UTEST(vfs, init_without_an_arena_frees_the_arena_it_makes) {
 #if defined(__linux__)
@@ -1191,7 +1191,7 @@ UTEST(vfs, init_without_an_arena_frees_the_arena_it_makes) {
 #endif
     for (int cycle = 0; cycle < VFS_MAPS_CYCLES; cycle++) {
         ASSERT_TRUE(fl_vfs_init(nullptr));
-        vfs_destroy();
+        fl_vfs_destroy();
 #if defined(__linux__)
         u64 maps_after_cycle = count_proc_self_maps();
         if (cycle == 0) {
@@ -1213,9 +1213,9 @@ UTEST(vfs, error_strings_do_not_run_out_over_many_failures) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     char name[ERROR_LOOP_PATH_SIZE + 1];
@@ -1225,7 +1225,7 @@ UTEST(vfs, error_strings_do_not_run_out_over_many_failures) {
 
     u64 error_bytes = 0;
     for_count(i, ERROR_LOOP_COUNT) {
-        FlVfsHandle handle = vfs_mount_read_all(mount.mount, missing);
+        FlVfsHandle handle = fl_vfs_mount_read_all(mount.mount, missing);
         ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
         fl_vfs_wait(handle);
         FlVfsData data = fl_vfs_get_data(handle);
@@ -1249,9 +1249,9 @@ UTEST(vfs, failed_listings_carry_an_error_message_until_closed) {
     no_list.list_directory = NULL;
     vfs_test_register_driver(&no_list);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     char name[ERROR_LOOP_PATH_SIZE + 1];
@@ -1275,7 +1275,7 @@ UTEST(vfs, failed_listings_carry_an_error_message_until_closed) {
     ASSERT_GT(error_bytes, (u64)MB(1));
 
     fl_vfs_mount_close(mount.mount);
-    vfs_destroy();
+    fl_vfs_destroy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1306,9 +1306,9 @@ UTEST(vfs, read_all_failure_notifies_the_callback) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     static FailNotifyStats over_cap;
@@ -1368,9 +1368,9 @@ UTEST(vfs, close_from_worker_takes_effect_and_the_running_job_still_finishes) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     static VfsWorkerCloseCtx ctx;
@@ -1385,9 +1385,9 @@ UTEST(vfs, close_from_worker_takes_effect_and_the_running_job_still_finishes) {
     vfs_dispatch(ctx.handle);
 
     // The close retires the id, so fl_vfs_wait(id) is a no-op here: the release hook is what reports the job is over.
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
-    while (atomic_load(&ctx.releases) == 0 && get_monotonic_time_ns_os() < deadline_ns) {
-        sleep_ms(1);
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
+    while (atomic_load(&ctx.releases) == 0 && fl_os_monotonic_ns() < deadline_ns) {
+        fl_os_sleep_ms(1);
     }
 
     ASSERT_TRUE_MSG(atomic_load(&ctx.close_attempted), "the callback must have run and closed its own handle");
@@ -1399,7 +1399,7 @@ UTEST(vfs, close_from_worker_takes_effect_and_the_running_job_still_finishes) {
     ASSERT_TRUE_MSG(atomic_load(&ctx.released_after_close), "the hook must not run before the job's callback is done");
 
     fl_vfs_close(ctx.handle); // a stale id: nothing to do
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_EQ_MSG(atomic_load(&ctx.releases), 1, "a second close and a wait_all must not release again");
 
     fl_vfs_mount_close(mount.mount);
@@ -1471,9 +1471,9 @@ UTEST(vfs, worker_read_against_a_pending_mount_is_deferred_and_still_runs_after_
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult ready_mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult ready_mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(ready_mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(ready_mount.mount));
 
     static VfsPendingMountCtx ctx;
@@ -1498,34 +1498,34 @@ UTEST(vfs, worker_read_against_a_pending_mount_is_deferred_and_still_runs_after_
 
     // Every wait below is deadlined and breaks rather than asserting, and the release is unconditional:
     // from here on the only worker is parked in the callback, and an ASSERT returns from the case without
-    // releasing it, which would leave vfs_destroy's wait with nothing to wait on but a spinning worker.
+    // releasing it, which would leave fl_vfs_destroy's wait with nothing to wait on but a spinning worker.
     bool callback_started = true;
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     while (!atomic_load(&ctx.in_callback)) {
-        if (get_monotonic_time_ns_os() >= deadline_ns) {
+        if (fl_os_monotonic_ns() >= deadline_ns) {
             callback_started = false;
             break;
         }
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
 
-    FlVfsMountResult pending_mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult pending_mount = fl_vfs_mount(FL_S("/stub"));
     atomic_store(&ctx.mount, pending_mount.status == FlVfsMountErrorStatus_Success ? pending_mount.mount : nullptr);
     atomic_store(&ctx.setup_done, true);
 
     bool probe_finished = true;
-    deadline_ns = get_monotonic_time_ns_os() + 10000000000ull;
+    deadline_ns = fl_os_monotonic_ns() + 10000000000ull;
     while (!atomic_load(&ctx.probe_done)) {
-        if (get_monotonic_time_ns_os() >= deadline_ns) {
+        if (fl_os_monotonic_ns() >= deadline_ns) {
             probe_finished = false;
             break;
         }
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     atomic_store(&ctx.release, true);
 
     fl_vfs_wait(parker);
-    vfs_wait_all(); // lets the second mount come up and the read deferred behind it run
+    fl_vfs_wait_all(); // lets the second mount come up and the read deferred behind it run
 
     ASSERT_TRUE_MSG(callback_started, "the read-all callback never ran");
     ASSERT_TRUE_MSG(probe_finished, "the worker never finished reading from the pending mount");
@@ -1584,9 +1584,9 @@ UTEST(vfs, chained_read_from_worker_refuses_unfinished_open) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     static VfsWorkerChainCtx ctx;
@@ -1655,7 +1655,7 @@ static FlVfsData vfs_park_callback(void* data, i64 size, void* user_data) {
 
 // Parks the only worker in parker's callback; false if it never got there. The caller stores ctx->release
 // unconditionally before its first ASSERT: an ASSERT returns from the case, and a worker still parked then
-// leaves vfs_destroy's wait with nothing to wait on but a spinning worker.
+// leaves fl_vfs_destroy's wait with nothing to wait on but a spinning worker.
 static bool vfs_park_worker(VfsParkCtx* ctx, FlVfsMount* mount, FlVfsHandle* parker, FlString path) {
     atomic_init(&ctx->in_callback, false);
     atomic_init(&ctx->release, false);
@@ -1664,12 +1664,12 @@ static bool vfs_park_worker(VfsParkCtx* ctx, FlVfsMount* mount, FlVfsHandle* par
         return false;
     }
     vfs_dispatch(*parker);
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     while (!atomic_load(&ctx->in_callback)) {
-        if (get_monotonic_time_ns_os() >= deadline_ns) {
+        if (fl_os_monotonic_ns() >= deadline_ns) {
             return false;
         }
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     return true;
 }
@@ -1712,9 +1712,9 @@ UTEST(vfs, close_racing_a_chained_read_defers_instead_of_freeing_the_file_handle
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     // The open must finish before the worker parks: a chain onto an unfinished open is refused outright, and
     // it is the finished predecessor that makes the pre-guard close believe the handle is idle.
@@ -1761,7 +1761,7 @@ UTEST(vfs, close_racing_a_chained_read_defers_instead_of_freeing_the_file_handle
     bool chained = in_window && vfs_await_flag(&ctx.chain_done);
     atomic_store(&s_stub_vfs_read_gate_armed, false);
     atomic_store(&ctx.release, true);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     ASSERT_TRUE_MSG(parked, "the read-all callback must park the only worker");
     ASSERT_TRUE_MSG(in_window, "the chained read must reach the driver and hold the scheduling window open");
@@ -1841,9 +1841,9 @@ static void* vfs_dispatch_race_releaser(void* user_data) {
     VfsDispatchRaceCtx* ctx = (VfsDispatchRaceCtx*)user_data;
 
     if (vfs_await_flag(&ctx->close_started)) {
-        u64 deadline_ns = get_monotonic_time_ns_os() + 100000000ull;
-        while (!atomic_load(&ctx->freed_in_flight) && get_monotonic_time_ns_os() < deadline_ns) {
-            sleep_ms(1);
+        u64 deadline_ns = fl_os_monotonic_ns() + 100000000ull;
+        while (!atomic_load(&ctx->freed_in_flight) && fl_os_monotonic_ns() < deadline_ns) {
+            fl_os_sleep_ms(1);
         }
     }
 
@@ -1857,11 +1857,11 @@ UTEST(vfs, mount_close_waits_out_a_dispatch_that_has_not_recorded_its_job) {
 
     // Two mounts: the close under test tears down target, while the parked worker's own read-all lives on
     // host, which that close neither drains nor frees.
-    FlVfsMountResult target = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult target = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(target.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    FlVfsMountResult host = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult host = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(host.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(target.mount));
     ASSERT_TRUE(fl_vfs_mount_is_ready(host.mount));
 
@@ -1895,8 +1895,8 @@ UTEST(vfs, mount_close_waits_out_a_dispatch_that_has_not_recorded_its_job) {
     bool in_window = parked && vfs_await_flag(&s_stub_vfs_read_entered);
 
     bool drained = false;
-    Thread releaser = { 0 };
-    bool releasing = in_window && os_thread_create(&releaser, vfs_dispatch_race_releaser, &ctx);
+    FlOsThread releaser = { 0 };
+    bool releasing = in_window && fl_os_thread_create(&releaser, vfs_dispatch_race_releaser, &ctx);
 
     if (releasing) {
         atomic_store(&ctx.close_started, true);
@@ -1911,7 +1911,7 @@ UTEST(vfs, mount_close_waits_out_a_dispatch_that_has_not_recorded_its_job) {
     atomic_store(&s_stub_vfs_read_gate_armed, false);
     atomic_store(&ctx.release_parker, true);
     if (releasing) {
-        os_thread_join(&releaser);
+        fl_os_thread_join(&releaser);
     }
     fl_vfs_wait(parker);
     fl_vfs_close(parker);
@@ -1966,9 +1966,9 @@ UTEST(vfs, close_of_a_queued_read_returns_and_the_job_releases_it) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     VfsParkCtx park;
@@ -1996,13 +1996,13 @@ UTEST(vfs, close_of_a_queued_read_returns_and_the_job_releases_it) {
     // The victim's job runs once the worker is free, and releases the op as it ends. Nothing here closes or waits
     // on anything else. Deadlined rather than asserted so the parker is never left parked.
     bool released_by_job = false;
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
-    while (get_monotonic_time_ns_os() < deadline_ns) {
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
+    while (fl_os_monotonic_ns() < deadline_ns) {
         if (atomic_load(&ctx.release_calls) == 1) {
             released_by_job = true;
             break;
         }
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
 
     ASSERT_TRUE_MSG(parked, "the parking callback never ran");
@@ -2056,9 +2056,9 @@ UTEST(vfs, close_of_a_queued_file_handle_returns_and_its_chained_read_still_comp
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     VfsParkCtx park;
@@ -2090,7 +2090,7 @@ UTEST(vfs, close_of_a_queued_file_handle_returns_and_its_chained_read_still_comp
     ASSERT_EQ(memcmp(buf, k_stub_vfs_data, sizeof(k_stub_vfs_data)), 0);
     fl_vfs_close(read);
 
-    vfs_wait_all(); // the chain has run, so the file is gone
+    fl_vfs_wait_all(); // the chain has run, so the file is gone
     FlVfsHandle reused = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, file);
     ASSERT_EQ_MSG(reused, file, "a closed file id must be reusable");
     fl_vfs_close(reused);
@@ -2108,9 +2108,9 @@ UTEST(vfs, a_closed_id_stays_reserved_until_its_old_op_has_run) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     VfsParkCtx park;
@@ -2131,7 +2131,7 @@ UTEST(vfs, a_closed_id_stays_reserved_until_its_old_op_has_run) {
 
     atomic_store(&park.release, true);
     fl_vfs_wait(parker);
-    vfs_wait_all(); // the closed op's job is waited for too, and releases the op as it ends
+    fl_vfs_wait_all(); // the closed op's job is waited for too, and releases the op as it ends
 
     FlVfsHandle reused = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), vfs_count_callback,
                                                             &second, vfs_count_release, id);
@@ -2164,9 +2164,9 @@ UTEST(vfs, a_read_that_has_run_no_longer_keeps_its_file_open) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     FlVfsHandle file = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
@@ -2220,9 +2220,9 @@ UTEST(vfs, mount_close_from_a_worker_refuses_new_ops_and_frees_on_the_last_refer
     const int allocs_before = s_stub_vfs_alloc_count;
     const int closes_before = s_stub_vfs_close_count;
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     VfsWorkerMountCloseCtx ctx
@@ -2237,14 +2237,14 @@ UTEST(vfs, mount_close_from_a_worker_refuses_new_ops_and_frees_on_the_last_refer
 
     // The reader's own job is the last thing holding the mount; the mount's root closes when that job ends.
     bool freed = false;
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
-    while (get_monotonic_time_ns_os() < deadline_ns) {
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
+    while (fl_os_monotonic_ns() < deadline_ns) {
         if (atomic_load(&ctx.closed_mount)
             && s_stub_vfs_close_count - closes_before == s_stub_vfs_alloc_count - allocs_before) {
             freed = true;
             break;
         }
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
 
     ASSERT_TRUE_MSG(atomic_load(&ctx.closed_mount), "the callback must have closed the mount from the worker");
@@ -2257,7 +2257,7 @@ UTEST(vfs, mount_close_from_a_worker_refuses_new_ops_and_frees_on_the_last_refer
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// A mount closed from a worker leaves the mount list only when it is freed, so vfs_wait_all still waits for the ops
+// A mount closed from a worker leaves the mount list only when it is freed, so fl_vfs_wait_all still waits for the ops
 // it has running. Reader A (on the only worker) closes the mount from its callback; B was queued behind it before
 // the close and runs against a closing mount. wait_all must not return before B has run and the root has closed.
 
@@ -2286,9 +2286,9 @@ UTEST(vfs, wait_all_covers_the_ops_of_a_mount_closed_from_a_worker) {
     const int allocs_before = s_stub_vfs_alloc_count;
     const int closes_before = s_stub_vfs_close_count;
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     VfsListedCloseCtx ctx = { .mount = mount.mount };
     atomic_init(&ctx.in_callback, false);
@@ -2309,7 +2309,7 @@ UTEST(vfs, wait_all_covers_the_ops_of_a_mount_closed_from_a_worker) {
     atomic_store(&ctx.go, true);
     bool closed = vfs_await_flag(&ctx.closed_mount);
     atomic_store(&ctx.release, true);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     ASSERT_TRUE_MSG(parked, "the closing reader never ran");
     ASSERT_TRUE_MSG(closed, "the reader never closed the mount");
@@ -2343,9 +2343,9 @@ UTEST(vfs, dispatching_an_op_twice_runs_it_once) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     static VfsReleaseCtx counts;
     memset(&counts, 0, sizeof(counts));
@@ -2353,7 +2353,7 @@ UTEST(vfs, dispatching_an_op_twice_runs_it_once) {
                                                    vfs_count_release, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(twice);
     vfs_dispatch(twice);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     fl_vfs_close(twice);
     ASSERT_EQ_MSG(atomic_load(&counts.callback_calls), 1, "a second dispatch must not run the op again");
     ASSERT_EQ(atomic_load(&counts.release_calls), 1);
@@ -2370,12 +2370,12 @@ UTEST(vfs, dispatching_an_op_twice_runs_it_once) {
     vfs_dispatch(reader);
     bool ran = vfs_await_flag(&ctx.done);
     FlVfsHandle read = atomic_load(&ctx.read);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     const int reads_before_dispatch = s_stub_vfs_read_count;
     if (ran && read != FL_VFS_HANDLE_INVALID) {
         vfs_dispatch(read); // already ran inline on the worker
     }
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     ASSERT_TRUE_MSG(ran, "the reader never ran");
     ASSERT_NE(read, FL_VFS_HANDLE_INVALID);
@@ -2410,9 +2410,9 @@ UTEST(vfs, closing_a_file_while_its_read_is_being_scheduled_leaves_the_read_inta
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     s_race_file = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
     fl_vfs_wait(s_race_file);
@@ -2456,9 +2456,9 @@ UTEST(vfs, a_release_hook_may_call_back_into_the_vfs) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     // On the closer's thread: a finished op released by its own close.
     static VfsReentrantCtx on_close;
@@ -2488,7 +2488,7 @@ UTEST(vfs, a_release_hook_may_call_back_into_the_vfs) {
     fl_vfs_close(queued);
     atomic_store(&park.release, true);
     fl_vfs_wait(parker);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     ASSERT_TRUE_MSG(parked, "the parking callback never ran");
     ASSERT_EQ(atomic_load(&on_worker.calls), 1);
@@ -2510,7 +2510,7 @@ typedef struct VfsDelayedReleaseCtx {
 
 static void* vfs_delayed_release_thread(void* user_data) {
     VfsDelayedReleaseCtx* ctx = (VfsDelayedReleaseCtx*)user_data;
-    sleep_ms(50);
+    fl_os_sleep_ms(50);
     atomic_store(&ctx->released, true);
     atomic_store(&ctx->park->release, true);
     return nullptr;
@@ -2520,9 +2520,9 @@ UTEST(vfs, close_of_a_queued_vfs_read_waits_for_the_buffer_it_lent) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     VfsParkCtx park;
@@ -2535,8 +2535,8 @@ UTEST(vfs, close_of_a_queued_vfs_read_waits_for_the_buffer_it_lent) {
 
     VfsDelayedReleaseCtx delayed = { .park = &park };
     atomic_init(&delayed.released, false);
-    Thread releaser;
-    bool thread_started = os_thread_create(&releaser, vfs_delayed_release_thread, &delayed);
+    FlOsThread releaser;
+    bool thread_started = fl_os_thread_create(&releaser, vfs_delayed_release_thread, &delayed);
     if (!thread_started) {
         atomic_store(&park.release, true);
     }
@@ -2546,7 +2546,7 @@ UTEST(vfs, close_of_a_queued_vfs_read_waits_for_the_buffer_it_lent) {
     bool buffer_filled = memcmp(buf, k_stub_vfs_data, sizeof(k_stub_vfs_data)) == 0;
 
     if (thread_started) {
-        os_thread_join(&releaser);
+        fl_os_thread_join(&releaser);
     }
     fl_vfs_wait(parker);
 
@@ -2569,9 +2569,9 @@ UTEST(vfs, close_of_a_queued_vfs_read_waits_for_the_buffer_it_lent) {
 UTEST(vfs, mount_of_a_missing_source_reports_error_and_its_ops_fail) {
     fl_vfs_init(s_arena); // idempotent
 
-    FlVfsMountResult mount = vfs_mount(FL_S("unit_test_vfs_no_such_source/none"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("unit_test_vfs_no_such_source/none"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     ASSERT_EQ((int)fl_vfs_mount_get_status(mount.mount), (int)FlVfsMountStatus_Error);
     ASSERT_FALSE(fl_vfs_mount_is_ready(mount.mount));
@@ -2604,9 +2604,9 @@ UTEST(vfs, mount_resolves_an_archive_nested_in_its_path_and_keeps_one_root_handl
     const int allocs_before = s_pfx_alloc_count;
     const int closes_before = s_pfx_close_count;
 
-    FlVfsMountResult mount = vfs_mount(FL_S("root/l0/l1"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("root/l0/l1"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     ASSERT_EQ((int)fl_vfs_mount_get_status(mount.mount), (int)FlVfsMountStatus_Ready);
     ASSERT_EQ_MSG(s_pfx_alloc_count - allocs_before, 5, "root + two probed files + two mounted archive layers");
@@ -2660,30 +2660,30 @@ static FlVfsPlugin s_arcname_vfs_plugin = {
 
 static bool write_listing_fixture_file(FlString dir, FlString name) {
     arena_scratch_auto(temp);
-    FlString path = file_build_path_os(temp.arena, dir, name);
-    return file_write_os(path, k_stub_vfs_data, (i64)sizeof(k_stub_vfs_data)) == (i64)sizeof(k_stub_vfs_data);
+    FlString path = fl_os_build_path(temp.arena, dir, name);
+    return fl_os_file_write(path, k_stub_vfs_data, (i64)sizeof(k_stub_vfs_data)) == (i64)sizeof(k_stub_vfs_data);
 }
 
 UTEST(vfs, listing_puts_directories_first_in_natural_order_and_flags_archives_by_name) {
     FlArena* arena = arena_new();
-    FlString cwd = get_current_directory_os(arena);
-    FlString dir = file_build_path_os(arena, cwd, FL_S("unit_test_vfs_listing_tmp"));
+    FlString cwd = fl_os_current_directory(arena);
+    FlString dir = fl_os_build_path(arena, cwd, FL_S("unit_test_vfs_listing_tmp"));
 
-    file_remove_directory_recursive_os(dir); // clean any leftover from an aborted run
-    ASSERT_TRUE(file_create_directory_os(dir));
-    ASSERT_TRUE(file_create_directory_os(file_build_path_os(arena, dir, FL_S("zdir"))));
-    ASSERT_TRUE(file_create_directory_os(file_build_path_os(arena, dir, FL_S("adir"))));
+    fl_os_remove_directory_recursive(dir); // clean any leftover from an aborted run
+    ASSERT_TRUE(fl_os_create_directory(dir));
+    ASSERT_TRUE(fl_os_create_directory(fl_os_build_path(arena, dir, FL_S("zdir"))));
+    ASSERT_TRUE(fl_os_create_directory(fl_os_build_path(arena, dir, FL_S("adir"))));
     ASSERT_TRUE(write_listing_fixture_file(dir, FL_S("b10.txt")));
     ASSERT_TRUE(write_listing_fixture_file(dir, FL_S("b2.txt")));
     ASSERT_TRUE(write_listing_fixture_file(dir, FL_S("a.zip")));
-    ASSERT_TRUE(write_listing_fixture_file(file_build_path_os(arena, dir, FL_S("adir")), FL_S("inner.txt")));
+    ASSERT_TRUE(write_listing_fixture_file(fl_os_build_path(arena, dir, FL_S("adir")), FL_S("inner.txt")));
 
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_arcname_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(dir);
+    FlVfsMountResult mount = fl_vfs_mount(dir);
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     FlVfsDirHandle root = fl_vfs_get_listing(mount.mount, FL_S(""), 0);
@@ -2718,7 +2718,7 @@ UTEST(vfs, listing_puts_directories_first_in_natural_order_and_flags_archives_by
     fl_vfs_close(root);
     fl_vfs_close(sub);
     fl_vfs_mount_close(mount.mount);
-    file_remove_directory_recursive_os(dir);
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -2735,7 +2735,7 @@ static void serial_enter(void) {
     int now = atomic_fetch_add(&s_serial_in_flight, 1) + 1;
     int seen = atomic_load(&s_serial_max_in_flight);
     while (now > seen && !atomic_compare_exchange_weak(&s_serial_max_in_flight, &seen, now)) {}
-    sleep_ms(1);
+    fl_os_sleep_ms(1);
 }
 
 static void serial_leave(void) {
@@ -2824,9 +2824,9 @@ UTEST(vfs, operations_on_one_mount_never_overlap_inside_its_driver) {
     atomic_store(&s_serial_reads, 0);
     atomic_store(&s_serial_lists, 0);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("serial"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("serial"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     FlVfsHandle file = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
@@ -2861,12 +2861,12 @@ UTEST(vfs, operations_on_one_mount_never_overlap_inside_its_driver) {
         ctx[i].chained[ctx[i].chained_count++] = &file_reads[i];
     }
 
-    Thread threads[THREADS];
+    FlOsThread threads[THREADS];
     for (int i = 0; i < THREADS; i++) {
-        ASSERT_TRUE(os_thread_create(&threads[i], serial_run_thread, &ctx[i]));
+        ASSERT_TRUE(fl_os_thread_create(&threads[i], serial_run_thread, &ctx[i]));
     }
     for (int i = 0; i < THREADS; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
 
     for (int i = 0; i < THREADS * READS_PER_THREAD; i++) {
@@ -2939,13 +2939,13 @@ typedef struct GatedMountCtx {
 static void gated_mount_job(void* user_data, FlJobsWorkerInfo info) {
     (void)info;
     GatedMountCtx* ctx = user_data;
-    ctx->mount = vfs_mount(ctx->source).mount;
+    ctx->mount = fl_vfs_mount(ctx->source).mount;
     atomic_store(&ctx->done, true);
 }
 
 static void* gated_other_mount_thread(void* user_data) {
     GatedMountCtx* ctx = user_data;
-    ctx->mount = vfs_mount(ctx->source).mount;
+    ctx->mount = fl_vfs_mount(ctx->source).mount;
     atomic_store(&ctx->done, true);
     return nullptr;
 }
@@ -2968,7 +2968,7 @@ UTEST(vfs, mounting_from_a_worker_holds_no_global_lock_while_the_driver_runs) {
 
     FlJobHandle gated_job = fl_jobs_add_job(gated_mount_job, &gated);
     for (int waited = 0; !atomic_load(&s_gate_entered) && waited < 5000; waited++) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     const bool gate_entered = atomic_load(&s_gate_entered);
     if (!gate_entered) {
@@ -2977,23 +2977,23 @@ UTEST(vfs, mounting_from_a_worker_holds_no_global_lock_while_the_driver_runs) {
     }
     ASSERT_TRUE_MSG(gate_entered, "the gated mount never reached its driver");
 
-    Thread other_thread;
-    const bool thread_created = os_thread_create(&other_thread, gated_other_mount_thread, &other);
+    FlOsThread other_thread;
+    const bool thread_created = fl_os_thread_create(&other_thread, gated_other_mount_thread, &other);
     for (int waited = 0; thread_created && !atomic_load(&other.done) && waited < 3000; waited++) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     bool other_started = atomic_load(&other.done);
 
     atomic_store(&s_gate_release, true);
     if (thread_created) {
-        os_thread_join(&other_thread);
+        fl_os_thread_join(&other_thread);
     }
     fl_jobs_wait(gated_job);
     ASSERT_TRUE(thread_created);
 
     ASSERT_TRUE_MSG(other_started, "a mount was blocked while another mount's driver call was in flight");
 
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(gated.mount));
     ASSERT_TRUE(fl_vfs_mount_is_ready(other.mount));
     fl_vfs_mount_close(gated.mount);
@@ -3009,16 +3009,16 @@ UTEST(vfs, mount_reports_pending_until_its_job_publishes_ready) {
     atomic_store(&s_gate_entered, false);
     atomic_store(&s_gate_release, false);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("gated"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("gated"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
     for (int waited = 0; !atomic_load(&s_gate_entered) && waited < 5000; waited++) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     const bool entered = atomic_load(&s_gate_entered);
     const int status_while_gated = (int)fl_vfs_mount_get_status(mount.mount);
 
     atomic_store(&s_gate_release, true);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE_MSG(entered, "the mount job never reached the driver");
     ASSERT_EQ(status_while_gated, (int)FlVfsMountStatus_Pending);
     ASSERT_EQ((int)fl_vfs_mount_get_status(mount.mount), (int)FlVfsMountStatus_Ready);
@@ -3046,9 +3046,9 @@ UTEST(vfs, closing_a_file_does_not_wait_for_a_read_in_flight_on_the_same_mount) 
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     FlVfsHandle busy = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
     FlVfsHandle idle = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
@@ -3061,23 +3061,23 @@ UTEST(vfs, closing_a_file_does_not_wait_for_a_read_in_flight_on_the_same_mount) 
     atomic_store(&s_stub_vfs_read_gate_armed, true);
     FlVfsHandle read = fl_vfs_read(busy, buffer, sizeof(buffer));
     for (int waited = 0; !atomic_load(&s_stub_vfs_read_entered) && waited < 5000; waited++) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     bool parked = atomic_load(&s_stub_vfs_read_entered);
 
     CloseDuringReadCtx ctx = { .file = idle };
     atomic_init(&ctx.done, false);
-    Thread closer;
-    bool started = os_thread_create(&closer, close_during_read_thread, &ctx);
+    FlOsThread closer;
+    bool started = fl_os_thread_create(&closer, close_during_read_thread, &ctx);
     for (int waited = 0; started && !atomic_load(&ctx.done) && waited < 3000; waited++) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     bool closed_while_parked = atomic_load(&ctx.done);
 
     atomic_store(&s_stub_vfs_read_release, true);
     atomic_store(&s_stub_vfs_read_gate_armed, false);
     if (started) {
-        os_thread_join(&closer);
+        fl_os_thread_join(&closer);
     }
     fl_vfs_wait(read);
 
@@ -3271,7 +3271,7 @@ static void* zip_stress_thread(void* user_data) {
     for (int iteration = 0; iteration < STRESS_ITERATIONS; iteration++) {
         FlVfsHandle handles[ZIP_ENTRY_COUNT];
         for (int i = 0; i < ZIP_ENTRY_COUNT; i++) {
-            handles[i] = vfs_mount_read_all(ctx->mount, string_from_cstr(k_zip_names[i]));
+            handles[i] = fl_vfs_mount_read_all(ctx->mount, string_from_cstr(k_zip_names[i]));
         }
 
         for (int i = 0; i < ZIP_ENTRY_COUNT; i++) {
@@ -3296,33 +3296,33 @@ UTEST(vfs_libarchive, concurrent_reads_through_one_archive_mount_return_the_righ
     FlArena* arena = arena_new();
     FlString dir = vfs_test_temp_dir(arena, FL_S("unit_test_vfs_zip_tmp"));
     ASSERT_TRUE(dir.length > 0);
-    FlString zip_path = file_build_path_os(arena, dir, FL_S("stress.zip"));
+    FlString zip_path = fl_os_build_path(arena, dir, FL_S("stress.zip"));
 
     ByteWriter* zip = byte_writer_create(arena);
     build_stored_zip(zip);
-    ASSERT_EQ(file_write_os(zip_path, zip->bytes, (i64)zip->size), (i64)zip->size);
+    ASSERT_EQ(fl_os_file_write(zip_path, zip->bytes, (i64)zip->size), (i64)zip->size);
 
-    FlVfsMount* archive = vfs_mount(zip_path).mount;
+    FlVfsMount* archive = fl_vfs_mount(zip_path).mount;
     ASSERT_TRUE(archive != NULL);
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE_MSG(fl_vfs_mount_is_ready(archive), "the archive must mount by its own path");
 
     ZipStressCtx ctx = { .mount = archive };
     atomic_init(&ctx.failures, 0);
-    Thread threads[STRESS_THREADS];
+    FlOsThread threads[STRESS_THREADS];
     for (int i = 0; i < STRESS_THREADS; i++) {
-        ASSERT_TRUE(os_thread_create(&threads[i], zip_stress_thread, &ctx));
+        ASSERT_TRUE(fl_os_thread_create(&threads[i], zip_stress_thread, &ctx));
     }
     for (int i = 0; i < STRESS_THREADS; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
     ASSERT_EQ(atomic_load(&ctx.failures), 0);
 
     // The directory holding the archive reads through it too, as a plain path.
-    FlVfsMount* directory = vfs_mount(dir).mount;
+    FlVfsMount* directory = fl_vfs_mount(dir).mount;
     ASSERT_TRUE(directory != NULL);
-    vfs_wait_all();
-    FlVfsHandle through = vfs_mount_read_all(directory, FL_S("stress.zip/file1.txt"));
+    fl_vfs_wait_all();
+    FlVfsHandle through = fl_vfs_mount_read_all(directory, FL_S("stress.zip/file1.txt"));
     fl_vfs_wait(through);
     FlVfsData through_data = fl_vfs_get_data(through);
     ASSERT_TRUE_MSG(through_data.success, "a directory mount resolves a path into an archive");
@@ -3338,7 +3338,7 @@ UTEST(vfs_libarchive, concurrent_reads_through_one_archive_mount_return_the_righ
 
     fl_vfs_mount_close(directory);
     fl_vfs_mount_close(archive);
-    file_remove_directory_recursive_os(dir);
+    fl_os_remove_directory_recursive(dir);
     fl_arena_destroy(arena);
 }
 
@@ -3374,7 +3374,7 @@ static bool nested_fixture_create(NestedFixture* fixture, FlString dir_name) {
     fixture->arena = arena_new();
     fixture->dir = vfs_test_temp_dir(fixture->arena, dir_name);
     if (fixture->dir.length == 0
-        || !file_create_directory_os(file_build_path_os(fixture->arena, fixture->dir, FL_S("folder")))) {
+        || !fl_os_create_directory(fl_os_build_path(fixture->arena, fixture->dir, FL_S("folder")))) {
         return false;
     }
 
@@ -3404,16 +3404,16 @@ static bool nested_fixture_create(NestedFixture* fixture, FlString dir_name) {
                              ZIP_TEXT("broken.zip", "PK this is not an archive, only named like one") },
               2);
 
-    FlString plain = file_build_path_os(fixture->arena, fixture->dir, FL_S("plain.txt"));
-    FlString corrupt = file_build_path_os(fixture->arena, fixture->dir, FL_S("corrupt.zip"));
-    return file_write_os(corrupt, (const u8*)"PK this file is named like an archive", 37) == 37
+    FlString plain = fl_os_build_path(fixture->arena, fixture->dir, FL_S("plain.txt"));
+    FlString corrupt = fl_os_build_path(fixture->arena, fixture->dir, FL_S("corrupt.zip"));
+    return fl_os_file_write(corrupt, (const u8*)"PK this file is named like an archive", 37) == 37
            && nested_write_file(fixture, FL_S("outer.zip"), outer)
            && nested_write_file(fixture, FL_S("folder/lone.zip"), lone)
-           && nested_write_file(fixture, FL_S("bad.zip"), bad) && file_write_os(plain, (const u8*)"plain\n", 6) == 6;
+           && nested_write_file(fixture, FL_S("bad.zip"), bad) && fl_os_file_write(plain, (const u8*)"plain\n", 6) == 6;
 }
 
 static void nested_fixture_destroy(NestedFixture* fixture) {
-    file_remove_directory_recursive_os(fixture->dir);
+    fl_os_remove_directory_recursive(fixture->dir);
     fl_arena_destroy(fixture->arena);
 }
 
@@ -3430,7 +3430,7 @@ static bool nested_expect_read(FlVfsMount* mount, FlString prefix, const char* n
 
 // The bytes of an archive file read as a file, which the tree must still serve after it has entered the archive.
 static bool nested_expect_raw_archive(FlVfsMount* mount, const char* path) {
-    FlVfsHandle handle = vfs_mount_read_all(mount, string_from_cstr(path));
+    FlVfsHandle handle = fl_vfs_mount_read_all(mount, string_from_cstr(path));
     fl_vfs_wait(handle);
     FlVfsData data = fl_vfs_get_data(handle);
     bool ok = data.success && data.size > 4 && memcmp(data.data, "PK\x03\x04", 4) == 0;
@@ -3513,7 +3513,7 @@ UTEST(vfs_libarchive, nested_archives_list_and_read_through_a_directory_mount) {
     ASSERT_TRUE(nested_expect_list(mount, absolute, "outer.zip/mid.zip", "sub/ inner.zip* mid.txt"));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
     nested_fixture_destroy(&fixture);
 }
 
@@ -3521,12 +3521,12 @@ UTEST(vfs_libarchive, nested_archives_list_and_read_through_a_mount_of_the_outer
     NestedFixture fixture;
     ASSERT_TRUE(nested_begin(&fixture, FL_S("unit_test_vfs_nested_outer_tmp")));
 
-    FlVfsMount* mount = vfs_test_mount(file_build_path_os(fixture.arena, fixture.dir, FL_S("outer.zip")));
+    FlVfsMount* mount = vfs_test_mount(fl_os_build_path(fixture.arena, fixture.dir, FL_S("outer.zip")));
     ASSERT_TRUE(mount != nullptr);
     ASSERT_TRUE(nested_check_outer(mount, FL_S("")));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
     nested_fixture_destroy(&fixture);
 }
 
@@ -3534,7 +3534,7 @@ UTEST(vfs_libarchive, a_nested_path_mounts_directly_and_resolves_further_layers_
     NestedFixture fixture;
     ASSERT_TRUE(nested_begin(&fixture, FL_S("unit_test_vfs_nested_direct_tmp")));
 
-    FlString outer = file_build_path_os(fixture.arena, fixture.dir, FL_S("outer.zip"));
+    FlString outer = fl_os_build_path(fixture.arena, fixture.dir, FL_S("outer.zip"));
 
     FlVfsMount* mid = vfs_test_mount(fl_sprintf_arena(fixture.arena, "%S/mid.zip", outer));
     ASSERT_TRUE_MSG(mid != nullptr, "outer.zip/mid.zip must mount");
@@ -3552,7 +3552,7 @@ UTEST(vfs_libarchive, a_nested_path_mounts_directly_and_resolves_further_layers_
     fl_vfs_mount_close(mid);
     fl_vfs_mount_close(inner);
     fl_vfs_mount_close(side);
-    vfs_destroy();
+    fl_vfs_destroy();
     nested_fixture_destroy(&fixture);
 }
 
@@ -3578,7 +3578,7 @@ UTEST(vfs_libarchive, a_nested_file_opens_and_reads_through_a_chained_read) {
     fl_vfs_close(read);
     fl_vfs_close(file);
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
     nested_fixture_destroy(&fixture);
 }
 
@@ -3651,12 +3651,12 @@ UTEST(vfs_libarchive, first_opens_of_nested_archives_race_inside_the_tree) {
                 ctx[t].lists[i].path = string_from_cstr(k_nested_listings[l]);
             }
         }
-        Thread threads[NESTED_THREADS];
+        FlOsThread threads[NESTED_THREADS];
         for (int t = 0; t < NESTED_THREADS; t++) {
-            ASSERT_TRUE(os_thread_create(&threads[t], nested_race_thread, &ctx[t]));
+            ASSERT_TRUE(fl_os_thread_create(&threads[t], nested_race_thread, &ctx[t]));
         }
         for (int t = 0; t < NESTED_THREADS; t++) {
-            os_thread_join(&threads[t]);
+            fl_os_thread_join(&threads[t]);
         }
         for (int t = 0; t < NESTED_THREADS; t++) {
             for (int i = 0; i < NESTED_PATHS; i++) {
@@ -3679,7 +3679,7 @@ UTEST(vfs_libarchive, first_opens_of_nested_archives_race_inside_the_tree) {
         fl_vfs_mount_close(mount);
     }
     ASSERT_EQ(failures, 0);
-    vfs_destroy();
+    fl_vfs_destroy();
     nested_fixture_destroy(&fixture);
 }
 
@@ -3769,7 +3769,7 @@ UTEST(vfs_libarchive, a_corrupt_inner_archive_fails_cleanly_and_leaks_no_handle)
     ASSERT_EQ_MSG(atomic_load(&s_archive_closed), atomic_load(&s_archive_opened),
                   "closing the mount must close every archive layer it opened");
 
-    vfs_destroy();
+    fl_vfs_destroy();
     nested_fixture_destroy(&fixture);
 }
 
@@ -3797,7 +3797,7 @@ UTEST(vfs_libarchive, closing_a_mount_with_reads_in_flight_through_archives_fini
     static NestedCloseCtx ctx;
     memset(&ctx, 0, sizeof(ctx));
     for (int i = 0; i < 8; i++) {
-        FlVfsHandle read = vfs_mount_read_all(mount, FL_S("outer.zip/mid.zip/inner.zip/hello.txt"),
+        FlVfsHandle read = fl_vfs_mount_read_all(mount, FL_S("outer.zip/mid.zip/inner.zip/hello.txt"),
                                               .callback = nested_close_callback, .user_data = &ctx);
         ASSERT_NE(read, FL_VFS_HANDLE_INVALID);
     }
@@ -3811,7 +3811,7 @@ UTEST(vfs_libarchive, closing_a_mount_with_reads_in_flight_through_archives_fini
     ASSERT_GT(atomic_load(&s_archive_opened), 0);
     ASSERT_EQ(atomic_load(&s_archive_closed), atomic_load(&s_archive_opened));
 
-    vfs_destroy();
+    fl_vfs_destroy();
     nested_fixture_destroy(&fixture);
 }
 
@@ -3836,7 +3836,7 @@ UTEST(vfs_libarchive, a_nested_archive_is_opened_once_and_kept_for_the_mount) {
     fl_vfs_mount_close(mount);
     ASSERT_EQ(atomic_load(&s_archive_closed), atomic_load(&s_archive_opened));
 
-    vfs_destroy();
+    fl_vfs_destroy();
     nested_fixture_destroy(&fixture);
 }
 
@@ -3866,7 +3866,7 @@ UTEST(vfs_lhasa, an_lha_archive_nests_in_a_zip_and_sits_on_disk) {
     ASSERT_TRUE(nested_expect_read(mount, FL_S(""), "disk.lha/song.txt", "lha song\n"));
 
     fl_vfs_mount_close(mount);
-    vfs_destroy();
+    fl_vfs_destroy();
     nested_fixture_destroy(&fixture);
 }
 

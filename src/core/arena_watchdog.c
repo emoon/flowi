@@ -194,7 +194,7 @@ void arena_watchdog_init(void) {
 
     s_watchdog.capacity = WATCHDOG_INITIAL_CAPACITY;
     s_watchdog.count = 0;
-    s_watchdog.last_sample_time_us = get_current_time_us_os();
+    s_watchdog.last_sample_time_us = fl_os_time_us();
     s_watchdog.sample_interval_us = WATCHDOG_DEFAULT_INTERVAL_US;
     s_watchdog.growth_threshold = WATCHDOG_DEFAULT_GROWTH_THRESHOLD;
     s_watchdog.min_growth_bytes = WATCHDOG_DEFAULT_MIN_GROWTH_BYTES;
@@ -226,7 +226,7 @@ void arena_watchdog_update(void) {
         return;
     }
 
-    i64 now = get_current_time_us_os();
+    i64 now = fl_os_time_us();
     if (now - s_watchdog.last_sample_time_us < s_watchdog.sample_interval_us) {
         return;
     }

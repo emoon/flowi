@@ -202,9 +202,9 @@ FlVfsReadResult stub_vfs_read(void* instance, void* handle, FlString relative_pa
     atomic_fetch_add(&s_stub_vfs_read_count, 1);
     if (atomic_load(&s_stub_vfs_read_gate_armed)) {
         atomic_store(&s_stub_vfs_read_entered, true);
-        const u64 deadline_ns = get_monotonic_time_ns_os() + STUB_VFS_GATE_TIMEOUT_NS;
-        while (!atomic_load(&s_stub_vfs_read_release) && get_monotonic_time_ns_os() < deadline_ns) {
-            sleep_ms(1);
+        const u64 deadline_ns = fl_os_monotonic_ns() + STUB_VFS_GATE_TIMEOUT_NS;
+        while (!atomic_load(&s_stub_vfs_read_release) && fl_os_monotonic_ns() < deadline_ns) {
+            fl_os_sleep_ms(1);
         }
     }
     StubVfsHandle* h = (StubVfsHandle*)handle;
@@ -501,7 +501,7 @@ void render_fixture_teardown(void) {
         image_destroy_system();
     }
     if (s_render.owns_vfs && g_vfs_state != nullptr) {
-        vfs_destroy();
+        fl_vfs_destroy();
     }
     fl_arena_destroy(s_render.arena);
     s_render.arena = nullptr;
@@ -521,7 +521,7 @@ void vfs_test_register_driver(const FlVfsPlugin* plugin) {
             return;
         }
     }
-    vfs_register_driver(plugin, nullptr);
+    fl_vfs_register_driver(plugin, nullptr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -533,7 +533,7 @@ void process_singletons_reset(void) {
     render_fixture_teardown();
     image_destroy_system();
     if (g_vfs_state != nullptr) {
-        vfs_destroy();
+        fl_vfs_destroy();
     }
     atomic_store(&s_stub_vfs_read_gate_armed, false);
     s_stub_vfs_override_data = nullptr;

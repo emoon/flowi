@@ -23,7 +23,7 @@ u32 fl_perf_scope_begin(const char* name) {
         return UINT32_MAX;
     }
 
-    u64 now = get_monotonic_time_ns_os();
+    u64 now = fl_os_monotonic_ns();
     u16 entry_index = (u16)state->entry_count;
     u16 depth = (u16)state->stack_depth;
     u16 parent_index = (depth > 0) ? state->stack[depth - 1].entry_index : 0;
@@ -60,7 +60,7 @@ void fl_perf_scope_end(u32 stack_index) {
         return;
     }
 
-    u64 now = get_monotonic_time_ns_os();
+    u64 now = fl_os_monotonic_ns();
     PerfScopeOpen* open = &state->stack[stack_index];
 
     PerfScopeEntry* entry = &state->entries[open->entry_index];

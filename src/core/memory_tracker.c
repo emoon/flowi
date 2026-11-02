@@ -218,7 +218,7 @@ static void dump_arena_callback(FlArena* arena, void* user_data) {
 
     {
         arena_scratch_auto_conflict(temp, data->output_arena);
-        i64 current_time_us = get_current_time_us_os();
+        i64 current_time_us = fl_os_time_us();
         i64 age_us = current_time_us - (i64)arena->creation_timestamp_us;
 
         FlString age_str;
@@ -250,7 +250,7 @@ FlString fl_memory_tracker_dump_string(FlArena* arena) {
 
     {
         arena_scratch_auto_conflict(temp, arena);
-        i64 current_time_us = get_current_time_us_os();
+        i64 current_time_us = fl_os_time_us();
         FlString timestamp_str = timestamp_format_os(temp.arena, current_time_us);
         sb_append_line(&sb, arena, "Generated: %S\n\n", timestamp_str);
     }
@@ -319,7 +319,7 @@ bool fl_memory_tracker_dump_to_file(FlString filepath) {
     arena_scratch_auto(temp);
     FlString content = fl_memory_tracker_dump_string(temp.arena);
 
-    i64 bytes_written = file_write_os(filepath, (const u8*)content.data, (i64)content.length);
+    i64 bytes_written = fl_os_file_write(filepath, (const u8*)content.data, (i64)content.length);
 
     if (bytes_written < 0) {
         log_error("Failed to write memory snapshot to file: %S", filepath);
@@ -351,7 +351,7 @@ static void dump_arena_json_callback(FlArena* arena, void* user_data) {
     double utilization = arena->reserved_size > 0 ? (arena->pos * 100.0) / arena->reserved_size : 0.0;
     double peak_utilization = arena->reserved_size > 0 ? (peak_offset * 100.0) / arena->reserved_size : 0.0;
 
-    i64 current_time_us = get_current_time_us_os();
+    i64 current_time_us = fl_os_time_us();
     i64 age_us = current_time_us - (i64)arena->creation_timestamp_us;
     double age_seconds = age_us >= 0 ? age_us / 1000000.0 : 0.0;
 
@@ -387,7 +387,7 @@ FlString fl_memory_tracker_export_json_string(FlArena* arena) {
 
     u64 mimalloc_current = mstats.total_allocated - mstats.total_freed;
 
-    i64 current_time_us = get_current_time_us_os();
+    i64 current_time_us = fl_os_time_us();
 
     {
         arena_scratch_auto_conflict(temp, arena);
@@ -443,7 +443,7 @@ bool fl_memory_tracker_export_json_to_file(FlString filepath) {
     arena_scratch_auto(temp);
     FlString content = fl_memory_tracker_export_json_string(temp.arena);
 
-    i64 bytes_written = file_write_os(filepath, (const u8*)content.data, (i64)content.length);
+    i64 bytes_written = fl_os_file_write(filepath, (const u8*)content.data, (i64)content.length);
 
     if (bytes_written < 0) {
         log_error("Failed to write JSON snapshot to file: %S", filepath);

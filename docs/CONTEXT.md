@@ -646,7 +646,7 @@ A filesystem backend the [[#Layout Engine]]'s asset path resolves through — lo
 archive, a network store. flowi's `vfs` module owns the **driver interface** — the `FlVfsPlugin`
 struct (identity + lifecycle + the operations vtable: `open`/`read`/`get_size`/`list_directory`/
 `close`/`get_capabilities` plus optional ops) — and is **handed already-constructed
-drivers** via `vfs_register_driver`; it never loads them. flowi's vfs is always *static* in this
+drivers** via `fl_vfs_register_driver`; it never loads them. flowi's vfs is always *static* in this
 sense, so a driver's `create` takes no arguments — flowi never wires services into a driver
 at construction (ADR-0034).
 _Avoid_: treating dynamic `.so` loading or a service registry as a flowi concern. Turning a loaded

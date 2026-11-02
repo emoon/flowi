@@ -71,7 +71,7 @@ static LocalFsHandle* localfs_make_handle(FlString os_path, bool is_dir, u32 fla
     LocalFsHandle* h = mi_alloc(LocalFsHandle);
     if (!h) {
         if (fd >= 0) {
-            file_close_handle_os(fd);
+            fl_os_file_close_handle(fd);
         }
         return nullptr;
     }
@@ -79,7 +79,7 @@ static LocalFsHandle* localfs_make_handle(FlString os_path, bool is_dir, u32 fla
     h->path = localfs_persist_path(os_path);
     if (!h->path.data) {
         if (fd >= 0) {
-            file_close_handle_os(fd);
+            fl_os_file_close_handle(fd);
         }
         mi_free(h);
         return nullptr;
@@ -101,7 +101,7 @@ static bool localfs_supports_path(FlString path) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool localfs_can_open(FlString path) {
-    return file_stat_os(path).is_valid;
+    return fl_os_file_stat(path).is_valid;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -114,7 +114,7 @@ static FlVfsOpenResult localfs_open(void* instance, void* parent_handle, FlStrin
     arena_scratch_auto(temp);
     FlString full = localfs_resolve(temp.arena, (const LocalFsHandle*)parent_handle, path);
 
-    FileStat st = file_stat_os(full);
+    FlOsFileStat st = fl_os_file_stat(full);
     if (!st.is_valid) {
         return (FlVfsOpenResult) { .handle = nullptr, .error = localfs_fail() };
     }
@@ -146,7 +146,7 @@ static FlVfsSizeResult localfs_get_size(void* instance, void* handle, FlString r
     // Empty relative path: the size of the file this handle was opened on, taken from its path so the fd's read
     // offset stays put.
     if (relative_path.length == 0) {
-        i64 size = file_get_size_os(h->path);
+        i64 size = fl_os_file_size(h->path);
         if (size < 0) {
             return (FlVfsSizeResult) { .size = -1, .error = localfs_fail() };
         }
@@ -156,7 +156,7 @@ static FlVfsSizeResult localfs_get_size(void* instance, void* handle, FlString r
     // Non-empty relative path: an existence/size probe against this directory handle. Directories report -1.
     arena_scratch_auto(temp);
     FlString full = localfs_resolve(temp.arena, h, relative_path);
-    FileStat st = file_stat_os(full);
+    FlOsFileStat st = fl_os_file_stat(full);
     if (!st.is_valid || st.is_directory) {
         return (FlVfsSizeResult) { .size = -1, .error = localfs_fail() };
     }
@@ -199,7 +199,7 @@ static FlVfsReadResult localfs_read(void* instance, void* handle, FlString relat
         i64 n = file_read_from_handle_os(buffer + total, fd, remaining, remaining);
         if (n < 0) {
             if (owns_fd) {
-                file_close_handle_os(fd);
+                fl_os_file_close_handle(fd);
             }
             return (FlVfsReadResult) { .bytes_read = -1, .error = localfs_fail() };
         }
@@ -209,7 +209,7 @@ static FlVfsReadResult localfs_read(void* instance, void* handle, FlString relat
         total += n;
     }
     if (owns_fd) {
-        file_close_handle_os(fd);
+        fl_os_file_close_handle(fd);
     }
     return (FlVfsReadResult) { .bytes_read = total, .error = localfs_ok() };
 }
@@ -226,13 +226,13 @@ static void localfs_list_directory(void* instance, void* handle, FlString relati
 
     arena_scratch_auto(temp);
     FlString dir_path = localfs_resolve(temp.arena, h, relative_path);
-    DirHandle dir = dir_open_os(temp.arena, dir_path);
+    FlOsDir dir = fl_os_dir_open(temp.arena, dir_path);
     if (!dir.is_valid) {
         return;
     }
 
-    // dir_read_next_os already skips "." and ".." and stats each entry.
-    for (FileStat e = dir_read_next_os(temp.arena, &dir); e.is_valid; e = dir_read_next_os(temp.arena, &dir)) {
+    // fl_os_dir_read_next already skips "." and ".." and stats each entry.
+    for (FlOsFileStat e = fl_os_dir_read_next(temp.arena, &dir); e.is_valid; e = fl_os_dir_read_next(temp.arena, &dir)) {
         FlVfsEntry entry = {
             .name = e.name,
             .size = e.is_directory ? 0 : (i64)e.size,
@@ -245,7 +245,7 @@ static void localfs_list_directory(void* instance, void* handle, FlString relati
         }
     }
 
-    dir_close_os(&dir);
+    fl_os_dir_close(&dir);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -257,7 +257,7 @@ static void localfs_close(void* instance, void* handle) {
         return;
     }
     if (h->fd >= 0) {
-        file_close_handle_os(h->fd);
+        fl_os_file_close_handle(h->fd);
     }
     mi_free((void*)h->path.data);
     mi_free(h);

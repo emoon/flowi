@@ -4,6 +4,8 @@
 // for_count) are unprefixed and would collide in a consumer's namespace, so this header is
 // explicitly opt-in and must never be included by another public flowi header.
 
+#include <stdint.h>
+
 #define CONCAT_(a, b) a##b
 #define CONCAT(a, b) CONCAT_(a, b)
 
@@ -14,6 +16,11 @@
 #define for_count(i, n) for (REMOVE_CONST(n) i = 0, CONCAT(_count_, __LINE__) = (n); i < CONCAT(_count_, __LINE__); ++i)
 
 #define sizeof_array(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+// Byte-size literals, widened to 64 bits so a gigabyte count cannot overflow int.
+#define KB(x) ((uint64_t)(x) * 1024ULL)
+#define MB(x) ((uint64_t)(x) * 1024ULL * 1024ULL)
+#define GB(x) ((uint64_t)(x) * 1024ULL * 1024ULL * 1024ULL)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Math utility macros

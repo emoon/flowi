@@ -1268,7 +1268,7 @@ UTEST(path_utils, is_separator_non_separator) {
 
 UTEST(path, get_current_directory) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    FlString result = path_get_current_directory(arena);
+    FlString result = fl_path_get_current_directory(arena);
 
     ASSERT_GT((u64)result.length, 0UL);
     ASSERT_TRUE(fl_path_is_absolute(result));
@@ -1280,7 +1280,7 @@ UTEST(path, get_current_directory) {
 
 UTEST(path, get_current_directory_not_null) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    FlString result = path_get_current_directory(arena);
+    FlString result = fl_path_get_current_directory(arena);
 
     if (result.length > 0) {
         ASSERT_TRUE(result.data != NULL);
@@ -1294,7 +1294,7 @@ UTEST(path, get_current_directory_not_null) {
 UTEST(path, find_directory_nonexistent) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    FlString result = path_find_directory(arena, FL_S("nonexistent_directory_12345"));
+    FlString result = fl_path_find_directory(arena, FL_S("nonexistent_directory_12345"));
 
     ASSERT_EQ(0UL, (u64)result.length);
 
@@ -1307,15 +1307,15 @@ UTEST(path, find_directory_current_existing) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     FlString test_dir = FL_S("test_find_dir");
-    bool created = file_create_directory_os(test_dir);
+    bool created = fl_os_create_directory(test_dir);
 
     if (created) {
-        FlString result = path_find_directory(arena, test_dir);
+        FlString result = fl_path_find_directory(arena, test_dir);
 
         ASSERT_GT((u64)result.length, 0UL);
-        ASSERT_TRUE(file_directory_exists_os(result));
+        ASSERT_TRUE(fl_os_directory_exists(result));
 
-        file_remove_directory_os(test_dir);
+        fl_os_remove_directory(test_dir);
     }
 
     fl_arena_destroy(arena);
@@ -1326,7 +1326,7 @@ UTEST(path, find_directory_current_existing) {
 UTEST(path, find_directory_relative_vs_absolute) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    FlString current_dir = path_get_current_directory(arena);
+    FlString current_dir = fl_path_get_current_directory(arena);
     if (current_dir.length > 0) {
         FlString current_name = fl_path_get_filename(current_dir);
 
@@ -1334,11 +1334,11 @@ UTEST(path, find_directory_relative_vs_absolute) {
             FlString parent_dir = fl_path_get_parent(arena, current_dir);
 
             if (parent_dir.length > 0 && fl_path_is_absolute(parent_dir)) {
-                FlString result = path_find_directory(arena, current_name);
+                FlString result = fl_path_find_directory(arena, current_name);
 
                 // Result should either be empty (not found) or a valid path
                 if (result.length > 0) {
-                    ASSERT_TRUE(file_directory_exists_os(result));
+                    ASSERT_TRUE(fl_os_directory_exists(result));
                 }
             }
         }
@@ -1352,7 +1352,7 @@ UTEST(path, find_directory_relative_vs_absolute) {
 UTEST(path, find_directory_empty_name) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    FlString result = path_find_directory(arena, FL_S(""));
+    FlString result = fl_path_find_directory(arena, FL_S(""));
 
     ASSERT_EQ(0UL, (u64)result.length);
 
@@ -1364,7 +1364,7 @@ UTEST(path, find_directory_empty_name) {
 UTEST(path, find_directory_with_separators) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    FlString result = path_find_directory(arena, FL_S("test/with/separators"));
+    FlString result = fl_path_find_directory(arena, FL_S("test/with/separators"));
 
     // A multi-segment name is searched verbatim against the cwd and each ancestor; no such directory exists, so
     // the miss must report the empty string rather than a partial match on the first segment.

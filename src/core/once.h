@@ -24,7 +24,7 @@ static inline bool once_begin(OnceFlag* flag) {
     }
 
     while (atomic_load_explicit(flag, memory_order_acquire) != OnceState_Done) {
-        sleep_us(50);
+        fl_os_sleep_us(50);
     }
     return false;
 }

@@ -94,10 +94,10 @@ FlHost* host_create(FlArena* arena, const FlHostSettings* settings, const FlRend
     // relative to the cwd) against it. On the main thread vfs_mount dispatches asynchronously, so wait for it
     // to finish before the first frame can issue a load.
     if (settings->mount_working_directory) {
-        FlVfsMountResult asset_mount = vfs_mount(get_current_directory_os(arena));
+        FlVfsMountResult asset_mount = fl_vfs_mount(fl_os_current_directory(arena));
         FL_HOST_FAIL(host, asset_mount.status != FlVfsMountErrorStatus_Success || asset_mount.mount == nullptr,
                      "fl_host: failed to mount working directory for assets");
-        vfs_wait_all();
+        fl_vfs_wait_all();
         host->asset_mount = asset_mount.mount;
         ui_set_asset_mount(host->asset_mount);
     }
@@ -161,7 +161,7 @@ void host_destroy(FlHost* host) {
     }
 
     // The font cache goes after the backend, which may hold a glyph cache built from these faces, and before
-    // vfs_destroy, because a face still loading owns a VFS handle that font_cache_destroy closes. Its FreeType
+    // fl_vfs_destroy, because a face still loading owns a VFS handle that font_cache_destroy closes. Its FreeType
     // library and per-face arenas are heap-owned, so the caller's arena does not reclaim them.
     if (host->font_cache) {
         font_cache_destroy(host->font_cache);
@@ -176,7 +176,7 @@ void host_destroy(FlHost* host) {
         host->owns_image_system = false;
     }
     if (host->owns_vfs) {
-        vfs_destroy();
+        fl_vfs_destroy();
         host->owns_vfs = false;
     }
 

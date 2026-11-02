@@ -527,7 +527,7 @@ UTEST(arena, thread_safe_allocation) {
     const int allocations_per_thread = 100;
 
     // MSVC doesn't support VLAs - use heap allocation
-    Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
+    FlOsThread* threads = (FlOsThread*)malloc(num_threads * sizeof(FlOsThread));
     ASSERT_NE(threads, NULL);
     ThreadTestData* thread_data = (ThreadTestData*)malloc(num_threads * sizeof(ThreadTestData));
     ASSERT_NE(thread_data, NULL);
@@ -540,11 +540,11 @@ UTEST(arena, thread_safe_allocation) {
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], thread_alloc_test, &thread_data[i]);
+        fl_os_thread_create(&threads[i], thread_alloc_test, &thread_data[i]);
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
 
     int total_errors = 0;
@@ -567,7 +567,7 @@ UTEST(arena, arena_mt_growth) {
     const int num_threads = 4;
 
     // MSVC doesn't support VLAs - use heap allocation
-    Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
+    FlOsThread* threads = (FlOsThread*)malloc(num_threads * sizeof(FlOsThread));
     ASSERT_NE(threads, NULL);
     ThreadTestData* thread_data = (ThreadTestData*)malloc(num_threads * sizeof(ThreadTestData));
     ASSERT_NE(thread_data, NULL);
@@ -580,11 +580,11 @@ UTEST(arena, arena_mt_growth) {
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], thread_large_alloc_test, &thread_data[i]);
+        fl_os_thread_create(&threads[i], thread_large_alloc_test, &thread_data[i]);
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
 
     int total_errors = 0;
@@ -723,7 +723,7 @@ UTEST(arena, high_contention_lock_free) {
     const int allocations_per_thread = 1000;
 
     // MSVC doesn't support VLAs - use heap allocation
-    Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
+    FlOsThread* threads = (FlOsThread*)malloc(num_threads * sizeof(FlOsThread));
     ASSERT_NE(threads, NULL);
     HighContentionTestData* thread_data
         = (HighContentionTestData*)calloc((size_t)num_threads, sizeof(HighContentionTestData));
@@ -740,11 +740,11 @@ UTEST(arena, high_contention_lock_free) {
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], high_contention_alloc_test, &thread_data[i]);
+        fl_os_thread_create(&threads[i], high_contention_alloc_test, &thread_data[i]);
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
 
     int total_errors = 0;
@@ -775,7 +775,7 @@ UTEST(arena, rapid_small_allocations) {
     const int allocations_per_thread = 5000;
 
     // MSVC doesn't support VLAs - use heap allocation
-    Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
+    FlOsThread* threads = (FlOsThread*)malloc(num_threads * sizeof(FlOsThread));
     ASSERT_NE(threads, NULL);
     HighContentionTestData* thread_data
         = (HighContentionTestData*)calloc((size_t)num_threads, sizeof(HighContentionTestData));
@@ -791,11 +791,11 @@ UTEST(arena, rapid_small_allocations) {
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], rapid_small_alloc_test, &thread_data[i]);
+        fl_os_thread_create(&threads[i], rapid_small_alloc_test, &thread_data[i]);
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
 
     int total_errors = 0;
@@ -823,7 +823,7 @@ UTEST(arena, mixed_size_high_contention) {
     const int allocations_per_thread = 500;
 
     // MSVC doesn't support VLAs - use heap allocation
-    Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
+    FlOsThread* threads = (FlOsThread*)malloc(num_threads * sizeof(FlOsThread));
     ASSERT_NE(threads, NULL);
     HighContentionTestData* thread_data
         = (HighContentionTestData*)calloc((size_t)num_threads, sizeof(HighContentionTestData));
@@ -839,11 +839,11 @@ UTEST(arena, mixed_size_high_contention) {
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], mixed_size_contention_test, &thread_data[i]);
+        fl_os_thread_create(&threads[i], mixed_size_contention_test, &thread_data[i]);
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
 
     int total_errors = 0;
@@ -874,7 +874,7 @@ UTEST(arena, stress_lock_free_rounds) {
         FlArenaMt* arena_mt = arena_mt_new();
 
         // MSVC doesn't support VLAs - use heap allocation
-        Thread* threads = (Thread*)malloc(threads_per_round * sizeof(Thread));
+        FlOsThread* threads = (FlOsThread*)malloc(threads_per_round * sizeof(FlOsThread));
         ASSERT_NE(threads, NULL);
         HighContentionTestData* thread_data
             = (HighContentionTestData*)malloc(threads_per_round * sizeof(HighContentionTestData));
@@ -891,11 +891,11 @@ UTEST(arena, stress_lock_free_rounds) {
         }
 
         for (int i = 0; i < threads_per_round; i++) {
-            os_thread_create(&threads[i], high_contention_alloc_test, &thread_data[i]);
+            fl_os_thread_create(&threads[i], high_contention_alloc_test, &thread_data[i]);
         }
 
         for (int i = 0; i < threads_per_round; i++) {
-            os_thread_join(&threads[i]);
+            fl_os_thread_join(&threads[i]);
         }
 
         int round_errors = 0;

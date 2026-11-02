@@ -168,36 +168,36 @@ bool fl_log_file_init(FlString base_dir) {
     if (base_dir.length > 0) {
         dir_path = fl_string_copy(s_log_arena, base_dir);
     } else {
-        const char* home = getenv_os("HOME");
+        const char* home = fl_os_getenv("HOME");
         if (home == nullptr) {
             return false;
         }
         FlString home_str = string_from_cstr(home);
-        dir_path = file_build_path_os(s_log_arena, home_str, fl_app_identity_data_dir_name());
+        dir_path = fl_os_build_path(s_log_arena, home_str, fl_app_identity_data_dir_name());
     }
 
-    if (!file_directory_exists_os(dir_path)) {
-        if (!file_create_directory_recursive_os(dir_path)) {
+    if (!fl_os_directory_exists(dir_path)) {
+        if (!fl_os_create_directory_recursive(dir_path)) {
             return false;
         }
     }
 
     FlString log_name = fl_app_identity_log_file_name();
-    FlString log_path = file_build_path_os(s_log_arena, dir_path, log_name);
+    FlString log_path = fl_os_build_path(s_log_arena, dir_path, log_name);
     FlString old_log_path
-        = file_build_path_os(s_log_arena, dir_path, fl_sprintf_arena(s_log_arena, "%S.old", log_name));
+        = fl_os_build_path(s_log_arena, dir_path, fl_sprintf_arena(s_log_arena, "%S.old", log_name));
 
     // Rotation overwrites the previous .old
-    if (file_exists_os(log_path)) {
+    if (fl_os_file_exists(log_path)) {
         file_rename_os(log_path, old_log_path);
     }
 
     // Close the fd from any previous init so re-init doesn't leak it
     mutex_lock(&s_log_file_mutex);
     if (s_log_file_fd >= 0) {
-        file_close_handle_os(s_log_file_fd);
+        fl_os_file_close_handle(s_log_file_fd);
     }
-    s_log_file_fd = file_open_write_os(log_path, false);
+    s_log_file_fd = fl_os_file_open_write(log_path, false);
     bool opened = s_log_file_fd >= 0;
     if (opened) {
         s_log_file_path = log_path;
@@ -214,7 +214,7 @@ void fl_log_file_shutdown(void) {
 
     mutex_lock(&s_log_file_mutex);
     if (s_log_file_fd >= 0) {
-        file_close_handle_os(s_log_file_fd);
+        fl_os_file_close_handle(s_log_file_fd);
         s_log_file_fd = -1;
     }
     mutex_unlock(&s_log_file_mutex);
@@ -244,7 +244,7 @@ static void log_file_write(FlString message) {
 
     mutex_lock(&s_log_file_mutex);
     if (s_log_file_fd >= 0) {
-        file_write_to_handle_os(s_log_file_fd, (const u8*)message.data, (i64)message.length);
+        fl_os_file_write_to_handle(s_log_file_fd, (const u8*)message.data, (i64)message.length);
     }
     mutex_unlock(&s_log_file_mutex);
 }
@@ -339,7 +339,7 @@ static void log_formatted_message_internal(LogChannelId id, LogLevel level, cons
 
     arena_scratch_auto(temp);
 
-    i64 timestamp = get_current_time_us_os();
+    i64 timestamp = fl_os_time_us();
     FlString timestamp_str = timestamp_format_os(temp.arena, timestamp);
     FlString channel_padded = format_channel_padded(temp.arena, channel_name);
 

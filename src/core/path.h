@@ -33,12 +33,3 @@ PathComponents path_components(struct FlArena* arena, FlString path);
 
 // Reconstruct a path from count segments starting at index start
 FlString path_reconstruct_from_segments(const PathComponents* components, int start, u32 count, struct FlArena* arena);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Directory searching and current directory utilities
-
-FlString path_get_current_directory(struct FlArena* arena);
-
-// Search the current directory and then each ancestor for a directory named start_directory.
-// Returns its full path, or an empty string if not found.
-FlString path_find_directory(struct FlArena* arena, FlString start_directory);

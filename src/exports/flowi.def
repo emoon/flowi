@@ -6,6 +6,10 @@ EXPORTS
     fl_app_headless_cursor_shape
     fl_app_headless_last_warp
     fl_app_headless_relative_mouse_mode
+    fl_app_identity_data_dir_name
+    fl_app_identity_file_watcher_queue
+    fl_app_identity_log_file_name
+    fl_app_identity_set
     fl_app_inject_drop_file
     fl_app_inject_key
     fl_app_inject_mouse_button
@@ -290,6 +294,36 @@ EXPORTS
     fl_modal_end
     fl_nav_down_pressed
     fl_nav_up_pressed
+    fl_os_build_path
+    fl_os_create_directory
+    fl_os_create_directory_recursive
+    fl_os_current_directory
+    fl_os_dir_close
+    fl_os_dir_open
+    fl_os_dir_read_next
+    fl_os_directory_exists
+    fl_os_file_close_handle
+    fl_os_file_delete
+    fl_os_file_exists
+    fl_os_file_open_write
+    fl_os_file_read
+    fl_os_file_size
+    fl_os_file_stat
+    fl_os_file_write
+    fl_os_file_write_to_handle
+    fl_os_getenv
+    fl_os_monotonic_ns
+    fl_os_process_id
+    fl_os_remove_directory
+    fl_os_remove_directory_recursive
+    fl_os_sleep_ms
+    fl_os_sleep_us
+    fl_os_temp_directory
+    fl_os_thread_create
+    fl_os_thread_join
+    fl_os_thread_set_name
+    fl_os_time_ms
+    fl_os_time_us
     fl_painter_arc
     fl_painter_bars
     fl_painter_circle
@@ -309,7 +343,9 @@ EXPORTS
     fl_painter_vline
     fl_path_ensure_trailing_separator
     fl_path_equals
+    fl_path_find_directory
     fl_path_get_basename
+    fl_path_get_current_directory
     fl_path_get_directory
     fl_path_get_extension
     fl_path_get_filename
@@ -415,6 +451,7 @@ EXPORTS
     fl_theme_update
     fl_ui_set_feedback_hook
     fl_vfs_close
+    fl_vfs_destroy
     fl_vfs_get_data
     fl_vfs_get_file_list
     fl_vfs_get_listing
@@ -430,8 +467,10 @@ EXPORTS
     fl_vfs_mount_with_options
     fl_vfs_read
     fl_vfs_register_builtin_drivers
+    fl_vfs_register_driver
     fl_vfs_set_priority
     fl_vfs_wait
+    fl_vfs_wait_all
     fl_viewport3d_begin
     fl_viewport3d_draw_lines
     fl_viewport3d_draw_mesh

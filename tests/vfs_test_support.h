@@ -237,8 +237,8 @@ static inline bool vfs_test_begin(void) {
 
 // Mounts path and waits for the mount job. nullptr when the mount did not become ready.
 static inline FlVfsMount* vfs_test_mount(FlString path) {
-    FlVfsMount* mount = vfs_mount(path).mount;
-    vfs_wait_all();
+    FlVfsMount* mount = fl_vfs_mount(path).mount;
+    fl_vfs_wait_all();
     return mount != nullptr && fl_vfs_mount_is_ready(mount) ? mount : nullptr;
 }
 
@@ -246,22 +246,22 @@ static inline FlVfsMount* vfs_test_mount(FlString path) {
 
 // A fresh, empty directory under the working directory for a case to put files in. Empty when it cannot be made.
 static inline FlString vfs_test_temp_dir(FlArena* arena, FlString name) {
-    FlString dir = file_build_path_os(arena, get_current_directory_os(arena), name);
-    file_remove_directory_recursive_os(dir);
-    return file_create_directory_os(dir) ? dir : FL_S("");
+    FlString dir = fl_os_build_path(arena, fl_os_current_directory(arena), name);
+    fl_os_remove_directory_recursive(dir);
+    return fl_os_create_directory(dir) ? dir : FL_S("");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline bool vfs_test_write_file(FlArena* arena, FlString dir, FlString name, const ByteWriter* bytes) {
-    FlString path = file_build_path_os(arena, dir, name);
-    return file_write_os(path, bytes->bytes, (i64)bytes->size) == (i64)bytes->size;
+    FlString path = fl_os_build_path(arena, dir, name);
+    return fl_os_file_write(path, bytes->bytes, (i64)bytes->size) == (i64)bytes->size;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline bool vfs_expect_read(FlVfsMount* mount, FlString path, FlString expected) {
-    FlVfsHandle handle = vfs_mount_read_all(mount, path);
+    FlVfsHandle handle = fl_vfs_mount_read_all(mount, path);
     fl_vfs_wait(handle);
     FlVfsData data = fl_vfs_get_data(handle);
     bool ok = data.success && (size_t)data.size == expected.length
@@ -277,7 +277,7 @@ static inline bool vfs_expect_read(FlVfsMount* mount, FlString path, FlString ex
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline bool vfs_expect_read_fails(FlVfsMount* mount, FlString path) {
-    FlVfsHandle handle = vfs_mount_read_all(mount, path);
+    FlVfsHandle handle = fl_vfs_mount_read_all(mount, path);
     fl_vfs_wait(handle);
     FlVfsData data = fl_vfs_get_data(handle);
     bool failed = !data.success && data.data == nullptr && data.size == 0;

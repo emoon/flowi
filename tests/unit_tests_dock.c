@@ -3666,16 +3666,16 @@ typedef struct DockTempDir {
 
 static DockTempDir dock_temp_dir_make(const char* name) {
     DockTempDir dir = { .arena = arena_new() };
-    FlString leaf = fl_sprintf_arena(dir.arena, "flowi_dock_%s_%u", name, get_process_id_os());
-    dir.path = file_build_path_os(dir.arena, get_temp_directory_os(dir.arena), leaf);
-    file_remove_directory_recursive_os(dir.path);
+    FlString leaf = fl_sprintf_arena(dir.arena, "flowi_dock_%s_%u", name, fl_os_process_id());
+    dir.path = fl_os_build_path(dir.arena, fl_os_temp_directory(dir.arena), leaf);
+    fl_os_remove_directory_recursive(dir.path);
     return dir;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dock_temp_dir_remove(DockTempDir* dir) {
-    file_remove_directory_recursive_os(dir->path);
+    fl_os_remove_directory_recursive(dir->path);
     fl_arena_destroy(dir->arena);
 }
 
@@ -3976,7 +3976,7 @@ UTEST(dock_persist, workspace_save_load_and_prune) {
 
     // No saved layout → load returns false so the caller keeps its default.
     FlDockWorkspace* ws3 = dock_workspace_create();
-    ASSERT_FALSE(dock_workspace_load(ws3, file_build_path_os(temp.arena, dir, FL_S("absent")), nullptr, 0));
+    ASSERT_FALSE(dock_workspace_load(ws3, fl_os_build_path(temp.arena, dir, FL_S("absent")), nullptr, 0));
 
     dock_workspace_destroy(ws);
     dock_workspace_destroy(ws2);
@@ -4017,7 +4017,7 @@ UTEST(dock_persist, prune_logs_the_drop) {
     ASSERT_TRUE(dock_tree_find_leaf_with_panel(load.workspaces[0].tree, 4242) == nullptr);
 
     u8 buffer[16384] = { 0 };
-    const i64 bytes = file_read_os(buffer, fl_log_file_get_path(), (i64)sizeof(buffer) - 1);
+    const i64 bytes = fl_os_file_read(buffer, fl_log_file_get_path(), (i64)sizeof(buffer) - 1);
     ASSERT_TRUE(bytes > 0);
     ASSERT_TRUE(strstr((const char*)buffer, "saved panel 4242 is not declared this session") != nullptr);
 

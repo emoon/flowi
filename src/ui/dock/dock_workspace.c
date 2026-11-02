@@ -232,9 +232,9 @@ bool dock_workspace_save(FlDockWorkspace* ws, FlString settings_dir) {
         return false;
     }
 
-    file_create_directory_recursive_os(settings_dir);
+    fl_os_create_directory_recursive(settings_dir);
     FlString path = fl_path_join(temp.arena, settings_dir, DOCK_LAYOUT_FILE);
-    return file_write_os(path, (const u8*)json.data, (i64)json.length) >= 0;
+    return fl_os_file_write(path, (const u8*)json.data, (i64)json.length) >= 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -244,12 +244,12 @@ bool dock_workspace_load(FlDockWorkspace* ws, FlString settings_dir, const FlDoc
     arena_scratch_auto(temp);
 
     FlString path = fl_path_join(temp.arena, settings_dir, DOCK_LAYOUT_FILE);
-    i64 size = file_get_size_os(path);
+    i64 size = fl_os_file_size(path);
     if (size <= 0) {
         return false; // no saved layout - caller keeps its default
     }
     u8* buffer = arena_alloc_array(temp.arena, u8, (u64)size + 1);
-    i64 read = file_read_os(buffer, path, size);
+    i64 read = fl_os_file_read(buffer, path, size);
     if (read <= 0) {
         return false;
     }

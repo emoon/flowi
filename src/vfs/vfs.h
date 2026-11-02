@@ -4,6 +4,7 @@
 #include <core/jobsys.h>
 #include <core/types.h>
 #include <flowi/vfs/vfs_api.h>
+#include <flowi/vfs/vfs_host.h>
 #include <flowi/vfs/vfs_plugin.h>
 
 struct FlArena;
@@ -46,16 +47,6 @@ typedef void (*VfsListingCallback)(FlVfsEntry entry, void* user_data);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Initialize the VFS system. Registers the built-in LocalFS driver, which stays the catch-all fallback,
-// tried after every driver registered later via vfs_register_driver().
-// Returns true if this call initialized the VFS (the caller owns it and should call vfs_destroy),
-// false if it was already initialized (first-caller-wins; this call was a no-op).
-bool fl_vfs_init(struct FlArena* arena);
-
-void vfs_destroy(void);
-
-// Convenience macro for mounting with default options
-#define vfs_mount(source_path) fl_vfs_mount_with_options(source_path, (FlVfsMountOptions) { 0 })
 
 // Returns 0 if the mount completed synchronously
 FlJobHandle fl_vfs_mount_get_job_handle(FlVfsMount* mount);
@@ -65,14 +56,6 @@ u64 vfs_mount_get_id(const FlVfsMount* mount);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-typedef struct VfsReadOptions {
-    FlVfsReadCallback callback;
-    void* user_data;
-    FlVfsReleaseCallback release; // Runs once with user_data when the handle is freed (see FlVfsReleaseCallback)
-    FlVfsHandle reuse_handle;     // Handle to reuse (or FL_VFS_HANDLE_INVALID/0)
-} VfsReadOptions;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File Operations on Mounts
 
 // Two-phase read: allocate handle without dispatching the job.
@@ -83,12 +66,6 @@ FlVfsHandle vfs_mount_read_all_prepare(FlVfsMount* mount, FlString relative_path
 // Dispatch a previously prepared handle (from vfs_mount_read_all_prepare).
 void vfs_dispatch(FlVfsHandle handle);
 
-#define vfs_mount_read_all(mount, path, ...)                                                            \
-    ({                                                                                                  \
-        VfsReadOptions _opts = { __VA_ARGS__ };                                                         \
-        fl_vfs_mount_read_all_with_options(mount, path, _opts.callback, _opts.user_data, _opts.release, \
-                                           _opts.reuse_handle);                                         \
-    })
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Handle Operations
@@ -114,11 +91,8 @@ void vfs_dispatch(FlVfsHandle handle);
 // still open on it. On the main thread it then waits until the last of them has ended and run its release hook; on
 // a worker it returns at once, and the mount is freed when the last operation holding it ends, so a buffer lent to
 // a fl_vfs_read must outlive that read's job. A release hook must not close the mount its own operation belongs to from
-// the main thread: the close waits for that operation to be destroyed. vfs_destroy() is main-thread teardown.
+// the main thread: the close waits for that operation to be destroyed. fl_vfs_destroy() is main-thread teardown.
 
-// Waits for the job of every live operation, including ones whose id was already closed. For startup and teardown
-// on the main thread, where a mount's first job must have run before the frame loop issues work against it.
-void vfs_wait_all(void);
 
 VfsOpStatus vfs_get_status(FlVfsHandle handle);
 
@@ -143,6 +117,4 @@ static inline bool vfs_is_pending(VfsOpStatus status) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Driver Registration (for extending VFS)
 //
-// Hand a constructed driver to the VFS. Call after fl_vfs_init(). The plugin pointer must outlive the VFS.
-// instance: Optional driver instance handle passed to every driver op (NULL for stateless drivers)
-void vfs_register_driver(const FlVfsPlugin* plugin, void* instance);
+

@@ -672,9 +672,9 @@ static void sdl_present(void* ud, FlWindow* window, u32 surface_texture, u32 tex
     if (self->last_present != 0) {
         double elapsed = (double)(now - self->last_present) / (double)SDL_GetPerformanceFrequency();
         if (elapsed < target) {
-            Uint32 sleep_ms = (Uint32)((target - elapsed) * 1000.0);
-            if (sleep_ms > 0) {
-                SDL_Delay(sleep_ms);
+            Uint32 fl_os_sleep_ms = (Uint32)((target - elapsed) * 1000.0);
+            if (fl_os_sleep_ms > 0) {
+                SDL_Delay(fl_os_sleep_ms);
             }
         }
     }

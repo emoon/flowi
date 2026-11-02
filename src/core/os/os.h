@@ -2,6 +2,7 @@
 
 #include "../string.h"
 #include "../types.h"
+#include <flowi/core/os.h>
 
 struct FlArena;
 
@@ -26,12 +27,8 @@ OsPath string_to_os_path(struct FlArena* arena, FlString path);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-i64 file_get_size_os(FlString path);
-i64 file_read_os(u8* dest, FlString path, const i64 buffer_size);
-i64 file_write_os(FlString path, const u8* data, i64 size);
 i64 file_open_os(FlString path, const int flags);
 i64 file_read_from_handle_os(u8* dest, const i64 fd, const i64 file_size, const i64 buffer_size);
-void file_close_handle_os(i64 fd);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Read-only file memory mapping
@@ -55,46 +52,15 @@ void file_mmap_close_os(FileMmap* mmap);
 
 // append: append to an existing file; false truncates/creates.
 // Returns a file descriptor (>= 0) on success, -1 on failure
-i64 file_open_write_os(FlString path, bool append);
 
 // Returns the number of bytes written, or -1 on failure
-i64 file_write_to_handle_os(i64 fd, const u8* data, i64 size);
 
 bool file_rename_os(FlString old_path, FlString new_path);
-bool file_exists_os(FlString path);
-bool file_directory_exists_os(FlString path);
-bool file_create_directory_os(FlString path);
-bool file_create_directory_recursive_os(FlString path);
-bool file_remove_directory_os(FlString path);
-bool file_remove_directory_recursive_os(FlString path);
-void file_delete_os(FlString path);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File system information and directory operations
 
-typedef struct FileStat {
-    FlString name; // Only set for directory listings
-    u64 size;
-    u64 modification_time;
-    bool is_directory;
-    bool is_regular_file;
-    bool is_symlink;
-    bool is_valid; // false = end of directory or error
-    u32 mode;
-} FileStat;
 
-FileStat file_stat_os(FlString path);
-FlString file_build_path_os(struct FlArena* arena, FlString base_path, FlString relative_path);
-
-typedef struct DirHandle {
-    void* platform_data; // Allocated on the arena passed to dir_open_os
-    FlString base_path;
-    bool is_valid;
-} DirHandle;
-
-DirHandle dir_open_os(struct FlArena* arena, FlString path);
-FileStat dir_read_next_os(struct FlArena* arena, DirHandle* dir);
-void dir_close_os(DirHandle* dir);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -102,12 +68,9 @@ void stderr_write_os(FlString str);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-i64 get_current_time_us_os(void);
-u64 get_current_time_ms_os(void);
 FlString timestamp_format_os(struct FlArena* arena, i64 timestamp_us);
 
 // Returns nanoseconds since an arbitrary starting point (only for computing durations)
-u64 get_monotonic_time_ns_os(void);
 
 // Convert a monotonic tick count to nanoseconds without overflowing: splitting
 // into whole seconds and remainder ticks keeps every intermediate below
@@ -120,8 +83,6 @@ static inline u64 monotonic_ticks_to_ns(u64 ticks, u64 ticks_per_second) {
 }
 
 // Note: Actual precision depends on OS scheduler (typically 1-15ms on most systems)
-void sleep_us(u64 microseconds);
-void sleep_ms(u64 milliseconds);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -168,26 +129,17 @@ void condvar_destroy(CondVar* condvar);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Thread management
 
-typedef struct Thread {
-    u8 data[64];
-} Thread;
-
-typedef void* (*ThreadFunc)(void* user_data);
-
-bool os_thread_create(Thread* thread, ThreadFunc func, void* user_data);
 
 // Returns the value returned by the thread function
-void* os_thread_join(Thread* thread);
 
 u64 os_thread_get_current_id(void);
 
 // name must be at most 15 characters on Linux (pthread_setname_np fails on longer names)
-void os_thread_set_name(const char* name);
 
 // thread: nullptr = current thread. True only when the requested affinity was applied; false on
 // failure, on a cpu id outside the platform's range, and on platforms that perform no affinity work
 // at all. Linux is the only one that performs any; an empty list there is a no-op that succeeds.
-bool os_thread_set_affinity(Thread* thread, const int* cpu_ids, int count);
+bool os_thread_set_affinity(FlOsThread* thread, const int* cpu_ids, int count);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Memory management functions
@@ -210,11 +162,8 @@ ArenaError release_range_os(void* ptr, u64 size);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System information and utilities
 
-FlString get_temp_directory_os(struct FlArena* arena);
 
-FlString get_current_directory_os(struct FlArena* arena);
 
-u32 get_process_id_os(void);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Disk space information
@@ -242,7 +191,6 @@ void os_disk_space_test_force_statvfs_failure(bool enable);
 // Set environment variables before spawning threads that may read them.
 
 // Returns pointer to value (do not modify), or nullptr if not found
-const char* getenv_os(const char* name);
 
 // overwrite: if non-zero, overwrite an existing value
 // Returns 0 on success, non-zero on failure

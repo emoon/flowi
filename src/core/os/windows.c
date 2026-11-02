@@ -72,7 +72,7 @@ static FlString wide_to_string(struct FlArena* arena, const wchar_t* wide) {
 }
 
 // The caller owns result.name and result.is_valid.
-static void filestat_from_attributes(FileStat* result, DWORD file_attributes, DWORD size_low, DWORD size_high,
+static void filestat_from_attributes(FlOsFileStat* result, DWORD file_attributes, DWORD size_low, DWORD size_high,
                                      FILETIME write_time) {
     LARGE_INTEGER size;
     size.LowPart = size_low;
@@ -103,7 +103,7 @@ static void std_write(DWORD which, FlString str) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-i64 file_get_size_os(FlString path) {
+i64 fl_os_file_size(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
 
@@ -138,7 +138,7 @@ bool file_rename_os(FlString old_path, FlString new_path) {
 i64 file_read_from_handle_os(u8* dest, const i64 handle, const i64 file_size, const i64 buffer_size) {
     HANDLE file = (HANDLE)handle;
     const i64 read_size = (buffer_size < file_size) ? buffer_size : file_size;
-    // A negative size (e.g. file_get_size_os's -1 failure sentinel) would be reinterpreted
+    // A negative size (e.g. fl_os_file_size's -1 failure sentinel) would be reinterpreted
     // as a huge DWORD by ReadFile, turning it into an unbounded over-read of dest.
     if (read_size < 0) {
         return -1;
@@ -154,21 +154,21 @@ i64 file_read_from_handle_os(u8* dest, const i64 handle, const i64 file_size, co
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-i64 file_read_os(u8* dest, FlString path, const i64 buffer_size) {
+i64 fl_os_file_read(u8* dest, FlString path, const i64 buffer_size) {
     const i64 file_handle = file_open_os(path, 0);
     if (file_handle < 0) {
         return -1;
     }
 
-    const i64 file_size = file_get_size_os(path);
+    const i64 file_size = fl_os_file_size(path);
     if (file_size < 0) {
-        file_close_handle_os(file_handle);
+        fl_os_file_close_handle(file_handle);
         return -1;
     }
 
     const i64 ret_size = file_read_from_handle_os(dest, file_handle, file_size, buffer_size);
 
-    file_close_handle_os(file_handle);
+    fl_os_file_close_handle(file_handle);
     return ret_size;
 }
 
@@ -189,7 +189,7 @@ i64 file_open_os(FlString path, const int flags) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void file_close_handle_os(const i64 handle) {
+void fl_os_file_close_handle(const i64 handle) {
     CloseHandle((HANDLE)handle);
 }
 
@@ -250,7 +250,7 @@ void file_mmap_close_os(FileMmap* mmap) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-i64 file_open_write_os(FlString path, bool append) {
+i64 fl_os_file_open_write(FlString path, bool append) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
 
@@ -274,7 +274,7 @@ i64 file_open_write_os(FlString path, bool append) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-i64 file_write_to_handle_os(i64 fd, const u8* data, i64 size) {
+i64 fl_os_file_write_to_handle(i64 fd, const u8* data, i64 size) {
     if (fd < 0 || data == nullptr || size <= 0) {
         return -1;
     }
@@ -295,7 +295,7 @@ void stderr_write_os(FlString str) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-i64 get_current_time_us_os(void) {
+i64 fl_os_time_us(void) {
     // The Precise variant, not GetSystemTimeAsFileTime: the latter ticks at the ~15 ms scheduler interval, so
     // callers that use the value to tell two events apart - arena identity in the watchdog - see them collide.
     FILETIME ft;
@@ -305,7 +305,7 @@ i64 get_current_time_us_os(void) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u64 get_monotonic_time_ns_os(void) {
+u64 fl_os_monotonic_ns(void) {
     LARGE_INTEGER counter, frequency;
 
     if (!QueryPerformanceCounter(&counter)) {
@@ -462,7 +462,7 @@ ArenaError release_range_os(void* ptr, u64 size) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File system operations
 
-bool file_exists_os(FlString path) {
+bool fl_os_file_exists(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     DWORD attrs = GetFileAttributesW(os_path_str(os_path));
@@ -471,7 +471,7 @@ bool file_exists_os(FlString path) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool file_directory_exists_os(FlString path) {
+bool fl_os_directory_exists(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     DWORD attrs = GetFileAttributesW(os_path_str(os_path));
@@ -480,7 +480,7 @@ bool file_directory_exists_os(FlString path) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool file_create_directory_os(FlString path) {
+bool fl_os_create_directory(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     BOOL success = CreateDirectoryW(os_path_str(os_path), nullptr);
@@ -489,12 +489,12 @@ bool file_create_directory_os(FlString path) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool file_create_directory_recursive_os(FlString path) {
+bool fl_os_create_directory_recursive(FlString path) {
     if (string_is_empty(path)) {
         return false;
     }
 
-    if (file_directory_exists_os(path)) {
+    if (fl_os_directory_exists(path)) {
         return true;
     }
 
@@ -527,8 +527,8 @@ bool file_create_directory_recursive_os(FlString path) {
         // call; the component existing is the desired outcome, so only a create failure with the
         // directory still absent is an error.
         FlString component = (FlString) { .data = path_copy, .length = (u64)(p - path_copy) };
-        if (!file_directory_exists_os(component)) {
-            if (!file_create_directory_os(component) && !file_directory_exists_os(component)) {
+        if (!fl_os_directory_exists(component)) {
+            if (!fl_os_create_directory(component) && !fl_os_directory_exists(component)) {
                 return false;
             }
         }
@@ -544,7 +544,7 @@ bool file_create_directory_recursive_os(FlString path) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void file_delete_os(FlString path) {
+void fl_os_file_delete(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     DeleteFileW(os_path_str(os_path));
@@ -552,7 +552,7 @@ void file_delete_os(FlString path) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-i64 file_write_os(FlString path, const u8* data, i64 size) {
+i64 fl_os_file_write(FlString path, const u8* data, i64 size) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
 
@@ -576,7 +576,7 @@ i64 file_write_os(FlString path, const u8* data, i64 size) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool file_remove_directory_os(FlString path) {
+bool fl_os_remove_directory(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     BOOL success = RemoveDirectoryW(os_path_str(os_path));
@@ -585,7 +585,7 @@ bool file_remove_directory_os(FlString path) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool file_remove_directory_recursive_os(FlString path) {
+bool fl_os_remove_directory_recursive(FlString path) {
     arena_scratch_auto(temp);
 
     FlString search_pattern = fl_string_concat(temp.arena, path, FL_S("\\*"));
@@ -602,16 +602,16 @@ bool file_remove_directory_recursive_os(FlString path) {
 
             FlString item_name = wide_to_string(temp.arena, find_data.cFileName);
             if (!string_is_empty(item_name)) {
-                FlString item_path = file_build_path_os(temp.arena, path, item_name);
+                FlString item_path = fl_os_build_path(temp.arena, path, item_name);
 
                 bool is_directory = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
                 bool is_link = (find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
                 if (is_directory && is_link) {
-                    file_remove_directory_os(item_path);
+                    fl_os_remove_directory(item_path);
                 } else if (is_directory) {
-                    file_remove_directory_recursive_os(item_path);
+                    fl_os_remove_directory_recursive(item_path);
                 } else {
-                    file_delete_os(item_path);
+                    fl_os_file_delete(item_path);
                 }
             }
         } while (FindNextFileW(find_handle, &find_data));
@@ -619,13 +619,13 @@ bool file_remove_directory_recursive_os(FlString path) {
         FindClose(find_handle);
     }
 
-    bool success = file_remove_directory_os(path);
+    bool success = fl_os_remove_directory(path);
     return success;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u64 get_current_time_ms_os(void) {
+u64 fl_os_time_ms(void) {
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
     return filetime_to_unix_ms(ft);
@@ -634,8 +634,8 @@ u64 get_current_time_ms_os(void) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File system information and directory operations
 
-FileStat file_stat_os(FlString path) {
-    FileStat result = { 0 };
+FlOsFileStat fl_os_file_stat(FlString path) {
+    FlOsFileStat result = { 0 };
 
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
@@ -653,7 +653,7 @@ FileStat file_stat_os(FlString path) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlString file_build_path_os(struct FlArena* arena, FlString base_path, FlString relative_path) {
+FlString fl_os_build_path(struct FlArena* arena, FlString base_path, FlString relative_path) {
     if (base_path.length == 0) {
         return fl_string_copy(arena, relative_path);
     }
@@ -685,8 +685,8 @@ typedef struct WindowsDirData {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-DirHandle dir_open_os(FlArena* arena, FlString path) {
-    DirHandle handle = { 0 };
+FlOsDir fl_os_dir_open(FlArena* arena, FlString path) {
+    FlOsDir handle = { 0 };
 
     FlString search_pattern = fl_string_concat(arena, path, FL_S("\\*"));
     OsPath os_path = string_to_os_path(arena, search_pattern);
@@ -710,8 +710,8 @@ DirHandle dir_open_os(FlArena* arena, FlString path) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
-    FileStat result = { 0 };
+FlOsFileStat fl_os_dir_read_next(FlArena* arena, FlOsDir* dir_handle) {
+    FlOsFileStat result = { 0 };
     result.is_valid = false;
 
     if (!dir_handle || !dir_handle->is_valid) {
@@ -763,7 +763,7 @@ FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void dir_close_os(DirHandle* dir_handle) {
+void fl_os_dir_close(FlOsDir* dir_handle) {
     if (dir_handle && dir_handle->is_valid) {
         WindowsDirData* dir_data = (WindowsDirData*)dir_handle->platform_data;
         if (dir_data->find_handle != INVALID_HANDLE_VALUE) {
@@ -777,7 +777,7 @@ void dir_close_os(DirHandle* dir_handle) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System information and utilities
 
-FlString get_temp_directory_os(struct FlArena* arena) {
+FlString fl_os_temp_directory(struct FlArena* arena) {
     wchar_t temp_path[MAX_PATH];
     DWORD result = GetTempPathW(MAX_PATH, temp_path);
     if (result == 0 || result > MAX_PATH) {
@@ -798,7 +798,7 @@ FlString get_temp_directory_os(struct FlArena* arena) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlString get_current_directory_os(struct FlArena* arena) {
+FlString fl_os_current_directory(struct FlArena* arena) {
     // Windows extended path support allows up to 32,767 characters
     const DWORD initial_size = 32768;
     wchar_t* buffer = arena_alloc_array(arena, wchar_t, initial_size);
@@ -822,7 +822,7 @@ FlString get_current_directory_os(struct FlArena* arena) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-u32 get_process_id_os(void) {
+u32 fl_os_process_id(void) {
     return GetCurrentProcessId();
 }
 
@@ -834,10 +834,10 @@ typedef struct {
     DWORD thread_id;
 } WindowsThread;
 
-_Static_assert(sizeof(WindowsThread) <= sizeof(Thread), "Thread structure too small for Windows thread handle");
+_Static_assert(sizeof(WindowsThread) <= sizeof(FlOsThread), "FlOsThread structure too small for Windows thread handle");
 
 typedef struct {
-    ThreadFunc func;
+    FlOsThreadFunc func;
     void* user_data;
 } ThreadStartData;
 
@@ -845,7 +845,7 @@ typedef struct {
 
 static DWORD WINAPI thread_entry_adapter(LPVOID param) {
     ThreadStartData* data = (ThreadStartData*)param;
-    ThreadFunc func = data->func;
+    FlOsThreadFunc func = data->func;
     void* user_data = data->user_data;
 
     // Free the adapter data (allocated by thread_create)
@@ -859,7 +859,7 @@ static DWORD WINAPI thread_entry_adapter(LPVOID param) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool os_thread_create(Thread* thread, ThreadFunc func, void* user_data) {
+bool fl_os_thread_create(FlOsThread* thread, FlOsThreadFunc func, void* user_data) {
     WindowsThread* wt = (WindowsThread*)thread;
 
     // Allocate adapter data (freed by thread_entry_adapter)
@@ -889,7 +889,7 @@ bool os_thread_create(Thread* thread, ThreadFunc func, void* user_data) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void* os_thread_join(Thread* thread) {
+void* fl_os_thread_join(FlOsThread* thread) {
     WindowsThread* wt = (WindowsThread*)thread;
 
     WaitForSingleObject(wt->handle, INFINITE);
@@ -912,7 +912,7 @@ u64 os_thread_get_current_id(void) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void os_thread_set_name(const char* name) {
+void fl_os_thread_set_name(const char* name) {
     wchar_t wide_name[64];
     int len = MultiByteToWideChar(CP_UTF8, 0, name, -1, wide_name, 64);
     if (len > 0) {
@@ -922,7 +922,7 @@ void os_thread_set_name(const char* name) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool os_thread_set_affinity(Thread* thread, const int* cpu_ids, int count) {
+bool os_thread_set_affinity(FlOsThread* thread, const int* cpu_ids, int count) {
     (void)thread;
     (void)cpu_ids;
     (void)count;
@@ -932,7 +932,7 @@ bool os_thread_set_affinity(Thread* thread, const int* cpu_ids, int count) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Sleep functions
 
-void sleep_us(u64 microseconds) {
+void fl_os_sleep_us(u64 microseconds) {
     // Windows Sleep() only supports millisecond precision
     DWORD ms = (DWORD)((microseconds + 999) / 1000); // Round up
     if (ms == 0 && microseconds > 0) {
@@ -943,14 +943,14 @@ void sleep_us(u64 microseconds) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void sleep_ms(u64 milliseconds) {
+void fl_os_sleep_ms(u64 milliseconds) {
     Sleep((DWORD)milliseconds);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Environment variables
 
-const char* getenv_os(const char* name) {
+const char* fl_os_getenv(const char* name) {
     return getenv(name);
 }
 

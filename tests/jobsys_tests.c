@@ -35,7 +35,7 @@ static void increment_counter(void* data, FlJobsWorkerInfo info) {
 static void delayed_job(void* data, FlJobsWorkerInfo info) {
     (void)info;
     DelayedJob* job = (DelayedJob*)data;
-    sleep_us(job->delay_ms * 1000);
+    fl_os_sleep_us(job->delay_ms * 1000);
     atomic_fetch_add(&global_counter, 1);
 }
 
@@ -50,7 +50,7 @@ static void gated_job(void* data, FlJobsWorkerInfo info) {
     (void)info;
     GatedJob* gate = (GatedJob*)data;
     while (!atomic_load(&gate->release)) {
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
     atomic_fetch_add(&global_counter, 1);
 }
@@ -95,7 +95,7 @@ static void ordered_job_c(void* data, FlJobsWorkerInfo info) {
 static void slow_job(void* data, FlJobsWorkerInfo info) {
     (void)info;
     DependencyTestData* test_data = (DependencyTestData*)data;
-    sleep_us(100000); // 100ms delay
+    fl_os_sleep_us(100000); // 100ms delay
     int order = atomic_fetch_add(&test_data->next_order, 1);
     atomic_store(&test_data->execution_order[0], order);
 }
@@ -467,7 +467,7 @@ static void worker_dep_gate_job(void* data, FlJobsWorkerInfo info) {
     WorkerDepCtx* ctx = (WorkerDepCtx*)data;
     atomic_store(&ctx->gate_started, true);
     while (!atomic_load(&ctx->gate_release)) {
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
     // The gate's last act, so a dependent that ran inline reads false here and one promoted afterwards
     // reads true.
@@ -506,9 +506,9 @@ UTEST_F(jobs_2t, worker_submitted_dependent_waits_for_its_dependency) {
 
     bool gate_running = ctx.dependency != 0;
     if (gate_running) {
-        u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+        u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
         while (!atomic_load(&ctx.gate_started)) {
-            if (get_monotonic_time_ns_os() >= deadline_ns) {
+            if (fl_os_monotonic_ns() >= deadline_ns) {
                 gate_running = false;
                 break;
             }
@@ -617,19 +617,19 @@ UTEST_F(jobs_8t, stale_handle_never_reports_not_finished) {
 
     // Oversubscribe the fixture's workers so threads get preempted mid-query and actually straddle a
     // recycle instead of always winning both loads before one can land.
-    Thread threads[STALE_HANDLE_THREADS];
+    FlOsThread threads[STALE_HANDLE_THREADS];
     for (int i = 0; i < STALE_HANDLE_THREADS; i++) {
-        ASSERT_TRUE(os_thread_create(&threads[i], stale_handle_race_thread, &ctx));
+        ASSERT_TRUE(fl_os_thread_create(&threads[i], stale_handle_race_thread, &ctx));
     }
 
     while (atomic_load(&ctx.cycles) < STALE_HANDLE_TARGET_CYCLES && !atomic_load(&ctx.saw_not_finished)) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
 
     // Stop and join before asserting: an early return would leave threads running against a stack context.
     atomic_store(&ctx.stop, true);
     for (int i = 0; i < STALE_HANDLE_THREADS; i++) {
-        os_thread_join(&threads[i]);
+        fl_os_thread_join(&threads[i]);
     }
 
     ASSERT_GT((int)atomic_load(&ctx.cycles), 0);

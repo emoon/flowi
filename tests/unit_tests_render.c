@@ -84,15 +84,15 @@ UTEST(font_cache, missing_font_file_settles_to_failed) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     FlFontCache* cache = font_cache_new(s_arena);
     FlFontId font = font_cache_load_font(cache, mount.mount, FL_S("no_such_font.ttf"), 16);
     ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "the async load starts even though the file is absent");
 
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_EQ_MSG((int)font_cache_get_font_status(cache, font), (int)FontStatus_Failed,
                   "a read that never delivers data must still settle the face, not leave it pending");
 
@@ -350,7 +350,7 @@ UTEST(sw_glyph_cache, concurrent_atlas_jobs_and_on_demand) {
     // each atlas turns Ready so it overlaps the jobs still running. The on-demand result is intentionally
     // unchecked: the embedded test font maps no non-ASCII codepoint.
     const Glyph* glyphs[4] = { 0 };
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     bool all_ready = false;
     while (!all_ready) {
         all_ready = true;
@@ -365,10 +365,10 @@ UTEST(sw_glyph_cache, concurrent_atlas_jobs_and_on_demand) {
                 (void)sw_glyph_cache_get(sw, font, sizes[i], 0x00E9);
             }
         }
-        ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns,
+        ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns,
                         "atlas rasterization jobs did not all complete within the deadline");
         if (!all_ready) {
-            sleep_us(200);
+            fl_os_sleep_us(200);
         }
     }
 
@@ -2022,7 +2022,7 @@ UTEST(prepare_image, deferred_to_begin_frame_pump) {
     // Decode runs in the job worker; once complete the request must be queued - not invoked.
     int waited = 0;
     while (!image_system_prepare_pending(sys, id) && waited < PREPARE_POLL_TIMEOUT_MS) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
         waited++;
     }
     ASSERT_TRUE(image_system_prepare_pending(sys, id));
@@ -2066,7 +2066,7 @@ UTEST(prepare_image, job_context_when_flag_set) {
     // No pumping: the decode job itself must invoke the seam.
     int waited = 0;
     while (atomic_load(&stats.call_count) == 0 && waited < PREPARE_POLL_TIMEOUT_MS) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
         waited++;
     }
     ASSERT_EQ(atomic_load(&stats.call_count), 1);
@@ -2087,7 +2087,7 @@ static bool wait_synthetic_settled(ImageSystem* sys, FlImageLoadRequestId id) {
         if (!image_system_load_is_active_synthetic(sys, id)) {
             return true;
         }
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     return false;
 }
@@ -2139,7 +2139,7 @@ UTEST(prepare_image, memory_load_stays_active_until_deferred_pump) {
     ASSERT_NE(id, (FlImageLoadRequestId)FL_IMAGE_LOAD_REQUEST_ID_INVALID);
 
     for (int waited = 0; !image_system_prepare_pending(sys, id) && waited < PREPARE_POLL_TIMEOUT_MS; waited++) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     ASSERT_TRUE(image_system_prepare_pending(sys, id));
     ASSERT_TRUE_MSG(image_system_load_is_active_synthetic(sys, id), "a queued prepare is still awaiting its ack");
@@ -2187,9 +2187,9 @@ UTEST(image_load, copies_caller_path_before_async_read) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all(); // drain the async mount before reading
+    fl_vfs_wait_all(); // drain the async mount before reading
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     PathCaptureStats stats = { 0 };
@@ -2213,7 +2213,7 @@ UTEST(image_load, copies_caller_path_before_async_read) {
 
     int waited = 0;
     while (atomic_load(&stats.call_count) == 0 && waited < PREPARE_POLL_TIMEOUT_MS) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
         waited++;
     }
     ASSERT_EQ(atomic_load(&stats.call_count), 1);
@@ -2250,7 +2250,7 @@ static int count_recycled_context_slots(ImageSystem* sys, FlVfsMount* mount, FlS
         if (id == (FlImageLoadRequestId)FL_IMAGE_LOAD_REQUEST_ID_INVALID) {
             return -1;
         }
-        vfs_wait_all();
+        fl_vfs_wait_all();
 
         void* reclaimed = fl_jobs_alloc_context(sizeof(void*));
         if (reclaimed == parked) {
@@ -2267,9 +2267,9 @@ UTEST(image_load, load_recycles_job_context_slot) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     FlRenderBackend backend = { 0 };
     ImageSystem* sys = image_system_create(s_arena, &backend);
@@ -2307,7 +2307,7 @@ static bool gated_prepare_image(void* user_data, FlImageLoadRequestId request_id
     GatedBackend* b = (GatedBackend*)user_data;
     atomic_fetch_add(&b->entered, 1);
     while (!atomic_load(&b->gate_open)) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     atomic_fetch_add(&b->finished, 1);
     return false;
@@ -2335,7 +2335,7 @@ static void* destroy_thread_main(void* user_data) {
 static bool wait_for_entered(GatedBackend* b, int count) {
     int waited = 0;
     while (atomic_load(&b->entered) < count && waited < PREPARE_POLL_TIMEOUT_MS) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
         waited++;
     }
     return atomic_load(&b->entered) >= count;
@@ -2355,15 +2355,15 @@ UTEST(image_teardown, destroy_waits_for_worker_in_prepare) {
     ASSERT_TRUE(wait_for_entered(&b, 1));
 
     DestroyThread d = { .sys = sys };
-    Thread thread;
-    ASSERT_TRUE(os_thread_create(&thread, destroy_thread_main, &d));
+    FlOsThread thread;
+    ASSERT_TRUE(fl_os_thread_create(&thread, destroy_thread_main, &d));
 
-    sleep_ms(DESTROY_BLOCKED_PROBE_MS);
+    fl_os_sleep_ms(DESTROY_BLOCKED_PROBE_MS);
     const bool done_while_gated = atomic_load(&d.done);
     const int finished_while_gated = atomic_load(&b.finished);
 
     atomic_store(&b.gate_open, true);
-    os_thread_join(&thread);
+    fl_os_thread_join(&thread);
     ASSERT_FALSE(done_while_gated);
     ASSERT_EQ(finished_while_gated, 0);
     ASSERT_TRUE(atomic_load(&d.done));
@@ -2389,13 +2389,13 @@ UTEST(image_teardown, burst_past_pending_capacity_is_tracked_and_drained) {
     ASSERT_EQ(image_system_pending_job_count(sys), (u32)TEARDOWN_BURST);
 
     DestroyThread d = { .sys = sys };
-    Thread thread;
-    ASSERT_TRUE(os_thread_create(&thread, destroy_thread_main, &d));
-    sleep_ms(DESTROY_BLOCKED_PROBE_MS);
+    FlOsThread thread;
+    ASSERT_TRUE(fl_os_thread_create(&thread, destroy_thread_main, &d));
+    fl_os_sleep_ms(DESTROY_BLOCKED_PROBE_MS);
     const bool done_while_gated = atomic_load(&d.done);
 
     atomic_store(&b.gate_open, true);
-    os_thread_join(&thread);
+    fl_os_thread_join(&thread);
     ASSERT_FALSE(done_while_gated);
     ASSERT_TRUE(atomic_load(&d.done));
 
@@ -2404,7 +2404,7 @@ UTEST(image_teardown, burst_past_pending_capacity_is_tracked_and_drained) {
     int entered = atomic_load(&b.entered);
     ASSERT_LT(entered, TEARDOWN_BURST);
     ASSERT_EQ(atomic_load(&b.finished), entered);
-    sleep_ms(DESTROY_BLOCKED_PROBE_MS);
+    fl_os_sleep_ms(DESTROY_BLOCKED_PROBE_MS);
     ASSERT_EQ(atomic_load(&b.entered), entered);
 }
 
@@ -2424,13 +2424,13 @@ UTEST(image_teardown, close_waits_for_failed_decode_in_prepare) {
     ASSERT_FALSE(image_system_load_failed(sys, bad));
 
     DestroyThread d = { .sys = sys, .close_only = true };
-    Thread thread;
-    ASSERT_TRUE(os_thread_create(&thread, destroy_thread_main, &d));
-    sleep_ms(DESTROY_BLOCKED_PROBE_MS);
+    FlOsThread thread;
+    ASSERT_TRUE(fl_os_thread_create(&thread, destroy_thread_main, &d));
+    fl_os_sleep_ms(DESTROY_BLOCKED_PROBE_MS);
     const bool done_while_gated = atomic_load(&d.done);
 
     atomic_store(&b.gate_open, true);
-    os_thread_join(&thread);
+    fl_os_thread_join(&thread);
     ASSERT_FALSE(done_while_gated);
     ASSERT_TRUE(atomic_load(&d.done));
     ASSERT_TRUE(image_system_load_failed(sys, bad));
@@ -2457,7 +2457,7 @@ UTEST(image_teardown, deferred_prepares_discarded_without_backend_call) {
     int waited = 0;
     while ((!image_system_prepare_pending(sys, ok) || !image_system_prepare_pending(sys, bad))
            && waited < PREPARE_POLL_TIMEOUT_MS) {
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
         waited++;
     }
     ASSERT_TRUE(image_system_prepare_pending(sys, ok));
@@ -2474,9 +2474,9 @@ UTEST(image_teardown, destroy_waits_for_vfs_load_in_prepare) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
     GatedBackend b = { 0 };
@@ -2489,14 +2489,14 @@ UTEST(image_teardown, destroy_waits_for_vfs_load_in_prepare) {
     ASSERT_TRUE(wait_for_entered(&b, 1));
 
     DestroyThread d = { .sys = sys, .close_only = true };
-    Thread thread;
-    ASSERT_TRUE(os_thread_create(&thread, destroy_thread_main, &d));
-    sleep_ms(DESTROY_BLOCKED_PROBE_MS);
+    FlOsThread thread;
+    ASSERT_TRUE(fl_os_thread_create(&thread, destroy_thread_main, &d));
+    fl_os_sleep_ms(DESTROY_BLOCKED_PROBE_MS);
     const bool done_while_gated = atomic_load(&d.done);
     const int finished_while_gated = atomic_load(&b.finished);
 
     atomic_store(&b.gate_open, true);
-    os_thread_join(&thread);
+    fl_os_thread_join(&thread);
     ASSERT_FALSE(done_while_gated);
     ASSERT_EQ(finished_while_gated, 0);
     ASSERT_TRUE(atomic_load(&d.done));
@@ -2579,14 +2579,14 @@ UTEST(image_teardown, host_destroy_drains_image_worker_before_backend_teardown) 
     ASSERT_TRUE(wait_for_entered(&s_host_gate, 1));
 
     HostDestroyThread d = { .host = host };
-    Thread thread;
-    ASSERT_TRUE(os_thread_create(&thread, host_destroy_thread_main, &d));
-    sleep_ms(DESTROY_BLOCKED_PROBE_MS);
+    FlOsThread thread;
+    ASSERT_TRUE(fl_os_thread_create(&thread, host_destroy_thread_main, &d));
+    fl_os_sleep_ms(DESTROY_BLOCKED_PROBE_MS);
     const bool done_while_gated = atomic_load(&d.done);
     const bool surface_destroyed_while_gated = atomic_load(&s_host_surface_destroyed);
 
     atomic_store(&s_host_gate.gate_open, true);
-    os_thread_join(&thread);
+    fl_os_thread_join(&thread);
     ASSERT_FALSE(done_while_gated);
     ASSERT_FALSE_MSG(surface_destroyed_while_gated, "backend torn down while an image worker was running");
     ASSERT_TRUE(atomic_load(&d.done));
@@ -2911,9 +2911,9 @@ UTEST(perf_fence, scene_raster_fill) {
     ctx->layout_height = (float)layout_h;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = (float)layout_w, .height = (float)layout_h });
 
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     scene_raster_fill(ctx, n);
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
 
     const FlFrameStats stats = perf_fence_frame_stats(ctx);
 
@@ -2956,10 +2956,10 @@ UTEST(render, icon_registry) {
                   "icon must be FL_IMAGE_HANDLE_INVALID before fl_icon_load");
 
     vfs_test_register_driver(&s_stub_vfs_plugin); // a mount source for fl_icon_load
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
     ASSERT_TRUE(mount.mount != NULL);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     // Null-mount guard is a no-op: nothing loads.
     fl_icon_load(NULL);
@@ -4222,7 +4222,7 @@ static bool wait_image_ready(ImageHandle handle) {
         if (image_cache_get_data(handle) != nullptr) {
             return true;
         }
-        sleep_ms(1);
+        fl_os_sleep_ms(1);
     }
     return false;
 }
@@ -4234,7 +4234,7 @@ static FlImageStatus wait_public_image_terminal(FlImageHandle handle) {
     for (int i = 0; i < 5000 && status == FlImageStatus_Pending; ++i) {
         status = fl_image_status(handle);
         if (status == FlImageStatus_Pending) {
-            sleep_ms(1);
+            fl_os_sleep_ms(1);
         }
     }
     return status;
@@ -4250,11 +4250,11 @@ UTEST(render, public_mounted_image_load_and_status) {
     s_stub_vfs_override_data = k_png_red;
     s_stub_vfs_override_size = sizeof(k_png_red);
 
-    FlVfsMountResult first_mount = vfs_mount(FL_S("/stub-image-a"));
-    FlVfsMountResult second_mount = vfs_mount(FL_S("/stub-image-b"));
+    FlVfsMountResult first_mount = fl_vfs_mount(FL_S("/stub-image-a"));
+    FlVfsMountResult second_mount = fl_vfs_mount(FL_S("/stub-image-b"));
     ASSERT_EQ(first_mount.status, FlVfsMountErrorStatus_Success);
     ASSERT_EQ(second_mount.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     FlImageLoadOptions resize_options = { .target_width = 2, .target_height = 2, .preserve_aspect_ratio = true };
     FlImageHandle direct = fl_image_load_mount(first_mount.mount, FL_S(STUB_VFS_FILE), resize_options);
@@ -4946,7 +4946,7 @@ UTEST(render, image_load_from_memory_bad_data_reports_error) {
     for (int i = 0; i < 5000 && status == ImageStatus_Pending; ++i) {
         status = image_get_status(image_get_data(handle));
         if (status == ImageStatus_Pending) {
-            sleep_ms(1);
+            fl_os_sleep_ms(1);
         }
     }
     ASSERT_EQ_MSG((int)status, (int)ImageStatus_Error,
@@ -6527,9 +6527,9 @@ UTEST(perf_fence, scene_text_elided) {
     ui_set_scale(1.0f, 1.0f);
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
 
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     scene_text_elided(ctx, n);
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
 
     const FlFrameStats stats = perf_fence_frame_stats(ctx);
     printf("[perf_fence] scene_text_elided(N=%d): %llu ns, render_commands=%u bin_alloc_bytes=%u\n", n,
@@ -6548,9 +6548,9 @@ UTEST(perf_fence, scene_many_elements) {
     ctx->layout_height = 1080.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
 
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     scene_many_elements(ctx, n);
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
 
     const FlFrameStats stats = perf_fence_frame_stats(ctx);
     printf(
@@ -6593,9 +6593,9 @@ UTEST(perf_fence, scene_floating) {
     ctx->layout_height = 1080.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
 
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     scene_floating(ctx, n);
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
 
     const FlFrameStats stats = perf_fence_frame_stats(ctx);
     printf("[perf_fence] scene_floating(N=%d): %llu ns, render_commands=%u bin_alloc_bytes=%u\n", n,
@@ -6642,9 +6642,9 @@ UTEST(perf_fence, scene_dyn_images) {
     ASSERT_TRUE_MSG(s_dyn_image != IMAGE_HANDLE_INVALID, "image load returned invalid handle");
     ASSERT_TRUE_MSG(wait_image_ready(s_dyn_image), "image did not decode in time");
 
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     scene_dyn_images(ctx, n);
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
 
     const FlFrameStats stats = perf_fence_frame_stats(ctx);
     printf(
@@ -6879,9 +6879,9 @@ UTEST(perf_fence, scene_widget_gallery) {
     ui_set_scale(1.0f, 1.0f);
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
 
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     scene_widget_gallery(ctx, n);
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
 
     const FlFrameStats stats = perf_fence_frame_stats(ctx);
     printf(
@@ -9907,9 +9907,9 @@ UTEST(image_load, free_then_reload_returns_a_working_handle) {
     s_stub_vfs_override_data = k_png_red;
     s_stub_vfs_override_size = sizeof(k_png_red);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub-image-reload"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub-image-reload"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     const FlImageLoadOptions options = { 0 };
     const FlImageHandle first = fl_image_load_mount(mount.mount, FL_S(STUB_VFS_FILE), options);
@@ -9941,11 +9941,11 @@ UTEST(image_load, mounts_of_one_source_do_not_share_dedup_entries) {
     s_stub_vfs_override_data = k_png_red;
     s_stub_vfs_override_size = sizeof(k_png_red);
 
-    FlVfsMountResult a = vfs_mount(FL_S("/stub-image-twin"));
-    FlVfsMountResult b = vfs_mount(FL_S("/stub-image-twin"));
+    FlVfsMountResult a = fl_vfs_mount(FL_S("/stub-image-twin"));
+    FlVfsMountResult b = fl_vfs_mount(FL_S("/stub-image-twin"));
     ASSERT_EQ(a.status, FlVfsMountErrorStatus_Success);
     ASSERT_EQ(b.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     const FlImageLoadOptions options = { 0 };
     const FlImageHandle from_a = fl_image_load_mount(a.mount, FL_S(STUB_VFS_FILE), options);
@@ -9976,9 +9976,9 @@ UTEST(image_load, remount_of_a_closed_source_does_not_return_a_stale_failed_entr
     vfs_test_register_driver(&s_stub_vfs_plugin);
     s_stub_vfs_override_data = NULL; // the stub's text payload: not a decodable image
 
-    FlVfsMountResult first = vfs_mount(FL_S("/stub-image-remount"));
+    FlVfsMountResult first = fl_vfs_mount(FL_S("/stub-image-remount"));
     ASSERT_EQ(first.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     const FlImageLoadOptions options = { 0 };
     const FlImageHandle failed = fl_image_load_mount(first.mount, FL_S(STUB_VFS_FILE), options);
@@ -9988,9 +9988,9 @@ UTEST(image_load, remount_of_a_closed_source_does_not_return_a_stale_failed_entr
 
     s_stub_vfs_override_data = k_png_red;
     s_stub_vfs_override_size = sizeof(k_png_red);
-    FlVfsMountResult second = vfs_mount(FL_S("/stub-image-remount"));
+    FlVfsMountResult second = fl_vfs_mount(FL_S("/stub-image-remount"));
     ASSERT_EQ(second.status, FlVfsMountErrorStatus_Success);
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     const FlImageHandle loaded = fl_image_load_mount(second.mount, FL_S(STUB_VFS_FILE), options);
     ASSERT_NE(loaded, FL_IMAGE_HANDLE_INVALID);
@@ -10014,9 +10014,9 @@ UTEST(image_load, dedup_key_storage_stays_bounded_under_load_free_churn) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    vfs_wait_all();
+    fl_vfs_wait_all();
 
     FlRenderBackend backend = { 0 };
     ImageSystem* sys = image_system_create(s_arena, &backend);
@@ -10034,7 +10034,7 @@ UTEST(image_load, dedup_key_storage_stays_bounded_under_load_free_churn) {
     }
     ASSERT_LT_MSG(image_system_dedup_key_bytes(sys), 32768u, "removed keys must be reclaimed, not retained");
 
-    vfs_wait_all();
+    fl_vfs_wait_all();
     for (int i = 0; i < DEDUP_CHURN_CYCLES; i++) {
         fl_vfs_close(ids[i]);
     }

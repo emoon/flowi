@@ -16,9 +16,8 @@ extern "C" {
 // allocates it from the caller's arena, so nothing here needs freeing; the extraction slots that
 // return a view into their input (fl_path_get_extension, fl_path_get_filename) take no arena. Plugins link the shared library and call these symbols directly.
 //
-// Core's path surface is wider than this (segment splitting, PathComponents, current-directory and
-// directory-search helpers); those stay internal - they are VFS resolution machinery, not something a
-// plugin manipulating file names needs.
+// Core's path surface is wider than this (segment splitting, PathComponents); those stay internal - they
+// are VFS resolution machinery, not something a plugin manipulating file names needs.
 // Fold backslashes to forward slashes and collapse duplicate separators.
 FL_API FlString fl_path_normalize(FlArena* arena, FlString path);
 // Normalize, then resolve "." and ".." components.
@@ -54,6 +53,11 @@ FL_API FlString fl_path_make_absolute(FlArena* arena, FlString base, FlString pa
 FL_API FlString fl_path_remove_trailing_separator(FlArena* arena, FlString path);
 // Add a trailing separator, if path lacks one (marking it as a directory).
 FL_API FlString fl_path_ensure_trailing_separator(FlArena* arena, FlString path);
+// The process working directory.
+FL_API FlString fl_path_get_current_directory(FlArena* arena);
+// Search the working directory and then each ancestor for a directory named start_directory. Returns
+// its full path, or an empty string if none exists.
+FL_API FlString fl_path_find_directory(FlArena* arena, FlString start_directory);
 
 
 #ifdef __cplusplus
