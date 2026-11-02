@@ -93,6 +93,21 @@ typedef struct FlRectConfig {
     FlColor corner[4];
 } FlRectConfig;
 
+// One solid filled rectangle of a Painter::rects batch: top-left (x, y), size (w, h), in logical (authoring)
+// space, filled with color.
+typedef struct FlColoredRect {
+    // left edge
+    float x;
+    // top edge
+    float y;
+    // width
+    float w;
+    // height
+    float h;
+    // fill color
+    FlColor color;
+} FlColoredRect;
+
 // Custom-drawing primitives: the painter's shape, line, text, and image commands. Call these to draw
 // directly into the current frame.
 // Set the effect every later painter call in the current element carries - effects are group-shaped, so
@@ -104,6 +119,12 @@ typedef struct FlRectConfig {
 FL_API void fl_painter_set_effect(FlEffect effect);
 // Draw a filled rectangle: top-left (x, y), size (w, h), in logical (authoring) space.
 FL_API void fl_painter_rect(float x, float y, float w, float h, FlColor color);
+// Draw a batch of solid filled rectangles in one call - dense visuals such as a scope waveform's
+// one-rectangle-per-pixel columns. The result is exactly that of calling rect() for each entry in
+// order: call order (later entries paint over earlier ones), alpha compositing, clipping, UI scaling,
+// the current effect and Canvas z-order all behave as in the scalar loop, on every render backend.
+// An empty batch draws nothing.
+FL_API void fl_painter_rects(const FlColoredRect* rects, uint32_t rects_size);
 // Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
 FL_API void fl_painter_rect_rounded(float x, float y, float w, float h, float radius, FlColor color);
 // Draw a filled rectangle with a four-corner color gradient (bilinear), corners named clockwise from

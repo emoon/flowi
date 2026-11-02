@@ -140,6 +140,33 @@ const _: () = {
     assert!(core::mem::offset_of!(RectConfig, corner) == 16, "RectConfig.corner offset drift");
 };
 
+/// One solid filled rectangle of a Painter::rects batch: top-left (x, y), size (w, h), in logical (authoring)
+/// space, filled with color.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct ColoredRect {
+    /// left edge
+    pub x: f32,
+    /// top edge
+    pub y: f32,
+    /// width
+    pub w: f32,
+    /// height
+    pub h: f32,
+    /// fill color
+    pub color: crate::sys::Color,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<ColoredRect>() == 20, "ColoredRect size drift");
+    assert!(core::mem::align_of::<ColoredRect>() == 4, "ColoredRect align drift");
+    assert!(core::mem::offset_of!(ColoredRect, x) == 0, "ColoredRect.x offset drift");
+    assert!(core::mem::offset_of!(ColoredRect, y) == 4, "ColoredRect.y offset drift");
+    assert!(core::mem::offset_of!(ColoredRect, w) == 8, "ColoredRect.w offset drift");
+    assert!(core::mem::offset_of!(ColoredRect, h) == 12, "ColoredRect.h offset drift");
+    assert!(core::mem::offset_of!(ColoredRect, color) == 16, "ColoredRect.color offset drift");
+};
+
 // Custom-drawing primitives: the painter's shape, line, text, and image commands. Call these to draw
 // directly into the current frame.
 extern "C" {
@@ -152,6 +179,12 @@ extern "C" {
     pub fn fl_painter_set_effect(effect: crate::sys::Effect);
     /// Draw a filled rectangle: top-left (x, y), size (w, h), in logical (authoring) space.
     pub fn fl_painter_rect(x: f32, y: f32, w: f32, h: f32, color: crate::sys::Color);
+    /// Draw a batch of solid filled rectangles in one call - dense visuals such as a scope waveform's
+    /// one-rectangle-per-pixel columns. The result is exactly that of calling rect() for each entry in
+    /// order: call order (later entries paint over earlier ones), alpha compositing, clipping, UI scaling,
+    /// the current effect and Canvas z-order all behave as in the scalar loop, on every render backend.
+    /// An empty batch draws nothing.
+    pub fn fl_painter_rects(rects: *const crate::sys::ColoredRect, rects_size: u32);
     /// Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
     pub fn fl_painter_rect_rounded(x: f32, y: f32, w: f32, h: f32, radius: f32, color: crate::sys::Color);
     /// Draw a filled rectangle with a four-corner color gradient (bilinear), corners named clockwise from

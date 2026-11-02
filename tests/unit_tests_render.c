@@ -2928,6 +2928,82 @@ UTEST(perf_fence, scene_raster_fill) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// scene_painter_rects: submission cost of a dense scope-style canvas - SCOPE_CHANNELS waveforms with one
+// rectangle per horizontal logical pixel - through the public per-rect call versus the batched one. The frames
+// must leave identical work (tier-1: same command count and raster bins); the time spent inside the painter
+// calls is tier-3, printed and never asserted.
+
+#define SCOPE_CHANNELS 4
+#define SCOPE_WIDTH 1920
+
+static FlColoredRect g_scope_rects[SCOPE_CHANNELS][SCOPE_WIDTH];
+
+static void scope_rects_init(void) {
+    for (int c = 0; c < SCOPE_CHANNELS; c++) {
+        const float mid = 120.0f + (float)c * 240.0f;
+        for (int x = 0; x < SCOPE_WIDTH; x++) {
+            const float amp = 80.0f * sinf((float)x * 0.05f + (float)c);
+            g_scope_rects[c][x] = (FlColoredRect) { (float)x, mid - (amp > 0.0f ? amp : 0.0f), 1.0f, fabsf(amp) + 1.0f,
+                                                    ui_color((u8)(60 + c * 50), (u8)(220 - c * 40), 120, 180) };
+        }
+    }
+}
+
+// Returns the nanoseconds spent inside the painter calls of one frame.
+static u64 scene_painter_rects(FlUiCtx* ctx, bool batch) {
+    ui_update_begin(ctx);
+    fl_layout_start(ID("scene_painter_rects_root"));
+    fl_layout_configure((FlLayoutConfig) { .sizing = { .width = sizing_grow(), .height = sizing_grow() } });
+
+    const u64 t0 = get_monotonic_time_ns_os();
+    for (int c = 0; c < SCOPE_CHANNELS; c++) {
+        if (batch) {
+            fl_painter_rects(g_scope_rects[c], SCOPE_WIDTH);
+        } else {
+            for (int x = 0; x < SCOPE_WIDTH; x++) {
+                const FlColoredRect* r = &g_scope_rects[c][x];
+                fl_painter_rect(r->x, r->y, r->w, r->h, r->color);
+            }
+        }
+    }
+    const u64 t1 = get_monotonic_time_ns_os();
+
+    fl_layout_end();
+    ui_update_end(ctx, 1.0f / 60.0f);
+    return t1 - t0;
+}
+
+UTEST(perf_fence, scene_painter_rects) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    ctx->layout_width = (float)SCOPE_WIDTH;
+    ctx->layout_height = 1080.0f;
+    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = (float)SCOPE_WIDTH, .height = 1080.0f });
+    scope_rects_init();
+
+    FlFrameStats stats[2];
+    u64 best_ns[2] = { UINT64_MAX, UINT64_MAX };
+    for (int mode = 0; mode < 2; mode++) {
+        scene_painter_rects(ctx, mode != 0); // warm-up frame
+        for (int rep = 0; rep < 9; rep++) {
+            const u64 ns = scene_painter_rects(ctx, mode != 0);
+            best_ns[mode] = ns < best_ns[mode] ? ns : best_ns[mode];
+        }
+        stats[mode] = perf_fence_frame_stats(ctx);
+    }
+
+    printf("[perf_fence] scene_painter_rects(%d rects): scalar loop %llu ns, batched %llu ns in painter calls "
+           "(best of 9 frames), render_commands=%u bin_alloc_bytes=%u\n",
+           SCOPE_CHANNELS * SCOPE_WIDTH, (unsigned long long)best_ns[0], (unsigned long long)best_ns[1],
+           stats[1].render_commands, stats[1].bin_alloc_bytes);
+
+    // Tier-1: the batch hands the backend exactly the scalar loop's work.
+    ASSERT_TRUE_MSG(stats[1].render_commands > 0, "the scope canvas rendered");
+    ASSERT_EQ_MSG(stats[1].render_commands, stats[0].render_commands, "batched render_commands == scalar loop's");
+    ASSERT_EQ_MSG(stats[1].bin_alloc_bytes, stats[0].bin_alloc_bytes, "batched raster bin bytes == scalar loop's");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.font_style_registry - fl_font_load_default / fl_font_style_register / fl_font_style_set end-to-end
 // on the built-in default font (headless-safe; no system font deps).
 

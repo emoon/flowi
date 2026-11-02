@@ -75,6 +75,9 @@ pub use crate::sys::StrokeStyle;
 /// so a rounded well cannot be faked by clipping.
 pub use crate::sys::RectConfig;
 
+/// One solid rectangle of a [`Painter::rects`] batch: position, size and fill color.
+pub use crate::sys::ColoredRect;
+
 /// The opaque, Copy image handle returned by [`Image::load`] and consumed by [`Image::is_ready`],
 /// and [`Painter::image`] (sentinel 0 = invalid).
 pub use crate::sys::ImageHandle;
