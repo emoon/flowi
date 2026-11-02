@@ -371,6 +371,162 @@ UTEST(input, out_of_range_gamepad_button_or_axis_is_ignored) {
     EXPECT_EQ(0.5f, gamepad->axes[FlGamepadAxis_Left_X]);
 }
 
+// fl_input_gamepad_connected is the public read over the slot table; slots past the table are documented to read as
+// disconnected rather than index out of it. Slot 3 keeps clear of the pad 0 the nav cases drive, and is handed back
+// exactly as found.
+UTEST(input, gamepad_connected_reads_the_slot_and_out_of_range_slots_as_disconnected) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    canvas_fixture_reset(ctx);
+
+    // fl_input_* read the global context; one frame binds it to this fixture.
+    ui_update_begin(ctx);
+    ui_update_end(ctx, 1.0f / 60.0f);
+
+    const u32 slot = 3;
+    const GamepadState saved = ctx->input_state.gamepads[slot];
+    ctx->input_state.gamepads[slot].connected = false;
+
+    EXPECT_FALSE(fl_input_gamepad_connected(slot));
+
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Connected, .gamepad_id = slot });
+    EXPECT_TRUE(fl_input_gamepad_connected(slot));
+    EXPECT_FALSE_MSG(fl_input_gamepad_connected(slot - 1), "connecting one slot leaves its neighbour alone");
+
+    EXPECT_FALSE(fl_input_gamepad_connected(UI_INPUT_MAX_GAMEPADS));
+    EXPECT_FALSE(fl_input_gamepad_connected(UI_INPUT_MAX_GAMEPADS + 1000));
+    EXPECT_FALSE(fl_input_gamepad_connected(UINT32_MAX));
+
+    platform_input_push_gamepad_event(ctx,
+                                      (FlGamepadEvent) { .type = FlGamepadEvent_Disconnected, .gamepad_id = slot });
+    EXPECT_FALSE(fl_input_gamepad_connected(slot));
+
+    ctx->input_state.gamepads[slot] = saved;
+    canvas_fixture_reset(ctx);
+}
+
+// The delta is position-derived: this frame's pointer position minus the last frame's. Driven the way a backend
+// does, by setting the pointer and letting ui_input_update close the frame.
+UTEST(input, mouse_delta_follows_the_pointer_between_frames) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    canvas_fixture_reset(ctx);
+
+    ui_update_begin(ctx);
+    ui_update_end(ctx, 1.0f / 60.0f);
+
+    MouseState* mouse = &ctx->input_state.mouse;
+    mouse->x = 10.0f;
+    mouse->y = 20.0f;
+    ui_input_update(ctx, 1.0 / 60.0);
+    mouse->x = 10.0f;
+    mouse->y = 20.0f;
+    ui_input_update(ctx, 1.0 / 60.0);
+    EXPECT_EQ(0.0f, fl_input_mouse_delta().x);
+    EXPECT_EQ(0.0f, fl_input_mouse_delta().y);
+
+    mouse->x = 40.0f;
+    mouse->y = 15.0f;
+    ui_input_update(ctx, 1.0 / 60.0);
+    EXPECT_EQ(30.0f, fl_input_mouse_delta().x);
+    EXPECT_EQ(-5.0f, fl_input_mouse_delta().y);
+
+    // Holding still afterwards reads as no movement, not as the last step repeated.
+    ui_input_update(ctx, 1.0 / 60.0);
+    EXPECT_EQ(0.0f, fl_input_mouse_delta().x);
+    EXPECT_EQ(0.0f, fl_input_mouse_delta().y);
+
+    canvas_fixture_reset(ctx);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// inspector_snapshot: the JSON shape fl_inspector_snapshot documents in include/flowi/ui/inspector.h. A consumer
+// parses this text, so the whole string is compared rather than searched for a name.
+
+static void inspector_emit_frame(FlUiCtx* ctx, bool with_elements, FlImageHandle image) {
+    ctx->layout_width = 256.0f;
+    ctx->layout_height = 256.0f;
+    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 256.0f, .height = 256.0f });
+
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
+        if (with_elements) {
+            ui_layout_area_id(ID("pin_rect"), .sizing = { sizing_fixed(100), sizing_fixed(40) },
+                              .color = ui_color(40, 200, 60, 255), .radius = corner_radius(6)) {
+                ui_text(FL_S("Hi"));
+            }
+            ui_layout_area_id(ID("pin_border"), .sizing = { sizing_fixed(60), sizing_fixed(20) },
+                              .border = { .color = ui_color(220, 200, 60, 255),
+                                          .width = { .left = 2, .right = 2, .top = 2, .bottom = 2 } }) {}
+            fl_image(image, (FlImageOpts) { .color = ui_color(10, 20, 30, 255) });
+        }
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+}
+
+UTEST(inspector_snapshot, a_frame_with_no_elements_is_an_empty_array) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+
+    inspector_emit_frame(ctx, false, 0);
+
+    char snapshot[256];
+    const int32_t needed = fl_inspector_snapshot(snapshot, (int32_t)sizeof(snapshot));
+    ASSERT_STREQ("{\"elements\":[],\"elementCount\":0}", snapshot);
+    ASSERT_EQ((int32_t)strlen(snapshot), needed);
+}
+
+UTEST(inspector_snapshot, elements_carry_their_documented_fields) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+
+    const u8 pixels[16] = { 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255 };
+    FlImageHandle image = fl_image_create_from_pixels(pixels, 2, 2, FlImageFormat_RGBA);
+    ASSERT_NE((FlImageHandle)FL_IMAGE_HANDLE_INVALID, image);
+    inspector_emit_frame(ctx, true, image);
+
+    // The ids are hashes, so they are read back rather than spelled out; everything else is the documented text.
+    ASSERT_EQ(4, fl_inspector_element_count());
+    FlInspectorElement elements[4];
+    for (int32_t i = 0; i < 4; i++) {
+        ASSERT_TRUE(fl_inspector_element_get(i, &elements[i]));
+    }
+    UiRenderCommand text_command;
+    ASSERT_TRUE(ui_get_render_command(1, &text_command));
+    ASSERT_EQ(UiRenderCmd_Text, text_command.type);
+
+    char expected[4096];
+    snprintf(expected, sizeof(expected),
+             "{\"elements\":["
+             "{\"id\":%u,\"name\":\"pin_rect\",\"type\":\"rectangle\","
+             "\"boundingBox\":{\"x\":0.00,\"y\":0.00,\"width\":100.00,\"height\":40.00},\"zIndex\":0,"
+             "\"backgroundColor\":{\"r\":40,\"g\":200,\"b\":60,\"a\":255},"
+             "\"cornerRadius\":{\"topLeft\":6.00,\"topRight\":6.00,\"bottomLeft\":6.00,\"bottomRight\":6.00}},"
+             "{\"id\":%u,\"name\":\"\",\"type\":\"text\","
+             "\"boundingBox\":{\"x\":%.2f,\"y\":%.2f,\"width\":%.2f,\"height\":%.2f},\"zIndex\":0,"
+             "\"text\":\"Hi\",\"textColor\":{\"r\":%u,\"g\":%u,\"b\":%u,\"a\":%u},"
+             "\"fontSize\":%d,\"fontId\":%d},"
+             "{\"id\":%u,\"name\":\"\",\"type\":\"border\","
+             "\"boundingBox\":{\"x\":100.00,\"y\":0.00,\"width\":60.00,\"height\":20.00},\"zIndex\":0,"
+             "\"borderColor\":{\"r\":220,\"g\":200,\"b\":60,\"a\":255},"
+             "\"cornerRadius\":{\"topLeft\":0.00,\"topRight\":0.00,\"bottomLeft\":0.00,\"bottomRight\":0.00}},"
+             "{\"id\":%u,\"name\":\"\",\"type\":\"image\","
+             "\"boundingBox\":{\"x\":160.00,\"y\":0.00,\"width\":2.00,\"height\":2.00},\"zIndex\":0,"
+             "\"backgroundColor\":{\"r\":10,\"g\":20,\"b\":30,\"a\":255}}"
+             "],\"elementCount\":4}",
+             elements[0].id, elements[1].id, (double)elements[1].x, (double)elements[1].y, (double)elements[1].width,
+             (double)elements[1].height, (unsigned)text_command.text_color.r, (unsigned)text_command.text_color.g,
+             (unsigned)text_command.text_color.b, (unsigned)text_command.text_color.a, (int)text_command.font_size,
+             (int)text_command.font_id, elements[2].id, elements[3].id);
+
+    char snapshot[4096];
+    const int32_t needed = fl_inspector_snapshot(snapshot, (int32_t)sizeof(snapshot));
+    ASSERT_STREQ(expected, snapshot);
+    ASSERT_EQ((int32_t)strlen(expected), needed);
+
+    image_free((ImageHandle)image);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(input, new_context_gamepads_start_at_default_dead_zone) {
