@@ -2,6 +2,8 @@
 
 #include "vfs_test_support.h"
 
+#include "ui/localization.h"
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define VFS_AWAIT_FLAG_TIMEOUT_NS 20000000000ull
@@ -2154,6 +2156,172 @@ UTEST(vfs, a_closed_id_stays_reserved_until_its_old_op_has_run) {
 
     fl_vfs_close(parker);
     fl_vfs_mount_close(mount.mount);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// A destroy that must wait out a queued read cannot return until the parked worker is released, so something other
+// than the destroying thread has to release it. The releaser does so once destroy_returned says destroy came back;
+// a destroy that waits can never set that, so the deadline is what lets it through, and a destroy that does not wait
+// is back long before it.
+
+typedef struct VfsTeardownCtx {
+    VfsParkCtx* park;
+    _Atomic bool destroy_returned;
+} VfsTeardownCtx;
+
+static void* vfs_teardown_releaser(void* user_data) {
+    VfsTeardownCtx* ctx = (VfsTeardownCtx*)user_data;
+    u64 deadline_ns = get_monotonic_time_ns_os() + 100000000ull;
+    while (!atomic_load(&ctx->destroy_returned) && get_monotonic_time_ns_os() < deadline_ns) {
+        sleep_ms(1);
+    }
+    atomic_store(&ctx->park->release, true);
+    return nullptr;
+}
+
+// Starts the releaser; without one the worker is released here, so the destroy under test cannot block forever.
+static bool vfs_teardown_begin(VfsTeardownCtx* ctx, VfsParkCtx* park, Thread* releaser) {
+    ctx->park = park;
+    atomic_init(&ctx->destroy_returned, false);
+    if (os_thread_create(releaser, vfs_teardown_releaser, ctx)) {
+        return true;
+    }
+    atomic_store(&park->release, true);
+    return false;
+}
+
+// Call right after the destroy under test returns. True if the parked worker had been released by then, which a
+// destroy only gets to see if it waited for the queued read.
+static bool vfs_teardown_end(VfsTeardownCtx* ctx, bool releasing, Thread* releaser) {
+    bool waited = atomic_load(&ctx->park->release);
+    atomic_store(&ctx->destroy_returned, true);
+    if (releasing) {
+        os_thread_join(releaser);
+    }
+    return waited;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// font_cache_destroy frees the arena a font load's callback writes into, and the load is only closed, not stopped,
+// by fl_vfs_close: it has to wait for the queued read first. The stub bytes are not a font, so the callback fails
+// after it has touched the face and its context.
+
+UTEST(vfs, font_cache_destroy_waits_for_a_queued_face_load) {
+    fl_vfs_init(s_arena); // idempotent
+    vfs_test_register_driver(&s_stub_vfs_plugin);
+
+    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
+    vfs_wait_all();
+    ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
+
+    VfsParkCtx park;
+    FlVfsHandle parker;
+    bool parked = vfs_park_worker(&park, mount.mount, &parker, FL_S(STUB_VFS_FILE));
+
+    FlFontCache* cache = font_cache_new(s_arena);
+    FlFontId font = font_cache_load_font(cache, mount.mount, FL_S(STUB_VFS_FILE), 16); // queued behind parker
+
+    // Nothing may ASSERT while the worker is parked; see vfs_park_worker.
+    VfsTeardownCtx teardown;
+    Thread releaser = { 0 };
+    bool releasing = vfs_teardown_begin(&teardown, &park, &releaser);
+    font_cache_destroy(cache);
+    bool waited = vfs_teardown_end(&teardown, releasing, &releaser);
+
+    // A destroy that skipped the wait leaves the load to run against freed memory once the worker is free.
+    fl_vfs_wait(parker);
+    vfs_wait_all();
+    fl_vfs_close(parker);
+    fl_vfs_mount_close(mount.mount);
+
+    ASSERT_TRUE_MSG(parked, "the parking callback never ran");
+    ASSERT_NE(font, FONT_ID_INVALID);
+    ASSERT_TRUE_MSG(releasing, "the releaser thread must start; the destroy under test blocks without it");
+    ASSERT_TRUE_MSG(waited, "font_cache_destroy must not return before the queued face load has been released to run");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// localization_destroy frees the arena the manifest read parses into, so it has to wait for a read still queued
+// at startup. The stub bytes are not JSON, so the parse fails after it has allocated from the manifest's arena.
+
+UTEST(vfs, localization_destroy_waits_for_a_queued_manifest_read) {
+    fl_vfs_init(s_arena); // idempotent
+    vfs_test_register_driver(&s_stub_vfs_plugin);
+
+    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
+    vfs_wait_all();
+    ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
+
+    VfsParkCtx park;
+    FlVfsHandle parker;
+    bool parked = vfs_park_worker(&park, mount.mount, &parker, FL_S(STUB_VFS_FILE));
+
+    struct Localization* loc = localization_create(mount.mount, FL_S(STUB_VFS_FILE), false); // queued behind parker
+    bool loading = localization_is_loading(loc);
+
+    VfsTeardownCtx teardown;
+    Thread releaser = { 0 };
+    bool releasing = vfs_teardown_begin(&teardown, &park, &releaser);
+    localization_destroy(loc);
+    bool waited = vfs_teardown_end(&teardown, releasing, &releaser);
+
+    fl_vfs_wait(parker);
+    vfs_wait_all();
+    fl_vfs_close(parker);
+    fl_vfs_mount_close(mount.mount);
+
+    ASSERT_TRUE_MSG(parked, "the parking callback never ran");
+    ASSERT_TRUE_MSG(loading, "the manifest read must still be queued when destroy runs");
+    ASSERT_TRUE_MSG(releasing, "the releaser thread must start; the destroy under test blocks without it");
+    ASSERT_TRUE_MSG(waited, "localization_destroy must not return before the queued manifest read has been released");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// The same for a string table read: the manifest is served as JSON that lists the stub file as the default language's
+// table, so the frame boundary that finishes the manifest queues a table read behind the parked worker.
+
+UTEST(vfs, localization_destroy_waits_for_a_queued_table_read) {
+    static const char k_manifest[] = "{ default: 'en', languages: [{ tag: 'en', file: 'hello.txt' }] }";
+
+    fl_vfs_init(s_arena); // idempotent
+    vfs_test_register_driver(&s_stub_vfs_plugin);
+
+    FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
+    ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
+    vfs_wait_all();
+    ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
+
+    s_stub_vfs_override_data = (const u8*)k_manifest;
+    s_stub_vfs_override_size = sizeof(k_manifest) - 1;
+    struct Localization* loc = localization_create(mount.mount, FL_S(STUB_VFS_FILE), false);
+    vfs_wait_all(); // the manifest read is done; the next frame boundary starts the table read
+
+    VfsParkCtx park;
+    FlVfsHandle parker;
+    bool parked = vfs_park_worker(&park, mount.mount, &parker, FL_S(STUB_VFS_FILE));
+
+    localization_frame_begin(loc); // table queued behind parker
+    bool loading = localization_is_loading(loc);
+
+    VfsTeardownCtx teardown;
+    Thread releaser = { 0 };
+    bool releasing = vfs_teardown_begin(&teardown, &park, &releaser);
+    localization_destroy(loc);
+    bool waited = vfs_teardown_end(&teardown, releasing, &releaser);
+
+    fl_vfs_wait(parker);
+    vfs_wait_all();
+    s_stub_vfs_override_data = nullptr;
+    s_stub_vfs_override_size = 0;
+    fl_vfs_close(parker);
+    fl_vfs_mount_close(mount.mount);
+
+    ASSERT_TRUE_MSG(parked, "the parking callback never ran");
+    ASSERT_TRUE_MSG(loading, "the table read must still be queued when destroy runs");
+    ASSERT_TRUE_MSG(releasing, "the releaser thread must start; the destroy under test blocks without it");
+    ASSERT_TRUE_MSG(waited, "localization_destroy must not return before the queued table read has been released");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
