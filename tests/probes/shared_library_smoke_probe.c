@@ -3,7 +3,9 @@
 
 #include "external_abi_probe.h"
 
+#include <ctype.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 // This probe simulates an external consumer loading libflowi at runtime with
@@ -141,4 +143,84 @@ FLOWI_TEST_EXPORT int external_c_shared_library_smoke(const char* library_path, 
     s_api.app_destroy(app);
     shared_library_close(library);
     return ok;
+}
+
+// Extracts the symbol name from one line of the export list, or returns 0 for a line that names none. A version script
+// line is "  name;" and a module-definition line is "    name"; the labels, braces, comments and the EXPORTS keyword
+// around them are not names.
+static int export_list_name(char* line, char** name) {
+    while (isspace((unsigned char)*line)) {
+        line++;
+    }
+    char* end = line;
+    if (!isalpha((unsigned char)*end) && *end != '_') {
+        return 0;
+    }
+    while (isalnum((unsigned char)*end) || *end == '_') {
+        end++;
+    }
+    char* name_end = end;
+    if (*end == ';') {
+        end++;
+    }
+    while (isspace((unsigned char)*end)) {
+        end++;
+    }
+    if (*end != '\0') {
+        return 0;
+    }
+    *name_end = '\0';
+    if (strcmp(line, "EXPORTS") == 0) {
+        return 0;
+    }
+    *name = line;
+    return 1;
+}
+
+// Looks up every name in the export list the linker applies to libflowi (the version script on Linux, the module
+// definition on Windows) and writes the ones the loaded library does not export to `missing`, space separated and cut
+// short if `capacity` is too small. Returns how many were missing; -1 when the library or the list cannot be opened or
+// the list names nothing; -2 where no export list is in force (macOS exports every public symbol and has none).
+FLOWI_TEST_EXPORT int external_c_shared_library_missing_exports(const char* library_path, char* missing,
+                                                                size_t capacity) {
+#if !defined(FLOWI_EXPORT_LIST_PATH)
+    (void)library_path;
+    (void)missing;
+    (void)capacity;
+    return -2;
+#else
+    missing[0] = '\0';
+    SharedLibraryHandle library = shared_library_open(library_path);
+    if (library == NULL) {
+        return -1;
+    }
+    FILE* list = fopen(FLOWI_EXPORT_LIST_PATH, "r");
+    if (list == NULL) {
+        shared_library_close(library);
+        return -1;
+    }
+
+    int names = 0;
+    int missing_count = 0;
+    size_t used = 0;
+    char line[256];
+    char* name;
+    while (fgets(line, sizeof(line), list) != NULL) {
+        if (!export_list_name(line, &name)) {
+            continue;
+        }
+        names++;
+        if (shared_library_symbol(library, name) != NULL) {
+            continue;
+        }
+        missing_count++;
+        int written = snprintf(missing + used, capacity - used, "%s%s", used > 0 ? " " : "", name);
+        if (written > 0 && (size_t)written < capacity - used) {
+            used += (size_t)written;
+        }
+    }
+    fclose(list);
+    shared_library_close(library);
+    return names > 0 ? missing_count : -1;
+#endif
 }

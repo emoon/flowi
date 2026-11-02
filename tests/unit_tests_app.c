@@ -1139,6 +1139,8 @@ int external_c_frame_format_abi_probe(void);
 int external_c_shared_library_smoke(const char* library_path, int (*const* in_frame_probes)(void),
                                     int in_frame_probe_count);
 
+int external_c_shared_library_missing_exports(const char* library_path, char* missing, size_t capacity);
+
 int external_cpp_abi_probe(void);
 
 int external_cpp_frame_format_abi_probe(void);
@@ -1158,6 +1160,18 @@ UTEST(shared_abi, headless_app_renders_through_public_shared_library) {
                                                     (int)(sizeof(in_frame_probes) / sizeof(in_frame_probes[0]))),
                     "public-only consumer could not render, format a frame string, and read back a frame "
                     "through libflowi");
+}
+
+UTEST(shared_abi, shared_library_exports_every_name_in_the_export_list) {
+    char missing[2048];
+    const int result = external_c_shared_library_missing_exports(FLOWI_SHARED_LIBRARY_PATH, missing, sizeof(missing));
+    if (result == -2) {
+        UTEST_SKIP("this platform applies no export list to libflowi");
+    }
+    ASSERT_NE_MSG(result, -1, "libflowi or the export list could not be opened, or the list names nothing");
+    char message[2200];
+    snprintf(message, sizeof(message), "libflowi does not export %d name(s) from its export list: %s", result, missing);
+    ASSERT_EQ_MSG(result, 0, message);
 }
 
 #if BACKEND_USE_SDL
