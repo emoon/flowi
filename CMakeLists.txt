@@ -264,6 +264,13 @@ target_link_libraries(external_abi_probe PRIVATE flowi)
 add_library(shared_library_smoke_probe SHARED tests/probes/shared_library_smoke_probe.c)
 target_link_libraries(shared_library_smoke_probe PRIVATE ${CMAKE_DL_LIBS})
 add_dependencies(shared_library_smoke_probe flowi)
+# The export list the linker applies to flowi, which the probe checks the library against. macOS applies none.
+if(WIN32)
+    target_compile_definitions(shared_library_smoke_probe PRIVATE FLOWI_EXPORT_LIST_PATH="${ROOT}/src/exports/flowi.def")
+elseif(UNIX AND NOT APPLE)
+    target_compile_definitions(shared_library_smoke_probe PRIVATE
+        FLOWI_EXPORT_LIST_PATH="${ROOT}/src/exports/flowi.version")
+endif()
 
 file(GLOB TEST_SRC CONFIGURE_DEPENDS tests/*.c tests/probes/*_api_check.c)
 add_executable(unit_tests ${TEST_SRC} ${SRC}/tools/loc_check.c)

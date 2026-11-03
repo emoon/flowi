@@ -338,6 +338,7 @@ FLOWI_1.0 {
     fl_painter_rect;
     fl_painter_rect_rounded;
     fl_painter_rect_styled;
+    fl_painter_rects;
     fl_painter_set_effect;
     fl_painter_text;
     fl_painter_text_styled;

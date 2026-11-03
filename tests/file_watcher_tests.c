@@ -61,6 +61,11 @@ static const char* build_temp_cstr_fw(FlArena* arena, const char* relative_path)
     return fl_string_to_cstr(arena, path);
 }
 
+static bool path_ends_with(FlString path, const char* name) {
+    size_t name_length = strlen(name);
+    return path.length >= name_length && memcmp(path.data + path.length - name_length, name, name_length) == 0;
+}
+
 static bool wait_for_file_watcher_changes(FlFileWatcherHandle handle, int max_polls, u32 poll_sleep_us) {
     for (int i = 0; i < max_polls; i++) {
         if (file_watcher_has_changes(handle)) {
@@ -104,6 +109,101 @@ UTEST(file_watcher, invalid_path) {
 
     FlFileWatcherHandle handle = file_watcher_start(FL_S("/nonexistent/path"), config);
     ASSERT_EQ(handle, FL_FILE_WATCHER_INVALID);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// The public fl_file_watcher_* entry points, called the way an embedding host does: a watcher handle in, a batch of
+// changes out.
+
+UTEST(file_watcher, public_api_reports_a_created_file_once) {
+    FlArena* arena = arena_new(.reserved_size = MB(64));
+
+    const char* test_dir = build_temp_cstr_fw(arena, "file_watcher_test_public_round_trip");
+    FlString test_file_path = build_temp_path_fw(arena, "file_watcher_test_public_round_trip/created.txt");
+    const char* test_file = fl_string_to_cstr(arena, test_file_path);
+    cleanup_path(test_file);
+    cleanup_path(test_dir);
+    ASSERT_TRUE(create_temp_directory(test_dir));
+
+    const FlFileWatcherConfig config
+        = { .recursive = false, .watch_files = true, .watch_directories = false, .max_changes = 10 };
+    const uint32_t handle = fl_file_watcher_start(string_from_cstr(test_dir), &config);
+    ASSERT_NE(handle, 0U);
+    ASSERT_TRUE(fl_file_watcher_is_active(handle));
+    ASSERT_FALSE_MSG(fl_file_watcher_has_changes(handle), "nothing has happened in the directory yet");
+
+    ASSERT_TRUE(create_test_file(test_file, "test content"));
+
+    // Poll until the change is detected (up to 2s, handles slow ARM CI hardware)
+    bool pending = false;
+    for (int i = 0; i < 200 && !pending; i++) {
+        pending = fl_file_watcher_has_changes(handle);
+        if (!pending) {
+            fl_os_sleep_us(10000);
+        }
+    }
+    ASSERT_TRUE_MSG(pending, "the created file was never reported");
+
+    const FlFileChanges batch = fl_file_watcher_take_changes(handle, arena);
+    ASSERT_GT(batch.count, 0U);
+    ASSERT_FALSE(batch.has_overflow);
+
+    const FlFileChange* created = nullptr;
+    for (uint32_t i = 0; i < batch.count; i++) {
+        if (path_ends_with(batch.changes[i].path, "created.txt")) {
+            created = &batch.changes[i];
+            break;
+        }
+    }
+    ASSERT_TRUE_MSG(created != nullptr, "no change names the created file");
+    ASSERT_TRUE((created->change_types & FlFileChangeType_Created) != 0);
+    ASSERT_FALSE(created->is_directory);
+
+    // A later event for the same file (a modify from the write) may still arrive, and a platform may flag it Created
+    // again, but it carries a later timestamp: a take that did not clear the batch would hand out the same entry.
+    const uint64_t created_at = created->timestamp;
+    for (int i = 0; i < 20; i++) {
+        if (fl_file_watcher_has_changes(handle)) {
+            const FlFileChanges later = fl_file_watcher_take_changes(handle, arena);
+            for (uint32_t c = 0; c < later.count; c++) {
+                const bool is_same_entry
+                    = path_ends_with(later.changes[c].path, "created.txt") && later.changes[c].timestamp == created_at;
+                ASSERT_FALSE_MSG(is_same_entry, "the creation was handed out by a second batch");
+            }
+        }
+        fl_os_sleep_us(5000);
+    }
+
+    fl_file_watcher_stop(handle);
+    ASSERT_FALSE(fl_file_watcher_is_active(handle));
+    cleanup_path(test_file);
+    cleanup_path(test_dir);
+    fl_arena_destroy(arena);
+}
+
+UTEST(file_watcher, public_start_returns_zero_for_a_path_it_cannot_watch) {
+    FlArena* arena = arena_new(.reserved_size = MB(64));
+
+    const FlFileWatcherConfig config
+        = { .recursive = false, .watch_files = true, .watch_directories = false, .max_changes = 10 };
+    const FlString missing = build_temp_path_fw(arena, "file_watcher_test_public_no_such_directory");
+    ASSERT_EQ(fl_file_watcher_start(missing, &config), 0U);
+
+    fl_arena_destroy(arena);
+}
+
+UTEST(file_watcher, public_start_returns_zero_for_a_null_config) {
+    FlArena* arena = arena_new(.reserved_size = MB(64));
+
+    // The directory exists, so only the missing config can be why the start fails.
+    const char* test_dir = build_temp_cstr_fw(arena, "file_watcher_test_public_null_config");
+    cleanup_path(test_dir);
+    ASSERT_TRUE(create_temp_directory(test_dir));
+
+    ASSERT_EQ(fl_file_watcher_start(string_from_cstr(test_dir), nullptr), 0U);
+
+    cleanup_path(test_dir);
+    fl_arena_destroy(arena);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

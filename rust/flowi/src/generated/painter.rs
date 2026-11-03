@@ -30,6 +30,17 @@ impl Painter {
         unsafe { crate::sys::fl_painter_rect(x, y, w, h, color) }
     }
 
+    /// Draw a batch of solid filled rectangles in one call - dense visuals such as a scope waveform's
+    /// one-rectangle-per-pixel columns. The result is exactly that of calling rect() for each entry in
+    /// order: call order (later entries paint over earlier ones), alpha compositing, clipping, UI scaling,
+    /// the current effect and Canvas z-order all behave as in the scalar loop, on every render backend.
+    /// An empty batch draws nothing.
+    #[inline]
+    pub fn rects(rects: &[crate::sys::ColoredRect]) {
+        let _frame = crate::frame_thread::frame_thread_guard("Painter::rects");
+        unsafe { crate::sys::fl_painter_rects(rects.as_ptr(), rects.len() as u32) }
+    }
+
     /// Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
     #[inline]
     pub fn rect_rounded(x: f32, y: f32, w: f32, h: f32, radius: f32, color: crate::sys::Color) {

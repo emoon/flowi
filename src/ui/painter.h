@@ -83,11 +83,15 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rectangle drawing
 
-// Draw a rectangle styled by config: per-corner radius and per-corner colors at once. This is the single
-// fill-rect emitter - the three narrower calls below are thin configs over it.
+// Draw a rectangle styled by config: per-corner radius and per-corner colors at once. The three narrower
+// calls below are thin configs over it.
 void painter_rect_styled(Painter* p, float x, float y, float w, float h, FlRectConfig config);
 
 void painter_rect(Painter* p, float x, float y, float w, float h, FlColor color);
+
+// Draw rect_count solid rectangles; the emitted records are exactly those of painter_rect called for each
+// entry in order, recorded in one pass.
+void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count);
 
 void painter_rect_rounded(Painter* p, float x, float y, float w, float h, float radius, FlColor color);
 

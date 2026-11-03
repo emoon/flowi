@@ -251,6 +251,24 @@ static inline FlString vfs_test_temp_dir(FlArena* arena, FlString name) {
     return fl_os_create_directory(dir) ? dir : FL_S("");
 }
 
+// A vfs_test_temp_dir with the arena its paths live in; destroying it removes the directory and frees the arena.
+typedef struct ScratchDir {
+    FlArena* arena;
+    FlString dir;
+} ScratchDir;
+
+// False when the directory cannot be made.
+static inline bool scratch_dir_create(ScratchDir* scratch, FlString name) {
+    scratch->arena = arena_new();
+    scratch->dir = vfs_test_temp_dir(scratch->arena, name);
+    return scratch->dir.length > 0;
+}
+
+static inline void scratch_dir_destroy(ScratchDir* scratch) {
+    fl_os_remove_directory_recursive(scratch->dir);
+    fl_arena_destroy(scratch->arena);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline bool vfs_test_write_file(FlArena* arena, FlString dir, FlString name, const ByteWriter* bytes) {

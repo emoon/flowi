@@ -2,6 +2,8 @@
 
 #include "vfs_test_support.h"
 
+#include "ui/localization.h"
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define VFS_AWAIT_FLAG_TIMEOUT_NS 20000000000ull
@@ -18,6 +20,34 @@ static bool vfs_await_flag(_Atomic bool* flag) {
     }
     return true;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The plugin handles a fake driver has opened and closed since the watch began, read off its pair of counters. A case
+// that must leak none asserts the two agree, or the count it expects.
+typedef struct LeakWatch {
+    const _Atomic int* alloc_counter;
+    const _Atomic int* close_counter;
+    int allocs_before;
+    int closes_before;
+} LeakWatch;
+
+static LeakWatch leak_watch_begin(const _Atomic int* alloc_counter, const _Atomic int* close_counter) {
+    return (LeakWatch) { .alloc_counter = alloc_counter,
+                         .close_counter = close_counter,
+                         .allocs_before = atomic_load(alloc_counter),
+                         .closes_before = atomic_load(close_counter) };
+}
+
+static int leak_watch_allocated(const LeakWatch* watch) {
+    return atomic_load(watch->alloc_counter) - watch->allocs_before;
+}
+
+static int leak_watch_closed(const LeakWatch* watch) {
+    return atomic_load(watch->close_counter) - watch->closes_before;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // fl_vfs_destroy must close each leaked plugin file handle exactly once and release operation-owned heap
 // allocations and listing arenas.
@@ -46,8 +76,7 @@ UTEST(vfs, destroy_closes_leaked_handles_across_cycles) {
         ASSERT_TRUE_MSG(fl_vfs_init(s_arena), "VFS singleton must be uninitialized when this test starts");
         vfs_test_register_driver(&s_stub_vfs_plugin);
 
-        int allocs_before = s_stub_vfs_alloc_count;
-        int closes_before = s_stub_vfs_close_count;
+        LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
         FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
         ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
         fl_vfs_wait_all();
@@ -72,10 +101,9 @@ UTEST(vfs, destroy_closes_leaked_handles_across_cycles) {
 
         fl_vfs_destroy();
 
-        int allocated = s_stub_vfs_alloc_count - allocs_before;
-        int closed = s_stub_vfs_close_count - closes_before;
-        ASSERT_GT_MSG(allocated, 0, "cycle should have opened plugin handles");
-        ASSERT_EQ_MSG(closed, allocated, "fl_vfs_destroy must close every leaked plugin handle exactly once");
+        ASSERT_GT_MSG(leak_watch_allocated(&leaks), 0, "cycle should have opened plugin handles");
+        ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
+                      "fl_vfs_destroy must close every leaked plugin handle exactly once");
 #if defined(__linux__)
         u64 maps_after_cycle = count_proc_self_maps();
         if (cycle == 0) {
@@ -88,14 +116,11 @@ UTEST(vfs, destroy_closes_leaked_handles_across_cycles) {
 }
 
 UTEST(vfs, builtin_localfs_reads_real_file) {
-    FlArena* arena = arena_new();
-
-    FlString cwd = fl_os_current_directory(arena);
-    FlString dir_path = fl_os_build_path(arena, cwd, FL_S("unit_test_localfs_builtin_tmp"));
+    ScratchDir scratch;
+    ASSERT_TRUE(scratch_dir_create(&scratch, FL_S("unit_test_localfs_builtin_tmp")));
+    FlArena* arena = scratch.arena;
+    FlString dir_path = scratch.dir;
     FlString file_path = fl_os_build_path(arena, dir_path, FL_S("hello.bin"));
-
-    fl_os_remove_directory_recursive(dir_path); // clean any leftover from an aborted run
-    ASSERT_TRUE(fl_os_create_directory(dir_path));
 
     // A fixed pattern, so a truncated or misordered read is caught by the byte compare below.
     uint8_t payload[8192];
@@ -153,20 +178,15 @@ UTEST(vfs, builtin_localfs_reads_real_file) {
     fl_vfs_close(read);
     fl_vfs_destroy();
 
-    fl_os_remove_directory_recursive(dir_path);
-    fl_arena_destroy(arena);
+    scratch_dir_destroy(&scratch);
 }
 
 // get_size and read must agree on relative_path: what the first sizes, the second must be the bytes of.
 UTEST(vfs, builtin_localfs_read_resolves_relative_path) {
-    FlArena* arena = arena_new();
-
-    FlString cwd = fl_os_current_directory(arena);
-    FlString dir_path = fl_os_build_path(arena, cwd, FL_S("unit_test_localfs_relpath_tmp"));
-    FlString file_path = fl_os_build_path(arena, dir_path, FL_S("child.bin"));
-
-    fl_os_remove_directory_recursive(dir_path);
-    ASSERT_TRUE(fl_os_create_directory(dir_path));
+    ScratchDir scratch;
+    ASSERT_TRUE(scratch_dir_create(&scratch, FL_S("unit_test_localfs_relpath_tmp")));
+    FlString dir_path = scratch.dir;
+    FlString file_path = fl_os_build_path(scratch.arena, dir_path, FL_S("child.bin"));
 
     uint8_t payload[64];
     for (size_t i = 0; i < sizeof(payload); i++) {
@@ -202,8 +222,7 @@ UTEST(vfs, builtin_localfs_read_resolves_relative_path) {
     driver->close(NULL, file.handle);
 
     driver->close(NULL, dir.handle);
-    fl_os_remove_directory_recursive(dir_path);
-    fl_arena_destroy(arena);
+    scratch_dir_destroy(&scratch);
 }
 
 UTEST(vfs, read_through_generated_plugin) {
@@ -273,8 +292,7 @@ static FlVfsPlugin s_memory_only_plugin = {
 // A short read (fewer bytes than get_size promised) takes the resolver's error branch, which must close
 // the file handle try_open_file just opened before returning.
 UTEST(vfs, resolve_short_read_closes_plugin_handle) {
-    const int allocs_before = s_stub_vfs_alloc_count;
-    const int closes_before = s_stub_vfs_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
 
     s_stub_vfs_open_as_file = true;
     s_stub_vfs_short_read = true;
@@ -296,10 +314,17 @@ UTEST(vfs, resolve_short_read_closes_plugin_handle) {
 
     ASSERT_EQ_MSG(result.error, VfsResolveError_InvalidFileSize, "short read must surface as InvalidFileSize");
 
-    const int allocated = s_stub_vfs_alloc_count - allocs_before;
-    const int closed = s_stub_vfs_close_count - closes_before;
-    ASSERT_GT_MSG(allocated, 1, "resolver should have opened the root and the probed file");
-    ASSERT_EQ_MSG(closed, allocated, "short-read error path must close every plugin handle it opened");
+    ASSERT_GT_MSG(leak_watch_allocated(&leaks), 1, "resolver should have opened the root and the probed file");
+    ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
+                  "short-read error path must close every plugin handle it opened");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// What the counting fake archive drivers below (Nest, Pfx, Ovr) advertise.
+static FlVfsDriverCapabilities counting_fake_capabilities(void) {
+    return (FlVfsDriverCapabilities)(FlVfsDriverCapabilities_Read | FlVfsDriverCapabilities_List
+                                     | FlVfsDriverCapabilities_Memory);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -313,9 +338,8 @@ typedef struct NestHandle {
     int serial; // 1-based allocation order; identifies a handle across a free that recycles its address
 } NestHandle;
 
-static int s_nest_alloc_count;
-
-static int s_nest_close_count;
+static _Atomic int s_nest_alloc_count;
+static _Atomic int s_nest_close_count;
 
 #define NEST_ARCHIVE_SIZE 8
 
@@ -391,11 +415,6 @@ static FlVfsOpenResult nest_open_memory(void* instance, const uint8_t* data, uin
     return (FlVfsOpenResult) { .handle = h, .is_directory = true, .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
 }
 
-static FlVfsDriverCapabilities nest_get_capabilities(void) {
-    return (FlVfsDriverCapabilities)(FlVfsDriverCapabilities_Read | FlVfsDriverCapabilities_List
-                                     | FlVfsDriverCapabilities_Memory);
-}
-
 static void nest_close(void* instance, void* handle) {
     (void)instance;
     if (handle) {
@@ -413,13 +432,12 @@ static FlVfsPlugin s_nest_vfs_plugin = {
     .read = nest_read,
     .get_size = nest_get_size,
     .close = nest_close,
-    .get_capabilities = nest_get_capabilities,
+    .get_capabilities = counting_fake_capabilities,
     .open_memory = nest_open_memory,
 };
 
 UTEST(vfs, resolve_nested_archives_close_intermediate_handles) {
-    const int allocs_before = s_nest_alloc_count;
-    const int closes_before = s_nest_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_nest_alloc_count, &s_nest_close_count);
 
     // State carrying the nested-archive stub so find_plugin_for_memory can mount each layer as we descend.
     VfsPluginEntry entry = { .plugin = &s_nest_vfs_plugin, .plugin_instance = NULL };
@@ -447,10 +465,8 @@ UTEST(vfs, resolve_nested_archives_close_intermediate_handles) {
     // The resolver consumed the root; only the final resolved handle is left for the caller to close.
     nest_close(NULL, result.handle);
 
-    const int allocated = s_nest_alloc_count - allocs_before;
-    const int closed = s_nest_close_count - closes_before;
-    ASSERT_EQ_MSG(allocated, 5, "root + two probed files + two mounted archive layers");
-    ASSERT_EQ_MSG(closed, allocated,
+    ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 5, "root + two probed files + two mounted archive layers");
+    ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
                   "descending through nested archives must close every intermediate container handle");
 }
 
@@ -464,9 +480,8 @@ typedef struct PfxHandle {
     bool is_dir;
 } PfxHandle;
 
-static int s_pfx_alloc_count;
-
-static int s_pfx_close_count;
+static _Atomic int s_pfx_alloc_count;
+static _Atomic int s_pfx_close_count;
 
 static bool s_pfx_memory_mountable; // whether open_memory accepts a probed file's bytes as an archive
 
@@ -542,11 +557,6 @@ static FlVfsOpenResult pfx_open_memory(void* instance, const uint8_t* data, uint
     return (FlVfsOpenResult) { .handle = h, .is_directory = true, .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
 }
 
-static FlVfsDriverCapabilities pfx_get_capabilities(void) {
-    return (FlVfsDriverCapabilities)(FlVfsDriverCapabilities_Read | FlVfsDriverCapabilities_List
-                                     | FlVfsDriverCapabilities_Memory);
-}
-
 static void pfx_close(void* instance, void* handle) {
     (void)instance;
     if (handle) {
@@ -564,7 +574,7 @@ static FlVfsPlugin s_pfx_vfs_plugin = {
     .read = pfx_read,
     .get_size = pfx_get_size,
     .close = pfx_close,
-    .get_capabilities = pfx_get_capabilities,
+    .get_capabilities = counting_fake_capabilities,
     .open_memory = pfx_open_memory,
 };
 
@@ -578,8 +588,7 @@ static FinalDriver pfx_mount(VfsState* state, VfsPluginEntry* entry, FlString pa
 }
 
 UTEST(vfs, mount_path_directory_exit_closes_container) {
-    const int allocs_before = s_pfx_alloc_count;
-    const int closes_before = s_pfx_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_pfx_alloc_count, &s_pfx_close_count);
     s_pfx_memory_mountable = true;
 
     // "root" opens as the container, then "dir" consumes the rest of the path as a directory.
@@ -594,15 +603,13 @@ UTEST(vfs, mount_path_directory_exit_closes_container) {
 
     pfx_close(NULL, result.handle);
 
-    const int allocated = s_pfx_alloc_count - allocs_before;
-    const int closed = s_pfx_close_count - closes_before;
-    ASSERT_EQ_MSG(allocated, 2, "root container + resolved directory");
-    ASSERT_EQ_MSG(closed, allocated, "the container handle must be closed once the directory is resolved");
+    ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 2, "root container + resolved directory");
+    ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
+                  "the container handle must be closed once the directory is resolved");
 }
 
 UTEST(vfs, mount_path_not_mountable_exit_closes_container) {
-    const int allocs_before = s_pfx_alloc_count;
-    const int closes_before = s_pfx_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_pfx_alloc_count, &s_pfx_close_count);
     s_pfx_memory_mountable = false;
 
     // "plain" reads back fine but no memory plugin accepts it, so the mount fails as NotMountable.
@@ -613,15 +620,13 @@ UTEST(vfs, mount_path_not_mountable_exit_closes_container) {
     ASSERT_EQ_MSG(result.error, VfsResolveError_NotMountable, "a non-archive file must not be mountable");
     ASSERT_TRUE(result.handle == NULL);
 
-    const int allocated = s_pfx_alloc_count - allocs_before;
-    const int closed = s_pfx_close_count - closes_before;
-    ASSERT_EQ_MSG(allocated, 2, "root container + probed file");
-    ASSERT_EQ_MSG(closed, allocated, "an error exit must leave no plugin handle live");
+    ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 2, "root container + probed file");
+    ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
+                  "an error exit must leave no plugin handle live");
 }
 
 UTEST(vfs, mount_path_missing_remainder_closes_container) {
-    const int allocs_before = s_pfx_alloc_count;
-    const int closes_before = s_pfx_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_pfx_alloc_count, &s_pfx_close_count);
     s_pfx_memory_mountable = true;
 
     // Nothing under "root" matches "nope", so try_open_file reports FileNotFound without having opened
@@ -633,15 +638,13 @@ UTEST(vfs, mount_path_missing_remainder_closes_container) {
     ASSERT_EQ_MSG(result.error, VfsResolveError_FileNotFound, "an unresolvable remainder must be FileNotFound");
     ASSERT_TRUE(result.handle == NULL);
 
-    const int allocated = s_pfx_alloc_count - allocs_before;
-    const int closed = s_pfx_close_count - closes_before;
-    ASSERT_EQ_MSG(allocated, 1, "only the root container was ever opened");
-    ASSERT_EQ_MSG(closed, allocated, "an error exit must leave no plugin handle live");
+    ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 1, "only the root container was ever opened");
+    ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
+                  "an error exit must leave no plugin handle live");
 }
 
 UTEST(vfs, mount_path_nested_archives_close_root_and_containers) {
-    const int allocs_before = s_pfx_alloc_count;
-    const int closes_before = s_pfx_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_pfx_alloc_count, &s_pfx_close_count);
     s_pfx_memory_mountable = true;
 
     // "root/l0/l1" descends two archive layers below the root container, so the handles closed here are
@@ -656,10 +659,9 @@ UTEST(vfs, mount_path_nested_archives_close_root_and_containers) {
 
     pfx_close(NULL, result.handle);
 
-    const int allocated = s_pfx_alloc_count - allocs_before;
-    const int closed = s_pfx_close_count - closes_before;
-    ASSERT_EQ_MSG(allocated, 5, "root + two probed files + two mounted archive layers");
-    ASSERT_EQ_MSG(closed, allocated, "root and every intermediate container must be closed");
+    ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 5, "root + two probed files + two mounted archive layers");
+    ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
+                  "root and every intermediate container must be closed");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1015,8 +1017,7 @@ UTEST(vfs, read_all_over_cap_reports_error_and_closes_handle) {
     fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
-    const int allocs_before = s_stub_vfs_alloc_count;
-    const int closes_before = s_stub_vfs_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
 
     s_stub_vfs_oversize = true;
     FlVfsHandle handle
@@ -1030,10 +1031,9 @@ UTEST(vfs, read_all_over_cap_reports_error_and_closes_handle) {
     FlVfsData data = fl_vfs_get_data(handle);
     ASSERT_FALSE_MSG(data.success, "over-cap read-all must not report success");
 
-    const int opened = s_stub_vfs_alloc_count - allocs_before;
-    const int closed = s_stub_vfs_close_count - closes_before;
-    ASSERT_GT_MSG(opened, 0, "read-all should have opened at least one plugin handle");
-    ASSERT_EQ_MSG(closed, opened, "over-cap error path must close every plugin handle it opened");
+    ASSERT_GT_MSG(leak_watch_allocated(&leaks), 0, "read-all should have opened at least one plugin handle");
+    ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
+                  "over-cap error path must close every plugin handle it opened");
 
     fl_vfs_close(handle);
     fl_vfs_mount_close(mount.mount);
@@ -1136,8 +1136,7 @@ UTEST(vfs, resolve_over_cap_file_fails_without_reading_it) {
     s_stub_vfs_open_as_file = true;
     s_stub_vfs_oversize = true;
     const int reads_before = atomic_load(&s_stub_vfs_read_count);
-    const int allocs_before = s_stub_vfs_alloc_count;
-    const int closes_before = s_stub_vfs_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
 
     VfsPluginEntry memory_entry = { .plugin = &s_memory_only_plugin };
     VfsState state = { .plugin_first = &memory_entry, .plugin_last = &memory_entry };
@@ -1154,7 +1153,7 @@ UTEST(vfs, resolve_over_cap_file_fails_without_reading_it) {
 
     ASSERT_EQ(result.error, VfsResolveError_FileTooLarge);
     ASSERT_EQ(atomic_load(&s_stub_vfs_read_count), reads_before);
-    ASSERT_EQ(s_stub_vfs_close_count - closes_before, s_stub_vfs_alloc_count - allocs_before);
+    ASSERT_EQ(leak_watch_closed(&leaks), leak_watch_allocated(&leaks));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1163,8 +1162,7 @@ UTEST(vfs, resolve_over_cap_file_fails_without_reading_it) {
 UTEST(vfs, resolve_without_a_memory_driver_does_not_read_the_file) {
     s_stub_vfs_open_as_file = true;
     const int reads_before = atomic_load(&s_stub_vfs_read_count);
-    const int allocs_before = s_stub_vfs_alloc_count;
-    const int closes_before = s_stub_vfs_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
 
     VfsState state = { 0 };
     VfsPluginEntry root_entry = { .plugin = &s_stub_vfs_plugin, .plugin_instance = NULL };
@@ -1179,7 +1177,7 @@ UTEST(vfs, resolve_without_a_memory_driver_does_not_read_the_file) {
 
     ASSERT_EQ(result.error, VfsResolveError_NotMountable);
     ASSERT_EQ(atomic_load(&s_stub_vfs_read_count), reads_before);
-    ASSERT_EQ(s_stub_vfs_close_count - closes_before, s_stub_vfs_alloc_count - allocs_before);
+    ASSERT_EQ(leak_watch_closed(&leaks), leak_watch_allocated(&leaks));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2157,6 +2155,172 @@ UTEST(vfs, a_closed_id_stays_reserved_until_its_old_op_has_run) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// A destroy that must wait out a queued read cannot return until the parked worker is released, so something other
+// than the destroying thread has to release it. The releaser does so once destroy_returned says destroy came back;
+// a destroy that waits can never set that, so the deadline is what lets it through, and a destroy that does not wait
+// is back long before it.
+
+typedef struct VfsTeardownCtx {
+    VfsParkCtx* park;
+    _Atomic bool destroy_returned;
+} VfsTeardownCtx;
+
+static void* vfs_teardown_releaser(void* user_data) {
+    VfsTeardownCtx* ctx = (VfsTeardownCtx*)user_data;
+    u64 deadline_ns = fl_os_monotonic_ns() + 100000000ull;
+    while (!atomic_load(&ctx->destroy_returned) && fl_os_monotonic_ns() < deadline_ns) {
+        fl_os_sleep_ms(1);
+    }
+    atomic_store(&ctx->park->release, true);
+    return nullptr;
+}
+
+// Starts the releaser; without one the worker is released here, so the destroy under test cannot block forever.
+static bool vfs_teardown_begin(VfsTeardownCtx* ctx, VfsParkCtx* park, FlOsThread* releaser) {
+    ctx->park = park;
+    atomic_init(&ctx->destroy_returned, false);
+    if (fl_os_thread_create(releaser, vfs_teardown_releaser, ctx)) {
+        return true;
+    }
+    atomic_store(&park->release, true);
+    return false;
+}
+
+// Call right after the destroy under test returns. True if the parked worker had been released by then, which a
+// destroy only gets to see if it waited for the queued read.
+static bool vfs_teardown_end(VfsTeardownCtx* ctx, bool releasing, FlOsThread* releaser) {
+    bool waited = atomic_load(&ctx->park->release);
+    atomic_store(&ctx->destroy_returned, true);
+    if (releasing) {
+        fl_os_thread_join(releaser);
+    }
+    return waited;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// font_cache_destroy frees the arena a font load's callback writes into, and the load is only closed, not stopped,
+// by fl_vfs_close: it has to wait for the queued read first. The stub bytes are not a font, so the callback fails
+// after it has touched the face and its context.
+
+UTEST(vfs, font_cache_destroy_waits_for_a_queued_face_load) {
+    fl_vfs_init(s_arena); // idempotent
+    vfs_test_register_driver(&s_stub_vfs_plugin);
+
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
+    ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
+    fl_vfs_wait_all();
+    ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
+
+    VfsParkCtx park;
+    FlVfsHandle parker;
+    bool parked = vfs_park_worker(&park, mount.mount, &parker, FL_S(STUB_VFS_FILE));
+
+    FlFontCache* cache = font_cache_new(s_arena);
+    FlFontId font = font_cache_load_font(cache, mount.mount, FL_S(STUB_VFS_FILE), 16); // queued behind parker
+
+    // Nothing may ASSERT while the worker is parked; see vfs_park_worker.
+    VfsTeardownCtx teardown;
+    FlOsThread releaser = { 0 };
+    bool releasing = vfs_teardown_begin(&teardown, &park, &releaser);
+    font_cache_destroy(cache);
+    bool waited = vfs_teardown_end(&teardown, releasing, &releaser);
+
+    // A destroy that skipped the wait leaves the load to run against freed memory once the worker is free.
+    fl_vfs_wait(parker);
+    fl_vfs_wait_all();
+    fl_vfs_close(parker);
+    fl_vfs_mount_close(mount.mount);
+
+    ASSERT_TRUE_MSG(parked, "the parking callback never ran");
+    ASSERT_NE(font, FONT_ID_INVALID);
+    ASSERT_TRUE_MSG(releasing, "the releaser thread must start; the destroy under test blocks without it");
+    ASSERT_TRUE_MSG(waited, "font_cache_destroy must not return before the queued face load has been released to run");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// localization_destroy frees the arena the manifest read parses into, so it has to wait for a read still queued
+// at startup. The stub bytes are not JSON, so the parse fails after it has allocated from the manifest's arena.
+
+UTEST(vfs, localization_destroy_waits_for_a_queued_manifest_read) {
+    fl_vfs_init(s_arena); // idempotent
+    vfs_test_register_driver(&s_stub_vfs_plugin);
+
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
+    ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
+    fl_vfs_wait_all();
+    ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
+
+    VfsParkCtx park;
+    FlVfsHandle parker;
+    bool parked = vfs_park_worker(&park, mount.mount, &parker, FL_S(STUB_VFS_FILE));
+
+    struct Localization* loc = localization_create(mount.mount, FL_S(STUB_VFS_FILE), false); // queued behind parker
+    bool loading = localization_is_loading(loc);
+
+    VfsTeardownCtx teardown;
+    FlOsThread releaser = { 0 };
+    bool releasing = vfs_teardown_begin(&teardown, &park, &releaser);
+    localization_destroy(loc);
+    bool waited = vfs_teardown_end(&teardown, releasing, &releaser);
+
+    fl_vfs_wait(parker);
+    fl_vfs_wait_all();
+    fl_vfs_close(parker);
+    fl_vfs_mount_close(mount.mount);
+
+    ASSERT_TRUE_MSG(parked, "the parking callback never ran");
+    ASSERT_TRUE_MSG(loading, "the manifest read must still be queued when destroy runs");
+    ASSERT_TRUE_MSG(releasing, "the releaser thread must start; the destroy under test blocks without it");
+    ASSERT_TRUE_MSG(waited, "localization_destroy must not return before the queued manifest read has been released");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// The same for a string table read: the manifest is served as JSON that lists the stub file as the default language's
+// table, so the frame boundary that finishes the manifest queues a table read behind the parked worker.
+
+UTEST(vfs, localization_destroy_waits_for_a_queued_table_read) {
+    static const char k_manifest[] = "{ default: 'en', languages: [{ tag: 'en', file: 'hello.txt' }] }";
+
+    fl_vfs_init(s_arena); // idempotent
+    vfs_test_register_driver(&s_stub_vfs_plugin);
+
+    FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
+    ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
+    fl_vfs_wait_all();
+    ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
+
+    s_stub_vfs_override_data = (const u8*)k_manifest;
+    s_stub_vfs_override_size = sizeof(k_manifest) - 1;
+    struct Localization* loc = localization_create(mount.mount, FL_S(STUB_VFS_FILE), false);
+    fl_vfs_wait_all(); // the manifest read is done; the next frame boundary starts the table read
+
+    VfsParkCtx park;
+    FlVfsHandle parker;
+    bool parked = vfs_park_worker(&park, mount.mount, &parker, FL_S(STUB_VFS_FILE));
+
+    localization_frame_begin(loc); // table queued behind parker
+    bool loading = localization_is_loading(loc);
+
+    VfsTeardownCtx teardown;
+    FlOsThread releaser = { 0 };
+    bool releasing = vfs_teardown_begin(&teardown, &park, &releaser);
+    localization_destroy(loc);
+    bool waited = vfs_teardown_end(&teardown, releasing, &releaser);
+
+    fl_vfs_wait(parker);
+    fl_vfs_wait_all();
+    s_stub_vfs_override_data = nullptr;
+    s_stub_vfs_override_size = 0;
+    fl_vfs_close(parker);
+    fl_vfs_mount_close(mount.mount);
+
+    ASSERT_TRUE_MSG(parked, "the parking callback never ran");
+    ASSERT_TRUE_MSG(loading, "the table read must still be queued when destroy runs");
+    ASSERT_TRUE_MSG(releasing, "the releaser thread must start; the destroy under test blocks without it");
+    ASSERT_TRUE_MSG(waited, "localization_destroy must not return before the queued table read has been released");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A read hands its file back as soon as it has run, not when its own id is closed: closing the file id afterwards
 // closes the driver's file handle at once, while the read's id is still open.
 
@@ -2192,8 +2356,7 @@ UTEST(vfs, a_read_that_has_run_no_longer_keeps_its_file_open) {
 
 typedef struct VfsWorkerMountCloseCtx {
     FlVfsMount* mount;
-    int allocs_before;
-    int closes_before;
+    LeakWatch leaks;
     _Atomic FlVfsHandle late;
     _Atomic bool closed_mount;
     _Atomic int open_handles_after_close;
@@ -2204,8 +2367,7 @@ static FlVfsData vfs_worker_mount_close_callback(void* data, i64 size, void* use
 
     fl_vfs_mount_close(ctx->mount);
     // The reader's own job still holds the mount, so its root handle is the one thing left open.
-    atomic_store(&ctx->open_handles_after_close,
-                 (s_stub_vfs_alloc_count - ctx->allocs_before) - (s_stub_vfs_close_count - ctx->closes_before));
+    atomic_store(&ctx->open_handles_after_close, leak_watch_allocated(&ctx->leaks) - leak_watch_closed(&ctx->leaks));
     atomic_store(&ctx->late, fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
                                                                 FL_VFS_HANDLE_INVALID));
     atomic_store(&ctx->closed_mount, true);
@@ -2217,16 +2379,14 @@ UTEST(vfs, mount_close_from_a_worker_refuses_new_ops_and_frees_on_the_last_refer
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    const int allocs_before = s_stub_vfs_alloc_count;
-    const int closes_before = s_stub_vfs_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
 
     FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
     fl_vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
-    VfsWorkerMountCloseCtx ctx
-        = { .mount = mount.mount, .allocs_before = allocs_before, .closes_before = closes_before };
+    VfsWorkerMountCloseCtx ctx = { .mount = mount.mount, .leaks = leaks };
     atomic_init(&ctx.late, FL_VFS_HANDLE_INVALID + 1);
     atomic_init(&ctx.closed_mount, false);
     atomic_init(&ctx.open_handles_after_close, -1);
@@ -2239,8 +2399,7 @@ UTEST(vfs, mount_close_from_a_worker_refuses_new_ops_and_frees_on_the_last_refer
     bool freed = false;
     u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     while (fl_os_monotonic_ns() < deadline_ns) {
-        if (atomic_load(&ctx.closed_mount)
-            && s_stub_vfs_close_count - closes_before == s_stub_vfs_alloc_count - allocs_before) {
+        if (atomic_load(&ctx.closed_mount) && leak_watch_closed(&leaks) == leak_watch_allocated(&leaks)) {
             freed = true;
             break;
         }
@@ -2251,7 +2410,7 @@ UTEST(vfs, mount_close_from_a_worker_refuses_new_ops_and_frees_on_the_last_refer
     ASSERT_EQ_MSG(atomic_load(&ctx.late), FL_VFS_HANDLE_INVALID, "a closing mount must refuse new operations");
     ASSERT_EQ_MSG(atomic_load(&ctx.open_handles_after_close), 1,
                   "a mount closed from a worker must keep its root open while an operation still holds it");
-    ASSERT_GT(s_stub_vfs_alloc_count - allocs_before, 0);
+    ASSERT_GT(leak_watch_allocated(&leaks), 0);
     ASSERT_TRUE_MSG(freed, "the mount's root handle must close once its last operation has ended");
     ASSERT_FALSE_MSG(fl_vfs_is_ready(reader), "the mount close released the reader's id");
 }
@@ -2283,8 +2442,7 @@ UTEST(vfs, wait_all_covers_the_ops_of_a_mount_closed_from_a_worker) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    const int allocs_before = s_stub_vfs_alloc_count;
-    const int closes_before = s_stub_vfs_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
 
     FlVfsMountResult mount = fl_vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
@@ -2317,7 +2475,7 @@ UTEST(vfs, wait_all_covers_the_ops_of_a_mount_closed_from_a_worker) {
     ASSERT_EQ_MSG(atomic_load(&queued.callback_calls), 1,
                   "wait_all returned before the op queued on the closed mount ran");
     ASSERT_EQ(atomic_load(&queued.release_calls), 1);
-    ASSERT_EQ_MSG(s_stub_vfs_close_count - closes_before, s_stub_vfs_alloc_count - allocs_before,
+    ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
                   "wait_all returned before the closed mount had been freed");
 }
 
@@ -2601,21 +2759,20 @@ UTEST(vfs, mount_resolves_an_archive_nested_in_its_path_and_keeps_one_root_handl
     vfs_test_register_driver(&s_pfx_vfs_plugin);
     s_pfx_memory_mountable = true;
 
-    const int allocs_before = s_pfx_alloc_count;
-    const int closes_before = s_pfx_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_pfx_alloc_count, &s_pfx_close_count);
 
     FlVfsMountResult mount = fl_vfs_mount(FL_S("root/l0/l1"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
     fl_vfs_wait_all();
 
     ASSERT_EQ((int)fl_vfs_mount_get_status(mount.mount), (int)FlVfsMountStatus_Ready);
-    ASSERT_EQ_MSG(s_pfx_alloc_count - allocs_before, 5, "root + two probed files + two mounted archive layers");
-    ASSERT_EQ_MSG((s_pfx_alloc_count - allocs_before) - (s_pfx_close_count - closes_before), 1,
+    ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 5, "root + two probed files + two mounted archive layers");
+    ASSERT_EQ_MSG(leak_watch_allocated(&leaks) - leak_watch_closed(&leaks), 1,
                   "a ready mount holds only the innermost root handle");
 
     fl_vfs_mount_close(mount.mount);
 
-    ASSERT_EQ_MSG(s_pfx_close_count - closes_before, s_pfx_alloc_count - allocs_before,
+    ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
                   "closing the mount must close its root handle");
 }
 
@@ -2665,12 +2822,10 @@ static bool write_listing_fixture_file(FlString dir, FlString name) {
 }
 
 UTEST(vfs, listing_puts_directories_first_in_natural_order_and_flags_archives_by_name) {
-    FlArena* arena = arena_new();
-    FlString cwd = fl_os_current_directory(arena);
-    FlString dir = fl_os_build_path(arena, cwd, FL_S("unit_test_vfs_listing_tmp"));
-
-    fl_os_remove_directory_recursive(dir); // clean any leftover from an aborted run
-    ASSERT_TRUE(fl_os_create_directory(dir));
+    ScratchDir scratch;
+    ASSERT_TRUE(scratch_dir_create(&scratch, FL_S("unit_test_vfs_listing_tmp")));
+    FlArena* arena = scratch.arena;
+    FlString dir = scratch.dir;
     ASSERT_TRUE(fl_os_create_directory(fl_os_build_path(arena, dir, FL_S("zdir"))));
     ASSERT_TRUE(fl_os_create_directory(fl_os_build_path(arena, dir, FL_S("adir"))));
     ASSERT_TRUE(write_listing_fixture_file(dir, FL_S("b10.txt")));
@@ -2718,8 +2873,7 @@ UTEST(vfs, listing_puts_directories_first_in_natural_order_and_flags_archives_by
     fl_vfs_close(root);
     fl_vfs_close(sub);
     fl_vfs_mount_close(mount.mount);
-    fl_os_remove_directory_recursive(dir);
-    fl_arena_destroy(arena);
+    scratch_dir_destroy(&scratch);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3098,8 +3252,8 @@ typedef struct OvrHandle {
     uint8_t* mem; // VFS-allocated buffer this handle owns
 } OvrHandle;
 
-static int s_ovr_alloc_count;
-static int s_ovr_close_count;
+static _Atomic int s_ovr_alloc_count;
+static _Atomic int s_ovr_close_count;
 static int s_ovr_mem_free_count;
 
 static OvrHandle* ovr_alloc(uint8_t* mem) {
@@ -3149,11 +3303,6 @@ static void ovr_close(void* instance, void* handle) {
     free(h);
 }
 
-static FlVfsDriverCapabilities ovr_get_capabilities(void) {
-    return (FlVfsDriverCapabilities)(FlVfsDriverCapabilities_Read | FlVfsDriverCapabilities_List
-                                     | FlVfsDriverCapabilities_Memory);
-}
-
 static FlVfsPlugin s_ovr_refusing_vfs_plugin = {
     .api_version = FL_VFS_PLUGIN_API_VERSION,
     .plugin_name = FL_S_("OvrRefusingArc"),
@@ -3161,7 +3310,7 @@ static FlVfsPlugin s_ovr_refusing_vfs_plugin = {
     .read = ovr_read,
     .is_directory = ovr_is_directory,
     .close = ovr_close,
-    .get_capabilities = ovr_get_capabilities,
+    .get_capabilities = counting_fake_capabilities,
     .open_memory = ovr_open_memory_refusing,
     .get_file_path = nullptr,
 };
@@ -3196,8 +3345,7 @@ static bool probe_block(const mi_heap_t* heap, const mi_heap_area_t* area, void*
 #endif
 
 UTEST(vfs, archive_memory_load_refused_leaves_the_node_untouched_and_frees_the_buffer_once) {
-    const int allocs_before = s_ovr_alloc_count;
-    const int closes_before = s_ovr_close_count;
+    const LeakWatch leaks = leak_watch_begin(&s_ovr_alloc_count, &s_ovr_close_count);
     const int frees_before = s_ovr_mem_free_count;
 
     FlArena* arena = arena_new();
@@ -3231,7 +3379,7 @@ UTEST(vfs, archive_memory_load_refused_leaves_the_node_untouched_and_frees_the_b
     vfs_tree_cleanup_node(node);
     fl_arena_destroy(arena);
 
-    ASSERT_EQ(s_ovr_alloc_count - allocs_before, s_ovr_close_count - closes_before);
+    ASSERT_EQ(leak_watch_allocated(&leaks), leak_watch_closed(&leaks));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3293,9 +3441,10 @@ UTEST(vfs_libarchive, concurrent_reads_through_one_archive_mount_return_the_righ
     fl_vfs_init(s_arena); // idempotent
     fl_vfs_register_builtin_drivers();
 
-    FlArena* arena = arena_new();
-    FlString dir = vfs_test_temp_dir(arena, FL_S("unit_test_vfs_zip_tmp"));
-    ASSERT_TRUE(dir.length > 0);
+    ScratchDir scratch;
+    ASSERT_TRUE(scratch_dir_create(&scratch, FL_S("unit_test_vfs_zip_tmp")));
+    FlArena* arena = scratch.arena;
+    FlString dir = scratch.dir;
     FlString zip_path = fl_os_build_path(arena, dir, FL_S("stress.zip"));
 
     ByteWriter* zip = byte_writer_create(arena);
@@ -3338,8 +3487,7 @@ UTEST(vfs_libarchive, concurrent_reads_through_one_archive_mount_return_the_righ
 
     fl_vfs_mount_close(directory);
     fl_vfs_mount_close(archive);
-    fl_os_remove_directory_recursive(dir);
-    fl_arena_destroy(arena);
+    scratch_dir_destroy(&scratch);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3361,19 +3509,12 @@ UTEST(vfs_libarchive, concurrent_reads_through_one_archive_mount_return_the_righ
 #define NESTED_LONE_HELLO "lone hello\n"
 #define NESTED_OK "ok\n"
 
-typedef struct NestedFixture {
-    FlArena* arena;
-    FlString dir;
-} NestedFixture;
-
-static bool nested_write_file(NestedFixture* fixture, FlString relative_path, const ByteWriter* zip) {
+static bool nested_write_file(ScratchDir* fixture, FlString relative_path, const ByteWriter* zip) {
     return vfs_test_write_file(fixture->arena, fixture->dir, relative_path, zip);
 }
 
-static bool nested_fixture_create(NestedFixture* fixture, FlString dir_name) {
-    fixture->arena = arena_new();
-    fixture->dir = vfs_test_temp_dir(fixture->arena, dir_name);
-    if (fixture->dir.length == 0
+static bool nested_fixture_create(ScratchDir* fixture, FlString dir_name) {
+    if (!scratch_dir_create(fixture, dir_name)
         || !fl_os_create_directory(fl_os_build_path(fixture->arena, fixture->dir, FL_S("folder")))) {
         return false;
     }
@@ -3410,11 +3551,6 @@ static bool nested_fixture_create(NestedFixture* fixture, FlString dir_name) {
            && nested_write_file(fixture, FL_S("outer.zip"), outer)
            && nested_write_file(fixture, FL_S("folder/lone.zip"), lone)
            && nested_write_file(fixture, FL_S("bad.zip"), bad) && fl_os_file_write(plain, (const u8*)"plain\n", 6) == 6;
-}
-
-static void nested_fixture_destroy(NestedFixture* fixture) {
-    fl_os_remove_directory_recursive(fixture->dir);
-    fl_arena_destroy(fixture->arena);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3486,12 +3622,12 @@ static bool nested_check_outer(FlVfsMount* mount, FlString prefix) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool nested_begin(NestedFixture* fixture, FlString dir_name) {
+static bool nested_begin(ScratchDir* fixture, FlString dir_name) {
     return vfs_test_begin() && nested_fixture_create(fixture, dir_name);
 }
 
 UTEST(vfs_libarchive, nested_archives_list_and_read_through_a_directory_mount) {
-    NestedFixture fixture;
+    ScratchDir fixture;
     ASSERT_TRUE(nested_begin(&fixture, FL_S("unit_test_vfs_nested_dir_tmp")));
 
     FlVfsMount* mount = vfs_test_mount(fixture.dir);
@@ -3514,11 +3650,11 @@ UTEST(vfs_libarchive, nested_archives_list_and_read_through_a_directory_mount) {
 
     fl_vfs_mount_close(mount);
     fl_vfs_destroy();
-    nested_fixture_destroy(&fixture);
+    scratch_dir_destroy(&fixture);
 }
 
 UTEST(vfs_libarchive, nested_archives_list_and_read_through_a_mount_of_the_outer_archive) {
-    NestedFixture fixture;
+    ScratchDir fixture;
     ASSERT_TRUE(nested_begin(&fixture, FL_S("unit_test_vfs_nested_outer_tmp")));
 
     FlVfsMount* mount = vfs_test_mount(fl_os_build_path(fixture.arena, fixture.dir, FL_S("outer.zip")));
@@ -3527,11 +3663,11 @@ UTEST(vfs_libarchive, nested_archives_list_and_read_through_a_mount_of_the_outer
 
     fl_vfs_mount_close(mount);
     fl_vfs_destroy();
-    nested_fixture_destroy(&fixture);
+    scratch_dir_destroy(&fixture);
 }
 
 UTEST(vfs_libarchive, a_nested_path_mounts_directly_and_resolves_further_layers_below_it) {
-    NestedFixture fixture;
+    ScratchDir fixture;
     ASSERT_TRUE(nested_begin(&fixture, FL_S("unit_test_vfs_nested_direct_tmp")));
 
     FlString outer = fl_os_build_path(fixture.arena, fixture.dir, FL_S("outer.zip"));
@@ -3553,11 +3689,11 @@ UTEST(vfs_libarchive, a_nested_path_mounts_directly_and_resolves_further_layers_
     fl_vfs_mount_close(inner);
     fl_vfs_mount_close(side);
     fl_vfs_destroy();
-    nested_fixture_destroy(&fixture);
+    scratch_dir_destroy(&fixture);
 }
 
 UTEST(vfs_libarchive, a_nested_file_opens_and_reads_through_a_chained_read) {
-    NestedFixture fixture;
+    ScratchDir fixture;
     ASSERT_TRUE(nested_begin(&fixture, FL_S("unit_test_vfs_nested_open_tmp")));
 
     FlVfsMount* mount = vfs_test_mount(fixture.dir);
@@ -3579,7 +3715,7 @@ UTEST(vfs_libarchive, a_nested_file_opens_and_reads_through_a_chained_read) {
     fl_vfs_close(file);
     fl_vfs_mount_close(mount);
     fl_vfs_destroy();
-    nested_fixture_destroy(&fixture);
+    scratch_dir_destroy(&fixture);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3627,7 +3763,7 @@ static void* nested_race_thread(void* user_data) {
 }
 
 UTEST(vfs_libarchive, first_opens_of_nested_archives_race_inside_the_tree) {
-    NestedFixture fixture;
+    ScratchDir fixture;
     ASSERT_TRUE(nested_begin(&fixture, FL_S("unit_test_vfs_nested_race_tmp")));
     int failures = 0;
 
@@ -3680,7 +3816,7 @@ UTEST(vfs_libarchive, first_opens_of_nested_archives_race_inside_the_tree) {
     }
     ASSERT_EQ(failures, 0);
     fl_vfs_destroy();
-    nested_fixture_destroy(&fixture);
+    scratch_dir_destroy(&fixture);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3720,7 +3856,7 @@ static void counting_archive_close(void* instance, void* handle) {
 }
 
 // A fresh VFS whose libarchive is the counting wrapper below, and the fixture directory.
-static bool nested_begin_counting(NestedFixture* fixture, FlString dir_name) {
+static bool nested_begin_counting(ScratchDir* fixture, FlString dir_name) {
     process_singletons_reset();
     if (!fl_vfs_init(s_arena) || !nested_fixture_create(fixture, dir_name)) {
         return false;
@@ -3739,7 +3875,7 @@ static bool nested_begin_counting(NestedFixture* fixture, FlString dir_name) {
 }
 
 UTEST(vfs_libarchive, a_corrupt_inner_archive_fails_cleanly_and_leaks_no_handle) {
-    NestedFixture fixture;
+    ScratchDir fixture;
     ASSERT_TRUE(nested_begin_counting(&fixture, FL_S("unit_test_vfs_nested_corrupt_tmp")));
 
     FlVfsMount* mount = vfs_test_mount(fixture.dir);
@@ -3770,7 +3906,7 @@ UTEST(vfs_libarchive, a_corrupt_inner_archive_fails_cleanly_and_leaks_no_handle)
                   "closing the mount must close every archive layer it opened");
 
     fl_vfs_destroy();
-    nested_fixture_destroy(&fixture);
+    scratch_dir_destroy(&fixture);
 }
 
 typedef struct NestedCloseCtx {
@@ -3788,7 +3924,7 @@ static FlVfsData nested_close_callback(void* data, i64 size, void* user_data) {
 }
 
 UTEST(vfs_libarchive, closing_a_mount_with_reads_in_flight_through_archives_finishes_them_and_closes_every_archive) {
-    NestedFixture fixture;
+    ScratchDir fixture;
     ASSERT_TRUE(nested_begin_counting(&fixture, FL_S("unit_test_vfs_nested_close_tmp")));
 
     FlVfsMount* mount = vfs_test_mount(fixture.dir);
@@ -3812,11 +3948,11 @@ UTEST(vfs_libarchive, closing_a_mount_with_reads_in_flight_through_archives_fini
     ASSERT_EQ(atomic_load(&s_archive_closed), atomic_load(&s_archive_opened));
 
     fl_vfs_destroy();
-    nested_fixture_destroy(&fixture);
+    scratch_dir_destroy(&fixture);
 }
 
 UTEST(vfs_libarchive, a_nested_archive_is_opened_once_and_kept_for_the_mount) {
-    NestedFixture fixture;
+    ScratchDir fixture;
     ASSERT_TRUE(nested_begin_counting(&fixture, FL_S("unit_test_vfs_nested_once_tmp")));
 
     FlVfsMount* mount = vfs_test_mount(fixture.dir);
@@ -3837,7 +3973,7 @@ UTEST(vfs_libarchive, a_nested_archive_is_opened_once_and_kept_for_the_mount) {
     ASSERT_EQ(atomic_load(&s_archive_closed), atomic_load(&s_archive_opened));
 
     fl_vfs_destroy();
-    nested_fixture_destroy(&fixture);
+    scratch_dir_destroy(&fixture);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3846,7 +3982,7 @@ UTEST(vfs_libarchive, a_nested_archive_is_opened_once_and_kept_for_the_mount) {
 #if FLOWI_VFS_DRIVER_LHASA
 
 UTEST(vfs_lhasa, an_lha_archive_nests_in_a_zip_and_sits_on_disk) {
-    NestedFixture fixture;
+    ScratchDir fixture;
     ASSERT_TRUE(nested_begin(&fixture, FL_S("unit_test_vfs_nested_lha_tmp")));
 
     ByteWriter* lha = byte_writer_create(fixture.arena);
@@ -3867,7 +4003,7 @@ UTEST(vfs_lhasa, an_lha_archive_nests_in_a_zip_and_sits_on_disk) {
 
     fl_vfs_mount_close(mount);
     fl_vfs_destroy();
-    nested_fixture_destroy(&fixture);
+    scratch_dir_destroy(&fixture);
 }
 
 #endif // FLOWI_VFS_DRIVER_LHASA
