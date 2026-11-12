@@ -16,38 +16,17 @@
 #define FL_JSON_FN_MATCHES(fn, ...) \
     _Static_assert(__builtin_types_compatible_p(__typeof__(fn), __VA_ARGS__), #fn " signature drift")
 
-FL_JSON_FN_MATCHES(fl_json_parse, FlJsonValue*(FlArena*, const void*, size_t));
-FL_JSON_FN_MATCHES(fl_json_parse_no_location, FlJsonValue*(FlArena*, const void*, size_t));
 FL_JSON_FN_MATCHES(fl_json_parse_with_flags, FlJsonValue*(FlArena*, const void*, size_t, size_t, FlJsonParseResult*));
-FL_JSON_FN_MATCHES(fl_json_extract_value, FlJsonValue*(FlArena*, const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_write_minified, FlString(FlArena*, const FlJsonValue*));
 FL_JSON_FN_MATCHES(fl_json_write_pretty, FlString(FlArena*, const FlJsonValue*, const char*, const char*));
 FL_JSON_FN_MATCHES(fl_json_value_as_string, FlString(FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_as_number, FlJsonNumber*(FlJsonValue*));
 FL_JSON_FN_MATCHES(fl_json_value_as_object, FlJsonObject*(FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_as_fixed_array, FlJsonArray*(FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_is_true, int32_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_is_false, int32_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_is_null, int32_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_is_bool, int32_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_get_bool, int32_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_get_u64, uint64_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_get_i32, int32_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_value_get_f64, double(const FlJsonValue*));
 FL_JSON_FN_MATCHES(fl_json_find_property, FlJsonValue*(const FlJsonValue*, FlString));
 FL_JSON_FN_MATCHES(fl_json_get_string_prop, FlString(const FlJsonValue*, FlString));
 FL_JSON_FN_MATCHES(fl_json_get_u32_prop, uint32_t(const FlJsonValue*, FlString));
 FL_JSON_FN_MATCHES(fl_json_get_f64_prop, double(const FlJsonValue*, FlString));
-FL_JSON_FN_MATCHES(fl_json_get_bool_prop, int32_t(const FlJsonValue*, FlString));
 FL_JSON_FN_MATCHES(fl_json_get_object_prop, FlJsonValue*(const FlJsonValue*, FlString));
 FL_JSON_FN_MATCHES(fl_json_get_array_prop, FlJsonArray*(const FlJsonValue*, FlString));
-FL_JSON_FN_MATCHES(fl_json_get_line_number, size_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_get_column_number, size_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_has_position_info, int32_t(const FlJsonValue*));
-FL_JSON_FN_MATCHES(fl_json_format_parse_error, FlString(FlArena*, const FlJsonParseResult*, const char*, size_t));
 FL_JSON_FN_MATCHES(fl_json_get_error_description, FlString(FlJsonParseError));
-FL_JSON_FN_MATCHES(fl_json_format_value_error, FlString(FlArena*, const FlJsonValue*, FlString, FlString, FlString));
-FL_JSON_FN_MATCHES(fl_json_get_path, FlJsonValue*(const FlJsonValue*, FlString));
 
 #undef FL_JSON_FN_MATCHES
 

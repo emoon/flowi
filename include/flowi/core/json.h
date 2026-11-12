@@ -126,42 +126,14 @@ typedef struct FlJsonParseResult {
 
 // The `fl_json_*` arena-backed JSON parser / DOM. Parse a buffer into a tree of
 // FlJsonValue, navigate and type-extract from it, then write it back out.
-// Parse a JSON buffer into a DOM allocated from arena. Returns nullptr on error.
-FL_API FlJsonValue* fl_json_parse(FlArena* arena, const void* src, size_t src_size);
-// Parse without location tracking (faster; for validated JSON that won't be edited).
-FL_API FlJsonValue* fl_json_parse_no_location(FlArena* arena, const void* src, size_t src_size);
-// Parse with explicit flags_bitset (FlJsonParseFlags OR-combined) and an optional result out-param.
+// Parse src as strict JSON (flags_bitset 0) or JSON5 (flags_bitset 1), with an optional result out-param.
 FL_API FlJsonValue* fl_json_parse_with_flags(FlArena* arena, const void* src, size_t src_size, size_t flags_bitset, FlJsonParseResult* result);
-// Deep-copy value (and all it references) into a fresh value allocated from arena.
-FL_API FlJsonValue* fl_json_extract_value(FlArena* arena, const FlJsonValue* value);
-// Write value out as a minified UTF-8 JSON string, allocated from arena.
-FL_API FlString fl_json_write_minified(FlArena* arena, const FlJsonValue* value);
 // Write value out as a pretty UTF-8 JSON string (indent/newline may be nullptr), allocated from arena.
 FL_API FlString fl_json_write_pretty(FlArena* arena, const FlJsonValue* value, const char* indent, const char* newline);
 // Reinterpret a value as a string. Returns empty if not a string.
 FL_API FlString fl_json_value_as_string(FlJsonValue* value);
-// Reinterpret a value as a number. Returns nullptr if not a number.
-FL_API FlJsonNumber* fl_json_value_as_number(FlJsonValue* value);
 // Reinterpret a value as an object. Returns nullptr if not an object.
 FL_API FlJsonObject* fl_json_value_as_object(FlJsonValue* value);
-// Reinterpret a value as an array. Returns nullptr if not an array.
-FL_API FlJsonArray* fl_json_value_as_fixed_array(FlJsonValue* value);
-// Whether the value is true.
-FL_API int32_t fl_json_value_is_true(const FlJsonValue* value);
-// Whether the value is false.
-FL_API int32_t fl_json_value_is_false(const FlJsonValue* value);
-// Whether the value is null.
-FL_API int32_t fl_json_value_is_null(const FlJsonValue* value);
-// Whether the value is a boolean (true or false).
-FL_API int32_t fl_json_value_is_bool(const FlJsonValue* value);
-// Get a boolean from a value. Returns 0 if not a boolean or if false.
-FL_API int32_t fl_json_value_get_bool(const FlJsonValue* value);
-// Get an unsigned 64-bit integer from a number (0x hex supported). Returns 0 if not a number.
-FL_API uint64_t fl_json_value_get_u64(const FlJsonValue* value);
-// Get a signed 32-bit integer from a number. Returns 0 if not a number.
-FL_API int32_t fl_json_value_get_i32(const FlJsonValue* value);
-// Get a 64-bit float from a number. Returns 0.0 if not a number.
-FL_API double fl_json_value_get_f64(const FlJsonValue* value);
 // Find a property in an object by key. Returns nullptr if absent.
 FL_API FlJsonValue* fl_json_find_property(const FlJsonValue* object, FlString key);
 // Extract a string-typed property by key (empty if absent / wrong type).
@@ -170,26 +142,12 @@ FL_API FlString fl_json_get_string_prop(const FlJsonValue* object, FlString key)
 FL_API uint32_t fl_json_get_u32_prop(const FlJsonValue* object, FlString key);
 // Extract an f64-typed property by key (0.0 if absent / wrong type).
 FL_API double fl_json_get_f64_prop(const FlJsonValue* object, FlString key);
-// Extract a bool-typed property by key (0 if absent / wrong type).
-FL_API int32_t fl_json_get_bool_prop(const FlJsonValue* object, FlString key);
 // Extract an object-typed property by key (nullptr if absent / wrong type).
 FL_API FlJsonValue* fl_json_get_object_prop(const FlJsonValue* object, FlString key);
 // Extract an array-typed property by key (nullptr if absent / wrong type).
 FL_API FlJsonArray* fl_json_get_array_prop(const FlJsonValue* object, FlString key);
-// Source line where value starts (1-based, 0 if unknown).
-FL_API size_t fl_json_get_line_number(const FlJsonValue* value);
-// Source column where value starts (1-based, 0 if unknown).
-FL_API size_t fl_json_get_column_number(const FlJsonValue* value);
-// Whether position information is available for value.
-FL_API int32_t fl_json_has_position_info(const FlJsonValue* value);
-// Format a parse error with source context, allocated from arena.
-FL_API FlString fl_json_format_parse_error(FlArena* arena, const FlJsonParseResult* result, const char* source_text, size_t source_size);
 // Human-readable description of a parse error code.
 FL_API FlString fl_json_get_error_description(FlJsonParseError error);
-// Format a value-anchored error with full context, allocated from arena.
-FL_API FlString fl_json_format_value_error(FlArena* arena, const FlJsonValue* value, FlString error_message, FlString file_path, FlString help_text);
-// Navigate a nested path like "metadata.shortname" (nullptr if not found).
-FL_API FlJsonValue* fl_json_get_path(const FlJsonValue* root, FlString path);
 
 
 #ifdef __cplusplus

@@ -1016,29 +1016,6 @@ UTEST(os_sleep, sleep_ms_split_separates_whole_seconds) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// JSON writer - hex-literal numbers are converted to decimal on output; the zero value is the edge case
-// (its digit count is 0, so a naive right-to-left digit write lands one byte before the output cursor).
-
-UTEST(json, write_hex_literal_zero) {
-    FlArena* arena = arena_new();
-
-    // Neighbors on both sides of the hex zero: a data[-1] write would clobber the ':' before the '0',
-    // and an undersized buffer would corrupt what follows. Exact-match catches both.
-    const char src[] = "{\"a\": 1, \"v\": 0x0, \"z\": 0xFF}";
-    FlJsonValue* root
-        = fl_json_parse_with_flags(arena, src, sizeof(src) - 1, FlJsonParseFlags_AllowHexadecimalNumbers, nullptr);
-    ASSERT_TRUE(root != nullptr);
-
-    FlString out = fl_json_write_minified(arena, root);
-    ASSERT_TRUE(out.data != nullptr);
-    const char expected[] = "{\"a\":1,\"v\":0,\"z\":255}";
-    ASSERT_EQ((int)out.length, (int)(sizeof(expected) - 1));
-    ASSERT_EQ(0, memcmp(out.data, expected, sizeof(expected) - 1));
-
-    fl_arena_destroy(arena);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // JSON parser depth limit - input nested past the maximum depth must fail with FlJsonParseError_TooDeep instead of
 // overflowing the native stack (both recursive walks recurse once per nesting level of raw input).
 

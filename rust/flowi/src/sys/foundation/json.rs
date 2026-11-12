@@ -182,42 +182,14 @@ const _: () = {
 // The `fl_json_*` arena-backed JSON parser / DOM. Parse a buffer into a tree of
 // FlJsonValue, navigate and type-extract from it, then write it back out.
 extern "C" {
-    /// Parse a JSON buffer into a DOM allocated from arena. Returns nullptr on error.
-    pub fn fl_json_parse(arena: *mut crate::sys::Arena, src: *const core::ffi::c_void, src_size: usize) -> *mut crate::sys::JsonValue;
-    /// Parse without location tracking (faster; for validated JSON that won't be edited).
-    pub fn fl_json_parse_no_location(arena: *mut crate::sys::Arena, src: *const core::ffi::c_void, src_size: usize) -> *mut crate::sys::JsonValue;
-    /// Parse with explicit flags_bitset (FlJsonParseFlags OR-combined) and an optional result out-param.
+    /// Parse src as strict JSON (flags_bitset 0) or JSON5 (flags_bitset 1), with an optional result out-param.
     pub fn fl_json_parse_with_flags(arena: *mut crate::sys::Arena, src: *const core::ffi::c_void, src_size: usize, flags_bitset: usize, result: *mut crate::sys::JsonParseResult) -> *mut crate::sys::JsonValue;
-    /// Deep-copy value (and all it references) into a fresh value allocated from arena.
-    pub fn fl_json_extract_value(arena: *mut crate::sys::Arena, value: *const crate::sys::JsonValue) -> *mut crate::sys::JsonValue;
-    /// Write value out as a minified UTF-8 JSON string, allocated from arena.
-    pub fn fl_json_write_minified(arena: *mut crate::sys::Arena, value: *const crate::sys::JsonValue) -> crate::sys::RawStr;
     /// Write value out as a pretty UTF-8 JSON string (indent/newline may be nullptr), allocated from arena.
     pub fn fl_json_write_pretty(arena: *mut crate::sys::Arena, value: *const crate::sys::JsonValue, indent: *const core::ffi::c_char, newline: *const core::ffi::c_char) -> crate::sys::RawStr;
     /// Reinterpret a value as a string. Returns empty if not a string.
     pub fn fl_json_value_as_string(value: *mut crate::sys::JsonValue) -> crate::sys::RawStr;
-    /// Reinterpret a value as a number. Returns nullptr if not a number.
-    pub fn fl_json_value_as_number(value: *mut crate::sys::JsonValue) -> *mut crate::sys::JsonNumber;
     /// Reinterpret a value as an object. Returns nullptr if not an object.
     pub fn fl_json_value_as_object(value: *mut crate::sys::JsonValue) -> *mut crate::sys::JsonObject;
-    /// Reinterpret a value as an array. Returns nullptr if not an array.
-    pub fn fl_json_value_as_fixed_array(value: *mut crate::sys::JsonValue) -> *mut crate::sys::JsonArray;
-    /// Whether the value is true.
-    pub fn fl_json_value_is_true(value: *const crate::sys::JsonValue) -> i32;
-    /// Whether the value is false.
-    pub fn fl_json_value_is_false(value: *const crate::sys::JsonValue) -> i32;
-    /// Whether the value is null.
-    pub fn fl_json_value_is_null(value: *const crate::sys::JsonValue) -> i32;
-    /// Whether the value is a boolean (true or false).
-    pub fn fl_json_value_is_bool(value: *const crate::sys::JsonValue) -> i32;
-    /// Get a boolean from a value. Returns 0 if not a boolean or if false.
-    pub fn fl_json_value_get_bool(value: *const crate::sys::JsonValue) -> i32;
-    /// Get an unsigned 64-bit integer from a number (0x hex supported). Returns 0 if not a number.
-    pub fn fl_json_value_get_u64(value: *const crate::sys::JsonValue) -> u64;
-    /// Get a signed 32-bit integer from a number. Returns 0 if not a number.
-    pub fn fl_json_value_get_i32(value: *const crate::sys::JsonValue) -> i32;
-    /// Get a 64-bit float from a number. Returns 0.0 if not a number.
-    pub fn fl_json_value_get_f64(value: *const crate::sys::JsonValue) -> f64;
     /// Find a property in an object by key. Returns nullptr if absent.
     pub fn fl_json_find_property(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> *mut crate::sys::JsonValue;
     /// Extract a string-typed property by key (empty if absent / wrong type).
@@ -226,25 +198,11 @@ extern "C" {
     pub fn fl_json_get_u32_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> u32;
     /// Extract an f64-typed property by key (0.0 if absent / wrong type).
     pub fn fl_json_get_f64_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> f64;
-    /// Extract a bool-typed property by key (0 if absent / wrong type).
-    pub fn fl_json_get_bool_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> i32;
     /// Extract an object-typed property by key (nullptr if absent / wrong type).
     pub fn fl_json_get_object_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> *mut crate::sys::JsonValue;
     /// Extract an array-typed property by key (nullptr if absent / wrong type).
     pub fn fl_json_get_array_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> *mut crate::sys::JsonArray;
-    /// Source line where value starts (1-based, 0 if unknown).
-    pub fn fl_json_get_line_number(value: *const crate::sys::JsonValue) -> usize;
-    /// Source column where value starts (1-based, 0 if unknown).
-    pub fn fl_json_get_column_number(value: *const crate::sys::JsonValue) -> usize;
-    /// Whether position information is available for value.
-    pub fn fl_json_has_position_info(value: *const crate::sys::JsonValue) -> i32;
-    /// Format a parse error with source context, allocated from arena.
-    pub fn fl_json_format_parse_error(arena: *mut crate::sys::Arena, result: *const crate::sys::JsonParseResult, source_text: *const core::ffi::c_char, source_size: usize) -> crate::sys::RawStr;
     /// Human-readable description of a parse error code.
     pub fn fl_json_get_error_description(error: crate::sys::JsonParseError) -> crate::sys::RawStr;
-    /// Format a value-anchored error with full context, allocated from arena.
-    pub fn fl_json_format_value_error(arena: *mut crate::sys::Arena, value: *const crate::sys::JsonValue, error_message: crate::sys::RawStr, file_path: crate::sys::RawStr, help_text: crate::sys::RawStr) -> crate::sys::RawStr;
-    /// Navigate a nested path like "metadata.shortname" (nullptr if not found).
-    pub fn fl_json_get_path(root: *const crate::sys::JsonValue, path: crate::sys::RawStr) -> *mut crate::sys::JsonValue;
 }
 

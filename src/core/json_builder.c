@@ -44,7 +44,7 @@ static void object_set(FlArena* arena, FlJsonValue* obj, FlString key, FlJsonVal
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* create_string_value(FlArena* arena, FlString str) {
-    FlJsonValue* val = json_value_alloc_zero(arena);
+    FlJsonValue* val = arena_alloc_zero(arena, FlJsonValue);
     val->type = FlJsonType_String;
     FlString* payload = arena_alloc(arena, FlString);
     *payload = fl_string_copy(arena, str);
@@ -55,7 +55,7 @@ static FlJsonValue* create_string_value(FlArena* arena, FlString str) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* create_number_value(FlArena* arena, const char* num_str, size_t len) {
-    FlJsonValue* val = json_value_alloc_zero(arena);
+    FlJsonValue* val = arena_alloc_zero(arena, FlJsonValue);
     val->type = FlJsonType_Number;
     FlJsonNumber* num = arena_alloc_zero(arena, FlJsonNumber);
     char* buf = arena_alloc_array(arena, char, len + 1);
@@ -72,7 +72,7 @@ static FlJsonValue* create_number_value(FlArena* arena, const char* num_str, siz
 FlJsonValue* json_build_object(FlArena* arena) {
     FL_ASSERT_DEBUG(arena);
     FlJsonObject* obj = arena_alloc_zero(arena, FlJsonObject);
-    FlJsonValue* val = json_value_alloc_zero(arena);
+    FlJsonValue* val = arena_alloc_zero(arena, FlJsonValue);
     val->type = FlJsonType_Object;
     val->payload = obj;
     return val;
@@ -83,7 +83,7 @@ FlJsonValue* json_build_object(FlArena* arena) {
 FlJsonValue* json_build_array(FlArena* arena) {
     FL_ASSERT_DEBUG(arena);
     FlJsonArray* arr = arena_alloc_zero(arena, FlJsonArray);
-    FlJsonValue* val = json_value_alloc_zero(arena);
+    FlJsonValue* val = arena_alloc_zero(arena, FlJsonValue);
     val->type = FlJsonType_Array;
     val->payload = arr;
     return val;
@@ -118,7 +118,7 @@ void json_build_set_float(FlArena* arena, FlJsonValue* obj, FlString key, f64 va
 
 void json_build_set_bool(FlArena* arena, FlJsonValue* obj, FlString key, bool value) {
     FL_ASSERT_DEBUG(arena && obj && obj->type == FlJsonType_Object);
-    FlJsonValue* val = json_value_alloc_zero(arena);
+    FlJsonValue* val = arena_alloc_zero(arena, FlJsonValue);
     val->type = value ? FlJsonType_True : FlJsonType_False;
     val->payload = nullptr;
     object_set(arena, obj, key, val);
@@ -128,7 +128,7 @@ void json_build_set_bool(FlArena* arena, FlJsonValue* obj, FlString key, bool va
 
 void json_build_set_null(FlArena* arena, FlJsonValue* obj, FlString key) {
     FL_ASSERT_DEBUG(arena && obj && obj->type == FlJsonType_Object);
-    FlJsonValue* val = json_value_alloc_zero(arena);
+    FlJsonValue* val = arena_alloc_zero(arena, FlJsonValue);
     val->type = FlJsonType_Null;
     object_set(arena, obj, key, val);
 }
