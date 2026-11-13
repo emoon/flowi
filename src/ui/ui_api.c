@@ -162,7 +162,7 @@ void fl_painter_set_effect(FlEffect effect) {
 }
 
 void fl_painter_rect(float x, float y, float w, float h, FlColor color) {
-    painter_rect(ui_get_painter(), x, y, w, h, color);
+    painter_rect(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, color);
 }
 
 void fl_painter_rects(const FlColoredRect* rects, uint32_t rects_size) {
@@ -170,24 +170,27 @@ void fl_painter_rects(const FlColoredRect* rects, uint32_t rects_size) {
 }
 
 void fl_painter_rect_rounded(float x, float y, float w, float h, float radius, FlColor color) {
-    painter_rect_rounded(ui_get_painter(), x, y, w, h, radius, color);
+    painter_rect_rounded(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, radius, color);
 }
 
 void fl_painter_gradient_rect(float x, float y, float w, float h, FlColor top_left, FlColor top_right,
                               FlColor bottom_left, FlColor bottom_right) {
-    painter_gradient_rect(ui_get_painter(), x, y, w, h, top_left, top_right, bottom_left, bottom_right);
+    painter_gradient_rect(
+        ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h },
+        (PainterCornerColors) {
+            .top_left = top_left, .top_right = top_right, .bottom_left = bottom_left, .bottom_right = bottom_right });
 }
 
 void fl_painter_rect_styled(float x, float y, float w, float h, FlRectConfig config) {
-    painter_rect_styled(ui_get_painter(), x, y, w, h, config);
+    painter_rect_styled(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, config);
 }
 
 void fl_painter_hline(float x, float y, float length, FlColor color) {
-    painter_hline(ui_get_painter(), x, y, length, color);
+    painter_hline(ui_get_painter(), (PainterRule) { .x = x, .y = y, .length = length, .color = color });
 }
 
 void fl_painter_vline(float x, float y, float length, FlColor color) {
-    painter_vline(ui_get_painter(), x, y, length, color);
+    painter_vline(ui_get_painter(), (PainterRule) { .x = x, .y = y, .length = length, .color = color });
 }
 
 // The two text draws are the exception: resolving the font-id zero semantic reads the context itself, so they
@@ -198,7 +201,8 @@ void fl_painter_text(float x, float y, FlString text, uint32_t font, FlColor col
     if (self == nullptr) {
         return;
     }
-    painter_text(ui_get_painter(), x, y, text, resolve_font_id(self, font), color);
+    painter_text(ui_get_painter(), (PainterTextRun) { .x = x, .y = y, .text = text, .color = color },
+                 resolve_font_id(self, font));
 }
 
 void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, FlColor color) {
@@ -207,44 +211,78 @@ void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, 
         return;
     }
     style.font_id = resolve_font_id(self, style.font_id);
-    painter_text_styled(ui_get_painter(), x, y, text, style, color);
+    painter_text_styled(ui_get_painter(), (PainterTextRun) { .x = x, .y = y, .text = text, .color = color }, style);
 }
 
 bool fl_painter_image(float x, float y, float w, float h, uint32_t image, FlColor color) {
-    return painter_image(ui_get_painter(), x, y, w, h, image, color);
+    return painter_image(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, image, color);
 }
 
 bool fl_painter_image_sub(float dx, float dy, float dw, float dh, float sx, float sy, float sw, float sh,
                           FlImageHandle image, FlColor color) {
-    return painter_image_sub(ui_get_painter(), dx, dy, dw, dh, sx, sy, sw, sh, image, color);
+    return painter_image_sub(ui_get_painter(), (PainterImageSub) { .dst = { .x = dx, .y = dy, .w = dw, .h = dh },
+                                                                   .src = { .x = sx, .y = sy, .w = sw, .h = sh },
+                                                                   .image = image,
+                                                                   .color = color });
 }
 
 void fl_painter_circle(float cx, float cy, float radius, FlColor color, FlColor border_color, float border_width) {
-    painter_circle(ui_get_painter(), cx, cy, radius, color, border_color, border_width);
+    painter_circle(
+        ui_get_painter(),
+        (PainterCircle) { .cx = cx,
+                          .cy = cy,
+                          .radius = radius,
+                          .fill = { .color = color, .border_color = border_color, .border_width = border_width } });
 }
 
 void fl_painter_circle_stroked(float cx, float cy, float radius, FlColor color, FlColor border_color,
                                float border_width, FlStrokeStyle stroke) {
-    painter_circle_stroked(ui_get_painter(), cx, cy, radius, color, border_color, border_width, stroke);
+    painter_circle_stroked(
+        ui_get_painter(),
+        (PainterCircle) { .cx = cx,
+                          .cy = cy,
+                          .radius = radius,
+                          .fill = { .color = color, .border_color = border_color, .border_width = border_width } },
+        stroke);
 }
 
 void fl_painter_diamond(float cx, float cy, float rx, float ry, FlColor color, FlColor border_color,
                         float border_width) {
-    painter_diamond(ui_get_painter(), cx, cy, rx, ry, color, border_color, border_width);
+    painter_diamond(
+        ui_get_painter(),
+        (PainterDiamond) { .cx = cx,
+                           .cy = cy,
+                           .rx = rx,
+                           .ry = ry,
+                           .fill = { .color = color, .border_color = border_color, .border_width = border_width } });
 }
 
 void fl_painter_arc(float cx, float cy, float radius, float thickness, float start_angle, float sweep, FlColor color,
                     FlArcFlags flags) {
-    painter_arc(ui_get_painter(), cx, cy, radius, thickness, start_angle, sweep, color, flags);
+    painter_arc(ui_get_painter(), (PainterArc) { .cx = cx,
+                                                 .cy = cy,
+                                                 .radius = radius,
+                                                 .thickness = thickness,
+                                                 .start_angle = start_angle,
+                                                 .sweep = sweep,
+                                                 .color = color,
+                                                 .flags = flags });
 }
 
 void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, float width, FlColor color,
                          FlPolylineFlags flags, FlColor fill_color, float baseline_y) {
-    painter_polyline(ui_get_painter(), points, points_size, width, color, flags, fill_color, baseline_y);
+    painter_polyline(ui_get_painter(), (PainterPolyline) { .points = points,
+                                                           .point_count = points_size,
+                                                           .width = width,
+                                                           .color = color,
+                                                           .flags = flags,
+                                                           .fill_color = fill_color,
+                                                           .baseline_y = baseline_y });
 }
 
 void fl_painter_bars(float baseline_y, const FlBar* bars, uint32_t bars_size, FlColor color) {
-    painter_bars(ui_get_painter(), baseline_y, bars, bars_size, color);
+    painter_bars(ui_get_painter(),
+                 (PainterBars) { .baseline_y = baseline_y, .bars = bars, .bar_count = bars_size, .color = color });
 }
 
 // Hand-written bodies for the generated Text api. emit is a plain layout element in the theme primary
