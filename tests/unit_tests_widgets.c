@@ -5733,6 +5733,97 @@ UTEST(input, text_input_reports_cancel_on_the_escape_frame_only) {
     fl_app_destroy(app);
 }
 
+// Shift held with a cursor key extends the selection from where the cursor was.
+
+static void text_input_tap(FlApp* app, TextInputEdgesState* st, FlKey key) {
+    fl_app_inject_key(app, key, true);
+    fl_app_tick(app, st, text_input_edges_frame);
+    fl_app_inject_key(app, key, false);
+    fl_app_tick(app, st, text_input_edges_frame);
+}
+
+// Number of selected characters, signed: negative when the cursor end is left of the anchor.
+static int text_input_selected(const TextInputEdgesState* st) {
+    const STB_TexteditState* stb = (const STB_TexteditState*)st->input.stb_state;
+    return stb->select_end - stb->select_start;
+}
+
+static FlApp* text_input_shift_app(TextInputEdgesState* st) {
+    FlApp* app = text_input_edges_app(st);
+    if (app) {
+        fl_app_inject_text(app, FL_S("ab cd"));
+        fl_app_tick(app, st, text_input_edges_frame);
+        fl_app_inject_key(app, FlKey_Left_Shift, true);
+    }
+    return app;
+}
+
+UTEST(input, text_input_shift_arrows_extend_the_selection) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+    TextInputEdgesState st = { 0 };
+    FlApp* app = text_input_shift_app(&st);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    text_input_tap(app, &st, FlKey_Left);
+    EXPECT_EQ(text_input_selected(&st), -1);
+    text_input_tap(app, &st, FlKey_Left);
+    EXPECT_EQ(text_input_selected(&st), -2);
+    text_input_tap(app, &st, FlKey_Right);
+    EXPECT_EQ(text_input_selected(&st), -1);
+
+    fl_app_destroy(app);
+}
+
+UTEST(input, text_input_shift_home_and_end_select_to_the_line_ends) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+    TextInputEdgesState st = { 0 };
+    FlApp* app = text_input_shift_app(&st);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    text_input_tap(app, &st, FlKey_Home);
+    EXPECT_EQ(text_input_selected(&st), -5);
+    text_input_tap(app, &st, FlKey_End);
+    EXPECT_EQ(text_input_selected(&st), 0);
+
+    fl_app_destroy(app);
+}
+
+UTEST(input, text_input_ctrl_shift_arrows_select_by_word) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+    TextInputEdgesState st = { 0 };
+    FlApp* app = text_input_shift_app(&st);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    fl_app_inject_key(app, FlKey_Left_Control, true);
+    text_input_tap(app, &st, FlKey_Left);
+    EXPECT_EQ(text_input_selected(&st), -2);
+    text_input_tap(app, &st, FlKey_Left);
+    EXPECT_EQ(text_input_selected(&st), -5);
+    // Word-right lands on the start of the next word.
+    text_input_tap(app, &st, FlKey_Right);
+    EXPECT_EQ(text_input_selected(&st), -2);
+
+    fl_app_destroy(app);
+}
+
+UTEST(input, text_input_typing_replaces_a_shift_selection) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+    TextInputEdgesState st = { 0 };
+    FlApp* app = text_input_shift_app(&st);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    text_input_tap(app, &st, FlKey_Left);
+    text_input_tap(app, &st, FlKey_Left);
+    fl_app_inject_key(app, FlKey_Left_Shift, false);
+    fl_app_inject_text(app, FL_S("X"));
+    fl_app_tick(app, &st, text_input_edges_frame);
+
+    FlString got = ui_text_input_get_text(&st.input);
+    EXPECT_TRUE_MSG(fl_string_equals(got, FL_S("ab X")), "the two selected characters are replaced");
+
+    fl_app_destroy(app);
+}
+
 // The same field, never aimed at: it is the frame's first focusable widget, so it is exactly what a focus
 // auto-restore that seeds on an idle frame would hand the keyboard to.
 
