@@ -163,6 +163,22 @@ void menu_branch_switch(FlUiCtx* ctx, int level, u32 child_id, bool child_is_sub
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// The index of the recorded row with widget id `id` in the level's prev-frame set, or -1.
+int menu_find_in_level(const UiMenuLevelFrame* lf, u32 id) {
+    if (id == 0) {
+        return -1;
+    }
+    int n = lf->item_count < UI_MENU_MAX_ITEMS ? lf->item_count : UI_MENU_MAX_ITEMS;
+    for (int i = 0; i < n; i++) {
+        if (lf->item_id[i] == id) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Locate the menu item the pointer is over by scanning the recorded item set of every open level.
 //
 // PREV-FRAME SET: the level arrays hold the PREVIOUS frame's emission, which is exactly what ctx->hot_id was computed
@@ -170,24 +186,17 @@ void menu_branch_switch(FlUiCtx* ctx, int level, u32 child_id, bool child_is_sub
 // begin() itself - must run before this frame's items re-emit and reset the per-frame counters.
 MenuHit menu_find_hot_item(const FlUiCtx* ctx) {
     const UiMenuState* m = &ctx->shared->menu;
-    const UiMenuFrame* mf = &ctx->menu_frame;
-    MenuHit none = { .level = -1, .index = -1 };
 
-    if (ctx->hot_id == 0) {
-        return none;
-    }
     for (int L = 0; L < m->depth && L < UI_MENU_MAX_DEPTH; L++) {
-        const UiMenuLevelFrame* lvl = &mf->levels[L];
-        int n = lvl->item_count < UI_MENU_MAX_ITEMS ? lvl->item_count : UI_MENU_MAX_ITEMS;
-        for (int i = 0; i < n; i++) {
-            if (lvl->item_id[i] == ctx->hot_id) {
-                return (MenuHit) {
-                    .level = L, .index = i, .submenu = lvl->item_submenu[i], .navigable = lvl->item_navigable[i]
-                };
-            }
+        const UiMenuLevelFrame* lvl = &ctx->menu_frame.levels[L];
+        int i = menu_find_in_level(lvl, ctx->hot_id);
+        if (i >= 0) {
+            return (MenuHit) {
+                .level = L, .index = i, .submenu = lvl->item_submenu[i], .navigable = lvl->item_navigable[i]
+            };
         }
     }
-    return none;
+    return (MenuHit) { .level = -1, .index = -1 };
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -486,4 +495,43 @@ bool menu_dismissed(FlUiCtx* ctx, u32 scope, bool pointer_on_surface) {
         return true;
     }
     return ui_action_pressed(ctx, FlAction_Cancel) && menu_handle_cancel(ctx, m);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Open the chain for the surface with this scope id at depth 1 (its root level only), clearing the transient state of
+// every level from first_level down. The caller seeds whatever per-surface state level 0 needs.
+void menu_arm_chain(FlUiCtx* ctx, u32 scope, int first_level) {
+    UiMenuState* m = &ctx->shared->menu;
+    UiMenuFrame* mf = &ctx->menu_frame;
+
+    m->active = true;
+    m->owner_scope_id = scope;
+    m->open_frame = ctx->frame_counter;
+    m->depth = 1; // a single flat root level; submenus extend the path as they open
+    mf->build_level = 0;
+    mf->close_requested = false;
+    m->dwell_item_id = 0;
+    m->hover_accum = 0.0f;
+    m->typeahead = (TypeAheadState) { 0 };
+    for (int i = first_level; i < UI_MENU_MAX_DEPTH; i++) {
+        menu_reset_level(ctx, i);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Own the focus scope, taking over from any other armed popup/dropdown scope. The menu owns ESC/click-outside itself,
+// so the popup layer's auto-close is disabled.
+void menu_arm_focus_scope(FlUiCtx* ctx, u32 scope) {
+    ui_focus_scope_arm(ctx, scope, true);
+    ctx->popup_auto_close = false;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Start building `level`: its items re-emit from index 0 this frame.
+void menu_begin_level(FlUiCtx* ctx, int level) {
+    ctx->menu_frame.build_level = level;
+    ctx->menu_frame.levels[level].item_count = 0;
 }

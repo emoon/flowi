@@ -31,18 +31,7 @@ static void menubar_activate(FlUiCtx* ctx, u32 scope) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
-    m->active = true;
-    m->owner_scope_id = scope;
-    m->open_frame = ctx->frame_counter;
-    m->depth = 1;
-    mf->build_level = 0;
-    mf->close_requested = false;
-    m->dwell_item_id = 0;
-    m->hover_accum = 0.0f;
-    m->typeahead = (TypeAheadState) { 0 };
-    for (int i = 1; i < UI_MENU_MAX_DEPTH; i++) {
-        menu_reset_level(ctx, i);
-    }
+    menu_arm_chain(ctx, scope, 1);
 
     // Level 0 becomes the bar's tops, so only its cross-open state clears.
     mf->levels[0] = mf->bar_tops;
@@ -71,18 +60,8 @@ static bool menubar_hot_is_actionable(BarHot hot) {
 // than level 0, since this must work while the bar is passive - when level 0 holds another menu's rows and m->depth
 // doesn't cover the bar.
 static BarHot menubar_hot_top(const UiMenuFrame* mf, u32 hot_id) {
-    BarHot none = { .index = -1 };
-    if (hot_id == 0) {
-        return none;
-    }
-    const UiMenuLevelFrame* bar = &mf->bar_tops;
-    int n = bar->item_count < UI_MENU_MAX_ITEMS ? bar->item_count : UI_MENU_MAX_ITEMS;
-    for (int i = 0; i < n; i++) {
-        if (bar->item_id[i] == hot_id) {
-            return (BarHot) { .index = i, .navigable = bar->item_navigable[i] };
-        }
-    }
-    return none;
+    int i = menu_find_in_level(&mf->bar_tops, hot_id);
+    return (BarHot) { .index = i, .navigable = i >= 0 && mf->bar_tops.item_navigable[i] };
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -299,8 +278,7 @@ void ui_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig cfg) {
     if (owned) {
         // Own the focus scope so the strip's tops register in-scope (click-outside membership) and the bar owns
         // arrows/ESC. The menu owns its dismissal, so the popup layer's auto-close stays disabled.
-        ui_focus_scope_arm(ctx, scope, true);
-        ctx->popup_auto_close = false;
+        menu_arm_focus_scope(ctx, scope);
         ctx->current_popup_scope_id = scope;
     }
 
@@ -383,8 +361,7 @@ static void menubar_dropdown_begin(FlUiCtx* ctx, FlLayoutId top_id, float min_wi
     UiMenuFrame* mf = &ctx->menu_frame;
 
     int child_level = 1;
-    mf->build_level = child_level;
-    mf->levels[child_level].item_count = 0;
+    menu_begin_level(ctx, child_level);
 
     ui_popup_begin(top_id, (FlPopupConfig) { .anchor = FlPopupAnchor_Element,
                                              .z_index = mf->z_base,

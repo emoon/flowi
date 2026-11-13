@@ -34,3 +34,7 @@ bool menu_highlight_is_submenu(const UiMenuLevel* level, const UiMenuLevelFrame*
 bool menu_step_highlight(FlUiCtx* ctx, int level, FlAction action, int dir);
 float menu_min_width(float requested);
 bool menu_dismissed(FlUiCtx* ctx, u32 scope, bool pointer_on_surface);
+int menu_find_in_level(const UiMenuLevelFrame* lf, u32 id);
+void menu_arm_chain(FlUiCtx* ctx, u32 scope, int first_level);
+void menu_arm_focus_scope(FlUiCtx* ctx, u32 scope);
+void menu_begin_level(FlUiCtx* ctx, int level);

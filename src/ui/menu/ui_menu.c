@@ -89,7 +89,6 @@ FlColor ui_menu_blend(FlColor a, FlColor b, float t) {
 void ui_menu_open_impl(FlLayoutId menu_id, FlVec2 point) {
     FlUiCtx* ctx = ui_get_ctx();
     UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
     u32 scope = ui_layout_id_to_clay_id(menu_id);
 
     // Capture the cursor only on the closed -> open transition. The right-click that opens the menu is
@@ -99,19 +98,8 @@ void ui_menu_open_impl(FlLayoutId menu_id, FlVec2 point) {
         return;
     }
 
-    m->active = true;
-    m->owner_scope_id = scope;
+    menu_arm_chain(ctx, scope, 0);
     m->anchor = point;
-    m->open_frame = ctx->frame_counter;
-    m->depth = 1; // a single flat root level; submenus extend the path as they open
-    mf->build_level = 0;
-    mf->close_requested = false;
-    m->dwell_item_id = 0;
-    m->hover_accum = 0.0f;
-    m->typeahead = (TypeAheadState) { 0 };
-    for (int i = 0; i < UI_MENU_MAX_DEPTH; i++) {
-        menu_reset_level(ctx, i);
-    }
 
     // Seed the last-input-wins latch so a pointer merely sitting over a row at open time does not own the
     // highlight until it actually moves.
@@ -135,10 +123,11 @@ bool ui_menu_is_open_impl(FlLayoutId menu_id) {
 // Row emission (shared by leaf items and submenu parents)
 
 typedef struct MenuRow {
-    FlSignal signal; // the row's interaction signal (a submenu parent's is never an action - caller ignores it)
-    u32 id;          // resolved widget id of the row
-    int level;       // build level the row was emitted at
-    int index;       // per-level item index
+    FlSignal signal;   // the row's interaction signal (a submenu parent's is never an action - caller ignores it)
+    u32 id;            // resolved widget id of the row
+    FlLayoutId layout; // the row's layout id, for painting it
+    int level;         // build level the row was emitted at
+    int index;         // per-level item index
     bool highlighted;
 } MenuRow;
 
@@ -218,46 +207,55 @@ static void menu_emit_trailer(const FlThemeColors* theme, const MenuRowSpec* row
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Claim the next index at the current build level, register the row's widget and record it into the level - the one
+// place a row (interactive or static) enters the open path. `flags` choose its interactions: scroll_target marks the
+// row as owning wheel input while it is hot, so ui_update_begin withholds the wheel from Clay's auto-scroll and
+// leaves it for the menu's manual per-level scroll (menu_apply_wheel).
+static MenuRow menu_register_row(FlUiCtx* ctx, const MenuRowSpec* spec, f32 height, FlItemFlags flags) {
+    UiMenuFrame* mf = &ctx->menu_frame;
+
+    int level = mf->build_level;
+    int index = mf->levels[level].item_count++;
+    menu_record_row_geometry(mf, level, index, height); // scroll geometry for an over-tall level
+
+    // Seed the id with (level, index): index disambiguates same-label rows within a level, and folding the build
+    // level in keeps a parent-level row and an open submenu row from colliding when their label and in-level index
+    // line up. Only one menu chain is open at a time, so cross-menu id reuse can't collide.
+    FlLayoutId layout = { .name = spec->label, .id = ui_menu_row_id_seed(level, index) };
+    MenuRow row = { .id = ui_layout_id_to_clay_id(layout), .layout = layout, .level = level, .index = index };
+    row.signal = ui_item_behavior(layout, flags, (FlWidgetConfig) { 0 });
+    menu_record_row(ctx, &row, spec);
+    return row;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Emit one menu row at the current build level: register the widget, record it into the level, apply the shared hover
 // highlight (last-input-wins), and paint the row - label on the left, plus a right-aligned shortcut (leaf) or a
 // chevron (submenu parent).
 static MenuRow menu_emit_row(FlUiCtx* ctx, MenuRowSpec spec) {
     UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
 
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
-    int level = mf->build_level;
-    int index = mf->levels[level].item_count++;
-    menu_record_row_geometry(mf, level, index, UI_MENU_ITEM_HEIGHT); // scroll geometry for an over-tall level
-
-    // Seed the id with (level, index): index disambiguates same-label rows within a level, and folding the build
-    // level in keeps a parent-level row and an open submenu row from colliding when their label and in-level index
-    // line up. Only one menu chain is open at a time, so cross-menu id reuse can't collide.
-    FlLayoutId item_id = { .name = spec.label, .id = ui_menu_row_id_seed(level, index) };
-    u32 rid = ui_layout_id_to_clay_id(item_id);
-    // Scroll_target marks the row as owning wheel input while it is hot, so ui_update_begin withholds the wheel from
-    // Clay's auto-scroll and leaves it for the menu's manual per-level scroll (menu_apply_wheel).
-    FlSignal signal = ui_item_behavior(
-        item_id, FlItemFlags_clickable | FlItemFlags_focusable | FlItemFlags_scroll_target, (FlWidgetConfig) { 0 });
-
-    menu_record_row(ctx, &(MenuRow) { .id = rid, .level = level, .index = index }, &spec);
+    MenuRow row = menu_register_row(ctx, &spec, UI_MENU_ITEM_HEIGHT,
+                                    FlItemFlags_clickable | FlItemFlags_focusable | FlItemFlags_scroll_target);
     if (spec.disabled) {
-        signal.clicked = false;
-        signal.activated = false;
-        signal.right_clicked = false;
+        row.signal.clicked = false;
+        row.signal.activated = false;
+        row.signal.right_clicked = false;
     }
-    if (signal.hovered && m->hover_drives) {
+    if (row.signal.hovered && m->hover_drives) {
         // Hover writes only while it holds the last-input-wins latch. A disabled row takes the highlight too, but
         // stays out of item_navigable, so the keyboard skips it and it dispatches nothing.
-        m->levels[level].highlight_index = index;
+        m->levels[row.level].highlight_index = row.index;
     }
 
-    bool highlighted = m->levels[level].highlight_index == index;
-    bool is_deepest = (level == m->depth - 1);
-    FlColor bg = menu_row_background(theme, highlighted, is_deepest, spec.disabled);
+    row.highlighted = m->levels[row.level].highlight_index == row.index;
+    bool is_deepest = (row.level == m->depth - 1);
+    FlColor bg = menu_row_background(theme, row.highlighted, is_deepest, spec.disabled);
     FlColor txt = spec.disabled ? theme->text.secondary : theme->text.primary;
 
-    ui_layout_area_id(item_id, .sizing = { sizing_grow(), sizing_fixed(UI_MENU_ITEM_HEIGHT) },
+    ui_layout_area_id(row.layout, .sizing = { sizing_grow(), sizing_fixed(UI_MENU_ITEM_HEIGHT) },
                       .direction = LayoutDirection_LeftToRight, .child_alignment = ui_align(Left, Center),
                       .padding = fl_padding_hv(FlSpacing_SM, FlSpacing_XS), .child_gap = FlSpacing_MD,
                       .radius = corner_radius(FlRadius_SM), .color = bg) {
@@ -269,7 +267,7 @@ static MenuRow menu_emit_row(FlUiCtx* ctx, MenuRowSpec spec) {
         menu_emit_trailer(theme, &spec);
     }
 
-    return (MenuRow) { .signal = signal, .id = rid, .level = level, .index = index, .highlighted = highlighted };
+    return row;
 }
 
 // Horizontal side for a submenu panel: right of the parent by default, left when only that side fits, with the parent
@@ -525,8 +523,7 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
 
     // Arm the menu's own focus scope, taking over from any other armed popup/dropdown scope. The menu owns
     // ESC/click-outside itself, so the popup layer's auto-close is disabled.
-    ui_focus_scope_arm(ctx, scope, true);
-    ctx->popup_auto_close = false;
+    menu_arm_focus_scope(ctx, scope);
 
     menu_handle_input(ctx);
 
@@ -628,33 +625,18 @@ FlSignal ui_menu_radio_impl(FlString label, int* selected, int value, FlMenuItem
 // item, returning its layout id for the caller to paint. It occupies an item index, keeping the per-level highlight
 // index dense with the action rows, and registers with no interaction flags so a click on it lands in the menu's
 // popup scope and therefore does NOT dismiss the chain.
-static FlLayoutId menu_record_static_row(UiMenuFrame* mf, FlString name, f32 row_height) {
-    int level = mf->build_level;
-    int index = mf->levels[level].item_count++;
-    menu_record_row_geometry(mf, level, index, row_height); // scroll geometry for an over-tall level
-
-    // Same (level, index) seed as menu_emit_row: a static row occupies an index in its level, so it must share the
-    // level-folded id scheme or a separator/header could collide with a same-index row in another open level.
-    FlLayoutId item_id = { .name = name, .id = ui_menu_row_id_seed(level, index) };
-    u32 rid = ui_layout_id_to_clay_id(item_id);
-    // Scroll_target (but not clickable/focusable): a static row owns the wheel while hot, so a wheel over a
-    // separator/header scrolls the over-tall level like a row does.
-    ui_item_behavior(item_id, FlItemFlags_scroll_target, (FlWidgetConfig) { 0 });
-
-    if (index < UI_MENU_MAX_ITEMS) {
-        mf->levels[level].item_navigable[index] = false; // never a nav / highlight target
-        mf->levels[level].item_id[index] = rid;          // identity-keyed open path: a click here maps in-scope
-        mf->levels[level].item_submenu[index] = false;
-        mf->levels[level].item_label_len[index] = 0; // non-navigable: never a type-ahead match target
-    }
-    return item_id;
+static FlLayoutId menu_record_static_row(FlUiCtx* ctx, FlString name, f32 row_height) {
+    // Non-navigable (never a nav / highlight / type-ahead target) with scroll_target only: no click or focus, but the
+    // row owns the wheel while hot, so a wheel over a separator/header scrolls the over-tall level like a row does.
+    MenuRowSpec spec = { .label = name, .disabled = true };
+    return menu_register_row(ctx, &spec, row_height, FlItemFlags_scroll_target).layout;
 }
 
 void ui_menu_separator_impl(void) {
     FlUiCtx* ctx = ui_get_ctx();
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
 
-    FlLayoutId item_id = menu_record_static_row(&ctx->menu_frame, FL_S("##menu_sep"), UI_MENU_SEPARATOR_HEIGHT);
+    FlLayoutId item_id = menu_record_static_row(ctx, FL_S("##menu_sep"), UI_MENU_SEPARATOR_HEIGHT);
 
     // A full-width row painting the menu surface (so the row's id has a render command and is hot-in-scope) with a
     // centered 1px rule in the separator color. Horizontal inset keeps the rule off the panel edges.
@@ -669,7 +651,7 @@ void ui_menu_header_impl(FlString label) {
     FlUiCtx* ctx = ui_get_ctx();
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
 
-    FlLayoutId item_id = menu_record_static_row(&ctx->menu_frame, label, UI_MENU_HEADER_HEIGHT);
+    FlLayoutId item_id = menu_record_static_row(ctx, label, UI_MENU_HEADER_HEIGHT);
 
     // A non-interactive caption: dimmed (secondary) text, left-aligned, on the menu surface. Never highlighted (not
     // navigable) and never activatable.
@@ -712,8 +694,7 @@ bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
         return false; // release safety
     }
 
-    mf->build_level = child_level;
-    mf->levels[child_level].item_count = 0; // reset this level's per-frame build state before its items emit
+    menu_begin_level(ctx, child_level);
 
     menu_submenu_panel_begin(ctx, row.id, parent_level, menu_min_width(cfg.min_width));
     return true;
