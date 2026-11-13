@@ -605,17 +605,53 @@ static MenuRow menu_emit_row(FlUiCtx* ctx, FlString label, FlString shortcut, bo
     return (MenuRow) { .signal = signal, .id = rid, .level = level, .index = index, .highlighted = highlighted };
 }
 
+// Horizontal side for a submenu panel: right of the parent by default, left when only that side fits, with the parent
+// level's bias winning when both fit.
+static bool submenu_flip_left(bool prefer_left, Clay_BoundingBox parent, float cw, float sw) {
+    bool right_fits = (cw <= 0.0f) || (parent.x + parent.width + cw <= sw);
+    bool left_fits = (cw <= 0.0f) || (parent.x - cw >= 0.0f);
+    if (prefer_left) {
+        return left_fits || !right_fits;
+    }
+    return !right_fits && left_fits;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Panel x for the chosen side, clamped into the viewport once the panel's width is known.
+static float submenu_place_x(Clay_BoundingBox parent, float cw, float sw, bool flip_left) {
+    float x = flip_left ? (parent.x - cw) : (parent.x + parent.width);
+    if (cw > 0.0f) {
+        x = fmaxf(fminf(x, sw - cw), 0.0f);
+    }
+    return x;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Panel y: top-aligned to the parent row, flipped up (bottom-aligned to the row's bottom) on bottom overflow, clamped
+// into the viewport if neither orientation fits.
+static float submenu_place_y(Clay_BoundingBox parent, float ch, float sh) {
+    if (ch <= 0.0f || parent.y + ch <= sh) {
+        return parent.y;
+    }
+
+    float y_up = parent.y + parent.height - ch;
+    return fmaxf((y_up >= 0.0f) ? y_up : (sh - ch), 0.0f);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Open a nested submenu floating panel for child_level, positioned beside its parent row. It shares the menu's one
 // popup focus scope (so click-outside / highlight membership still cover the whole chain) but uses a distinct Clay
 // element id per submenu so panels don't collide. Placement is measured one frame late (Clay reports the panel's box
 // next frame): open right of the parent by default, flip left on right-edge overflow with the parent's bias
 // inherited; top-align to the parent row, flip up on bottom overflow, clamp if neither fits. The chosen horizontal
 // side is stored on the child level so deeper submenus inherit the bias.
-static void menu_submenu_panel_begin(FlUiCtx* ctx, UiMenuState* m, u32 parent_item_id, int parent_level,
-                                     int child_level, float min_width) {
-    Clay_ElementData parent = Clay_GetElementData((Clay_ElementId) { .id = parent_item_id });
-    float px = parent.boundingBox.x, py = parent.boundingBox.y;
-    float pw = parent.boundingBox.width, ph = parent.boundingBox.height;
+static void menu_submenu_panel_begin(FlUiCtx* ctx, u32 parent_item_id, int parent_level, int child_level,
+                                     float min_width) {
+    UiMenuState* m = &ctx->shared->menu;
+    Clay_BoundingBox parent = Clay_GetElementData((Clay_ElementId) { .id = parent_item_id }).boundingBox;
 
     // Distinct, stable element id for this panel, derived from the parent item id (unique per submenu, frame-stable).
     u32 panel_clay_id = parent_item_id * 2654435761u + 0x9E3779B9u;
@@ -624,39 +660,11 @@ static void menu_submenu_panel_begin(FlUiCtx* ctx, UiMenuState* m, u32 parent_it
     Clay_ElementData prev = Clay_GetElementData(panel_id);
     float cw = prev.found ? prev.boundingBox.width : 0.0f;
     float ch = prev.found ? prev.boundingBox.height : 0.0f;
-    float sw = ctx->layout_width, sh = ctx->layout_height;
 
-    // Horizontal: right by default, flipped left on overflow, inheriting the parent level's bias.
-    bool prefer_left = m->levels[parent_level].flip_left;
-    bool right_fits = (cw <= 0.0f) || (px + pw + cw <= sw);
-    bool left_fits = (cw <= 0.0f) || (px - cw >= 0.0f);
-    bool flip_left;
-    if (prefer_left) {
-        flip_left = left_fits ? true : (right_fits ? false : true);
-    } else {
-        flip_left = right_fits ? false : (left_fits ? true : false);
-    }
-    float x = flip_left ? (px - cw) : (px + pw);
-    if (cw > 0.0f) {
-        if (x + cw > sw) {
-            x = sw - cw;
-        }
-        if (x < 0.0f) {
-            x = 0.0f;
-        }
-    }
+    bool flip_left = submenu_flip_left(m->levels[parent_level].flip_left, parent, cw, ctx->layout_width);
     m->levels[child_level].flip_left = flip_left;
-
-    // Vertical: top-align to the parent row; flip up (bottom-align to the parent row's bottom) on bottom overflow;
-    // clamp into the viewport if neither orientation fits.
-    float y = py;
-    if (ch > 0.0f && py + ch > sh) {
-        float y_up = py + ph - ch;
-        y = (y_up >= 0.0f) ? y_up : (sh - ch);
-        if (y < 0.0f) {
-            y = 0.0f;
-        }
-    }
+    float x = submenu_place_x(parent, cw, ctx->layout_width, flip_left);
+    float y = submenu_place_y(parent, ch, ctx->layout_height);
 
     // Floating element attached to the root at the computed absolute position. current_popup_scope_id is already the
     // menu scope (armed by ui_popup_begin for the root), so child items register into the shared scope.
@@ -1009,7 +1017,7 @@ bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
     mf->levels[child_level].item_count = 0; // reset this level's per-frame build state before its items emit
 
     float min_w = cfg.min_width > 0.0f ? cfg.min_width : UI_MENU_DEFAULT_MIN_WIDTH;
-    menu_submenu_panel_begin(ctx, m, row.id, parent_level, child_level, min_w);
+    menu_submenu_panel_begin(ctx, row.id, parent_level, child_level, min_w);
     return true;
 }
 
