@@ -343,32 +343,42 @@ static bool dropdown_commit(DropdownOutcome outcome, int* selected_index) {
     return outcome.picked != 0 || outcome.cancelled;
 }
 
-void ui_dropdown_impl(FlString label, bool* is_open, FlString* options, int option_count, int* selected_index,
-                      FlDropdownConfig cfg) {
-    if (!is_open || !options || option_count <= 0 || !selected_index) {
+static bool dropdown_request_valid(const UiDropdownRequest* req) {
+    bool has_targets = req->is_open && req->selected_index;
+    bool has_options = req->options && req->option_count > 0;
+    return has_targets && has_options;
+}
+
+static bool dropdown_index_in_range(int index, int count) {
+    return index >= 0 && index < count;
+}
+
+void ui_dropdown_impl(const UiDropdownRequest* req) {
+    if (!dropdown_request_valid(req)) {
         log_error("ui_dropdown_impl: invalid parameters");
         return;
     }
 
-    if (*selected_index < 0 || *selected_index >= option_count) {
+    int* selected_index = req->selected_index;
+    if (!dropdown_index_in_range(*selected_index, req->option_count)) {
         *selected_index = 0;
     }
 
     // The button id must match the popup anchor.
-    FlLayoutId button_id = resolve_widget_id(label, cfg.widget.id_override);
+    FlLayoutId button_id = resolve_widget_id(req->label, req->cfg.widget.id_override);
     FlString list_id_str = fl_format_frame_string("%S_dropdown_list", button_id.name);
     const Dropdown d = {
         .button_id = button_id,
         .list_id = (FlLayoutId) { .name = list_id_str, .id = 0 },
-        .cfg = &cfg,
-        .options = options,
-        .option_count = option_count,
+        .cfg = &req->cfg,
+        .options = req->options,
+        .option_count = req->option_count,
         .selected_index = *selected_index,
     };
-    DropdownTrigger trigger = dropdown_draw_trigger(label, &d);
-    DropdownOpenState open = dropdown_toggle(&d, *is_open, trigger.signal);
+    DropdownTrigger trigger = dropdown_draw_trigger(req->label, &d);
+    DropdownOpenState open = dropdown_toggle(&d, *req->is_open, trigger.signal);
 
     DropdownOutcome outcome
         = open.is_open ? dropdown_show_popup(&d, trigger, open.opened_this_frame) : (DropdownOutcome) { 0 };
-    *is_open = open.is_open && !dropdown_commit(outcome, selected_index);
+    *req->is_open = open.is_open && !dropdown_commit(outcome, selected_index);
 }
