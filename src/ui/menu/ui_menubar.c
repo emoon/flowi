@@ -3,15 +3,15 @@
 #include <core/assert.h>
 #include <core/math.h>
 #include "external/clay/clay.h"
-#include "input_actions.h"
-#include "layout.h"
-#include "scroll_core.h"
+#include "../input_actions.h"
+#include "../layout.h"
+#include "../scroll_core.h"
 #include <core/string.h>
-#include "ui.h"
-#include "ui_color_utils.h"
-#include "ui_popup.h"
-#include "ui_private.h"
-#include "ui_tokens.h"
+#include "../ui.h"
+#include "../ui_color_utils.h"
+#include "../ui_popup.h"
+#include "../ui_private.h"
+#include "../ui_tokens.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Menu-bar top-row height in logical px: a compact strip, a touch shorter than a context-menu row.

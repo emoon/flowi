@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ui_private.h"
+#include "../ui_private.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Menu core: the open-path state machine, navigation, type-ahead and scrolling shared by the context menu and the menu
