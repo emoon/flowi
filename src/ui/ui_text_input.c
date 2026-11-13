@@ -359,19 +359,19 @@ static void handle_text_input_keyboard(FlTextInputState* state, FlUiCtx* ctx, Fl
     u32 shift_flag = shift ? STB_TEXTEDIT_K_SHIFT : 0;
 
     // Navigation - cursor movement (action press OR software repeat while held)
-    if (ui_action_pressed(ctx, FlAction_Text_Move_Left) || ui_action_repeated(ctx, FlAction_Text_Move_Left)) {
+    if (ui_action_pressed_or_repeated(ctx, FlAction_Text_Move_Left)) {
         stb_textedit_key(state, state->stb_state, STB_TEXTEDIT_K_LEFT | shift_flag);
         // Consume left navigation to prevent widget navigation while editing text
         ctx->nav_frame.nav_left = false;
         state->cursor_blink_t = 0.0f;
     }
-    if (ui_action_pressed(ctx, FlAction_Text_Move_Right) || ui_action_repeated(ctx, FlAction_Text_Move_Right)) {
+    if (ui_action_pressed_or_repeated(ctx, FlAction_Text_Move_Right)) {
         stb_textedit_key(state, state->stb_state, STB_TEXTEDIT_K_RIGHT | shift_flag);
         // Consume right navigation to prevent widget navigation while editing text
         ctx->nav_frame.nav_right = false;
         state->cursor_blink_t = 0.0f;
     }
-    if (ui_action_pressed(ctx, FlAction_Text_Move_Word_Left) || ui_action_repeated(ctx, FlAction_Text_Move_Word_Left)) {
+    if (ui_action_pressed_or_repeated(ctx, FlAction_Text_Move_Word_Left)) {
         stb_textedit_key(state, state->stb_state, STB_TEXTEDIT_K_WORDLEFT | shift_flag);
         // Consume left navigation (Ctrl+Left also uses left arrow)
         ctx->nav_frame.nav_left = false;
@@ -395,12 +395,12 @@ static void handle_text_input_keyboard(FlTextInputState* state, FlUiCtx* ctx, Fl
     }
 
     // Backspace/Delete (action press OR software repeat while held)
-    if (ui_action_pressed(ctx, FlAction_Text_Backspace) || ui_action_repeated(ctx, FlAction_Text_Backspace)) {
+    if (ui_action_pressed_or_repeated(ctx, FlAction_Text_Backspace)) {
         stb_textedit_key(state, state->stb_state, STB_TEXTEDIT_K_BACKSPACE);
         *text_changed = true;
         state->cursor_blink_t = 0.0f;
     }
-    if (ui_action_pressed(ctx, FlAction_Text_Delete) || ui_action_repeated(ctx, FlAction_Text_Delete)) {
+    if (ui_action_pressed_or_repeated(ctx, FlAction_Text_Delete)) {
         stb_textedit_key(state, state->stb_state, STB_TEXTEDIT_K_DELETE);
         *text_changed = true;
         state->cursor_blink_t = 0.0f;
