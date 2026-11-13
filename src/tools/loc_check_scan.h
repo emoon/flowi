@@ -12,7 +12,7 @@ typedef struct SidRef {
     u32 line;
 } SidRef;
 
-// Appends every "SID_... literal in source to the list whose tail link is *tail, and advances *tail. Grep-level: a
+// Every "SID_... literal in sources, in source order, as a linked list allocated in arena. Grep-level: a
 // runtime-assembled SID is not seen. The bare "SID_" prefix constant is skipped.
 
-void loc_check_scan_source(struct FlArena* arena, const LocCheckSource* source, SidRef*** tail);
+SidRef* loc_check_scan_sources(struct FlArena* arena, const LocCheckSource* sources, u32 source_count);

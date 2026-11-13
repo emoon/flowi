@@ -39,7 +39,7 @@ static bool find_sid_literal_end(FlString text, u64 start, u64* out_end) {
     return true;
 }
 
-void loc_check_scan_source(FlArena* arena, const LocCheckSource* source, SidRef*** tail) {
+static void scan_source(FlArena* arena, const LocCheckSource* source, SidRef*** tail) {
     const FlString text = source->text;
     u32 line = 1;
 
@@ -66,4 +66,14 @@ void loc_check_scan_source(FlArena* arena, const LocCheckSource* source, SidRef*
 
         i = end;
     }
+}
+
+SidRef* loc_check_scan_sources(FlArena* arena, const LocCheckSource* sources, u32 source_count) {
+    SidRef* refs = nullptr;
+    SidRef** tail = &refs;
+
+    for (u32 i = 0; i < source_count; i++) {
+        scan_source(arena, &sources[i], &tail);
+    }
+    return refs;
 }

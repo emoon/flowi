@@ -74,3 +74,7 @@ LocCheckResult loc_check_run(struct FlArena* arena, const LocCheckInput* input);
 
 FlString loc_check_format_report(struct FlArena* arena, const LocCheckResult* result, const LocCheckTable* tables,
                                  u32 table_count);
+
+// The label the report titles a check's group with, or null for an id that has none.
+
+const char* loc_check_heading_label(LocCheckId check);

@@ -1,5 +1,6 @@
 #include "loc_check.h"
 #include <core/arena.h>
+#include <flowi/core/assert.h>
 
 // How a check titles its group in the report: a label, and whether the language tag follows it.
 typedef struct Heading {
@@ -17,8 +18,13 @@ static const Heading headings[LocCheckId_Count] = {
     [LocCheckId_TableUnreadable] = { "table unreadable", false },
 };
 
+const char* loc_check_heading_label(LocCheckId check) {
+    return check < LocCheckId_Count ? headings[check].label : nullptr;
+}
+
 static FlStringBuilder append_heading(FlStringBuilder sb, LocCheckId check, FlString tag, u32 count) {
     const Heading* heading = &headings[check];
+    FL_ASSERT(loc_check_heading_label(check) != nullptr);
     sb = fl_sb_appendf(sb, "  %s", heading->label);
     if (heading->names_language) {
         sb = fl_sb_appendf(sb, " %S", tag);

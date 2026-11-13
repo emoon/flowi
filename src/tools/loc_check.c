@@ -4,9 +4,6 @@
 #include <core/arena.h>
 #include <core/hashmap.h>
 #include <core/json.h>
-#include <ui/localization.h>
-
-#include <string.h>
 
 // A table after parsing: the strings object in file order for reporting, and the same entries by key for lookup.
 // strings is null when the file never got that far, which takes the table out of every cross-table check.
@@ -21,12 +18,9 @@ typedef struct Checker {
     LocCheckFinding* tail;
 } Checker;
 
-// Appends a copy of finding to the result; its next link is set here.
-
-static void finding_add(Checker* self, LocCheckFinding finding) {
+static void finding_append(Checker* self, LocCheckFinding finding) {
     LocCheckFinding* added = arena_alloc_zero(self->arena, LocCheckFinding);
     *added = finding;
-    added->next = nullptr;
 
     if (self->tail == nullptr) {
         self->result.first = added;
@@ -42,9 +36,22 @@ static void finding_add(Checker* self, LocCheckFinding finding) {
     }
 }
 
+static void finding_error(Checker* self, LocCheckId check, u32 language, FlString message) {
+    finding_append(self,
+                   (LocCheckFinding) { .check = check, .language = language, .is_error = true, .message = message });
+}
+
+static void finding_warning(Checker* self, LocCheckId check, u32 language, FlString message) {
+    finding_append(self,
+                   (LocCheckFinding) { .check = check, .language = language, .is_error = false, .message = message });
+}
+
+// The one variant name every plural object must carry.
+static const FlString other_variant = FL_S_("other");
+
 static bool is_cldr_category(FlString name) {
     static const FlString categories[]
-        = { FL_S_("zero"), FL_S_("one"), FL_S_("two"), FL_S_("few"), FL_S_("many"), FL_S_("other") };
+        = { FL_S_("zero"), FL_S_("one"), FL_S_("two"), FL_S_("few"), FL_S_("many"), other_variant };
 
     for (u64 i = 0; i < sizeof_array(categories); i++) {
         if (fl_string_equals(name, categories[i])) {
@@ -59,33 +66,24 @@ static void parse_table(Checker* self, const LocCheckTable* table, u32 index, Pa
     FlStringBuilder sb = fl_sb_create(self->arena);
 
     if (table->json.length == 0) {
-        finding_add(self, (LocCheckFinding) { .check = LocCheckId_TableUnreadable,
-                                              .language = index,
-                                              .is_error = true,
-                                              .message = fl_sb_to_string(fl_sb_appendf(
-                                                  sb, "%S is empty or could not be read", table->path)) });
+        finding_error(self, LocCheckId_TableUnreadable, index,
+                      fl_sb_to_string(fl_sb_appendf(sb, "%S is empty or could not be read", table->path)));
         return;
     }
 
     FlJsonParseResult result = { 0 };
     FlJsonValue* root = fl_json_parse_with_flags(self->arena, table->json, FlJsonParseFlags_AllowJson5, &result);
     if (root == nullptr) {
-        finding_add(self, (LocCheckFinding) {
-                              .check = LocCheckId_TableUnreadable,
-                              .language = index,
-                              .is_error = true,
-                              .message = fl_sb_to_string(fl_sb_appendf(sb, "%S failed to parse: %S", table->path,
-                                                                       fl_json_get_error_description(result.error))) });
+        finding_error(self, LocCheckId_TableUnreadable, index,
+                      fl_sb_to_string(fl_sb_appendf(sb, "%S failed to parse: %S", table->path,
+                                                    fl_json_get_error_description(result.error))));
         return;
     }
 
     FlJsonValue* strings = fl_json_get_object_prop(root, FL_S("strings"));
     if (strings == nullptr) {
-        finding_add(self, (LocCheckFinding) { .check = LocCheckId_TableUnreadable,
-                                              .language = index,
-                                              .is_error = true,
-                                              .message = fl_sb_to_string(
-                                                  fl_sb_appendf(sb, "%S has no \"strings\" object", table->path)) });
+        finding_error(self, LocCheckId_TableUnreadable, index,
+                      fl_sb_to_string(fl_sb_appendf(sb, "%S has no \"strings\" object", table->path)));
         return;
     }
 
@@ -95,22 +93,23 @@ static void parse_table(Checker* self, const LocCheckTable* table, u32 index, Pa
     }
 }
 
-// The entry a shape finding is about: its language and key.
-typedef struct ShapeEntry {
+// The entry a finding is about: its language and key.
+typedef struct Entry {
     u32 language;
     FlString name;
-} ShapeEntry;
+} Entry;
 
 // A ValueShape finding is an error in the default table (language 0) and a warning in a translation.
 static void shape_finding(Checker* self, u32 language, FlString message) {
-    finding_add(self, (LocCheckFinding) { .check = LocCheckId_ValueShape,
-                                          .language = language,
-                                          .is_error = language == 0,
-                                          .message = message });
+    if (language == 0) {
+        finding_error(self, LocCheckId_ValueShape, language, message);
+    } else {
+        finding_warning(self, LocCheckId_ValueShape, language, message);
+    }
 }
 
-static void check_variant(Checker* self, ShapeEntry entry, FlString variant, FlJsonValue* variant_value) {
-    if (!fl_string_equals(variant, FL_S("other")) && !is_cldr_category(variant)) {
+static void check_variant(Checker* self, Entry entry, FlString variant, FlJsonValue* variant_value) {
+    if (!is_cldr_category(variant)) {
         shape_finding(self, entry.language,
                       fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena), "%S has the non-CLDR variant \"%S\"",
                                                     entry.name, variant)));
@@ -124,26 +123,28 @@ static void check_variant(Checker* self, ShapeEntry entry, FlString variant, FlJ
 
 // LocCheckId_ValueShape for one entry.
 
-static void check_value_shape(Checker* self, u32 language, FlString name, FlJsonValue* value) {
+static void check_value_shape(Checker* self, Entry entry, FlJsonValue* value) {
     if (value->type == FlJsonType_String) {
         return;
     }
     if (value->type != FlJsonType_Object) {
-        shape_finding(self, language,
-                      fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena),
-                                                    "%S is neither a plain string nor a plural-variant object", name)));
+        shape_finding(
+            self, entry.language,
+            fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena),
+                                          "%S is neither a plain string nor a plural-variant object", entry.name)));
         return;
     }
 
     bool has_other = false;
     for_each_json_property(value, variant, variant_value) {
-        has_other |= fl_string_equals(*variant, FL_S("other"));
-        check_variant(self, (ShapeEntry) { .language = language, .name = name }, *variant, variant_value);
+        has_other |= fl_string_equals(*variant, other_variant);
+        check_variant(self, entry, *variant, variant_value);
     }
 
     if (!has_other) {
-        shape_finding(self, language,
-                      fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena), "%S has no \"other\" variant", name)));
+        shape_finding(self, entry.language,
+                      fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena), "%S has no \"%S\" variant", entry.name,
+                                                    other_variant)));
     }
 }
 
@@ -156,11 +157,7 @@ static void check_against_code(Checker* self, const LocCheckSource* sources, u32
         return;
     }
 
-    SidRef* refs = nullptr;
-    SidRef** tail = &refs;
-    for (u32 i = 0; i < source_count; i++) {
-        loc_check_scan_source(self->arena, &sources[i], &tail);
-    }
+    SidRef* refs = loc_check_scan_sources(self->arena, sources, source_count);
 
     hashmap(FlString, u8) used;
     hashmap_string_new(&used, self->arena, 256);
@@ -170,51 +167,34 @@ static void check_against_code(Checker* self, const LocCheckSource* sources, u32
         if (hashmap_string_get(&default_table->lookup, ref->key) != nullptr) {
             continue;
         }
-        finding_add(self, (LocCheckFinding) {
-                              .check = LocCheckId_MissingFromDefault,
-                              .language = 0,
-                              .is_error = true,
-                              .message = fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena), "%S:%u: %S",
-                                                                       ref->path, ref->line, ref->key)),
-                          });
+        finding_error(
+            self, LocCheckId_MissingFromDefault, 0,
+            fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena), "%S:%u: %S", ref->path, ref->line, ref->key)));
     }
 
     for_each_json_property(default_table->strings, name, value) {
         (void)value;
         if (hashmap_string_get(&used, *name) == nullptr) {
-            finding_add(self, (LocCheckFinding) {
-                                  .check = LocCheckId_Orphan, .language = 0, .is_error = false, .message = *name });
+            finding_warning(self, LocCheckId_Orphan, 0, *name);
         }
     }
 }
 
-// One translation entry next to the default entry of the same key.
-typedef struct EntryPair {
-    u32 language;
-    FlString name;
-    FlJsonValue* original;
-    FlJsonValue* value;
-} EntryPair;
-
-static void check_arity(Checker* self, const EntryPair* pair) {
-    const FlString name = pair->name;
-    const i64 allowed = loc_check_value_max_slot_index(pair->original);
-    const i64 referenced = loc_check_value_max_slot_index(pair->value);
+static void check_arity(Checker* self, Entry entry, FlJsonValue* original, FlJsonValue* value) {
+    const i64 allowed = loc_check_value_max_slot_index(original);
+    const i64 referenced = loc_check_value_max_slot_index(value);
     if (referenced <= allowed) {
         return;
     }
 
-    FlStringBuilder sb = fl_sb_appendf(fl_sb_create(self->arena), "%S references {%lld}, but the default table ", name,
-                                       (long long)referenced);
+    FlStringBuilder sb = fl_sb_appendf(fl_sb_create(self->arena), "%S references {%lld}, but the default table ",
+                                       entry.name, (long long)referenced);
     if (allowed < 0) {
         sb = fl_sb_append_cstr(sb, "uses no placeholders");
     } else {
         sb = fl_sb_appendf(sb, "goes no higher than {%lld}", (long long)allowed);
     }
-    finding_add(self, (LocCheckFinding) { .check = LocCheckId_PlaceholderArity,
-                                          .language = pair->language,
-                                          .is_error = true,
-                                          .message = fl_sb_to_string(sb) });
+    finding_error(self, LocCheckId_PlaceholderArity, entry.language, fl_sb_to_string(sb));
 }
 
 // LocCheckId_MissingFromTranslation, LocCheckId_Stale and LocCheckId_PlaceholderArity: one translation against the
@@ -225,22 +205,17 @@ static void check_translation(Checker* self, u32 language, const ParsedTable* tr
     for_each_json_property(default_table->strings, name, value) {
         (void)value;
         if (hashmap_string_get(&translation->lookup, *name) == nullptr) {
-            finding_add(self, (LocCheckFinding) { .check = LocCheckId_MissingFromTranslation,
-                                                  .language = language,
-                                                  .is_error = false,
-                                                  .message = *name });
+            finding_warning(self, LocCheckId_MissingFromTranslation, language, *name);
         }
     }
 
     for_each_json_property(translation->strings, name, value) {
         FlJsonValue** original = hashmap_string_get(&default_table->lookup, *name);
         if (original == nullptr) {
-            finding_add(self,
-                        (LocCheckFinding) {
-                            .check = LocCheckId_Stale, .language = language, .is_error = false, .message = *name });
+            finding_warning(self, LocCheckId_Stale, language, *name);
             continue;
         }
-        check_arity(self, &(EntryPair) { .language = language, .name = *name, .original = *original, .value = value });
+        check_arity(self, (Entry) { .language = language, .name = *name }, *original, value);
     }
 }
 
@@ -258,7 +233,7 @@ static void check_value_shapes(Checker* self, const ParsedTable* parsed, u32 tab
             continue;
         }
         for_each_json_property(parsed[i].strings, name, value) {
-            check_value_shape(self, i, *name, value);
+            check_value_shape(self, (Entry) { .language = i, .name = *name }, value);
         }
     }
 }
