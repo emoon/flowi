@@ -1,5 +1,16 @@
-/// Dynamic image widget - draws a per-frame caller-updated image buffer described by DynamicImage.
+extern opaque FlArena
+
+/// Dynamic image widget - draws a per-frame caller-updated image buffer described by DynamicImage. create and
+/// create_alpha allocate the image and its pixel buffer from a caller arena; a caller that owns its own buffer
+/// can fill a DynamicImage directly instead.
 api DynamicImage {
+    /// Allocate a width x height dynamic image with a zeroed, tightly packed RGBA8 buffer from arena. The image
+    /// and its buffer live until the arena is rewound or destroyed, so keep the arena alive for as long as the
+    /// image is drawn. Returns NULL for a non-positive dimension, a size that overflows, or a null arena.
+    [manual] create(width: i32, height: i32, arena: *FlArena) -> *DynamicImage
+    /// Like create, but the buffer is single-channel alpha (is_alpha_only is set): a monochrome mask the widget
+    /// colorizes with the color in its opts.
+    [manual] create_alpha(width: i32, height: i32, arena: *FlArena) -> *DynamicImage
     /// Draw the dynamic image image whose buffer the caller refreshes each frame. opts tints and selects
     /// fill-container scaling. Call inside a frame callback.
     [manual] new(image: *DynamicImage, opts: ImageOpts)

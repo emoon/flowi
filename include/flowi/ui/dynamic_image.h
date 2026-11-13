@@ -3,13 +3,25 @@
 #pragma once
 
 #include <flowi/fl_api.h>
+#include <stdint.h>
 #include <flowi/ui/image.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Dynamic image widget - draws a per-frame caller-updated image buffer described by DynamicImage.
+typedef struct FlArena FlArena;
+
+// Dynamic image widget - draws a per-frame caller-updated image buffer described by DynamicImage. create and
+// create_alpha allocate the image and its pixel buffer from a caller arena; a caller that owns its own buffer
+// can fill a DynamicImage directly instead.
+// Allocate a width x height dynamic image with a zeroed, tightly packed RGBA8 buffer from arena. The image
+// and its buffer live until the arena is rewound or destroyed, so keep the arena alive for as long as the
+// image is drawn. Returns NULL for a non-positive dimension, a size that overflows, or a null arena.
+FL_API FlDynamicImage* fl_dynamic_image_create(int32_t width, int32_t height, FlArena* arena);
+// Like create, but the buffer is single-channel alpha (is_alpha_only is set): a monochrome mask the widget
+// colorizes with the color in its opts.
+FL_API FlDynamicImage* fl_dynamic_image_create_alpha(int32_t width, int32_t height, FlArena* arena);
 // Draw the dynamic image image whose buffer the caller refreshes each frame. opts tints and selects
 // fill-container scaling. Call inside a frame callback.
 FL_API void fl_dynamic_image(FlDynamicImage* image, FlImageOpts opts);

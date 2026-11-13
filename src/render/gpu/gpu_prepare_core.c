@@ -5,8 +5,8 @@
 #include <core/log.h>
 #include <math.h>
 #include <ui/font_cache.h>
-#include <ui/image_decode.h>
-#include <ui/image_system.h>
+#include <ui/image/image_decode.h>
+#include <ui/image/image_system.h>
 #include <ui/vector_image.h>
 
 bool gpu_prepare_image_decode_valid(FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,

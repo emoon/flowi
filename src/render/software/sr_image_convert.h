@@ -8,7 +8,7 @@
 #pragma once
 
 #include <core/core.h>
-#include <ui/image.h>
+#include <ui/image/image.h>
 
 struct FlArena;
 

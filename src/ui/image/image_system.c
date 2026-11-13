@@ -6,50 +6,41 @@
 #include <core/log.h>
 #include <core/memory.h>
 #include <core/os/os.h>
-#include <core/sprintf.h>
 #include <ui/render_backend.h>
+#include "image_dedup.h"
+#include "image_raw_pixels.h"
 #include "image_registry.h"
 #include <vfs/vfs.h>
 #include <stdatomic.h>
-#include <string.h>
 
 // In-memory load job handles are tracked (in a list that grows with the burst) so they can be recycled via
 // fl_jobs_is_finished() and waited on at teardown. Without this, fire-and-forget jobs leak JobInfo slots.
 
 #define IMAGE_PENDING_JOBS_INITIAL_CAPACITY 64
 
-// Cap the dedup cache to bound arena growth: at the limit the cache is rebuilt empty in a fresh arena.
-// With ~80 bytes per key this allows ~800 KB before a flush.
+// Cap the dedup cache to bound arena growth: past the limit the cache is flushed. With ~80 bytes per key this allows
+// ~800 KB before a flush.
 #define DEDUP_CACHE_MAX_ENTRIES 10000
-
-// Removed entries leave their key bytes in the cache arena; once that dead weight passes this and outweighs the live
-// keys, the cache is rebuilt from the live entries.
-#define DEDUP_DEAD_KEY_BYTES_MAX 16384
 
 // A decode whose prepare_image call is deferred to the begin-frame pump (prepare_image_on_job unset).
 // The entry's arena owns everything the deferred call needs - the entry itself, the decoded pixels, and the
 // copied request path - and is released right after the main-thread call completes. Job worker threads
 // enqueue; the main/render thread drains. Guarded by ImageSystem.deferred_lock.
 
-typedef struct DeferredPrepare {
-    struct DeferredPrepare* next;
-    FlArena* arena;
+// One prepare_image call: the decode result and the request it answers.
+typedef struct PrepareCall {
     FlImageLoadRequestId request_id;
     const FlImageDecodeResult* decoded; // null when decode failed (the backend still sees the failure)
     FlImageLoadRequest request;
+} PrepareCall;
+
+typedef struct DeferredPrepare {
+    struct DeferredPrepare* next;
+    FlArena* arena;
+    PrepareCall call;
 } DeferredPrepare;
 
-// The creation shape of an image built from raw pixels, so update_pixels can re-specify it from a handle alone.
-typedef struct RawPixelImage {
-    int width;
-    int height;
-    FlImageFormat format;
-    bool dedicated;
-} RawPixelImage;
-
 struct ImageSystem {
-    FlArena* dedup_arena; // Owns dedup_cache: its buckets, nodes and key copies; replaced when the cache is rebuilt
-
     // The render backend's image-preparation seam, copied off the FlRenderBackend at create time. Invoked on
     // decode-complete in the job worker thread when prepare_on_job is set, else from the begin-frame pump on
     // the main/render thread.
@@ -76,9 +67,7 @@ struct ImageSystem {
     // Once closing is set no new producer is accepted and a job that has not reached the backend yet skips it.
     _Atomic u32 producers_inflight;
     _Atomic bool closing;
-    hashmap(FlString, FlImageLoadRequestId) dedup_cache;
-    u64 dedup_live_key_bytes;
-    u64 dedup_dead_key_bytes; // Key bytes of removed entries, still held by dedup_arena until the next rebuild
+    ImageDedupCache dedup;
 
     // Failed in-memory decodes, keyed by synthetic request id. A memory load has no VFS handle behind it, so
     // a decode failure recorded here is the only way the poll path can distinguish "failed" from "still
@@ -89,7 +78,7 @@ struct ImageSystem {
     hashmap(FlImageLoadRequestId, bool) active_synthetic_loads;
 
     // Main-thread only: both create_from_pixels and update_pixels realize synchronously.
-    hashmap(FlImageLoadRequestId, RawPixelImage) raw_pixel_images;
+    hashmap(FlImageLoadRequestId, RawPixelShape) raw_pixel_images;
 };
 
 static ImageDecodeOptions resolve_decode_options(ImageSystem* sys, const ImageDecodeOptions* options) {
@@ -116,10 +105,9 @@ typedef struct ImageLoadContext {
 // Call the backend's prepare_image seam and mark the handle ready once the backend reports it realized. Runs on
 // whichever thread the backend prepares on (prepare_on_job).
 
-static void prepare_and_mark(ImageSystem* sys, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
-                             FlArena* scratch, const FlImageLoadRequest* request) {
-    if (sys->prepare_image(sys->backend_user_data, request_id, decoded, scratch, request)) {
-        image_registry_mark_realized((ImageHandle)request_id, decoded->width, decoded->height);
+static void prepare_and_mark(ImageSystem* sys, const PrepareCall* call, FlArena* scratch) {
+    if (sys->prepare_image(sys->backend_user_data, call->request_id, call->decoded, scratch, &call->request)) {
+        image_registry_mark_realized((ImageHandle)call->request_id, call->decoded->width, call->decoded->height);
     }
 }
 
@@ -129,23 +117,18 @@ static void prepare_and_mark(ImageSystem* sys, FlImageLoadRequestId request_id, 
 // queued entry, the decoded result and a copy of the request path (the job context is gone by the time the
 // begin-frame pump makes the call), and is destroyed once that call returns.
 
-static void dispatch_prepare_image(ImageSystem* sys, FlArena* decode_arena, FlArena* scratch,
-                                   FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
-                                   const FlImageLoadRequest* request) {
+static void dispatch_prepare_image(ImageSystem* sys, FlArena* decode_arena, FlArena* scratch, const PrepareCall* call) {
     if (sys->prepare_on_job) {
-        if (atomic_load(&sys->closing)) {
-            return;
+        if (!atomic_load(&sys->closing)) {
+            prepare_and_mark(sys, call, scratch);
         }
-        prepare_and_mark(sys, request_id, decoded, scratch, request);
         return;
     }
 
     DeferredPrepare* entry = arena_alloc_zero(decode_arena, DeferredPrepare);
     entry->arena = decode_arena;
-    entry->request_id = request_id;
-    entry->decoded = decoded;
-    entry->request = *request;
-    entry->request.relative_path = fl_string_copy(decode_arena, request->relative_path);
+    entry->call = *call;
+    entry->call.request.relative_path = fl_string_copy(decode_arena, call->request.relative_path);
 
     mutex_lock_auto(&sys->deferred_lock);
     if (sys->deferred_tail) {
@@ -156,15 +139,11 @@ static void dispatch_prepare_image(ImageSystem* sys, FlArena* decode_arena, FlAr
     sys->deferred_tail = entry;
 }
 
-// Decode data/size and hand the result to the backend's prepare_image seam. Deferring backends decode into a
-// dedicated arena the queued entry owns (released after the main-thread call); job-context backends decode into
-// scratch. Returns the decoded result, null on failure.
+// Decode data/size with the options in call->request and hand the result to the backend's prepare_image seam.
+// Deferring backends decode into a dedicated arena the queued entry owns (released after the main-thread call);
+// job-context backends decode into scratch. Sets call->decoded and returns false when the decode failed.
 
-static const FlImageDecodeResult* decode_and_dispatch(ImageSystem* sys, const void* data, size_t size,
-                                                      const ImageDecodeOptions* options,
-                                                      const ImageThumbnailOptions* thumb_options,
-                                                      FlImageLoadRequestId request_id,
-                                                      const FlImageLoadRequest* request) {
+static bool decode_and_dispatch(ImageSystem* sys, const void* data, size_t size, PrepareCall* call) {
     arena_scratch_auto(scratch);
 
     bool defer = sys->prepare_image && !sys->prepare_on_job;
@@ -172,50 +151,53 @@ static const FlImageDecodeResult* decode_and_dispatch(ImageSystem* sys, const vo
 
     FlImageDecodeResult* decoded = nullptr;
     if (data && size > 0) {
-        decoded = image_decode(decode_arena, data, size, options);
+        decoded = image_decode(decode_arena, data, size, &call->request.decode_options);
         // Thumbnail/preview finishing pass (no-op for SVG/waveform decodes), on the same job arena.
-        image_thumbnail_compose(decode_arena, decoded, options, thumb_options);
+        image_thumbnail_compose(decode_arena, decoded, &call->request.decode_options,
+                                &call->request.thumbnail_options);
     }
+    call->decoded = decoded;
 
     if (sys->prepare_image) {
-        dispatch_prepare_image(sys, decode_arena, scratch.arena, request_id, decoded, request);
+        dispatch_prepare_image(sys, decode_arena, scratch.arena, call);
     }
 
-    return decoded;
+    return decoded != nullptr;
 }
 
 // VFS callback - runs in job worker thread
+
+static void log_decode_failure(FlString path, FlImageLoadRequestId request_id, const void* data, i64 size) {
+    const char* what = (data && size > 0) ? "decode failed" : "no data";
+    log_error("image_system_vfs_callback: %s for '%.*s' (data=%p, size=%lld)", what, (int)path.length, path.data, data,
+              (long long)size);
+    log_error("image_system_vfs_callback: pipeline failed for '%.*s' (request_id=%u)", (int)path.length, path.data,
+              (unsigned)request_id);
+}
 
 static FlVfsData image_system_vfs_callback(void* data, i64 size, void* user_data) {
     ImageLoadContext* ctx = (ImageLoadContext*)user_data;
     ImageSystem* sys = ctx->sys;
 
-    FlImageLoadRequestId request_id = atomic_load(&ctx->request_id);
-    FlImageLoadRequest request = {
-        .mount = ctx->mount,
-        .relative_path = ctx->relative_path,
-        .decode_options = ctx->decode_options,
-        .thumbnail_options = ctx->thumbnail_options,
-        .user_data = ctx->user_data,
+    PrepareCall call = {
+        .request_id = atomic_load(&ctx->request_id),
+        .request = {
+            .mount = ctx->mount,
+            .relative_path = ctx->relative_path,
+            .decode_options = ctx->decode_options,
+            .thumbnail_options = ctx->thumbnail_options,
+            .user_data = ctx->user_data,
+        },
     };
 
-    const FlImageDecodeResult* decoded = decode_and_dispatch(
-        sys, data, size > 0 ? (size_t)size : 0, &ctx->decode_options, &ctx->thumbnail_options, request_id, &request);
+    const bool decoded = decode_and_dispatch(sys, data, size > 0 ? (size_t)size : 0, &call);
 
     if (!decoded) {
-        if (data && size > 0) {
-            log_error("image_system_vfs_callback: decode failed for '%.*s' (data=%p, size=%lld)",
-                      (int)ctx->relative_path.length, ctx->relative_path.data, data, (long long)size);
-        } else {
-            log_error("image_system_vfs_callback: no data for '%.*s' (data=%p, size=%lld)",
-                      (int)ctx->relative_path.length, ctx->relative_path.data, data, (long long)size);
-        }
-        log_error("image_system_vfs_callback: pipeline failed for '%.*s' (request_id=%u, decoded=%p)",
-                  (int)ctx->relative_path.length, ctx->relative_path.data, (unsigned)request_id, (void*)decoded);
+        log_decode_failure(ctx->relative_path, call.request_id, data, size);
     }
 
     FlVfsData result = { 0 };
-    result.success = (decoded != nullptr);
+    result.success = decoded;
 
     // Nothing reads ctx past here: a deferred prepare_image call has its own arena copy of the path, and the
     // VFS never touches handle->user_data again after the callback returns. A failed or cancelled read still
@@ -246,7 +228,7 @@ static void producer_end(ImageSystem* sys) {
 
 ImageSystem* image_system_create(FlArena* arena, const FlRenderBackend* backend) {
     ImageSystem* sys = arena_alloc_zero(arena, ImageSystem);
-    sys->dedup_arena = arena_new();
+    image_dedup_init(&sys->dedup);
     if (backend) {
         sys->backend_user_data = backend->user_data;
         sys->prepare_image = backend->prepare_image;
@@ -256,7 +238,6 @@ ImageSystem* image_system_create(FlArena* arena, const FlRenderBackend* backend)
     mutex_init(&sys->deferred_lock);
     mutex_init(&sys->failed_lock);
     atomic_store(&sys->ui_scale, 1.0f);
-    hashmap_string_new(&sys->dedup_cache, sys->dedup_arena, 256);
     hashmap_new(&sys->failed_loads, arena, 16);
     hashmap_new(&sys->active_synthetic_loads, arena, 16);
     hashmap_new(&sys->raw_pixel_images, arena, 16);
@@ -319,7 +300,7 @@ void image_system_destroy(ImageSystem* sys) {
     mutex_destroy(&sys->deferred_lock);
     mutex_destroy(&sys->failed_lock);
 
-    fl_arena_destroy(sys->dedup_arena);
+    image_dedup_destroy(&sys->dedup);
 }
 
 // Null-guarded: the SW backend leaves release_image unbound and relies on wholesale regen.
@@ -330,26 +311,6 @@ void image_system_release_image(ImageSystem* sys, FlImageHandle handle) {
     }
 }
 
-static void dedup_rebuild(ImageSystem* sys, bool keep_entries) {
-    FlArena* fresh = arena_new();
-    __typeof__(sys->dedup_cache) old = sys->dedup_cache;
-    FlArena* old_arena = sys->dedup_arena;
-
-    hashmap_string_new(&sys->dedup_cache, fresh, 256);
-    sys->dedup_arena = fresh;
-    sys->dedup_live_key_bytes = 0;
-    sys->dedup_dead_key_bytes = 0;
-
-    if (keep_entries) {
-        for_each_hashmap(&old, key, value) {
-            hashmap_string_insert(&sys->dedup_cache, *key, *value);
-            sys->dedup_live_key_bytes += key->length;
-        }
-    }
-
-    fl_arena_destroy(old_arena);
-}
-
 void image_system_begin_frame(ImageSystem* sys) {
     // Pump deferred prepare_image calls on this (main/render) thread, then release the arena that kept each
     // decoded result alive.
@@ -358,19 +319,16 @@ void image_system_begin_frame(ImageSystem* sys) {
         DeferredPrepare* next = entry->next;
         {
             arena_scratch_auto(scratch);
-            prepare_and_mark(sys, entry->request_id, entry->decoded, scratch.arena, &entry->request);
+            prepare_and_mark(sys, &entry->call, scratch.arena);
         }
-        settle_synthetic_load(sys, entry->request_id);
+        settle_synthetic_load(sys, entry->call.request_id);
         fl_arena_destroy(entry->arena);
         entry = next;
     }
 
     // The cache is persistent across frames, so callers that load the same image every frame get dedup hits.
-    u64 count = hashmap_count(&sys->dedup_cache);
-    if (count > DEDUP_CACHE_MAX_ENTRIES) {
-        log_info("Image dedup cache flush: %llu entries exceeded limit of %d", (unsigned long long)count,
-                 DEDUP_CACHE_MAX_ENTRIES);
-        dedup_rebuild(sys, false);
+    if (image_dedup_flush_over(&sys->dedup, DEDUP_CACHE_MAX_ENTRIES)) {
+        log_info("Image dedup cache flushed: more than %d entries", DEDUP_CACHE_MAX_ENTRIES);
     }
 }
 
@@ -422,115 +380,49 @@ FlImageLoadRequestId image_system_load(ImageSystem* sys, FlVfsMount* mount, FlSt
     return request_id;
 }
 
-// Hash load options for dedup cache key (FNV-1a over the individual fields)
-
-static u64 hash_load_options(const ImageDecodeOptions* o, const ImageThumbnailOptions* t) {
-    u64 h = 14695981039346656037ULL;
-
-#define FNV_MIX(val)           \
-    do {                       \
-        h ^= (u64)(val);       \
-        h *= 1099511628211ULL; \
-    } while (0)
-
-    FNV_MIX(o->target_width);
-    FNV_MIX(o->target_height);
-    FNV_MIX(t->detect_black_border);
-    FNV_MIX(o->preserve_aspect_ratio);
-    FNV_MIX(t->background_mode);
-    FNV_MIX(o->resize_filter);
-    FNV_MIX(t->apply_vertical_fade);
-    FNV_MIX(t->fade_r);
-    FNV_MIX(t->fade_g);
-    FNV_MIX(t->fade_b);
-    FNV_MIX(o->detect_grayscale);
-
-    u32 fade_bits;
-    memcpy(&fade_bits, &t->fade_start, sizeof(fade_bits));
-    FNV_MIX(fade_bits);
-
-    u32 svg_bits;
-    memcpy(&svg_bits, &o->svg_scale_factor, sizeof(svg_bits));
-    FNV_MIX(svg_bits);
-
-    u32 scale_bits;
-    memcpy(&scale_bits, &o->ui_scale, sizeof(scale_bits));
-    FNV_MIX(scale_bits);
-
-#undef FNV_MIX
-
-    return h;
-}
-
 FlImageLoadRequestId image_system_load_dedup(ImageSystem* sys, FlVfsMount* mount, FlString relative_path,
                                              const ImageDecodeOptions* options,
                                              const ImageThumbnailOptions* thumb_options, void* user_data,
                                              bool* was_cached) {
+    bool unused_was_cached;
+    if (!was_cached) {
+        was_cached = &unused_was_cached;
+    }
+    *was_cached = false;
+
     if (!sys || !mount) {
-        if (was_cached) {
-            *was_cached = false;
-        }
         return FL_IMAGE_LOAD_REQUEST_ID_INVALID;
     }
 
     ImageThumbnailOptions thumb = thumb_options ? *thumb_options : (ImageThumbnailOptions) { 0 };
 
     arena_scratch_auto(scratch);
-    u64 opts_hash = hash_load_options(options, &thumb);
-    FlString cache_key = fl_sprintf_arena(scratch.arena, "%llu:%S:%lx", (unsigned long long)vfs_mount_get_id(mount),
-                                          relative_path, opts_hash);
+    FlString cache_key = image_dedup_make_key(scratch.arena, mount, relative_path, options, &thumb);
 
-    FlImageLoadRequestId* cached = hashmap_string_get(&sys->dedup_cache, cache_key);
+    const FlImageLoadRequestId* cached = image_dedup_get(&sys->dedup, cache_key);
     if (cached != nullptr) {
-        if (was_cached) {
-            *was_cached = true;
-        }
+        *was_cached = true;
         return *cached;
-    }
-
-    if (was_cached) {
-        *was_cached = false;
     }
 
     FlImageLoadRequestId request_id
         = image_system_load(sys, mount, relative_path, options, &thumb, user_data, FL_IMAGE_LOAD_REQUEST_ID_INVALID);
 
     if (request_id != FL_IMAGE_LOAD_REQUEST_ID_INVALID) {
-        hashmap_string_insert(&sys->dedup_cache, cache_key, request_id);
-        sys->dedup_live_key_bytes += cache_key.length;
+        image_dedup_insert(&sys->dedup, cache_key, request_id);
     }
 
     return request_id;
 }
 
 void image_system_forget_dedup(ImageSystem* sys, FlImageLoadRequestId request_id) {
-    if (!sys) {
-        return;
-    }
-
-    arena_scratch_auto(scratch);
-    FlString* stale = arena_alloc_array(scratch.arena, FlString, hashmap_count(&sys->dedup_cache));
-    u64 stale_count = 0;
-
-    for_each_hashmap(&sys->dedup_cache, key, value) {
-        if (*value == request_id) {
-            stale[stale_count++] = *key;
-        }
-    }
-
-    for_count(i, stale_count) {
-        sys->dedup_live_key_bytes -= stale[i].length;
-        sys->dedup_dead_key_bytes += stale[i].length;
-        hashmap_string_remove(&sys->dedup_cache, stale[i]);
-    }
-
-    if (sys->dedup_dead_key_bytes > DEDUP_DEAD_KEY_BYTES_MAX && sys->dedup_dead_key_bytes > sys->dedup_live_key_bytes) {
-        dedup_rebuild(sys, true);
+    if (sys) {
+        image_dedup_forget(&sys->dedup, request_id);
     }
 }
 
 u64 image_system_dedup_key_bytes(const ImageSystem* sys) {
-    return sys->dedup_live_key_bytes + sys->dedup_dead_key_bytes;
+    return image_dedup_key_bytes(&sys->dedup);
 }
 
 // Drain completed memory-load jobs so their JobInfo slots get recycled.
@@ -597,29 +489,29 @@ static void memory_load_job(void* user_data, FlJobsWorkerInfo info) {
     MemoryLoadContext* ctx = (MemoryLoadContext*)user_data;
     ImageSystem* sys = ctx->sys;
 
-    FlImageLoadRequestId request_id = atomic_load(&ctx->request_id);
-    FlImageLoadRequest request = {
-        .mount = nullptr,
-        .relative_path = FL_S("(memory)"),
-        .decode_options = ctx->decode_options,
-        .thumbnail_options = ctx->thumbnail_options,
-        .user_data = nullptr,
+    PrepareCall call = {
+        .request_id = atomic_load(&ctx->request_id),
+        .request = {
+            .relative_path = FL_S("(memory)"),
+            .decode_options = ctx->decode_options,
+            .thumbnail_options = ctx->thumbnail_options,
+        },
     };
 
-    const FlImageDecodeResult* decoded = decode_and_dispatch(sys, ctx->data, ctx->data_size, &ctx->decode_options,
-                                                             &ctx->thumbnail_options, request_id, &request);
+    const bool decoded = decode_and_dispatch(sys, ctx->data, ctx->data_size, &call);
 
     if (!decoded) {
-        log_error("memory_load_job: decode failed (request_id=%u, size=%zu)", (unsigned)request_id, ctx->data_size);
+        log_error("memory_load_job: decode failed (request_id=%u, size=%zu)", (unsigned)call.request_id,
+                  ctx->data_size);
         // No VFS handle carries an error status for a memory load; the poll path reads this record.
-        image_system_mark_load_failed(sys, request_id);
+        image_system_mark_load_failed(sys, call.request_id);
     }
 
     // A deferring backend acknowledges from the begin-frame pump, which settles the load; every other path has
     // already had its one chance to acknowledge.
     bool deferred = sys->prepare_image && !sys->prepare_on_job;
     if (!decoded || !deferred) {
-        settle_synthetic_load(sys, request_id);
+        settle_synthetic_load(sys, call.request_id);
     }
 
     mi_free(ctx->data);
@@ -627,6 +519,43 @@ static void memory_load_job(void* user_data, FlJobsWorkerInfo info) {
 
     // Last access to the image system from this producer.
     atomic_fetch_sub(&sys->producers_inflight, 1);
+}
+
+// Builds the job context for a memory load, copying data to the heap (the job frees it after decode). Returns
+// nullptr when an allocation fails.
+static MemoryLoadContext* memory_load_context_create(ImageSystem* sys, const void* data, size_t size) {
+    MemoryLoadContext* ctx = jobs_context_alloc(MemoryLoadContext);
+    if (!ctx) {
+        return nullptr;
+    }
+
+    void* data_copy = mi_malloc(size);
+    if (!data_copy) {
+        // No job is submitted, so nothing would ever recycle the context.
+        jobs_context_free(ctx);
+        return nullptr;
+    }
+    memory_copy(data_copy, size, data, size);
+
+    ctx->sys = sys;
+    ctx->data = data_copy;
+    ctx->data_size = size;
+    return ctx;
+}
+
+// Registers the synthetic handle as active and submits the job under one failed_lock hold, so the job cannot settle
+// the load before the active record exists. Needs a slot reserved by reserve_pending_job.
+static FlImageLoadRequestId submit_memory_load(ImageSystem* sys, MemoryLoadContext* ctx) {
+    FlImageLoadRequestId request_id = alloc_synthetic_handle();
+    atomic_store(&ctx->request_id, request_id);
+
+    mutex_lock_auto(&sys->failed_lock);
+    bool active = true;
+    hashmap_insert(&sys->active_synthetic_loads, request_id, active);
+
+    FlJobHandle job_handle = fl_jobs_add_job(memory_load_job, ctx);
+    sys->pending_jobs[sys->pending_job_count++] = job_handle;
+    return request_id;
 }
 
 FlImageLoadRequestId image_system_load_from_memory(ImageSystem* sys, const void* data, size_t size,
@@ -641,43 +570,15 @@ FlImageLoadRequestId image_system_load_from_memory(ImageSystem* sys, const void*
     }
 
     drain_completed_jobs(sys);
-    if (!reserve_pending_job(sys)) {
-        producer_end(sys);
-        return FL_IMAGE_LOAD_REQUEST_ID_INVALID;
-    }
-
-    MemoryLoadContext* ctx = jobs_context_alloc(MemoryLoadContext);
+    MemoryLoadContext* ctx = reserve_pending_job(sys) ? memory_load_context_create(sys, data, size) : nullptr;
     if (!ctx) {
         producer_end(sys);
         return FL_IMAGE_LOAD_REQUEST_ID_INVALID;
     }
-
-    // Copy data to heap (job function will free it after decode)
-    void* data_copy = mi_malloc(size);
-    if (!data_copy) {
-        // No job is submitted, so nothing would ever recycle the context.
-        jobs_context_free(ctx);
-        producer_end(sys);
-        return FL_IMAGE_LOAD_REQUEST_ID_INVALID;
-    }
-    memory_copy(data_copy, size, data, size);
-
-    ctx->sys = sys;
-    ctx->data = data_copy;
-    ctx->data_size = size;
     ctx->decode_options = resolve_decode_options(sys, options);
     ctx->thumbnail_options = thumb_options ? *thumb_options : (ImageThumbnailOptions) { 0 };
 
-    FlImageLoadRequestId request_id = alloc_synthetic_handle();
-    atomic_store(&ctx->request_id, request_id);
-    mutex_lock_auto(&sys->failed_lock);
-    bool active = true;
-    hashmap_insert(&sys->active_synthetic_loads, request_id, active);
-
-    FlJobHandle job_handle = fl_jobs_add_job(memory_load_job, ctx);
-    sys->pending_jobs[sys->pending_job_count++] = job_handle;
-
-    return request_id;
+    return submit_memory_load(sys, ctx);
 }
 
 void image_system_mark_load_failed(ImageSystem* sys, FlImageLoadRequestId request_id) {
@@ -718,123 +619,49 @@ void image_system_clear_load_failed(ImageSystem* sys, FlImageLoadRequestId reque
     hashmap_remove(&sys->active_synthetic_loads, request_id);
 }
 
-// Widen pixel_count pixels of src_channels bytes each to 4-byte RGBA. With premultiply the source alpha
-// is applied to RGB and kept; without it the destination alpha is opaque and any fourth source byte is dropped.
-static void expand_to_rgba(u8* dst, const u8* src, size_t pixel_count, size_t src_channels, bool premultiply) {
-    if (premultiply) {
-        for (size_t i = 0; i < pixel_count; i++) {
-            const u8* s = src + i * src_channels;
-            u8 a = s[3];
-            dst[i * 4u + 0] = image_premul_channel(s[0], a);
-            dst[i * 4u + 1] = image_premul_channel(s[1], a);
-            dst[i * 4u + 2] = image_premul_channel(s[2], a);
-            dst[i * 4u + 3] = a;
-        }
-        return;
-    }
-
-    for (size_t i = 0; i < pixel_count; i++) {
-        const u8* s = src + i * src_channels;
-        dst[i * 4u + 0] = s[0];
-        dst[i * 4u + 1] = s[1];
-        dst[i * 4u + 2] = s[2];
-        dst[i * 4u + 3] = 255;
-    }
-}
-
-static u8* copy_raw_pixels(FlArena* arena, const void* pixels, int width, int height, FlImageFormat format,
-                           u8* out_channels, int* out_stride) {
-    size_t src_size = 0;
-    const u8* src = (const u8*)pixels;
-
-    switch (format) {
-        case FlImageFormat_Alpha:
-            if (!image_checked_pixel_size(width, height, 1, &src_size)) {
-                return nullptr;
-            }
-            {
-                u8* dst = arena_alloc_array(arena, u8, src_size);
-                memory_copy(dst, src_size, src, src_size);
-                *out_channels = 1;
-                *out_stride = width;
-                return dst;
-            }
-
-        case FlImageFormat_RGB:
-        case FlImageFormat_XRGB:
-        case FlImageFormat_RGBA: {
-            size_t src_channels = (format == FlImageFormat_RGB) ? 3u : 4u;
-            size_t dst_size = 0;
-            if (!image_checked_pixel_size(width, height, src_channels, &src_size)
-                || !image_checked_pixel_size(width, height, 4, &dst_size)) {
-                return nullptr;
-            }
-            u8* dst = arena_alloc_array(arena, u8, dst_size);
-            expand_to_rgba(dst, src, (size_t)width * (size_t)height, src_channels, format == FlImageFormat_RGBA);
-            *out_channels = 4;
-            *out_stride = width * 4;
-            return dst;
-        }
-
-        case FlImageFormat_Default:
-        case FlImageFormat_Deinterleaved:
-            return nullptr;
-    }
-
-    return nullptr;
+// Raw pixels are realized synchronously through the backend, so they need pixels and a backend that prepares images.
+static bool can_realize_pixels(const ImageSystem* sys, const void* pixels) {
+    return sys && sys->prepare_image && pixels;
 }
 
 // Convert, realize, and ack one raw-pixel image under request_id.
-static bool realize_raw_pixels(ImageSystem* sys, FlImageLoadRequestId request_id, const void* pixels, int width,
-                               int height, FlImageFormat format, bool dedicated) {
+static bool realize_raw_pixels(ImageSystem* sys, FlImageLoadRequestId request_id, const void* pixels,
+                               RawPixelShape shape) {
     arena_scratch_auto(scratch);
 
-    u8 channels = 0;
-    int stride = 0;
-    u8* copied_pixels = copy_raw_pixels(scratch.arena, pixels, width, height, format, &channels, &stride);
-    if (copied_pixels == nullptr) {
-        log_error("image_system: unsupported raw image shape/format (%dx%d, format=%d)", width, height, (int)format);
+    FlImageDecodeResult decoded;
+    if (!image_raw_pixels_to_decoded(scratch.arena, pixels, shape, &decoded)) {
+        log_error("image_system: unsupported raw image shape/format (%dx%d, format=%d)", shape.width, shape.height,
+                  (int)shape.format);
         return false;
     }
 
-    FlImageDecodeResult decoded = {
-        .pixels = copied_pixels,
-        .width = width,
-        .height = height,
-        .stride = stride,
-        .channels = channels,
-        .premultiplied = channels == 4,
-        .needs_thumbnail_compose = false,
+    PrepareCall call = {
+        .request_id = request_id,
+        .decoded = &decoded,
+        .request = {
+            .relative_path = FL_S("(pixels)"),
+            .decode_options = { .ui_scale = atomic_load(&sys->ui_scale) },
+            .thumbnail_options = { .background_mode = ImageDecodeBackgroundMode_Regular },
+            .dedicated = shape.dedicated,
+        },
     };
-    FlImageLoadRequest request = {
-        .mount = nullptr,
-        .relative_path = FL_S("(pixels)"),
-        .decode_options = { .ui_scale = atomic_load(&sys->ui_scale) },
-        .thumbnail_options = { .background_mode = ImageDecodeBackgroundMode_Regular },
-        .user_data = nullptr,
-        .dedicated = dedicated,
-    };
+    prepare_and_mark(sys, &call, scratch.arena);
 
-    prepare_and_mark(sys, request_id, &decoded, scratch.arena, &request);
-
-    int realized_w = 0;
-    int realized_h = 0;
-    return image_registry_is_ready((ImageHandle)request_id, &realized_w, &realized_h);
+    return image_registry_is_ready((ImageHandle)request_id, nullptr, nullptr);
 }
 
-FlImageLoadRequestId image_system_create_from_pixels(ImageSystem* sys, const void* pixels, int width, int height,
-                                                     FlImageFormat format, bool dedicated) {
-    if (!sys || !sys->prepare_image || !pixels) {
+FlImageLoadRequestId image_system_create_from_pixels(ImageSystem* sys, const void* pixels, RawPixelShape shape) {
+    if (!can_realize_pixels(sys, pixels)) {
         return FL_IMAGE_LOAD_REQUEST_ID_INVALID;
     }
 
     FlImageLoadRequestId request_id = alloc_synthetic_handle();
-    if (!realize_raw_pixels(sys, request_id, pixels, width, height, format, dedicated)) {
+    if (!realize_raw_pixels(sys, request_id, pixels, shape)) {
         return FL_IMAGE_LOAD_REQUEST_ID_INVALID;
     }
 
-    RawPixelImage record = { .width = width, .height = height, .format = format, .dedicated = dedicated };
-    hashmap_insert(&sys->raw_pixel_images, request_id, record);
+    hashmap_insert(&sys->raw_pixel_images, request_id, shape);
     return request_id;
 }
 
@@ -845,24 +672,23 @@ FlImageLoadRequestId image_system_create_from_pixels(ImageSystem* sys, const voi
 // leave a failed re-upload reporting "ready" against a handle the backend can no longer resolve.
 
 bool image_system_update_pixels(ImageSystem* sys, FlImageHandle handle, const void* pixels) {
-    if (!sys || !sys->prepare_image || !pixels) {
+    if (!can_realize_pixels(sys, pixels)) {
         return false;
     }
 
-    const RawPixelImage* record = hashmap_get(&sys->raw_pixel_images, (FlImageLoadRequestId)handle);
+    const RawPixelShape* record = hashmap_get(&sys->raw_pixel_images, (FlImageLoadRequestId)handle);
     if (record == nullptr) {
         log_error("image_system_update_pixels: handle %u was not created from pixels", (unsigned)handle);
         return false;
     }
-    RawPixelImage shape = *record;
+    RawPixelShape shape = *record;
 
     if (sys->release_image) {
         sys->release_image(sys->backend_user_data, handle);
     }
     image_registry_remove((ImageHandle)handle);
 
-    if (!realize_raw_pixels(sys, (FlImageLoadRequestId)handle, pixels, shape.width, shape.height, shape.format,
-                            shape.dedicated)) {
+    if (!realize_raw_pixels(sys, (FlImageLoadRequestId)handle, pixels, shape)) {
         // The handle keeps its creation record, so a later update with the same shape can still bring it back.
         log_error("image_system_update_pixels: handle %u could not be re-realized and is no longer ready",
                   (unsigned)handle);
@@ -882,7 +708,7 @@ FlImageHandle image_system_alloc_backend_handle(void) {
 bool image_system_prepare_pending(ImageSystem* sys, FlImageLoadRequestId request_id) {
     mutex_lock_auto(&sys->deferred_lock);
     for_each_list(entry, sys->deferred_head) {
-        if (entry->request_id == request_id) {
+        if (entry->call.request_id == request_id) {
             return true;
         }
     }

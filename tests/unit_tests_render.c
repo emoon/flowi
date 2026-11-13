@@ -4482,8 +4482,8 @@ static const u8 k_pgm_gray4x4[] = {
 // pins that no stray neighbour byte leaked into G/B.
 UTEST(image_decode, compose_grayscale_source_replicates_gray) {
     const u8 gray[6] = { 11, 22, 33, 44, 55, 66 }; // 3x2, 1 channel, stride 3
-    InternalDecodeData img = {
-        .data = (u8*)gray,
+    FlImageDecodeResult img = {
+        .pixels = (u8*)gray,
         .width = 3,
         .height = 2,
         .stride = 3,
@@ -4491,7 +4491,8 @@ UTEST(image_decode, compose_grayscale_source_replicates_gray) {
     };
 
     u8 canvas[3 * 2 * 3];
-    composite_source_into_canvas_rgb(&img, canvas, 3, 2, 5, 5, 5, 0, 0);
+    const ImageCanvas target = { .pixels = canvas, .width = 3, .height = 2, .fill = { 5, 5, 5 } };
+    composite_source_into_canvas_rgb(&img, &target);
 
     for (int i = 0; i < 3 * 2; i++) {
         ASSERT_EQ_MSG((int)canvas[i * 3 + 0], (int)gray[i], "grayscale value replicated into R");
@@ -4504,8 +4505,8 @@ UTEST(image_decode, compose_grayscale_source_replicates_gray) {
 // and must be dropped, not read into G/B. Source is exactly width*height*2 bytes.
 UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
     const u8 ga[6] = { 100, 255, 150, 128, 200, 0 }; // 3x1, 2 channels (gray, alpha), stride 6
-    InternalDecodeData img = {
-        .data = (u8*)ga,
+    FlImageDecodeResult img = {
+        .pixels = (u8*)ga,
         .width = 3,
         .height = 1,
         .stride = 6,
@@ -4513,7 +4514,8 @@ UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
     };
 
     u8 canvas[3 * 1 * 3];
-    composite_source_into_canvas_rgb(&img, canvas, 3, 1, 0, 0, 0, 0, 0);
+    const ImageCanvas target = { .pixels = canvas, .width = 3, .height = 1 };
+    composite_source_into_canvas_rgb(&img, &target);
 
     const int expected_gray[3] = { 100, 150, 200 }; // channel-0 gray of each pixel; alpha ignored
     for (int i = 0; i < 3; i++) {
@@ -4528,16 +4530,17 @@ UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
 // report false on its grey byte, and a high alpha byte must not make a black row report non-black.
 UTEST(image_decode, black_predicates_read_gray_alpha_channel) {
     const u8 bright_ga[6] = { 200, 0, 200, 0, 200, 0 }; // 3x1 GA: bright grey, zero alpha
-    ASSERT_FALSE_MSG(image_decode_test_is_row_all_black(bright_ga, 3, 2),
+    const FlImageDecodeResult bright = { .pixels = (u8*)bright_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
+    ASSERT_FALSE_MSG(image_region_all_black(&bright, (PixelRect) { 0, 1, 0, 3 }),
                      "a bright grey+alpha row must not report all-black");
+    ASSERT_FALSE_MSG(image_region_all_black(&bright, (PixelRect) { 0, 1, 1, 2 }),
+                     "a bright grey+alpha column must not report all-black");
 
     const u8 black_ga[6] = { 0, 255, 0, 255, 0, 255 }; // 3x1 GA: black grey, opaque alpha
-    ASSERT_TRUE_MSG(image_decode_test_is_row_all_black(black_ga, 3, 2),
+    const FlImageDecodeResult black = { .pixels = (u8*)black_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
+    ASSERT_TRUE_MSG(image_region_all_black(&black, (PixelRect) { 0, 1, 0, 3 }),
                     "a black grey+alpha row must report all-black regardless of alpha");
-
-    ASSERT_FALSE_MSG(image_decode_test_is_column_all_black(bright_ga, 1, 0, 1, 6, 2),
-                     "a bright grey+alpha column must not report all-black");
-    ASSERT_TRUE_MSG(image_decode_test_is_column_all_black(black_ga, 1, 0, 1, 6, 2),
+    ASSERT_TRUE_MSG(image_region_all_black(&black, (PixelRect) { 0, 1, 1, 2 }),
                     "a black grey+alpha column must report all-black regardless of alpha");
 }
 
@@ -4554,8 +4557,8 @@ UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
         src[i * 3 + 1] = (u8)(i * 3 + 1);
         src[i * 3 + 2] = (u8)(i * 3 + 2);
     }
-    InternalDecodeData img = {
-        .data = src,
+    FlImageDecodeResult img = {
+        .pixels = src,
         .width = 4,
         .height = 4,
         .stride = 4 * 3,
@@ -4571,7 +4574,10 @@ UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
 
     // offset (-1,-1) mimics a Center offset for a source larger than the canvas ((2-4)/2). dst_x = -1 + x, so
     // x==0 falls before the canvas (dropped), x==3 falls past it (dropped), x==1/2 map to canvas cols 0/1.
-    composite_source_into_canvas_rgb(&img, canvas, CW, CH, 7, 8, 9, -1, -1);
+    const ImageCanvas target = {
+        .pixels = canvas, .width = CW, .height = CH, .fill = { 7, 8, 9 }, .offset_x = -1, .offset_y = -1,
+    };
+    composite_source_into_canvas_rgb(&img, &target);
 
     for (int i = 0; i < GUARD; i++) {
         ASSERT_EQ_MSG((int)buf[i], 0xAB, "leading guard byte untouched (no OOB write before canvas)");
@@ -4821,6 +4827,28 @@ UTEST(image_decode, dynamic_image_refuses_stride_overflow) {
     FlDynamicImage* ok = dynamic_image_create(8, 4, s_arena);
     ASSERT_TRUE(ok != nullptr);
     ASSERT_EQ(8 * 4, ok->user_stride);
+}
+
+// The public constructors hand back a zeroed buffer of the right shape and refuse unusable arguments.
+UTEST(image_decode, public_dynamic_image_constructors_shape_the_buffer) {
+    FlDynamicImage* rgba = fl_dynamic_image_create(5, 3, (FlArena*)s_arena);
+    ASSERT_TRUE(rgba != nullptr);
+    ASSERT_EQ(5, rgba->width);
+    ASSERT_EQ(3, rgba->height);
+    ASSERT_EQ(5 * 4, rgba->user_stride);
+    ASSERT_FALSE(rgba->is_alpha_only);
+    for (int i = 0; i < 5 * 3 * 4; i++) {
+        ASSERT_EQ_MSG((int)rgba->user_buffer[i], 0, "public RGBA buffer starts zeroed");
+    }
+
+    FlDynamicImage* alpha = fl_dynamic_image_create_alpha(5, 3, (FlArena*)s_arena);
+    ASSERT_TRUE(alpha != nullptr);
+    ASSERT_EQ(5, alpha->user_stride);
+    ASSERT_TRUE(alpha->is_alpha_only);
+
+    ASSERT_TRUE(fl_dynamic_image_create(0, 3, (FlArena*)s_arena) == nullptr);
+    ASSERT_TRUE(fl_dynamic_image_create_alpha(5, -1, (FlArena*)s_arena) == nullptr);
+    ASSERT_TRUE(fl_dynamic_image_create(5, 3, nullptr) == nullptr);
 }
 
 static const char k_svg_declared_huge[]

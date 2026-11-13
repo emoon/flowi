@@ -104,26 +104,47 @@ static inline u8 image_premul_channel(int c, int a) {
     return (u8)((t + (t >> 8)) >> 8);
 }
 
-// Internal decode data (exposed for tests)
+// Shared with image_thumbnail.c
 
-typedef struct InternalDecodeData {
-    u8* data;
+typedef struct ImageSize {
+    int width, height;
+} ImageSize;
+
+// True when the options ask for a target size (SVG rasterizes at it, rasters resize to it in compose).
+bool image_has_target_size(const ImageDecodeOptions* opts);
+
+// The target size multiplied by ui_scale and rounded.
+ImageSize image_scaled_target_size(const ImageDecodeOptions* opts);
+
+// Collapses an RGBA image whose color is all gray into a single alpha channel; a no-op for anything else.
+void image_convert_grayscale_to_alpha(FlImageDecodeResult* image, FlArena* arena);
+
+// Compose primitives
+
+typedef struct Rgb8 {
+    u8 r, g, b;
+} Rgb8;
+
+// A 3-channel canvas plus where the source image lands on it. Offsets may be negative; the blit is clamped.
+typedef struct ImageCanvas {
+    u8* pixels; // width * height * 3 bytes
     i32 width;
     i32 height;
-    i32 stride;
-    u8 channels;
-    bool premultiplied;
-} InternalDecodeData;
+    Rgb8 fill;
+    i32 offset_x;
+    i32 offset_y;
+} ImageCanvas;
 
-// Compose primitive behind the Tint/Center background modes: fill canvas (canvas_w*canvas_h*3 RGB bytes) and
-// blit image onto it at (offset_x, offset_y). Reads are channel-agnostic (1-/2-channel grayscale sources
-// replicate the gray value into R/G/B) and the blit is clamped to the canvas, so an overhanging source is
-// cropped.
-void composite_source_into_canvas_rgb(const InternalDecodeData* image, u8* canvas, int canvas_w, int canvas_h,
-                                      u8 fill_r, u8 fill_g, u8 fill_b, int offset_x, int offset_y);
+// Compose primitive behind the Tint/Center background modes: fill the canvas and blit image onto it. Reads are
+// channel-agnostic (1-/2-channel grayscale sources replicate the gray value into R/G/B) and the blit is clamped to
+// the canvas, so an overhanging source is cropped.
+void composite_source_into_canvas_rgb(const FlImageDecodeResult* image, const ImageCanvas* canvas);
 
-// Test API
+// Half-open pixel rectangle: rows [row_start, row_end), columns [col_start, col_end).
+typedef struct PixelRect {
+    int row_start, row_end;
+    int col_start, col_end;
+} PixelRect;
 
-bool image_decode_test_is_row_all_black(const u8* row_data, int width, int channels);
-bool image_decode_test_is_column_all_black(const u8* data, int column, int start_row, int end_row, int stride,
-                                           int channels);
+// True when every pixel in region has zero colour bytes. Alpha is ignored; an empty region is all black.
+bool image_region_all_black(const FlImageDecodeResult* image, PixelRect region);

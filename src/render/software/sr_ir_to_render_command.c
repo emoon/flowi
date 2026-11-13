@@ -17,8 +17,8 @@
 #include "sr_render_helpers.h"
 #include "sw_glyph_cache.h"
 #include <ui/font_cache.h>
-#include <ui/image.h>
-#include <ui/image_cache.h>
+#include <ui/image/image.h>
+#include <ui/image/image_cache.h>
 #include <ui/render_ir.h>
 #include <assert.h>
 #include <math.h>

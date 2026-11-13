@@ -3,7 +3,7 @@
 #include <core/simd.h>
 #include "software_renderer_internal.h"
 #include "sr_image_blend.h"
-#include <ui/image.h>
+#include <ui/image/image.h>
 #include <math.h>
 
 // Sample 8 destination pixels from one source plane as Q7 values. Takes the scalar gather when this command's

@@ -2,9 +2,9 @@
 #include <core/arena.h>
 #include <core/log.h>
 #include <core/simd.h>
-#include <ui/image_decode.h>
-#include <ui/image_private.h>
-#include <ui/image_system.h>
+#include <ui/image/image_decode.h>
+#include <ui/image/image_private.h>
+#include <ui/image/image_system.h>
 #include <core/memory.h>
 #include "sr_image_convert.h"
 

@@ -38,7 +38,7 @@
 #include <flowi/ui/ui_menu.h>
 #include <flowi/ui/ui_scroll.h>
 #include <flowi/ui/ui_selection.h>
-#include "image.h"
+#include "image/image.h"
 #include "list_uniform.h"
 #include "painter.h"
 #include <ui/render_backend.h>
@@ -724,6 +724,14 @@ void fl_image(FlImageHandle handle, FlImageOpts opts) {
 
 void fl_dynamic_image(FlDynamicImage* image, FlImageOpts opts) {
     ui_dynamic_image_impl(image, opts);
+}
+
+FlDynamicImage* fl_dynamic_image_create(int32_t width, int32_t height, FlArena* arena) {
+    return dynamic_image_create(width, height, arena);
+}
+
+FlDynamicImage* fl_dynamic_image_create_alpha(int32_t width, int32_t height, FlArena* arena) {
+    return dynamic_image_create_alpha(width, height, arena);
 }
 
 void fl_spacer(float height) {

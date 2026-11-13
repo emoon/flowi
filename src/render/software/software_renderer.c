@@ -12,8 +12,8 @@
 #include <core/perf_scope.h>
 #include <core/simd.h>
 #include "external/clay/clay.h"
-#include <ui/image_cache.h>
-#include <ui/image_decode.h>
+#include <ui/image/image_cache.h>
+#include <ui/image/image_decode.h>
 #include <ui/render_backend.h>
 #include <assert.h>
 #include <math.h>

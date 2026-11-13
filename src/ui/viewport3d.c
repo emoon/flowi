@@ -14,7 +14,7 @@
 // A backend with no 3D seam draws a flat placeholder rect instead.
 
 #include "external/clay/clay.h"
-#include "image_system.h"
+#include "image/image_system.h"
 #include "ui_private.h"
 #include <core/log.h>
 #include <flowi/ui/layout.h>

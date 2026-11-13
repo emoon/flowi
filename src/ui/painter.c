@@ -17,8 +17,8 @@
 #include <core/arena.h>
 #include <core/math.h>
 #include "font_cache.h"
-#include "image.h"
-#include "image_registry.h"
+#include "image/image.h"
+#include "image/image_registry.h"
 #include "render_ir.h"
 #include "render_ir_build.h"
 

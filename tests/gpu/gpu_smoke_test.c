@@ -24,8 +24,8 @@
 #include <render/gpu/gpu_shaders.h>           // GL-typed, Linux-only
 #endif
 #include "ui/color.h"
-#include "ui/image_decode.h"
-#include "ui/image_registry.h"
+#include "ui/image/image_decode.h"
+#include "ui/image/image_registry.h"
 #include "ui/font_cache.h"
 #include "ui/layout.h"
 #include "ui/clay_to_render_ir.h"

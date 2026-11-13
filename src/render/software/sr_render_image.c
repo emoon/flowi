@@ -7,7 +7,7 @@
 #include <core/simd.h>
 #include "software_renderer_internal.h"
 #include "sr_image_blend.h"
-#include <ui/image.h>
+#include <ui/image/image.h>
 #include <math.h>
 
 // Nearest-neighbor (point-sampled) image rendering.

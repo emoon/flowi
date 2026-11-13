@@ -23,8 +23,8 @@
 #include <render/gpu/gpu_svg_atlas.h>
 #include "ui/font_cache.h"
 #include <ui/render_backend.h>
-#include "ui/image_decode.h"
-#include "ui/image_system.h"
+#include "ui/image/image_decode.h"
+#include "ui/image/image_system.h"
 #include "ui/render_ir.h"
 #include "ui/render_ir_build.h"
 #include "ui/vector_image.h"

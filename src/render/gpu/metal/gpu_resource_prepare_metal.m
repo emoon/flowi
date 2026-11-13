@@ -9,7 +9,7 @@
 #include "gpu_svg_color_lower.h" // GpuColorShape
 #include <core/log.h>
 #include <ui/font_cache.h>     // FlGlyphOutline
-#include <ui/image_decode.h>   // FlImageDecodeResult
+#include <ui/image/image_decode.h>   // FlImageDecodeResult
 #include <ui/vector_image.h>   // FlVectorImage
 
 // The cell-raster dispatch shared by glyph, monochrome SVG, and multi-color SVG cells; they differ in pipeline,

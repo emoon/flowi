@@ -7,8 +7,8 @@
 //   - Deinterleaving (separate R,G,B,A planes for SIMD rendering)
 //   - TLSF cache storage
 
-#include <ui/image_decode.h>
-#include <ui/image_system.h>
+#include <ui/image/image_decode.h>
+#include <ui/image/image_system.h>
 
 struct FlArena;
 

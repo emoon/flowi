@@ -8,7 +8,7 @@
 #include "ui_color_utils.h"
 #include "ui_tokens.h"
 #include "layout.h"
-#include "image.h"
+#include "image/image.h"
 #include <core/core.h>
 #include <core/math.h>
 #include <external/clay/clay.h>

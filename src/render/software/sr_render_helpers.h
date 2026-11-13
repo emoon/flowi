@@ -5,7 +5,7 @@
 #include <core/simd.h>
 #include <core/types.h>
 #include <math.h>
-#include <ui/image_decode.h>
+#include <ui/image/image_decode.h>
 
 struct FlArena;
 struct Glyph;
