@@ -15,69 +15,34 @@
 // Parse flag bitset passed to fl_json_parse_with_flags as a plain size_t.
 
 typedef enum FlJsonParseFlags {
+    // strict JSON.
     FlJsonParseFlags_Default = 0,
 
-    // allow trailing commas in objects and arrays.
-    FlJsonParseFlags_AllowTrailingComma = 0x1,
-
-    // allow unquoted keys for objects.
-    FlJsonParseFlags_AllowUnquotedKeys = 0x2,
-
-    // allow a global unbracketed object. For example, a : null, b : true, c : {}
-    FlJsonParseFlags_AllowGlobalObject = 0x4,
-
-    // allow objects to use '=' instead of ':' between key/value pairs.
-    FlJsonParseFlags_AllowEqualsInObject = 0x8,
-
-    // allow that objects don't have to have comma separators between key/value
-    // pairs.
-    FlJsonParseFlags_AllowNoCommas = 0x10,
-
-    // allow c-style comments (either variants) to be ignored in the input JSON
-    // file.
-    FlJsonParseFlags_AllowCStyleComments = 0x20,
-
-    // record location information for each value.
-    FlJsonParseFlags_AllowLocationInformation = 0x80,
-
-    // allow strings to be 'single quoted'.
-    FlJsonParseFlags_AllowSingleQuotedStrings = 0x100,
-
-    // allow numbers to be hexadecimal.
-    FlJsonParseFlags_AllowHexadecimalNumbers = 0x200,
-
-    // allow numbers like +123 to be parsed.
-    FlJsonParseFlags_AllowLeadingPlusSign = 0x400,
-
-    // allow numbers like .0123 or 123. to be parsed.
-    FlJsonParseFlags_AllowLeadingOrTrailingDecimalPoint = 0x800,
-
-    // allow Infinity, -Infinity, NaN, -NaN.
-    FlJsonParseFlags_AllowInfAndNan = 0x1000,
-
-    // allow multi line string by ignoring new line characters.
-    FlJsonParseFlags_AllowMultiLineStrings = 0x2000,
-
-    // allow simplified JSON to be parsed. Simplified JSON is an enabling of a set
-    // of other parsing options.
-    FlJsonParseFlags_AllowSimplifiedJson = (FlJsonParseFlags_AllowTrailingComma | FlJsonParseFlags_AllowUnquotedKeys
-                                            | FlJsonParseFlags_AllowGlobalObject | FlJsonParseFlags_AllowEqualsInObject
-                                            | FlJsonParseFlags_AllowNoCommas),
-
-    // allow JSON5 to be parsed. JSON5 is an enabling of a set of other parsing options.
-    FlJsonParseFlags_AllowJson5 = (
-        FlJsonParseFlags_AllowTrailingComma | FlJsonParseFlags_AllowUnquotedKeys | FlJsonParseFlags_AllowCStyleComments
-        | FlJsonParseFlags_AllowSingleQuotedStrings | FlJsonParseFlags_AllowHexadecimalNumbers
-        | FlJsonParseFlags_AllowLeadingPlusSign | FlJsonParseFlags_AllowLeadingOrTrailingDecimalPoint
-        | FlJsonParseFlags_AllowInfAndNan | FlJsonParseFlags_AllowMultiLineStrings | FlJsonParseFlags_AllowGlobalObject)
+    // JSON5: comments, unquoted and single-quoted keys, single-quoted strings, multi-line strings, trailing commas,
+    // hexadecimal numbers, leading '+', leading or trailing decimal points, Infinity and NaN, and a top-level object
+    // without braces.
+    FlJsonParseFlags_AllowJson5 = 0x1,
 } FlJsonParseFlags;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Allocate a zeroed value node. Every value reachable through the fl_json_* API carries the parser's
-// internal location fields, so anything building a DOM by hand must allocate through this rather
-// than sizeof(FlJsonValue) - the position accessors read those fields unconditionally.
+// String escapes shared by the parser and the writer: JSON_ESCAPE_CODES[i] follows the backslash for the character
+// JSON_ESCAPE_VALUES[i].
 
-struct FlJsonValue* json_value_alloc_zero(struct FlArena* arena);
+#define JSON_ESCAPE_CODES "\"\\bfnrt"
+#define JSON_ESCAPE_VALUES "\"\\\b\f\n\r\t"
+
+static inline int json_hex_digit_value(char c) {
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    }
+    if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    }
+    return -1;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // JSON iteration helper macros

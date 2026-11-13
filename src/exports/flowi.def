@@ -194,37 +194,16 @@ EXPORTS
     fl_jobs_num_threads
     fl_jobs_set_priority
     fl_jobs_wait
-    fl_json_extract_value
     fl_json_find_property
-    fl_json_format_parse_error
-    fl_json_format_value_error
     fl_json_get_array_prop
-    fl_json_get_bool_prop
-    fl_json_get_column_number
     fl_json_get_error_description
     fl_json_get_f64_prop
-    fl_json_get_line_number
     fl_json_get_object_prop
-    fl_json_get_path
     fl_json_get_string_prop
     fl_json_get_u32_prop
-    fl_json_has_position_info
-    fl_json_parse
-    fl_json_parse_no_location
     fl_json_parse_with_flags
-    fl_json_value_as_fixed_array
-    fl_json_value_as_number
     fl_json_value_as_object
     fl_json_value_as_string
-    fl_json_value_get_bool
-    fl_json_value_get_f64
-    fl_json_value_get_i32
-    fl_json_value_get_u64
-    fl_json_value_is_bool
-    fl_json_value_is_false
-    fl_json_value_is_null
-    fl_json_value_is_true
-    fl_json_write_minified
     fl_json_write_pretty
     fl_layout_configure
     fl_layout_end

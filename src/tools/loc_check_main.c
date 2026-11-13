@@ -119,8 +119,7 @@ static u32 load_tables(FlArena* arena, FlString manifest_path, LocCheckTable** o
     }
 
     FlJsonParseResult result = { 0 };
-    FlJsonValue* root
-        = fl_json_parse_with_flags(arena, manifest.data, manifest.length, FlJsonParseFlags_AllowJson5, &result);
+    FlJsonValue* root = fl_json_parse_with_flags(arena, manifest, FlJsonParseFlags_AllowJson5, &result);
     if (root == nullptr) {
         const FlString error = fl_json_get_error_description(result.error);
         fprintf(stderr, "loc_check: manifest %.*s failed to parse: %.*s\n", (int)manifest_path.length,

@@ -3695,7 +3695,7 @@ static void dock_log_file_close(bool* open) {
 
 // Parses JSON text, with the relaxed flags the persisted layout is read with, into the arena.
 static FlJsonValue* dock_json_parse(FlArena* arena, FlString text) {
-    return fl_json_parse_with_flags(arena, text.data, text.length, FlJsonParseFlags_AllowJson5, nullptr);
+    return fl_json_parse_with_flags(arena, text, FlJsonParseFlags_AllowJson5, nullptr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

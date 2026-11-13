@@ -137,7 +137,8 @@ static FlVfsData manifest_load_callback(void* data, i64 size, void* user_data) {
     }
 
     FlJsonParseResult result = { 0 };
-    FlJsonValue* root = fl_json_parse_with_flags(self->arena, data, (size_t)size, FlJsonParseFlags_AllowJson5, &result);
+    FlJsonValue* root = fl_json_parse_with_flags(self->arena, string_from_cstr_len((const char*)data, (u64)size),
+                                                 FlJsonParseFlags_AllowJson5, &result);
     if (root == nullptr) {
         log_warning("Localization manifest failed to parse: %S", fl_json_get_error_description(result.error));
         return (FlVfsData) { .success = false };
@@ -228,8 +229,8 @@ static FlVfsData table_load_callback(void* data, i64 size, void* user_data) {
     }
 
     FlJsonParseResult result = { 0 };
-    FlJsonValue* root
-        = fl_json_parse_with_flags(table->arena, data, (size_t)size, FlJsonParseFlags_AllowJson5, &result);
+    FlJsonValue* root = fl_json_parse_with_flags(table->arena, string_from_cstr_len((const char*)data, (u64)size),
+                                                 FlJsonParseFlags_AllowJson5, &result);
     if (root == nullptr) {
         log_warning("Localization table %S failed to parse: %S", table->path,
                     fl_json_get_error_description(result.error));

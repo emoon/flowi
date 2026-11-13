@@ -49,7 +49,6 @@ notices in the file. "Modified" means edited after copying.
 |---|---|---|---|---|
 | [TLSF](http://tlsf.baisoku.org) 3.1 | `src/core/tlsf.c`, `tlsf.h` | BSD 3-Clause (notice in both files; reproduced below) | 2006-2016 Matthew Conte | Not tracked; treat as modified |
 | [stb_sprintf](https://github.com/nothings/stb) v1.10 | `src/core/sprintf.c` | Public domain (Unlicense) or MIT, at your option (notice at end of the stb section) | 2017 Sean Barrett; RAD Game Tools and contributors listed in the file | Modified: flowi arena wrappers appended after the upstream code |
-| [json.h](https://github.com/sheredom/json.h) | `src/core/json.c` | Unlicense (public domain) | Neil Henning (sheredom) | Modified: adapted to flowi code style |
 | [branchless-utf8](https://github.com/skeeto/branchless-utf8) | `src/core/utf8.h` | Unlicense (public domain) | Christopher Wellons | Modified: embedded in flowi's UTF-8 helpers |
 | [teeny-sha1](https://github.com/CTrabant/teeny-sha1) | `src/core/hash.c` (SHA1 section) | MIT (full notice in the file) | 2017 CTrabant | Modified: flowi types and hex output wrapper |
 | MD5 (Colin Plumb) | `src/core/hash.c` (MD5 section) | Public domain | 1993 Colin Plumb (no copyright claimed) | Modified: flowi API wrapper |
