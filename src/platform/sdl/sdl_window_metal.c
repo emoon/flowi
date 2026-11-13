@@ -175,10 +175,10 @@ static void sdl_metal_composite(SdlWindowContext* self, FlWindow* window, id<MTL
 
 // The compositor device/queue/pipeline are built on the first present. Each present uses its own command buffer,
 // render pass and drawable.
-static void sdl_present_metal(void* ud, FlWindow* window, const FlGpuSurfaceTexture* surface_texture) {
+static void sdl_present_metal(void* ud, FlWindow* window, FlSurfaceHandle surface_texture) {
     SdlWindowContext* self = (SdlWindowContext*)ud;
     // A null texture leaves the window untouched.
-    id<MTLTexture> ui_tex = (id<MTLTexture>)surface_texture->handle;
+    id<MTLTexture> ui_tex = (id<MTLTexture>)surface_texture;
     if (window == NULL || window->metal_layer == nil) {
         return;
     }

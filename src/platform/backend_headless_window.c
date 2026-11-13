@@ -160,7 +160,7 @@ static void headless_warp_mouse(void* ud, FlWindow* window, float x, float y) {
 }
 
 // Presentation - no-op; the signature matches the seam's present slot.
-static void headless_present(void* ud, FlWindow* window, const FlGpuSurfaceTexture* surface_texture) {
+static void headless_present(void* ud, FlWindow* window, FlSurfaceHandle surface_texture) {
     UNUSED(ud);
     UNUSED(window);
     UNUSED(surface_texture);

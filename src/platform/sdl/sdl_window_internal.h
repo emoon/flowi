@@ -89,8 +89,8 @@ struct SdlWindowMode {
     void (*destroy_window)(SdlWindowContext* self, FlWindow* window);
     // Live drawable size in physical pixels.
     void (*pixel_size)(FlWindow* window, int* px_w, int* px_h);
-    void (*present)(void* ud, FlWindow* window, const FlGpuSurfaceTexture* surface_texture);
-    void (*present_software)(void* ud, FlWindow* window, const FlPixelReadback* pixels);
+    void (*present)(void* ud, FlWindow* window, FlSurfaceHandle surface_texture);
+    void (*present_software)(void* ud, FlWindow* window, const FlRgb24Frame* frame);
     void (*make_current)(void* ud, FlWindow* window);
 };
 

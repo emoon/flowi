@@ -70,21 +70,21 @@ static bool sdl_software_ensure_texture(FlWindow* window, u32 tex_width, u32 tex
     return true;
 }
 
-static void sdl_present_software(void* ud, FlWindow* window, const FlPixelReadback* pixels) {
+static void sdl_present_software(void* ud, FlWindow* window, const FlRgb24Frame* frame) {
     UNUSED(ud);
     if (window == NULL || window->renderer == NULL) {
         return;
     }
-    if (pixels->pixels == NULL) {
+    if (frame->pixels == NULL) {
         return;
     }
-    if (pixels->width == 0 || pixels->height == 0) {
+    if (frame->width == 0 || frame->height == 0) {
         return;
     }
-    if (!sdl_software_ensure_texture(window, pixels->width, pixels->height)) {
+    if (!sdl_software_ensure_texture(window, frame->width, frame->height)) {
         return;
     }
-    SDL_UpdateTexture(window->ui_texture, NULL, pixels->pixels, (int)pixels->stride);
+    SDL_UpdateTexture(window->ui_texture, NULL, frame->pixels, (int)frame->stride);
     SDL_SetRenderDrawColor(window->renderer, 0, 0, 0, 255);
     SDL_RenderClear(window->renderer);
     SDL_RenderCopy(window->renderer, window->ui_texture, NULL, NULL);
