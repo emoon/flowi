@@ -112,12 +112,12 @@ ImageSize image_scaled_target_size(const ImageDecodeOptions* opts) {
     return (ImageSize) { (int)(opts->target_width * ui_scale + 0.5f), (int)(opts->target_height * ui_scale + 0.5f) };
 }
 
-void image_convert_grayscale_to_alpha(InternalDecodeData* image, FlArena* arena) {
+void image_convert_grayscale_to_alpha(FlImageDecodeResult* image, FlArena* arena) {
     if (image->channels != 4) {
         return;
     }
 
-    if (!is_grayscale_rgba_simd(image->data, image->width, image->height, image->stride)) {
+    if (!is_grayscale_rgba_simd(image->pixels, image->width, image->height, image->stride)) {
         return;
     }
 
@@ -129,7 +129,7 @@ void image_convert_grayscale_to_alpha(InternalDecodeData* image, FlArena* arena)
     u8* alpha_data = arena_alloc_array(arena, u8, pixel_count);
 
     for_count(y, image->height) {
-        const u8* src_row = image->data + (size_t)y * (size_t)image->stride;
+        const u8* src_row = image->pixels + (size_t)y * (size_t)image->stride;
         u8* dst_row = alpha_data + (size_t)y * (size_t)image->width;
         for_count(x, image->width) {
             u8 r = src_row[x * 4 + 0];
@@ -138,26 +138,9 @@ void image_convert_grayscale_to_alpha(InternalDecodeData* image, FlArena* arena)
         }
     }
 
-    image->data = alpha_data;
+    image->pixels = alpha_data;
     image->stride = image->width;
     image->channels = 1;
-}
-
-// Writes the working data into a result and marks it final; raw raster decodes set needs_thumbnail_compose afterwards.
-void image_store_internal_in_result(FlImageDecodeResult* result, const InternalDecodeData* internal) {
-    result->pixels = internal->data;
-    result->width = internal->width;
-    result->height = internal->height;
-    result->stride = internal->stride;
-    result->channels = internal->channels;
-    result->premultiplied = internal->premultiplied;
-    result->needs_thumbnail_compose = false;
-}
-
-static FlImageDecodeResult* internal_to_result(const InternalDecodeData* internal, FlArena* arena) {
-    FlImageDecodeResult* result = arena_alloc(arena, FlImageDecodeResult);
-    image_store_internal_in_result(result, internal);
-    return result;
 }
 
 // Largest rasterized SVG edge. nanosvg indexes its bitmap with int row * stride arithmetic, so the raster must keep
@@ -215,12 +198,11 @@ static bool svg_raster_size(const NSVGimage* image, const ImageDecodeOptions* op
     return true;
 }
 
-// Rasterizes the parsed SVG into a new RGBA buffer. Returns false on an unusable size or allocation failure.
-static bool rasterize_svg(NSVGimage* image, const ImageDecodeOptions* opts, FlArena* arena,
-                          InternalDecodeData* out) {
+// Rasterizes the parsed SVG into a new RGBA result. Returns nullptr on an unusable size or allocation failure.
+static FlImageDecodeResult* rasterize_svg(NSVGimage* image, const ImageDecodeOptions* opts, FlArena* arena) {
     ImageSize size;
     if (!svg_raster_size(image, opts, &size)) {
-        return false;
+        return nullptr;
     }
 
     size_t pixel_size = 0;
@@ -228,13 +210,13 @@ static bool rasterize_svg(NSVGimage* image, const ImageDecodeOptions* opts, FlAr
     if (!image_checked_pixel_size(size.width, size.height, 4, &pixel_size)
         || !image_checked_stride(size.width, 4, &stride)) {
         log_debug("SVG dimensions %dx%d are too large to rasterize", size.width, size.height);
-        return false;
+        return nullptr;
     }
 
     NSVGrasterizer* rast = nsvgCreateRasterizer();
     if (!rast) {
         log_debug("Failed to create SVG rasterizer");
-        return false;
+        return nullptr;
     }
 
     u8* pixel_data = arena_alloc_array(arena, u8, pixel_size);
@@ -242,15 +224,16 @@ static bool rasterize_svg(NSVGimage* image, const ImageDecodeOptions* opts, FlAr
                   size.height, stride);
     nsvgDeleteRasterizer(rast);
 
-    *out = (InternalDecodeData) {
-        .data = pixel_data,
+    FlImageDecodeResult* result = arena_alloc(arena, FlImageDecodeResult);
+    *result = (FlImageDecodeResult) {
+        .pixels = pixel_data,
         .width = size.width,
         .height = size.height,
         .stride = stride,
         .channels = 4,
         .premultiplied = true, // nanosvg produces premultiplied output
     };
-    return true;
+    return result;
 }
 
 static FlImageDecodeResult* decode_svg(const u8* data, size_t size, const ImageDecodeOptions* opts, FlArena* arena) {
@@ -266,27 +249,23 @@ static FlImageDecodeResult* decode_svg(const u8* data, size_t size, const ImageD
         return nullptr;
     }
 
-    InternalDecodeData internal;
-    const bool rasterized = rasterize_svg(image, opts, arena, &internal);
+    FlImageDecodeResult* result = rasterize_svg(image, opts, arena);
     nsvgDelete(image);
-    if (!rasterized) {
-        return nullptr;
-    }
 
-    if (opts->detect_grayscale) {
-        image_convert_grayscale_to_alpha(&internal, arena);
+    if (result && opts->detect_grayscale) {
+        image_convert_grayscale_to_alpha(result, arena);
     }
-
-    return internal_to_result(&internal, arena);
+    return result;
 }
 
-// Decodes a raster image with stb into arena memory. Returns data == nullptr when it cannot be decoded or is too large.
-static InternalDecodeData decode_raster(FlArena* arena, const u8* data, size_t size, bool force_rgb) {
+// Decodes a raster image with stb into arena memory, leaving it raw for image_thumbnail_compose() to finish. Returns
+// nullptr when it cannot be decoded or is too large.
+static FlImageDecodeResult* decode_raster(FlArena* arena, const u8* data, size_t size, bool force_rgb) {
     int width, height, channels;
     u8* stb_data = stbi_load_from_memory(data, (int)size, &width, &height, &channels, force_rgb ? 3 : 0);
     if (!stb_data) {
         log_debug("Failed to decode image data (%zu bytes): %s", size, stbi_failure_reason());
-        return (InternalDecodeData) { 0 };
+        return nullptr;
     }
     if (force_rgb) {
         channels = 3;
@@ -298,20 +277,22 @@ static InternalDecodeData decode_raster(FlArena* arena, const u8* data, size_t s
         || !image_checked_stride(width, (size_t)channels, &stride)) {
         log_debug("Decoded image %dx%d (%d channels) is too large", width, height, channels);
         stbi_image_free(stb_data);
-        return (InternalDecodeData) { 0 };
+        return nullptr;
     }
     u8* arena_data = arena_alloc_array(arena, u8, image_size);
     memory_copy(arena_data, image_size, stb_data, image_size);
     stbi_image_free(stb_data);
 
-    return (InternalDecodeData) {
-        .data = arena_data,
+    FlImageDecodeResult* result = arena_alloc(arena, FlImageDecodeResult);
+    *result = (FlImageDecodeResult) {
+        .pixels = arena_data,
         .width = width,
         .height = height,
         .stride = stride,
         .channels = (u8)channels,
-        .premultiplied = false,
+        .needs_thumbnail_compose = true,
     };
+    return result;
 }
 
 FlImageDecodeResult* image_decode(FlArena* arena, const void* file_data, size_t file_size,
@@ -327,15 +308,6 @@ FlImageDecodeResult* image_decode(FlArena* arena, const void* file_data, size_t 
         return decode_svg(data, file_size, &opts, arena);
     }
 
-    InternalDecodeData internal = decode_raster(arena, data, file_size, opts.force_rgb);
-    if (!internal.data) {
-        return nullptr;
-    }
-
-    // Raster decode returns raw pixels; the finishing pass (premultiply, resize, compositing, grayscale) runs
-    // in image_thumbnail_compose().
-    FlImageDecodeResult* result = internal_to_result(&internal, arena);
-    result->needs_thumbnail_compose = true;
-    return result;
+    return decode_raster(arena, data, file_size, opts.force_rgb);
 }
 

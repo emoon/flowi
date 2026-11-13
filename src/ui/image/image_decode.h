@@ -104,17 +104,6 @@ static inline u8 image_premul_channel(int c, int a) {
     return (u8)((t + (t >> 8)) >> 8);
 }
 
-// Internal decode data (exposed for tests)
-
-typedef struct InternalDecodeData {
-    u8* data;
-    i32 width;
-    i32 height;
-    i32 stride;
-    u8 channels;
-    bool premultiplied;
-} InternalDecodeData;
-
 // Shared with image_thumbnail.c
 
 typedef struct ImageSize {
@@ -128,10 +117,7 @@ bool image_has_target_size(const ImageDecodeOptions* opts);
 ImageSize image_scaled_target_size(const ImageDecodeOptions* opts);
 
 // Collapses an RGBA image whose color is all gray into a single alpha channel; a no-op for anything else.
-void image_convert_grayscale_to_alpha(InternalDecodeData* image, FlArena* arena);
-
-// Writes the working data into a result and marks it final (needs_thumbnail_compose cleared).
-void image_store_internal_in_result(FlImageDecodeResult* result, const InternalDecodeData* internal);
+void image_convert_grayscale_to_alpha(FlImageDecodeResult* image, FlArena* arena);
 
 // Compose primitives
 
@@ -152,7 +138,7 @@ typedef struct ImageCanvas {
 // Compose primitive behind the Tint/Center background modes: fill the canvas and blit image onto it. Reads are
 // channel-agnostic (1-/2-channel grayscale sources replicate the gray value into R/G/B) and the blit is clamped to
 // the canvas, so an overhanging source is cropped.
-void composite_source_into_canvas_rgb(const InternalDecodeData* image, const ImageCanvas* canvas);
+void composite_source_into_canvas_rgb(const FlImageDecodeResult* image, const ImageCanvas* canvas);
 
 // Half-open pixel rectangle: rows [row_start, row_end), columns [col_start, col_end).
 typedef struct PixelRect {
@@ -161,4 +147,4 @@ typedef struct PixelRect {
 } PixelRect;
 
 // True when every pixel in region has zero colour bytes. Alpha is ignored; an empty region is all black.
-bool image_region_all_black(const InternalDecodeData* image, PixelRect region);
+bool image_region_all_black(const FlImageDecodeResult* image, PixelRect region);

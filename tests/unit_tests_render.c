@@ -4482,8 +4482,8 @@ static const u8 k_pgm_gray4x4[] = {
 // pins that no stray neighbour byte leaked into G/B.
 UTEST(image_decode, compose_grayscale_source_replicates_gray) {
     const u8 gray[6] = { 11, 22, 33, 44, 55, 66 }; // 3x2, 1 channel, stride 3
-    InternalDecodeData img = {
-        .data = (u8*)gray,
+    FlImageDecodeResult img = {
+        .pixels = (u8*)gray,
         .width = 3,
         .height = 2,
         .stride = 3,
@@ -4505,8 +4505,8 @@ UTEST(image_decode, compose_grayscale_source_replicates_gray) {
 // and must be dropped, not read into G/B. Source is exactly width*height*2 bytes.
 UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
     const u8 ga[6] = { 100, 255, 150, 128, 200, 0 }; // 3x1, 2 channels (gray, alpha), stride 6
-    InternalDecodeData img = {
-        .data = (u8*)ga,
+    FlImageDecodeResult img = {
+        .pixels = (u8*)ga,
         .width = 3,
         .height = 1,
         .stride = 6,
@@ -4530,14 +4530,14 @@ UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
 // report false on its grey byte, and a high alpha byte must not make a black row report non-black.
 UTEST(image_decode, black_predicates_read_gray_alpha_channel) {
     const u8 bright_ga[6] = { 200, 0, 200, 0, 200, 0 }; // 3x1 GA: bright grey, zero alpha
-    const InternalDecodeData bright = { .data = (u8*)bright_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
+    const FlImageDecodeResult bright = { .pixels = (u8*)bright_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
     ASSERT_FALSE_MSG(image_region_all_black(&bright, (PixelRect) { 0, 1, 0, 3 }),
                      "a bright grey+alpha row must not report all-black");
     ASSERT_FALSE_MSG(image_region_all_black(&bright, (PixelRect) { 0, 1, 1, 2 }),
                      "a bright grey+alpha column must not report all-black");
 
     const u8 black_ga[6] = { 0, 255, 0, 255, 0, 255 }; // 3x1 GA: black grey, opaque alpha
-    const InternalDecodeData black = { .data = (u8*)black_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
+    const FlImageDecodeResult black = { .pixels = (u8*)black_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
     ASSERT_TRUE_MSG(image_region_all_black(&black, (PixelRect) { 0, 1, 0, 3 }),
                     "a black grey+alpha row must report all-black regardless of alpha");
     ASSERT_TRUE_MSG(image_region_all_black(&black, (PixelRect) { 0, 1, 1, 2 }),
@@ -4557,8 +4557,8 @@ UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
         src[i * 3 + 1] = (u8)(i * 3 + 1);
         src[i * 3 + 2] = (u8)(i * 3 + 2);
     }
-    InternalDecodeData img = {
-        .data = src,
+    FlImageDecodeResult img = {
+        .pixels = src,
         .width = 4,
         .height = 4,
         .stride = 4 * 3,

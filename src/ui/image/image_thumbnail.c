@@ -8,17 +8,6 @@
 // Thumbnail compose: the finishing pass for raw raster decodes (border crop, premultiply, resize, fade, background,
 // grayscale).
 
-static InternalDecodeData internal_from_result(const FlImageDecodeResult* result) {
-    return (InternalDecodeData) {
-        .data = result->pixels,
-        .width = result->width,
-        .height = result->height,
-        .stride = result->stride,
-        .channels = result->channels,
-        .premultiplied = result->premultiplied,
-    };
-}
-
 // Leading bytes are colour, trailing bytes are alpha, so a grey+alpha pixel tests its grey byte only.
 static int color_byte_count(int channels) {
     return channels >= 3 ? 3 : 1;
@@ -33,11 +22,11 @@ static bool pixel_is_black(const u8* pixel, int color_bytes) {
     return true;
 }
 
-bool image_region_all_black(const InternalDecodeData* image, PixelRect region) {
+bool image_region_all_black(const FlImageDecodeResult* image, PixelRect region) {
     const int color_bytes = color_byte_count(image->channels);
 
     for (int row = region.row_start; row < region.row_end; row++) {
-        const u8* pixel = image->data + row * image->stride + region.col_start * image->channels;
+        const u8* pixel = image->pixels + row * image->stride + region.col_start * image->channels;
 
         for (int col = region.col_start; col < region.col_end; col++, pixel += image->channels) {
             if (!pixel_is_black(pixel, color_bytes)) {
@@ -48,8 +37,8 @@ bool image_region_all_black(const InternalDecodeData* image, PixelRect region) {
     return true;
 }
 
-static bool has_pixels(const InternalDecodeData* image) {
-    return image->data && image->width > 0 && image->height > 0 && image->channels > 0;
+static bool has_pixels(const FlImageDecodeResult* image) {
+    return image->pixels && image->width > 0 && image->height > 0 && image->channels > 0;
 }
 
 typedef struct BorderInsets {
@@ -57,7 +46,7 @@ typedef struct BorderInsets {
 } BorderInsets;
 
 // Measures the black margin on each side. Returns false when the image has no content at all.
-static bool measure_black_border(const InternalDecodeData* image, BorderInsets* out) {
+static bool measure_black_border(const FlImageDecodeResult* image, BorderInsets* out) {
     const int width = image->width;
     const int height = image->height;
     BorderInsets border = { 0 };
@@ -95,7 +84,7 @@ static bool measure_black_border(const InternalDecodeData* image, BorderInsets* 
 }
 
 // Crops the black margin by moving the data pointer, so no pixels are copied.
-static void detect_and_remove_black_border(InternalDecodeData* image) {
+static void detect_and_remove_black_border(FlImageDecodeResult* image) {
     if (!has_pixels(image)) {
         return;
     }
@@ -105,13 +94,13 @@ static void detect_and_remove_black_border(InternalDecodeData* image) {
         return;
     }
 
-    image->data += border.top * image->stride + border.left * image->channels;
+    image->pixels += border.top * image->stride + border.left * image->channels;
     image->width -= border.left + border.right;
     image->height -= border.top + border.bottom;
 }
 
 // False for an invalid target or one the image already matches.
-static bool size_needs_resize(const InternalDecodeData* image, ImageSize target) {
+static bool size_needs_resize(const FlImageDecodeResult* image, ImageSize target) {
     if (target.width <= 0 || target.height <= 0) {
         return false;
     }
@@ -121,7 +110,7 @@ static bool size_needs_resize(const InternalDecodeData* image, ImageSize target)
 // Returns true when the image is left at the requested size (either a successful resize or a no-op because it
 // already matched / the target was invalid). Returns false when the resize failed: the image is unchanged and
 // keeps its pre-resize size.
-static bool resize_image(InternalDecodeData* image, ImageSize target, ImageDecodeResizeFilter filter, FlArena* arena) {
+static bool resize_image(FlImageDecodeResult* image, ImageSize target, ImageDecodeResizeFilter filter, FlArena* arena) {
     if (!size_needs_resize(image, target)) {
         return true;
     }
@@ -139,13 +128,13 @@ static bool resize_image(InternalDecodeData* image, ImageSize target, ImageDecod
     stbir_filter stb_filter
         = (filter == ImageDecodeResizeFilter_Nearest) ? STBIR_FILTER_POINT_SAMPLE : STBIR_FILTER_DEFAULT;
 
-    if (!stbir_resize(image->data, image->width, image->height, image->stride, resized_data, target.width,
+    if (!stbir_resize(image->pixels, image->width, image->height, image->stride, resized_data, target.width,
                       target.height, 0, (stbir_pixel_layout)channels, STBIR_TYPE_UINT8, STBIR_EDGE_CLAMP,
                       stb_filter)) {
         return false;
     }
 
-    image->data = resized_data;
+    image->pixels = resized_data;
     image->width = target.width;
     image->height = target.height;
     image->stride = output_stride;
@@ -153,7 +142,7 @@ static bool resize_image(InternalDecodeData* image, ImageSize target, ImageDecod
 }
 
 // The largest size within bounds that keeps the image's aspect ratio.
-static ImageSize fit_aspect(const InternalDecodeData* image, ImageSize bounds) {
+static ImageSize fit_aspect(const FlImageDecodeResult* image, ImageSize bounds) {
     if (!has_pixels(image) || bounds.height <= 0) {
         return bounds;
     }
@@ -169,7 +158,7 @@ static ImageSize fit_aspect(const InternalDecodeData* image, ImageSize bounds) {
 
 // Resizes to the requested target (shrinking to fit when the aspect ratio is preserved) and returns the canvas size
 // the compose stage should fill, or {0, 0} when no target was asked for.
-static ImageSize resize_to_target(InternalDecodeData* image, const ImageDecodeOptions* opts, FlArena* arena) {
+static ImageSize resize_to_target(FlImageDecodeResult* image, const ImageDecodeOptions* opts, FlArena* arena) {
     if (!image_has_target_size(opts)) {
         return (ImageSize) { 0, 0 };
     }
@@ -196,7 +185,7 @@ static inline u8x16 premul_channel_x16(u8x16 c, i16x8x2 alpha) {
     return i16x8x2_pack_to_u8x16_narrow_shr(t, 8);
 }
 
-static void premultiply_alpha(InternalDecodeData* image) {
+static void premultiply_alpha(FlImageDecodeResult* image) {
     if (image->channels != 4) {
         return;
     }
@@ -204,7 +193,7 @@ static void premultiply_alpha(InternalDecodeData* image) {
     const int simd_pixels = (image->width / 16) * 16;
 
     for (int row = 0; row < image->height; row++) {
-        u8* row_data = image->data + row * image->stride;
+        u8* row_data = image->pixels + row * image->stride;
 
         for (int i = 0; i < simd_pixels; i += 16) {
             u8x16_rgba_result rgba = u8x16_load_deinterleaved_4(row_data, i * 4);
@@ -267,7 +256,7 @@ static void blend_toward_rgb(u8* pixel, Rgb8 target, int t) {
 }
 
 // Tint gradient: from image_start_x the tint color fades into the image over a quarter of the image width.
-static void apply_tint_gradient_rgb(InternalDecodeData* image, int image_start_x, Rgb8 tint, FlArena* arena) {
+static void apply_tint_gradient_rgb(FlImageDecodeResult* image, int image_start_x, Rgb8 tint, FlArena* arena) {
     const int image_width = image->width - image_start_x;
     if (image_width <= 1) {
         return;
@@ -283,7 +272,7 @@ static void apply_tint_gradient_rgb(InternalDecodeData* image, int image_start_x
     }
 
     for (int y = 0; y < image->height; y++) {
-        u8* row = image->data + y * image->stride;
+        u8* row = image->pixels + y * image->stride;
 
         int x = image_start_x;
         for (; x + 16 <= gradient_end_x; x += 16) {
@@ -299,7 +288,7 @@ static void apply_tint_gradient_rgb(InternalDecodeData* image, int image_start_x
 }
 
 // Vertical fade: from fade_start (0.0 = top, 1.0 = bottom) each row blends from the original toward target.
-static void apply_vertical_fade_rgb(InternalDecodeData* image, f32 fade_start, Rgb8 target) {
+static void apply_vertical_fade_rgb(FlImageDecodeResult* image, f32 fade_start, Rgb8 target) {
     const int height = image->height;
     if (image->channels != 3 || height <= 1) {
         return;
@@ -317,7 +306,7 @@ static void apply_vertical_fade_rgb(InternalDecodeData* image, f32 fade_start, R
     const int simd_pixels = (image->width / 16) * 16;
 
     for (int y = fade_start_row; y < height; y++) {
-        u8* row = image->data + y * image->stride;
+        u8* row = image->pixels + y * image->stride;
         const i16 t = (i16)(BLEND_ONE - ((y - fade_start_row) * BLEND_ONE) / (fade_height - 1));
         const i16x8 t_vec = i16x8_new_splat(t);
         const i16x8x2 t_pair = { t_vec, t_vec };
@@ -333,9 +322,9 @@ static void apply_vertical_fade_rgb(InternalDecodeData* image, f32 fade_start, R
 }
 
 // Copies source row y into dst_row (one canvas row), dropping pixels that land outside the canvas.
-static void blit_row_rgb(const InternalDecodeData* image, int y, const ImageCanvas* canvas, u8* dst_row) {
+static void blit_row_rgb(const FlImageDecodeResult* image, int y, const ImageCanvas* canvas, u8* dst_row) {
     const int src_channels = image->channels;
-    const u8* src_row = image->data + y * image->stride;
+    const u8* src_row = image->pixels + y * image->stride;
 
     for (int x = 0; x < image->width; x++) {
         const int dst_x = canvas->offset_x + x;
@@ -358,7 +347,7 @@ static void blit_row_rgb(const InternalDecodeData* image, int y, const ImageCanv
 //
 // Reads are channel-agnostic: 1-channel (grayscale) and 2-channel (grayscale+alpha) sources replicate the gray
 // value into R/G/B. The blit is bounds-checked against the canvas, so an overhanging source is cropped.
-void composite_source_into_canvas_rgb(const InternalDecodeData* image, const ImageCanvas* canvas) {
+void composite_source_into_canvas_rgb(const FlImageDecodeResult* image, const ImageCanvas* canvas) {
     for (int i = 0; i < canvas->width * canvas->height; i++) {
         canvas->pixels[i * 3 + 0] = canvas->fill.r;
         canvas->pixels[i * 3 + 1] = canvas->fill.g;
@@ -375,7 +364,7 @@ void composite_source_into_canvas_rgb(const InternalDecodeData* image, const Ima
 
 // Replaces the image with a freshly allocated canvas holding it. Returns false, leaving the image untouched, when
 // the canvas is too large to allocate. canvas.pixels is ignored.
-static bool composite_on_canvas_rgb(InternalDecodeData* image, ImageCanvas canvas, FlArena* arena) {
+static bool composite_on_canvas_rgb(FlImageDecodeResult* image, ImageCanvas canvas, FlArena* arena) {
     size_t canvas_size = 0;
     int canvas_stride = 0;
     if (!image_checked_pixel_size(canvas.width, canvas.height, 3, &canvas_size)
@@ -387,7 +376,7 @@ static bool composite_on_canvas_rgb(InternalDecodeData* image, ImageCanvas canva
 
     composite_source_into_canvas_rgb(image, &canvas);
 
-    image->data = canvas.pixels;
+    image->pixels = canvas.pixels;
     image->width = canvas.width;
     image->height = canvas.height;
     image->stride = canvas_stride;
@@ -401,7 +390,7 @@ static int max_zero(int value) {
 
 // Places the image on a canvas of the target size per the background mode. Tint right-aligns it and fades the tint
 // into its left edge; Center letterboxes it. An overhanging source gets offset 0 and is cropped by the blit.
-static void apply_background(InternalDecodeData* image, ImageSize canvas_size, const ImageThumbnailOptions* tb,
+static void apply_background(FlImageDecodeResult* image, ImageSize canvas_size, const ImageThumbnailOptions* tb,
                              FlArena* arena) {
     if (canvas_size.width <= 0 || canvas_size.height <= 0) {
         return;
@@ -427,8 +416,6 @@ static void apply_background(InternalDecodeData* image, ImageSize canvas_size, c
     }
 }
 
-// Thumbnail compose - the content-browser preview finishing pass.
-
 void image_thumbnail_compose(FlArena* arena, FlImageDecodeResult* result, const ImageDecodeOptions* decode_opts,
                              const ImageThumbnailOptions* thumb) {
     if (!result || !result->needs_thumbnail_compose) {
@@ -438,26 +425,24 @@ void image_thumbnail_compose(FlArena* arena, FlImageDecodeResult* result, const 
     const ImageDecodeOptions opts = decode_opts ? *decode_opts : (ImageDecodeOptions) { 0 };
     const ImageThumbnailOptions tb = thumb ? *thumb : (ImageThumbnailOptions) { 0 };
 
-    InternalDecodeData internal = internal_from_result(result);
-
     // Black border detection (before resize, on the raw decoded pixels)
     if (tb.detect_black_border) {
-        detect_and_remove_black_border(&internal);
+        detect_and_remove_black_border(result);
     }
 
-    premultiply_alpha(&internal);
+    premultiply_alpha(result);
 
-    const ImageSize canvas_size = resize_to_target(&internal, &opts, arena);
+    const ImageSize canvas_size = resize_to_target(result, &opts, arena);
 
     if (tb.apply_vertical_fade) {
-        apply_vertical_fade_rgb(&internal, tb.fade_start, (Rgb8) { tb.fade_r, tb.fade_g, tb.fade_b });
+        apply_vertical_fade_rgb(result, tb.fade_start, (Rgb8) { tb.fade_r, tb.fade_g, tb.fade_b });
     }
 
-    apply_background(&internal, canvas_size, &tb, arena);
+    apply_background(result, canvas_size, &tb, arena);
 
     if (opts.detect_grayscale) {
-        image_convert_grayscale_to_alpha(&internal, arena);
+        image_convert_grayscale_to_alpha(result, arena);
     }
 
-    image_store_internal_in_result(result, &internal);
+    result->needs_thumbnail_compose = false;
 }
