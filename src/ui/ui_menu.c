@@ -725,6 +725,14 @@ static void menu_submenu_panel_begin(FlUiCtx* ctx, u32 parent_item_id, int paren
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Builder
 
+// Whether the level's highlight sits on a submenu parent (a container that opens a child level).
+static bool menu_highlight_is_submenu(const UiMenuLevel* level, const UiMenuLevelFrame* frame) {
+    int hi = level->highlight_index;
+    return hi >= 0 && hi < UI_MENU_MAX_ITEMS && frame->item_submenu[hi];
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Keyboard/gamepad navigation for the deepest open level (arrow keys never reach into a parent level). Runs on the
 // prev-frame item set, so it must precede the per-frame item_count reset, and is skipped on the opening frame (see
 // UiMenuState.open_frame). Scroll-into-view fires only when a key actually moved the highlight, so a wheel scroll or
@@ -766,7 +774,7 @@ static void menu_handle_keyboard(FlUiCtx* ctx) {
     UiMenuLevel* dl = &m->levels[lvl];
     UiMenuLevelFrame* dlf = &mf->levels[lvl];
     int hi = dl->highlight_index;
-    bool hi_submenu = hi >= 0 && hi < UI_MENU_MAX_ITEMS && dlf->item_submenu[hi];
+    bool hi_submenu = menu_highlight_is_submenu(dl, dlf);
     bool want_descend
         = ui_action_pressed(ctx, FlAction_Nav_Right) || (hi_submenu && ui_action_pressed(ctx, FlAction_Confirm));
     if (want_descend && hi_submenu) {
@@ -1169,24 +1177,40 @@ static void menubar_activate(FlUiCtx* ctx, u32 scope) {
     m->levels[0].init_highlight = false; // the caller sets the highlight to the clicked top explicitly
 }
 
+// The bar top the pointer is over: its item index (-1 when none) and whether it can be navigated to.
+typedef struct BarHot {
+    int index;
+    bool navigable;
+} BarHot;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Whether the pointer is over a top that a press can open or switch to.
+static bool menubar_hot_is_actionable(BarHot hot) {
+    return hot.index >= 0 && hot.navigable;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Resolve which top the pointer is over, scanning the bar's own prev-frame record (see menu_find_hot_item) rather
 // than level 0, since this must work while the bar is passive - when level 0 holds another menu's rows and m->depth
-// doesn't cover the bar. Returns the item index (and its navigability) or -1.
-static int menubar_hot_top(const UiMenuFrame* mf, u32 hot_id, bool* out_nav) {
-    *out_nav = false;
+// doesn't cover the bar.
+static BarHot menubar_hot_top(const UiMenuFrame* mf, u32 hot_id) {
+    BarHot none = { .index = -1 };
     if (hot_id == 0) {
-        return -1;
+        return none;
     }
     const UiMenuLevelFrame* bar = &mf->bar_tops;
     int n = bar->item_count < UI_MENU_MAX_ITEMS ? bar->item_count : UI_MENU_MAX_ITEMS;
     for (int i = 0; i < n; i++) {
         if (bar->item_id[i] == hot_id) {
-            *out_nav = bar->item_navigable[i];
-            return i;
+            return (BarHot) { .index = i, .navigable = bar->item_navigable[i] };
         }
     }
-    return -1;
+    return none;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Re-expand whichever top the bar-level highlight now points at, so a Left/Right keyboard move switches the OPEN root
 // while a dropdown is showing. A non-submenu highlight collapses the dropdown.
@@ -1197,42 +1221,47 @@ static void menubar_reopen_under_highlight(FlUiCtx* ctx) {
     UiMenuLevel* bar = &m->levels[0];
     UiMenuLevelFrame* barf = &mf->levels[0];
     int hi = bar->highlight_index;
-    if (hi >= 0 && hi < UI_MENU_MAX_ITEMS && barf->item_submenu[hi]) {
+    if (menu_highlight_is_submenu(bar, barf)) {
         menu_branch_switch(ctx, 0, barf->item_id[hi], true);
     } else {
         menu_collapse_to(m, 1);
     }
 }
 
-// Open/close arbitration for the bar chain: the passive click-to-open trigger, the click-outside / ESC dismissal,
-// and the re-press-on-the-open-top release. Returns whether the bar owns the menu chain after this frame's
-// transitions; the caller runs no further bar handling once it returns false, since that code reads m->depth, which
-// a teardown has zeroed.
-static bool menubar_arbitrate_open(FlUiCtx* ctx, u32 scope, int hot_top, bool hot_nav, bool owned) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    if (!owned) {
-        // Passive: cold hover does NOTHING (the bar's per-surface trigger is click, not the submenu's hover-dwell). A
-        // press on a navigable top opens it - activate the chain, then branch-switch into that top (level 0 -> 1).
-        if (ctx->mouse_pressed_this_frame && hot_top >= 0 && hot_nav) {
-            u32 top_id = mf->bar_tops.item_id[hot_top];
-            menubar_activate(ctx, scope);
-            menu_branch_switch(ctx, 0, top_id, true);
-            m->levels[0].highlight_index = hot_top;
-            m->hover_drives = true;
-            return true;
-        }
+// Passive: cold hover does NOTHING (the bar's per-surface trigger is click, not the submenu's hover-dwell). A press on
+// a navigable top opens it - activate the chain, then branch-switch into that top (level 0 -> 1). Returns whether the
+// bar now owns the chain.
+static bool menubar_try_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
+    if (!ctx->mouse_pressed_this_frame || !menubar_hot_is_actionable(hot)) {
         return false;
     }
+
+    UiMenuState* m = &ctx->shared->menu;
+    UiMenuFrame* mf = &ctx->menu_frame;
+    u32 top_id = mf->bar_tops.item_id[hot.index];
+    menubar_activate(ctx, scope);
+    menu_branch_switch(ctx, 0, top_id, true);
+    m->levels[0].highlight_index = hot.index;
+    m->hover_drives = true;
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Owned: dismissal. A press outside the bar scope closes the whole chain; ESC pops one level (dropdown -> strip, then
+// strip -> closed), exactly as the context menu's ESC does at depth 1. Re-pressing the OPEN top releases the chain
+// entirely (the mouse's undo of the press that opened it), rather than collapsing to the focused strip the way ESC's
+// first pop does. Returns whether the bar still owns the chain.
+static bool menubar_stay_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
+    UiMenuState* m = &ctx->shared->menu;
+    UiMenuFrame* mf = &ctx->menu_frame;
 
     if (ctx->frame_counter <= m->open_frame) {
         return true;
     }
 
-    // Dismissal: a press outside the bar scope closes the whole chain; ESC pops one level (dropdown -> strip, then
-    // strip -> closed), exactly as the context menu's ESC does at depth 1.
-    if (ctx->mouse_pressed_this_frame && !menu_hot_in_scope(ctx, scope) && hot_top < 0) {
+    bool pressed = ctx->mouse_pressed_this_frame;
+    if (pressed && !menu_hot_in_scope(ctx, scope) && hot.index < 0) {
         menu_close_internal(ctx);
         return false;
     }
@@ -1240,29 +1269,37 @@ static bool menubar_arbitrate_open(FlUiCtx* ctx, u32 scope, int hot_top, bool ho
         return false;
     }
 
-    // Re-pressing the OPEN top releases the chain entirely (the mouse's undo of the press that opened it), rather
-    // than collapsing to the focused strip the way ESC's first pop does.
-    if (ctx->mouse_pressed_this_frame && hot_top >= 0 && hot_nav
-        && m->levels[0].expanded_child_id == mf->levels[0].item_id[hot_top]) {
+    bool on_open_top = pressed && menubar_hot_is_actionable(hot)
+                       && m->levels[0].expanded_child_id == mf->levels[0].item_id[hot.index];
+    if (on_open_top) {
         menu_close_internal(ctx);
-        return false;
     }
-
-    return true;
+    return !on_open_top;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Open/close arbitration for the bar chain. Returns whether the bar owns the menu chain after this frame's
+// transitions; the caller runs no further bar handling once it returns false, since that code reads m->depth, which
+// a teardown has zeroed.
+static bool menubar_arbitrate_open(FlUiCtx* ctx, u32 scope, BarHot hot, bool owned) {
+    return owned ? menubar_stay_open(ctx, scope, hot) : menubar_try_open(ctx, scope, hot);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Mouse: a press on a top switches the open root; hovering a sibling while a dropdown is open switches it instantly
 // (no dwell).
-static void menubar_handle_mouse(FlUiCtx* ctx, int hot_top, bool hot_nav) {
+static void menubar_handle_mouse(FlUiCtx* ctx, BarHot hot) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
-    if (hot_top < 0 || !hot_nav) {
+    if (!menubar_hot_is_actionable(hot)) {
         return;
     }
 
     UiMenuLevel* bar = &m->levels[0];
-    u32 top_id = mf->levels[0].item_id[hot_top];
+    u32 top_id = mf->levels[0].item_id[hot.index];
     bool pressed = ctx->mouse_pressed_this_frame;
     bool hover_switch = m->hover_drives && m->depth > 1 && bar->expanded_child_id != top_id;
     if (!pressed && !hover_switch) {
@@ -1270,7 +1307,7 @@ static void menubar_handle_mouse(FlUiCtx* ctx, int hot_top, bool hot_nav) {
     }
 
     menu_branch_switch(ctx, 0, top_id, true);
-    bar->highlight_index = hot_top;
+    bar->highlight_index = hot.index;
     if (pressed) {
         m->hover_drives = true;
     }
@@ -1315,7 +1352,7 @@ static void menubar_open_highlighted_top(FlUiCtx* ctx) {
     UiMenuFrame* mf = &ctx->menu_frame;
 
     int hi = m->levels[0].highlight_index;
-    bool hi_top = hi >= 0 && hi < UI_MENU_MAX_ITEMS && mf->levels[0].item_submenu[hi];
+    bool hi_top = menu_highlight_is_submenu(&m->levels[0], &mf->levels[0]);
     if (!hi_top || !(ui_action_pressed(ctx, FlAction_Nav_Down) || ui_action_pressed(ctx, FlAction_Confirm))) {
         return;
     }
@@ -1329,10 +1366,10 @@ static void menubar_open_highlighted_top(FlUiCtx* ctx) {
 // Mouse and keyboard driving of an open bar chain: root switching from the bar strip, navigation inside the open
 // dropdown, type-ahead, and the wheel. Reads the prev-frame item set, so it must precede the per-frame item_count
 // reset.
-static void menubar_handle_input(FlUiCtx* ctx, int hot_top, bool hot_nav) {
+static void menubar_handle_input(FlUiCtx* ctx, BarHot hot) {
     UiMenuState* m = &ctx->shared->menu;
 
-    menubar_handle_mouse(ctx, hot_top, hot_nav);
+    menubar_handle_mouse(ctx, hot);
 
     // Keyboard: Left/Right move between tops (and switch the open root if a dropdown is up); Up/Down navigate the
     // open dropdown; with no dropdown open, Down / Confirm opens the highlighted top.
@@ -1389,13 +1426,12 @@ void ui_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig cfg) {
 
     // Which top is the pointer over (prev-frame set)? Used by both the passive click-to-open trigger and the
     // active hover-to-switch trigger.
-    bool hot_nav = false;
-    int hot_top = menubar_hot_top(mf, ctx->hot_id, &hot_nav);
+    BarHot hot = menubar_hot_top(mf, ctx->hot_id);
 
-    owned = menubar_arbitrate_open(ctx, scope, hot_top, hot_nav, owned);
+    owned = menubar_arbitrate_open(ctx, scope, hot, owned);
 
     if (owned && ctx->frame_counter > m->open_frame) {
-        menubar_handle_input(ctx, hot_top, hot_nav);
+        menubar_handle_input(ctx, hot);
     }
 
     // Reset the bar's per-frame record. The highlight PERSISTS across frames; only the per-frame item counter resets
