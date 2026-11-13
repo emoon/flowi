@@ -110,15 +110,15 @@ impl Painter {
         unsafe { crate::sys::fl_painter_image(x, y, w, h, image, color) }
     }
 
-    /// Draw the filled circle circle, with its optional border ring.
+    /// Draw a filled circle with an optional border ring: center, radius and colors come from circle.
     #[inline]
     pub fn circle(circle: crate::sys::CircleShape) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::circle");
         unsafe { crate::sys::fl_painter_circle(circle) }
     }
 
-    /// Draw the filled circle circle with its border ring dashed by stroke (a zeroed stroke draws the
-    /// same solid ring Painter::circle does). The dash period is rescaled slightly so a whole number of
+    /// Draw a filled circle like Painter::circle, with the border ring dashed by stroke (a zeroed stroke
+    /// draws the same solid ring). The dash period is rescaled slightly so a whole number of
     /// dashes closes the ring - no stub where the pattern wraps.
     #[inline]
     pub fn circle_stroked(circle: crate::sys::CircleShape, stroke: crate::sys::StrokeStyle) {
@@ -126,14 +126,16 @@ impl Painter {
         unsafe { crate::sys::fl_painter_circle_stroked(circle, stroke) }
     }
 
-    /// Draw the filled diamond diamond, with its optional border ring.
+    /// Draw a filled diamond with an optional border ring: center, half-extents and colors come from
+    /// diamond.
     #[inline]
     pub fn diamond(diamond: crate::sys::DiamondShape) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::diamond");
         unsafe { crate::sys::fl_painter_diamond(diamond) }
     }
 
-    /// Draw the stroked arc arc.
+    /// Draw a stroked arc, ring or circle sector. Angles are radians: 0 is 12 o'clock and a positive
+    /// sweep runs clockwise.
     #[inline]
     pub fn arc(arc: crate::sys::ArcShape) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::arc");
@@ -159,8 +161,10 @@ impl Painter {
         unsafe { crate::sys::fl_painter_bars(baseline_y, bars.as_ptr(), bars.len() as u32, color) }
     }
 
-    /// Draw the source rectangle of sub's image into its destination rectangle. Returns false (and draws
-    /// nothing) until the image is ready or when the source rect is empty.
+    /// Draw a source rectangle of an image, in source image pixels, into a destination rectangle in
+    /// logical (authoring) space. A non-positive destination width or height uses the source width or
+    /// height. Returns false (and draws nothing) until the image is ready or when the source rect is
+    /// empty.
     #[inline]
     pub fn image_sub(sub: crate::sys::ImageSub) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::image_sub");

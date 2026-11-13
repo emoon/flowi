@@ -4499,7 +4499,7 @@ UTEST(image_decode, compose_grayscale_source_replicates_gray) {
     };
 
     u8 canvas[3 * 2 * 3];
-    const ImageCanvas target = { .pixels = canvas, .width = 3, .height = 2, 5, 5, 5 };
+    const ImageCanvas target = { .pixels = canvas, .width = 3, .height = 2, .fill = { 5, 5, 5 } };
     composite_source_into_canvas_rgb(&img, &target);
 
     for (int i = 0; i < 3 * 2; i++) {
@@ -4587,9 +4587,7 @@ UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
         .pixels = canvas,
         .width = CW,
         .height = CH,
-        7,
-        8,
-        9,
+        .fill = { 7, 8, 9 },
         .offset_x = -1,
         .offset_y = -1,
     };

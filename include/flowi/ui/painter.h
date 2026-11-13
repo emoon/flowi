@@ -257,15 +257,17 @@ FL_API void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle 
 // `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
 // (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
 FL_API bool fl_painter_image(float x, float y, float w, float h, FlImageHandle image, FlColor color);
-// Draw the filled circle circle, with its optional border ring.
+// Draw a filled circle with an optional border ring: center, radius and colors come from circle.
 FL_API void fl_painter_circle(FlCircleShape circle);
-// Draw the filled circle circle with its border ring dashed by stroke (a zeroed stroke draws the
-// same solid ring Painter::circle does). The dash period is rescaled slightly so a whole number of
+// Draw a filled circle like Painter::circle, with the border ring dashed by stroke (a zeroed stroke
+// draws the same solid ring). The dash period is rescaled slightly so a whole number of
 // dashes closes the ring - no stub where the pattern wraps.
 FL_API void fl_painter_circle_stroked(FlCircleShape circle, FlStrokeStyle stroke);
-// Draw the filled diamond diamond, with its optional border ring.
+// Draw a filled diamond with an optional border ring: center, half-extents and colors come from
+// diamond.
 FL_API void fl_painter_diamond(FlDiamondShape diamond);
-// Draw the stroked arc arc.
+// Draw a stroked arc, ring or circle sector. Angles are radians: 0 is 12 o'clock and a positive
+// sweep runs clockwise.
 FL_API void fl_painter_arc(FlArcShape arc);
 // Draw a polyline. points are
 // vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
@@ -276,8 +278,10 @@ FL_API void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size,
 // x, width, and height, all in logical (authoring) space; a negative height draws downward. This is an
 // optional-tier primitive: a backend may skip it (today the software backend does).
 FL_API void fl_painter_bars(float baseline_y, const FlBar* bars, uint32_t bars_size, FlColor color);
-// Draw the source rectangle of sub's image into its destination rectangle. Returns false (and draws
-// nothing) until the image is ready or when the source rect is empty.
+// Draw a source rectangle of an image, in source image pixels, into a destination rectangle in
+// logical (authoring) space. A non-positive destination width or height uses the source width or
+// height. Returns false (and draws nothing) until the image is ready or when the source rect is
+// empty.
 FL_API bool fl_painter_image_sub(FlImageSub sub);
 
 #define fl_painter_rect_styled_impl(x, y, w, h, config) (fl_painter_rect_styled)(x, y, w, h, config)

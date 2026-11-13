@@ -399,15 +399,17 @@ extern "C" {
     /// `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
     /// (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
     pub fn fl_painter_image(x: f32, y: f32, w: f32, h: f32, image: crate::sys::ImageHandle, color: crate::sys::Color) -> bool;
-    /// Draw the filled circle circle, with its optional border ring.
+    /// Draw a filled circle with an optional border ring: center, radius and colors come from circle.
     pub fn fl_painter_circle(circle: crate::sys::CircleShape);
-    /// Draw the filled circle circle with its border ring dashed by stroke (a zeroed stroke draws the
-    /// same solid ring Painter::circle does). The dash period is rescaled slightly so a whole number of
+    /// Draw a filled circle like Painter::circle, with the border ring dashed by stroke (a zeroed stroke
+    /// draws the same solid ring). The dash period is rescaled slightly so a whole number of
     /// dashes closes the ring - no stub where the pattern wraps.
     pub fn fl_painter_circle_stroked(circle: crate::sys::CircleShape, stroke: crate::sys::StrokeStyle);
-    /// Draw the filled diamond diamond, with its optional border ring.
+    /// Draw a filled diamond with an optional border ring: center, half-extents and colors come from
+    /// diamond.
     pub fn fl_painter_diamond(diamond: crate::sys::DiamondShape);
-    /// Draw the stroked arc arc.
+    /// Draw a stroked arc, ring or circle sector. Angles are radians: 0 is 12 o'clock and a positive
+    /// sweep runs clockwise.
     pub fn fl_painter_arc(arc: crate::sys::ArcShape);
     /// Draw a polyline. points are
     /// vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
@@ -418,8 +420,10 @@ extern "C" {
     /// x, width, and height, all in logical (authoring) space; a negative height draws downward. This is an
     /// optional-tier primitive: a backend may skip it (today the software backend does).
     pub fn fl_painter_bars(baseline_y: f32, bars: *const crate::sys::Bar, bars_size: u32, color: crate::sys::Color);
-    /// Draw the source rectangle of sub's image into its destination rectangle. Returns false (and draws
-    /// nothing) until the image is ready or when the source rect is empty.
+    /// Draw a source rectangle of an image, in source image pixels, into a destination rectangle in
+    /// logical (authoring) space. A non-positive destination width or height uses the source width or
+    /// height. Returns false (and draws nothing) until the image is ready or when the source rect is
+    /// empty.
     pub fn fl_painter_image_sub(sub: crate::sys::ImageSub) -> bool;
 }
 
