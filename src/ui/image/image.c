@@ -144,14 +144,13 @@ ImageHandle image_load_from_memory(const void* data, size_t size, FlImageLoadOpt
     return (ImageHandle)request_id;
 }
 
-static ImageHandle create_from_pixels(const void* pixels, int width, int height, FlImageFormat format, bool dedicated) {
+static ImageHandle create_from_pixels(const void* pixels, RawPixelShape shape) {
     if (!s_image_system) {
         log_error("image_create_from_pixels: image system not initialized. Call image_create_system() first.");
         return IMAGE_HANDLE_INVALID;
     }
 
-    FlImageLoadRequestId request_id
-        = image_system_create_from_pixels(s_image_system, pixels, width, height, format, dedicated);
+    FlImageLoadRequestId request_id = image_system_create_from_pixels(s_image_system, pixels, shape);
     if (request_id == FL_IMAGE_LOAD_REQUEST_ID_INVALID) {
         return IMAGE_HANDLE_INVALID;
     }
@@ -160,11 +159,11 @@ static ImageHandle create_from_pixels(const void* pixels, int width, int height,
 }
 
 ImageHandle image_create_from_pixels(const void* pixels, int width, int height, FlImageFormat format) {
-    return create_from_pixels(pixels, width, height, format, false);
+    return create_from_pixels(pixels, (RawPixelShape) { width, height, format, false });
 }
 
 ImageHandle image_create_dedicated(const void* pixels, int width, int height, FlImageFormat format) {
-    return create_from_pixels(pixels, width, height, format, true);
+    return create_from_pixels(pixels, (RawPixelShape) { width, height, format, true });
 }
 
 bool image_update_pixels(ImageHandle handle, const void* pixels) {
@@ -271,8 +270,12 @@ FlImageStatus image_public_status(ImageHandle handle) {
     return FlImageStatus_Error;
 }
 
+static bool dynamic_image_args_valid(int width, int height, const FlArena* arena) {
+    return arena != nullptr && width > 0 && height > 0;
+}
+
 ImageData* image_create_dynamic(u8* buffer, int width, int height, int stride, FlImageFormat format, FlArena* arena) {
-    if (buffer == nullptr || arena == nullptr || width <= 0 || height <= 0 || stride <= 0) {
+    if (buffer == nullptr || stride <= 0 || !dynamic_image_args_valid(width, height, arena)) {
         return nullptr;
     }
 
@@ -290,7 +293,7 @@ ImageData* image_create_dynamic(u8* buffer, int width, int height, int stride, F
 }
 
 FlDynamicImage* dynamic_image_create(int width, int height, FlArena* arena) {
-    if (arena == nullptr || width <= 0 || height <= 0) {
+    if (!dynamic_image_args_valid(width, height, arena)) {
         return nullptr;
     }
 
@@ -312,7 +315,7 @@ FlDynamicImage* dynamic_image_create(int width, int height, FlArena* arena) {
 }
 
 FlDynamicImage* dynamic_image_create_alpha(int width, int height, FlArena* arena) {
-    if (arena == nullptr || width <= 0 || height <= 0) {
+    if (!dynamic_image_args_valid(width, height, arena)) {
         return nullptr;
     }
 

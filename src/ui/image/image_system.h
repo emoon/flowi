@@ -10,6 +10,7 @@
 #include <core/arena.h>
 #include <core/types.h>
 #include "image_decode.h"
+#include "image_raw_pixels.h"
 #include <flowi/ui/image.h>
 #include <ui/render_backend.h>
 #include <vfs/vfs.h>
@@ -98,8 +99,7 @@ void image_system_clear_load_failed(ImageSystem* sys, FlImageLoadRequestId reque
 // Copy raw pixels into a backend-owned static image and realize it synchronously through the active backend;
 // dedicated selects the never-atlased path (see FlImageLoadRequest.dedicated).
 // Returns FL_IMAGE_LOAD_REQUEST_ID_INVALID when the format/shape is unsupported or the backend cannot realize it.
-FlImageLoadRequestId image_system_create_from_pixels(ImageSystem* sys, const void* pixels, int width, int height,
-                                                     FlImageFormat format, bool dedicated);
+FlImageLoadRequestId image_system_create_from_pixels(ImageSystem* sys, const void* pixels, RawPixelShape shape);
 
 // Re-upload into an image previously created from raw pixels, keeping the handle's identity, dimensions, and
 // format. Returns false when the handle was not created from pixels or the backend cannot realize it.
