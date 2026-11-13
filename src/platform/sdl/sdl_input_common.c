@@ -255,7 +255,7 @@ static FlUiCtx* route_context(const SDL_Event* e, const u32* window_ids, FlUiCtx
     if (target_id == 0) {
         return contexts[0];
     }
-    for (int i = 0; i < count; i++) {
+    for_count(i, count) {
         if (window_ids[i] == target_id) {
             return contexts[i];
         }
@@ -321,7 +321,7 @@ void sdl_input_common_warp_mouse(SDL_Window* window, float x, float y) {
 void sdl_input_common_destroy(SdlInputCommon* self) {
     sdl_gamepads_destroy(&self->gamepads);
 
-    for (int i = 0; i < FlCursorShape_Count; i++) {
+    for_count(i, FlCursorShape_Count) {
         if (self->system_cursors[i]) {
             SDL_FreeCursor(self->system_cursors[i]);
             self->system_cursors[i] = nullptr;

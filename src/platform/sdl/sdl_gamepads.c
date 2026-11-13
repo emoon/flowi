@@ -10,7 +10,7 @@
 #include <core/os/os.h>
 
 static int find_slot(const SdlGamepads* self, SDL_JoystickID id) {
-    for (int i = 0; i < UI_INPUT_MAX_GAMEPADS; i++) {
+    for_count(i, UI_INPUT_MAX_GAMEPADS) {
         if (self->ids[i] == id) {
             return i;
         }
@@ -19,7 +19,7 @@ static int find_slot(const SdlGamepads* self, SDL_JoystickID id) {
 }
 
 static int find_free_slot(const SdlGamepads* self) {
-    for (int i = 0; i < UI_INPUT_MAX_GAMEPADS; i++) {
+    for_count(i, UI_INPUT_MAX_GAMEPADS) {
         if (self->controllers[i] == nullptr) {
             return i;
         }
@@ -30,7 +30,7 @@ static int find_free_slot(const SdlGamepads* self) {
 void sdl_gamepads_init(SdlGamepads* self) {
     memory_zero(self, sizeof(SdlGamepads));
 
-    for (int i = 0; i < UI_INPUT_MAX_GAMEPADS; i++) {
+    for_count(i, UI_INPUT_MAX_GAMEPADS) {
         self->ids[i] = -1;
     }
 
@@ -50,7 +50,7 @@ void sdl_gamepads_init(SdlGamepads* self) {
 }
 
 void sdl_gamepads_flush_pending(SdlGamepads* self, FlUiCtx* ctx) {
-    for (int i = 0; i < UI_INPUT_MAX_GAMEPADS; i++) {
+    for_count(i, UI_INPUT_MAX_GAMEPADS) {
         if (!self->connect_pending[i]) {
             continue;
         }
@@ -144,7 +144,7 @@ void sdl_gamepads_handle_event(SdlGamepads* self, FlUiCtx* ctx, const SDL_Event*
 }
 
 void sdl_gamepads_destroy(SdlGamepads* self) {
-    for (int i = 0; i < UI_INPUT_MAX_GAMEPADS; i++) {
+    for_count(i, UI_INPUT_MAX_GAMEPADS) {
         if (self->controllers[i]) {
             SDL_GameControllerClose(self->controllers[i]);
             self->controllers[i] = nullptr;

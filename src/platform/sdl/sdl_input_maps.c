@@ -78,7 +78,7 @@ static const KeyRange k_key_ranges[] = {
 };
 
 static FlKey key_from_ranges(SDL_Keycode sdl_key) {
-    for (size_t i = 0; i < sizeof_array(k_key_ranges); i++) {
+    for_count(i, sizeof_array(k_key_ranges)) {
         const KeyRange* range = &k_key_ranges[i];
         if (sdl_key >= range->sdl_first && sdl_key <= range->sdl_last) {
             return (FlKey)(range->fl_first + (sdl_key - range->sdl_first));
@@ -88,7 +88,7 @@ static FlKey key_from_ranges(SDL_Keycode sdl_key) {
 }
 
 static FlKey key_from_pairs(SDL_Keycode sdl_key) {
-    for (size_t i = 0; i < sizeof_array(k_key_pairs); i++) {
+    for_count(i, sizeof_array(k_key_pairs)) {
         if (k_key_pairs[i].sdl == sdl_key) {
             return k_key_pairs[i].fl;
         }
@@ -113,7 +113,7 @@ static const ModPair k_mod_pairs[] = {
 
 u32 sdl_keymod_to_fl_keymod(u16 sdl_mod) {
     u32 modifiers = 0;
-    for (size_t i = 0; i < sizeof_array(k_mod_pairs); i++) {
+    for_count(i, sizeof_array(k_mod_pairs)) {
         if (sdl_mod & k_mod_pairs[i].sdl) {
             modifiers |= k_mod_pairs[i].fl;
         }
