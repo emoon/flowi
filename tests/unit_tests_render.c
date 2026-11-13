@@ -8,6 +8,12 @@
 #include "app/host.h"
 #include <render/software/sr_render_helpers.h>
 
+// Measures text at a font, size and letter spacing through the cache.
+static FlTextMetrics measure(FlFontCache* cache, FlString text, FlFontId font, float size, float spacing) {
+    return font_cache_measure_text(cache, text,
+                                   (FlTextStyle) { .font_id = font, .font_size = size, .letter_spacing = spacing });
+}
+
 // font_cache: quantize bucket boundaries.
 
 UTEST(font_cache, quantize_buckets) {
@@ -106,60 +112,40 @@ UTEST(font_cache, measure_text_freetype) {
     // 1600 = 25.0px in 26.6: the font's 0.8 em design advance (25.6px at 32px) after hinting.
     ASSERT_EQ_MSG(adv, 1600, "whole-px 'A' advance is pinned to its historical value");
     FlString aa = { .data = "AA", .length = 2, .is_static = 1, .is_ascii = 1 };
-    FlTextMetrics m = font_cache_measure_text(
-        cache, aa, &(FontMeasureStyle) { .font_id = font, .font_size = 32.0f, .letter_spacing = 0.0f });
+    FlTextMetrics m = measure(cache, aa, font, 32.0f, 0.0f);
     ASSERT_NEAR_MSG(m.width, (float)(2 * adv) / 64.0f, 0.0001f, "width = summed advances of the layout path");
     ASSERT_TRUE_MSG(m.height > 0.0f && m.ascent > 0.0f, "line metrics are filled");
     ASSERT_NEAR_MSG(m.height, m.ascent + m.descent, 2.0f, "line height tracks ascent + descent");
 
     FlString aa_utf8 = { .data = "AA", .length = 2, .is_static = 1 };
-    ASSERT_NEAR_MSG(
-        font_cache_measure_text(cache, aa_utf8,
-                                &(FontMeasureStyle) { .font_id = font, .font_size = 32.0f, .letter_spacing = 0.0f })
-            .width,
-        m.width, 0.0001f, "utf8 iteration agrees with the ascii fast path");
+    ASSERT_NEAR_MSG(measure(cache, aa_utf8, font, 32.0f, 0.0f).width, m.width, 0.0001f,
+                    "utf8 iteration agrees with the ascii fast path");
 
-    FlTextMetrics spaced = font_cache_measure_text(
-        cache, aa, &(FontMeasureStyle) { .font_id = font, .font_size = 32.0f, .letter_spacing = 1.5f });
+    FlTextMetrics spaced = measure(cache, aa, font, 32.0f, 1.5f);
     ASSERT_NEAR_MSG(spaced.width, m.width + 1.5f, 0.0001f, "two glyphs get exactly one spacing gap");
     FlString a = { .data = "A", .length = 1, .is_static = 1, .is_ascii = 1 };
-    ASSERT_NEAR_MSG(font_cache_measure_text(
-                        cache, a, &(FontMeasureStyle) { .font_id = font, .font_size = 32.0f, .letter_spacing = 1.5f })
-                        .width,
-                    font_cache_measure_text(
-                        cache, a, &(FontMeasureStyle) { .font_id = font, .font_size = 32.0f, .letter_spacing = 0.0f })
-                        .width,
-                    0.0001f, "a single glyph gets no spacing gap");
+    ASSERT_NEAR_MSG(measure(cache, a, font, 32.0f, 1.5f).width, measure(cache, a, font, 32.0f, 0.0f).width, 0.0001f,
+                    "a single glyph gets no spacing gap");
     FlString aaa = { .data = "AAA", .length = 3, .is_static = 1, .is_ascii = 1 };
-    ASSERT_NEAR_MSG(font_cache_measure_text(
-                        cache, aaa, &(FontMeasureStyle) { .font_id = font, .font_size = 32.0f, .letter_spacing = 1.5f })
-                        .width,
-                    3.0f * ((float)adv / 64.0f) + 3.0f, 0.0001f,
+    ASSERT_NEAR_MSG(measure(cache, aaa, font, 32.0f, 1.5f).width, 3.0f * ((float)adv / 64.0f) + 3.0f, 0.0001f,
                     "three glyphs get exactly two spacing gaps (n−1, no trailing gap)");
 
-    FlTextMetrics empty = font_cache_measure_text(
-        cache, string_empty(), &(FontMeasureStyle) { .font_id = font, .font_size = 32.0f, .letter_spacing = 4.0f });
+    FlTextMetrics empty = measure(cache, string_empty(), font, 32.0f, 4.0f);
     ASSERT_NEAR_MSG(empty.width, 0.0f, 0.0001f, "empty text has zero width");
     ASSERT_NEAR_MSG(empty.height, m.height, 0.0001f, "empty text keeps the line metrics");
 
-    FlTextMetrics q_lo = font_cache_measure_text(
-        cache, aa, &(FontMeasureStyle) { .font_id = font, .font_size = 7.5f, .letter_spacing = 0.0f });
-    FlTextMetrics q_hi = font_cache_measure_text(
-        cache, aa, &(FontMeasureStyle) { .font_id = font, .font_size = 7.6f, .letter_spacing = 0.0f });
+    FlTextMetrics q_lo = measure(cache, aa, font, 7.5f, 0.0f);
+    FlTextMetrics q_hi = measure(cache, aa, font, 7.6f, 0.0f);
     ASSERT_TRUE_MSG(q_lo.width > 0.0f && q_lo.width < m.width, "7.5px measures smaller than 32px");
     ASSERT_NEAR_MSG(q_lo.width, q_hi.width, 0.0001f, "7.5px and 7.6px share one quarter-px key");
-    ASSERT_NEAR_MSG(font_cache_measure_text(
-                        cache, aa, &(FontMeasureStyle) { .font_id = font, .font_size = 0.0f, .letter_spacing = 0.0f })
-                        .width,
-                    m.width, 0.0001f, "size 0 falls back to the load size");
+    ASSERT_NEAR_MSG(measure(cache, aa, font, 0.0f, 0.0f).width, m.width, 0.0001f, "size 0 falls back to the load size");
 
     FlFontMetrics fm = font_cache_get_font_metrics(cache, font, 32.0f);
     ASSERT_NEAR_MSG(fm.ascent, m.ascent, 0.0001f, "font metrics ascent matches measurement");
     ASSERT_NEAR_MSG(fm.descent, m.descent, 0.0001f, "font metrics descent matches measurement");
     ASSERT_NEAR_MSG(fm.line_height, m.height, 0.0001f, "font metrics line height matches measurement");
 
-    FlTextMetrics unknown = font_cache_measure_text(
-        cache, aa, &(FontMeasureStyle) { .font_id = 9999, .font_size = 32.0f, .letter_spacing = 0.0f });
+    FlTextMetrics unknown = measure(cache, aa, 9999, 32.0f, 0.0f);
     ASSERT_TRUE_MSG(unknown.width == 0.0f && unknown.height == 0.0f && unknown.ascent == 0.0f
                         && unknown.descent == 0.0f,
                     "unknown font measures as zeroed metrics");
@@ -175,25 +161,18 @@ UTEST(font_cache, measure_text_default_font) {
     FlFontId font = font_cache_load_default_font(cache, 2); // built-in 8x8 font at scale 2
 
     FlString ab = { .data = "AB", .length = 2, .is_static = 1, .is_ascii = 1 };
-    FlTextMetrics m = font_cache_measure_text(
-        cache, ab, &(FontMeasureStyle) { .font_id = font, .font_size = 0.0f, .letter_spacing = 0.0f });
+    FlTextMetrics m = measure(cache, ab, font, 0.0f, 0.0f);
     ASSERT_NEAR_MSG(m.width, 32.0f, 0.0001f, "two cells at 8px × scale 2");
     ASSERT_NEAR_MSG(m.height, 16.0f, 0.0001f, "cell height at scale 2");
     ASSERT_TRUE_MSG(m.ascent == 0.0f && m.descent == 0.0f,
                     "the built-in font's baseline sits at the cell top (zero ascent/descent)");
-    ASSERT_NEAR_MSG(font_cache_measure_text(
-                        cache, ab, &(FontMeasureStyle) { .font_id = font, .font_size = 0.0f, .letter_spacing = 2.0f })
-                        .width,
-                    34.0f, 0.0001f, "letter spacing applies to the built-in font too");
-    ASSERT_NEAR_MSG(font_cache_measure_text(
-                        cache, ab, &(FontMeasureStyle) { .font_id = font, .font_size = 12.34f, .letter_spacing = 0.0f })
-                        .width,
-                    m.width, 0.0001f, "the built-in font ignores the requested size");
+    ASSERT_NEAR_MSG(measure(cache, ab, font, 0.0f, 2.0f).width, 34.0f, 0.0001f,
+                    "letter spacing applies to the built-in font too");
+    ASSERT_NEAR_MSG(measure(cache, ab, font, 12.34f, 0.0f).width, m.width, 0.0001f,
+                    "the built-in font ignores the requested size");
     FlString abc = { .data = "ABC", .length = 3, .is_static = 1, .is_ascii = 1 };
-    ASSERT_NEAR_MSG(font_cache_measure_text(
-                        cache, abc, &(FontMeasureStyle) { .font_id = font, .font_size = 0.0f, .letter_spacing = 2.0f })
-                        .width,
-                    52.0f, 0.0001f, "three cells plus exactly two spacing gaps (n−1)");
+    ASSERT_NEAR_MSG(measure(cache, abc, font, 0.0f, 2.0f).width, 52.0f, 0.0001f,
+                    "three cells plus exactly two spacing gaps (n−1)");
     ASSERT_NEAR_MSG(font_cache_get_font_metrics(cache, font, 0.0f).line_height, 16.0f, 0.0001f,
                     "font metrics report the cell height");
 
@@ -414,10 +393,8 @@ UTEST(font_cache, text_size_includes_fallback_advance) {
 
     ASSERT_EQ_MSG(font_cache_get_text_size(cache, b, primary, size).x, 0.0f,
                   "no fallback -> missing codepoint measures zero width");
-    ASSERT_EQ_MSG(font_cache_measure_text(
-                      cache, b, &(FontMeasureStyle) { .font_id = primary, .font_size = 32.0f, .letter_spacing = 0.0f })
-                      .width,
-                  0.0f, "no fallback -> the fractional path measures zero width too");
+    ASSERT_EQ_MSG(measure(cache, b, primary, 32.0f, 0.0f).width, 0.0f,
+                  "no fallback -> the fractional path measures zero width too");
 
     FlFontId fallback = font_cache_load_font_memory(cache, k_fallback_test_ttf, k_fallback_test_ttf_size, size);
     ASSERT_TRUE_MSG(fallback != FONT_ID_INVALID, "fallback font must load");
@@ -427,11 +404,8 @@ UTEST(font_cache, text_size_includes_fallback_advance) {
     ASSERT_TRUE_MSG(advance > 0, "fallback supplies a nonzero advance for 'B'");
     ASSERT_EQ_MSG(font_cache_get_text_size(cache, b, primary, size).x, (float)advance / 64.0f,
                   "measured width equals the per-codepoint laid-out advance (fallback included)");
-    ASSERT_NEAR_MSG(
-        font_cache_measure_text(cache, b,
-                                &(FontMeasureStyle) { .font_id = primary, .font_size = 32.0f, .letter_spacing = 0.0f })
-            .width,
-        (float)advance / 64.0f, 0.0001f, "the fractional path picks up the fallback advance too");
+    ASSERT_NEAR_MSG(measure(cache, b, primary, 32.0f, 0.0f).width, (float)advance / 64.0f, 0.0001f,
+                    "the fractional path picks up the fallback advance too");
 
     font_cache_destroy(cache);
 }

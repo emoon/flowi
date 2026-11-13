@@ -98,20 +98,17 @@ static Clay_Dimensions measure_text_function(Clay_StringSlice text, Clay_TextEle
         .is_ascii = is_ascii_quick(text.chars, text.length),
     };
 
-    FlFontId font_id = (FlFontId)config->fontId;
-    const float letter_spacing = (float)config->letterSpacing;
-
-    FlTextMetrics m = font_cache_measure_text(
-        ctx->shared->font_cache, our_string,
-        &(FontMeasureStyle) { .font_id = font_id,
-                              .font_size = (float)font_cache_quantize_size((u16)config->fontSize),
-                              .letter_spacing = letter_spacing });
+    FlTextMetrics m
+        = font_cache_measure_text(ctx->shared->font_cache, our_string,
+                                  (FlTextStyle) { .font_id = config->fontId,
+                                                  .font_size = (float)font_cache_quantize_size((u16)config->fontSize),
+                                                  .letter_spacing = (float)config->letterSpacing });
 
     if (m.height == 0.0f) {
         return (Clay_Dimensions) { 0, 0 };
     }
 
-    return (Clay_Dimensions) { m.width + letter_spacing, m.height };
+    return (Clay_Dimensions) { m.width + (float)config->letterSpacing, m.height };
 }
 
 // Clay returns a safe default after invoking this, so a release build can carry the frame to completion.

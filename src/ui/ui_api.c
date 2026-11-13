@@ -263,11 +263,8 @@ FlTextMetrics fl_text_measure(FlString text, FlTextStyle style) {
     if (self == nullptr) {
         return (FlTextMetrics) { 0 };
     }
-    FlFontId font_id = resolve_font_id(self, style.font_id);
-    return font_cache_measure_text(self->shared->font_cache, text,
-                                   &(FontMeasureStyle) { .font_id = font_id,
-                                                         .font_size = style.font_size,
-                                                         .letter_spacing = style.letter_spacing });
+    style.font_id = resolve_font_id(self, style.font_id);
+    return font_cache_measure_text(self->shared->font_cache, text, style);
 }
 
 // The scroll (fl_scroll_area_*), floating (fl_floating_*) and layout (fl_layout_*) families are defined
