@@ -1129,9 +1129,9 @@ UTEST(list_drag, reorder_request) {
     fl_app_destroy(app);
 }
 
-// The declarative one-call face ui_list(id, items, count, set, opts): the widget takes an array of {id, label, icon}
-// descriptors and the caller-owned set, runs the whole interaction internally (virtualization, selection, keyboard
-// nav, marquee, drag-reorder, auto-apply), and the app reads only the policy outcomes off the result. Geometry
+// The declarative one-call face ui_list(a ListDecl (id, items, count, set, opts)): the widget takes an array of {id,
+// label, icon} descriptors and the caller-owned set, runs the whole interaction internally (virtualization, selection,
+// keyboard nav, marquee, drag-reorder, auto-apply), and the app reads only the policy outcomes off the result. Geometry
 // mirrors the drag case: row_height 24 + gap 12 -> 36px stride in a 120px viewport at the window origin (ui_scale 1,
 // content Y == screen Y at scroll 0). Stable ids are (position+1)*10, distinct from positions, so the result is
 // proven keyed on identity rather than dense position.

@@ -226,10 +226,10 @@ void ui_dropdown_impl(FlString label, bool* is_open, FlString* options, int opti
                                                            .items = items,
                                                            .count = (u32)filtered_count,
                                                            .set = list_set,
-                                                           .opts = { .row_height = UI_DROPDOWN_ROW_HEIGHT,
-                                                                     .gap = UI_DROPDOWN_ROW_GAP,
-                                                                     .multi_select = false,
-                                                                     .reorderable = false } });
+                                                           .opts = (FlListOpts) { .row_height = UI_DROPDOWN_ROW_HEIGHT,
+                                                                                  .gap = UI_DROPDOWN_ROW_GAP,
+                                                                                  .multi_select = false,
+                                                                                  .reorderable = false } });
 
                     // Searchable hand-off OUT: Nav-Up on the list's first row (nav_up_edge) returns focus to the
                     // search input. The list consumed the Nav-Up when raising the edge flag; claiming the global ring

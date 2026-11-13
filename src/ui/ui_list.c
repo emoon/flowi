@@ -45,9 +45,7 @@
 // The arguments of the begin core: the scoped face's begin call plus the declarative face's policy toggles.
 typedef struct ListBeginArgs {
     FlLayoutId id;
-    const u64* ordered_ids;
-    u32 count;
-    FlSelectionSet* set;
+    ListModel model;
     FlListConfig config;
     bool single_select;
     bool disable_reorder;
@@ -132,10 +130,10 @@ static void list_reset_frame(FlListContext* self, const ListBeginArgs* args) {
     self->context_menu_id = 0;
     self->current_id = args->id;
     self->current_clay_id = ui_layout_id_to_clay_id(args->id);
-    self->ordered_ids = args->ordered_ids;
-    self->ordered_count = args->count;
+    self->ordered_ids = args->model.ordered_ids;
+    self->ordered_count = args->model.count;
     self->labels = args->config.labels;
-    self->set = args->set;
+    self->set = args->model.set;
     self->activated_id = 0;
     self->focused_id = 0;
     self->frame_row_pressed = false;
@@ -172,7 +170,7 @@ static void list_expose_cursor(FlListContext* self, const ListState* st, bool ha
 static FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
     // The slice is the model the List forwards to selection_set_apply; it must be present whenever the List is
     // the one applying (non-NULL set). A no-selection caller (NULL set) need not owe the slice.
-    FL_ASSERT_DEBUG((args.set == nullptr || args.ordered_ids != nullptr)
+    FL_ASSERT_DEBUG((args.model.set == nullptr || args.model.ordered_ids != nullptr)
                     && "ui_list_begin: ordered_ids required when set is non-NULL");
 
     list_reset_frame(self, &args);
@@ -195,7 +193,7 @@ static FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
 
     // list_uniform provides the scroll engine and uniform-height layout container; the ordered-id count is the
     // virtualization total.
-    FlListUniformRange r = list_uniform_begin(self->ui_ctx->list_uniform_ctx, args.id.name, args.count,
+    FlListUniformRange r = list_uniform_begin(self->ui_ctx->list_uniform_ctx, args.id.name, args.model.count,
                                               (FlListUniformOpts) {
                                                   .height_hint = row_height,
                                                   .gap = gap,
@@ -463,13 +461,13 @@ static void list_decl_row_content(const FlListItem* it, f32 row_height) {
     fl_layout_end();
 }
 
-static FlListResult list_decl_impl(FlListContext* self, const ListDecl* decl) {
-    const FlListItem* items = decl->items;
-    const FlListOpts opts = decl->opts;
+static FlListResult list_decl_impl(FlListContext* self, ListDecl decl) {
+    const FlListItem* items = decl.items;
+    const FlListOpts opts = decl.opts;
     // A NULL item array is treated as empty regardless of count - never trust a count without the backing
     // array (the loop below dereferences items[i], so a non-zero count with NULL items would fault). n is the
     // effective length forwarded to the core; the begin call and the row loop both key off it, not the raw count.
-    u32 n = (items != nullptr) ? decl->count : 0;
+    u32 n = (items != nullptr) ? decl.count : 0;
 
     // Fold the descriptors into the two parallel slices the shared core takes - the ordered stable ids (also the
     // virtualization total) and the type-ahead labels - into the frame arena.
@@ -487,10 +485,8 @@ static FlListResult list_decl_impl(FlListContext* self, const ListDecl* decl) {
     // multi_select / reorderable are positive-sense opts; the core takes the inverted policy toggles.
     FlListRange r = list_begin_impl(self,
                                     (ListBeginArgs) {
-                                        .id = decl->id,
-                                        .ordered_ids = ids,
-                                        .count = n,
-                                        .set = decl->set,
+                                        .id = decl.id,
+                                        .model = { .ordered_ids = ids, .count = n, .set = decl.set },
                                         .config = {
                                             .row_height = opts.row_height,
                                             .gap = opts.gap,
@@ -515,9 +511,7 @@ static FlListResult list_decl_impl(FlListContext* self, const ListDecl* decl) {
 FlListRange ui_list_begin(FlLayoutId id, ListModel model, FlListConfig config) {
     return list_begin_impl(ui_get_ctx()->ui_list_ctx, (ListBeginArgs) {
                                                           .id = id,
-                                                          .ordered_ids = model.ordered_ids,
-                                                          .count = model.count,
-                                                          .set = model.set,
+                                                          .model = model,
                                                           .config = config,
                                                       });
 }
@@ -535,7 +529,7 @@ FlListResult ui_list_end(void) {
 }
 
 FlListResult ui_list(ListDecl decl) {
-    return list_decl_impl(ui_get_ctx()->ui_list_ctx, &decl);
+    return list_decl_impl(ui_get_ctx()->ui_list_ctx, decl);
 }
 
 void ui_list_request_focus(FlLayoutId id, u64 cursor_id) {

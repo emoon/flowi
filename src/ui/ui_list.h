@@ -14,16 +14,21 @@ typedef struct FlArena FlArena;
 
 FlListContext* ui_list_create(FlArena* arena);
 
-// The model a scoped list runs over: the app's full ordered id slice (count entries), and the caller-owned
-// selection storage the List auto-applies into (NULL opts out; ordered_ids is then optional).
+// The model a list runs over.
 typedef struct ListModel {
+    // The app's full ordered id slice, count entries. Borrowed for the whole begin->end scope; required when set
+    // is non-NULL, may be NULL when set is NULL.
     const u64* ordered_ids;
+    // Both the virtualization total and the model length forwarded to selection_set_apply.
     u32 count;
+    // Caller-owned selection storage the List auto-applies emitted requests into and resolves the highlight from.
+    // NULL opts out of auto-apply/highlight: the app then owns them via result.requests.
     FlSelectionSet* set;
 } ListModel;
 
-// Everything the declarative face takes: the list id, the item descriptors (count entries), the caller-owned
-// selection set and the layout/policy options.
+// Everything the declarative face takes: the list id, the item descriptors (count entries; a NULL items array is
+// treated as empty), the caller-owned selection set (same contract as ListModel.set) and the layout/policy
+// options.
 typedef struct ListDecl {
     FlLayoutId id;
     const FlListItem* items;
@@ -35,12 +40,8 @@ typedef struct ListDecl {
 // Scoped face - operate on the global UI context. These are the symbols the api_gen seam (ui_list.def) binds
 // to Rust; keep their names in lockstep with the seam.
 
-// Begin a virtualized list over model.ordered_ids (model.count entries). count is
-// both the virtualization total and the model length forwarded to selection_set_apply. set is the
-// caller-owned selection storage the List auto-applies emitted requests into and resolves the highlight from;
-// pass NULL to opt out of auto-apply/highlight (the app then owns them via result.requests). ordered_ids is
-// borrowed for the whole begin->end scope and is required when set is non-NULL (may be NULL when set is
-// NULL). Returns the visible index range to emit.
+// Begin a virtualized list over model (see ListModel for the id slice, count and selection set contracts).
+// Returns the visible index range to emit.
 FlListRange ui_list_begin(FlLayoutId id, ListModel model, FlListConfig config);
 
 // Begin one row carrying the opaque stable_id; returns its interaction signal (computed from the previous
