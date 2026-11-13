@@ -2,7 +2,6 @@
 #include <core/arena.h>
 #include <core/core.h>
 #include <core/log.h>
-#include <core/simd.h>
 #include <core/memory.h>
 #include "nanosvg.h"
 #include "nanosvgrast.h"
@@ -41,39 +40,16 @@ bool image_checked_stride(int width, size_t bytes_per_pixel, int* out_stride) {
     return true;
 }
 
-static bool is_grayscale_rgba_row(const u8* row, int width) {
-    // Process 16 pixels (64 bytes) at a time using SIMD deinterleaving
-    int simd_count = width / 16;
-
-    for_count(i, simd_count) {
-        u8x16_rgba_result rgba = u8x16_load_deinterleaved_4(row, i * 64);
-
-        u8x16 rg_equal = u8x16_cmp_eq(rgba.r, rgba.g);
-        u8x16 gb_equal = u8x16_cmp_eq(rgba.g, rgba.b);
-        u8x16 grayscale_mask = u8x16_and(rg_equal, gb_equal);
-
-        if (!u8x16_all_true(grayscale_mask)) {
-            return false;
+static bool is_grayscale_rgba(const FlImageDecodeResult* image) {
+    for_count(y, image->height) {
+        const u8* pixel = image->pixels + (size_t)y * (size_t)image->stride;
+        for_count(x, image->width) {
+            if (pixel[0] != pixel[1] || pixel[1] != pixel[2]) {
+                return false;
+            }
+            pixel += 4;
         }
     }
-
-    for (int x = simd_count * 16; x < width; x++) {
-        const u8* pixel = row + x * 4;
-        if (pixel[0] != pixel[1] || pixel[1] != pixel[2]) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-static bool is_grayscale_rgba_simd(const u8* rgba_data, int width, int height, int stride) {
-    for_count(y, height) {
-        if (!is_grayscale_rgba_row(rgba_data + (size_t)y * (size_t)stride, width)) {
-            return false;
-        }
-    }
-
     return true;
 }
 
@@ -112,12 +88,19 @@ ImageSize image_scaled_target_size(const ImageDecodeOptions* opts) {
     return (ImageSize) { (int)(opts->target_width * ui_scale + 0.5f), (int)(opts->target_height * ui_scale + 0.5f) };
 }
 
-void image_convert_grayscale_to_alpha(FlImageDecodeResult* image, FlArena* arena) {
-    if (image->channels != 4) {
-        return;
+// The red channel of each RGBA pixel, zeroed where the pixel is fully transparent.
+static void extract_gray_as_alpha(const FlImageDecodeResult* image, u8* dst) {
+    for_count(y, image->height) {
+        const u8* src_row = image->pixels + (size_t)y * (size_t)image->stride;
+        u8* dst_row = dst + (size_t)y * (size_t)image->width;
+        for_count(x, image->width) {
+            dst_row[x] = (src_row[x * 4 + 3] > 0) ? src_row[x * 4 + 0] : 0;
+        }
     }
+}
 
-    if (!is_grayscale_rgba_simd(image->pixels, image->width, image->height, image->stride)) {
+void image_convert_grayscale_to_alpha(FlImageDecodeResult* image, FlArena* arena) {
+    if (image->channels != 4 || !is_grayscale_rgba(image)) {
         return;
     }
 
@@ -127,16 +110,7 @@ void image_convert_grayscale_to_alpha(FlImageDecodeResult* image, FlArena* arena
         return;
     }
     u8* alpha_data = arena_alloc_array(arena, u8, pixel_count);
-
-    for_count(y, image->height) {
-        const u8* src_row = image->pixels + (size_t)y * (size_t)image->stride;
-        u8* dst_row = alpha_data + (size_t)y * (size_t)image->width;
-        for_count(x, image->width) {
-            u8 r = src_row[x * 4 + 0];
-            u8 a = src_row[x * 4 + 3];
-            dst_row[x] = (a > 0) ? r : 0;
-        }
-    }
+    extract_gray_as_alpha(image, alpha_data);
 
     image->pixels = alpha_data;
     image->stride = image->width;
