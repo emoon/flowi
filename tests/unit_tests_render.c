@@ -175,9 +175,9 @@ UTEST(font_cache, measure_text_default_font) {
     font_cache_destroy(cache);
 }
 
-// font_cache: the glyph-outline service over the embedded test fonts (tests/fixtures/fonts/glyph_test_fonts.h): 'A' is a
-// solid square, 'o' a ring with an opposite-wound counter; one font per outline flavor (TrueType quadratics,
-// CFF cubics). Light-hinted loading may nudge coordinates, so geometry assertions are ranges, not exact.
+// font_cache: the glyph-outline service over the embedded test fonts (tests/fixtures/fonts/glyph_test_fonts.h): 'A' is
+// a solid square, 'o' a ring with an opposite-wound counter; one font per outline flavor (TrueType quadratics, CFF
+// cubics). Light-hinted loading may nudge coordinates, so geometry assertions are ranges, not exact.
 
 // forbidden is the segment kind the flavor must never produce, expected the curve kind it must.
 // (utest's ASSERT macros write through utest_result, threaded in from the calling UTEST case.)
@@ -4538,7 +4538,8 @@ UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
 // report false on its grey byte, and a high alpha byte must not make a black row report non-black.
 UTEST(image_decode, black_predicates_read_gray_alpha_channel) {
     const u8 bright_ga[6] = { 200, 0, 200, 0, 200, 0 }; // 3x1 GA: bright grey, zero alpha
-    const FlImageDecodeResult bright = { .pixels = (u8*)bright_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
+    const FlImageDecodeResult bright
+        = { .pixels = (u8*)bright_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
     ASSERT_FALSE_MSG(image_region_all_black(&bright, (PixelRect) { 0, 1, 0, 3 }),
                      "a bright grey+alpha row must not report all-black");
     ASSERT_FALSE_MSG(image_region_all_black(&bright, (PixelRect) { 0, 1, 1, 2 }),
@@ -4583,7 +4584,12 @@ UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
     // offset (-1,-1) mimics a Center offset for a source larger than the canvas ((2-4)/2). dst_x = -1 + x, so
     // x==0 falls before the canvas (dropped), x==3 falls past it (dropped), x==1/2 map to canvas cols 0/1.
     const ImageCanvas target = {
-        .pixels = canvas, .width = CW, .height = CH, .fill = { 7, 8, 9 }, .offset_x = -1, .offset_y = -1,
+        .pixels = canvas,
+        .width = CW,
+        .height = CH,
+        .fill = { 7, 8, 9 },
+        .offset_x = -1,
+        .offset_y = -1,
     };
     composite_source_into_canvas_rgb(&img, &target);
 
