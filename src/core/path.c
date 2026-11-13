@@ -1,110 +1,173 @@
 #include "path.h"
 #include "arena.h"
 #include "string.h"
-#include "log.h"
 #include "memory.h"
 #include "os/os.h"
-#include <assert.h>
 #include <ctype.h>
-#include <stdio.h>
-#include <string.h>
+
+// Small classifiers and scans shared by the functions below
+
+static bool is_http_url(FlString path) {
+    return fl_string_begins_with(path, FL_S("http://")) || fl_string_begins_with(path, FL_S("https://"));
+}
+
+static bool is_drive_letter(char c) {
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+// Windows drive root: "C:\" or "C:/"
+static bool has_drive_root(FlString path) {
+    return path.length >= 3 && is_drive_letter(path.data[0]) && path.data[1] == ':' && path_is_separator(path.data[2]);
+}
+
+// Windows UNC path: "\\server\share" or "//server/share"
+static bool is_unc(FlString path) {
+    return path.length >= 2 && path_is_separator(path.data[0]) && path_is_separator(path.data[1]);
+}
+
+static bool has_trailing_separator(FlString path) {
+    return path.length > 0 && path_is_separator(path.data[path.length - 1]);
+}
+
+// Index of the last separator within the first end bytes of path, or -1
+static i64 last_separator_index(FlString path, u64 end) {
+    for (i64 i = (i64)end - 1; i >= 0; i--) {
+        if (path_is_separator(path.data[i])) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// Index of the last c in str, or -1
+static i64 last_char_index(FlString str, char c) {
+    for (i64 i = (i64)str.length - 1; i >= 0; i--) {
+        if (str.data[i] == c) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static FlString copy_prefix(struct FlArena* arena, FlString path, u64 length) {
+    return fl_string_copy(arena, (FlString) { .data = path.data, .length = length });
+}
+
+static FlString copy_root(struct FlArena* arena) {
+    return fl_string_copy(arena, (FlString) { .data = "/", .length = 1 });
+}
+
+// Normalization
+
+// End of the "scheme://" part of a URL, whose double slash has to survive normalization. 0 when there is none.
+static u64 url_scheme_end(FlString url) {
+    for (u64 i = 1; i + 1 < url.length; i++) {
+        if (url.data[i] == '/' && url.data[i + 1] == '/') {
+            return i + 2;
+        }
+    }
+    return 0;
+}
+
+// Write path to buffer with backslashes turned into slashes and runs of slashes collapsed to one. Slashes before
+// keep_until are kept as they are. Returns the number of bytes written.
+static u64 collapse_separators(FlString path, u64 keep_until, char* buffer) {
+    u64 out_len = 0;
+    bool prev_slash = false;
+
+    for (u64 i = 0; i < path.length; i++) {
+        const char c = path.data[i] == '\\' ? '/' : path.data[i];
+        const bool is_slash = c == '/';
+        const bool is_duplicate = is_slash && prev_slash && i >= keep_until;
+
+        if (!is_duplicate) {
+            buffer[out_len++] = c;
+        }
+        prev_slash = is_slash;
+    }
+
+    return out_len;
+}
 
 FlString fl_path_normalize(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
         return (FlString) { 0 };
     }
 
-    bool is_url = fl_string_begins_with(path, FL_S("http://")) || fl_string_begins_with(path, FL_S("https://"));
+    const bool is_url = is_http_url(path);
+    const u64 keep_until = is_url ? url_scheme_end(path) : 0;
 
     char* buffer = arena_alloc_array(arena, char, path.length + 1);
-    u64 out_len = 0;
-
-    bool prev_slash = false;
-    u64 protocol_end = 0;
-
-    if (is_url) {
-        for (u64 i = 0; i < path.length - 1; i++) {
-            if (path.data[i] == '/' && path.data[i + 1] == '/' && i > 0) {
-                protocol_end = i + 2; // Include both slashes in protocol part
-                break;
-            }
-        }
-    }
-
-    for (u64 i = 0; i < path.length; i++) {
-        char c = path.data[i];
-
-        if (c == '\\') {
-            c = '/';
-        }
-
-        // Skip duplicate slashes, but preserve them in URL protocol part
-        if (c == '/') {
-            if (prev_slash && i >= protocol_end) {
-                continue;
-            }
-            prev_slash = true;
-        } else {
-            prev_slash = false;
-        }
-
-        buffer[out_len++] = c;
-    }
+    u64 out_len = collapse_separators(path, keep_until, buffer);
 
     // A trailing slash is kept on the root and on URLs, where it indicates a directory
-    if (out_len > 1 && buffer[out_len - 1] == '/' && !is_url) {
+    const bool drops_trailing_slash = !is_url && out_len > 1 && buffer[out_len - 1] == '/';
+    if (drops_trailing_slash) {
         out_len--;
     }
 
     return (FlString) { .data = buffer, .length = out_len, .is_ascii = path.is_ascii };
 }
 
+static bool can_pop_segment(const FlString* resolved, u32 count) {
+    return count > 0 && !fl_string_equals(resolved[count - 1], FL_S(".."));
+}
+
+// Resolve the "." and ".." segments into resolved, which has room for every segment. Returns the number kept.
+static u32 resolve_dot_segments(StringArray segments, bool is_absolute, FlString* resolved) {
+    u32 count = 0;
+
+    for_count(i, (u32)segments.count) {
+        const FlString seg = segments.items[i];
+        if (fl_string_equals(seg, FL_S("."))) {
+            continue;
+        }
+
+        const bool is_parent = fl_string_equals(seg, FL_S(".."));
+        if (is_parent && can_pop_segment(resolved, count)) {
+            count--;
+        } else if (!is_parent || !is_absolute) {
+            // Nothing to pop on a relative path: keep the ".." so the result
+            // still points above its (unknown) base. On an absolute path the
+            // root has no parent, so an un-poppable ".." is dropped.
+            resolved[count++] = seg;
+        }
+    }
+
+    return count;
+}
+
 FlString fl_path_normalize_full(struct FlArena* arena, FlString path) {
     // Absolute-ness must be recorded up front: path_split drops the leading empty
     // segment, so nothing downstream can recover it.
-    bool is_absolute = path.length > 0 && path.data[0] == '/';
+    const bool is_absolute = path.length > 0 && path.data[0] == '/';
 
-    StringArray segments = path_split(arena, path);
-
+    const StringArray segments = path_split(arena, path);
     FlString* resolved = arena_alloc_array(arena, FlString, segments.count);
-    u32 resolved_count = 0;
-
-    for_count(i, (u32)segments.count) {
-        FlString seg = segments.items[i];
-
-        if (fl_string_equals(seg, FL_S("."))) {
-            continue;
-        } else if (fl_string_equals(seg, FL_S(".."))) {
-            if (resolved_count > 0 && !fl_string_equals(resolved[resolved_count - 1], FL_S(".."))) {
-                resolved_count--;
-            } else if (!is_absolute) {
-                // Nothing to pop on a relative path: keep the ".." so the result
-                // still points above its (unknown) base. On an absolute path the
-                // root has no parent, so an un-poppable ".." is dropped.
-                resolved[resolved_count++] = seg;
-            }
-        } else {
-            resolved[resolved_count++] = seg;
-        }
-    }
+    const u32 resolved_count = resolve_dot_segments(segments, is_absolute, resolved);
 
     if (resolved_count == 0) {
         return is_absolute ? FL_S("/") : FL_S(".");
     }
 
-    FlString result;
-    u32 first = 0;
-    if (is_absolute) {
-        result = FL_S("/");
-    } else {
-        result = fl_string_copy(arena, resolved[0]);
-        first = 1;
-    }
-    for (u32 i = first; i < resolved_count; i++) {
+    FlString result = is_absolute ? FL_S("/") : fl_string_copy(arena, resolved[0]);
+    for (u32 i = is_absolute ? 0 : 1; i < resolved_count; i++) {
         result = fl_path_join(arena, result, resolved[i]);
     }
 
     return result;
+}
+
+// Splitting and joining
+
+static u32 count_separators(FlString path) {
+    u32 count = 0;
+    for (u64 i = 0; i < path.length; i++) {
+        if (path_is_separator(path.data[i])) {
+            count++;
+        }
+    }
+    return count;
 }
 
 StringArray path_split(struct FlArena* arena, FlString path) {
@@ -112,30 +175,58 @@ StringArray path_split(struct FlArena* arena, FlString path) {
         return (StringArray) { .items = nullptr, .count = 0, .capacity = 0 };
     }
 
-    u32 count = 1;
-    for (u64 i = 0; i < path.length; i++) {
-        if (path_is_separator(path.data[i])) {
-            count++;
-        }
-    }
-
-    FlString* segments = arena_alloc_array_zero(arena, FlString, count);
-    u32 segment_idx = 0;
+    const u32 capacity = count_separators(path) + 1;
+    FlString* segments = arena_alloc_array_zero(arena, FlString, capacity);
+    u32 segment_count = 0;
     u64 start = 0;
 
     for (u64 i = 0; i <= path.length; i++) {
-        if (i == path.length || path_is_separator(path.data[i])) {
-            if (i > start) {
-                segments[segment_idx].data = path.data + start;
-                segments[segment_idx].length = i - start;
-                segments[segment_idx].is_ascii = path.is_ascii;
-                segment_idx++;
-            }
-            start = i + 1;
+        const bool is_segment_end = i == path.length || path_is_separator(path.data[i]);
+        if (!is_segment_end) {
+            continue;
         }
+
+        // Empty segments (leading, trailing and doubled separators) are dropped
+        if (i > start) {
+            segments[segment_count++] = fl_string_substr(path, start, i - start);
+        }
+        start = i + 1;
     }
 
-    return (StringArray) { .items = segments, .count = segment_idx, .capacity = count };
+    return (StringArray) { .items = segments, .count = segment_count, .capacity = capacity };
+}
+
+// An absolute relative part replaces the base, with one exception: a single leading slash on a single component
+// ("/name") counts as a separator rather than making it absolute.
+static bool replaces_base(FlString relative) {
+    if (!fl_path_is_absolute(relative)) {
+        return false;
+    }
+
+    const FlString after_first = fl_string_substr(relative, 1, relative.length - 1);
+    const bool is_single_component = relative.data[0] == '/' && !fl_path_has_separator(after_first);
+    return !is_single_component;
+}
+
+// Concatenate two non-empty parts with exactly one separator between them: one is added when neither side brings
+// it, and one is skipped when both do.
+static FlString join_parts(struct FlArena* arena, FlString base, FlString relative) {
+    const bool base_has_separator = path_is_separator(base.data[base.length - 1]);
+    const bool relative_has_separator = path_is_separator(relative.data[0]);
+    const bool adds_separator = !base_has_separator && !relative_has_separator;
+    const u64 skip = (base_has_separator && relative_has_separator) ? 1 : 0;
+
+    const u64 total_len = base.length + (adds_separator ? 1 : 0) + relative.length - skip;
+    char* buffer = arena_alloc_array(arena, char, total_len + 1);
+
+    u64 offset = base.length;
+    memory_copy(buffer, total_len + 1, base.data, base.length);
+    if (adds_separator) {
+        buffer[offset++] = '/';
+    }
+    memory_copy(buffer + offset, total_len + 1 - offset, relative.data + skip, relative.length - skip);
+
+    return (FlString) { .data = buffer, .length = total_len, .is_ascii = base.is_ascii && relative.is_ascii };
 }
 
 FlString fl_path_join(struct FlArena* arena, FlString base, FlString relative) {
@@ -145,173 +236,79 @@ FlString fl_path_join(struct FlArena* arena, FlString base, FlString relative) {
     if (relative.length == 0) {
         return fl_string_copy(arena, base);
     }
-
-    // A single leading slash on the relative component counts as a separator rather than making it
-    // absolute, unless it holds further separators
-    if (fl_path_is_absolute(relative)) {
-        if (relative.length > 0 && relative.data[0] == '/'
-            && !(relative.length >= 2 && relative.data[1] == '/')) { // Not UNC
-            bool has_more_separators = false;
-            for (u64 i = 1; i < relative.length; i++) {
-                if (path_is_separator(relative.data[i])) {
-                    has_more_separators = true;
-                    break;
-                }
-            }
-            if (!has_more_separators) {
-                // Single component with leading slash - treat as relative separator
-            } else {
-                return fl_string_copy(arena, relative);
-            }
-        } else {
-            return fl_string_copy(arena, relative);
-        }
+    if (replaces_base(relative)) {
+        return fl_string_copy(arena, relative);
     }
 
-    bool base_has_separator = base.length > 0 && path_is_separator(base.data[base.length - 1]);
-    bool relative_has_separator = relative.length > 0 && path_is_separator(relative.data[0]);
+    return join_parts(arena, base, relative);
+}
 
-    u64 total_len = base.length + relative.length;
-    if (!base_has_separator && !relative_has_separator) {
-        total_len++;
-    } else if (base_has_separator && relative_has_separator) {
-        total_len--;
-    }
+// Parts of a path
 
-    char* buffer = arena_alloc_array(arena, char, total_len + 1);
-    memory_copy(buffer, total_len + 1, base.data, base.length);
-
-    u64 offset = base.length;
-    const char* relative_start = relative.data;
-    u64 relative_len = relative.length;
-
-    if (!base_has_separator && !relative_has_separator) {
-        buffer[offset++] = '/';
-    } else if (base_has_separator && relative_has_separator) {
-        relative_start++;
-        relative_len--;
-    }
-
-    memory_copy(buffer + offset, total_len + 1 - offset, relative_start, relative_len);
-
-    return (FlString) { .data = buffer, .length = total_len, .is_ascii = base.is_ascii && relative.is_ascii };
+FlString fl_path_get_filename(FlString path) {
+    const u64 start = (u64)(last_separator_index(path, path.length) + 1);
+    return fl_string_substr(path, start, path.length - start);
 }
 
 FlString fl_path_get_extension(FlString path) {
-    if (path.length == 0) {
+    const FlString filename = fl_path_get_filename(path);
+    const i64 last_dot = last_char_index(filename, '.');
+
+    // A leading dot is not an extension (hidden files), and a trailing dot has none after it
+    if (last_dot <= 0) {
         return (FlString) { 0 };
     }
 
-    i64 last_dot = -1;
-    i64 last_sep = -1;
-
-    for (i64 i = path.length - 1; i >= 0; i--) {
-        if (path.data[i] == '.' && last_dot == -1) {
-            last_dot = i;
-        } else if (path_is_separator(path.data[i])) {
-            last_sep = i;
-            break;
-        }
-    }
-
-    // A leading dot is not an extension (hidden files)
-    if (last_dot > last_sep && last_dot < (i64)path.length - 1 && last_dot != last_sep + 1) {
-        return (FlString) { .data = path.data + last_dot + 1,
-                            .length = path.length - last_dot - 1,
-                            .is_ascii = path.is_ascii };
-    }
-
-    return (FlString) { 0 };
+    const u64 start = (u64)last_dot + 1;
+    return fl_string_substr(filename, start, filename.length - start);
 }
 
 FlString path_get_filename_prefix(FlString path) {
-    if (path.length == 0) {
+    const FlString filename = fl_path_get_filename(path);
+
+    // Don't count leading dot as prefix separator (hidden files)
+    const i64 first_dot = fl_string_find_char_from(filename, '.', 1);
+    if (first_dot < 0) {
         return (FlString) { 0 };
     }
 
-    FlString filename = fl_path_get_filename(path);
-    if (filename.length == 0) {
-        return (FlString) { 0 };
-    }
-
-    for (u64 i = 0; i < filename.length; i++) {
-        if (filename.data[i] == '.') {
-            // Don't count leading dot as prefix separator (hidden files)
-            if (i == 0) {
-                continue;
-            }
-            return (FlString) { .data = filename.data, .length = i, .is_ascii = filename.is_ascii };
-        }
-    }
-
-    return (FlString) { 0 };
-}
-
-FlString fl_path_get_filename(FlString path) {
-    if (path.length == 0) {
-        return (FlString) { 0 };
-    }
-
-    i64 last_sep = -1;
-    for (i64 i = path.length - 1; i >= 0; i--) {
-        if (path_is_separator(path.data[i])) {
-            last_sep = i;
-            break;
-        }
-    }
-
-    if (last_sep == (i64)path.length - 1) {
-        return (FlString) { 0 };
-    }
-
-    return (
-        FlString) { .data = path.data + last_sep + 1, .length = path.length - last_sep - 1, .is_ascii = path.is_ascii };
-}
-
-FlString fl_path_get_directory(struct FlArena* arena, FlString path) {
-    if (path.length == 0) {
-        return (FlString) { 0 };
-    }
-
-    i64 last_sep = -1;
-    for (i64 i = path.length - 1; i >= 0; i--) {
-        if (path_is_separator(path.data[i])) {
-            last_sep = i;
-            break;
-        }
-    }
-
-    if (last_sep <= 0) {
-        // No directory part, or it's root
-        if (last_sep == 0) {
-            return fl_string_copy(arena, (FlString) { .data = "/", .length = 1 });
-        }
-        return (FlString) { 0 };
-    }
-
-    return fl_string_copy(arena, (FlString) { .data = path.data, .length = (u64)last_sep });
+    return fl_string_substr(filename, 0, (u64)first_dot);
 }
 
 FlString fl_path_get_basename(struct FlArena* arena, FlString path) {
-    FlString filename = fl_path_get_filename(path);
-    if (filename.length == 0) {
+    const FlString filename = fl_path_get_filename(path);
+    const i64 last_dot = last_char_index(filename, '.');
+
+    // A leading dot belongs to the name (hidden files)
+    return last_dot > 0 ? copy_prefix(arena, filename, (u64)last_dot) : fl_string_copy(arena, filename);
+}
+
+// The part before the last separator within the first end bytes of path: "/" when that separator is the leading
+// one, and empty when there is none.
+static FlString directory_part(struct FlArena* arena, FlString path, u64 end) {
+    const i64 last_sep = last_separator_index(path, end);
+    if (last_sep < 0) {
         return (FlString) { 0 };
     }
 
-    i64 last_dot = -1;
-    for (i64 i = filename.length - 1; i >= 0; i--) {
-        if (filename.data[i] == '.') {
-            last_dot = i;
-            break;
-        }
-    }
-
-    if (last_dot > 0) {
-        return fl_string_copy(arena, (FlString) { .data = filename.data, .length = (u64)last_dot });
-    }
-
-    return fl_string_copy(arena, filename);
+    return last_sep == 0 ? copy_root(arena) : copy_prefix(arena, path, (u64)last_sep);
 }
+
+FlString fl_path_get_directory(struct FlArena* arena, FlString path) {
+    return directory_part(arena, path, path.length);
+}
+
+FlString fl_path_get_parent(struct FlArena* arena, FlString path) {
+    // Trailing separators do not start a new component
+    u64 end = path.length;
+    while (end > 1 && path_is_separator(path.data[end - 1])) {
+        end--;
+    }
+
+    return directory_part(arena, path, end);
+}
+
+// Queries
 
 bool fl_path_is_absolute(FlString path) {
     if (path.length == 0) {
@@ -323,25 +320,8 @@ bool fl_path_is_absolute(FlString path) {
         return true;
     }
 
-    // Windows absolute path (C:\ or C:/)
-    if (path.length >= 3 && isalpha(path.data[0]) && path.data[1] == ':' && path_is_separator(path.data[2])) {
-        return true;
-    }
-
-    // Windows UNC path (\\server\share or //server/share)
-    if (path.length >= 2 && path_is_separator(path.data[0]) && path_is_separator(path.data[1])) {
-        return true;
-    }
-
     // HTTP/HTTPS URLs are considered absolute
-    if (path.length >= 7) {
-        if (fl_string_begins_with(path, FL_S("http://"))
-            || (path.length >= 8 && fl_string_begins_with(path, FL_S("https://")))) {
-            return true;
-        }
-    }
-
-    return false;
+    return has_drive_root(path) || is_unc(path) || is_http_url(path);
 }
 
 bool fl_path_is_relative(FlString path) {
@@ -356,49 +336,29 @@ FlString fl_path_make_absolute(struct FlArena* arena, FlString base, FlString pa
     return fl_path_join(arena, base, path);
 }
 
-bool fl_path_equals(FlString path1, FlString path2) {
-    if (path1.length == 0 && path2.length == 0) {
-        return true;
+// The form of c that fl_path_equals compares: both separators are the same, and on Windows so are both cases
+static int path_equals_char(char c) {
+    if (path_is_separator(c)) {
+        return '/';
     }
-    if (path1.length == 0 || path2.length == 0) {
-        return false;
-    }
+#ifdef _WIN32
+    return tolower(c);
+#else
+    return c;
+#endif
+}
 
+bool fl_path_equals(FlString path1, FlString path2) {
     if (path1.length != path2.length) {
         return false;
     }
 
-#ifdef _WIN32
     for (u64 i = 0; i < path1.length; i++) {
-        char c1 = path1.data[i];
-        char c2 = path2.data[i];
-
-        if (path_is_separator(c1))
-            c1 = '/';
-        if (path_is_separator(c2))
-            c2 = '/';
-
-        if (tolower(c1) != tolower(c2)) {
+        if (path_equals_char(path1.data[i]) != path_equals_char(path2.data[i])) {
             return false;
         }
     }
     return true;
-#else
-    for (u64 i = 0; i < path1.length; i++) {
-        char c1 = path1.data[i];
-        char c2 = path2.data[i];
-
-        if (path_is_separator(c1))
-            c1 = '/';
-        if (path_is_separator(c2))
-            c2 = '/';
-
-        if (c1 != c2) {
-            return false;
-        }
-    }
-    return true;
-#endif
 }
 
 bool fl_path_has_extension(FlString path, FlString extension) {
@@ -420,29 +380,28 @@ bool fl_path_has_extension(FlString path, FlString extension) {
     return true;
 }
 
+bool fl_path_has_separator(FlString path) {
+    return last_separator_index(path, path.length) >= 0;
+}
+
+// Separator edits
+
 FlString fl_path_remove_trailing_separator(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
         return (FlString) { 0 };
     }
 
     // Don't remove separator from root path
-    if (path.length == 1 && path_is_separator(path.data[0])) {
-        return fl_string_copy(arena, path);
-    }
-
-    if (path_is_separator(path.data[path.length - 1])) {
-        return fl_string_copy(arena, (FlString) { .data = path.data, .length = path.length - 1 });
-    }
-
-    return fl_string_copy(arena, path);
+    const bool removes_separator = path.length > 1 && has_trailing_separator(path);
+    return removes_separator ? copy_prefix(arena, path, path.length - 1) : fl_string_copy(arena, path);
 }
 
 FlString fl_path_ensure_trailing_separator(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
-        return fl_string_copy(arena, (FlString) { .data = "/", .length = 1 });
+        return copy_root(arena);
     }
 
-    if (path_is_separator(path.data[path.length - 1])) {
+    if (has_trailing_separator(path)) {
         return fl_string_copy(arena, path);
     }
 
@@ -451,44 +410,6 @@ FlString fl_path_ensure_trailing_separator(struct FlArena* arena, FlString path)
     buffer[path.length] = '/';
 
     return (FlString) { .data = buffer, .length = path.length + 1, .is_ascii = path.is_ascii };
-}
-
-FlString fl_path_get_parent(struct FlArena* arena, FlString path) {
-    if (path.length == 0) {
-        return (FlString) { 0 };
-    }
-
-    u64 end = path.length;
-    while (end > 1 && path_is_separator(path.data[end - 1])) {
-        end--;
-    }
-
-    i64 last_sep = -1;
-    for (i64 i = end - 1; i >= 0; i--) {
-        if (path_is_separator(path.data[i])) {
-            last_sep = i;
-            break;
-        }
-    }
-
-    if (last_sep <= 0) {
-        // No parent or it's root
-        if (last_sep == 0) {
-            return fl_string_copy(arena, (FlString) { .data = "/", .length = 1 });
-        }
-        return (FlString) { 0 };
-    }
-
-    return fl_string_copy(arena, (FlString) { .data = path.data, .length = (u64)last_sep });
-}
-
-bool fl_path_has_separator(FlString path) {
-    for (u64 i = 0; i < path.length; i++) {
-        if (path_is_separator(path.data[i])) {
-            return true;
-        }
-    }
-    return false;
 }
 
 FlString fl_path_to_forward_slashes(struct FlArena* arena, FlString path) {
@@ -507,60 +428,66 @@ FlString fl_path_to_forward_slashes(struct FlArena* arena, FlString path) {
 // Path components functions for resolving a path through nested containers
 
 PathComponents path_components(struct FlArena* arena, FlString path) {
-    // Check for trailing slash before normalization (important for URLs indicating directories)
-    bool has_trailing_slash
-        = (path.length > 0 && (path.data[path.length - 1] == '/' || path.data[path.length - 1] == '\\'));
+    const FlString normalized = fl_path_normalize(arena, path);
 
-    FlString normalized = fl_path_normalize(arena, path);
-    StringArray segments = path_split(arena, normalized);
-    bool is_absolute = fl_path_is_absolute(path);
+    return (PathComponents) {
+        .segments = path_split(arena, normalized),
+        .is_absolute = fl_path_is_absolute(path),
+        // Taken before normalization, which drops it (important for URLs indicating directories)
+        .has_trailing_slash = has_trailing_separator(path),
+    };
+}
 
-    return (
-        PathComponents) { .segments = segments, .is_absolute = is_absolute, .has_trailing_slash = has_trailing_slash };
+static bool is_url_scheme_segment(FlString segment) {
+    return fl_string_equals(segment, FL_S("https:")) || fl_string_equals(segment, FL_S("http:"));
+}
+
+// A single letter followed by a colon, e.g. "C:"
+static bool is_drive_segment(FlString segment) {
+    return segment.length == 2 && segment.data[1] == ':' && is_drive_letter(segment.data[0]);
+}
+
+// Whether the range of count segments from start begins a URL, which needs at least two segments (scheme + domain)
+static bool range_is_url(const PathComponents* components, int start, u32 count) {
+    const bool has_scheme_and_domain = (int)count > start + 1 && components->segments.count > start;
+    return has_scheme_and_domain && is_url_scheme_segment(components->segments.items[start]);
+}
+
+// Whether the range from start begins with the drive of a Windows absolute path
+static bool range_is_windows_absolute(const PathComponents* components, int start) {
+    const bool has_first_segment = components->is_absolute && components->segments.count > start;
+    return has_first_segment && is_drive_segment(components->segments.items[start]);
+}
+
+// "scheme://domain" from the first two segments of a URL: the scheme takes "//" after it and the domain follows
+// without a separator
+static FlString url_origin(struct FlArena* arena, const FlString* segments) {
+    const FlString scheme = fl_string_concat(arena, segments[0], FL_S("//"));
+    return fl_string_concat(arena, scheme, segments[1]);
 }
 
 FlString path_reconstruct_from_segments(const PathComponents* components, const int start, const u32 count,
                                         struct FlArena* arena) {
-    // A URL needs at least two segments (scheme + domain)
-    bool is_url = false;
-    if ((int)count > start + 1 && (int)components->segments.count > start) {
-        FlString first_segment = components->segments.items[start];
-        is_url = fl_string_equals(first_segment, FL_S("https:")) || fl_string_equals(first_segment, FL_S("http:"));
-    }
+    const FlString* segments = components->segments.items;
+    const bool is_url = range_is_url(components, start, count);
 
-    // Windows absolute path: a first segment of a single letter followed by a colon, e.g. "C:"
-    bool is_windows_absolute = false;
-    if (components->is_absolute && (int)components->segments.count > start) {
-        FlString first_segment = components->segments.items[start];
-        is_windows_absolute = (first_segment.length == 2 && first_segment.data[1] == ':'
-                               && ((first_segment.data[0] >= 'A' && first_segment.data[0] <= 'Z')
-                                   || (first_segment.data[0] >= 'a' && first_segment.data[0] <= 'z')));
-    }
+    // Windows absolute paths don't need a leading slash
+    const bool has_leading_slash = components->is_absolute && !range_is_windows_absolute(components, start);
 
-    FlString result;
+    FlString result = has_leading_slash ? FL_S("/") : FL_S("");
+    u32 next = (u32)start;
     if (is_url) {
-        result = FL_S("");
-    } else if (is_windows_absolute) {
-        // Windows absolute paths don't need a leading slash
-        result = FL_S("");
-    } else {
-        result = components->is_absolute ? FL_S("/") : FL_S("");
+        result = url_origin(arena, segments + start);
+        next += 2;
     }
 
-    for (u32 i = (u32)start; i < count; i++) {
-        if (is_url && (int)i == start) {
-            // The first segment is the scheme; add it directly with //
-            result = fl_string_concat(arena, components->segments.items[i], FL_S("//"));
-        } else if (is_url && (int)i == start + 1) {
-            // Join without a separator since :// was already added
-            result = fl_string_concat(arena, result, components->segments.items[i]);
-        } else {
-            result = fl_path_join(arena, result, components->segments.items[i]);
-        }
+    for (u32 i = next; i < count; i++) {
+        result = fl_path_join(arena, result, segments[i]);
     }
 
-    // On a URL a trailing slash indicates a directory, so preserve it
-    if (is_url && components->has_trailing_slash && count == (u32)components->segments.count) {
+    // On a URL a trailing slash indicates a directory, so preserve it when the range runs to the last segment
+    const bool keeps_trailing_slash = components->has_trailing_slash && count == (u32)components->segments.count;
+    if (is_url && keeps_trailing_slash) {
         result = fl_string_concat(arena, result, FL_S("/"));
     }
 
@@ -573,6 +500,38 @@ FlString path_get_current_directory(struct FlArena* arena) {
     return get_current_directory_os(arena);
 }
 
+// Look for name in each ancestor of directory, nearest first. Returns its path, or an empty string.
+static FlString find_in_ancestors(struct FlArena* arena, FlString directory, FlString name) {
+    const PathComponents components = path_components(arena, directory);
+    const u32 segment_count = (u32)components.segments.count;
+
+    for (u32 levels = 1; levels < segment_count; levels++) {
+        const FlString parent = path_reconstruct_from_segments(&components, 0, segment_count - levels, arena);
+        const FlString candidate = fl_path_join(arena, parent, name);
+
+        if (file_directory_exists_os(candidate)) {
+            return candidate;
+        }
+    }
+
+    return (FlString) { 0 };
+}
+
+// Root of the filesystem an absolute directory is on: "/", or a drive root such as "C:\". Empty when directory is
+// relative or in an unknown absolute form.
+static FlString filesystem_root(FlString directory) {
+    if (!fl_path_is_absolute(directory)) {
+        return (FlString) { 0 };
+    }
+
+    if (fl_string_begins_with(directory, FL_S("/"))) {
+        return FL_S("/");
+    }
+
+    const bool has_drive = directory.length >= 3 && directory.data[1] == ':';
+    return has_drive ? fl_string_substr(directory, 0, 3) : (FlString) { 0 };
+}
+
 FlString path_find_directory(struct FlArena* arena, FlString start_directory) {
     if (start_directory.length == 0) {
         return (FlString) { 0 };
@@ -582,43 +541,22 @@ FlString path_find_directory(struct FlArena* arena, FlString start_directory) {
         return fl_string_copy(arena, start_directory);
     }
 
-    FlString current_dir = path_get_current_directory(arena);
+    const FlString current_dir = path_get_current_directory(arena);
     if (current_dir.length == 0) {
         return (FlString) { 0 };
     }
 
-    PathComponents current_components = path_components(arena, current_dir);
-
-    // Walk backwards up the directory tree
-    for (u32 levels = 1; levels < (u32)current_components.segments.count; levels++) {
-        u32 parent_segment_count = (u32)current_components.segments.count - levels;
-        FlString parent_path = path_reconstruct_from_segments(&current_components, 0, parent_segment_count, arena);
-
-        FlString candidate_path = fl_path_join(arena, parent_path, start_directory);
-
-        if (file_directory_exists_os(candidate_path)) {
-            return candidate_path;
-        }
+    const FlString in_ancestor = find_in_ancestors(arena, current_dir, start_directory);
+    if (in_ancestor.length > 0) {
+        return in_ancestor;
     }
 
     // Also try from filesystem root as last resort
-    FlString root_path;
-    if (fl_path_is_absolute(current_dir)) {
-        if (fl_string_begins_with(current_dir, FL_S("/"))) {
-            root_path = fl_path_join(arena, FL_S("/"), start_directory);
-        }
-        // On Windows, try from drive root
-        else if (current_dir.length >= 3 && current_dir.data[1] == ':') {
-            FlString drive = { .data = current_dir.data, .length = 3 }; // e.g., "C:\"
-            root_path = fl_path_join(arena, drive, start_directory);
-        } else {
-            return (FlString) { 0 }; // Unknown absolute path format
-        }
-
-        if (file_directory_exists_os(root_path)) {
-            return root_path;
-        }
+    const FlString root = filesystem_root(current_dir);
+    if (root.length == 0) {
+        return (FlString) { 0 };
     }
 
-    return (FlString) { 0 };
+    const FlString from_root = fl_path_join(arena, root, start_directory);
+    return file_directory_exists_os(from_root) ? from_root : (FlString) { 0 };
 }
