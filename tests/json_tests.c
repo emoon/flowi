@@ -30,6 +30,17 @@ static FlString write_pretty(FlArena* arena, const FlJsonValue* value) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static FlJsonParseResult parse_error(FlArena* arena, const char* text, size_t flags) {
+    FlJsonParseResult result;
+    FlJsonValue* value = fl_json_parse_with_flags(arena, string_from_cstr(text), flags, &result);
+    if (value != nullptr) {
+        result.error = FlJsonParseError_None;
+    }
+    return result;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static bool is_rejected(FlArena* arena, const char* text, size_t flags) {
     FlJsonParseResult result;
     FlJsonValue* value = fl_json_parse_with_flags(arena, string_from_cstr(text), flags, &result);
@@ -49,10 +60,18 @@ static bool is_accepted(FlArena* arena, const char* text, size_t flags) {
 UTEST(json_parser, parse_basic_types) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    ASSERT_EQ((int)parse_strict(arena, "null")->type, (int)FlJsonType_Null);
-    ASSERT_EQ((int)parse_strict(arena, "true")->type, (int)FlJsonType_True);
-    ASSERT_EQ((int)parse_strict(arena, "false")->type, (int)FlJsonType_False);
-    ASSERT_EQ((int)parse_strict(arena, "  42  ")->type, (int)FlJsonType_Number);
+    const struct {
+        const char* text;
+        FlJsonType type;
+    } scalars[] = {
+        { "null", FlJsonType_Null },
+        { "true", FlJsonType_True },
+        { "false", FlJsonType_False },
+        { "  42  ", FlJsonType_Number },
+    };
+    for (size_t i = 0; i < sizeof(scalars) / sizeof(scalars[0]); i++) {
+        ASSERT_EQ((int)parse_strict(arena, scalars[i].text)->type, (int)scalars[i].type);
+    }
 
     FlJsonValue* text = parse_strict(arena, "\"hello\"");
     ASSERT_EQ((int)text->type, (int)FlJsonType_String);
@@ -156,10 +175,15 @@ UTEST(json_parser, strict_rejects_malformed_numbers) {
 UTEST(json_parser, accepts_edge_cases) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    ASSERT_TRUE(is_accepted(arena, "123456789012345678901234567890.123456789", FlJsonParseFlags_Default));
-    ASSERT_TRUE(is_accepted(arena, "[[[[[[[]]]]]]]", FlJsonParseFlags_Default));
-    ASSERT_TRUE(is_accepted(arena, "\"\"", FlJsonParseFlags_Default));
-    ASSERT_TRUE(is_accepted(arena, "{\"a\": [ ] , \"b\" : { } }", FlJsonParseFlags_Default));
+    const char* cases[] = {
+        "123456789012345678901234567890.123456789",
+        "[[[[[[[]]]]]]]",
+        "\"\"",
+        "{\"a\": [ ] , \"b\" : { } }",
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        ASSERT_TRUE(is_accepted(arena, cases[i], FlJsonParseFlags_Default));
+    }
 
     ASSERT_EQ((u64)fl_json_value_as_string(parse_strict(arena, "\"\""))
                   .length,
@@ -191,12 +215,17 @@ UTEST(json_parser, decodes_string_escapes) {
 UTEST(json_parser, json5_accepts_extensions) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    ASSERT_TRUE(is_accepted(arena, "{a: [1, 2, 3,]}", FlJsonParseFlags_AllowJson5));
-    ASSERT_TRUE(is_accepted(arena, "{a: 1, b_2: 2,}", FlJsonParseFlags_AllowJson5));
-    ASSERT_TRUE(is_accepted(arena, "{'a': 'single', \"b\": 'its'}", FlJsonParseFlags_AllowJson5));
-    ASSERT_TRUE(is_accepted(arena, "// line\n/* block\n */ {\"a\": 1 // tail\n}", FlJsonParseFlags_AllowJson5));
-    ASSERT_TRUE(is_accepted(arena, "{\"a\": \"line1\nline2\"}", FlJsonParseFlags_AllowJson5));
-    ASSERT_TRUE(is_accepted(arena, "{\"a\": [0xFF, +123, .5, 5., -.5, Infinity, -Infinity, NaN]}", FlJsonParseFlags_AllowJson5));
+    const char* cases[] = {
+        "{a: [1, 2, 3,]}",
+        "{a: 1, b_2: 2,}",
+        "{'a': 'single', \"b\": 'its'}",
+        "// line\n/* block\n */ {\"a\": 1 // tail\n}",
+        "{\"a\": \"line1\nline2\"}",
+        "{\"a\": [0xFF, +123, .5, 5., -.5, Infinity, -Infinity, NaN]}",
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        ASSERT_TRUE(is_accepted(arena, cases[i], FlJsonParseFlags_AllowJson5));
+    }
 
     fl_arena_destroy(arena);
 }
@@ -226,8 +255,6 @@ UTEST(json_parser, json5_parses_a_global_object) {
     ASSERT_NE(root, nullptr);
     ASSERT_EQ((int)root->type, (int)FlJsonType_Object);
     ASSERT_STR_EQ(fl_json_get_string_prop(root, S("name")), "test");
-    ASSERT_EQ(fl_json_get_u32_prop(root, S("value")), 42u);
-    ASSERT_NE(fl_json_get_object_prop(root, S("theme")), nullptr);
 
     FlJsonValue* empty = parse_json5(arena, "  // nothing\n");
     ASSERT_NE(empty, nullptr);
@@ -241,22 +268,32 @@ UTEST(json_parser, json5_parses_a_global_object) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+UTEST(json_parser, json5_global_object_members) {
+    FlArena* arena = arena_new(.reserved_size = MB(64));
+
+    FlJsonValue* root = parse_json5(arena, "value: 42, theme: { accent: [255, 107, 53] }");
+    ASSERT_NE(root, nullptr);
+    ASSERT_EQ(fl_json_get_u32_prop(root, S("value")), 42u);
+    ASSERT_NE(fl_json_get_object_prop(root, S("theme")), nullptr);
+
+    fl_arena_destroy(arena);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 UTEST(json_parser, reports_the_failure_position) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    FlJsonParseResult result;
 
-    const char* text = "{\n  \"a\": 1,\n  \"b\" 2\n}";
-    ASSERT_EQ(fl_json_parse_with_flags(arena, string_from_cstr(text), FlJsonParseFlags_Default, &result), nullptr);
-    ASSERT_ERROR_EQ(result.error, FlJsonParseError_ExpectedColon);
-    ASSERT_EQ((int)result.error_line_no, 3);
-    ASSERT_EQ((int)result.error_row_no, 7);
+    FlJsonParseResult colon = parse_error(arena, "{\n  \"a\": 1,\n  \"b\" 2\n}", FlJsonParseFlags_Default);
+    ASSERT_ERROR_EQ(colon.error, FlJsonParseError_ExpectedColon);
+    ASSERT_EQ((int)colon.error_line_no, 3);
+    ASSERT_EQ((int)colon.error_row_no, 7);
 
-    const char* trailing = "[] x";
-    ASSERT_EQ(fl_json_parse_with_flags(arena, string_from_cstr(trailing), FlJsonParseFlags_Default, &result), nullptr);
-    ASSERT_ERROR_EQ(result.error, FlJsonParseError_UnexpectedTrailingCharacters);
-    ASSERT_EQ((int)result.error_offset, 3);
+    FlJsonParseResult trailing = parse_error(arena, "[] x", FlJsonParseFlags_Default);
+    ASSERT_ERROR_EQ(trailing.error, FlJsonParseError_UnexpectedTrailingCharacters);
+    ASSERT_EQ((int)trailing.error_offset, 3);
 
-    ASSERT_EQ(fl_json_parse_with_flags(arena, string_empty(), FlJsonParseFlags_Default, &result), nullptr);
+    ASSERT_TRUE(is_rejected(arena, "", FlJsonParseFlags_Default));
 
     fl_arena_destroy(arena);
 }
@@ -279,17 +316,36 @@ UTEST(json_parser, find_property_matches_the_full_key) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     FlJsonValue* root = parse_strict(arena, "{\"a\\u0000c\": 1, \"a\\u0000b\": 2, \"key\": \"v\"}");
-    ASSERT_NE(root, nullptr);
 
     FlString nul_key = { .data = "a\0b", .length = 3 };
     FlJsonValue* found = fl_json_find_property(root, nul_key);
     ASSERT_NE(found, nullptr);
     ASSERT_EQ(((FlJsonNumber*)found->payload)->number[0], '2');
     ASSERT_EQ(fl_json_find_property(root, S("a")), nullptr);
+
+    fl_arena_destroy(arena);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(json_parser, find_property_tolerates_non_objects) {
+    FlArena* arena = arena_new(.reserved_size = MB(64));
+
     ASSERT_EQ(fl_json_find_property(nullptr, S("key")), nullptr);
-    ASSERT_EQ(fl_json_find_property(found, S("key")), nullptr);
+    ASSERT_EQ(fl_json_find_property(parse_strict(arena, "7"), S("key")), nullptr);
+
+    fl_arena_destroy(arena);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+UTEST(json_parser, string_property_defaults_to_empty) {
+    FlArena* arena = arena_new(.reserved_size = MB(64));
+
+    FlJsonValue* root = parse_strict(arena, "{\"a\": 1, \"key\": \"v\"}");
     ASSERT_STR_EQ(fl_json_get_string_prop(root, S("key")), "v");
     ASSERT_EQ((int)fl_json_get_string_prop(root, S("a")).length, 0);
+    ASSERT_EQ((int)fl_json_get_string_prop(root, S("missing")).length, 0);
 
     fl_arena_destroy(arena);
 }
@@ -303,19 +359,26 @@ UTEST(json_parser, typed_number_properties) {
                                            "plus: +3, real: 2.5, text: \"9\"");
     ASSERT_NE(root, nullptr);
 
-    ASSERT_EQ(fl_json_get_u32_prop(root, S("hex")), 31u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, S("plus")), 3u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, S("neg")), 0u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, S("big")), 0u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, S("huge")), 0u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, S("text")), 0u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, S("missing")), 0u);
+    const struct {
+        const char* name;
+        u32 expected;
+    } as_u32[] = {
+        { "hex", 31u }, { "plus", 3u }, { "neg", 0u },     { "big", 0u },
+        { "huge", 0u }, { "text", 0u }, { "missing", 0u },
+    };
+    for (size_t i = 0; i < sizeof(as_u32) / sizeof(as_u32[0]); i++) {
+        ASSERT_EQ(fl_json_get_u32_prop(root, string_from_cstr(as_u32[i].name)), as_u32[i].expected);
+    }
 
-    ASSERT_EQ(fl_json_get_f64_prop(root, S("real")), 2.5);
-    ASSERT_EQ(fl_json_get_f64_prop(root, S("neg")), -7.0);
-    ASSERT_EQ(fl_json_get_f64_prop(root, S("hex")), 31.0);
-    ASSERT_EQ(fl_json_get_f64_prop(root, S("text")), 0.0);
-    ASSERT_EQ(fl_json_get_f64_prop(root, S("missing")), 0.0);
+    const struct {
+        const char* name;
+        f64 expected;
+    } as_f64[] = {
+        { "real", 2.5 }, { "neg", -7.0 }, { "hex", 31.0 }, { "text", 0.0 }, { "missing", 0.0 },
+    };
+    for (size_t i = 0; i < sizeof(as_f64) / sizeof(as_f64[0]); i++) {
+        ASSERT_EQ(fl_json_get_f64_prop(root, string_from_cstr(as_f64[i].name)), as_f64[i].expected);
+    }
 
     fl_arena_destroy(arena);
 }
@@ -341,11 +404,19 @@ UTEST(json_parser, number_accessors_are_bounded_by_number_size) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, error_descriptions_are_distinct) {
-    ASSERT_STR_EQ(fl_json_get_error_description(FlJsonParseError_None), "No error");
-    ASSERT_STR_EQ(fl_json_get_error_description(FlJsonParseError_ExpectedColon), "Expected colon after object key");
-    ASSERT_STR_EQ(fl_json_get_error_description(FlJsonParseError_InvalidNumberFormat), "Invalid number format");
-    ASSERT_STR_EQ(fl_json_get_error_description(FlJsonParseError_TooDeep), "JSON nesting exceeds maximum depth");
-    ASSERT_STR_EQ(fl_json_get_error_description((FlJsonParseError)999), "Unknown JSON parse error");
+    const struct {
+        FlJsonParseError error;
+        const char* description;
+    } cases[] = {
+        { FlJsonParseError_None, "No error" },
+        { FlJsonParseError_ExpectedColon, "Expected colon after object key" },
+        { FlJsonParseError_InvalidNumberFormat, "Invalid number format" },
+        { FlJsonParseError_TooDeep, "JSON nesting exceeds maximum depth" },
+        { (FlJsonParseError)999, "Unknown JSON parse error" },
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        ASSERT_TRUE(fl_string_equals(fl_json_get_error_description(cases[i].error), string_from_cstr(cases[i].description)));
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -429,7 +500,10 @@ UTEST(json_writer, writes_builder_trees) {
     ASSERT_NE(parsed, nullptr);
     ASSERT_STR_EQ(fl_json_get_string_prop(parsed, S("name")), "flowi");
     ASSERT_EQ(fl_json_get_f64_prop(parsed, S("ratio")), 0.5);
-    ASSERT_EQ((int)fl_json_get_array_prop(parsed, S("list"))->length, 1);
+
+    FlJsonArray* items = fl_json_get_array_prop(parsed, S("list"));
+    ASSERT_NE(items, nullptr);
+    ASSERT_EQ((int)items->length, 1);
 
     fl_arena_destroy(arena);
 }
