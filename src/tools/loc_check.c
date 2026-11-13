@@ -153,8 +153,7 @@ static void parse_table(Checker* self, const LocCheckTable* table, u32 index, Pa
     }
 
     FlJsonParseResult result = { 0 };
-    FlJsonValue* root = fl_json_parse_with_flags(self->arena, table->json.data, table->json.length,
-                                                 FlJsonParseFlags_AllowJson5, &result);
+    FlJsonValue* root = fl_json_parse_with_flags(self->arena, table->json, FlJsonParseFlags_AllowJson5, &result);
     if (root == nullptr) {
         finding_add(self, LocCheckId_TableUnreadable, index, true,
                     fl_sb_to_string(fl_sb_appendf(sb, "%S failed to parse: %S", table->path,

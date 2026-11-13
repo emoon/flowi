@@ -1050,14 +1050,14 @@ UTEST(json, depth_at_limit_parses) {
 
     FlJsonParseResult result;
     char* arrays = json_nested_arrays(arena, 256);
-    FlJsonValue* root = fl_json_parse_with_flags(arena, arrays, 256 * 2, 0, &result);
+    FlJsonValue* root = fl_json_parse_with_flags(arena, string_from_cstr_len(arrays, 256 * 2), 0, &result);
     ASSERT_TRUE(root != nullptr);
     ASSERT_EQ((int)result.error, (int)FlJsonParseError_None);
     ASSERT_EQ((int)root->type, (int)FlJsonType_Array);
 
     size_t obj_len = 0;
     char* objects = json_nested_objects(arena, 256, &obj_len);
-    root = fl_json_parse_with_flags(arena, objects, obj_len, 0, &result);
+    root = fl_json_parse_with_flags(arena, string_from_cstr_len(objects, obj_len), 0, &result);
     ASSERT_TRUE(root != nullptr);
     ASSERT_EQ((int)result.error, (int)FlJsonParseError_None);
     ASSERT_EQ((int)root->type, (int)FlJsonType_Object);
@@ -1070,13 +1070,13 @@ UTEST(json, depth_past_limit_fails_cleanly) {
 
     FlJsonParseResult result;
     char* arrays = json_nested_arrays(arena, 257);
-    FlJsonValue* root = fl_json_parse_with_flags(arena, arrays, 257 * 2, 0, &result);
+    FlJsonValue* root = fl_json_parse_with_flags(arena, string_from_cstr_len(arrays, 257 * 2), 0, &result);
     ASSERT_TRUE(root == nullptr);
     ASSERT_EQ((int)result.error, (int)FlJsonParseError_TooDeep);
 
     size_t obj_len = 0;
     char* objects = json_nested_objects(arena, 257, &obj_len);
-    root = fl_json_parse_with_flags(arena, objects, obj_len, 0, &result);
+    root = fl_json_parse_with_flags(arena, string_from_cstr_len(objects, obj_len), 0, &result);
     ASSERT_TRUE(root == nullptr);
     ASSERT_EQ((int)result.error, (int)FlJsonParseError_TooDeep);
 
@@ -1096,7 +1096,7 @@ UTEST(json, depth_extreme_nesting_no_crash) {
     memset(buf, '[', depth);
 
     FlJsonParseResult result;
-    FlJsonValue* root = fl_json_parse_with_flags(arena, buf, depth, 0, &result);
+    FlJsonValue* root = fl_json_parse_with_flags(arena, string_from_cstr_len(buf, depth), 0, &result);
     ASSERT_TRUE(root == nullptr);
     ASSERT_EQ((int)result.error, (int)FlJsonParseError_TooDeep);
 

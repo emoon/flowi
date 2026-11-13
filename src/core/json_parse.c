@@ -727,18 +727,17 @@ static bool json_finish_document(JsonParser* p) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FlJsonValue* fl_json_parse_with_flags(FlArena* arena, const void* src, size_t src_size, size_t flags_bitset,
-                                      FlJsonParseResult* result) {
+FlJsonValue* fl_json_parse_with_flags(FlArena* arena, FlString src, size_t flags_bitset, FlJsonParseResult* result) {
     if (result) {
         *result = (FlJsonParseResult) { 0 };
     }
-    if (!src) {
+    if (!src.data) {
         return nullptr;
     }
     JsonParser parser = {
         .arena = arena,
-        .src = (const char*)src,
-        .size = src_size,
+        .src = src.data,
+        .size = src.length,
         .line_no = 1,
         .json5 = (flags_bitset & FlJsonParseFlags_AllowJson5) != 0,
     };

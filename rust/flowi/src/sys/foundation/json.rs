@@ -183,7 +183,7 @@ const _: () = {
 // FlJsonValue, navigate and type-extract from it, then write it back out.
 extern "C" {
     /// Parse src as strict JSON (flags_bitset 0) or JSON5 (flags_bitset 1), with an optional result out-param.
-    pub fn fl_json_parse_with_flags(arena: *mut crate::sys::Arena, src: *const core::ffi::c_void, src_size: usize, flags_bitset: usize, result: *mut crate::sys::JsonParseResult) -> *mut crate::sys::JsonValue;
+    pub fn fl_json_parse_with_flags(arena: *mut crate::sys::Arena, src: crate::sys::RawStr, flags_bitset: usize, result: *mut crate::sys::JsonParseResult) -> *mut crate::sys::JsonValue;
     /// Write value out as a pretty UTF-8 JSON string (indent/newline may be nullptr), allocated from arena.
     pub fn fl_json_write_pretty(arena: *mut crate::sys::Arena, value: *const crate::sys::JsonValue, indent: *const core::ffi::c_char, newline: *const core::ffi::c_char) -> crate::sys::RawStr;
     /// Reinterpret a value as a string. Returns empty if not a string.

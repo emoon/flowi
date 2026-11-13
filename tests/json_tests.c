@@ -13,13 +13,13 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* parse_strict(FlArena* arena, const char* text) {
-    return fl_json_parse_with_flags(arena, text, strlen(text), FlJsonParseFlags_Default, nullptr);
+    return fl_json_parse_with_flags(arena, string_from_cstr(text), FlJsonParseFlags_Default, nullptr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* parse_json5(FlArena* arena, const char* text) {
-    return fl_json_parse_with_flags(arena, text, strlen(text), FlJsonParseFlags_AllowJson5, nullptr);
+    return fl_json_parse_with_flags(arena, string_from_cstr(text), FlJsonParseFlags_AllowJson5, nullptr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -32,7 +32,7 @@ static FlString write_pretty(FlArena* arena, const FlJsonValue* value) {
 
 static bool is_rejected(FlArena* arena, const char* text, size_t flags) {
     FlJsonParseResult result;
-    FlJsonValue* value = fl_json_parse_with_flags(arena, text, strlen(text), flags, &result);
+    FlJsonValue* value = fl_json_parse_with_flags(arena, string_from_cstr(text), flags, &result);
     return value == nullptr && result.error != FlJsonParseError_None;
 }
 
@@ -40,7 +40,7 @@ static bool is_rejected(FlArena* arena, const char* text, size_t flags) {
 
 static bool is_accepted(FlArena* arena, const char* text, size_t flags) {
     FlJsonParseResult result;
-    FlJsonValue* value = fl_json_parse_with_flags(arena, text, strlen(text), flags, &result);
+    FlJsonValue* value = fl_json_parse_with_flags(arena, string_from_cstr(text), flags, &result);
     return value != nullptr && result.error == FlJsonParseError_None;
 }
 
@@ -246,17 +246,17 @@ UTEST(json_parser, reports_the_failure_position) {
     FlJsonParseResult result;
 
     const char* text = "{\n  \"a\": 1,\n  \"b\" 2\n}";
-    ASSERT_EQ(fl_json_parse_with_flags(arena, text, strlen(text), FlJsonParseFlags_Default, &result), nullptr);
+    ASSERT_EQ(fl_json_parse_with_flags(arena, string_from_cstr(text), FlJsonParseFlags_Default, &result), nullptr);
     ASSERT_ERROR_EQ(result.error, FlJsonParseError_ExpectedColon);
     ASSERT_EQ((int)result.error_line_no, 3);
     ASSERT_EQ((int)result.error_row_no, 7);
 
     const char* trailing = "[] x";
-    ASSERT_EQ(fl_json_parse_with_flags(arena, trailing, strlen(trailing), FlJsonParseFlags_Default, &result), nullptr);
+    ASSERT_EQ(fl_json_parse_with_flags(arena, string_from_cstr(trailing), FlJsonParseFlags_Default, &result), nullptr);
     ASSERT_ERROR_EQ(result.error, FlJsonParseError_UnexpectedTrailingCharacters);
     ASSERT_EQ((int)result.error_offset, 3);
 
-    ASSERT_EQ(fl_json_parse_with_flags(arena, nullptr, 0, FlJsonParseFlags_Default, &result), nullptr);
+    ASSERT_EQ(fl_json_parse_with_flags(arena, string_empty(), FlJsonParseFlags_Default, &result), nullptr);
 
     fl_arena_destroy(arena);
 }
@@ -400,7 +400,7 @@ UTEST(json_writer, output_round_trips_through_the_parser) {
 
     FlJsonValue* original = parse_json5(arena, "name: 'a\"b\\\\c', list: [1, 2.5, [true, false, null]], nested: { k: 'v' }");
     FlString first = write_pretty(arena, original);
-    FlJsonValue* reparsed = fl_json_parse_with_flags(arena, first.data, first.length, FlJsonParseFlags_Default, nullptr);
+    FlJsonValue* reparsed = fl_json_parse_with_flags(arena, first, FlJsonParseFlags_Default, nullptr);
     ASSERT_NE(reparsed, nullptr);
     FlString second = write_pretty(arena, reparsed);
     ASSERT_TRUE(fl_string_equals(first, second));
@@ -425,7 +425,7 @@ UTEST(json_writer, writes_builder_trees) {
 
     FlString written = write_pretty(arena, root);
     FlJsonValue* parsed
-        = fl_json_parse_with_flags(arena, written.data, written.length, FlJsonParseFlags_Default, nullptr);
+        = fl_json_parse_with_flags(arena, written, FlJsonParseFlags_Default, nullptr);
     ASSERT_NE(parsed, nullptr);
     ASSERT_STR_EQ(fl_json_get_string_prop(parsed, FL_S("name")), "flowi");
     ASSERT_EQ(fl_json_get_f64_prop(parsed, FL_S("ratio")), 0.5);

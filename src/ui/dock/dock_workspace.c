@@ -253,8 +253,8 @@ bool dock_workspace_load(FlDockWorkspace* ws, FlString settings_dir, const FlDoc
     if (read <= 0) {
         return false;
     }
-    FlJsonValue* blob
-        = fl_json_parse_with_flags(temp.arena, buffer, (size_t)read, FlJsonParseFlags_AllowJson5, nullptr);
+    FlJsonValue* blob = fl_json_parse_with_flags(temp.arena, string_from_cstr_len((const char*)buffer, (u64)read),
+                                                 FlJsonParseFlags_AllowJson5, nullptr);
     if (blob == nullptr) {
         return false;
     }

@@ -127,7 +127,7 @@ typedef struct FlJsonParseResult {
 // The `fl_json_*` arena-backed JSON parser / DOM. Parse a buffer into a tree of
 // FlJsonValue, navigate and type-extract from it, then write it back out.
 // Parse src as strict JSON (flags_bitset 0) or JSON5 (flags_bitset 1), with an optional result out-param.
-FL_API FlJsonValue* fl_json_parse_with_flags(FlArena* arena, const void* src, size_t src_size, size_t flags_bitset, FlJsonParseResult* result);
+FL_API FlJsonValue* fl_json_parse_with_flags(FlArena* arena, FlString src, size_t flags_bitset, FlJsonParseResult* result);
 // Write value out as a pretty UTF-8 JSON string (indent/newline may be nullptr), allocated from arena.
 FL_API FlString fl_json_write_pretty(FlArena* arena, const FlJsonValue* value, const char* indent, const char* newline);
 // Reinterpret a value as a string. Returns empty if not a string.

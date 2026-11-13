@@ -16,7 +16,7 @@
 #define FL_JSON_FN_MATCHES(fn, ...) \
     _Static_assert(__builtin_types_compatible_p(__typeof__(fn), __VA_ARGS__), #fn " signature drift")
 
-FL_JSON_FN_MATCHES(fl_json_parse_with_flags, FlJsonValue*(FlArena*, const void*, size_t, size_t, FlJsonParseResult*));
+FL_JSON_FN_MATCHES(fl_json_parse_with_flags, FlJsonValue*(FlArena*, FlString, size_t, FlJsonParseResult*));
 FL_JSON_FN_MATCHES(fl_json_write_pretty, FlString(FlArena*, const FlJsonValue*, const char*, const char*));
 FL_JSON_FN_MATCHES(fl_json_value_as_string, FlString(FlJsonValue*));
 FL_JSON_FN_MATCHES(fl_json_value_as_object, FlJsonObject*(FlJsonValue*));
