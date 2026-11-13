@@ -5783,14 +5783,7 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     fl_ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 8.0f, 8.0f }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     size_t pos_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - pos_start);
-    UiRenderCommandsArray pos = sr_ir_to_render_commands(&(SrIrRequest) {
-        .commands_arena = commands_arena,
-        .state_arena = state_arena,
-        .glyph_cache = nullptr,
-        .ir_commands = pos_start,
-        .ir_bytes = pos_bytes,
-        .global_alpha = 255,
-    });
+    UiRenderCommandsArray pos = sw_translate(commands_arena, state_arena, pos_start, pos_bytes, 255);
     ASSERT_EQ_MSG(pos.count, 1u, "a positive-width scaled image emits one render command");
     ASSERT_TRUE_MSG((pos.commands[0].mask & RenderMask_TextureScaled) != 0, "8x8 dst for 2x2 src is the scaled path");
 
@@ -5801,14 +5794,7 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     fl_ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 0.0f, 8.0f }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     size_t zero_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - zero_start);
-    UiRenderCommandsArray zero = sr_ir_to_render_commands(&(SrIrRequest) {
-        .commands_arena = commands_arena,
-        .state_arena = state_arena,
-        .glyph_cache = nullptr,
-        .ir_commands = zero_start,
-        .ir_bytes = zero_bytes,
-        .global_alpha = 255,
-    });
+    UiRenderCommandsArray zero = sw_translate(commands_arena, state_arena, zero_start, zero_bytes, 255);
     ASSERT_EQ_MSG(zero.count, 0u, "a zero-width image destination is dropped, not rasterized");
 
     // A destination narrower than one whole pixel truncates to zero columns and is dropped the same way.
@@ -5817,14 +5803,7 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     fl_ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 0.5f, 8.0f }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     size_t thin_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - thin_start);
-    UiRenderCommandsArray thin = sr_ir_to_render_commands(&(SrIrRequest) {
-        .commands_arena = commands_arena,
-        .state_arena = state_arena,
-        .glyph_cache = nullptr,
-        .ir_commands = thin_start,
-        .ir_bytes = thin_bytes,
-        .global_alpha = 255,
-    });
+    UiRenderCommandsArray thin = sw_translate(commands_arena, state_arena, thin_start, thin_bytes, 255);
     ASSERT_EQ_MSG(thin.count, 0u, "a sub-pixel-wide image destination is dropped, not rasterized");
 
     fl_arena_destroy(ir_arena);

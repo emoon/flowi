@@ -135,6 +135,19 @@
 #define STUB_VFS_FILE "hello.txt"
 
 // One open resource in the in-memory driver: either the mount-root directory or the single file.
+// Translates the IR records [start, start + bytes) with no glyph cache.
+static inline UiRenderCommandsArray sw_translate(FlArena* commands_arena, FlArena* state_arena, const void* start,
+                                                 size_t bytes, u8 global_alpha) {
+    return sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = start,
+        .ir_bytes = bytes,
+        .global_alpha = global_alpha,
+    });
+}
+
 typedef struct StubVfsHandle {
     bool is_dir;
     int64_t offset; // read cursor for the file

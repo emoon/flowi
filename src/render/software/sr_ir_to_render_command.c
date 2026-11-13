@@ -86,16 +86,8 @@ static inline float sr_clamp_radius(float radius, float max_radius) {
     return fminf(fmaxf(radius, 0.0f), max_radius);
 }
 
-// What every emit_* function writes into: the command list, the per-frame scratch arena and the frame's alpha.
-typedef struct SrEmitter {
-    FlArena* commands;
-    FlArena* state;
-    SwGlyphCache* glyph_cache;
-    u8 global_alpha;
-} SrEmitter;
-
-static inline RenderCommand* sr_alloc_command(const SrEmitter* em) {
-    return arena_alloc_zero(em->commands, RenderCommand);
+static inline RenderCommand* sr_alloc_command(const SrIrRequest* req) {
+    return arena_alloc_zero(req->commands_arena, RenderCommand);
 }
 
 // FillRect - solid (four equal corners) or gradient (four differing). Gradient setup is deferred to
@@ -105,20 +97,20 @@ static bool fill_corners_are_solid(const FlColor corner[4]) {
     return sr_color_eq(corner[0], corner[1]) && sr_color_eq(corner[0], corner[2]) && sr_color_eq(corner[0], corner[3]);
 }
 
-static void set_solid_fill(const SrEmitter* em, RenderCommand* cmd, FlColor color) {
+static void set_solid_fill(const SrIrRequest* req, RenderCommand* cmd, FlColor color) {
     cmd->mask = RenderMask_DrawQuad;
-    if (sr_fold_global_alpha(color.a, em->global_alpha) < 255) {
+    if (sr_fold_global_alpha(color.a, req->global_alpha) < 255) {
         cmd->mask |= RenderMask_BlendWithBackground;
     }
-    cmd->corner_colors = sr_color_straight(color, em->global_alpha);
+    cmd->corner_colors = sr_color_straight(color, req->global_alpha);
 }
 
 // Four corners packed as straight RGBA in [TL,TR,BL,BR] order.
-static void set_gradient_fill(const SrEmitter* em, RenderCommand* cmd, const FlColor corner[4]) {
+static void set_gradient_fill(const SrIrRequest* req, RenderCommand* cmd, const FlColor corner[4]) {
     u8 packed[16];
     bool translucent = false;
     for (int i = 0; i < 4; ++i) {
-        u8 alpha = sr_fold_global_alpha(corner[i].a, em->global_alpha);
+        u8 alpha = sr_fold_global_alpha(corner[i].a, req->global_alpha);
         packed[i * 4 + 0] = corner[i].r;
         packed[i * 4 + 1] = corner[i].g;
         packed[i * 4 + 2] = corner[i].b;
@@ -132,21 +124,21 @@ static void set_gradient_fill(const SrEmitter* em, RenderCommand* cmd, const FlC
     }
 }
 
-static void emit_fill_rect(const SrEmitter* em, const FlCmdFillRect* fr) {
+static void emit_fill_rect(const SrIrRequest* req, const FlCmdFillRect* fr) {
     RenderCommand cmd = { 0 };
     cmd.aabb = sr_rect_to_aabb(fr->rect);
 
     if (fill_corners_are_solid(fr->corner)) {
-        set_solid_fill(em, &cmd, fr->corner[0]);
+        set_solid_fill(req, &cmd, fr->corner[0]);
     } else {
-        set_gradient_fill(em, &cmd, fr->corner);
+        set_gradient_fill(req, &cmd, fr->corner);
     }
 
     // Clamp corner radii to half the smaller dimension.
     float max_radius = fminf(fr->rect.w, fr->rect.h) * 0.5f;
     f32x4 corners = f32x4_new(sr_clamp_radius(fr->radius.tl, max_radius), sr_clamp_radius(fr->radius.tr, max_radius),
                               sr_clamp_radius(fr->radius.bl, max_radius), sr_clamp_radius(fr->radius.br, max_radius));
-    sr_command_split_rounded(em->commands, &cmd, corners);
+    sr_command_split_rounded(req->commands_arena, &cmd, corners);
 }
 
 // Border - per-side widths plus an outer corner radius, emitted as corner and edge quads.
@@ -167,28 +159,28 @@ typedef struct BorderEdge {
     float x0, y0, x1, y1;
 } BorderEdge;
 
-static void add_border_corner(const SrEmitter* em, const BorderStyle* style, const BorderCorner* c) {
+static void add_border_corner(const SrIrRequest* req, const BorderStyle* style, const BorderCorner* c) {
     if (c->outer_radius <= 0) {
         return;
     }
-    RenderCommand* cmd = sr_alloc_command(em);
+    RenderCommand* cmd = sr_alloc_command(req);
     cmd->aabb = f32x4_new(c->x, c->y, c->x + c->outer_radius, c->y + c->outer_radius);
     cmd->corner_colors = style->color;
     cmd->mask = style->base_mask | RenderMask_Border | RenderMask_Corners | render_mask_corner(c->corner);
     cmd->radius = c->outer_radius;
     cmd->inner_radius = c->inner_radius;
-    cmd->global_alpha = em->global_alpha;
+    cmd->global_alpha = req->global_alpha;
 }
 
-static void add_border_edge(const SrEmitter* em, const BorderStyle* style, const BorderEdge* e) {
+static void add_border_edge(const SrIrRequest* req, const BorderStyle* style, const BorderEdge* e) {
     if (e->x1 <= e->x0 || e->y1 <= e->y0) {
         return;
     }
-    RenderCommand* cmd = sr_alloc_command(em);
+    RenderCommand* cmd = sr_alloc_command(req);
     cmd->aabb = f32x4_new(e->x0, e->y0, e->x1, e->y1);
     cmd->corner_colors = style->color;
     cmd->mask = style->base_mask;
-    cmd->global_alpha = em->global_alpha;
+    cmd->global_alpha = req->global_alpha;
 }
 
 static bool border_has_no_width(const FlCmdBorder* b) {
@@ -200,11 +192,12 @@ static float border_inner_radius(float radius, float width_a, float width_b) {
 }
 
 // Rounded corners: outer_radius = corner_radius, inner_radius = corner_radius - border_width.
-static void add_border_corners(const SrEmitter* em, const BorderStyle* style, const FlCmdBorder* b, FlCornerRadius r) {
+static void add_border_corners(const SrIrRequest* req, const BorderStyle* style, const FlCmdBorder* b,
+                               FlCornerRadius r) {
     float right = b->rect.x + b->rect.w;
     float bottom = b->rect.y + b->rect.h;
 
-    add_border_corner(em, style,
+    add_border_corner(req, style,
                       &(BorderCorner) {
                           .x = b->rect.x,
                           .y = b->rect.y,
@@ -212,7 +205,7 @@ static void add_border_corners(const SrEmitter* em, const BorderStyle* style, co
                           .inner_radius = border_inner_radius(r.tl, b->w_l, b->w_t),
                           .corner = RenderCorner_TopLeft,
                       });
-    add_border_corner(em, style,
+    add_border_corner(req, style,
                       &(BorderCorner) {
                           .x = right - r.tr,
                           .y = b->rect.y,
@@ -220,7 +213,7 @@ static void add_border_corners(const SrEmitter* em, const BorderStyle* style, co
                           .inner_radius = border_inner_radius(r.tr, b->w_r, b->w_t),
                           .corner = RenderCorner_TopRight,
                       });
-    add_border_corner(em, style,
+    add_border_corner(req, style,
                       &(BorderCorner) {
                           .x = b->rect.x,
                           .y = bottom - r.bl,
@@ -228,7 +221,7 @@ static void add_border_corners(const SrEmitter* em, const BorderStyle* style, co
                           .inner_radius = border_inner_radius(r.bl, b->w_l, b->w_b),
                           .corner = RenderCorner_BottomLeft,
                       });
-    add_border_corner(em, style,
+    add_border_corner(req, style,
                       &(BorderCorner) {
                           .x = right - r.br,
                           .y = bottom - r.br,
@@ -239,13 +232,13 @@ static void add_border_corners(const SrEmitter* em, const BorderStyle* style, co
 }
 
 // b->stroke is ignored: every border is drawn solid.
-static void emit_border(const SrEmitter* em, const FlCmdBorder* b) {
+static void emit_border(const SrIrRequest* req, const FlCmdBorder* b) {
     if (border_has_no_width(b)) {
         return;
     }
 
-    BorderStyle style = { .color = sr_color_straight(b->color, em->global_alpha), .base_mask = RenderMask_DrawQuad };
-    if (sr_fold_global_alpha(b->color.a, em->global_alpha) < 255) {
+    BorderStyle style = { .color = sr_color_straight(b->color, req->global_alpha), .base_mask = RenderMask_DrawQuad };
+    if (sr_fold_global_alpha(b->color.a, req->global_alpha) < 255) {
         style.base_mask |= RenderMask_BlendWithBackground;
     }
 
@@ -260,32 +253,32 @@ static void emit_border(const SrEmitter* em, const FlCmdBorder* b) {
     float r_tr = sr_clamp_radius(b->radius.tr, max_radius);
     float r_bl = sr_clamp_radius(b->radius.bl, max_radius);
     float r_br = sr_clamp_radius(b->radius.br, max_radius);
-    add_border_corners(em, &style, b, (FlCornerRadius) { r_tl, r_tr, r_bl, r_br });
+    add_border_corners(req, &style, b, (FlCornerRadius) { r_tl, r_tr, r_bl, r_br });
 
-    add_border_edge(em, &style, &(BorderEdge) { .x0 = x + r_tl, .y0 = y, .x1 = x + width - r_tr, .y1 = y + b->w_t });
+    add_border_edge(req, &style, &(BorderEdge) { .x0 = x + r_tl, .y0 = y, .x1 = x + width - r_tr, .y1 = y + b->w_t });
     add_border_edge(
-        em, &style,
+        req, &style,
         &(BorderEdge) { .x0 = x + r_bl, .y0 = y + height - b->w_b, .x1 = x + width - r_br, .y1 = y + height });
-    add_border_edge(em, &style, &(BorderEdge) { .x0 = x, .y0 = y + r_tl, .x1 = x + b->w_l, .y1 = y + height - r_bl });
+    add_border_edge(req, &style, &(BorderEdge) { .x0 = x, .y0 = y + r_tl, .x1 = x + b->w_l, .y1 = y + height - r_bl });
     add_border_edge(
-        em, &style,
+        req, &style,
         &(BorderEdge) { .x0 = x + width - b->w_r, .y0 = y + r_tr, .x1 = x + width, .y1 = y + height - r_br });
 }
 
 // TextRun - re-resolve each pre-positioned glyph by id through the glyph cache and emit it.
 
-static void emit_text_run(const SrEmitter* em, const FlCmdTextRun* tr) {
-    if (em->glyph_cache == nullptr) {
+static void emit_text_run(const SrIrRequest* req, const FlCmdTextRun* tr) {
+    if (req->glyph_cache == nullptr) {
         return;
     }
     const FlGlyph* glyphs = (const FlGlyph*)(tr + 1);
-    u8x16 color = sr_color_premul(tr->color, em->global_alpha);
+    u8x16 color = sr_color_premul(tr->color, req->global_alpha);
     // Glyphs are blitted 1:1, so only run->scale == 1.0 is honored. The run's size is a quarter-px key, rounded
     // to whole pixels for rasterization.
     u16 size_px = font_cache_q4_to_whole_px(tr->size);
     for (u32 i = 0; i < tr->glyph_count; ++i) {
-        const Glyph* glyph = sw_glyph_cache_get(em->glyph_cache, tr->font, size_px, glyphs[i].glyph_id);
-        sr_emit_glyph(em->commands, glyph, glyphs[i].x, glyphs[i].y, color, em->global_alpha);
+        const Glyph* glyph = sw_glyph_cache_get(req->glyph_cache, tr->font, size_px, glyphs[i].glyph_id);
+        sr_emit_glyph(req->commands_arena, glyph, glyphs[i].x, glyphs[i].y, color, req->global_alpha);
     }
 }
 
@@ -294,12 +287,12 @@ static void emit_text_run(const SrEmitter* em, const FlCmdTextRun* tr) {
 
 // A single-channel mask colorized by the tint - the grayscale RenderText path. The source is always a dynamic
 // neutral buffer.
-static void emit_alpha_coverage_image(const SrEmitter* em, const FlCmdImage* im) {
-    RenderCommand* cmd = sr_alloc_command(em);
+static void emit_alpha_coverage_image(const SrIrRequest* req, const FlCmdImage* im) {
+    RenderCommand* cmd = sr_alloc_command(req);
     cmd->mask = RenderMask_DrawQuad | RenderMask_Text;
-    cmd->global_alpha = em->global_alpha;
+    cmd->global_alpha = req->global_alpha;
     cmd->render_text.aabb = sr_rect_to_aabb(im->dst);
-    cmd->render_text.color = sr_color_premul(im->tint, em->global_alpha);
+    cmd->render_text.color = sr_color_premul(im->tint, req->global_alpha);
     cmd->render_text.data_r = (const u8*)im->source.dynamic.pixels;
     cmd->render_text.data_g = nullptr; // nullptr signals grayscale mode
     cmd->render_text.data_b = nullptr;
@@ -312,19 +305,19 @@ static void emit_alpha_coverage_image(const SrEmitter* em, const FlCmdImage* im)
 }
 
 // Resolve a static handle to a planar ImageData the texture sampler can read. Null when the image is not ready.
-static ImageData* resolve_static_image(const SrEmitter* em, const FlCmdImage* im) {
+static ImageData* resolve_static_image(const SrIrRequest* req, const FlCmdImage* im) {
     ImageData* src = image_cache_get_data((ImageHandle)im->source.handle);
     if (src == nullptr || !sr_image_needs_conversion(src)) {
         return src;
     }
     // RGBA keeps its alpha plane for blending; XRGB drops the unused X byte.
     bool keep_alpha = (src->format == FlImageFormat_RGBA);
-    ImageData* converted = sr_convert_to_planar(src, keep_alpha, em->state);
+    ImageData* converted = sr_convert_to_planar(src, keep_alpha, req->state_arena);
     return converted != nullptr ? converted : src;
 }
 
 // Dynamic neutral RGBA buffer: deinterleave to 3-plane RGB.
-static ImageData* resolve_dynamic_image(const SrEmitter* em, const FlCmdImage* im) {
+static ImageData* resolve_dynamic_image(const SrIrRequest* req, const FlCmdImage* im) {
     ImageData wrap = { 0 };
     wrap.data = (u8*)im->source.dynamic.pixels;
     wrap.width = (int)im->source.dynamic.w;
@@ -339,7 +332,7 @@ static ImageData* resolve_dynamic_image(const SrEmitter* em, const FlCmdImage* i
     wrap.stride = (int)dyn_stride;
     wrap.channels = 4;
     wrap.format = FlImageFormat_RGBA;
-    return sr_convert_to_planar(&wrap, false, em->state);
+    return sr_convert_to_planar(&wrap, false, req->state_arena);
 }
 
 // Where the image lands: the source rectangle to sample and whether it is drawn at 1:1.
@@ -367,9 +360,9 @@ static bool image_placement(const FlCmdImage* im, const ImageData* src, ImagePla
     return true;
 }
 
-static void emit_image(const SrEmitter* em, const FlCmdImage* im) {
+static void emit_image(const SrIrRequest* req, const FlCmdImage* im) {
     if (im->mode == FlImageMode_AlphaCoverage) {
-        emit_alpha_coverage_image(em, im);
+        emit_alpha_coverage_image(req, im);
         return;
     }
 
@@ -379,7 +372,7 @@ static void emit_image(const SrEmitter* em, const FlCmdImage* im) {
     }
 
     ImageData* src
-        = im->source.kind == FlImageKind_Static ? resolve_static_image(em, im) : resolve_dynamic_image(em, im);
+        = im->source.kind == FlImageKind_Static ? resolve_static_image(req, im) : resolve_dynamic_image(req, im);
     if (src == nullptr) {
         return;
     }
@@ -389,9 +382,9 @@ static void emit_image(const SrEmitter* em, const FlCmdImage* im) {
         return;
     }
 
-    RenderCommand* cmd = sr_alloc_command(em);
+    RenderCommand* cmd = sr_alloc_command(req);
     cmd->mask = RenderMask_DrawQuad | RenderMask_BlendWithBackground; // images always blend (may carry alpha)
-    cmd->global_alpha = em->global_alpha;
+    cmd->global_alpha = req->global_alpha;
     cmd->image = src;
     cmd->aabb = sr_rect_to_aabb(im->dst);
     cmd->corner_colors = sr_color_raw(im->tint); // raw tint; white = no tint
@@ -403,71 +396,64 @@ static void emit_image(const SrEmitter* em, const FlCmdImage* im) {
     cmd->mask |= place.same_size ? RenderMask_TextureSameSize : RenderMask_TextureScaled;
 }
 
-static void emit_clip_push(const SrEmitter* em, const FlCmdClipPush* clip) {
-    RenderCommand* cmd = sr_alloc_command(em);
+static void emit_clip_push(const SrIrRequest* req, const FlCmdClipPush* clip) {
+    RenderCommand* cmd = sr_alloc_command(req);
     cmd->mask = RenderMask_ClipRectBegin;
     cmd->aabb = sr_rect_to_aabb(clip->rect);
 }
 
-static void emit_clip_pop(const SrEmitter* em) {
-    RenderCommand* cmd = sr_alloc_command(em);
+static void emit_clip_pop(const SrIrRequest* req) {
+    RenderCommand* cmd = sr_alloc_command(req);
     cmd->mask = RenderMask_ClipRectEnd;
 }
 
-static void emit_ir_command(const SrEmitter* em, const FlCmdHeader* header) {
+static void emit_ir_command(const SrIrRequest* req, const FlCmdHeader* header) {
     switch ((FlCmdKind)header->kind) {
         case FlCmd_FillRect:
-            emit_fill_rect(em, (const FlCmdFillRect*)(header + 1));
+            emit_fill_rect(req, (const FlCmdFillRect*)(header + 1));
             break;
         case FlCmd_Border:
-            emit_border(em, (const FlCmdBorder*)(header + 1));
+            emit_border(req, (const FlCmdBorder*)(header + 1));
             break;
         case FlCmd_TextRun:
-            emit_text_run(em, (const FlCmdTextRun*)(header + 1));
+            emit_text_run(req, (const FlCmdTextRun*)(header + 1));
             break;
         case FlCmd_Image:
-            emit_image(em, (const FlCmdImage*)(header + 1));
+            emit_image(req, (const FlCmdImage*)(header + 1));
             break;
         case FlCmd_ClipPush:
-            emit_clip_push(em, (const FlCmdClipPush*)(header + 1));
+            emit_clip_push(req, (const FlCmdClipPush*)(header + 1));
             break;
         case FlCmd_ClipPop:
-            emit_clip_pop(em);
+            emit_clip_pop(req);
             break;
         default:
             break; // optional-tier kinds: a SW backend may ignore them
     }
 }
 
-UiRenderCommandsArray sr_ir_to_render_commands(const SrIrRequest* request) {
+UiRenderCommandsArray sr_ir_to_render_commands(const SrIrRequest* req) {
     perf_scope_function();
 
-    FlArena* commands_arena = request->commands_arena;
-    FlArena* state_arena = request->state_arena;
+    FlArena* commands_arena = req->commands_arena;
 
     // Align first: arena_pos_type returns an aligned position that may be past the current one, which would
     // trip arena_count's bounds assertion.
     fl_arena_align(commands_arena, _Alignof(RenderCommand));
     RenderCommand* start = arena_pos_type(commands_arena, RenderCommand);
 
-    SrEmitter em = {
-        .commands = commands_arena,
-        .state = state_arena,
-        .glyph_cache = request->glyph_cache,
-        .global_alpha = request->global_alpha,
-    };
-    const u8* p = (const u8*)request->ir_commands;
-    const u8* end = p + request->ir_bytes;
+    const u8* p = (const u8*)req->ir_commands;
+    const u8* end = p + req->ir_bytes;
     while (p < end) {
         const FlCmdHeader* header = (const FlCmdHeader*)p;
-        emit_ir_command(&em, header);
+        emit_ir_command(req, header);
         p += header->byte_size;
     }
 
     int count = arena_count(commands_arena, start, RenderCommand);
 
     for_count(i, count) {
-        sr_command_setup(state_arena, &start[i]);
+        sr_command_setup(req->state_arena, &start[i]);
     }
 
     return (UiRenderCommandsArray) { .commands = start, .count = count };
