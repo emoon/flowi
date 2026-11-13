@@ -98,28 +98,36 @@ static const InputBinding s_bindings_text_delete[] = {
     BINDING_KEYBOARD(FlKey_Delete),
 };
 
+// The cursor actions also fire with Shift held: modifiers match exactly, and the text input extends the
+// selection when a cursor action fires under Shift.
 static const InputBinding s_bindings_text_home[] = {
     BINDING_KEYBOARD(FlKey_Home),
+    BINDING_KEYBOARD_MOD(FlKey_Home, UI_MOD_SHIFT),
 };
 
 static const InputBinding s_bindings_text_end[] = {
     BINDING_KEYBOARD(FlKey_End),
+    BINDING_KEYBOARD_MOD(FlKey_End, UI_MOD_SHIFT),
 };
 
 static const InputBinding s_bindings_text_move_left[] = {
     BINDING_KEYBOARD(FlKey_Left),
+    BINDING_KEYBOARD_MOD(FlKey_Left, UI_MOD_SHIFT),
 };
 
 static const InputBinding s_bindings_text_move_right[] = {
     BINDING_KEYBOARD(FlKey_Right),
+    BINDING_KEYBOARD_MOD(FlKey_Right, UI_MOD_SHIFT),
 };
 
 static const InputBinding s_bindings_text_move_word_left[] = {
     BINDING_KEYBOARD_MOD(FlKey_Left, UI_MOD_CTRL),
+    BINDING_KEYBOARD_MOD(FlKey_Left, UI_MOD_CTRL | UI_MOD_SHIFT),
 };
 
 static const InputBinding s_bindings_text_move_word_right[] = {
     BINDING_KEYBOARD_MOD(FlKey_Right, UI_MOD_CTRL),
+    BINDING_KEYBOARD_MOD(FlKey_Right, UI_MOD_CTRL | UI_MOD_SHIFT),
 };
 
 static const InputBinding s_bindings_text_select_all[] = {
