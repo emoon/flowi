@@ -99,13 +99,19 @@ bool font_cache_metrics_ready(FlFontCache* self, FlFontId font_id);
 // whole-px layout/measure path); fractional keys are cached in the per-face hashmap, still O(1) once warm.
 int font_cache_get_glyph_advance_q4(FlFontCache* self, FlFontId font_id, u16 size_q4, u32 codepoint);
 
+// The font, size and letter spacing a single-line measurement is taken at.
+typedef struct FontMeasureStyle {
+    FlFontId font_id;
+    float font_size;
+    float letter_spacing;
+} FontMeasureStyle;
+
 // Single-line measurement at a fractional size (quarter-pixel quantized). Width is summed glyph
 // advances plus letter_spacing between glyphs only (n−1 gaps, no trailing gap); vertical fields
 // are the line metrics at the quantized size. font_size <= 0 falls back to the font's load size.
 // Unknown/unready fonts return zeroed metrics (with a log); missing glyphs measure via the
 // fallback face, same as rendering.
-FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlFontId font_id, float font_size,
-                                      float letter_spacing);
+FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, const FontMeasureStyle* style);
 
 // String-independent vertical metrics at a fractional size (quarter-pixel quantized), for stable
 // vertical centering of dynamic readouts. font_size <= 0 falls back to the font's load size.

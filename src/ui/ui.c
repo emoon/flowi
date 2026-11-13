@@ -101,8 +101,11 @@ static Clay_Dimensions measure_text_function(Clay_StringSlice text, Clay_TextEle
     FlFontId font_id = (FlFontId)config->fontId;
     const float letter_spacing = (float)config->letterSpacing;
 
-    FlTextMetrics m = font_cache_measure_text(ctx->shared->font_cache, our_string, font_id,
-                                              (float)font_cache_quantize_size((u16)config->fontSize), letter_spacing);
+    FlTextMetrics m = font_cache_measure_text(
+        ctx->shared->font_cache, our_string,
+        &(FontMeasureStyle) { .font_id = font_id,
+                              .font_size = (float)font_cache_quantize_size((u16)config->fontSize),
+                              .letter_spacing = letter_spacing });
 
     if (m.height == 0.0f) {
         return (Clay_Dimensions) { 0, 0 };

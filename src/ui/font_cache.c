@@ -104,14 +104,19 @@ u16 font_cache_q4_to_whole_px(u16 size_q4) {
     return px < 1 ? 1 : px;
 }
 
+typedef struct FontBytes {
+    const void* data;
+    i64 size;
+} FontBytes;
+
 // Copy the font file bytes into the face arena and stand up the main-thread metrics face. The bytes are
 // owned by the face for its lifetime; FreeType and the SW backend's raster faces read them.
-static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, const void* data, i64 size,
-                                          u16 font_size) {
+static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, FontBytes bytes, u16 font_size) {
+    const i64 size = bytes.size;
     face->arena = arena_new();
     face->font_data = arena_alloc_array(face->arena, u8, size);
     face->font_data_size = size;
-    memcpy(face->font_data, data, size);
+    memcpy(face->font_data, bytes.data, size);
 
     // This runs on a VFS worker thread; the lock serializes it against main-thread FreeType use of cache->library.
     mutex_lock(&cache->ft_lock);
@@ -142,7 +147,7 @@ static FlVfsData font_load_callback(void* data, i64 size, void* user_data) {
         return (FlVfsData) { .success = false };
     }
 
-    if (!face_init_freetype_from_bytes(ctx->cache, ctx->face, data, size, ctx->font_size)) {
+    if (!face_init_freetype_from_bytes(ctx->cache, ctx->face, (FontBytes) { data, size }, ctx->font_size)) {
         return (FlVfsData) { .success = false };
     }
     return (FlVfsData) { .data = nullptr, .size = 0, .success = true };
@@ -203,7 +208,7 @@ FlFontId font_cache_load_font_memory(FlFontCache* self, const u8* data, i64 size
         return FONT_ID_INVALID;
     }
 
-    if (!face_init_freetype_from_bytes(self, face, data, size, font_size)) {
+    if (!face_init_freetype_from_bytes(self, face, (FontBytes) { data, size }, font_size)) {
         return FONT_ID_INVALID;
     }
     return face->id;
@@ -619,17 +624,16 @@ Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id
 // Fractional-size single-line measurement (quarter-px quantized). Letter spacing adds n−1 gaps only (no
 // trailing gap), so a measured pill hugs its label; the styled draw applies the same rule.
 
-FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlFontId font_id, float font_size,
-                                      float letter_spacing) {
+FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, const FontMeasureStyle* style) {
     FlTextMetrics out = { 0 };
 
-    FontFace* face = face_for_metrics(self, font_id, "font_cache_measure_text");
+    FontFace* face = face_for_metrics(self, style->font_id, "font_cache_measure_text");
     if (face == nullptr) {
         return out;
     }
 
     // A zero key (face loaded at size 0, measured with font_size <= 0) has no usable FreeType size: zeroed metrics.
-    u16 q4 = resolve_size_q4(face, font_size);
+    u16 q4 = resolve_size_q4(face, style->font_size);
     if (face->kind == FlFontRasterKind_FreeType && q4 == 0) {
         return out;
     }
@@ -638,7 +642,7 @@ FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlFontId
     AdvanceSum advances = sum_advances(&run, text);
     out.width = (float)advances.sum / 64.0f;
     if (advances.glyphs > 1) {
-        out.width += letter_spacing * (float)(advances.glyphs - 1);
+        out.width += style->letter_spacing * (float)(advances.glyphs - 1);
     }
 
     FlFontMetrics vm = face_vmetrics(self, face, q4);

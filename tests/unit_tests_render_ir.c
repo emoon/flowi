@@ -37,7 +37,8 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     // A dropped n−1 guard would offset the first pen while leaving the deltas/extent checks unchanged.
     ASSERT_NEAR_MSG(glyphs[0].x, 10.0f, 0.0001f, "the first glyph has no leading spacing gap");
 
-    FlTextMetrics m = font_cache_measure_text(cache, aaa, font, font_size, spacing);
+    FlTextMetrics m = font_cache_measure_text(
+        cache, aaa, &(FontMeasureStyle) { .font_id = font, .font_size = font_size, .letter_spacing = spacing });
     ASSERT_NEAR_MSG((glyphs[2].x + adv) - glyphs[0].x, m.width, 0.0001f, "draw and measure agree on the width");
 
     fl_arena_destroy(scratch);
