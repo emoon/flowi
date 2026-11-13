@@ -43,7 +43,7 @@ typedef enum MenuMarker {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Whether activating an item closes the chain.
-static bool menu_policy_closes(FlMenuClosePolicy policy, bool kind_default_close) {
+static bool policy_closes(FlMenuClosePolicy policy, bool kind_default_close) {
     switch (policy) {
         case FlMenuClosePolicy_Close:
             return true;
@@ -127,7 +127,7 @@ typedef struct MenuRowSpec {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Record the row into its level; the first navigable row claims the initial highlight.
-static void menu_record_row(FlUiCtx* ctx, const MenuRow* row, const MenuRowSpec* spec) {
+static void record_row(FlUiCtx* ctx, const MenuRow* row, const MenuRowSpec* spec) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuLevelFrame* lf = &ctx->menu_frame.levels[row->level];
 
@@ -146,7 +146,7 @@ static void menu_record_row(FlUiCtx* ctx, const MenuRow* row, const MenuRowSpec*
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static FlColor menu_row_background(const FlThemeColors* theme, bool highlighted, bool is_deepest, bool disabled) {
+static FlColor row_background(const FlThemeColors* theme, bool highlighted, bool is_deepest, bool disabled) {
     if (!highlighted) {
         return theme->surface.elevated;
     }
@@ -157,7 +157,7 @@ static FlColor menu_row_background(const FlThemeColors* theme, bool highlighted,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menu_emit_marker(const FlThemeColors* theme, MenuMarker marker, bool marked) {
+static void emit_marker(const FlThemeColors* theme, MenuMarker marker, bool marked) {
     float r = marker == MenuMarker_Radio ? (float)FlRadius_Full : (float)FlRadius_SM;
     ui_layout_area(.sizing = { sizing_fixed(UI_MENU_MARKER_WIDTH), sizing_fixed(UI_MENU_ITEM_HEIGHT) },
                    .direction = LayoutDirection_TopToBottom, .child_alignment = ui_align(Center, Center)) {
@@ -171,7 +171,7 @@ static void menu_emit_marker(const FlThemeColors* theme, MenuMarker marker, bool
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Emit the chevron (submenu) or the shortcut text at the trailing edge.
-static void menu_emit_trailer(const FlThemeColors* theme, const MenuRowSpec* row) {
+static void emit_trailer(const FlThemeColors* theme, const MenuRowSpec* row) {
     if (!row->is_submenu && row->shortcut.length == 0) {
         return;
     }
@@ -185,7 +185,7 @@ static void menu_emit_trailer(const FlThemeColors* theme, const MenuRowSpec* row
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Claim the next row index at the current build level, register its widget and record it.
-static MenuRow menu_register_row(FlUiCtx* ctx, const MenuRowSpec* spec, f32 height, FlItemFlags flags) {
+static MenuRow register_row(FlUiCtx* ctx, const MenuRowSpec* spec, f32 height, FlItemFlags flags) {
     UiMenuFrame* mf = &ctx->menu_frame;
 
     int level = mf->build_level;
@@ -195,18 +195,18 @@ static MenuRow menu_register_row(FlUiCtx* ctx, const MenuRowSpec* spec, f32 heig
     FlLayoutId layout = { .name = spec->label, .id = ui_menu_row_id_seed(level, index) };
     MenuRow row = { .id = ui_layout_id_to_clay_id(layout), .layout = layout, .level = level, .index = index };
     row.signal = ui_item_behavior(layout, flags, (FlWidgetConfig) { 0 });
-    menu_record_row(ctx, &row, spec);
+    record_row(ctx, &row, spec);
     return row;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static MenuRow menu_emit_row(FlUiCtx* ctx, MenuRowSpec spec) {
+static MenuRow emit_row(FlUiCtx* ctx, MenuRowSpec spec) {
     UiMenuState* m = &ctx->shared->menu;
 
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
-    MenuRow row = menu_register_row(ctx, &spec, UI_MENU_ITEM_HEIGHT,
-                                    FlItemFlags_clickable | FlItemFlags_focusable | FlItemFlags_scroll_target);
+    MenuRow row = register_row(ctx, &spec, UI_MENU_ITEM_HEIGHT,
+                               FlItemFlags_clickable | FlItemFlags_focusable | FlItemFlags_scroll_target);
     if (spec.disabled) {
         row.signal.clicked = false;
         row.signal.activated = false;
@@ -218,7 +218,7 @@ static MenuRow menu_emit_row(FlUiCtx* ctx, MenuRowSpec spec) {
 
     row.highlighted = m->levels[row.level].highlight_index == row.index;
     bool is_deepest = (row.level == m->depth - 1);
-    FlColor bg = menu_row_background(theme, row.highlighted, is_deepest, spec.disabled);
+    FlColor bg = row_background(theme, row.highlighted, is_deepest, spec.disabled);
     FlColor txt = spec.disabled ? theme->text.secondary : theme->text.primary;
 
     ui_layout_area_id(row.layout, .sizing = { sizing_grow(), sizing_fixed(UI_MENU_ITEM_HEIGHT) },
@@ -226,11 +226,11 @@ static MenuRow menu_emit_row(FlUiCtx* ctx, MenuRowSpec spec) {
                       .padding = fl_padding_hv(FlSpacing_SM, FlSpacing_XS), .child_gap = FlSpacing_MD,
                       .radius = corner_radius(FlRadius_SM), .color = bg) {
         if (spec.marker != MenuMarker_None) {
-            menu_emit_marker(theme, spec.marker, spec.marked);
+            emit_marker(theme, spec.marker, spec.marked);
         }
         ui_text_styled_impl(spec.label,
                             (FlTextConfig) { .color = txt, .valign = FlTextVAlign_Center, .no_wrap = true });
-        menu_emit_trailer(theme, &spec);
+        emit_trailer(theme, &spec);
     }
 
     return row;
@@ -271,7 +271,7 @@ static float submenu_place_y(Clay_BoundingBox parent, float ch, float sh) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Open the floating panel for a submenu beside its parent row.
-static void menu_submenu_panel_begin(FlUiCtx* ctx, u32 parent_item_id, int parent_level, float min_width) {
+static void submenu_panel_begin(FlUiCtx* ctx, u32 parent_item_id, int parent_level, float min_width) {
     UiMenuState* m = &ctx->shared->menu;
     int child_level = parent_level + 1;
     Clay_BoundingBox parent = Clay_GetElementData((Clay_ElementId) { .id = parent_item_id }).boundingBox;
@@ -309,14 +309,14 @@ static void menu_submenu_panel_begin(FlUiCtx* ctx, u32 parent_item_id, int paren
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static int menu_deepest_level(const UiMenuState* m) {
+static int deepest_level(const UiMenuState* m) {
     return m->depth > 0 ? m->depth - 1 : 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Left: collapse one level.
-static void menu_key_ascend(FlUiCtx* ctx) {
+static void key_ascend(FlUiCtx* ctx) {
     UiMenuState* m = &ctx->shared->menu;
 
     if (ui_action_pressed(ctx, FlAction_Nav_Left) && m->depth > 1) {
@@ -328,7 +328,7 @@ static void menu_key_ascend(FlUiCtx* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Right, or Confirm on a submenu row: open the highlighted submenu. Returns whether it opened.
-static bool menu_key_descend(FlUiCtx* ctx, int level) {
+static bool key_descend(FlUiCtx* ctx, int level) {
     UiMenuState* m = &ctx->shared->menu;
     const UiMenuLevelFrame* lf = &ctx->menu_frame.levels[level];
 
@@ -346,21 +346,21 @@ static bool menu_key_descend(FlUiCtx* ctx, int level) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Keyboard navigation for the deepest open level.
-static void menu_handle_keyboard(FlUiCtx* ctx) {
+static void handle_keyboard(FlUiCtx* ctx) {
     UiMenuState* m = &ctx->shared->menu;
 
     if (ctx->frame_counter <= m->open_frame) {
         return;
     }
 
-    int lvl = menu_deepest_level(m);
+    int lvl = deepest_level(m);
     bool nav_moved = menu_step_highlight(ctx, lvl, FlAction_Nav_Up, -1);
     nav_moved |= menu_step_highlight(ctx, lvl, FlAction_Nav_Down, +1);
 
-    menu_key_ascend(ctx);
-    lvl = menu_deepest_level(m);
-    if (menu_key_descend(ctx, lvl)) {
-        lvl = menu_deepest_level(m);
+    key_ascend(ctx);
+    lvl = deepest_level(m);
+    if (key_descend(ctx, lvl)) {
+        lvl = deepest_level(m);
         nav_moved = true;
     }
 
@@ -373,14 +373,14 @@ static void menu_handle_keyboard(FlUiCtx* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menu_dwell_reset(UiMenuState* m) {
+static void dwell_reset(UiMenuState* m) {
     m->dwell_item_id = 0;
     m->hover_accum = 0.0f;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menu_dwell_tick(FlUiCtx* ctx) {
+static void dwell_tick(FlUiCtx* ctx) {
     UiMenuState* m = &ctx->shared->menu;
 
     if (m->dwell_item_id != ctx->hot_id) {
@@ -393,7 +393,7 @@ static void menu_dwell_tick(FlUiCtx* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Switch to the hovered sibling after the grace period, or at once when the pointer moves away from the open submenu.
-static void menu_dwell_switch_sibling(FlUiCtx* ctx, MenuHit hit, float move_dx) {
+static void dwell_switch_sibling(FlUiCtx* ctx, MenuHit hit, float move_dx) {
     const UiMenuState* m = &ctx->shared->menu;
 
     int child_lvl = hit.level + 1 < UI_MENU_MAX_DEPTH ? hit.level + 1 : hit.level;
@@ -407,20 +407,20 @@ static void menu_dwell_switch_sibling(FlUiCtx* ctx, MenuHit hit, float move_dx) 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Hover-driven opening and switching of submenus.
-static void menu_handle_dwell(FlUiCtx* ctx, float move_dx) {
+static void handle_dwell(FlUiCtx* ctx, float move_dx) {
     UiMenuState* m = &ctx->shared->menu;
 
     MenuHit hit = menu_find_hot_item(ctx);
     u32 cur_child = hit.level >= 0 ? m->levels[hit.level].expanded_child_id : 0;
     bool inert = hit.level < 0 || !hit.navigable;
     if (inert || ctx->hot_id == cur_child) {
-        menu_dwell_reset(m);
+        dwell_reset(m);
         return;
     }
 
-    menu_dwell_tick(ctx);
+    dwell_tick(ctx);
     if (cur_child != 0) {
-        menu_dwell_switch_sibling(ctx, hit, move_dx);
+        dwell_switch_sibling(ctx, hit, move_dx);
     } else if (hit.submenu && m->hover_accum >= UI_MENU_DWELL_SECONDS) {
         menu_branch_switch(ctx, hit.level, ctx->hot_id, true);
     }
@@ -428,15 +428,15 @@ static void menu_handle_dwell(FlUiCtx* ctx, float move_dx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menu_handle_input(FlUiCtx* ctx) {
+static void handle_input(FlUiCtx* ctx) {
     UiMenuState* m = &ctx->shared->menu;
 
-    menu_handle_keyboard(ctx);
+    handle_keyboard(ctx);
 
     float move_dx = menu_track_pointer_move(ctx, m).x;
 
     if (ctx->frame_counter > m->open_frame && m->hover_drives) {
-        menu_handle_dwell(ctx, move_dx);
+        handle_dwell(ctx, move_dx);
     }
 
     menu_apply_wheel(ctx);
@@ -456,7 +456,7 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
 
     menu_arm_focus_scope(ctx, scope);
 
-    menu_handle_input(ctx);
+    handle_input(ctx);
 
     mf->build_level = 0;
     mf->levels[0].item_count = 0;
@@ -480,7 +480,7 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Apply keyboard activation and the close policy to a leaf row. Returns its signal.
-static FlSignal menu_finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg, bool kind_default_close) {
+static FlSignal finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg, bool kind_default_close) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
@@ -493,7 +493,7 @@ static FlSignal menu_finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg
     }
 
     bool activated = !cfg.disabled && signal.clicked;
-    if (activated && menu_policy_closes(cfg.close_policy, kind_default_close)) {
+    if (activated && policy_closes(cfg.close_policy, kind_default_close)) {
         mf->close_requested = true;
     }
 
@@ -504,9 +504,8 @@ static FlSignal menu_finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg
 
 FlSignal ui_menu_item_impl(FlString label, FlMenuItemConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
-    MenuRow row
-        = menu_emit_row(ctx, (MenuRowSpec) { .label = label, .shortcut = cfg.shortcut, .disabled = cfg.disabled });
-    return menu_finish_leaf(ctx, row, cfg, /*kind_default_close=*/true);
+    MenuRow row = emit_row(ctx, (MenuRowSpec) { .label = label, .shortcut = cfg.shortcut, .disabled = cfg.disabled });
+    return finish_leaf(ctx, row, cfg, /*kind_default_close=*/true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -514,12 +513,12 @@ FlSignal ui_menu_item_impl(FlString label, FlMenuItemConfig cfg) {
 FlSignal ui_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
     bool marked = checked != nullptr && *checked;
-    MenuRow row = menu_emit_row(ctx, (MenuRowSpec) { .label = label,
-                                                     .shortcut = cfg.shortcut,
-                                                     .disabled = cfg.disabled,
-                                                     .marker = MenuMarker_Check,
-                                                     .marked = marked });
-    FlSignal signal = menu_finish_leaf(ctx, row, cfg, /*kind_default_close=*/false);
+    MenuRow row = emit_row(ctx, (MenuRowSpec) { .label = label,
+                                                .shortcut = cfg.shortcut,
+                                                .disabled = cfg.disabled,
+                                                .marker = MenuMarker_Check,
+                                                .marked = marked });
+    FlSignal signal = finish_leaf(ctx, row, cfg, /*kind_default_close=*/false);
 
     if (signal.clicked && checked != nullptr) {
         *checked = !*checked;
@@ -532,12 +531,12 @@ FlSignal ui_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig cfg)
 FlSignal ui_menu_radio_impl(FlString label, int* selected, int value, FlMenuItemConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
     bool marked = selected != nullptr && *selected == value;
-    MenuRow row = menu_emit_row(ctx, (MenuRowSpec) { .label = label,
-                                                     .shortcut = cfg.shortcut,
-                                                     .disabled = cfg.disabled,
-                                                     .marker = MenuMarker_Radio,
-                                                     .marked = marked });
-    FlSignal signal = menu_finish_leaf(ctx, row, cfg, /*kind_default_close=*/false);
+    MenuRow row = emit_row(ctx, (MenuRowSpec) { .label = label,
+                                                .shortcut = cfg.shortcut,
+                                                .disabled = cfg.disabled,
+                                                .marker = MenuMarker_Radio,
+                                                .marked = marked });
+    FlSignal signal = finish_leaf(ctx, row, cfg, /*kind_default_close=*/false);
 
     if (signal.clicked && selected != nullptr) {
         *selected = value;
@@ -551,9 +550,9 @@ FlSignal ui_menu_radio_impl(FlString label, int* selected, int value, FlMenuItem
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Register a separator or header row. Returns its layout id.
-static FlLayoutId menu_record_static_row(FlUiCtx* ctx, FlString name, f32 row_height) {
+static FlLayoutId record_static_row(FlUiCtx* ctx, FlString name, f32 row_height) {
     MenuRowSpec spec = { .label = name, .disabled = true };
-    return menu_register_row(ctx, &spec, row_height, FlItemFlags_scroll_target).layout;
+    return register_row(ctx, &spec, row_height, FlItemFlags_scroll_target).layout;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -562,7 +561,7 @@ void ui_menu_separator_impl(void) {
     FlUiCtx* ctx = ui_get_ctx();
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
 
-    FlLayoutId item_id = menu_record_static_row(ctx, FL_S("##menu_sep"), UI_MENU_SEPARATOR_HEIGHT);
+    FlLayoutId item_id = record_static_row(ctx, FL_S("##menu_sep"), UI_MENU_SEPARATOR_HEIGHT);
 
     ui_layout_area_id(item_id, .sizing = { sizing_grow(), sizing_fixed(UI_MENU_SEPARATOR_HEIGHT) },
                       .direction = LayoutDirection_TopToBottom, .child_alignment = ui_align(Center, Center),
@@ -577,7 +576,7 @@ void ui_menu_header_impl(FlString label) {
     FlUiCtx* ctx = ui_get_ctx();
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
 
-    FlLayoutId item_id = menu_record_static_row(ctx, label, UI_MENU_HEADER_HEIGHT);
+    FlLayoutId item_id = record_static_row(ctx, label, UI_MENU_HEADER_HEIGHT);
 
     ui_layout_area_id(item_id, .sizing = { sizing_grow(), sizing_fixed(UI_MENU_HEADER_HEIGHT) },
                       .direction = LayoutDirection_LeftToRight, .child_alignment = ui_align(Left, Center),
@@ -596,7 +595,7 @@ bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
 
     int parent_level = mf->build_level;
 
-    MenuRow row = menu_emit_row(ctx, (MenuRowSpec) { .label = label, .disabled = cfg.disabled, .is_submenu = true });
+    MenuRow row = emit_row(ctx, (MenuRowSpec) { .label = label, .disabled = cfg.disabled, .is_submenu = true });
 
     bool is_expanded = m->levels[parent_level].expanded_child_id == row.id;
     bool clicked_open = !cfg.disabled && row.signal.clicked;
@@ -617,7 +616,7 @@ bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
 
     menu_begin_level(ctx, child_level);
 
-    menu_submenu_panel_begin(ctx, row.id, parent_level, menu_min_width(cfg.min_width));
+    submenu_panel_begin(ctx, row.id, parent_level, menu_min_width(cfg.min_width));
     return true;
 }
 
@@ -655,7 +654,7 @@ void ui_menu_end_impl(void) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Whether the point is inside the region's layout box from the previous frame.
-static bool menu_region_contains(FlLayoutId region_id, FlVec2 point) {
+static bool region_contains(FlLayoutId region_id, FlVec2 point) {
     Clay_ElementData ed = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(region_id) });
     Clay_BoundingBox b = ed.boundingBox;
     return ed.found && point.x >= b.x && point.x < b.x + b.width && point.y >= b.y && point.y < b.y + b.height;
@@ -664,7 +663,7 @@ static bool menu_region_contains(FlLayoutId region_id, FlVec2 point) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Grow in both axes when the caller left the sizing unset.
-static FlLayoutSizing menu_region_sizing(FlLayoutSizing requested) {
+static FlLayoutSizing region_sizing(FlLayoutSizing requested) {
     bool unset = requested.width.type == FlLayoutSizingType_Fit && requested.width.size.min_max.max == 0.0f
                  && requested.height.type == FlLayoutSizingType_Fit && requested.height.size.min_max.max == 0.0f;
     return unset ? (FlLayoutSizing) { sizing_grow(), sizing_grow() } : requested;
@@ -679,12 +678,12 @@ FlSignal ui_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlM
         = ui_item_behavior(region_id, FlItemFlags_clickable | FlItemFlags_right_click, (FlWidgetConfig) { 0 });
 
     FlVec2 mouse = { ctx->input_state.mouse.x, ctx->input_state.mouse.y };
-    if (ctx->input_state.mouse.buttons[FlMouseButton_Right] && menu_region_contains(region_id, mouse)) {
+    if (ctx->input_state.mouse.buttons[FlMouseButton_Right] && region_contains(region_id, mouse)) {
         ui_menu_open_impl(menu_id, mouse);
     }
 
     fl_layout_start(region_id);
-    fl_layout_configure((FlLayoutConfig) { .sizing = menu_region_sizing(cfg.sizing) });
+    fl_layout_configure((FlLayoutConfig) { .sizing = region_sizing(cfg.sizing) });
 
     return signal;
 }

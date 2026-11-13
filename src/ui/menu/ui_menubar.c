@@ -23,7 +23,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Open the chain for the bar, with its tops as level 0.
-static void menubar_activate(FlUiCtx* ctx, u32 scope) {
+static void activate(FlUiCtx* ctx, u32 scope) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
@@ -44,14 +44,14 @@ typedef struct BarHot {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menubar_hot_is_actionable(BarHot hot) {
+static bool hot_is_actionable(BarHot hot) {
     return hot.index >= 0 && hot.navigable;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The top under the pointer, from the bar's own record.
-static BarHot menubar_hot_top(const UiMenuFrame* mf, u32 hot_id) {
+static BarHot hot_top(const UiMenuFrame* mf, u32 hot_id) {
     int i = menu_find_in_level(&mf->bar_tops, hot_id);
     return (BarHot) { .index = i, .navigable = i >= 0 && mf->bar_tops.item_navigable[i] };
 }
@@ -59,7 +59,7 @@ static BarHot menubar_hot_top(const UiMenuFrame* mf, u32 hot_id) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Open the top at the bar highlight, or collapse the dropdown if it is not a submenu.
-static void menubar_reopen_under_highlight(FlUiCtx* ctx) {
+static void reopen_under_highlight(FlUiCtx* ctx) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
@@ -76,15 +76,15 @@ static void menubar_reopen_under_highlight(FlUiCtx* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Open the chain when a navigable top is pressed. Returns whether the bar now owns it.
-static bool menubar_try_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
-    if (!ctx->mouse_pressed_this_frame || !menubar_hot_is_actionable(hot)) {
+static bool try_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
+    if (!ctx->mouse_pressed_this_frame || !hot_is_actionable(hot)) {
         return false;
     }
 
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
     u32 top_id = mf->bar_tops.item_id[hot.index];
-    menubar_activate(ctx, scope);
+    activate(ctx, scope);
     menu_branch_switch(ctx, 0, top_id, true);
     m->levels[0].highlight_index = hot.index;
     m->hover_drives = true;
@@ -94,7 +94,7 @@ static bool menubar_try_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Close the chain on a press outside, ESC, or a press on the open top. Returns whether the bar still owns it.
-static bool menubar_stay_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
+static bool stay_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
@@ -106,7 +106,7 @@ static bool menubar_stay_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
         return false;
     }
 
-    bool on_open_top = ctx->mouse_pressed_this_frame && menubar_hot_is_actionable(hot)
+    bool on_open_top = ctx->mouse_pressed_this_frame && hot_is_actionable(hot)
                        && m->levels[0].expanded_child_id == mf->levels[0].item_id[hot.index];
     if (on_open_top) {
         menu_close_internal(ctx);
@@ -117,18 +117,18 @@ static bool menubar_stay_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Open or close the bar chain for this frame. Returns whether the bar owns it afterwards.
-static bool menubar_arbitrate_open(FlUiCtx* ctx, u32 scope, BarHot hot, bool owned) {
-    return owned ? menubar_stay_open(ctx, scope, hot) : menubar_try_open(ctx, scope, hot);
+static bool arbitrate_open(FlUiCtx* ctx, u32 scope, BarHot hot, bool owned) {
+    return owned ? stay_open(ctx, scope, hot) : try_open(ctx, scope, hot);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Switch the open top on a press, or on hovering a sibling while a dropdown is open.
-static void menubar_handle_mouse(FlUiCtx* ctx, BarHot hot) {
+static void handle_mouse(FlUiCtx* ctx, BarHot hot) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
-    if (!menubar_hot_is_actionable(hot)) {
+    if (!hot_is_actionable(hot)) {
         return;
     }
 
@@ -149,20 +149,20 @@ static void menubar_handle_mouse(FlUiCtx* ctx, BarHot hot) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menubar_step_top(FlUiCtx* ctx, int dir) {
+static void step_top(FlUiCtx* ctx, int dir) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
     menu_move_highlight(&m->levels[0], &mf->levels[0], dir);
     m->hover_drives = false;
     if (m->depth > 1) {
-        menubar_reopen_under_highlight(ctx);
+        reopen_under_highlight(ctx);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menubar_open_highlighted_top(FlUiCtx* ctx) {
+static void open_highlighted_top(FlUiCtx* ctx) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
@@ -179,16 +179,16 @@ static void menubar_open_highlighted_top(FlUiCtx* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menubar_handle_input(FlUiCtx* ctx, BarHot hot) {
+static void handle_input(FlUiCtx* ctx, BarHot hot) {
     UiMenuState* m = &ctx->shared->menu;
 
-    menubar_handle_mouse(ctx, hot);
+    handle_mouse(ctx, hot);
 
     if (ui_action_pressed_or_repeated(ctx, FlAction_Nav_Left)) {
-        menubar_step_top(ctx, -1);
+        step_top(ctx, -1);
     }
     if (ui_action_pressed_or_repeated(ctx, FlAction_Nav_Right)) {
-        menubar_step_top(ctx, +1);
+        step_top(ctx, +1);
     }
 
     bool nav_moved = false;
@@ -196,7 +196,7 @@ static void menubar_handle_input(FlUiCtx* ctx, BarHot hot) {
         nav_moved |= menu_step_highlight(ctx, m->depth - 1, FlAction_Nav_Down, +1);
         nav_moved |= menu_step_highlight(ctx, m->depth - 1, FlAction_Nav_Up, -1);
     } else {
-        menubar_open_highlighted_top(ctx);
+        open_highlighted_top(ctx);
     }
 
     nav_moved |= menu_typeahead(ctx, m->depth - 1);
@@ -222,12 +222,12 @@ void ui_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig cfg) {
         mf->levels[0] = mf->bar_tops;
     }
 
-    BarHot hot = menubar_hot_top(mf, ctx->hot_id);
+    BarHot hot = hot_top(mf, ctx->hot_id);
 
-    owned = menubar_arbitrate_open(ctx, scope, hot, owned);
+    owned = arbitrate_open(ctx, scope, hot, owned);
 
     if (owned && ctx->frame_counter > m->open_frame) {
-        menubar_handle_input(ctx, hot);
+        handle_input(ctx, hot);
     }
 
     mf->build_level = 0;
@@ -255,14 +255,14 @@ void ui_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig cfg) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menubar_owned(const FlUiCtx* ctx) {
+static bool bar_owns_chain(const FlUiCtx* ctx) {
     return menu_owned_by(ctx, ctx->menu_frame.menubar_scope);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Record the top into the bar's record. Returns its widget id.
-static u32 menubar_record_top(FlUiCtx* ctx, FlLayoutId top_id, bool navigable) {
+static u32 record_top(FlUiCtx* ctx, FlLayoutId top_id, bool navigable) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuLevelFrame* tops = &ctx->menu_frame.bar_tops;
     int index = top_id.id;
@@ -274,7 +274,7 @@ static u32 menubar_record_top(FlUiCtx* ctx, FlLayoutId top_id, bool navigable) {
         tops->item_submenu[index] = navigable;
         menu_record_label(tops, index, top_id.name);
     }
-    bool claims_highlight = navigable && menubar_owned(ctx);
+    bool claims_highlight = navigable && bar_owns_chain(ctx);
     if (claims_highlight && m->levels[0].init_highlight) {
         m->levels[0].highlight_index = index;
         m->levels[0].init_highlight = false;
@@ -284,8 +284,8 @@ static u32 menubar_record_top(FlUiCtx* ctx, FlLayoutId top_id, bool navigable) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menubar_top_current(const FlUiCtx* ctx, int index, bool is_open_top, bool hovered) {
-    if (!menubar_owned(ctx)) {
+static bool top_current(const FlUiCtx* ctx, int index, bool is_open_top, bool hovered) {
+    if (!bar_owns_chain(ctx)) {
         return hovered;
     }
     return ctx->shared->menu.levels[0].highlight_index == index || is_open_top;
@@ -293,7 +293,7 @@ static bool menubar_top_current(const FlUiCtx* ctx, int index, bool is_open_top,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void menubar_paint_top(FlUiCtx* ctx, FlLayoutId top_id, bool highlighted, bool disabled) {
+static void paint_top(FlUiCtx* ctx, FlLayoutId top_id, bool highlighted, bool disabled) {
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
     FlColor bg = highlighted ? theme->surface.selected : theme->surface.elevated;
     FlColor txt = disabled ? theme->text.secondary : theme->text.primary;
@@ -310,7 +310,7 @@ static void menubar_paint_top(FlUiCtx* ctx, FlLayoutId top_id, bool highlighted,
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Open the dropdown panel under the top.
-static void menubar_dropdown_begin(FlUiCtx* ctx, FlLayoutId top_id, float min_width) {
+static void dropdown_begin(FlUiCtx* ctx, FlLayoutId top_id, float min_width) {
     UiMenuFrame* mf = &ctx->menu_frame;
 
     int child_level = 1;
@@ -336,16 +336,16 @@ bool ui_menubar_menu_begin_impl(FlString label, FlMenuBarMenuConfig cfg) {
     FlSignal signal = ui_item_behavior(top_id, FlItemFlags_clickable, (FlWidgetConfig) { 0 });
 
     bool navigable = !cfg.disabled;
-    u32 rid = menubar_record_top(ctx, top_id, navigable);
+    u32 rid = record_top(ctx, top_id, navigable);
 
-    bool is_open_top = menubar_owned(ctx) && m->levels[0].expanded_child_id == rid;
-    bool highlighted = navigable && menubar_top_current(ctx, index, is_open_top, signal.hovered);
-    menubar_paint_top(ctx, top_id, highlighted, cfg.disabled);
+    bool is_open_top = bar_owns_chain(ctx) && m->levels[0].expanded_child_id == rid;
+    bool highlighted = navigable && top_current(ctx, index, is_open_top, signal.hovered);
+    paint_top(ctx, top_id, highlighted, cfg.disabled);
 
     if (!is_open_top) {
         return false;
     }
-    menubar_dropdown_begin(ctx, top_id, menu_min_width(cfg.min_width));
+    dropdown_begin(ctx, top_id, menu_min_width(cfg.min_width));
     return true;
 }
 
@@ -359,7 +359,7 @@ void ui_menubar_menu_end_impl(void) {
     ui_popup_end();
     mf->build_level = 0;
 
-    if (menubar_owned(ctx)) {
+    if (bar_owns_chain(ctx)) {
         ctx->current_popup_scope_id = mf->menubar_scope;
     }
 }

@@ -112,7 +112,7 @@ void menu_collapse_to(UiMenuState* m, int new_depth) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ESC: pop one level, or close the chain at the root. Returns whether the chain closed.
-static bool menu_handle_cancel(FlUiCtx* ctx, UiMenuState* m) {
+static bool handle_cancel(FlUiCtx* ctx, UiMenuState* m) {
     if (m->depth > 1) {
         menu_collapse_to(m, m->depth - 1);
         m->hover_drives = false;
@@ -183,7 +183,7 @@ MenuHit menu_find_hot_item(const FlUiCtx* ctx) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Whether the widget under the pointer belongs to the menu's popup scope.
-static bool menu_hot_in_scope(FlUiCtx* ctx, u32 scope) {
+static bool hot_in_scope(FlUiCtx* ctx, u32 scope) {
     if (ctx->hot_id == 0) {
         return false;
     }
@@ -295,7 +295,7 @@ typedef struct MenuScrollGeom {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static MenuScrollGeom menu_scroll_geom(const FlUiCtx* ctx, const UiMenuLevelFrame* lf) {
+static MenuScrollGeom scroll_geom(const FlUiCtx* ctx, const UiMenuLevelFrame* lf) {
     MenuScrollGeom g = { .content = lf->natural_height, .viewport = lf->natural_height, .max_offset = 0.0f };
     f32 scale = ctx->ui_scale > 0.0f ? ctx->ui_scale : 1.0f;
     f32 interior_cap = ctx->layout_height / scale - 2.0f * UI_MENU_VIEWPORT_MARGIN - UI_MENU_PANEL_VPAD;
@@ -314,7 +314,7 @@ void menu_configure_panel(FlUiCtx* ctx, int level, float min_w) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
-    MenuScrollGeom g = menu_scroll_geom(ctx, &mf->levels[level]);
+    MenuScrollGeom g = scroll_geom(ctx, &mf->levels[level]);
     m->levels[level].scroll_offset = clamp_f32_impl(m->levels[level].scroll_offset, 0.0f, g.max_offset);
 
     FlLayoutSizingAxis height = g.capped ? sizing_fixed(g.viewport + UI_MENU_PANEL_VPAD) : sizing_fit();
@@ -349,7 +349,7 @@ void menu_apply_wheel(FlUiCtx* ctx) {
     if (wheel.y == 0.0f || hit.level < 0) {
         return;
     }
-    MenuScrollGeom g = menu_scroll_geom(ctx, &mf->levels[hit.level]);
+    MenuScrollGeom g = scroll_geom(ctx, &mf->levels[hit.level]);
     if (g.max_offset <= 0.0f) {
         return;
     }
@@ -359,7 +359,7 @@ void menu_apply_wheel(FlUiCtx* ctx) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool menu_row_recorded(const UiMenuLevelFrame* lf, int i) {
+static bool row_recorded(const UiMenuLevelFrame* lf, int i) {
     return i >= 0 && i < UI_MENU_MAX_ITEMS && i < lf->item_count;
 }
 
@@ -385,9 +385,9 @@ void menu_scroll_into_view(FlUiCtx* ctx, int level) {
         return;
     }
     const UiMenuLevelFrame* lf = &mf->levels[level];
-    MenuScrollGeom g = menu_scroll_geom(ctx, lf);
+    MenuScrollGeom g = scroll_geom(ctx, lf);
     int i = m->levels[level].highlight_index;
-    if (g.max_offset <= 0.0f || !menu_row_recorded(lf, i)) {
+    if (g.max_offset <= 0.0f || !row_recorded(lf, i)) {
         return;
     }
     f32 off = scroll_offset_to_show(m->levels[level].scroll_offset, lf->item_top[i], lf->item_height[i], g.viewport);
@@ -430,12 +430,12 @@ bool menu_dismissed(FlUiCtx* ctx, u32 scope, bool pointer_on_surface) {
     if (ctx->frame_counter <= m->open_frame) {
         return false;
     }
-    bool outside = !menu_hot_in_scope(ctx, scope) && !pointer_on_surface;
+    bool outside = !hot_in_scope(ctx, scope) && !pointer_on_surface;
     if (ctx->mouse_pressed_this_frame && outside) {
         menu_close_internal(ctx);
         return true;
     }
-    return ui_action_pressed(ctx, FlAction_Cancel) && menu_handle_cancel(ctx, m);
+    return ui_action_pressed(ctx, FlAction_Cancel) && handle_cancel(ctx, m);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
