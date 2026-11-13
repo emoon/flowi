@@ -745,7 +745,14 @@ FlSignal fl_scrollbar_impl(float* value, FlScrollbarConfig config) {
 
 void fl_dropdown_impl(FlString label, bool* is_open, const FlString* options, uint32_t options_size,
                       int32_t* selected_index, FlDropdownConfig config) {
-    ui_dropdown_impl(label, is_open, (FlString*)options, (int)options_size, selected_index, config);
+    ui_dropdown_impl(&(UiDropdownRequest) {
+        .label = label,
+        .is_open = is_open,
+        .options = options,
+        .option_count = (int)options_size,
+        .selected_index = selected_index,
+        .cfg = config,
+    });
 }
 
 bool fl_tab_bar_impl(const FlString* tabs, uint32_t tabs_size, int32_t* selected_index, FlTabBarConfig config) {
