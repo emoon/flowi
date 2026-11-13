@@ -512,11 +512,86 @@ typedef struct MenuRow {
     bool highlighted;
 } MenuRow;
 
-// Emit one menu row at the current build level: register the widget, record its identity (id + submenu flag) and
-// navigability into the level, apply the shared hover highlight (last-input-wins), and paint the row - label on the
-// left, plus a right-aligned shortcut (leaf) or a chevron (submenu parent).
-static MenuRow menu_emit_row(FlUiCtx* ctx, FlString label, FlString shortcut, bool disabled, bool is_submenu,
-                             MenuMarker marker, bool marked) {
+// What a row shows: its label, an optional leading marker, and either a trailing shortcut (leaf) or a chevron
+// (submenu parent).
+typedef struct MenuRowSpec {
+    FlString label;
+    FlString shortcut;
+    bool disabled;
+    bool is_submenu;
+    MenuMarker marker;
+    bool marked;
+} MenuRowSpec;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Record the row's identity (id + submenu flag) and navigability into its level, and let the first navigable row claim
+// the initial highlight on open.
+static void menu_record_row(FlUiCtx* ctx, int level, int index, u32 rid, const MenuRowSpec* row) {
+    UiMenuState* m = &ctx->shared->menu;
+    UiMenuLevelFrame* lf = &ctx->menu_frame.levels[level];
+
+    bool navigable = !row->disabled;
+    if (index < UI_MENU_MAX_ITEMS) {
+        lf->item_navigable[index] = navigable;
+        lf->item_id[index] = rid; // identity-keyed open path: maps hot_id -> this row
+        lf->item_submenu[index] = row->is_submenu;
+        menu_record_label(lf, index, row->label); // type-ahead prefix source (matched at the next begin)
+    }
+    if (navigable && m->levels[level].init_highlight) {
+        m->levels[level].highlight_index = index;
+        m->levels[level].init_highlight = false;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Every row paints a background (the menu surface by default, the highlight when current). Beyond the look, a painted
+// row is what makes the item hittable: the hot/hover path is driven by render commands, so a fully transparent row
+// would never report hover.
+static FlColor menu_row_background(const FlThemeColors* theme, bool highlighted, bool is_deepest, bool disabled) {
+    if (!highlighted) {
+        return theme->surface.elevated;
+    }
+
+    float t = disabled ? UI_MENU_DISABLED_HIGHLIGHT : (is_deepest ? 1.0f : UI_MENU_TRAIL_HIGHLIGHT);
+    return ui_menu_blend(theme->surface.elevated, theme->surface.selected, t);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The gutter marker: a near-square for a check, a full-radius dot for a radio bullet.
+static void menu_emit_marker(const FlThemeColors* theme, MenuMarker marker, bool marked) {
+    float r = marker == MenuMarker_Radio ? (float)FlRadius_Full : (float)FlRadius_SM;
+    ui_layout_area(.sizing = { sizing_fixed(UI_MENU_MARKER_WIDTH), sizing_fixed(UI_MENU_ITEM_HEIGHT) },
+                   .direction = LayoutDirection_TopToBottom, .child_alignment = ui_align(Center, Center)) {
+        if (marked) {
+            ui_layout_area(.sizing = { sizing_fixed(UI_MENU_MARKER_DOT), sizing_fixed(UI_MENU_MARKER_DOT) },
+                           .color = theme->interactive.base, .radius = corner_radius(r)) {}
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// A grow spacer pushes the trailing text (chevron for a submenu parent, else the shortcut) to the trailing edge.
+static void menu_emit_trailer(const FlThemeColors* theme, const MenuRowSpec* row) {
+    if (!row->is_submenu && row->shortcut.length == 0) {
+        return;
+    }
+
+    ui_layout_area(.sizing = { sizing_grow(), sizing_fit() }) {}
+    ui_text_styled_impl(
+        row->is_submenu ? FL_S(">") : row->shortcut,
+        (FlTextConfig) { .color = theme->text.secondary, .valign = FlTextVAlign_Center, .no_wrap = true });
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Emit one menu row at the current build level: register the widget, record it into the level, apply the shared hover
+// highlight (last-input-wins), and paint the row - label on the left, plus a right-aligned shortcut (leaf) or a
+// chevron (submenu parent).
+static MenuRow menu_emit_row(FlUiCtx* ctx, MenuRowSpec spec) {
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
@@ -528,26 +603,15 @@ static MenuRow menu_emit_row(FlUiCtx* ctx, FlString label, FlString shortcut, bo
     // Seed the id with (level, index): index disambiguates same-label rows within a level, and folding the build
     // level in keeps a parent-level row and an open submenu row from colliding when their label and in-level index
     // line up. Only one menu chain is open at a time, so cross-menu id reuse can't collide.
-    FlLayoutId item_id = { .name = label, .id = ui_menu_row_id_seed(level, index) };
+    FlLayoutId item_id = { .name = spec.label, .id = ui_menu_row_id_seed(level, index) };
     u32 rid = ui_layout_id_to_clay_id(item_id);
     // Scroll_target marks the row as owning wheel input while it is hot, so ui_update_begin withholds the wheel from
     // Clay's auto-scroll and leaves it for the menu's manual per-level scroll (menu_apply_wheel).
     FlSignal signal = ui_item_behavior(
         item_id, FlItemFlags_clickable | FlItemFlags_focusable | FlItemFlags_scroll_target, (FlWidgetConfig) { 0 });
 
-    bool navigable = !disabled;
-    if (index < UI_MENU_MAX_ITEMS) {
-        mf->levels[level].item_navigable[index] = navigable;
-        mf->levels[level].item_id[index] = rid; // identity-keyed open path: maps hot_id -> this row
-        mf->levels[level].item_submenu[index] = is_submenu;
-        menu_record_label(&mf->levels[level], index, label); // type-ahead prefix source (matched at the next begin)
-    }
-    // Initial highlight on open: the first navigable row claims the highlight as items emit this frame.
-    if (navigable && m->levels[level].init_highlight) {
-        m->levels[level].highlight_index = index;
-        m->levels[level].init_highlight = false;
-    }
-    if (disabled) {
+    menu_record_row(ctx, level, index, rid, &spec);
+    if (spec.disabled) {
         signal.clicked = false;
         signal.activated = false;
         signal.right_clicked = false;
@@ -560,46 +624,19 @@ static MenuRow menu_emit_row(FlUiCtx* ctx, FlString label, FlString shortcut, bo
 
     bool highlighted = m->levels[level].highlight_index == index;
     bool is_deepest = (level == m->depth - 1);
-
-    // Every row paints a background (the menu surface by default, the highlight when current). Beyond the look, a
-    // painted row is what makes the item hittable: the hot/hover path is driven by render commands, so a fully
-    // transparent row would never report hover.
-    FlColor bg = theme->surface.elevated;
-    if (highlighted) {
-        float t = disabled ? UI_MENU_DISABLED_HIGHLIGHT : (is_deepest ? 1.0f : UI_MENU_TRAIL_HIGHLIGHT);
-        bg = ui_menu_blend(theme->surface.elevated, theme->surface.selected, t);
-    }
-    FlColor txt = disabled ? theme->text.secondary : theme->text.primary;
+    FlColor bg = menu_row_background(theme, highlighted, is_deepest, spec.disabled);
+    FlColor txt = spec.disabled ? theme->text.secondary : theme->text.primary;
 
     ui_layout_area_id(item_id, .sizing = { sizing_grow(), sizing_fixed(UI_MENU_ITEM_HEIGHT) },
                       .direction = LayoutDirection_LeftToRight, .child_alignment = ui_align(Left, Center),
                       .padding = fl_padding_hv(FlSpacing_SM, FlSpacing_XS), .child_gap = FlSpacing_MD,
                       .radius = corner_radius(FlRadius_SM), .color = bg) {
-        if (marker != MenuMarker_None) {
-            // A near-square for a check, a full-radius dot for a radio bullet.
-            float r = marker == MenuMarker_Radio ? (float)FlRadius_Full : (float)FlRadius_SM;
-            ui_layout_area(.sizing = { sizing_fixed(UI_MENU_MARKER_WIDTH), sizing_fixed(UI_MENU_ITEM_HEIGHT) },
-                           .direction = LayoutDirection_TopToBottom, .child_alignment = ui_align(Center, Center)) {
-                if (marked) {
-                    ui_layout_area(.sizing = { sizing_fixed(UI_MENU_MARKER_DOT), sizing_fixed(UI_MENU_MARKER_DOT) },
-                                   .color = theme->interactive.base, .radius = corner_radius(r)) {}
-                }
-            }
+        if (spec.marker != MenuMarker_None) {
+            menu_emit_marker(theme, spec.marker, spec.marked);
         }
-        ui_text_styled_impl(label, (FlTextConfig) { .color = txt, .valign = FlTextVAlign_Center, .no_wrap = true });
-        if (is_submenu) {
-            // A grow spacer pushes the chevron to the trailing edge (the "has children" affordance).
-            ui_layout_area(.sizing = { sizing_grow(), sizing_fit() }) {}
-            ui_text_styled_impl(
-                FL_S(">"),
-                (FlTextConfig) { .color = theme->text.secondary, .valign = FlTextVAlign_Center, .no_wrap = true });
-        } else if (shortcut.length > 0) {
-            // A grow spacer pushes the shortcut text to the trailing edge.
-            ui_layout_area(.sizing = { sizing_grow(), sizing_fit() }) {}
-            ui_text_styled_impl(
-                shortcut,
-                (FlTextConfig) { .color = theme->text.secondary, .valign = FlTextVAlign_Center, .no_wrap = true });
-        }
+        ui_text_styled_impl(spec.label,
+                            (FlTextConfig) { .color = txt, .valign = FlTextVAlign_Center, .no_wrap = true });
+        menu_emit_trailer(theme, &spec);
     }
 
     return (MenuRow) { .signal = signal, .id = rid, .level = level, .index = index, .highlighted = highlighted };
@@ -893,7 +930,8 @@ static FlSignal menu_finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg
 
 FlSignal ui_menu_item_impl(FlString label, FlMenuItemConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
-    MenuRow row = menu_emit_row(ctx, label, cfg.shortcut, cfg.disabled, /*is_submenu=*/false, MenuMarker_None, false);
+    MenuRow row
+        = menu_emit_row(ctx, (MenuRowSpec) { .label = label, .shortcut = cfg.shortcut, .disabled = cfg.disabled });
     return menu_finish_leaf(ctx, row, cfg, /*kind_default_close=*/true);
 }
 
@@ -902,7 +940,11 @@ FlSignal ui_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig cfg)
     // The marker reflects the state at emit time; the toggle below applies after, so the new state shows next frame
     // (the menu stays open by default). A null pointer is a live row that shows nothing and mutates nothing.
     bool marked = checked != nullptr && *checked;
-    MenuRow row = menu_emit_row(ctx, label, cfg.shortcut, cfg.disabled, /*is_submenu=*/false, MenuMarker_Check, marked);
+    MenuRow row = menu_emit_row(ctx, (MenuRowSpec) { .label = label,
+                                                     .shortcut = cfg.shortcut,
+                                                     .disabled = cfg.disabled,
+                                                     .marker = MenuMarker_Check,
+                                                     .marked = marked });
     FlSignal signal = menu_finish_leaf(ctx, row, cfg, /*kind_default_close=*/false);
 
     if (signal.clicked && checked != nullptr) {
@@ -914,7 +956,11 @@ FlSignal ui_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig cfg)
 FlSignal ui_menu_radio_impl(FlString label, int* selected, int value, FlMenuItemConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
     bool marked = selected != nullptr && *selected == value;
-    MenuRow row = menu_emit_row(ctx, label, cfg.shortcut, cfg.disabled, /*is_submenu=*/false, MenuMarker_Radio, marked);
+    MenuRow row = menu_emit_row(ctx, (MenuRowSpec) { .label = label,
+                                                     .shortcut = cfg.shortcut,
+                                                     .disabled = cfg.disabled,
+                                                     .marker = MenuMarker_Radio,
+                                                     .marked = marked });
     FlSignal signal = menu_finish_leaf(ctx, row, cfg, /*kind_default_close=*/false);
 
     if (signal.clicked && selected != nullptr) {
@@ -991,8 +1037,7 @@ bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
     int parent_level = mf->build_level;
 
     // A submenu parent is a pure container: emit the row (chevron, marked submenu) but never expose an action signal.
-    MenuRow row
-        = menu_emit_row(ctx, label, (FlString) { 0 }, cfg.disabled, /*is_submenu=*/true, MenuMarker_None, false);
+    MenuRow row = menu_emit_row(ctx, (MenuRowSpec) { .label = label, .disabled = cfg.disabled, .is_submenu = true });
 
     // Click is a per-surface open trigger (instant, no dwell): a click on a closed submenu parent - or on a sibling
     // while a different branch is open - branch-switches to it. Clicking the already-open parent is a no-op. The
