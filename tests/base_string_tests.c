@@ -389,3 +389,22 @@ UTEST(string_search, real_world_url_parsing) {
 
     ASSERT_EQ(fl_string_find_substr(local_path, FL_S("://")), -1);
 }
+
+UTEST(string_substr, clamps_to_the_end) {
+    FlString str = FL_S("hello world");
+
+    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 0, 5), FL_S("hello")));
+    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 6, 5), FL_S("world")));
+    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 6, 100), FL_S("world")));
+    ASSERT_EQ((u64)fl_string_substr(str, 11, 1).length, (u64)0);
+    ASSERT_EQ((u64)fl_string_substr(str, 3, 0).length, (u64)0);
+}
+
+UTEST(string_substr, length_near_u64_max_clamps) {
+    FlString str = FL_S("hello world");
+
+    // start + length wraps around u64 here, which must still clamp to the end of the string
+    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 6, UINT64_MAX), FL_S("world")));
+    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 2, UINT64_MAX - 1), FL_S("llo world")));
+    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 10, UINT64_MAX), FL_S("d")));
+}
