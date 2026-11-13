@@ -97,6 +97,117 @@ struct ColoredRect {
     color: Color,
 }
 
+/// The four corner colors of a Painter::gradient_rect, interpolated bilinearly across the rectangle.
+#[attributes(Copy)]
+struct CornerColors {
+    /// top-left corner
+    top_left: Color,
+    /// top-right corner
+    top_right: Color,
+    /// bottom-left corner
+    bottom_left: Color,
+    /// bottom-right corner
+    bottom_right: Color,
+}
+
+/// A filled circle with an optional border ring, in logical (authoring) space.
+#[attributes(Copy)]
+struct CircleShape {
+    /// center x
+    cx: f32,
+    /// center y
+    cy: f32,
+    /// radius
+    radius: f32,
+    /// fill color
+    color: Color,
+    /// border ring color
+    border_color: Color,
+    /// border ring width; 0 = no border
+    border_width: f32,
+}
+
+/// A filled diamond with an optional border ring, in logical (authoring) space.
+#[attributes(Copy)]
+struct DiamondShape {
+    /// center x
+    cx: f32,
+    /// center y
+    cy: f32,
+    /// horizontal half-extent
+    rx: f32,
+    /// vertical half-extent
+    ry: f32,
+    /// fill color
+    color: Color,
+    /// border ring color
+    border_color: Color,
+    /// border ring width; 0 = no border
+    border_width: f32,
+}
+
+/// A stroked arc, ring or circle sector, in logical (authoring) space. Angles are radians: 0 is 12 o'clock
+/// and a positive sweep runs clockwise.
+#[attributes(Copy)]
+struct ArcShape {
+    /// center x
+    cx: f32,
+    /// center y
+    cy: f32,
+    /// outer radius
+    radius: f32,
+    /// stroke thickness, extending inward from radius; thickness >= radius makes a filled sector
+    thickness: f32,
+    /// angle the arc starts at
+    start_angle: f32,
+    /// angle the arc covers from start_angle
+    sweep: f32,
+    /// stroke color
+    color: Color,
+    /// end caps (empty = butt caps)
+    flags: ArcFlags,
+}
+
+/// How a Painter::polyline is stroked and filled.
+#[attributes(Copy)]
+struct PolylineStyle {
+    /// stroke width; caps and joins are always round
+    width: f32,
+    /// stroke color
+    color: Color,
+    /// filling and closing (empty = an open stroke)
+    flags: PolylineFlags,
+    /// fill color, used when flags has filled
+    fill_color: Color,
+    /// y the fill extends to, used when flags has filled
+    baseline_y: f32,
+}
+
+/// A source rectangle of an image drawn into a destination rectangle.
+#[attributes(Copy)]
+struct ImageSub {
+    /// destination left edge, in logical (authoring) space
+    dx: f32,
+    /// destination top edge
+    dy: f32,
+    /// destination width; non-positive uses the source width
+    dw: f32,
+    /// destination height; non-positive uses the source height
+    dh: f32,
+    /// source left edge, in source image pixels
+    sx: f32,
+    /// source top edge
+    sy: f32,
+    /// source width
+    sw: f32,
+    /// source height
+    sh: f32,
+    /// the `ImageHandle` from Image::load
+    image: ImageHandle,
+    /// multiplicatively tints color images and colorizes alpha atlases
+    color: Color,
+}
+
 /// Custom-drawing primitives: the painter's shape, line, text, and image commands. Call these to draw
 /// directly into the current frame.
 #[frame_context]
@@ -118,9 +229,9 @@ api Painter {
     rects(rects: [*const ColoredRect])
     /// Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
     rect_rounded(x: f32, y: f32, w: f32, h: f32, radius: f32, color: Color)
-    /// Draw a filled rectangle with a four-corner color gradient (bilinear), corners named clockwise from
-    /// top-left.
-    gradient_rect(x: f32, y: f32, w: f32, h: f32, top_left: Color, top_right: Color, bottom_left: Color, bottom_right: Color)
+    /// Draw a filled rectangle with a four-corner color gradient (bilinear): top-left (x, y), size (w, h),
+    /// in logical space.
+    gradient_rect(x: f32, y: f32, w: f32, h: f32, colors: CornerColors)
     /// Draw a filled rectangle styled by config: per-corner radius and a per-corner color gradient in one
     /// draw, which is what rect_rounded (solid only) and gradient_rect (square only) cannot express
     /// together. Top-left (x, y), size (w, h), in logical space. Each radius clamps to half the smaller
@@ -143,32 +254,26 @@ api Painter {
     /// `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
     /// (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
     image(x: f32, y: f32, w: f32, h: f32, image: ImageHandle, color: Color) -> bool
-    /// Draw a filled circle centered at (cx, cy) with radius, plus an optional border
-    /// (border_color, border_width).
-    circle(cx: f32, cy: f32, radius: f32, color: Color, border_color: Color, border_width: f32)
-    /// Draw a filled circle like circle, with the border ring dashed by stroke (a zeroed stroke
-    /// draws the same solid ring circle does). The dash period is rescaled slightly so a whole
-    /// number of dashes closes the ring - no stub where the pattern wraps.
-    circle_stroked(cx: f32, cy: f32, radius: f32, color: Color, border_color: Color, border_width: f32, stroke: StrokeStyle)
-    /// Draw a filled diamond centered at (cx, cy) with half-extents (rx, ry), plus an optional border
-    /// (border_color, border_width).
-    diamond(cx: f32, cy: f32, rx: f32, ry: f32, color: Color, border_color: Color, border_width: f32)
-    /// Draw a stroked arc centered at (cx, cy): radius, stroke thickness, from start_angle sweeping
-    /// sweep radians. flags selects the end caps (empty = butt caps).
-    arc(cx: f32, cy: f32, radius: f32, thickness: f32, start_angle: f32, sweep: f32, color: Color, flags: ArcFlags)
+    /// Draw the filled circle circle, with its optional border ring.
+    circle(circle: CircleShape)
+    /// Draw the filled circle circle with its border ring dashed by stroke (a zeroed stroke draws the
+    /// same solid ring Painter::circle does). The dash period is rescaled slightly so a whole number of
+    /// dashes closes the ring - no stub where the pattern wraps.
+    circle_stroked(circle: CircleShape, stroke: StrokeStyle)
+    /// Draw the filled diamond diamond, with its optional border ring.
+    diamond(diamond: DiamondShape)
+    /// Draw the stroked arc arc.
+    arc(arc: ArcShape)
     /// Draw a polyline. points are
     /// vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
-    /// segments) and scales fill alpha. width is the stroke width (caps/joins always round). flags selects
-    /// filling and closing (empty = an open stroke).
-    polyline(points: [*const PolyPoint], width: f32, color: Color, flags: PolylineFlags, fill_color: Color, baseline_y: f32)
+    /// segments) and scales fill alpha. style carries the stroke width and color and the optional fill.
+    polyline(points: [*const PolyPoint], style: PolylineStyle)
     /// Draw a row of bars off the shared baseline baseline_y - meters, spectrum analyzers, step sequencers.
     /// The whole row is one draw, which is what a bar row buys over a rect per bar. Each bar carries its own
     /// x, width, and height, all in logical (authoring) space; a negative height draws downward. This is an
     /// optional-tier primitive: a backend may skip it (today the software backend does).
     bars(baseline_y: f32, bars: [*const Bar], color: Color)
-    /// Draw source rectangle (sx, sy, sw, sh), in source image pixels, into destination rectangle
-    /// (dx, dy, dw, dh), in logical (authoring) space. A non-positive destination width or height uses the
-    /// source width or height, respectively. color multiplicatively tints color images and colorizes alpha
-    /// atlases. Returns false (and draws nothing) until the image is ready or when the source rect is empty.
-    image_sub(dx: f32, dy: f32, dw: f32, dh: f32, sx: f32, sy: f32, sw: f32, sh: f32, image: ImageHandle, color: Color) -> bool
+    /// Draw the source rectangle of sub's image into its destination rectangle. Returns false (and draws
+    /// nothing) until the image is ready or when the source rect is empty.
+    image_sub(sub: ImageSub) -> bool
 }

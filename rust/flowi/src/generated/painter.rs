@@ -48,13 +48,12 @@ impl Painter {
         unsafe { crate::sys::fl_painter_rect_rounded(x, y, w, h, radius, color) }
     }
 
-    /// Draw a filled rectangle with a four-corner color gradient (bilinear), corners named clockwise from
-    /// top-left.
-    #[allow(clippy::too_many_arguments)]
+    /// Draw a filled rectangle with a four-corner color gradient (bilinear): top-left (x, y), size (w, h),
+    /// in logical space.
     #[inline]
-    pub fn gradient_rect(x: f32, y: f32, w: f32, h: f32, top_left: crate::sys::Color, top_right: crate::sys::Color, bottom_left: crate::sys::Color, bottom_right: crate::sys::Color) {
+    pub fn gradient_rect(x: f32, y: f32, w: f32, h: f32, colors: crate::sys::CornerColors) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::gradient_rect");
-        unsafe { crate::sys::fl_painter_gradient_rect(x, y, w, h, top_left, top_right, bottom_left, bottom_right) }
+        unsafe { crate::sys::fl_painter_gradient_rect(x, y, w, h, colors) }
     }
 
     /// Draw a filled rectangle styled by config: per-corner radius and a per-corner color gradient in one
@@ -111,48 +110,43 @@ impl Painter {
         unsafe { crate::sys::fl_painter_image(x, y, w, h, image, color) }
     }
 
-    /// Draw a filled circle centered at (cx, cy) with radius, plus an optional border
-    /// (border_color, border_width).
+    /// Draw the filled circle circle, with its optional border ring.
     #[inline]
-    pub fn circle(cx: f32, cy: f32, radius: f32, color: crate::sys::Color, border_color: crate::sys::Color, border_width: f32) {
+    pub fn circle(circle: crate::sys::CircleShape) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::circle");
-        unsafe { crate::sys::fl_painter_circle(cx, cy, radius, color, border_color, border_width) }
+        unsafe { crate::sys::fl_painter_circle(circle) }
     }
 
-    /// Draw a filled circle like circle, with the border ring dashed by stroke (a zeroed stroke
-    /// draws the same solid ring circle does). The dash period is rescaled slightly so a whole
-    /// number of dashes closes the ring - no stub where the pattern wraps.
+    /// Draw the filled circle circle with its border ring dashed by stroke (a zeroed stroke draws the
+    /// same solid ring Painter::circle does). The dash period is rescaled slightly so a whole number of
+    /// dashes closes the ring - no stub where the pattern wraps.
     #[inline]
-    pub fn circle_stroked(cx: f32, cy: f32, radius: f32, color: crate::sys::Color, border_color: crate::sys::Color, border_width: f32, stroke: crate::sys::StrokeStyle) {
+    pub fn circle_stroked(circle: crate::sys::CircleShape, stroke: crate::sys::StrokeStyle) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::circle_stroked");
-        unsafe { crate::sys::fl_painter_circle_stroked(cx, cy, radius, color, border_color, border_width, stroke) }
+        unsafe { crate::sys::fl_painter_circle_stroked(circle, stroke) }
     }
 
-    /// Draw a filled diamond centered at (cx, cy) with half-extents (rx, ry), plus an optional border
-    /// (border_color, border_width).
+    /// Draw the filled diamond diamond, with its optional border ring.
     #[inline]
-    pub fn diamond(cx: f32, cy: f32, rx: f32, ry: f32, color: crate::sys::Color, border_color: crate::sys::Color, border_width: f32) {
+    pub fn diamond(diamond: crate::sys::DiamondShape) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::diamond");
-        unsafe { crate::sys::fl_painter_diamond(cx, cy, rx, ry, color, border_color, border_width) }
+        unsafe { crate::sys::fl_painter_diamond(diamond) }
     }
 
-    /// Draw a stroked arc centered at (cx, cy): radius, stroke thickness, from start_angle sweeping
-    /// sweep radians. flags selects the end caps (empty = butt caps).
-    #[allow(clippy::too_many_arguments)]
+    /// Draw the stroked arc arc.
     #[inline]
-    pub fn arc(cx: f32, cy: f32, radius: f32, thickness: f32, start_angle: f32, sweep: f32, color: crate::sys::Color, flags: crate::sys::ArcFlags) {
+    pub fn arc(arc: crate::sys::ArcShape) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::arc");
-        unsafe { crate::sys::fl_painter_arc(cx, cy, radius, thickness, start_angle, sweep, color, flags) }
+        unsafe { crate::sys::fl_painter_arc(arc) }
     }
 
     /// Draw a polyline. points are
     /// vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
-    /// segments) and scales fill alpha. width is the stroke width (caps/joins always round). flags selects
-    /// filling and closing (empty = an open stroke).
+    /// segments) and scales fill alpha. style carries the stroke width and color and the optional fill.
     #[inline]
-    pub fn polyline(points: &[crate::sys::PolyPoint], width: f32, color: crate::sys::Color, flags: crate::sys::PolylineFlags, fill_color: crate::sys::Color, baseline_y: f32) {
+    pub fn polyline(points: &[crate::sys::PolyPoint], style: crate::sys::PolylineStyle) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::polyline");
-        unsafe { crate::sys::fl_painter_polyline(points.as_ptr(), points.len() as u32, width, color, flags, fill_color, baseline_y) }
+        unsafe { crate::sys::fl_painter_polyline(points.as_ptr(), points.len() as u32, style) }
     }
 
     /// Draw a row of bars off the shared baseline baseline_y - meters, spectrum analyzers, step sequencers.
@@ -165,15 +159,12 @@ impl Painter {
         unsafe { crate::sys::fl_painter_bars(baseline_y, bars.as_ptr(), bars.len() as u32, color) }
     }
 
-    /// Draw source rectangle (sx, sy, sw, sh), in source image pixels, into destination rectangle
-    /// (dx, dy, dw, dh), in logical (authoring) space. A non-positive destination width or height uses the
-    /// source width or height, respectively. color multiplicatively tints color images and colorizes alpha
-    /// atlases. Returns false (and draws nothing) until the image is ready or when the source rect is empty.
-    #[allow(clippy::too_many_arguments)]
+    /// Draw the source rectangle of sub's image into its destination rectangle. Returns false (and draws
+    /// nothing) until the image is ready or when the source rect is empty.
     #[inline]
-    pub fn image_sub(dx: f32, dy: f32, dw: f32, dh: f32, sx: f32, sy: f32, sw: f32, sh: f32, image: crate::sys::ImageHandle, color: crate::sys::Color) -> bool {
+    pub fn image_sub(sub: crate::sys::ImageSub) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::image_sub");
-        unsafe { crate::sys::fl_painter_image_sub(dx, dy, dw, dh, sx, sy, sw, sh, image, color) }
+        unsafe { crate::sys::fl_painter_image_sub(sub) }
     }
 }
 
