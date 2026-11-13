@@ -5,7 +5,7 @@
 // Holds blend / alpha / clear-color state, handed to the backend as an FlBackground snapshot at the front of
 // each frame (FlRenderFrame.background - see render_backend.h). This module performs no rendering.
 
-#include "image.h"
+#include "image/image.h"
 #include <ui/render_backend.h>
 
 typedef struct FlBackgroundState {

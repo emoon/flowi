@@ -13,7 +13,7 @@
 #include <core/log.h>
 #include "gpu_renderer_internal.h"
 #include "gpu_shaders.h"
-#include <ui/image_registry.h>
+#include <ui/image/image_registry.h>
 
 // Vertex attribute layout of FlMeshVertex, the one fixed format meshes use.
 #define MESH_ATTRIB_POS 0

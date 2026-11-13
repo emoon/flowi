@@ -36,8 +36,8 @@
 #include <flowi/ui/ui_scroll.h>
 #include <flowi/ui/ui_selection.h>
 #include <core/hashmap.h>
-#include "image.h"
-#include "image_registry.h"
+#include "image/image.h"
+#include "image/image_registry.h"
 #include "input_actions.h"
 #include "layout.h"
 #include "list_uniform.h"

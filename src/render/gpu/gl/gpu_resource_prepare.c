@@ -4,7 +4,7 @@
 #include "gpu_renderer_internal.h"
 #include "gpu_svg_color_lower.h"
 #include <ui/font_cache.h>
-#include <ui/image_decode.h>
+#include <ui/image/image_decode.h>
 #include <ui/vector_image.h>
 
 // Image preparation seam: place a decoded static image into the atlas, or onto a dedicated slot-tier texture

@@ -6,8 +6,8 @@
 #include "image_registry.h"
 #include "image_system.h"
 #include <ui/render_backend.h>
-#include "ui.h"
-#include "ui_private.h"
+#include "ui/ui.h"
+#include "ui/ui_private.h"
 #include <vfs/vfs.h>
 #include <ui/ui_theme.h>
 

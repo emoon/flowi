@@ -14,7 +14,7 @@
 #include <flowi/ui/text_config.h>   // @generated FlTextConfig (api_gen)
 #include <flowi/ui/theme.h>         // @generated FlThemeColors (api_gen)
 #include <flowi/ui/widget_config.h> // @generated FlWidgetConfig / FlSliderConfig / ... (api_gen)
-#include "image.h"
+#include "image/image.h"
 #include "layout.h"
 #include <ui/ui_types.h>
 #include "ui_ids.h"

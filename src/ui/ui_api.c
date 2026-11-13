@@ -38,7 +38,7 @@
 #include <flowi/ui/ui_menu.h>
 #include <flowi/ui/ui_scroll.h>
 #include <flowi/ui/ui_selection.h>
-#include "image.h"
+#include "image/image.h"
 #include "list_uniform.h"
 #include "painter.h"
 #include <ui/render_backend.h>

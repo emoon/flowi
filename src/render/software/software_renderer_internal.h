@@ -7,7 +7,7 @@
 #include <ui/ui_types.h>
 #include "sr_command.h"
 #include "sw_glyph_cache.h"
-#include <ui/image.h>
+#include <ui/image/image.h>
 
 struct FlFontCache;
 struct FlArena;

@@ -7,7 +7,7 @@
 #include <core/os/os.h>
 #include <render/software/software_renderer.h>
 #include "ui/font_cache.h"
-#include "ui/image.h"
+#include "ui/image/image.h"
 #include "ui/ui.h"
 #include "ui/ui_private.h"
 #include "vfs/vfs.h"

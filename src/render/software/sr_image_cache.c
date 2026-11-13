@@ -10,7 +10,7 @@
 #include <core/stats.h>
 #include <core/string_allocator.h>
 #include <core/tlsf.h>
-#include <ui/image_private.h>
+#include <ui/image/image_private.h>
 #include "sr_image_convert.h"
 #include <core/memory.h>
 #include <core/os/os.h>

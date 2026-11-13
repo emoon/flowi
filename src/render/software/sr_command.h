@@ -2,7 +2,7 @@
 
 #include <core/math.h>
 #include <core/simd.h>
-#include <ui/image.h>
+#include <ui/image/image.h>
 
 #define RenderMask_Corners_Shift 17
 

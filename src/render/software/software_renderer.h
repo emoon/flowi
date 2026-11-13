@@ -1,7 +1,7 @@
 #pragma once
 
 #include "software_renderer_internal.h"
-#include <ui/image.h>
+#include <ui/image/image.h>
 #include <ui/render_backend.h>
 #include <stdint.h>
 

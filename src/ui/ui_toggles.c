@@ -9,7 +9,7 @@
 #include "ui_tokens.h"
 #include "layout.h"
 #include "animation.h"
-#include "image.h"
+#include "image/image.h"
 #include <core/core.h>
 #include <core/math.h>
 #include <core/log.h>
