@@ -128,6 +128,7 @@ typedef struct GpuDrawList {
 
 // Translate an IR byte stream into the draw-command + AABB + clip-rect arrays, all allocated contiguously in arena.
 //
+// commands/bytes:  the IR byte stream.
 // global_alpha:    frame-wide opacity, folded into each command's packed color alphas here (never pre-folded in the
 //                  IR). Background commands ignore it.
 // target_*:        the root clip rect.
@@ -164,8 +165,19 @@ struct GpuSvgAtlas;
 struct GpuImageSlots;
 struct FlBackground;
 
-GpuDrawList gpu_ir_to_draw_cmds(struct FlArena* arena, const void* ir_commands, size_t ir_bytes, u8 global_alpha,
-                                u32 target_width, u32 target_height, const struct GpuImageAtlas* atlas,
-                                const struct GpuGlyphAtlas* glyphs, struct GpuImageSlots* slots,
-                                const struct FlBackground* background, const struct GpuSvgAtlas* svg,
-                                const struct GpuSvgAtlas* svg_color);
+// Everything one translation reads. Zero-initialize and set what the frame has: a null source is skipped.
+typedef struct GpuIrInput {
+    const void* commands;
+    size_t bytes;
+    u8 global_alpha;
+    u32 target_width;
+    u32 target_height;
+    const struct GpuImageAtlas* atlas;
+    const struct GpuGlyphAtlas* glyphs;
+    struct GpuImageSlots* slots;
+    const struct FlBackground* background;
+    const struct GpuSvgAtlas* svg;
+    const struct GpuSvgAtlas* svg_color;
+} GpuIrInput;
+
+GpuDrawList gpu_ir_to_draw_cmds(struct FlArena* arena, const GpuIrInput* in);

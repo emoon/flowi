@@ -4128,8 +4128,10 @@ UTEST(render, translucent_fill_border_over) {
         const FlColor corners[4] = { tA, tA, tA, tA };
         fl_ir_fill_rect(ir, (FlRect) { 10.0f, 10.0f, 40.0f, 40.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
-        GpuDrawList g = gpu_ir_to_draw_cmds(commands_arena, start, bytes, 255, 128, 128, nullptr, nullptr, nullptr,
-                                            nullptr, nullptr, nullptr);
+        GpuDrawList g = gpu_ir_to_draw_cmds(
+            commands_arena,
+            &(GpuIrInput) {
+                .commands = start, .bytes = bytes, .global_alpha = 255, .target_width = 128, .target_height = 128 });
         ASSERT_TRUE(g.count >= 1);
         ASSERT_TRUE_MSG(render_ir_to_surface(&backend, surface, &clear, start, bytes, &buf), "read_pixels failed");
         ASSERT_TRUE_MSG(px_matches_gpu_over(&buf, 30, 30, g.cmds[0].color[0], &clear, 2),
@@ -4145,8 +4147,10 @@ UTEST(render, translucent_fill_border_over) {
         fl_ir_border(ir, (FlRect) { 70.0f, 10.0f, 40.0f, 40.0f }, 12.0f, 12.0f, 12.0f, 12.0f, (FlCornerRadius) { 0 },
                      tA);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
-        GpuDrawList g = gpu_ir_to_draw_cmds(commands_arena, start, bytes, 255, 128, 128, nullptr, nullptr, nullptr,
-                                            nullptr, nullptr, nullptr);
+        GpuDrawList g = gpu_ir_to_draw_cmds(
+            commands_arena,
+            &(GpuIrInput) {
+                .commands = start, .bytes = bytes, .global_alpha = 255, .target_width = 128, .target_height = 128 });
         ASSERT_TRUE(g.count >= 1);
         ASSERT_TRUE_MSG(render_ir_to_surface(&backend, surface, &clear, start, bytes, &buf), "read_pixels failed");
         // Top edge band x=70..110, y=10..22; the GPU border packs the color in color[0].
@@ -4165,8 +4169,10 @@ UTEST(render, translucent_fill_border_over) {
         const FlColor corners[4] = { tA, tB, tA, tB }; // TL, TR, BL, BR
         fl_ir_fill_rect(ir, (FlRect) { 10.0f, 70.0f, 48.0f, 48.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
-        GpuDrawList g = gpu_ir_to_draw_cmds(commands_arena, start, bytes, 255, 128, 128, nullptr, nullptr, nullptr,
-                                            nullptr, nullptr, nullptr);
+        GpuDrawList g = gpu_ir_to_draw_cmds(
+            commands_arena,
+            &(GpuIrInput) {
+                .commands = start, .bytes = bytes, .global_alpha = 255, .target_width = 128, .target_height = 128 });
         ASSERT_TRUE(g.count >= 1);
         ASSERT_TRUE_MSG(render_ir_to_surface(&backend, surface, &clear, start, bytes, &buf), "read_pixels failed");
         // color[0] = TL corner (tA); sample the leftmost interior column, dominated by tA.
@@ -4185,8 +4191,10 @@ UTEST(render, translucent_fill_border_over) {
         const FlCornerRadius r = { .tl = 24.0f, .tr = 24.0f, .bl = 24.0f, .br = 24.0f };
         fl_ir_border(ir, (FlRect) { 70.0f, 70.0f, 48.0f, 48.0f }, 24.0f, 24.0f, 24.0f, 24.0f, r, tA);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
-        GpuDrawList g = gpu_ir_to_draw_cmds(commands_arena, start, bytes, 255, 128, 128, nullptr, nullptr, nullptr,
-                                            nullptr, nullptr, nullptr);
+        GpuDrawList g = gpu_ir_to_draw_cmds(
+            commands_arena,
+            &(GpuIrInput) {
+                .commands = start, .bytes = bytes, .global_alpha = 255, .target_width = 128, .target_height = 128 });
         ASSERT_TRUE(g.count >= 1);
         ASSERT_TRUE_MSG(render_ir_to_surface(&backend, surface, &clear, start, bytes, &buf), "read_pixels failed");
         // (88,88) is inside the top-left corner disk centered at (94,94), radius 24 - fully covered.

@@ -282,9 +282,17 @@ static struct FlFontCache* gl_op_get_font_cache(void* backend) {
 static GpuDrawList gl_op_translate(void* backend, const struct FlRenderFrame* frame, u32 screen_w, u32 screen_h) {
     GpuShared* self = backend;
     GpuDrawList list
-        = gpu_ir_to_draw_cmds(self->frame_arena, frame->commands, frame->bytes, frame->global_alpha, screen_w, screen_h,
-                              &self->cpu.image_atlas, &self->cpu.glyph_atlas, &self->cpu.image_slots,
-                              &frame->background, &self->cpu.svg_atlas, &self->cpu.color_svg_atlas);
+        = gpu_ir_to_draw_cmds(self->frame_arena, &(GpuIrInput) { .commands = frame->commands,
+                                                                 .bytes = frame->bytes,
+                                                                 .global_alpha = frame->global_alpha,
+                                                                 .target_width = screen_w,
+                                                                 .target_height = screen_h,
+                                                                 .atlas = &self->cpu.image_atlas,
+                                                                 .glyphs = &self->cpu.glyph_atlas,
+                                                                 .slots = &self->cpu.image_slots,
+                                                                 .background = &frame->background,
+                                                                 .svg = &self->cpu.svg_atlas,
+                                                                 .svg_color = &self->cpu.color_svg_atlas });
     gpu_prepare_log_slot_overflow(&self->cpu.image_slots);
     return list;
 }
