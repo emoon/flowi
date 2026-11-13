@@ -314,9 +314,20 @@ static GpuDrawList metal_op_translate(void* backend, const struct FlRenderFrame*
     u8 global_alpha = frame != NULL ? frame->global_alpha : 255;
     const struct FlBackground* background = frame != NULL ? &frame->background : NULL;
     GpuDrawList list =
-        gpu_ir_to_draw_cmds(self->frame_arena, ir, ir_bytes, global_alpha, screen_w, screen_h, &self->cpu.image_atlas,
-                            &self->cpu.glyph_atlas, &self->cpu.image_slots, background, &self->cpu.svg_atlas,
-                            &self->cpu.color_svg_atlas);
+        gpu_ir_to_draw_cmds(self->frame_arena,
+                            &(GpuIrInput) {
+                                .commands = ir,
+                                .bytes = ir_bytes,
+                                .global_alpha = global_alpha,
+                                .target_width = screen_w,
+                                .target_height = screen_h,
+                                .atlas = &self->cpu.image_atlas,
+                                .glyphs = &self->cpu.glyph_atlas,
+                                .slots = &self->cpu.image_slots,
+                                .background = background,
+                                .svg = &self->cpu.svg_atlas,
+                                .svg_color = &self->cpu.color_svg_atlas,
+                            });
     gpu_prepare_log_slot_overflow(&self->cpu.image_slots);
     return list;
 }

@@ -780,8 +780,11 @@ UTEST(render_ir, sw_gpu_decode_agrees) {
     u8x16_store_unaligned(sw.commands[0].corner_colors, sw_rgba, 0);
     int sw_alpha = sw_rgba[3]; // premultiply leaves the alpha channel as the folded alpha
 
-    GpuDrawList gpu = gpu_ir_to_draw_cmds(commands_arena, fill_start, fill_bytes, 200, 200, 200, nullptr, nullptr,
-                                          nullptr, nullptr, nullptr, nullptr);
+    GpuDrawList gpu = gpu_ir_to_draw_cmds(commands_arena, &(GpuIrInput) { .commands = fill_start,
+                                                                          .bytes = fill_bytes,
+                                                                          .global_alpha = 200,
+                                                                          .target_width = 200,
+                                                                          .target_height = 200 });
     ASSERT_TRUE(gpu.count >= 1);
     int gpu_alpha = (int)((gpu.cmds[0].color[0] >> 24) & 0xFFu); // R low byte, A high byte
 
@@ -814,8 +817,11 @@ UTEST(render_ir, sw_gpu_decode_agrees) {
     ASSERT_TRUE_MSG(memcmp(sw_neg.commands, sw_zero.commands, sizeof(RenderCommand) * (size_t)sw_neg.count) == 0,
                     "SW negative-radius decode must be byte-identical to the zero-radius decode");
 
-    GpuDrawList gpu_neg = gpu_ir_to_draw_cmds(commands_arena, neg_start, neg_bytes, 255, 200, 200, nullptr, nullptr,
-                                              nullptr, nullptr, nullptr, nullptr);
+    GpuDrawList gpu_neg = gpu_ir_to_draw_cmds(commands_arena, &(GpuIrInput) { .commands = neg_start,
+                                                                              .bytes = neg_bytes,
+                                                                              .global_alpha = 255,
+                                                                              .target_width = 200,
+                                                                              .target_height = 200 });
     ASSERT_TRUE(gpu_neg.count >= 1);
     ASSERT_TRUE_MSG(gpu_neg.cmds[0].radius[2] == 0.0f, "GPU must floor a negative corner radius to zero");
 
@@ -895,8 +901,10 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
         fl_ir_border_stroked(ir_arena, rect, 4.0f, 4.0f, 4.0f, 4.0f, (FlCornerRadius) { 0 }, color,
                              border_cases[i].stroke);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - start);
-        GpuDrawList g = gpu_ir_to_draw_cmds(commands_arena, start, bytes, 255, 128, 128, nullptr, nullptr, nullptr,
-                                            nullptr, nullptr, nullptr);
+        GpuDrawList g = gpu_ir_to_draw_cmds(
+            commands_arena,
+            &(GpuIrInput) {
+                .commands = start, .bytes = bytes, .global_alpha = 255, .target_width = 128, .target_height = 128 });
         ASSERT_EQ(g.count, 1u);
         ASSERT_EQ_MSG(g.cmds[0].flags, border_cases[i].flags, border_cases[i].what);
     }
@@ -907,8 +915,11 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
     fl_ir_border_stroked(ir_arena, rect, 40.0f, 40.0f, 40.0f, 40.0f, (FlCornerRadius) { 0 }, color,
                          (FlStrokeStyle) { 3.0f, 2.0f });
     size_t consumed_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - consumed);
-    GpuDrawList gc = gpu_ir_to_draw_cmds(commands_arena, consumed, consumed_bytes, 255, 128, 128, nullptr, nullptr,
-                                         nullptr, nullptr, nullptr, nullptr);
+    GpuDrawList gc = gpu_ir_to_draw_cmds(commands_arena, &(GpuIrInput) { .commands = consumed,
+                                                                         .bytes = consumed_bytes,
+                                                                         .global_alpha = 255,
+                                                                         .target_width = 128,
+                                                                         .target_height = 128 });
     ASSERT_EQ(gc.count, 1u);
     ASSERT_EQ_MSG(gc.cmds[0].kind, (u32)GpuDraw_Rect, "a border consuming its rect still becomes a plain fill");
     ASSERT_EQ_MSG(gc.cmds[0].flags, 0u, "a degenerate border carries no dash into the fill it becomes");
@@ -920,8 +931,10 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
     fl_ir_circle_stroked(ir_arena, 20.0f, 20.0f, 10.0f, color, color, 0.0f, (FlStrokeStyle) { 3.0f, 2.0f }, nullptr);
     fl_ir_circle_stroked(ir_arena, 20.0f, 20.0f, 10.0f, color, color, 10.0f, (FlStrokeStyle) { 3.0f, 2.0f }, nullptr);
     size_t ring_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - ring);
-    GpuDrawList gr = gpu_ir_to_draw_cmds(commands_arena, ring, ring_bytes, 255, 128, 128, nullptr, nullptr, nullptr,
-                                         nullptr, nullptr, nullptr);
+    GpuDrawList gr = gpu_ir_to_draw_cmds(
+        commands_arena,
+        &(GpuIrInput) {
+            .commands = ring, .bytes = ring_bytes, .global_alpha = 255, .target_width = 128, .target_height = 128 });
     ASSERT_EQ(gr.count, 3u);
     ASSERT_EQ_MSG(gr.cmds[0].flags, expected, "a circle's ring packs the pattern the same way a border does");
     ASSERT_EQ_MSG(gr.cmds[1].flags, 0u, "a borderless circle has no ring to dash");
@@ -1155,10 +1168,16 @@ UTEST(render_ir, painter_rects_frame_stream_matches_scalar_loop) {
     ASSERT_TRUE_MSG(memcmp(sw_batch.commands, sw_scalar.commands, sizeof(RenderCommand) * (size_t)sw_scalar.count) == 0,
                     "software decode: identical commands");
 
-    GpuDrawList gpu_scalar = gpu_ir_to_draw_cmds(commands_arena, scalar_start, scalar_bytes, 255, 1920, 1080, nullptr,
-                                                 nullptr, nullptr, nullptr, nullptr, nullptr);
-    GpuDrawList gpu_batch = gpu_ir_to_draw_cmds(commands_arena, batch_start, batch_bytes, 255, 1920, 1080, nullptr,
-                                                nullptr, nullptr, nullptr, nullptr, nullptr);
+    GpuDrawList gpu_scalar = gpu_ir_to_draw_cmds(commands_arena, &(GpuIrInput) { .commands = scalar_start,
+                                                                                 .bytes = scalar_bytes,
+                                                                                 .global_alpha = 255,
+                                                                                 .target_width = 1920,
+                                                                                 .target_height = 1080 });
+    GpuDrawList gpu_batch = gpu_ir_to_draw_cmds(commands_arena, &(GpuIrInput) { .commands = batch_start,
+                                                                                .bytes = batch_bytes,
+                                                                                .global_alpha = 255,
+                                                                                .target_width = 1920,
+                                                                                .target_height = 1080 });
     ASSERT_TRUE_MSG(gpu_scalar.count >= RECT_BATCH_COUNT,
                     "the GPU decode kept the unclipped canvas (the scissor culls part of the other)");
     ASSERT_EQ_MSG(gpu_batch.count, gpu_scalar.count, "GPU decode: same draw count");

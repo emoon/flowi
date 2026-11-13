@@ -408,8 +408,13 @@ enum { TR_TARGET = 2048 };
 
 static GpuDrawList translate(FlArena* out_arena, FlArena* ir_arena, const void* start, u8 global_alpha,
                              const GpuImageAtlas* atlas, GpuImageSlots* slots) {
-    return gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), global_alpha, TR_TARGET, TR_TARGET, atlas,
-                               NULL, slots, NULL, NULL, NULL);
+    return gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = global_alpha,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .atlas = atlas,
+                                                          .slots = slots });
 }
 
 // Runs the translation off the test thread so a regressed zero-byte_size guard hangs this worker instead of
@@ -424,8 +429,11 @@ typedef struct MalformedTranslateJob {
 
 static void* malformed_translate_thread(void* user_data) {
     MalformedTranslateJob* job = (MalformedTranslateJob*)user_data;
-    job->list = gpu_ir_to_draw_cmds(job->out_arena, job->commands, job->bytes, 255, TR_TARGET, TR_TARGET, NULL, NULL,
-                                    NULL, NULL, NULL, NULL);
+    job->list = gpu_ir_to_draw_cmds(job->out_arena, &(GpuIrInput) { .commands = job->commands,
+                                                                    .bytes = job->bytes,
+                                                                    .global_alpha = 255,
+                                                                    .target_width = TR_TARGET,
+                                                                    .target_height = TR_TARGET });
     atomic_store(&job->done, true);
     return NULL;
 }
@@ -434,8 +442,9 @@ static int run_translator_tests(void) {
     FlArena* ir_arena = arena_new();
     FlArena* out_arena = arena_new();
 
-    GpuDrawList list
-        = gpu_ir_to_draw_cmds(out_arena, NULL, 0, 255, TR_TARGET, TR_TARGET, NULL, NULL, NULL, NULL, NULL, NULL);
+    GpuDrawList list = gpu_ir_to_draw_cmds(
+        out_arena,
+        &(GpuIrInput) { .bytes = 0, .global_alpha = 255, .target_width = TR_TARGET, .target_height = TR_TARGET });
     CHECK(list.count == 0, "translate: empty stream should produce no commands");
     CHECK(list.clip_count == 1, "translate: clips[0] (the full target) exists even for an empty stream");
 
@@ -1499,8 +1508,12 @@ static int run_background_translator_tests(void) {
     const FlColor green = { 40, 200, 60, 255 };
 
     FlBackground bg_clear = { .current = FL_IMAGE_HANDLE_INVALID, .prev = FL_IMAGE_HANDLE_INVALID, .clear = clear };
-    GpuDrawList list
-        = gpu_ir_to_draw_cmds(out_arena, NULL, 0, 255, TR_TARGET, TR_TARGET, NULL, NULL, &slots, &bg_clear, NULL, NULL);
+    GpuDrawList list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .bytes = 0,
+                                                                      .global_alpha = 255,
+                                                                      .target_width = TR_TARGET,
+                                                                      .target_height = TR_TARGET,
+                                                                      .slots = &slots,
+                                                                      .background = &bg_clear });
     CHECK(list.count == 1, "background: a clear-only envelope emits one command");
     CHECK(list.cmds[0].kind == GpuDraw_Rect, "background: the clear is a fill rect");
     CHECK(list.cmds[0].rect[0] == 0.0f && list.cmds[0].rect[1] == 0.0f && list.cmds[0].rect[2] == (f32)TR_TARGET
@@ -1511,13 +1524,22 @@ static int run_background_translator_tests(void) {
 
     FlBackground bg_clearless
         = { .current = FL_IMAGE_HANDLE_INVALID, .prev = FL_IMAGE_HANDLE_INVALID, .clear = { 20, 30, 40, 0 } };
-    list = gpu_ir_to_draw_cmds(out_arena, NULL, 0, 255, TR_TARGET, TR_TARGET, NULL, NULL, &slots, &bg_clearless, NULL,
-                               NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .bytes = 0,
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .slots = &slots,
+                                                          .background = &bg_clearless });
     CHECK(list.count == 0, "background: a zero-alpha clear emits no command");
 
     // A single image tints white at the background alpha, premultiplied - alpha 128 gives (128,128,128,128).
     FlBackground bg_one = { .current = 7, .prev = FL_IMAGE_HANDLE_INVALID, .alpha = 128, .clear = clear };
-    list = gpu_ir_to_draw_cmds(out_arena, NULL, 0, 255, TR_TARGET, TR_TARGET, NULL, NULL, &slots, &bg_one, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .bytes = 0,
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .slots = &slots,
+                                                          .background = &bg_one });
     CHECK(list.count == 2, "background: clear + one image");
     CHECK(list.cmds[0].kind == GpuDraw_Rect, "background: the clear leads the image");
     CHECK(list.cmds[1].kind == GpuDraw_SlotImage && list.cmds[1].aux == 0,
@@ -1529,8 +1551,13 @@ static int run_background_translator_tests(void) {
 
     void* start = ir_rewind_begin(ir_arena);
     emit_solid_rect(ir_arena, 10, 10, 50, 50, green);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, NULL,
-                               &slots, &bg_one, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .slots = &slots,
+                                                          .background = &bg_one });
     CHECK(list.count == 3, "background: clear + image + the UI rect");
     CHECK(list.cmds[2].kind == GpuDraw_Rect && list.cmds[2].rect[0] == 10.0f,
           "background: the UI command follows the background commands");
@@ -1538,7 +1565,12 @@ static int run_background_translator_tests(void) {
     // A valid prev makes the background two images - prev opaque, current at crossfade_t - so over-compositing
     // yields lerp(prev, current, t). The background's own alpha is unused here.
     FlBackground bg_xf = { .current = 8, .prev = 7, .crossfade_t = 0.5f, .alpha = 200, .clear = clear };
-    list = gpu_ir_to_draw_cmds(out_arena, NULL, 0, 255, TR_TARGET, TR_TARGET, NULL, NULL, &slots, &bg_xf, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .bytes = 0,
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .slots = &slots,
+                                                          .background = &bg_xf });
     CHECK(list.count == 3, "crossfade: clear + prev + current");
     CHECK(list.cmds[1].kind == GpuDraw_SlotImage && list.cmds[1].color[0] == 0xFFFFFFFFu,
           "crossfade: prev draws opaque (white tint)");
@@ -1551,8 +1583,13 @@ static int run_background_translator_tests(void) {
     FlBackground bg_opaque = { .current = 7, .prev = FL_IMAGE_HANDLE_INVALID, .alpha = 255, .clear = clear };
     start = ir_rewind_begin(ir_arena);
     emit_solid_rect(ir_arena, 10, 10, 50, 50, green);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 128, TR_TARGET, TR_TARGET, NULL, NULL,
-                               &slots, &bg_opaque, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 128,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .slots = &slots,
+                                                          .background = &bg_opaque });
     CHECK(list.count == 3, "global_alpha: clear + image + UI");
     CHECK((list.cmds[0].color[0] >> 24) == 255u, "global_alpha: the background clear stays opaque");
     CHECK((list.cmds[1].color[0] >> 24) == 255u,
@@ -1592,8 +1629,12 @@ static int run_text_translator_tests(void) {
     };
     void* start = ir_begin(ir_arena);
     fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
-    GpuDrawList list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL,
-                                           &glyphs, NULL, NULL, NULL, NULL);
+    GpuDrawList list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                                      .bytes = ir_bytes(ir_arena, start),
+                                                                      .global_alpha = 255,
+                                                                      .target_width = TR_TARGET,
+                                                                      .target_height = TR_TARGET,
+                                                                      .glyphs = &glyphs });
     CHECK(list.count == 2, "text translate: a run explodes to one quad per non-empty prepared glyph");
 
     // At full alpha the premultiplied run tint is identical to the straight pack.
@@ -1623,8 +1664,12 @@ static int run_text_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     FlGlyph one = { 'A', 0.0f, 50.0f };
     fl_ir_text_run(ir_arena, font, size, 1.0f, half, &one, 1);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, &glyphs,
-                               NULL, NULL, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .glyphs = &glyphs });
     u32 ea = ((u32)half.a * 255u + 127u) / 255u;
     u32 er = ((u32)half.r * ea + 127u) / 255u;
     u32 eg = ((u32)half.g * ea + 127u) / 255u;
@@ -1634,38 +1679,57 @@ static int run_text_translator_tests(void) {
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_text_run(ir_arena, font, (u16)(size + 2), 1.0f, run_color, run, 4);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, &glyphs,
-                               NULL, NULL, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .glyphs = &glyphs });
     CHECK(list.count == 0, "text translate: a run at an unprepared size resolves no glyphs");
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, NULL, NULL,
-                               NULL, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET });
     CHECK(list.count == 0, "text translate: a NULL glyph atlas emits no text commands");
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_clip_push(ir_arena, (FlRect) { 0.0f, 0.0f, 4.0f, 4.0f }); // a tiny box far from the glyphs at ~(100, 200)
     fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
     fl_ir_clip_pop(ir_arena);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, &glyphs,
-                               NULL, NULL, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .glyphs = &glyphs });
     CHECK(list.count == 0, "text translate: glyphs fully outside the clip drop");
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_clip_push(ir_arena, (FlRect) { 90.0f, 180.0f, 80.0f, 40.0f }); // covers 'A' (~100,200) and 'b' (~117,200)
     fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
     fl_ir_clip_pop(ir_arena);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, &glyphs,
-                               NULL, NULL, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .glyphs = &glyphs });
     CHECK(list.count == 2 && list.cmds[0].clip != 0 && list.cmds[0].clip == list.cmds[1].clip,
           "text translate: glyphs inside a clip survive and inherit its (non-root) clip index");
 
     start = ir_rewind_begin(ir_arena);
     FlGlyph ga = { 'A', 0.0f, 50.0f };
     fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, &ga, 1);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 128, TR_TARGET, TR_TARGET, NULL, &glyphs,
-                               NULL, NULL, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 128,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .glyphs = &glyphs });
     u32 ga_a = ((u32)run_color.a * 128u + 127u) / 255u;
     u32 ga_r = ((u32)run_color.r * ga_a + 127u) / 255u;
     u32 ga_g = ((u32)run_color.g * ga_a + 127u) / 255u;
@@ -1680,8 +1744,12 @@ static int run_text_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     FlGlyph scaled = { 'A', 100.0f, 200.0f };
     fl_ir_text_run(ir_arena, font, size, s, run_color, &scaled, 1);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, &glyphs,
-                               NULL, NULL, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .glyphs = &glyphs });
     CHECK(list.count == 1 && list.cmds[0].kind == GpuDraw_Glyph,
           "text translate: a scaled run still emits a glyph quad");
     const GpuDrawCmd* sc = &list.cmds[0];
@@ -1713,8 +1781,12 @@ static int run_text_translator_tests(void) {
     FlGlyph* trun_glyphs = arena_alloc_array(ir_arena, FlGlyph, 1);
     trun_glyphs[0] = (FlGlyph) { 'A', 100.0f, 200.0f };
     fl_ir_append_effect(ir_arena, theader, &text_fx);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, &glyphs,
-                               NULL, NULL, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .glyphs = &glyphs });
     CHECK(list.count == 1 && list.cmds[0].kind == GpuDraw_Glyph, "text effect: the annotated run translates");
     CHECK(effect_kind_of(&list.cmds[0]) == 1 && list.cmds[0].effect[3] == packed_rgba(tfx_color, 255),
           "text effect: the effect is located past the glyph array and stamped onto the quad");
@@ -1748,8 +1820,12 @@ static int run_svg_translator_tests(void) {
     void* start = ir_begin(ir_arena);
     fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
                 (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
-    GpuDrawList list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL,
-                                           NULL, NULL, NULL, &svg, NULL);
+    GpuDrawList list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                                      .bytes = ir_bytes(ir_arena, start),
+                                                                      .global_alpha = 255,
+                                                                      .target_width = TR_TARGET,
+                                                                      .target_height = TR_TARGET,
+                                                                      .svg = &svg });
     CHECK(list.count == 1, "svg translate: a vector-mono handle emits one command");
     const GpuDrawCmd* c = &list.cmds[0];
     CHECK(c->kind == GpuDraw_Svg, "svg translate: a vector-mono handle emits GpuDraw_Svg");
@@ -1768,16 +1844,24 @@ static int run_svg_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
                 (FlRect) { 0 }, override, FlImageFilter_Linear, nullptr);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, NULL, NULL,
-                               NULL, &svg, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .svg = &svg });
     CHECK(list.count == 1 && list.cmds[0].kind == GpuDraw_Svg && list.cmds[0].color[0] == packed_rgba(override, 255),
           "svg translate: a non-identity tint recolors the icon");
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
                 (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 128, TR_TARGET, TR_TARGET, NULL, NULL, NULL,
-                               NULL, &svg, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 128,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .svg = &svg });
     u32 fa = ((u32)authored.a * 128u + 127u) / 255u;
     u32 fr = ((u32)authored.r * fa + 127u) / 255u;
     u32 fg = ((u32)authored.g * fa + 127u) / 255u;
@@ -1789,8 +1873,11 @@ static int run_svg_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
                 (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, NULL, NULL,
-                               NULL, NULL, NULL);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET });
     CHECK(list.count == 0, "svg translate: a NULL SVG atlas emits no command for a vector-only handle");
 
     // Multi-color path: a handle living in the RGBA8 color atlas emits GpuDraw_SvgColor sampling the baked
@@ -1805,8 +1892,12 @@ static int run_svg_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = color_handle }, FlImageMode_Color,
                 dst, (FlRect) { 0 }, override, FlImageFilter_Linear, nullptr);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 255, TR_TARGET, TR_TARGET, NULL, NULL, NULL,
-                               NULL, NULL, &svg_color);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 255,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .svg_color = &svg_color });
     CHECK(list.count == 1, "svg color translate: a multi-color handle emits one command");
     c = &list.cmds[0];
     CHECK(c->kind == GpuDraw_SvgColor, "svg color translate: a multi-color handle emits GpuDraw_SvgColor");
@@ -1824,8 +1915,12 @@ static int run_svg_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = color_handle }, FlImageMode_Color,
                 dst, (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
-    list = gpu_ir_to_draw_cmds(out_arena, start, ir_bytes(ir_arena, start), 128, TR_TARGET, TR_TARGET, NULL, NULL, NULL,
-                               NULL, NULL, &svg_color);
+    list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
+                                                          .bytes = ir_bytes(ir_arena, start),
+                                                          .global_alpha = 128,
+                                                          .target_width = TR_TARGET,
+                                                          .target_height = TR_TARGET,
+                                                          .svg_color = &svg_color });
     CHECK(list.count == 1 && list.cmds[0].color[0] == (128u | (128u << 8) | (128u << 16) | (128u << 24)),
           "svg color translate: the frame global_alpha rides the white tint premultiplied");
 
