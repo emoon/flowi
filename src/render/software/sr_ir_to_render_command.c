@@ -439,9 +439,11 @@ static void emit_ir_command(const SrEmitter* em, const FlCmdHeader* header) {
     }
 }
 
-UiRenderCommandsArray sr_ir_to_render_commands(FlArena* commands_arena, FlArena* state_arena, SwGlyphCache* glyph_cache,
-                                               const void* ir_commands, size_t ir_bytes, u8 global_alpha) {
+UiRenderCommandsArray sr_ir_to_render_commands(const SrIrRequest* request) {
     perf_scope_function();
+
+    FlArena* commands_arena = request->commands_arena;
+    FlArena* state_arena = request->state_arena;
 
     // Align first: arena_pos_type returns an aligned position that may be past the current one, which would
     // trip arena_count's bounds assertion.
@@ -451,11 +453,11 @@ UiRenderCommandsArray sr_ir_to_render_commands(FlArena* commands_arena, FlArena*
     SrEmitter em = {
         .commands = commands_arena,
         .state = state_arena,
-        .glyph_cache = glyph_cache,
-        .global_alpha = global_alpha,
+        .glyph_cache = request->glyph_cache,
+        .global_alpha = request->global_alpha,
     };
-    const u8* p = (const u8*)ir_commands;
-    const u8* end = p + ir_bytes;
+    const u8* p = (const u8*)request->ir_commands;
+    const u8* end = p + request->ir_bytes;
     while (p < end) {
         const FlCmdHeader* header = (const FlCmdHeader*)p;
         emit_ir_command(&em, header);

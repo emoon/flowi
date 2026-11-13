@@ -639,7 +639,14 @@ UTEST(render_ir, sw_backend_skips_optional_tier) {
     fl_ir_fill_rect(ir_arena, (FlRect) { 20.0f, 0.0f, 10.0f, 10.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
 
     size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - start);
-    UiRenderCommandsArray out = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, start, bytes, 255);
+    UiRenderCommandsArray out = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = start,
+        .ir_bytes = bytes,
+        .global_alpha = 255,
+    });
 
     ASSERT_TRUE_MSG(out.count == 2, "only the two core-tier fill rects translate");
 
@@ -650,7 +657,15 @@ UTEST(render_ir, sw_backend_skips_optional_tier) {
 
 static int sw_translate_range(FlArena* ir_arena, FlArena* commands_arena, FlArena* state_arena, const u8* start) {
     size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - start);
-    return sr_ir_to_render_commands(commands_arena, state_arena, nullptr, start, bytes, 255).count;
+    return sr_ir_to_render_commands(&(SrIrRequest) {
+                                        .commands_arena = commands_arena,
+                                        .state_arena = state_arena,
+                                        .glyph_cache = nullptr,
+                                        .ir_commands = start,
+                                        .ir_bytes = bytes,
+                                        .global_alpha = 255,
+                                    })
+        .count;
 }
 
 // Per-primitive companion to sw_backend_skips_optional_tier: each kind is fed ALONE, so a primitive that gains
@@ -734,10 +749,22 @@ UTEST(render_ir, sw_backend_ignores_effect_on_core_command) {
     fl_ir_append_effect(ir_arena, header, &shadow);
     size_t fx_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - fx_start);
 
-    UiRenderCommandsArray plain
-        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, plain_start, plain_bytes, 255);
-    UiRenderCommandsArray withfx
-        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, fx_start, fx_bytes, 255);
+    UiRenderCommandsArray plain = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = plain_start,
+        .ir_bytes = plain_bytes,
+        .global_alpha = 255,
+    });
+    UiRenderCommandsArray withfx = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = fx_start,
+        .ir_bytes = fx_bytes,
+        .global_alpha = 255,
+    });
 
     ASSERT_EQ(plain.count, 1);
     ASSERT_EQ(withfx.count, plain.count);
@@ -773,8 +800,14 @@ UTEST(render_ir, sw_gpu_decode_agrees) {
     fl_ir_fill_rect(ir_arena, rect, (FlCornerRadius) { 0 }, solid, nullptr);
     size_t fill_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - fill_start);
 
-    UiRenderCommandsArray sw
-        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, fill_start, fill_bytes, 200);
+    UiRenderCommandsArray sw = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = fill_start,
+        .ir_bytes = fill_bytes,
+        .global_alpha = 200,
+    });
     ASSERT_EQ(sw.count, 1);
     u8 sw_rgba[16];
     u8x16_store_unaligned(sw.commands[0].corner_colors, sw_rgba, 0);
@@ -809,10 +842,22 @@ UTEST(render_ir, sw_gpu_decode_agrees) {
     fl_ir_fill_rect(ir_arena, rect, zero_r, op4, nullptr);
     size_t zero_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - zero_start);
 
-    UiRenderCommandsArray sw_neg
-        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, neg_start, neg_bytes, 255);
-    UiRenderCommandsArray sw_zero
-        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, zero_start, zero_bytes, 255);
+    UiRenderCommandsArray sw_neg = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = neg_start,
+        .ir_bytes = neg_bytes,
+        .global_alpha = 255,
+    });
+    UiRenderCommandsArray sw_zero = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = zero_start,
+        .ir_bytes = zero_bytes,
+        .global_alpha = 255,
+    });
     ASSERT_EQ_MSG(sw_neg.count, sw_zero.count, "SW must clamp a negative corner radius to zero (same split as 0)");
     ASSERT_TRUE_MSG(memcmp(sw_neg.commands, sw_zero.commands, sizeof(RenderCommand) * (size_t)sw_neg.count) == 0,
                     "SW negative-radius decode must be byte-identical to the zero-radius decode");
@@ -850,10 +895,22 @@ UTEST(render_ir, sw_backend_ignores_a_border_dash_pattern) {
     fl_ir_border_stroked(ir_arena, rect, 4.0f, 3.0f, 2.0f, 1.0f, radius, color, (FlStrokeStyle) { 3.0f, 2.0f });
     size_t dashed_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - dashed);
 
-    UiRenderCommandsArray sw_solid
-        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, solid, solid_bytes, 255);
-    UiRenderCommandsArray sw_dashed
-        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, dashed, dashed_bytes, 255);
+    UiRenderCommandsArray sw_solid = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = solid,
+        .ir_bytes = solid_bytes,
+        .global_alpha = 255,
+    });
+    UiRenderCommandsArray sw_dashed = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = dashed,
+        .ir_bytes = dashed_bytes,
+        .global_alpha = 255,
+    });
 
     ASSERT_TRUE_MSG(sw_solid.count > 0, "the solid border must decode to at least one SW command");
     ASSERT_EQ_MSG(sw_dashed.count, sw_solid.count, "a dash pattern must not change how many commands SW emits");
@@ -1159,10 +1216,22 @@ UTEST(render_ir, painter_rects_frame_stream_matches_scalar_loop) {
     // Alpha compositing happens backend-side on the decoded commands: the decode must agree too.
     FlArena* commands_arena = arena_new();
     FlArena* state_arena = arena_new();
-    UiRenderCommandsArray sw_scalar
-        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, scalar_start, scalar_bytes, 255);
-    UiRenderCommandsArray sw_batch
-        = sr_ir_to_render_commands(commands_arena, state_arena, nullptr, batch_start, batch_bytes, 255);
+    UiRenderCommandsArray sw_scalar = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = scalar_start,
+        .ir_bytes = scalar_bytes,
+        .global_alpha = 255,
+    });
+    UiRenderCommandsArray sw_batch = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = commands_arena,
+        .state_arena = state_arena,
+        .glyph_cache = nullptr,
+        .ir_commands = batch_start,
+        .ir_bytes = batch_bytes,
+        .global_alpha = 255,
+    });
     ASSERT_TRUE_MSG(sw_scalar.count >= 2 * RECT_BATCH_COUNT, "the software decode kept every rect");
     ASSERT_EQ_MSG(sw_batch.count, sw_scalar.count, "software decode: same command count");
     ASSERT_TRUE_MSG(memcmp(sw_batch.commands, sw_scalar.commands, sizeof(RenderCommand) * (size_t)sw_scalar.count) == 0,
