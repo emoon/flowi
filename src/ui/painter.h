@@ -43,7 +43,7 @@ typedef struct PainterFrame {
 } PainterFrame;
 
 // Call before any painter operation this frame; resets the painter's internal arena.
-void painter_begin_frame(Painter* p, const PainterFrame* frame);
+void painter_begin_frame(Painter* p, PainterFrame frame);
 
 // Painting scopes (internal use only - driven by the layout begin/end seam)
 //
@@ -138,13 +138,13 @@ void painter_vline(Painter* p, PainterRule rule);
 
 // Image drawing
 
-// Draw an image into rect (logical space). A non-positive rect.w/rect.h uses the image's native pixel size for
-// that dimension. Returns false if the image is not ready/invalid.
+// Draw an image into rect (logical space). rect.w or rect.h <= 0 means the image's native pixel width or height.
+// Returns false if the image is not ready/invalid.
 bool painter_image(Painter* p, FlRect rect, FlImageHandle image, FlColor color);
 
 // A source sub-rectangle of an image drawn into a destination rectangle.
 typedef struct PainterImageSub {
-    FlRect dst; // logical (authoring) space; a non-positive w/h uses the source rect's w/h
+    FlRect dst; // logical (authoring) space; w or h <= 0 means the source rect's width or height (its native size)
     FlRect src; // image pixels
     FlImageHandle image;
     FlColor color;
@@ -153,7 +153,7 @@ typedef struct PainterImageSub {
 // Draw a source sub-rectangle of an image. Returns false if image/source is not ready/valid.
 bool painter_image_sub(Painter* p, PainterImageSub draw);
 
-// Draw a dynamic image (RGBA or alpha-only) with its top-left at (x, y). For alpha-only images color
+// Draw a dynamic image (RGBA or alpha-only) with its top-left at pos. For alpha-only images color
 // colorizes the alpha mask; for RGBA it tints the image (white = no tint).
 void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColor color);
 
@@ -200,14 +200,19 @@ typedef struct PainterArc {
 // flags: FlArcFlags - ROUND_CAPS rounds the arc ends (default butt caps keep sector pie edges clean)
 void painter_arc(Painter* p, PainterArc arc);
 
-// A circle in logical space with an optional border ring.
+// A fill color with an optional border ring (border_width 0 = no border); shared by the closed shapes.
+typedef struct PainterFill {
+    FlColor color;
+    FlColor border_color;
+    float border_width;
+} PainterFill;
+
+// A circle in logical space.
 typedef struct PainterCircle {
     float cx;
     float cy;
     float radius;
-    FlColor color;
-    FlColor border_color;
-    float border_width;
+    PainterFill fill;
 } PainterCircle;
 
 // Draw a filled circle with an optional border ring (border_width 0 = no border).
@@ -217,15 +222,13 @@ void painter_circle(Painter* p, PainterCircle circle);
 // scale with the painter like every other length.
 void painter_circle_stroked(Painter* p, PainterCircle circle, FlStrokeStyle stroke);
 
-// A diamond in logical space with an optional border ring.
+// A diamond in logical space with half-extents rx, ry.
 typedef struct PainterDiamond {
     float cx;
     float cy;
     float rx;
     float ry;
-    FlColor color;
-    FlColor border_color;
-    float border_width;
+    PainterFill fill;
 } PainterDiamond;
 
 // Draw a filled diamond with half-extents rx, ry and an optional border ring (border_width 0 = no border).

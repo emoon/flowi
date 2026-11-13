@@ -5800,7 +5800,8 @@ static void rects_test_record(Painter* p, bool batch, FlColoredRect* rects, u32 
         painter_rects(p, rects, count);
     } else {
         for (u32 i = 0; i < count; i++) {
-            painter_rect(p, (FlRect) { rects[i].x, rects[i].y, rects[i].w, rects[i].h }, rects[i].color);
+            painter_rect(p, (FlRect) { .x = rects[i].x, .y = rects[i].y, .w = rects[i].w, .h = rects[i].h },
+                         rects[i].color);
         }
     }
     painter_scope_pop(p);
@@ -5829,7 +5830,8 @@ static int run_painter_rects_pixel_test(FlRenderBackend* backend, FlArena* ir_ar
 
     FlArena* scratch = arena_new();
     Painter* p = painter_create(scratch);
-    painter_begin_frame(p, &(PainterFrame) { nullptr, 1.5f, 1.0f, scratch });
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.5f, .text_scale = 1.0f, .state_arena = scratch });
 
     u8* readback[2] = { nullptr, nullptr };
     size_t readback_bytes = 0;
@@ -6102,9 +6104,13 @@ static void fl_app_gpu_frame(void* user_data) {
     // here and element-local painter coordinates map 1:1 to the 256x256 surface.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         Painter* p = ui_get_painter();
-        painter_rect(p, (FlRect) { 20.0f, 20.0f, 100.0f, 100.0f }, ui_color(40, 60, 200, 255));
-        painter_circle(
-            p, (PainterCircle) { 180.0f, 180.0f, 50.0f, ui_color(230, 80, 60, 255), ui_color(0, 0, 0, 0), 0.0f });
+        painter_rect(p, (FlRect) { .x = 20.0f, .y = 20.0f, .w = 100.0f, .h = 100.0f }, ui_color(40, 60, 200, 255));
+        painter_circle(p, (PainterCircle) { .cx = 180.0f,
+                                            .cy = 180.0f,
+                                            .radius = 50.0f,
+                                            .fill = { .color = ui_color(230, 80, 60, 255),
+                                                      .border_color = ui_color(0, 0, 0, 0),
+                                                      .border_width = 0.0f } });
     }
 }
 

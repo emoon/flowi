@@ -520,10 +520,10 @@ void ui_update_begin(FlUiCtx* self) {
     // The frame arenas now hold this frame's storage, so fl_frame_str is legal from here until ui_update_end.
     self->frame_open = true;
 
-    painter_begin_frame(self->painter, &(PainterFrame) { .font_cache = self->shared->font_cache,
-                                                         .ui_scale = self->ui_scale,
-                                                         .text_scale = self->text_scale,
-                                                         .state_arena = self->render_frame_allocator_state });
+    painter_begin_frame(self->painter, (PainterFrame) { .font_cache = self->shared->font_cache,
+                                                        .ui_scale = self->ui_scale,
+                                                        .text_scale = self->text_scale,
+                                                        .state_arena = self->render_frame_allocator_state });
 
     list_uniform_begin_update(self->list_uniform_ctx);
 
