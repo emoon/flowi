@@ -145,17 +145,15 @@ static void sdl_gl_cap_frame_rate(SdlWindowContext* self, SDL_Window* window) {
     self->last_present = SDL_GetPerformanceCounter();
 }
 
-static void sdl_present_gl(void* ud, FlWindow* window, u32 surface_texture, u32 tex_width, u32 tex_height) {
+static void sdl_present_gl(void* ud, FlWindow* window, const FlGpuSurfaceTexture* surface_texture) {
     SdlWindowContext* self = (SdlWindowContext*)ud;
-    UNUSED(tex_width);
-    UNUSED(tex_height);
     // Texture name 0 is a surface that has not rendered yet; leave the window untouched.
-    if (!sdl_gl_window_usable(self, window) || surface_texture == 0) {
+    if (!sdl_gl_window_usable(self, window) || surface_texture->handle == 0) {
         return;
     }
     // Bind the shared context against this window's drawable, then composite + swap.
     SDL_GL_MakeCurrent(window->window, self->gl_ctx);
-    sdl_gl_composite(self, window->window, (GLuint)surface_texture);
+    sdl_gl_composite(self, window->window, (GLuint)surface_texture->handle);
     SDL_GL_SwapWindow(window->window);
     sdl_gl_cap_frame_rate(self, window->window);
 }

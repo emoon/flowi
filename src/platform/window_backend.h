@@ -11,6 +11,7 @@
 #include <core/string.h>
 #include <core/types.h>
 #include <flowi/core/math_data.h>
+#include <flowi/ui/pixel_readback.h>
 #include "input_types.h"
 
 struct FlArena;
@@ -20,6 +21,19 @@ struct FlUiCtx;
 // and casts internally - the host never sees its layout.
 
 typedef struct FlWindow FlWindow;
+
+// A GPU Surface Texture handed to present: the handle is a u32 GL texture name, or an opaque void* id<MTLTexture> on
+// APPLE, with the texture's size in pixels.
+
+typedef struct FlGpuSurfaceTexture {
+#if __APPLE__
+    void* handle;
+#else
+    u32 handle;
+#endif
+    u32 width;
+    u32 height;
+} FlGpuSurfaceTexture;
 
 // Window creation parameters - title plus the initial drawable size in physical pixels and top-left position.
 
@@ -82,17 +96,13 @@ typedef struct FlWindowBackend {
     // Presentation. A backend provides exactly ONE of the two present slots and the runner selects by whichever is
     // non-null:
     //   present - GPU windows: composite a Surface Texture over the window and swap. The handle is a
-    //                      u32 GL texture name on GL, an opaque void* id<MTLTexture> on Metal. The headless backend
-    //                      no-ops this.
+    //                      u32 GL texture name on GL, an opaque void* id<MTLTexture> on Metal (FlGpuSurfaceTexture).
+    //                      The headless backend no-ops this.
     //   present_software - software windows: blit a CPU pixel buffer (the software renderer's offscreen RGB24
-    //                      target) to the window. px points at tex_width x tex_height pixels with stride bytes
-    //                      per row.
-#if __APPLE__
-    void (*present)(void* ud, FlWindow* window, void* surface_texture, u32 tex_width, u32 tex_height);
-#else
-    void (*present)(void* ud, FlWindow* window, u32 surface_texture, u32 tex_width, u32 tex_height);
-#endif
-    void (*present_software)(void* ud, FlWindow* window, const void* px, u32 tex_width, u32 tex_height, u32 stride);
+    //                      target) to the window. pixels points at width x height pixels with stride bytes
+    //                      per row (FlPixelReadback).
+    void (*present)(void* ud, FlWindow* window, const FlGpuSurfaceTexture* surface_texture);
+    void (*present_software)(void* ud, FlWindow* window, const FlPixelReadback* pixels);
 
     // Make the backend's shared GL context current against a window's drawable, without compositing or swapping.
     // The host calls this once before render-backend teardown. Null when the backend owns no GL context.

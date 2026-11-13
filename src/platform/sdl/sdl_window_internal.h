@@ -78,14 +78,6 @@ typedef struct SdlWindowParams {
     bool resizable;
 } SdlWindowParams;
 
-// The type of FlWindowBackend.present, which takes the Surface Texture as a Metal handle on APPLE and a GL texture
-// name elsewhere.
-#if __APPLE__
-typedef void (*SdlPresentFn)(void* ud, FlWindow* window, void* surface_texture, u32 tex_width, u32 tex_height);
-#else
-typedef void (*SdlPresentFn)(void* ud, FlWindow* window, u32 surface_texture, u32 tex_width, u32 tex_height);
-#endif
-
 // One construction mode: how its windows are created, destroyed and measured, and the present slots it fills in the
 // FlWindowBackend (the slots a mode does not use stay null).
 struct SdlWindowMode {
@@ -97,8 +89,8 @@ struct SdlWindowMode {
     void (*destroy_window)(SdlWindowContext* self, FlWindow* window);
     // Live drawable size in physical pixels.
     void (*pixel_size)(FlWindow* window, int* px_w, int* px_h);
-    SdlPresentFn present;
-    void (*present_software)(void* ud, FlWindow* window, const void* px, u32 tex_width, u32 tex_height, u32 stride);
+    void (*present)(void* ud, FlWindow* window, const FlGpuSurfaceTexture* surface_texture);
+    void (*present_software)(void* ud, FlWindow* window, const FlPixelReadback* pixels);
     void (*make_current)(void* ud, FlWindow* window);
 };
 
