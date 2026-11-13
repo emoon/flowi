@@ -102,29 +102,45 @@ u32 painter_scope_depth(const Painter* p) {
 // Effect state. It lives in the innermost scope's slot, so it dies when that element's scope pops (and with
 // every scope at begin_frame) and reaches no sibling, child, or later frame.
 
+// The innermost scope, or null when none is open or nesting is past the cap (such scopes do not record).
+static const PaintScope* painter_top_scope(const Painter* p) {
+    if (p->scope_depth == 0 || p->scope_depth > PAINTER_MAX_SCOPE_DEPTH) {
+        return nullptr;
+    }
+    return &p->scope_stack[p->scope_depth - 1];
+}
+
+// The same scope for the callers that write to it; the slot lives in the non-const painter.
+static PaintScope* painter_top_scope_mut(Painter* p) {
+    return (PaintScope*)painter_top_scope(p);
+}
+
 void painter_set_effect(Painter* p, FlEffect effect) {
-    if (p == nullptr || p->scope_depth == 0 || p->scope_depth > PAINTER_MAX_SCOPE_DEPTH) {
+    if (p == nullptr) {
         return;
     }
-    p->scope_stack[p->scope_depth - 1].effect = effect;
+    PaintScope* scope = painter_top_scope_mut(p);
+    if (scope != nullptr) {
+        scope->effect = effect;
+    }
 }
 
 // The effect the next primitive carries, or null when there is none (the builders take NULL for "no effect").
 static const FlEffect* painter_current_effect(const Painter* p) {
-    if (p->scope_depth == 0 || p->scope_depth > PAINTER_MAX_SCOPE_DEPTH) {
+    const PaintScope* scope = painter_top_scope(p);
+    if (scope == nullptr || scope->effect.kind == FlEffectKind_None) {
         return nullptr;
     }
-    const FlEffect* effect = &p->scope_stack[p->scope_depth - 1].effect;
-    return effect->kind != FlEffectKind_None ? effect : nullptr;
+    return &scope->effect;
 }
 
 // The innermost scope's span, lazily created and attached to its element's CUSTOM marker. Returns null when
 // there is no recordable scope (none open, or nesting past the cap), in which case the primitive no-ops.
 static FlPaintSpan* painter_active_span(Painter* p) {
-    if (p->scope_depth == 0 || p->scope_depth > PAINTER_MAX_SCOPE_DEPTH) {
+    PaintScope* s = painter_top_scope_mut(p);
+    if (s == nullptr) {
         return nullptr;
     }
-    PaintScope* s = &p->scope_stack[p->scope_depth - 1];
     if (s->span == nullptr) {
         s->span = arena_alloc_zero(p->scratch, FlPaintSpan);
         if (s->custom_slot != nullptr) {
@@ -134,8 +150,9 @@ static FlPaintSpan* painter_active_span(Painter* p) {
     return s->span;
 }
 
-// Begin recording one primitive: returns the active span (else null → skip the primitive) and 8-aligns the
-// arena so the upcoming record starts exactly at *out_start (the byte_size walk requires record-aligned starts).
+// Begin recording one primitive: returns the active span (else null → skip the primitive)
+// and 8-aligns the arena so the upcoming record starts exactly at *out_start (the byte_size walk requires
+// record-aligned starts).
 static FlPaintSpan* painter_record_begin(Painter* p, void** out_start) {
     FlPaintSpan* span = painter_active_span(p);
     if (span == nullptr) {
@@ -177,7 +194,10 @@ static void painter_record_end(Painter* p, FlPaintSpan* span, void* start) {
 // backend re-resolves each glyph id and rasterizes it.
 
 void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, FlColor color) {
-    if (p == nullptr || text.length == 0 || text.data == nullptr || p->font_cache == nullptr) {
+    if (p == nullptr) {
+        return;
+    }
+    if (string_is_empty(text) || p->font_cache == nullptr) {
         return;
     }
 
@@ -210,7 +230,10 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
 // drawn. Positions carry ui_scale (chrome); the size and spacing carry text_scale (type).
 
 void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color) {
-    if (p == nullptr || text.length == 0 || text.data == nullptr || p->font_cache == nullptr) {
+    if (p == nullptr) {
+        return;
+    }
+    if (string_is_empty(text) || p->font_cache == nullptr) {
         return;
     }
 
@@ -249,12 +272,13 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
 
 // The one fill-rect record writer: logical-space geometry and radii are scaled to pixels here, so every rectangle
 // entry point (single or batched) emits the same bytes. The caller owns the span bracket.
-static void painter_emit_fill_rect(Painter* p, float x, float y, float w, float h, FlCornerRadius radius,
-                                   const FlColor corners[4], const FlEffect* effect) {
+static void painter_emit_fill_rect(Painter* p, FlRect rect, const FlRectConfig* config, const FlEffect* effect) {
     // Radii are lengths, so they scale like the geometry; the backend clamps each to half the smaller
     // dimension (pill shapes).
+    FlCornerRadius radius = config->radius;
     FlCornerRadius scaled = { scale(p, radius.tl), scale(p, radius.tr), scale(p, radius.bl), scale(p, radius.br) };
-    fl_ir_fill_rect(p->arena, (FlRect) { scale(p, x), scale(p, y), scale(p, w), scale(p, h) }, scaled, corners, effect);
+    FlRect scaled_rect = { scale(p, rect.x), scale(p, rect.y), scale(p, rect.w), scale(p, rect.h) };
+    fl_ir_fill_rect(p->arena, scaled_rect, scaled, config->corner, effect);
 }
 
 void painter_rect_styled(Painter* p, float x, float y, float w, float h, FlRectConfig config) {
@@ -266,7 +290,7 @@ void painter_rect_styled(Painter* p, float x, float y, float w, float h, FlRectC
     if (span == nullptr) {
         return;
     }
-    painter_emit_fill_rect(p, x, y, w, h, config.radius, config.corner, painter_current_effect(p));
+    painter_emit_fill_rect(p, (FlRect) { x, y, w, h }, &config, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
@@ -275,7 +299,10 @@ void painter_rect(Painter* p, float x, float y, float w, float h, FlColor color)
 }
 
 void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count) {
-    if (p == nullptr || rects == nullptr || rect_count == 0) {
+    if (p == nullptr) {
+        return;
+    }
+    if (rects == nullptr || rect_count == 0) {
         return;
     }
     void* start;
@@ -286,8 +313,8 @@ void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count) {
     const FlEffect* effect = painter_current_effect(p);
     for (u32 i = 0; i < rect_count; i++) {
         const FlColoredRect* r = &rects[i];
-        const FlColor corners[4] = { r->color, r->color, r->color, r->color };
-        painter_emit_fill_rect(p, r->x, r->y, r->w, r->h, (FlCornerRadius) { 0 }, corners, effect);
+        const FlRectConfig config = { .corner = { r->color, r->color, r->color, r->color } };
+        painter_emit_fill_rect(p, (FlRect) { r->x, r->y, r->w, r->h }, &config, effect);
     }
     painter_record_end(p, span, start);
 }
@@ -313,35 +340,39 @@ static inline float device_hairline(float ui_scale) {
     return t < 1.0f ? 1.0f : t;
 }
 
-void painter_hline(Painter* p, float x, float y, float length, FlColor color) {
-    if (p == nullptr) {
-        return;
-    }
+// Records one snapped fill rect given in pixel space.
+static void painter_record_snapped_rect(Painter* p, FlRect rect, FlColor color) {
     void* start;
     FlPaintSpan* span = painter_record_begin(p, &start);
     if (span == nullptr) {
         return;
     }
-    FlRect rect = { scale(p, x), scale(p, y), scale(p, length), device_hairline(p->ui_scale) };
     fl_ir_fill_rect_snapped(p->arena, rect, color, painter_current_effect(p));
     painter_record_end(p, span, start);
+}
+
+void painter_hline(Painter* p, float x, float y, float length, FlColor color) {
+    if (p == nullptr) {
+        return;
+    }
+    painter_record_snapped_rect(
+        p, (FlRect) { scale(p, x), scale(p, y), scale(p, length), device_hairline(p->ui_scale) }, color);
 }
 
 void painter_vline(Painter* p, float x, float y, float length, FlColor color) {
     if (p == nullptr) {
         return;
     }
-    void* start;
-    FlPaintSpan* span = painter_record_begin(p, &start);
-    if (span == nullptr) {
-        return;
-    }
-    FlRect rect = { scale(p, x), scale(p, y), device_hairline(p->ui_scale), scale(p, length) };
-    fl_ir_fill_rect_snapped(p->arena, rect, color, painter_current_effect(p));
-    painter_record_end(p, span, start);
+    painter_record_snapped_rect(
+        p, (FlRect) { scale(p, x), scale(p, y), device_hairline(p->ui_scale), scale(p, length) }, color);
 }
 
 // Image drawing
+
+// A logical length scaled to pixels, or the fallback pixel length when it is not positive.
+static float painter_extent_or(const Painter* p, float length, float fallback_px) {
+    return length > 0.0f ? scale(p, length) : fallback_px;
+}
 
 bool painter_image(Painter* p, float x, float y, float w, float h, FlImageHandle image, FlColor color) {
     if (p == nullptr) {
@@ -365,8 +396,8 @@ bool painter_image(Painter* p, float x, float y, float w, float h, FlImageHandle
     // A non-positive dimension falls back to the image's native pixel size.
     float sx = scale(p, x);
     float sy = scale(p, y);
-    float sw = (w > 0.0f) ? scale(p, w) : (float)native_w;
-    float sh = (h > 0.0f) ? scale(p, h) : (float)native_h;
+    float sw = painter_extent_or(p, w, (float)native_w);
+    float sh = painter_extent_or(p, h, (float)native_h);
 
     FlImageSource source = { .kind = FlImageKind_Static };
     source.handle = image;
@@ -376,33 +407,38 @@ bool painter_image(Painter* p, float x, float y, float w, float h, FlImageHandle
     return true;
 }
 
-bool painter_image_sub(Painter* p, float dx, float dy, float dw, float dh, float sx, float sy, float sw, float sh,
-                       FlImageHandle image, FlColor color) {
-    if (p == nullptr || sw <= 0.0f || sh <= 0.0f) {
-        return false;
-    }
-
+// The part of the requested source rect that lies inside a ready image, in image pixels. False when the image
+// is not ready or nothing of the rect is left.
+static bool painter_ready_source(FlImageHandle image, FlRect want, FlRect* out) {
     int native_w = 0;
     int native_h = 0;
     if (!image_registry_is_ready((ImageHandle)image, &native_w, &native_h)) {
         return false;
     }
+    float x0 = clamp(want.x, 0.0f, (float)native_w);
+    float y0 = clamp(want.y, 0.0f, (float)native_h);
+    float x1 = clamp(want.x + want.w, x0, (float)native_w);
+    float y1 = clamp(want.y + want.h, y0, (float)native_h);
+    *out = (FlRect) { x0, y0, x1 - x0, y1 - y0 };
+    return out->w > 0.0f && out->h > 0.0f;
+}
 
-    float src_x0 = clamp(sx, 0.0f, (float)native_w);
-    float src_y0 = clamp(sy, 0.0f, (float)native_h);
-    float src_x1 = clamp(sx + sw, src_x0, (float)native_w);
-    float src_y1 = clamp(sy + sh, src_y0, (float)native_h);
-    float src_w = src_x1 - src_x0;
-    float src_h = src_y1 - src_y0;
-    if (src_w <= 0.0f || src_h <= 0.0f) {
+bool painter_image_sub(Painter* p, float dx, float dy, float dw, float dh, float sx, float sy, float sw, float sh,
+                       FlImageHandle image, FlColor color) {
+    if (p == nullptr) {
+        return false;
+    }
+    if (sw <= 0.0f || sh <= 0.0f) {
         return false;
     }
 
-    float dst_x = scale(p, dx);
-    float dst_y = scale(p, dy);
-    float dst_w = (dw > 0.0f) ? scale(p, dw) : src_w;
-    float dst_h = (dh > 0.0f) ? scale(p, dh) : src_h;
-    if (dst_w <= 0.0f || dst_h <= 0.0f) {
+    FlRect src;
+    if (!painter_ready_source(image, (FlRect) { sx, sy, sw, sh }, &src)) {
+        return false;
+    }
+
+    FlRect dst = { scale(p, dx), scale(p, dy), painter_extent_or(p, dw, src.w), painter_extent_or(p, dh, src.h) };
+    if (dst.w <= 0.0f || dst.h <= 0.0f) {
         return false;
     }
 
@@ -414,14 +450,16 @@ bool painter_image_sub(Painter* p, float dx, float dy, float dw, float dh, float
 
     FlImageSource source = { .kind = FlImageKind_Static };
     source.handle = image;
-    fl_ir_image(p->arena, source, FlImageMode_Color, (FlRect) { dst_x, dst_y, dst_w, dst_h },
-                (FlRect) { src_x0, src_y0, src_w, src_h }, color, FlImageFilter_Linear, painter_current_effect(p));
+    fl_ir_image(p->arena, source, FlImageMode_Color, dst, src, color, FlImageFilter_Linear, painter_current_effect(p));
     painter_record_end(p, span, start);
     return true;
 }
 
 void painter_dynamic_image(Painter* p, float x, float y, FlDynamicImage* image, FlColor color) {
-    if (p == nullptr || image == nullptr || image->user_buffer == nullptr) {
+    if (p == nullptr) {
+        return;
+    }
+    if (image == nullptr || image->user_buffer == nullptr) {
         return;
     }
 
@@ -456,7 +494,10 @@ void painter_dynamic_image(Painter* p, float x, float y, FlDynamicImage* image, 
 
 void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, float width, FlColor color, u32 flags,
                       FlColor fill_color, float baseline_y) {
-    if (p == nullptr || points == nullptr || point_count == 0) {
+    if (p == nullptr) {
+        return;
+    }
+    if (points == nullptr || point_count == 0) {
         return;
     }
     void* start;
@@ -530,7 +571,10 @@ void painter_diamond(Painter* p, float cx, float cy, float rx, float ry, FlColor
 }
 
 void painter_bars(Painter* p, float baseline_y, const FlBar* bars, u32 bar_count, FlColor color) {
-    if (p == nullptr || bars == nullptr || bar_count == 0) {
+    if (p == nullptr) {
+        return;
+    }
+    if (bars == nullptr || bar_count == 0) {
         return;
     }
     void* start;
