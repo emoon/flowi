@@ -306,10 +306,9 @@ FlString fl_string_substr(const FlString str, u64 start, u64 length) {
         return string_empty();
     }
 
-    u64 actual_length = length;
-    if (start + length > str.length) {
-        actual_length = str.length - start;
-    }
+    // Compared against the bytes left rather than as start + length, which can wrap
+    const u64 remaining = str.length - start;
+    const u64 actual_length = length < remaining ? length : remaining;
 
     // Substring of ASCII string is ASCII
     return (FlString) { .data = str.data + start, .length = actual_length, .is_ascii = str.is_ascii };
