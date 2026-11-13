@@ -11,8 +11,6 @@
 #include <math.h>
 #include <stdint.h>
 
-// Checked pixel sizes
-
 bool image_checked_pixel_size(int width, int height, size_t bytes_per_pixel, size_t* out_size) {
     if (width <= 0 || height <= 0) {
         return false;
@@ -79,8 +77,6 @@ static bool is_grayscale_rgba_simd(const u8* rgba_data, int width, int height, i
     return true;
 }
 
-// SVG detection
-
 static bool is_svg_data(const u8* data, size_t size) {
     if (size < 4) {
         return false;
@@ -103,8 +99,6 @@ static bool is_svg_data(const u8* data, size_t size) {
     return false;
 }
 
-// Target size helpers
-
 bool image_has_target_size(const ImageDecodeOptions* opts) {
     return opts->target_width > 0 && opts->target_height > 0;
 }
@@ -117,8 +111,6 @@ ImageSize image_scaled_target_size(const ImageDecodeOptions* opts) {
     const float ui_scale = effective_ui_scale(opts);
     return (ImageSize) { (int)(opts->target_width * ui_scale + 0.5f), (int)(opts->target_height * ui_scale + 0.5f) };
 }
-
-// Grayscale conversion
 
 void image_convert_grayscale_to_alpha(InternalDecodeData* image, FlArena* arena) {
     if (image->channels != 4) {
@@ -151,8 +143,6 @@ void image_convert_grayscale_to_alpha(InternalDecodeData* image, FlArena* arena)
     image->channels = 1;
 }
 
-// Decode result conversion
-
 // Writes the working data into a result and marks it final; raw raster decodes set needs_thumbnail_compose afterwards.
 void image_store_internal_in_result(FlImageDecodeResult* result, const InternalDecodeData* internal) {
     result->pixels = internal->data;
@@ -169,8 +159,6 @@ static FlImageDecodeResult* internal_to_result(const InternalDecodeData* interna
     image_store_internal_in_result(result, internal);
     return result;
 }
-
-// SVG loading
 
 // Largest rasterized SVG edge. nanosvg indexes its bitmap with int row * stride arithmetic, so the raster must keep
 // stride * height within INT_MAX: 8192 * 4 * 8192 is 268M, well inside it.
@@ -291,8 +279,6 @@ static FlImageDecodeResult* decode_svg(const u8* data, size_t size, const ImageD
 
     return internal_to_result(&internal, arena);
 }
-
-// Main decode function
 
 // Decodes a raster image with stb into arena memory. Returns data == nullptr when it cannot be decoded or is too large.
 static InternalDecodeData decode_raster(FlArena* arena, const u8* data, size_t size, bool force_rgb) {

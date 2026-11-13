@@ -19,8 +19,6 @@ static InternalDecodeData internal_from_result(const FlImageDecodeResult* result
     };
 }
 
-// Black border detection
-
 // Leading bytes are colour, trailing bytes are alpha, so a grey+alpha pixel tests its grey byte only.
 static int color_byte_count(int channels) {
     return channels >= 3 ? 3 : 1;
@@ -112,8 +110,6 @@ static void detect_and_remove_black_border(InternalDecodeData* image) {
     image->height -= border.top + border.bottom;
 }
 
-// Resize
-
 // False for an invalid target or one the image already matches.
 static bool size_needs_resize(const InternalDecodeData* image, ImageSize target) {
     if (target.width <= 0 || target.height <= 0) {
@@ -188,8 +184,6 @@ static ImageSize resize_to_target(InternalDecodeData* image, const ImageDecodeOp
     return canvas;
 }
 
-// Premultiplication
-
 static inline u8x16 premul_channel_x16(u8x16 c, i16x8x2 alpha) {
     const i16x8 bias = i16x8_new_splat(128);
     i16x8x2 t = i16x8x2_mul(u8x16_unpack_to_i16x8_low(c), alpha);
@@ -235,8 +229,6 @@ static void premultiply_alpha(InternalDecodeData* image) {
 
     image->premultiplied = true;
 }
-
-// Blend toward a color
 
 // Blend weights are fixed point: BLEND_ONE keeps the pixel, 0 gives the target.
 #define BLEND_ONE 32767
@@ -339,8 +331,6 @@ static void apply_vertical_fade_rgb(InternalDecodeData* image, f32 fade_start, R
         }
     }
 }
-
-// Canvas compositing
 
 // Copies source row y into dst_row (one canvas row), dropping pixels that land outside the canvas.
 static void blit_row_rgb(const InternalDecodeData* image, int y, const ImageCanvas* canvas, u8* dst_row) {
