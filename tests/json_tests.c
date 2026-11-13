@@ -69,7 +69,7 @@ UTEST(json_parser, parse_basic_types) {
         { "false", FlJsonType_False },
         { "  42  ", FlJsonType_Number },
     };
-    for (size_t i = 0; i < sizeof(scalars) / sizeof(scalars[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(scalars); i++) {
         ASSERT_EQ((int)parse_strict(arena, scalars[i].text)->type, (int)scalars[i].type);
     }
 
@@ -132,7 +132,7 @@ UTEST(json_parser, strict_rejects_malformed_input) {
         "{\"a\": 1, \"b\"",  "[,]",               "{,}",                           "[1,, 2]",
         "{\"a\":, \"b\": 1}", "{\"a\": 1 \"b\": 2}", "[1,]",                         "{\"a\": 1,}",
     };
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(cases); i++) {
         ASSERT_TRUE(is_rejected(arena, cases[i], FlJsonParseFlags_Default));
     }
 
@@ -147,7 +147,7 @@ UTEST(json_parser, strict_rejects_malformed_strings) {
     const char* cases[] = {
         "\"\\\"", "\"\\u123\"", "\"\\u123G\"", "\"line1\nline2\"", "\"\\q\"", "\"\\ud83d\"", "\"\\udd25\"", "'single'",
     };
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(cases); i++) {
         ASSERT_TRUE(is_rejected(arena, cases[i], FlJsonParseFlags_Default));
     }
 
@@ -163,7 +163,7 @@ UTEST(json_parser, strict_rejects_malformed_numbers) {
         "123.456.789", "123e", "123e+", "123e-", "123.e", ".123.456", "123ee10", "1.2.3e4",
         "01",          "-",    "+1",    ".5",    "5.",    "0xFF",     "NaN",     "Infinity",
     };
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(cases); i++) {
         ASSERT_TRUE(is_rejected(arena, cases[i], FlJsonParseFlags_Default));
     }
 
@@ -181,7 +181,7 @@ UTEST(json_parser, accepts_edge_cases) {
         "\"\"",
         "{\"a\": [ ] , \"b\" : { } }",
     };
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(cases); i++) {
         ASSERT_TRUE(is_accepted(arena, cases[i], FlJsonParseFlags_Default));
     }
 
@@ -223,7 +223,7 @@ UTEST(json_parser, json5_accepts_extensions) {
         "{\"a\": \"line1\nline2\"}",
         "{\"a\": [0xFF, +123, .5, 5., -.5, Infinity, -Infinity, NaN]}",
     };
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(cases); i++) {
         ASSERT_TRUE(is_accepted(arena, cases[i], FlJsonParseFlags_AllowJson5));
     }
 
@@ -239,7 +239,7 @@ UTEST(json_parser, json5_still_rejects_malformed_input) {
         "{a 1}", "{a: }", "{: 1}", "{\"a\": 1 \"b\": 2}", "[1 2]", "{a: 0x}", "{a: 1e}", "{a: NaN1}", "{a: .}", "{a: 'x}",
         "{a: 1} trailing", "{a: /* unterminated",
     };
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(cases); i++) {
         ASSERT_TRUE(is_rejected(arena, cases[i], FlJsonParseFlags_AllowJson5));
     }
 
@@ -366,7 +366,7 @@ UTEST(json_parser, typed_number_properties) {
         { "hex", 31u }, { "plus", 3u }, { "neg", 0u },     { "big", 0u },
         { "huge", 0u }, { "text", 0u }, { "missing", 0u },
     };
-    for (size_t i = 0; i < sizeof(as_u32) / sizeof(as_u32[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(as_u32); i++) {
         ASSERT_EQ(fl_json_get_u32_prop(root, string_from_cstr(as_u32[i].name)), as_u32[i].expected);
     }
 
@@ -376,7 +376,7 @@ UTEST(json_parser, typed_number_properties) {
     } as_f64[] = {
         { "real", 2.5 }, { "neg", -7.0 }, { "hex", 31.0 }, { "text", 0.0 }, { "missing", 0.0 },
     };
-    for (size_t i = 0; i < sizeof(as_f64) / sizeof(as_f64[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(as_f64); i++) {
         ASSERT_EQ(fl_json_get_f64_prop(root, string_from_cstr(as_f64[i].name)), as_f64[i].expected);
     }
 
@@ -414,7 +414,7 @@ UTEST(json_parser, error_descriptions_are_distinct) {
         { FlJsonParseError_TooDeep, "JSON nesting exceeds maximum depth" },
         { (FlJsonParseError)999, "Unknown JSON parse error" },
     };
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(cases); i++) {
         ASSERT_TRUE(fl_string_equals(fl_json_get_error_description(cases[i].error), string_from_cstr(cases[i].description)));
     }
 }
