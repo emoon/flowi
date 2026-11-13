@@ -43,8 +43,6 @@ bool image_checked_stride(int width, size_t bytes_per_pixel, int* out_stride) {
     return true;
 }
 
-// SIMD grayscale detection
-
 static bool is_grayscale_rgba_row(const u8* row, int width) {
     // Process 16 pixels (64 bytes) at a time using SIMD deinterleaving
     int simd_count = width / 16;
