@@ -1,4 +1,5 @@
 #include "ui_menu.h"
+#include "ui_menu_core.h"
 #include <core/assert.h>
 #include <core/math.h>
 #include "external/clay/clay.h"
@@ -15,9 +16,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Defaults
 
-// Menu panel width in logical px - wide enough for a label plus a right-aligned shortcut; items grow to fill it so
-// the hover highlight spans the full row.
-#define UI_MENU_DEFAULT_MIN_WIDTH 180.0f
 // Per-item row height in logical px (compact menu row, smaller than a standard button).
 #define UI_MENU_ITEM_HEIGHT 36.0f
 // Separator row height: a thin rule centered in a short row (the row gives the rule vertical breathing room).
@@ -33,16 +31,6 @@
 // not activatable: a parent on the open path (trail), and a disabled row the pointer is merely over.
 #define UI_MENU_TRAIL_HIGHLIGHT 0.6f
 #define UI_MENU_DISABLED_HIGHLIGHT 0.25f
-// Menu-bar top-row height in logical px: a compact strip, a touch shorter than a context-menu row.
-#define UI_MENUBAR_HEIGHT 30.0f
-// Logical-px gap kept between an over-tall (scrolling) menu level and the top/bottom viewport edges, so a height-capped
-// panel's border doesn't sit flush against the screen. Only affects levels tall enough to scroll.
-#define UI_MENU_VIEWPORT_MARGIN 8.0f
-// Wheel pixels scrolled per notch over a menu level (matches the scroll-area default feel).
-#define UI_MENU_WHEEL_SPEED 30.0f
-// Vertical padding (top + bottom) the menu panel reserves around its item list - padding_all(FlSpacing_XS) on both
-// panel styles. Folded out of the viewport when sizing the scrollable interior so the cap math stays in content space.
-#define UI_MENU_PANEL_VPAD (2.0f * (float)FlSpacing_XS)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal helpers
@@ -82,373 +70,18 @@ FlColor ui_menu_blend(FlColor a, FlColor b, float t) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Tear down the open chain: drop the open path and release the popup focus scope it armed (restoring focus). Safe
-// to call whether the scope is still the menu's or already gone.
-static void menu_close_internal(FlUiCtx* ctx) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    if (ctx->popup_focus_scope_id == m->owner_scope_id && m->owner_scope_id != 0) {
-        ui_focus_scope_release(ctx);
-        ctx->saved_focused_id = 0;
-        ctx->popup_closed_this_frame = true; // let any sibling popup-driven widget observe the close
-    }
-
-    m->active = false;
-    m->depth = 0;
-    mf->build_level = 0;
-    mf->close_requested = false;
-    m->owner_scope_id = 0;
-    m->dwell_item_id = 0;
-    m->hover_accum = 0.0f;
-    for (int i = 0; i < UI_MENU_MAX_DEPTH; i++) {
-        m->levels[i].expanded_child_id = 0;
-        m->levels[i].flip_left = false;
-        m->levels[i].scroll_offset = 0.0f;
-    }
-}
-
-// Clear one level's per-frame build state and cross-open state, so it reopens fresh: no highlight yet, no expanded
-// child, no flip, scrolled to the top.
-static void menu_reset_level(FlUiCtx* ctx, int level) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    m->levels[level].highlight_index = -1;
-    mf->levels[level].item_count = 0;
-    m->levels[level].init_highlight = true; // first navigable item claims the highlight as items emit this frame
-    m->levels[level].expanded_child_id = 0;
-    m->levels[level].flip_left = false;
-    m->levels[level].scroll_offset = 0.0f;
-}
-
-// Update the last-input-wins latch from this frame's pointer position and return the pointer's movement. A pointer
-// that actually moved reclaims the shared highlight from the keyboard; a stationary one leaves a keyboard selection
-// alone. menu_emit_row only lets hover write the highlight while hover_drives is set.
-static FlVec2 menu_track_pointer_move(FlUiCtx* ctx, UiMenuState* m) {
-    FlVec2 mp = { ctx->input_state.mouse.x, ctx->input_state.mouse.y };
-    FlVec2 move = { mp.x - m->last_mouse_pos.x, mp.y - m->last_mouse_pos.y };
-    if (move.x != 0.0f || move.y != 0.0f) {
-        m->hover_drives = true;
-    }
-    m->last_mouse_pos = mp;
-    return move;
-}
-
-// Collapse the open path so new_depth levels remain open: every level at or beyond new_depth drops its expanded
-// child, so the deepest kept level becomes a leaf again. Resets the dwell/grace accumulator so a stale hot-item timer
-// can't fire across the collapse.
-static void menu_collapse_to(UiMenuState* m, int new_depth) {
-    if (new_depth < 1) {
-        new_depth = 1;
-    }
-    if (new_depth > UI_MENU_MAX_DEPTH) {
-        new_depth = UI_MENU_MAX_DEPTH;
-    }
-    for (int i = new_depth - 1; i < UI_MENU_MAX_DEPTH; i++) {
-        m->levels[i].expanded_child_id = 0;
-        // Reset scroll only on the levels that fully CLOSE (>= new_depth): the deepest kept level (new_depth - 1) is
-        // still on screen, so an ESC-pop / Left-ascend must not jump its scroll - but a reopened deeper level starts
-        // at the top.
-        if (i >= new_depth) {
-            m->levels[i].scroll_offset = 0.0f;
-        }
-    }
-    m->depth = new_depth;
-    m->dwell_item_id = 0;
-    m->hover_accum = 0.0f;
-}
-
-// ESC: pop ONE level, closing the whole chain only at the root. Returns true when the chain fully closed.
-static bool menu_handle_cancel(FlUiCtx* ctx, UiMenuState* m) {
-    if (m->depth > 1) {
-        menu_collapse_to(m, m->depth - 1);
-        m->hover_drives = false;
-        return false;
-    }
-    menu_close_internal(ctx);
-    return true;
-}
-
-// Level-agnostic branch switch: collapse the open path back to level, then expand the sibling child_id at that
-// level if it is a submenu parent. A leaf "expands" to nothing - it just collapses the deeper path. The new deepest
-// level re-initializes its highlight to the first navigable child. Overflow past the fixed depth cap asserts in debug.
-static void menu_branch_switch(FlUiCtx* ctx, int level, u32 child_id, bool child_is_submenu) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    menu_collapse_to(m, level + 1);
-    if (!child_is_submenu || child_id == 0) {
-        return; // sibling leaf (or nothing): the collapse above is the whole switch
-    }
-    int child = level + 1;
-    FL_ASSERT_MSG(child < UI_MENU_MAX_DEPTH, "menu open-path overflow (fixed cap UI_MENU_MAX_DEPTH)");
-    if (child >= UI_MENU_MAX_DEPTH) {
-        return; // release safety: refuse to grow past the cap
-    }
-    m->levels[level].expanded_child_id = child_id;
-    m->levels[child].highlight_index = -1;
-    m->levels[child].init_highlight = true; // the first navigable child row claims the highlight as it emits
-    mf->levels[child].item_count = 0;
-    m->levels[child].expanded_child_id = 0;
-    m->depth = child + 1;
-}
-
-// Locate the menu item the pointer is over by scanning the recorded item set of every open level. Returns false when
-// the hot widget is not a menu item (pointer outside the chain).
-//
-// PREV-FRAME SET: the level arrays hold the PREVIOUS frame's emission, which is exactly what ctx->hot_id was computed
-// against, so every reader of them - this function, menu_move_highlight, menu_typeahead, the scroll geometry, and
-// begin() itself - must run before this frame's items re-emit and reset the per-frame counters.
-static bool menu_find_hot_item(FlUiCtx* ctx, u32 hot_id, int* out_level, int* out_index, bool* out_submenu) {
-    const UiMenuState* m = &ctx->shared->menu;
-    const UiMenuFrame* mf = &ctx->menu_frame;
-
-    if (hot_id == 0) {
-        return false;
-    }
-    for (int L = 0; L < m->depth && L < UI_MENU_MAX_DEPTH; L++) {
-        const UiMenuLevelFrame* lvl = &mf->levels[L];
-        int n = lvl->item_count < UI_MENU_MAX_ITEMS ? lvl->item_count : UI_MENU_MAX_ITEMS;
-        for (int i = 0; i < n; i++) {
-            if (lvl->item_id[i] == hot_id) {
-                *out_level = L;
-                *out_index = i;
-                *out_submenu = lvl->item_submenu[i];
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-// Click-outside test: is the hot widget (the one the pointer is over) part of the menu's popup scope? The whole open
-// chain shares one scope id, so a single membership check covers the union of all open menu rects.
-static bool menu_hot_in_scope(FlUiCtx* ctx, u32 scope) {
-    if (ctx->hot_id == 0) {
-        return false;
-    }
-    ItemState* hot = hashmap_get(&ctx->shared->item_state, ctx->hot_id);
-    return hot != nullptr && hot->popup_scope_id == scope;
-}
-
-// Move the level's highlight by dir (+1 down, -1 up) to the next navigable item, wrapping at the ends and skipping
-// non-navigable rows. Reads the prev-frame set (see menu_find_hot_item); a menu's contents are stable frame to
-// frame. No-op when the level has no navigable items. A highlight of -1 (none yet) steps to the first item in the
-// travel direction.
-static void menu_move_highlight(UiMenuLevel* lvl, const UiMenuLevelFrame* lf, int dir) {
-    int n = lf->item_count;
-    if (n > UI_MENU_MAX_ITEMS) {
-        n = UI_MENU_MAX_ITEMS;
-    }
-    if (n <= 0) {
-        return;
-    }
-    int idx = lvl->highlight_index;
-    for (int step = 0; step < n; step++) {
-        idx += dir;
-        if (idx < 0) {
-            idx = n - 1;
-        } else if (idx >= n) {
-            idx = 0;
-        }
-        if (lf->item_navigable[idx]) {
-            lvl->highlight_index = idx;
-            return;
-        }
-    }
-}
-
-// Record a bounded copy of an emitted row's label into its level slot for type-ahead, truncating at the prefix cap.
-// A copy, never the borrowed FlString, so the bytes stay valid at the next begin() where matching runs.
-static void menu_record_label(UiMenuLevelFrame* lf, int index, FlString label) {
-    if (index < 0 || index >= UI_MENU_MAX_ITEMS) {
-        return;
-    }
-    u32 n = label.length < UI_MENU_TYPEAHEAD_CAP ? (u32)label.length : UI_MENU_TYPEAHEAD_CAP;
-    for (u32 i = 0; i < n; i++) {
-        lf->item_label[index][i] = label.data[i];
-    }
-    lf->item_label_len[index] = (u8)n;
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Type-ahead: fold this frame's typed text into the menu's prefix and move level's highlight to the matching item,
-// cycling on a repeated single letter. Reads the prev-frame set's labels and navigability (see menu_find_hot_item);
-// non-navigable rows are presented to the matcher as empty labels so they never match. Returns true when it moved the
-// highlight, so the caller can hand it to the keyboard in the arbitration.
-static bool menu_typeahead(FlUiCtx* ctx, int level) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    UiMenuLevel* lvl = &m->levels[level];
-    const UiMenuLevelFrame* lf = &mf->levels[level];
-
-    // Per-frame snapshot, not the raw kb->text_input which ui_input_update clears before the
-    // frame body runs under the fl_app tick order.
-    FlString typed = ctx->text_input_this_frame;
-    if (typed.length == 0 || typed.data == nullptr) {
-        return false;
-    }
-
-    int n = lf->item_count;
-    if (n > UI_MENU_MAX_ITEMS) {
-        n = UI_MENU_MAX_ITEMS;
-    }
-    if (n < 0) {
-        n = 0;
-    }
-    FlString labels[UI_MENU_MAX_ITEMS];
-    for (int i = 0; i < n; i++) {
-        labels[i] = lf->item_navigable[i] ? (FlString) { .data = lf->item_label[i], .length = lf->item_label_len[i] }
-                                          : (FlString) { 0 };
-    }
-    i32 idx = type_ahead_match(&m->typeahead, labels, (u32)n, lvl->highlight_index, typed, ctx->input_state.time,
-                               UI_MENU_TYPEAHEAD_CAP);
-    if (idx < 0) {
-        return false;
-    }
-    lvl->highlight_index = idx;
-    return true;
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Scrollable over-tall levels. A menu level whose natural item list is taller than the viewport is height-capped and
 // its contents scroll; a level that fits stays natural-height. All offset/clamp math reuses scroll_core (scroll_max).
 // Scrolling is immediate (no smoothing) so keyboard scroll-into-view lands the highlight in a single frame.
 
-// Record one emitted row's scroll geometry: its content-space top (relative to the first row, panel padding excluded)
-// and height, plus the level's running natural height. The running height restarts as the level's first row (index 0)
-// emits, so the natural_height read back at the next begin() - before this frame's first row re-emits - is the previous
-// frame's complete total.
-static void menu_record_row_geometry(UiMenuFrame* mf, int level, int index, f32 height) {
-    UiMenuLevelFrame* lf = &mf->levels[level];
-    if (index == 0) {
-        lf->natural_height = 0.0f;
-    }
-    if (index >= 0 && index < UI_MENU_MAX_ITEMS) {
-        lf->item_top[index] = lf->natural_height;
-        lf->item_height[index] = height;
-    }
-    lf->natural_height += height;
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// The scrollable geometry of a level, derived from the prev-frame set's recorded rows (natural_height) and the
-// current viewport height. capped is true when the natural list overflows the interior; viewport is the visible
-// interior height (content space, == content when it fits), max_offset the largest legal scroll offset (0 when
-// it fits).
-typedef struct MenuScrollGeom {
-    bool capped;
-    f32 content;    // total natural item-list height (content space)
-    f32 viewport;   // visible interior height (== content when not capped)
-    f32 max_offset; // scroll_max(content, viewport); 0 when not capped
-} MenuScrollGeom;
-
-static MenuScrollGeom menu_scroll_geom(const FlUiCtx* ctx, const UiMenuLevelFrame* lf) {
-    MenuScrollGeom g = { .content = lf->natural_height, .viewport = lf->natural_height, .max_offset = 0.0f };
-    // Interior height available to the item list: the viewport minus the top/bottom edge margins and the panel's own
-    // vertical padding. A level taller than that is capped to it and scrolls the remainder. All of this is logical
-    // (natural_height sums authored row heights), so the physical layout height is divided back down first - at any
-    // ui_scale other than 1 the two spaces disagree and an over-tall level would never cap.
-    f32 scale = ctx->ui_scale > 0.0f ? ctx->ui_scale : 1.0f;
-    f32 interior_cap = ctx->layout_height / scale - 2.0f * UI_MENU_VIEWPORT_MARGIN - UI_MENU_PANEL_VPAD;
-    if (interior_cap > 0.0f && g.content > interior_cap) {
-        g.capped = true;
-        g.viewport = interior_cap;
-        g.max_offset = scroll_max(g.content, g.viewport);
-    }
-    return g;
-}
-
-// Configure a menu level's panel container - shared by the context-menu root, submenu panels, and menu-bar dropdowns.
-// When the level is over-tall the panel is height-capped and gets a vertical clip with the level's manual scroll
-// offset; when it fits it stays sizing_fit. Clamps the offset to this frame's geometry first, so a level whose content
-// shrank snaps back in range.
-static void menu_configure_panel(FlUiCtx* ctx, int level, float min_w) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-    const FlThemeColors* theme = ui_get_theme_colors(ctx);
-    MenuScrollGeom g = menu_scroll_geom(ctx, &mf->levels[level]);
-    m->levels[level].scroll_offset = clamp_f32_impl(m->levels[level].scroll_offset, 0.0f, g.max_offset);
-
-    FlLayoutSizingAxis height = g.capped ? sizing_fixed(g.viewport + UI_MENU_PANEL_VPAD) : sizing_fit();
-    FlLayoutConfig cfg = {
-        .sizing = { sizing_fit(min_w), height },
-        .direction = LayoutDirection_TopToBottom,
-        .padding = padding_all(FlSpacing_XS),
-        .color = theme->surface.elevated,
-        .radius = corner_radius(FlRadius_SM),
-        .border = fl_border(theme->border.default_color, FlBorderWidth_Thin),
-    };
-    if (g.capped) {
-        // Manual clip: Clay clips children to the fixed panel height and shifts them up by the offset. The rows still
-        // emit and record identity every frame (fully-clipped rows just draw nothing), so nav/hit-testing is unchanged.
-        // childOffset is screen space and bypasses fl_layout_configure's scaling, so the logical offset is
-        // multiplied here (everything else on this path stays logical).
-        f32 scale = ctx->ui_scale > 0.0f ? ctx->ui_scale : 1.0f;
-        cfg.clip = (FlLayoutClip) {
-            .vertical = true,
-            .manual_scroll = true,
-            .scroll_pos = { 0.0f, -m->levels[level].scroll_offset * scale },
-        };
-    }
-    fl_layout_configure(cfg);
-}
-
-// Mouse wheel over the open chain scrolls the HOVERED level only (the one the pointer is over), never a parent. Applies
-// the frame's wheel delta to that level's offset, clamped to its scrollable range. A no-op unless the pointer is over a
-// menu item whose level is over-tall.
-static void menu_apply_wheel(FlUiCtx* ctx) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    FlVec2 wheel = ui_get_mouse_wheel();
-    if (wheel.y == 0.0f) {
-        return;
-    }
-    int L = -1, idx = -1;
-    bool sub = false;
-    if (!menu_find_hot_item(ctx, ctx->hot_id, &L, &idx, &sub)) {
-        return; // pointer not over a menu item → nothing to scroll
-    }
-    MenuScrollGeom g = menu_scroll_geom(ctx, &mf->levels[L]);
-    if (g.max_offset <= 0.0f) {
-        return;
-    }
-    // wheel.y > 0 is a scroll-up gesture → content moves down → offset decreases (matches the scroll-area sign).
-    f32 off = m->levels[L].scroll_offset - wheel.y * UI_MENU_WHEEL_SPEED;
-    m->levels[L].scroll_offset = clamp_f32_impl(off, 0.0f, g.max_offset);
-}
-
-// Scroll level's highlighted row fully into view with the minimal adjustment in either direction. Reads the
-// prev-frame set's row geometry against this frame's just-moved highlight_index. A no-op when the level fits or the
-// highlight is out of the recorded range.
-static void menu_scroll_into_view(FlUiCtx* ctx, int level) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    if (level < 0 || level >= UI_MENU_MAX_DEPTH) {
-        return;
-    }
-    const UiMenuLevelFrame* lf = &mf->levels[level];
-    MenuScrollGeom g = menu_scroll_geom(ctx, lf);
-    if (g.max_offset <= 0.0f) {
-        return;
-    }
-    int i = m->levels[level].highlight_index;
-    if (i < 0 || i >= UI_MENU_MAX_ITEMS || i >= lf->item_count) {
-        return;
-    }
-    f32 top = lf->item_top[i];
-    f32 bottom = top + lf->item_height[i];
-    f32 off = m->levels[level].scroll_offset;
-    if (top < off) {
-        off = top; // row above the window → align its top to the window top
-    } else if (bottom > off + g.viewport) {
-        off = bottom - g.viewport; // row below the window → align its bottom to the window bottom
-    }
-    m->levels[level].scroll_offset = clamp_f32_impl(off, 0.0f, g.max_offset);
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Open-path state
@@ -462,7 +95,7 @@ void ui_menu_open_impl(FlLayoutId menu_id, FlVec2 point) {
     // Capture the cursor only on the closed -> open transition. The right-click that opens the menu is
     // level-triggered (true every frame the button is held), so re-anchoring here each frame would make the menu
     // live-follow the pointer while the button is held.
-    if (m->active && m->owner_scope_id == scope) {
+    if (menu_owned_by(ctx, scope)) {
         return;
     }
 
@@ -488,17 +121,14 @@ void ui_menu_open_impl(FlLayoutId menu_id, FlVec2 point) {
 
 void ui_menu_close_impl(FlLayoutId menu_id) {
     FlUiCtx* ctx = ui_get_ctx();
-    UiMenuState* m = &ctx->shared->menu;
-    if (!m->active || m->owner_scope_id != ui_layout_id_to_clay_id(menu_id)) {
-        return;
+    if (menu_owned_by(ctx, ui_layout_id_to_clay_id(menu_id))) {
+        menu_close_internal(ctx);
     }
-    menu_close_internal(ctx);
 }
 
 bool ui_menu_is_open_impl(FlLayoutId menu_id) {
     FlUiCtx* ctx = ui_get_ctx();
-    UiMenuState* m = &ctx->shared->menu;
-    return m->active && m->owner_scope_id == ui_layout_id_to_clay_id(menu_id);
+    return menu_owned_by(ctx, ui_layout_id_to_clay_id(menu_id));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -527,20 +157,20 @@ typedef struct MenuRowSpec {
 
 // Record the row's identity (id + submenu flag) and navigability into its level, and let the first navigable row claim
 // the initial highlight on open.
-static void menu_record_row(FlUiCtx* ctx, int level, int index, u32 rid, const MenuRowSpec* row) {
+static void menu_record_row(FlUiCtx* ctx, const MenuRow* row, const MenuRowSpec* spec) {
     UiMenuState* m = &ctx->shared->menu;
-    UiMenuLevelFrame* lf = &ctx->menu_frame.levels[level];
+    UiMenuLevelFrame* lf = &ctx->menu_frame.levels[row->level];
 
-    bool navigable = !row->disabled;
-    if (index < UI_MENU_MAX_ITEMS) {
-        lf->item_navigable[index] = navigable;
-        lf->item_id[index] = rid; // identity-keyed open path: maps hot_id -> this row
-        lf->item_submenu[index] = row->is_submenu;
-        menu_record_label(lf, index, row->label); // type-ahead prefix source (matched at the next begin)
+    bool navigable = !spec->disabled;
+    if (row->index < UI_MENU_MAX_ITEMS) {
+        lf->item_navigable[row->index] = navigable;
+        lf->item_id[row->index] = row->id; // identity-keyed open path: maps hot_id -> this row
+        lf->item_submenu[row->index] = spec->is_submenu;
+        menu_record_label(lf, row->index, spec->label); // type-ahead prefix source (matched at the next begin)
     }
-    if (navigable && m->levels[level].init_highlight) {
-        m->levels[level].highlight_index = index;
-        m->levels[level].init_highlight = false;
+    if (navigable && m->levels[row->level].init_highlight) {
+        m->levels[row->level].highlight_index = row->index;
+        m->levels[row->level].init_highlight = false;
     }
 }
 
@@ -610,7 +240,7 @@ static MenuRow menu_emit_row(FlUiCtx* ctx, MenuRowSpec spec) {
     FlSignal signal = ui_item_behavior(
         item_id, FlItemFlags_clickable | FlItemFlags_focusable | FlItemFlags_scroll_target, (FlWidgetConfig) { 0 });
 
-    menu_record_row(ctx, level, index, rid, &spec);
+    menu_record_row(ctx, &(MenuRow) { .id = rid, .level = level, .index = index }, &spec);
     if (spec.disabled) {
         signal.clicked = false;
         signal.activated = false;
@@ -685,9 +315,9 @@ static float submenu_place_y(Clay_BoundingBox parent, float ch, float sh) {
 // next frame): open right of the parent by default, flip left on right-edge overflow with the parent's bias
 // inherited; top-align to the parent row, flip up on bottom overflow, clamp if neither fits. The chosen horizontal
 // side is stored on the child level so deeper submenus inherit the bias.
-static void menu_submenu_panel_begin(FlUiCtx* ctx, u32 parent_item_id, int parent_level, int child_level,
-                                     float min_width) {
+static void menu_submenu_panel_begin(FlUiCtx* ctx, u32 parent_item_id, int parent_level, float min_width) {
     UiMenuState* m = &ctx->shared->menu;
+    int child_level = parent_level + 1;
     Clay_BoundingBox parent = Clay_GetElementData((Clay_ElementId) { .id = parent_item_id }).boundingBox;
 
     // Distinct, stable element id for this panel, derived from the parent item id (unique per submenu, frame-stable).
@@ -725,10 +355,46 @@ static void menu_submenu_panel_begin(FlUiCtx* ctx, u32 parent_item_id, int paren
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Builder
 
-// Whether the level's highlight sits on a submenu parent (a container that opens a child level).
-static bool menu_highlight_is_submenu(const UiMenuLevel* level, const UiMenuLevelFrame* frame) {
-    int hi = level->highlight_index;
-    return hi >= 0 && hi < UI_MENU_MAX_ITEMS && frame->item_submenu[hi];
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The deepest open level, clamped to the root while the chain is closed.
+static int menu_deepest_level(const UiMenuState* m) {
+    return m->depth > 0 ? m->depth - 1 : 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Left: ascend (collapse one level); the parent becomes the deepest and keeps its highlight on the row whose submenu
+// just closed. No-op at the root (Left there belongs to the background, but the menu owns the scope).
+static void menu_key_ascend(FlUiCtx* ctx) {
+    UiMenuState* m = &ctx->shared->menu;
+
+    if (ui_action_pressed(ctx, FlAction_Nav_Left) && m->depth > 1) {
+        menu_collapse_to(m, m->depth - 1);
+        m->hover_drives = false;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Right / Confirm-on-a-submenu: descend into the highlighted submenu parent (instant cold-open via keyboard). A submenu
+// parent is a pure container, so Confirm opens it rather than activating; a leaf ignores Right. Returns whether it
+// descended.
+static bool menu_key_descend(FlUiCtx* ctx, int level) {
+    UiMenuState* m = &ctx->shared->menu;
+    const UiMenuLevelFrame* lf = &ctx->menu_frame.levels[level];
+
+    if (!menu_highlight_is_submenu(&m->levels[level], lf)) {
+        return false;
+    }
+    if (!ui_action_pressed(ctx, FlAction_Nav_Right) && !ui_action_pressed(ctx, FlAction_Confirm)) {
+        return false;
+    }
+    menu_branch_switch(ctx, level, lf->item_id[m->levels[level].highlight_index], true);
+    m->hover_drives = false;
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -739,139 +405,98 @@ static bool menu_highlight_is_submenu(const UiMenuLevel* level, const UiMenuLeve
 // a stationary highlight is never yanked back by a per-frame re-centering.
 static void menu_handle_keyboard(FlUiCtx* ctx) {
     UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
 
     if (ctx->frame_counter <= m->open_frame) {
         return;
     }
 
-    int lvl = m->depth - 1; // deepest open level
-    if (lvl < 0) {
-        lvl = 0;
-    }
-
-    bool nav_moved = false;
     // Up/Down: move the highlight within the deepest level (press edge + the existing nav-repeat timing).
-    if (ui_action_pressed_or_repeated(ctx, FlAction_Nav_Up)) {
-        menu_move_highlight(&m->levels[lvl], &mf->levels[lvl], -1);
-        m->hover_drives = false; // keyboard moved last → it owns the highlight until the pointer moves again
-        nav_moved = true;
-    }
-    if (ui_action_pressed_or_repeated(ctx, FlAction_Nav_Down)) {
-        menu_move_highlight(&m->levels[lvl], &mf->levels[lvl], +1);
-        m->hover_drives = false;
-        nav_moved = true;
-    }
-    // Left: ascend (collapse one level); the parent becomes the deepest and keeps its highlight on the row whose
-    // submenu just closed. No-op at the root (Left there belongs to the background, but the menu owns the scope).
-    if (ui_action_pressed(ctx, FlAction_Nav_Left) && m->depth > 1) {
-        menu_collapse_to(m, m->depth - 1);
-        m->hover_drives = false;
-        lvl = m->depth - 1;
-    }
-    // Right / Confirm-on-a-submenu: descend into the highlighted submenu parent (instant cold-open via keyboard).
-    // A submenu parent is a pure container, so Confirm opens it rather than activating; a leaf ignores Right.
-    UiMenuLevel* dl = &m->levels[lvl];
-    UiMenuLevelFrame* dlf = &mf->levels[lvl];
-    int hi = dl->highlight_index;
-    bool hi_submenu = menu_highlight_is_submenu(dl, dlf);
-    bool want_descend
-        = ui_action_pressed(ctx, FlAction_Nav_Right) || (hi_submenu && ui_action_pressed(ctx, FlAction_Confirm));
-    if (want_descend && hi_submenu) {
-        menu_branch_switch(ctx, lvl, dlf->item_id[hi], true);
-        m->hover_drives = false;
-        lvl = m->depth - 1;
+    int lvl = menu_deepest_level(m);
+    bool nav_moved = menu_step_highlight(ctx, lvl, FlAction_Nav_Up, -1);
+    nav_moved |= menu_step_highlight(ctx, lvl, FlAction_Nav_Down, +1);
+
+    menu_key_ascend(ctx);
+    lvl = menu_deepest_level(m);
+    if (menu_key_descend(ctx, lvl)) {
+        lvl = menu_deepest_level(m);
         nav_moved = true; // the new deepest level's fresh highlight should be brought into view
     }
 
     // Type-ahead: a printable character jumps the deepest level's highlight to the next matching item (cycling on
     // a repeated letter). When it moves the highlight, the keyboard owns it, just like the arrow keys above.
-    if (menu_typeahead(ctx, lvl)) {
-        m->hover_drives = false;
-        nav_moved = true;
-    }
+    nav_moved |= menu_typeahead(ctx, lvl);
 
     if (nav_moved) {
         menu_scroll_into_view(ctx, lvl);
     }
 }
 
-// Pointer-driven cold-open dwell + branch-switch grace, off the prev-frame item set (so it must precede the
-// per-frame item_count reset). move_dx is this frame's horizontal pointer movement.
-static void menu_handle_dwell(FlUiCtx* ctx, float move_dx) {
+static void menu_dwell_reset(UiMenuState* m) {
+    m->dwell_item_id = 0;
+    m->hover_accum = 0.0f;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Accumulate hover time on the hot item; a new hot item restarts its hover_since_hot accumulator.
+static void menu_dwell_tick(FlUiCtx* ctx) {
     UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
 
-    int hL = -1, hidx = -1;
-    bool hsub = false;
-    if (!menu_find_hot_item(ctx, ctx->hot_id, &hL, &hidx, &hsub)) {
-        m->dwell_item_id = 0; // pointer in empty space (sticky: chain stays open) → no pending switch
-        m->hover_accum = 0.0f;
-        return;
-    }
-
-    u32 hot = ctx->hot_id;
-    u32 cur_child = m->levels[hL].expanded_child_id;
-    bool hnav = (hidx < UI_MENU_MAX_ITEMS) && mf->levels[hL].item_navigable[hidx];
-    if (hot == cur_child || !hnav) {
-        m->dwell_item_id = 0; // back over the already-expanded parent, or over a disabled row: no switch
-        m->hover_accum = 0.0f;
-        return;
-    }
-
-    if (m->dwell_item_id != hot) {
-        m->dwell_item_id = hot; // a new hot item resets its hover_since_hot accumulator
+    if (m->dwell_item_id != ctx->hot_id) {
+        m->dwell_item_id = ctx->hot_id;
         m->hover_accum = 0.0f;
     }
     m->hover_accum += ctx->delta_time;
+}
 
-    if (cur_child == 0) {
-        // Cold level: only a submenu parent opens, and only after the dwell threshold.
-        if (hsub && m->hover_accum >= UI_MENU_DWELL_SECONDS) {
-            menu_branch_switch(ctx, hL, hot, true);
-        }
-        return;
-    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // A sibling is already open: switch after the grace, protecting a diagonal move into the open submenu. Fire
-    // immediately if the cursor is moving AWAY from it (cheap dot-product on x).
-    int child_lvl = hL + 1 < UI_MENU_MAX_DEPTH ? hL + 1 : hL;
+// A sibling is already open: switch after the grace, protecting a diagonal move into the open submenu. Fire
+// immediately if the cursor is moving AWAY from it (cheap dot-product on x).
+static void menu_dwell_switch_sibling(FlUiCtx* ctx, MenuHit hit, float move_dx) {
+    const UiMenuState* m = &ctx->shared->menu;
+
+    int child_lvl = hit.level + 1 < UI_MENU_MAX_DEPTH ? hit.level + 1 : hit.level;
     float dir = m->levels[child_lvl].flip_left ? -1.0f : 1.0f;
     bool moving_away = (move_dx * dir) < 0.0f;
     if (moving_away || m->hover_accum >= UI_MENU_BRANCH_GRACE_SECONDS) {
-        menu_branch_switch(ctx, hL, hot, hsub);
+        menu_branch_switch(ctx, hit.level, ctx->hot_id, hit.submenu);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+
+// Pointer-driven cold-open dwell + branch-switch grace, off the prev-frame item set (so it must precede the
+// per-frame item_count reset). move_dx is this frame's horizontal pointer movement.
+static void menu_handle_dwell(FlUiCtx* ctx, float move_dx) {
     UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-    u32 scope = ui_layout_id_to_clay_id(menu_id);
 
-    if (!m->active || m->owner_scope_id != scope) {
-        return false;
+    // Pointer in empty space (sticky: chain stays open) → no pending switch; likewise back over the already-expanded
+    // parent, or over a disabled row.
+    MenuHit hit = menu_find_hot_item(ctx);
+    u32 cur_child = hit.level >= 0 ? m->levels[hit.level].expanded_child_id : 0;
+    bool inert = hit.level < 0 || !hit.navigable;
+    if (inert || ctx->hot_id == cur_child) {
+        menu_dwell_reset(m);
+        return;
     }
 
-    // Self-owned dismissal, past the opening-frame guard (see UiMenuState.open_frame).
-    // ESC is read through the action system (FlAction_Cancel), not keys_pressed, which ui_input_update
-    // clears before the frame body runs. ESC pops ONE level (closing the chain only at the root); a click outside the
-    // union of all open rects closes the whole chain. Leaving the cursor in empty space is sticky and does NOT close.
-    if (ctx->frame_counter > m->open_frame) {
-        if (ctx->mouse_pressed_this_frame && !menu_hot_in_scope(ctx, scope)) {
-            menu_close_internal(ctx);
-            return false;
-        }
-        if (ui_action_pressed(ctx, FlAction_Cancel) && menu_handle_cancel(ctx, m)) {
-            return false;
-        }
+    menu_dwell_tick(ctx);
+    if (cur_child != 0) {
+        menu_dwell_switch_sibling(ctx, hit, move_dx);
+    } else if (hit.submenu && m->hover_accum >= UI_MENU_DWELL_SECONDS) {
+        // Cold level: only a submenu parent opens, and only after the dwell threshold.
+        menu_branch_switch(ctx, hit.level, ctx->hot_id, true);
     }
+}
 
-    // Arm the menu's own focus scope, taking over from any other armed popup/dropdown scope. The menu owns
-    // ESC/click-outside itself, so the popup layer's auto-close is disabled.
-    ui_focus_scope_arm(ctx, scope, true);
-    ctx->popup_auto_close = false;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Drive the open chain from input: keyboard, pointer dwell, and the wheel.
+static void menu_handle_input(FlUiCtx* ctx) {
+    UiMenuState* m = &ctx->shared->menu;
 
     menu_handle_keyboard(ctx);
 
@@ -882,8 +507,28 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
         menu_handle_dwell(ctx, move_dx);
     }
 
-    // Mouse wheel scrolls the hovered over-tall level (prev-frame set, so before the reset below).
+    // Mouse wheel scrolls the hovered over-tall level (prev-frame set, so before the reset in begin).
     menu_apply_wheel(ctx);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
+    FlUiCtx* ctx = ui_get_ctx();
+    UiMenuState* m = &ctx->shared->menu;
+    UiMenuFrame* mf = &ctx->menu_frame;
+    u32 scope = ui_layout_id_to_clay_id(menu_id);
+
+    if (!menu_owned_by(ctx, scope) || menu_dismissed(ctx, scope, false)) {
+        return false;
+    }
+
+    // Arm the menu's own focus scope, taking over from any other armed popup/dropdown scope. The menu owns
+    // ESC/click-outside itself, so the popup layer's auto-close is disabled.
+    ui_focus_scope_arm(ctx, scope, true);
+    ctx->popup_auto_close = false;
+
+    menu_handle_input(ctx);
 
     // Reset the root level's per-frame build state. The highlight PERSISTS across frames; only the per-frame item
     // counter resets so indices restart. Deeper levels reset their counters as ui_submenu_begin enters them.
@@ -891,7 +536,6 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
     mf->levels[0].item_count = 0;
     mf->close_requested = false;
 
-    float min_w = cfg.min_width > 0.0f ? cfg.min_width : UI_MENU_DEFAULT_MIN_WIDTH;
     i16 z = cfg.z_index != 0 ? cfg.z_index : UI_Z_OVERLAY;
     mf->z_base = z; // submenu panels stack at z_base + level so each opens above its parent
 
@@ -905,7 +549,7 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
 
     // Root panel container (height-capped + scrollable when the root level is over-tall; sizing_fit otherwise).
     fl_layout_start_auto();
-    menu_configure_panel(ctx, 0, min_w);
+    menu_configure_panel(ctx, 0, menu_min_width(cfg.min_width));
 
     return true;
 }
@@ -922,14 +566,14 @@ static FlSignal menu_finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg
     // Keyboard/gamepad activation: Enter / Space / gamepad-A fires the highlighted leaf at the DEEPEST level (arrow
     // keys never reach a parent), past the opening-frame guard (see UiMenuState.open_frame). The mouse path needs
     // no guard - row.signal.clicked flows through untouched.
-    bool is_deepest = (row.level == m->depth - 1);
-    if (row.highlighted && is_deepest && ctx->frame_counter > m->open_frame
-        && ui_action_pressed(ctx, FlAction_Confirm)) {
+    bool can_confirm = row.highlighted && row.level == m->depth - 1 && ctx->frame_counter > m->open_frame;
+    if (can_confirm && ui_action_pressed(ctx, FlAction_Confirm)) {
         signal.clicked = true;
         signal.activated = true;
     }
 
-    if (!cfg.disabled && signal.clicked && menu_policy_closes(cfg.close_policy, kind_default_close)) {
+    bool activated = !cfg.disabled && signal.clicked;
+    if (activated && menu_policy_closes(cfg.close_policy, kind_default_close)) {
         mf->close_requested = true;
     }
 
@@ -1050,13 +694,15 @@ bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
     // Click is a per-surface open trigger (instant, no dwell): a click on a closed submenu parent - or on a sibling
     // while a different branch is open - branch-switches to it. Clicking the already-open parent is a no-op. The
     // click is consumed here as "open"; a submenu parent never dispatches an action signal to the caller.
-    if (!cfg.disabled && row.signal.clicked && m->levels[parent_level].expanded_child_id != row.id) {
+    bool is_expanded = m->levels[parent_level].expanded_child_id == row.id;
+    bool clicked_open = !cfg.disabled && row.signal.clicked;
+    if (clicked_open && !is_expanded) {
         menu_branch_switch(ctx, parent_level, row.id, true);
+        is_expanded = true;
     }
 
     // Open only while THIS submenu is the one expanded at its level (identity-keyed: compare resolved widget ids).
-    bool open = !cfg.disabled && m->levels[parent_level].expanded_child_id == row.id;
-    if (!open) {
+    if (cfg.disabled || !is_expanded) {
         return false;
     }
 
@@ -1069,8 +715,7 @@ bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
     mf->build_level = child_level;
     mf->levels[child_level].item_count = 0; // reset this level's per-frame build state before its items emit
 
-    float min_w = cfg.min_width > 0.0f ? cfg.min_width : UI_MENU_DEFAULT_MIN_WIDTH;
-    menu_submenu_panel_begin(ctx, row.id, parent_level, child_level, min_w);
+    menu_submenu_panel_begin(ctx, row.id, parent_level, menu_min_width(cfg.min_width));
     return true;
 }
 
@@ -1102,6 +747,27 @@ void ui_menu_end_impl(void) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Right-click region
 
+// Whether the cursor is inside the region's LAYOUT box. The render-command-driven hot path only marks elements that
+// emit a render command, so a transparent catch-all region would never report hover; Clay tracks the layout box
+// whether or not the region paints anything. The box is last frame's.
+static bool menu_region_contains(FlLayoutId region_id, FlVec2 point) {
+    Clay_ElementData ed = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(region_id) });
+    Clay_BoundingBox b = ed.boundingBox;
+    return ed.found && point.x >= b.x && point.x < b.x + b.width && point.y >= b.y && point.y < b.y + b.height;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Default to a grow/grow catch-all region when the caller didn't specify sizing (zero-init is Fit/Fit with no bounds,
+// treated here as "unset").
+static FlLayoutSizing menu_region_sizing(FlLayoutSizing requested) {
+    bool unset = requested.width.type == FlLayoutSizingType_Fit && requested.width.size.min_max.max == 0.0f
+                 && requested.height.type == FlLayoutSizingType_Fit && requested.height.size.min_max.max == 0.0f;
+    return unset ? (FlLayoutSizing) { sizing_grow(), sizing_grow() } : requested;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 FlSignal ui_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlMenuRegionConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
 
@@ -1110,462 +776,17 @@ FlSignal ui_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlM
     FlSignal signal
         = ui_item_behavior(region_id, FlItemFlags_clickable | FlItemFlags_right_click, (FlWidgetConfig) { 0 });
 
-    // Open on a right-click anywhere inside the region. The render-command-driven hot path only marks elements that
-    // emit a render command, so a transparent catch-all region would never report hover; the cursor is tested
-    // against the region's LAYOUT box (Clay tracks it whether or not the region paints anything). The box is last
-    // frame's.
-    if (ctx->input_state.mouse.buttons[FlMouseButton_Right]) {
-        Clay_ElementData ed = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(region_id) });
-        float mx = ctx->input_state.mouse.x;
-        float my = ctx->input_state.mouse.y;
-        if (ed.found && mx >= ed.boundingBox.x && mx < ed.boundingBox.x + ed.boundingBox.width && my >= ed.boundingBox.y
-            && my < ed.boundingBox.y + ed.boundingBox.height) {
-            ui_menu_open_impl(menu_id, (FlVec2) { mx, my });
-        }
-    }
-
-    // Default to a grow/grow catch-all region when the caller didn't specify sizing (zero-init is Fit/Fit with no
-    // bounds, treated here as "unset").
-    FlLayoutSizing sizing = cfg.sizing;
-    if (sizing.width.type == FlLayoutSizingType_Fit && sizing.width.size.min_max.max == 0.0f
-        && sizing.height.type == FlLayoutSizingType_Fit && sizing.height.size.min_max.max == 0.0f) {
-        sizing = (FlLayoutSizing) { sizing_grow(), sizing_grow() };
+    FlVec2 mouse = { ctx->input_state.mouse.x, ctx->input_state.mouse.y };
+    if (ctx->input_state.mouse.buttons[FlMouseButton_Right] && menu_region_contains(region_id, mouse)) {
+        ui_menu_open_impl(menu_id, mouse);
     }
 
     fl_layout_start(region_id);
-    fl_layout_configure((FlLayoutConfig) { .sizing = sizing });
+    fl_layout_configure((FlLayoutConfig) { .sizing = menu_region_sizing(cfg.sizing) });
 
     return signal;
 }
 
 void ui_menu_region_end_impl(void) {
     fl_layout_end();
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Menu bar - a SECOND surface over the menu core. The bar IS level 0, rendered as a persistent horizontal strip
-// instead of a floating panel; each top's dropdown is level 1, anchored UNDER its bar button. State mutation goes
-// through the same primitives ui_menu_begin_impl drives; the bar supplies only the per-surface open TRIGGER - a
-// click, never the submenu's hover-dwell.
-
-// Activate the bar chain on the closed -> open transition: arm the shared open path at depth 1 (bar level only, no
-// dropdown yet), seeding level 0 with the bar's recorded tops so the caller can immediately branch-switch into the
-// clicked one. Mirrors ui_menu_open_impl but with no point anchor (the strip is laid out, not floated) and with level 0
-// taken from the bar's own record (its item identities drive the branch-switch that follows).
-static void menubar_activate(FlUiCtx* ctx, u32 scope) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    m->active = true;
-    m->owner_scope_id = scope;
-    m->open_frame = ctx->frame_counter;
-    m->depth = 1;
-    mf->build_level = 0;
-    mf->close_requested = false;
-    m->dwell_item_id = 0;
-    m->hover_accum = 0.0f;
-    m->typeahead = (TypeAheadState) { 0 };
-    for (int i = 1; i < UI_MENU_MAX_DEPTH; i++) {
-        menu_reset_level(ctx, i);
-    }
-
-    // Level 0 becomes the bar's tops, so only its cross-open state clears.
-    mf->levels[0] = mf->bar_tops;
-    m->levels[0].expanded_child_id = 0; // nothing expanded yet → the bar is the deepest level
-    m->levels[0].flip_left = false;
-    m->levels[0].scroll_offset = 0.0f;   // the horizontal bar strip never scrolls, but keep the state clean
-    m->levels[0].init_highlight = false; // the caller sets the highlight to the clicked top explicitly
-}
-
-// The bar top the pointer is over: its item index (-1 when none) and whether it can be navigated to.
-typedef struct BarHot {
-    int index;
-    bool navigable;
-} BarHot;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Whether the pointer is over a top that a press can open or switch to.
-static bool menubar_hot_is_actionable(BarHot hot) {
-    return hot.index >= 0 && hot.navigable;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Resolve which top the pointer is over, scanning the bar's own prev-frame record (see menu_find_hot_item) rather
-// than level 0, since this must work while the bar is passive - when level 0 holds another menu's rows and m->depth
-// doesn't cover the bar.
-static BarHot menubar_hot_top(const UiMenuFrame* mf, u32 hot_id) {
-    BarHot none = { .index = -1 };
-    if (hot_id == 0) {
-        return none;
-    }
-    const UiMenuLevelFrame* bar = &mf->bar_tops;
-    int n = bar->item_count < UI_MENU_MAX_ITEMS ? bar->item_count : UI_MENU_MAX_ITEMS;
-    for (int i = 0; i < n; i++) {
-        if (bar->item_id[i] == hot_id) {
-            return (BarHot) { .index = i, .navigable = bar->item_navigable[i] };
-        }
-    }
-    return none;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Re-expand whichever top the bar-level highlight now points at, so a Left/Right keyboard move switches the OPEN root
-// while a dropdown is showing. A non-submenu highlight collapses the dropdown.
-static void menubar_reopen_under_highlight(FlUiCtx* ctx) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    UiMenuLevel* bar = &m->levels[0];
-    UiMenuLevelFrame* barf = &mf->levels[0];
-    int hi = bar->highlight_index;
-    if (menu_highlight_is_submenu(bar, barf)) {
-        menu_branch_switch(ctx, 0, barf->item_id[hi], true);
-    } else {
-        menu_collapse_to(m, 1);
-    }
-}
-
-// Passive: cold hover does NOTHING (the bar's per-surface trigger is click, not the submenu's hover-dwell). A press on
-// a navigable top opens it - activate the chain, then branch-switch into that top (level 0 -> 1). Returns whether the
-// bar now owns the chain.
-static bool menubar_try_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
-    if (!ctx->mouse_pressed_this_frame || !menubar_hot_is_actionable(hot)) {
-        return false;
-    }
-
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-    u32 top_id = mf->bar_tops.item_id[hot.index];
-    menubar_activate(ctx, scope);
-    menu_branch_switch(ctx, 0, top_id, true);
-    m->levels[0].highlight_index = hot.index;
-    m->hover_drives = true;
-    return true;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Owned: dismissal. A press outside the bar scope closes the whole chain; ESC pops one level (dropdown -> strip, then
-// strip -> closed), exactly as the context menu's ESC does at depth 1. Re-pressing the OPEN top releases the chain
-// entirely (the mouse's undo of the press that opened it), rather than collapsing to the focused strip the way ESC's
-// first pop does. Returns whether the bar still owns the chain.
-static bool menubar_stay_open(FlUiCtx* ctx, u32 scope, BarHot hot) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    if (ctx->frame_counter <= m->open_frame) {
-        return true;
-    }
-
-    bool pressed = ctx->mouse_pressed_this_frame;
-    if (pressed && !menu_hot_in_scope(ctx, scope) && hot.index < 0) {
-        menu_close_internal(ctx);
-        return false;
-    }
-    if (ui_action_pressed(ctx, FlAction_Cancel) && menu_handle_cancel(ctx, m)) {
-        return false;
-    }
-
-    bool on_open_top = pressed && menubar_hot_is_actionable(hot)
-                       && m->levels[0].expanded_child_id == mf->levels[0].item_id[hot.index];
-    if (on_open_top) {
-        menu_close_internal(ctx);
-    }
-    return !on_open_top;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Open/close arbitration for the bar chain. Returns whether the bar owns the menu chain after this frame's
-// transitions; the caller runs no further bar handling once it returns false, since that code reads m->depth, which
-// a teardown has zeroed.
-static bool menubar_arbitrate_open(FlUiCtx* ctx, u32 scope, BarHot hot, bool owned) {
-    return owned ? menubar_stay_open(ctx, scope, hot) : menubar_try_open(ctx, scope, hot);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Mouse: a press on a top switches the open root; hovering a sibling while a dropdown is open switches it instantly
-// (no dwell).
-static void menubar_handle_mouse(FlUiCtx* ctx, BarHot hot) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    if (!menubar_hot_is_actionable(hot)) {
-        return;
-    }
-
-    UiMenuLevel* bar = &m->levels[0];
-    u32 top_id = mf->levels[0].item_id[hot.index];
-    bool pressed = ctx->mouse_pressed_this_frame;
-    bool hover_switch = m->hover_drives && m->depth > 1 && bar->expanded_child_id != top_id;
-    if (!pressed && !hover_switch) {
-        return;
-    }
-
-    menu_branch_switch(ctx, 0, top_id, true);
-    bar->highlight_index = hot.index;
-    if (pressed) {
-        m->hover_drives = true;
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Move the bar-level highlight one top in `dir`, switching the open root when a dropdown is up.
-static void menubar_step_top(FlUiCtx* ctx, int dir) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    menu_move_highlight(&m->levels[0], &mf->levels[0], dir);
-    m->hover_drives = false;
-    if (m->depth > 1) {
-        menubar_reopen_under_highlight(ctx);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Move the deepest (dropdown) highlight one row in `dir` when `action` fires. Returns whether it moved.
-static bool menubar_step_dropdown(FlUiCtx* ctx, FlAction action, int dir) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    if (!ui_action_pressed_or_repeated(ctx, action)) {
-        return false;
-    }
-
-    int deepest = m->depth - 1;
-    menu_move_highlight(&m->levels[deepest], &mf->levels[deepest], dir);
-    m->hover_drives = false;
-    return true;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// With no dropdown open, Down / Confirm opens the highlighted top.
-static void menubar_open_highlighted_top(FlUiCtx* ctx) {
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    int hi = m->levels[0].highlight_index;
-    bool hi_top = menu_highlight_is_submenu(&m->levels[0], &mf->levels[0]);
-    if (!hi_top || !(ui_action_pressed(ctx, FlAction_Nav_Down) || ui_action_pressed(ctx, FlAction_Confirm))) {
-        return;
-    }
-
-    menu_branch_switch(ctx, 0, mf->levels[0].item_id[hi], true);
-    m->hover_drives = false;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Mouse and keyboard driving of an open bar chain: root switching from the bar strip, navigation inside the open
-// dropdown, type-ahead, and the wheel. Reads the prev-frame item set, so it must precede the per-frame item_count
-// reset.
-static void menubar_handle_input(FlUiCtx* ctx, BarHot hot) {
-    UiMenuState* m = &ctx->shared->menu;
-
-    menubar_handle_mouse(ctx, hot);
-
-    // Keyboard: Left/Right move between tops (and switch the open root if a dropdown is up); Up/Down navigate the
-    // open dropdown; with no dropdown open, Down / Confirm opens the highlighted top.
-    if (ui_action_pressed_or_repeated(ctx, FlAction_Nav_Left)) {
-        menubar_step_top(ctx, -1);
-    }
-    if (ui_action_pressed_or_repeated(ctx, FlAction_Nav_Right)) {
-        menubar_step_top(ctx, +1);
-    }
-
-    // Tracks a keyboard move of the deepest (dropdown) highlight, so scroll-into-view runs only then - never
-    // re-centering a wheel scroll or a stationary highlight.
-    bool nav_moved = false;
-    if (m->depth > 1) {
-        nav_moved |= menubar_step_dropdown(ctx, FlAction_Nav_Down, +1);
-        nav_moved |= menubar_step_dropdown(ctx, FlAction_Nav_Up, -1);
-    } else {
-        menubar_open_highlighted_top(ctx);
-    }
-
-    // Type-ahead over the deepest open level: within a dropdown when one is open, else across the bar's own tops.
-    // Purely a highlight move within the current level - an open dropdown stays put (unlike Left/Right, which
-    // switch the open root).
-    if (menu_typeahead(ctx, m->depth - 1)) {
-        m->hover_drives = false;
-        nav_moved = true;
-    }
-
-    // Scroll the deepest open level's highlight into view when the keyboard moved it (over-tall dropdown); a no-op
-    // on the horizontal bar strip and when it fits.
-    if (nav_moved) {
-        menu_scroll_into_view(ctx, m->depth - 1);
-    }
-    // Mouse wheel scrolls the hovered over-tall dropdown (prev-frame set, so before the reset below).
-    menu_apply_wheel(ctx);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void ui_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-    u32 scope = ui_layout_id_to_clay_id(bar_id);
-    mf->menubar_scope = scope;
-    bool owned = m->active && m->owner_scope_id == scope;
-
-    menu_track_pointer_move(ctx, m);
-
-    // An owning bar's tops are the chain's level 0, so the shared navigation helpers read them there. A passive bar
-    // leaves level 0 alone: it belongs to whichever menu owns the chain.
-    if (owned) {
-        mf->levels[0] = mf->bar_tops;
-    }
-
-    // Which top is the pointer over (prev-frame set)? Used by both the passive click-to-open trigger and the
-    // active hover-to-switch trigger.
-    BarHot hot = menubar_hot_top(mf, ctx->hot_id);
-
-    owned = menubar_arbitrate_open(ctx, scope, hot, owned);
-
-    if (owned && ctx->frame_counter > m->open_frame) {
-        menubar_handle_input(ctx, hot);
-    }
-
-    // Reset the bar's per-frame record. The highlight PERSISTS across frames; only the per-frame item counter resets
-    // so the tops re-index from 0 as they emit. The strip is horizontal and never scrolls, so its natural height stays
-    // 0 (menu_configure_panel is only used for the vertical dropdowns).
-    mf->build_level = 0;
-    mf->bar_tops.item_count = 0;
-    mf->bar_tops.natural_height = 0.0f;
-    mf->close_requested = false;
-    mf->z_base = cfg.z_index != 0 ? cfg.z_index : UI_Z_OVERLAY;
-
-    if (owned) {
-        // Own the focus scope so the strip's tops register in-scope (click-outside membership) and the bar owns
-        // arrows/ESC. The menu owns its dismissal, so the popup layer's auto-close stays disabled.
-        ui_focus_scope_arm(ctx, scope, true);
-        ctx->popup_auto_close = false;
-        ctx->current_popup_scope_id = scope;
-    }
-
-    // The horizontal strip container (always rendered - the tops are persistent).
-    const FlThemeColors* theme = ui_get_theme_colors(ctx);
-    fl_layout_start(bar_id);
-    fl_layout_configure((FlLayoutConfig) {
-        .sizing = { sizing_grow(), sizing_fixed(UI_MENUBAR_HEIGHT) },
-        .direction = LayoutDirection_LeftToRight,
-        .child_alignment = ui_align(Left, Center),
-        .padding = fl_padding_hv(FlSpacing_XS, 0),
-        .child_gap = FlSpacing_XS,
-        .color = theme->surface.elevated,
-    });
-}
-
-bool ui_menubar_menu_begin_impl(FlString label, FlMenuBarMenuConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-    const FlThemeColors* theme = ui_get_theme_colors(ctx);
-    u32 scope = mf->menubar_scope;
-    bool owned = m->active && m->owner_scope_id == scope;
-
-    // Record the top into the bar's own record (identity + navigability), like a menu row; while the bar owns the
-    // chain that record is its level 0, so the shared branch-switch / highlight / hot-item logic operates on it. A top
-    // behaves as a submenu parent: it opens a child level, never dispatches an action.
-    int index = mf->bar_tops.item_count++;
-    FlLayoutId top_id = { .name = label, .id = index };
-    u32 rid = ui_layout_id_to_clay_id(top_id);
-    FlSignal signal = ui_item_behavior(top_id, FlItemFlags_clickable, (FlWidgetConfig) { 0 });
-
-    bool navigable = !cfg.disabled;
-    if (index < UI_MENU_MAX_ITEMS) {
-        mf->bar_tops.item_navigable[index] = navigable;
-        mf->bar_tops.item_id[index] = rid;
-        mf->bar_tops.item_submenu[index] = navigable;   // a navigable top is a container that opens a dropdown
-        menu_record_label(&mf->bar_tops, index, label); // type-ahead over the bar's tops as well as the dropdowns
-    }
-    if (owned && navigable && m->levels[0].init_highlight) {
-        m->levels[0].highlight_index = index;
-        m->levels[0].init_highlight = false;
-    }
-
-    bool is_open_top = owned && m->levels[0].expanded_child_id == rid;
-    // Visual highlight: while the bar owns the chain, the managed bar-level highlight (keyboard/hover) and the open
-    // root both read as "current"; while passive, a plain hover affordance.
-    bool highlighted = navigable && (owned ? (m->levels[0].highlight_index == index || is_open_top) : signal.hovered);
-
-    FlColor bg = highlighted ? theme->surface.selected : theme->surface.elevated;
-    FlColor txt = cfg.disabled ? theme->text.secondary : theme->text.primary;
-
-    ui_layout_area_id(top_id, .sizing = { sizing_fit(), sizing_fixed(UI_MENUBAR_HEIGHT) },
-                      .direction = LayoutDirection_LeftToRight, .child_alignment = ui_align(Center, Center),
-                      .padding = fl_padding_hv(FlSpacing_SM, FlSpacing_XS), .radius = corner_radius(FlRadius_SM),
-                      .color = bg) {
-        ui_text_styled_impl(label, (FlTextConfig) { .color = txt, .valign = FlTextVAlign_Center, .no_wrap = true });
-    }
-
-    if (!is_open_top) {
-        return false;
-    }
-
-    // The dropdown is level 1: a floating panel anchored UNDER the bar button (element-anchor, so the popup core opens
-    // it below the top). It reuses the menu scope (ui_popup_begin inherits the armed popup_focus_scope_id), so its
-    // items register into the one shared scope.
-    int child_level = 1;
-    mf->build_level = child_level;
-    mf->levels[child_level].item_count = 0;
-
-    float min_w = cfg.min_width > 0.0f ? cfg.min_width : UI_MENU_DEFAULT_MIN_WIDTH;
-    ui_popup_begin(top_id, (FlPopupConfig) { .anchor = FlPopupAnchor_Element,
-                                             .z_index = mf->z_base,
-                                             .capture_input = true,
-                                             .auto_close = false });
-    // Dropdown panel (height-capped + scrollable when the dropdown is over-tall; sizing_fit otherwise).
-    fl_layout_start_auto();
-    menu_configure_panel(ctx, child_level, min_w);
-    return true;
-}
-
-void ui_menubar_menu_end_impl(void) {
-    FlUiCtx* ctx = ui_get_ctx();
-    UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    fl_layout_end(); // close the dropdown panel container
-    ui_popup_end();  // close the floating element (clears current_popup_scope_id)
-    mf->build_level = 0;
-
-    // ui_popup_end zeroed current_popup_scope_id; restore it so tops emitted AFTER the open one still register in the
-    // bar scope (click-outside membership / hover-switch).
-    if (m->active && m->owner_scope_id == mf->menubar_scope) {
-        ctx->current_popup_scope_id = mf->menubar_scope;
-    }
-}
-
-void ui_menubar_end_impl(void) {
-    FlUiCtx* ctx = ui_get_ctx();
-    UiMenuFrame* mf = &ctx->menu_frame;
-
-    fl_layout_end(); // close the strip container
-
-    // Disarm the render-time scope the bar armed at begin (and re-armed after each open dropdown). It covers the bar
-    // block only: left set, every widget emitted for the rest of the frame would register as a member of the bar's
-    // popup scope, and the click-outside test would answer yes for the whole app.
-    ctx->current_popup_scope_id = 0;
-
-    // A dropdown action item that asked to close tears the whole chain down AFTER the strip and its dropdown have
-    // rendered once more this frame - same deferred teardown as the context menu.
-    if (mf->close_requested) {
-        menu_close_internal(ctx);
-    }
-    mf->menubar_scope = 0;
-}
-
-bool ui_menubar_is_open_impl(FlLayoutId bar_id) {
-    FlUiCtx* ctx = ui_get_ctx();
-    UiMenuState* m = &ctx->shared->menu;
-    return m->active && m->owner_scope_id == ui_layout_id_to_clay_id(bar_id);
 }
