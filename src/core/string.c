@@ -36,24 +36,48 @@ bool fl_string_begins_with(const FlString str, const FlString needle) {
     return memory_compare(str.data, needle.data, needle.length) == 0;
 }
 
+bool fl_string_ends_with(const FlString str, const FlString needle) {
+    if (needle.length > str.length) {
+        return false;
+    }
+
+    const char* str_end = str.data + str.length - needle.length;
+    return memory_compare(str_end, needle.data, needle.length) == 0;
+}
+
+static inline char char_to_lower(char c) {
+    return (c >= 'A' && c <= 'Z') ? (char)(c + ('a' - 'A')) : c;
+}
+
+static inline bool is_digit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+static bool bytes_equal_nocase(const char* a, const char* b, u64 length) {
+    for (u64 i = 0; i < length; i++) {
+        if (char_to_lower(a[i]) != char_to_lower(b[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// -1, 0 or 1 as a is less than, equal to or greater than b
+static int compare_u64(u64 a, u64 b) {
+    return (a > b) - (a < b);
+}
+
 bool fl_string_equals(const FlString a, const FlString b) {
     if (a.length != b.length) {
         return false;
     }
 
-    if (a.length == 0) {
-        return true;
-    }
-
-    if (a.is_static && b.is_static && a.data == b.data) {
+    // Empty strings may have null data, and a shared pointer needs no byte compare
+    if (a.length == 0 || a.data == b.data) {
         return true;
     }
 
     return memory_compare(a.data, b.data, a.length) == 0;
-}
-
-static inline char char_to_lower(char c) {
-    return (c >= 'A' && c <= 'Z') ? (char)(c + ('a' - 'A')) : c;
 }
 
 bool fl_string_equals_nocase(const FlString a, const FlString b) {
@@ -61,109 +85,87 @@ bool fl_string_equals_nocase(const FlString a, const FlString b) {
         return false;
     }
 
-    if (a.length == 0) {
-        return true;
-    }
-
-    if (a.is_static && b.is_static && a.data == b.data) {
-        return true;
-    }
-
-    for (u64 i = 0; i < a.length; i++) {
-        if (char_to_lower(a.data[i]) != char_to_lower(b.data[i])) {
-            return false;
-        }
-    }
-
-    return true;
+    return bytes_equal_nocase(a.data, b.data, a.length);
 }
 
 int fl_string_compare_n(const FlString a, const FlString b, u64 max_len) {
-    u64 compare_len = a.length < b.length ? a.length : b.length;
+    const u64 common_len = a.length < b.length ? a.length : b.length;
+
     // The length tie-break below is only meaningful when the full common prefix was compared; when max_len
-    // cuts the comparison short, equal bytes within the bound mean "equal within the bound" - return 0.
-    bool was_clamped = max_len < compare_len;
-    if (was_clamped) {
-        compare_len = max_len;
+    // cuts the comparison short, equal bytes within the bound mean "equal within the bound".
+    if (max_len < common_len) {
+        return memory_compare(a.data, b.data, max_len);
     }
-    if (compare_len == 0) {
-        if (was_clamped) {
-            return 0;
+
+    if (common_len > 0) {
+        const int result = memory_compare(a.data, b.data, common_len);
+        if (result != 0) {
+            return result;
         }
-        return a.length == b.length ? 0 : (a.length < b.length ? -1 : 1);
     }
-    int result = memory_compare(a.data, b.data, compare_len);
-    if (result == 0 && !was_clamped && a.length != b.length) {
-        return a.length < b.length ? -1 : 1;
+
+    return compare_u64(a.length, b.length);
+}
+
+// Consume the run of digits at *pos and return it without its leading zeros
+static FlString take_number(const FlString str, u64* pos) {
+    u64 i = *pos;
+    while (i < str.length && str.data[i] == '0') {
+        i++;
     }
-    return result;
+
+    const u64 start = i;
+    while (i < str.length && is_digit(str.data[i])) {
+        i++;
+    }
+
+    *pos = i;
+    return (FlString) { .data = str.data + start, .length = i - start };
+}
+
+// Compare two digit runs that have no leading zeros: the longer one is the bigger number
+static int compare_numbers(const FlString a, const FlString b) {
+    if (a.length != b.length) {
+        return compare_u64(a.length, b.length);
+    }
+
+    for (u64 i = 0; i < a.length; i++) {
+        if (a.data[i] != b.data[i]) {
+            return a.data[i] < b.data[i] ? -1 : 1;
+        }
+    }
+    return 0;
+}
+
+static int compare_chars_nocase(char a, char b) {
+    const char lower_a = char_to_lower(a);
+    const char lower_b = char_to_lower(b);
+    return (lower_a > lower_b) - (lower_a < lower_b);
 }
 
 // Natural string comparison (case-insensitive, with numeric awareness)
 // Compares strings in a human-friendly way: "file1" < "file2" < "file10"
-
-static inline char to_lower(char c) {
-    return (c >= 'A' && c <= 'Z') ? (c + 32) : c;
-}
-
-static inline bool is_digit(char c) {
-    return c >= '0' && c <= '9';
-}
-
 int fl_string_compare_natural(const FlString a, const FlString b) {
-    u64 i = 0, j = 0;
+    u64 i = 0;
+    u64 j = 0;
 
     while (i < a.length && j < b.length) {
-        char ca = a.data[i];
-        char cb = b.data[j];
-
-        if (is_digit(ca) && is_digit(cb)) {
-            // Skip leading zeros
-            while (i < a.length && a.data[i] == '0')
-                i++;
-            while (j < b.length && b.data[j] == '0')
-                j++;
-
-            u64 num_start_a = i;
-            u64 num_start_b = j;
-
-            while (i < a.length && is_digit(a.data[i]))
-                i++;
-            while (j < b.length && is_digit(b.data[j]))
-                j++;
-
-            u64 num_len_a = i - num_start_a;
-            u64 num_len_b = j - num_start_b;
-
-            // Compare by length first (longer number is bigger)
-            if (num_len_a != num_len_b) {
-                return num_len_a < num_len_b ? -1 : 1;
-            }
-
-            for_count(k, num_len_a) {
-                if (a.data[num_start_a + k] != b.data[num_start_b + k]) {
-                    return a.data[num_start_a + k] < b.data[num_start_b + k] ? -1 : 1;
-                }
-            }
+        int result;
+        if (is_digit(a.data[i]) && is_digit(b.data[j])) {
+            const FlString number_a = take_number(a, &i);
+            const FlString number_b = take_number(b, &j);
+            result = compare_numbers(number_a, number_b);
         } else {
-            char lower_a = to_lower(ca);
-            char lower_b = to_lower(cb);
+            result = compare_chars_nocase(a.data[i++], b.data[j++]);
+        }
 
-            if (lower_a != lower_b) {
-                return lower_a < lower_b ? -1 : 1;
-            }
-
-            i++;
-            j++;
+        if (result != 0) {
+            return result;
         }
     }
 
-    // If we've exhausted one string, the shorter one comes first
-    if (i < a.length)
-        return 1;
-    if (j < b.length)
-        return -1;
-    return 0;
+    // One string is exhausted; the one with characters left sorts last
+    return (int)(i < a.length) - (int)(j < b.length);
 }
 
 FlString fl_string_concat(struct FlArena* arena, FlString s0, FlString s1) {
@@ -181,34 +183,25 @@ static inline FlString string_copy_impl(char* buffer, const FlString str) {
     return (FlString) { .data = buffer, .length = str.length, .is_ascii = str.is_ascii };
 }
 
+// Static strings are shared instead of copied, and an empty string owns no bytes
+static bool copy_needs_allocation(const FlString str) {
+    return !str.is_static && str.length > 0;
+}
+
 FlString fl_string_copy(struct FlArena* arena, const FlString str) {
-    // Static strings don't need to be copied
-    if (str.is_static) {
-        return str;
+    if (!copy_needs_allocation(str)) {
+        return str.is_static ? str : string_empty();
     }
 
-    if (str.length == 0) {
-        return string_empty();
-    }
-
-    char* buffer = arena_alloc_array(arena, char, str.length);
-    return string_copy_impl(buffer, str);
+    return string_copy_impl(arena_alloc_array(arena, char, str.length), str);
 }
 
 FlString fl_string_copy_malloc(const FlString str) {
-    // Static strings don't need to be copied
-    if (str.is_static) {
-        return str;
+    if (!copy_needs_allocation(str)) {
+        return str.is_static ? str : string_empty();
     }
 
-    if (str.length == 0) {
-        return string_empty();
-    }
-
-    char* buffer = mi_malloc(str.length);
-    memory_copy(buffer, str.length, str.data, str.length);
-
-    return (FlString) { .data = buffer, .length = str.length, .is_ascii = str.is_ascii };
+    return string_copy_impl(mi_malloc(str.length), str);
 }
 
 FlString fl_string_to_lower(struct FlArena* arena, const FlString str) {
@@ -218,16 +211,19 @@ FlString fl_string_to_lower(struct FlArena* arena, const FlString str) {
 
     char* buffer = arena_alloc_array(arena, char, str.length);
     for (u64 i = 0; i < str.length; i++) {
-        buffer[i] = to_lower(str.data[i]);
+        buffer[i] = char_to_lower(str.data[i]);
     }
 
     return (FlString) { .data = buffer, .length = str.length, .is_ascii = str.is_ascii };
 }
 
+// Static strings, empty strings (which point to "") and nullptr were never heap allocated
+static bool owns_heap_data(const FlString str) {
+    return str.length > 0 && !str.is_static && str.data;
+}
+
 void fl_string_free(FlString str) {
-    // Only free strings that were dynamically allocated
-    // Don't free: static strings, empty strings (which point to ""), or nullptr
-    if (str.length > 0 && !str.is_static && str.data) {
+    if (owns_heap_data(str)) {
         mi_free((void*)str.data);
     }
 }
@@ -304,86 +300,6 @@ u64 fl_sb_length(FlStringBuilder sb) {
     return sb.arena->pos - sb.start_pos;
 }
 
-bool fl_string_ends_with(const FlString str, const FlString needle) {
-    if (needle.length > str.length) {
-        return false;
-    }
-
-    const char* str_end = str.data + str.length - needle.length;
-    return memory_compare(str_end, needle.data, needle.length) == 0;
-}
-
-static char* string_to_null_terminated(const FlString str, char* buffer, u64 buffer_size) {
-    if (str.length == 0) {
-        buffer[0] = '\0';
-        return buffer;
-    }
-
-    if (str.length >= buffer_size) {
-        return nullptr; // FlString too long
-    }
-
-    memory_copy(buffer, buffer_size, str.data, str.length);
-    buffer[str.length] = '\0';
-    return buffer;
-}
-
-static bool is_hex_digit(char c) {
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-}
-
-static u32 hex_digit_value(char c) {
-    if (c >= '0' && c <= '9')
-        return c - '0';
-
-    if (c >= 'a' && c <= 'f')
-        return c - 'a' + 10;
-
-    if (c >= 'A' && c <= 'F')
-        return c - 'A' + 10;
-
-    return 0; // Should never reach here if is_hex_digit was checked
-}
-
-StringParseResultU64 fl_string_parse_u64(const FlString str) {
-    if (str.length == 0 || !str.data) {
-        return (StringParseResultU64) { 0, StringParseStatus_Empty };
-    }
-
-    char buffer[32];
-    if (!string_to_null_terminated(str, buffer, sizeof(buffer))) {
-        return (StringParseResultU64) { 0, StringParseStatus_InvalidFormat };
-    }
-
-    // strtoull silently accepts a sign after optional whitespace and wraps negative values into huge
-    // unsigned results; an unsigned parse must reject signed input outright.
-    const char* first = buffer;
-    while (*first == ' ' || *first == '\t' || *first == '\n' || *first == '\v' || *first == '\f' || *first == '\r') {
-        ++first;
-    }
-    if (*first == '-' || *first == '+') {
-        return (StringParseResultU64) { 0, StringParseStatus_InvalidFormat };
-    }
-
-    errno = 0;
-    char* endptr;
-    unsigned long long result = strtoull(buffer, &endptr, 10);
-
-    if (endptr == buffer) {
-        return (StringParseResultU64) { 0, StringParseStatus_InvalidFormat };
-    }
-
-    if (*endptr != '\0') {
-        return (StringParseResultU64) { 0, StringParseStatus_InvalidFormat };
-    }
-
-    if (errno == ERANGE) {
-        return (StringParseResultU64) { 0, StringParseStatus_Overflow };
-    }
-
-    return (StringParseResultU64) { (u64)result, StringParseStatus_Success };
-}
-
 FlString fl_string_substr(const FlString str, u64 start, u64 length) {
     if (start >= str.length) {
         return string_empty();
@@ -398,142 +314,181 @@ FlString fl_string_substr(const FlString str, u64 start, u64 length) {
     return (FlString) { .data = str.data + start, .length = actual_length, .is_ascii = str.is_ascii };
 }
 
-StringParseResultI64 fl_string_parse_i64(const FlString str) {
-    if (str.length == 0 || !str.data) {
-        return (StringParseResultI64) { 0, StringParseStatus_Empty };
+// Number parsing
+
+// Copy str into buffer as a C string for the strto* family and clear errno for the call. Anything but Success means
+// there is nothing to parse.
+static StringParseStatus parse_begin(const FlString str, char* buffer, u64 buffer_size) {
+    if (string_is_empty(str)) {
+        return StringParseStatus_Empty;
     }
 
-    char buffer[32];
-    if (!string_to_null_terminated(str, buffer, sizeof(buffer))) {
-        return (StringParseResultI64) { 0, StringParseStatus_InvalidFormat };
+    if (str.length >= buffer_size) {
+        return StringParseStatus_InvalidFormat; // Too long to be a number
     }
 
+    memory_copy(buffer, buffer_size, str.data, str.length);
+    buffer[str.length] = '\0';
     errno = 0;
+    return StringParseStatus_Success;
+}
+
+// Status of a strto* call that stopped at endptr: the whole buffer has to be consumed, and errno carries the range
+// error, which the caller names in range_status.
+static StringParseStatus parse_end(const char* buffer, const char* endptr, StringParseStatus range_status) {
+    if (endptr == buffer || *endptr != '\0') {
+        return StringParseStatus_InvalidFormat;
+    }
+
+    return errno == ERANGE ? range_status : StringParseStatus_Success;
+}
+
+static StringParseStatus range_status(bool is_above, bool is_below) {
+    if (is_above) {
+        return StringParseStatus_Overflow;
+    }
+    return is_below ? StringParseStatus_Underflow : StringParseStatus_Success;
+}
+
+// The whitespace strto* skips before a number
+static bool is_c_space(char c) {
+    return c == ' ' || (c >= '\t' && c <= '\r');
+}
+
+static bool has_sign(const char* cstr) {
+    while (is_c_space(*cstr)) {
+        ++cstr;
+    }
+    return *cstr == '-' || *cstr == '+';
+}
+
+StringParseResultU64 fl_string_parse_u64(const FlString str) {
+    char buffer[32];
+    StringParseStatus status = parse_begin(str, buffer, sizeof(buffer));
+
+    // strtoull silently accepts a sign after optional whitespace and wraps negative values into huge
+    // unsigned results; an unsigned parse must reject signed input outright.
+    if (status == StringParseStatus_Success && has_sign(buffer)) {
+        status = StringParseStatus_InvalidFormat;
+    }
+
+    u64 value = 0;
+    if (status == StringParseStatus_Success) {
+        char* endptr;
+        value = strtoull(buffer, &endptr, 10);
+        status = parse_end(buffer, endptr, StringParseStatus_Overflow);
+    }
+
+    return (StringParseResultU64) { status == StringParseStatus_Success ? value : 0, status };
+}
+
+StringParseResultI64 fl_string_parse_i64(const FlString str) {
+    char buffer[32];
+    const StringParseStatus begin_status = parse_begin(str, buffer, sizeof(buffer));
+    if (begin_status != StringParseStatus_Success) {
+        return (StringParseResultI64) { 0, begin_status };
+    }
+
     char* endptr;
-    long long result = strtoll(buffer, &endptr, 10);
+    const i64 value = strtoll(buffer, &endptr, 10);
+    // On a range error strtoll returns the limit that was crossed
+    const StringParseStatus status = parse_end(buffer, endptr, range_status(value == LLONG_MAX, true));
 
-    if (endptr == buffer) {
-        return (StringParseResultI64) { 0, StringParseStatus_InvalidFormat };
-    }
-
-    if (*endptr != '\0') {
-        return (StringParseResultI64) { 0, StringParseStatus_InvalidFormat };
-    }
-
-    if (errno == ERANGE) {
-        if (result == LLONG_MAX) {
-            return (StringParseResultI64) { 0, StringParseStatus_Overflow };
-        } else {
-            return (StringParseResultI64) { 0, StringParseStatus_Underflow };
-        }
-    }
-
-    return (StringParseResultI64) { (i64)result, StringParseStatus_Success };
+    return (StringParseResultI64) { status == StringParseStatus_Success ? value : 0, status };
 }
 
-StringParseResultU32 fl_string_parse_u32(const FlString str) {
-    StringParseResultU64 result = fl_string_parse_u64(str);
-
-    if (result.status != StringParseStatus_Success) {
-        return (StringParseResultU32) { 0, result.status };
-    }
-
-    if (result.value > UINT32_MAX) {
-        return (StringParseResultU32) { 0, StringParseStatus_Overflow };
-    }
-
-    return (StringParseResultU32) { (u32)result.value, StringParseStatus_Success };
-}
-
-StringParseResultI32 fl_string_parse_i32(const FlString str) {
-    StringParseResultI64 result = fl_string_parse_i64(str);
-
-    if (result.status != StringParseStatus_Success) {
-        return (StringParseResultI32) { 0, result.status };
-    }
-
-    if (result.value > INT32_MAX) {
-        return (StringParseResultI32) { 0, StringParseStatus_Overflow };
-    }
-
-    if (result.value < INT32_MIN) {
-        return (StringParseResultI32) { 0, StringParseStatus_Underflow };
-    }
-
-    return (StringParseResultI32) { (i32)result.value, StringParseStatus_Success };
+// On a range error strtod returns +-HUGE_VAL for overflow and a value near zero for underflow
+static StringParseStatus f64_range_status(double value) {
+    return range_status(fabs(value) == HUGE_VAL, true);
 }
 
 StringParseResultF64 fl_string_parse_f64(const FlString str) {
-    if (str.length == 0 || !str.data) {
-        return (StringParseResultF64) { 0.0, StringParseStatus_Empty };
-    }
-
     char buffer[64];
-    if (!string_to_null_terminated(str, buffer, sizeof(buffer))) {
-        return (StringParseResultF64) { 0.0, StringParseStatus_InvalidFormat };
+    char* endptr = buffer;
+    double value = 0.0;
+
+    StringParseStatus status = parse_begin(str, buffer, sizeof(buffer));
+    if (status == StringParseStatus_Success) {
+        value = strtod(buffer, &endptr);
+        status = parse_end(buffer, endptr, f64_range_status(value));
     }
 
-    errno = 0;
-    char* endptr;
-    double result = strtod(buffer, &endptr);
+    if (status != StringParseStatus_Success) {
+        value = 0.0;
+    }
+    return (StringParseResultF64) { value, status };
+}
 
-    if (endptr == buffer) {
-        return (StringParseResultF64) { 0.0, StringParseStatus_InvalidFormat };
+static StringParseResultU32 narrow_to_u32(const StringParseResultU64 wide) {
+    StringParseStatus status = wide.status;
+    if (status == StringParseStatus_Success) {
+        status = range_status(wide.value > UINT32_MAX, false);
     }
 
-    if (*endptr != '\0') {
-        return (StringParseResultF64) { 0.0, StringParseStatus_InvalidFormat };
+    return (StringParseResultU32) { status == StringParseStatus_Success ? (u32)wide.value : 0, status };
+}
+
+StringParseResultU32 fl_string_parse_u32(const FlString str) {
+    return narrow_to_u32(fl_string_parse_u64(str));
+}
+
+StringParseResultI32 fl_string_parse_i32(const FlString str) {
+    const StringParseResultI64 wide = fl_string_parse_i64(str);
+    if (wide.status != StringParseStatus_Success) {
+        return (StringParseResultI32) { 0, wide.status };
     }
 
-    if (errno == ERANGE) {
-        if (result == HUGE_VAL || result == -HUGE_VAL) {
-            return (StringParseResultF64) { 0.0, StringParseStatus_Overflow };
-        } else {
-            return (StringParseResultF64) { 0.0, StringParseStatus_Underflow };
-        }
-    }
-
-    return (StringParseResultF64) { result, StringParseStatus_Success };
+    const StringParseStatus status = range_status(wide.value > INT32_MAX, wide.value < INT32_MIN);
+    return (StringParseResultI32) { status == StringParseStatus_Success ? (i32)wide.value : 0, status };
 }
 
 StringParseResultF32 fl_string_parse_f32(const FlString str) {
-    StringParseResultF64 result = fl_string_parse_f64(str);
+    StringParseResultF32 result = { 0.0f, StringParseStatus_Success };
 
-    if (result.status != StringParseStatus_Success) {
-        return (StringParseResultF32) { 0.0f, result.status };
+    const StringParseResultF64 wide = fl_string_parse_f64(str);
+    result.status = wide.status;
+    if (result.status == StringParseStatus_Success) {
+        result.status = range_status(wide.value > FLT_MAX, wide.value < -FLT_MAX);
     }
 
-    if (result.value > FLT_MAX) {
-        return (StringParseResultF32) { 0.0f, StringParseStatus_Overflow };
+    if (result.status == StringParseStatus_Success) {
+        result.value = (f32)wide.value;
+    }
+    return result;
+}
+
+// Value of a hex digit, or -1 when c is not one
+static int hex_digit_value(char c) {
+    if (is_digit(c)) {
+        return c - '0';
     }
 
-    if (result.value < -FLT_MAX) {
-        return (StringParseResultF32) { 0.0f, StringParseStatus_Underflow };
+    const char lower = char_to_lower(c);
+    if (lower >= 'a' && lower <= 'f') {
+        return lower - 'a' + 10;
     }
 
-    return (StringParseResultF32) { (f32)result.value, StringParseStatus_Success };
+    return -1;
+}
+
+static bool has_hex_prefix(const FlString str) {
+    return str.length >= 2 && str.data[0] == '0' && char_to_lower(str.data[1]) == 'x';
 }
 
 StringParseResultU64 fl_string_parse_hex_u64(const FlString str) {
-    if (str.length == 0 || !str.data) {
+    if (string_is_empty(str)) {
         return (StringParseResultU64) { 0, StringParseStatus_Empty };
     }
 
-    u64 start_idx = 0;
-
-    if (str.length >= 2 && str.data[0] == '0' && (str.data[1] == 'x' || str.data[1] == 'X')) {
-        start_idx = 2;
-    }
-
-    if (start_idx >= str.length) {
+    const FlString digits = has_hex_prefix(str) ? fl_string_substr(str, 2, str.length - 2) : str;
+    if (digits.length == 0) {
         return (StringParseResultU64) { 0, StringParseStatus_InvalidHexPrefix };
     }
 
     u64 result = 0;
-    for (u64 i = start_idx; i < str.length; i++) {
-        char c = str.data[i];
-
-        if (!is_hex_digit(c)) {
+    for (u64 i = 0; i < digits.length; i++) {
+        const int digit = hex_digit_value(digits.data[i]);
+        if (digit < 0) {
             return (StringParseResultU64) { 0, StringParseStatus_InvalidFormat };
         }
 
@@ -542,50 +497,26 @@ StringParseResultU64 fl_string_parse_hex_u64(const FlString str) {
             return (StringParseResultU64) { 0, StringParseStatus_Overflow };
         }
 
-        result = result * 16 + hex_digit_value(c);
+        result = result * 16 + (u64)digit;
     }
 
     return (StringParseResultU64) { result, StringParseStatus_Success };
 }
 
 StringParseResultU32 fl_string_parse_hex_u32(const FlString str) {
-    StringParseResultU64 result = fl_string_parse_hex_u64(str);
-
-    if (result.status != StringParseStatus_Success) {
-        return (StringParseResultU32) { 0, result.status };
-    }
-
-    if (result.value > UINT32_MAX) {
-        return (StringParseResultU32) { 0, StringParseStatus_Overflow };
-    }
-
-    return (StringParseResultU32) { (u32)result.value, StringParseStatus_Success };
+    return narrow_to_u32(fl_string_parse_hex_u64(str));
 }
 
 StringParseResultU64 fl_string_parse_number_u64(const FlString str) {
-    if (str.length == 0 || !str.data) {
+    if (string_is_empty(str)) {
         return (StringParseResultU64) { 0, StringParseStatus_Empty };
     }
 
-    if (str.length >= 2 && str.data[0] == '0' && (str.data[1] == 'x' || str.data[1] == 'X')) {
-        return fl_string_parse_hex_u64(str);
-    }
-
-    return fl_string_parse_u64(str);
+    return has_hex_prefix(str) ? fl_string_parse_hex_u64(str) : fl_string_parse_u64(str);
 }
 
 StringParseResultU32 fl_string_parse_number_u32(const FlString str) {
-    StringParseResultU64 result = fl_string_parse_number_u64(str);
-
-    if (result.status != StringParseStatus_Success) {
-        return (StringParseResultU32) { 0, result.status };
-    }
-
-    if (result.value > UINT32_MAX) {
-        return (StringParseResultU32) { 0, StringParseStatus_Overflow };
-    }
-
-    return (StringParseResultU32) { (u32)result.value, StringParseStatus_Success };
+    return narrow_to_u32(fl_string_parse_number_u64(str));
 }
 
 // FlString search and URL utilities
@@ -599,27 +530,32 @@ i64 fl_string_find_char(const FlString str, char c) {
     return -1;
 }
 
-i64 fl_string_find_substr(const FlString str, const FlString needle) {
+typedef bool (*BytesEqualFn)(const char* a, const char* b, u64 length);
+
+static bool bytes_equal(const char* a, const char* b, u64 length) {
+    return memory_compare(a, b, length) == 0;
+}
+
+// Index of the first place in str where needle matches under equal, or -1. An empty needle matches at 0.
+static i64 find_substr_with(const FlString str, const FlString needle, BytesEqualFn equal) {
     if (needle.length == 0) {
-        return 0; // Empty needle found at position 0
+        return 0;
     }
     if (needle.length > str.length) {
         return -1;
     }
 
-    for (u64 i = 0; i <= str.length - needle.length; i++) {
-        bool match = true;
-        for (u64 j = 0; j < needle.length; j++) {
-            if (str.data[i + j] != needle.data[j]) {
-                match = false;
-                break;
-            }
-        }
-        if (match) {
+    const u64 last_start = str.length - needle.length;
+    for (u64 i = 0; i <= last_start; i++) {
+        if (equal(str.data + i, needle.data, needle.length)) {
             return (i64)i;
         }
     }
     return -1;
+}
+
+i64 fl_string_find_substr(const FlString str, const FlString needle) {
+    return find_substr_with(str, needle, bytes_equal);
 }
 
 i64 fl_string_find_char_from(const FlString str, char c, u64 offset) {
@@ -639,33 +575,9 @@ bool fl_string_contains(const FlString str, const FlString needle) {
     return fl_string_find_substr(str, needle) != -1;
 }
 
+// Case-insensitive for ASCII only
 bool fl_string_contains_nocase(const FlString str, const FlString needle) {
-    if (needle.length == 0) {
-        return true;
-    }
-    if (str.length < needle.length) {
-        return false;
-    }
-
-    for (u64 i = 0; i <= str.length - needle.length; i++) {
-        bool match = true;
-        for (u64 j = 0; j < needle.length; j++) {
-            char s = str.data[i + j];
-            char n = needle.data[j];
-            // Convert to lowercase for comparison (ASCII only)
-            if (s >= 'A' && s <= 'Z')
-                s += 32;
-            if (n >= 'A' && n <= 'Z')
-                n += 32;
-            if (s != n) {
-                match = false;
-                break;
-            }
-        }
-        if (match)
-            return true;
-    }
-    return false;
+    return find_substr_with(str, needle, bytes_equal_nocase) != -1;
 }
 
 #define FNV1A_64_INIT 0xcbf29ce484222325ULL
