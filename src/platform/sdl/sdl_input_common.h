@@ -1,19 +1,17 @@
 #pragma once
 
 // Shared SDL event translation + input-device state: the SDL->Fl event pump (keyboard, text, mouse, wheel,
-// gamepad, window events) and the per-window OS mechanics (system-cursor cache, relative-mouse mode, warp,
-// clipboard) the SDL window backend delegates to.
+// gamepad, window events) and the per-window OS mechanics (system-cursor cache, relative-mouse mode, warp) the SDL
+// window backend delegates to.
 
 #if BACKEND_USE_SDL
 
 #include "../input_types.h"
+#include "sdl_gamepads.h"
 #include <SDL.h>
 
 typedef struct SdlInputCommon {
-    SDL_GameController* gamepads[UI_INPUT_MAX_GAMEPADS];
-    SDL_JoystickID gamepad_ids[UI_INPUT_MAX_GAMEPADS];
-    // Slots opened at init whose Connected event the next pump still owes the main window.
-    bool gamepad_connect_pending[UI_INPUT_MAX_GAMEPADS];
+    SdlGamepads gamepads;
 
     // Relative-mouse mode (a hidden drag). While true, motion is delivered as raw FlMouseEvent_Relative_Motion
     // deltas rather than absolute FlMouseEvent_Move, and SDL has hidden + unbounded the cursor.
