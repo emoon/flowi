@@ -4491,7 +4491,8 @@ UTEST(image_decode, compose_grayscale_source_replicates_gray) {
     };
 
     u8 canvas[3 * 2 * 3];
-    composite_source_into_canvas_rgb(&img, canvas, 3, 2, 5, 5, 5, 0, 0);
+    const ImageCanvas target = { .pixels = canvas, .width = 3, .height = 2, .fill = { 5, 5, 5 } };
+    composite_source_into_canvas_rgb(&img, &target);
 
     for (int i = 0; i < 3 * 2; i++) {
         ASSERT_EQ_MSG((int)canvas[i * 3 + 0], (int)gray[i], "grayscale value replicated into R");
@@ -4513,7 +4514,8 @@ UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
     };
 
     u8 canvas[3 * 1 * 3];
-    composite_source_into_canvas_rgb(&img, canvas, 3, 1, 0, 0, 0, 0, 0);
+    const ImageCanvas target = { .pixels = canvas, .width = 3, .height = 1 };
+    composite_source_into_canvas_rgb(&img, &target);
 
     const int expected_gray[3] = { 100, 150, 200 }; // channel-0 gray of each pixel; alpha ignored
     for (int i = 0; i < 3; i++) {
@@ -4528,16 +4530,17 @@ UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
 // report false on its grey byte, and a high alpha byte must not make a black row report non-black.
 UTEST(image_decode, black_predicates_read_gray_alpha_channel) {
     const u8 bright_ga[6] = { 200, 0, 200, 0, 200, 0 }; // 3x1 GA: bright grey, zero alpha
-    ASSERT_FALSE_MSG(image_decode_test_is_row_all_black(bright_ga, 3, 2),
+    const InternalDecodeData bright = { .data = (u8*)bright_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
+    ASSERT_FALSE_MSG(image_region_all_black(&bright, (PixelRect) { 0, 1, 0, 3 }),
                      "a bright grey+alpha row must not report all-black");
+    ASSERT_FALSE_MSG(image_region_all_black(&bright, (PixelRect) { 0, 1, 1, 2 }),
+                     "a bright grey+alpha column must not report all-black");
 
     const u8 black_ga[6] = { 0, 255, 0, 255, 0, 255 }; // 3x1 GA: black grey, opaque alpha
-    ASSERT_TRUE_MSG(image_decode_test_is_row_all_black(black_ga, 3, 2),
+    const InternalDecodeData black = { .data = (u8*)black_ga, .width = 3, .height = 1, .stride = 6, .channels = 2 };
+    ASSERT_TRUE_MSG(image_region_all_black(&black, (PixelRect) { 0, 1, 0, 3 }),
                     "a black grey+alpha row must report all-black regardless of alpha");
-
-    ASSERT_FALSE_MSG(image_decode_test_is_column_all_black(bright_ga, 1, 0, 1, 6, 2),
-                     "a bright grey+alpha column must not report all-black");
-    ASSERT_TRUE_MSG(image_decode_test_is_column_all_black(black_ga, 1, 0, 1, 6, 2),
+    ASSERT_TRUE_MSG(image_region_all_black(&black, (PixelRect) { 0, 1, 1, 2 }),
                     "a black grey+alpha column must report all-black regardless of alpha");
 }
 
@@ -4571,7 +4574,10 @@ UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
 
     // offset (-1,-1) mimics a Center offset for a source larger than the canvas ((2-4)/2). dst_x = -1 + x, so
     // x==0 falls before the canvas (dropped), x==3 falls past it (dropped), x==1/2 map to canvas cols 0/1.
-    composite_source_into_canvas_rgb(&img, canvas, CW, CH, 7, 8, 9, -1, -1);
+    const ImageCanvas target = {
+        .pixels = canvas, .width = CW, .height = CH, .fill = { 7, 8, 9 }, .offset_x = -1, .offset_y = -1,
+    };
+    composite_source_into_canvas_rgb(&img, &target);
 
     for (int i = 0; i < GUARD; i++) {
         ASSERT_EQ_MSG((int)buf[i], 0xAB, "leading guard byte untouched (no OOB write before canvas)");
