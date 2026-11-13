@@ -30,6 +30,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Menu core - the open-path state machine, navigation, type-ahead and scrolling shared by every menu surface.
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Whether the chain is open and owned by the surface with this scope id.
 bool menu_owned_by(const FlUiCtx* ctx, u32 scope) {
     return ctx->shared->menu.active && ctx->shared->menu.owner_scope_id == scope;
@@ -301,6 +303,8 @@ bool menu_typeahead(FlUiCtx* ctx, int level) {
 // Scrollable over-tall levels. A menu level whose natural item list is taller than the viewport is height-capped and
 // its contents scroll; a level that fits stays natural-height. All offset/clamp math reuses scroll_core (scroll_max).
 // Scrolling is immediate (no smoothing) so keyboard scroll-into-view lands the highlight in a single frame.
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Record one emitted row's scroll geometry: its content-space top (relative to the first row, panel padding excluded)
 // and height, plus the level's running natural height. The running height restarts as the level's first row (index 0)

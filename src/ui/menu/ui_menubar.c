@@ -23,6 +23,8 @@
 // through the same primitives ui_menu_begin_impl drives; the bar supplies only the per-surface open TRIGGER - a
 // click, never the submenu's hover-dwell.
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Activate the bar chain on the closed -> open transition: arm the shared open path at depth 1 (bar level only, no
 // dropdown yet), seeding level 0 with the bar's recorded tops so the caller can immediately branch-switch into the
 // clicked one. Mirrors ui_menu_open_impl but with no point anchor (the strip is laid out, not floated) and with level 0
@@ -81,6 +83,8 @@ static void menubar_reopen_under_highlight(FlUiCtx* ctx) {
         menu_collapse_to(m, 1);
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Passive: cold hover does NOTHING (the bar's per-surface trigger is click, not the submenu's hover-dwell). A press on
 // a navigable top opens it - activate the chain, then branch-switch into that top (level 0 -> 1). Returns whether the
@@ -293,6 +297,8 @@ void ui_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig cfg) {
     });
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Whether the bar currently owns the open chain.
 static bool menubar_owned(const FlUiCtx* ctx) {
     return menu_owned_by(ctx, ctx->menu_frame.menubar_scope);
@@ -395,6 +401,8 @@ bool ui_menubar_menu_begin_impl(FlString label, FlMenuBarMenuConfig cfg) {
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void ui_menubar_menu_end_impl(void) {
     FlUiCtx* ctx = ui_get_ctx();
     UiMenuFrame* mf = &ctx->menu_frame;
@@ -409,6 +417,8 @@ void ui_menubar_menu_end_impl(void) {
         ctx->current_popup_scope_id = mf->menubar_scope;
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_menubar_end_impl(void) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -428,6 +438,8 @@ void ui_menubar_end_impl(void) {
     }
     mf->menubar_scope = 0;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_menubar_is_open_impl(FlLayoutId bar_id) {
     FlUiCtx* ctx = ui_get_ctx();

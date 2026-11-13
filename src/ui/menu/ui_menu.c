@@ -43,6 +43,8 @@ typedef enum MenuMarker {
     MenuMarker_Radio,    // a round dot in the gutter when marked (radio)
 } MenuMarker;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Resolve whether activating an item closes the chain, from the per-item policy and the item kind's natural default
 // (action: close; checkable/radio: keep open). The two explicit policies force the exception in either direction.
 static bool menu_policy_closes(FlMenuClosePolicy policy, bool kind_default_close) {
@@ -72,6 +74,8 @@ FlColor ui_menu_blend(FlColor a, FlColor b, float t) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Open-path state
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void ui_menu_open_impl(FlLayoutId menu_id, FlVec2 point) {
     FlUiCtx* ctx = ui_get_ctx();
     UiMenuState* m = &ctx->shared->menu;
@@ -93,12 +97,16 @@ void ui_menu_open_impl(FlLayoutId menu_id, FlVec2 point) {
     m->last_mouse_pos = (FlVec2) { ctx->input_state.mouse.x, ctx->input_state.mouse.y };
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void ui_menu_close_impl(FlLayoutId menu_id) {
     FlUiCtx* ctx = ui_get_ctx();
     if (menu_owned_by(ctx, ui_layout_id_to_clay_id(menu_id))) {
         menu_close_internal(ctx);
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_menu_is_open_impl(FlLayoutId menu_id) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -255,6 +263,8 @@ static MenuRow menu_emit_row(FlUiCtx* ctx, MenuRowSpec spec) {
 
     return row;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Horizontal side for a submenu panel: right of the parent by default, left when only that side fits, with the parent
 // level's bias winning when both fit.
@@ -413,6 +423,8 @@ static void menu_handle_keyboard(FlUiCtx* ctx) {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static void menu_dwell_reset(UiMenuState* m) {
     m->dwell_item_id = 0;
     m->hover_accum = 0.0f;
@@ -533,6 +545,8 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Fold keyboard/gamepad activation and the per-item close policy into a freshly-emitted leaf row, returning the
 // resolved signal. kind_default_close is the kind's natural close default: an action closes on activation, a
 // toggle keeps open.
@@ -559,12 +573,16 @@ static FlSignal menu_finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg
     return signal;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 FlSignal ui_menu_item_impl(FlString label, FlMenuItemConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
     MenuRow row
         = menu_emit_row(ctx, (MenuRowSpec) { .label = label, .shortcut = cfg.shortcut, .disabled = cfg.disabled });
     return menu_finish_leaf(ctx, row, cfg, /*kind_default_close=*/true);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlSignal ui_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -583,6 +601,8 @@ FlSignal ui_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig cfg)
     }
     return signal;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlSignal ui_menu_radio_impl(FlString label, int* selected, int value, FlMenuItemConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -603,6 +623,8 @@ FlSignal ui_menu_radio_impl(FlString label, int* selected, int value, FlMenuItem
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Static (non-interactive) item kinds - separator, section header
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Record a static row (separator / header) into the current level and register it as an in-scope but non-interactive
 // item, returning its layout id for the caller to paint. It occupies an item index, keeping the per-level highlight
 // index dense with the action rows, and registers with no interaction flags so a click on it lands in the menu's
@@ -613,6 +635,8 @@ static FlLayoutId menu_record_static_row(FlUiCtx* ctx, FlString name, f32 row_he
     MenuRowSpec spec = { .label = name, .disabled = true };
     return menu_register_row(ctx, &spec, row_height, FlItemFlags_scroll_target).layout;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_menu_separator_impl(void) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -629,6 +653,8 @@ void ui_menu_separator_impl(void) {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void ui_menu_header_impl(FlString label) {
     FlUiCtx* ctx = ui_get_ctx();
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
@@ -644,6 +670,8 @@ void ui_menu_header_impl(FlString label) {
             label, (FlTextConfig) { .color = theme->text.secondary, .valign = FlTextVAlign_Center, .no_wrap = true });
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -682,6 +710,8 @@ bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void ui_submenu_end_impl(void) {
     FlUiCtx* ctx = ui_get_ctx();
     UiMenuFrame* mf = &ctx->menu_frame;
@@ -693,6 +723,8 @@ void ui_submenu_end_impl(void) {
         mf->build_level--; // pop back to the parent level
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_menu_end_impl(void) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -709,6 +741,8 @@ void ui_menu_end_impl(void) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Right-click region
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Whether the cursor is inside the region's LAYOUT box. The render-command-driven hot path only marks elements that
 // emit a render command, so a transparent catch-all region would never report hover; Clay tracks the layout box
@@ -749,6 +783,8 @@ FlSignal ui_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlM
 
     return signal;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_menu_region_end_impl(void) {
     fl_layout_end();
