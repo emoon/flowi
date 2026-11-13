@@ -6,14 +6,55 @@
 #include <math.h>
 #include <string.h>
 
+typedef enum InputType {
+    INPUT_TYPE_KEYBOARD,
+    INPUT_TYPE_GAMEPAD,
+    INPUT_TYPE_GAMEPAD_AXIS,
+} InputType;
+
+typedef enum UiModifiers {
+    UI_MOD_NONE = 0,
+    UI_MOD_SHIFT = (1 << 0),
+    UI_MOD_CTRL = (1 << 1),
+    UI_MOD_ALT = (1 << 2),
+    UI_MOD_SUPER = (1 << 3), // Command key on macOS, Windows key on Windows
+} UiModifiers;
+
+// One physical input source that can trigger an action
+typedef struct InputBinding {
+    InputType type;
+
+    union {
+        struct {
+            FlKey key;
+            UiModifiers modifiers;
+        } keyboard;
+
+        struct {
+            u32 gamepad_index; // 0-3
+            FlGamepadButton button;
+        } gamepad;
+
+        struct {
+            u32 gamepad_index;
+            FlGamepadAxis axis;
+            float threshold; // Dead zone (default 0.5)
+            bool positive;   // True = positive direction, false = negative
+        } gamepad_axis;
+    };
+} InputBinding;
+
+// Which actions went down this frame.
+struct ActionSystemState {
+    bool pressed[FlAction_Count];
+};
+
 // Default Bindings - Hardcoded sensible defaults that work out-of-the-box
 
 #define BINDING_KEYBOARD(k) \
     { .type = INPUT_TYPE_KEYBOARD, .keyboard = { .key = k, .modifiers = UI_MOD_NONE } }
 #define BINDING_KEYBOARD_MOD(k, m) \
     { .type = INPUT_TYPE_KEYBOARD, .keyboard = { .key = k, .modifiers = m } }
-#define BINDING_MOUSE(btn) \
-    { .type = INPUT_TYPE_MOUSE, .mouse = { .button = btn } }
 #define BINDING_GAMEPAD(idx, btn) \
     { .type = INPUT_TYPE_GAMEPAD, .gamepad = { .gamepad_index = idx, .button = btn } }
 #define BINDING_GAMEPAD_AXIS(idx, ax, thresh, pos)                                                 \
@@ -197,14 +238,6 @@ static const BindingSet s_default_bindings[FlAction_Count] = {
     [FlAction_Text_Redo] = { s_bindings_text_redo, sizeof_array(s_bindings_text_redo) },
 };
 
-// Binding check dispatch - unified function that routes to appropriate checker based on event type
-
-typedef enum BindingEventType {
-    BINDING_EVENT_HELD = 0,
-    BINDING_EVENT_PRESSED = 1,
-    BINDING_EVENT_RELEASED = 2,
-} BindingEventType;
-
 // Exact match of the active keyboard modifiers against a binding's required modifiers.
 // Only Shift/Ctrl/Alt/Super participate; all other modifier bits are ignored.
 static bool keyboard_modifiers_match(u32 active_modifiers, UiModifiers required) {
@@ -222,106 +255,64 @@ static bool keyboard_modifiers_match(u32 active_modifiers, UiModifiers required)
     return (active_modifiers & relevant_mask) == expected_mods;
 }
 
-static bool check_binding(const FlInputState* input, const InputBinding* binding, BindingEventType event_type) {
-    switch (binding->type) {
-        case INPUT_TYPE_KEYBOARD: {
-            const KeyboardState* kb = &input->keyboard;
-            FlKey key = binding->keyboard.key;
+static bool key_pressed(const KeyboardState* kb, const InputBinding* binding) {
+    return keyboard_modifiers_match(kb->modifiers, binding->keyboard.modifiers)
+           && kb->keys_pressed[binding->keyboard.key];
+}
 
-            const bool* key_states[3] = {
-                kb->keys,         // BINDING_EVENT_HELD (0)
-                kb->keys_pressed, // BINDING_EVENT_PRESSED (1)
-                kb->keys_released // BINDING_EVENT_RELEASED (2)
-            };
+// The gamepad in a slot, or nullptr when the slot is out of range or empty.
+static const GamepadState* connected_gamepad(const FlInputState* input, u32 index) {
+    if (index >= UI_INPUT_MAX_GAMEPADS || !input->gamepads[index].connected) {
+        return nullptr;
+    }
+    return &input->gamepads[index];
+}
 
-            // Modifiers must match exactly for pressed/held (release ignores modifiers)
-            if (event_type != BINDING_EVENT_RELEASED
-                && !keyboard_modifiers_match(kb->modifiers, binding->keyboard.modifiers)) {
-                return false;
-            }
+static bool gamepad_button_pressed(const FlInputState* input, const InputBinding* binding) {
+    const GamepadState* pad = connected_gamepad(input, binding->gamepad.gamepad_index);
+    return pad && pad->buttons_pressed[binding->gamepad.button];
+}
 
-            return key_states[event_type][key];
-        }
-
-        case INPUT_TYPE_MOUSE: {
-            const bool* button_states[3] = {
-                input->mouse.buttons,         // BINDING_EVENT_HELD (0)
-                input->mouse.buttons_pressed, // BINDING_EVENT_PRESSED (1)
-                input->mouse.buttons_released // BINDING_EVENT_RELEASED (2)
-            };
-            return button_states[event_type][binding->mouse.button];
-        }
-
-        case INPUT_TYPE_GAMEPAD: {
-            u32 idx = binding->gamepad.gamepad_index;
-            if (idx >= UI_INPUT_MAX_GAMEPADS)
-                return false;
-
-            const GamepadState* pad = &input->gamepads[idx];
-            if (!pad->connected)
-                return false;
-
-            const bool* button_states[3] = {
-                pad->buttons,         // BINDING_EVENT_HELD (0)
-                pad->buttons_pressed, // BINDING_EVENT_PRESSED (1)
-                pad->buttons_released // BINDING_EVENT_RELEASED (2)
-            };
-            return button_states[event_type][binding->gamepad.button];
-        }
-
-        case INPUT_TYPE_GAMEPAD_AXIS: {
-            u32 idx = binding->gamepad_axis.gamepad_index;
-            if (idx >= UI_INPUT_MAX_GAMEPADS)
-                return false;
-
-            const GamepadState* pad = &input->gamepads[idx];
-            if (!pad->connected)
-                return false;
-
-            FlGamepadAxis axis = binding->gamepad_axis.axis;
-            float threshold = binding->gamepad_axis.threshold;
-            bool positive = binding->gamepad_axis.positive;
-            float value = pad->axes[axis];
-            float prev_value = pad->axes_prev[axis];
-
-            if (positive) {
-                if (event_type == BINDING_EVENT_PRESSED) {
-                    return (prev_value <= threshold) && (value > threshold);
-                } else if (event_type == BINDING_EVENT_HELD) {
-                    return value > threshold;
-                } else { // BINDING_EVENT_RELEASED
-                    return (prev_value > threshold) && (value <= threshold);
-                }
-            } else {
-                if (event_type == BINDING_EVENT_PRESSED) {
-                    return (prev_value >= -threshold) && (value < -threshold);
-                } else if (event_type == BINDING_EVENT_HELD) {
-                    return value < -threshold;
-                } else { // BINDING_EVENT_RELEASED
-                    return (prev_value < -threshold) && (value >= -threshold);
-                }
-            }
-        }
+// An axis counts as pressed on the frame it crosses the threshold in the binding's direction.
+static bool gamepad_axis_pressed(const FlInputState* input, const InputBinding* binding) {
+    const GamepadState* pad = connected_gamepad(input, binding->gamepad_axis.gamepad_index);
+    if (!pad) {
+        return false;
     }
 
+    const float threshold = binding->gamepad_axis.threshold;
+    const float value = pad->axes[binding->gamepad_axis.axis];
+    const float prev_value = pad->axes_prev[binding->gamepad_axis.axis];
+
+    if (binding->gamepad_axis.positive) {
+        return (prev_value <= threshold) && (value > threshold);
+    }
+    return (prev_value >= -threshold) && (value < -threshold);
+}
+
+static bool binding_pressed(const FlInputState* input, const InputBinding* binding) {
+    switch (binding->type) {
+        case INPUT_TYPE_KEYBOARD:
+            return key_pressed(&input->keyboard, binding);
+        case INPUT_TYPE_GAMEPAD:
+            return gamepad_button_pressed(input, binding);
+        case INPUT_TYPE_GAMEPAD_AXIS:
+            return gamepad_axis_pressed(input, binding);
+    }
     return false;
 }
 
-// Action Evaluation
-
-static bool evaluate_action(const FlInputState* input, FlAction action, BindingEventType event_type) {
+static bool action_pressed(const FlInputState* input, FlAction action) {
     const BindingSet* set = &s_default_bindings[action];
 
     for_count(i, set->count) {
-        if (check_binding(input, &set->bindings[i], event_type)) {
+        if (binding_pressed(input, &set->bindings[i])) {
             return true;
         }
     }
 
     return false;
 }
-
-// Internal API Implementation
 
 void ui_actions_init(FlUiCtx* ctx) {
     ctx->action_state = arena_alloc(ctx->persistant, ActionSystemState);
@@ -338,24 +329,15 @@ void ui_actions_update(FlUiCtx* ctx) {
     const FlInputState* input = &ctx->input_state;
 
     for_count(i, FlAction_Count) {
-        state->actions[i].pressed = evaluate_action(input, (FlAction)i, BINDING_EVENT_PRESSED);
-        state->actions[i].held = evaluate_action(input, (FlAction)i, BINDING_EVENT_HELD);
-        state->actions[i].released = evaluate_action(input, (FlAction)i, BINDING_EVENT_RELEASED);
+        state->pressed[i] = action_pressed(input, (FlAction)i);
     }
 
-    // Mouse wheel has no "held" state, just up/down events. Reads the per-frame cached value (set by
-    // ui_input_update before it calls this, and before the live accumulator is cleared), so the actions
-    // observe the same values - including the Shift axis swap - as every other wheel consumer.
-    state->actions[FlAction_Scroll_Up].pressed = (input->mouse.wheel_y_cached > 0.0f);
-    state->actions[FlAction_Scroll_Up].held = false;
-    state->actions[FlAction_Scroll_Up].released = false;
-
-    state->actions[FlAction_Scroll_Down].pressed = (input->mouse.wheel_y_cached < 0.0f);
-    state->actions[FlAction_Scroll_Down].held = false;
-    state->actions[FlAction_Scroll_Down].released = false;
+    // The mouse wheel has no bindings. Reads the per-frame cached value (set by ui_input_update before it calls
+    // this, and before the live accumulator is cleared), so the actions observe the same values - including the
+    // Shift axis swap - as every other wheel consumer.
+    state->pressed[FlAction_Scroll_Up] = (input->mouse.wheel_y_cached > 0.0f);
+    state->pressed[FlAction_Scroll_Down] = (input->mouse.wheel_y_cached < 0.0f);
 }
-
-// Public Query API Implementation
 
 bool ui_action_pressed(FlUiCtx* ctx, FlAction action) {
     if (action >= FlAction_Count) {
@@ -367,7 +349,7 @@ bool ui_action_pressed(FlUiCtx* ctx, FlAction action) {
         return false;
     }
 
-    return state->actions[action].pressed;
+    return state->pressed[action];
 }
 
 bool ui_action_repeated(FlUiCtx* ctx, FlAction action) {
