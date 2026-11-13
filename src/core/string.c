@@ -107,9 +107,6 @@ int fl_string_compare_n(const FlString a, const FlString b, u64 max_len) {
     return compare_u64(a.length, b.length);
 }
 
-// Natural string comparison (case-insensitive, with numeric awareness)
-// Compares strings in a human-friendly way: "file1" < "file2" < "file10"
-
 // Consume the run of digits at *pos and return it without its leading zeros
 static FlString take_number(const FlString str, u64* pos) {
     u64 i = *pos;
@@ -146,6 +143,8 @@ static int compare_chars_nocase(char a, char b) {
     return (lower_a > lower_b) - (lower_a < lower_b);
 }
 
+// Natural string comparison (case-insensitive, with numeric awareness)
+// Compares strings in a human-friendly way: "file1" < "file2" < "file10"
 int fl_string_compare_natural(const FlString a, const FlString b) {
     u64 i = 0;
     u64 j = 0;
