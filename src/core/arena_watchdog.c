@@ -9,7 +9,6 @@
 #include "sprintf.h"
 #include <stdatomic.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Arena Growth Watchdog
 //
 // Uses mi_malloc for its own storage to avoid a circular dependency with arenas.
@@ -19,8 +18,6 @@
 #define WATCHDOG_DEFAULT_INTERVAL_US (30 * 1000000LL)
 #define WATCHDOG_DEFAULT_GROWTH_THRESHOLD 3
 #define WATCHDOG_DEFAULT_MIN_GROWTH_BYTES 4096
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
     const FlArena* arena;
@@ -33,8 +30,6 @@ typedef struct {
     u64 last_alert_pos; // Suppress duplicate alerts at same position
     bool seen;          // Marked true during iteration, false = stale
 } WatchdogEntry;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
     WatchdogEntry* entries;
@@ -50,8 +45,6 @@ typedef struct {
 
 static ArenaWatchdog s_watchdog = { 0 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static WatchdogEntry* find_entry(const FlArena* arena, u64 creation_timestamp) {
     for (u32 i = 0; i < s_watchdog.count; i++) {
         WatchdogEntry* entry = &s_watchdog.entries[i];
@@ -61,8 +54,6 @@ static WatchdogEntry* find_entry(const FlArena* arena, u64 creation_timestamp) {
     }
     return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static WatchdogEntry* add_entry(const FlArena* arena) {
     if (s_watchdog.count >= s_watchdog.capacity) {
@@ -86,15 +77,11 @@ static WatchdogEntry* add_entry(const FlArena* arena) {
     return entry;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void remove_entry(u32 index) {
     FL_ASSERT_DEBUG(index < s_watchdog.count);
     s_watchdog.entries[index] = s_watchdog.entries[s_watchdog.count - 1];
     s_watchdog.count--;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool check_monotonic_growth(const WatchdogEntry* entry, u32 threshold, u64 min_bytes) {
     if (entry->sample_count < threshold) {
@@ -121,8 +108,6 @@ static bool check_monotonic_growth(const WatchdogEntry* entry, u32 threshold, u6
     u64 total_growth = last_sample - first_sample;
     return total_growth >= min_bytes;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void sample_arena_callback(FlArena* arena, void* user_data) {
     (void)user_data;
@@ -164,8 +149,6 @@ static void sample_arena_callback(FlArena* arena, void* user_data) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void cleanup_stale_entries(void) {
     u32 i = 0;
     while (i < s_watchdog.count) {
@@ -178,8 +161,6 @@ static void cleanup_stale_entries(void) {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void arena_watchdog_init(void) {
     if (s_watchdog.initialized) {
@@ -208,8 +189,6 @@ void arena_watchdog_init(void) {
     s_watchdog.initialized = true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_watchdog_destroy(void) {
     if (!s_watchdog.initialized) {
         return;
@@ -218,8 +197,6 @@ void arena_watchdog_destroy(void) {
     mi_free(s_watchdog.entries);
     memory_zero(&s_watchdog, sizeof(ArenaWatchdog));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void arena_watchdog_update(void) {
     if (!s_watchdog.initialized || !s_watchdog.enabled) {
@@ -238,19 +215,13 @@ void arena_watchdog_update(void) {
     cleanup_stale_entries();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_watchdog_set_enabled(bool enabled) {
     s_watchdog.enabled = enabled;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_watchdog_set_interval_seconds(u32 seconds) {
     s_watchdog.sample_interval_us = (i64)seconds * 1000000LL;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void arena_watchdog_set_growth_threshold(u32 consecutive_samples) {
     if (consecutive_samples < 2) {
@@ -262,13 +233,9 @@ void arena_watchdog_set_growth_threshold(u32 consecutive_samples) {
     s_watchdog.growth_threshold = consecutive_samples;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_watchdog_set_min_growth_bytes(u64 bytes) {
     s_watchdog.min_growth_bytes = bytes;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void sb_append_line(FlStringBuilder* sb, FlArena* output_arena, const char* format, ...) {
     arena_scratch_auto_conflict(temp, output_arena);
@@ -281,16 +248,12 @@ static void sb_append_line(FlStringBuilder* sb, FlArena* output_arena, const cha
     *sb = fl_sb_append_string(*sb, line);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct {
     FlStringBuilder* sb;
     FlArena* output_arena;
     u32 growing_count;
     u32 total_count;
 } ReportCallbackData;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void build_report_entries(ReportCallbackData* data) {
     for (u32 i = 0; i < s_watchdog.count; i++) {
@@ -318,8 +281,6 @@ static void build_report_entries(ReportCallbackData* data) {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString arena_watchdog_report(FlArena* output_arena) {
     FL_VALIDATE_RET(output_arena != nullptr, string_empty());

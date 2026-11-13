@@ -12,8 +12,6 @@ typedef struct ScopedEnv {
     char* saved; // the value to put back; nullptr when the variable was unset
 } ScopedEnv;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline ScopedEnv scoped_env_set(const char* name, const char* value) {
     ScopedEnv scope = { .name = name, .saved = nullptr };
     const char* current = getenv_os(name);
@@ -32,8 +30,6 @@ static inline ScopedEnv scoped_env_set(const char* name, const char* value) {
     return scope;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void scoped_env_restore(ScopedEnv* scope) {
     if (scope->saved != nullptr) {
         setenv_os(scope->name, scope->saved, 1);
@@ -42,8 +38,6 @@ static inline void scoped_env_restore(ScopedEnv* scope) {
     }
     free(scope->saved);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Declares `var`, sets name to value (nullptr unsets it) and restores the old state when var goes out of scope.
 #define SCOPED_ENV(var, name, value) \

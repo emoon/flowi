@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // flowi neutral render-command IR - emit helpers.
 //
 // Small inline builders that append a tagged FlCmd record (render_ir.h) to an arena, producing one contiguous,
@@ -20,7 +19,6 @@
 #include "render_ir.h"
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Start a record: 8-align, emit the header, and stamp byte_size rounded up to the 8-byte record stride.
 // total_bytes is the WHOLE record size (header + payload + any inline trailing data), not just the payload.
 
@@ -36,7 +34,6 @@ static inline FlCmdHeader* fl_ir_header(FlArena* arena, FlCmdKind kind, u32 tota
     return header;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Append the optional effect annotation to the record being built (after the payload and any inline trailing
 // array) and mark the header. NULL means no effect. The caller's total_bytes must already include the effect.
 
@@ -53,7 +50,6 @@ static inline void fl_ir_append_effect(FlArena* arena, FlCmdHeader* header, cons
     *dst = *effect;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fill rect with optional per-corner radii and per-corner colors (a solid fill is four equal corner colors;
 // a gradient is four differing ones - there is no separate gradient command). NULL effect = none.
 
@@ -71,7 +67,6 @@ static inline void fl_ir_fill_rect(FlArena* arena, FlRect rect, FlCornerRadius r
     fl_ir_append_effect(arena, header, effect);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Device-snapped solid fill rect for crisp 1px lines (separators, grid, rulers). The same record as
 // fl_ir_fill_rect but tagged FL_SNAP_DEVICE_PX, so the paint-span splice rounds it to the device-pixel grid after
 // adding the element origin. Solid color, no corner radius.
@@ -89,7 +84,6 @@ static inline void fl_ir_fill_rect_snapped(FlArena* arena, FlRect rect, FlColor 
     fl_ir_append_effect(arena, header, effect);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Border with per-side widths and an outer radius (the backend derives the inner geometry). The _stroked
 // variant additionally dashes the band; the plain one is that with a zeroed (solid) pattern.
 
@@ -112,7 +106,6 @@ static inline void fl_ir_border(FlArena* arena, FlRect rect, f32 w_l, f32 w_r, f
     fl_ir_border_stroked(arena, rect, w_l, w_r, w_t, w_b, radius, color, (FlStrokeStyle) { 0 });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // One image primitive (static handle or dynamic neutral buffer; color or alpha-coverage mode). NULL effect = none.
 
 static inline void fl_ir_image(FlArena* arena, FlImageSource source, FlImageMode mode, FlRect dst, FlRect src,
@@ -129,7 +122,6 @@ static inline void fl_ir_image(FlArena* arena, FlImageSource source, FlImageMode
     fl_ir_append_effect(arena, header, effect);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A run of pre-positioned glyphs in one font/size/color. The glyphs are copied inline after the payload.
 
 static inline void fl_ir_text_run(FlArena* arena, FlFontId font, u16 size, f32 scale, FlColor color,
@@ -148,7 +140,6 @@ static inline void fl_ir_text_run(FlArena* arena, FlFontId font, u16 size, f32 s
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rect-only clip push / pop.
 
 static inline void fl_ir_clip_push(FlArena* arena, FlRect rect) {
@@ -161,7 +152,6 @@ static inline void fl_ir_clip_pop(FlArena* arena) {
     fl_ir_header(arena, FlCmd_ClipPop, (u32)sizeof(FlCmdHeader));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Optional-tier builders. All five take an optional effect (NULL = none), appended after the payload and any
 // inline trailing array. The variable-length builders (polyline, bars) reserve the trailing array inside the
 // record and return it; the caller MUST fill every reserved entry.
@@ -247,7 +237,6 @@ static inline FlBar* fl_ir_bars(FlArena* arena, f32 baseline_y, FlColor color, u
     return bars;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lay a UTF-8 string out into a positioned FlCmd_TextRun and append it. Glyph ids are codepoints (the backend
 // re-resolves and rasterizes each), resolved here only to advance the pen. cursor_x is the pen x of the first
 // glyph; baseline_y is the text baseline. The transient FlGlyph array is built in scratch, which MUST be a

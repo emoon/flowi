@@ -31,7 +31,6 @@ FlString error_message_vformat(LogChannelId channel, LogLevel level, const char*
 // As error_message_format_no_log, taking a va_list.
 FlString error_message_vformat_no_log(const char* fmt, va_list args);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Convenience Macros
 
 #define error_message_error(channel, fmt, ...) error_message_format(channel, LogLevel_Error, fmt, ##__VA_ARGS__)

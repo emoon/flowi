@@ -6,8 +6,6 @@
 #include <core/string.h>
 #include "scoped_env.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(env_expand, no_variables) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlString input = FL_S("no variables here");
@@ -17,8 +15,6 @@ UTEST(env_expand, no_variables) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(env_expand, empty_string) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlString input = FL_S("");
@@ -27,8 +23,6 @@ UTEST(env_expand, empty_string) {
     ASSERT_TRUE(fl_string_equals(result, input));
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(env_expand, braced_variable) {
     SCOPED_ENV(env_test_var, "TEST_VAR", "hello");
@@ -41,8 +35,6 @@ UTEST(env_expand, braced_variable) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(env_expand, unbraced_variable) {
     SCOPED_ENV(env_user_name, "USER_NAME", "john");
 
@@ -53,8 +45,6 @@ UTEST(env_expand, unbraced_variable) {
     ASSERT_TRUE(fl_string_equals(result, FL_S("john-data")));
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(env_expand, multiple_variables) {
     SCOPED_ENV(env_a, "A", "foo");
@@ -68,8 +58,6 @@ UTEST(env_expand, multiple_variables) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(env_expand, undefined_variable_braced) {
     SCOPED_ENV(env_undefined_var, "UNDEFINED_VAR", nullptr);
 
@@ -81,8 +69,6 @@ UTEST(env_expand, undefined_variable_braced) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(env_expand, undefined_variable_unbraced) {
     SCOPED_ENV(env_missing, "MISSING", nullptr);
 
@@ -93,8 +79,6 @@ UTEST(env_expand, undefined_variable_unbraced) {
     ASSERT_TRUE(fl_string_equals(result, FL_S("$MISSING/file")));
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(env_expand, adjacent_variables) {
     SCOPED_ENV(env_x, "X", "1");
@@ -108,8 +92,6 @@ UTEST(env_expand, adjacent_variables) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(env_expand, mixed_braced_unbraced) {
     SCOPED_ENV(env_home, "HOME", "/home/user");
     SCOPED_ENV(env_file, "FILE", "data.txt");
@@ -122,8 +104,6 @@ UTEST(env_expand, mixed_braced_unbraced) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(env_expand, trailing_dollar) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlString input = FL_S("price is $");
@@ -133,8 +113,6 @@ UTEST(env_expand, trailing_dollar) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(env_expand, unclosed_brace) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlString input = FL_S("${UNCLOSED");
@@ -143,8 +121,6 @@ UTEST(env_expand, unclosed_brace) {
     ASSERT_TRUE(fl_string_equals(result, FL_S("${UNCLOSED")));
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(env_expand, empty_variable_name) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -159,8 +135,6 @@ UTEST(env_expand, empty_variable_name) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(env_expand, real_world_build_dir) {
     SCOPED_ENV(env_build_dir, "BUILD_DIR", "/home/user/app/build");

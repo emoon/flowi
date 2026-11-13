@@ -8,8 +8,6 @@
 #include <unistd.h>
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString create_test_name(FlArena* arena, const char* base_name) {
     u32 pid = get_process_id_os();
     return fl_sprintf_arena(arena, "%s_%u", base_name, pid);
@@ -27,8 +25,6 @@ static FlString create_test_dir_path(FlArena* arena, const char* test_name) {
     return file_build_path_os(arena, temp_dir, unique_name);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, get_temp_directory_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -42,8 +38,6 @@ UTEST(os_api, get_temp_directory_basic) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, get_temp_directory_consistency) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -55,15 +49,11 @@ UTEST(os_api, get_temp_directory_consistency) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, get_process_id_basic) {
     u32 pid = get_process_id_os();
 
     ASSERT_GT(pid, 0U);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, get_process_id_consistency) {
     u32 pid1 = get_process_id_os();
@@ -71,8 +61,6 @@ UTEST(os_api, get_process_id_consistency) {
 
     ASSERT_EQ(pid1, pid2);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, file_write_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -91,8 +79,6 @@ UTEST(os_api, file_write_basic) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, file_write_empty) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -107,8 +93,6 @@ UTEST(os_api, file_write_empty) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, file_write_large_content) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -131,8 +115,6 @@ UTEST(os_api, file_write_large_content) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, file_write_overwrite) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -153,8 +135,6 @@ UTEST(os_api, file_write_overwrite) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, directory_create_and_remove) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -170,8 +150,6 @@ UTEST(os_api, directory_create_and_remove) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, directory_create_existing) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -189,8 +167,6 @@ UTEST(os_api, directory_create_existing) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, directory_recursive_remove_with_files) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -222,8 +198,6 @@ UTEST(os_api, directory_recursive_remove_with_files) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, directory_recursive_remove_nested) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -252,8 +226,6 @@ UTEST(os_api, directory_recursive_remove_nested) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, directory_create_recursive_nested) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -276,8 +248,6 @@ UTEST(os_api, directory_create_recursive_nested) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, directory_create_recursive_existing) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -294,13 +264,9 @@ UTEST(os_api, directory_create_recursive_existing) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, directory_create_recursive_empty_path) {
     ASSERT_FALSE(file_create_directory_recursive_os(string_empty()));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, directory_create_recursive_single_level) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -316,8 +282,6 @@ UTEST(os_api, directory_create_recursive_single_level) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, full_workflow_integration) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -357,8 +321,6 @@ UTEST(os_api, full_workflow_integration) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, cross_platform_path_handling) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -382,8 +344,6 @@ UTEST(os_api, cross_platform_path_handling) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, file_write_invalid_path) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -400,8 +360,6 @@ UTEST(os_api, file_write_invalid_path) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, directory_remove_nonexistent) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -412,8 +370,6 @@ UTEST(os_api, directory_remove_nonexistent) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, get_disk_space_temp_directory) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -434,8 +390,6 @@ UTEST(os_api, get_disk_space_temp_directory) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, get_disk_space_current_directory) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -447,8 +401,6 @@ UTEST(os_api, get_disk_space_current_directory) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, get_disk_space_file_path) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -468,8 +420,6 @@ UTEST(os_api, get_disk_space_file_path) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, get_disk_space_nonexistent_file_with_valid_parent) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -493,8 +443,6 @@ UTEST(os_api, get_disk_space_nonexistent_file_with_valid_parent) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, get_disk_space_empty_path) {
     FlString empty_path = FL_S("");
     DiskSpaceInfo info = get_disk_space_os(empty_path);
@@ -504,8 +452,6 @@ UTEST(os_api, get_disk_space_empty_path) {
     ASSERT_EQ(info.bytes_free, 0ULL);
     ASSERT_EQ(info.bytes_available, 0ULL);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, get_disk_space_consistency) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -535,8 +481,6 @@ UTEST(os_api, get_disk_space_consistency) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, file_open_write_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -558,8 +502,6 @@ UTEST(os_api, file_open_write_basic) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, file_open_write_truncate) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -586,8 +528,6 @@ UTEST(os_api, file_open_write_truncate) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, file_open_write_append) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -612,8 +552,6 @@ UTEST(os_api, file_open_write_append) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, file_open_write_multiple_writes) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -645,30 +583,22 @@ UTEST(os_api, file_open_write_multiple_writes) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, file_write_to_handle_invalid_fd) {
     FlString content = FL_S("This should fail");
     i64 result = file_write_to_handle_os(-1, (const u8*)content.data, (i64)content.length);
     ASSERT_LT(result, 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, file_write_to_handle_null_data) {
     i64 result = file_write_to_handle_os(1, nullptr, 100);
     ASSERT_LT(result, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, file_write_to_handle_zero_size) {
     FlString content = FL_S("Content");
     i64 result = file_write_to_handle_os(1, (const u8*)content.data, 0);
     ASSERT_LE(result, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, file_open_write_invalid_path) {
 #ifdef _WIN32
@@ -679,8 +609,6 @@ UTEST(os_api, file_open_write_invalid_path) {
     i64 fd = file_open_write_os(invalid_path, false);
     ASSERT_LT(fd, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, file_rename_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -705,8 +633,6 @@ UTEST(os_api, file_rename_basic) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, file_rename_overwrite) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -733,8 +659,6 @@ UTEST(os_api, file_rename_overwrite) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, file_rename_nonexistent_source) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -745,8 +669,6 @@ UTEST(os_api, file_rename_nonexistent_source) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(os_api, file_rename_to_invalid_path) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -771,8 +693,6 @@ UTEST(os_api, file_rename_to_invalid_path) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(os_api, file_rename_same_directory) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -795,7 +715,6 @@ UTEST(os_api, file_rename_same_directory) {
 
     fl_arena_destroy(arena);
 }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if !defined(_WIN32)
 UTEST(os_api, directory_recursive_remove_does_not_follow_symlinks) {

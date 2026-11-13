@@ -2,8 +2,6 @@
 #include <core/utf8.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_ascii_single) {
     FlString str = FL_S("A");
     u32 cp;
@@ -12,8 +10,6 @@ UTEST(utf8, decode_ascii_single) {
     ASSERT_EQ(cp, (u32)'A');
     ASSERT_EQ(next, str.data + 1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_ascii_all) {
     const char* ascii
@@ -32,8 +28,6 @@ UTEST(utf8, decode_ascii_all) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_ascii_control) {
     char buf[32];
     for (int i = 0; i < 32; i++) {
@@ -48,8 +42,6 @@ UTEST(utf8, decode_ascii_control) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_2byte_latin_extended) {
     // "Café" - the 'é' is U+00E9, encoded as C3 A9
     const char* cafe = "Caf\xC3\xA9";
@@ -63,8 +55,6 @@ UTEST(utf8, decode_2byte_latin_extended) {
     ASSERT_EQ(utf8_iter_next(&it), (u32)0x00E9); // é
     ASSERT_TRUE(utf8_iter_done(&it));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_2byte_german) {
     const char* german = "M\xC3\xBCller"; // Müller
@@ -82,8 +72,6 @@ UTEST(utf8, decode_2byte_german) {
     ASSERT_EQ(utf8_iter_next(&it), (u32)'r');
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_2byte_swedish) {
     // Swedish characters: å=U+00E5, ä=U+00E4, ö=U+00F6
     const char* swedish = "\xC3\xA5\xC3\xA4\xC3\xB6"; // åäö
@@ -97,8 +85,6 @@ UTEST(utf8, decode_2byte_swedish) {
     ASSERT_EQ(utf8_iter_next(&it), (u32)0x00E4); // ä
     ASSERT_EQ(utf8_iter_next(&it), (u32)0x00F6); // ö
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_2byte_boundary) {
     char buf[4];
@@ -119,8 +105,6 @@ UTEST(utf8, decode_2byte_boundary) {
     ASSERT_EQ(cp, (u32)0x07FF);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_3byte_cjk) {
     // CJK character: 中 = U+4E2D = E4 B8 AD
     const char* chinese = "\xE4\xB8\xAD";
@@ -130,8 +114,6 @@ UTEST(utf8, decode_3byte_cjk) {
     utf8_decode_safe(str.data, str.data + str.length, &cp);
     ASSERT_EQ(cp, (u32)0x4E2D);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_3byte_mixed) {
     // Mixed ASCII and CJK: "Hi中文"
@@ -148,8 +130,6 @@ UTEST(utf8, decode_3byte_mixed) {
     ASSERT_EQ(utf8_iter_next(&it), (u32)0x6587); // 文
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_3byte_euro) {
     // Euro sign: € = U+20AC = E2 82 AC
     const char* euro = "\xE2\x82\xAC";
@@ -159,8 +139,6 @@ UTEST(utf8, decode_3byte_euro) {
     utf8_decode_safe(str.data, str.data + str.length, &cp);
     ASSERT_EQ(cp, (u32)0x20AC);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_3byte_boundary) {
     char buf[4];
@@ -183,8 +161,6 @@ UTEST(utf8, decode_3byte_boundary) {
     ASSERT_EQ(cp, (u32)0xFFFF);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_4byte_emoji) {
     // Grinning face emoji: 😀 = U+1F600 = F0 9F 98 80
     const char* emoji = "\xF0\x9F\x98\x80";
@@ -195,8 +171,6 @@ UTEST(utf8, decode_4byte_emoji) {
     ASSERT_EQ(cp, (u32)0x1F600);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_4byte_musical) {
     // Musical symbol G clef: 𝄞 = U+1D11E = F0 9D 84 9E
     const char* clef = "\xF0\x9D\x84\x9E";
@@ -206,8 +180,6 @@ UTEST(utf8, decode_4byte_musical) {
     utf8_decode_safe(str.data, str.data + str.length, &cp);
     ASSERT_EQ(cp, (u32)0x1D11E);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_4byte_boundary) {
     char buf[4];
@@ -232,8 +204,6 @@ UTEST(utf8, decode_4byte_boundary) {
     ASSERT_EQ(cp, (u32)0x10FFFF);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_invalid_continuation_only) {
     // Continuation byte without lead byte (0x80-0xBF)
     char buf[1] = { '\x80' };
@@ -244,8 +214,6 @@ UTEST(utf8, decode_invalid_continuation_only) {
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_invalid_truncated_2byte) {
     char buf[1] = { '\xC2' }; // Lead byte for 2-byte, no continuation
     FlString str = { .data = buf, .length = 1, .is_ascii = 0 };
@@ -254,8 +222,6 @@ UTEST(utf8, decode_invalid_truncated_2byte) {
     utf8_decode_safe(str.data, str.data + str.length, &cp);
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_invalid_truncated_3byte) {
     char buf[2] = { '\xE4', '\xB8' }; // Start of 中, missing last byte
@@ -266,8 +232,6 @@ UTEST(utf8, decode_invalid_truncated_3byte) {
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_invalid_truncated_4byte) {
     char buf[3] = { '\xF0', '\x9F', '\x98' }; // Start of emoji, missing last byte
     FlString str = { .data = buf, .length = 3, .is_ascii = 0 };
@@ -277,8 +241,6 @@ UTEST(utf8, decode_invalid_truncated_4byte) {
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_invalid_bad_continuation) {
     char buf[2] = { '\xC2', '\x00' }; // Second byte should be 80-BF
     FlString str = { .data = buf, .length = 2, .is_ascii = 0 };
@@ -287,8 +249,6 @@ UTEST(utf8, decode_invalid_bad_continuation) {
     utf8_decode_safe(str.data, str.data + str.length, &cp);
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_invalid_fe_ff) {
     // 0xFE and 0xFF are never valid UTF-8 bytes
@@ -306,8 +266,6 @@ UTEST(utf8, decode_invalid_fe_ff) {
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_overlong_2byte) {
     // Overlong encoding of NUL (U+0000): C0 80 instead of 00
     char buf[2] = { '\xC0', '\x80' };
@@ -317,8 +275,6 @@ UTEST(utf8, decode_overlong_2byte) {
     utf8_decode_safe(str.data, str.data + str.length, &cp);
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_overlong_2byte_slash) {
     // Overlong encoding of '/' (U+002F): C0 AF instead of 2F
@@ -331,8 +287,6 @@ UTEST(utf8, decode_overlong_2byte_slash) {
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_overlong_3byte) {
     // Overlong encoding of U+007F: E0 81 BF instead of 7F
     char buf[3] = { '\xE0', '\x81', '\xBF' };
@@ -342,8 +296,6 @@ UTEST(utf8, decode_overlong_3byte) {
     utf8_decode_safe(str.data, str.data + str.length, &cp);
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_overlong_4byte) {
     // Overlong encoding of U+0041 ('A'): F0 80 81 81 instead of 41
@@ -355,8 +307,6 @@ UTEST(utf8, decode_overlong_4byte) {
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_surrogate_high) {
     // High surrogate U+D800 = ED A0 80 (invalid in UTF-8)
     char buf[3] = { '\xED', '\xA0', '\x80' };
@@ -366,8 +316,6 @@ UTEST(utf8, decode_surrogate_high) {
     utf8_decode_safe(str.data, str.data + str.length, &cp);
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_surrogate_low) {
     // Low surrogate U+DC00 = ED B0 80 (invalid in UTF-8)
@@ -379,8 +327,6 @@ UTEST(utf8, decode_surrogate_low) {
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_surrogate_max_high) {
     // Maximum high surrogate U+DBFF = ED AF BF
     char buf[3] = { '\xED', '\xAF', '\xBF' };
@@ -390,8 +336,6 @@ UTEST(utf8, decode_surrogate_max_high) {
     utf8_decode_safe(str.data, str.data + str.length, &cp);
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, decode_surrogate_max_low) {
     // Maximum low surrogate U+DFFF = ED BF BF
@@ -403,8 +347,6 @@ UTEST(utf8, decode_surrogate_max_low) {
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, decode_out_of_range) {
     // U+110000 is beyond Unicode maximum (F4 90 80 80)
     char buf[4] = { '\xF4', '\x90', '\x80', '\x80' };
@@ -415,8 +357,6 @@ UTEST(utf8, decode_out_of_range) {
     ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, iter_empty) {
     FlString str = string_empty();
 
@@ -424,8 +364,6 @@ UTEST(utf8, iter_empty) {
     ASSERT_TRUE(utf8_iter_done(&it));
     ASSERT_EQ(utf8_iter_next(&it), (u32)0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, iter_mixed) {
     // "Hëllo 世界 🌍" - mix of ASCII, 2-byte, 3-byte, and 4-byte
@@ -446,23 +384,17 @@ UTEST(utf8, iter_mixed) {
     ASSERT_TRUE(utf8_iter_done(&it));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, codepoint_count_ascii) {
     FlString str = FL_S("Hello World");
     u64 count = utf8_codepoint_count(str);
     ASSERT_EQ(count, (u64)11);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, codepoint_count_empty) {
     FlString str = string_empty();
     u64 count = utf8_codepoint_count(str);
     ASSERT_EQ(count, (u64)0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, codepoint_count_multibyte) {
     // "日本語" = 3 characters, 9 bytes
@@ -472,8 +404,6 @@ UTEST(utf8, codepoint_count_multibyte) {
     u64 count = utf8_codepoint_count(str);
     ASSERT_EQ(count, (u64)3);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, encode_ascii) {
     char buf[4];
@@ -486,8 +416,6 @@ UTEST(utf8, encode_ascii) {
     ASSERT_EQ(len, (u32)1);
     ASSERT_EQ((u8)buf[0], (u8)0x7F);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, encode_2byte) {
     char buf[4];
@@ -504,8 +432,6 @@ UTEST(utf8, encode_2byte) {
     ASSERT_EQ((u8)buf[0], (u8)0xDF);
     ASSERT_EQ((u8)buf[1], (u8)0xBF);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, encode_3byte) {
     char buf[4];
@@ -524,8 +450,6 @@ UTEST(utf8, encode_3byte) {
     ASSERT_EQ((u8)buf[1], (u8)0x82);
     ASSERT_EQ((u8)buf[2], (u8)0xAC);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, encode_4byte) {
     char buf[4];
@@ -547,8 +471,6 @@ UTEST(utf8, encode_4byte) {
     ASSERT_EQ((u8)buf[3], (u8)0xBF);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, encode_invalid) {
     char buf[4];
 
@@ -561,8 +483,6 @@ UTEST(utf8, encode_invalid) {
     len = utf8_encode(buf, 0x110000);
     ASSERT_EQ(len, (u32)0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, encode_decode_roundtrip) {
     u32 test_codepoints[] = {
@@ -596,14 +516,10 @@ UTEST(utf8, encode_decode_roundtrip) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, is_valid_ascii) {
     FlString str = FL_S("Hello World 123");
     ASSERT_TRUE(utf8_is_valid(str));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, is_valid_utf8) {
     // "Café 日本語 😀"
@@ -611,8 +527,6 @@ UTEST(utf8, is_valid_utf8) {
     FlString str = { .data = valid, .length = strlen(valid), .is_ascii = 0 };
     ASSERT_TRUE(utf8_is_valid(str));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, is_valid_invalid) {
     char buf1[2] = { '\xC2', '\x00' }; // Bad continuation
@@ -630,14 +544,10 @@ UTEST(utf8, is_valid_invalid) {
     ASSERT_FALSE(utf8_is_valid(str3));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(utf8, is_valid_empty) {
     FlString str = string_empty();
     ASSERT_TRUE(utf8_is_valid(str));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, sequence_length) {
     ASSERT_EQ(utf8_sequence_length(0x00), (u32)1);
@@ -659,8 +569,6 @@ UTEST(utf8, sequence_length) {
     ASSERT_EQ(utf8_sequence_length(0xFE), (u32)0);
     ASSERT_EQ(utf8_sequence_length(0xFF), (u32)0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(utf8, is_continuation) {
     ASSERT_TRUE(utf8_is_continuation(0x80));

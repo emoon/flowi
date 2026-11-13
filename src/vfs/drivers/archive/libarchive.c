@@ -18,7 +18,6 @@
 
 #define LIBARCHIVE_BLOCK_SIZE 10240
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Handle for the archive root or one of its members
 
 typedef struct LibArchiveHandle {
@@ -32,7 +31,6 @@ typedef struct LibArchiveHandle {
     bool entry_ready;            // True if archive is positioned at entry for reading
 } LibArchiveHandle;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Maps a libarchive return code to a VFS status
 
 static FlVfsStatus libarchive_errno_to_vfs_status(int archive_result) {
@@ -51,7 +49,6 @@ static FlVfsStatus libarchive_errno_to_vfs_status(int archive_result) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // True when the path ends in ".<suffix>", compared case-insensitively. Suffix may contain dots ("tar.gz")
 
 static bool path_has_suffix(FlString path, FlString suffix) {
@@ -60,8 +57,6 @@ static bool path_has_suffix(FlString path, FlString suffix) {
     }
     return fl_string_equals_nocase(fl_string_substr(path, path.length - suffix.length, suffix.length), suffix);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool path_has_any_suffix(FlString path, const FlString* suffixes, size_t count) {
     for_count(i, count) {
@@ -72,7 +67,6 @@ static bool path_has_any_suffix(FlString path, const FlString* suffixes, size_t 
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Compressed tarballs and single-file compression formats
 
 static const FlString k_tarball_suffixes[] = { FL_S_("tar.gz"),   FL_S_("tar.xz"), FL_S_("tar.lz"), FL_S_("tar.bz2"),
@@ -81,7 +75,6 @@ static const FlString k_tarball_suffixes[] = { FL_S_("tar.gz"),   FL_S_("tar.xz"
 static const FlString k_single_file_suffixes[]
     = { FL_S_("gz"), FL_S_("bz2"), FL_S_("xz"), FL_S_("lz"), FL_S_("lzma"), FL_S_("zst") };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // True for single-file compression (.gz, .bz2, ...) but not a compressed tarball (.tar.gz); these open with
 // archive_read_support_format_raw()
 
@@ -93,7 +86,6 @@ static bool is_single_file_compression(FlString path) {
                                sizeof(k_single_file_suffixes) / sizeof(k_single_file_suffixes[0]));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The filename without its compression extension ("MOD.song.gz" -> "MOD.song")
 
 static FlString get_decompressed_filename(FlString path, FlArena* arena) {
@@ -115,8 +107,6 @@ static FlString get_decompressed_filename(FlString path, FlArena* arena) {
     return fl_string_copy(arena, filename);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_archive_file(FlString path) {
     if (is_single_file_compression(path)) {
         return true;
@@ -129,7 +119,6 @@ static bool is_archive_file(FlString path) {
            || path_has_any_suffix(path, k_tarball_suffixes, sizeof(k_tarball_suffixes) / sizeof(k_tarball_suffixes[0]));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Enables the formats and filters the handle's archive is read with
 
 static void configure_archive_format(struct archive* a, bool is_raw_compression) {
@@ -141,7 +130,6 @@ static void configure_archive_format(struct archive* a, bool is_raw_compression)
     archive_read_support_filter_all(a);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Opens a fresh reader over the handle's memory or file
 
 static struct archive* open_archive_reader(LibArchiveHandle* handle, FlArena* scratch) {
@@ -165,7 +153,6 @@ static struct archive* open_archive_reader(LibArchiveHandle* handle, FlArena* sc
     return a;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Advances the archive to the entry named target_cstr and stores it in entry_out when given. False when absent.
 
 static bool find_archive_entry(struct archive* a, const char* target_cstr, size_t target_len,
@@ -192,11 +179,8 @@ static bool find_archive_entry(struct archive* a, const char* target_cstr, size_
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void libarchive_close(void* driver_instance, void* handle_ptr);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Positions the handle's archive at its target entry. Success when found, an error status otherwise.
 
 static FlVfsStatus libarchive_seek_to_entry(LibArchiveHandle* handle, FlArena* scratch) {
@@ -238,7 +222,6 @@ static FlVfsStatus libarchive_seek_to_entry(LibArchiveHandle* handle, FlArena* s
     return FlVfsStatus_FileNotFound;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Allocates the handle of an archive root. data is the archive's bytes, or nullptr for a file-backed one.
 
 static LibArchiveHandle* libarchive_alloc_root(FlString archive_path, const uint8_t* data, uint64_t size,
@@ -261,7 +244,6 @@ static LibArchiveHandle* libarchive_alloc_root(FlString archive_path, const uint
     return handle;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Opens a member of an already-opened archive, or the archive file itself
 
 static FlVfsOpenResult libarchive_open(void* driver_instance, void* parent_handle, FlString path, uint32_t flags,
@@ -350,15 +332,11 @@ static FlVfsOpenResult libarchive_open(void* driver_instance, void* parent_handl
     return (FlVfsOpenResult) { .handle = handle, .is_directory = true, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool libarchive_is_directory(void* driver_instance, void* handle) {
     (void)driver_instance;
     LibArchiveHandle* h = (LibArchiveHandle*)handle;
     return h ? h->base.is_directory : false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsReadResult libarchive_read(void* driver_instance, void* handle_ptr, FlString path, uint8_t* buffer,
                                        int64_t size) {
@@ -421,8 +399,6 @@ static FlVfsReadResult libarchive_read(void* driver_instance, void* handle_ptr, 
     return (FlVfsReadResult) { .bytes_read = (int64_t)bytes_read, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsSizeResult libarchive_get_size(void* driver_instance, void* handle_ptr, FlString path) {
     (void)driver_instance;
     LibArchiveHandle* handle = (LibArchiveHandle*)handle_ptr;
@@ -470,7 +446,6 @@ static FlVfsSizeResult libarchive_get_size(void* driver_instance, void* handle_p
     return (FlVfsSizeResult) { .size = result_size, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Reads every entry header into the listing cache
 
 static void build_entry_cache(LibArchiveHandle* handle) {
@@ -509,8 +484,6 @@ static void build_entry_cache(LibArchiveHandle* handle) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void libarchive_list_directory(void* driver_instance, void* handle_ptr, FlString path,
                                       FlVfsListingCallback callback, void* user_data) {
     (void)driver_instance;
@@ -524,8 +497,6 @@ static void libarchive_list_directory(void* driver_instance, void* handle_ptr, F
 
     vfs_archive_list_children(handle->base.entries.head, path, callback, user_data);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void libarchive_close(void* driver_instance, void* handle_ptr) {
     (void)driver_instance;
@@ -547,8 +518,6 @@ static void libarchive_close(void* driver_instance, void* handle_ptr) {
     vfs_archive_handle_release(&handle->base);
     fl_heap_free(handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsOpenResult libarchive_open_memory(void* driver_instance, const uint8_t* data, uint64_t size,
                                               FlString original_path) {
@@ -609,14 +578,10 @@ static FlVfsOpenResult libarchive_open_memory(void* driver_instance, const uint8
     return (FlVfsOpenResult) { .handle = handle, .is_directory = true, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsDriverCapabilities libarchive_get_capabilities(void) {
     return FlVfsDriverCapabilities_Read | FlVfsDriverCapabilities_List | FlVfsDriverCapabilities_Memory
            | FlVfsDriverCapabilities_Archive;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsPlugin s_libarchive_plugin = {
     .api_version = FL_VFS_PLUGIN_API_VERSION,
@@ -639,8 +604,6 @@ static FlVfsPlugin s_libarchive_plugin = {
     .get_file_path = nullptr,
     .is_cached = nullptr,
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsPlugin* vfs_driver_libarchive(void) {
     return &s_libarchive_plugin;

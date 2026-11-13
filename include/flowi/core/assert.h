@@ -1,12 +1,10 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Flowi Assert System
 //
 // All failures route through fl_assert_handler, which logs the expression with file:line.
 // Debug builds abort; release builds log and let the caller recover.
 //
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <flowi/core/platform.h>
 #include <stdbool.h>
@@ -18,7 +16,6 @@
 extern "C" {
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Assert Handler
 //
 // Called when an assertion fails. Logs the failure and exits when fatal, otherwise returns false so the
@@ -31,7 +28,6 @@ bool fl_assert_handler(const char* expr_str, const char* file, int line, bool fa
 
 NORETURN void fl_assert_fatal_handler(const char* expr_str, const char* file, int line);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Assertion Macros
 
 // Main assertion macro - checks in both debug and release builds
@@ -51,8 +47,6 @@ NORETURN void fl_assert_fatal_handler(const char* expr_str, const char* file, in
     } while (0)
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Fatal assertion - always exits on failure (debug and release)
 #define FL_ASSERT_FATAL(expr)                                   \
     do {                                                        \
@@ -60,8 +54,6 @@ NORETURN void fl_assert_fatal_handler(const char* expr_str, const char* file, in
             fl_assert_fatal_handler(#expr, __FILE__, __LINE__); \
         }                                                       \
     } while (0)
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Fatal assertion with a custom message - always exits on failure (debug and release)
 #define FL_ASSERT_FATAL_MSG(expr, msg)                                    \
@@ -71,16 +63,12 @@ NORETURN void fl_assert_fatal_handler(const char* expr_str, const char* file, in
         }                                                                 \
     } while (0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Debug-only assertion - compiles out in release builds
 #ifdef NDEBUG
 #define FL_ASSERT_DEBUG(expr) ((void)0)
 #else
 #define FL_ASSERT_DEBUG(expr) FL_ASSERT(expr)
 #endif
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Assertion with custom message
 #ifdef NDEBUG
@@ -99,7 +87,6 @@ NORETURN void fl_assert_fatal_handler(const char* expr_str, const char* file, in
     } while (0)
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Validation Macros
 //
 // Assertion plus early return. The assertion logic is inlined to preserve correct file/line info.
@@ -160,8 +147,6 @@ NORETURN void fl_assert_fatal_handler(const char* expr_str, const char* file, in
         }                                                       \
     } while (0)
 #endif
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef __cplusplus
 }

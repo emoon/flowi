@@ -17,8 +17,6 @@ UTEST(base_string, string_begins_with_basic) {
     ASSERT_FALSE(fl_string_begins_with(str, prefix5));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(base_string, string_begins_with_protocols) {
     FlString http_url = FL_S("http://example.com");
     FlString https_url = FL_S("https://example.com");
@@ -46,8 +44,6 @@ UTEST(base_string, string_begins_with_protocols) {
     ASSERT_FALSE(fl_string_begins_with(file_path, ftp_prefix));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(base_string, string_begins_with_edge_cases) {
     FlString empty_str = FL_S("");
     FlString normal_str = FL_S("test");
@@ -58,8 +54,6 @@ UTEST(base_string, string_begins_with_edge_cases) {
     ASSERT_TRUE(fl_string_begins_with(normal_str, empty_prefix));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_builder, sb_create_and_length) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlStringBuilder sb = fl_sb_create(arena);
@@ -69,8 +63,6 @@ UTEST(string_builder, sb_create_and_length) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(string_builder, fl_sb_append_cstr) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -88,8 +80,6 @@ UTEST(string_builder, fl_sb_append_cstr) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(string_builder, fl_sb_append_string) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -110,8 +100,6 @@ UTEST(string_builder, fl_sb_append_string) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_builder, fl_sb_append_char) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlStringBuilder sb = fl_sb_create(arena);
@@ -129,8 +117,6 @@ UTEST(string_builder, fl_sb_append_char) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_builder, fl_sb_appendf) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlStringBuilder sb = fl_sb_create(arena);
@@ -145,8 +131,6 @@ UTEST(string_builder, fl_sb_appendf) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // fl_sb_appendf discards the formatted FlString and takes its length from how far the arena moved, so
 // the append has to bump by exactly the assembled length. A format wider than one stb chunk is where
@@ -173,8 +157,6 @@ UTEST(string_builder, sb_appendf_spanning_several_chunks) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_builder, fl_sb_clear) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlStringBuilder sb = fl_sb_create(arena);
@@ -194,8 +176,6 @@ UTEST(string_builder, fl_sb_clear) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_builder, fl_sb_to_cstr) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlStringBuilder sb = fl_sb_create(arena);
@@ -207,8 +187,6 @@ UTEST(string_builder, fl_sb_to_cstr) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(string_builder, sb_mixed_operations) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -228,8 +206,6 @@ UTEST(string_builder, sb_mixed_operations) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_search, string_find_char_basic) {
     FlString str = FL_S("hello world");
 
@@ -244,8 +220,6 @@ UTEST(string_search, string_find_char_basic) {
     ASSERT_EQ(fl_string_find_char(str, '\0'), -1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_search, string_find_char_edge_cases) {
     FlString empty_str = FL_S("");
     FlString single_char = FL_S("a");
@@ -256,8 +230,6 @@ UTEST(string_search, string_find_char_edge_cases) {
     ASSERT_EQ(fl_string_find_char(single_char, 'b'), -1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_search, string_find_char_url_parsing) {
     FlString http_url = FL_S("https://example.com/path");
 
@@ -265,8 +237,6 @@ UTEST(string_search, string_find_char_url_parsing) {
     ASSERT_EQ(fl_string_find_char(http_url, '/'), 6);
     ASSERT_EQ(fl_string_find_char(http_url, '.'), 15);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(string_search, string_find_substr_basic) {
     FlString str = FL_S("hello world, hello universe");
@@ -280,8 +250,6 @@ UTEST(string_search, string_find_substr_basic) {
     ASSERT_EQ(fl_string_find_substr(str, FL_S("Hello")), -1);
     ASSERT_EQ(fl_string_find_substr(str, FL_S("hello world, hello universe!")), -1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(string_search, string_find_substr_edge_cases) {
     FlString str = FL_S("test string");
@@ -298,8 +266,6 @@ UTEST(string_search, string_find_substr_edge_cases) {
     ASSERT_EQ(fl_string_find_substr(str, FL_S("t")), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_search, string_find_substr_protocols) {
     FlString http_url = FL_S("http://example.com");
     FlString https_url = FL_S("https://secure.example.com");
@@ -314,8 +280,6 @@ UTEST(string_search, string_find_substr_protocols) {
     ASSERT_EQ(fl_string_find_substr(ftp_url, FL_S("files")), 6);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_search, string_find_char_from_basic) {
     FlString str = FL_S("hello world hello");
 
@@ -329,8 +293,6 @@ UTEST(string_search, string_find_char_from_basic) {
     ASSERT_EQ(fl_string_find_char_from(str, 'h', 1), 12);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_search, string_find_char_from_edge_cases) {
     FlString str = FL_S("test");
 
@@ -341,8 +303,6 @@ UTEST(string_search, string_find_char_from_edge_cases) {
     FlString empty = FL_S("");
     ASSERT_EQ(fl_string_find_char_from(empty, 'a', 0), -1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(string_search, string_find_char_from_url_parsing) {
     FlString url = FL_S("https://example.com/path/to/file.txt");
@@ -356,8 +316,6 @@ UTEST(string_search, string_find_char_from_url_parsing) {
     i64 second_path_slash = fl_string_find_char_from(url, '/', first_path_slash + 1);
     ASSERT_EQ(second_path_slash, 24);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(string_search, string_contains_basic) {
     FlString str = FL_S("The quick brown fox jumps over the lazy dog");
@@ -373,8 +331,6 @@ UTEST(string_search, string_contains_basic) {
     ASSERT_FALSE(fl_string_contains(str, FL_S("elephant")));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(string_search, string_contains_edge_cases) {
     FlString str = FL_S("test string");
     FlString empty_str = FL_S("");
@@ -386,8 +342,6 @@ UTEST(string_search, string_contains_edge_cases) {
 
     ASSERT_TRUE(fl_string_contains(str, str));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(string_search, string_contains_url_components) {
     FlString url = FL_S("https://api.example.com:8443/v1/users?id=123&format=json");
@@ -407,8 +361,6 @@ UTEST(string_search, string_contains_url_components) {
     ASSERT_FALSE(fl_string_contains(url, FL_S(":80")));
     ASSERT_FALSE(fl_string_contains(url, FL_S("admin")));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(string_search, real_world_url_parsing) {
     FlString base_url1 = FL_S("https://example.com");

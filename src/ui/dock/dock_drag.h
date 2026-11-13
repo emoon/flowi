@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock Drag - the drag-to-dock targeting experience (CONTEXT.md "Docking"). The layout makes space where the panel
 // would land: the drop target is an empty slot the provisional layout opens, and on release the resolved request is
 // committed into the committed tree. The commit (and the undock that detaches a dragged tab into the floating set)
@@ -16,7 +15,6 @@
 //
 // Coordinate space: LOGICAL px throughout - the hit-test buffer divides the physical Clay boxes by ui_get_scale(),
 // so every constant below is logical px.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "dock_layout.h"
 #include "dock_tree.h"
@@ -70,7 +68,6 @@ typedef struct FlDockDropNode {
     bool is_root;
 } FlDockDropNode;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Decide which drop zone cursor falls in over the laid-out nodes. Resolution is nearest leaf, not containing
 // leaf, so a cursor in a splitter gutter still has an answer; only a cursor outside the root rect returns None.
 // Precedence: the nearest leaf's tab region beats the workspace outer band, which beats that leaf's split quadrants.
@@ -84,7 +81,6 @@ typedef struct FlDockDropNode {
 FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec2 cursor, u32 panel_family,
                                    u32 accept_filter, FlDockRequest* out_req);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Drag controller. Holds the in-flight drag: the dragged panel, the geometry the hit-test resolves against, the
 // retained preview tree that carries the gap, and the last resolved zone/request.
 //

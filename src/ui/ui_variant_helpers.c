@@ -4,7 +4,6 @@
 #include "ui_private.h"
 #include <stddef.h> // offsetof
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Constants for state color modification
 //
 // Hover/press/focus are derived from a base color perceptually (OKLCH lighten/darken, OKLab focus
@@ -13,8 +12,6 @@
 #define HOVER_LIGHTEN_AMOUNT 0.15f
 #define PRESS_DARKEN_AMOUNT 0.15f
 #define SOFT_BG_ALPHA 38 // 15% of 255 ~ 38
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlColor ui_get_variant_bg(FlWidgetVariant variant, const FlThemeColors* theme) {
     switch (variant) {
@@ -40,8 +37,6 @@ FlColor ui_get_variant_bg(FlWidgetVariant variant, const FlThemeColors* theme) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlColor ui_get_variant_text(FlWidgetVariant variant, const FlThemeColors* theme) {
     switch (variant) {
         case FlWidgetVariant_Solid:
@@ -61,8 +56,6 @@ FlColor ui_get_variant_text(FlWidgetVariant variant, const FlThemeColors* theme)
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlColor ui_get_variant_border(FlWidgetVariant variant, const FlThemeColors* theme) {
     switch (variant) {
         case FlWidgetVariant_Solid:
@@ -81,8 +74,6 @@ FlColor ui_get_variant_border(FlWidgetVariant variant, const FlThemeColors* them
             return (FlColor) { 0, 0, 0, 0 };
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlColor ui_apply_state_color(FlColor base, const struct ItemState* item) {
     if (item == nullptr) {
@@ -105,8 +96,6 @@ FlColor ui_apply_state_color(FlColor base, const struct ItemState* item) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlColor ui_apply_focus_border(FlColor base_border, const struct ItemState* item, const FlThemeColors* theme) {
     if (item == nullptr || theme == nullptr) {
         return base_border;
@@ -128,8 +117,6 @@ FlColor ui_apply_focus_border(FlColor base_border, const struct ItemState* item,
     return color_lerp_oklab(base_border, focus_color, focused_t);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlWidgetColors fl_resolve_widget_colors(FlWidgetVariant variant, FlColor bg_override, FlColor text_override,
                                         const struct ItemState* item, const FlThemeColors* theme, bool animate_text) {
     FlColor bg_base = (bg_override.a > 0) ? bg_override : ui_get_variant_bg(variant, theme);
@@ -143,7 +130,6 @@ FlWidgetColors fl_resolve_widget_colors(FlWidgetVariant variant, FlColor bg_over
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Byte offset of each semantic slot within FlThemeColors, indexed by FlThemeSlot bit position. The order must match
 // the FlThemeSlot enum so bit i selects k_theme_slot_offset[i]. A merge copies only the flagged slots, leaving every
 // other slot inherited from the base theme.

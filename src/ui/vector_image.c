@@ -8,7 +8,6 @@
 #include <core/memory.h>
 #include "nanosvg.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // nanosvg stores fill paint as 0xAABBGGRR; unpack into the neutral RGBA FlColor.
 
 static FlColor svg_color(unsigned int c) {
@@ -56,7 +55,6 @@ static SvgShapeVerdict svg_classify_shape(const NSVGshape* shape) {
     return SvgShape_Skip; // NSVG_PAINT_NONE / NSVG_PAINT_UNDEF - no fill
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Count the closed-contour segments a shape lowers to: one Cubic per bezier piece plus, per path, a closing
 // Line back to the path's first point when the path does not already return there.
 
@@ -107,8 +105,6 @@ static void svg_fill_shape_segments(const NSVGshape* shape, f32 height, FlGlyphS
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool vector_image_parse(const u8* data, size_t size, struct FlArena* arena, FlVectorImage* out) {
     arena_scratch_auto_conflict(temp, arena);

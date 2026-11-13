@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: neutral render IR -> backend-private draw-command + AABB arrays.
 //
 // Walks the variable-length FlCmd records of the neutral render IR (ui/render_ir.h) and produces the two parallel
@@ -12,7 +11,6 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fixed-stride draw command, uploaded verbatim as a std430 SSBO. The 80-byte stride is the frozen layout contract
 // with the raster shader's DrawCmd struct (vec4 + vec4 + uvec4 + 4 x uint + uvec4): the leading 64 bytes are the
 // shape, the trailing uvec4 the optional effect annotation every command may carry.
@@ -128,7 +126,6 @@ typedef struct GpuDrawList {
     u32 clip_count; // >= 1 whenever count > 0 (clips[0] always exists)
 } GpuDrawList;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Translate an IR byte stream into the draw-command + AABB + clip-rect arrays, all allocated contiguously in arena.
 //
 // global_alpha:    frame-wide opacity, folded into each command's packed color alphas here (never pre-folded in the

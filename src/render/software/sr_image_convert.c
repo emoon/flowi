@@ -6,7 +6,6 @@
 #include <core/arena.h>
 #include <core/simd.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // r/g/b read bytes 0/1/2 of each pixel; alpha (byte 3) is written only when keep_alpha is set (which
 // requires src_channels == 4).
 
@@ -43,8 +42,6 @@ void sr_deinterleave_pixels(const u8* src, u8* r, u8* g, u8* b, u8* a, int count
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void pad_plane_last_row(u8* plane, int real_rows, int stride, int width) {
     const u8* last = plane + (real_rows - 1) * stride;
     u8* pad = plane + real_rows * stride;
@@ -57,8 +54,6 @@ static void pad_plane_last_row(u8* plane, int real_rows, int stride, int width) 
         pad[x] = last[x];
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ImageData* sr_convert_to_planar(const ImageData* src, bool keep_alpha, struct FlArena* arena) {
     if (src == nullptr || arena == nullptr) {

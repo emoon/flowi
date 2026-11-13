@@ -6,7 +6,6 @@
 #include <core/os/os.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Thread test helper - must be defined outside UTEST macro (C11 no nested functions)
 
 typedef struct {
@@ -24,15 +23,11 @@ static void* tracker_thread_func(void* arg) {
     return nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena_alloc_tracker, create_destroy) {
     ArenaAllocTracker* tracker = arena_alloc_tracker_create();
     ASSERT_NE(nullptr, tracker);
     arena_alloc_tracker_destroy(tracker);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena_alloc_tracker, record_and_query) {
     ArenaAllocTracker* tracker = arena_alloc_tracker_create();
@@ -55,8 +50,6 @@ UTEST(arena_alloc_tracker, record_and_query) {
     arena_alloc_tracker_destroy(tracker);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena_alloc_tracker, same_callsite_accumulates) {
     ArenaAllocTracker* tracker = arena_alloc_tracker_create();
 
@@ -76,8 +69,6 @@ UTEST(arena_alloc_tracker, same_callsite_accumulates) {
     arena_alloc_tracker_destroy(tracker);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena_alloc_tracker, reset_clears_entries) {
     ArenaAllocTracker* tracker = arena_alloc_tracker_create();
 
@@ -94,8 +85,6 @@ UTEST(arena_alloc_tracker, reset_clears_entries) {
 
     arena_alloc_tracker_destroy(tracker);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena_alloc_tracker, hash_collision_handling) {
     ArenaAllocTracker* tracker = arena_alloc_tracker_create();
@@ -116,8 +105,6 @@ UTEST(arena_alloc_tracker, hash_collision_handling) {
 
     arena_alloc_tracker_destroy(tracker);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena_alloc_tracker, top_n_sorting) {
     ArenaAllocTracker* tracker = arena_alloc_tracker_create();
@@ -141,8 +128,6 @@ UTEST(arena_alloc_tracker, top_n_sorting) {
 
     arena_alloc_tracker_destroy(tracker);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena_alloc_tracker, thread_safety) {
     ArenaAllocTracker* tracker = arena_alloc_tracker_create();

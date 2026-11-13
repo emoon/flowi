@@ -10,7 +10,6 @@
 #include <unistd.h>
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // core_init: the process-wide bring-up guard. main already ran fl_init(1), and fl_app_create runs it again for
 // every app, so a repeat call must adopt the live services rather than re-init them behind their users.
 
@@ -23,7 +22,6 @@ UTEST(core_init, a_repeat_fl_init_returns_the_live_main_arena) {
     ASSERT_TRUE(third == s_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // core_dll: dll_insert/dll_push_front/dll_push_back/dll_remove macros from core.h.
 
 typedef struct DllTestNode {
@@ -56,7 +54,6 @@ static bool dll_test_check_list(DllTestNode* f, DllTestNode* l, const int* expec
     return node == nullptr && l->next == nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // min/max/clamp from <flowi/core/utils.h>. Plain ternaries: they evaluate their arguments more than once, so
 // callers must pass side-effect-free expressions, but in exchange each keeps the argument's own type.
 
@@ -122,8 +119,6 @@ UTEST(core_utils, for_count_evaluates_its_bound_once) {
     EXPECT_EQ(4, iterations);
     EXPECT_EQ(1, calls);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(core_dll, insert_into_empty_list) {
     DllTestNode a = { .value = 1 };
@@ -234,7 +229,6 @@ UTEST(arena, destroy_releases_reservation_no_vma_leak) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // arena: both allocation paths must reject a size that overflows the position arithmetic
 // (aligned_pos + size) with a fatal error, not hand back a wrapped, overlapping pointer.
 
@@ -276,7 +270,6 @@ UTEST(arena, alloc_raw_overflow_guard_rejects) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // arena: fl_arena_align must commit memory on demand when the aligned position crosses a page-commit
 // boundary inside the reservation (like fl_arena_alloc_raw), instead of fatally exiting the process.
 
@@ -306,7 +299,6 @@ UTEST(arena, align_commits_across_page_boundary) {
     fl_arena_destroy(a);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // arena: fl_arena_rewind must poison the just-freed region [ARENA_SIZE, old pos) so ASAN catches
 // use-after-rewind through stale pointers, instead of poisoning the never-allocated tail.
 
@@ -350,7 +342,6 @@ UTEST(arena, rewind_poisons_freed_region) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // arena: arena_typed_rewind goes through arena_rewind_to, which must poison the region it releases
 // so ASAN catches use-after-rewind through a stale element pointer.
 
@@ -392,7 +383,6 @@ UTEST(arena, typed_rewind_poisons_freed_region) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // hashmap: a string key must be copied into the map's own arena, not left pointing at the caller's arena.
 
 UTEST(hashmap, string_key_survives_source_arena_rewind) {
@@ -433,7 +423,6 @@ UTEST(hashmap, string_key_survives_source_arena_rewind) {
     fl_arena_destroy(map_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // arena: the FlArenaMt wrapper lives at the base of the arena it wraps. A full fl_arena_rewind
 // of the underlying arena must stop at the rewind floor above the wrapper, not clobber it.
 
@@ -458,7 +447,6 @@ UTEST(arena, mt_rewind_preserves_wrapper) {
     arena_mt_destroy(mt);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // arena: arena_tracker_iterate_all holds the global tracker mutex across callbacks, so it must pre-warm
 // the calling thread's scratch arenas before locking - a first scratch use inside a callback re-enters
 // arena_tracker_register on the same non-recursive mutex.
@@ -491,7 +479,6 @@ UTEST(arena, tracker_iterate_scratch_callback_no_self_deadlock) {
     fl_arena_destroy(a);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // pool_allocator: pool_free_raw stores a pointer-sized free-list node inside each freed item, so pool_init_raw
 // must clamp item_size/item_alignment up to FreeListNode's. A pool of 1-byte items must still hand out distinct,
 // pointer-aligned, zeroed slots across a free/realloc cycle.
@@ -540,7 +527,6 @@ UTEST(pool_allocator, sub_pointer_item_size_clamped) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // tlsf: a realloc grow to a size the allocator can never satisfy must return NULL and leave the original
 // allocation (size, contents, pool integrity) untouched.
 
@@ -576,7 +562,6 @@ UTEST(tlsf, realloc_oversize_fails_without_corruption) {
     ASSERT_EQ(tlsf_check_pool(tlsf_get_pool(tlsf)), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_heap_alloc_aligned must honor a power-of-two alignment even when the requested size is not a multiple of it. The
 // C11 aligned_alloc path (sanitizer / non-mimalloc builds) is UB when size % alignment != 0 - the ASan interceptor
 // aborts on it - so the wrapper rounds the size up.
@@ -594,7 +579,6 @@ UTEST(heap, alloc_aligned_size_not_multiple_of_alignment) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sprintf_arena_mt: concurrent formatting of long (>1 stb chunk, ~512 chars) messages on a shared FlArenaMt
 // must return a contiguous FlString whose bytes are entirely its own. Each worker formats a uniform per-thread fill
 // character so any foreign byte interleaved between the internal 512-char chunks is detectable at any offset.
@@ -650,7 +634,6 @@ UTEST(sprintf, arena_mt_concurrent_contiguous) {
     arena_mt_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // stbsp_snprintf with count == 0 and a non-null buffer is the standard "measure required length" idiom: it must not
 // write to the buffer at all and must return the full formatted length. A sentinel byte immediately before the
 // pointed-at buffer detects a one-byte-before-buffer write.
@@ -720,7 +703,6 @@ UTEST(sprintf, unknown_vector_format_at_callback_boundary) {
     ASSERT_STREQ(out + 510, "v10z");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_string_parse_u64: strtoull silently accepts a leading sign and wraps negatives into huge unsigned values;
 // the parser must reject signed input as InvalidFormat while leaving valid unsigned parsing (and overflow
 // detection) unchanged.
@@ -746,7 +728,6 @@ UTEST(string, parse_u64_rejects_signed_input) {
     EXPECT_EQ((int)over.status, (int)StringParseStatus_Overflow);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_string_compare_n: when max_len clamps the comparison below both strings' lengths, equal bytes within the
 // bound mean "equal within the bound" (0). The length tie-break (shorter sorts first) only applies when the
 // full common prefix was actually compared.
@@ -796,7 +777,6 @@ UTEST(string, short_literal_macros_match_the_fl_forms) {
     EXPECT_EQ((uint64_t)braced.length, 3);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_string_to_cstr_buffer: buffer_len == 0 leaves no room even for the null terminator; the unsigned
 // buffer_len - 1 clamp must not underflow into "copy everything". Nothing may be written to dest.
 
@@ -823,7 +803,6 @@ UTEST(string, to_cstr_buffer_zero_buffer_len_writes_nothing) {
     EXPECT_STREQ(big, "hello");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // env_expand: expand_env_vars needs a temp allocation per variable for the getenv() name lookup. That temp
 // scratch must be disjoint from the caller's arena - when the caller passes the thread-local scratch arena,
 // the plain scratch variant hands back that same arena and the temp scope's rewind frees the appended bytes.
@@ -842,7 +821,6 @@ UTEST(env_expand, output_on_scratch_arena_survives_temp_rewind) {
     EXPECT_TRUE(fl_string_equals(kept, FL_S("${FLOWI_TEST_EXPAND_MISSING}/tail")));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_hash_sha1: NULL data with zero length is the empty message and must produce the well-known SHA1("") digest,
 // never leave the output buffer untouched (callers would read uninitialized memory).
 
@@ -868,7 +846,6 @@ UTEST(hash, sha1_null_empty_input_is_empty_string_digest) {
     EXPECT_STREQ(hex, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_hash_sha1: the chunk-count / tail-padding arithmetic is 64-bit so multi-GiB inputs don't wrap and corrupt the
 // padding offsets. A real >= 4 GiB buffer is impractical in CI, so the geometry invariants below are checked at
 // a synthetic 5 GiB size where 32-bit math would wrap.
@@ -927,7 +904,6 @@ UTEST(hash, sha1_chunk_count_is_64bit_safe) {
     EXPECT_EQ(hash_sha1_chunk_count(56, &tail_bytes), 2ull);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_hash_crc32: the size is u64 but zlib's crc32() takes a 32-bit length, so buffers >= 4 GiB must be hashed by
 // chaining chunked crc32() calls rather than narrowing the size. We can't allocate 4 GiB here, so we verify the
 // invariant the chunk loop relies on: crc32 chained over consecutive pieces equals crc32 of the whole.
@@ -953,7 +929,6 @@ UTEST(hash, crc32_chunked_matches_reference) {
     EXPECT_EQ(hash_crc32_update(whole, NULL, 0), whole);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // cpu_topology: cpu_online_from_sysfs (core/cpu_topology.c) - the decision seam behind is_cpu_online. A missing
 // per-CPU 'online' sysfs file means the kernel doesn't expose hotplug state (non-hotplug kernels omit it entirely),
 // so the CPU must be treated as online; only a present file reading 0 marks a CPU offline.
@@ -1015,7 +990,6 @@ UTEST(os_sleep, sleep_ms_split_separates_whole_seconds) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // JSON parser depth limit - input nested past the maximum depth must fail with FlJsonParseError_TooDeep instead of
 // overflowing the native stack (both recursive walks recurse once per nesting level of raw input).
 
@@ -1103,7 +1077,6 @@ UTEST(json, depth_extreme_nesting_no_crash) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // jobsys lost-wakeup regression: a job enqueued exactly as the single worker transitions to idle must never be
 // stranded. The tight add-then-wait loop keeps the worker rapidly toggling in and out of the idle state, hammering
 // the window where the producer decides whether to signal.
@@ -1137,7 +1110,6 @@ UTEST(jobsys, no_lost_wakeup_under_rapid_idle_transitions) {
     ASSERT_EQ_MSG(atomic_load(&s_jobsys_stress_counter), iterations, "not every job ran");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // jobsys dependent-promotion regression: a dependent registered on a dependency that finishes at almost the
 // same instant must always be scheduled, never orphaned. The dependency spins briefly so that across many
 // iterations its completion frequently overlaps the dependent's registration - exactly the promote-vs-recycle
@@ -1187,7 +1159,6 @@ UTEST(jobsys, dependent_promoted_when_dependency_completes_concurrently) {
     ASSERT_EQ_MSG(atomic_load(&s_jobsys_dep_ran), iterations, "not every dependent ran");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // jobsys queue-saturation regressions. The policy when a work queue's SLOTS entries are all occupied:
 // non-worker producers block with backpressure until a slot frees; worker producers never block and
 // instead claim + execute the job inline. Both tests rely on the suite running with exactly one worker thread
@@ -1299,7 +1270,6 @@ UTEST(jobsys, dependents_execute_inline_when_queue_saturated) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A job that a worker runs inline off a saturated queue runs nested, on the stack of a job that is still
 // using the same scratch arena. It must give back only what it allocated: rewinding to the arena floor
 // instead would poison the outer job's live allocations and let its next one alias them.
@@ -1434,7 +1404,6 @@ UTEST(jobsys, nested_inline_job_leaves_the_outer_jobs_scratch_alone) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A full stats registry must reject the next registration with the invalid-id sentinel instead of
 // writing past the end of the fixed counters array.
 
@@ -1563,14 +1532,11 @@ UTEST(perf_counters, reconfigure_after_destroy_keeps_foreign_fd_open) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // mimalloc stats: alloc_count and free_count are block counts of one population, so their difference is the
 // number of live blocks.
 
 #if USE_MIMALLOC
 #include <mimalloc.h>
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void mimalloc_stats_merge_job(void* user_data, FlJobsWorkerInfo worker_info) {
     (void)user_data;
@@ -1578,15 +1544,11 @@ static void mimalloc_stats_merge_job(void* user_data, FlJobsWorkerInfo worker_in
     mi_stats_merge();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A block a worker allocated and the test thread freed is credited as an allocation to the worker and a free to the
 // test thread, and the worker's side reaches the process totals only when the worker merges.
 static void mimalloc_stats_settle_workers(void) {
     fl_jobs_wait(fl_jobs_add_job(mimalloc_stats_merge_job, nullptr));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(mimalloc_stats, live_blocks_track_allocations_and_frees) {
     enum { BLOCK_COUNT = 4096 };
@@ -1613,8 +1575,6 @@ UTEST(mimalloc_stats, live_blocks_track_allocations_and_frees) {
     ASSERT_TRUE(after.free_count <= after.alloc_count);
     ASSERT_LT(after.alloc_count - after.free_count, held.alloc_count - held.free_count - BLOCK_COUNT / 2);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(mimalloc_stats, huge_blocks_count_as_allocations_and_frees) {
     enum { HUGE_COUNT = 8 };
@@ -1646,14 +1606,10 @@ UTEST(mimalloc_stats, huge_blocks_count_as_allocations_and_frees) {
     ASSERT_EQ(after.alloc_count - after.free_count, before.alloc_count - before.free_count);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct CrossThreadFree {
     void** blocks;
     int count;
 } CrossThreadFree;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void* cross_thread_free_worker(void* user_data) {
     CrossThreadFree* job = (CrossThreadFree*)user_data;
@@ -1662,8 +1618,6 @@ static void* cross_thread_free_worker(void* user_data) {
     }
     return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(mimalloc_stats, huge_blocks_freed_on_another_thread_count_as_freed) {
     enum { HUGE_COUNT = 8 };

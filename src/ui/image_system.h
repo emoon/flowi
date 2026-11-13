@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image System - Loading pipeline bound to a render backend
 //
 // Loading is always async - the VFS read and decode run in a job worker thread, never stalling the caller.
@@ -15,11 +14,8 @@
 #include <ui/render_backend.h>
 #include <vfs/vfs.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct ImageSystem ImageSystem;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Load request info (passed to the backend's prepare_image seam)
 
 typedef struct FlImageLoadRequest {
@@ -34,8 +30,6 @@ typedef struct FlImageLoadRequest {
     // creation and never inferred from size; a backend without an atlas ignores it.
     bool dedicated;
 } FlImageLoadRequest;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Create the image system, bound to the render backend that realizes decoded images. The decoded result is
 // valid only during the prepare_image callback - the backend must copy anything it keeps.

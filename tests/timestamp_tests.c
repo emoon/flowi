@@ -17,8 +17,6 @@ UTEST(timestamp, get_current_time_us_os_basic) {
     ASSERT_GE(timestamp2, timestamp1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(timestamp, get_current_time_us_os_precision) {
     i64 timestamps[10];
 
@@ -30,8 +28,6 @@ UTEST(timestamp, get_current_time_us_os_precision) {
         ASSERT_GE(timestamps[i], timestamps[i - 1]);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(timestamp, timestamp_format_os_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -55,8 +51,6 @@ UTEST(timestamp, timestamp_format_os_basic) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(timestamp, timestamp_format_os_current_time) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -119,8 +113,6 @@ UTEST(timestamp, timestamp_format_os_current_time) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(timestamp, timestamp_format_os_consistency) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -134,8 +126,6 @@ UTEST(timestamp, timestamp_format_os_consistency) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(timestamp, timestamp_format_os_microsecond_precision) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -173,8 +163,6 @@ UTEST(timestamp, timestamp_format_os_microsecond_precision) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(timestamp, timestamp_format_os_edge_cases) {
     FlArena* arena = arena_new(.reserved_size = MB(64));

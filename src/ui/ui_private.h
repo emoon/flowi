@@ -20,8 +20,6 @@
 #include "type_ahead.h"
 #include "ui.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define UI_INPUT_GAMEPAD_DEFAULT_DEAD_ZONE 0.15f
 
 #define UI_MOUSE_DOUBLE_CLICK_TIME 0.3f
@@ -55,8 +53,6 @@ struct ScrollAreaStackEntry;
 struct WidgetScrollInfo;
 struct Painter;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct MouseState {
     float x;
     float y;
@@ -89,8 +85,6 @@ typedef struct MouseState {
     bool position_valid;
 } MouseState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Cap for the typed text accumulated in one pump (KeyboardState.text_input_storage) and for the per-frame snapshot
 // (ctx->text_input_buffer). Text past the cap is dropped, so the earliest characters of the frame win.
 #define UI_TEXT_INPUT_THIS_FRAME_CAP 64
@@ -105,7 +99,6 @@ typedef struct KeyboardState {
     char text_input_storage[UI_TEXT_INPUT_THIS_FRAME_CAP];
 } KeyboardState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Navigation software repeat helper - interval-based timing: fires once when crossing each repeat interval
 // boundary.
 
@@ -123,8 +116,6 @@ static inline bool input_should_nav_repeat(const KeyboardState* kb, FlKey key, f
     return fmodf(time_since_delay, rate) < dt;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct GamepadState {
     bool connected;
     bool buttons[FlGamepadButton_Count];
@@ -137,8 +128,6 @@ typedef struct GamepadState {
     float dead_zone;
     u32 id;
 } GamepadState;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Cap on the files one frame's OS drops carry, and on the bytes their paths take in the stable
 // per-frame snapshot. A drop past either cap is discarded with a warning.
@@ -158,8 +147,6 @@ typedef struct WindowEventState {
     FlVec2 dropped_file_positions[UI_DROPPED_FILES_CAP];
 } WindowEventState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct FlInputState {
     MouseState mouse;
     KeyboardState keyboard;
@@ -177,8 +164,6 @@ typedef struct FlInputState {
     void* user_data;
 } FlInputState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Item flags for flag-based widget composition (FlItemFlags) are generated from item_flags.def into
 // flowi/ui/item_flags.h (included via ui.h).
 //
@@ -190,8 +175,6 @@ typedef struct FlInputState {
 enum {
     FlItem_DragThreshold = (1 << 9),
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct ItemState {
     // Public widget state (returned by ui_get_element_state)
@@ -242,7 +225,6 @@ struct ImageCache;
 struct ImageRegistry;
 struct ScrollAreaState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Menu system
 //
 // The whole open menu chain lives in one popup focus scope with an internal open path. Per-level highlight is the
@@ -356,8 +338,6 @@ typedef struct UiMenuFrame {
     UiMenuLevelFrame levels[UI_MENU_MAX_DEPTH];
 } UiMenuFrame;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // App-level shared resource tier. One per app, brought up once by the runner and referenced by every
 // per-window FlUiCtx through ctx->shared. Holds the resources that never move
 // between windows: the render backend, font cache, image readiness registry, host-injected base theme,
@@ -422,8 +402,6 @@ typedef struct UiShared {
     bool debug_id_tracker_app_owned;
 #endif
 } UiShared;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct FlUiCtx {
     FlArena* persistant;
@@ -617,8 +595,6 @@ typedef struct FlUiCtx {
 #endif
 } FlUiCtx;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Bring up the app-level shared resource tier once: the host constructs the render backend (with
 // its surface binding) and injects it here; the core never names a concrete backend. The backend's vtable is
 // copied into the shared tier, which then backs every per-window FlUiCtx.
@@ -709,7 +685,7 @@ void ui_capture_render_commands(FlUiCtx* self, struct Clay_RenderCommandArray* c
 #endif
 
 #ifdef FLOWI_UI_INSPECTOR
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Render command snapshot - Clay-independent types for MCP introspection
 
 typedef enum UiRenderCommandType {

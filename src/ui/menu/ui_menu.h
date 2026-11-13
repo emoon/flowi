@@ -6,7 +6,6 @@
 #include <flowi/ui/menu.h>   // @generated FlMenuRegionConfig (api_gen)
 #include <flowi/ui/signal.h> // @generated FlSignal (api_gen)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Menu (context menu) API
 //
 // A flat, immediate-mode context menu, built by emitting items with ui_menu_item between ui_menu_begin/end (the
@@ -85,7 +84,6 @@ void ui_menu_end_impl(void);
 FlSignal ui_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlMenuRegionConfig config);
 void ui_menu_region_end_impl(void);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Menu bar - the persistent File/Edit/View strip.
 //
 // The bar is the core's level 0, rendered as a horizontal strip instead of a floating panel; each top's dropdown is
@@ -116,7 +114,6 @@ void ui_menubar_menu_end_impl(void);
 // after an ESC collapsed the dropdown back to the strip).
 bool ui_menubar_is_open_impl(FlLayoutId bar_id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scope-based macros
 
 static int UI_MENU_LATCH UNUSED_VARIABLE = 0;

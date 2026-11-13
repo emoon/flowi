@@ -4,7 +4,6 @@
 #include <flowi/ui/layout.h> // @generated FlLayoutId (api_gen)
 #include <flowi/ui/popup.h>  // @generated FlTooltipConfig (api_gen)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tooltip API
 //
 // A floating hover-dwell label. Call AFTER the anchor widget has been emitted, passing the anchor's layout id.

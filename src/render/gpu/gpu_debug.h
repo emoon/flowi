@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: debug readback + debug render modes.
 //
 // Backend-private - not part of the FlRenderBackend seam. Callers pass the FlRenderBackend's user_data; no GL type
@@ -21,7 +20,6 @@ typedef struct FlSurface FlSurface;
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tile-list layout, shared with both compute shaders: 8x8-pixel tiles, each owning a fixed-capacity index
 // list laid out as [count, overflow, index * GPU_TILE_CAPACITY]. count is clamped to capacity; overflow
 // counts the commands that did not fit and were dropped.
@@ -30,7 +28,6 @@ struct FlArena;
 #define GPU_TILE_CAPACITY 64
 #define GPU_TILE_STRIDE_U32 (2 + GPU_TILE_CAPACITY)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The classification pass's output for one frame, read back verbatim. tile_lists is the raw SSBO contents -
 // tile_cols * tile_rows records of GPU_TILE_STRIDE_U32 u32 each, in row-major tile order. List slots at and
 // past a tile's count are unspecified (the shader never writes them).
@@ -58,7 +55,6 @@ static inline u32 gpu_tile_cmd_index(const GpuTileClassification* c, int tile_x,
     return gpu_tile_list(c, tile_x, tile_y)[2 + slot];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Read the given surface's most recently rendered frame's classification results back to CPU memory, allocated
 // from arena. The tile grid and its SSBO are per-surface. Requires the backend's GL context current and at
 // least one render() call on that surface. Off the per-frame path - this stalls the pipeline like pixel readback.
@@ -66,7 +62,6 @@ static inline u32 gpu_tile_cmd_index(const GpuTileClassification* c, int tile_x,
 bool gpu_debug_read_tile_classification(void* renderer_user_data, FlSurface* surface, struct FlArena* arena,
                                         GpuTileClassification* out);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Debug render modes - a raster-shader switch consuming the same per-tile data as the blend loop.
 
 typedef enum GpuDebugMode {
@@ -78,7 +73,6 @@ typedef enum GpuDebugMode {
 // Takes effect on the next render() call and stays until changed.
 void gpu_debug_set_mode(void* renderer_user_data, GpuDebugMode mode);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Glyph-atlas readback: the R8 coverage texels verbatim as one width * height byte buffer (row 0 = texel row 0),
 // plus the placement lookup. The atlas texture is never cleared, so texels outside prepared cells are undefined;
 // a prepared cell is fully written by its dispatch, padding ring included.
@@ -95,7 +89,6 @@ bool gpu_debug_read_glyph_atlas(void* renderer_user_data, struct FlArena* arena,
 // next prepare_glyph call.
 const GpuGlyphEntry* gpu_debug_find_glyph(void* renderer_user_data, FlFontId font, u16 size, u32 glyph_id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SVG vector-icon atlas readback: the R8 coverage texels as one width * height byte buffer (row 0 = texel row 0),
 // plus the placement lookup. Texels outside prepared cells are undefined, as in the glyph atlas above.
 
@@ -146,7 +139,6 @@ typedef struct GpuViewport3dTarget {
 
 GpuViewport3dTarget gpu_debug_viewport3d_target(void* renderer_user_data, u32 viewport_id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Multi-color SVG atlas readback: the RGBA8 color texels as one width * height * 4 byte buffer of interleaved
 // premultiplied RGBA (row 0 = texel row 0), plus the placement lookup. Texels outside prepared cells are undefined,
 // as in the glyph atlas above; a prepared cell's padding ring composites to transparent.
@@ -163,7 +155,6 @@ bool gpu_debug_read_color_svg_atlas(void* renderer_user_data, struct FlArena* ar
 // Valid until the next prepare_vector call.
 const GpuSvgEntry* gpu_debug_find_color_svg(void* renderer_user_data, FlImageHandle handle);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-frame GPU work counters, read back after a rendered frame.
 
 typedef struct GpuFrameStats {

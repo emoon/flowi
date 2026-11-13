@@ -37,8 +37,6 @@
 #define __STDC_WANT_LIB_EXT1__ 1
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UNUSED_FUNCTION static void memory_zero(void* ptr, u64 size) {
 #if COMPILER_MSVC
     // SecureZeroMemory would require windows.h
@@ -54,8 +52,6 @@ UNUSED_FUNCTION static void memory_zero(void* ptr, u64 size) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void memory_copy(void* restrict dest, u64 dest_size, const void* restrict src, u64 src_size) {
 #if COMPILER_MSVC
     memcpy_s(dest, dest_size, src, src_size);
@@ -70,8 +66,6 @@ static inline void memory_copy(void* restrict dest, u64 dest_size, const void* r
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void memory_set(void* ptr, u64 ptr_size, int value, u64 count) {
 #if defined(__STDC_LIB_EXT1__) && !COMPILER_MSVC
     // C11 Annex K is not supported on MSVC
@@ -82,8 +76,6 @@ static inline void memory_set(void* ptr, u64 ptr_size, int value, u64 count) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline int memory_compare(const void* ptr1, const void* ptr2, u64 size) {
 #if COMPILER_GCC || COMPILER_CLANG
     return __builtin_memcmp(ptr1, ptr2, size);
@@ -91,8 +83,6 @@ static inline int memory_compare(const void* ptr1, const void* ptr2, u64 size) {
     return memcmp(ptr1, ptr2, size);
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if !USE_MIMALLOC
 #include <stdlib.h>
@@ -106,8 +96,6 @@ static inline int memory_compare(const void* ptr1, const void* ptr2, u64 size) {
 #define mi_alloc_zero(type) ((type*)mi_zalloc(sizeof(type)))
 #define mi_alloc(type) ((type*)mi_malloc(sizeof(type)))
 #endif
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ASAN memory poisoning support
 #if defined(ENABLE_ASAN) || defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer)
@@ -126,7 +114,6 @@ void __asan_unpoison_memory_region(void const volatile* addr, size_t size);
 #define asan_unpoison_memory_region(addr, size) ((void)(addr), (void)(size))
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mimalloc Statistics
 
 typedef struct {

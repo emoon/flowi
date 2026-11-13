@@ -4,14 +4,10 @@
 #include <core/hash.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hash, crc32_empty) {
     u32 crc = fl_hash_crc32(nullptr, 0);
     ASSERT_EQ(crc, 0U);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hash, crc32_simple) {
     // "123456789" has well-known CRC32 = 0xCBF43926
@@ -19,8 +15,6 @@ UTEST(hash, crc32_simple) {
     u32 crc = fl_hash_crc32((const u8*)data, 9);
     ASSERT_EQ(crc, 0xCBF43926U);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hash, crc32_incremental) {
     const char* data = "123456789";
@@ -31,8 +25,6 @@ UTEST(hash, crc32_incremental) {
 
     ASSERT_EQ(crc, 0xCBF43926U);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hash, sha1_empty) {
     // A zero-length hash takes an empty buffer, not nullptr.
@@ -46,8 +38,6 @@ UTEST(hash, sha1_empty) {
     ASSERT_EQ(memcmp(sha1, expected, 20), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hash, sha1_abc) {
     u8 sha1[20];
     fl_hash_sha1((const u8*)"abc", 3, sha1);
@@ -58,15 +48,11 @@ UTEST(hash, sha1_abc) {
     ASSERT_EQ(memcmp(sha1, expected, 20), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hash, sha1_hex) {
     char hex[41];
     hash_sha1_hex((const u8*)"abc", 3, hex);
     ASSERT_STREQ(hex, "a9993e364706816aba3e25717850c26c9cd0d89d");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hash, sha1_longer_message) {
     const char* msg = "The quick brown fox jumps over the lazy dog";
@@ -74,8 +60,6 @@ UTEST(hash, sha1_longer_message) {
     hash_sha1_hex((const u8*)msg, strlen(msg), hex);
     ASSERT_STREQ(hex, "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hash, md5_empty) {
     u8 md5[16];
@@ -88,8 +72,6 @@ UTEST(hash, md5_empty) {
     ASSERT_EQ(memcmp(md5, expected, 16), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hash, md5_abc) {
     u8 md5[16];
     fl_hash_md5((const u8*)"abc", 3, md5);
@@ -100,15 +82,11 @@ UTEST(hash, md5_abc) {
     ASSERT_EQ(memcmp(md5, expected, 16), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hash, md5_hex) {
     char hex[33];
     hash_md5_hex((const u8*)"abc", 3, hex);
     ASSERT_STREQ(hex, "900150983cd24fb0d6963f7d28e17f72");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hash, md5_longer_message) {
     const char* msg = "The quick brown fox jumps over the lazy dog";
@@ -116,8 +94,6 @@ UTEST(hash, md5_longer_message) {
     hash_md5_hex((const u8*)msg, strlen(msg), hex);
     ASSERT_STREQ(hex, "9e107d9d372bb6826bd81d3542a419d6");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hash, md5_incremental) {
     const char* msg = "The quick brown fox jumps over the lazy dog";
@@ -138,8 +114,6 @@ UTEST(hash, md5_incremental) {
     ASSERT_EQ(memcmp(md5, expected, 16), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hash, sha256_empty) {
     u8 sha256[32];
     u8 empty_data = 0;
@@ -152,8 +126,6 @@ UTEST(hash, sha256_empty) {
     ASSERT_EQ(memcmp(sha256, expected, 32), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hash, sha256_abc) {
     u8 sha256[32];
     hash_sha256((const u8*)"abc", 3, sha256);
@@ -165,15 +137,11 @@ UTEST(hash, sha256_abc) {
     ASSERT_EQ(memcmp(sha256, expected, 32), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hash, sha256_hex) {
     char hex[65];
     fl_hash_sha256_hex((const u8*)"abc", 3, hex);
     ASSERT_STREQ(hex, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hash, sha256_longer_message) {
     const char* msg = "The quick brown fox jumps over the lazy dog";
@@ -181,8 +149,6 @@ UTEST(hash, sha256_longer_message) {
     fl_hash_sha256_hex((const u8*)msg, strlen(msg), hex);
     ASSERT_STREQ(hex, "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hash, sha256_incremental) {
     const char* msg = "The quick brown fox jumps over the lazy dog";

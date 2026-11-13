@@ -1,7 +1,6 @@
 #include <core/arena.h>
 #include "gpu_renderer_internal.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Debug seams (gpu_debug.h): verbatim CPU readback of the classification pass's tile lists, and the raster
 // debug-mode switch.
 
@@ -34,7 +33,6 @@ void gpu_debug_set_mode(void* renderer_user_data, GpuDebugMode mode) {
     self->debug_mode = mode;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Glyph-atlas debug seams (gpu_debug.h): the R8 coverage texels verbatim.
 
 bool gpu_debug_read_glyph_atlas(void* renderer_user_data, struct FlArena* arena, GpuGlyphAtlasReadback* out) {
@@ -58,7 +56,6 @@ bool gpu_debug_read_glyph_atlas(void* renderer_user_data, struct FlArena* arena,
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SVG-atlas debug seams (gpu_debug.h): the R8 coverage texels verbatim.
 
 bool gpu_debug_read_svg_atlas(void* renderer_user_data, struct FlArena* arena, GpuSvgAtlasReadback* out) {
@@ -82,7 +79,6 @@ bool gpu_debug_read_svg_atlas(void* renderer_user_data, struct FlArena* arena, G
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Multi-color SVG atlas debug seams: the RGBA8 color texels verbatim.
 
 bool gpu_debug_read_color_svg_atlas(void* renderer_user_data, struct FlArena* arena, GpuColorSvgAtlasReadback* out) {
@@ -125,7 +121,6 @@ GpuViewport3dTarget gpu_debug_viewport3d_target(void* renderer_user_data, u32 vi
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tier-1 perf-fence work counters (gpu_debug.h): the glyph/SVG dispatch totals off the backend plus the
 // surface's summed tile overflow.
 

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image Decode - Pure decode and common processing
 //
 // Synchronous, backend-agnostic image decoding: no storage, no VFS async, no renderer-specific transforms.
@@ -10,7 +9,6 @@
 #include <core/arena.h>
 #include <core/core.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Decode result - temporary, allocated from provided arena
 
 typedef struct FlImageDecodeResult {
@@ -26,7 +24,6 @@ typedef struct FlImageDecodeResult {
     bool needs_thumbnail_compose;
 } FlImageDecodeResult;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Decode options
 
 typedef enum ImageDecodeResizeFilter {
@@ -51,7 +48,6 @@ typedef struct ImageDecodeOptions {
     bool force_rgb;        // Decode raster as 3-channel RGB (drop alpha)
 } ImageDecodeOptions;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Thumbnail compose options
 //
 // Fed to image_thumbnail_compose() after image_decode(); the caller supplies any theme-derived colors (tint).
@@ -69,7 +65,6 @@ typedef struct ImageThumbnailOptions {
     u8 fade_r, fade_g, fade_b;
 } ImageThumbnailOptions;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Decode API
 
 // Decode an image from a memory buffer (synchronous). Allocates result and pixels from arena; returns NULL on
@@ -79,7 +74,6 @@ typedef struct ImageThumbnailOptions {
 FlImageDecodeResult* image_decode(FlArena* arena, const void* file_data, size_t file_size,
                                   const ImageDecodeOptions* options);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Thumbnail compose stage
 //
 // Run after image_decode() on the same arena. Finishes a raw raster decode in place: black-border crop,
@@ -91,7 +85,6 @@ FlImageDecodeResult* image_decode(FlArena* arena, const void* file_data, size_t 
 void image_thumbnail_compose(FlArena* arena, FlImageDecodeResult* result, const ImageDecodeOptions* decode_opts,
                              const ImageThumbnailOptions* thumb);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Checked pixel sizes
 //
 // Every width*height*bytes_per_pixel allocation or pixel count goes through these.
@@ -103,7 +96,6 @@ bool image_checked_pixel_size(int width, int height, size_t bytes_per_pixel, siz
 // Row stride in bytes for width pixels at bytes_per_pixel. Returns false when it does not fit the i32 stride fields.
 bool image_checked_stride(int width, size_t bytes_per_pixel, int* out_stride);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Premultiply
 
 // round(c * a / 255) for 8-bit inputs, as (t + (t >> 8)) >> 8 with t = c * a + 128.
@@ -112,7 +104,6 @@ static inline u8 image_premul_channel(int c, int a) {
     return (u8)((t + (t >> 8)) >> 8);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal decode data (exposed for tests)
 
 typedef struct InternalDecodeData {
@@ -131,7 +122,6 @@ typedef struct InternalDecodeData {
 void composite_source_into_canvas_rgb(const InternalDecodeData* image, u8* canvas, int canvas_w, int canvas_h,
                                       u8 fill_r, u8 fill_g, u8 fill_b, int offset_x, int offset_y);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Test API
 
 bool image_decode_test_is_row_all_black(const u8* row_data, int width, int channels);

@@ -5,8 +5,6 @@
 #include "fixed_array.h"
 #include "os/os.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define FILE_WATCHER_DEFAULT_MAX_CHANGES 1000
 #define FILE_WATCHER_COALESCE_WINDOW_US 100000 // 100ms
 #define FILE_WATCHER_MAX_CALLBACKS 32
@@ -15,8 +13,6 @@
 // (Linux inotify). A tree with more is refused.
 #define FILE_WATCHER_MAX_RECURSIVE_DIRECTORIES 1024
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct CallbackRegistration {
     FileWatcherCallbackHandle handle;
     FlString file_path; // Specific file path to watch, allocated in the registry arena
@@ -24,7 +20,6 @@ typedef struct CallbackRegistration {
     void* user_data;
 } CallbackRegistration;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Error codes for platform implementations
 
 typedef enum FileWatcherError {
@@ -34,8 +29,6 @@ typedef enum FileWatcherError {
     FileWatcherError_ResourceExhausted,
     FileWatcherError_SystemError,
 } FileWatcherError;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct FileWatcherState {
     FlFileWatcherHandle handle;
@@ -61,8 +54,6 @@ typedef struct FileWatcherState {
     FileWatcherCallbackHandle next_callback_handle;
 } FileWatcherState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct FileWatcherRegistry {
     FlArena* arena; // Protected by lock
     fixed_array(FileWatcherState) watchers;
@@ -70,7 +61,6 @@ typedef struct FileWatcherRegistry {
     Mutex lock; // Protects all registry operations (handle allocation, arena, watcher array)
 } FileWatcherRegistry;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal functions for platform implementations
 
 // The registry, already brought up by file_watcher_init. Its arena is null until then.
@@ -89,7 +79,6 @@ void add_file_change(FileWatcherState* watcher, FlString path, FlString old_path
 // Comparison is textual (no symlink resolution); trailing '/' separators are ignored.
 bool file_watcher_path_is_direct_child(FlString watch_root, FlString path);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Platform-specific interface (implemented in platform files)
 
 FileWatcherError platform_start_watching(FileWatcherState* state);
@@ -98,7 +87,6 @@ void platform_stop_watching(FileWatcherState* state);
 
 FileWatcherError platform_poll_changes(FileWatcherState* state);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Map system error codes to FileWatcherError
 
 #if PLATFORM_LINUX

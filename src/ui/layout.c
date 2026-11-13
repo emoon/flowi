@@ -8,7 +8,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Painting-scope bracketing. Every layout element open/close pushes/pops a painter scope in lockstep, capturing
 // the just-opened element's CUSTOM customData slot so painter calls inside the scope attach there. The
 // direct-Clay element opens elsewhere (popups, the text cursor) neither push nor pop - they are not painted into
@@ -29,8 +28,6 @@ static void ui_paint_scope_pop(void) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void ui_apply_sizing(Clay_Sizing* out, FlLayoutSizing sizing, float scale) {
     if (sizing.width.type == FlLayoutSizingType_Percent) {
         out->width.size.percent = sizing.width.size.percent;
@@ -48,8 +45,6 @@ static void ui_apply_sizing(Clay_Sizing* out, FlLayoutSizing sizing, float scale
     }
     out->height.type = (Clay__SizingType)sizing.height.type;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ui_open_element_with_id(FlLayoutId id) {
     // Open with the full Clay element id - including its stringId, so Clay's hashmap retains the name.
@@ -75,27 +70,19 @@ static void ui_open_element_with_id(FlLayoutId id) {
     Clay__OpenElementWithId(element_id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_layout_start(FlLayoutId id) {
     ui_open_element_with_id(id);
     ui_paint_scope_push();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_layout_start_auto(void) {
     Clay__OpenElement();
     ui_paint_scope_push();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_floating_start(FlLayoutId id) {
     fl_layout_start(id);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_floating_configure(FlFloatingConfig config) {
     Clay_ElementDeclaration decl = { 0 };
@@ -135,21 +122,15 @@ void fl_floating_configure(FlFloatingConfig config) {
     Clay__ConfigureOpenElement(decl);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_layout_end(void) {
     ui_paint_scope_pop();
     Clay__CloseElement();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlVec2 ui_get_scroll_offset(void) {
     Clay_Vector2 offset = Clay_GetScrollOffset();
     return (FlVec2) { .x = offset.x, .y = offset.y };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlScrollContainerExtent ui_get_scroll_container_extent(u32 element_id) {
     Clay_ScrollContainerData data = Clay_GetScrollContainerData((Clay_ElementId) { .id = element_id });
@@ -162,8 +143,6 @@ FlScrollContainerExtent ui_get_scroll_container_extent(u32 element_id) {
         .found = true,
     };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_layout_configure(FlLayoutConfig config) {
     FlUiCtx* ctx = ui_get_ctx();

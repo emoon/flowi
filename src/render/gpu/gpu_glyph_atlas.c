@@ -2,8 +2,6 @@
 #include <core/arena.h>
 #include <core/log.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gpu_glyph_atlas_init(GpuGlyphAtlas* atlas, struct FlArena* arena) {
     if (atlas->entries == NULL) {
         atlas->entries = arena_alloc_array(arena, GpuGlyphEntry, GPU_GLYPH_ATLAS_MAX_ENTRIES);
@@ -23,8 +21,6 @@ void gpu_glyph_atlas_wipe_if_needed(GpuGlyphAtlas* atlas, struct FlArena* arena)
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static GpuGlyphEntry* find_entry(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id) {
     for (u32 i = 0; i < atlas->entry_count; i++) {
         GpuGlyphEntry* e = &atlas->entries[i];
@@ -38,8 +34,6 @@ static GpuGlyphEntry* find_entry(GpuGlyphAtlas* atlas, FlFontId font, u16 size, 
 const GpuGlyphEntry* gpu_glyph_atlas_find(const GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id) {
     return find_entry((GpuGlyphAtlas*)atlas, font, size, glyph_id);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id, u32 w, u32 h,
                                            f32 left, f32 top, f32 advance) {

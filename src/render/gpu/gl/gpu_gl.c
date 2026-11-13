@@ -2,8 +2,6 @@
 #include <core/log.h>
 #include <EGL/egl.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool gpu_gl_load(GpuGl* gl) {
     bool ok = true;
 #define GPU_GL_LOAD(type, name, sym)                         \

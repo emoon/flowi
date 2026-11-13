@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Uniform List - Internal Implementation Header
 //
 // The implementation seam behind the public fl_list_uniform_* API: the context struct and the receiver-taking
@@ -11,19 +10,14 @@
 #include <core/types.h>
 #include <flowi/ui/list_uniform.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct FlArena FlArena;
 typedef struct FlListUniformContext FlListUniformContext;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // arena backs internal state allocations.
 FlListUniformContext* list_uniform_create(FlArena* arena);
 
 void list_uniform_destroy(FlListUniformContext* self);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Receiver-taking bodies behind the public ctx-free fl_list_uniform_* API
 
 FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u32 total_count, FlListUniformOpts opts);
@@ -31,7 +25,6 @@ void list_uniform_item_begin(FlListUniformContext* self, u32 index);
 void list_uniform_item_end(FlListUniformContext* self);
 void list_uniform_end(FlListUniformContext* self);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scroll introspection / drive. Keyed by the container's string id so a caller may read/drive a list outside its
 // begin->end scope. Both no-op / return 0 for an unknown id.
 

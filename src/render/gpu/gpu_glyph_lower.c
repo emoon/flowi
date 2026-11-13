@@ -1,8 +1,6 @@
 #include "gpu_glyph_lower.h"
 #include <ui/font_cache.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct GlyphQuadEmit {
     f32* floats; // 6 per quadratic: p0, control, p1
     u32 quad_count;
@@ -44,8 +42,6 @@ static void glyph_emit_cubic(GlyphQuadEmit* e, Vec2 p0, Vec2 c1, Vec2 c2, Vec2 p
 static Vec2 glyph_cell_point(FlVec2 p, f32 origin_x, f32 origin_y) {
     return (Vec2) { p.x - origin_x, origin_y - p.y };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 gpu_glyph_lower_segments(const struct FlGlyphSegment* segments, u32 segment_count, f32 origin_x, f32 origin_y,
                              f32* out_floats) {

@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Compile-only parity guard: the api_gen-generated public logging surface (<flowi/core/log.h>). Nothing is linked;
 // every fl_log_* prototype must parse and match its expected signature here.
 //

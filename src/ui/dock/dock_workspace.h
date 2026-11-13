@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock Workspace - a logical dock tree together with the per-frame panel-declaration bookkeeping that binds
 // immediately-declared Detachable Panels to the retained leaves they live in (CONTEXT.md "Workspace",
 // "Detachable Panel"). The app re-declares each panel every frame by its stable id, and the workspace binds that
@@ -17,7 +16,6 @@
 // survives a promote/demote; a single-window app has exactly one (registry entry 0). Each tree belongs to one
 // workspace hosted by one window - it does not span windows. Plain fields are read and written directly; the
 // functions below are the operations that are more than a field access.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <flowi/core/string.h>
 
@@ -28,7 +26,6 @@
 extern "C" {
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A workspace owns its tree and a per-panel record of the last frame each panel was declared: "declared this
 // frame" is last_declared == frame.
 
@@ -72,7 +69,6 @@ typedef struct FlDockWorkspace {
     u32 open_panels;
 } FlDockWorkspace;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lifecycle. A fresh workspace owns a fresh dock tree (a single empty root leaf - the floor).
 
 FlDockWorkspace* dock_workspace_create(void);
@@ -84,7 +80,6 @@ void dock_workspace_destroy(FlDockWorkspace* ws);
 // already installed) is a no-op, so a failed dock_tree_build keeps the existing floor.
 void dock_workspace_set_tree(FlDockWorkspace* ws, FlDockTree* tree);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Promotion - the headless half of detaching a panel to its own window, WITHOUT the OS seam. Promoting a panel is
 // a SUBTREE MOVE BETWEEN TWO IN-PROCESS WORKSPACES, not a copy: the panel leaves its source workspace's tree
 // entirely and re-hosts as the root of a second workspace, conserving the panel id across the pair. No node is
@@ -105,7 +100,6 @@ bool dock_workspace_promote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPa
 // src == dst.
 bool dock_workspace_demote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPanelId panel);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-panel attributes.
 
 // A Detachable Panel's dock-family tag (0 = general; CONTEXT.md "Detachable Panel"). The tag gates which workspaces
@@ -125,7 +119,6 @@ u32 dock_workspace_panel_family(const FlDockWorkspace* ws, FlDockPanelId id);
 void dock_workspace_set_panel_visible(FlDockWorkspace* ws, FlDockPanelId id, bool visible);
 bool dock_workspace_panel_visible(const FlDockWorkspace* ws, FlDockPanelId id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The active panel - one panel id per workspace, set by a press inside a tile and never by hover. The setter is the
 // only writer, and every change it makes blurs the keyboard focus ring. Not persisted, and no chrome renders it.
 //
@@ -134,7 +127,6 @@ bool dock_workspace_panel_visible(const FlDockWorkspace* ws, FlDockPanelId id);
 
 void dock_workspace_set_active_panel(FlDockWorkspace* ws, FlDockPanelId id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Persistence hooks. Save serializes this workspace's tree + family filter + host size + version to an
 // opaque JSON blob written into settings_dir as dock_layout.json. Load reads it back, applies the
 // rebind-on-load rules against this session (see dock_persist.h), and adopts the restored tree + attributes.
@@ -149,7 +141,6 @@ bool dock_workspace_save(FlDockWorkspace* ws, FlString settings_dir);
 bool dock_workspace_load(FlDockWorkspace* ws, FlString settings_dir, const FlDockPanelId* known_panels,
                          u32 known_count);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-frame declaration window. Bracket each frame's panel declarations with begin/end: begin opens a fresh
 // "declared this frame" generation, so panels not re-declared this frame fall back to reserved.
 
@@ -166,7 +157,6 @@ bool dock_workspace_declare(FlDockWorkspace* ws, FlDockPanelId id, FlString titl
 // walk runs BEFORE this frame's declarations, and a reserved panel has no declaration at all.
 FlString dock_workspace_panel_title(const FlDockWorkspace* ws, FlDockPanelId id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Queries (binding + reservation). Pure reads - no per-frame side effects.
 
 // The id of the leaf node currently holding id, or 0 ("no node") if id is floating or absent from the tree.
@@ -197,7 +187,6 @@ FlDockPanelId dock_workspace_leaf_shown_panel(const FlDockWorkspace* ws, const F
 // the panel is not emitting, has no measured tile yet, or is starved past the content floor.
 FlVec2 dock_workspace_panel_size(const FlDockWorkspace* ws, FlDockPanelId id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render entry. Emit the workspace's tile geometry for this frame by walking the tree (delegates to the dock
 // layout emit; Clay computes every rect). Call inside a UI frame (between ui_update_begin and ui_update_end).
 // The selected panel's content is emitted by the app via dock_panel(id, title){...}. The workspace is non-const:
@@ -213,7 +202,6 @@ FlVec2 dock_workspace_panel_size(const FlDockWorkspace* ws, FlDockPanelId id);
 
 void dock_workspace_emit(FlDockWorkspace* ws);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Macro glue (ui/dock.h). Resolve the active window's workspace from its per-window binding (ctx->dock_workspace,
 // which points into the shared registry).
 

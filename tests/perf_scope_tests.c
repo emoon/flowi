@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tests for the always-on lightweight frame profiler.
 
 #include "utest/utest.h"
@@ -6,14 +5,11 @@
 #include <core/os/os.h>
 #include <core/perf_scope.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Burn enough time to be measurable on platforms with coarse timer resolution (macOS, arm64 Linux).
 
 static void burn_measurable_time(void) {
     sleep_ms(1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(perf_scope, basic_scope) {
     fl_perf_scope_frame_begin();
@@ -30,8 +26,6 @@ UTEST(perf_scope, basic_scope) {
     ASSERT_GT(state->entries[0].elapsed_ns, (u64)0);
     ASSERT_FALSE(state->overflow);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(perf_scope, nested_scopes) {
     fl_perf_scope_frame_begin();
@@ -58,8 +52,6 @@ UTEST(perf_scope, nested_scopes) {
     ASSERT_GE(state->entries[0].elapsed_ns, state->entries[1].elapsed_ns);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(perf_scope, frame_begin_resets) {
     fl_perf_scope_frame_begin();
 
@@ -73,8 +65,6 @@ UTEST(perf_scope, frame_begin_resets) {
     ASSERT_EQ(state->stack_depth, (u32)0);
     ASSERT_FALSE(state->overflow);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(perf_scope, entry_overflow) {
     fl_perf_scope_frame_begin();
@@ -94,8 +84,6 @@ UTEST(perf_scope, entry_overflow) {
     fl_perf_scope_end(sentinel);
     ASSERT_EQ(state->stack_depth, (u32)0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(perf_scope, stack_depth_overflow) {
     fl_perf_scope_frame_begin();
@@ -121,8 +109,6 @@ UTEST(perf_scope, stack_depth_overflow) {
 
     ASSERT_EQ(state->stack_depth, (u32)0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void helper_with_early_return(bool should_return) {
     perf_scope("helper");
@@ -150,8 +136,6 @@ UTEST(perf_scope, cleanup_early_return) {
     ASSERT_GT(state->entries[1].elapsed_ns, (u64)0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(perf_scope, cleanup_goto) {
     fl_perf_scope_frame_begin();
 
@@ -167,8 +151,6 @@ UTEST(perf_scope, cleanup_goto) {
     ASSERT_EQ(state->stack_depth, (u32)0);
     ASSERT_STREQ(state->entries[0].name, "goto_test");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(perf_scope, sequential_siblings) {
     fl_perf_scope_frame_begin();
@@ -199,8 +181,6 @@ UTEST(perf_scope, sequential_siblings) {
     ASSERT_EQ(state->entries[3].parent_index, (u16)0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void named_function_for_test(void) {
     perf_scope_function();
     volatile int x = 0;
@@ -216,8 +196,6 @@ UTEST(perf_scope, scope_function_captures_func) {
     ASSERT_EQ(state->entry_count, (u32)1);
     ASSERT_STREQ(state->entries[0].name, "named_function_for_test");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(perf_scope, deep_nesting_depths) {
     fl_perf_scope_frame_begin();
@@ -243,8 +221,6 @@ UTEST(perf_scope, deep_nesting_depths) {
     ASSERT_EQ(state->entries[2].parent_index, (u16)1);
     ASSERT_EQ(state->entries[3].parent_index, (u16)2);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(perf_scope, loop_scopes) {
     fl_perf_scope_frame_begin();

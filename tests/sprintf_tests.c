@@ -18,8 +18,6 @@ UTEST(sprintf, basic_format) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf, string_struct_single) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -32,8 +30,6 @@ UTEST(sprintf, string_struct_single) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf, string_struct_multiple) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -49,8 +45,6 @@ UTEST(sprintf, string_struct_multiple) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf, mixed_format_specifiers) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -64,8 +58,6 @@ UTEST(sprintf, mixed_format_specifiers) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf, empty_string_struct) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -78,8 +70,6 @@ UTEST(sprintf, empty_string_struct) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf, vsprintf_arena) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -95,8 +85,6 @@ UTEST(sprintf, vsprintf_arena) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf, vector_f32x4_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -108,8 +96,6 @@ UTEST(sprintf, vector_f32x4_basic) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf, vector_i32x4_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -123,8 +109,6 @@ UTEST(sprintf, vector_i32x4_basic) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf, vector_u32x4_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -136,8 +120,6 @@ UTEST(sprintf, vector_u32x4_basic) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf, vector_f32x4_mixed_format) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -151,8 +133,6 @@ UTEST(sprintf, vector_f32x4_mixed_format) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf, vector_all_types_mixed) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -168,8 +148,6 @@ UTEST(sprintf, vector_all_types_mixed) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf, vector_edge_cases) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -187,8 +165,6 @@ UTEST(sprintf, vector_edge_cases) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf, vector_i16x8_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -200,8 +176,6 @@ UTEST(sprintf, vector_i16x8_basic) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf, vector_u8x16_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -216,8 +190,6 @@ UTEST(sprintf, vector_u8x16_basic) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf, vector_u16x8_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -231,8 +203,6 @@ UTEST(sprintf, vector_u16x8_basic) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf, vector_f16x8_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -244,8 +214,6 @@ UTEST(sprintf, vector_f16x8_basic) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf, vector_extended_types_mixed) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -263,8 +231,6 @@ UTEST(sprintf, vector_extended_types_mixed) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf, vector_unknown_format) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -276,8 +242,6 @@ UTEST(sprintf, vector_unknown_format) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf_std, integer_formats) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -293,8 +257,6 @@ UTEST(sprintf_std, integer_formats) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf_std, width_precision) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -314,8 +276,6 @@ UTEST(sprintf_std, width_precision) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf_std, left_justify) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -328,8 +288,6 @@ UTEST(sprintf_std, left_justify) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf_std, sign_flags) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -347,8 +305,6 @@ UTEST(sprintf_std, sign_flags) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf_std, float_formats) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -371,8 +327,6 @@ UTEST(sprintf_std, float_formats) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf_std, string_formats) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -398,8 +352,6 @@ UTEST(sprintf_std, string_formats) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf_std, char_format) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -411,8 +363,6 @@ UTEST(sprintf_std, char_format) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf_std, pointer_format) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -429,8 +379,6 @@ UTEST(sprintf_std, pointer_format) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf_std, percent_literal) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -442,8 +390,6 @@ UTEST(sprintf_std, percent_literal) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf_edge, extreme_values) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -459,8 +405,6 @@ UTEST(sprintf_edge, extreme_values) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(sprintf_edge, width_from_arg) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -480,8 +424,6 @@ UTEST(sprintf_edge, width_from_arg) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf_edge, zero_width_precision) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -499,8 +441,6 @@ UTEST(sprintf_edge, zero_width_precision) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(sprintf_combined, string_with_all_types) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -516,7 +456,6 @@ UTEST(sprintf_combined, string_with_all_types) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A uniform per-thread fill character formatted over more than one stb chunk makes a byte spliced in
 // by another thread's allocation on the shared arena detectable at any offset in the result.
 

@@ -4,7 +4,6 @@
 #include <core/types.h>
 #include "software_renderer_internal.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scaled image rendering: nearest-neighbor sampling via SIMD shuffles. The shuffle tables must already have been
 // set up during command creation.
 

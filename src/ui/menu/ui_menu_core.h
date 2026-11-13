@@ -2,7 +2,6 @@
 
 #include "../ui_private.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Menu core: the open-path state machine, navigation, type-ahead and scrolling shared by the context menu and the menu
 // bar. Surfaces drive it through these primitives and own only their per-surface open trigger and painting.
 
@@ -13,8 +12,6 @@ typedef struct MenuHit {
     bool submenu;
     bool navigable;
 } MenuHit;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool menu_owned_by(const FlUiCtx* ctx, u32 scope);
 void menu_close_internal(FlUiCtx* ctx);

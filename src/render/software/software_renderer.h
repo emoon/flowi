@@ -8,8 +8,6 @@
 struct FlArena;
 struct FlFontCache;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // font_cache may be null at create time (injected later via ui_set_font_cache); render_mode fixes the
 // rasterization target for the SW glyph cache, which is built lazily on first text resolve.
 FlRenderBackend create_software_renderer(struct FlArena* arena, struct FlFontCache* font_cache,

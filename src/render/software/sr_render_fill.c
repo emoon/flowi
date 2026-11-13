@@ -13,8 +13,6 @@
 #include "sr_gradient_interpolation.h"
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE SoaRgba splat_color(u8x16 color) {
     i16x8x2 corner_colors = u8x16_unpack_to_i16x8_wide_shl(color, 7);
     return (SoaRgba) {
@@ -24,8 +22,6 @@ static ALWAYS_INLINE SoaRgba splat_color(u8x16 color) {
         .a = i16x8_splat_lane(corner_colors.v0, 3),
     };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE SoaRgba process_8_pixels(SoaRgba fixed_color, const bool gradient, const bool rounding,
                                               const bool blend_with_background,
@@ -63,8 +59,6 @@ static ALWAYS_INLINE SoaRgba process_8_pixels(SoaRgba fixed_color, const bool gr
     return color;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE SoaRgba process_8_pixels_border(SoaRgba fixed_color, const bool blend_with_background,
                                                      CornerRoundingState* rounding_state, i16* line_output,
                                                      int r_offset, int g_offset, int b_offset) {
@@ -89,8 +83,6 @@ static ALWAYS_INLINE SoaRgba process_8_pixels_border(SoaRgba fixed_color, const 
     return color;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Tile-local pixel box of a command clipped to the scissor rect. clip_diff is how far the scissor cuts into the
 // command rect on each axis, as a positive value.
 typedef struct FillClip {
@@ -99,8 +91,6 @@ typedef struct FillClip {
     int ylen;
     i32x4 clip_diff;
 } FillClip;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE bool fill_clip_setup(const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile_info,
                                           FillClip* out) {
@@ -122,8 +112,6 @@ static ALWAYS_INLINE bool fill_clip_setup(const RenderCommand* command, f32x4 sc
     return out->xlen > 0 && out->ylen > 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Store color into the xlen & 7 remainder pixels of the row only; the other lanes keep their current value.
 static ALWAYS_INLINE void store_rgb_masked(SoaRgba color, i16x8 write_mask, i16* line_output, int r_offset,
                                            int g_offset, int b_offset) {
@@ -135,8 +123,6 @@ static ALWAYS_INLINE void store_rgb_masked(SoaRgba color, i16x8 write_mask, i16*
     i16x8_store_unaligned(out_g, line_output, g_offset);
     i16x8_store_unaligned(out_b, line_output, b_offset);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void fill_internal(const bool blend_with_background, const bool gradient, const bool rounding,
                                         i16* output, f32x4 scissor_rect, const TileInfo* tile_info,
@@ -207,8 +193,6 @@ static ALWAYS_INLINE void fill_internal(const bool blend_with_background, const 
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void fill_border_internal(const bool blend_with_background, i16* output, f32x4 scissor_rect,
                                                const TileInfo* tile_info, const RenderCommand* command) {
     CornerRoundingState rounding_state;
@@ -264,81 +248,58 @@ static ALWAYS_INLINE void fill_border_internal(const bool blend_with_background,
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void fill_border(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                       const TileInfo* tile) {
     fill_border_internal(false, tile_output, scissor_rect, tile, command);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void fill_border_blend(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                             const TileInfo* tile) {
     fill_border_internal(true, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void fill_solid(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                      const TileInfo* tile) {
     fill_internal(false, false, false, tile_output, scissor_rect, tile, command);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void fill_solid_rounded(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                              const TileInfo* tile) {
     fill_internal(false, false, true, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void fill_gradient(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                         const TileInfo* tile) {
     fill_internal(false, true, false, tile_output, scissor_rect, tile, command);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void fill_gradient_rounded(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                                 const TileInfo* tile) {
     fill_internal(false, true, true, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void fill_solid_blend(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                            const TileInfo* tile) {
     fill_internal(true, false, false, tile_output, scissor_rect, tile, command);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void fill_solid_rounded_blend(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                                    const TileInfo* tile) {
     fill_internal(true, false, true, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void fill_gradient_blend(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                               const TileInfo* tile) {
     fill_internal(true, true, false, tile_output, scissor_rect, tile, command);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void fill_gradient_rounded_blend(i16* tile_output, const RenderCommand* command,
                                                       f32x4 scissor_rect, const TileInfo* tile) {
     fill_internal(true, true, true, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef void (*fill_func_t)(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lookup table for all 8 permutations: [blend_with_background][gradient][rounding]
 
 // clang-format off
@@ -358,8 +319,6 @@ static const fill_func_t fill_dispatch_table[2][2][2] = {
 };
 // clang-format on
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void sr_render_fill(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile) {
     u32 render_mask = command->mask;
     int rounding = !!(render_mask & RenderMask_Corners);
@@ -369,7 +328,6 @@ void sr_render_fill(i16* tile_output, const RenderCommand* command, f32x4 scisso
     fill_dispatch_table[blend_with_background][gradient][rounding](tile_output, command, scissor_rect, tile);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lookup table for border rendering: [blend_with_background]
 
 // clang-format off
@@ -378,8 +336,6 @@ static const fill_func_t border_dispatch_table[2] = {
     fill_border_blend
 };
 // clang-format on
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void sr_render_border(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile) {
     int blend_with_background = !!(command->mask & RenderMask_BlendWithBackground);

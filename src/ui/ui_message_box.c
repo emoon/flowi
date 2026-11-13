@@ -4,7 +4,6 @@
 #include "ui_private.h"
 #include <flowi/ui/modal.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Defaults
 
 // Default panel width in logical px - wide enough for a short prompt and a two-button row.
@@ -19,8 +18,6 @@
 #define UI_MESSAGE_BOX_BACKDROP_ID "##msgbox_backdrop"
 #define UI_MESSAGE_BOX_OK_ID "##msgbox_ok"
 #define UI_MESSAGE_BOX_CANCEL_ID "##msgbox_cancel"
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlDialogResult ui_message_box_impl(FlString title, FlString message, bool* open, FlMessageBoxConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: minimal OpenGL 4.3 function loader.
 //
 // The backend assumes a current GL >= 4.3 core context, created by the host before the backend is constructed.
@@ -11,7 +10,6 @@
 #include <GL/glext.h>
 #include <stdbool.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // X-macro: typedef, struct member, GL symbol name.
 
 #define GPU_GL_FNS(X)                                                                         \
@@ -71,7 +69,6 @@ typedef struct GpuGl {
 #undef GPU_GL_MEMBER
 } GpuGl;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resolve every entry via eglGetProcAddress. Requires a current GL context. Returns false (and logs) if any
 // function is missing - the backend must not be constructed then.
 

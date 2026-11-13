@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Software backend: neutral render IR (ui/render_ir.h) -> internal RenderCommand list.
 //
 // Font ids and image handles are resolved here, backend-side - the IR never carries baked glyph bitmaps or
@@ -12,7 +11,6 @@
 struct FlArena;
 struct SwGlyphCache;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // commands_arena: receives the contiguous RenderCommand array (the returned .commands).
 // state_arena:    per-frame scratch for image conversion + gradient/scaled-texture setup.
 // glyph_cache:    may be null before a font cache is injected, in which case text runs are skipped.

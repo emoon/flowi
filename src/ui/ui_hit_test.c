@@ -1,10 +1,8 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hit testing - per-frame refresh of the interactive item registry from the resolved layout.
 //
 // Only ids already present in UiShared.item_state are touched (ui_item_behavior creates them), so text, images
 // and other non-interactive elements never enter hit testing. Clip rects are tracked through the render
 // command stream's scissor pairs, since Clay culls against the screen and not against an enclosing clip.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "ui_hit_test.h"
 #include "animation.h"
@@ -12,8 +10,6 @@
 #include <core/math.h>
 #include <core/types.h>
 #include <math.h>
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void update_item_animations(ItemState* item, float hover_rate, float press_rate, float focus_rate) {
     if (item->flags & FlItemFlags_hot_animation) {
@@ -32,13 +28,10 @@ static void update_item_animations(ItemState* item, float hover_rate, float pres
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool ui_point_in_rect(Vec2 point, Vec2 min, Vec2 max) {
     return point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The scissor rect in force where a render command was emitted: the intersection of every clip container that
 // encloses it. Unbounded when no scissor is open around the command.
 
@@ -53,13 +46,9 @@ typedef struct HitClip {
 // Maximum clip container nesting the hit-test walk tracks.
 #define UI_HIT_CLIP_STACK_MAX 32
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_item_hit_contains(const ItemState* item, Vec2 point) {
     return ui_point_in_rect(point, item->hit_min, item->hit_max);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void item_state_update(FlUiCtx* self, const Clay_RenderCommand* command, HitClip clip, const u64 pass,
                               const float dt) {
@@ -117,8 +106,6 @@ static void item_state_update(FlUiCtx* self, const Clay_RenderCommand* command, 
 
     update_item_animations(item, hover_rate, press_rate, focus_rate);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_hit_test_frame(FlUiCtx* self, Clay_RenderCommandArray commands, float dt) {
     self->next_hot_id = 0;

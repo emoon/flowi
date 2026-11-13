@@ -13,8 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlKey sdl_key_to_fl_key(SDL_Keycode sdl_key) {
     switch (sdl_key) {
         case SDLK_a:
@@ -232,8 +230,6 @@ static FlKey sdl_key_to_fl_key(SDL_Keycode sdl_key) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static u32 sdl_keymod_to_fl_keymod(u16 sdl_mod) {
     u32 modifiers = 0;
     if (sdl_mod & KMOD_SHIFT)
@@ -250,8 +246,6 @@ static u32 sdl_keymod_to_fl_keymod(u16 sdl_mod) {
         modifiers |= FlKeyModifier_Num_Lock;
     return modifiers;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // FlMouseButton_Count marks a button flowi has no mapping for.
 static FlMouseButton sdl_mouse_button_to_ui_button(u8 sdl_button) {
@@ -270,8 +264,6 @@ static FlMouseButton sdl_mouse_button_to_ui_button(u8 sdl_button) {
             return FlMouseButton_Count;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlGamepadButton sdl_gamepad_button_to_ui_button(SDL_GameControllerButton sdl_button) {
     switch (sdl_button) {
@@ -310,8 +302,6 @@ static FlGamepadButton sdl_gamepad_button_to_ui_button(SDL_GameControllerButton 
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlGamepadAxis sdl_gamepad_axis_to_fl_axis(SDL_GameControllerAxis sdl_axis) {
     switch (sdl_axis) {
         case SDL_CONTROLLER_AXIS_LEFTX:
@@ -331,8 +321,6 @@ static FlGamepadAxis sdl_gamepad_axis_to_fl_axis(SDL_GameControllerAxis sdl_axis
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int find_gamepad_slot(SdlInputCommon* self, SDL_JoystickID id) {
     for (int i = 0; i < UI_INPUT_MAX_GAMEPADS; i++) {
         if (self->gamepad_ids[i] == id) {
@@ -342,8 +330,6 @@ static int find_gamepad_slot(SdlInputCommon* self, SDL_JoystickID id) {
     return -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int find_free_gamepad_slot(SdlInputCommon* self) {
     for (int i = 0; i < UI_INPUT_MAX_GAMEPADS; i++) {
         if (self->gamepads[i] == nullptr) {
@@ -352,8 +338,6 @@ static int find_free_gamepad_slot(SdlInputCommon* self) {
     }
     return -1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void sdl_input_common_init(SdlInputCommon* self) {
     memory_zero(self, sizeof(SdlInputCommon));
@@ -378,7 +362,6 @@ void sdl_input_common_init(SdlInputCommon* self) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The SDL windowID an event is addressed to, or 0 when it is not window-addressed (SDL_QUIT, gamepad device/axis).
 
 static u32 sdl_event_window_id(const SDL_Event* e) {
@@ -433,7 +416,6 @@ static float sdl_pointer_scale(Uint32 window_id) {
     return sdl_window_pixel_scale(SDL_GetWindowFromID(window_id));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Translate a single SDL event and push the resulting Fl event(s) onto ctx. SDL_QUIT and a per-window close both
 // push FlWindowEvent_Close; neither controls the drain loop, so one window's close does not stop the others'
 // events being routed in the same pump.
@@ -679,7 +661,6 @@ static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event 
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Multi-window pump (the WindowBackend). Drains the shared queue once, demuxing each event to its window's FlUiCtx
 // by SDL windowID: window_ids[i] pairs with contexts[i]. Callers pass at least the main window.
 
@@ -714,7 +695,6 @@ void sdl_input_common_pump_multi(SdlInputCommon* self, const u32* window_ids, Fl
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Cursor
 
 static SDL_SystemCursor sdl_system_cursor_for_shape(FlCursorShape shape) {
@@ -758,13 +738,10 @@ void sdl_input_common_set_cursor(SdlInputCommon* self, FlCursor cursor) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void sdl_input_common_set_cursor_visible(bool visible) {
     SDL_ShowCursor(visible ? SDL_ENABLE : SDL_DISABLE);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hidden-drag mechanics
 
 void sdl_input_common_set_relative_mouse_mode(SdlInputCommon* self, bool enabled) {
@@ -772,15 +749,11 @@ void sdl_input_common_set_relative_mouse_mode(SdlInputCommon* self, bool enabled
     SDL_SetRelativeMouseMode(enabled ? SDL_TRUE : SDL_FALSE);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void sdl_input_common_warp_mouse(SDL_Window* window, float x, float y) {
     // x, y are drawable pixels; a null window targets the mouse-focus window.
     const float scale = sdl_window_pixel_scale(window);
     SDL_WarpMouseInWindow(window, (int)(x / scale), (int)(y / scale));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString backend_get_clipboard_text(struct FlArena* arena) {
     if (!SDL_HasClipboardText()) {
@@ -802,8 +775,6 @@ FlString backend_get_clipboard_text(struct FlArena* arena) {
     return (FlString) { .data = text_copy, .length = len, .is_static = 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool backend_set_clipboard_text(FlString text) {
     // SDL takes a null-terminated string.
     char* temp = malloc(text.length + 1);
@@ -819,8 +790,6 @@ bool backend_set_clipboard_text(FlString text) {
 
     return result == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void sdl_input_common_destroy(SdlInputCommon* self) {
     for (int i = 0; i < UI_INPUT_MAX_GAMEPADS; i++) {

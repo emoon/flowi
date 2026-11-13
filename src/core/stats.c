@@ -8,8 +8,6 @@
 #include "sprintf.h"
 #include <stdio.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct StatsRegistry {
     StatCounter* counters;
     u32 counter_count;
@@ -17,8 +15,6 @@ struct StatsRegistry {
     FlArena* arena;
     Mutex mutex; // Only for registration, not for increments
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 StatsRegistry* stats_create(FlArena* arena) {
     FL_ASSERT(arena != nullptr);
@@ -35,8 +31,6 @@ StatsRegistry* stats_create(FlArena* arena) {
     return self;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void stats_destroy(StatsRegistry* self) {
     FL_VALIDATE(self != nullptr);
 
@@ -44,8 +38,6 @@ void stats_destroy(StatsRegistry* self) {
 
     log_debug("Statistics system destroyed");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 stats_register_counter(StatsRegistry* self, FlString name, FlString category) {
     FL_ASSERT(name.data != nullptr && name.length > 0);
@@ -74,16 +66,12 @@ u32 stats_register_counter(StatsRegistry* self, FlString name, FlString category
     return id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 StatCounter* stats_get_counter(StatsRegistry* self, u32 counter_id) {
     if (!self || counter_id >= self->counter_count) {
         return nullptr;
     }
     return &self->counters[counter_id];
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 stats_find_counter(StatsRegistry* self, FlString name, FlString category) {
     for_count(i, self->counter_count) {
@@ -96,8 +84,6 @@ u32 stats_find_counter(StatsRegistry* self, FlString name, FlString category) {
     return UINT32_MAX; // Counter not found
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void stats_enable_counter(StatsRegistry* self, u32 counter_id, bool enabled) {
     StatCounter* counter = stats_get_counter(self, counter_id);
     if (counter) {
@@ -106,8 +92,6 @@ void stats_enable_counter(StatsRegistry* self, u32 counter_id, bool enabled) {
                   enabled ? "enabled" : "disabled");
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void stats_enable_category(StatsRegistry* self, FlString category, bool enabled) {
     u32 affected_count = 0;
@@ -122,8 +106,6 @@ void stats_enable_category(StatsRegistry* self, FlString category, bool enabled)
     log_debug("Category %S %s (%u counters affected)", category, enabled ? "enabled" : "disabled", affected_count);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u64 stats_get_value(StatsRegistry* self, u32 counter_id) {
     StatCounter* counter = stats_get_counter(self, counter_id);
     if (!counter) {
@@ -131,8 +113,6 @@ u64 stats_get_value(StatsRegistry* self, u32 counter_id) {
     }
     return atomic_load(&counter->value);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u64 stats_get_value_by_name(StatsRegistry* self, FlString name, FlString category) {
     u32 counter_id = stats_find_counter(self, name, category);
@@ -142,8 +122,6 @@ u64 stats_get_value_by_name(StatsRegistry* self, FlString name, FlString categor
     return stats_get_value(self, counter_id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void stats_reset_counter(StatsRegistry* self, u32 counter_id) {
     StatCounter* counter = stats_get_counter(self, counter_id);
     if (counter) {
@@ -152,16 +130,12 @@ void stats_reset_counter(StatsRegistry* self, u32 counter_id) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void stats_reset_counter_by_name(StatsRegistry* self, FlString name, FlString category) {
     u32 counter_id = stats_find_counter(self, name, category);
     if (counter_id != UINT32_MAX) {
         stats_reset_counter(self, counter_id);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void stats_print_category(StatsRegistry* self, FlString category) {
     log_debug("=== %S Stats ===", category);

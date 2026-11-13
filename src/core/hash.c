@@ -4,7 +4,6 @@
 #include "assert.h"
 #include <zlib.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CRC32
 
 // zlib's crc32() takes a 32-bit uInt length; larger buffers are hashed in chained chunks of at most this size.
@@ -13,8 +12,6 @@
 u32 fl_hash_crc32(const u8* data, u64 size) {
     return hash_crc32_update(0, data, size);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 hash_crc32_update(u32 crc, const u8* data, u64 size) {
     uLong result = crc;
@@ -29,7 +26,6 @@ u32 hash_crc32_update(u32 crc, const u8* data, u64 size) {
 
 #undef CRC32_MAX_CHUNK
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SHA1 - teeny-sha1 implementation
 //
 // https://github.com/CTrabant/teeny-sha1
@@ -60,16 +56,12 @@ u32 hash_crc32_update(u32 crc, const u8* data, u64 size) {
 
 #define SHA1ROTATELEFT(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Both values are 64-bit for multi-GiB inputs; the tail is always in [9, 72].
 u64 hash_sha1_chunk_count(u64 size, u32* out_tail_bytes) {
     const u64 chunk_count = (size + 8) / 64 + 1;
     *out_tail_bytes = (u32)(64 * chunk_count - size);
     return chunk_count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static int sha1digest(uint8_t* digest, char* hexdigest, const uint8_t* data, size_t databytes) {
     uint32_t W[80];
@@ -201,19 +193,14 @@ static int sha1digest(uint8_t* digest, char* hexdigest, const uint8_t* data, siz
 
 #undef SHA1ROTATELEFT
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_hash_sha1(const u8* data, u64 size, u8 out[20]) {
     sha1digest(out, nullptr, data, (size_t)size);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void hash_sha1_hex(const u8* data, u64 size, char out[41]) {
     sha1digest(nullptr, out, data, (size_t)size);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MD5 - public domain implementation
 //
 // This code implements the MD5 message-digest algorithm.
@@ -230,8 +217,6 @@ static void md5_transform(u32 buf[4], const u32 in[16]);
 
 // Central step in the MD5 algorithm
 #define MD5_STEP(f, w, x, y, z, data, s) (w += f(x, y, z) + data, w = w << s | w >> (32 - s), w += x)
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void md5_transform(u32 buf[4], const u32 in[16]) {
     u32 a = buf[0];
@@ -319,8 +304,6 @@ static void md5_transform(u32 buf[4], const u32 in[16]) {
 #undef MD5_F4
 #undef MD5_STEP
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void hash_md5_init(Md5Context* ctx) {
     ctx->buf[0] = 0x67452301;
     ctx->buf[1] = 0xefcdab89;
@@ -329,8 +312,6 @@ void hash_md5_init(Md5Context* ctx) {
     ctx->bits[0] = 0;
     ctx->bits[1] = 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void hash_md5_update(Md5Context* ctx, const u8* data, u64 size) {
     u32 t = ctx->bits[0];
@@ -367,8 +348,6 @@ void hash_md5_update(Md5Context* ctx, const u8* data, u64 size) {
     memcpy(ctx->in, data, (size_t)size);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void hash_md5_final(Md5Context* ctx, u8 out[16]) {
     // Number of bytes mod 64
     u32 count = (ctx->bits[0] >> 3) & 0x3f;
@@ -401,16 +380,12 @@ void hash_md5_final(Md5Context* ctx, u8 out[16]) {
     memset(ctx, 0, sizeof(*ctx));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_hash_md5(const u8* data, u64 size, u8 out[16]) {
     Md5Context ctx;
     hash_md5_init(&ctx);
     hash_md5_update(&ctx, data, size);
     hash_md5_final(&ctx, out);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void hash_md5_hex(const u8* data, u64 size, char out[33]) {
     u8 digest[16];
@@ -420,7 +395,6 @@ void hash_md5_hex(const u8* data, u64 size, char out[33]) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SHA256 - public domain implementation
 //
 // Based on Brad Conte's compact SHA256. Public domain.
@@ -443,8 +417,6 @@ static const u32 sha256_k[64] = {
     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void sha256_transform(Sha256Context* ctx, const u8 block[64]) {
     u32 a, b, c, d, e, f, g, h, t1, t2, m[64];
@@ -496,8 +468,6 @@ static void sha256_transform(Sha256Context* ctx, const u8 block[64]) {
 #undef SHA256_SIG0
 #undef SHA256_SIG1
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_hash_sha256_init(Sha256Context* ctx) {
     ctx->datalen = 0;
     ctx->bitcount = 0;
@@ -511,8 +481,6 @@ void fl_hash_sha256_init(Sha256Context* ctx) {
     ctx->state[7] = 0x5be0cd19;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_hash_sha256_update(Sha256Context* ctx, const u8* data, u64 size) {
     for (u64 i = 0; i < size; ++i) {
         ctx->data[ctx->datalen] = data[i];
@@ -524,8 +492,6 @@ void fl_hash_sha256_update(Sha256Context* ctx, const u8* data, u64 size) {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_hash_sha256_final(Sha256Context* ctx, u8 out[32]) {
     u32 i = ctx->datalen;
@@ -566,8 +532,6 @@ void fl_hash_sha256_final(Sha256Context* ctx, u8 out[32]) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void hash_sha256(const u8* data, u64 size, u8 out[32]) {
     Sha256Context ctx;
     fl_hash_sha256_init(&ctx);
@@ -575,15 +539,11 @@ void hash_sha256(const u8* data, u64 size, u8 out[32]) {
     fl_hash_sha256_final(&ctx, out);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_hash_sha256_hex(const u8* data, u64 size, char out[65]) {
     u8 digest[32];
     hash_sha256(data, size, digest);
     fl_hash_sha256_digest_hex(digest, out);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_hash_sha256_digest_hex(const u8 digest[32], char out[65]) {
     for (int i = 0; i < 32; i++) {

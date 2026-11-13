@@ -7,7 +7,6 @@
 #include <ui/image_decode.h>
 #include <ui/vector_image.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image preparation seam: place a decoded static image into the atlas, or onto a dedicated slot-tier texture
 // (gpu_prepare_image_wants_slot_tier). Runs on the render thread.
 //
@@ -60,7 +59,6 @@ bool prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlIma
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Cell rasterization shared by glyph and SVG preparation.
 
 // Upload quad_count quadratics into the curve SSBO and bind it at base 0.
@@ -72,14 +70,12 @@ static void upload_curves(GpuShared* self, const f32* floats, u32 quad_count) {
     gl->BindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, self->curve_ssbo);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Launch one thread per texel of a pw x ph cell, then fence the cell's image stores for texture fetches.
 static void dispatch_cell(const GpuGl* gl, u32 pw, u32 ph) {
     gl->DispatchCompute((pw + GPU_TILE_SIZE - 1u) / GPU_TILE_SIZE, (ph + GPU_TILE_SIZE - 1u) / GPU_TILE_SIZE, 1);
     gl->MemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rasterize quad_count quadratics into the cell at (x, y) of the R8 atlas texture target through glyph_prog.
 static void raster_coverage_cell(GpuShared* self, GLuint target, u32 x, u32 y, u32 pw, u32 ph, const f32* floats,
                                  u32 quad_count) {
@@ -93,7 +89,6 @@ static void raster_coverage_cell(GpuShared* self, GLuint target, u32 x, u32 y, u
     dispatch_cell(gl, pw, ph);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Glyph preparation seam: place the glyph and rasterize its lowered outline into the R8 glyph atlas with one
 // compute dispatch. Runs on the render thread.
 
@@ -111,7 +106,6 @@ void prepare_glyph(void* user_data, FlFontId font, u16 size, u32 glyph_id, const
     fl_arena_rewind(self->frame_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rasterize one live SVG cell into its atlas cell: the GpuRasterCellFn the shared vector-prepare calls for a
 // cell's first raster and for each survivor's re-raster after a compaction. A monochrome cell (color false)
 // rasterizes R8 coverage through glyph_prog into the mono atlas; a multi-color cell composites per-shape records
@@ -150,7 +144,6 @@ static void raster_svg_cell(void* backend, const GpuSvgEntry* entry, const FlVec
     fl_arena_rewind(self->frame_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Vector preparation seam: rasterize a solid-fill icon into the mono or multi-color SVG atlas through
 // gpu_prepare_vector. Runs on the render thread.
 

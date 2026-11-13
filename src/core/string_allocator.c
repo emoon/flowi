@@ -3,8 +3,6 @@
 #include "math.h"
 #include "memory.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u32 get_bucket_for_size(u64 size, u32 min_log2) {
     if (size == 0) {
         return 0;
@@ -20,8 +18,6 @@ static inline u32 get_bucket_for_size(u64 size, u32 min_log2) {
     return log2 - min_log2;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 StringAllocator* string_allocator_new(FlArena* arena) {
     StringAllocator* self = arena_alloc_zero(arena, StringAllocator);
 
@@ -36,8 +32,6 @@ StringAllocator* string_allocator_new(FlArena* arena) {
 
     return self;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString string_allocator_alloc(StringAllocator* self, u64 size) {
     FL_ASSERT(self->arena != nullptr);
@@ -77,8 +71,6 @@ FlString string_allocator_alloc(StringAllocator* self, u64 size) {
     return (FlString) { .data = ptr, .length = size };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void string_allocator_free(StringAllocator* self, FlString str) {
 
     // Static strings were not allocated here
@@ -114,8 +106,6 @@ void string_allocator_free(StringAllocator* self, FlString str) {
 
     mutex_unlock(&self->lock);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString string_allocator_copy(StringAllocator* self, FlString src) {
     // A static string needs no allocation

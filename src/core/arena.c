@@ -15,7 +15,6 @@
 
 thread_local static FlArena* s_arena_scratch = nullptr;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Global Arena Tracker
 
 typedef struct {
@@ -27,8 +26,6 @@ typedef struct {
 
 static ArenaTracker g_arena_tracker = { 0 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_tracker_init(void) {
     if (once_begin(&g_arena_tracker.initialized)) {
         mutex_init(&g_arena_tracker.mutex);
@@ -37,8 +34,6 @@ void arena_tracker_init(void) {
         once_end(&g_arena_tracker.initialized);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void arena_tracker_destroy(void) {
     if (once_is_done(&g_arena_tracker.initialized)) {
@@ -49,8 +44,6 @@ void arena_tracker_destroy(void) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_tracker_register(FlArena* self) {
     if (FL_UNLIKELY(!once_is_done(&g_arena_tracker.initialized))) {
         arena_tracker_init();
@@ -60,8 +53,6 @@ void arena_tracker_register(FlArena* self) {
     dll_push_back_np(g_arena_tracker.head, g_arena_tracker.tail, self, next_tracked, prev_tracked);
     mutex_unlock(&g_arena_tracker.mutex);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void arena_tracker_unregister(FlArena* self) {
     if (FL_UNLIKELY(!once_is_done(&g_arena_tracker.initialized))) {
@@ -92,8 +83,6 @@ void arena_tracker_unregister(FlArena* self) {
     mutex_unlock(&g_arena_tracker.mutex);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_tracker_iterate_all(ArenaIteratorCallback callback, void* user_data) {
     if (!callback) {
         return;
@@ -114,8 +103,6 @@ void arena_tracker_iterate_all(ArenaIteratorCallback callback, void* user_data) 
     mutex_unlock(&g_arena_tracker.mutex);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_stats(FlArena* arena, FlArenaStats* out) {
     // Relaxed: the counters are read for reporting, and nothing downstream orders other memory
     // against them.
@@ -126,20 +113,15 @@ void arena_stats(FlArena* arena, FlArenaStats* out) {
     out->site_line = arena->allocation_site_line;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlArena functions
 
 void vm_range_rewind(FlArena* self);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void vm_range_rewind(FlArena* self) {
     // Reset to the rewind floor: just after the arena structure, plus any header
     // (e.g. an FlArenaMt wrapper) that must survive a full rewind.
     atomic_store_explicit(&self->pos, self->rewind_pos, memory_order_relaxed);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlArena* arena_new_(const ArenaSettings* settings) {
     u64 page_size = get_page_size_os();
@@ -188,8 +170,6 @@ FlArena* arena_new_(const ArenaSettings* settings) {
     return self;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlArena* fl_arena_create(u64 reserved_size, const char* file, int line) {
     ArenaSettings settings = {
         .reserved_size = reserved_size,
@@ -198,8 +178,6 @@ FlArena* fl_arena_create(u64 reserved_size, const char* file, int line) {
     };
     return arena_new_(&settings);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void* fl_arena_current_pos(FlArena* self) {
     u64 current_pos = atomic_load_explicit(&self->pos, memory_order_relaxed);
@@ -251,7 +229,6 @@ u64 fl_arena_count_elements(const FlArena* self, const void* start_ptr, u64 elem
     return bytes_used / element_size;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Thread-safe (CAS-based) allocation - this is the default
 
 void* fl_arena_alloc_raw(FlArena* self, u64 size, u64 alignment) {
@@ -334,15 +311,12 @@ void* fl_arena_alloc_raw(FlArena* self, u64 size, u64 alignment) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void* fl_arena_alloc_raw_zero(FlArena* self, u64 size, u64 alignment) {
     void* ptr = fl_arena_alloc_raw(self, size, alignment);
     memory_zero(ptr, size);
     return ptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Single-threaded allocation - use only when arena is not shared between threads
 
 void* fl_arena_alloc_raw_st(FlArena* self, u64 size, u64 alignment) {
@@ -397,15 +371,11 @@ void* fl_arena_alloc_raw_st(FlArena* self, u64 size, u64 alignment) {
     return return_ptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void* fl_arena_alloc_raw_zero_st(FlArena* self, u64 size, u64 alignment) {
     void* ptr = fl_arena_alloc_raw_st(self, size, alignment);
     memory_zero(ptr, size);
     return ptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_arena_rewind(FlArena* self) {
     // Everything in [rewind_pos, pos) becomes logically freed; poison it to detect use-after-rewind.
@@ -423,8 +393,6 @@ void fl_arena_rewind(FlArena* self) {
     asan_unpoison_memory_region(self->ptr, self->rewind_pos);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_rewind_to(FlArena* self, const void* pos) {
     FL_ASSERT(self != nullptr);
 
@@ -440,8 +408,6 @@ void arena_rewind_to(FlArena* self, const void* pos) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_arena_destroy(FlArena* self) {
     FL_VALIDATE(self != nullptr);
 
@@ -453,8 +419,6 @@ void fl_arena_destroy(FlArena* self) {
     u64 reserved_size = self->reserved_size;
     release_range_os(ptr, reserved_size);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlArenaMt* arena_mt_new_(const ArenaSettings* settings) {
     FlArena* arena = arena_new_(settings);
@@ -474,19 +438,13 @@ FlArenaMt* arena_mt_new_(const ArenaSettings* settings) {
     return arena_mt;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void* arena_mt_alloc_raw(FlArenaMt* self, u64 size, u64 alignment) {
     return fl_arena_alloc_raw(self->arena, size, alignment);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_mt_destroy(FlArenaMt* self) {
     fl_arena_destroy(self->arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void arena_scratch_init(void) {
     if (s_arena_scratch != nullptr) {
@@ -495,8 +453,6 @@ void arena_scratch_init(void) {
     s_arena_scratch = arena_new();
     s_arena_scratch->next = arena_new();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void arena_scratch_destroy(void) {
     if (s_arena_scratch) {
@@ -509,8 +465,6 @@ void arena_scratch_destroy(void) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlTempArena fl_arena_scratch_begin(void) {
     if (s_arena_scratch == nullptr) {
         arena_scratch_init();
@@ -521,8 +475,6 @@ FlTempArena fl_arena_scratch_begin(void) {
     temp_arena.pos = atomic_load_explicit(&temp_arena.arena->pos, memory_order_relaxed);
     return temp_arena;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlTempArena fl_arena_scratch_begin_conflict(const FlArena* self) {
     if (s_arena_scratch == nullptr) {
@@ -539,8 +491,6 @@ FlTempArena fl_arena_scratch_begin_conflict(const FlArena* self) {
     temp_arena.pos = atomic_load_explicit(&temp_arena.arena->pos, memory_order_relaxed);
     return temp_arena;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_arena_align(FlArena* self, u64 alignment) {
     u64 current_pos = atomic_load_explicit(&self->pos, memory_order_relaxed);

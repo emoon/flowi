@@ -10,10 +10,7 @@
 #include <sys/inotify.h>
 #include <unistd.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static LogChannelId FW_ID = LOG_CHANNEL_INVALID;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct WatchEntry {
     int wd;
@@ -26,8 +23,6 @@ typedef struct LinuxWatcherData {
     bool recursive;
     fixed_array(WatchEntry) watches;
 } LinuxWatcherData;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherError map_errno_to_error(int err) {
     switch (err) {
@@ -45,8 +40,6 @@ FileWatcherError map_errno_to_error(int err) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Removes every inotify watch this watcher holds and empties the wd -> path table. Used by normal
 // teardown and by the failure paths in platform_start_watching, where the watches added before the
 // failure must not outlive the watcher that was rejected.
@@ -61,8 +54,6 @@ static void remove_all_watches(LinuxWatcherData* data) {
     fixed_array_clear(&data->watches);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString find_path_for_wd(LinuxWatcherData* data, int wd) {
     for (u32 i = 0; i < fixed_array_length(&data->watches); i++) {
         WatchEntry* entry = fixed_array_get_ptr(&data->watches, i);
@@ -72,8 +63,6 @@ static FlString find_path_for_wd(LinuxWatcherData* data, int wd) {
     }
     return string_empty();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Returns 0 on success, otherwise an errno the caller maps through map_errno_to_error(). That is
 // either the errno of a failing inotify_add_watch or ENOSPC when the wd -> path table is full.
@@ -101,8 +90,6 @@ static int add_watch_for_directory(LinuxWatcherData* data, FlString path, FlAren
     logc_debug(FW_ID, "Added watch (wd: %d) for: %S", wd, path);
     return 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Returns 0 when every directory under base_path was watched, otherwise the errno that stopped the
 // walk. Stops at the first failure. An unreadable directory is skipped, not treated as a failure.
@@ -139,8 +126,6 @@ static int add_watches_recursive(LinuxWatcherData* data, FlString base_path, FlA
     dir_close_os(&dir);
     return result;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherError platform_start_watching(FileWatcherState* state) {
     if (FW_ID == LOG_CHANNEL_INVALID) {
@@ -200,8 +185,6 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
     return FileWatcherError_Success;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void platform_stop_watching(FileWatcherState* state) {
     if (!state || !state->platform_data) {
         return;
@@ -219,8 +202,6 @@ void platform_stop_watching(FileWatcherState* state) {
 
     logc_debug(FW_ID, "FileWatcher[%u]: Linux inotify watcher stopped", state->handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static u32 map_inotify_mask_to_change_types(u32 mask) {
     u32 change_types = 0;
@@ -240,8 +221,6 @@ static u32 map_inotify_mask_to_change_types(u32 mask) {
 
     return change_types;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherError platform_poll_changes(FileWatcherState* state) {
     if (!state || !state->platform_data || !state->is_active) {

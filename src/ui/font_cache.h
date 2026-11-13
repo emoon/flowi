@@ -9,7 +9,6 @@
 #include <flowi/ui/font.h>
 #include <flowi/ui/text.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared font layer (CONTEXT.md "Font (shared layer)").
 //
 // Backend-agnostic font handling: FreeType face management, metrics/measurement, shaping, glyph indices, and
@@ -18,7 +17,6 @@
 
 typedef struct FlFontCache FlFontCache;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-size vertical metrics for a font. count doubles as a readiness flag (0 = font/metrics not ready yet, so
 // callers should skip emitting this run for the frame). All distances are 26.6 fixed point.
 
@@ -28,15 +26,12 @@ typedef struct GlyphList {
     int descender; // baseline to bottom, typically negative
 } GlyphList;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef enum FontStatus {
     FontStatus_Loading,
     FontStatus_Ready,
     FontStatus_Failed,
 } FontStatus;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Raster source access: the upstream input a backend needs to realize a font's glyphs itself - the FreeType
 // file bytes, or the built-in default font's scale.
 
@@ -52,8 +47,6 @@ typedef struct FlFontRasterSource {
     i64 font_data_size;  // FreeType: byte count
     u16 default_scale;   // Default: integer scale of the 8x8 built-in font
 } FlFontRasterSource;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlFontCache* font_cache_new(struct FlArena* arena);
 void font_cache_destroy(FlFontCache* self);

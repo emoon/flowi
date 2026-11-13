@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Standalone compile guard for the hand-written public nav/action query surface (<flowi/ui/nav.h>).
 //
 // No .def single-sources this surface: the C header and the Rust binding (rust/flowi/src/sys/nav.rs) are both

@@ -2,7 +2,6 @@
 
 #include <stdbool.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: the compute-shader GLSL program sources. Four programs: classification then raster (both over the
 // draw-command/AABB/tile/clip SSBOs), the per-glyph coverage raster, and the multi-color SVG raster.
 //
@@ -11,8 +10,6 @@
 // the shared-vocabulary compat header (shader_compat_glsl.h), a generated "#define" preamble splicing the host's
 // constants (tile geometry, atlas sizes, slot count), the shared GLSL snippets, and the shader body. The sources
 // functions below fill the array glShaderSource takes.
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Upper bound on the source-string count any program assembles - sizes the array passed to the fillers below.
 #define GPU_SHADER_MAX_SOURCES 9

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared SDL event translation + input-device state: the SDL->Fl event pump (keyboard, text, mouse, wheel,
 // gamepad, window events) and the per-window OS mechanics (system-cursor cache, relative-mouse mode, warp,
 // clipboard) the SDL window backend delegates to.

@@ -9,25 +9,17 @@
 #define ASSERT_ERROR_NE(actual, expected) ASSERT_NE((int)(actual), (int)(expected))
 #define ASSERT_STR_EQ(actual, expected) ASSERT_TRUE(fl_string_equals((actual), S(expected)))
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlJsonValue* parse_strict(FlArena* arena, FlString text) {
     return fl_json_parse_with_flags(arena, text, FlJsonParseFlags_Default, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* parse_json5(FlArena* arena, FlString text) {
     return fl_json_parse_with_flags(arena, text, FlJsonParseFlags_AllowJson5, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString write_pretty(FlArena* arena, const FlJsonValue* value) {
     return fl_json_write_pretty(arena, value, "  ", "\n");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonParseResult parse_error(FlArena* arena, FlString text, size_t flags) {
     FlJsonParseResult result;
@@ -38,23 +30,17 @@ static FlJsonParseResult parse_error(FlArena* arena, FlString text, size_t flags
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_rejected(FlArena* arena, FlString text, size_t flags) {
     FlJsonParseResult result;
     FlJsonValue* value = fl_json_parse_with_flags(arena, text, flags, &result);
     return value == nullptr && result.error != FlJsonParseError_None;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_accepted(FlArena* arena, FlString text, size_t flags) {
     FlJsonParseResult result;
     FlJsonValue* value = fl_json_parse_with_flags(arena, text, flags, &result);
     return value != nullptr && result.error == FlJsonParseError_None;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, parse_basic_types) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -83,8 +69,6 @@ UTEST(json_parser, parse_basic_types) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, parse_arrays_and_objects) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -119,8 +103,6 @@ UTEST(json_parser, parse_arrays_and_objects) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_parser, strict_rejects_malformed_input) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -153,8 +135,6 @@ UTEST(json_parser, strict_rejects_malformed_input) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_parser, strict_rejects_malformed_strings) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -168,8 +148,6 @@ UTEST(json_parser, strict_rejects_malformed_strings) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, strict_rejects_malformed_numbers) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -185,8 +163,6 @@ UTEST(json_parser, strict_rejects_malformed_numbers) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, accepts_edge_cases) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -206,8 +182,6 @@ UTEST(json_parser, accepts_edge_cases) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_parser, decodes_string_escapes) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -223,8 +197,6 @@ UTEST(json_parser, decodes_string_escapes) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, json5_accepts_extensions) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -244,8 +216,6 @@ UTEST(json_parser, json5_accepts_extensions) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_parser, json5_still_rejects_malformed_input) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -260,8 +230,6 @@ UTEST(json_parser, json5_still_rejects_malformed_input) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, json5_parses_a_global_object) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -282,8 +250,6 @@ UTEST(json_parser, json5_parses_a_global_object) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_parser, json5_global_object_members) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -294,8 +260,6 @@ UTEST(json_parser, json5_global_object_members) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, reports_the_failure_position) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -314,8 +278,6 @@ UTEST(json_parser, reports_the_failure_position) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_parser, failed_parse_releases_its_allocations) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -325,8 +287,6 @@ UTEST(json_parser, failed_parse_releases_its_allocations) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, find_property_matches_the_full_key) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -342,8 +302,6 @@ UTEST(json_parser, find_property_matches_the_full_key) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_parser, find_property_tolerates_non_objects) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -352,8 +310,6 @@ UTEST(json_parser, find_property_tolerates_non_objects) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, string_property_defaults_to_empty) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -365,8 +321,6 @@ UTEST(json_parser, string_property_defaults_to_empty) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_parser, typed_number_properties) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -399,8 +353,6 @@ UTEST(json_parser, typed_number_properties) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_parser, number_accessors_are_bounded_by_number_size) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -417,8 +369,6 @@ UTEST(json_parser, number_accessors_are_bounded_by_number_size) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_parser, error_descriptions_are_distinct) {
     const struct {
         FlJsonParseError error;
@@ -434,8 +384,6 @@ UTEST(json_parser, error_descriptions_are_distinct) {
         ASSERT_TRUE(fl_string_equals(fl_json_get_error_description(cases[i].error), cases[i].description));
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_writer, pretty_output_layout) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -466,8 +414,6 @@ UTEST(json_writer, pretty_output_layout) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(json_writer, normalizes_json5_numbers) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -480,8 +426,6 @@ UTEST(json_writer, normalizes_json5_numbers) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_writer, output_round_trips_through_the_parser) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -496,8 +440,6 @@ UTEST(json_writer, output_round_trips_through_the_parser) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(json_writer, writes_builder_trees) {
     FlArena* arena = arena_new(.reserved_size = MB(64));

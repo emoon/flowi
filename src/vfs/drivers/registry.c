@@ -3,7 +3,6 @@
 
 #include <vfs/vfs.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bulk registration of the archive drivers this build contains.
 //
 // vfs_register_driver splices each driver in behind the previous one and ahead of the LocalFS fallback, so the

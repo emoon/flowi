@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Compile-only parity guard: the api_gen-generated public per-frame-profiler surface (<flowi/core/perf_scope.h>).
 //
 // This TU links nothing. It proves at compile time that the generated header is self-contained valid C against only

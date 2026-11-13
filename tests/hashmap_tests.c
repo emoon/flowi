@@ -57,8 +57,6 @@ UTEST(hashmap, int_to_int) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hashmap, int_to_struct) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -91,8 +89,6 @@ UTEST(hashmap, int_to_struct) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hashmap, pointer_keys) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -119,8 +115,6 @@ UTEST(hashmap, pointer_keys) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hashmap, clear_and_reuse) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -150,8 +144,6 @@ UTEST(hashmap, clear_and_reuse) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hashmap, collision_handling) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -191,8 +183,6 @@ UTEST(hashmap, collision_handling) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hashmap, large_data) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -215,8 +205,6 @@ UTEST(hashmap, large_data) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hashmap, string_keys_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -249,8 +237,6 @@ UTEST(hashmap, string_keys_basic) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hashmap, string_keys_same_content_different_memory) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -280,8 +266,6 @@ UTEST(hashmap, string_keys_same_content_different_memory) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hashmap, string_keys_empty_strings) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -302,8 +286,6 @@ UTEST(hashmap, string_keys_empty_strings) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hashmap, string_keys_update_value) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -327,8 +309,6 @@ UTEST(hashmap, string_keys_update_value) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hashmap, string_keys_remove) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -361,8 +341,6 @@ UTEST(hashmap, string_keys_remove) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hashmap, string_keys_iteration) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -399,8 +377,6 @@ UTEST(hashmap, string_keys_iteration) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(hashmap, string_keys_collision_handling) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -427,8 +403,6 @@ UTEST(hashmap, string_keys_collision_handling) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hashmap, string_keys_clear_and_reuse) {
     FlArena* arena = arena_new(.reserved_size = MB(64));

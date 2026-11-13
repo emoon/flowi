@@ -1,8 +1,6 @@
 #include "gpu_svg_translate.h"
 #include "gpu_svg_atlas.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlCmdImage gpu_svg_image_cmd(FlImageHandle handle, GpuAtlasCell cell, FlVectorClass cls, FlColor tint, FlRect dst) {
     // Content sub-rect: drop the transparent padding border the cell carries for clean linear sampling.
     FlRect src = {

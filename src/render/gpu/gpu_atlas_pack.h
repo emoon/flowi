@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: skyline-bottom-left rect packer. Append-only - rects are placed, never removed;
 // clients layer handle bookkeeping and released-cell reuse on top.
 
@@ -8,7 +7,6 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The skyline is a left-to-right list of segments; segment i spans x in [nodes[i].x, nodes[i+1].x) (the last
 // runs to the atlas width) at height nodes[i].y (the first free row above the packed rects in that span).
 
@@ -30,8 +28,6 @@ typedef struct GpuAtlasPack {
     u32 width;
     u32 height;
 } GpuAtlasPack;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Initialize (or reset) a packer over a width x height atlas. Node storage comes from arena on first init;
 // re-initializing with the same width reuses it.

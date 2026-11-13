@@ -5,7 +5,6 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // OS Path conversion
 
 typedef struct {
@@ -24,8 +23,6 @@ OsPath string_to_os_path(struct FlArena* arena, FlString path);
 #define os_path_str(os_path) ((os_path).cstr_path)
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 i64 file_get_size_os(FlString path);
 i64 file_read_os(u8* dest, FlString path, const i64 buffer_size);
 i64 file_write_os(FlString path, const u8* data, i64 size);
@@ -33,7 +30,6 @@ i64 file_open_os(FlString path, const int flags);
 i64 file_read_from_handle_os(u8* dest, const i64 fd, const i64 file_size, const i64 buffer_size);
 void file_close_handle_os(i64 fd);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Read-only file memory mapping
 
 typedef struct FileMmap {
@@ -69,7 +65,6 @@ bool file_remove_directory_os(FlString path);
 bool file_remove_directory_recursive_os(FlString path);
 void file_delete_os(FlString path);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File system information and directory operations
 
 typedef struct FileStat {
@@ -96,11 +91,7 @@ DirHandle dir_open_os(struct FlArena* arena, FlString path);
 FileStat dir_read_next_os(struct FlArena* arena, DirHandle* dir);
 void dir_close_os(DirHandle* dir);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void stderr_write_os(FlString str);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 i64 get_current_time_us_os(void);
 u64 get_current_time_ms_os(void);
@@ -123,15 +114,11 @@ static inline u64 monotonic_ticks_to_ns(u64 ticks, u64 ticks_per_second) {
 void sleep_us(u64 microseconds);
 void sleep_ms(u64 milliseconds);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Splits a duration into whole seconds and the remaining nanoseconds (below one second), the form nanosleep takes.
 static inline void sleep_ms_split(u64 milliseconds, u64* out_seconds, u32* out_nanoseconds) {
     *out_seconds = milliseconds / 1000;
     *out_nanoseconds = (u32)((milliseconds % 1000) * 1000000);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct CACHE_ALIGNED Mutex {
     u8 data[128]; // Opaque platform storage
@@ -142,7 +129,6 @@ void mutex_lock(Mutex* mutex);
 void mutex_unlock(Mutex* mutex);
 void mutex_destroy(Mutex* mutex);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Auto-unlock mutex scope guard
 
 static inline void mutex_unlock_cleanup(Mutex** mutex_ptr) {
@@ -152,8 +138,6 @@ static inline void mutex_unlock_cleanup(Mutex** mutex_ptr) {
 #define mutex_lock_auto(mutex) \
     mutex_lock(mutex);         \
     __attribute__((cleanup(mutex_unlock_cleanup))) Mutex* CONCAT(_mutex_guard_, __LINE__) = (mutex)
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct CACHE_ALIGNED CondVar {
     u8 data[128]; // Opaque platform storage
@@ -165,7 +149,6 @@ void condvar_signal(CondVar* condvar);
 void condvar_broadcast(CondVar* condvar);
 void condvar_destroy(CondVar* condvar);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Thread management
 
 typedef struct Thread {
@@ -189,7 +172,6 @@ void os_thread_set_name(const char* name);
 // at all. Linux is the only one that performs any; an empty list there is a no-op that succeeds.
 bool os_thread_set_affinity(Thread* thread, const int* cpu_ids, int count);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Memory management functions
 
 typedef enum ArenaError {
@@ -207,7 +189,6 @@ ArenaError decommit_memory_os(void* ptr, u64 size);
 // Inverse of reserve_range_os: releases the reservation (address range + VMA) back to the OS.
 ArenaError release_range_os(void* ptr, u64 size);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System information and utilities
 
 FlString get_temp_directory_os(struct FlArena* arena);
@@ -216,7 +197,6 @@ FlString get_current_directory_os(struct FlArena* arena);
 
 u32 get_process_id_os(void);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Disk space information
 
 typedef struct DiskSpaceInfo {
@@ -235,7 +215,6 @@ DiskSpaceInfo get_disk_space_os(FlString path);
 void os_disk_space_test_force_statvfs_failure(bool enable);
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Environment variables (cross-platform)
 //
 // WARNING: These functions are NOT thread-safe when used concurrently.

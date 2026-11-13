@@ -8,7 +8,6 @@
 #include <core/string.h>
 #include "vfs_private.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Closes a plugin handle; every call site passes a live one.
 
 static void close_plugin_handle(const FlVfsPlugin* plugin, void* instance, void* handle) {
@@ -16,7 +15,6 @@ static void close_plugin_handle(const FlVfsPlugin* plugin, void* instance, void*
     plugin->close(instance, handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Plugin utilities
 
 FlString vfs_path_range(const PathComponents* components, int start, u32 end, FlArena* arena) {
@@ -26,8 +24,6 @@ FlString vfs_path_range(const PathComponents* components, int start, u32 end, Fl
     }
     return path_reconstruct_from_segments(&range, start, end, arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
     DriverHandle opened;
@@ -91,8 +87,6 @@ static TryLoadData try_open_file(VfsPluginEntry* plugin_entry, void* parent_hand
     return (TryLoadData) { .error = VfsResolveError_FileNotFound };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 DriverHandle vfs_resolve_find_root_driver(VfsState* self, FlArena* temp, const PathComponents* comp, int start) {
     profile_function_auto_nc("vfs:vfs_resolve_find_root_driver", PROFILE_COLOR_CYAN);
     int end = comp->segments.count;
@@ -120,13 +114,9 @@ DriverHandle vfs_resolve_find_root_driver(VfsState* self, FlArena* temp, const P
     return (DriverHandle) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool driver_opens_from_memory(const FlVfsPlugin* plugin) {
     return (plugin->get_capabilities() & FlVfsDriverCapabilities_Memory) && plugin->open_memory;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 DriverHandle vfs_resolve_find_memory_driver(VfsState* self, FlString org_path, u8* data, u64 size) {
     profile_function_auto_nc("vfs:vfs_resolve_find_memory_driver", PROFILE_COLOR_CYAN);
@@ -153,8 +143,6 @@ DriverHandle vfs_resolve_find_memory_driver(VfsState* self, FlString org_path, u
     return (DriverHandle) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool has_memory_driver(VfsState* self) {
     for (VfsPluginEntry* entry = self->plugin_first; entry != nullptr; entry = entry->next) {
         if (driver_opens_from_memory(entry->plugin)) {
@@ -164,8 +152,6 @@ static bool has_memory_driver(VfsState* self) {
 
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Reads the whole file behind handle and offers it to the memory drivers as an archive. loaded_path only names the
 // data for driver selection. The memory driver owns the buffer once it has opened it; in every other case it is freed.
@@ -207,7 +193,6 @@ static MemoryArchive open_archive_in_memory(VfsState* self, VfsPluginEntry* entr
     return archive;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Path resolution
 
 FinalDriver vfs_resolve_from_root(VfsState* self, VfsPluginEntry* root_entry, void* root_handle,
@@ -297,8 +282,6 @@ FinalDriver vfs_resolve_from_root(VfsState* self, VfsPluginEntry* root_entry, vo
     return (FinalDriver) { .plugin_entry = current_entry, .handle = current_handle, .error = VfsResolveError_None };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FinalDriver vfs_resolve_mount_path(VfsState* self, FlString path, FlArena* scratch) {
     profile_function_auto_nc("vfs:vfs_resolve_mount_path", PROFILE_COLOR_CYAN);
 
@@ -314,7 +297,6 @@ FinalDriver vfs_resolve_mount_path(VfsState* self, FlString path, FlArena* scrat
                                  root_plugin.path_index, scratch);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Archives below a mount's root
 
 bool vfs_name_is_archive(VfsState* self, FlString name) {
@@ -331,8 +313,6 @@ bool vfs_name_is_archive(VfsState* self, FlString name) {
 
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Opens a file on disk in place with the first archive driver that accepts it.
 static DriverHandle open_archive_file(VfsState* self, FlString file_path) {
@@ -359,8 +339,6 @@ static DriverHandle open_archive_file(VfsState* self, FlString file_path) {
 
     return (DriverHandle) { 0 };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 DriverHandle vfs_resolve_open_archive(VfsState* self, VfsPluginEntry* parent, void* parent_handle, FlString path,
                                       i64 size, FlArena* scratch) {

@@ -5,7 +5,6 @@
 
 #include "unit_tests_common.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FNV-1a-64 over an RGB24 readback, stride-aware.
 //
 // Two readbacks alias the surface's own output buffer, so the first frame is digested before the second is
@@ -23,7 +22,6 @@ static u64 hash_readback(const FlPixelReadback* rb) {
     return hash;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resize every part of the output geometry the host owns: the surface itself, the context's layout
 // area (what ui_set_display_resolution sets), and the dimensions Clay measures against.
 
@@ -33,8 +31,6 @@ static void set_resolution(FlUiCtx* ctx, int width, int height) {
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = (float)width, .height = (float)height });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // One frame filling the window with a known colour, then the surface read back.
 static void render_fill_and_read(FlUiCtx* ctx, FlColor fill, FlPixelReadback* out) {
     ui_update_begin(ctx);
@@ -43,7 +39,6 @@ static void render_fill_and_read(FlUiCtx* ctx, FlColor fill, FlPixelReadback* ou
     render_seam_read_pixels(&s_render.backend, ctx->surface, out);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A surface presents at 1080p, at 720p and at a PAL/SD height: the readback is correctly sized and
 // unpadded, carries real ink, and reproduces byte for byte when the same content is drawn again.
 

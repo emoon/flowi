@@ -28,7 +28,6 @@ typedef struct FlVectorImage {
     float height;
 } FlVectorImage;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared vector layer - the SVG analog of the shared font layer that produces FlGlyphOutline.
 //
 // Parses an SVG once (via nanosvg) into a neutral, resolution-independent form - per-shape closed cubic
@@ -43,7 +42,6 @@ typedef struct FlVectorImage {
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Parse SVG bytes into a neutral vector image, allocated from arena (which must outlive every use - the
 // shared layer hands these contours back to the backend on every zoom step). Never rasterizes.
 //

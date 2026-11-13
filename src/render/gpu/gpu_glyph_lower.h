@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: outline -> quadratic lowering for the glyph-raster dispatch.
 //
 // Turns the shared font layer's outline (font_cache.h FlGlyphOutline - pixels, y-up, pen-relative) into the curve
@@ -13,8 +12,6 @@
 
 struct FlGlyphOutline;
 struct FlGlyphSegment;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Worst-case quadratics per outline segment (a cubic's 4) - sizes the caller's output buffer:
 // segment_count * GPU_GLYPH_LOWER_MAX_QUADS_PER_SEGMENT * 6 f32.

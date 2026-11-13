@@ -40,7 +40,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GL entry points the host-side compositor needs beyond GL 1.x, resolved once through SDL_GL_GetProcAddress.
 
 #define COMPOSITOR_GL_FNS(X)                           \
@@ -80,7 +79,6 @@ static bool compositor_gl_load(CompositorGl* gl) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fullscreen-quad compositor. The vertex shader emits a screen-covering triangle from gl_VertexID (no VBO);
 // the fragment shader samples the UI texture flipped in V (the backend stores UI row 0 at texel row 0, the
 // opposite of GL's bottom-up sample origin) and blends it over the cleared background, premultiplied.
@@ -140,7 +138,6 @@ static GLuint build_compositor_program(const CompositorGl* gl) {
     return prog;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Palette + gallery layout. Cells are a fixed grid anchored top-left.
 
 static const FlColor k_bg = { 28, 30, 38, 255 };
@@ -170,7 +167,6 @@ static FlRect cell_rect(int col, int row) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // View: pan (pixels) + zoom, mapping authoring/world coordinates to screen as screen = world * zoom + pan. The
 // transform is applied to every coordinate and size as the scene is built. Angles are scale-invariant and
 // pass through untouched; the procedural image's source sub-rect is in texel space and is never transformed.
@@ -234,7 +230,6 @@ static void vw_image(FlArena* a, View v, FlImageSource src, FlImageMode mode, Fl
     fl_ir_image(a, src, mode, v_rect(v, dst), src_rect, tint, filter, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Text helper: prepare each on-screen glyph's atlas entry, then emit the run. Glyph prep is keyed by codepoint
 // to match fl_ir_text_layout's FlGlyph.glyph_id, but the outline is fetched by face glyph index (FT_Load_Glyph
 // wants an index, not a codepoint). scratch MUST be a different arena than the IR arena.
@@ -360,7 +355,6 @@ static void draw_cell_chrome(FlArena* arena, FlArena* scratch, FlRenderBackend* 
     draw_text(arena, scratch, backend, fc, font, v, LABEL_SIZE, k_dim, label, cell.x + 12.0f, cell.y + cell.h - 12.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The gallery scene, rebuilt into a rewound arena every frame (static - no animation).
 
 static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backend, FlFontCache* fc, FlFontId font,
@@ -520,7 +514,6 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
     *out_bytes = (size_t)((const u8*)fl_arena_current_pos(arena) - (const u8*)start);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Build a small procedural RGBA image and hand it to the backend's prepare_image seam under handle. Opaque,
 // so premultiplied == straight. The GPU backend keys the static image slot on the request id, so we pass
 // handle as the request id and reference it as a kind-0 source.
@@ -552,8 +545,6 @@ static void prepare_demo_image(FlRenderBackend* backend, FlArena* scratch, FlIma
     FlImageLoadRequest request = { .relative_path = FL_S("procedural") };
     backend->prepare_image(backend->user_data, (FlImageLoadRequestId)handle, &decoded, scratch, &request);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int main(void) {
     FlArena* arena = fl_init(1);

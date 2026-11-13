@@ -7,8 +7,6 @@
 #include <core/string.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct error_report_fixture {
     LogChannelId test_channel;
 };
@@ -19,13 +17,9 @@ UTEST_F_SETUP(error_report_fixture) {
     utest_fixture->test_channel = fl_log_register_channel(FL_S("TEST"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F_TEARDOWN(error_report_fixture) {
     error_report_cleanup();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(error_report_fixture, basic_error_formatting) {
     FlString error = error_message_format_no_log("Test error: %d", 42);
@@ -34,8 +28,6 @@ UTEST_F(error_report_fixture, basic_error_formatting) {
     ASSERT_GT((u64)error.length, 0);
     ASSERT_TRUE(strstr(error.data, "Test error: 42") != NULL);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(error_report_fixture, error_with_logging) {
     FlString error
@@ -46,8 +38,6 @@ UTEST_F(error_report_fixture, error_with_logging) {
     ASSERT_TRUE(strstr(error.data, "File not found: test.txt") != NULL);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(error_report_fixture, error_without_logging) {
     FlString error = error_message_format(LOG_CHANNEL_INVALID, LogLevel_Error, "Silent error: %d", 123);
 
@@ -55,8 +45,6 @@ UTEST_F(error_report_fixture, error_without_logging) {
     ASSERT_GT((u64)error.length, 0);
     ASSERT_TRUE(strstr(error.data, "Silent error: 123") != NULL);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(error_report_fixture, cleanup_resets_arena) {
     FlString error1 = error_message_format_no_log("Error 1");
@@ -75,8 +63,6 @@ UTEST_F(error_report_fixture, cleanup_resets_arena) {
     // error1/2/3 dangle after the cleanup above; only error4 is still valid here.
     ASSERT_GT((u64)error4.length, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(error_report_fixture, many_allocations) {
     const int num_allocations = 10000;
@@ -99,16 +85,12 @@ UTEST_F(error_report_fixture, many_allocations) {
     ASSERT_GT((u64)final_error.length, 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct ThreadTestData {
     LogChannelId channel;
     int thread_id;
     int num_iterations;
     _Atomic int success_count;
 } ThreadTestData;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void* thread_test_worker(void* arg) {
     ThreadTestData* data = (ThreadTestData*)arg;
@@ -123,8 +105,6 @@ static void* thread_test_worker(void* arg) {
 
     return NULL;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(error_report_fixture, thread_safety) {
 #define NUM_TEST_THREADS 4
@@ -157,8 +137,6 @@ UTEST_F(error_report_fixture, thread_safety) {
 #undef ITERATIONS_PER_THREAD
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(error_report_fixture, convenience_macros) {
     FlString error = error_message_error(utest_fixture->test_channel, "Error message");
     ASSERT_TRUE(error.data != NULL);
@@ -173,8 +151,6 @@ UTEST_F(error_report_fixture, convenience_macros) {
     ASSERT_TRUE(strstr(info.data, "Info message") != NULL);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(error_report_fixture, custom_format_specifiers) {
     FlString path = FL_S("/path/to/file.txt");
     FlString name = FL_S("example");
@@ -185,8 +161,6 @@ UTEST_F(error_report_fixture, custom_format_specifiers) {
     ASSERT_GT((u64)error.length, 0);
     ASSERT_TRUE(strstr(error.data, "Failed to load example from /path/to/file.txt") != NULL);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(error_report_fixture, multiple_rpstring_format) {
     FlString str1 = FL_S("first");
@@ -201,8 +175,6 @@ UTEST_F(error_report_fixture, multiple_rpstring_format) {
     ASSERT_TRUE(strstr(error.data, "third") != NULL);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(error_report_fixture, mixed_format_specifiers) {
     FlString filename = FL_S("config.json");
     int line = 42;
@@ -216,16 +188,12 @@ UTEST_F(error_report_fixture, mixed_format_specifiers) {
     ASSERT_TRUE(strstr(error.data, "syntax error") != NULL);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(error_report_fixture, empty_format_string) {
     FlString error = error_message_format_no_log("");
 
     ASSERT_TRUE(error.data != NULL);
     ASSERT_EQ((u64)error.length, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(error_report_fixture, long_error_message) {
     const char* long_text = "This is a very long error message that contains a lot of text to ensure that the "
@@ -239,8 +207,6 @@ UTEST_F(error_report_fixture, long_error_message) {
     ASSERT_EQ(memcmp(error.data, long_text, error.length), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString test_vformat_wrapper(LogChannelId channel, LogLevel level, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -249,8 +215,6 @@ static FlString test_vformat_wrapper(LogChannelId channel, LogLevel level, const
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString test_vformat_no_log_wrapper(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -258,8 +222,6 @@ static FlString test_vformat_no_log_wrapper(const char* fmt, ...) {
     va_end(args);
     return result;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(error_report_fixture, vformat_variants) {
     FlString error1 = test_vformat_wrapper(utest_fixture->test_channel, LogLevel_Error, "Error: %d", 123);
@@ -270,8 +232,6 @@ UTEST_F(error_report_fixture, vformat_variants) {
     ASSERT_TRUE(error2.data != NULL);
     ASSERT_TRUE(strstr(error2.data, "Message: test") != NULL);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(error_report_fixture, consecutive_allocations) {
 #define TEST_ERROR_COUNT 100

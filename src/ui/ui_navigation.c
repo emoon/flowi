@@ -1,10 +1,8 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Keyboard/gamepad focus movement - tab order, spatial navigation, and focus repair.
 //
 // Both walks are restricted to the current focus scope (the active popup's items when one is open, otherwise
 // items matching popup_focus_scope_id), so a menu or dialog cannot be navigated out of. Runs after hit testing
 // so the rects spatial navigation scores are this frame's.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "ui_navigation.h"
 #include <core/arena.h>
@@ -13,15 +11,11 @@
 #include <float.h>
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline float calculate_overlap_1d(float a_min, float a_max, float b_min, float b_max) {
     float overlap_min = fmaxf(a_min, b_min);
     float overlap_max = fminf(a_max, b_max);
     return overlap_max - overlap_min;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Is this item reachable by navigation right now? With a popup active, only items in the active
 // popup; otherwise items matching the current focus scope.
@@ -32,8 +26,6 @@ static inline bool item_in_scope(const FlUiCtx* self, const ItemState* item, boo
     return item->popup_scope_id == self->popup_focus_scope_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline bool widget_navigable(FlUiCtx* self, u32 widget_id, bool popup_active) {
     ItemState* item = hashmap_get(&self->shared->item_state, widget_id);
     if (item == nullptr)
@@ -41,8 +33,6 @@ static inline bool widget_navigable(FlUiCtx* self, u32 widget_id, bool popup_act
 
     return item_in_scope(self, item, popup_active);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ui_restore_focus_if_needed(FlUiCtx* self) {
     bool popup_active = (self->popup_stack_count > 0);
@@ -95,8 +85,6 @@ static void ui_restore_focus_if_needed(FlUiCtx* self) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef enum { NavDirection_Up, NavDirection_Down, NavDirection_Left, NavDirection_Right } NavDirection;
 
 // A NavDirection is an (axis, sign) pair. axis 0 = horizontal (x), axis 1 = vertical (y).
@@ -121,7 +109,6 @@ static const FlUiFeedbackDir NAV_FEEDBACK_DIR[4] = {
     [NavDirection_Right] = FlUiFeedbackDir_Right,
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Weighted navigation distance between two items; INFINITY if the candidate is not in the given direction.
 
 static float calculate_navigation_distance(ItemState* from, ItemState* to, NavDirection dir, FlUiCtx* self) {
@@ -178,8 +165,6 @@ static float calculate_navigation_distance(ItemState* from, ItemState* to, NavDi
     return distance;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static u32 find_best_navigation_candidate(FlUiCtx* self, ItemState* focused, NavDirection dir) {
     u32 best_id = 0;
     float best_distance = FLT_MAX;
@@ -210,7 +195,6 @@ static u32 find_best_navigation_candidate(FlUiCtx* self, ItemState* focused, Nav
     return best_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Navigate focus using tab order (Tab/Shift+Tab)
 
 static void ui_navigate_tab_order(FlUiCtx* self, bool forward) {
@@ -258,8 +242,6 @@ static void ui_navigate_tab_order(FlUiCtx* self, bool forward) {
         self->should_scroll_to_focused = true;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_navigation_update(FlUiCtx* self) {
     if (self->nav_next_pressed || self->nav_prev_pressed) {

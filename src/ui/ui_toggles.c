@@ -15,7 +15,6 @@
 #include <core/log.h>
 #include <external/clay/clay.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 FlSignal ui_checkbox_impl(FlString label, bool* checked, FlCheckboxConfig cfg) {
     FlUiCtx* self = g_ui_ctx;
 
@@ -84,7 +83,6 @@ FlSignal ui_checkbox_impl(FlString label, bool* checked, FlCheckboxConfig cfg) {
     return signal;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Switch implementation
 //
 // Same boolean role as the checkbox (the same click-toggle on a bool), but drawn as a pill track with a knob that
@@ -169,7 +167,6 @@ FlSignal ui_switch_impl(FlString label, bool* value, FlSwitchConfig cfg) {
     return signal;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Radio group implementation
 //
 // Exclusive single-choice selection across options[]: each option is an outline circle + label, the selected one

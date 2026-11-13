@@ -172,7 +172,6 @@ int gpu_color_svg_sources(const char** out) {
     return n;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The Viewport3d pair: hardware vertex/fragment stages, so they take only the dialect preamble - neither the
 // compute compat header nor the #define preamble applies, and the pair is GL only.
 

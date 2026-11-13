@@ -13,7 +13,6 @@
 #include "../ui_widget_internal.h"
 #include <external/clay/clay.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Element-id mapping
 
 static FlLayoutId node_layout_id(FlDockNodeId node) {
@@ -33,7 +32,6 @@ u32 dock_layout_content_element_id(FlDockNodeId node) {
     return ui_layout_id_to_clay_id(content_layout_id(node));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The tile floor and the whole-pixel edge - both pure functions of the ratio and the extent, so a window resize
 // runs them again and never writes the tree.
 
@@ -43,8 +41,6 @@ f32 dock_ui_scale(void) {
     f32 scale = ui_get_scale();
     return scale > 0.0f ? scale : 1.0f;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 f32 dock_layout_clamp_ratio(f32 ratio, FlDockAxis axis, f32 extent_px, bool* out_starved) {
     if (out_starved != nullptr) {
@@ -75,8 +71,6 @@ f32 dock_layout_clamp_ratio(f32 ratio, FlDockAxis axis, f32 extent_px, bool* out
     return ratio > hi ? hi : ratio;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f32 dock_layout_snap_ratio(f32 ratio, f32 extent_px) {
     if (extent_px <= 0.0f) {
         return ratio;
@@ -84,7 +78,6 @@ f32 dock_layout_snap_ratio(f32 ratio, f32 extent_px) {
     return ui_snap_to_pixel(ratio * extent_px) / extent_px;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Emit
 
 // Every non-empty leaf gets a tab header over a content area - a one-panel leaf included; the header is
@@ -283,8 +276,6 @@ static void emit_node(FlDockTree* tree, FlDockNode* node, FlLayoutSizingAxis wid
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void dock_layout_emit(FlDockTree* tree, FlDockPanelId* out_grab) {
     if (tree == nullptr || tree->root == nullptr) {
         return;
@@ -292,7 +283,6 @@ void dock_layout_emit(FlDockTree* tree, FlDockPanelId* out_grab) {
     emit_node(tree, tree->root, sizing_grow(), sizing_grow(), out_grab);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Readback - the same nodes in the same pre-order, each rect queried by element id.
 
 static u32 count_nodes(const FlDockNode* node) {

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Archive driver descriptors
 //
 // Each archive driver is compiled in only when its FLOWI_VFS_DRIVER_* cmake option is on, and its accessor is
@@ -8,7 +7,6 @@
 //
 // Each accessor returns a pointer to the driver's own static descriptor, not a copy: writing through it changes
 // what every later registration sees.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <flowi/vfs/vfs_plugin.h>
 

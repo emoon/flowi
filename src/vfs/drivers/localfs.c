@@ -8,7 +8,6 @@
 #include <flowi/vfs/vfs_plugin.h>
 #include <flowi/vfs/vfs_types.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // One open resource: the absolute OS path it was opened at, plus an OS file descriptor for an open file.
 
 typedef struct LocalFsHandle {
@@ -17,19 +16,14 @@ typedef struct LocalFsHandle {
     bool is_dir;
 } LocalFsHandle;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsDriverError localfs_ok(void) {
     return (FlVfsDriverError) { .vfs_status = FlVfsStatus_Success };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsDriverError localfs_fail(void) {
     return (FlVfsDriverError) { .vfs_status = FlVfsStatus_FileNotFound };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Returns an empty string (data == nullptr) on OOM.
 
 static FlString localfs_persist_path(FlString path) {
@@ -44,7 +38,6 @@ static FlString localfs_persist_path(FlString path) {
     return (FlString) { .data = buf, .length = path.length, .is_static = 0, .is_ascii = 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resolve rel against a parent handle's OS path: an absolute rel is used verbatim, otherwise it is joined
 // onto the parent directory.
 
@@ -53,7 +46,6 @@ static FlString localfs_resolve(FlArena* arena, const LocalFsHandle* parent, FlS
     return fl_path_make_absolute(arena, base, rel);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Allocate a handle for os_path, opening an OS fd according to flags. Directories and flag-less opens get no
 // fd. Returns nullptr on OOM or open failure.
 
@@ -90,7 +82,6 @@ static LocalFsHandle* localfs_make_handle(FlString os_path, bool is_dir, u32 fla
     return h;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Plugin callbacks. The driver instance is always nullptr; every callback ignores it.
 
 static bool localfs_supports_path(FlString path) {
@@ -98,13 +89,9 @@ static bool localfs_supports_path(FlString path) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool localfs_can_open(FlString path) {
     return file_stat_os(path).is_valid;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsOpenResult localfs_open(void* instance, void* parent_handle, FlString path, uint32_t flags,
                                     FlVfsMountOptions mount_options) {
@@ -126,15 +113,11 @@ static FlVfsOpenResult localfs_open(void* instance, void* parent_handle, FlStrin
     return (FlVfsOpenResult) { .handle = h, .is_directory = h->is_dir, .error = localfs_ok() };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool localfs_is_directory(void* instance, void* handle) {
     (void)instance;
     LocalFsHandle* h = (LocalFsHandle*)handle;
     return h && h->is_dir;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsSizeResult localfs_get_size(void* instance, void* handle, FlString relative_path) {
     (void)instance;
@@ -162,8 +145,6 @@ static FlVfsSizeResult localfs_get_size(void* instance, void* handle, FlString r
     }
     return (FlVfsSizeResult) { .size = (i64)st.size, .error = localfs_ok() };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsReadResult localfs_read(void* instance, void* handle, FlString relative_path, uint8_t* buffer,
                                     int64_t size) {
@@ -214,8 +195,6 @@ static FlVfsReadResult localfs_read(void* instance, void* handle, FlString relat
     return (FlVfsReadResult) { .bytes_read = total, .error = localfs_ok() };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void localfs_list_directory(void* instance, void* handle, FlString relative_path, FlVfsListingCallback callback,
                                    void* user_data) {
     (void)instance;
@@ -248,8 +227,6 @@ static void localfs_list_directory(void* instance, void* handle, FlString relati
     dir_close_os(&dir);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void localfs_close(void* instance, void* handle) {
     (void)instance;
     LocalFsHandle* h = (LocalFsHandle*)handle;
@@ -262,8 +239,6 @@ static void localfs_close(void* instance, void* handle) {
     mi_free((void*)h->path.data);
     mi_free(h);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Hand back the real OS path for a resource (FlVfsDriverCapabilities_DirectPath), letting the core open
 // on-disk archives by path instead of loading them into RAM. Empty relative_path means the handle's own file.
@@ -280,14 +255,10 @@ static FlString localfs_get_file_path(void* instance, void* handle, FlString rel
     return localfs_resolve(arena, h, relative_path);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsDriverCapabilities localfs_get_capabilities(void) {
     return (FlVfsDriverCapabilities)(FlVfsDriverCapabilities_Read | FlVfsDriverCapabilities_List
                                      | FlVfsDriverCapabilities_DirectPath);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsPlugin s_localfs_plugin = {
     .api_version = FL_VFS_PLUGIN_API_VERSION,
@@ -308,8 +279,6 @@ static FlVfsPlugin s_localfs_plugin = {
     .get_file_path = localfs_get_file_path,
     .is_cached = nullptr,
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const FlVfsPlugin* localfs_plugin(void) {
     return &s_localfs_plugin;

@@ -11,7 +11,6 @@
 #include <flowi/ui/cursor.h>
 #include <external/clay/clay.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Both the behaviour pass and the draw pass derive the divider's element id from the split node id, so they
 // address one element by construction.
 
@@ -19,14 +18,11 @@ static FlLayoutId divider_layout_id(FlDockNodeId split_id) {
     return ID_INT("fl_dock_divider", (i32)split_id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f32 dock_splitter_ratio_at(f32 cursor_rel_px, f32 extent_px) {
     f32 r = (extent_px > 0.0f) ? cursor_rel_px / extent_px : 0.5f;
     return clamp_f32_impl(r, FL_DOCK_MIN_RATIO, 1.0f - FL_DOCK_MIN_RATIO);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void dock_splitter_handle_drag(FlDockTree* tree, FlDockNodeId split_id, FlDockAxis axis) {
     FlUiCtx* self = g_ui_ctx;
 

@@ -4,8 +4,6 @@
 #include <core/math.h>
 #include <core/simd.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct CornerRoundingState {
     f16x8 y_step;
     f16x8 x_step;
@@ -17,8 +15,6 @@ typedef struct CornerRoundingState {
     f16x8 circle_center_y;
     f16x8 circle_y2;
 } CornerRoundingState;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void corner_rounding_init_dual(CornerRoundingState* self, float y_offset, float outer_radius,
                                                     float inner_radius, int direction) {
@@ -46,13 +42,9 @@ static ALWAYS_INLINE void corner_rounding_init_dual(CornerRoundingState* self, f
     self->x_current = f16x8_new_splat(0.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void corner_rounding_init(CornerRoundingState* self, float y_offset, float radius, int direction) {
     corner_rounding_init_dual(self, y_offset, radius, 0.0f, direction);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void corner_rounding_step_y(CornerRoundingState* self, const i32x4 clip_diff) {
     const f16x8 const_0123467 = f16x8_new(0.0, 1.0f, 2.0f, 3.0, 4.0f, 5.0f, 6.0f, 7.0f);
@@ -63,7 +55,6 @@ static ALWAYS_INLINE void corner_rounding_step_y(CornerRoundingState* self, cons
     self->y_current = f16x8_add(self->y_current, self->y_step);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Calculates the blending factor for rounded corners in vectorized form. circle_y2 holds the squared
 /// y-distances from the circle centers. Returns anti-aliasing blending factors scaled to 0..32767.
 static ALWAYS_INLINE i16x8 calculate_edge_rounding(f16x8 circle_y2, f16x8 current_x, f16x8 circle_center_x,
@@ -89,7 +80,6 @@ static ALWAYS_INLINE i16x8 calculate_edge_rounding(f16x8 circle_y2, f16x8 curren
     return f16x8_as_i16x8(scaled);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Calculates the blending factor for rounded corners with dual radii (inner and outer).
 ///
 /// The result is 32767 when inside the border ring, 0 when outside outer or inside inner,
@@ -124,8 +114,6 @@ static ALWAYS_INLINE i16x8 calculate_edge_rounding_dual(f16x8 circle_y2, f16x8 c
     return f16x8_as_i16x8(scaled);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE i16x8 corner_rounding_step_8(CornerRoundingState* self) {
     i16x8 v = calculate_edge_rounding(self->circle_y2, self->x_current, self->circle_center_x, self->border_radius_v);
 
@@ -133,8 +121,6 @@ static ALWAYS_INLINE i16x8 corner_rounding_step_8(CornerRoundingState* self) {
 
     return v;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE i16x8 corner_rounding_step_8_dual(CornerRoundingState* self) {
     i16x8 v = calculate_edge_rounding_dual(self->circle_y2, self->x_current, self->circle_center_x,

@@ -26,8 +26,6 @@ UTEST(linked_list, dll_push_back_empty_list) {
     ASSERT_EQ(node.prev, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, dll_push_back_single_node) {
     TestNode* first = nullptr;
     TestNode* last = nullptr;
@@ -45,8 +43,6 @@ UTEST(linked_list, dll_push_back_single_node) {
     ASSERT_EQ(node2.prev, &node1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, dll_push_front_single_node) {
     TestNode* first = nullptr;
     TestNode* last = nullptr;
@@ -63,8 +59,6 @@ UTEST(linked_list, dll_push_front_single_node) {
     ASSERT_EQ(node1.next, nullptr);
     ASSERT_EQ(node1.prev, &node2);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(linked_list, dll_insert_middle) {
     TestNode* first = nullptr;
@@ -85,8 +79,6 @@ UTEST(linked_list, dll_insert_middle) {
     ASSERT_EQ(node3.prev, &node2);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, dll_remove_first) {
     TestNode* first = nullptr;
     TestNode* last = nullptr;
@@ -105,8 +97,6 @@ UTEST(linked_list, dll_remove_first) {
     ASSERT_EQ(node2.prev, nullptr);
     ASSERT_EQ(node2.next, &node3);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(linked_list, dll_remove_last) {
     TestNode* first = nullptr;
@@ -127,8 +117,6 @@ UTEST(linked_list, dll_remove_last) {
     ASSERT_EQ(node2.prev, &node1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, dll_remove_middle) {
     TestNode* first = nullptr;
     TestNode* last = nullptr;
@@ -148,8 +136,6 @@ UTEST(linked_list, dll_remove_middle) {
     ASSERT_EQ(node3.prev, &node1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, dll_remove_only_node) {
     TestNode* first = nullptr;
     TestNode* last = nullptr;
@@ -162,8 +148,6 @@ UTEST(linked_list, dll_remove_only_node) {
     ASSERT_EQ(last, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, sll_queue_push_empty) {
     TestSingleNode* first = nullptr;
     TestSingleNode* last = nullptr;
@@ -175,8 +159,6 @@ UTEST(linked_list, sll_queue_push_empty) {
     ASSERT_EQ(last, &node);
     ASSERT_EQ(node.next, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(linked_list, sll_queue_push_multiple) {
     TestSingleNode* first = nullptr;
@@ -196,8 +178,6 @@ UTEST(linked_list, sll_queue_push_multiple) {
     ASSERT_EQ(node3.next, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, sll_queue_push_front) {
     TestSingleNode* first = nullptr;
     TestSingleNode* last = nullptr;
@@ -212,8 +192,6 @@ UTEST(linked_list, sll_queue_push_front) {
     ASSERT_EQ(node2.next, &node1);
     ASSERT_EQ(node1.next, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(linked_list, sll_queue_pop) {
     TestSingleNode* first = nullptr;
@@ -233,8 +211,6 @@ UTEST(linked_list, sll_queue_pop) {
     ASSERT_EQ(node2.next, &node3);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, sll_queue_pop_last) {
     TestSingleNode* first = nullptr;
     TestSingleNode* last = nullptr;
@@ -246,8 +222,6 @@ UTEST(linked_list, sll_queue_pop_last) {
     ASSERT_EQ(first, nullptr);
     ASSERT_EQ(last, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(linked_list, sll_queue_remove_first) {
     TestSingleNode* first = nullptr;
@@ -268,8 +242,6 @@ UTEST(linked_list, sll_queue_remove_first) {
     ASSERT_EQ(node3.next, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, sll_queue_remove_middle) {
     TestSingleNode* first = nullptr;
     TestSingleNode* last = nullptr;
@@ -288,8 +260,6 @@ UTEST(linked_list, sll_queue_remove_middle) {
     ASSERT_EQ(node1.next, &node3);
     ASSERT_EQ(node3.next, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(linked_list, sll_queue_remove_last) {
     TestSingleNode* first = nullptr;
@@ -310,8 +280,6 @@ UTEST(linked_list, sll_queue_remove_last) {
     ASSERT_EQ(node2.next, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, sll_queue_remove_single_node) {
     TestSingleNode* first = nullptr;
     TestSingleNode* last = nullptr;
@@ -325,8 +293,6 @@ UTEST(linked_list, sll_queue_remove_single_node) {
     ASSERT_EQ(last, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, sll_stack_push) {
     TestSingleNode* top = nullptr;
     TestSingleNode node1 = { 1, nullptr };
@@ -339,8 +305,6 @@ UTEST(linked_list, sll_stack_push) {
     ASSERT_EQ(node2.next, &node1);
     ASSERT_EQ(node1.next, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(linked_list, sll_stack_pop) {
     TestSingleNode* top = nullptr;
@@ -356,8 +320,6 @@ UTEST(linked_list, sll_stack_pop) {
     ASSERT_EQ(node1.next, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(linked_list, sll_stack_pop_last) {
     TestSingleNode* top = nullptr;
     TestSingleNode node = { 42, nullptr };
@@ -367,8 +329,6 @@ UTEST(linked_list, sll_stack_pop_last) {
 
     ASSERT_EQ(top, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(linked_list, for_each_list_iteration) {
     TestSingleNode* first = nullptr;
@@ -391,8 +351,6 @@ UTEST(linked_list, for_each_list_iteration) {
     ASSERT_EQ(count, 3);
     ASSERT_EQ(sum, 6);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(linked_list, for_each_list_empty) {
     TestSingleNode* first = nullptr;

@@ -6,11 +6,9 @@
 #include <core/path.h>
 #include "vfs_internal.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Largest file the VFS reads whole into memory: a read-all, or an archive opened from memory (512 MB)
 #define VFS_MAX_READ_SIZE (512 * 1024 * 1024)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared type definitions
 
 // Result of resolving a mount's source
@@ -35,13 +33,11 @@ typedef struct {
     bool is_directory;
 } TryLoadData;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Global state access (defined in vfs.c)
 
 extern LogChannelId VFS_ID;
 extern VfsState* g_vfs_state;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mount path resolution (defined in vfs_resolve.c)
 
 // Resolves a mount's source path to a driver and one live root handle, descending through archives nested in the
@@ -61,7 +57,6 @@ DriverHandle vfs_resolve_find_root_driver(VfsState* self, FlArena* temp, const P
 // caller owns that handle. On failure data is untouched and still the caller's to free.
 DriverHandle vfs_resolve_find_memory_driver(VfsState* self, FlString org_path, u8* data, u64 size);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Archives below a mount's root (defined in vfs_resolve.c)
 
 // path_reconstruct_from_segments, except that a range that does not start at the first segment is relative to the
@@ -76,7 +71,6 @@ DriverHandle vfs_resolve_open_archive(VfsState* self, VfsPluginEntry* parent, vo
 // True when an archive driver claims the name. LocalFS, which claims everything, does not count.
 bool vfs_name_is_archive(VfsState* self, FlString name);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The tree of a mount (defined in vfs_tree.c). All of it runs under the mount's driver_lock, except the creation
 // and cleanup of a mount, which nothing else can reach.
 
@@ -102,7 +96,6 @@ bool vfs_tree_try_load_as_archive(VfsState* self, VfsTreeNode* node, VfsPluginEn
 // Closes the node's handle, then every child's, children first.
 void vfs_tree_cleanup_node(VfsTreeNode* node);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Operations functions (defined in vfs_ops.c)
 
 void vfs_op_mount(VfsState* self, VfsOp* op, FlArena* scratch);
@@ -116,7 +109,6 @@ void vfs_ops_do_job(void* data, FlJobsWorkerInfo info);
 void vfs_ops_execute_sync(VfsOp* op);
 FlJobHandle vfs_ops_schedule_job(FlVfsMount* mount, FlJobsFunc func, void* user_data);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Core VFS functions (defined in vfs.c)
 
 // Test seam, null in production: fl_vfs_read calls it on the main thread right after it has scheduled a read, with the

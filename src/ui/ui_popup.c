@@ -4,7 +4,6 @@
 #include "input_actions.h"
 #include "ui_private.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public API
 
 void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
@@ -92,8 +91,6 @@ void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
     Clay__ConfigureOpenElement(decl);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_popup_end(void) {
     FlUiCtx* ctx = ui_get_ctx();
 
@@ -103,7 +100,6 @@ void ui_popup_end(void) {
     ctx->rendering_popup = false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Auto-close logic (called from ui_update_begin, AFTER ui_input_update captures mouse state)
 
 void ui_popup_check_auto_close(FlUiCtx* ctx) {
@@ -138,8 +134,6 @@ void ui_popup_check_auto_close(FlUiCtx* ctx) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_popup_close_internal(FlUiCtx* ctx) {
     ui_focus_scope_release(ctx);
 
@@ -150,8 +144,6 @@ void ui_popup_close_internal(FlUiCtx* ctx) {
     ctx->popup_stack_count = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_focus_scope_arm(FlUiCtx* ctx, u32 scope_id, bool take_over) {
     bool arm = take_over ? ctx->popup_focus_scope_id != scope_id : ctx->popup_focus_scope_id == 0;
     if (arm) {
@@ -160,8 +152,6 @@ bool ui_focus_scope_arm(FlUiCtx* ctx, u32 scope_id, bool take_over) {
     }
     return arm;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_focus_scope_release(FlUiCtx* ctx) {
     ctx->focused_id = ctx->saved_focused_id;

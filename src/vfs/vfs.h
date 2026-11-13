@@ -8,7 +8,6 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // VFS Operation Status - Hierarchical 32-bit error system (internal use only)
 
 typedef u32 VfsOpStatus;
@@ -39,12 +38,9 @@ typedef u32 VfsOpStatus;
 // The op could only have proceeded by waiting on a job worker, which the job system forbids
 #define VFS_ERROR_WOULD_BLOCK (VFS_STATE_ERROR | VFS_THREADING_ERROR)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Callback invoked once per discovered entry during directory listing
 
 typedef void (*VfsListingCallback)(FlVfsEntry entry, void* user_data);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Initialize the VFS system. Registers the built-in LocalFS driver, which stays the catch-all fallback,
 // tried after every driver registered later via vfs_register_driver().
@@ -63,8 +59,6 @@ FlJobHandle fl_vfs_mount_get_job_handle(FlVfsMount* mount);
 // Process-unique id of the mount instance; never reused, even after the mount closes.
 u64 vfs_mount_get_id(const FlVfsMount* mount);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct VfsReadOptions {
     FlVfsReadCallback callback;
     void* user_data;
@@ -72,7 +66,6 @@ typedef struct VfsReadOptions {
     FlVfsHandle reuse_handle;     // Handle to reuse (or FL_VFS_HANDLE_INVALID/0)
 } VfsReadOptions;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File Operations on Mounts
 
 // Two-phase read: allocate handle without dispatching the job.
@@ -90,7 +83,6 @@ void vfs_dispatch(FlVfsHandle handle);
                                            _opts.reuse_handle);                                         \
     })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Handle Operations
 //
 // Thread contract: fl_jobs_wait() does nothing on a job worker, because blocking one on a job that itself
@@ -122,8 +114,6 @@ void vfs_wait_all(void);
 
 VfsOpStatus vfs_get_status(FlVfsHandle handle);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline VfsOpStatus vfs_get_core_state(VfsOpStatus status) {
     return status & VFS_STATE_MASK;
 }
@@ -140,7 +130,6 @@ static inline bool vfs_is_pending(VfsOpStatus status) {
     return vfs_get_core_state(status) == VFS_STATE_PENDING;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Driver Registration (for extending VFS)
 //
 // Hand a constructed driver to the VFS. Call after fl_vfs_init(). The plugin pointer must outlive the VFS.

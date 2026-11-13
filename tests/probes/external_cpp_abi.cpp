@@ -18,7 +18,6 @@ extern "C" FLOWI_TEST_EXPORT int external_cpp_abi_probe(void) {
     return ok;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // As in external_c_abi.c: only valid while libflowi has a frame open, since the string comes from that instance's
 // frame arena.
 

@@ -5,12 +5,10 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Performance counters - hardware performance monitoring
 //
 // Instructions retired is the only event here. Linux reads it through perf_event_open; no other
 // platform has a seam for it, so counters report unavailable there and every call below refuses.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef enum PerfCounterEvent {
     PERF_COUNTER_INSTRUCTIONS,
@@ -21,7 +19,6 @@ typedef u64 PerfCounterValue;
 
 typedef struct PerfCounterSession PerfCounterSession;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Core API
 
 // Must succeed before anything else below does anything. False when no counter could be opened: no
@@ -34,7 +31,6 @@ void perf_counters_shutdown(void);
 // Whether a counter can be opened right now. False until a successful perf_counters_init().
 bool perf_counters_available(void);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Session
 //
 // A session owns one hardware counter. Null unless perf_counters_init() has succeeded.
@@ -55,7 +51,7 @@ bool perf_counter_session_start(PerfCounterSession* session);
 bool perf_counter_session_stop(PerfCounterSession* session, PerfCounterValue* out_value);
 
 #if PLATFORM_LINUX
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Event mapping (Linux)
 
 // The two perf_event_attr fields that select an event: type is a PERF_TYPE_* value and config the

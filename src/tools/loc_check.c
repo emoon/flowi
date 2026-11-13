@@ -6,8 +6,6 @@
 
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // One "SID_... literal the scanner found, with where it found it.
 typedef struct SidRef {
     struct SidRef* next;
@@ -28,8 +26,6 @@ typedef struct Checker {
     LocCheckResult result;
     LocCheckFinding* tail;
 } Checker;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void finding_add(Checker* self, LocCheckId check, u32 language, bool is_error, FlString message) {
     LocCheckFinding* finding = arena_alloc_zero(self->arena, LocCheckFinding);
@@ -52,15 +48,12 @@ static void finding_add(Checker* self, LocCheckId check, u32 language, bool is_e
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_cldr_category(FlString name) {
     return fl_string_equals(name, FL_S("zero")) || fl_string_equals(name, FL_S("one"))
            || fl_string_equals(name, FL_S("two")) || fl_string_equals(name, FL_S("few"))
            || fl_string_equals(name, FL_S("many")) || fl_string_equals(name, FL_S("other"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Highest {n} argument index text references, or -1 when it references none. Walks the same placeholder
 // grammar the runtime substitutes through, so the two cannot disagree about what a slot is.
 
@@ -79,7 +72,6 @@ static i64 max_slot_index(FlString text) {
     return highest;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The same, across every form a value can take: a plural-variant object references whatever its widest variant does.
 
 static i64 value_max_slot_index(FlJsonValue* value) {
@@ -104,7 +96,6 @@ static i64 value_max_slot_index(FlJsonValue* value) {
     return highest;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Every "SID_... literal in source, appended to the list tail ends. Grep-level: a runtime-assembled SID is not
 // seen. The bare "SID_" prefix constant is skipped.
 
@@ -140,8 +131,6 @@ static void scan_source(FlArena* arena, const LocCheckSource* source, SidRef*** 
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void parse_table(Checker* self, const LocCheckTable* table, u32 index, ParsedTable* out) {
     hashmap_string_new(&out->lookup, self->arena, 256);
     FlStringBuilder sb = fl_sb_create(self->arena);
@@ -174,7 +163,6 @@ static void parse_table(Checker* self, const LocCheckTable* table, u32 index, Pa
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // LocCheckId_ValueShape: an error in the default table, a warning in a translation.
 
 static void check_value_shape(Checker* self, u32 language, FlString name, FlJsonValue* value) {
@@ -212,7 +200,6 @@ static void check_value_shape(Checker* self, u32 language, FlString name, FlJson
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // LocCheckId_MissingFromDefault and LocCheckId_Orphan: the default table against source code. Skipped when no source
 // was scanned.
 
@@ -249,7 +236,6 @@ static void check_against_code(Checker* self, const LocCheckSource* sources, u32
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // LocCheckId_MissingFromTranslation, LocCheckId_Stale and LocCheckId_PlaceholderArity: one translation against the
 // default table.
 
@@ -286,8 +272,6 @@ static void check_translation(Checker* self, u32 language, const ParsedTable* tr
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 LocCheckResult loc_check_run(FlArena* arena, const LocCheckSource* sources, u32 source_count,
                              const LocCheckTable* tables, u32 table_count) {
     Checker self = { .arena = arena };
@@ -322,8 +306,6 @@ LocCheckResult loc_check_run(FlArena* arena, const LocCheckSource* sources, u32 
     return self.result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlStringBuilder append_heading(FlStringBuilder sb, LocCheckId check, FlString tag, u32 count) {
     switch (check) {
         case LocCheckId_MissingFromDefault:
@@ -345,8 +327,6 @@ static FlStringBuilder append_heading(FlStringBuilder sb, LocCheckId check, FlSt
     }
     return sb;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString loc_check_format_report(FlArena* arena, const LocCheckResult* result, const LocCheckTable* tables,
                                  u32 table_count) {

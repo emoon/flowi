@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_host - the embedded flowi tier for a host that owns its own OS integration.
 //
 // fl_host brings up everything a flowi frame needs except the window, the input pump and presentation: the
@@ -17,8 +16,6 @@
 #include <core/types.h>
 #include <flowi/app/host.h> // @generated FlHostSettings (api_gen)
 #include <ui/render_backend.h>
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct FlHost FlHost;
 typedef struct FlArena FlArena;
@@ -39,7 +36,6 @@ typedef struct FlUiCtx FlUiCtx;
 FlHost* host_create(FlArena* arena, const FlHostSettings* settings, const FlRenderBackend* adopt_backend);
 void host_destroy(FlHost* host);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-window: one surface + one UI context. A sized host_create does both for its own window; fl_app calls
 // them per OS window instead.
 

@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Painter API Implementation
 //
 // Each painter call draws inside the open layout element's immediate-mode scope: it records the
@@ -12,7 +11,6 @@
 // All public coordinates use element-local logical (authoring) space and are scaled to actual pixels here, at
 // emit time, so span records are in pixel space (the same space Clay output lands in); the splice adds the
 // element's resolved rect origin.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "painter.h"
 
@@ -26,7 +24,6 @@
 
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Maximum nesting of painting scopes (one per open layout element on the path to the painter call). Deeper
 // nesting still balances (push/pop track true depth) but does not record.
 
@@ -34,8 +31,6 @@
 
 // Arena reserved size for painter IR (virtual address space, commits on demand)
 #define PAINTER_ARENA_INITIAL_SIZE (1024 * 1024 * 1024)
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct PaintScope {
     void** custom_slot; // &element->config.custom.customData; the span pointer is written here on first paint
@@ -54,21 +49,15 @@ struct Painter {
     u32 scope_depth;
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline float scale(const Painter* p, float v) {
     return v * p->ui_scale;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Painter* painter_create(FlArena* persistent_arena) {
     Painter* p = arena_alloc_zero(persistent_arena, Painter);
     p->arena = arena_new(.reserved_size = PAINTER_ARENA_INITIAL_SIZE);
     return p;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void painter_destroy(Painter* p) {
     if (p == nullptr) {
@@ -77,8 +66,6 @@ void painter_destroy(Painter* p) {
     fl_arena_destroy(p->arena);
     p->arena = nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void painter_begin_frame(Painter* p, FlFontCache* fc, float ui_scale, float text_scale, FlArena* scratch) {
     // Spans from the previous frame are dropped with the arena.
@@ -91,7 +78,6 @@ void painter_begin_frame(Painter* p, FlFontCache* fc, float ui_scale, float text
     p->scope_depth = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Painting scopes. push/pop bracket each layout element; record* funnels every primitive into the innermost
 // scope's span, lazily creating it (and attaching the CUSTOM marker) on first use.
 
@@ -113,7 +99,6 @@ u32 painter_scope_depth(const Painter* p) {
     return p->scope_depth;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Effect state. It lives in the innermost scope's slot, so it dies when that element's scope pops (and with
 // every scope at begin_frame) and reaches no sibling, child, or later frame.
 
@@ -133,7 +118,6 @@ static const FlEffect* painter_current_effect(const Painter* p) {
     return effect->kind != FlEffectKind_None ? effect : nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The innermost scope's span, lazily created and attached to its element's CUSTOM marker. Returns null when
 // there is no recordable scope (none open, or nesting past the cap), in which case the primitive no-ops.
 static FlPaintSpan* painter_active_span(Painter* p) {
@@ -189,7 +173,6 @@ static void painter_record_end(Painter* p, FlPaintSpan* span, void* start) {
     span->last = seg;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Text drawing. Glyphs are laid out here via the shared font cache and emitted as a positioned text run; the
 // backend re-resolves each glyph id and rasterizes it.
 
@@ -222,7 +205,6 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
     painter_record_end(p, span, start);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Styled text: the fractional-size (quarter-px quantized) painter draw. Shares the size quantizer, per-glyph
 // advances, and the n−1 letter-spacing rule with font_cache_measure_text, so a measured run matches what gets
 // drawn. Positions carry ui_scale (chrome); the size and spacing carry text_scale (type).
@@ -263,7 +245,6 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
     painter_record_end(p, span, start);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rectangle drawing
 
 // The one fill-rect record writer: logical-space geometry and radii are scaled to pixels here, so every rectangle
@@ -289,13 +270,9 @@ void painter_rect_styled(Painter* p, float x, float y, float w, float h, FlRectC
     painter_record_end(p, span, start);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void painter_rect(Painter* p, float x, float y, float w, float h, FlColor color) {
     painter_rect_styled(p, x, y, w, h, (FlRectConfig) { .corner = { color, color, color, color } });
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count) {
     if (p == nullptr || rects == nullptr || rect_count == 0) {
@@ -315,15 +292,11 @@ void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count) {
     painter_record_end(p, span, start);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void painter_rect_rounded(Painter* p, float x, float y, float w, float h, float radius, FlColor color) {
     painter_rect_styled(
         p, x, y, w, h,
         (FlRectConfig) { .radius = { radius, radius, radius, radius }, .corner = { color, color, color, color } });
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void painter_gradient_rect(Painter* p, float x, float y, float w, float h, FlColor top_left, FlColor top_right,
                            FlColor bottom_left, FlColor bottom_right) {
@@ -331,7 +304,6 @@ void painter_gradient_rect(Painter* p, float x, float y, float w, float h, FlCol
     painter_rect_styled(p, x, y, w, h, (FlRectConfig) { .corner = { top_left, top_right, bottom_left, bottom_right } });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 1px lines (separators, grid, rulers). One logical pixel thick, scaled and snapped to a whole device pixel
 // (never thinner than 1) here; the line's position is snapped later at the splice, where the absolute device
 // coordinate (element origin + scaled local) is known. Emitted as a core fill rect tagged FL_SNAP_DEVICE_PX.
@@ -369,7 +341,6 @@ void painter_vline(Painter* p, float x, float y, float length, FlColor color) {
     painter_record_end(p, span, start);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image drawing
 
 bool painter_image(Painter* p, float x, float y, float w, float h, FlImageHandle image, FlColor color) {
@@ -449,8 +420,6 @@ bool painter_image_sub(Painter* p, float dx, float dy, float dw, float dh, float
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void painter_dynamic_image(Painter* p, float x, float y, FlDynamicImage* image, FlColor color) {
     if (p == nullptr || image == nullptr || image->user_buffer == nullptr) {
         return;
@@ -481,7 +450,6 @@ void painter_dynamic_image(Painter* p, float x, float y, FlDynamicImage* image, 
     painter_record_end(p, span, start);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shape drawing (optional-tier IR). Scalar geometry is scaled up front; the trailing arrays (polyline points,
 // bars) are scaled while being written directly into the record the builder reserved. Angles and per-point
 // intensity are unitless and pass through unscaled.
@@ -507,8 +475,6 @@ void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, fl
     painter_record_end(p, span, start);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void painter_arc(Painter* p, float cx, float cy, float radius, float thickness, float start_angle, float sweep,
                  FlColor color, u32 flags) {
     if (p == nullptr) {
@@ -524,8 +490,6 @@ void painter_arc(Painter* p, float cx, float cy, float radius, float thickness, 
               flags, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void painter_circle_stroked(Painter* p, float cx, float cy, float radius, FlColor color, FlColor border_color,
                             float border_width, FlStrokeStyle stroke) {
@@ -550,8 +514,6 @@ void painter_circle(Painter* p, float cx, float cy, float radius, FlColor color,
     painter_circle_stroked(p, cx, cy, radius, color, border_color, border_width, (FlStrokeStyle) { 0 });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void painter_diamond(Painter* p, float cx, float cy, float rx, float ry, FlColor color, FlColor border_color,
                      float border_width) {
     if (p == nullptr) {
@@ -566,8 +528,6 @@ void painter_diamond(Painter* p, float cx, float cy, float rx, float ry, FlColor
                   scale(p, border_width), painter_current_effect(p));
     painter_record_end(p, span, start);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void painter_bars(Painter* p, float baseline_y, const FlBar* bars, u32 bar_count, FlColor color) {
     if (p == nullptr || bars == nullptr || bar_count == 0) {

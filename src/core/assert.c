@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_assert_fatal_handler(const char* expr_str, const char* file, int line) {
     log_fatal("Assertion failed: %s at %s:%d", expr_str, file, line);
     fl_log_flush();
@@ -15,8 +13,6 @@ void fl_assert_fatal_handler(const char* expr_str, const char* file, int line) {
     abort();
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_assert_handler(const char* expr_str, const char* file, int line, bool fatal) {
     if (fatal) {

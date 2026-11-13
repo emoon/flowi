@@ -3,7 +3,6 @@
 #include <core/string.h>
 #include <tools/loc_check.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fixtures for the drift checker. Every case builds its tables as in-memory JSON5 and asserts on the findings the
 // six checks produce, so nothing here touches the filesystem.
 
@@ -30,8 +29,6 @@ static const LocCheckFinding* first_finding(const LocCheckResult* result, LocChe
     ASSERT_EQ((result).error_count, 0u); \
     ASSERT_EQ((result).warning_count, 0u)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, matching_code_and_tables_are_clean) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -46,8 +43,6 @@ UTEST(loc_check, matching_code_and_tables_are_clean) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(loc_check, key_used_in_code_but_absent_from_the_default_is_an_error) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
@@ -69,8 +64,6 @@ UTEST(loc_check, key_used_in_code_but_absent_from_the_default_is_an_error) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, key_never_seen_in_code_is_an_orphan_warning) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -88,8 +81,6 @@ UTEST(loc_check, key_never_seen_in_code_is_an_orphan_warning) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, without_sources_the_code_side_checks_do_not_run) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -101,8 +92,6 @@ UTEST(loc_check, without_sources_the_code_side_checks_do_not_run) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(loc_check, a_dynamic_sid_looks_orphaned_rather_than_missing) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
@@ -125,8 +114,6 @@ UTEST(loc_check, a_dynamic_sid_looks_orphaned_rather_than_missing) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, keys_missing_from_a_translation_are_that_language_s_worklist) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -148,8 +135,6 @@ UTEST(loc_check, keys_missing_from_a_translation_are_that_language_s_worklist) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, a_translation_key_the_default_dropped_is_stale) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -167,8 +152,6 @@ UTEST(loc_check, a_translation_key_the_default_dropped_is_stale) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(loc_check, repeated_reordered_and_unused_slots_are_legal) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
@@ -188,8 +171,6 @@ UTEST(loc_check, repeated_reordered_and_unused_slots_are_legal) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(loc_check, a_slot_above_the_default_s_highest_is_an_error) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
@@ -213,8 +194,6 @@ UTEST(loc_check, a_slot_above_the_default_s_highest_is_an_error) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, an_escaped_brace_in_the_default_leaves_no_slot_to_reference) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -233,8 +212,6 @@ UTEST(loc_check, an_escaped_brace_in_the_default_leaves_no_slot_to_reference) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, a_named_slot_is_not_an_argument_index) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -248,8 +225,6 @@ UTEST(loc_check, a_named_slot_is_not_an_argument_index) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(loc_check, plural_variants_are_compared_at_their_widest) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
@@ -270,8 +245,6 @@ UTEST(loc_check, plural_variants_are_compared_at_their_widest) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, a_well_formed_plural_object_passes) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -286,8 +259,6 @@ UTEST(loc_check, a_well_formed_plural_object_passes) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(loc_check, a_non_cldr_variant_errors_in_the_default_and_warns_in_a_translation) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
@@ -314,8 +285,6 @@ UTEST(loc_check, a_non_cldr_variant_errors_in_the_default_and_warns_in_a_transla
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, a_plural_object_without_other_is_reported) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -332,8 +301,6 @@ UTEST(loc_check, a_plural_object_without_other_is_reported) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, a_value_that_is_neither_string_nor_object_is_reported) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -346,8 +313,6 @@ UTEST(loc_check, a_value_that_is_neither_string_nor_object_is_reported) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(loc_check, an_unparseable_table_is_an_error_and_takes_no_other_check_down) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
@@ -366,8 +331,6 @@ UTEST(loc_check, an_unparseable_table_is_an_error_and_takes_no_other_check_down)
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(loc_check, the_tables_are_read_with_json5_comments_and_trailing_commas) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
 
@@ -381,8 +344,6 @@ UTEST(loc_check, the_tables_are_read_with_json5_comments_and_trailing_commas) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(loc_check, the_report_groups_per_language_and_ends_in_a_summary) {
     FlArena* arena = arena_new(.reserved_size = MB(16));
@@ -409,8 +370,6 @@ UTEST(loc_check, the_report_groups_per_language_and_ends_in_a_summary) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(loc_check, a_clean_run_reports_only_the_summary) {
     FlArena* arena = arena_new(.reserved_size = MB(16));

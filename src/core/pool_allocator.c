@@ -2,13 +2,9 @@
 #include "assert.h"
 #include "memory.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct FreeListNode {
     struct FreeListNode* next;
 } FreeListNode;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void pool_init_raw(PoolAllocatorBase* self, FlArena* arena, u64 item_size, u64 item_alignment) {
     FL_ASSERT(arena != nullptr);
@@ -30,8 +26,6 @@ void pool_init_raw(PoolAllocatorBase* self, FlArena* arena, u64 item_size, u64 i
     self->item_alignment = item_alignment;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void* pool_alloc_raw(PoolAllocatorBase* self) {
     FL_ASSERT(self->arena != nullptr);
 
@@ -48,8 +42,6 @@ void* pool_alloc_raw(PoolAllocatorBase* self) {
 
     return fl_arena_alloc_raw_zero(self->arena, self->item_size, self->item_alignment);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void pool_free_raw(PoolAllocatorBase* self, void* ptr) {
     FL_ASSERT(ptr != nullptr);

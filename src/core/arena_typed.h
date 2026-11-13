@@ -5,7 +5,6 @@
 #include "types.h"
 #include <assert.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Type-safe arena implementation
 //
 // Usage:
@@ -15,8 +14,6 @@
 //   u64 count = arena_typed_count(&my_i32_arena);
 //   arena_typed_rewind(&my_i32_arena);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define arena_typed(element_type)    \
     struct {                         \
         FlArena* arena;              \
@@ -24,7 +21,6 @@
         element_type* _element_type; \
     }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Borrows an existing arena
 
 #define arena_typed_init(typed_arena_ptr, arena_ptr)                    \
@@ -34,19 +30,14 @@
         (typed_arena_ptr)->_element_type = nullptr;                     \
     } while (0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define arena_typed_alloc(typed_arena_ptr)                                                                   \
     ({                                                                                                       \
         typedef __typeof__(*(typed_arena_ptr)->_element_type) _element_t;                                    \
         (_element_t*)fl_arena_alloc_raw((typed_arena_ptr)->arena, sizeof(_element_t), align_of(_element_t)); \
     })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define arena_typed_rewind(typed_arena_ptr) arena_rewind_to((typed_arena_ptr)->arena, (typed_arena_ptr)->start_pos)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Elements allocated since initialization
 
 #define arena_typed_count(typed_arena_ptr)                                                                    \

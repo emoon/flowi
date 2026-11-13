@@ -8,10 +8,7 @@
 
 #include <windows.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static LogChannelId FW_ID = LOG_CHANNEL_INVALID;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct WindowsWatcherData {
     HANDLE dir_handle;
@@ -21,8 +18,6 @@ typedef struct WindowsWatcherData {
     DWORD bytes_returned;
     bool read_pending;
 } WindowsWatcherData;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherError map_windows_error(u32 win_error) {
     switch (win_error) {
@@ -39,8 +34,6 @@ FileWatcherError map_windows_error(u32 win_error) {
             return FileWatcherError_SystemError;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static DWORD get_notify_filter(FlFileWatcherConfig* config) {
     DWORD filter = 0;
@@ -66,8 +59,6 @@ static DWORD get_notify_filter(FlFileWatcherConfig* config) {
     return filter;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static u32 map_windows_action_to_change_types(DWORD action) {
     switch (action) {
         case FILE_ACTION_ADDED:
@@ -83,8 +74,6 @@ static u32 map_windows_action_to_change_types(DWORD action) {
             return 0;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool start_directory_watch(WindowsWatcherData* data, DWORD filter, bool recursive) {
     HANDLE event = data->overlapped.hEvent;
@@ -112,8 +101,6 @@ static bool start_directory_watch(WindowsWatcherData* data, DWORD filter, bool r
     data->read_pending = true;
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherError platform_start_watching(FileWatcherState* state) {
     if (FW_ID == LOG_CHANNEL_INVALID) {
@@ -169,8 +156,6 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
     return FileWatcherError_Success;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void platform_stop_watching(FileWatcherState* state) {
     if (!state || !state->platform_data) {
         return;
@@ -202,8 +187,6 @@ void platform_stop_watching(FileWatcherState* state) {
 
     logc_debug(FW_ID, "FileWatcher[%u]: Windows watcher stopped", state->handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherError platform_poll_changes(FileWatcherState* state) {
     if (!state || !state->platform_data || !state->is_active) {

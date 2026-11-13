@@ -10,8 +10,6 @@
 #include <ui/render_ir.h>
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static const f32 GPU_TAU = 6.28318530717958647692f;
 
 static bool is_renderable_rect(const FlCmdFillRect* fr) {
@@ -64,7 +62,6 @@ static u32 pack_dash(FlStrokeStyle stroke) {
     return (dash << GPU_DRAW_DASH_SHIFT) | (gap << GPU_DRAW_GAP_SHIFT);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pack an FlColor with the frame's global_alpha folded into the alpha channel. Byte order matches GLSL
 // unpackUnorm4x8: R in the low byte. The alpha product rounds to nearest so 255 * 255 stays 255.
 
@@ -83,7 +80,6 @@ static u32 pack_tint_premultiplied(FlColor tint, u8 global_alpha) {
     return r | (g << 8) | (b << 16) | (a << 24);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Clip stack, walked over the single translation pass. Each level holds the effective clip - the running
 // intersection down the stack, rooted at the full target - so the current clip is always the top and a pop is
 // just a depth decrement.
@@ -150,7 +146,6 @@ static GpuAabb clip_stack_current(const GpuClipStack* s) {
     return s->effective[s->depth];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dedup lookup into the per-frame clip-rect array: exact float match (effective rects from identical push
 // sequences are bit-identical).
 
@@ -164,7 +159,6 @@ static u32 clip_find_or_append(GpuAabb* clips, u32* clip_count, GpuAabb rect) {
     return (*clip_count)++;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Arc geometry, shared by translation and the AABB pass. Records normalize once here (the shader never
 // remaps angles).
 
@@ -268,7 +262,6 @@ static GpuAabb arc_aabb(const GpuArcShape* s) {
     return bb;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-record translation state. n is the running count of surviving commands and indexes the next free slot
 // in out's pre-sized arrays.
 
@@ -779,7 +772,6 @@ static void translate_polyline(GpuTranslate* tr, const FlCmdPolyline* pl) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Background: the frame envelope's background state translated to commands at the front of the stream (so the
 // UI draws over it). Background commands ignore the frame's global_alpha, so they emit at full opacity,
 // modulated only by the background's own alpha / crossfade weight.
@@ -895,7 +887,6 @@ static void translate_stream(GpuTranslate* tr, const void* ir_commands, size_t i
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Upper bound on the draw-command and clip arrays from record counts alone. Each kind's bound is the most
 // commands it can ever commit: the fixed-shape kinds one each, a text run one quad per glyph, a bar set one
 // rect per bar, a polyline up to one fill trapezoid per open edge plus one stroke capsule per edge

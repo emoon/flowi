@@ -1,12 +1,10 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // flowi UI types - internal umbrella
 //
 // The public UI types are authored in api_gen .def files and emitted into include/flowi/ui/; this internal
 // header re-exports them under one include so flowi's UI code gets the whole set with a single `<ui/ui_types.h>`.
 // It defines no types of its own - every Fl* type below is generated.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <core/string.h> // FlString (length-prefixed string), includer-provided to the generated headers
 #include <stdbool.h>

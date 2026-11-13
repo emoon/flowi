@@ -14,7 +14,6 @@
 #include <math.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // u64 <-> decimal-string. Panel and workspace ids are full 64-bit, so they are serialized as decimal strings to
 // preserve every bit - JSON numbers route through the builder's i64 setter, which would mangle ids at or above
 // 2^63.
@@ -67,8 +66,6 @@ static u64 str_to_u64(const char* data, u64 len, u64* consumed) {
     return overflow ? UINT64_MAX : v;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlDockNode* leftmost_leaf(FlDockNode* node) {
     while (node != nullptr && node->kind == FlDockNodeKind_Split) {
         node = node->split.child[0];
@@ -76,7 +73,6 @@ static FlDockNode* leftmost_leaf(FlDockNode* node) {
     return node;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Serialize
 
 // Panel ids as a single space-separated decimal string ("" when empty) - the json builder has no standalone
@@ -142,7 +138,6 @@ FlJsonValue* dock_persist_to_json(const FlDockPersistWorkspace* workspaces, u32 
     return root;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Load
 
 // Append every id in a space-separated decimal string to leaf, or to the tree's floating set when floating.
@@ -260,7 +255,6 @@ FlDockPersistLoad dock_persist_from_json(const FlJsonValue* blob, FlArena* arena
     return out;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Reconcile (the rebind-on-load rules)
 
 static bool id_in(const u64* ids, u32 count, u64 id) {
@@ -272,7 +266,6 @@ static bool id_in(const u64* ids, u32 count, u64 id) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static bool panel_in_any(const FlDockPersistLoad* load, FlDockPanelId p) {
     for (u32 i = 0; i < load->count; ++i) {
         if (dock_tree_has_panel(load->workspaces[i].tree, p)) {
@@ -292,7 +285,6 @@ static void reparent_to_root(FlDockTree* target, FlDockPanelId p) {
     dock_tree_apply(target, &req);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Close every panel in tree that declared does not name. Callers skip this for an empty roster.
 
 static void prune_undeclared(FlDockTree* tree, const FlDockPanelId* declared, u32 declared_count) {
@@ -315,7 +307,6 @@ static void prune_undeclared(FlDockTree* tree, const FlDockPanelId* declared, u3
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock every parked panel into tree's root region, emptying the floating set. The count is cleared before the
 // walk, not after, so each re-dock is a plain insert and the saved order survives.
 
@@ -327,7 +318,6 @@ static void drain_floating(FlDockTree* tree) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A panel already present in target (a cross-workspace id collision) is a no-op move.
 static void reparent_docked_rec(const FlDockNode* node, FlDockTree* target) {
     if (node == nullptr) {
@@ -345,7 +335,6 @@ static void reparent_docked_rec(const FlDockNode* node, FlDockTree* target) {
     reparent_docked_rec(node->split.child[1], target);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static void reparent_workspace(FlDockTree* src, FlDockTree* target) {
     reparent_docked_rec(src->root, target);
     for (u32 i = 0; i < src->floating_count; ++i) {
@@ -406,7 +395,6 @@ void dock_persist_reconcile(FlDockPersistLoad* load, const u64* live_ws_ids, u32
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Structural equality
 
 static bool nodes_equal(const FlDockNode* a, const FlDockNode* b) {

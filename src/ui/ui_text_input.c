@@ -19,7 +19,6 @@
 #include <math.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // stb_textedit integration
 //
 // All required macros and callbacks must be defined before including stb_textedit.h; see that header for
@@ -53,13 +52,9 @@
 #define STB_TEXTEDIT_NEWLINE '\n'
 #define STB_TEXTEDIT_IS_SPACE(ch) isspace((unsigned char)(ch))
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int STB_TEXTEDIT_STRINGLEN(const FlTextInputState* state) {
     return (int)state->buffer_length;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static STB_TEXTEDIT_CHARTYPE STB_TEXTEDIT_GETCHAR(const FlTextInputState* state, int pos) {
     if (pos < 0 || pos >= (int)state->buffer_length) {
@@ -68,7 +63,6 @@ static STB_TEXTEDIT_CHARTYPE STB_TEXTEDIT_GETCHAR(const FlTextInputState* state,
     return state->buffer[pos];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Helpers: the two scales this widget works in
 //
 // Everything this file measures or positions ends up in screen coordinates, reached by two different
@@ -95,8 +89,6 @@ static inline float ui_scale_of(FlUiCtx* ctx) {
     return (ctx && ctx->ui_scale > 0.0f) ? ctx->ui_scale : 1.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static float STB_TEXTEDIT_GETWIDTH(FlTextInputState* state, int line_start, int char_idx) {
     (void)line_start; // Single-line input, line_start unused
     if (char_idx < 0 || char_idx >= (int)state->buffer_length) {
@@ -114,8 +106,6 @@ static float STB_TEXTEDIT_GETWIDTH(FlTextInputState* state, int line_start, int 
     Vec2 size = font_cache_get_text_size(ctx->shared->font_cache, single_char, ctx->active_font, font_size);
     return size.x;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* row, FlTextInputState* state, int line_start) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -140,8 +130,6 @@ static void STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* row, FlTextInputState* state,
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int STB_TEXTEDIT_INSERTCHARS(FlTextInputState* state, int pos, const STB_TEXTEDIT_CHARTYPE* new_text, int len) {
     u32 new_length = state->buffer_length + len;
     text_buffer_grow(state->arena, &state->buffer, &state->buffer_capacity, state->buffer_length, new_length);
@@ -155,8 +143,6 @@ static int STB_TEXTEDIT_INSERTCHARS(FlTextInputState* state, int pos, const STB_
     return 1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void STB_TEXTEDIT_DELETECHARS(FlTextInputState* state, int pos, int len) {
     if (pos < 0 || pos + len > (int)state->buffer_length) {
         return;
@@ -165,8 +151,6 @@ static void STB_TEXTEDIT_DELETECHARS(FlTextInputState* state, int pos, int len) 
     memmove(state->buffer + pos, state->buffer + pos + len, state->buffer_length - pos - len);
     state->buffer_length -= len;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Convert keyboard input to character (-1 if not a character)
 static int STB_TEXTEDIT_KEYTOTEXT(int key) {
@@ -183,13 +167,9 @@ static int STB_TEXTEDIT_KEYTOTEXT(int key) {
 #include "stb_textedit.h"
 #pragma GCC diagnostic pop
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define STB_STATE(state) ((STB_TexteditState*)(state)->stb_state)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Helper Functions
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline float measure_text_to_pos(FlFontCache* font_cache, FlFontId font, u16 font_size, const char* buffer,
                                         u64 pos) {
@@ -200,8 +180,6 @@ static inline float measure_text_to_pos(FlFontCache* font_cache, FlFontId font, 
     Vec2 size = font_cache_get_text_size(font_cache, text, font, font_size);
     return size.x;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_text_input_init(FlTextInputState* state, FlArena* arena) {
     memory_zero(state, sizeof(*state));
@@ -214,8 +192,6 @@ void ui_text_input_init(FlTextInputState* state, FlArena* arena) {
     state->stb_state = (void*)arena_alloc_zero(arena, STB_TexteditState);
     stb_textedit_initialize_state(STB_STATE(state), 1); // 1 = single-line mode
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlTextInputState* ui_text_input_create(uint32_t capacity) {
     FlArena* arena = arena_new();
@@ -231,15 +207,11 @@ FlTextInputState* ui_text_input_create(uint32_t capacity) {
     return state;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_text_input_destroy(FlTextInputState* state) {
     if (state) {
         fl_arena_destroy(state->arena);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_text_input_set_text(FlTextInputState* state, FlString text) {
     if (!state || !state->buffer) {
@@ -267,16 +239,12 @@ void ui_text_input_set_text(FlTextInputState* state, FlString text) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString ui_text_input_get_text(const FlTextInputState* state) {
     if (!state || !state->buffer) {
         return (FlString) { .data = nullptr, .length = 0, .is_static = 0 };
     }
     return (FlString) { .data = state->buffer, .length = state->buffer_length, .is_static = 0 };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_text_input_clear(FlTextInputState* state) {
     if (!state || !state->buffer) {
@@ -290,8 +258,6 @@ void ui_text_input_clear(FlTextInputState* state) {
         STB_STATE(state)->select_end = 0;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_text_input_paste(FlTextInputState* state, const FlTextInputConfig* cfg, FlString text) {
     if (text.length == 0) {
@@ -325,8 +291,6 @@ bool ui_text_input_paste(FlTextInputState* state, const FlTextInputConfig* cfg, 
     state->cursor_blink_t = 0.0f;
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void handle_text_input_keyboard(FlTextInputState* state, FlUiCtx* ctx, FlTextInputConfig* cfg,
                                        bool* text_changed, bool* submitted, bool* cancelled) {
@@ -471,10 +435,7 @@ static void handle_text_input_keyboard(FlTextInputState* state, FlUiCtx* ctx, Fl
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void render_text_input(FlTextInputState* state, FlTextInputConfig* cfg, FlUiCtx* ctx, bool is_focused,
                               float visible_width) {
@@ -601,10 +562,7 @@ static void render_text_cursor(FlTextInputState* state, FlUiCtx* ctx, u32 clay_i
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Main Widget Function
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // clang-format off
 FlSignal ui_text_input(FlString label, FlTextInputState* state, FlTextInputConfig cfg) {

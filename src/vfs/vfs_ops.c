@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include "vfs_private.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Failure idiom for file operations: log the error, then publish the status with release semantics.
 // The caller returns.
 
@@ -21,7 +20,6 @@
         atomic_store_explicit(&(op)->error_status, status, memory_order_release); \
     } while (0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File operations
 
 // Caller holds the mount's driver_lock. Stores the op's status and returns it.
@@ -52,16 +50,12 @@ static VfsOpStatus file_open_locked(VfsOp* op, FlArena* scratch) {
     return VFS_STATE_SUCCESS;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void vfs_op_file_open(VfsOp* op, FlArena* scratch) {
     profile_function_auto_nc("vfs:vfs_op_file_open", PROFILE_COLOR_CYAN);
 
     mutex_lock_auto(&op->mount->driver_lock);
     file_open_locked(op, scratch);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Reads through the file the op is chained onto. Failures publish their status and return.
 static void file_read_from_file(VfsOp* op) {
@@ -102,8 +96,6 @@ static void file_read_from_file(VfsOp* op) {
     atomic_store_explicit(&op->error_status, VFS_STATE_SUCCESS, memory_order_release);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void vfs_op_file_read(VfsOp* op) {
     profile_function_auto_nc("vfs:vfs_op_file_read", PROFILE_COLOR_CYAN);
 
@@ -114,8 +106,6 @@ void vfs_op_file_read(VfsOp* op) {
     op->file_op = nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A failed read still invokes the callback, with data == nullptr and size == 0, so it can release whatever its
 // user_data owns and settle its own state. It runs before the result is published, so the op never reads ready
 // while the callback is still running, and any data it returns is dropped - a failed result has no reader for it.
@@ -124,8 +114,6 @@ static void read_all_notify_failure(VfsOp* op) {
         op->callback(nullptr, 0, op->user_data);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // What the driver half of a read-all produced. A set error_fmt is a failure; data is then null.
 typedef struct ReadAllData {
@@ -145,8 +133,6 @@ static ReadAllData read_all_failed(VfsOp* op, u8* buffer, VfsOpStatus status, co
     op->plugin_file_handle = nullptr;
     return (ReadAllData) { .status = status, .error_fmt = error_fmt };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Opens the file, reads all of it and closes it, under the mount's driver_lock. The caller's callback runs after
 // the lock is gone.
@@ -248,8 +234,6 @@ static ReadAllData read_all_from_driver(VfsOp* op, FlArena* scratch) {
     return (ReadAllData) { .data = buffer, .size = total_read, .status = VFS_STATE_SUCCESS };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void vfs_op_read_all(VfsOp* op, FlArena* scratch) {
     profile_function_auto_nc("vfs:vfs_op_read_all", PROFILE_COLOR_CYAN);
 
@@ -284,7 +268,6 @@ static void vfs_op_read_all(VfsOp* op, FlArena* scratch) {
     atomic_store_explicit(&op->error_status, VFS_STATE_SUCCESS, memory_order_release);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Directory listing
 
 typedef struct ListEntryNode {
@@ -302,8 +285,6 @@ typedef struct ListCollector {
     ListEntryNode* last;
     u32 count;
 } ListCollector;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool list_collect_entry(void* user_data, const FlVfsEntry* entry) {
     profile_function_auto_nc("vfs:list_collect_entry", PROFILE_COLOR_CYAN);
@@ -328,8 +309,6 @@ static bool list_collect_entry(void* user_data, const FlVfsEntry* entry) {
     return true; // Continue listing
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Directories first, then natural order by name.
 static int list_entry_compare(const void* a, const void* b) {
     const FlVfsEntry* left = a;
@@ -342,7 +321,6 @@ static int list_entry_compare(const void* a, const void* b) {
     return fl_string_compare_natural(left->name, right->name);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Failure path for directory listing. Destroys list_arena when non-null.
 
 static void vfs_list_fail(VfsOp* op, FlArena* list_arena, VfsOpStatus status, const char* fmt, FlString path) {
@@ -357,8 +335,6 @@ static void vfs_list_fail(VfsOp* op, FlArena* list_arena, VfsOpStatus status, co
         fl_arena_destroy(list_arena);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void vfs_op_list(VfsState* self, VfsOp* op, FlArena* scratch) {
     profile_function_auto_nc("vfs:vfs_op_list", PROFILE_COLOR_CYAN);
@@ -426,7 +402,6 @@ void vfs_op_list(VfsState* self, VfsOp* op, FlArena* scratch) {
     atomic_store_explicit(&op->error_status, VFS_STATE_SUCCESS, memory_order_release);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mount operation: resolves the source once and publishes the result.
 
 void vfs_op_mount(VfsState* self, VfsOp* op, FlArena* scratch) {
@@ -448,10 +423,7 @@ void vfs_op_mount(VfsState* self, VfsOp* op, FlArena* scratch) {
     atomic_store_explicit(&op->error_status, VFS_STATE_SUCCESS, memory_order_release);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Job scheduling
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Core execution logic - shared by both async and sync paths. Ends by publishing done, after the result and status.
 static void vfs_ops_execute(VfsOp* op, FlArena* scratch) {
@@ -483,8 +455,6 @@ static void vfs_ops_execute(VfsOp* op, FlArena* scratch) {
     atomic_store_explicit(&op->done, true, memory_order_release);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Async job wrapper - called by job system. The job's reference is returned last: it may be the final one, in which
 // case the op is destroyed, and its release hook runs, right here on the worker.
 void vfs_ops_do_job(void* data, FlJobsWorkerInfo info) {
@@ -493,15 +463,11 @@ void vfs_ops_do_job(void* data, FlJobsWorkerInfo info) {
     vfs_op_release(op);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Synchronous execution - called when already in job context
 void vfs_ops_execute_sync(VfsOp* op) {
     arena_scratch_auto(temp);
     vfs_ops_execute(op, temp.arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlJobHandle vfs_ops_schedule_job(FlVfsMount* mount, FlJobsFunc func, void* user_data) {
     profile_function_auto_nc("vfs:vfs_ops_schedule_job", PROFILE_COLOR_CYAN);

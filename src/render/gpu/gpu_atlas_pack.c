@@ -1,8 +1,6 @@
 #include "gpu_atlas_pack.h"
 #include <core/arena.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gpu_atlas_pack_init(GpuAtlasPack* pack, FlArena* arena, u32 width, u32 height) {
     if (pack->nodes == NULL || pack->width != width) {
         pack->nodes = arena_alloc_array(arena, GpuAtlasPackNode, width + 1);
@@ -13,7 +11,6 @@ void gpu_atlas_pack_init(GpuAtlasPack* pack, FlArena* arena, u32 width, u32 heig
     pack->node_count = 1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The y a w-wide rect rests at with its left edge at nodes[first].x. False when it would overhang the right edge.
 
 static bool fit_y_at(const GpuAtlasPack* pack, u32 first, u32 w, u32* out_y) {
@@ -31,7 +28,6 @@ static bool fit_y_at(const GpuAtlasPack* pack, u32 first, u32 w, u32* out_y) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Raise the skyline to y + h across [x, x + w). The height of the segment the span's right edge cuts into
 // resumes at x + w.
 
@@ -75,8 +71,6 @@ static void add_rect(GpuAtlasPack* pack, u32 first, u32 x, u32 y, u32 w, u32 h) 
     }
     pack->node_count = out + 1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool gpu_atlas_pack_insert(GpuAtlasPack* pack, u32 w, u32 h, u32* out_x, u32* out_y) {
     if (w == 0 || h == 0 || w > pack->width || h > pack->height) {

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_app - first-class C runner for the flowi toolkit.
 //
 // fl_app owns the window, the per-frame update loop, and presentation. C owns the loop and the host is a
@@ -21,8 +20,6 @@
 #include <flowi/ui/application_settings.h> // @generated FlAppSettings (api_gen)
 #include <ui/render_backend.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct FlApp FlApp;
 
 // Per-frame host callback. Emit the UI here (between the core's update_begin/update_end); fl_frame_str is
@@ -37,7 +34,6 @@ FlApp* fl_app_create(const FlAppSettings* settings);
 FlWindowConfig fl_app_main_window_config(const FlAppSettings* settings, const FlWindowBackend* backend);
 void fl_app_destroy(FlApp* app);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Multi-window. The app owns a window list: the main window (from fl_app_create) plus any opened with
 // fl_app_window_open. Each window pairs one window-backend window + one render surface + one per-window UI
 // context, and every fl_app_tick pumps the shared event queue once, demuxes events by window id into each
@@ -101,7 +97,6 @@ void fl_app_run(FlApp* app, void* user_data, FlAppFrameFn frame);
 // monitor content scale x zoom, recomposed for every window immediately.
 void fl_app_set_ui_zoom(FlApp* app, float zoom);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Headless harness surface - the single injection surface for C + Rust golden tests. The fl_app_inject_*
 // entry points assert app->headless (they drive the offscreen input backend).
 
@@ -153,7 +148,6 @@ void fl_app_set_test_dt(FlApp* app, float dt);
 // in either mode.
 bool fl_app_read_pixels(FlApp* app, FlPixelReadback* out);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Copy len bytes into the current frame's arena; valid until the end of the frame. Resolves the arena via the
 // process-global UI context (ui_get_ctx()); calling it with no active frame (between fl_app_tick's
 // update_begin/update_end) terminates the process in every build type, release included.

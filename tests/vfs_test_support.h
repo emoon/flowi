@@ -8,8 +8,6 @@
 #include <flowi/vfs/drivers.h>
 #include <vfs/drivers/archive_drivers.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Fixtures live in tests/fixtures/vfs. The directory comes from the build, so it does not depend on the working
 // directory.
 #define VFS_FIXTURE_DIR FLOWI_TEST_FIXTURE_DIR "/vfs"
@@ -18,8 +16,6 @@ static inline FlString vfs_fixture_path(FlArena* arena, FlString name) {
     return fl_sprintf_arena(arena, "%s/%S", VFS_FIXTURE_DIR, name);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The three loose text files in the fixture directory, and the first three entries of test.zip, which hold the same
 // text.
 #define FIXTURE_ASYNC_COUNT 3
@@ -27,8 +23,6 @@ static const char* const k_fixture_async_names[FIXTURE_ASYNC_COUNT]
     = { "async_test1.txt", "async_test2.txt", "async_test3.txt" };
 static const char* const k_fixture_async_contents[FIXTURE_ASYNC_COUNT]
     = { "Content 1", "Content 2 is longer", "Content 3" };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define BYTE_WRITER_MIN_CAPACITY 4096
 
@@ -52,8 +46,6 @@ static inline ByteWriter* byte_writer_create(FlArena* arena) {
     return writer;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void byte_writer_reserve(ByteWriter* writer, size_t extra) {
     if (writer->size + extra <= writer->capacity) {
         return;
@@ -67,16 +59,12 @@ static inline void byte_writer_reserve(ByteWriter* writer, size_t extra) {
     writer->capacity = capacity;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void byte_put(ByteWriter* writer, u64 value, int byte_count) {
     byte_writer_reserve(writer, (size_t)byte_count);
     for (int i = 0; i < byte_count; i++) {
         writer->bytes[writer->size++] = (u8)(value >> (8 * i));
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline void byte_put_bytes(ByteWriter* writer, const void* data, size_t size) {
     byte_writer_reserve(writer, size);
@@ -91,8 +79,6 @@ static inline void byte_put_bytes(ByteWriter* writer, const void* data, size_t s
 #define ZIP_END_SIGNATURE 0x06054b50u
 #define ZIP_VERSION 20
 #define ZIP_DOS_DATE_1980 0x21
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Writes a zip of stored entries. A name ending in '/' is a directory entry and takes no data.
 static inline void zip_build(ByteWriter* zip, const ZipEntry* entries, int entry_count) {
@@ -156,8 +142,6 @@ static inline void zip_build(ByteWriter* zip, const ZipEntry* entries, int entry
 #define ZIP_FILE(name, zip_writer) ((ZipEntry) { name, (zip_writer)->bytes, (zip_writer)->size })
 #define ZIP_DIR(name) ((ZipEntry) { name, (const u8*)"", 0 })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // LHA archives of stored entries, for the Lhasa driver.
 // Bytes of a level 0 header after its first two (size, checksum) that do not depend on the name.
 #define LHA_HEADER_FIXED 22
@@ -177,8 +161,6 @@ static inline u16 lha_crc16(const u8* data, size_t size) {
     }
     return crc;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline void lha_put_entry(ByteWriter* lha, const char* name, const char* text, const char* method,
                                  u8 attribute) {
@@ -207,21 +189,15 @@ static inline void lha_put_entry(ByteWriter* lha, const char* name, const char* 
     byte_put_bytes(lha, text, data_size);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void lha_put_end(ByteWriter* lha) {
     byte_put(lha, 0, 1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // An archive holding one stored file.
 static inline void lha_build(ByteWriter* lha, const char* name, const char* text) {
     lha_put_entry(lha, name, text, LHA_METHOD_STORED, LHA_ATTRIBUTE_FILE);
     lha_put_end(lha);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Starts from a pristine VFS with every archive driver this build contains registered.
 static inline bool vfs_test_begin(void) {
@@ -233,16 +209,12 @@ static inline bool vfs_test_begin(void) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Mounts path and waits for the mount job. nullptr when the mount did not become ready.
 static inline FlVfsMount* vfs_test_mount(FlString path) {
     FlVfsMount* mount = vfs_mount(path).mount;
     vfs_wait_all();
     return mount != nullptr && fl_vfs_mount_is_ready(mount) ? mount : nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // A fresh, empty directory under the working directory for a case to put files in. Empty when it cannot be made.
 static inline FlString vfs_test_temp_dir(FlArena* arena, FlString name) {
@@ -269,14 +241,10 @@ static inline void scratch_dir_destroy(ScratchDir* scratch) {
     fl_arena_destroy(scratch->arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline bool vfs_test_write_file(FlArena* arena, FlString dir, FlString name, const ByteWriter* bytes) {
     FlString path = file_build_path_os(arena, dir, name);
     return file_write_os(path, bytes->bytes, (i64)bytes->size) == (i64)bytes->size;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline bool vfs_expect_read(FlVfsMount* mount, FlString path, FlString expected) {
     FlVfsHandle handle = vfs_mount_read_all(mount, path);
@@ -292,8 +260,6 @@ static inline bool vfs_expect_read(FlVfsMount* mount, FlString path, FlString ex
     return ok;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline bool vfs_expect_read_fails(FlVfsMount* mount, FlString path) {
     FlVfsHandle handle = vfs_mount_read_all(mount, path);
     fl_vfs_wait(handle);
@@ -305,8 +271,6 @@ static inline bool vfs_expect_read_fails(FlVfsMount* mount, FlString path) {
     fl_vfs_close(handle);
     return failed;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The entries of a listing as "name" for files, "name/" for directories and "name*" for files flagged as archives, in
 // listing order, space separated.
@@ -333,8 +297,6 @@ static inline bool vfs_expect_list(FlVfsMount* mount, FlString path, const char*
     fl_vfs_close(handle);
     return ok;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Reads path through a file handle chunk bytes at a time. Every read but the last must fill the buffer, the last must
 // bring the file to exactly expected, and the read after it must report the end with zero bytes.

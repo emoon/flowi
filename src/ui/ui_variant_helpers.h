@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI Variant Helpers
 //
 // Variants define the visual style of widgets:
@@ -8,7 +7,6 @@
 // - Outline: Border only, transparent background (secondary actions)
 // - Ghost:   Transparent background, secondary text (tertiary actions, nav items)
 // - Soft:    Subtle tinted background (accent at 15% opacity), accent text (tags, chips)
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <ui/ui_types.h>
 #include <flowi/ui/theme.h>
@@ -17,7 +15,6 @@
 // ItemState is internal.
 struct ItemState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Base colors for a variant - before any state modifiers (hover, press, focus).
 
 FlColor ui_get_variant_bg(FlWidgetVariant variant, const FlThemeColors* theme);
@@ -26,7 +23,6 @@ FlColor ui_get_variant_text(FlWidgetVariant variant, const FlThemeColors* theme)
 
 FlColor ui_get_variant_border(FlWidgetVariant variant, const FlThemeColors* theme);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // State Color Application
 //
 // Apply hover/press/focus state modifiers to base colors, driven by the ItemState animation values
@@ -39,7 +35,6 @@ FlColor ui_apply_state_color(FlColor base, const struct ItemState* item);
 // Apply focus to a border color: OKLab-lerps toward theme->interactive.focus, giving the focus ring.
 FlColor ui_apply_focus_border(FlColor base_border, const struct ItemState* item, const FlThemeColors* theme);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Widget Color Resolution
 //
 // The uniform per-widget color prologue (bg/text/border base selection + state application). Call sites pass
@@ -53,7 +48,6 @@ typedef struct {
 FlWidgetColors fl_resolve_widget_colors(FlWidgetVariant variant, FlColor bg_override, FlColor text_override,
                                         const struct ItemState* item, const FlThemeColors* theme, bool animate_text);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Sparse theme override merge
 //
 // Layer a sparse FlThemeOverride over a base theme: copy only the slots flagged in override->slots, inherit
@@ -64,7 +58,6 @@ FlWidgetColors fl_resolve_widget_colors(FlWidgetVariant variant, FlColor bg_over
 
 FlThemeColors fl_theme_merge_override(const FlThemeColors* base, const FlThemeOverride* override);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Convenience Functions
 
 static inline bool ui_color_is_transparent(FlColor c) {

@@ -2,8 +2,6 @@
 #include <core/arena.h>
 #include <core/log.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gpu_image_atlas_init(GpuImageAtlas* atlas, FlArena* arena) {
     atlas->entries = arena_alloc_array(arena, GpuImageAtlasEntry, GPU_IMAGE_ATLAS_MAX_ENTRIES);
     atlas->entry_count = 0;
@@ -12,8 +10,6 @@ void gpu_image_atlas_init(GpuImageAtlas* atlas, FlArena* arena) {
     atlas->pack = (GpuAtlasPack) { 0 };
     gpu_atlas_pack_init(&atlas->pack, arena, GPU_IMAGE_ATLAS_SIZE, GPU_IMAGE_ATLAS_SIZE);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static GpuImageAtlasEntry* find_entry(GpuImageAtlas* atlas, FlImageHandle handle) {
     for (u32 i = 0; i < atlas->entry_count; i++) {
@@ -27,8 +23,6 @@ static GpuImageAtlasEntry* find_entry(GpuImageAtlas* atlas, FlImageHandle handle
 const GpuImageAtlasEntry* gpu_image_atlas_find(const GpuImageAtlas* atlas, FlImageHandle handle) {
     return find_entry((GpuImageAtlas*)atlas, handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const GpuImageAtlasEntry* gpu_image_atlas_place(GpuImageAtlas* atlas, FlImageHandle handle, u32 w, u32 h) {
     if (w == 0 || h == 0 || w > GPU_IMAGE_ATLAS_MAX_DIM || h > GPU_IMAGE_ATLAS_MAX_DIM) {
@@ -68,8 +62,6 @@ const GpuImageAtlasEntry* gpu_image_atlas_place(GpuImageAtlas* atlas, FlImageHan
     return entry;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gpu_image_atlas_release(GpuImageAtlas* atlas, FlImageHandle handle) {
     GpuImageAtlasEntry* entry = find_entry(atlas, handle);
     if (entry == NULL) {
@@ -82,8 +74,6 @@ void gpu_image_atlas_release(GpuImageAtlas* atlas, FlImageHandle handle) {
     }
     *entry = atlas->entries[--atlas->entry_count];
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gpu_image_atlas_expand_coverage(u8* dst, const u8* src, u32 w, u32 h, u32 src_stride) {
     u32 stride = src_stride != 0 ? src_stride : w;

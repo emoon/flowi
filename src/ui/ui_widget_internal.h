@@ -24,7 +24,6 @@ static inline u32 ui_item_id_seed(u32 instance_id, u32 index) {
 // color with alpha > 0, and pointer hit-testing needs that command.
 #define UI_HIT_TEST_FILL(alpha) ((FlColor) { 0, 0, 0, (alpha) })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // color with its alpha raised to at least min_alpha, RGB preserved, so a themed fill stays hit-testable.
 static inline FlColor ui_hit_testable(FlColor color, u8 min_alpha) {
     if (color.a < min_alpha) {

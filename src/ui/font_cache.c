@@ -9,14 +9,11 @@
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared font layer: FreeType face management, async file load, text measurement, per-size vertical metrics, glyph
 // advances, and the raster-source hand-off. This layer NEVER rasterizes - coverage bitmaps, atlases, and the
 // job-threaded realization live in the SW backend (render/software/sw_glyph_cache.{h,c}).
 
 #define MAX_FONT_FACES 128
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct FontFace {
     FlArena* arena;
@@ -43,15 +40,11 @@ typedef struct FontFace {
     hashmap(u64, int) advance_cache;
 } FontFace;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct FontLoadContext {
     FlFontCache* cache;
     FontFace* face;
     u16 font_size;
 } FontLoadContext;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct FlFontCache {
     FT_Library library;
@@ -65,8 +58,6 @@ struct FlFontCache {
     FlFontId next_id;
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlFontCache* font_cache_new(FlArena* arena) {
     FlFontCache* cache = arena_alloc_zero(arena, FlFontCache);
     cache->next_id = 1;
@@ -76,7 +67,6 @@ FlFontCache* font_cache_new(FlArena* arena) {
     return cache;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Quantize font size to reduce atlas proliferation. Shared with the SW glyph realization layer so the metrics
 // measured here and the coverage bitmaps it rasterizes agree on a size.
 //   < 30px: 2px steps   30-59px: 4px steps   >= 60px: 8px steps
@@ -91,7 +81,6 @@ u16 font_cache_quantize_size(u16 size) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Quarter-pixel size key for the fractional-size text path: round(size × 4). The same key drives measurement
 // and the styled draw so both agree on one FreeType size.
 
@@ -114,8 +103,6 @@ u16 font_cache_q4_to_whole_px(u16 size_q4) {
     u16 px = (u16)((size_q4 + 2) / 4);
     return px < 1 ? 1 : px;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Copy the font file bytes into the face arena and stand up the main-thread metrics face. The bytes are
 // owned by the face for its lifetime; FreeType and the SW backend's raster faces read them.
@@ -146,7 +133,6 @@ static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, co
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static FlVfsData font_load_callback(void* data, i64 size, void* user_data) {
     FontLoadContext* ctx = (FontLoadContext*)user_data;
 
@@ -162,7 +148,6 @@ static FlVfsData font_load_callback(void* data, i64 size, void* user_data) {
     return (FlVfsData) { .data = nullptr, .size = 0, .success = true };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Claim the next face slot and stamp the fields every load path sets identically. Returns nullptr when the
 // cache is full. A slot stays consumed once claimed, even if the caller's load then fails: the face is left
 // at FontStatus_Failed and destroy frees whatever the partial load allocated. FontStatus_Loading is the zero value.
@@ -182,8 +167,6 @@ static FontFace* alloc_face(FlFontCache* self, FlFontRasterKind kind, u16 font_s
     };
     return face;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlFontId font_cache_load_font(FlFontCache* self, FlVfsMount* mount, FlString relative_path, u16 font_size) {
     FontFace* face = alloc_face(self, FlFontRasterKind_FreeType, font_size);
@@ -208,7 +191,6 @@ FlFontId font_cache_load_font(FlFontCache* self, FlVfsMount* mount, FlString rel
     return face->id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Load a FreeType font from memory: same face shape as the VFS path, ready synchronously.
 
 FlFontId font_cache_load_font_memory(FlFontCache* self, const u8* data, i64 size, u16 font_size) {
@@ -226,8 +208,6 @@ FlFontId font_cache_load_font_memory(FlFontCache* self, const u8* data, i64 size
     }
     return face->id;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool font_cache_load_fallback(FlFontCache* self, FlVfsMount* mount, FlString relative_path) {
     if (self->fallback_face != nullptr) {
@@ -249,8 +229,6 @@ bool font_cache_load_fallback(FlFontCache* self, FlVfsMount* mount, FlString rel
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlFontId font_cache_load_default_font(FlFontCache* self, u16 scale) {
     FontFace* face = alloc_face(self, FlFontRasterKind_Default, 8 * scale); // Base size is 8x8 pixels
     if (face == nullptr) {
@@ -264,8 +242,6 @@ FlFontId font_cache_load_default_font(FlFontCache* self, u16 scale) {
     return face->id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FontFace* find_face_by_id(FlFontCache* cache, FlFontId font_id) {
     for_count(i, cache->face_count) {
         if (cache->faces[i].id == font_id) {
@@ -274,8 +250,6 @@ static FontFace* find_face_by_id(FlFontCache* cache, FlFontId font_id) {
     }
     return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void font_cache_set_fallback_font(FlFontCache* self, FlFontId font_id) {
     FontFace* face = find_face_by_id(self, font_id);
@@ -292,14 +266,10 @@ void font_cache_set_fallback_font(FlFontCache* self, FlFontId font_id) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FontStatus font_cache_get_font_status(FlFontCache* self, FlFontId font_id) {
     FontFace* face = find_face_by_id(self, font_id);
     return face != nullptr ? face->status : FontStatus_Failed;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void font_cache_destroy(FlFontCache* self) {
     FL_VALIDATE(self != nullptr);
@@ -336,8 +306,6 @@ void font_cache_destroy(FlFontCache* self) {
     self->face_count = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void font_cache_update(FlFontCache* self) {
     for_count(i, self->face_count) {
         FontFace* face = &self->faces[i];
@@ -360,8 +328,6 @@ void font_cache_update(FlFontCache* self) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void font_cache_wait_loaded(FlFontCache* self, FlFontId id) {
     while (font_cache_get_font_status(self, id) == FontStatus_Loading) {
         font_cache_update(self);
@@ -369,7 +335,6 @@ void font_cache_wait_loaded(FlFontCache* self, FlFontId id) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Opt-in load barrier. Pump I/O until no font is still loading, then report whether all succeeded. Waits on
 // metrics-readiness only; glyph rasterization stays render-when-ready. A missing/unreadable file resolves to
 // FontStatus_Failed and exits the loop (no timeout). Drains only fonts.
@@ -399,14 +364,11 @@ bool font_cache_ensure_all_loaded(FlFontCache* self) {
     return all_ready;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int font_cache_get_size(FlFontCache* self, FlFontId font_id) {
     FontFace* face = find_face_by_id(self, font_id);
     return face != nullptr ? face->size : 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Size a metrics face to a quarter-px key: 26.6 nominal height q4 << 4 at 72 dpi, the same FT_Request_Size
 // that FT_Set_Pixel_Sizes issues when the key is a whole pixel; fractional keys size at fractional ppem.
 static void ft_set_size_q4(FT_Face face, u16 q4) {
@@ -435,7 +397,6 @@ static int ft_compute_advance(FlFontCache* self, FontFace* face, u16 q4, u32 cod
     return (int)mf->glyph->advance.x;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Cached advance for one codepoint at a quarter-px size key. Only the whole-px measure paths may claim the
 // dense ASCII row (may_claim_row), so row ownership is deterministic regardless of whether a fractional caller
 // touches the face first; the q4-keyed paths always take the hashmap.
@@ -519,19 +480,16 @@ float font_cache_resolve_size_px(FlFontCache* self, FlFontId font_id, float font
     return size > 0.0f ? size : 0.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool font_cache_metrics_ready(FlFontCache* self, FlFontId font_id) {
     FontFace* face = find_face_by_id(self, font_id);
     return face != nullptr && face->status == FontStatus_Ready;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-size vertical metrics, in 26.6 ints. count is the readiness flag (0 = not ready, skip the run this
 // frame). 26.6 values are exact in f32, so the float round trip through face_vmetrics is lossless.
 
 static FlFontMetrics face_vmetrics(FlFontCache* self, FontFace* face, u16 q4);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 GlyphList font_cache_get_glyph_list(FlFontCache* self, FlFontId font_id, u16 font_size) {
     FontFace* face = find_face_by_id(self, font_id);
     if (face == nullptr || face->status != FontStatus_Ready) {
@@ -548,7 +506,6 @@ GlyphList font_cache_get_glyph_list(FlFontCache* self, FlFontId font_id, u16 fon
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared measurement core
 
 static FontFace* face_for_metrics(FlFontCache* self, FlFontId font_id, const char* caller) {
@@ -615,8 +572,6 @@ static i64 sum_advances_q4(FlFontCache* self, FontFace* face, FlString text, u16
     return sum;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id, u16 font_size) {
     FontFace* face = face_for_metrics(self, font_id, "font_cache_get_text_size");
     if (face == nullptr) {
@@ -633,7 +588,6 @@ Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id
     return (Vec2) { width, face_vmetrics(self, face, q4).line_height };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fractional-size single-line measurement (quarter-px quantized). Letter spacing adds n−1 gaps only (no
 // trailing gap), so a measured pill hugs its label; the styled draw applies the same rule.
 
@@ -665,7 +619,6 @@ FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlFontId
     return out;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // String-independent vertical metrics at a fractional size - what font_cache_measure_text reports minus the
 // string.
 
@@ -678,7 +631,6 @@ FlFontMetrics font_cache_get_font_metrics(FlFontCache* self, FlFontId font_id, f
     return face_vmetrics(self, face, resolve_size_q4(face, font_size));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Raster-source hand-off: the upstream inputs a backend needs to realize coverage; never coverage itself.
 
 bool font_cache_get_raster_source(FlFontCache* self, FlFontId font_id, FlFontRasterSource* out) {
@@ -707,8 +659,6 @@ bool font_cache_get_raster_source(FlFontCache* self, FlFontId font_id, FlFontRas
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool font_cache_get_fallback_raster_source(FlFontCache* self, FlFontRasterSource* out) {
     if (self->fallback_face == nullptr) {
         return false;
@@ -716,7 +666,6 @@ bool font_cache_get_fallback_raster_source(FlFontCache* self, FlFontRasterSource
     return font_cache_get_raster_source(self, self->fallback_face->id, out);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Glyph-outline service. FT_Outline_Decompose walks the loaded outline; the same callbacks run twice - a
 // counting pass, then a fill pass into the caller's arena. FreeType closes contours implicitly, so a contour
 // whose last segment does not end on its start point gets its closing edge materialized as a Line segment
@@ -791,8 +740,6 @@ static int outline_conic_to(const FT_Vector* control, const FT_Vector* to, void*
 static int outline_cubic_to(const FT_Vector* control1, const FT_Vector* control2, const FT_Vector* to, void* user) {
     return outline_seg(user, FlGlyphSegment_Cubic, control1, control2, to);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static u32 face_glyph_index(FlFontCache* self, FontFace* face, u32 codepoint) {
     if (face == nullptr || face->kind != FlFontRasterKind_FreeType || face->status != FontStatus_Ready

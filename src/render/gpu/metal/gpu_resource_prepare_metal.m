@@ -12,7 +12,6 @@
 #include <ui/image_decode.h>   // FlImageDecodeResult
 #include <ui/vector_image.h>   // FlVectorImage
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The cell-raster dispatch shared by glyph, monochrome SVG, and multi-color SVG cells; they differ in pipeline,
 // target atlas, and whether per-shape records ride along. Each dispatch rides its own command buffer waited to
 // completion. The curve and shape buffers are +1 owned and released once it completes.

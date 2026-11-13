@@ -2,12 +2,10 @@
 
 #include <core/types.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scroll core - shared pure scroll math (single-axis, frame-rate independent, stateless).
 //
 // ui_scroll, list_uniform and content_view all feed their own positioning policy (target / content extent)
 // into these functions; none of them owns the math.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Default smooth-scroll lerp factor (higher is snappier); callers may override.
 #define SCROLL_CORE_DEFAULT_SMOOTH_SPEED 8.0f

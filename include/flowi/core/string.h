@@ -41,7 +41,6 @@ static inline FlString string_from_cstr(const char* cstr) {
     return cstr ? string_from_cstr_len(cstr, (uint64_t)strlen(cstr)) : string_empty();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlString Literal Macros
 //
 // Use FL_S("literal") to create compile-time FlString constants from string literals.

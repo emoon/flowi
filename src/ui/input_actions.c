@@ -6,7 +6,6 @@
 #include <math.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Default Bindings - Hardcoded sensible defaults that work out-of-the-box
 
 #define BINDING_KEYBOARD(k) \
@@ -153,14 +152,10 @@ static const InputBinding s_bindings_text_redo[] = {
     BINDING_KEYBOARD_MOD(FlKey_Z, UI_MOD_SUPER | UI_MOD_SHIFT), // macOS (Cmd+Shift+Z)
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct BindingSet {
     const InputBinding* bindings;
     u32 count;
 } BindingSet;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const BindingSet s_default_bindings[FlAction_Count] = {
     [FlAction_None] = { nullptr, 0 },
@@ -194,7 +189,6 @@ static const BindingSet s_default_bindings[FlAction_Count] = {
     [FlAction_Text_Redo] = { s_bindings_text_redo, sizeof_array(s_bindings_text_redo) },
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Binding check dispatch - unified function that routes to appropriate checker based on event type
 
 typedef enum BindingEventType {
@@ -202,8 +196,6 @@ typedef enum BindingEventType {
     BINDING_EVENT_PRESSED = 1,
     BINDING_EVENT_RELEASED = 2,
 } BindingEventType;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Exact match of the active keyboard modifiers against a binding's required modifiers.
 // Only Shift/Ctrl/Alt/Super participate; all other modifier bits are ignored.
@@ -221,8 +213,6 @@ static bool keyboard_modifiers_match(u32 active_modifiers, UiModifiers required)
     const u32 relevant_mask = FlKeyModifier_Shift | FlKeyModifier_Control | FlKeyModifier_Alt | FlKeyModifier_Super;
     return (active_modifiers & relevant_mask) == expected_mods;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool check_binding(const FlInputState* input, const InputBinding* binding, BindingEventType event_type) {
     switch (binding->type) {
@@ -309,7 +299,6 @@ static bool check_binding(const FlInputState* input, const InputBinding* binding
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Action Evaluation
 
 static bool evaluate_action(const FlInputState* input, FlAction action, BindingEventType event_type) {
@@ -324,15 +313,12 @@ static bool evaluate_action(const FlInputState* input, FlAction action, BindingE
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal API Implementation
 
 void ui_actions_init(FlUiCtx* ctx) {
     ctx->action_state = arena_alloc(ctx->persistant, ActionSystemState);
     memory_zero(ctx->action_state, sizeof(ActionSystemState));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_actions_update(FlUiCtx* ctx) {
     ActionSystemState* state = ctx->action_state;
@@ -361,7 +347,6 @@ void ui_actions_update(FlUiCtx* ctx) {
     state->actions[FlAction_Scroll_Down].released = false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public Query API Implementation
 
 bool ui_action_pressed(FlUiCtx* ctx, FlAction action) {
@@ -376,8 +361,6 @@ bool ui_action_pressed(FlUiCtx* ctx, FlAction action) {
 
     return state->actions[action].pressed;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_action_repeated(FlUiCtx* ctx, FlAction action) {
     if (action >= FlAction_Count) {
@@ -406,8 +389,6 @@ bool ui_action_repeated(FlUiCtx* ctx, FlAction action) {
 
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_action_pressed_or_repeated(FlUiCtx* ctx, FlAction action) {
     return ui_action_pressed(ctx, action) || ui_action_repeated(ctx, action);

@@ -1,11 +1,9 @@
 #include "app/app_gpu.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU Surface Binding for fl_app. Compiled to nothing unless FL_APP_HAVE_GPU (OpenGL_EGL_FOUND). Holds the
 // headless EGL-surfaceless context plus two thin host helpers - backend construction against an already-current
 // context, and the surface-texture resolve - so app.c stays free of EGL/GL types. The windowed SDL-GL window +
 // context + compositor + present live in the SDL WindowBackend (src/platform/backend_sdl_window.c).
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if FL_APP_HAVE_GPU
 
@@ -15,7 +13,6 @@
 
 #ifdef __APPLE__
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // macOS: the GPU backend is Metal. Its surface binding is a bare MTLDevice - no window and no GL context -
 // owned inside the render backend itself (gpu_metal.m), so the headless bootstrap has nothing of its own to
 // hold and just constructs the backend.
@@ -71,8 +68,6 @@ void fl_app_gpu_destroy(FlAppGpu* gpu) {
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <string.h>
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct FlAppGpu {
     // Headless: the EGL surfaceless display + context. The windowed path's GL context lives in the SDL

@@ -7,7 +7,6 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Cross-platform path manipulation utilities
 
 StringArray path_split(struct FlArena* arena, FlString path);
@@ -20,7 +19,6 @@ static inline bool path_is_separator(char c) {
     return c == '/' || c == '\\';
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Path components structure and functions for resolving a path through nested containers
 
 typedef struct {
@@ -34,7 +32,6 @@ PathComponents path_components(struct FlArena* arena, FlString path);
 // Reconstruct a path from count segments starting at index start
 FlString path_reconstruct_from_segments(const PathComponents* components, int start, u32 count, struct FlArena* arena);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Directory searching and current directory utilities
 
 FlString path_get_current_directory(struct FlArena* arena);

@@ -5,7 +5,6 @@
 #include <core/os/os.h>
 #include <stdatomic.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A handle's realized form as the active backend reported it: logical dimensions only, no pixels. Presence in
 // the map is readiness - the entry exists only after a backend acked realization.
 
@@ -24,8 +23,6 @@ struct ImageRegistry {
 // thread (GPU). The mutex guards the map itself.
 static _Atomic(struct ImageRegistry*) s_image_registry;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ImageRegistry* image_registry_new(FlArena* arena) {
     ImageRegistry* self = arena_alloc_zero(arena, ImageRegistry);
     self->arena = arena;
@@ -35,8 +32,6 @@ ImageRegistry* image_registry_new(FlArena* arena) {
     atomic_compare_exchange_strong(&s_image_registry, &installed, self);
     return self;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void image_registry_destroy(ImageRegistry* self) {
     FL_VALIDATE(self != nullptr);
@@ -49,8 +44,6 @@ void image_registry_destroy(ImageRegistry* self) {
     // The map lives in the caller-owned arena; nothing else to free here.
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void image_registry_mark_realized(ImageHandle handle, int width, int height) {
     ImageRegistry* self = atomic_load(&s_image_registry);
     if (!self || handle == IMAGE_HANDLE_INVALID) {
@@ -62,8 +55,6 @@ void image_registry_mark_realized(ImageHandle handle, int width, int height) {
     hashmap_insert(&self->realized, handle, entry);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void image_registry_remove(ImageHandle handle) {
     ImageRegistry* self = atomic_load(&s_image_registry);
     if (!self || handle == IMAGE_HANDLE_INVALID) {
@@ -73,8 +64,6 @@ void image_registry_remove(ImageHandle handle) {
     mutex_lock_auto(&self->mutex);
     hashmap_remove(&self->realized, handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool image_registry_is_ready(ImageHandle handle, int* out_width, int* out_height) {
     ImageRegistry* self = atomic_load(&s_image_registry);

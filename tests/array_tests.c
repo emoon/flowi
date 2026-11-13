@@ -23,8 +23,6 @@ typedef struct {
     i32 value;
 } PtrValueTestStruct;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(array, create_and_destroy) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -39,8 +37,6 @@ UTEST(array, create_and_destroy) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(array, add_and_get) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -67,8 +63,6 @@ UTEST(array, add_and_get) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(array, bounds_checking) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     fixed_array(i32) int_array;
@@ -86,8 +80,6 @@ UTEST(array, bounds_checking) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(array, set_elements) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     fixed_array(i32) int_array;
@@ -104,8 +96,6 @@ UTEST(array, set_elements) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(array, remove_swapback) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -129,8 +119,6 @@ UTEST(array, remove_swapback) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(array, clear_and_status) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -157,8 +145,6 @@ UTEST(array, clear_and_status) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(array, direct_access) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     fixed_array(i32) int_array;
@@ -179,8 +165,6 @@ UTEST(array, direct_access) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(array, capacity_exceeded) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     fixed_array(i32) int_array;
@@ -199,8 +183,6 @@ UTEST(array, capacity_exceeded) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(array, struct_array) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -228,8 +210,6 @@ UTEST(array, struct_array) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(array, float_array) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     fixed_array(f32) float_array;
@@ -251,8 +231,6 @@ UTEST(array, float_array) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(array, type_safety) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     fixed_array(i32) int_array;
@@ -268,8 +246,6 @@ UTEST(array, type_safety) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(array, for_each_macro) {
     FlArena* arena = arena_new(.reserved_size = MB(64));

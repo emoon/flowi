@@ -30,8 +30,6 @@ static inline FlLayoutSizingAxis get_widget_height_sizing(FlWidgetSize size) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlSignal ui_button_impl(FlString string, FlWidgetConfig cfg) {
     UiWidgetState w = ui_widget_prepare(string, cfg, STANDARD_WIDGET_FLAGS, cfg.variant, /*animate_text=*/false);
     FlSignal signal = w.signal;
@@ -112,7 +110,6 @@ void ui_progress_bar_impl(float fraction, FlProgressConfig cfg) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Link widget - clickable text with underline for hyperlinks
 
 FlSignal ui_link_impl(FlString text, FlLinkConfig cfg) {

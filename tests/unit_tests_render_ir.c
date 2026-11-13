@@ -2,7 +2,6 @@
 
 #include "unit_tests_common.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render_ir: the styled text-run layout (fl_ir_text_layout at a fractional quarter-px key) agrees with
 // font_cache_measure_text - same quantizer, same per-glyph advances, same n−1 letter-spacing rule.
 
@@ -100,7 +99,6 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render_ir: optional-tier emission and SW-backend skip (ui/render_ir_build.h, sr_ir_to_render_command.c).
 // The builders are verified through a full walk of the emitted byte stream. The painter case proves the
 // reference-space-to-pixel scaling happens at emit (unitless angles/intensity pass through). The SW case proves
@@ -702,7 +700,6 @@ UTEST(render_ir, sw_backend_drops_each_optional_tier) {
     fl_arena_destroy(state_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SW backend behavior is unchanged by an effect annotation: it never reads the effect, so a core fill rect
 // carrying a drop shadow translates to the same render command as the same rect without one.
 
@@ -757,7 +754,6 @@ UTEST(render_ir, sw_backend_ignores_effect_on_core_command) {
     fl_arena_destroy(state_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SW and GPU IR decoders must agree on the two bits of intent-decode math they both do: the global_alpha
 // fold (both round: (a*ga+127)/255) and the corner-radius clamp (both floor negatives to 0). A rect that trips
 // either divergence would render differently on the two backends.
@@ -998,7 +994,6 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     font_cache_destroy(cache);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // painter_rects: one batched call must leave exactly the records a painter_rect loop leaves. The backends only
 // ever see the IR, so identical bytes at every stage below are identical output on every backend: the span
 // itself (UI scaling, effect), the spliced frame stream (Canvas z-order, clipping), and each backend's decode

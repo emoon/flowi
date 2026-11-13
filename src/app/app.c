@@ -16,8 +16,6 @@
 #include "ui/ui.h"
 #include "ui/ui_private.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The two sentinels must carry the same value so a host position passes straight through, untranslated.
 _Static_assert(FL_APP_WINDOW_POS_DEFAULT == FL_WINDOW_POS_DEFAULT,
                "FL_APP_WINDOW_POS_DEFAULT must equal the window backend's FL_WINDOW_POS_DEFAULT");
@@ -126,7 +124,6 @@ struct FlApp {
 // resolves its arena from the process-global UI context; v1 hosts a single app per process.
 static bool s_frame_active;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Attach a host-level window to the shared tier: create its render surface and its UI context, wire the shared
 // font cache + default font onto it, and append it to the window list. os_window must already exist - the GPU
 // windowed path builds its render backend against the context before the surface does. The caller owns the
@@ -170,7 +167,6 @@ static bool app_attach_window(FlApp* app, FlAppWindow* w, FlWindow* os_window, b
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 FlWindowConfig fl_app_main_window_config(const FlAppSettings* settings, const FlWindowBackend* backend) {
     float scale = backend->display_content_scale ? backend->display_content_scale(backend->user_data) : 1.0f;
     if (!(scale > 0.0f)) {
@@ -185,7 +181,6 @@ FlWindowConfig fl_app_main_window_config(const FlAppSettings* settings, const Fl
                               .resizable = !settings->fixed_size };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Default dock host: the runner provides the OS-window mechanics for panel promotion; flowi owns the decision +
 // lifecycle + demote-on-close. Registered once in fl_app_create. flowi never opens a window itself.
 
@@ -225,8 +220,6 @@ static void* app_dock_open_promoted_window(void* ud, struct FlDockWorkspace* ws,
 static void app_dock_close_promoted_window(void* ud, void* host_window) {
     fl_app_window_close((FlApp*)ud, (FlAppWindow*)host_window);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Every fl_app_create failure path bails identically: tear down whatever came up (fl_app_destroy null-checks every
 // subsystem, so it is safe at any point in the bring-up) and return null. Two macros - not helpers - so the
@@ -523,7 +516,6 @@ void fl_app_destroy(FlApp* app) {
     fl_arena_destroy(app->arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Frame loop. Ordering within a tick: pump -> ui_input_update -> begin -> frame -> end -> present.
 // ui_input_update is the edge snapshot - it derives mouse_pressed_this_frame / mouse_released_this_frame
 // from the buttons_pressed / buttons_released flags the pump just set, then clears those raw flags. It MUST run
@@ -860,7 +852,6 @@ void fl_app_set_ui_zoom(FlApp* app, float zoom) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Headless harness surface. The fl_app_inject_* entry points drive the offscreen input backend, so they
 // assert headless.
 
@@ -983,8 +974,6 @@ bool fl_app_read_pixels(FlApp* app, FlPixelReadback* out) {
     // The golden-comparison surface is the main window's.
     return host_read_pixels(app->host, app->windows[0]->surface, out);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_frame_str(const char* ptr, size_t len) {
     FlUiCtx* ctx = ui_get_ctx();

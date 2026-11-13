@@ -1,8 +1,6 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Channel-based logging - internal include seam over the generated <flowi/core/log.h>.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "core.h"
 #include "types.h"
@@ -13,7 +11,6 @@
 #include <flowi/core/log.h>
 #include <flowi/core/log_macros.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal LogLevel spelling - the generated FlLogLevel, named without the Fl prefix.
 
 typedef FlLogLevel LogLevel;
@@ -25,19 +22,16 @@ typedef FlLogLevel LogLevel;
 #define LogLevel_Error FlLogLevel_Error
 #define LogLevel_Fatal FlLogLevel_Fatal
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Channel ids are a plain u32 in the generated surface.
 
 typedef u32 LogChannelId;
 #define LOG_CHANNEL_INVALID UINT32_MAX
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // va_list carve-out: NOT IDL-expressible, so it stays hand-written here (body in log.c).
 
 DLL_EXPORT void fl_log_c_vmessage_loc(LogChannelId id, LogLevel level, const char* file, int line, const char* format,
                                       va_list args);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Channel-based logging macros that capture __FILE__ and __LINE__ at the call site
 
 #define logc_trace(channel_id, fmt, ...) \
@@ -53,7 +47,6 @@ DLL_EXPORT void fl_log_c_vmessage_loc(LogChannelId id, LogLevel level, const cha
 #define logc_fatal(channel_id, fmt, ...) \
     fl_log_c_message(channel_id, LogLevel_Fatal, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Channel-less logging macros
 
 #define log_trace(fmt, ...) fl_log_message(LogLevel_Trace, __FILE__, __LINE__, fmt, ##__VA_ARGS__)

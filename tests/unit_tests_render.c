@@ -8,7 +8,6 @@
 #include "app/host.h"
 #include <render/software/sr_render_helpers.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // font_cache: quantize bucket boundaries.
 
 UTEST(font_cache, quantize_buckets) {
@@ -19,7 +18,6 @@ UTEST(font_cache, quantize_buckets) {
     ASSERT_EQ_MSG((int)font_cache_quantize_size(60), 64, "quantize(60) -> 64px (8px bucket)");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // font_cache: quarter-pixel size keys for the fractional-size text path (round(size × 4)).
 
 UTEST(font_cache, quantize_q4_quarter_steps) {
@@ -49,7 +47,6 @@ UTEST(font_cache, q4_to_whole_px_round_trip) {
                   "an in-band whole px round trips unchanged");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // font_cache: the shared face-slot allocator every load path funnels through. The default font needs no
 // font data, so it can fill the table on its own.
 
@@ -76,7 +73,6 @@ UTEST(font_cache, face_slots_are_unique_and_bounded) {
     font_cache_destroy(cache);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // font_cache: single-line fractional-size measurement (font_cache_measure_text / font_cache_get_font_metrics).
 // The embedded glyph test font ('A' solid square, 'o' ring; 0.8 em advances) provides known glyphs.
 
@@ -179,7 +175,6 @@ UTEST(font_cache, measure_text_default_font) {
     font_cache_destroy(cache);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // font_cache: the glyph-outline service over the embedded test fonts (tests/fixtures/fonts/glyph_test_fonts.h): 'A' is a
 // solid square, 'o' a ring with an opposite-wound counter; one font per outline flavor (TrueType quadratics,
 // CFF cubics). Light-hinted loading may nudge coordinates, so geometry assertions are ranges, not exact.
@@ -450,7 +445,6 @@ UTEST(font_cache, resolve_glyph_uses_the_fallback_face) {
     font_cache_destroy(cache);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // reference_fit: the opt-in 1080p scale-to-fit policy (ui/reference_fit.h). ui_reference_fit(height) must reproduce
 // the numbers the core computes via ui_apply_scale_preset: identity at the 1080p reference, and a PAL-boosted
 // half-scale at 540p.
@@ -472,7 +466,6 @@ UTEST(reference_fit, reproduces_reference_and_pal_numbers) {
     EXPECT_EQ(pal.text_scale, text_scale);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // color_oklch: the perceptual color module (ui/color_oklch.c). Pure value math, no renderer: sRGB<->OKLab
 // <->OKLCH conversions, out-of-gamut clamping, perceptual lighten/darken/desaturate, and the luminance-based
 // readable-foreground pick.
@@ -591,7 +584,6 @@ UTEST(color_oklch, readable_foreground_picks_by_lightness) {
     EXPECT_EQ((int)color_readable_foreground((FlColor) { 20, 20, 140, 255 }, light, dark).r, (int)light.r);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // vector_image: the GPU SVG vector core, all headless / no GL.
 
 static const char k_svg_mono[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"80\">"
@@ -862,7 +854,6 @@ UTEST(vector_image, atlas_one_live_cell_per_handle) {
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, h) == b, "the first handle is unaffected by the second");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The backend-agnostic prepare core: the glyph cell extent, the SVG uniform fit, the mono contour scaling, and the
 // compaction-retry the GL and Metal prepare seams both drive. Headless CPU is the only cross-platform coverage
 // this math gets - gpu_resource_prepare.c (the GL half) is not compiled at all on macOS.
@@ -1225,7 +1216,6 @@ UTEST(gpu_glyph_atlas, earlier_glyph_survives_same_frame_overflow) {
                     "an unflagged honor call is a no-op and keeps the live set intact");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // gpu_orchestrator: the backend-agnostic per-frame sequence + the shared text-glyph walk, exercised on CPU
 // through a fake GpuRenderOps that records the op call order and every prepare_glyph invocation. This is the only
 // coverage the shared orchestrator gets on the GL/Linux build (its render path never runs in CI); on Metal the
@@ -1643,7 +1633,6 @@ UTEST(vector_image, translate_routing) {
     ASSERT_EQ_MSG((int)color.tint.a, 255, "white tint A");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // background: controller state machine and FlBackground snapshot (ui/background.{c,h}).
 
 // ImageHandle invalid is 0, so any nonzero value stands in for a real VFS handle.
@@ -1940,7 +1929,6 @@ UTEST(sr_image_convert, convert_to_planar_xrgb_and_alpha) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sr_image_convert: a zero extent has no last pixel or row to duplicate, so the edge padding would read
 // before the plane. The conversion must reject it rather than produce that read.
 
@@ -1971,7 +1959,6 @@ UTEST(sr_image_convert, convert_to_planar_rejects_a_zero_extent) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // prepare_image: stub backend records how prepare_image was called.
 
 typedef struct PrepareStats {
@@ -2003,7 +1990,6 @@ static const char s_svg[] = "<svg width=\"8\" height=\"8\"><rect width=\"8\" hei
 
 #define PREPARE_POLL_TIMEOUT_MS 5000
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // prepare_image_on_job unset - the call is deferred to the begin-frame pump on this (main/render) thread.
 
 UTEST(prepare_image, deferred_to_begin_frame_pump) {
@@ -2047,7 +2033,6 @@ UTEST(prepare_image, deferred_to_begin_frame_pump) {
     image_system_destroy(sys);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // prepare_image_on_job set - the call happens in the job worker thread (SW shape, unchanged).
 
 UTEST(prepare_image, job_context_when_flag_set) {
@@ -2078,7 +2063,6 @@ UTEST(prepare_image, job_context_when_flag_set) {
     image_system_destroy(sys);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A memory load whose decode succeeds but that no backend acknowledges ends failed, not active-pending: either
 // there is no backend, or the backend's prepare_image never realizes the image into the registry.
 
@@ -2153,7 +2137,6 @@ UTEST(prepare_image, memory_load_stays_active_until_deferred_pump) {
     image_system_destroy(sys);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // image_system_load must copy the caller's path FlString before returning: the worker-thread VFS callback
 // reads the path after the call returns, but ui.h's contract lets the caller free/reuse its buffer
 // immediately ("path need only live for this call"). The path is built in a mutable stack buffer so
@@ -2225,7 +2208,6 @@ UTEST(image_load, copies_caller_path_before_async_read) {
     fl_vfs_mount_close(mount.mount);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Every image load takes a JobContext pool slot, and nothing in the job system recycles it - the slot only
 // comes back if image_system releases it. The pool's free list is LIFO, so a slot parked on it before a load
 // reappears from the next allocation exactly when the load gave it back.
@@ -2287,7 +2269,6 @@ UTEST(image_load, load_recycles_job_context_slot) {
     fl_vfs_mount_close(mount.mount);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Teardown: image_system_destroy must not return while a worker can still reach the backend, and jobs that have
 // not reached the backend yet must skip it once teardown has begun.
 
@@ -2370,7 +2351,6 @@ UTEST(image_teardown, destroy_waits_for_worker_in_prepare) {
     ASSERT_EQ(atomic_load(&b.finished), 1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A burst well past the old 64-entry list: every load is tracked, and jobs still queued when teardown begins
 // skip the backend instead of calling one the caller is about to free.
 
@@ -2408,7 +2388,6 @@ UTEST(image_teardown, burst_past_pending_capacity_is_tracked_and_drained) {
     ASSERT_EQ(atomic_load(&b.entered), entered);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A failed decode still reaches the backend and then records its failure; teardown waits for that record so the
 // failed-load state it writes is not destroyed under it.
 
@@ -2438,7 +2417,6 @@ UTEST(image_teardown, close_waits_for_failed_decode_in_prepare) {
     image_system_destroy(sys);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A failed decode on a deferred backend reaches the pump queue with a null result; teardown discards it, as it
 // does a successful one, without ever calling the backend.
 
@@ -2467,7 +2445,6 @@ UTEST(image_teardown, deferred_prepares_discarded_without_backend_call) {
     ASSERT_EQ(atomic_load(&stats.call_count), 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // VFS read callbacks are producers too: teardown waits for one held in the backend, and refuses new VFS loads.
 
 UTEST(image_teardown, destroy_waits_for_vfs_load_in_prepare) {
@@ -2510,7 +2487,6 @@ UTEST(image_teardown, destroy_waits_for_vfs_load_in_prepare) {
     fl_vfs_mount_close(mount.mount);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Once teardown has begun, new in-memory loads are refused.
 
 UTEST(image_teardown, loads_refused_after_close) {
@@ -2527,7 +2503,6 @@ UTEST(image_teardown, loads_refused_after_close) {
     image_system_destroy(sys);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Host teardown: the host destroys its surfaces, shared tier and backend, so it must drain image workers before
 // any of that. The surface teardown is the observable first step of the backend side.
 
@@ -2597,7 +2572,6 @@ UTEST(image_teardown, host_destroy_drains_image_worker_before_backend_teardown) 
     backend.destroy(backend.user_data);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.smoke - the full pipeline end-to-end without any display/SDL/plugins.
 
 UTEST(render, smoke) {
@@ -2642,7 +2616,6 @@ UTEST(render, smoke) {
     ASSERT_TRUE_MSG(r > g && r > b, "expected red to dominate green and blue");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.layout_primitives - drives a frame through the layout primitives directly (fl_layout_start /
 // fl_layout_start_auto / fl_layout_configure / fl_layout_end) rather than the ui_layout_area macro.
 
@@ -2684,7 +2657,6 @@ UTEST(render, layout_primitives) {
     ASSERT_TRUE_MSG(g > r && g > b, "expected green (the nested child) to dominate");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.inspector_seam - the debug-only render-IR inspector: snapshot serialize, enumerate, and
 // hit-test by id and by name. Guarded on the same gate as the seam so a build without the inspector drops the case
 // cleanly rather than failing to link.
@@ -2775,7 +2747,6 @@ UTEST(render, inspector_seam) {
     ASSERT_FALSE_MSG(fl_inspector_hit_test_id(0u, &miss_id), "hit-test by an absent id reports no hit");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.inspector_capture_owns_strings - the frame capture must own the strings it hands back, not borrow them.
 //
 // An element's name and text reach Clay as bare pointers into caller memory (ui_text_styled_impl passes
@@ -2847,7 +2818,6 @@ UTEST(render, inspector_capture_owns_strings) {
 #undef CANARY_NAME
 #endif // FLOWI_UI_INSPECTOR
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // perf_fence: the performance regression fence. scene_raster_fill isolates the SW raster fill /
 // border / rounded-rect paths and gates on tier-1 deterministic work counters (render_commands,
 // bin_alloc_bytes, clip_broadcasts). Tier-3 wall-clock ns is printed, never asserted.
@@ -2927,7 +2897,6 @@ UTEST(perf_fence, scene_raster_fill) {
     ASSERT_EQ_MSG(stats.clip_broadcasts, 1020u, "clip_broadcasts baseline drift");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // scene_painter_rects: submission cost of a dense scope-style canvas - SCOPE_CHANNELS waveforms with one
 // rectangle per horizontal logical pixel - through the public per-rect call versus the batched one. The frames
 // must leave identical work (tier-1: same command count and raster bins); the time spent inside the painter
@@ -3003,7 +2972,6 @@ UTEST(perf_fence, scene_painter_rects) {
     ASSERT_EQ_MSG(stats[1].bin_alloc_bytes, stats[0].bin_alloc_bytes, "batched raster bin bytes == scalar loop's");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.font_style_registry - fl_font_load_default / fl_font_style_register / fl_font_style_set end-to-end
 // on the built-in default font (headless-safe; no system font deps).
 
@@ -3019,7 +2987,6 @@ UTEST(render, font_style_registry) {
     ASSERT_EQ_MSG(ctx->active_font, font, "fl_font_style_set must make the registered style's font active");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.icon_registry - fl_icon_load / fl_icon_get over the hermetic stub VFS driver. image_load_async hands
 // back a request-id handle synchronously, so the handle is valid even though the stub serves no svg.
 
@@ -3060,7 +3027,6 @@ UTEST(render, icon_registry) {
     fl_vfs_mount_close(mount.mount);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.modal_scope - fl_modal_begin_frame / begin / end / close end-to-end: focus is saved when the scope
 // opens and restored (with all popup-scope state cleared) when it closes.
 
@@ -3085,8 +3051,6 @@ UTEST(render, modal_begin_frame_keeps_armed_scope) {
     ctx->popup_focus_scope_id = 0;
     ctx->saved_focused_id = 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(render, modal_scope) {
     FlUiCtx* ctx = render_fixture_get(); // also makes the fixture context current (g_ui_ctx), which these fl_* read
@@ -3124,7 +3088,6 @@ UTEST(render, modal_scope) {
     ASSERT_EQ_MSG(ctx->saved_focused_id, 0u, "fl_modal_close must clear the saved focus");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.layout_area_macros_nest - fl_layout_area / fl_layout_area_id / FL_ID nested ≥2 deep. Open/close pairs
 // must balance: Clay's open-element id is sampled at base, inside the innermost body, and after the macros
 // unwind, so a leaked or duplicated fl_layout_end shows up as a residual.
@@ -3174,7 +3137,6 @@ UTEST(render, layout_area_macros_nest) {
                     "expected green (the innermost child) to dominate");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.floating_scroll_area_macros - fl_floating_area / fl_floating_area_id / fl_scroll_area_id. Each must
 // open exactly one logical container and unwind it, so Clay's open-element id returns to the baseline after
 // every macro. The no-id fl_floating_area proves the FL_ID_INT(__LINE__) seed expands to a usable id.
@@ -3217,7 +3179,6 @@ UTEST(render, floating_scroll_area_macros) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scroll_widget_visibility_reroute - ui_scroll's visibility + scroll-to-widget + content-extent paths
 // read the scroll container's screen rect from item_state (populated because fl_scroll_area_begin registers it
 // via ui_track_element). A fixed 200x80 viewport holds eight 60px buttons (480px of content), so only the top
@@ -3277,7 +3238,6 @@ UTEST(render, scroll_widget_visibility_reroute) {
                      "after scrolling down, the former top child must no longer be visible");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scroll_wheel_hover_gate - fl_scroll_area_begin only applies the wheel tick to the scroll area the
 // cursor is actually over. Two sibling scroll areas are open in the same frame; the shared cached wheel delta
 // must not scroll both. The hover test reads the container's screen rect from the previous frame's layout
@@ -3355,7 +3315,6 @@ UTEST(render, scroll_wheel_hover_gate) {
                     "the unhovered scroll area must not move when the wheel is delivered to its sibling");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scroll_wheel_nested - the wheel goes to the innermost hovered scroll area only, and hover is cut by the
 // clip chain the hit tester uses. The outer area (200x80) holds a header_h spacer, then an inner area (100x60 at
 // y = header_h), then a tall spacer so the outer has room to scroll.
@@ -3438,7 +3397,6 @@ UTEST(render, scroll_wheel_nested) {
     scroll_nested_reset_input(ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scroll_wheel_clipped_away - the part of a scroll area cut away by an enclosing clip must not take the
 // wheel. Here the inner area (y 60..120) hangs below the outer viewport (0..80); the cursor at y = 100 is inside the
 // inner's own rect but outside every visible region.
@@ -3469,7 +3427,6 @@ UTEST(render, scroll_wheel_clipped_away) {
     scroll_nested_reset_input(ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scroll_state_alloc_failure_stack_balance - the fallback path fl_scroll_area_begin takes when
 // scroll-state allocation fails must still push a (null-state) stack entry, so the paired fl_scroll_area_end
 // pops its own entry instead of the enclosing scroll area's. The failure is forced via the ui_scroll test seam
@@ -3519,7 +3476,6 @@ UTEST(render, scroll_state_alloc_failure_stack_balance) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.resize - the software backend's change_resolution seam, on a standalone backend (no UI fixture /
 // global context). A pixel near the far corner of the GROWN buffer must carry the freshly rendered clear
 // color, which fails if change_resolution forgot to reallocate the RGB24 target.
@@ -3574,7 +3530,6 @@ UTEST(render, resize) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.surface_cycle_no_perm_arena_growth - a SW surface owns a dedicated arena and the SwSurface
 // struct lives in that arena, not the renderer's perm_arena, so a full create/destroy cycle must leave
 // perm_arena's used-bytes high-water mark exactly where it started.
@@ -3608,7 +3563,6 @@ UTEST(render, surface_cycle_no_perm_arena_growth) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scissor_stack_deep_nesting_balanced - the SW renderer's scissor stack must stay paired with the IR
 // clip nesting even when nesting exceeds MAX_SCISSOR_STACK_DEPTH (16). A push past the cap is dropped, but the
 // matching pop must NOT pop a still-in-scope rect off the real stack; it decrements an ignored-pushes counter
@@ -3686,7 +3640,6 @@ UTEST(render, scissor_stack_deep_nesting_balanced) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.text_alpha_linear_fade - the SW text/coverage raster must fold the frame's global_alpha into text
 // exactly once, matching the GPU backend. global_alpha is applied at command-emit time (sr_color_premul /
 // pack_tint_premultiplied), so draw_text must NOT re-multiply by command->global_alpha.
@@ -3759,7 +3712,6 @@ UTEST(render, text_alpha_linear_fade) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.dynamic_image_stride_zero_tight - a dynamic image supplied with stride == 0 (the "tightly packed"
 // convention the GPU backend honors, tex_sub_image_strided: `if (stride == 0) stride = w * bpp;`) must render
 // consecutive source rows on the SW backend too, not row 0 repeated. Both emit_image sites are exercised: the
@@ -3869,7 +3821,6 @@ UTEST(render, dynamic_image_stride_zero_tight) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Composite a GPU-packed straight color (packed RGBA8, R low byte / A high byte - GLSL unpackUnorm4x8 order)
 // over an OPAQUE background at full coverage, exactly as the GPU raster shader does: premultiply then over,
 // out = rgb·a + bg·(1−a), round-to-nearest /255. An SW pixel compared against this is compared against the GPU
@@ -3901,8 +3852,6 @@ static bool px_matches_gpu_over(const FlPixelReadback* buf, int x, int y, u32 pa
     const u8* p = (const u8*)buf->pixels + (size_t)y * buf->stride + (size_t)x * 3u;
     return abs((int)p[0] - ref[0]) <= tol && abs((int)p[1] - ref[1]) <= tol && abs((int)p[2] - ref[2]) <= tol;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // render.translucent_fill_border_over - the SW fill/border/gradient blend must apply the source alpha exactly
 // once (straight-over: out = rgb·a + bg·(1−a)), matching the GPU backend, not rgb·a². Colors reach the renderer
@@ -4254,7 +4203,6 @@ UTEST(render, translucent_fill_border_over) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.primitives_and_background_blend - drives the software renderer over two frames and asserts pixels
 // probed at positions the geometry fixes:
 //   * "primitives" - the full primitive set (rect / rounded / border / clip / gradient / static-image /
@@ -4303,8 +4251,6 @@ static bool wait_image_ready(ImageHandle handle) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlImageStatus wait_public_image_terminal(FlImageHandle handle) {
     FlImageStatus status = FlImageStatus_Pending;
     for (int i = 0; i < 5000 && status == FlImageStatus_Pending; ++i) {
@@ -4315,8 +4261,6 @@ static FlImageStatus wait_public_image_terminal(FlImageHandle handle) {
     }
     return status;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(render, public_mounted_image_load_and_status) {
     FlUiCtx* ctx = render_fixture_get();
@@ -4376,8 +4320,6 @@ UTEST(render, public_mounted_image_load_and_status) {
     s_stub_vfs_override_size = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void write_ppm(const char* path, const u8* rgb24, int width, int height) {
     FILE* f = fopen(path, "wb");
     if (!f) {
@@ -4406,7 +4348,6 @@ static const u8* readback_rgb_at(const FlPixelReadback* buf, int x, int y) {
     return (const u8*)buf->pixels + (size_t)y * (size_t)buf->stride + (size_t)x * 3u;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static bool px_near(const FlPixelReadback* buf, int x, int y, FlColor want, int tol) {
     const u8* p = readback_rgb_at(buf, x, y);
     return abs((int)p[0] - (int)want.r) <= tol && abs((int)p[1] - (int)want.g) <= tol
@@ -4769,8 +4710,6 @@ UTEST(image_decode, resize_filter_selects_the_load_time_resampler) {
     ASSERT_EQ_MSG(intermediates[1], 0, "the nearest resize filter point-samples, producing no new values");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define CROP_GRAY_BORDER 2
 #define CROP_GRAY_INNER 8
 #define CROP_GRAY_SIZE (CROP_GRAY_INNER + 2 * CROP_GRAY_BORDER)
@@ -4856,8 +4795,6 @@ UTEST(image_decode, crop_then_resize_grayscale_stays_correct) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(image_decode, checked_pixel_size_rejects_unrepresentable_sizes) {
     size_t size = 0;
     ASSERT_TRUE(image_checked_pixel_size(3, 2, 4, &size));
@@ -4924,8 +4861,6 @@ UTEST(image_decode, svg_refuses_oversized_target) {
     ASSERT_TRUE(image_decode(s_arena, k_svg_gradient, sizeof(k_svg_gradient) - 1, &opts) == nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // SVG decodes are final: image_decode leaves needs_thumbnail_compose false and the compose stage must be a
 // no-op for them (even when compositing flags like detect_black_border are requested).
 UTEST(image_decode, svg_skips_thumbnail_compose) {
@@ -4947,7 +4882,6 @@ UTEST(image_decode, svg_skips_thumbnail_compose) {
     ASSERT_TRUE_MSG(out->pixels == px, "compose left svg pixels untouched");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.image_pool_evict_self_heals - the image ownership split. The SW realized-pixel pool is owned by the
 // software backend and its residency is invisible to the core readiness registry: a realized image can drop
 // out of the pool and be re-realized later without the core ever observing a "ready-but-not-resident" state.
@@ -4983,7 +4917,6 @@ UTEST(render, image_pool_evict_self_heals) {
     image_free(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.image_status_realized_after_unready_poll - a memory load that is realized and out of the active set
 // when its load state is resolved reads as ready, never error.
 
@@ -5002,7 +4935,6 @@ UTEST(render, image_status_realized_after_unready_poll) {
     image_registry_remove(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.image_load_from_memory_bad_data_reports_error - a failed in-memory decode has no VFS handle to carry
 // an error status, so the failure must be recorded against the request id (memory_load_job) and surface from
 // the poll path as an error rather than pending forever.
@@ -5036,7 +4968,6 @@ UTEST(render, image_load_from_memory_bad_data_reports_error) {
     image_free(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.image_cache_defer_free_drains_at_frame_boundary - the image cache's eviction/free paths run on a job
 // worker thread and must not tlsf_free pixels the render thread may still be reading through an ImageData* it
 // obtained via image_cache_get_data earlier in the frame. Freeing is deferred onto a pending list and drained
@@ -5084,8 +5015,6 @@ UTEST(render, image_cache_defer_free_drains_at_frame_boundary) {
     image_free(reload);
     image_free(handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // utest's ASSERT_* macros return from the case, so a mid-body failure would otherwise strand realized images in
 // the fixed-size SW pixel pool. Clearing the background first keeps the compositor from holding a freed handle.
@@ -5275,7 +5204,6 @@ UTEST(render, primitives_and_background_blend) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.background_resize_larger_no_oob - a background image is pre-scaled to the surface size and the SW
 // compositor addresses it by the surface's current tile grid on that invariant. change_resolution rebuilds the
 // tile grid but does not re-fit an already-set background image, so a resize LARGER than the image would drive
@@ -5358,7 +5286,6 @@ UTEST(render, background_resize_larger_no_oob) {
     backend->destroy_surface(backend->user_data, surface);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.non16_width_right_edge - both SW tile output paths process each tile row in 16-px SIMD chunks plus a
 // scalar tail, so the rightmost (tile_width & 15) columns of a non-16-aligned surface are the cold path. A
 // horizontally-uniform frame is rendered and the ENTIRE sampled row must equal its midpoint pixel - a skipped
@@ -5487,7 +5414,6 @@ UTEST(render, non16_width_right_edge) {
     ASSERT_TRUE_MSG(xfade_ok, "crossfade_direct_to_output left a non-16 tail/seam column unwritten");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.theme_seam - theme colors resolve through the seam (ui_get_theme_colors), not the raw base
 // pointer: with the override stack empty the seam resolves to the host-injected base theme, an un-injected
 // context falls back to the built-in default theme, and the box colors of a frame all come through the seam.
@@ -5568,7 +5494,6 @@ UTEST(render, theme_seam) {
                     "default fallback text.primary must match the default theme");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.image_scaled - painter_image honors its w/h params, documented as a "scaled to fit" target
 // size. A 4x4 image drawn at a 200x200 logical size is checked by pixels inside and outside the requested
 // rect. A non-positive w/h falls back to native size; that path is
@@ -5625,7 +5550,6 @@ UTEST(render, image_scaled) {
     dump_frame("image_scaled", &buf);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.image_downscale_gather - scaled-image sampling stays correct past the ~4.4x downscale threshold.
 //
 // The SW scaled sampler precomputes an 8-pixel shuffle over a fixed 32-byte source window. Once the downscale
@@ -5715,7 +5639,6 @@ UTEST(render, image_downscale_gather) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.image_scale_plane_over_read_guard - the scaled sampler's fixed 32-byte window stays in bounds.
 //
 // The scaled sampler (sample_plane_8 in sr_render_image_scale.c) issues two unaligned 16-byte loads per
@@ -5787,7 +5710,6 @@ UTEST(render, image_scale_plane_over_read_guard) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A zero-width image destination must be dropped, not rasterized. The scaled path precomputes a shuffle table
 // sized to the integer destination width; at dst_width == 0 the padding-fill loop in calculate_shuffle_tables
 // would index result[dst_width - 1] == result[-1], which as a size_t subscript underflows to a huge
@@ -5851,11 +5773,8 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     image_free((ImageHandle)img);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Draw an image through the SW backend onto a clear-colored 32x32 surface and read it back. The 8x8 dst for
 // the 2x2 sources below is always the scaled path.
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool render_image_scaled(FlImageSource source, FlColor tint, u8 frame_global_alpha, FlColor clear,
                                 FlPixelReadback* out, FlArena* backend_arena, FlRenderBackend* backend,
@@ -5882,8 +5801,6 @@ static bool render_image_scaled(FlImageSource source, FlColor tint, u8 frame_glo
     return ok;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void destroy_scaled_render(FlRenderBackend* backend, FlSurface* surface, FlArena* backend_arena) {
     backend->destroy_surface(backend->user_data, surface);
     if (backend->destroy != nullptr) {
@@ -5892,21 +5809,16 @@ static void destroy_scaled_render(FlRenderBackend* backend, FlSurface* surface, 
     fl_arena_destroy(backend_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlImageSource static_source(FlImageHandle img) {
     FlImageSource source = { .kind = FlImageKind_Static };
     source.handle = img;
     return source;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static const u8* scaled_probe_px(const FlPixelReadback* buf) {
     return (const u8*)buf->pixels + (size_t)12 * buf->stride + (size_t)12 * 3u; // inside the 8x8 dst at (8,8)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scaled_image_blends_source_alpha - a scaled RGBA image with a translucent alpha plane composites over the
 // background (premultiplied-over) instead of painting its color opaque.
 
@@ -5941,7 +5853,6 @@ UTEST(render, scaled_image_blends_source_alpha) {
     image_free((ImageHandle)img);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scaled_image_honours_global_alpha - a scaled opaque image under a frame fade blends toward the
 // background, for both the 4-plane static upload and the 3-plane dynamic buffer.
 
@@ -5986,7 +5897,6 @@ UTEST(render, scaled_image_honours_global_alpha) {
     image_free((ImageHandle)img);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scaled_alpha_image_is_tinted_coverage - a scaled 1-channel image is coverage for the tint: full coverage
 // paints the tint, zero coverage leaves the background. Only the one plane is sampled.
 
@@ -6027,7 +5937,6 @@ UTEST(render, scaled_alpha_image_is_tinted_coverage) {
     image_free((ImageHandle)img_none);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.static_image_blocks_carry_the_sampler_guard - every static image block is allocated with
 // SR_SCALE_PLANE_LOAD_GUARD bytes past its padded planes, zeroed. The sizes below are exact multiples of the
 // allocator granularity, so an unguarded block has no slack.
@@ -6065,7 +5974,6 @@ UTEST(render, static_image_blocks_carry_the_sampler_guard) {
     image_free((ImageHandle)h_rgb);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.premultiply_keeps_opaque_channels - an opaque pixel premultiplies to itself, and a half-alpha channel
 // rounds to nearest.
 
@@ -6084,7 +5992,6 @@ UTEST(render, premultiply_keeps_opaque_channels) {
     ASSERT_EQ_MSG(out[1], 50, "100 at alpha 128 premultiplies to 50");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.image_from_pixels - the raw upload is synchronous and copies caller memory into a
 // backend-owned static image, so the source buffers are mutated before drawing. Covers RGBA, Alpha, RGB and
 // XRGB handles.
@@ -6179,7 +6086,6 @@ UTEST(render, image_from_pixels) {
     image_free((ImageHandle)xrgb);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.image_update_pixels - re-uploading into a live handle keeps the handle's identity, dimensions, and
 // format, and respects the same caller-buffer contract create_from_pixels does.
 
@@ -6225,7 +6131,6 @@ UTEST(render, image_update_pixels) {
     image_free((ImageHandle)handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.viewport3d_software_placeholder - a Viewport3d under a backend with no 3D seam.
 //
 // The software backend binds none of mesh_create / mesh_destroy / viewport3d_submit: the element must still
@@ -6296,7 +6201,6 @@ UTEST(render, viewport3d_software_placeholder) {
                     "a Viewport3d with no 3D backend must fill itself with the placeholder");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.viewport3d_retires_unused_slots - more distinct viewport ids than the table holds, each shown for two
 // frames and then dropped, must all lay out: slots not begun in the last frame are reused.
 
@@ -6325,7 +6229,6 @@ UTEST(render, viewport3d_retires_unused_slots) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.viewport3d_live_slots_never_displaced - eight abandoned viewports are retired by eight live ones; with
 // the table full of viewports begun every frame, a ninth id is refused and none of the eight is displaced.
 
@@ -6374,7 +6277,6 @@ UTEST(render, viewport3d_live_slots_never_displaced) {
     ASSERT_TRUE_MSG(sizes[8].x == 0.0f && sizes[8].y == 0.0f, "a ninth live viewport has no slot");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.scroll_area_overflow_stays_paired - scroll areas nested past the stack capacity must not pop an
 // enclosing area's entry on end.
 
@@ -6410,7 +6312,6 @@ UTEST(render, scroll_area_overflow_stays_paired) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.window_teardown_releases_painter_arena - each window context owns a painter arena that ui_destroy
 // releases, so opening and closing windows leaves the live arena count where it started.
 
@@ -6437,7 +6338,6 @@ UTEST(render, window_teardown_releases_painter_arena) {
                   "ui_destroy must release every arena ui_create made");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.translucent_image_over - the RGBA (4-channel) image blend must apply the source alpha exactly once
 // (premultiplied-over), matching the GPU backend, not rgb·a². create_from_pixels premultiplies the RGBA source
 // with the same round-to-nearest /255 rule the GPU's pack_tint_premultiplied uses, and the SW sampler carries
@@ -6563,7 +6463,6 @@ UTEST(render, image_sub_atlas) {
     image_free((ImageHandle)atlas);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // perf_fence CPU micro-scenes - the remaining isolating scenes beyond scene_raster_fill. Each
 // isolates ONE hot path so a regression points at a cause, and reuses the tier-1/3 harness above.
 
@@ -7080,7 +6979,6 @@ UTEST(render, theme_scope) {
     dump_frame("theme_scope", &buf);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.theme_scope_frame_hygiene - a scoped override is frame-local. If a caller pushes but forgets to pop, the
 // override must not leak into the next frame: ui_update_begin resets the override depth to 0.
 
@@ -7118,7 +7016,6 @@ UTEST(render, theme_scope_frame_hygiene) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.theme_stack_fl_api - drives the theme override stack through the generated direct API: fl_theme_update
 // injects the base palette, fl_theme_push layers a sparse override, fl_theme_pop unwinds it. The fl_theme_*
 // forwarders thread the file-local s_ctx (set by ui_create in the fixture). base is static because
@@ -7161,7 +7058,6 @@ UTEST(render, theme_stack_fl_api) {
                     "after pop, surface.base must revert to the injected base");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.public_read_getters - the narrow read getters: fl_theme_colors (live palette), fl_focused_id (focused
 // widget id, no FlUiCtx exposed), and fl_list_clipper_create (visible-row window).
 
@@ -7196,7 +7092,6 @@ UTEST(render, public_read_getters) {
     ASSERT_EQ_MSG(degenerate.display_end, 0, "zero item height must yield an empty window");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.public_nav_query - the public nav/action query surface: fl_action_pressed reports the action a key press
 // bound to it raised this frame, and fl_set_focus + fl_focused_id round-trip a layout id.
 
@@ -7218,7 +7113,6 @@ UTEST(render, public_nav_query) {
                   "fl_set_focus + fl_focused_id must round-trip the resolved widget id");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.public_widget_api_smoke - every widget on the public fl_* surface is called once inside one real frame
 // through its generated bare-primary name + convenience macro; a frame that emits render commands proves the
 // widgets laid out. No interaction is injected, so every returned Signal is quiescent (.clicked false).
@@ -7287,7 +7181,6 @@ UTEST(render, public_widget_api_smoke) {
     // (scrollbar recomputes *value from thumb geometry every frame, so it is intentionally not asserted unchanged)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.state_derivation - interactive-state color derivation. Resolves fl_resolve_widget_colors for synthetic
 // ItemState at stepped hot_t / active_t / focused_t factors: the OKLCH lighten/darken hover/press derivation and the
 // OKLab focus-border lerp. The assertions are the endpoints the theme fixes and the direction each channel moves.
@@ -7299,8 +7192,6 @@ typedef enum StateChannel {
     StateChannel_Press,
     StateChannel_Focus,
 } StateChannel;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The background (hover, press) or border (focus) the variant resolves to with one animation factor set to t.
 static FlColor state_derivation_resolve(FlWidgetVariant variant, StateChannel channel, float t,
@@ -7318,13 +7209,9 @@ static FlColor state_derivation_resolve(FlWidgetVariant variant, StateChannel ch
     return channel == StateChannel_Focus ? colors.border : colors.bg;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int channel_sum(FlColor c) {
     return (int)c.r + (int)c.g + (int)c.b;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(render, state_derivation) {
     FlUiCtx* ctx = render_fixture_get();
@@ -7394,7 +7281,6 @@ UTEST(render, state_derivation) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.variant_derivation - perceptual variant derivation from an arbitrary base ("Object Color") plus a
 // luminance-chosen label color. Lighten raises and darken lowers the brightness, desaturate narrows the channel
 // spread, and the readable foreground flips with the background.
@@ -7402,8 +7288,6 @@ UTEST(render, state_derivation) {
 static int variant_derivation_spread(FlColor c) {
     return (int)max(max(c.r, c.g), c.b) - (int)min(min(c.r, c.g), c.b);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(render, variant_derivation) {
     const FlColor label_light = FL_THEME_DEFAULT_TEXT_PRIMARY;
@@ -7448,7 +7332,6 @@ UTEST(render, variant_derivation) {
                     "a near-black background takes the light label");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.widget_slot_override - per-widget state-slot overrides (FlWidgetConfig::theme_override). A widget
 // config carries a sparse FlThemeOverride layered over the resolved theme for that one widget, composing with any
 // active scoped subtree override (widget-level wins for the slots it flags, inherits the rest). Driven through
@@ -8003,7 +7886,6 @@ UTEST(render, dock_tabs) {
     dock_workspace_destroy(ws);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.public_button_variant_config - the public fl_button takes a trailing FlWidgetConfig, so the
 // designated-initializer macro can pass .variant (and id/color/focus). Read off the emitted background fills:
 // at rest (no hover/press) the variant base color is the fill, so Solid (interactive.base) and Outline
@@ -8046,7 +7928,6 @@ UTEST(render, public_button_variant_config) {
                     "Outline variant via fl_button config resolves bg to surface.base");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.item_behavior_auto_focus - FlItemFlags_auto_focus is the flag-only counterpart of
 // FlWidgetConfig.auto_focus. Two focusable elements in order: A (plain focusable) then B (focusable +
 // auto_focus). Auto-restore picks the first focusable when nothing is focused, so B ending up focused - not
@@ -8124,7 +8005,6 @@ UTEST(render, a_spacer_follows_the_ui_scale) {
     ASSERT_EQ_MSG((int)v.size.y, 20, "a 10px vertical spacer is 20 physical px at scale 2");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.text_overflow_clip_vs_elide - the single-line text-overflow mode (FlTextConfig.overflow). A ten-glyph
 // run is placed twice inside the same narrow fixed-width box, once per mode, and read off the debug
 // render-command snapshot. The built-in 8x8 font is used so every ASCII glyph advances exactly 16px (monospace,
@@ -9025,7 +8905,6 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
     ASSERT_TRUE_MSG(px_near(&buf, 100, 70, base, 2), "right half reverts to base once the cursor leaves it");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hover-dwell tooltip: the floating label is revealed only after the pointer has dwelled over the anchor -
 // driven by the real stationary timer, not the eased hover value - and hides as soon as the anchor is no longer
 // hovered. Asserted on the tooltip's floating element via Clay_GetElementData rather than a pixel comparison.
@@ -9094,7 +8973,6 @@ UTEST(render, tooltip_reveals_after_dwell_hides_on_unhover) {
     ASSERT_FALSE_MSG(tooltip_present(anchor), "tooltip hides once the anchor is no longer hovered");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_app headless runner - drives the full tick path (pump -> begin -> frame -> end -> present(no-op) ->
 // input_update) and reads back a known clear color through fl_app_read_pixels, then verifies the quit flag.
 // fl_app's create calls for the process-global singletons (image system, VFS) are idempotent no-ops and its
@@ -9200,7 +9078,6 @@ UTEST(render, snapped_line_crisp_at_fractional_scroll) {
     canvas_fixture_reset(ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.list_virtualization - the List foundation (ui_list_begin/_item/_end on list_uniform's core). Renders a
 // 100-row list inside a fixed 240px viewport and asserts the virtualization only emits the visible window. A
 // first frame establishes the list container height (list_uniform queries it from the previous frame's Clay
@@ -9304,7 +9181,6 @@ UTEST(render, list_virtualization) {
     dump_frame("list", &buf);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.list_empty - a zero-item list renders cleanly.
 
 UTEST(render, list_empty) {
@@ -9328,7 +9204,6 @@ UTEST(render, list_empty) {
     ASSERT_EQ_MSG((u64)0, result.focused_id, "empty list: no focus");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.list_stable_id_split - the Item Id split (CONTEXT Item Id): the result is keyed on the app's opaque
 // u64 stable id, never on the dense emission position. The cursor is aimed at the row at position 2, and
 // focused_id must come back as that row's stable id.
@@ -9544,7 +9419,6 @@ UTEST(render, app_headless_smoke) {
     fl_app_destroy(app2);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.adjacent_radio_groups_no_id_collision - end-to-end guard that adjacent multi-item widgets lay out in
 // one frame without an id collision. A collision makes the debug duplicate-id tracker (ui_open_element_with_id)
 // fatally assert, so reaching frame end proves the ids stayed distinct.
@@ -9583,7 +9457,6 @@ UTEST(render, adjacent_radio_groups_no_id_collision) {
     ASSERT_TRUE_MSG(ui_get_render_command_count() > 0, "adjacent radio groups must emit render commands");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.adjacent_tab_bars_no_id_collision - the tab-strip analogue of the radio guard above. Two tab bars keyed
 // on adjacent int fields (a 4-byte gap), the first with 5 tabs so its top tab index (4) aliases the second bar's
 // tab 0 under a plain linear seed - reaching frame end without the duplicate-id assert proves the ids stayed
@@ -9620,7 +9493,6 @@ UTEST(render, adjacent_tab_bars_no_id_collision) {
     ASSERT_TRUE_MSG(ui_get_render_command_count() > 0, "adjacent tab bars must emit render commands");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.tab_bar_keyboard_nav_uses_seeded_ids - guards the two keyboard-nav seed sites (prev/next tab in
 // ui_tab_bar_impl). A mismatch there would NOT trip the duplicate-id assert (only the render pass opens elements);
 // it would silently point fl_set_focus at the wrong id.
@@ -9682,7 +9554,6 @@ UTEST(render, tab_bar_keyboard_nav_uses_seeded_ids) {
     ctx->nav_frame.nav_right = false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Auto-restore repairs a vanished focused widget; it never seeds one. The ring is unclaimed until a Tab, a click
 // or an explicit fl_set_focus moves it.
 
@@ -9740,7 +9611,6 @@ UTEST(render, idle_frame_leaves_the_keyboard_ring_unclaimed) {
     ctx->last_focused_id = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.focusable_no_stays_out_of_focus_order - the focus ring is an animation, so a single frame cannot see
 // it: run several and pin focused_t at 0 throughout.
 //
@@ -9876,7 +9746,6 @@ UTEST(render, focusable_no_stays_out_of_focus_order) {
     ctx->last_focused_id = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.focusable_default_keeps_tab_bar_arrow_nav - the strip gates its OWN arrow-key handling on
 // cfg.widget.focusable (ui_tab_bar.c), separately from the focus_order gate in ui_item_behavior, so a zeroed
 // config has to reach it as "navigable" too.
@@ -9931,7 +9800,6 @@ UTEST(render, focusable_default_keeps_tab_bar_arrow_nav) {
     ctx->nav_frame.nav_left = false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Raster premultiply: an opaque pixel keeps its channels in both the SIMD (16-pixel blocks) and scalar tails, and
 // both paths round c * a / 255 to nearest.
 
@@ -9972,7 +9840,6 @@ UTEST(image_decode, premultiply_keeps_opaque_and_rounds_in_simd_and_scalar_paths
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The dedup cache maps an image to its request id. Freeing the image drops that entry, so loading the same path
 // again starts a new request instead of returning the freed handle.
 
@@ -10006,7 +9873,6 @@ UTEST(image_load, free_then_reload_returns_a_working_handle) {
     s_stub_vfs_override_size = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The dedup key names the mount instance, not its source path: two live mounts of one source keep separate cache
 // entries, and a remount of a closed source starts clean.
 
@@ -10044,8 +9910,6 @@ UTEST(image_load, mounts_of_one_source_do_not_share_dedup_entries) {
     s_stub_vfs_override_size = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(image_load, remount_of_a_closed_source_does_not_return_a_stale_failed_entry) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -10079,8 +9943,6 @@ UTEST(image_load, remount_of_a_closed_source_does_not_return_a_stale_failed_entr
     s_stub_vfs_override_data = NULL;
     s_stub_vfs_override_size = 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Load/forget churn on one path leaves no live entries, so the key storage must not keep growing with the cycles.
 

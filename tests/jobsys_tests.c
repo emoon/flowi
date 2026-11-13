@@ -244,7 +244,6 @@ static void check_thread_context(void* data, FlJobsWorkerInfo info) {
 // FIXTURES - Grouped by worker thread count
 // =====================================================================================================
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Swap only the global job system: fl_destroy() per test would tear down the one fl_init() runtime
 // (main arena, perf_scope, error_report, arena_watchdog) that the whole unit_tests process shares.
 
@@ -260,8 +259,6 @@ static void jobs_fixture_teardown(FlArena* arena) {
     fl_jobs_create(arena, 1); // restore the shared 1-worker system for subsequent tests
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct jobs_1t {
     FlArena* arena;
 };
@@ -275,8 +272,6 @@ UTEST_F_TEARDOWN(jobs_1t) {
     (void)utest_result;
     jobs_fixture_teardown(utest_fixture->arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct jobs_2t {
     FlArena* arena;
@@ -292,8 +287,6 @@ UTEST_F_TEARDOWN(jobs_2t) {
     jobs_fixture_teardown(utest_fixture->arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct jobs_4t {
     FlArena* arena;
 };
@@ -307,8 +300,6 @@ UTEST_F_TEARDOWN(jobs_4t) {
     (void)utest_result;
     jobs_fixture_teardown(utest_fixture->arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct jobs_8t {
     FlArena* arena;
@@ -328,8 +319,6 @@ UTEST_F_TEARDOWN(jobs_8t) {
 // 1-THREAD TESTS
 // =====================================================================================================
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_1t, basic_functionality) {
     (void)utest_fixture;
 
@@ -345,8 +334,6 @@ UTEST_F(jobs_1t, basic_functionality) {
 // 2-THREAD TESTS
 // =====================================================================================================
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_2t, job_handle_validity) {
     (void)utest_fixture;
 
@@ -358,8 +345,6 @@ UTEST_F(jobs_2t, job_handle_validity) {
     fl_jobs_wait(handle);
     ASSERT_EQ((int)fl_jobs_is_finished(handle), (int)FlJobsResult_Finished);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_2t, is_main_thread) {
     (void)utest_fixture;
@@ -374,8 +359,6 @@ UTEST_F(jobs_2t, is_main_thread) {
     ASSERT_TRUE(check_data.main_thread_result);
     ASSERT_FALSE(check_data.worker_thread_result);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_2t, priority_get_priority) {
     (void)utest_fixture;
@@ -400,8 +383,6 @@ UTEST_F(jobs_2t, priority_get_priority) {
     fl_jobs_wait(low);
     fl_jobs_wait(invalid);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_2t, priority_set_priority) {
     (void)utest_fixture;
@@ -432,8 +413,6 @@ UTEST_F(jobs_2t, priority_set_priority) {
     ASSERT_EQ(atomic_load(&test_data.low_count), 1u);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_2t, priority_set_on_completed) {
     (void)utest_fixture;
 
@@ -447,7 +426,6 @@ UTEST_F(jobs_2t, priority_set_on_completed) {
     ASSERT_FALSE(changed);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A dependent submitted from a worker must not run before the job it was ordered after. Two workers make that
 // observable: the gate occupies one for as long as the test holds it, pinning the dependency as unfinished
 // while the other worker submits against it.
@@ -547,7 +525,6 @@ UTEST_F(jobs_2t, worker_submitted_dependent_waits_for_its_dependency) {
                     "the dependent ran before the dependency it was ordered after");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Verify that calling fl_jobs_is_finished() recycles the job slot for reuse.
 // Without this call, completed jobs leak their JobInfo allocation permanently.
 
@@ -573,7 +550,6 @@ UTEST_F(jobs_2t, is_finished_recycles_job_slot) {
     ASSERT_EQ((int)fl_jobs_is_finished(handle2), (int)FlJobsResult_Finished);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Regression: a handle whose job has completed must never answer NotFinished, no matter how often its slot is
 // recycled underneath it. fl_jobs_is_finished reads the slot's generation and status as two separate loads; a
 // status load that straddles a recycle used to describe the slot's new occupant, so a long-finished handle
@@ -641,8 +617,6 @@ UTEST_F(jobs_8t, stale_handle_never_reports_not_finished) {
 // 4-THREAD TESTS
 // =====================================================================================================
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_4t, multiple_jobs) {
     (void)utest_fixture;
     TestData test_data = { .counter = 0, .expected_increments = 100 };
@@ -658,8 +632,6 @@ UTEST_F(jobs_4t, multiple_jobs) {
 
     ASSERT_EQ((int)atomic_load(&test_data.counter), 100);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_4t, global_system) {
     (void)utest_fixture;
@@ -679,8 +651,6 @@ UTEST_F(jobs_4t, global_system) {
 
     ASSERT_EQ((int)atomic_load(&test_data.counter), 50);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_4t, is_finished_functionality) {
     (void)utest_fixture;
@@ -715,8 +685,6 @@ UTEST_F(jobs_4t, is_finished_functionality) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_4t, basic_dependency) {
     (void)utest_fixture;
 
@@ -738,8 +706,6 @@ UTEST_F(jobs_4t, basic_dependency) {
     ASSERT_EQ(order_a, 0);
     ASSERT_EQ(order_b, 1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_4t, dependency_on_finished_job) {
     (void)utest_fixture;
@@ -763,8 +729,6 @@ UTEST_F(jobs_4t, dependency_on_finished_job) {
     ASSERT_EQ(order_b, 1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_4t, dependency_race_condition) {
     (void)utest_fixture;
 
@@ -787,8 +751,6 @@ UTEST_F(jobs_4t, dependency_race_condition) {
     ASSERT_EQ(order_a, 0);
     ASSERT_EQ(order_b, 1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_4t, multiple_dependents_on_one_job) {
     (void)utest_fixture;
@@ -815,8 +777,6 @@ UTEST_F(jobs_4t, multiple_dependents_on_one_job) {
     ASSERT_EQ(order_a, 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_4t, invalid_dependency_handle) {
     (void)utest_fixture;
 
@@ -833,8 +793,6 @@ UTEST_F(jobs_4t, invalid_dependency_handle) {
     ASSERT_EQ(order_a, 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_4t, dependency_with_zero_handle) {
     (void)utest_fixture;
 
@@ -849,8 +807,6 @@ UTEST_F(jobs_4t, dependency_with_zero_handle) {
     int order_a = atomic_load(&test_data.execution_order[0]);
     ASSERT_EQ(order_a, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_4t, priority_basic) {
     (void)utest_fixture;
@@ -871,8 +827,6 @@ UTEST_F(jobs_4t, priority_basic) {
     ASSERT_EQ(atomic_load(&test_data.total_completed), 3u);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_4t, priority_default_is_normal) {
     (void)utest_fixture;
 
@@ -885,8 +839,6 @@ UTEST_F(jobs_4t, priority_default_is_normal) {
 
     fl_jobs_wait(handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_4t, priority_with_dependency) {
     (void)utest_fixture;
@@ -908,8 +860,6 @@ UTEST_F(jobs_4t, priority_with_dependency) {
 
     ASSERT_TRUE(order_a < order_b);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_4t, priority_stress_reprioritize) {
     (void)utest_fixture;
@@ -937,8 +887,6 @@ UTEST_F(jobs_4t, priority_stress_reprioritize) {
 
     ASSERT_EQ(atomic_load(&test_data.completed), (u32)num_jobs);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_4t, priority_stress_rapid_changes) {
     (void)utest_fixture;
@@ -983,8 +931,6 @@ UTEST_F(jobs_4t, priority_stress_rapid_changes) {
 
     ASSERT_FALSE(fl_jobs_set_priority(job, JobPriority_Low));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_4t, priority_ordering_validation) {
     (void)utest_fixture;
@@ -1041,8 +987,6 @@ UTEST_F(jobs_4t, priority_ordering_validation) {
 // 8-THREAD TESTS
 // =====================================================================================================
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_8t, stress_test_dependencies) {
     (void)utest_fixture;
 
@@ -1074,8 +1018,6 @@ UTEST_F(jobs_8t, stress_test_dependencies) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(jobs_8t, priority_stress_mixed_submission) {
     (void)utest_fixture;
 
@@ -1101,8 +1043,6 @@ UTEST_F(jobs_8t, priority_stress_mixed_submission) {
     ASSERT_EQ(atomic_load(&test_data.low_count), (u32)jobs_per_priority);
     ASSERT_EQ(atomic_load(&test_data.total_completed), (u32)total_jobs);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(jobs_8t, priority_stress_with_dependencies) {
     (void)utest_fixture;

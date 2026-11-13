@@ -18,8 +18,6 @@ const FlItemFlags STANDARD_WIDGET_FLAGS = FlItemFlags_clickable | FlItemFlags_fo
 // Two-pass selection widgets (radio group, tab bar) resolve the selection before any item lays out, so they split
 // behaviour and colour passes and use neither.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UiWidgetState ui_widget_begin(FlString label, FlWidgetConfig cfg, FlItemFlags flags) {
     UiWidgetState w = { 0 };
     w.id = resolve_widget_id(label, cfg.id_override);
@@ -32,8 +30,6 @@ UiWidgetState ui_widget_begin(FlString label, FlWidgetConfig cfg, FlItemFlags fl
     w.theme = *theme;
     return w;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UiWidgetState ui_widget_prepare(FlString label, FlWidgetConfig cfg, FlItemFlags flags, FlWidgetVariant variant,
                                 bool animate_text) {

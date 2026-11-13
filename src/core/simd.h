@@ -91,8 +91,6 @@ static inline f32x4 f32x4_load_unaligned(const float* data) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void f32x4_store_unaligned(f32x4 a, float* data) {
 #if CPU_X64 || CPU_X86
     _mm_storeu_ps(data, a.v);
@@ -101,8 +99,6 @@ static inline void f32x4_store_unaligned(f32x4 a, float* data) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f32x4 f32x4_new_splat(float a) {
 #if CPU_X64 || CPU_X86
     return (f32x4) { .v = _mm_set1_ps(a) };
@@ -110,8 +106,6 @@ static inline f32x4 f32x4_new_splat(float a) {
     return (f32x4) { .v = vdupq_n_f32(a) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline f32x4 f32x4_new(float a, float b, float c, float d) {
 #if CPU_X64 || CPU_X86
@@ -126,13 +120,9 @@ static inline f32x4 f32x4_new(float a, float b, float c, float d) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f32x4 f32x4_new_xy(float a, float b) {
     return f32x4_new(a, b, a, b);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline f32x4 f32x4_add(f32x4 a, f32x4 b) {
 #if CPU_X64 || CPU_X86
@@ -142,8 +132,6 @@ static inline f32x4 f32x4_add(f32x4 a, f32x4 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f32x4 f32x4_sub(f32x4 a, f32x4 b) {
 #if CPU_X64 || CPU_X86
     return (f32x4) { .v = _mm_sub_ps(a.v, b.v) };
@@ -151,8 +139,6 @@ static inline f32x4 f32x4_sub(f32x4 a, f32x4 b) {
     return (f32x4) { .v = vsubq_f32(a.v, b.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline f32x4 f32x4_mul(f32x4 a, f32x4 b) {
 #if CPU_X64 || CPU_X86
@@ -162,8 +148,6 @@ static inline f32x4 f32x4_mul(f32x4 a, f32x4 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f32x4 f32x4_floor(f32x4 a) {
 #if CPU_X64 || CPU_X86
     return (f32x4) { .v = _mm_floor_ps(a.v) };
@@ -172,8 +156,6 @@ static inline f32x4 f32x4_floor(f32x4 a) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f32x4 f32x4_sqrt(f32x4 a) {
 #if CPU_X64 || CPU_X86
     return (f32x4) { .v = _mm_sqrt_ps(a.v) };
@@ -181,8 +163,6 @@ static inline f32x4 f32x4_sqrt(f32x4 a) {
     return (f32x4) { .v = vsqrtq_f32(a.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline f32x4 f32x4_clamp(f32x4 a, f32x4 min, f32x4 max) {
 #if CPU_X64 || CPU_X86
@@ -232,8 +212,6 @@ static inline f32x4 f32x4_drop_fraction(f32x4 a) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f32x4 f32x4_and(f32x4 a, f32x4 b) {
 #if CPU_X64 || CPU_X86
     return (f32x4) { .v = _mm_and_ps(a.v, b.v) };
@@ -242,14 +220,11 @@ static inline f32x4 f32x4_and(f32x4 a, f32x4 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shuffle f32x4 vector - Select 4 elements from two input vectors
 //
 // Indices 0-3 select from v0, indices 4-7 select from v1.
 
 #define f32x4_shuffle(v0, v1, i0, i1, i2, i3) ((f32x4) { .v = __builtin_shufflevector((v0).v, (v1).v, i0, i1, i2, i3) })
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline f32x4 f32x4_table_shuffle(f32x4 a, const uint8_t table[16]) {
 #if CPU_X64 || CPU_X86
@@ -261,8 +236,6 @@ static inline f32x4 f32x4_table_shuffle(f32x4 a, const uint8_t table[16]) {
     return (f32x4) { .v = vreinterpretq_f32_s8(result_s8) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline bool f32x4_test_intersect(f32x4 a, f32x4 b) {
 #if CPU_X64 || CPU_X86
@@ -352,8 +325,6 @@ static inline u8x16 u16x8_narrow_to_u8x16(u16x8 a, u16x8 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u16x8 u16x8_load_unaligned(const void* data, size_t offset) {
     const u8* ptr = (const u8*)data + offset * sizeof(u16);
 #if CPU_X64 || CPU_X86
@@ -363,8 +334,6 @@ static inline u16x8 u16x8_load_unaligned(const void* data, size_t offset) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u16x8 u16x8_new_splat(uint16_t a) {
 #if CPU_X64 || CPU_X86
     return (u16x8) { .v = _mm_set1_epi16((int16_t)a) };
@@ -373,8 +342,6 @@ static inline u16x8 u16x8_new_splat(uint16_t a) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u16x8 u16x8_sub(u16x8 a, u16x8 b) {
 #if CPU_X64 || CPU_X86
     return (u16x8) { .v = _mm_sub_epi16(a.v, b.v) };
@@ -382,8 +349,6 @@ static inline u16x8 u16x8_sub(u16x8 a, u16x8 b) {
     return (u16x8) { .v = vsubq_u16(a.v, b.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline u16 u16x8_hmin(u16x8 a) {
 #if CPU_X64 || CPU_X86
@@ -395,8 +360,6 @@ static inline u16 u16x8_hmin(u16x8 a) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i32x4 i32x4_new_splat(int32_t a) {
 #if CPU_X64 || CPU_X86
     return (i32x4) { .v = _mm_set1_epi32(a) };
@@ -404,8 +367,6 @@ static inline i32x4 i32x4_new_splat(int32_t a) {
     return (i32x4) { .v = vdupq_n_s32(a) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i32x4 i32x4_add(i32x4 a, i32x4 b) {
 #if CPU_X64 || CPU_X86
@@ -415,8 +376,6 @@ static inline i32x4 i32x4_add(i32x4 a, i32x4 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i32x4 i32x4_sub(i32x4 a, i32x4 b) {
 #if CPU_X64 || CPU_X86
     return (i32x4) { .v = _mm_sub_epi32(a.v, b.v) };
@@ -424,8 +383,6 @@ static inline i32x4 i32x4_sub(i32x4 a, i32x4 b) {
     return (i32x4) { .v = vsubq_s32(a.v, b.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i32x4 i32x4_div(i32x4 a, i32x4 b) {
 #if CPU_X64 || CPU_X86
@@ -442,8 +399,6 @@ static inline i32x4 i32x4_div(i32x4 a, i32x4 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i32x4 i32x4_min(i32x4 a, i32x4 b) {
 #if CPU_X64 || CPU_X86
     return (i32x4) { .v = _mm_min_epi32(a.v, b.v) };
@@ -452,8 +407,6 @@ static inline i32x4 i32x4_min(i32x4 a, i32x4 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i32x4 i32x4_max(i32x4 a, i32x4 b) {
 #if CPU_X64 || CPU_X86
     return (i32x4) { .v = _mm_max_epi32(a.v, b.v) };
@@ -461,8 +414,6 @@ static inline i32x4 i32x4_max(i32x4 a, i32x4 b) {
     return (i32x4) { .v = vmaxq_s32(a.v, b.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i32x4 i32x4_abs(i32x4 a) {
 #if CPU_X64 || CPU_X86
@@ -499,8 +450,6 @@ static inline i16x8 i32x4_pack_i16x8(i32x4 a) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i32x4 i32x4_table_shuffle(i32x4 a, const uint8_t table[16]) {
 #if CPU_X64 || CPU_X86
     __m128i mask = _mm_loadu_si128((const __m128i*)table);
@@ -525,8 +474,6 @@ static inline i16x8 i16x8_new(int16_t a, int16_t b, int16_t c, int16_t d, int16_
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i16x8 i16x8_new_splat(int16_t a) {
 #if CPU_X64 || CPU_X86
     return (i16x8) { .v = _mm_set1_epi16(a) };
@@ -534,8 +481,6 @@ static inline i16x8 i16x8_new_splat(int16_t a) {
     return (i16x8) { .v = vdupq_n_s16(a) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8 i16x8_load_unaligned(const void* data, size_t offset) {
     uint8_t* ptr = (uint8_t*)(((i16*)data) + offset);
@@ -546,8 +491,6 @@ static inline i16x8 i16x8_load_unaligned(const void* data, size_t offset) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void i16x8_store_unaligned(i16x8 a, void* data, size_t offset) {
     uint8_t* ptr = (uint8_t*)(((i16*)data) + offset);
 #if CPU_X64 || CPU_X86
@@ -556,8 +499,6 @@ static inline void i16x8_store_unaligned(i16x8 a, void* data, size_t offset) {
     vst1q_s16((int16_t*)ptr, a.v);
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8x2 i16x8x2_load(const void* data, size_t offset) {
     uint8_t* ptr = (uint8_t*)(((i16*)data) + offset);
@@ -572,8 +513,6 @@ static inline i16x8x2 i16x8x2_load(const void* data, size_t offset) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i16x8 i16x8_add(i16x8 a, i16x8 b) {
 #if CPU_X64 || CPU_X86
     return (i16x8) { .v = _mm_add_epi16(a.v, b.v) };
@@ -581,8 +520,6 @@ static inline i16x8 i16x8_add(i16x8 a, i16x8 b) {
     return (i16x8) { .v = vaddq_s16(a.v, b.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8 i16x8_sub(i16x8 a, i16x8 b) {
 #if CPU_X64 || CPU_X86
@@ -592,8 +529,6 @@ static inline i16x8 i16x8_sub(i16x8 a, i16x8 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i16x8 i16x8_mul(i16x8 a, i16x8 b) {
 #if CPU_X64 || CPU_X86
     return (i16x8) { .v = _mm_mullo_epi16(a.v, b.v) };
@@ -601,8 +536,6 @@ static inline i16x8 i16x8_mul(i16x8 a, i16x8 b) {
     return (i16x8) { .v = vmulq_s16(a.v, b.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8 i16x8_lerp(i16x8 start, i16x8 end, i16x8 t) {
     i16x8 result;
@@ -631,8 +564,6 @@ static inline i16x8 i16x8_mul_high(i16x8 a, i16x8 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i16x8 i16x8_lerp_diff(i16x8 start, i16x8 delta, i16x8 t) {
     i16x8 result;
 #if CPU_X64 || CPU_X86
@@ -643,8 +574,6 @@ static inline i16x8 i16x8_lerp_diff(i16x8 start, i16x8 delta, i16x8 t) {
 #endif
     return result;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8 i16x8_table_shuffle(i16x8 a, const uint8_t table[16]) {
     i16x8 result;
@@ -658,8 +587,6 @@ static inline i16x8 i16x8_table_shuffle(i16x8 a, const uint8_t table[16]) {
 #endif
     return result;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8 i16x8_and(i16x8 a, i16x8 b) {
 #if CPU_X64 || CPU_X86
@@ -693,8 +620,6 @@ static inline u8x16 i16x8_pack_high_to_u8x16(i16x8 p0, i16x8 p1) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i16x8 i16x8_rotate_4(i16x8 a) {
 #if CPU_X64 || CPU_X86
     return (i16x8) { .v = _mm_shuffle_epi32(a.v, _MM_SHUFFLE(1, 0, 3, 2)) };
@@ -709,8 +634,6 @@ static inline i16x8 i16x8_rotate_4(i16x8 a) {
 #define i16x8_splat_lane(a, lane) ((i16x8) { .v = vdupq_laneq_s16((a).v, (lane)) })
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void i16x8_store_unaligned_ptr(i16x8 a, void* data) {
 #if CPU_X64 || CPU_X86
     _mm_storeu_si128((__m128i*)data, a.v);
@@ -719,8 +642,6 @@ static inline void i16x8_store_unaligned_ptr(i16x8 a, void* data) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void i16x8_store_unaligned_ptr_lower(i16x8 a, void* data) {
 #if CPU_X64 || CPU_X86
     _mm_storeu_si64((uint8_t*)data, a.v);
@@ -728,8 +649,6 @@ static inline void i16x8_store_unaligned_ptr_lower(i16x8 a, void* data) {
     vst1_s16((int16_t*)data, vget_low_s16(a.v));
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8 i16x8_load_unaligned_ptr(const void* data, size_t offset) {
     i16x8 result;
@@ -742,8 +661,6 @@ static inline i16x8 i16x8_load_unaligned_ptr(const void* data, size_t offset) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i16x8 i16x8_cmp_lt(i16x8 a, i16x8 b) {
 #if CPU_X64 || CPU_X86
     return (i16x8) { .v = _mm_cmplt_epi16(a.v, b.v) };
@@ -752,16 +669,12 @@ static inline i16x8 i16x8_cmp_lt(i16x8 a, i16x8 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline i16x8 i16x8_write_mask(int32_t rest_count) {
     const int16_t data[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
     i16x8 index = i16x8_load_unaligned(data, 0);
     i16x8 cnt = i16x8_new_splat((int16_t)(rest_count & 0x7));
     return i16x8_cmp_lt(cnt, index);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8 i16x8_select(i16x8 mask, i16x8 a, i16x8 b) {
     // Selects a where the mask is set, b where it is clear.
@@ -777,8 +690,6 @@ static inline i16x8 i16x8_select(i16x8 mask, i16x8 a, i16x8 b) {
 // u8x16 Functions
 // =============================================================================
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u8x16 u8x16_new_splat(uint8_t a) {
 #if CPU_X64 || CPU_X86
     return (u8x16) { .v = _mm_set1_epi8((int8_t)a) };
@@ -786,8 +697,6 @@ static inline u8x16 u8x16_new_splat(uint8_t a) {
     return (u8x16) { .v = vdupq_n_u8(a) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline u8x16 u8x16_load_unaligned(const uint8_t* ptr, size_t offset) {
     const uint8_t* addr = ptr + offset;
@@ -798,13 +707,9 @@ static inline u8x16 u8x16_load_unaligned(const uint8_t* ptr, size_t offset) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u8x16 u8x16_new(const uint8_t data[16]) {
     return u8x16_load_unaligned(data, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline void u8x16_store_unaligned(u8x16 a, uint8_t* ptr, size_t offset) {
     uint8_t* addr = ptr + offset;
@@ -814,8 +719,6 @@ static inline void u8x16_store_unaligned(u8x16 a, uint8_t* ptr, size_t offset) {
     vst1q_u8(addr, a.v);
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline u8x16 u8x16_cmp_lt(u8x16 a, u8x16 b) {
 #if CPU_X64 || CPU_X86
@@ -829,8 +732,6 @@ static inline u8x16 u8x16_cmp_lt(u8x16 a, u8x16 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u8x16 u8x16_and(u8x16 a, u8x16 b) {
 #if CPU_X64 || CPU_X86
     return (u8x16) { .v = _mm_and_si128(a.v, b.v) };
@@ -839,8 +740,6 @@ static inline u8x16 u8x16_and(u8x16 a, u8x16 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u8x16 u8x16_or(u8x16 a, u8x16 b) {
 #if CPU_X64 || CPU_X86
     return (u8x16) { .v = _mm_or_si128(a.v, b.v) };
@@ -848,8 +747,6 @@ static inline u8x16 u8x16_or(u8x16 a, u8x16 b) {
     return (u8x16) { .v = vorrq_u8(a.v, b.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline u8x16 u8x16_cmp_eq(u8x16 a, u8x16 b) {
 #if CPU_X64 || CPU_X86
@@ -869,8 +766,6 @@ static inline bool u8x16_all_true(u8x16 a) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u8x16 u8x16_table_shuffle(u8x16 a, const uint8_t table[16]) {
 #if CPU_X64 || CPU_X86
     __m128i mask = _mm_loadu_si128((const __m128i*)table);
@@ -881,8 +776,6 @@ static inline u8x16 u8x16_table_shuffle(u8x16 a, const uint8_t table[16]) {
     return (u8x16) { .v = vreinterpretq_u8_s8(result_s8) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline u8x16 u8x16_shuffle2(u8x16 v0, u8x16 v1, u8x16 mask) {
     u8x16 result;
@@ -910,8 +803,6 @@ static inline u8x16 u8x16_shuffle2(u8x16 v0, u8x16 v1, u8x16 mask) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u8x16 u8x16_write_mask(int32_t rest_count) {
     const uint8_t data[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     u8x16 index = u8x16_load_unaligned(data, 0);
@@ -919,13 +810,9 @@ static inline u8x16 u8x16_write_mask(int32_t rest_count) {
     return u8x16_cmp_lt(cnt, index);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void u8x16_to_fixed_array(u8x16 a, uint8_t result[16]) {
     u8x16_store_unaligned(a, result, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8x2 u8x16_unpack_to_i16x8_high(u8x16 a) {
     i16x8x2 result;
@@ -943,8 +830,6 @@ static inline i16x8x2 u8x16_unpack_to_i16x8_high(u8x16 a) {
 #endif
     return result;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8x2 u8x16_unpack_to_i16x8_low(u8x16 a) {
     i16x8x2 result;
@@ -1117,8 +1002,6 @@ static inline u8x16_rgba_result u8x16_load_deinterleaved_4(const uint8_t* data, 
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void u8x16_store_interleaved_3(uint8_t* data, u8x16 r, u8x16 g, u8x16 b, size_t offset) {
     uint8_t* ptr = data + offset;
 
@@ -1139,8 +1022,6 @@ static inline void u8x16_store_interleaved_3(uint8_t* data, u8x16 r, u8x16 g, u8
     }
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline void u8x16_store_interleaved_4(uint8_t* data, u8x16 r, u8x16 g, u8x16 b, u8x16 a, size_t offset) {
     uint8_t* ptr = data + offset;
@@ -1227,8 +1108,6 @@ static inline f16x8 f16x8_new_splat(float a) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f16x8 f16x8_new(float a, float b, float c, float d, float e, float f, float g, float h) {
 #if CPU_X64 || CPU_X86
     return (f16x8) { .low = f32x4_new(a, b, c, d), .high = f32x4_new(e, f, g, h) };
@@ -1238,8 +1117,6 @@ static inline f16x8 f16x8_new(float a, float b, float c, float d, float e, float
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f16x8 f16x8_add(f16x8 a, f16x8 b) {
 #if CPU_X64 || CPU_X86
     return (f16x8) { .low = f32x4_add(a.low, b.low), .high = f32x4_add(a.high, b.high) };
@@ -1247,8 +1124,6 @@ static inline f16x8 f16x8_add(f16x8 a, f16x8 b) {
     return (f16x8) { .v = vaddq_f16(a.v, b.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline f16x8 f16x8_sub(f16x8 a, f16x8 b) {
 #if CPU_X64 || CPU_X86
@@ -1258,8 +1133,6 @@ static inline f16x8 f16x8_sub(f16x8 a, f16x8 b) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f16x8 f16x8_mul(f16x8 a, f16x8 b) {
 #if CPU_X64 || CPU_X86
     return (f16x8) { .low = f32x4_mul(a.low, b.low), .high = f32x4_mul(a.high, b.high) };
@@ -1267,8 +1140,6 @@ static inline f16x8 f16x8_mul(f16x8 a, f16x8 b) {
     return (f16x8) { .v = vmulq_f16(a.v, b.v) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Approximate square root: a * rsqrt_estimate(a). x86 uses the bare _mm_rsqrt_ps estimate; ARM64 adds one
 // Newton-Raphson step. An input of 0 yields NaN on x86.
@@ -1287,8 +1158,6 @@ static inline f16x8 f16x8_sqrt_approx(f16x8 a) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline f16x8 f16x8_clamp(f16x8 a, f16x8 min, f16x8 max) {
 #if CPU_X64 || CPU_X86
     return (f16x8) { .low = f32x4_clamp(a.low, min.low, max.low), .high = f32x4_clamp(a.high, min.high, max.high) };
@@ -1296,8 +1165,6 @@ static inline f16x8 f16x8_clamp(f16x8 a, f16x8 min, f16x8 max) {
     return (f16x8) { .v = vmaxq_f16(min.v, vminq_f16(a.v, max.v)) };
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline i16x8 f16x8_as_i16x8(f16x8 a) {
 #if CPU_X64 || CPU_X86

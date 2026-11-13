@@ -20,7 +20,6 @@ struct FlArena;
 // contents never affect output.
 #define SR_SCALE_PLANE_LOAD_GUARD 32
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Deinterleave a run of interleaved pixels into separate planar channel buffers
 //
 // Reads count pixels of src_channels bytes each; r/g/b come from bytes 0/1/2.
@@ -29,7 +28,6 @@ struct FlArena;
 
 void sr_deinterleave_pixels(const u8* src, u8* r, u8* g, u8* b, u8* a, int count, int src_channels, bool keep_alpha);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Convert a 4-channel interleaved image (RGBA or XRGB8888) to planar format
 //
 // Allocates a new ImageData and planar buffer from the provided arena and adds
@@ -40,7 +38,6 @@ void sr_deinterleave_pixels(const u8* src, u8* r, u8* g, u8* b, u8* a, int count
 
 ImageData* sr_convert_to_planar(const ImageData* src, bool keep_alpha, struct FlArena* arena);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // True if the image format requires conversion to planar.
 
 static inline bool sr_image_needs_conversion(const ImageData* image) {

@@ -4,13 +4,10 @@
 
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u32 gpu_svg_atlas_size(GpuSvgTexelFormat format) {
     return format == GpuSvgTexel_Rgba8 ? GPU_SVG_ATLAS_SIZE_COLOR : GPU_SVG_ATLAS_SIZE_MONO;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Geometric raster-size ladder: snap up to the smallest ladder step >= size, clamped to the top step. The
 // steps grow ~1.4x-1.5x, and snap-up over a fixed table is monotonic and idempotent (any ladder value snaps to
 // itself).
@@ -52,8 +49,6 @@ u16 svg_raster_size_for_dst(f32 dst_w, f32 dst_h, FlVectorClass cls) {
     return svg_quantize_size(px, cls);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gpu_svg_atlas_init(GpuSvgAtlas* atlas, struct FlArena* arena, GpuSvgTexelFormat format) {
     if (atlas->entries == NULL) {
         atlas->entries = arena_alloc_array(arena, GpuSvgEntry, GPU_SVG_ATLAS_MAX_ENTRIES);
@@ -64,8 +59,6 @@ void gpu_svg_atlas_init(GpuSvgAtlas* atlas, struct FlArena* arena, GpuSvgTexelFo
     u32 extent = gpu_svg_atlas_size(format); // per-format extent; the packer's node capacity is extent + 1
     gpu_atlas_pack_init(&atlas->pack, arena, extent, extent);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static GpuSvgEntry* find_live_entry(GpuSvgAtlas* atlas, FlImageHandle handle) {
     // At most one entry per handle is live, so the first match is the answer.
@@ -81,8 +74,6 @@ static GpuSvgEntry* find_live_entry(GpuSvgAtlas* atlas, FlImageHandle handle) {
 const GpuSvgEntry* gpu_svg_atlas_find(const GpuSvgAtlas* atlas, FlImageHandle handle) {
     return find_live_entry((GpuSvgAtlas*)atlas, handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle, u16 size, u32 w, u32 h,
                                        FlVectorClass cls, FlColor mono_color, const FlVectorImage* vector) {
@@ -120,8 +111,6 @@ const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle,
     };
     return entry;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gpu_svg_atlas_compact(GpuSvgAtlas* atlas) {
     // Reset the packer to an empty atlas (reuses the existing node storage - same dimensions), then re-insert

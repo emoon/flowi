@@ -9,7 +9,6 @@
 #include <external/clay/clay.h>
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pure geometry
 
 static bool point_in_rect(FlDockRect r, FlVec2 p) {
@@ -86,7 +85,6 @@ static bool outer_band_side(FlDockRect ws, FlVec2 cursor, FlDockSide* out_side) 
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Zone taxonomy and the hit-test
 
 static FlDockDropZone zone_for_side(FlDockSide side, bool outer) {
@@ -160,7 +158,6 @@ FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec
     return zone_for_side(out_req->side, false);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The resolver - the hit-test plus the drag's two stabilisation rules
 
 // Sticky gap: from inside the slot the layout has opened, the cursor may push the gap around the node it opened in
@@ -200,22 +197,18 @@ FlDockDropZone dock_drag_resolve(FlDockDrag* drag, FlVec2 cursor) {
     return zone;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Drag controller
 
 bool dock_drag_active(const FlDockDrag* drag) {
     return drag != nullptr && drag->active;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The per-frame hit-test buffer, read back off the live provisional layout
 
 // Reciprocal of the UI scale, so physical px reach logical px by multiply.
 static f32 drag_inv_scale(void) {
     return 1.0f / dock_ui_scale();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Clay_GetElementData returns the previous frame's box during this frame, in physical px; the buffer stores logical
 // px so the resolution constants mean logical px.
@@ -224,8 +217,6 @@ static FlDockRect node_rect(FlDockNodeId node, f32 inv_scale) {
     return (FlDockRect) { data.boundingBox.x * inv_scale, data.boundingBox.y * inv_scale,
                           data.boundingBox.width * inv_scale, data.boundingBox.height * inv_scale };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void fill_base_rec(FlDockDrag* drag, const FlDockNode* node, bool is_root, f32 inv_scale) {
     if (node == nullptr || drag->base_count >= FL_DOCK_DRAG_MAX_NODES) {
@@ -256,8 +247,6 @@ static void fill_base_rec(FlDockDrag* drag, const FlDockNode* node, bool is_root
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Without a live Clay layout context (a headless test) the buffer is left empty.
 static void refresh_base(FlDockDrag* drag, const FlDockTree* live) {
     drag->base_count = 0;
@@ -266,8 +255,6 @@ static void refresh_base(FlDockDrag* drag, const FlDockTree* live) {
         fill_base_rec(drag, live->root, true, drag_inv_scale());
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const FlDockRect* base_rect_of(const FlDockDrag* drag, FlDockNodeId node) {
     for (u32 i = 0; i < drag->base_count; ++i) {
@@ -278,7 +265,6 @@ static const FlDockRect* base_rect_of(const FlDockDrag* drag, FlDockNodeId node)
     return nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lifecycle
 
 void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanelId panel, u32 panel_family,
@@ -306,16 +292,12 @@ void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanel
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Drop the whole in-flight state, preview tree included. The committed tree is untouched, so an abandoned drop
 // leaves exactly the shape the drag started from.
 static void drag_reset(FlDockDrag* drag) {
     dock_tree_destroy(drag->preview);
     *drag = (FlDockDrag) { 0 };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void dock_drag_discard(FlDockDrag* drag) {
     if (drag != nullptr) {
@@ -346,8 +328,6 @@ bool dock_drag_end(FlDockDrag* drag, FlDockTree* committed) {
     return committed_change;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool dock_drag_cancel(FlDockDrag* drag, FlDockTree* committed) {
     if (drag == nullptr) {
         return false;
@@ -356,14 +336,10 @@ bool dock_drag_cancel(FlDockDrag* drag, FlDockTree* committed) {
     return dock_drag_end(drag, committed);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Two requests raise the same gap when they name the same operation on the same target.
 static bool request_same_target(const FlDockRequest* a, const FlDockRequest* b) {
     return a->kind == b->kind && a->target_node == b->target_node && a->side == b->side;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Take the gap out of the preview, undoing the request that opened it. The panel lands in the preview's
 // floating set, which the next request detaches it from.
@@ -377,8 +353,6 @@ static void close_gap(FlDockDrag* drag) {
     drag->has_gap_rect = false;
     drag->has_pre_gap = false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Bring the retained preview onto zone. The tree is cloned once, at the first resolved zone, and mutated in place
 // from there: a re-target is an undock followed by the new request, so the old gap closes while the new one opens.
@@ -419,8 +393,6 @@ static void retarget_preview(FlDockDrag* drag, FlDockTree* committed, FlDockDrop
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
     if (!dock_drag_active(drag) || committed == nullptr) {

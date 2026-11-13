@@ -4,8 +4,6 @@
 #include <core/simd.h>
 #include "software_renderer_internal.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct GradientQuadState {
     // Top edge colors: [TL_R, TL_G, TL_B, TL_A, TR_R, TR_G, TR_B, TR_A]
     i16x8 top;
@@ -48,8 +46,6 @@ typedef struct GradientInterpolationState {
     i16x8 y_step;
 } GradientInterpolationState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void gradient_interpolation_step_y(GradientInterpolationState* state) {
     // Result: [TL_R', TL_G', TL_B', TL_A', TR_R', TR_G', TR_B', TR_A'] where ' indicates interpolated values
     i16x8 rgba_lr = i16x8_lerp_diff(state->top, state->top_bottom_delta, state->y_blend_lr);
@@ -74,7 +70,6 @@ static ALWAYS_INLINE void gradient_interpolation_step_y(GradientInterpolationSta
     state->y_blend_lr = i16x8_add(state->y_blend_lr, state->y_step);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Once per quad setup - calculates invariant properties
 // rect_size = x0y0x1y1 (i32 for each value)
 
@@ -115,7 +110,6 @@ static ALWAYS_INLINE void gradient_interpolation_setup(GradientQuadState* quad_s
     quad_state->top_bottom_delta = i16x8_sub(bottom, quad_state->top);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-tile setup - applies tile-specific clipping
 // clip should contain [clip_x, clip_y, ...] as i16 values
 
@@ -143,8 +137,6 @@ static ALWAYS_INLINE GradientInterpolationState gradient_interpolation_tile_setu
 
     return state;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE SoaRgba gradient_interpolation_step_x(GradientInterpolationState* state) {
     SoaRgba result;

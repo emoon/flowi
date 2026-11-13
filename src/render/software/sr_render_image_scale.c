@@ -6,8 +6,6 @@
 #include <ui/image.h>
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Sample 8 destination pixels from one source plane as Q7 values. Takes the scalar gather when this command's
 // source spread does not fit the 32-byte shuffle window.
 static ALWAYS_INLINE i16x8 sample_plane_8(const ScaledTexturePrecomputed* scaled, const u8* line, int dest_x_pos) {
@@ -27,8 +25,6 @@ static ALWAYS_INLINE i16x8 sample_plane_8(const ScaledTexturePrecomputed* scaled
     }
     return u8x16_unpack_to_i16x8_wide_shl(bytes, 7).v0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Composite 8 sampled destination pixels over the tile background. 1-channel sources are alpha coverage for the
 // command tint, 3-channel sources are opaque unless faded by the frame's global alpha, 4-channel sources are
@@ -72,8 +68,6 @@ static ALWAYS_INLINE SoaRgb scale_8_pixels(const int channel_count, const bool f
     }
     return color;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void sr_render_image_scale(i16* output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile_info) {
     const ImageData* image = command->image;

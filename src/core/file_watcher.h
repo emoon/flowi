@@ -9,19 +9,16 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File watcher foundational types
 
 // File watcher handle - opaque
 typedef uint32_t FlFileWatcherHandle;
 #define FL_FILE_WATCHER_INVALID ((FlFileWatcherHandle)0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File Watcher API - Iterator-based file system change detection
 //
 // Designed for debug purposes and single-threaded operation on the main thread.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal types (not in public API)
 
 typedef FlFileChange FileChange;
@@ -39,7 +36,6 @@ typedef void (*FileChangeCallback)(const FileChange* change, void* user_data);
 typedef u32 FileWatcherCallbackHandle;
 #define FILE_WATCHER_CALLBACK_INVALID ((FileWatcherCallbackHandle)0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Registry lifecycle - called by fl_init / fl_destroy, never by a watcher caller
 
 // Brings the process-wide watcher registry up. Runs before any thread can start a watch, so the
@@ -49,7 +45,6 @@ void file_watcher_init(void);
 // Stops every watcher still running and releases the registry.
 void file_watcher_destroy(void);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Watch Management
 
 FlFileWatcherHandle file_watcher_start(FlString path, FlFileWatcherConfig config);
@@ -68,7 +63,6 @@ FileWatcherCallbackHandle file_watcher_register_callback(FlFileWatcherHandle han
 
 void file_watcher_unregister_callback(FlFileWatcherHandle handle, FileWatcherCallbackHandle callback_handle);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Change Detection
 
 // Get iterator for pending changes - allocates change data in provided arena
@@ -79,7 +73,6 @@ bool file_watcher_has_changes(FlFileWatcherHandle handle);
 
 void file_watcher_clear_changes(FlFileWatcherHandle handle);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Iterator Usage
 
 bool file_change_iterator_has_next(const FileChangeIterator* iter);

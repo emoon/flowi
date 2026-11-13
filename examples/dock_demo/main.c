@@ -83,7 +83,6 @@ typedef struct DockDemoState {
     u32 fires[DEMO_PANEL_COUNT]; // per-panel shortcut hit counts, printed in the panel body
 } DockDemoState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // One declared panel's presentation: a tinted card naming the panel, whether it is the active one, its family tag
 // and how often its bare-letter shortcut has fired.
 
@@ -108,7 +107,6 @@ static void declare_panel(const FlDockWorkspace* ws, const DemoPanel* p, u32* fi
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The visibility keys: 1-7 hide/show, Shift+1-7 close. Hiding leaves the panel declared and keeps its slot; only
 // close takes it out of the tree.
 

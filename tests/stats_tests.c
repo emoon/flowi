@@ -5,8 +5,6 @@
 #include <core/string.h>
 #include <core/types.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct stats_fixture {
     FlArena* arena;
     StatsRegistry* stats;
@@ -14,27 +12,19 @@ struct stats_fixture {
 
 #define STATS utest_fixture->stats
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F_SETUP(stats_fixture) {
     utest_fixture->arena = arena_new(.reserved_size = MB(64));
     utest_fixture->stats = stats_create(utest_fixture->arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F_TEARDOWN(stats_fixture) {
     stats_destroy(utest_fixture->stats);
     fl_arena_destroy(utest_fixture->arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(stats_fixture, initialization) {
     ASSERT_NE(STATS, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(stats_fixture, basic_registration) {
     u32 counter_id = stats_register_counter(STATS, FL_S("test_counter"), FL_S("test"));
@@ -47,8 +37,6 @@ UTEST_F(stats_fixture, basic_registration) {
     ASSERT_EQ(atomic_load(&counter->value), 0ULL);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(stats_fixture, basic_increment) {
     u32 counter_id = stats_register_counter(STATS, FL_S("test"), FL_S("test"));
 
@@ -57,8 +45,6 @@ UTEST_F(stats_fixture, basic_increment) {
 
     ASSERT_EQ(stats_get_value(STATS, counter_id), 2ULL);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(stats_fixture, enable_disable_counter) {
     u32 counter_id = stats_register_counter(STATS, FL_S("test"), FL_S("test"));
@@ -74,8 +60,6 @@ UTEST_F(stats_fixture, enable_disable_counter) {
     stats_inc(STATS, counter_id);
     ASSERT_EQ(stats_get_value(STATS, counter_id), 2ULL);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(stats_fixture, enable_disable_category) {
     u32 counter1 = stats_register_counter(STATS, FL_S("counter1"), FL_S("test"));
@@ -101,8 +85,6 @@ UTEST_F(stats_fixture, enable_disable_category) {
     ASSERT_EQ(stats_get_value(STATS, counter3), 2ULL);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(stats_fixture, reset_counter) {
     u32 counter_id = stats_register_counter(STATS, FL_S("test"), FL_S("test"));
 
@@ -118,8 +100,6 @@ UTEST_F(stats_fixture, reset_counter) {
     ASSERT_EQ(stats_get_value(STATS, counter_id), 1ULL);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_F(stats_fixture, invalid_counter_access) {
     ASSERT_EQ(stats_get_counter(STATS, 999), nullptr);
     ASSERT_EQ(stats_get_value(STATS, 999), 0ULL);
@@ -127,8 +107,6 @@ UTEST_F(stats_fixture, invalid_counter_access) {
     // stats_inc with invalid ID should not crash
     stats_inc(STATS, 999);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST_F(stats_fixture, multiple_categories) {
     u32 cache_hits = stats_register_counter(STATS, FL_S("hits"), FL_S("cache"));
@@ -152,7 +130,5 @@ UTEST_F(stats_fixture, multiple_categories) {
     ASSERT_EQ(stats_get_value(STATS, cache_hits), 0ULL);
     ASSERT_EQ(stats_get_value(STATS, vfs_reads), 1ULL);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: Add thread safety test when threading API is available

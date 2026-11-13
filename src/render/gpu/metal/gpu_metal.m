@@ -15,7 +15,6 @@
 #include <core/log.h>
 #include <string.h> // memcpy (the per-frame SSBO uploads)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The CoreFoundation half of the METAL_RELEASE teardown idiom: drop a +1-owned CFTypeRef and clear its field.
 // CFRelease(NULL) is undefined where release on nil is a no-op, so this form keeps a guard.
 
@@ -27,7 +26,6 @@
         }                     \
     } while (0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // One 2D-texture allocation: a texture of fmt at w x h with the given usage + storage mode, +1 retained. The
 // autoreleased descriptor is drained by the caller's @autoreleasepool. Returns nil on failure.
 static id<MTLTexture> metal_make_texture(id<MTLDevice> device, MTLPixelFormat fmt, NSUInteger w, NSUInteger h,
@@ -69,7 +67,6 @@ static bool metal_make_textures(id<MTLDevice> device, const MetalTextureSpec* sp
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // IOSurface-backed offscreen target for the cross-process accessor: one RGBA8 IOSurface at w x h wrapped in an
 // id<MTLTexture> with the same ShaderWrite|ShaderRead usage the private target carries. An IOSurface-backed texture
 // cannot use private storage - it is Shared on unified-memory devices and Managed on discrete ones. Both the
@@ -102,7 +99,6 @@ static id<MTLTexture> metal_make_iosurface_texture(id<MTLDevice> device, u32 w, 
     return tex;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Slot-image tier (the non-atlas image paths). The raster pass declares an array of IMAGE_SLOT_COUNT sampler slots
 // starting at texture index GPU_BIND_RASTER_TEX_SLOT0, past the target and the glyph/image/SVG atlases at 0..4. The
 // translator hands each referenced slot image a per-frame slot index in the draw command.
@@ -178,7 +174,6 @@ static void metal_slot_drain_dead(MetalShared* self) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // (Re)build everything resolution-dependent: the offscreen RGBA8 target + the CPU readback buffer. Called from
 // create_surface and change_resolution. Rewinds to the savepoint just past the struct before reallocating the
 // tight readback buffer, so a resize leaves no residue in the per-surface arena.
@@ -236,7 +231,6 @@ static void metal_setup_resolution(MetalShared* self, MetalSurface* surface, int
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Surface lifecycle: a Metal surface owns the offscreen RGBA8 target and the CPU readback buffer, both in one
 // per-surface arena - the struct first, then a readback_reset savepoint past it. destroy_surface releases the
 // target texture and frees that arena wholesale. The host calls it before the backend's destroy().
@@ -264,7 +258,6 @@ static void metal_destroy_surface(void* user_data, FlSurface* surface_handle) {
     fl_arena_destroy(surface->arena); // frees the readback buffer AND the MetalSurface struct itself (dangling after this)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Neutral RenderInterface seams (vtable).
 
 static void metal_change_resolution(void* user_data, FlSurface* surface_handle, int width, int height) {
@@ -295,7 +288,6 @@ id<MTLBuffer> metal_upload_ssbo(id<MTLDevice> device, const void* data, NSUInteg
     return buf;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared-orchestrator ops: the Metal half of the GpuRenderOps table, driven by gpu_orchestrate_frame in the
 // canonical per-frame order. The backend/surface handles arrive as void* and cast back to MetalShared/MetalSurface.
 
@@ -541,7 +533,6 @@ static void metal_destroy(void* user_data) {
     METAL_RELEASE(self->device);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resolution-independent vtable seams: the UI-scale change and the font-cache bind.
 
 // Forgets every glyph and SVG placement on a UI-scale change; the next frame's prepare pass repopulates the atlases.
@@ -557,7 +548,6 @@ static void metal_set_font_cache(void* user_data, struct FlFontCache* font_cache
     self->font_cache = font_cache;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shader compile: build one compute pipeline from a shared program's MSL source. gpu_shaders.c assembles the
 // source array; newLibraryWithSource: takes a single source, so it is concatenated into one string here. Returns
 // nil on any failure, which the caller gates the whole backend on.
@@ -595,7 +585,6 @@ static id<MTLComputePipelineState> metal_build_pipeline(id<MTLDevice> device, in
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Create the backend: bring up the system MTLDevice, a command queue, and the compute pipelines compiled from the
 // shared MSL sources. A missing device or queue, or a shader compile failure, returns a zeroed FlRenderBackend
 // (render == NULL), which the host must gate on before injecting.
@@ -688,7 +677,6 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Surface-texture seam (gpu_renderer.h): on Metal the handle is the backend-owned, retained id<MTLTexture> of the
 // offscreen RGBA8 target, carried as an opaque void*. Two events rebuild target and so invalidate the handle - a
 // change_resolution on this surface, and the surface's first gpu_renderer_surface_iosurface call, which upgrades
@@ -703,7 +691,6 @@ GpuSurfaceTexture gpu_renderer_surface_texture(FlSurface* surface_handle) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // IOSurface variant of the Surface-texture seam (gpu_renderer.h): the cross-process accessor. The first call
 // latches the surface into IOSurface mode and rebuilds target as an IOSurface-backed texture at the current
 // resolution, after which both accessors view the same resource. That rebuild invalidates any primary handle held

@@ -8,13 +8,9 @@
     "This is a simple test file for VFS path resolver tests.\nIt contains plain text content " \
     "that can be read by the VFS system."
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsMount* fixture_mount(void) {
     return vfs_test_mount(FL_S(VFS_FIXTURE_DIR));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_local, a_directory_mount_becomes_ready_and_reports_its_path) {
     ASSERT_TRUE(vfs_test_begin());
@@ -34,8 +30,6 @@ UTEST(vfs_local, a_directory_mount_becomes_ready_and_reports_its_path) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_local, files_read_back_with_their_exact_content) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -48,8 +42,6 @@ UTEST(vfs_local, files_read_back_with_their_exact_content) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_local, a_read_issued_right_after_the_mount_waits_for_it) {
     // No wait on the mount: the read is chained behind the mount job and still sees the file.
     ASSERT_TRUE(vfs_test_begin());
@@ -61,8 +53,6 @@ UTEST(vfs_local, a_read_issued_right_after_the_mount_waits_for_it) {
     fl_vfs_mount_close(mount);
     vfs_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_local, reads_in_flight_together_each_return_their_own_file) {
     ASSERT_TRUE(vfs_test_begin());
@@ -89,8 +79,6 @@ UTEST(vfs_local, reads_in_flight_together_each_return_their_own_file) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_local, a_missing_file_fails_with_a_message_naming_it) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -112,8 +100,6 @@ UTEST(vfs_local, a_missing_file_fails_with_a_message_naming_it) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_local, a_successful_read_has_no_error_message) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -131,7 +117,6 @@ UTEST(vfs_local, a_successful_read_has_no_error_message) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A read-all callback sees the bytes the driver read and may transform them in place; its release hook runs once.
 
 typedef struct UppercaseStats {
@@ -151,14 +136,10 @@ static FlVfsData uppercase_callback(void* data, i64 size, void* user_data) {
     return (FlVfsData) { .data = bytes, .size = size, .success = true };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void uppercase_release(void* user_data) {
     UppercaseStats* stats = user_data;
     atomic_fetch_add(&stats->releases, 1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_local, a_read_callback_transforms_the_data_and_its_release_hook_runs_once) {
     ASSERT_TRUE(vfs_test_begin());
@@ -185,8 +166,6 @@ UTEST(vfs_local, a_read_callback_transforms_the_data_and_its_release_hook_runs_o
     fl_vfs_mount_close(mount);
     vfs_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_local, every_priority_level_still_delivers_the_right_bytes) {
     // Highest maps onto High in the job system, so all four levels have to work.
@@ -216,8 +195,6 @@ UTEST(vfs_local, every_priority_level_still_delivers_the_right_bytes) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_local, two_mounts_of_one_directory_are_independent) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -233,8 +210,6 @@ UTEST(vfs_local, two_mounts_of_one_directory_are_independent) {
     fl_vfs_mount_close(second);
     vfs_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_local, sources_that_do_not_exist_mount_to_distinct_mounts_that_end_in_error) {
     ASSERT_TRUE(vfs_test_begin());
@@ -261,7 +236,6 @@ UTEST(vfs_local, sources_that_do_not_exist_mount_to_distinct_mounts_that_end_in_
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Listings of a directory made on the fly, so the order does not depend on what the fixture directory holds.
 
 UTEST(vfs_local, a_directory_lists_directories_first_then_files_in_natural_order) {
@@ -296,8 +270,6 @@ UTEST(vfs_local, a_directory_lists_directories_first_then_files_in_natural_order
     file_remove_directory_recursive_os(dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_local, listing_a_directory_that_is_not_there_gives_an_empty_listing) {
     ASSERT_TRUE(vfs_test_begin());

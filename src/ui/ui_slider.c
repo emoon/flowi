@@ -14,10 +14,7 @@
 #include <external/clay/clay.h>
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Slider helper functions
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline float slider_value_to_log_normalized(float value, float min, float max) {
     float log_min = log10f(fmaxf(min, UI_SLIDER_LOG_EPSILON));
@@ -26,8 +23,6 @@ static inline float slider_value_to_log_normalized(float value, float min, float
     return inv_lerp(log_min, log_max, log_value);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline float slider_log_normalized_to_value(float normalized, float min, float max) {
     float log_min = log10f(fmaxf(min, UI_SLIDER_LOG_EPSILON));
     float log_max = log10f(fmaxf(max, UI_SLIDER_LOG_EPSILON));
@@ -35,7 +30,6 @@ static inline float slider_log_normalized_to_value(float normalized, float min, 
     return powf(10.0f, log_result);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // vertical: up/down adjust the value and left/right navigate away; horizontal is the mirror image.
 
 static float slider_update_value_from_input(float current_normalized, float normalized_step, FlSignal signal,
@@ -110,8 +104,6 @@ static float slider_update_value_from_input(float current_normalized, float norm
 
     return normalized;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Shared slider body. is_int only governs how the display value is formatted: int sliders apply the format
 // string to the rounded integer (see ui_slider_format_value).
@@ -236,8 +228,6 @@ static FlSignal slider_impl(FlString label, float* value, float min, float max, 
     return signal;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString ui_slider_format_value(FlArena* arena, const char* format, float value, bool is_int) {
     if (is_int) {
         // Apply the format to the rounded integer; a NULL format falls back to a bare integer.
@@ -250,7 +240,6 @@ FlSignal ui_slider_float_impl(FlString label, float* value, float min, float max
     return slider_impl(label, value, min, max, cfg, false);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 FlSignal ui_slider_int_impl(FlString label, int* value, int min, int max, FlSliderConfig cfg) {
     // Drive the shared slider over a float mirror of the int, formatting the display against the integer value
     // (is_int = true).

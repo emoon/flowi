@@ -11,8 +11,6 @@
 
 #include <time.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Set once the process-wide services are up; cleared by fl_destroy.
 static bool s_initialized = false;
 static FlArena* s_main_arena = nullptr;
@@ -47,8 +45,6 @@ FlArena* fl_init(int job_threads) {
     s_initialized = true;
     return main_arena;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_destroy(void) {
     if (!s_initialized) {

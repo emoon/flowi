@@ -169,8 +169,6 @@ impl Payload for Mapped {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// The launch side of the closure-transported read.
 impl Mount {
     /// Launch an async read of path whose bytes are handed to transform on the

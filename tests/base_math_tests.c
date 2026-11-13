@@ -2,8 +2,6 @@
 #include <core/core.h>
 #include <core/math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(base_math, count_trailing_zeros) {
     ASSERT_EQ(count_trailing_zeros(1), 0);
     ASSERT_EQ(count_trailing_zeros(2), 1);

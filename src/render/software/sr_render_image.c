@@ -10,7 +10,6 @@
 #include <ui/image.h>
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Nearest-neighbor (point-sampled) image rendering.
 
 static ALWAYS_INLINE SoaRgb process_8_pixels_nearest(const bool blend_with_background, const bool rounding,
@@ -87,7 +86,6 @@ static ALWAYS_INLINE SoaRgb process_8_pixels_nearest(const bool blend_with_backg
     return color;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Nearest-neighbor inner loop
 
 static ALWAYS_INLINE void image_internal_nearest(const bool blend_with_background, const bool rounding,
@@ -196,7 +194,6 @@ static ALWAYS_INLINE void image_internal_nearest(const bool blend_with_backgroun
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Nearest-neighbor wrapper functions
 
 // 1-channel (alpha-only) permutations
@@ -205,28 +202,20 @@ static ALWAYS_INLINE void render_image_nearest_solid_1ch(i16* tile_output, const
     image_internal_nearest(false, false, 1, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void render_image_nearest_blend_1ch(i16* tile_output, const RenderCommand* command,
                                                          f32x4 scissor_rect, const TileInfo* tile) {
     image_internal_nearest(true, false, 1, tile_output, scissor_rect, tile, command);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void render_image_nearest_rounded_1ch(i16* tile_output, const RenderCommand* command,
                                                            f32x4 scissor_rect, const TileInfo* tile) {
     image_internal_nearest(false, true, 1, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void render_image_nearest_blend_rounded_1ch(i16* tile_output, const RenderCommand* command,
                                                                  f32x4 scissor_rect, const TileInfo* tile) {
     image_internal_nearest(true, true, 1, tile_output, scissor_rect, tile, command);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // 3-channel (RGB) permutations
 static ALWAYS_INLINE void render_image_nearest_solid_3ch(i16* tile_output, const RenderCommand* command,
@@ -234,28 +223,20 @@ static ALWAYS_INLINE void render_image_nearest_solid_3ch(i16* tile_output, const
     image_internal_nearest(false, false, 3, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void render_image_nearest_blend_3ch(i16* tile_output, const RenderCommand* command,
                                                          f32x4 scissor_rect, const TileInfo* tile) {
     image_internal_nearest(true, false, 3, tile_output, scissor_rect, tile, command);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void render_image_nearest_rounded_3ch(i16* tile_output, const RenderCommand* command,
                                                            f32x4 scissor_rect, const TileInfo* tile) {
     image_internal_nearest(false, true, 3, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void render_image_nearest_blend_rounded_3ch(i16* tile_output, const RenderCommand* command,
                                                                  f32x4 scissor_rect, const TileInfo* tile) {
     image_internal_nearest(true, true, 3, tile_output, scissor_rect, tile, command);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // 4-channel (RGBA) permutations - always blend with background due to alpha channel
 static ALWAYS_INLINE void render_image_nearest_blend_4ch(i16* tile_output, const RenderCommand* command,
@@ -263,18 +244,12 @@ static ALWAYS_INLINE void render_image_nearest_blend_4ch(i16* tile_output, const
     image_internal_nearest(true, false, 4, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE void render_image_nearest_blend_rounded_4ch(i16* tile_output, const RenderCommand* command,
                                                                  f32x4 scissor_rect, const TileInfo* tile) {
     image_internal_nearest(true, true, 4, tile_output, scissor_rect, tile, command);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef void (*fill_func_t)(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const fill_func_t image_nearest_dispatch_table[2][2][3] = {
     {
@@ -292,8 +267,6 @@ static const fill_func_t image_nearest_dispatch_table[2][2][3] = {
           render_image_nearest_blend_rounded_4ch }, // With blend
     },
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void sr_render_image_nearest(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile) {
     const ImageData* image = command->image;
