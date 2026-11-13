@@ -406,3 +406,9 @@ bool ui_action_repeated(FlUiCtx* ctx, FlAction action) {
 
     return false;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool ui_action_pressed_or_repeated(FlUiCtx* ctx, FlAction action) {
+    return ui_action_pressed(ctx, action) || ui_action_repeated(ctx, action);
+}

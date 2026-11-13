@@ -36,7 +36,7 @@
 #include <flowi/ui/viewport3d.h>
 #include "ui/render_ir_build.h"
 #include "ui/ui.h"
-#include "ui/ui_menu.h"
+#include "ui/menu/ui_menu.h"
 #include "ui/ui_private.h"
 #include "ui/vector_image.h"
 #include "vfs/vfs.h"

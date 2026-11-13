@@ -23,7 +23,7 @@
 #include "ui/layout.h"
 #include "ui/ui.h"
 #include "ui/ui_list.h"
-#include "ui/ui_menu.h"
+#include "ui/menu/ui_menu.h"
 #include "ui/ui_message_box.h"
 #include "ui/ui_scroll.h"
 #include "ui/ui_selection.h"

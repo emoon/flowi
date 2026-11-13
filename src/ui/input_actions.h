@@ -81,6 +81,9 @@ bool ui_action_pressed(FlUiCtx* ctx, FlAction action);
 // Backed by interval-based key-repeat timing; keyboard bindings only, with exact modifier match.
 bool ui_action_repeated(FlUiCtx* ctx, FlAction action);
 
+// Action went down this frame or fires a software repeat.
+bool ui_action_pressed_or_repeated(FlUiCtx* ctx, FlAction action);
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal API (used by UI system)
 

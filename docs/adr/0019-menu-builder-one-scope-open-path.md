@@ -44,4 +44,4 @@ deliberate choices that diverge from the obvious paths:
 - Accelerator/hotkey **dispatch** is out of scope: items render shortcut *text* only; binding keys
   to actions while the menu is closed is a separate subsystem.
 - **Type-ahead** (jump-to-item by typing) was deferred when this was written; it has since landed
-  (`menu_typeahead` in `ui_menu.c`) as an additive feature that shapes none of the core state.
+  (`menu_typeahead` in `ui/menu/ui_menu_core.c`) as an additive feature that shapes none of the core state.
