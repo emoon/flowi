@@ -5,7 +5,6 @@
 #if BACKEND_USE_SDL
 
 #include <SDL.h>
-#include <core/arena.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,14 +18,9 @@ FlString backend_get_clipboard_text(struct FlArena* arena) {
         return string_empty();
     }
 
-    // Copy to the arena and free the SDL text.
-    u64 len = strlen(sdl_text);
-    char* text_copy = arena_alloc_array(arena, char, len + 1);
-    memcpy(text_copy, sdl_text, len);
-    text_copy[len] = '\0';
+    FlString text = fl_string_copy(arena, string_from_cstr(sdl_text));
     SDL_free(sdl_text);
-
-    return (FlString) { .data = text_copy, .length = len, .is_static = 0 };
+    return text;
 }
 
 bool backend_set_clipboard_text(FlString text) {
