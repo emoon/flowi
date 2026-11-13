@@ -12,8 +12,6 @@
 #include <unistd.h>
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool create_temp_directory(const char* path) {
     FlString path_str = string_from_cstr(path);
     return file_create_directory_os(path_str);
@@ -76,8 +74,6 @@ static bool wait_for_file_watcher_changes(FlFileWatcherHandle handle, int max_po
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(file_watcher, create_and_destroy) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -101,8 +97,6 @@ UTEST(file_watcher, create_and_destroy) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(file_watcher, invalid_path) {
     FlFileWatcherConfig config
         = { .recursive = false, .watch_files = true, .watch_directories = true, .max_changes = 100 };
@@ -111,7 +105,6 @@ UTEST(file_watcher, invalid_path) {
     ASSERT_EQ(handle, FL_FILE_WATCHER_INVALID);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The public fl_file_watcher_* entry points, called the way an embedding host does: a watcher handle in, a batch of
 // changes out.
 
@@ -206,8 +199,6 @@ UTEST(file_watcher, public_start_returns_zero_for_a_null_config) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(file_watcher, detect_file_creation) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -245,8 +236,6 @@ UTEST(file_watcher, detect_file_creation) {
     cleanup_path(test_dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, detect_file_modification) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -290,8 +279,6 @@ UTEST(file_watcher, detect_file_modification) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(file_watcher, clear_changes) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -319,8 +306,6 @@ UTEST(file_watcher, clear_changes) {
     cleanup_path(test_dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, iterator_functions) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -360,8 +345,6 @@ UTEST(file_watcher, iterator_functions) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, detect_file_deletion) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -404,8 +387,6 @@ UTEST(file_watcher, detect_file_deletion) {
     cleanup_path(test_dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, detect_directory_changes) {
 #if PLATFORM_WINDOWS
@@ -453,8 +434,6 @@ UTEST(file_watcher, detect_directory_changes) {
     fl_arena_destroy(arena);
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, multiple_file_operations) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -517,8 +496,6 @@ UTEST(file_watcher, multiple_file_operations) {
     cleanup_path(test_dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, event_coalescing_rapid_changes) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -584,8 +561,6 @@ UTEST(file_watcher, event_coalescing_rapid_changes) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(file_watcher, buffer_overflow_handling) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -631,8 +606,6 @@ UTEST(file_watcher, buffer_overflow_handling) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(file_watcher, invalid_handle_operations) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -651,8 +624,6 @@ UTEST(file_watcher, invalid_handle_operations) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, watcher_cleanup_on_path_deletion) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -679,8 +650,6 @@ UTEST(file_watcher, watcher_cleanup_on_path_deletion) {
     file_watcher_stop(handle);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, config_variations) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -723,9 +692,6 @@ UTEST(file_watcher, config_variations) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The Linux backend maps each watched directory's inotify descriptor back to its path through a
 // fixed-capacity table. A directory that does not fit cannot be attributed, so the watcher refuses
 // to start rather than silently watching part of the tree. These cover both sides of that cap.
@@ -805,8 +771,6 @@ UTEST(file_watcher, recursive_watch_at_capacity_starts) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(file_watcher, recursive_watch_over_capacity_fails) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -837,8 +801,6 @@ UTEST(file_watcher, recursive_watch_over_capacity_fails) {
     remove_subdirectories(arena, root, subdir_count);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, recursive_watch_over_capacity_leaves_no_descriptors) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -871,8 +833,6 @@ UTEST(file_watcher, recursive_watch_over_capacity_leaves_no_descriptors) {
 }
 
 #endif // PLATFORM_LINUX
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(file_watcher, multiple_watchers_same_path) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -917,7 +877,7 @@ UTEST(file_watcher, multiple_watchers_same_path) {
     cleanup_path(test_dir);
     fl_arena_destroy(arena);
 }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // macOS delivers changes on the stream's dispatch queue, so a stop can arrive while a callback is still running.
 
 #if PLATFORM_MACOS
@@ -974,7 +934,6 @@ UTEST(file_watcher, stop_waits_for_a_callback_in_flight) {
 
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The registry is process-wide, so starting, polling and stopping distinct watchers from several threads all walk the
 // same watcher array. Four workers churn their own watcher while the main thread keeps polling one of its own, which
 // is the shape of a host that starts and stops watchers on job threads while the main thread polls.

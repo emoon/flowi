@@ -73,8 +73,6 @@ static void f16x8_to_fixed_array(f16x8 vec, float* out) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, load_store_unaligned) {
     const float data[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
     f32x4 vec = f32x4_load_unaligned(data);
@@ -85,8 +83,6 @@ UTEST(f32x4, load_store_unaligned) {
     ASSERT_TRUE(f32_arrays_equal(data, result, 4, 1e-6f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, new_splat) {
     f32x4 vec = f32x4_new_splat(5.0f);
     float result[4];
@@ -95,8 +91,6 @@ UTEST(f32x4, new_splat) {
     const float expected[4] = { 5.0f, 5.0f, 5.0f, 5.0f };
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(f32x4, new_xy) {
     f32x4 vec = f32x4_new_xy(1.0f, 2.0f);
@@ -107,8 +101,6 @@ UTEST(f32x4, new_xy) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, new) {
     f32x4 vec = f32x4_new(1.0f, 2.0f, 3.0f, 4.0f);
     float result[4];
@@ -117,8 +109,6 @@ UTEST(f32x4, new) {
     const float expected[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(f32x4, add) {
     f32x4 a = f32x4_new(1.0f, 2.0f, 3.0f, 4.0f);
@@ -132,8 +122,6 @@ UTEST(f32x4, add) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, sub) {
     f32x4 a = f32x4_new(5.0f, 7.0f, 9.0f, 11.0f);
     f32x4 b = f32x4_new(1.0f, 2.0f, 3.0f, 4.0f);
@@ -145,8 +133,6 @@ UTEST(f32x4, sub) {
     const float expected[4] = { 4.0f, 5.0f, 6.0f, 7.0f };
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(f32x4, mul) {
     f32x4 a = f32x4_new(1.0f, 2.0f, 3.0f, 4.0f);
@@ -160,8 +146,6 @@ UTEST(f32x4, mul) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, drop_fraction) {
     f32x4 a = f32x4_new(1.9f, 2.1f, 3.7f, 4.3f);
     f32x4 result_vec = f32x4_drop_fraction(a);
@@ -172,8 +156,6 @@ UTEST(f32x4, drop_fraction) {
     const float expected[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(f32x4, floor) {
     f32x4 a = f32x4_new(1.9f, 2.1f, 3.7f, 4.3f);
@@ -186,8 +168,6 @@ UTEST(f32x4, floor) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, sqrt) {
     f32x4 a = f32x4_new(1.0f, 4.0f, 9.0f, 16.0f);
     f32x4 result_vec = f32x4_sqrt(a);
@@ -199,8 +179,6 @@ UTEST(f32x4, sqrt) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i32x4, new_splat) {
     i32x4 vec = i32x4_new_splat(42);
     int32_t result[4];
@@ -210,8 +188,6 @@ UTEST(i32x4, new_splat) {
     ASSERT_TRUE(i32_arrays_equal(expected, result, 4));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i32x4, new) {
     i32x4 vec = i32x4_new(1, 2, 3, 4);
     int32_t result[4];
@@ -220,8 +196,6 @@ UTEST(i32x4, new) {
     const int32_t expected[4] = { 1, 2, 3, 4 };
     ASSERT_TRUE(i32_arrays_equal(expected, result, 4));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i32x4, add) {
     i32x4 a = i32x4_new(1, 2, 3, 4);
@@ -235,8 +209,6 @@ UTEST(i32x4, add) {
     ASSERT_TRUE(i32_arrays_equal(expected, result, 4));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i32x4, min) {
     i32x4 a = i32x4_new(1, 4, 3, 8);
     i32x4 b = i32x4_new(2, 3, 4, 7);
@@ -248,8 +220,6 @@ UTEST(i32x4, min) {
     const int32_t expected[4] = { 1, 3, 3, 7 };
     ASSERT_TRUE(i32_arrays_equal(expected, result, 4));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i32x4, max) {
     i32x4 a = i32x4_new(1, 4, 3, 8);
@@ -263,8 +233,6 @@ UTEST(i32x4, max) {
     ASSERT_TRUE(i32_arrays_equal(expected, result, 4));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i32x4, extract) {
     i32x4 vec = i32x4_new(10, 20, 30, 40);
     ASSERT_EQ(i32x4_extract(vec, 0), 10);
@@ -272,8 +240,6 @@ UTEST(i32x4, extract) {
     ASSERT_EQ(i32x4_extract(vec, 2), 30);
     ASSERT_EQ(i32x4_extract(vec, 3), 40);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i32x4, div) {
     i32x4 a = i32x4_new(100, 50, 24, 16);
@@ -286,8 +252,6 @@ UTEST(i32x4, div) {
     const int32_t expected[4] = { 10, 10, 4, 4 };
     ASSERT_TRUE(i32_arrays_equal(expected, result, 4));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i32x4, div_gradient_case) {
     i32x4 numerator = i32x4_new_splat(0x8000);
@@ -302,8 +266,6 @@ UTEST(i32x4, div_gradient_case) {
     ASSERT_TRUE(i32_arrays_equal(expected, result, 4));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8, new) {
     i16x8 vec = i16x8_new(1, 2, 3, 4, 5, 6, 7, 8);
     int16_t result[8];
@@ -312,8 +274,6 @@ UTEST(i16x8, new) {
     const int16_t expected[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
     ASSERT_TRUE(i16_arrays_equal(expected, result, 8));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8, new_splat) {
     i16x8 vec = i16x8_new_splat(42);
@@ -324,8 +284,6 @@ UTEST(i16x8, new_splat) {
     ASSERT_TRUE(i16_arrays_equal(expected, result, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8, load_store_unaligned) {
     const int16_t data[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
     i16x8 vec = i16x8_load_unaligned(data, 0);
@@ -335,8 +293,6 @@ UTEST(i16x8, load_store_unaligned) {
 
     ASSERT_TRUE(i16_arrays_equal(data, result, 8));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8, add) {
     i16x8 a = i16x8_new(1, 2, 3, 4, 5, 6, 7, 8);
@@ -349,8 +305,6 @@ UTEST(i16x8, add) {
     const int16_t expected[8] = { 9, 9, 9, 9, 9, 9, 9, 9 };
     ASSERT_TRUE(i16_arrays_equal(expected, result, 8));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8, lerp) {
     i16x8 start = i16x8_new(10, 20, 30, 40, 50, 60, 70, 80);
@@ -369,8 +323,6 @@ UTEST(i16x8, lerp) {
     ASSERT_TRUE(i16_arrays_equal(expected, result, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u8x16, new_and_store_unaligned) {
     const uint8_t data[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     u8x16 simd_vec = u8x16_new(data);
@@ -380,8 +332,6 @@ UTEST(u8x16, new_and_store_unaligned) {
 
     ASSERT_TRUE(u8_arrays_equal(data, stored_data, 16));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16, new_splat) {
     const uint8_t val = 42;
@@ -393,8 +343,6 @@ UTEST(u8x16, new_splat) {
     const uint8_t expected[16] = { val, val, val, val, val, val, val, val, val, val, val, val, val, val, val, val };
     ASSERT_TRUE(u8_arrays_equal(expected, result, 16));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16, load_unaligned) {
     uint8_t data_source[32];
@@ -439,8 +387,6 @@ UTEST(generics, add_f32x4) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 4, 1e-6f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(generics, add_i32x4) {
     i32x4 a = i32x4_new(1, 2, 3, 4);
     i32x4 b = i32x4_new(4, 3, 2, 1);
@@ -452,8 +398,6 @@ UTEST(generics, add_i32x4) {
     const int32_t expected[4] = { 5, 5, 5, 5 };
     ASSERT_TRUE(i32_arrays_equal(expected, result, 4));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(generics, new_splat) {
     f32x4 vec_f32 = simd_new_splat(5.0f);
@@ -468,8 +412,6 @@ UTEST(generics, new_splat) {
     const int32_t expected_i32[4] = { 42, 42, 42, 42 };
     ASSERT_TRUE(i32_arrays_equal(expected_i32, result_i32, 4));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(generics, extract) {
     f32x4 vec_f32 = f32x4_new(1.1f, 2.2f, 3.3f, 4.4f);
@@ -507,8 +449,6 @@ UTEST(f32x4, shuffle_functions) {
     ASSERT_TRUE(f32_arrays_equal(expected_cross, result_cross_arr, 4, 1e-6f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, and_function) {
     f32x4 a = f32x4_new(1.0f, -1.0f, 2.0f, -2.0f);
     f32x4 mask = f32x4_new(1.0f, 1.0f, 0.0f, 0.0f);
@@ -522,8 +462,6 @@ UTEST(f32x4, and_function) {
     ASSERT_TRUE(f32_arrays_equal(expected, result_arr, 4, 1e-6f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, test_intersect) {
     f32x4 a = f32x4_new(1.0f, 1.0f, 3.0f, 3.0f);
     f32x4 b = f32x4_new(2.0f, 2.0f, 4.0f, 4.0f);
@@ -534,8 +472,6 @@ UTEST(f32x4, test_intersect) {
     ASSERT_FALSE(f32x4_test_intersect(c, d));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, extract_all_lanes) {
     f32x4 vec = f32x4_new(1.1f, 2.2f, 3.3f, 4.4f);
 
@@ -544,8 +480,6 @@ UTEST(f32x4, extract_all_lanes) {
     ASSERT_NEAR(f32x4_extract(vec, 2), 3.3f, 1e-6f);
     ASSERT_NEAR(f32x4_extract(vec, 3), 4.4f, 1e-6f);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i32x4, shift_left_comprehensive) {
     i32x4 vec = i32x4_new(1, 2, 4, 8);
@@ -571,8 +505,6 @@ UTEST(i32x4, shift_left_comprehensive) {
     const int32_t expected8[4] = { 256, 512, 1024, 2048 };
     ASSERT_TRUE(i32_arrays_equal(expected8, result, 4));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i32x4, shift_right_comprehensive) {
     i32x4 vec = i32x4_new(256, 512, 1024, -1024);
@@ -607,8 +539,6 @@ UTEST(i32x4, shift_right_comprehensive) {
     ASSERT_TRUE(i32_arrays_equal(expected8, result, 4));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8, additional_functions) {
     i16x8 a = i16x8_new(0x1000, 0x2000, 0x3000, 0x4000, 0x5000, 0x6000, 0x7000, 0x1000);
     i16x8 b = i16x8_new(0x0800, 0x0800, 0x0800, 0x0800, 0x0800, 0x0800, 0x0800, 0x0800);
@@ -633,8 +563,6 @@ UTEST(i16x8, additional_functions) {
     const int16_t expected_shift[8] = { 0x100, 0x200, 0x300, 0x400, 0x500, 0x600, 0x700, 0x100 };
     ASSERT_TRUE(i16_arrays_equal(expected_shift, shift_arr, 8));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8, shift_right_comprehensive) {
     i16x8 vec = i16x8_new(256, 512, 1024, 2048, -256, -512, -1024, -2048);
@@ -669,8 +597,6 @@ UTEST(i16x8, shift_right_comprehensive) {
     ASSERT_TRUE(i16_arrays_equal(expected8, result, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8, pack_high_to_u8x16) {
     i16x8 p0 = i16x8_new(0x0123, 0x0234, 0x0345, 0x0456, 0x0567, 0x0678, 0x0789, 0x089A);
     i16x8 p1 = i16x8_new(0x1122, 0x1233, 0x1344, 0x1455, 0x1566, 0x1677, 0x1788, 0x1899);
@@ -683,8 +609,6 @@ UTEST(i16x8, pack_high_to_u8x16) {
         = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18 };
     ASSERT_TRUE(u8_arrays_equal(expected, result_arr, 16));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16, table_shuffle) {
     const uint8_t data[16] = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150 };
@@ -708,8 +632,6 @@ UTEST(u8x16, table_shuffle) {
     ASSERT_TRUE(u8_arrays_equal(expected_reverse, result_reverse_arr, 16));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u8x16, write_mask) {
     // Test rest_count = 5: 5 < i is true for i=6..15, false for i=0..5
     u8x16 result5 = u8x16_write_mask(5);
@@ -730,8 +652,6 @@ UTEST(u8x16, write_mask) {
     ASSERT_TRUE(u8_arrays_equal(expected0, result0_arr, 16));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u8x16, unpack_to_i16x8_high) {
     const uint8_t input[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     u8x16 u8_vec = u8x16_new(input);
@@ -749,8 +669,6 @@ UTEST(u8x16, unpack_to_i16x8_high) {
     ASSERT_TRUE(i16_arrays_equal(expected_low, low_arr, 8));
     ASSERT_TRUE(i16_arrays_equal(expected_high, high_arr, 8));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16, unpack_to_i16x8_low) {
     const uint8_t input[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
@@ -770,8 +688,6 @@ UTEST(u8x16, unpack_to_i16x8_low) {
     ASSERT_TRUE(i16_arrays_equal(expected_high, high_arr, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f32x4, table_shuffle) {
     f32x4 vec = f32x4_new(1.0f, 2.0f, 3.0f, 4.0f);
 
@@ -784,8 +700,6 @@ UTEST(f32x4, table_shuffle) {
     const float expected[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
     ASSERT_TRUE(f32_arrays_equal(expected, result_arr, 4, 1e-6f));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8, table_shuffle) {
     i16x8 vec = i16x8_new(1, 2, 3, 4, 5, 6, 7, 8);
@@ -800,8 +714,6 @@ UTEST(i16x8, table_shuffle) {
     ASSERT_TRUE(i16_arrays_equal(expected, result_arr, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8, splat_lane) {
     i16x8 vec = i16x8_new(10, 20, 30, 40, 50, 60, 70, 80);
 
@@ -812,8 +724,6 @@ UTEST(i16x8, splat_lane) {
     const int16_t expected[8] = { 30, 30, 30, 30, 30, 30, 30, 30 };
     ASSERT_TRUE(i16_arrays_equal(expected, result_arr, 8));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8, lerp_diff) {
     i16x8 start = i16x8_new(10, 20, 30, 40, 50, 60, 70, 80);
@@ -834,7 +744,6 @@ UTEST(i16x8, lerp_diff) {
     ASSERT_TRUE(i16_arrays_equal(expected, result, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Verify lerp produces correct results for actual color blending ranges (0-255 colors, 0-32767 alpha).
 
 UTEST(i16x8, lerp_color_blend_full_alpha) {
@@ -853,8 +762,6 @@ UTEST(i16x8, lerp_color_blend_full_alpha) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8, lerp_color_blend_zero_alpha) {
     i16x8 start = i16x8_new(100, 100, 100, 100, 100, 100, 100, 100);
     i16x8 end = i16x8_new(200, 200, 200, 200, 200, 200, 200, 200);
@@ -867,8 +774,6 @@ UTEST(i16x8, lerp_color_blend_zero_alpha) {
     const int16_t expected[8] = { 100, 100, 100, 100, 100, 100, 100, 100 };
     ASSERT_TRUE(i16_arrays_equal(expected, result, 8));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8, lerp_color_blend_varying_alpha) {
     i16x8 start = i16x8_new(0, 50, 100, 150, 200, 250, 0, 128);
@@ -894,8 +799,6 @@ UTEST(i16x8, lerp_color_blend_varying_alpha) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8, lerp_diff_color_blend) {
     i16x8 start = i16x8_new(0, 50, 100, 150, 200, 250, 0, 128);
     i16x8 delta = i16x8_new(255, 205, 155, 105, 55, 5, 255, 127);
@@ -911,8 +814,6 @@ UTEST(i16x8, lerp_diff_color_blend) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i32x4, table_shuffle) {
     i32x4 vec = i32x4_new(0x11223344, 0x55667788, 0x99AABBCC, 0xDDEEFF00);
 
@@ -925,8 +826,6 @@ UTEST(i32x4, table_shuffle) {
     const int32_t expected[4] = { (int32_t)0xDDEEFF00, (int32_t)0x99AABBCC, 0x55667788, 0x11223344 };
     ASSERT_TRUE(i32_arrays_equal(expected, result_arr, 4));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8, additional_pointer_functions) {
     const int16_t data[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -946,8 +845,6 @@ UTEST(i16x8, additional_pointer_functions) {
     ASSERT_TRUE(i16_arrays_equal(expected_lower, stored_lower, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f16x8, new_splat) {
     f16x8 vec = f16x8_new_splat(2.5f);
     float result[8];
@@ -957,8 +854,6 @@ UTEST(f16x8, new_splat) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 8, 1e-3f)); // f16 has lower precision
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f16x8, new) {
     f16x8 vec = f16x8_new(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f);
     float result[8];
@@ -967,8 +862,6 @@ UTEST(f16x8, new) {
     const float expected[8] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f };
     ASSERT_TRUE(f32_arrays_equal(expected, result, 8, 1e-3f)); // f16 has lower precision
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(f16x8, add) {
     f16x8 a = f16x8_new(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f);
@@ -982,8 +875,6 @@ UTEST(f16x8, add) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 8, 1e-3f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f16x8, sub) {
     f16x8 a = f16x8_new(10.0f, 12.0f, 14.0f, 16.0f, 18.0f, 20.0f, 22.0f, 24.0f);
     f16x8 b = f16x8_new(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f);
@@ -996,8 +887,6 @@ UTEST(f16x8, sub) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 8, 1e-3f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f16x8, mul) {
     f16x8 a = f16x8_new(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f);
     f16x8 b = f16x8_new(2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f);
@@ -1009,8 +898,6 @@ UTEST(f16x8, mul) {
     const float expected[8] = { 2.0f, 4.0f, 6.0f, 8.0f, 10.0f, 12.0f, 14.0f, 16.0f };
     ASSERT_TRUE(f32_arrays_equal(expected, result, 8, 1e-3f));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(f16x8, clamp) {
     f16x8 a = f16x8_new(-2.0f, 1.0f, 5.0f, 8.0f, 0.5f, 12.0f, -1.0f, 3.0f);
@@ -1025,8 +912,6 @@ UTEST(f16x8, clamp) {
     ASSERT_TRUE(f32_arrays_equal(expected, result, 8, 1e-3f));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f16x8, as_i16x8) {
     f16x8 a = f16x8_new(100.0f, 200.0f, 300.0f, 400.0f, 500.0f, 600.0f, 700.0f, 800.0f);
     i16x8 result_vec = f16x8_as_i16x8(a);
@@ -1037,8 +922,6 @@ UTEST(f16x8, as_i16x8) {
     const int16_t expected[8] = { 100, 200, 300, 400, 500, 600, 700, 800 };
     ASSERT_TRUE(i16_arrays_equal(expected, result, 8));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(f16x8, extract_parts_as_f32x4) {
     f16x8 vec = f16x8_new(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f);
@@ -1056,8 +939,6 @@ UTEST(f16x8, extract_parts_as_f32x4) {
     ASSERT_TRUE(f32_arrays_equal(expected_low, low_result, 4, 1e-3f));
     ASSERT_TRUE(f32_arrays_equal(expected_high, high_result, 4, 1e-3f));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16, to_i16x8_wide_shl_shift_by_0) {
     uint8_t test_data[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
@@ -1080,8 +961,6 @@ UTEST(u8x16, to_i16x8_wide_shl_shift_by_0) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u8x16, to_i16x8_wide_shl_shift_by_8) {
     uint8_t test_data[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
     u8x16 input = u8x16_new(test_data);
@@ -1102,8 +981,6 @@ UTEST(u8x16, to_i16x8_wide_shl_shift_by_8) {
         ASSERT_EQ(expected, high_arr[i]);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16, to_i16x8_wide_shl_shift_by_15) {
     uint8_t test_data[16] = { 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0 };
@@ -1126,8 +1003,6 @@ UTEST(u8x16, to_i16x8_wide_shl_shift_by_15) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u8x16, to_i16x8_wide_shl_zero_input) {
     uint8_t test_data[16] = { 0 };
     u8x16 input = u8x16_new(test_data);
@@ -1144,8 +1019,6 @@ UTEST(u8x16, to_i16x8_wide_shl_zero_input) {
         ASSERT_EQ(0, high_arr[i]);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16, to_i16x8_wide_shl_max_input_values) {
     uint8_t test_data[16];
@@ -1168,8 +1041,6 @@ UTEST(u8x16, to_i16x8_wide_shl_max_input_values) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8x2, to_u8x16_narrow_shr_shift_by_8) {
     i16x8x2 input;
     input.v0 = i16x8_new(1 << 8, 2 << 8, 3 << 8, 4 << 8, 5 << 8, 6 << 8, 7 << 8, 8 << 8);
@@ -1183,8 +1054,6 @@ UTEST(i16x8x2, to_u8x16_narrow_shr_shift_by_8) {
     uint8_t expected[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
     ASSERT_TRUE(u8_arrays_equal(expected, result_arr, 16));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8x2, to_u8x16_narrow_shr_shift_by_8_alternating) {
     i16x8x2 input;
@@ -1200,8 +1069,6 @@ UTEST(i16x8x2, to_u8x16_narrow_shr_shift_by_8_alternating) {
     ASSERT_TRUE(u8_arrays_equal(expected, result_arr, 16));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8x2, to_u8x16_narrow_shr_zero_input) {
     i16x8x2 input;
     input.v0 = i16x8_new(0, 0, 0, 0, 0, 0, 0, 0);
@@ -1215,8 +1082,6 @@ UTEST(i16x8x2, to_u8x16_narrow_shr_zero_input) {
     uint8_t expected[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     ASSERT_TRUE(u8_arrays_equal(expected, result_arr, 16));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(i16x8x2, to_u8x16_narrow_shr_saturation_clamping) {
     // Test saturation - values that would exceed u8 range should be clamped to 255
@@ -1233,8 +1098,6 @@ UTEST(i16x8x2, to_u8x16_narrow_shr_saturation_clamping) {
     ASSERT_TRUE(u8_arrays_equal(expected, result_arr, 16));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(i16x8x2, roundtrip_wide_shl_narrow_shr) {
     uint8_t original[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
     u8x16 input = u8x16_new(original);
@@ -1248,8 +1111,6 @@ UTEST(i16x8x2, roundtrip_wide_shl_narrow_shr) {
 
     ASSERT_TRUE(u8_arrays_equal(original, result_arr, 16));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16_mul_widen, basic_multiplication) {
     uint8_t a_data[16] = { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
@@ -1269,8 +1130,6 @@ UTEST(u8x16_mul_widen, basic_multiplication) {
         ASSERT_EQ(6, high[i]);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16_mul_widen, sequential_values) {
     uint8_t a_data[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
@@ -1293,8 +1152,6 @@ UTEST(u8x16_mul_widen, sequential_values) {
         ASSERT_EQ(expected_high[i], high[i]);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16_mul_widen, max_values) {
     // Test with maximum u8 values: 255 * 255 = 65025 (fits in u16)
@@ -1319,8 +1176,6 @@ UTEST(u8x16_mul_widen, max_values) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u8x16_mul_widen, zero_multiplication) {
     uint8_t a_data[16] = { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160 };
     uint8_t b_data[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -1339,8 +1194,6 @@ UTEST(u8x16_mul_widen, zero_multiplication) {
         ASSERT_EQ(0, high[i]);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16_mul_widen, identity_multiplication) {
     uint8_t a_data[16] = { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160 };
@@ -1363,8 +1216,6 @@ UTEST(u8x16_mul_widen, identity_multiplication) {
         ASSERT_EQ(expected_high[i], high[i]);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u8x16_mul_widen, premultiply_alpha_pattern) {
     // RGBA pixels: (255,128,64,128), (200,100,50,200), (100,50,25,100), (50,25,12,50)
@@ -1395,8 +1246,6 @@ UTEST(u8x16_mul_widen, premultiply_alpha_pattern) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(f16x8, broadcast) {
     f16x8 result = f16x8_new_splat(3.14f);
 
@@ -1414,13 +1263,9 @@ UTEST(f16x8, broadcast) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool u16_arrays_equal(const uint16_t* a, const uint16_t* b, int count) {
     return memcmp(a, b, count * sizeof(uint16_t)) == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u16x8, load_unaligned) {
     const uint16_t data[8] = { 100, 200, 300, 400, 500, 600, 700, 800 };
@@ -1431,8 +1276,6 @@ UTEST(u16x8, load_unaligned) {
 
     ASSERT_TRUE(u16_arrays_equal(data, result, 8));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u16x8, load_unaligned_with_offset) {
     const uint16_t data[12] = { 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120 };
@@ -1445,8 +1288,6 @@ UTEST(u16x8, load_unaligned_with_offset) {
     ASSERT_TRUE(u16_arrays_equal(expected, result, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u16x8, new_splat) {
     u16x8 vec = u16x8_new_splat(12345);
 
@@ -1458,8 +1299,6 @@ UTEST(u16x8, new_splat) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u16x8, new_splat_max_value) {
     u16x8 vec = u16x8_new_splat(65535);
 
@@ -1470,8 +1309,6 @@ UTEST(u16x8, new_splat_max_value) {
         ASSERT_EQ(result[i], 65535);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u16x8, sub_basic) {
     const uint16_t a_data[8] = { 100, 200, 300, 400, 500, 600, 700, 800 };
@@ -1488,8 +1325,6 @@ UTEST(u16x8, sub_basic) {
     ASSERT_TRUE(u16_arrays_equal(expected, result, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u16x8, sub_with_splat) {
     const uint16_t data[8] = { 100, 150, 200, 250, 300, 350, 400, 450 };
 
@@ -1504,8 +1339,6 @@ UTEST(u16x8, sub_with_splat) {
     ASSERT_TRUE(u16_arrays_equal(expected, result, 8));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u16x8, hmin_basic) {
     const uint16_t data[8] = { 50, 30, 80, 20, 90, 10, 70, 40 };
     u16x8 vec = u16x8_load_unaligned(data, 0);
@@ -1514,8 +1347,6 @@ UTEST(u16x8, hmin_basic) {
 
     ASSERT_EQ(min_val, 10);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u16x8, hmin_first_element) {
     const uint16_t data[8] = { 5, 30, 80, 20, 90, 10, 70, 40 };
@@ -1526,8 +1357,6 @@ UTEST(u16x8, hmin_first_element) {
     ASSERT_EQ(min_val, 5);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u16x8, hmin_last_element) {
     const uint16_t data[8] = { 50, 30, 80, 20, 90, 10, 70, 3 };
     u16x8 vec = u16x8_load_unaligned(data, 0);
@@ -1537,8 +1366,6 @@ UTEST(u16x8, hmin_last_element) {
     ASSERT_EQ(min_val, 3);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(u16x8, hmin_all_same) {
     u16x8 vec = u16x8_new_splat(42);
 
@@ -1546,8 +1373,6 @@ UTEST(u16x8, hmin_all_same) {
 
     ASSERT_EQ(min_val, 42);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u16x8, hmin_large_values) {
     const uint16_t data[8] = { 300, 280, 350, 277, 400, 290, 310, 295 };
@@ -1557,8 +1382,6 @@ UTEST(u16x8, hmin_large_values) {
 
     ASSERT_EQ(min_val, 277);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u16x8, narrow_to_u8x16) {
     const uint16_t a_data[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
@@ -1574,8 +1397,6 @@ UTEST(u16x8, narrow_to_u8x16) {
     const uint8_t expected[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     ASSERT_TRUE(u8_arrays_equal(expected, result, 16));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(u16x8, shuffle_mask_pattern) {
     // The pattern used in image scaling: load source indices, find min, subtract min to get shuffle offsets.

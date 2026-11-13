@@ -15,7 +15,6 @@
 
 #define sizeof_array(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Math utility macros
 //
 // These evaluate their arguments more than once, so pass side-effect-free expressions. Each keeps the

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // LocalFS - flowi's built-in VFS driver for the native filesystem.
 //
 // LocalFS is the built-in driver, registered during fl_vfs_init(). Drivers added via vfs_register_driver() are tried

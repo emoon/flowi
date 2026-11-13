@@ -70,8 +70,6 @@
 // with FL_VALIDATE(g_ui_ctx != nullptr); the background family no-ops on null instead.
 FlUiCtx* g_ui_ctx;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_ascii_quick(const char* data, i32 len) {
     for (i32 i = 0; i < len; i++) {
         if ((u8)data[i] >= 0x80) {
@@ -80,8 +78,6 @@ static bool is_ascii_quick(const char* data, i32 len) {
     }
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Clay's measure callback. The width includes the run's glyph gaps (n-1) plus one trailing letterSpacing: Clay
 // subtracts one letterSpacing from the unwrapped width of every text element, so a single-word run's element
@@ -115,8 +111,6 @@ static Clay_Dimensions measure_text_function(Clay_StringSlice text, Clay_TextEle
     return (Clay_Dimensions) { m.width + letter_spacing, m.height };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Clay returns a safe default after invoking this, so a release build can carry the frame to completion.
 static void handle_clay_errors(Clay_ErrorData errorData) {
     // Clay resets its own once-per-error latch in Clay_BeginLayout, so a persistent error reports every frame.
@@ -128,8 +122,6 @@ static void handle_clay_errors(Clay_ErrorData errorData) {
     }
     FL_ASSERT(false);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Bring up the app-level shared resource tier: one per app, handed to each window's ui_create. The
 // host-constructed backend's vtable is copied in.
@@ -161,8 +153,6 @@ UiShared* ui_shared_create(FlArena* arena, FlRenderBackend* backend) {
     return shared;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_shared_destroy(UiShared* shared) {
     if (!shared) {
         return;
@@ -182,8 +172,6 @@ void ui_shared_destroy(UiShared* shared) {
     localization_destroy(shared->localization);
     shared->localization = nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlUiCtx* ui_create(FlArena* arena, UiShared* shared) {
     FL_VALIDATE_RET(shared != nullptr, nullptr);
@@ -250,8 +238,6 @@ FlUiCtx* ui_create(FlArena* arena, UiShared* shared) {
     return ctx;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_destroy(FlUiCtx* ctx) {
     FL_VALIDATE(ctx != nullptr);
 
@@ -303,8 +289,6 @@ void ui_destroy(FlUiCtx* ctx) {
     // ctx itself lives in the caller's persistent arena; font_cache is owned by the application.
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Select ctx as the active window context: swap both the core singleton and Clay's current layout
 // context so layout/input/render-command emission all target this window's tree. Called before a window emits.
 void ui_make_current(FlUiCtx* ctx) {
@@ -313,14 +297,10 @@ void ui_make_current(FlUiCtx* ctx) {
     Clay_SetCurrentContext(ctx->clay_ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_set_surface(FlUiCtx* ctx, FlSurface* surface) {
     FL_VALIDATE(ctx != nullptr);
     ctx->surface = surface;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_set_font_cache(FlUiCtx* ctx, struct FlFontCache* font_cache) {
     ctx->shared->font_cache = font_cache;
@@ -331,15 +311,11 @@ void ui_set_font_cache(FlUiCtx* ctx, struct FlFontCache* font_cache) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_set_theme(FlUiCtx* ctx, const struct FlThemeColors* colors) {
     FL_VALIDATE(ctx != nullptr);
 
     ctx->shared->theme_colors = colors;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Standard toolkit-chrome icons, indexed by FlIcon: VFS path + square render size in pixels.
 static const struct {
@@ -362,8 +338,6 @@ void fl_icon_load(FlVfsMount* mount) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlImageHandle fl_icon_get(FlIcon icon) {
     if (!g_ui_ctx || (unsigned)icon >= FlIcon_Count) {
         return FL_IMAGE_HANDLE_INVALID;
@@ -371,25 +345,17 @@ FlImageHandle fl_icon_get(FlIcon icon) {
     return (FlImageHandle)g_ui_ctx->shared->icons[icon];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_theme_update(const struct FlThemeColors* colors) {
     ui_set_theme(g_ui_ctx, colors);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const FlThemeColors* fl_theme_colors(void) {
     return ui_get_theme_colors(g_ui_ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 uint32_t fl_focused_id(void) {
     return g_ui_ctx ? g_ui_ctx->focused_id : 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Install (or clear) the app's UI feedback hook. One hook serves every window. No-op before any
 // ui_create (no shared tier to hold it).
@@ -400,8 +366,6 @@ void fl_ui_set_feedback_hook(FlUiFeedbackCallback cb, void* user_data) {
     g_ui_ctx->shared->feedback_hook = cb;
     g_ui_ctx->shared->feedback_user_data = user_data;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The bottom of the theme resolution stack: the host-injected colors, or the built-in default.
 static const FlThemeColors* ui_theme_base_colors(const FlUiCtx* ctx) {
@@ -433,7 +397,6 @@ static const FlThemeColors* ui_theme_base_colors(const FlUiCtx* ctx) {
     return ctx->shared->theme_colors;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Theme-color resolution seam: the innermost scoped override (ui_theme_push) if one is active, otherwise the
 // base theme.
 
@@ -444,7 +407,6 @@ const FlThemeColors* ui_get_theme_colors(FlUiCtx* ctx) {
     return ui_theme_base_colors(ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Push starts from the currently resolved theme so the override inherits every slot it does not touch - that
 // is what makes nested overrides stack (an inner push layers on top of the outer's merged result).
 
@@ -460,7 +422,6 @@ void ui_theme_push(FlUiCtx* ctx, FlThemeOverride override) {
     ctx->theme_override_depth = depth + 1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resolve the theme a widget renders against: the seam-resolved theme (including any active subtree overrides) with
 // the widget's own sparse override merged on top. Never returns null. With no widget override it returns the seam
 // theme directly (no copy); when an override applies, the merged result is written into caller-owned scratch.
@@ -474,30 +435,22 @@ const FlThemeColors* ui_resolve_widget_theme(FlUiCtx* self, const FlThemeOverrid
     return theme;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_theme_pop(FlUiCtx* ctx) {
     FL_VALIDATE(ctx != nullptr);
     FL_VALIDATE(ctx->theme_override_depth > 0);
     ctx->theme_override_depth--;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Returns null in the pre-init window; see the g_ui_ctx declaration for the guarding rule callers must follow.
 FlUiCtx* ui_get_ctx(void) {
     return g_ui_ctx;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_ctx_set_dock_workspace(FlUiCtx* ctx, struct FlDockWorkspace* ws) {
     if (ctx != nullptr) {
         ctx->dock_workspace = ws; // non-owning: the shared registry owns the workspace
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The current context's Painter, so the shape primitives (painter_circle, ...) are reachable without threading
 // one. Valid only inside an open painting scope (a layout element); returns null before ui_create, with no
@@ -511,8 +464,6 @@ struct Painter* ui_get_painter(void) {
     }
     return g_ui_ctx->painter;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_update_begin(FlUiCtx* self) {
     perf_scope_function();
@@ -599,8 +550,6 @@ void ui_update_begin(FlUiCtx* self) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_app_frame_begin(FlUiCtx* self) {
     // Finishes an in-flight string table and applies a pending language switch before any text resolves.
     localization_frame_begin(self->shared->localization);
@@ -614,51 +563,33 @@ void ui_app_frame_begin(FlUiCtx* self) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlVec2 ui_get_mouse_wheel(void) {
     return (FlVec2) { g_ui_ctx->input_state.mouse.wheel_x_cached, g_ui_ctx->input_state.mouse.wheel_y_cached };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_nav_up_pressed(void) {
     return g_ui_ctx->nav_frame.nav_up;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_nav_down_pressed(void) {
     return g_ui_ctx->nav_frame.nav_down;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_consume_nav_up(void) {
     g_ui_ctx->nav_frame.nav_up = false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_consume_nav_down(void) {
     g_ui_ctx->nav_frame.nav_down = false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_consume_nav_left(void) {
     g_ui_ctx->nav_frame.nav_left = false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_consume_nav_right(void) {
     g_ui_ctx->nav_frame.nav_right = false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Input-state accessors: the range check precedes the array access. EDGE queries read the per-frame context
 // snapshot; LEVEL queries read the raw array.
@@ -674,37 +605,25 @@ bool ui_key_pressed(FlKey key) {
     return key_edge_get(keys_pressed_this_frame, key);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_key_down(FlKey key) {
     return key_state_get(keys, key);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_key_released(FlKey key) {
     return key_edge_get(keys_released_this_frame, key);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_text_input_active(void) {
     return g_ui_ctx->input_state.text_input_active;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 ui_keyboard_modifiers(void) {
     return g_ui_ctx->input_state.keyboard.modifiers;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u32 ui_dropped_file_count(void) {
     return g_ui_ctx->dropped_file_count_this_frame;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString ui_dropped_file(u32 index) {
     if (index >= g_ui_ctx->dropped_file_count_this_frame) {
@@ -713,16 +632,12 @@ FlString ui_dropped_file(u32 index) {
     return g_ui_ctx->dropped_files_this_frame[index];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlVec2 ui_dropped_file_position(u32 index) {
     if (index >= g_ui_ctx->dropped_file_count_this_frame) {
         return (FlVec2) { .x = 0.0f, .y = 0.0f };
     }
     return g_ui_ctx->dropped_file_positions_this_frame[index];
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Read of a per-button bool array, under the same two rules as the keyboard accessors above. Callers pass the
 // snapshot array (mouse_buttons_*_this_frame) for an edge and input_state.mouse.buttons[] for the held level.
@@ -733,32 +648,22 @@ bool ui_mouse_pressed(FlMouseButton button) {
     return mouse_button_state_get(g_ui_ctx->mouse_buttons_pressed_this_frame, button);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_mouse_down(FlMouseButton button) {
     return mouse_button_state_get(g_ui_ctx->input_state.mouse.buttons, button);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_mouse_released(FlMouseButton button) {
     return mouse_button_state_get(g_ui_ctx->mouse_buttons_released_this_frame, button);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVec2 ui_mouse_delta(void) {
     const MouseState* mouse = &g_ui_ctx->input_state.mouse;
     return (FlVec2) { mouse->delta_x, mouse->delta_y };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_gamepad_connected(u32 slot) {
     return slot < UI_INPUT_MAX_GAMEPADS && g_ui_ctx->input_state.gamepads[slot].connected;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // An empty slot reads as "no buttons held".
 
@@ -771,8 +676,6 @@ bool ui_gamepad_button_down(u32 slot, FlGamepadButton button) {
     return pad->connected && pad->buttons[button];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The pad's edge, or false when the slot or button is out of range or the slot is empty. Callers pass the
 // per-frame snapshot (gamepad_buttons_*_this_frame), not the raw arrays ui_input_update has cleared.
 static bool gamepad_edge_get(bool edges[UI_INPUT_MAX_GAMEPADS][FlGamepadButton_Count], u32 slot,
@@ -780,19 +683,13 @@ static bool gamepad_edge_get(bool edges[UI_INPUT_MAX_GAMEPADS][FlGamepadButton_C
     return ui_gamepad_connected(slot) && (u32)button < FlGamepadButton_Count && edges[slot][button];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_gamepad_button_pressed(u32 slot, FlGamepadButton button) {
     return gamepad_edge_get(g_ui_ctx->gamepad_buttons_pressed_this_frame, slot, button);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_gamepad_button_released(u32 slot, FlGamepadButton button) {
     return gamepad_edge_get(g_ui_ctx->gamepad_buttons_released_this_frame, slot, button);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 f32 ui_gamepad_button_hold_duration(u32 slot, FlGamepadButton button) {
     if (!ui_gamepad_connected(slot) || (u32)button >= FlGamepadButton_Count) {
@@ -802,8 +699,6 @@ f32 ui_gamepad_button_hold_duration(u32 slot, FlGamepadButton button) {
     return g_ui_ctx->input_state.gamepads[slot].button_hold_duration[button];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f32 ui_gamepad_axis(u32 slot, FlGamepadAxis axis) {
     if (!ui_gamepad_connected(slot) || (u32)axis >= FlGamepadAxis_Count) {
         return 0.0f;
@@ -811,8 +706,6 @@ f32 ui_gamepad_axis(u32 slot, FlGamepadAxis axis) {
 
     return g_ui_ctx->input_state.gamepads[slot].axes[axis];
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_mouse_hidden_drag_begin(float scale) {
     g_ui_ctx->hidden_drag_active = true;
@@ -825,8 +718,6 @@ void ui_mouse_hidden_drag_begin(float scale) {
     g_ui_ctx->warp_pending = false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_mouse_hidden_drag_end(void) {
     g_ui_ctx->hidden_drag_active = false;
     g_ui_ctx->relative_mouse_mode = false;
@@ -836,8 +727,6 @@ void ui_mouse_hidden_drag_end(void) {
     g_ui_ctx->warp_y = g_ui_ctx->hidden_drag_press_y;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlVec2 ui_mouse_drag_delta(void) {
     if (!g_ui_ctx->hidden_drag_active) {
         return (FlVec2) { 0.0f, 0.0f };
@@ -846,13 +735,9 @@ FlVec2 ui_mouse_drag_delta(void) {
                       g_ui_ctx->input_state.mouse.raw_delta_y_cached * g_ui_ctx->hidden_drag_scale };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_get_relative_mouse_mode(void) {
     return g_ui_ctx->relative_mouse_mode;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_take_pending_warp(float* out_x, float* out_y) {
     if (!g_ui_ctx->warp_pending) {
@@ -864,25 +749,18 @@ bool ui_take_pending_warp(float* out_x, float* out_y) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_action_pressed(FlAction action) {
     return ui_action_pressed(g_ui_ctx, action);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlNavFrame fl_get_nav_frame(void) {
     return g_ui_ctx->nav_frame;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 float ui_get_delta_time(void) {
     return g_ui_ctx ? g_ui_ctx->delta_time : 0.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Modal Popup API
 
 void fl_modal_begin_frame(u32 scope_id) {
@@ -898,8 +776,6 @@ void fl_modal_begin_frame(u32 scope_id) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_modal_begin(u32 scope_id) {
     if (scope_id == 0) {
         return;
@@ -911,14 +787,10 @@ void fl_modal_begin(u32 scope_id) {
     g_ui_ctx->current_popup_scope_id = scope_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_modal_end(void) {
     // The focus scope stays active until the modal closes.
     g_ui_ctx->current_popup_scope_id = 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_modal_close(void) {
     u32 focused_id = g_ui_ctx->focused_id;
@@ -931,26 +803,19 @@ void fl_modal_close(void) {
     g_ui_ctx->modal_scope_id = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_modal_is_active(void) {
     return g_ui_ctx->popup_focus_scope_id != 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_set_focus_id(FlElementId id) {
     g_ui_ctx->focused_id = id;
     g_ui_ctx->should_scroll_to_focused = true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_set_focus(FlLayoutId layout_id) {
     fl_set_focus_id(ui_layout_id_to_clay_id(layout_id));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Returns FlElementState with found=0 if the widget has no state entry.
 
 FlElementState ui_get_element_state_by_id(u32 element_id) {
@@ -958,13 +823,10 @@ FlElementState ui_get_element_state_by_id(u32 element_id) {
     return item != nullptr ? item->state : (FlElementState) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlElementState ui_get_element_state(FlLayoutId layout_id) {
     return ui_get_element_state_by_id(ui_layout_id_to_clay_id(layout_id));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The single topmost-hovered element id this frame - the core's already-arbitrated hot_id (0 = nothing hovered).
 
 u32 ui_hot_id(void) {
@@ -972,7 +834,6 @@ u32 ui_hot_id(void) {
     return ctx ? ctx->hot_id : 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pointer position in an element's local logical (authoring) space - (mouse - origin) / ui_scale. The
 // element rect lands in physical pixels (Clay lays out at the actual resolution) and the mouse is fed in that
 // same physical space, so dividing the local delta by ui_scale converts back to the logical authoring space the
@@ -992,7 +853,6 @@ FlVec2 ui_mouse_position(FlLayoutId layout_id) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scroll Target registration. A plain layout area never enters item_state on its own - only ui_item_behavior
 // creates entries, and item_state_update skips ids not already present. This inserts the area into item_state
 // with FlItemFlags_scroll_target, computing the clay id exactly as the layout open path does, so the existing
@@ -1007,7 +867,6 @@ void ui_scroll_target(FlLayoutId layout_id) {
     item->flags |= FlItemFlags_scroll_target;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Put the area in item_state so item_state_update fills its bounds from this frame's render command, without the
 // scroll_target flag (see ui_track_element in ui.h for the hot/active-arbitration side effect).
 
@@ -1019,7 +878,6 @@ void ui_track_element(FlLayoutId layout_id) {
     get_or_create_key(self, ui_layout_id_to_clay_id(layout_id));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scoped per-frame wheel delta: the mouse_wheel_delta(id) query. Returns the frame's wheel delta only when this
 // id is the hot Scroll Target (consume-takes-all: the topmost hot target wins, ancestors read {0,0}). Reads
 // item->state.hot directly, not signal.wheel_delta.
@@ -1037,8 +895,6 @@ FlVec2 ui_mouse_wheel_delta(FlLayoutId layout_id) {
         .y = self->input_state.mouse.wheel_y_cached,
     };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlListClipper fl_list_clipper_create(int32_t total_items, float item_height, float scroll_offset_y,
                                      float viewport_height) {
@@ -1075,8 +931,6 @@ FlListClipper fl_list_clipper_create(int32_t total_items, float item_height, flo
     return clipper;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A spacer's extent is authored logical px, exactly like every FlLayoutSizing the layout seam scales in
 // ui_apply_sizing (ui/layout.c) - so it goes through the same scale-and-snap.
 static float ui_spacer_extent(float logical) {
@@ -1101,8 +955,6 @@ void ui_spacer(float height_logical) {
 }
 // clang-format on
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // clang-format off
 void ui_spacer_h(float width_logical) {
     const float width = ui_spacer_extent(width_logical);
@@ -1119,8 +971,6 @@ void ui_spacer_h(float width_logical) {
     Clay__CloseElement();
 }
 // clang-format on
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void retire_stale_items(UiShared* shared) {
     arena_scratch_auto(scratch);
@@ -1141,14 +991,10 @@ static void retire_stale_items(UiShared* shared) {
     shared->item_epoch++;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_app_frame_end(FlUiCtx* self) {
     self->shared->item_epoch_app_owned = false;
     retire_stale_items(self->shared);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ItemState* get_or_create_key(FlUiCtx* self, u32 id) {
     ItemState* item = hashmap_get(&self->shared->item_state, id);
@@ -1169,8 +1015,6 @@ static ItemState* get_or_create_key(FlUiCtx* self, u32 id) {
     FL_ASSERT(item != nullptr);
     return item;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_update_end(FlUiCtx* self, float dt) {
     perf_scope_function();
@@ -1247,7 +1091,6 @@ void ui_update_end(FlUiCtx* self, float dt) {
     self->frame_open = false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared Frame Update Logic (used by both application and tests)
 
 void ui_frame_end_and_update_input(FlUiCtx* ctx, double dt) {
@@ -1263,15 +1106,11 @@ void ui_frame_end_and_update_input(FlUiCtx* ctx, double dt) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_text(FlString string) {
     // Default text: theme primary colour, everything else falls back inside ui_text_styled_impl.
     const FlThemeColors* theme = ui_get_theme_colors(g_ui_ctx);
     ui_text_styled_impl(string, (FlTextConfig) { .color = theme->text.primary });
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_text_styled_impl(FlString string, FlTextConfig config) {
     FlUiCtx* self = g_ui_ctx;
@@ -1303,20 +1142,15 @@ void ui_text_styled_impl(FlString string, FlTextConfig config) {
     Clay__OpenTextElement(clay_string, clay_config);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Unified item behavior function for flag-based widget composition
 //
 // One behavior function for every widget family, controlled by flags. Exported in ui_private.h for use by
 // custom widgets (like text input).
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlLayoutId resolve_widget_id(FlString fallback, FlString id_override) {
     FlString id_string = id_override.length > 0 ? id_override : fallback;
     return (FlLayoutId) { .name = id_string, .id = 0 };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 ui_layout_id_to_clay_id(FlLayoutId layout_id) {
     Clay_ElementId clay_id = Clay__HashString(
@@ -1324,14 +1158,10 @@ u32 ui_layout_id_to_clay_id(FlLayoutId layout_id) {
     return clay_id.id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ItemState* get_item_state(FlLayoutId layout_id) {
     u32 clay_id = ui_layout_id_to_clay_id(layout_id);
     return hashmap_get(&g_ui_ctx->shared->item_state, clay_id);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlSignal ui_item_behavior(FlLayoutId lay_id, FlItemFlags flags, FlWidgetConfig cfg) {
     FlUiCtx* self = g_ui_ctx;
@@ -1488,13 +1318,9 @@ FlSignal ui_item_behavior(FlLayoutId lay_id, FlItemFlags flags, FlWidgetConfig c
     return signal;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlSignal ui_widget_behavior(FlLayoutId id, FlWidgetConfig cfg) {
     return ui_item_behavior(id, STANDARD_WIDGET_FLAGS, cfg);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_font_style_register(FlFontId font_id, FlFontStyle style) {
     FL_VALIDATE(g_ui_ctx != nullptr);
@@ -1507,8 +1333,6 @@ void fl_font_style_register(FlFontId font_id, FlFontStyle style) {
     g_ui_ctx->font_styles[style] = font_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_font_style_set(FlFontStyle style) {
     FL_VALIDATE(g_ui_ctx != nullptr);
 
@@ -1520,14 +1344,10 @@ void fl_font_style_set(FlFontStyle style) {
     g_ui_ctx->active_font = g_ui_ctx->font_styles[style];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_font_set(FlFontId id) {
     FL_VALIDATE(g_ui_ctx != nullptr);
     g_ui_ctx->active_font = id;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVec2 ui_get_screen_size(void) {
     FlUiCtx* ctx = g_ui_ctx;
@@ -1536,8 +1356,6 @@ FlVec2 ui_get_screen_size(void) {
     }
     return (FlVec2) { ctx->layout_width, ctx->layout_height };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // A font handle carries the authored size; text_scale is multiplied in on use (ui_text_styled_impl, the painter).
 // 0 means the default size; 8px is the floor.
@@ -1551,36 +1369,27 @@ FlFontId ui_font_load(FlVfsMount* mount, FlString relative_path, u16 default_siz
     return font_cache_load_font(g_ui_ctx->shared->font_cache, mount, relative_path, authored_font_size(default_size));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The public face of ui_font_load, for a host that loads fonts from its own data mount instead of the asset
 // mount fl_font_load resolves against.
 FlFontId fl_font_load_mount(FlVfsMount* mount, FlString relative_path, u16 default_size) {
     return ui_font_load(mount, relative_path, default_size);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_font_load_fallback(FlVfsMount* mount, FlString relative_path) {
     FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return font_cache_load_fallback(g_ui_ctx->shared->font_cache, mount, relative_path);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_font_wait_load(FlFontId font_id) {
     FL_VALIDATE(g_ui_ctx != nullptr);
     font_cache_wait_loaded(g_ui_ctx->shared->font_cache, font_id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_font_is_loaded(FlFontId id) {
     FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return font_cache_get_font_status(g_ui_ctx->shared->font_cache, id) == FontStatus_Ready;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pump I/O until every kicked-off font has its metrics ready (or failed), so setup can load several fonts and
 // sync once before the first rendered frame. Returns false if any font failed to load.
 
@@ -1589,14 +1398,10 @@ bool ui_font_ensure_loaded(void) {
     return font_cache_ensure_all_loaded(g_ui_ctx->shared->font_cache);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlFontId fl_font_load_default(u16 default_size) {
     FL_VALIDATE_RET(g_ui_ctx != nullptr, FONT_ID_INVALID);
     return font_cache_load_default_font(g_ui_ctx->shared->font_cache, authored_font_size(default_size));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Emit a Clay image element for a prepared neutral image-source descriptor. When fill is set the
 // element grows to fill its parent (triggers scaled rendering); otherwise it sizes to w x h pixels.
@@ -1611,8 +1416,6 @@ static void ui_emit_image_element(FlImageSource* source, FlColor color, bool fil
                        .image = { .imageData = (void*)source } }) {}
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_image_impl(ImageHandle handle, FlImageOpts opts) {
     ImageResult data = image_get_data(handle);
@@ -1632,8 +1435,6 @@ void ui_image_impl(ImageHandle handle, FlImageOpts opts) {
     ui_emit_image_element(source, opts.color, opts.fill_container, (float)data.width, (float)data.height);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_dynamic_image_impl(FlDynamicImage* image, FlImageOpts opts) {
     if (image == nullptr) {
         return;
@@ -1650,7 +1451,6 @@ void ui_dynamic_image_impl(FlDynamicImage* image, FlImageOpts opts) {
     ui_emit_image_element(source, opts.color, opts.fill_container, (float)image->width, (float)image->height);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI Scaling API
 //
 // The core holds zero scaling policy: it stores one absolute UI scale and one absolute text scale,
@@ -1675,8 +1475,6 @@ void ui_set_scale(float ui_scale, float text_scale) {
     log_info("UI scale set to ui_scale=%.3f, text_scale=%.3f", ui_scale, text_scale);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_set_display_resolution(int width, int height) {
     FlUiCtx* ctx = g_ui_ctx;
     if (!ctx) {
@@ -1695,21 +1493,16 @@ void ui_set_display_resolution(int width, int height) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 float ui_get_scale(void) {
     FlUiCtx* ctx = g_ui_ctx;
     return ctx ? ctx->ui_scale : 1.0f;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 float ui_get_text_scale(void) {
     FlUiCtx* ctx = g_ui_ctx;
     return ctx ? ctx->text_scale : 1.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Background Image API
 
 void ui_background_set(ImageHandle handle) {
@@ -1719,16 +1512,12 @@ void ui_background_set(ImageHandle handle) {
     background_controller_set(&ctx->background, handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_background_set_alpha(u8 alpha) {
     FlUiCtx* ctx = g_ui_ctx;
     if (!ctx)
         return;
     background_controller_set_alpha(&ctx->background, alpha);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_background_set_clear_color(u8 r, u8 g, u8 b) {
     FlUiCtx* ctx = g_ui_ctx;
@@ -1737,7 +1526,6 @@ void ui_background_set_clear_color(u8 r, u8 g, u8 b) {
     background_controller_set_clear_color(&ctx->background, r, g, b);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Background blend API
 
 void ui_background_set_blend(ImageHandle prev, ImageHandle current, u8 t) {

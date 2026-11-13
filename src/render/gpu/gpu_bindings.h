@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The shader resource-binding contract: every buffer and texture index the host encoder sets and the shader
 // signature declares, named once. gpu_shaders.c splices these into every program's source through the generated
 // #define preamble, so the shader spells BIND_RASTER_CLIPS where the host spells

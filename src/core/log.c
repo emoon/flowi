@@ -9,14 +9,11 @@
 #include <stdarg.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Channel system constants
 
 #define MAX_LOG_CHANNELS 32
 #define LOG_LEVEL_WIDTH 7 // "WARNING" is longest
 #define LOG_CHANNEL_WIDTH 8
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct LogChannel {
     FlString name;
@@ -25,7 +22,6 @@ typedef struct LogChannel {
     bool registered; // Slot is in use
 } LogChannel;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Global state
 
 static LogLevel s_current_log_level = LogLevel_Trace;
@@ -47,8 +43,6 @@ static OnceFlag s_log_file_mutex_initialized;
 // Persistent arena for log file path (lives for duration of program)
 static FlArena* s_log_arena = nullptr;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void ensure_channel_mutex_initialized(void) {
     if (once_begin(&s_channel_mutex_initialized)) {
         mutex_init(&s_channel_mutex);
@@ -56,7 +50,6 @@ static void ensure_channel_mutex_initialized(void) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Channel registration and management
 
 LogChannelId fl_log_register_channel(FlString name) {
@@ -97,8 +90,6 @@ LogChannelId fl_log_register_channel(FlString name) {
     return id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_log_channel_set_level(LogChannelId id, LogLevel level) {
     ensure_channel_mutex_initialized();
     mutex_lock(&s_channel_mutex);
@@ -108,8 +99,6 @@ void fl_log_channel_set_level(LogChannelId id, LogLevel level) {
     mutex_unlock(&s_channel_mutex);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_log_channel_enable(LogChannelId id, bool enabled) {
     ensure_channel_mutex_initialized();
     mutex_lock(&s_channel_mutex);
@@ -118,8 +107,6 @@ void fl_log_channel_enable(LogChannelId id, bool enabled) {
     }
     mutex_unlock(&s_channel_mutex);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Copies a channel's name/level/enabled under s_channel_mutex so concurrent set_level / enable writers can't be
 // observed torn. Invalid or unregistered ids resolve to a permissive DEFAULT channel.
@@ -139,13 +126,10 @@ static void channel_info_read(LogChannelId id, FlString* name, LogLevel* level, 
     mutex_unlock(&s_channel_mutex);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_log_set_show_location(bool show) {
     s_show_file_line = show;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File logging implementation
 
 static void ensure_log_file_mutex_initialized(void) {
@@ -154,8 +138,6 @@ static void ensure_log_file_mutex_initialized(void) {
         once_end(&s_log_file_mutex_initialized);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_log_file_init(FlString base_dir) {
     ensure_log_file_mutex_initialized();
@@ -207,8 +189,6 @@ bool fl_log_file_init(FlString base_dir) {
     return opened;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_log_file_shutdown(void) {
     ensure_log_file_mutex_initialized();
 
@@ -222,8 +202,6 @@ void fl_log_file_shutdown(void) {
     // s_log_arena is kept alive so the path stays readable after shutdown
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_log_file_get_path(void) {
     ensure_log_file_mutex_initialized();
 
@@ -232,8 +210,6 @@ FlString fl_log_file_get_path(void) {
     mutex_unlock(&s_log_file_mutex);
     return path;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void log_file_write(FlString message) {
     if (s_log_file_fd < 0) {
@@ -249,13 +225,9 @@ static void log_file_write(FlString message) {
     mutex_unlock(&s_log_file_mutex);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString format_channel_padded(FlArena* arena, FlString channel_name) {
     return fl_sprintf_arena(arena, "%-*S", atomic_load(&s_max_channel_name_length), channel_name);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlString get_level_string(LogLevel level) {
     switch (level) {
@@ -275,8 +247,6 @@ static FlString get_level_string(LogLevel level) {
             return FL_S("UNKNOWN");
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlString format_level_padded(FlArena* arena, LogLevel level) {
     FlString level_str = get_level_string(level);
@@ -307,13 +277,9 @@ static FlString format_level_padded(FlArena* arena, LogLevel level) {
     return fl_sprintf_arena(arena, "%S%-*S\033[0m", color_code, LOG_LEVEL_WIDTH, level_str);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString format_level_plain(FlArena* arena, LogLevel level) {
     return fl_sprintf_arena(arena, "%-*S", LOG_LEVEL_WIDTH, get_level_string(level));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlString format_log_line(FlArena* arena, FlString timestamp, FlString channel, FlString level, FlString message,
                                 const char* filename, int line, bool show_location) {
@@ -323,8 +289,6 @@ static FlString format_log_line(FlArena* arena, FlString timestamp, FlString cha
     }
     return fl_sprintf_arena(arena, "[%S] [%S] [%S] : %S\n", timestamp, channel, level, message);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void log_formatted_message_internal(LogChannelId id, LogLevel level, const char* file, int line,
                                            FlString message) {
@@ -364,8 +328,6 @@ static void log_formatted_message_internal(LogChannelId id, LogLevel level, cons
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_log_c_vmessage_loc(LogChannelId id, LogLevel level, const char* file, int line, const char* format,
                            va_list args) {
     FlString channel_name;
@@ -383,8 +345,6 @@ void fl_log_c_vmessage_loc(LogChannelId id, LogLevel level, const char* file, in
     log_formatted_message_internal(id, level, file, line, message);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_log_c_message(LogChannelId id, LogLevel level, const char* file, int line, const char* format, ...) {
     va_list args;
     va_start(args, format);
@@ -392,13 +352,9 @@ void fl_log_c_message(LogChannelId id, LogLevel level, const char* file, int lin
     va_end(args);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_log_c_message_formatted(LogChannelId id, LogLevel level, const char* file, int line, FlString message) {
     log_formatted_message_internal(id, level, file, line, message);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ensure_default_channel(void) {
     if (s_default_channel == LOG_CHANNEL_INVALID) {
@@ -406,8 +362,6 @@ static void ensure_default_channel(void) {
         fl_log_channel_set_level(s_default_channel, s_current_log_level);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_log_message(LogLevel level, const char* file, int line, const char* format, ...) {
     ensure_default_channel();
@@ -418,11 +372,7 @@ void fl_log_message(LogLevel level, const char* file, int line, const char* form
     va_end(args);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_log_flush(void) {}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_log_set_level(LogLevel level) {
     s_current_log_level = level;

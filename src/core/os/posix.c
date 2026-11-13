@@ -24,7 +24,6 @@
 #include <sys/statvfs.h>
 #include <time.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // OS Path conversion - POSIX just uses UTF-8 strings directly
 
 OsPath string_to_os_path(struct FlArena* arena, FlString path) {
@@ -32,8 +31,6 @@ OsPath string_to_os_path(struct FlArena* arena, FlString path) {
     result.cstr_path = (char*)fl_string_to_cstr(arena, path);
     return result;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 i64 file_get_size_os(FlString path) {
     arena_scratch_auto(temp);
@@ -46,8 +43,6 @@ i64 file_get_size_os(FlString path) {
     return size;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 i64 file_read_from_handle_os(u8* dest, const i64 fd, const i64 file_size, const i64 buffer_size) {
     const i64 read_size = min(buffer_size, file_size);
     // A negative size (e.g. file_get_size_os's -1 failure sentinel) would be reinterpreted
@@ -57,8 +52,6 @@ i64 file_read_from_handle_os(u8* dest, const i64 fd, const i64 file_size, const 
     }
     return read(fd, dest, (size_t)read_size);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 i64 file_read_os(u8* dest, FlString path, const i64 buffer_size) {
     const i64 fd = file_open_os(path, 0);
@@ -78,8 +71,6 @@ i64 file_read_os(u8* dest, FlString path, const i64 buffer_size) {
     return ret_size;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 i64 file_open_os(FlString path, const int flags) {
     (void)flags;
     arena_scratch_auto(temp);
@@ -88,13 +79,9 @@ i64 file_open_os(FlString path, const int flags) {
     return fd >= 0 ? fd : -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void file_close_handle_os(const i64 fd) {
     close((int)fd);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileMmap file_mmap_open_os(FlString path) {
     FileMmap result = { .data = nullptr, .size = 0, .fd = -1 };
@@ -125,8 +112,6 @@ FileMmap file_mmap_open_os(FlString path) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void file_mmap_close_os(FileMmap* mmap) {
     if (mmap == nullptr || mmap->data == nullptr) {
         return;
@@ -138,8 +123,6 @@ void file_mmap_close_os(FileMmap* mmap) {
     mmap->size = 0;
     mmap->fd = -1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 i64 file_open_write_os(FlString path, bool append) {
     arena_scratch_auto(temp);
@@ -156,8 +139,6 @@ i64 file_open_write_os(FlString path, bool append) {
     return fd >= 0 ? fd : -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 i64 file_write_to_handle_os(i64 fd, const u8* data, i64 size) {
     if (fd < 0 || data == nullptr || size <= 0) {
         return -1;
@@ -167,8 +148,6 @@ i64 file_write_to_handle_os(i64 fd, const u8* data, i64 size) {
     return written >= 0 ? (i64)written : -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool file_rename_os(FlString old_path, FlString new_path) {
     arena_scratch_auto(temp);
     OsPath old_os_path = string_to_os_path(temp.arena, old_path);
@@ -176,8 +155,6 @@ bool file_rename_os(FlString old_path, FlString new_path) {
 
     return rename(os_path_str(old_os_path), os_path_str(new_os_path)) == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Writes until every byte is consumed; EINTR is retried.
 
@@ -200,13 +177,9 @@ static void write_all(int fd, const char* data, size_t len) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void stderr_write_os(FlString str) {
     write_all(STDERR_FILENO, str.data, str.length);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 i64 get_current_time_us_os(void) {
     struct timespec ts;
@@ -216,8 +189,6 @@ i64 get_current_time_us_os(void) {
     return 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u64 get_monotonic_time_ns_os(void) {
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
@@ -225,8 +196,6 @@ u64 get_monotonic_time_ns_os(void) {
     }
     return 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString timestamp_format_os(struct FlArena* arena, i64 timestamp_us) {
     time_t seconds = (time_t)(timestamp_us / 1000000LL);
@@ -242,50 +211,34 @@ FlString timestamp_format_os(struct FlArena* arena, i64 timestamp_us) {
                             local_time.tm_sec, (int)microseconds);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static_assert(sizeof(pthread_mutex_t) <= sizeof(((Mutex*)0)->data), "pthread_mutex_t too large for Mutex struct");
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void mutex_init(Mutex* mutex) {
     pthread_mutex_t* handle = (pthread_mutex_t*)mutex->data;
     pthread_mutex_init(handle, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void mutex_lock(Mutex* mutex) {
     pthread_mutex_t* handle = (pthread_mutex_t*)mutex->data;
     pthread_mutex_lock(handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void mutex_unlock(Mutex* mutex) {
     pthread_mutex_t* handle = (pthread_mutex_t*)mutex->data;
     pthread_mutex_unlock(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void mutex_destroy(Mutex* mutex) {
     pthread_mutex_t* handle = (pthread_mutex_t*)mutex->data;
     pthread_mutex_destroy(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static_assert(sizeof(pthread_cond_t) <= sizeof(((CondVar*)0)->data), "pthread_cond_t too large for CondVar struct");
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void condvar_init(CondVar* condvar) {
     pthread_cond_t* handle = (pthread_cond_t*)condvar->data;
     pthread_cond_init(handle, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void condvar_wait(CondVar* condvar, Mutex* mutex) {
     pthread_cond_t* cond_handle = (pthread_cond_t*)condvar->data;
@@ -293,35 +246,26 @@ void condvar_wait(CondVar* condvar, Mutex* mutex) {
     pthread_cond_wait(cond_handle, mutex_handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void condvar_signal(CondVar* condvar) {
     pthread_cond_t* handle = (pthread_cond_t*)condvar->data;
     pthread_cond_signal(handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void condvar_broadcast(CondVar* condvar) {
     pthread_cond_t* handle = (pthread_cond_t*)condvar->data;
     pthread_cond_broadcast(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void condvar_destroy(CondVar* condvar) {
     pthread_cond_t* handle = (pthread_cond_t*)condvar->data;
     pthread_cond_destroy(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Memory management functions
 
 u64 get_page_size_os(void) {
     return (u64)sysconf(_SC_PAGESIZE);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ArenaError reserve_range_os(u64 size, void** out_ptr) {
     void* ptr = mmap(nullptr, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -332,16 +276,12 @@ ArenaError reserve_range_os(u64 size, void** out_ptr) {
     return ARENA_SUCCESS;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ArenaError commit_memory_os(void* ptr, u64 size) {
     if (mprotect(ptr, size, PROT_READ | PROT_WRITE) != 0) {
         return ARENA_PROTECTION_FAILED;
     }
     return ARENA_SUCCESS;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ArenaError decommit_memory_os(void* ptr, u64 size) {
     if (mprotect(ptr, size, PROT_NONE) != 0) {
@@ -350,8 +290,6 @@ ArenaError decommit_memory_os(void* ptr, u64 size) {
     return ARENA_SUCCESS;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ArenaError release_range_os(void* ptr, u64 size) {
     if (munmap(ptr, size) != 0) {
         return ARENA_PROTECTION_FAILED;
@@ -359,7 +297,6 @@ ArenaError release_range_os(void* ptr, u64 size) {
     return ARENA_SUCCESS;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File system operations
 
 bool file_exists_os(FlString path) {
@@ -369,8 +306,6 @@ bool file_exists_os(FlString path) {
     return exists;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool file_directory_exists_os(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
@@ -379,16 +314,12 @@ bool file_directory_exists_os(FlString path) {
     return exists;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool file_create_directory_os(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     bool success = mkdir(os_path_str(os_path), 0755) == 0;
     return success;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool file_create_directory_recursive_os(FlString path) {
     if (string_is_empty(path)) {
@@ -438,15 +369,11 @@ bool file_create_directory_recursive_os(FlString path) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void file_delete_os(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     remove(os_path_str(os_path));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u64 get_current_time_ms_os(void) {
     struct timespec ts;
@@ -454,7 +381,6 @@ u64 get_current_time_ms_os(void) {
     return (u64)ts.tv_sec * 1000 + (u64)ts.tv_nsec / 1000000;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // File system information and directory operations
 
 FileStat file_stat_os(FlString path) {
@@ -487,8 +413,6 @@ FileStat file_stat_os(FlString path) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString file_build_path_os(struct FlArena* arena, FlString base_path, FlString relative_path) {
     if (base_path.length == 0) {
         return fl_string_copy(arena, relative_path);
@@ -510,8 +434,6 @@ FlString file_build_path_os(struct FlArena* arena, FlString base_path, FlString 
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 DirHandle dir_open_os(FlArena* arena, FlString path) {
     DirHandle handle = { 0 };
 
@@ -528,8 +450,6 @@ DirHandle dir_open_os(FlArena* arena, FlString path) {
 
     return handle;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
     FileStat result = { 0 };
@@ -585,8 +505,6 @@ FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void dir_close_os(DirHandle* dir_handle) {
     if (dir_handle && dir_handle->is_valid) {
         DIR** dir_ptr = (DIR**)dir_handle->platform_data;
@@ -596,8 +514,6 @@ void dir_close_os(DirHandle* dir_handle) {
         dir_handle->is_valid = false;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 i64 file_write_os(FlString path, const u8* data, i64 size) {
     arena_scratch_auto(temp);
@@ -615,16 +531,12 @@ i64 file_write_os(FlString path, const u8* data, i64 size) {
     return (i64)bytes_written;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool file_remove_directory_os(FlString path) {
     arena_scratch_auto(temp);
     const char* cstr_path = fl_string_to_cstr(temp.arena, path);
     int result = rmdir(cstr_path);
     return result == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool file_remove_directory_recursive_os(FlString path) {
     arena_scratch_auto(temp);
@@ -655,7 +567,6 @@ bool file_remove_directory_recursive_os(FlString path) {
     return success;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System information and utilities
 
 FlString get_temp_directory_os(struct FlArena* arena) {
@@ -670,8 +581,6 @@ FlString get_temp_directory_os(struct FlArena* arena) {
 
     return fl_string_copy(arena, FL_S("/tmp"));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString get_current_directory_os(struct FlArena* arena) {
     // The buffer must come from the arena, not from getcwd's allocating GNU extension: that buffer is
@@ -693,13 +602,10 @@ FlString get_current_directory_os(struct FlArena* arena) {
     return (FlString) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u32 get_process_id_os(void) {
     return (u32)getpid();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Thread management - POSIX implementation
 
 typedef struct {
@@ -708,14 +614,10 @@ typedef struct {
 
 _Static_assert(sizeof(PosixThread) <= sizeof(Thread), "Thread structure too small for pthread_t");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool os_thread_create(Thread* thread, ThreadFunc func, void* user_data) {
     PosixThread* pt = (PosixThread*)thread;
     return pthread_create(&pt->pthread, nullptr, func, user_data) == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void* os_thread_join(Thread* thread) {
     PosixThread* pt = (PosixThread*)thread;
@@ -724,14 +626,10 @@ void* os_thread_join(Thread* thread) {
     return ret_val;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u64 os_thread_get_current_id(void) {
     // Cast to u64 for a unique identifier (implementation-defined behavior)
     return (u64)pthread_self();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void os_thread_set_name(const char* name) {
 #if PLATFORM_MACOS
@@ -742,8 +640,6 @@ void os_thread_set_name(const char* name) {
     pthread_setname_np(pthread_self(), name);
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool os_thread_set_affinity(Thread* thread, const int* cpu_ids, int count) {
 #if PLATFORM_LINUX
@@ -780,14 +676,11 @@ bool os_thread_set_affinity(Thread* thread, const int* cpu_ids, int count) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Sleep functions
 
 void sleep_us(u64 microseconds) {
     usleep((useconds_t)microseconds);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void sleep_ms(u64 milliseconds) {
     // nanosleep, resumed on EINTR.
@@ -798,26 +691,19 @@ void sleep_ms(u64 milliseconds) {
     while (nanosleep(&req, &req) == -1 && errno == EINTR) {}
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Environment variables
 
 const char* getenv_os(const char* name) {
     return getenv(name);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int setenv_os(const char* name, const char* value, int overwrite) {
     return setenv(name, value, overwrite);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int unsetenv_os(const char* name) {
     return unsetenv(name);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Test seam: forces every statvfs() lookup below to fail, so the directory walk-up can be driven
 // all the way past the root path.

@@ -5,7 +5,6 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Drift checker between source code and the localization String Tables. The engine takes file contents already in
 // memory and returns findings; it does no file IO.
 
@@ -57,14 +56,12 @@ typedef struct LocCheckResult {
     u32 warning_count;
 } LocCheckResult;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Run every LocCheckId check. `tables[0]` is the default language; the rest are translations. Findings come back in
 // check order per language, and everything they point at is allocated in arena.
 
 LocCheckResult loc_check_run(struct FlArena* arena, const LocCheckSource* sources, u32 source_count,
                              const LocCheckTable* tables, u32 table_count);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render the findings as the human-readable report: grouped per language, then per check, ending in a summary line.
 
 FlString loc_check_format_report(struct FlArena* arena, const LocCheckResult* result, const LocCheckTable* tables,

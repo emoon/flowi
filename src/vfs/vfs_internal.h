@@ -10,7 +10,6 @@
 #include <flowi/vfs/vfs_plugin.h>
 #include <stdatomic.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Forward declarations
 
 typedef struct VfsState VfsState;
@@ -36,7 +35,6 @@ typedef enum VfsResolveError {
     VfsResolveError_OutOfMemory,
 } VfsResolveError;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Handle data for operations
 
 typedef enum VfsOperationType {
@@ -46,8 +44,6 @@ typedef enum VfsOperationType {
     VfsOp_FileRead,
     VfsOp_ReadAll, // Monolithic read: open + read entire file + close (no separate file handle)
 } VfsOperationType;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // One path segment met while resolving paths below a mount. A node that carries a driver is the root of an archive
 // (or the mount root itself): paths below it are handed to that driver, and a path below a node without one walks up
@@ -64,8 +60,6 @@ typedef struct VfsTreeNode {
     VfsPluginEntry* plugin_entry; // Driver for this node and everything below it (nullptr: inherit the parent's)
     void* handle;                 // That driver's single handle for the node
 } VfsTreeNode;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct FlVfsMount {
     u64 id; // Unique for the life of the process, assigned at creation and never reused
@@ -105,8 +99,6 @@ struct FlVfsMount {
     // so drivers must allow that close alongside other calls on the same mount.
     Mutex driver_lock;
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // One asynchronous operation. It owns its path, result arena, status and job handle, and is reference counted: the
 // slot table (while the caller's id is open), the operation's own job (until it has run) and, for a chained read, the
@@ -157,7 +149,6 @@ struct VfsOp {
     bool callback_owns_data;
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Main VFS state
 
 typedef struct VfsState {
@@ -191,7 +182,6 @@ typedef struct VfsState {
 
 } VfsState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal functions
 
 // Slot table. vfs_op_acquire returns the operation id names with a reference of its own, or nullptr when the id is

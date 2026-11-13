@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Uniform List API Implementation
 //
 // A virtualized scrollable list where all items have the same height. Callers render arbitrary content inside
@@ -15,21 +14,15 @@
 #include "ui_private.h"
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define LIST_UNIFORM_SCROLL_SPEED 12.0f // Smooth scroll lerp factor (per-caller override)
 #define LIST_UNIFORM_DEFAULT_GAP 8.0f
 #define LIST_UNIFORM_VISIBLE_BUFFER 2 // Extra items to render outside viewport
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct ListUniformState {
     f32 scroll_offset;    // Current scroll position (pixels)
     f32 scroll_target;    // Target for smooth scrolling
     f32 container_height; // Actual container height from previous frame
 } ListUniformState;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct FlListUniformContext {
     FlArena* arena;
@@ -55,8 +48,6 @@ struct FlListUniformContext {
     u32 current_layout_id;
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlListUniformContext* list_uniform_create(FlArena* arena) {
     FlListUniformContext* ctx = arena_alloc_zero(arena, FlListUniformContext);
     ctx->arena = arena;
@@ -68,14 +59,10 @@ FlListUniformContext* list_uniform_create(FlArena* arena) {
     return ctx;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void list_uniform_destroy(FlListUniformContext* self) {
     (void)self;
     // Arena-allocated, nothing to free
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ListUniformState* get_or_create_state(FlListUniformContext* self, FlString id) {
     ListUniformState* state = hashmap_string_get(&self->states, id);
@@ -89,14 +76,11 @@ static ListUniformState* get_or_create_state(FlListUniformContext* self, FlStrin
     return hashmap_string_insert(&self->states, id, new_state);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Total content height - the list's extent policy is every item plus its gap.
 
 static f32 list_content_height(u32 count, f32 item_height, f32 gap) {
     return (f32)count * (item_height + gap);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void update_scroll_for_selection(FlListUniformContext* self, i32 selected, f32 item_height, f32 gap) {
     f32 item_with_gap = item_height + gap;
@@ -112,13 +96,9 @@ static void update_scroll_for_selection(FlListUniformContext* self, i32 selected
     self->current_state->scroll_target = clamp_f32_impl(target, 0.0f, max_scroll);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void list_uniform_begin_update(FlListUniformContext* self) {
     self->viewport_height = self->ui_ctx->layout_height;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u32 total_count,
                                       FlListUniformOpts opts) {
@@ -187,8 +167,6 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void list_uniform_item_begin(FlListUniformContext* self, u32 index) {
     self->in_item = true;
 
@@ -200,8 +178,6 @@ void list_uniform_item_begin(FlListUniformContext* self, u32 index) {
     });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void list_uniform_item_end(FlListUniformContext* self) {
     if (!self->in_item) {
         return;
@@ -209,8 +185,6 @@ void list_uniform_item_end(FlListUniformContext* self) {
     self->in_item = false;
     fl_layout_end();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void list_uniform_end(FlListUniformContext* self) {
     fl_layout_end();
@@ -222,7 +196,6 @@ void list_uniform_end(FlListUniformContext* self) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scroll introspection / drive (see header).
 
 f32 list_uniform_scroll_offset(FlListUniformContext* self, FlString id) {

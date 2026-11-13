@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: sampler-slot bookkeeping for the non-atlas image paths - large static images (past
 // GPU_IMAGE_ATLAS_MAX_DIM, each on its own texture) and dynamic images (IR source kind 1: a live neutral
 // RGBA/alpha buffer streamed to a dedicated texture on frames a command references it). Texture creation, uploads,
@@ -19,7 +18,6 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Number of large/dynamic image sampler slots.
 
 #define GPU_IMAGE_SLOT_COUNT 11
@@ -55,8 +53,6 @@ typedef struct GpuImageSlots {
     u32 dead_count;
     bool table_full_diagnosed; // one table-full diagnostic per frame, not one per record
 } GpuImageSlots;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gpu_image_slots_init(GpuImageSlots* slots, struct FlArena* arena);
 

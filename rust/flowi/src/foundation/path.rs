@@ -61,8 +61,6 @@ pub fn is_absolute(path: &str) -> bool {
     unsafe { sys::fl_path_is_absolute(sys::RawStr::borrow(path)) }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #[cfg(test)]
 mod tests {
     use super::*;

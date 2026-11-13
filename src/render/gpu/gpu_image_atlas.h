@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: image-atlas bookkeeping - handle -> atlas-cell map over the skyline packer.
 //
 // Released cells go on a reuse list and are claimed by the first later placement that fits; the skyline
@@ -11,8 +10,6 @@
 #include <ui/ui_types.h>
 
 struct FlArena;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define GPU_IMAGE_ATLAS_SIZE 1024   // atlas texture is GPU_IMAGE_ATLAS_SIZE^2 RGBA8
 #define GPU_IMAGE_ATLAS_MAX_DIM 256 // per-image cap; larger images never enter the atlas
@@ -32,8 +29,6 @@ typedef struct GpuImageAtlas {
     u32 free_count;
     GpuAtlasPack pack;
 } GpuImageAtlas;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gpu_image_atlas_init(GpuImageAtlas* atlas, struct FlArena* arena);
 

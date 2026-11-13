@@ -6,8 +6,6 @@
 #include "types.h"
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fixed_array_init_raw(ArrayBase* array, struct FlArena* arena, u32 capacity, u32 element_size) {
     FL_ASSERT(array != nullptr);
     FL_ASSERT(arena != nullptr);
@@ -22,8 +20,6 @@ void fixed_array_init_raw(ArrayBase* array, struct FlArena* arena, u32 capacity,
     array->data = data;
     array->element_size = element_size;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void* fixed_array_remove_swap_raw(ArrayBase* array, u32 index, u32 element_size) {
     FL_ASSERT(array != nullptr);

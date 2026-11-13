@@ -9,13 +9,9 @@
 
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u64 hashmap_hash(const void* key, u64 size) {
     return XXH64(key, size, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static u64 next_power_of_2(u64 n) {
     if (n <= 1)
@@ -29,8 +25,6 @@ static u64 next_power_of_2(u64 n) {
     }
     return power;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void hashmap_init_raw(HashMapBase* self, FlArena* arena, u64 capacity, u64 key_size, u64 value_size, u64 key_offset,
                       u64 value_offset, u64 node_size) {
@@ -47,32 +41,22 @@ void hashmap_init_raw(HashMapBase* self, FlArena* arena, u64 capacity, u64 key_s
     self->free_nodes.last = nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef bool (*KeyEqualsFunc)(const void* node_key, const void* search_key, u64 key_size);
 typedef void (*KeyCopyFunc)(HashMapBase* self, void* dest_key, const void* src_key, u64 key_size);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool generic_key_equals(const void* node_key, const void* search_key, u64 key_size) {
     return memory_compare(node_key, search_key, key_size) == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void generic_key_copy(HashMapBase* self, void* dest_key, const void* src_key, u64 key_size) {
     (void)self; // POD keys are stored inline; no separate storage needed
     memory_copy(dest_key, key_size, src_key, key_size);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool string_key_equals(const void* node_key, const void* search_key, u64 key_size) {
     (void)key_size; // Unused for FlString keys
     return fl_string_equals(*(const FlString*)node_key, *(const FlString*)search_key);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void string_key_copy(HashMapBase* self, void* dest_key, const void* src_key, u64 key_size) {
     (void)key_size; // Unused for FlString keys
@@ -80,8 +64,6 @@ static void string_key_copy(HashMapBase* self, void* dest_key, const void* src_k
     // so copy them into the map's own arena. fl_string_copy is a no-op for static/literal strings.
     *(FlString*)dest_key = fl_string_copy(self->arena, *(const FlString*)src_key);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static HashMapNodeBase* hashmap_allocate_node(HashMapBase* self) {
     HashMapNodeBase* node;
@@ -95,15 +77,11 @@ static HashMapNodeBase* hashmap_allocate_node(HashMapBase* self) {
     return node;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void hashmap_free_node(HashMapBase* self, HashMapNodeBase* node) {
     node->next = nullptr;
     sll_queue_push(self->free_nodes.first, self->free_nodes.last, node);
     self->count--;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static HashMapNodeBase* hashmap_find_node_internal(HashMapBase* self, u64 hash, const void* key, u64 key_size,
                                                    KeyEqualsFunc key_equals) {
@@ -120,8 +98,6 @@ static HashMapNodeBase* hashmap_find_node_internal(HashMapBase* self, u64 hash, 
     }
     return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static HashMapNodeBase* hashmap_insert_internal(HashMapBase* self, u64 hash, const void* key, const void* value,
                                                 u64 key_size, KeyEqualsFunc key_equals, KeyCopyFunc key_copy) {
@@ -150,8 +126,6 @@ static HashMapNodeBase* hashmap_insert_internal(HashMapBase* self, u64 hash, con
     return node;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool hashmap_remove_internal(HashMapBase* self, u64 hash, const void* key, u64 key_size,
                                     KeyEqualsFunc key_equals) {
     const u64 bucket_idx = hash & (self->capacity - 1);
@@ -170,25 +144,17 @@ static bool hashmap_remove_internal(HashMapBase* self, u64 hash, const void* key
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 HashMapNodeBase* hashmap_insert_raw(HashMapBase* self, u64 hash, const void* key, const void* value) {
     return hashmap_insert_internal(self, hash, key, value, self->key_size, generic_key_equals, generic_key_copy);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 HashMapNodeBase* hashmap_get_raw(HashMapBase* self, u64 hash, const void* key) {
     return hashmap_find_node_internal(self, hash, key, self->key_size, generic_key_equals);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool hashmap_remove_raw(HashMapBase* self, u64 hash, const void* key) {
     return hashmap_remove_internal(self, hash, key, self->key_size, generic_key_equals);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void hashmap_clear_raw(HashMapBase* self) {
     for_count(i, self->capacity) {
@@ -209,7 +175,6 @@ void hashmap_clear_raw(HashMapBase* self) {
     self->count = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlString support functions
 
 u64 hashmap_hash_string(const FlString str) {
@@ -227,28 +192,21 @@ u64 hashmap_hash_string(const FlString str) {
     return XXH64_digest(&state);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 HashMapNodeBase* hashmap_insert_string_raw(HashMapBase* self, const FlString* key, const void* value) {
     u64 hash = hashmap_hash_string(*key);
     return hashmap_insert_internal(self, hash, key, value, sizeof(FlString), string_key_equals, string_key_copy);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 HashMapNodeBase* hashmap_get_string_raw(HashMapBase* self, const FlString* key) {
     u64 hash = hashmap_hash_string(*key);
     return hashmap_find_node_internal(self, hash, key, sizeof(FlString), string_key_equals);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool hashmap_remove_string_raw(HashMapBase* self, const FlString* key) {
     u64 hash = hashmap_hash_string(*key);
     return hashmap_remove_internal(self, hash, key, sizeof(FlString), string_key_equals);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Optimized functions for u32 keys
 
 static HashMapNodeBase* hashmap_find_node_u32(HashMapBase* self, u64 hash, u32 key) {
@@ -265,8 +223,6 @@ static HashMapNodeBase* hashmap_find_node_u32(HashMapBase* self, u64 hash, u32 k
     }
     return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static HashMapNodeBase* hashmap_insert_u32_internal(HashMapBase* self, u64 hash, u32 key, const void* value) {
     HashMapNodeBase* existing = hashmap_find_node_u32(self, hash, key);
@@ -294,19 +250,13 @@ static HashMapNodeBase* hashmap_insert_u32_internal(HashMapBase* self, u64 hash,
     return node;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 HashMapNodeBase* hashmap_insert_u32_raw(HashMapBase* self, u64 hash, u32 key, const void* value) {
     return hashmap_insert_u32_internal(self, hash, key, value);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 HashMapNodeBase* hashmap_get_u32_raw(HashMapBase* self, u64 hash, u32 key) {
     return hashmap_find_node_u32(self, hash, key);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool hashmap_remove_u32_raw(HashMapBase* self, u64 hash, u32 key) {
     const u64 bucket_idx = hash & (self->capacity - 1);
@@ -325,7 +275,6 @@ bool hashmap_remove_u32_raw(HashMapBase* self, u64 hash, u32 key) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Optimized functions for u64 keys (no function pointer overhead)
 
 static HashMapNodeBase* hashmap_find_node_u64(HashMapBase* self, u64 hash, u64 key) {
@@ -342,8 +291,6 @@ static HashMapNodeBase* hashmap_find_node_u64(HashMapBase* self, u64 hash, u64 k
     }
     return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static HashMapNodeBase* hashmap_insert_u64_internal(HashMapBase* self, u64 hash, u64 key, const void* value) {
     HashMapNodeBase* existing = hashmap_find_node_u64(self, hash, key);
@@ -371,19 +318,13 @@ static HashMapNodeBase* hashmap_insert_u64_internal(HashMapBase* self, u64 hash,
     return node;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 HashMapNodeBase* hashmap_insert_u64_raw(HashMapBase* self, u64 hash, u64 key, const void* value) {
     return hashmap_insert_u64_internal(self, hash, key, value);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 HashMapNodeBase* hashmap_get_u64_raw(HashMapBase* self, u64 hash, u64 key) {
     return hashmap_find_node_u64(self, hash, key);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool hashmap_remove_u64_raw(HashMapBase* self, u64 hash, u64 key) {
     const u64 bucket_idx = hash & (self->capacity - 1);

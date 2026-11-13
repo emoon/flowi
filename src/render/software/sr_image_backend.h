@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Software render backend - static image realization (the image-preparation seam).
 //
 // Applies SW-specific transforms after decode and stores the result in the SW image cache:
@@ -13,7 +12,6 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // prepare_image seam - realize a decoded static image into the SW cache (job-thread context).
 
 bool sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,

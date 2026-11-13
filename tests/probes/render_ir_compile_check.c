@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Compile-only check for the neutral render-command IR and the FlRenderBackend interface.
 //
 // This translation unit includes both IR headers with ZERO consumers and is built (by CMakeLists.txt) with
@@ -20,15 +19,12 @@
 // also keeps the include above load-bearing so the header-isolation compile gate cannot be silently dropped.
 _Static_assert(sizeof(GlyphList) == 3 * sizeof(int), "GlyphList is metrics-only {count, ascender, descender}");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 _Static_assert(sizeof(FlRect) == 4 * sizeof(f32), "FlRect is exactly {x, y, w, h}");
 _Static_assert(offsetof(FlRect, x) == 0, "FlRect.x first");
 _Static_assert(offsetof(FlRect, y) == sizeof(f32), "FlRect.y");
 _Static_assert(offsetof(FlRect, w) == 2 * sizeof(f32), "FlRect.w");
 _Static_assert(offsetof(FlRect, h) == 3 * sizeof(f32), "FlRect.h");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Command stream - fixed header, variable-length records.
 
 _Static_assert(sizeof(FlCmdHeader) == 8, "FlCmdHeader is u16 kind + u16 flags + u32 byte_size");
@@ -48,7 +44,6 @@ _Static_assert(FlCmd_Circle == 8, "optional tier reserves five slots");
 _Static_assert(FlCmd_Diamond == 9, "optional tier reserves five slots");
 _Static_assert(FlCmd_Bar == 10, "optional tier reserves five slots");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FillRect - gradient folded in as four per-corner colors (solid = four equal corners).
 
 _Static_assert(sizeof(FlCmdFillRect) == 48, "FillRect is rect + radius + four corner colors only");
@@ -57,7 +52,6 @@ _Static_assert(offsetof(FlCmdFillRect, radius) == sizeof(FlRect), "FillRect.radi
 _Static_assert(offsetof(FlCmdFillRect, corner) == sizeof(FlRect) + sizeof(FlCornerRadius), "FillRect.corner");
 _Static_assert(sizeof(((FlCmdFillRect*)0)->corner) == 4 * sizeof(FlColor), "FillRect carries four corner colors");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Border - outer radius + per-side widths (backend derives the inner geometry; no pre-split inner_radius).
 
 _Static_assert(sizeof(FlCmdBorder) == 60, "Border is rect + 4 widths + radius + color + stroke only");
@@ -71,7 +65,6 @@ _Static_assert(offsetof(FlCmdBorder, color) == offsetof(FlCmdBorder, radius) + s
 _Static_assert(offsetof(FlCmdBorder, stroke) == offsetof(FlCmdBorder, color) + sizeof(FlColor),
                "Border.stroke (zeroed = solid)");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TextRun - FlFontId + pre-positioned opaque glyphs (never bitmaps); FlGlyph[glyph_count] trails inline.
 
 _Static_assert(sizeof(FlGlyph) == sizeof(u32) + 2 * sizeof(f32), "FlGlyph is exactly {glyph_id, x, y}");
@@ -86,8 +79,6 @@ _Static_assert(offsetof(FlCmdTextRun, size) == sizeof(FlFontId), "TextRun.size (
 _Static_assert(offsetof(FlCmdTextRun, color) == sizeof(FlFontId) + sizeof(u16), "TextRun.color");
 _Static_assert(offsetof(FlCmdTextRun, glyph_count) == 12, "TextRun.glyph_count governs inline-array iteration");
 _Static_assert(offsetof(FlCmdTextRun, scale) == 16, "TextRun.scale (display = size * scale; quad scale factor)");
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 _Static_assert(sizeof(FlImageSource) == 32, "FlImageSource is kind + {handle | dynamic} union");
 _Static_assert(offsetof(FlImageSource, kind) == 0, "FlImageSource.kind discriminant first");
@@ -124,12 +115,10 @@ static void fl_ir_image_source_shapes(void) {
     (void)img;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Clip is rect-only; ClipPop has no payload (header only).
 
 _Static_assert(sizeof(FlCmdClipPush) == sizeof(FlRect), "clip push is rect-only");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Optional-tier payloads - intent only; a backend MAY ignore these kinds entirely (the SW backend does).
 // Trailing arrays (FlPolyPoint, FlBar) follow their payload inline, like text-run glyphs.
 
@@ -189,7 +178,6 @@ _Static_assert(offsetof(FlCmdBarSet, baseline_y) == 0, "BarSet.baseline_y (share
 _Static_assert(offsetof(FlCmdBarSet, color) == sizeof(f32), "BarSet.color");
 _Static_assert(offsetof(FlCmdBarSet, bar_count) == 8, "BarSet.bar_count governs inline-array iteration");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Effect annotation - flag-gated, appended to a record after the payload and any inline trailing array;
 // drop-shadow and glow share one shape.
 
@@ -204,13 +192,11 @@ _Static_assert(offsetof(FlEffect, blur) == 8 + 2 * sizeof(f32), "FlEffect.blur")
 // bounds-expansion path distinguishes drop-shadow (offset) from glow (centered). Pin them.
 _Static_assert(FlEffectKind_None == 0 && FlEffectKind_DropShadow == 1 && FlEffectKind_Glow == 2, "effect kind values");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Frame envelope - global_alpha is a frame parameter, never per-command; background travels as state.
 
 _Static_assert(offsetof(FlRenderFrame, global_alpha) > offsetof(FlRenderFrame, bytes), "global_alpha is frame-wide");
 _Static_assert(sizeof(((FlRenderFrame*)0)->background) == sizeof(FlBackground), "frame carries background state");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Backend interface - one object; presentation excluded; readback is nullable.
 
 _Static_assert(sizeof(FlRenderBackend) == 17 * sizeof(void*),

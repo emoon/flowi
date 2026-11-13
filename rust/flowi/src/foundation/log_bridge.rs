@@ -27,8 +27,6 @@ static CHANNELS: Mutex<BTreeMap<&'static str, u32>> = Mutex::new(BTreeMap::new()
 /// Target-prefix floors, keyed by prefix.
 static TARGET_LEVELS: Mutex<BTreeMap<&'static str, log::LevelFilter>> = Mutex::new(BTreeMap::new());
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// The id name is registered under, registering it on first use. The name is leaked:
 /// the native channel table keeps the pointer for the rest of the process.
 fn channel_id(name: &str) -> u32 {
@@ -44,8 +42,6 @@ fn channel_id(name: &str) -> u32 {
     id
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// Map a log level onto flowi's. LogLevel::Fatal has no log counterpart.
 fn to_fl_level(level: log::Level) -> sys::LogLevel {
     match level {
@@ -56,8 +52,6 @@ fn to_fl_level(level: log::Level) -> sys::LogLevel {
         log::Level::Trace => sys::LogLevel::Trace,
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// The log::Log impl: render Rust-side, then emit on the record's channel.
 struct ChannelLogger;
@@ -118,8 +112,6 @@ impl log::Log for ChannelLogger {
 
 static LOGGER: ChannelLogger = ChannelLogger;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// Route this binary's log records at flowi core's channel logging.
 ///
 /// Until it runs, log sits at [`LevelFilter::Off`](log::LevelFilter::Off) and records are
@@ -139,8 +131,6 @@ pub fn install_log_bridge() {
     });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// Drop records whose target starts with prefix below level.
 ///
 /// A log target defaults to the emitting module's path, so "ureq" covers a whole
@@ -153,8 +143,6 @@ pub fn set_target_level(prefix: &'static str, level: log::LevelFilter) {
     let mut floors = TARGET_LEVELS.lock().unwrap_or_else(|e| e.into_inner());
     floors.insert(prefix, level);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// The on-disk log sink, open for as long as this guard lives.
 ///

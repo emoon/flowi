@@ -1,6 +1,5 @@
 #include "utf8.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bounds-checked UTF-8 decoder
 
 const char* utf8_decode_safe(const char* ptr, const char* end, u32* codepoint) {
@@ -59,8 +58,6 @@ const char* utf8_decode_safe(const char* ptr, const char* end, u32* codepoint) {
     return ptr + len;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u64 utf8_codepoint_count(FlString str) {
     u64 count = 0;
     Utf8Iter it = utf8_iter(str);
@@ -72,8 +69,6 @@ u64 utf8_codepoint_count(FlString str) {
 
     return count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 utf8_encode(char* buf, u32 cp) {
     if (cp > UTF8_MAX_CODEPOINT || (cp >= 0xD800 && cp <= 0xDFFF)) {
@@ -104,8 +99,6 @@ u32 utf8_encode(char* buf, u32 cp) {
     buf[3] = (char)(0x80 | (cp & 0x3F));
     return 4;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool utf8_is_valid(FlString str) {
     const char* ptr = str.data;

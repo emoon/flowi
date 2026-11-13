@@ -17,8 +17,6 @@
 #define GPU_SVG_ATLAS_UNIT (GPU_IMAGE_SLOT_UNIT0 + GPU_IMAGE_SLOT_COUNT)
 #define GPU_COLOR_SVG_ATLAS_UNIT (GPU_SVG_ATLAS_UNIT + 1)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 GLuint gpu_compile_shader(const GpuGl* gl, GLenum stage, const char* const* sources, int count, const char* name) {
     GLuint shader = gl->CreateShader(stage);
     gl->ShaderSource(shader, count, sources, NULL);
@@ -78,7 +76,6 @@ static void seed_empty_ssbo(const GpuGl* gl, GLuint ssbo, GLsizeiptr size, const
     gl->BufferData(GL_SHADER_STORAGE_BUFFER, size, zero, GL_STREAM_DRAW);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // (Re)build everything resolution-dependent: the offscreen target + its readback FBO, the per-tile list SSBO,
 // and the CPU readback buffer. Called from create and change_resolution.
 
@@ -118,8 +115,6 @@ static void setup_resolution(GpuShared* self, GpuSurface* surface, int width, in
     surface->readback_buf = arena_alloc_array(surface->arena, u8, (u64)width * (u64)height * 4u);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Surface lifecycle: a GPU surface owns the offscreen RGBA8 target, its readback FBO, the per-tile
 // classification SSBO sized to its tile grid, and the CPU readback buffer, all in one per-surface arena - the
 // struct first, then a readback_reset savepoint past it. destroy_surface tears down the GL objects and frees that
@@ -150,8 +145,6 @@ static void gpu_destroy_surface(void* user_data, FlSurface* surface_handle) {
         surface->arena); // frees the readback buffer AND the GpuSurface struct itself (dangling after this)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void change_resolution(void* user_data, FlSurface* surface_handle, int width, int height) {
     GpuShared* self = user_data;
     GpuSurface* surface = (GpuSurface*)surface_handle;
@@ -162,8 +155,6 @@ static void change_resolution(void* user_data, FlSurface* surface_handle, int wi
     setup_resolution(self, surface, width, height);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Atlas-regen seam, called by the core from ui_set_scale on every absolute UI-scale change: forgets every glyph
 // and SVG placement so the live set repacks at the new sizes. The textures are not cleared.
 static void scale_changed(void* user_data, float ui_scale) {
@@ -172,7 +163,6 @@ static void scale_changed(void* user_data, float ui_scale) {
                               &self->cpu.svg_atlas, &self->cpu.color_svg_atlas);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Sampler-slot textures (gpu_image_slots.h): the GL half of the non-atlas image paths. Dynamic textures are
 // created lazily here on the render thread; their content streams via plain glTexSubImage2D on frames a
 // command references them. Texture updates are ordered against the dispatch by the GL command stream, so no
@@ -267,9 +257,6 @@ static void bind_frame_slot_textures(GpuShared* self) {
     gl->Uniform2fv(self->u_raster_slot_inv_size, GPU_IMAGE_SLOT_COUNT, inv_size);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared-orchestrator ops: the GL half of the GpuRenderOps table, driven by gpu_orchestrate_frame in the
 // canonical per-frame order. The backend/surface handles arrive as void* and cast back to GpuShared/GpuSurface.
 // GL binds directly to the current context, so begin_encoder is a no-op and the pass ordering rides GL memory
@@ -420,14 +407,12 @@ static void render(void* user_data, FlSurface* surface_handle, const FlRenderFra
                           &self->cpu.glyph_atlas, self->frame_arena, self->perm_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bind the shared font cache so render() can pull glyph outlines and realize them into the atlas itself.
 static void set_font_cache(void* user_data, struct FlFontCache* font_cache) {
     GpuShared* self = user_data;
     self->font_cache = font_cache;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Optional pixel-readback capability: explicit GPU -> CPU readback of the offscreen target as interleaved
 // RGBA8 (premultiplied coverage alpha). Row 0 is the top UI row - the imageStore pixel grid and glReadPixels
 // both address texel row 0 first, so no flip is needed. Off the per-frame present path.
@@ -451,7 +436,6 @@ static bool read_pixels(void* user_data, FlSurface* surface_handle, FlPixelReadb
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Surface-texture seam (gpu_renderer.h): the offscreen target's GL texture name + current
 // dimensions, for a host to sample and composite. The texture name crosses as a plain u32 - no GL type here.
 // Per-surface: the host passes the surface handle it rendered into, one per window.
@@ -464,8 +448,6 @@ GpuSurfaceTexture gpu_renderer_surface_texture(FlSurface* surface_handle) {
         .height = surface->screen_height,
     };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void destroy(void* user_data) {
     GpuShared* self = user_data;
@@ -500,8 +482,6 @@ static void destroy(void* user_data) {
 
     fl_arena_destroy(self->frame_arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     GpuShared* self = arena_alloc_zero(arena, GpuShared);

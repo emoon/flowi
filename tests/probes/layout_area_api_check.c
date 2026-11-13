@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Standalone compile guard for the hand-written public block-scoped layout macros (<flowi/ui/layout_area.h>).
 //
 // This TU links nothing. It proves at compile time that the header is self-contained valid C given only FlString,

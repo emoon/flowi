@@ -6,15 +6,9 @@
 #include "memory.h"
 #include "os/os.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static LogChannelId FW_ID = LOG_CHANNEL_INVALID;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FileWatcherRegistry g_registry = { 0 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void file_watcher_init(void) {
     if (g_registry.arena) {
@@ -31,13 +25,9 @@ void file_watcher_init(void) {
     logc_info(FW_ID, "File watcher system initialized");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FileWatcherRegistry* get_file_watcher_registry(void) {
     return &g_registry;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherState* find_watcher_state(FlFileWatcherHandle handle) {
     if (handle == FL_FILE_WATCHER_INVALID) {
@@ -64,8 +54,6 @@ FileWatcherState* find_watcher_state(FlFileWatcherHandle handle) {
     return nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Must be called with the registry lock held: the tombstone it leaves behind is what lets
 // file_watcher_start hand the slot out again.
 static void destroy_watcher_state(FileWatcherState* watcher) {
@@ -85,8 +73,6 @@ static void destroy_watcher_state(FileWatcherState* watcher) {
     watcher->platform_data = nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void remove_watcher_state(FlFileWatcherHandle handle) {
     FileWatcherRegistry* registry = get_file_watcher_registry();
 
@@ -101,8 +87,6 @@ static void remove_watcher_state(FlFileWatcherHandle handle) {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void file_watcher_destroy(void) {
     if (!g_registry.arena) {
@@ -126,8 +110,6 @@ void file_watcher_destroy(void) {
     g_registry = (FileWatcherRegistry) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Copy the callbacks registered for path into out (caller-provided, FILE_WATCHER_MAX_CALLBACKS slots).
 // Must be called with watcher->changes_lock held. The snapshot lets callers invoke callbacks
 // after releasing the lock, avoiding deadlock if a callback re-enters the watcher API.
@@ -140,8 +122,6 @@ static u32 snapshot_matching_callbacks(const FileWatcherState* watcher, FlString
     }
     return count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Length of s with trailing '/' separators stripped, keeping a lone "/" root intact.
 static u64 length_without_trailing_slashes(FlString s) {
@@ -191,8 +171,6 @@ bool file_watcher_path_is_direct_child(FlString watch_root, FlString path) {
 
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void add_file_change(FileWatcherState* watcher, FlString path, FlString old_path, u32 change_types, bool is_directory) {
     if (!watcher || !watcher->is_active) {
@@ -265,8 +243,6 @@ void add_file_change(FileWatcherState* watcher, FlString path, FlString old_path
         matched[i].callback(&callback_change, matched[i].user_data);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlFileWatcherHandle file_watcher_start(FlString path, FlFileWatcherConfig config) {
     FileWatcherRegistry* registry = get_file_watcher_registry();
@@ -346,8 +322,6 @@ FlFileWatcherHandle file_watcher_start(FlString path, FlFileWatcherConfig config
     return handle;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void file_watcher_stop(FlFileWatcherHandle handle) {
     if (handle == FL_FILE_WATCHER_INVALID) {
         return;
@@ -361,14 +335,10 @@ void file_watcher_stop(FlFileWatcherHandle handle) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool file_watcher_is_active(FlFileWatcherHandle handle) {
     FileWatcherState* watcher = find_watcher_state(handle);
     return watcher && watcher->is_active;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherCallbackHandle file_watcher_register_callback(FlFileWatcherHandle handle, FlString file_path,
                                                          FileChangeCallback callback, void* user_data) {
@@ -420,8 +390,6 @@ FileWatcherCallbackHandle file_watcher_register_callback(FlFileWatcherHandle han
     return callback_handle;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void file_watcher_unregister_callback(FlFileWatcherHandle handle, FileWatcherCallbackHandle callback_handle) {
     FileWatcherState* watcher = find_watcher_state(handle);
     if (!watcher) {
@@ -458,8 +426,6 @@ void file_watcher_unregister_callback(FlFileWatcherHandle handle, FileWatcherCal
     logc_warning(FW_ID, "FileWatcher[%u]: Callback handle %u not found", handle, callback_handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool file_watcher_has_changes(FlFileWatcherHandle handle) {
     FileWatcherState* watcher = find_watcher_state(handle);
     if (!watcher || !watcher->is_active) {
@@ -481,8 +447,6 @@ bool file_watcher_has_changes(FlFileWatcherHandle handle) {
     return has_changes;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void file_watcher_clear_changes(FlFileWatcherHandle handle) {
     FileWatcherState* watcher = find_watcher_state(handle);
     if (!watcher) {
@@ -502,8 +466,6 @@ void file_watcher_clear_changes(FlFileWatcherHandle handle) {
         logc_debug(FW_ID, "FileWatcher[%u]: Cleared %u pending changes", handle, cleared_count);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileChangeIterator file_watcher_get_changes(FlFileWatcherHandle handle, FlArena* arena) {
     FileChangeIterator iter = { 0 };
@@ -554,13 +516,9 @@ FileChangeIterator file_watcher_get_changes(FlFileWatcherHandle handle, FlArena*
     return iter;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool file_change_iterator_has_next(const FileChangeIterator* iter) {
     return iter && iter->current < iter->count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileChange file_change_iterator_next(FileChangeIterator* iter) {
     FileChange empty = { 0 };
@@ -572,15 +530,12 @@ FileChange file_change_iterator_next(FileChangeIterator* iter) {
     return iter->changes[iter->current++];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void file_change_iterator_reset(FileChangeIterator* iter) {
     if (iter) {
         iter->current = 0;
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public API forwarders.
 //
 // Intra-library calls use the internal file_watcher_* names, never the exported fl_* ones.
@@ -594,25 +549,17 @@ u32 fl_file_watcher_start(FlString path, const FlFileWatcherConfig* config) {
     return file_watcher_start(path, *config);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_file_watcher_stop(u32 handle) {
     file_watcher_stop(handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_file_watcher_is_active(u32 handle) {
     return file_watcher_is_active(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_file_watcher_has_changes(u32 handle) {
     return file_watcher_has_changes(handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlFileChanges fl_file_watcher_take_changes(u32 handle, FlArena* arena) {
     FileChangeIterator iter = file_watcher_get_changes(handle, arena);

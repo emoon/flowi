@@ -16,15 +16,12 @@
 #include <core/os/os.h>
 #include <assert.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define IMAGE_CACHE_MEMORY_SIZE_MB 512
 #define IMAGE_CACHE_EVICTED_BUCKETS 256
 
 // Atomic: written by main thread (cache_new/cache_destroy), read by worker threads (alloc_entry, mark_finished)
 static _Atomic(struct ImageCache*) s_image_cache;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Statistics
 
 typedef struct ImageCacheStats {
@@ -35,8 +32,6 @@ typedef struct ImageCacheStats {
     u32 allocation_failures;
     u32 eviction_cleanup_runs;
 } ImageCacheStats;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void image_cache_register_stats(StatsRegistry* stats, ImageCacheStats* ids) {
     if (!stats) {
@@ -51,14 +46,10 @@ static void image_cache_register_stats(StatsRegistry* stats, ImageCacheStats* id
     ids->eviction_cleanup_runs = stats_register_counter(stats, FL_S("eviction_cleanup_runs"), FL_S("image_cache"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct InternalImage {
     ImageData public;
     ImageCacheEntry* cache_entry;
 } InternalImage;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct ImageCache {
     CACHE_ALIGNED _Atomic u64 current_frame;
@@ -87,14 +78,10 @@ struct ImageCache {
     ImageCacheStats stat_ids;
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static u32 image_format_bytes_per_pixel(InternalImageData* image) {
     // The channels field always matches the actual bytes per pixel, deinterleaved included
     return (u32)image->channels;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Batch size for eviction - collect this many oldest entries in a single scan
 #define EVICTION_BATCH_SIZE 32
@@ -105,7 +92,6 @@ typedef struct EvictionBatch {
     u32 count;
 } EvictionBatch;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Find the N oldest entries in a single hashmap scan
 
 static void find_oldest_entries(ImageCache* self, EvictionBatch* batch) {
@@ -143,8 +129,6 @@ static void find_oldest_entries(ImageCache* self, EvictionBatch* batch) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString image_cache_copy_string(FlString str) {
     ImageCache* self = atomic_load(&s_image_cache);
 
@@ -160,8 +144,6 @@ FlString image_cache_copy_string(FlString str) {
 
     return result;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ImageCache* image_cache_new(FlArena* parent_arena, StatsRegistry* stats, ImageCacheConfig config) {
     // Process-singleton pool: the existing one is shared and never torn down.
@@ -218,16 +200,12 @@ ImageCache* image_cache_new(FlArena* parent_arena, StatsRegistry* stats, ImageCa
     return winner;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The pool is a process singleton that outlives every backend; nothing is freed here and process exit
 // reclaims it.
 void image_cache_destroy(ImageCache* self) {
     FL_VALIDATE(self != nullptr);
     (void)self;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void image_cache_update(ImageCache* self, u64 frame_counter) {
     atomic_store(&self->current_frame, frame_counter);
@@ -289,8 +267,6 @@ void image_cache_update(ImageCache* self, u64 frame_counter) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void image_cache_track_eviction(ImageCache* self, ImageCacheEntry* entry, ImageHandle handle) {
     if (!self->config.enable_evicted_cache)
         return;
@@ -314,8 +290,6 @@ static void image_cache_track_eviction(ImageCache* self, ImageCacheEntry* entry,
     hashmap_insert(&self->evicted_lookup, handle, evicted);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Queue a TLSF block for release at the next frame-boundary drain (image_cache_update). Called under the cache
 // mutex from the job-thread eviction/free paths so we never tlsf_free pixels the render thread may still be
 // reading for the in-flight frame. Growing the list abandons the old array in the arena (pointer-sized, per the
@@ -338,8 +312,6 @@ static void image_cache_defer_free(ImageCache* self, void* data) {
     self->pending_free[self->pending_free_count++] = data;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void evict_single_entry(ImageCache* self, ImageCacheEntry* entry) {
     ImageHandle handle = entry->handle;
     if (handle != IMAGE_HANDLE_INVALID) {
@@ -351,7 +323,6 @@ static void evict_single_entry(ImageCache* self, ImageCacheEntry* entry) {
     stats_inc(self->stats, self->stat_ids.evictions);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Evict a batch of oldest entries in one go (single scan + batch free)
 
 static u32 evict_batch(ImageCache* self) {
@@ -364,8 +335,6 @@ static u32 evict_batch(ImageCache* self) {
 
     return batch.count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ImageCacheEntry* image_cache_alloc_entry(InternalImageData* image) {
     ImageCache* self = atomic_load(&s_image_cache);
@@ -417,7 +386,6 @@ ImageCacheEntry* image_cache_alloc_entry(InternalImageData* image) {
     return entry;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Get the data back given a ImageHandle. Will only show return non null after we marked the request as finished
 
 ImageData* image_cache_get_data(ImageHandle handle) {
@@ -455,7 +423,6 @@ ImageData* image_cache_get_data(ImageHandle handle) {
     return nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Record a cache miss for an initial image load. Data is stored in the cache before image_get_data() is
 // called, so the miss has to be counted when the load is initiated.
 
@@ -466,7 +433,6 @@ void image_cache_record_initial_miss(void) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Called once we know the vfs has finished processing the image
 
 void image_cache_mark_request_finished(ImageHandle handle, ImageCacheEntry* cache_entry) {
@@ -483,8 +449,6 @@ void image_cache_mark_request_finished(ImageHandle handle, ImageCacheEntry* cach
     stats_inc(self->stats, self->stat_ids.images_cached);
     mutex_unlock(&self->mutex);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void image_cache_free_handle(ImageHandle handle) {
     ImageCache* self = atomic_load(&s_image_cache);
@@ -522,9 +486,6 @@ void image_cache_free_handle(ImageHandle handle) {
     // of those cases - on a reloading handle it would cancel the reload.
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pool-residency hooks for tests (see image_cache.h): evict_keep removes an entry from the lookup but keeps its
 // pixels, and restore makes it resident again.
 
@@ -556,8 +517,6 @@ bool image_cache_test_restore(ImageHandle handle, void* entry) {
     mutex_unlock(&self->mutex);
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Test accessors.
 

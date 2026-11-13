@@ -4,7 +4,6 @@
 
 FlArena* s_arena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // arena: reservation lifecycle - fl_arena_destroy must release its VMA, not merely decommit
 
 #if defined(__linux__)
@@ -62,8 +61,6 @@ const u8* s_stub_vfs_override_data;
 
 size_t s_stub_vfs_override_size;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 const u8* stub_vfs_data(size_t* size) {
     if (s_stub_vfs_override_data) {
         *size = s_stub_vfs_override_size;
@@ -72,8 +69,6 @@ const u8* stub_vfs_data(size_t* size) {
     *size = sizeof(k_stub_vfs_data);
     return k_stub_vfs_data;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 StubVfsHandle* stub_vfs_alloc(bool is_dir) {
     StubVfsHandle* h = (StubVfsHandle*)malloc(sizeof(StubVfsHandle));
@@ -372,7 +367,6 @@ void scene_many_elements(FlUiCtx* ctx, int n) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render.theme_scope - scoped subtree theme overrides (ui_theme_push / ui_theme_pop): an override replaces
 // only its flagged slots and inherits the rest, nests, and unwinds on pop.
 
@@ -408,7 +402,6 @@ bool tab_color_eq(UiColor4 got, FlColor want) {
            && fabsf(got.b - (float)want.b) < 0.5f && fabsf(got.a - (float)want.a) < 0.5f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // canvas - the Canvas seam: painter calls inside a layout element draw at that element's z, under its child
 // elements, bracketed by the live layout scissor stack, with floating elements declared later on top. These
 // cases drive a real frame through the software backend and sample the offscreen buffer (targeted pixel
@@ -426,7 +419,6 @@ void canvas_fixture_reset(FlUiCtx* ctx) {
     ui_background_set_clear_color(12, 12, 14);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // list_focus_request.* - ui_list_request_focus: the opt-in seam a freshly-opened popup calls on its open edge so
 // keyboard nav and Enter/Space-commit work before any row click. It engages the list's has_focus AND claims the
 // global focus ring together (so the focus sticks past the frame the trigger widget blurs), and seeds the focus
@@ -451,7 +443,6 @@ bool focus_ring_drawn(void) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A perf_counters session owns one descriptor, so the cases that open one compare this before and
 // after to prove it was closed (core/os/perf_counters_linux.inc).
 
@@ -477,7 +468,6 @@ int count_open_fds(void) {
 }
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tear the render fixture down. Idempotent: a TU that never touched the fixture, or one that runs
 // after an earlier teardown already ran, finds nothing to release.
 
@@ -510,8 +500,6 @@ void render_fixture_teardown(void) {
     s_render.created = false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void vfs_test_register_driver(const FlVfsPlugin* plugin) {
     if (g_vfs_state == nullptr) {
         return;
@@ -523,8 +511,6 @@ void vfs_test_register_driver(const FlVfsPlugin* plugin) {
     }
     vfs_register_driver(plugin, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void process_singletons_reset(void) {
     app_identity_reset();

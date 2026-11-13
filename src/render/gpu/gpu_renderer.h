@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU render backend entry (OpenGL 4.3 core on Linux/Windows, Metal on Apple), all-compute.
 //
 // A frame is two compute dispatches into an offscreen RGBA8 target: tile classification (one thread per 8x8 tile,
@@ -18,13 +17,11 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Returns a zeroed FlRenderBackend (render == NULL) when the current context is below the 4.3 floor or shader
 // compilation fails; the host must check before injecting.
 
 FlRenderBackend create_gpu_renderer(struct FlArena* arena);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Surface-texture seam: the host's handle on the offscreen RGBA8 target the backend renders into, carrying
 // premultiplied coverage alpha, for the host to sample and composite. Takes the surface handle it rendered into,
 // one per window, and requires the backend's GL context current on this thread.
@@ -51,7 +48,7 @@ typedef struct GpuSurfaceTexture {
 GpuSurfaceTexture gpu_renderer_surface_texture(FlSurface* surface);
 
 #if __APPLE__
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // IOSurface variant of the Surface-texture seam, Metal only. Returns the offscreen RGBA8 target's backing IOSurface
 // instead of the id<MTLTexture> handle, so a host in a different process can open the same pixels into its own
 // MTLTexture. The pixels are linear RGBA8 with premultiplied coverage alpha, identical to the primary accessor's.

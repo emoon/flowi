@@ -14,7 +14,6 @@
 #include <stdint.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Memory-backed input stream for lhasa
 
 typedef struct LhasaMemoryStream {
@@ -22,8 +21,6 @@ typedef struct LhasaMemoryStream {
     size_t size;
     size_t pos;
 } LhasaMemoryStream;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static int lhasa_mem_read(void* handle, void* buf, size_t buf_len) {
     LhasaMemoryStream* stream = (LhasaMemoryStream*)handle;
@@ -38,8 +35,6 @@ static int lhasa_mem_read(void* handle, void* buf, size_t buf_len) {
     return (int)to_read;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int lhasa_mem_skip(void* handle, size_t bytes) {
     LhasaMemoryStream* stream = (LhasaMemoryStream*)handle;
     size_t remaining = stream->size - stream->pos;
@@ -48,13 +43,9 @@ static int lhasa_mem_skip(void* handle, size_t bytes) {
     return (to_skip == bytes) ? 1 : 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void lhasa_mem_close(void* handle) {
     (void)handle;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static LHAInputStreamType s_lhasa_memory_stream_type = {
     .read = lhasa_mem_read,
@@ -62,7 +53,6 @@ static LHAInputStreamType s_lhasa_memory_stream_type = {
     .close = lhasa_mem_close,
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Handle for the archive root or one of its members
 
 typedef struct LhasaHandle {
@@ -76,14 +66,12 @@ typedef struct LhasaHandle {
     bool positioned;
 } LhasaHandle;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // True for the .lha and .lzh extensions
 
 static bool is_lha_file(FlString path) {
     return fl_path_has_extension(path, FL_S("lha")) || fl_path_has_extension(path, FL_S("lzh"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // True when the bytes start like an LHA archive
 
 static bool is_lha_archive_data(const uint8_t* data, size_t size) {
@@ -99,7 +87,6 @@ static bool is_lha_archive_data(const uint8_t* data, size_t size) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Joins the header's path and filename, without a trailing slash
 
 static size_t build_full_path(char* dest, size_t dest_size, LHAFileHeader* header) {
@@ -129,7 +116,6 @@ static size_t build_full_path(char* dest, size_t dest_size, LHAFileHeader* heade
     return full_len;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Creates the reader over the handle's memory buffer
 
 static bool lhasa_open_from_memory(LhasaHandle* handle) {
@@ -166,7 +152,6 @@ static bool lhasa_open_from_memory(LhasaHandle* handle) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Frees the handle's reader and the streams under it
 
 static void lhasa_free_reader(LhasaHandle* handle) {
@@ -184,7 +169,6 @@ static void lhasa_free_reader(LhasaHandle* handle) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rewinds the reader to the first entry
 
 static bool lhasa_reset_reader(LhasaHandle* handle) {
@@ -197,7 +181,6 @@ static bool lhasa_reset_reader(LhasaHandle* handle) {
     return lhasa_open_from_memory(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Finds the entry named target_path, leaving the reader positioned at it. nullptr when absent.
 
 static LHAFileHeader* find_lha_entry(LhasaHandle* handle, FlString target_path) {
@@ -228,8 +211,6 @@ static LHAFileHeader* find_lha_entry(LhasaHandle* handle, FlString target_path) 
     return nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void build_entry_cache(LhasaHandle* handle) {
     if (handle->base.entries.arena || !handle->base.memory_buffer) {
         return;
@@ -258,7 +239,6 @@ static void build_entry_cache(LhasaHandle* handle) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Opens a member of an already-opened archive
 
 static FlVfsOpenResult lhasa_open(void* driver_instance, void* parent_handle, FlString path, uint32_t flags,
@@ -296,15 +276,12 @@ static FlVfsOpenResult lhasa_open(void* driver_instance, void* parent_handle, Fl
                                .error = { .vfs_status = FlVfsStatus_NotImplemented } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool lhasa_is_directory(void* driver_instance, void* handle) {
     (void)driver_instance;
     LhasaHandle* h = (LhasaHandle*)handle;
     return h ? h->base.is_directory : false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Continue reading the handle's own entry from where the last read stopped, 0 bytes at its end
 
 static FlVfsReadResult lhasa_read_next(LhasaHandle* handle, uint8_t* buffer, int64_t size) {
@@ -326,8 +303,6 @@ static FlVfsReadResult lhasa_read_next(LhasaHandle* handle, uint8_t* buffer, int
 
     return (FlVfsReadResult) { .bytes_read = (int64_t)total_read, .error = { .vfs_status = FlVfsStatus_Success } };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsReadResult lhasa_read(void* driver_instance, void* handle_ptr, FlString path, uint8_t* buffer,
                                   int64_t size) {
@@ -379,8 +354,6 @@ static FlVfsReadResult lhasa_read(void* driver_instance, void* handle_ptr, FlStr
     return (FlVfsReadResult) { .bytes_read = (int64_t)total_read, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsSizeResult lhasa_get_size(void* driver_instance, void* handle_ptr, FlString path) {
     (void)driver_instance;
     LhasaHandle* handle = (LhasaHandle*)handle_ptr;
@@ -410,8 +383,6 @@ static FlVfsSizeResult lhasa_get_size(void* driver_instance, void* handle_ptr, F
     return (FlVfsSizeResult) { .size = size, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void lhasa_list_directory(void* driver_instance, void* handle_ptr, FlString path, FlVfsListingCallback callback,
                                  void* user_data) {
     (void)driver_instance;
@@ -426,8 +397,6 @@ static void lhasa_list_directory(void* driver_instance, void* handle_ptr, FlStri
     vfs_archive_list_children(handle->base.entries.head, path, callback, user_data);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void lhasa_close(void* driver_instance, void* handle_ptr) {
     (void)driver_instance;
     LhasaHandle* handle = (LhasaHandle*)handle_ptr;
@@ -440,8 +409,6 @@ static void lhasa_close(void* driver_instance, void* handle_ptr) {
     vfs_archive_handle_release(&handle->base);
     fl_heap_free(handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsOpenResult lhasa_open_memory(void* driver_instance, const uint8_t* data, uint64_t size,
                                          FlString original_path) {
@@ -484,14 +451,10 @@ static FlVfsOpenResult lhasa_open_memory(void* driver_instance, const uint8_t* d
     return (FlVfsOpenResult) { .handle = handle, .is_directory = true, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsDriverCapabilities lhasa_get_capabilities(void) {
     return FlVfsDriverCapabilities_Read | FlVfsDriverCapabilities_List | FlVfsDriverCapabilities_Memory
            | FlVfsDriverCapabilities_Archive;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsPlugin s_lhasa_plugin = {
     .api_version = FL_VFS_PLUGIN_API_VERSION,
@@ -514,8 +477,6 @@ static FlVfsPlugin s_lhasa_plugin = {
     .get_file_path = nullptr,
     .is_cached = nullptr,
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsPlugin* vfs_driver_lhasa(void) {
     return &s_lhasa_plugin;

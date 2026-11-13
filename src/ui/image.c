@@ -11,11 +11,7 @@
 #include <vfs/vfs.h>
 #include <ui/ui_theme.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ImageSystem* s_image_system = nullptr;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void set_thumbnail_tint_color(ImageThumbnailOptions* opts, FlBackgroundMode mode) {
     if (mode == FlBackgroundMode_Tint) {
@@ -30,8 +26,6 @@ static void set_thumbnail_tint_color(ImageThumbnailOptions* opts, FlBackgroundMo
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool image_create_system(FlArena* arena, const FlRenderBackend* backend) {
     if (s_image_system) {
         return false;
@@ -40,15 +34,11 @@ bool image_create_system(FlArena* arena, const FlRenderBackend* backend) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void image_stop_loading(void) {
     if (s_image_system) {
         image_system_close(s_image_system);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void image_destroy_system(void) {
     if (s_image_system) {
@@ -57,15 +47,11 @@ void image_destroy_system(void) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void image_begin_frame(void) {
     if (s_image_system) {
         image_system_begin_frame(s_image_system);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void convert_load_options(const FlImageLoadOptions* options, ImageDecodeOptions* out_decode,
                                  ImageThumbnailOptions* out_thumb) {
@@ -101,8 +87,6 @@ static void convert_load_options(const FlImageLoadOptions* options, ImageDecodeO
     set_thumbnail_tint_color(out_thumb, options->background_mode);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ImageHandle image_load_async_with_options(FlVfsMount* mount, FlString relative_path, FlImageLoadOptions options) {
     if (!s_image_system) {
         log_error("image_load_async_with_options: image system not initialized. Call image_create_system() first.");
@@ -126,8 +110,6 @@ ImageHandle image_load_async_with_options(FlVfsMount* mount, FlString relative_p
     return (ImageHandle)request_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ImageHandle image_reload_evicted(FlVfsMount* mount, FlString relative_path, FlImageLoadOptions options,
                                  ImageHandle old_handle) {
     if (!s_image_system) {
@@ -145,8 +127,6 @@ ImageHandle image_reload_evicted(FlVfsMount* mount, FlString relative_path, FlIm
     return (ImageHandle)request_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ImageHandle image_load_from_memory(const void* data, size_t size, FlImageLoadOptions options) {
     if (!s_image_system) {
         log_error("image_load_from_memory: image system not initialized. Call image_create_system() first.");
@@ -163,8 +143,6 @@ ImageHandle image_load_from_memory(const void* data, size_t size, FlImageLoadOpt
         = image_system_load_from_memory(s_image_system, data, size, &decode_opts, &thumb_opts);
     return (ImageHandle)request_id;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ImageHandle create_from_pixels(const void* pixels, int width, int height, FlImageFormat format, bool dedicated) {
     if (!s_image_system) {
@@ -185,13 +163,9 @@ ImageHandle image_create_from_pixels(const void* pixels, int width, int height, 
     return create_from_pixels(pixels, width, height, format, false);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ImageHandle image_create_dedicated(const void* pixels, int width, int height, FlImageFormat format) {
     return create_from_pixels(pixels, width, height, format, true);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool image_update_pixels(ImageHandle handle, const void* pixels) {
     if (!s_image_system) {
@@ -201,7 +175,6 @@ bool image_update_pixels(ImageHandle handle, const void* pixels) {
     return image_system_update_pixels(s_image_system, (FlImageHandle)handle, pixels);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Success with the realized size when the registry reports the handle ready, else a pending placeholder.
 static ImageResult image_ready_result(ImageHandle handle) {
     int width = 0;
@@ -212,8 +185,6 @@ static ImageResult image_ready_result(ImageHandle handle) {
     fl_vfs_close((FlVfsHandle)handle); // safe to call on an already-closed handle
     return (ImageResult) { .width = width, .height = height, .status = VFS_STATE_SUCCESS };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ImageResult image_get_data(ImageHandle handle) {
     if (handle == IMAGE_HANDLE_INVALID) {
@@ -227,7 +198,6 @@ ImageResult image_get_data(ImageHandle handle) {
     return image_resolve_unrealized(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Status of a handle that was not ready when polled. The backend's realization ack lands before a memory load
 // leaves the active set, so readiness is re-read once the load reads as inactive.
 
@@ -276,8 +246,6 @@ ImageResult image_resolve_unrealized(ImageHandle handle) {
     return (ImageResult) { .status = VFS_STATE_ERROR };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ImageStatus image_get_status(ImageResult image) {
     if (vfs_is_pending(image.status)) {
         return ImageStatus_Pending;
@@ -287,8 +255,6 @@ ImageStatus image_get_status(ImageResult image) {
         return ImageStatus_Error;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlImageStatus image_public_status(ImageHandle handle) {
     if (handle == 0 || handle == UINT32_MAX) {
@@ -304,8 +270,6 @@ FlImageStatus image_public_status(ImageHandle handle) {
     }
     return FlImageStatus_Error;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ImageData* image_create_dynamic(u8* buffer, int width, int height, int stride, FlImageFormat format, FlArena* arena) {
     if (buffer == nullptr || arena == nullptr || width <= 0 || height <= 0 || stride <= 0) {
@@ -324,8 +288,6 @@ ImageData* image_create_dynamic(u8* buffer, int width, int height, int stride, F
 
     return image;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlDynamicImage* dynamic_image_create(int width, int height, FlArena* arena) {
     if (arena == nullptr || width <= 0 || height <= 0) {
@@ -349,8 +311,6 @@ FlDynamicImage* dynamic_image_create(int width, int height, FlArena* arena) {
     return image;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlDynamicImage* dynamic_image_create_alpha(int width, int height, FlArena* arena) {
     if (arena == nullptr || width <= 0 || height <= 0) {
         return nullptr;
@@ -372,8 +332,6 @@ FlDynamicImage* dynamic_image_create_alpha(int width, int height, FlArena* arena
     return image;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void image_free(ImageHandle handle) {
     image_registry_remove(handle);
     image_cache_free_handle(handle);
@@ -382,8 +340,6 @@ void image_free(ImageHandle handle) {
     image_system_clear_load_failed(s_image_system, (FlImageLoadRequestId)handle);
     image_system_forget_dedup(s_image_system, (FlImageLoadRequestId)handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void image_set_load_priority(ImageHandle handle, ImageLoadPriority priority) {
     if (handle == IMAGE_HANDLE_INVALID) {

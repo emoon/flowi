@@ -10,7 +10,6 @@
 #include <core/log.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The one GPU -> CPU body every readback here shares: blit tex's w x h region into a transient shared MTLBuffer,
 // wait for it, then strip the buffer's row padding into the caller's tight dst (height * tight_bpr bytes, row 0
 // first). The blit's destination bytes-per-row is 256-aligned. The staging buffer is +1 owned and released here.
@@ -78,7 +77,6 @@ bool metal_read_pixels(void* renderer_user_data, FlSurface* surface_handle, FlPi
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Glyph-atlas debug seams (gpu_debug.h): the R8 coverage texels verbatim. The
 // atlas is backend-wide, so this takes no surface.
 
@@ -103,7 +101,6 @@ bool gpu_debug_read_glyph_atlas(void* renderer_user_data, struct FlArena* arena,
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SVG vector-icon atlas debug seams (gpu_debug.h): the glyph-atlas seam above for the R8 monochrome and RGBA8
 // multi-color SVG atlases.
 
@@ -149,7 +146,6 @@ bool gpu_debug_read_color_svg_atlas(void* renderer_user_data, struct FlArena* ar
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Debug seams with no Metal implementation (gpu_debug.h): the tile-classification readback, the debug render mode,
 // the 3D viewport target, and the frame stats report unavailable. Image-atlas residency is answered from the CPU
 // placement table.
@@ -163,20 +159,17 @@ bool gpu_debug_read_tile_classification(void* renderer_user_data, FlSurface* sur
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void gpu_debug_set_mode(void* renderer_user_data, GpuDebugMode mode) {
     (void)renderer_user_data;
     (void)mode;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 GpuViewport3dTarget gpu_debug_viewport3d_target(void* renderer_user_data, u32 viewport_id) {
     (void)renderer_user_data;
     (void)viewport_id;
     return (GpuViewport3dTarget) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void gpu_debug_read_frame_stats(void* renderer_user_data, FlSurface* surface, struct FlArena* arena,
                                 GpuFrameStats* out) {
     (void)renderer_user_data;

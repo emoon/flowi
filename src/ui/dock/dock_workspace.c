@@ -30,8 +30,6 @@
 // The settings-store file the layout blob lives in, alongside settings' own <module>.json files.
 #define DOCK_LAYOUT_FILE FL_S("dock_layout.json")
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static DeclRecord* decl_find(const FlDockWorkspace* ws, FlDockPanelId id) {
     for (u32 i = 0; i < ws->decl_count; ++i) {
         if (ws->decls[i].id == id) {
@@ -40,8 +38,6 @@ static DeclRecord* decl_find(const FlDockWorkspace* ws, FlDockPanelId id) {
     }
     return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static DeclRecord* decl_get_or_add(FlDockWorkspace* ws, FlDockPanelId id) {
     DeclRecord* existing = decl_find(ws, id);
@@ -60,7 +56,6 @@ static DeclRecord* decl_get_or_add(FlDockWorkspace* ws, FlDockPanelId id) {
     return rec;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lifecycle
 
 FlDockWorkspace* dock_workspace_create(void) {
@@ -72,8 +67,6 @@ FlDockWorkspace* dock_workspace_create(void) {
     return ws;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void dock_workspace_destroy(FlDockWorkspace* ws) {
     if (ws == nullptr) {
         return;
@@ -83,8 +76,6 @@ void dock_workspace_destroy(FlDockWorkspace* ws) {
     fl_arena_destroy(ws->arena);  // the workspace handle itself lives in this arena
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void dock_workspace_set_tree(FlDockWorkspace* ws, FlDockTree* tree) {
     if (tree == nullptr || tree == ws->tree) {
         return; // a failed dock_tree_build (null) or a redundant swap leaves the existing tree in place
@@ -93,7 +84,6 @@ void dock_workspace_set_tree(FlDockWorkspace* ws, FlDockTree* tree) {
     ws->tree = tree;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Promotion - the headless subtree move between two in-process workspaces, built from the dock_tree_apply ops:
 // Close extracts the panel from one tree's universe, Tab/Outer re-homes it in the other. Nothing copies a node or
 // migrates per-panel state - the panel id is the only thing that moves, and the shared id-keyed widget store
@@ -104,8 +94,6 @@ static bool tree_extract_panel(FlDockTree* tree, FlDockPanelId panel) {
     FlDockRequest req = { .kind = FlDockRequest_Close, .panel = panel };
     return dock_tree_apply(tree, &req);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Dock a not-yet-present panel into tree: a tab of the root leaf when the root is a leaf, else an outer dock
 // that splits the root.
@@ -118,15 +106,11 @@ static bool tree_dock_panel_at_root(FlDockTree* tree, FlDockPanelId panel) {
     return dock_tree_apply(tree, &req);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // True when tree is a fresh empty floor (single empty root leaf, no floating panels) - the only shape a promote
 // target may take, so the promoted panel becomes the literal root.
 static bool tree_is_empty_floor(const FlDockTree* tree) {
     return tree->root->kind == FlDockNodeKind_Leaf && tree->root->leaf.count == 0 && tree->floating_count == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool dock_workspace_promote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPanelId panel) {
     if (src == nullptr || dst == nullptr || src == dst) {
@@ -147,8 +131,6 @@ bool dock_workspace_promote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPa
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool dock_workspace_demote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPanelId panel) {
     if (src == nullptr || dst == nullptr || src == dst) {
         return false;
@@ -167,21 +149,16 @@ bool dock_workspace_demote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPan
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-panel attributes
 
 void dock_workspace_set_panel_family(FlDockWorkspace* ws, FlDockPanelId id, u32 family) {
     decl_get_or_add(ws, id)->family = family;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u32 dock_workspace_panel_family(const FlDockWorkspace* ws, FlDockPanelId id) {
     const DeclRecord* rec = decl_find(ws, id);
     return rec != nullptr ? rec->family : 0; // an untagged (or never-declared) panel is general
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void dock_workspace_set_panel_visible(FlDockWorkspace* ws, FlDockPanelId id, bool visible) {
     decl_get_or_add(ws, id)->hidden = !visible;
@@ -191,14 +168,11 @@ void dock_workspace_set_panel_visible(FlDockWorkspace* ws, FlDockPanelId id, boo
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool dock_workspace_panel_visible(const FlDockWorkspace* ws, FlDockPanelId id) {
     const DeclRecord* rec = decl_find(ws, id);
     return rec == nullptr || !rec->hidden; // a panel the app never hid is shown
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The active panel
 
 void dock_workspace_set_active_panel(FlDockWorkspace* ws, FlDockPanelId id) {
@@ -212,7 +186,6 @@ void dock_workspace_set_active_panel(FlDockWorkspace* ws, FlDockPanelId id) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Persistence hooks. The serialize / load / rebind logic lives in dock_persist; these hooks add only the file I/O,
 // routed through the settings store's directory + JSON/file substrate.
 
@@ -236,8 +209,6 @@ bool dock_workspace_save(FlDockWorkspace* ws, FlString settings_dir) {
     FlString path = fl_path_join(temp.arena, settings_dir, DOCK_LAYOUT_FILE);
     return file_write_os(path, (const u8*)json.data, (i64)json.length) >= 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool dock_workspace_load(FlDockWorkspace* ws, FlString settings_dir, const FlDockPanelId* known_panels,
                          u32 known_count) {
@@ -300,7 +271,6 @@ bool dock_workspace_load(FlDockWorkspace* ws, FlString settings_dir, const FlDoc
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-frame declaration window
 
 void dock_workspace_begin(FlDockWorkspace* ws) {
@@ -309,8 +279,6 @@ void dock_workspace_begin(FlDockWorkspace* ws) {
     dock_shared_flush_promotes();
     ws->frame++; // records not stamped with this generation read as not declared
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void dock_workspace_end(FlDockWorkspace* ws) {
     // The active id must name a panel that emits or is held in a drag - hidden, closed, reserved and background-tab
@@ -330,8 +298,6 @@ void dock_workspace_end(FlDockWorkspace* ws) {
     ws->open_panels = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool dock_workspace_declare(FlDockWorkspace* ws, FlDockPanelId id, FlString title) {
     DeclRecord* rec = decl_get_or_add(ws, id);
     rec->last_declared = ws->frame;
@@ -341,14 +307,11 @@ bool dock_workspace_declare(FlDockWorkspace* ws, FlDockPanelId id, FlString titl
     return dock_workspace_panel_should_emit(ws, id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString dock_workspace_panel_title(const FlDockWorkspace* ws, FlDockPanelId id) {
     const DeclRecord* rec = decl_find(ws, id);
     return rec != nullptr ? rec->title : string_empty();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Queries
 
 FlDockNodeId dock_workspace_panel_leaf(const FlDockWorkspace* ws, FlDockPanelId id) {
@@ -356,21 +319,15 @@ FlDockNodeId dock_workspace_panel_leaf(const FlDockWorkspace* ws, FlDockPanelId 
     return leaf != nullptr ? leaf->id : 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool dock_workspace_panel_declared(const FlDockWorkspace* ws, FlDockPanelId id) {
     const DeclRecord* rec = decl_find(ws, id);
     return rec != nullptr && rec->last_declared == ws->frame;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool dock_workspace_panel_reserved(const FlDockWorkspace* ws, FlDockPanelId id) {
     bool in_tree = dock_tree_find_leaf_with_panel(ws->tree, id) != nullptr;
     return in_tree && !dock_workspace_panel_declared(ws, id);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool dock_workspace_panel_should_emit(const FlDockWorkspace* ws, FlDockPanelId id) {
     if (!dock_workspace_panel_visible(ws, id)) {
@@ -381,14 +338,10 @@ bool dock_workspace_panel_should_emit(const FlDockWorkspace* ws, FlDockPanelId i
     return leaf != nullptr && dock_workspace_leaf_shown_panel(ws, leaf) == id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u32 dock_workspace_panel_overflow_logs(const FlDockWorkspace* ws, FlDockPanelId id) {
     const DeclRecord* rec = decl_find(ws, id);
     return rec != nullptr ? rec->overflow_logs : 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlDockPanelId dock_workspace_leaf_shown_panel(const FlDockWorkspace* ws, const FlDockNode* leaf) {
     FlDockPanelId first_shown = 0;
@@ -407,17 +360,12 @@ FlDockPanelId dock_workspace_leaf_shown_panel(const FlDockWorkspace* ws, const F
     return first_shown;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render entry
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The fill element inside the drag overlay - the box that holds the dragged panel's title.
 static FlLayoutId drag_overlay_fill_layout_id(FlDockPanelId panel) {
     return (FlLayoutId) { .name = FL_S("fl_dock_drag_overlay_fill"), .id = (u32)panel };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Overlay geometry in logical px. The pointer sits just inside the top-left, so the panel hangs off the cursor the
 // way the grabbed tab did.
@@ -429,8 +377,6 @@ static FlLayoutId drag_overlay_fill_layout_id(FlDockPanelId panel) {
 // underneath stays visible through it.
 #define DOCK_DRAG_OVERLAY_TINT_ALPHA 96
 #define DOCK_DRAG_OVERLAY_LABEL_PAD 12
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The panel in the user's hand: a translucent ghost carrying the panel's title, not its body. Untargeted it hangs
 // off the cursor; over a resolved target it fills the gap the layout opened.
@@ -478,14 +424,10 @@ static void emit_drag_overlay(FlDockWorkspace* ws) {
     fl_layout_end();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The tab widget already gates pending_grab on the substrate's own click-vs-drag distance, so a dock threshold
 // below that one would never be the binding one.
 _Static_assert(FL_DOCK_DRAG_THRESHOLD >= UI_MOUSE_DRAG_THRESHOLD,
                "FL_DOCK_DRAG_THRESHOLD must be at least UI_MOUSE_DRAG_THRESHOLD");
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The distance the cursor has travelled since the press, in LOGICAL px - dock constants are logical throughout,
 // while the input field is physical. It is the press's max travel, not the current offset, so a jitter back toward
@@ -500,8 +442,6 @@ static bool drag_past_arm_threshold(void) {
     return travelled_sqr > FL_DOCK_DRAG_THRESHOLD * FL_DOCK_DRAG_THRESHOLD;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // End the gesture and leave the panel in a leaf; if its origin leaf is gone it is docked at the floor, so nothing is
 // left in the floating set once the gesture is over.
 static void dock_gesture_finish(FlDockWorkspace* ws, bool cancel) {
@@ -515,8 +455,6 @@ static void dock_gesture_finish(FlDockWorkspace* ws, bool cancel) {
         tree_dock_panel_at_root(ws->tree, dropped);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The leaf whose tile contains x,y, or null. Clay's boxes are physical px and so is the raw pointer, so this
 // needs no scale conversion; the boxes are the PREVIOUS frame's, like every other geometry read-back.
@@ -537,8 +475,6 @@ static const FlDockNode* leaf_at_point(const FlDockNode* node, f32 x, f32 y) {
     return inside ? node : nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A press inside a tile activates that tile's shown panel. A modal blocks it; a popup does not.
 static void activate_panel_under_press(FlDockWorkspace* ws) {
     FlUiCtx* self = g_ui_ctx;
@@ -554,8 +490,6 @@ static void activate_panel_under_press(FlDockWorkspace* ws) {
         dock_workspace_set_active_panel(ws, panel);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void dock_workspace_emit(FlDockWorkspace* ws) {
     if (g_ui_ctx == nullptr) {
@@ -603,8 +537,6 @@ void dock_workspace_emit(FlDockWorkspace* ws) {
     ws->emitted_frame = ws->frame;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlVec2 dock_workspace_panel_size(const FlDockWorkspace* ws, FlDockPanelId id) {
     // A panel that is not emitting has no room to report: absent, hidden, floating, or a background tab.
     if (!dock_workspace_panel_should_emit(ws, id)) {
@@ -626,7 +558,6 @@ FlVec2 dock_workspace_panel_size(const FlDockWorkspace* ws, FlDockPanelId id) {
     return size;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Macro glue - resolve the active window's workspace from its per-window binding.
 
 FlDockWorkspace* dock_workspace_current(void) {
@@ -636,15 +567,11 @@ FlDockWorkspace* dock_workspace_current(void) {
     return ctx->dock_workspace; // non-owning; the registry default at ui_create, rebound for promoted windows
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The clip container a panel's body lives in - the element whose viewport is the tile and whose content is
 // whatever the body laid out at.
 static FlLayoutId panel_clip_layout_id(FlDockPanelId id) {
     return (FlLayoutId) { .name = FL_S("fl_dock_panel_clip"), .id = (u32)id };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // A body larger than its tile is clipped, so the overflow is reported once instead. Reads the previous frame's
 // extent, like every other geometry read-back.
@@ -667,8 +594,6 @@ static void report_overflow_once(FlDockWorkspace* ws, FlDockPanelId id) {
               (unsigned long long)id, (double)extent.content_extent.x, (double)extent.content_extent.y,
               (double)extent.viewport_size.x, (double)extent.viewport_size.y);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Open a declared panel's body INSIDE the tile it is bound to. The tile was emitted earlier this frame by
 // dock_workspace_emit, so the body cannot nest inline - instead it is a Clay floating element attached by id to
@@ -716,8 +641,6 @@ bool dock_panel_scope_begin(FlDockPanelId id, FlString title) {
     });
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void dock_panel_scope_end(void) {
     FlDockWorkspace* ws = dock_workspace_current();

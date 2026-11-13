@@ -9,8 +9,6 @@
 #include <ui/image_system.h>
 #include <ui/vector_image.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool gpu_prepare_image_decode_valid(FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                                     const FlImageLoadRequest* request) {
     if (!decoded) {
@@ -26,13 +24,9 @@ bool gpu_prepare_image_decode_valid(FlImageLoadRequestId request_id, const FlIma
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool gpu_prepare_image_wants_slot_tier(const FlImageDecodeResult* decoded, const FlImageLoadRequest* request) {
     return request->dedicated || decoded->width > GPU_IMAGE_ATLAS_MAX_DIM || decoded->height > GPU_IMAGE_ATLAS_MAX_DIM;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool gpu_prepare_image_place_atlas(GpuImageAtlas* atlas, FlImageLoadRequestId request_id,
                                    const FlImageDecodeResult* decoded, FlArena* scratch, GpuAtlasImageUpload* out) {
@@ -62,7 +56,6 @@ bool gpu_prepare_image_place_atlas(GpuImageAtlas* atlas, FlImageLoadRequestId re
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 GpuGlyphCell gpu_prepare_glyph_cell(const FlGlyphOutline* outline) {
     f32 x0 = floorf(outline->min_x);
     f32 y1 = ceilf(outline->max_y);
@@ -81,7 +74,6 @@ GpuGlyphCell gpu_prepare_glyph_cell(const FlGlyphOutline* outline) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, FlArena* arena, FlFontId font, u16 size, u32 glyph_id,
                              const FlGlyphOutline* outline, GpuGlyphRaster* out) {
     if (outline == NULL) {
@@ -109,8 +101,6 @@ bool gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, FlArena* arena, FlFontId font
     *out = (GpuGlyphRaster) { .entry = entry, .cell = cell, .floats = floats, .quad_count = quad_count };
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool gpu_prepare_svg_fit(const FlVectorImage* vector, u16 size, GpuSvgCellFit* out) {
     f32 doc_max = fmaxf(vector->width, vector->height);
@@ -222,8 +212,6 @@ void gpu_prepare_vector_into(void* backend, GpuSvgAtlas* atlas, FlImageHandle ha
     raster_cell(backend, entry, vector, color);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gpu_prepare_vector(void* backend, GpuSvgAtlas* mono_atlas, GpuSvgAtlas* color_atlas, FlImageHandle handle,
                         u16 size, const FlVectorImage* vector, GpuRasterCellFn raster_cell, u32* compact_count) {
     if (vector == NULL || vector->shape_count == 0) {
@@ -233,8 +221,6 @@ void gpu_prepare_vector(void* backend, GpuSvgAtlas* mono_atlas, GpuSvgAtlas* col
     gpu_prepare_vector_into(backend, color ? color_atlas : mono_atlas, handle, size, vector, color, raster_cell,
                             compact_count);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gpu_prepare_scale_changed(float* last_ui_scale, float ui_scale, FlArena* perm_arena, GpuGlyphAtlas* glyph_atlas,
                                GpuSvgAtlas* svg_atlas, GpuSvgAtlas* color_svg_atlas) {
@@ -246,8 +232,6 @@ void gpu_prepare_scale_changed(float* last_ui_scale, float ui_scale, FlArena* pe
     gpu_svg_atlas_init(svg_atlas, perm_arena, svg_atlas->format);
     gpu_svg_atlas_init(color_svg_atlas, perm_arena, color_svg_atlas->format);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gpu_prepare_log_slot_overflow(const GpuImageSlots* slots) {
     if (slots->overflow > 0) {

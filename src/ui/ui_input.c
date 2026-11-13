@@ -8,13 +8,9 @@
 #include <math.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void ui_input_state_reset(FlInputState* state) {
     memory_zero(state, sizeof(FlInputState));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_input_state_init(FlInputState* state) {
     ui_input_state_reset(state);
@@ -22,8 +18,6 @@ void ui_input_state_init(FlInputState* state) {
         state->gamepads[i].dead_zone = UI_INPUT_GAMEPAD_DEFAULT_DEAD_ZONE;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void platform_input_push_key_event(FlUiCtx* ctx, FlKeyEvent event) {
     FlInputState* state = &ctx->input_state;
@@ -57,8 +51,6 @@ void platform_input_push_key_event(FlUiCtx* ctx, FlKeyEvent event) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void platform_input_push_text_input_event(FlUiCtx* ctx, FlTextInputEvent event) {
     FlInputState* state = &ctx->input_state;
 
@@ -79,8 +71,6 @@ void platform_input_push_text_input_event(FlUiCtx* ctx, FlTextInputEvent event) 
     memcpy(kb->text_input_storage + used, event.text.data, count);
     kb->text_input = (FlString) { .data = kb->text_input_storage, .length = used + count, .is_static = 0 };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
     FlInputState* state = &ctx->input_state;
@@ -137,8 +127,6 @@ void platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void platform_input_push_gamepad_event(FlUiCtx* ctx, FlGamepadEvent event) {
     FlInputState* state = &ctx->input_state;
 
@@ -191,8 +179,6 @@ void platform_input_push_gamepad_event(FlUiCtx* ctx, FlGamepadEvent event) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Copy one dropped path into the frame arena and record it.
 static void push_dropped_file(FlUiCtx* ctx, WindowEventState* window_events, FlWindowDropData drop) {
     if (drop.path.length == 0 || drop.path.data == nullptr) {
@@ -210,8 +196,6 @@ static void push_dropped_file(FlUiCtx* ctx, WindowEventState* window_events, FlW
     window_events->dropped_files[slot] = (FlString) { .data = path_copy, .length = drop.path.length, .is_static = 0 };
     window_events->dropped_file_positions[slot] = (FlVec2) { .x = drop.x, .y = drop.y };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void platform_input_push_window_event(FlUiCtx* ctx, FlWindowEvent event) {
     FlInputState* state = &ctx->input_state;
@@ -246,29 +230,21 @@ void platform_input_push_window_event(FlUiCtx* ctx, FlWindowEvent event) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_input_set_mouse_position(FlUiCtx* ctx, float x, float y) {
     FlInputState* state = &ctx->input_state;
     state->mouse.x = x;
     state->mouse.y = y;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_mouse_pos_valid(float x, float y) {
     return x > UI_MOUSE_INVALID_POS && y > UI_MOUSE_INVALID_POS;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static float mouse_distance_sqr(float x1, float y1, float x2, float y2) {
     float dx = x2 - x1;
     float dy = y2 - y1;
     return dx * dx + dy * dy;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ui_input_update_mouse(FlInputState* state, double dt) {
     MouseState* mouse = &state->mouse;
@@ -336,8 +312,6 @@ static void ui_input_update_mouse(FlInputState* state, double dt) {
     mouse->prev_x = mouse->x;
     mouse->prev_y = mouse->y;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_input_update(FlUiCtx* ctx, double dt) {
     FlInputState* state = &ctx->input_state;

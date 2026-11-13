@@ -8,7 +8,6 @@
 #include <core/string.h>
 #include "vfs_private.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Nodes
 
 VfsTreeNode* vfs_tree_create_node(FlVfsMount* mount, VfsTreeNode* parent, FlString name) {
@@ -24,8 +23,6 @@ VfsTreeNode* vfs_tree_create_node(FlVfsMount* mount, VfsTreeNode* parent, FlStri
     return node;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static VfsTreeNode* find_child_node(const VfsTreeNode* parent, FlString name) {
     for (VfsTreeNode* child = parent->first_child; child != nullptr; child = child->next_sibling) {
         if (fl_string_equals(child->name, name)) {
@@ -36,16 +33,12 @@ static VfsTreeNode* find_child_node(const VfsTreeNode* parent, FlString name) {
     return nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void close_node_handle(VfsTreeNode* node) {
     if (node->handle) {
         node->plugin_entry->plugin->close(node->plugin_entry->plugin_instance, node->handle);
         node->handle = nullptr;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void vfs_tree_cleanup_node(VfsTreeNode* node) {
     profile_function_auto_nc("vfs:vfs_tree_cleanup_node", PROFILE_COLOR_CYAN);
@@ -58,7 +51,6 @@ void vfs_tree_cleanup_node(VfsTreeNode* node) {
     close_node_handle(node);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Archive loading
 
 bool vfs_tree_try_load_as_archive(VfsState* self, VfsTreeNode* node, VfsPluginEntry* parent, void* parent_handle,
@@ -75,7 +67,6 @@ bool vfs_tree_try_load_as_archive(VfsState* self, VfsTreeNode* node, VfsPluginEn
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Path resolution
 
 VfsLocation vfs_tree_locate(VfsState* self, FlVfsMount* mount, FlString path, bool is_directory, FlArena* scratch) {

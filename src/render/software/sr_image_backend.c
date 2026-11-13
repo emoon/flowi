@@ -8,7 +8,6 @@
 #include <core/memory.h>
 #include "sr_image_convert.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Adds one extra pixel at the end of each line and duplicates the last line, for bilinear filtering.
 // Handles strided input data (after border detection).
 
@@ -61,7 +60,6 @@ static void pad_image_for_bilinear(InternalImageData* image_data, FlArena* arena
     image_data->stride = padded_stride;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Split interleaved pixels into separate R, G, B (and A) planes. Single-channel images are already planar.
 
 static void deinterleave_image(InternalImageData* image_data, FlArena* arena) {
@@ -88,7 +86,6 @@ static void deinterleave_image(InternalImageData* image_data, FlArena* arena) {
     image_data->stride = image_data->padded_width * source_channels;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SW backend prepare_image seam. Runs on a job worker thread after image_decode() completes.
 
 bool sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,

@@ -1,14 +1,12 @@
 #include "gpu_cpu_state.h"
 #include "gpu_debug.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void gpu_release_image(void* user_data, FlImageHandle handle) {
     GpuCpuState* cpu = user_data;
     gpu_image_atlas_release(&cpu->image_atlas, handle);
     gpu_image_slots_release_static(&cpu->image_slots, handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Debug seams (gpu_debug.h) answered from the CPU bookkeeping alone, identical on every backend.
 
 const GpuGlyphEntry* gpu_debug_find_glyph(void* renderer_user_data, FlFontId font, u16 size, u32 glyph_id) {

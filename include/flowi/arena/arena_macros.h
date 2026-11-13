@@ -14,7 +14,6 @@
 
 #ifndef __cplusplus
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Element count to byte count
 //
 // Saturating, not wrapping: a count whose byte size does not fit asks for UINT64_MAX bytes, which the
@@ -25,7 +24,6 @@ static inline uint64_t arena_array_bytes(uint64_t count, uint64_t element_size) 
     return count > UINT64_MAX / element_size ? UINT64_MAX : count * element_size;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Typed allocation (thread-safe by default)
 
 #define arena_alloc(arena, type) ((type*)fl_arena_alloc_raw(arena, sizeof(type), _Alignof(type)))
@@ -57,7 +55,6 @@ static inline uint64_t arena_array_bytes(uint64_t count, uint64_t element_size) 
 // Complete elements of `type` between start_ptr and the arena's current position.
 #define arena_count(arena, start_ptr, type) fl_arena_count_elements(arena, start_ptr, sizeof(type))
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scoped cleanup (GCC/Clang): a temp or scratch scope that ends itself when the enclosing block exits.
 
 #if COMPILER_CLANG || COMPILER_GCC

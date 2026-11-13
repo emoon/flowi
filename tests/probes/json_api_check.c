@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Compile-only parity guard: the api_gen-generated public JSON surface (<flowi/core/json.h>). This TU links nothing.
 //
 // The FlJsonParseFlags bitset enum and the for_each_json_* iteration macros are a deliberate carve-out kept in

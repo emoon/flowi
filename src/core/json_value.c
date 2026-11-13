@@ -8,8 +8,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_json_value_as_string(FlJsonValue* value) {
     if (!value || value->type != FlJsonType_String) {
         return (FlString) { 0 };
@@ -18,13 +16,9 @@ FlString fl_json_value_as_string(FlJsonValue* value) {
     return string && string->data ? *string : (FlString) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlJsonObject* fl_json_value_as_object(FlJsonValue* value) {
     return value && value->type == FlJsonType_Object ? (FlJsonObject*)value->payload : nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlJsonValue* fl_json_find_property(const FlJsonValue* object, FlString key) {
     if (!object || object->type != FlJsonType_Object) {
@@ -39,16 +33,12 @@ FlJsonValue* fl_json_find_property(const FlJsonValue* object, FlString key) {
     return nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool has_hex_prefix(FlString text) {
     if (text.length < 2) {
         return false;
     }
     return text.data[0] == '0' && (text.data[1] | 0x20) == 'x';
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static u64 strip_radix_prefix(FlString* text) {
     if (has_hex_prefix(*text)) {
@@ -58,14 +48,10 @@ static u64 strip_radix_prefix(FlString* text) {
     return 10;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int digit_value(char c, u64 base) {
     const int digit = json_hex_digit_value(c);
     return digit >= 0 && (u64)digit < base ? digit : -1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool parse_magnitude(FlString text, u64* out) {
     const u64 base = strip_radix_prefix(&text);
@@ -84,8 +70,6 @@ static bool parse_magnitude(FlString text, u64* out) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static u64 number_to_u64(const FlJsonNumber* number) {
     FlString text = { .data = number->number, .length = number->number_size };
     if (text.length > 0 && text.data[0] == '+') {
@@ -94,8 +78,6 @@ static u64 number_to_u64(const FlJsonNumber* number) {
     u64 value = 0;
     return parse_magnitude(text, &value) ? value : 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static f64 number_to_f64(const FlJsonNumber* number) {
     arena_scratch_auto(temp);
@@ -109,19 +91,13 @@ static f64 number_to_f64(const FlJsonNumber* number) {
     return (end == text || *end != '\0' || overflow) ? 0.0 : value;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static const FlJsonNumber* number_of(const FlJsonValue* value) {
     return value && value->type == FlJsonType_Number ? (const FlJsonNumber*)value->payload : nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_json_get_string_prop(const FlJsonValue* object, FlString key) {
     return fl_json_value_as_string(fl_json_find_property(object, key));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 fl_json_get_u32_prop(const FlJsonValue* object, FlString key) {
     const FlJsonNumber* number = number_of(fl_json_find_property(object, key));
@@ -129,28 +105,20 @@ u32 fl_json_get_u32_prop(const FlJsonValue* object, FlString key) {
     return value <= UINT32_MAX ? (u32)value : 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f64 fl_json_get_f64_prop(const FlJsonValue* object, FlString key) {
     const FlJsonNumber* number = number_of(fl_json_find_property(object, key));
     return number ? number_to_f64(number) : 0.0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlJsonValue* fl_json_get_object_prop(const FlJsonValue* object, FlString key) {
     FlJsonValue* property = fl_json_find_property(object, key);
     return property && property->type == FlJsonType_Object ? property : nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlJsonArray* fl_json_get_array_prop(const FlJsonValue* object, FlString key) {
     FlJsonValue* property = fl_json_find_property(object, key);
     return property && property->type == FlJsonType_Array ? (FlJsonArray*)property->payload : nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const FlString k_error_descriptions[] = {
     [FlJsonParseError_None] = S_("No error"),
@@ -166,8 +134,6 @@ static const FlString k_error_descriptions[] = {
     [FlJsonParseError_UnexpectedTrailingCharacters] = S_("Unexpected characters after JSON"),
     [FlJsonParseError_TooDeep] = S_("JSON nesting exceeds maximum depth"),
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_json_get_error_description(FlJsonParseError error) {
     const bool known = (u32)error < sizeof(k_error_descriptions) / sizeof(k_error_descriptions[0])

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GPU frame orchestrator: the one canonical per-frame sequence both the GL and the Metal backend drive.
 // The GL/EGL path (gpu_renderer.c) and the Metal path (gpu_metal.m) compile on mutually exclusive platforms,
 // so the sequence lives in one backend-agnostic TU (gpu_orchestrator.c) compiled into both, calling
@@ -20,7 +19,6 @@ struct FlGlyphOutline;
 struct FlRenderFrame;
 struct FlFontCache;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-backend primitive table. Every entry takes the opaque backend handle (GpuShared* / MetalShared*) it casts
 // back internally; the encoder-lifecycle entries also take the opaque surface handle (GpuSurface* / MetalSurface*).
 // gpu_orchestrate_frame calls these in a fixed order (see gpu_orchestrator.c). GL leaves begin_encoder a no-op
@@ -56,7 +54,6 @@ typedef struct GpuRenderOps {
     void (*end_encoder)(void* backend);
 } GpuRenderOps;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Run one frame through the canonical sequence: frame_begin -> realize the frame's text glyphs -> translate the
 // IR -> the two-dispatch compute pipeline -> the deferred glyph-atlas overflow wipe -> rewind the frame arena.
 // backend and surface are the opaque handles handed to every op; glyph_atlas / frame_arena / perm_arena are

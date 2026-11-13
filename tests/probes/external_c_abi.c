@@ -26,7 +26,6 @@ FLOWI_TEST_EXPORT int external_c_variadic_abi_probe(void) {
     return ok;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Must be called while libflowi has a frame open: fl_format_frame_string allocates from the frame arena of the UI
 // context owned by the flowi instance running that frame, and this probe is linked against the shared library, not
 // against the test executable's own statically linked copy.

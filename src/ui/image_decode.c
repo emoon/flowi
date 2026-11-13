@@ -12,7 +12,6 @@
 #include <math.h>
 #include <stdint.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Checked pixel sizes
 
 bool image_checked_pixel_size(int width, int height, size_t bytes_per_pixel, size_t* out_size) {
@@ -33,8 +32,6 @@ bool image_checked_pixel_size(int width, int height, size_t bytes_per_pixel, siz
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool image_checked_stride(int width, size_t bytes_per_pixel, int* out_stride) {
     size_t row_bytes = 0;
     if (!image_checked_pixel_size(width, 1, bytes_per_pixel, &row_bytes) || row_bytes > INT_MAX) {
@@ -44,7 +41,6 @@ bool image_checked_stride(int width, size_t bytes_per_pixel, int* out_stride) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SIMD grayscale detection
 
 static bool is_grayscale_rgba_row(const u8* row, int width) {
@@ -73,8 +69,6 @@ static bool is_grayscale_rgba_row(const u8* row, int width) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_grayscale_rgba_simd(const u8* rgba_data, int width, int height, int stride) {
     for_count(y, height) {
         if (!is_grayscale_rgba_row(rgba_data + (size_t)y * (size_t)stride, width)) {
@@ -85,7 +79,6 @@ static bool is_grayscale_rgba_simd(const u8* rgba_data, int width, int height, i
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Black border detection
 
 static bool is_row_all_black(const u8* row_data, int width, int channels) {
@@ -167,8 +160,6 @@ static bool is_row_all_black(const u8* row_data, int width, int channels) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_column_all_black(const u8* data, int column, int start_row, int end_row, int stride, int channels) {
     if (channels <= 0) {
         return false;
@@ -190,8 +181,6 @@ static bool is_column_all_black(const u8* data, int column, int start_row, int e
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_region_all_black(const u8* data, int row_start, int row_end, int col_start, int col_end, int stride,
                                 int channels) {
     int region_width = col_end - col_start;
@@ -207,8 +196,6 @@ static bool is_region_all_black(const u8* data, int row_start, int row_end, int 
     }
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void detect_and_remove_black_border(InternalDecodeData* image) {
     if (!image->data || image->width <= 0 || image->height <= 0) {
@@ -295,7 +282,6 @@ static void detect_and_remove_black_border(InternalDecodeData* image) {
     image->height = new_height;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SVG detection
 
 static bool is_svg_data(const u8* data, size_t size) {
@@ -318,7 +304,6 @@ static bool is_svg_data(const u8* data, size_t size) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resize
 
 // Returns true when the image is left at the requested size (either a successful resize or a no-op because it
@@ -360,7 +345,6 @@ static bool resize_image(InternalDecodeData* image, int target_width, int target
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Premultiplication
 
 static inline u8x16 premul_channel_x16(u8x16 c, i16x8x2 alpha) {
@@ -374,8 +358,6 @@ static inline u8x16 premul_channel_x16(u8x16 c, i16x8x2 alpha) {
     t.v1 = i16x8_add(t.v1, high.v1);
     return i16x8x2_pack_to_u8x16_narrow_shr(t, 8);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void premultiply_alpha(InternalDecodeData* image) {
     if (image->channels != 4) {
@@ -416,7 +398,6 @@ static void premultiply_alpha(InternalDecodeData* image) {
     image->premultiplied = true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Grayscale conversion
 
 static void convert_grayscale_to_alpha(InternalDecodeData* image, FlArena* arena) {
@@ -450,7 +431,6 @@ static void convert_grayscale_to_alpha(InternalDecodeData* image, FlArena* arena
     image->channels = 1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tint gradient
 
 static void apply_tint_gradient_rgb(u8* rgb_data, int width, int height, int stride, int image_start_x, u8 tint_r,
@@ -527,7 +507,6 @@ static void apply_tint_gradient_rgb(u8* rgb_data, int width, int height, int str
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Vertical fade gradient (top to bottom) - RGB version
 // Fades from original image color at top to target color at bottom
 
@@ -603,7 +582,6 @@ static void apply_vertical_fade_rgb(u8* rgb_data, int width, int height, int str
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Composite the decoded RGB(A) image onto a fresh fill-colored RGB canvas at (offset_x, offset_y). Source alpha
 // is dropped (the canvas is always 3-channel). Callers pick the offset: right-align for the tint preview,
 // centered for letterbox/pillarbox.
@@ -666,7 +644,6 @@ static void composite_on_canvas_rgb(InternalDecodeData* image, int canvas_w, int
     image->channels = 3;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Allocate and populate the public decode result from the internal working data.
 
 static FlImageDecodeResult* internal_to_result(const InternalDecodeData* internal, FlArena* arena) {
@@ -681,7 +658,6 @@ static FlImageDecodeResult* internal_to_result(const InternalDecodeData* interna
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SVG loading
 
 // Largest rasterized SVG edge. nanosvg indexes its bitmap with int row * stride arithmetic, so the raster must keep
@@ -787,7 +763,6 @@ static FlImageDecodeResult* decode_svg(const u8* data, size_t size, const ImageD
     return internal_to_result(&internal, arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Main decode function
 
 FlImageDecodeResult* image_decode(FlArena* arena, const void* file_data, size_t file_size,
@@ -843,7 +818,6 @@ FlImageDecodeResult* image_decode(FlArena* arena, const void* file_data, size_t 
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Thumbnail compose - the content-browser preview finishing pass.
 
 void image_thumbnail_compose(FlArena* arena, FlImageDecodeResult* result, const ImageDecodeOptions* decode_opts,
@@ -947,8 +921,6 @@ void image_thumbnail_compose(FlArena* arena, FlImageDecodeResult* result, const 
     result->premultiplied = internal.premultiplied;
     result->needs_thumbnail_compose = false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool image_decode_test_is_row_all_black(const u8* row_data, int width, int channels) {
     return is_row_all_black(row_data, width, channels);

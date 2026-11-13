@@ -5,13 +5,11 @@
 #include <core/string.h>
 #include <ctype.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared text-buffer helpers
 //
 // Character filtering and arena-backed buffer growth shared by the text-input widget
 // (ui_text_input.c) and the on-screen virtual keyboard (ui_virtual_keyboard.c).
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Decide whether a character may be inserted into a text buffer.
 //
 // With no explicit allow-list, printable characters plus '\n', '\r' and '\t' are permitted.
@@ -31,7 +29,6 @@ static inline bool text_buffer_filter_char(char c, FlString allowed_chars) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Grow an arena-backed text buffer so it can hold at least min_capacity bytes.
 //
 // No-op when the buffer already has room. Otherwise it grows by capacity-doubling with a 256-byte

@@ -16,8 +16,6 @@
 
 #define ARENA_SIZE 128
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct CACHE_ALIGNED FlArena {
     // Cache line 1: Hot contested field + cold fields to fill 64 bytes
     _Atomic u64 pos;
@@ -53,15 +51,12 @@ typedef struct FlArenaMt {
     _Atomic u64 atomic_committed_size;
 } FlArenaMt;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct ArenaSettings {
     u64 reserved_size;
     const char* allocation_site_file;
     int allocation_site_line;
 } ArenaSettings;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// FlArena functions
 
 // Arena allocations never return NULL - the arena traps/aborts on OOM.
@@ -96,14 +91,11 @@ DLL_EXPORT FlArenaMt* arena_mt_new_(const ArenaSettings* settings);
 DLL_EXPORT void* arena_mt_alloc_raw(FlArenaMt* arena, u64 size, u64 alignment);
 DLL_EXPORT void arena_mt_destroy(FlArenaMt* self);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 DLL_EXPORT void arena_scratch_init(void);
 DLL_EXPORT void arena_scratch_destroy(void);
 FL_API FlTempArena fl_arena_scratch_begin(void);
 FL_API FlTempArena fl_arena_scratch_begin_conflict(const FlArena* self);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Memory Tracking API
 
 void arena_tracker_init(void);
@@ -116,8 +108,6 @@ void arena_tracker_unregister(FlArena* self);
 // the tracker mutex is non-recursive and would self-deadlock. Scratch-arena use is safe.
 typedef void (*ArenaIteratorCallback)(FlArena* arena, void* user_data);
 void arena_tracker_iterate_all(ArenaIteratorCallback callback, void* user_data);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // A flat, by-value snapshot of one arena's occupancy and where it was created.
 // site_file borrows the arena's creation-site literal, so it lives as long as the program does.
@@ -135,14 +125,11 @@ typedef struct FlArenaStats {
 // no lock.
 DLL_EXPORT void arena_stats(FlArena* arena, FlArenaStats* out);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pin the current position as the rewind floor: everything allocated so far survives fl_arena_rewind.
 
 static inline void arena_pin_rewind_floor(FlArena* self) {
     self->rewind_pos = atomic_load_explicit(&self->pos, memory_order_relaxed);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define arena_new(...)            \
     arena_new_(&(ArenaSettings) { \
@@ -164,7 +151,6 @@ static inline void arena_pin_rewind_floor(FlArena* self) {
     })
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Typed allocation and scoped-cleanup macros live in the public companion header so plugins built
 /// against the public include root get the same spellings host code uses.
 #include <flowi/arena/arena_macros.h>

@@ -2,7 +2,6 @@
 
 #include "unit_tests_common.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A full watcher registry must reject new watchers, not silently corrupt the last slot.
 
 UTEST(file_watcher, full_registry_rejects_instead_of_corrupting) {
@@ -27,7 +26,6 @@ UTEST(file_watcher, full_registry_rejects_instead_of_corrupting) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // file_watcher_path_is_direct_child backs recursive=false on platforms whose native watch API
 // is inherently recursive (FSEvents on macOS): the callback keeps only the watched root itself
 // and its immediate children, discarding deeper subtree events.
@@ -66,7 +64,6 @@ UTEST(file_watcher, path_is_direct_child_rejects_deep_and_unrelated_paths) {
     ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("")));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A directory entry's name must stay valid across subsequent reads and close of the same handle:
 // POSIX readdir reuses its internal dirent buffer, so dir_read_next_os must copy the name into the
 // caller's arena (as Windows does) instead of aliasing that buffer.
@@ -98,7 +95,6 @@ UTEST(os_dir, entry_name_survives_next_read_and_close) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // file_get_size_os returns -1 when stat() fails; file_read_from_handle_os must reject that
 // sentinel instead of letting min(buffer_size, -1) reach read() as a size_t (SIZE_MAX), which
 // would over-read past dest. A stat failure after a successful open can't be constructed
@@ -126,7 +122,6 @@ UTEST(os_file, negative_file_size_fails_without_reading) {
 
 #if !PLATFORM_WINDOWS
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // get_disk_space_os walks up the directory tree retrying statvfs() on shorter prefixes. The seam
 // forces every statvfs() to fail, driving the walk all the way past the root.
 
@@ -164,7 +159,6 @@ UTEST(os_disk_space, existing_path_immediate_hit) {
 
 #endif // !PLATFORM_WINDOWS
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // file_create_directory_recursive_os checks each path component's existence before creating it, so a
 // concurrent creator can win the race between that check and the create call. Two threads rendezvous
 // per iteration and create the same nested path simultaneously; every call must succeed.
@@ -211,7 +205,6 @@ UTEST(os_file, recursive_mkdir_survives_concurrent_creator) {
     file_remove_directory_recursive_os(FL_S("flowi_mkdir_race_tmp"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The concurrent-creator tolerance above must not swallow genuine failures: a regular file
 // occupying a path component makes the create fail and the post-failure directory re-check false,
 // so the helper still reports the error.
@@ -226,7 +219,6 @@ UTEST(os_file, recursive_mkdir_still_fails_on_file_component) {
     file_remove_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Re-initializing the log file must close the previous init's fd before opening the new one. Equal
 // /proc/self/fd counts (count_open_fds, declared in unit_tests_common.h) across the second init prove
 // the old fd was closed and its replacement opened 1:1.
@@ -262,7 +254,6 @@ UTEST(log_file, reinit_closes_previous_fd) {
     file_remove_directory_recursive_os(dir);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlString carries an explicit length and doesn't guarantee a trailing NUL, but C APIs consuming
 // the log file path need a NUL-terminated string; fl_string_to_cstr converts.
 
@@ -292,7 +283,6 @@ UTEST(log_file, path_converts_to_valid_cstr) {
     file_remove_directory_recursive_os(dir);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // App-identity seam: the data dir, log file name, and file-watcher queue default to neutral "flowi" values, a host
 // override replaces only the fields it sets, and fl_log_file_init routes the log file name through the seam so a
 // host (e.g. a host writing myapp.log) gets its branded filename without any hardcoded literal in core.
@@ -325,7 +315,6 @@ UTEST(app_identity, defaults_override_and_log_routing) {
     ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi")));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The data dir name is routed through the seam: a host override replaces it.
 
 UTEST(app_identity, data_dir_name_routes_through_seam) {
@@ -338,7 +327,6 @@ UTEST(app_identity, data_dir_name_routes_through_seam) {
     ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi_other")));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Stopping a watcher must not relocate any other watcher's state: platform layers (FSEvents on
 // macOS) retain the FileWatcherState* passed to platform_start_watching for the stream's lifetime,
 // so removal tombstones the slot in place instead of swap-compacting the array.
@@ -368,7 +356,6 @@ UTEST(file_watcher, stop_does_not_relocate_live_watchers) {
     file_watcher_stop(h3);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Freed slots must be reused: repeated start/stop cycles far beyond the 16-slot registry capacity
 // must never hit the "registry full" rejection.
 
@@ -381,7 +368,6 @@ UTEST(file_watcher, slots_reused_across_stop_start_cycles) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Interleaved stop/start at capacity: once the registry is full, stopping one watcher must free
 // exactly one slot that a subsequent start can claim.
 
@@ -410,7 +396,6 @@ UTEST(file_watcher, full_registry_frees_slot_on_stop) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Callback register/unregister must not race the dispatch loop in add_file_change, which runs on
 // platform threads and iterates watcher->callbacks under changes_lock. This hammers both sides
 // concurrently; an unguarded version reports a race under ThreadSanitizer and can crash without it.
@@ -460,7 +445,6 @@ UTEST(file_watcher, callback_registration_does_not_race_dispatch) {
     file_watcher_stop(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-event path strings live in a per-watcher arena that is rewound whenever the change ring is
 // drained.
 
@@ -531,7 +515,6 @@ UTEST(file_watcher, change_string_arena_rewinds_on_drain) {
     fl_arena_destroy(caller_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A directory moved into a recursively-watched tree via rename() arrives as IN_MOVED_TO, not
 // IN_CREATE. The inotify backend must add a watch for it just like a freshly created directory,
 // or files inside the moved-in subtree change silently with no events and no callbacks.
@@ -581,7 +564,6 @@ UTEST(file_watcher, moved_in_directory_becomes_watched) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_path_normalize_full follows standard lexical normalization (Go path.Clean / Rust path-clean): an absolute input
 // stays absolute (".." at the root is dropped - "/" has no parent), while a relative input keeps un-poppable ".."
 // segments so the result still points above its unknown base.

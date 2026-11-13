@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // loc_check: reports drift between source code and the localization String Tables. It never writes a table - the
 // default table is the catalog, hand-maintained, with translator context in its JSON5 comments.
 
@@ -32,7 +31,6 @@ static const char* k_usage
       "The code scan matches `\"SID_...` string literals only; a SID assembled at runtime is not\n"
       "seen.\n";
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Whole file into arena. Empty on any failure, which the checker reports as an unreadable table.
 
 static FlString read_file(FlArena* arena, FlString path) {
@@ -47,8 +45,6 @@ static FlString read_file(FlArena* arena, FlString path) {
     }
     return string_from_cstr_len((const char*)data, (u64)size);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct SourceList {
     LocCheckSource* items;
@@ -74,7 +70,6 @@ static void source_list_add(SourceList* self, FlString path) {
     self->items[self->count++] = (LocCheckSource) { .path = path, .text = text };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Collect the .c and .rs files under path, recursing into subdirectories. A plain file is taken as-is whatever its
 // extension, so a single file can be pointed at directly.
 
@@ -107,7 +102,6 @@ static void collect_sources(SourceList* self, FlString path) {
     dir_close_os(&dir);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Read the manifest and turn its language list into tables, the default language first. Returns 0 when the manifest
 // itself is unusable.
 
@@ -176,8 +170,6 @@ static u32 load_tables(FlArena* arena, FlString manifest_path, LocCheckTable** o
     *out_tables = tables;
     return count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
     FlArena* arena = fl_init(0);

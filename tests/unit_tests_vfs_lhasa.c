@@ -9,8 +9,6 @@
 #define LHA_TEST_CONTENT "Hello from LHA test archive!\n"
 #define LHA_FIRST_PIECE_SIZE 10
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_lhasa, an_lha_on_disk_reads_whole_and_in_pieces_of_any_size) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -38,8 +36,6 @@ UTEST(vfs_lhasa, an_lha_on_disk_reads_whole_and_in_pieces_of_any_size) {
     file_remove_directory_recursive_os(dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_lhasa, asking_for_the_size_between_two_reads_keeps_the_read_position) {
     // get_size must not rewind the handle to the start of its entry.
@@ -84,8 +80,6 @@ UTEST(vfs_lhasa, asking_for_the_size_between_two_reads_keeps_the_read_position) 
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_lhasa, a_directory_entry_lists_as_a_directory_and_an_empty_stored_file_as_a_file) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -110,8 +104,6 @@ UTEST(vfs_lhasa, a_directory_entry_lists_as_a_directory_and_an_empty_stored_file
     file_remove_directory_recursive_os(dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_lhasa, opening_a_member_that_is_not_in_the_archive_fails_at_open) {
     const FlVfsPlugin* plugin = vfs_driver_lhasa();

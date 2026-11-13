@@ -14,7 +14,6 @@
 #include "ui_variant_helpers.h"
 #include "ui_widget_internal.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Constants
 
 // Smooth scroll lerp factor - shared scroll_core default (higher = faster)
@@ -25,7 +24,6 @@
 #define SCROLLBAR_MIN_THUMB_SIZE 40.0f // Minimum scrollbar thumb height
 #define SCROLLBAR_PADDING 2.0f         // Padding around scrollbar
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Test-only: makes state creation report allocation failure so the begin-path fallback can be exercised.
 // Only affects scroll areas without existing state; already-created states are returned as usual.
 static bool g_force_state_alloc_failure = false;
@@ -61,16 +59,12 @@ static ScrollAreaState* get_or_create_scroll_state(u32 element_id) {
     return hashmap_get(&ctx->shared->scroll_states, element_id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void update_smooth_scroll(ScrollAreaState* state, FlVec2 max_scroll, f32 delta_time) {
     state->scroll_offset.x = scroll_smooth_step(state->scroll_offset.x, state->scroll_target.x, max_scroll.x,
                                                 SCROLL_SMOOTH_LERP_SPEED, delta_time);
     state->scroll_offset.y = scroll_smooth_step(state->scroll_offset.y, state->scroll_target.y, max_scroll.y,
                                                 SCROLL_SMOOTH_LERP_SPEED, delta_time);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVec2 calculate_max_scroll(FlVec2 content_size, FlVec2 viewport_size) {
     return (FlVec2) {
@@ -79,7 +73,6 @@ static FlVec2 calculate_max_scroll(FlVec2 content_size, FlVec2 viewport_size) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Containers must be registered with ui_track_element for get_element_bounds to find them (scroll areas do so
 // in _begin).
 
@@ -93,7 +86,6 @@ static bool get_element_bounds(u32 element_id, FlVec2* out_pos, FlVec2* out_size
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pointer is over the container's clip-cut rect from the previous frame's hit test. A scroll area not yet in
 // item_state (first frame) is not hovered.
 
@@ -105,8 +97,6 @@ static bool scroll_area_hovered(FlUiCtx* ctx, u32 element_id) {
 
     return ui_item_hit_contains(item, (Vec2) { ctx->input_state.mouse.x, ctx->input_state.mouse.y });
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool scroll_area_is_ancestor(FlUiCtx* ctx, u32 ancestor_id, u32 area_id) {
     u32 parent_id = area_id;
@@ -123,7 +113,6 @@ static bool scroll_area_is_ancestor(FlUiCtx* ctx, u32 ancestor_id, u32 area_id) 
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The wheel goes to the innermost hovered scroll area only: an area takes it when hovered and no scroll area nested
 // inside it is also hovered.
 
@@ -140,8 +129,6 @@ static bool scroll_area_owns_wheel(FlUiCtx* ctx, u32 element_id) {
     }
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void handle_mouse_wheel(ScrollAreaState* state, FlVec2 max_scroll, f32 scroll_speed, bool smooth_scroll) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -177,8 +164,6 @@ static void handle_mouse_wheel(ScrollAreaState* state, FlVec2 max_scroll, f32 sc
         state->scroll_target = state->scroll_offset;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlSignal ui_scrollbar_impl(float* value, FlScrollbarConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -312,8 +297,6 @@ FlSignal ui_scrollbar_impl(float* value, FlScrollbarConfig cfg) {
     return signal;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void render_vertical_scrollbar(ScrollAreaState* state, FlVec2 viewport_size, FlVec2 content_size,
                                       FlScrollbarDisplayMode scrollbar_mode, u32 scroll_area_id) {
     if (scrollbar_mode == FlScrollbarDisplayMode_Never || content_size.y <= viewport_size.y) {
@@ -358,8 +341,6 @@ static void render_vertical_scrollbar(ScrollAreaState* state, FlVec2 viewport_si
     // clang-format on
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Pushes one entry. Past SCROLL_AREA_STACK_MAX_DEPTH the area is counted in scroll_area_overflow instead, so
 // the matching fl_scroll_area_end retires it without popping an enclosing area's entry.
 static void scroll_stack_push(FlUiCtx* ctx, ScrollAreaStackEntry entry) {
@@ -378,8 +359,6 @@ static void scroll_stack_push(FlUiCtx* ctx, ScrollAreaStackEntry entry) {
     }
     ctx->scroll_area_stack[ctx->scroll_area_stack_depth++] = entry;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_scroll_area_begin(FlLayoutId id, FlScrollAreaConfig config) {
     FlUiCtx* ctx = ui_get_ctx();
@@ -473,8 +452,6 @@ void fl_scroll_area_begin(FlLayoutId id, FlScrollAreaConfig config) {
     fl_layout_configure(layout_config);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_scroll_area_end(void) {
     FlUiCtx* ctx = ui_get_ctx();
 
@@ -515,8 +492,6 @@ void fl_scroll_area_end(void) {
     fl_layout_end();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool ui_is_widget_visible(FlLayoutId widget_id) {
     FlUiCtx* ctx = ui_get_ctx();
     if (ctx == nullptr) {
@@ -550,13 +525,9 @@ bool ui_is_widget_visible(FlLayoutId widget_id) {
     return (widget_bottom > viewport_top && widget_top < viewport_bottom);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_scroll_to_widget(FlLayoutId widget_id) {
     ui_scroll_to_widget_ex(widget_id, (FlScrollToOptions) { .margin = SCROLL_DEFAULT_MARGIN });
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Internal helper that works with raw Clay ID (used by ui_scroll_auto_to_focused)
 static void scroll_to_widget_internal(u32 widget_clay_id, FlScrollToOptions opts) {
@@ -634,14 +605,10 @@ static void scroll_to_widget_internal(u32 widget_clay_id, FlScrollToOptions opts
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_scroll_to_widget_ex(FlLayoutId widget_id, FlScrollToOptions opts) {
     u32 id = ui_layout_id_to_clay_id(widget_id);
     scroll_to_widget_internal(id, opts);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_scroll_auto_to_focused(void) {
     FlUiCtx* ctx = ui_get_ctx();

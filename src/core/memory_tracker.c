@@ -9,12 +9,9 @@
 #include "sprintf.h"
 #include <stdarg.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Memory Tracker Implementation
 //
 // Collects arena and mimalloc statistics on-demand and outputs formatted reports.
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void sb_append_line(FlStringBuilder* sb, FlArena* output_arena, const char* format, ...) {
     arena_scratch_auto_conflict(temp, output_arena);
@@ -26,8 +23,6 @@ static void sb_append_line(FlStringBuilder* sb, FlArena* output_arena, const cha
 
     *sb = fl_sb_append_string(*sb, line);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void sb_append_size(FlStringBuilder* sb, FlArena* output_arena, const char* label, u64 bytes) {
     arena_scratch_auto_conflict(temp, output_arena);
@@ -49,8 +44,6 @@ static void sb_append_size(FlStringBuilder* sb, FlArena* output_arena, const cha
         sb_append_line(sb, output_arena, "%s%S\n", label, size_str);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void sb_append_number(FlStringBuilder* sb, FlArena* output_arena, const char* label, u64 number) {
     arena_scratch_auto_conflict(temp, output_arena);
@@ -87,19 +80,13 @@ static void sb_append_number(FlStringBuilder* sb, FlArena* output_arena, const c
     sb_append_line(sb, output_arena, "%s%S\n", label, num_str);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_memory_tracker_init(void) {
     arena_tracker_init();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_memory_tracker_destroy(void) {
     arena_tracker_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
     u32 count;
@@ -116,8 +103,6 @@ static void collect_arena_stats_callback(FlArena* arena, void* user_data) {
     collector->total_used += arena->pos;
     collector->total_peak += atomic_load_explicit(&arena->peak_offset, memory_order_relaxed);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_memory_tracker_get_stats(FlMemoryStats* stats) {
     FL_VALIDATE(stats != nullptr);
@@ -141,16 +126,12 @@ void fl_memory_tracker_get_stats(FlMemoryStats* stats) {
     stats->total_arena_peak = collector.total_peak;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct {
     FlStringBuilder* sb;
     FlArena* output_arena;
     u32 current_thread_id;
     bool first_arena_in_thread;
 } ArenaDumpData;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dump_arena_callback(FlArena* arena, void* user_data) {
     ArenaDumpData* data = (ArenaDumpData*)user_data;
@@ -239,8 +220,6 @@ static void dump_arena_callback(FlArena* arena, void* user_data) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_memory_tracker_dump_string(FlArena* arena) {
     FL_VALIDATE_RET(arena != nullptr, string_empty());
 
@@ -311,8 +290,6 @@ FlString fl_memory_tracker_dump_string(FlArena* arena) {
     return fl_sb_to_string(sb);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_memory_tracker_dump_to_file(FlString filepath) {
     FL_VALIDATE_RET(!string_is_empty(filepath), false);
 
@@ -329,15 +306,11 @@ bool fl_memory_tracker_dump_to_file(FlString filepath) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct {
     FlStringBuilder* sb;
     FlArena* output_arena;
     bool first;
 } JsonArenaDumpData;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dump_arena_json_callback(FlArena* arena, void* user_data) {
     JsonArenaDumpData* data = (JsonArenaDumpData*)user_data;
@@ -373,8 +346,6 @@ static void dump_arena_json_callback(FlArena* arena, void* user_data) {
 
     *data->sb = fl_sb_append_string(*data->sb, entry);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_memory_tracker_export_json_string(FlArena* arena) {
     FL_VALIDATE_RET(arena != nullptr, string_empty());
@@ -434,8 +405,6 @@ FlString fl_memory_tracker_export_json_string(FlArena* arena) {
 
     return fl_sb_to_string(sb);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_memory_tracker_export_json_to_file(FlString filepath) {
     FL_VALIDATE_RET(!string_is_empty(filepath), false);

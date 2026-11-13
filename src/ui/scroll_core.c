@@ -1,7 +1,6 @@
 #include "scroll_core.h"
 #include <core/math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pure scroll math (see header) - single-axis, frame-rate independent.
 
 #define SCROLL_SNAP_EPSILON 0.5f // Snap offset to target once within this many pixels
@@ -17,13 +16,9 @@ f32 scroll_smooth_step(f32 offset, f32 target, f32 max, f32 speed, f32 dt) {
     return clamp_f32_impl(offset, 0.0f, max);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f32 scroll_max(f32 content, f32 viewport) {
     return max_f32_impl(0.0f, content - viewport);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void scroll_visible_range(f32 scroll_offset, f32 viewport, f32 item_stride, u32 total_count, u32 buffer, u32* out_start,
                           u32* out_end) {

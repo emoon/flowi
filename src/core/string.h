@@ -26,7 +26,6 @@ _Static_assert(sizeof(FlStringBuilder) == 16, "FlStringBuilder size drift vs <fl
 _Static_assert(offsetof(FlStringBuilder, arena) == 0, "FlStringBuilder.arena offset drift");
 _Static_assert(offsetof(FlStringBuilder, start_pos) == 8, "FlStringBuilder.start_pos offset drift");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal aliases mapping the short core names onto the canonical Fl* names
 
 #define StringParseStatus FlStringParseStatus
@@ -37,7 +36,6 @@ _Static_assert(offsetof(FlStringBuilder, start_pos) == 8, "FlStringBuilder.start
 #define StringParseStatus_Empty FlStringParseStatus_Empty
 #define StringParseStatus_InvalidHexPrefix FlStringParseStatus_InvalidHexPrefix
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Result types using the shared enum
 
 #define StringParseResultU64 FlStringParseResultU64
@@ -47,19 +45,15 @@ _Static_assert(offsetof(FlStringBuilder, start_pos) == 8, "FlStringBuilder.start
 #define StringParseResultF64 FlStringParseResultF64
 #define StringParseResultF32 FlStringParseResultF32
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct StringArray {
     FlString* items;
     int count;
     u32 capacity;
 } StringArray;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Declared in <flowi/string/string.h>; the va_list variant is not part of the generated surface.
 FlStringBuilder sb_vappendf(FlStringBuilder sb, const char* format, va_list args);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sprintf.h includes this header back for FlString; both are #pragma once.
 
 #include "sprintf.h"

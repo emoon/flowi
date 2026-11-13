@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // flowi window backend interface - the single OS-integration seam: window lifecycle, the event pump (demuxed per
 // window by OS window id), keyboard/mouse/cursor/relative-mouse/warp, per-window drawable size + content scale,
 // and presentation. One backend owns the OS connection and creates per-window handles.
@@ -17,13 +16,11 @@
 struct FlArena;
 struct FlUiCtx;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Opaque, backend-owned OS-window handle. Each concrete backend defines its own struct for this incomplete type
 // and casts internally - the host never sees its layout.
 
 typedef struct FlWindow FlWindow;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Window creation parameters - title plus the initial drawable size in physical pixels and top-left position.
 
 #define FL_WINDOW_POS_DEFAULT (-2147483647 - 1) // INT32_MIN: "let the backend choose" sentinel for x/y
@@ -38,7 +35,6 @@ typedef struct FlWindowConfig {
     bool resizable;  // the user can resize the window
 } FlWindowConfig;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction mode: a backend instance is built for exactly one present path, and the runner selects it by
 // whichever present slot is non-null.
 
@@ -48,7 +44,6 @@ typedef enum FlWindowBackendMode {
     FlWindowBackendMode_Metal,    // GPU windows on APPLE: composite a Surface Texture over a CAMetalLayer (present)
 } FlWindowBackendMode;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Backend interface - one injected object, per-window seams.
 
 typedef struct FlWindowBackend {
@@ -107,13 +102,11 @@ typedef struct FlWindowBackend {
     void (*destroy)(void* ud);
 } FlWindowBackend;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Factory - headless backend. Records cursor/relative-mode/warp state and queues injected events the next pump
 // drains.
 
 FlWindowBackend headless_window_backend_create(struct FlArena* arena);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Factory - SDL backend. Owns the OS connection (SDL video) and creates per-window OS windows; the construction
 // mode picks the presentation path:
 //   FlWindowBackendMode_Gl - SDL-GL windows carrying a shared GL context + the fullscreen-quad compositor;
@@ -127,7 +120,6 @@ FlWindowBackend headless_window_backend_create(struct FlArena* arena);
 
 FlWindowBackend sdl_window_backend_create(struct FlArena* arena, FlWindowBackendMode mode);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Headless backend test harness - inject events into a specific window's queue (the next pump_events drains it
 // into that window's FlUiCtx), and read back the cursor / hidden-drag state the core flushed on the last tick.
 

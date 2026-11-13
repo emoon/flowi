@@ -6,13 +6,9 @@
 
 #define RenderMask_Corners_Shift 17
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct FlArena;
 struct GradientQuadState;
 struct ImageData;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef enum RenderMask {
     RenderMask_None = 0,
@@ -45,8 +41,6 @@ typedef enum RenderCorner {
 #define render_mask_corner(corner) ((u32)(corner) << RenderMask_Corners_Shift)
 #define render_mask_corner_of(mask) ((RenderCorner)((u32)(mask) >> RenderMask_Corners_Shift))
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct RenderText {
     f32x4 aabb;
     u8x16 color;
@@ -56,8 +50,6 @@ typedef struct RenderText {
     int stride;
 } RenderText;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct ScaledTexturePrecomputed {
     u16* load_offsets;      // Per-destination-pixel: load offset for 8-pixel group starting here
     u8x16* shuffle_masks;   // Per-destination-pixel: shuffle mask for 8-pixel group starting here
@@ -65,8 +57,6 @@ typedef struct ScaledTexturePrecomputed {
     int dst_width;
     bool wide_spread; // 8-pixel source spread can exceed the 32-byte shuffle window (downscale > ~4.4x)
 } ScaledTexturePrecomputed;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct RenderCommand {
     RenderMask mask;
@@ -90,8 +80,6 @@ typedef struct RenderCommand {
         RenderText render_text;
     };
 } RenderCommand;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void sr_command_setup(struct FlArena* arena, RenderCommand* command);
 int sr_command_split_rounded(struct FlArena* arena, RenderCommand* initial_command, f32x4 corners);

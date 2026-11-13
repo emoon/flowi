@@ -104,8 +104,6 @@ outright (ADR-0044).
   (ADR-0044).
 - **No issue numbers in code comments.** A comment describes the code, not the
   ticket that prompted it.
-- New C functions are preceded by the full-width `///////…` separator line used
-  throughout the sources.
 
 ## Naming
 

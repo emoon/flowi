@@ -9,8 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_path_normalize(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
         return (FlString) { 0 };
@@ -61,8 +59,6 @@ FlString fl_path_normalize(struct FlArena* arena, FlString path) {
     return (FlString) { .data = buffer, .length = out_len, .is_ascii = path.is_ascii };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_path_normalize_full(struct FlArena* arena, FlString path) {
     // Absolute-ness must be recorded up front: path_split drops the leading empty
     // segment, so nothing downstream can recover it.
@@ -111,8 +107,6 @@ FlString fl_path_normalize_full(struct FlArena* arena, FlString path) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 StringArray path_split(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
         return (StringArray) { .items = nullptr, .count = 0, .capacity = 0 };
@@ -143,8 +137,6 @@ StringArray path_split(struct FlArena* arena, FlString path) {
 
     return (StringArray) { .items = segments, .count = segment_idx, .capacity = count };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_path_join(struct FlArena* arena, FlString base, FlString relative) {
     if (base.length == 0) {
@@ -205,8 +197,6 @@ FlString fl_path_join(struct FlArena* arena, FlString base, FlString relative) {
     return (FlString) { .data = buffer, .length = total_len, .is_ascii = base.is_ascii && relative.is_ascii };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_path_get_extension(FlString path) {
     if (path.length == 0) {
         return (FlString) { 0 };
@@ -234,8 +224,6 @@ FlString fl_path_get_extension(FlString path) {
     return (FlString) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString path_get_filename_prefix(FlString path) {
     if (path.length == 0) {
         return (FlString) { 0 };
@@ -259,8 +247,6 @@ FlString path_get_filename_prefix(FlString path) {
     return (FlString) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_path_get_filename(FlString path) {
     if (path.length == 0) {
         return (FlString) { 0 };
@@ -281,8 +267,6 @@ FlString fl_path_get_filename(FlString path) {
     return (
         FlString) { .data = path.data + last_sep + 1, .length = path.length - last_sep - 1, .is_ascii = path.is_ascii };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_path_get_directory(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
@@ -308,8 +292,6 @@ FlString fl_path_get_directory(struct FlArena* arena, FlString path) {
     return fl_string_copy(arena, (FlString) { .data = path.data, .length = (u64)last_sep });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_path_get_basename(struct FlArena* arena, FlString path) {
     FlString filename = fl_path_get_filename(path);
     if (filename.length == 0) {
@@ -330,8 +312,6 @@ FlString fl_path_get_basename(struct FlArena* arena, FlString path) {
 
     return fl_string_copy(arena, filename);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_path_is_absolute(FlString path) {
     if (path.length == 0) {
@@ -364,13 +344,9 @@ bool fl_path_is_absolute(FlString path) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_path_is_relative(FlString path) {
     return !fl_path_is_absolute(path);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_path_make_absolute(struct FlArena* arena, FlString base, FlString path) {
     if (fl_path_is_absolute(path)) {
@@ -379,8 +355,6 @@ FlString fl_path_make_absolute(struct FlArena* arena, FlString base, FlString pa
 
     return fl_path_join(arena, base, path);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_path_equals(FlString path1, FlString path2) {
     if (path1.length == 0 && path2.length == 0) {
@@ -427,8 +401,6 @@ bool fl_path_equals(FlString path1, FlString path2) {
 #endif
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_path_has_extension(FlString path, FlString extension) {
     FlString ext = fl_path_get_extension(path);
     if (ext.length == 0 || extension.length == 0) {
@@ -448,8 +420,6 @@ bool fl_path_has_extension(FlString path, FlString extension) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_path_remove_trailing_separator(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
         return (FlString) { 0 };
@@ -467,8 +437,6 @@ FlString fl_path_remove_trailing_separator(struct FlArena* arena, FlString path)
     return fl_string_copy(arena, path);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_path_ensure_trailing_separator(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
         return fl_string_copy(arena, (FlString) { .data = "/", .length = 1 });
@@ -484,8 +452,6 @@ FlString fl_path_ensure_trailing_separator(struct FlArena* arena, FlString path)
 
     return (FlString) { .data = buffer, .length = path.length + 1, .is_ascii = path.is_ascii };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_path_get_parent(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
@@ -516,8 +482,6 @@ FlString fl_path_get_parent(struct FlArena* arena, FlString path) {
     return fl_string_copy(arena, (FlString) { .data = path.data, .length = (u64)last_sep });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_path_has_separator(FlString path) {
     for (u64 i = 0; i < path.length; i++) {
         if (path_is_separator(path.data[i])) {
@@ -526,8 +490,6 @@ bool fl_path_has_separator(FlString path) {
     }
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_path_to_forward_slashes(struct FlArena* arena, FlString path) {
     if (path.length == 0) {
@@ -542,7 +504,6 @@ FlString fl_path_to_forward_slashes(struct FlArena* arena, FlString path) {
     return (FlString) { .data = buffer, .length = path.length, .is_ascii = path.is_ascii };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Path components functions for resolving a path through nested containers
 
 PathComponents path_components(struct FlArena* arena, FlString path) {
@@ -557,8 +518,6 @@ PathComponents path_components(struct FlArena* arena, FlString path) {
     return (
         PathComponents) { .segments = segments, .is_absolute = is_absolute, .has_trailing_slash = has_trailing_slash };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString path_reconstruct_from_segments(const PathComponents* components, const int start, const u32 count,
                                         struct FlArena* arena) {
@@ -608,14 +567,11 @@ FlString path_reconstruct_from_segments(const PathComponents* components, const 
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Directory searching and current directory utilities
 
 FlString path_get_current_directory(struct FlArena* arena) {
     return get_current_directory_os(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString path_find_directory(struct FlArena* arena, FlString start_directory) {
     if (start_directory.length == 0) {

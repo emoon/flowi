@@ -3,13 +3,10 @@
 
 #define PI_F 3.14159265358979323846f
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // OKLab conversion, after Björn Ottosson's reference implementation:
 // https://bottosson.github.io/posts/oklab/
 //
 // Path: sRGB <-> linear RGB <-> OKLab <-> OKLCH. Matrix constants are from the Oklab paper.
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline f32 srgb_to_linear(f32 c) {
     if (c <= 0.04045f)
@@ -31,7 +28,6 @@ static inline f32 clamp01(f32 x) {
     return x;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // linear sRGB <-> OKLab
 
 static FlColorOKLab linear_srgb_to_oklab(f32 r, f32 g, f32 b) {
@@ -64,7 +60,6 @@ static void oklab_to_linear_srgb(FlColorOKLab lab, f32* r, f32* g, f32* b) {
     *b = -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sRGB (0-255) <-> OKLab
 
 FlColorOKLab color_rgb_to_oklab(FlColor rgb) {
@@ -91,8 +86,6 @@ FlColor color_oklab_to_rgb(FlColorOKLab lab) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlColorOKLCH color_oklab_to_oklch(FlColorOKLab lab) {
     f32 c = sqrtf(lab.a * lab.a + lab.b * lab.b);
     f32 h = atan2f(lab.b, lab.a) * (180.0f / PI_F);
@@ -110,7 +103,6 @@ FlColorOKLab color_oklch_to_oklab(FlColorOKLCH lch) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sRGB (0-255) <-> OKLCH
 
 FlColorOKLCH color_rgb_to_oklch(FlColor rgb) {
@@ -120,8 +112,6 @@ FlColorOKLCH color_rgb_to_oklch(FlColor rgb) {
 FlColor color_oklch_to_rgb(FlColorOKLCH oklch) {
     return color_oklab_to_rgb(color_oklch_to_oklab(oklch));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlColor color_lighten_perceptual(FlColor base, f32 amount) {
     FlColor out = color_oklch_to_rgb(color_oklch_lighten(color_rgb_to_oklch(base), amount));
@@ -153,8 +143,6 @@ FlColor color_lerp_oklab(FlColor a, FlColor b, f32 t) {
     out.a = (u8)(a.a + (b.a - a.a) * t);
     return out;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 f32 color_perceptual_lightness(FlColor color) {
     return color_rgb_to_oklab(color).L;

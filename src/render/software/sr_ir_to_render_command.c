@@ -1,11 +1,9 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Software backend: neutral render IR -> internal RenderCommand list.
 //
 // The neutral IR (ui/render_ir.h) carries drawing intent only: colors are not premultiplied, the frame's
 // global_alpha is not folded in, gradients are four per-corner colors, rounded rects are not pre-split, and
 // resources are referenced by handle, never by baked pixels. This translator turns all of that into the
 // software renderer's internal RenderCommand form.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "sr_ir_to_render_command.h"
 
@@ -25,7 +23,6 @@
 #include <assert.h>
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Color helpers - the IR stores raw intent; folding global_alpha and premultiplying happens here.
 
 static inline u8 sr_fold_global_alpha(u8 a, u8 global_alpha) {
@@ -85,7 +82,6 @@ static inline float sr_clamp_radius(float radius, float max_radius) {
     return fminf(fmaxf(radius, 0.0f), max_radius);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FillRect - solid (four equal corners) or gradient (four differing). Gradient setup is deferred to
 // sr_command_setup; rounded corners are clamped and split here.
 
@@ -125,7 +121,6 @@ static void emit_fill_rect(FlArena* commands_arena, const FlCmdFillRect* fr, u8 
     sr_command_split_rounded(commands_arena, &cmd, corners);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Border - per-side widths plus an outer corner radius, emitted as corner and edge quads.
 
 static void add_border_corner(FlArena* commands_arena, u8x16 color, RenderMask base_mask, float x, float y,
@@ -209,7 +204,6 @@ static void emit_border(FlArena* commands_arena, const FlCmdBorder* b, u8 global
                     global_alpha);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TextRun - re-resolve each pre-positioned glyph by id through the glyph cache and emit it.
 
 static void emit_text_run(FlArena* commands_arena, SwGlyphCache* glyph_cache, const FlCmdTextRun* tr, u8 global_alpha) {
@@ -227,7 +221,6 @@ static void emit_text_run(FlArena* commands_arena, SwGlyphCache* glyph_cache, co
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image - color mode (static handle or dynamic RGBA buffer) and alpha-coverage mode (bitmap glyphs / alpha-only
 // dynamic images). Source resolution and format conversion happen here, never in the IR.
 
@@ -322,8 +315,6 @@ static void emit_image(FlArena* commands_arena, FlArena* state_arena, const FlCm
 
     cmd->mask |= (width_matches && height_matches) ? RenderMask_TextureSameSize : RenderMask_TextureScaled;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UiRenderCommandsArray sr_ir_to_render_commands(FlArena* commands_arena, FlArena* state_arena, SwGlyphCache* glyph_cache,
                                                const void* ir_commands, size_t ir_bytes, u8 global_alpha) {

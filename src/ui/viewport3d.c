@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Viewport3d + Mesh: the core half of flowi's minimal 3D API.
 //
 // A Viewport3d is an ordinary layout element whose content the render backend rasterizes with the hardware
@@ -23,7 +22,6 @@
 #include <string.h>
 #include <ui/render_ir.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fixed live-viewport and per-viewport draw caps; overflow is logged.
 
 #define VIEWPORT3D_MAX 8
@@ -61,8 +59,6 @@ static const f32 k_identity[16] = {
     0.0f, 0.0f, 1.0f, 0.0f, //
     0.0f, 0.0f, 0.0f, 1.0f, //
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The active backend when it implements the 3D seam, else nullptr. The three entries are bound as a group, so
 // testing one tests all (see the seam's contract in ui/render_backend.h).
@@ -113,8 +109,6 @@ static Viewport3d* find_or_create(u32 element_id) {
     return slot;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void viewport3d_release_owner(const FlUiCtx* ctx) {
     u32 kept = 0;
     for (u32 i = 0; i < s_viewport_count; i++) {
@@ -128,7 +122,6 @@ void viewport3d_release_owner(const FlUiCtx* ctx) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Emit the viewport's layout element: a grow-sized box drawing the previous frame's color target as an
 // ordinary image, or - before the first submit, and under a backend with no 3D seam - a flat placeholder.
 // Tracked by id so the next frame can read back the rect this one lays out.
@@ -155,8 +148,6 @@ static void emit_element(FlLayoutId id, FlImageHandle color) {
     fl_layout_end();
     ui_track_element(id);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVec2 fl_viewport3d_begin(FlLayoutId id) {
     if (s_open != nullptr) {
@@ -186,8 +177,6 @@ FlVec2 fl_viewport3d_begin(FlLayoutId id) {
     return (FlVec2) { .x = (f32)self->width, .y = (f32)self->height };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_viewport3d_set_view_projection(const float* matrix, uint32_t matrix_size) {
     if (s_open == nullptr) {
         log_error("viewport3d: set_view_projection() outside a begin()/end() bracket");
@@ -199,8 +188,6 @@ void fl_viewport3d_set_view_projection(const float* matrix, uint32_t matrix_size
     }
     memcpy(s_open->view_projection, matrix, sizeof(s_open->view_projection));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Append one draw to the open viewport's list - the bracket check, the invalid-mesh drop and the overflow
 // diagnostic live here once for both public draw entry points.
@@ -222,22 +209,17 @@ static void push_draw(FlViewport3dDraw draw, const char* what) {
     s_open->draws[s_open->draw_count++] = draw;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_viewport3d_draw_mesh(FlMeshHandle mesh, FlImageHandle texture, FlImageFilter filter) {
     push_draw((FlViewport3dDraw) { .mesh = mesh, .texture = texture, .filter = filter, .depth_test = true },
               "draw_mesh");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lines carry no texture and are drawn in their vertex colors; depth testing is the caller's choice.
 
 void fl_viewport3d_draw_lines(FlMeshHandle mesh, bool depth_test) {
     push_draw((FlViewport3dDraw) { .mesh = mesh, .texture = FL_IMAGE_HANDLE_INVALID, .depth_test = depth_test },
               "draw_lines");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_viewport3d_end(void) {
     Viewport3d* self = s_open;
@@ -261,7 +243,6 @@ void fl_viewport3d_end(void) {
                                self->view_projection, self->draws, self->draw_count);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Retained meshes are backend-shared resources with no core-side state: these validate the geometry and forward
 // to the backend.
 
@@ -286,21 +267,15 @@ static FlMeshHandle create_mesh(const FlMeshVertex* vertices, u32 vertices_size,
     return backend->mesh_create(backend->user_data, vertices, vertices_size, indices, indices_size, topology);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlMeshHandle fl_mesh_create(const FlMeshVertex* vertices, uint32_t vertices_size, const uint16_t* indices,
                             uint32_t indices_size) {
     return create_mesh(vertices, vertices_size, indices, indices_size, FlMeshTopology_Triangles);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlMeshHandle fl_mesh_create_lines(const FlMeshVertex* vertices, uint32_t vertices_size, const uint16_t* indices,
                                   uint32_t indices_size) {
     return create_mesh(vertices, vertices_size, indices, indices_size, FlMeshTopology_Lines);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_mesh_destroy(FlMeshHandle mesh) {
     const FlRenderBackend* backend = renderer_3d();

@@ -11,7 +11,6 @@
 
 #include "unit_tests_common.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // image_free must drive the backend's release_image seam so the GPU backend can reclaim the freed handle's
 // atlas cell / slot texture. Uses the global image system (image_create_system), which image_free reaches.
 
@@ -49,7 +48,6 @@ UTEST(image_free, unbound_release_seam_is_noop) {
     image_destroy_system();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_app create/destroy/create - a sole-owner fl_app must reset the process-global singletons (VFS, image
 // system) on destroy so a second create in the same process re-initializes them instead of reusing pointers
 // into the destroyed app arena. Only a sole-owner fl_app exercises the owner-gated teardown path - after another
@@ -82,8 +80,6 @@ UTEST(fl_app, create_destroy_create_reinitializes_global_singletons) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST_STATE();
 
 // Each registered case is replaced by run_isolated_case, which keeps the original function and index in a side
@@ -95,16 +91,12 @@ typedef struct IsolatedCase {
 
 static IsolatedCase* s_isolated_cases;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void run_isolated_case(int* result, size_t slot) {
     const IsolatedCase wrapped = s_isolated_cases[slot];
     process_singletons_reset();
     wrapped.func(result, wrapped.index);
     process_singletons_reset();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool isolate_cases(void) {
     s_isolated_cases = arena_alloc_array(s_arena, IsolatedCase, utest_state.tests_length);
@@ -118,8 +110,6 @@ static bool isolate_cases(void) {
     }
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, const char* const argv[]) {
     s_arena = fl_init(1); // one job worker thread, distinct from the (main) test thread

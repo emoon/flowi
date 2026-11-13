@@ -10,8 +10,6 @@ static FlVfsMount* mount_fixture(const char* name) {
     return vfs_test_mount(vfs_fixture_path(s_arena, string_from_cstr(name)));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool expect_reads(FlVfsMount* mount, const char* const* names, const char* const* contents, int count) {
     for (int i = 0; i < count; i++) {
         if (!vfs_expect_read(mount, string_from_cstr(names[i]), string_from_cstr(contents[i]))) {
@@ -21,7 +19,6 @@ static bool expect_reads(FlVfsMount* mount, const char* const* names, const char
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mounting an archive and reading what is in it
 
 UTEST(vfs_libarchive, a_zip_mounts_and_its_files_read_back_with_their_exact_content) {
@@ -38,8 +35,6 @@ UTEST(vfs_libarchive, a_zip_mounts_and_its_files_read_back_with_their_exact_cont
     fl_vfs_mount_close(mount);
     vfs_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_libarchive, a_zip_made_by_another_tool_reads_files_at_every_depth) {
     ASSERT_TRUE(vfs_test_begin());
@@ -68,8 +63,6 @@ UTEST(vfs_libarchive, a_zip_made_by_another_tool_reads_files_at_every_depth) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_libarchive, all_files_of_a_zip_can_be_in_flight_at_once) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -96,8 +89,6 @@ UTEST(vfs_libarchive, all_files_of_a_zip_can_be_in_flight_at_once) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_libarchive, a_standalone_gzip_mounts_as_one_file_without_the_gz_suffix) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -111,7 +102,6 @@ UTEST(vfs_libarchive, a_standalone_gzip_mounts_as_one_file_without_the_gz_suffix
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Failures
 
 UTEST(vfs_libarchive, a_tar_gz_mounts_as_its_members_not_as_one_file) {
@@ -128,8 +118,6 @@ UTEST(vfs_libarchive, a_tar_gz_mounts_as_its_members_not_as_one_file) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_libarchive, a_file_that_is_not_in_the_zip_fails_to_read) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -141,8 +129,6 @@ UTEST(vfs_libarchive, a_file_that_is_not_in_the_zip_fails_to_read) {
     fl_vfs_mount_close(mount);
     vfs_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_libarchive, files_named_zip_that_are_not_archives_end_in_a_mount_error) {
     ASSERT_TRUE(vfs_test_begin());
@@ -160,8 +146,6 @@ UTEST(vfs_libarchive, files_named_zip_that_are_not_archives_end_in_a_mount_error
 
     vfs_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_libarchive, listing_a_directory_that_is_not_in_the_zip_gives_an_empty_listing) {
     // An archive has no directory to be missing from: a path that names nothing lists as no entries, not as an error.
@@ -181,7 +165,6 @@ UTEST(vfs_libarchive, listing_a_directory_that_is_not_in_the_zip_gives_an_empty_
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Listings
 
 UTEST(vfs_libarchive, a_zip_lists_its_files_with_their_sizes_in_natural_order) {
@@ -208,8 +191,6 @@ UTEST(vfs_libarchive, a_zip_lists_its_files_with_their_sizes_in_natural_order) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_libarchive, a_zip_shows_its_directories_and_lists_into_them) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -233,8 +214,6 @@ UTEST(vfs_libarchive, a_zip_shows_its_directories_and_lists_into_them) {
     fl_vfs_mount_close(mount);
     vfs_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define MANY_ENTRIES 300
 
@@ -275,8 +254,6 @@ UTEST(vfs_libarchive, a_zip_with_more_than_256_entries_in_one_directory_lists_ev
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_libarchive, a_macosx_directory_entry_in_a_zip_does_not_nest_a_second_macosx_directory) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -304,7 +281,6 @@ UTEST(vfs_libarchive, a_macosx_directory_entry_in_a_zip_does_not_nest_a_second_m
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A directory mount reaches the archives in it
 
 UTEST(vfs_libarchive, a_directory_mount_lists_archives_flagged_and_reads_through_them) {
@@ -351,7 +327,6 @@ UTEST(vfs_libarchive, a_directory_mount_lists_archives_flagged_and_reads_through
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Archives made by other tools that sit inside each other. The generated nested archives are covered in
 // unit_tests_vfs.c; these have the extra fields and directory entries a real zip tool writes.
 
@@ -383,8 +358,6 @@ UTEST(vfs_libarchive, a_zip_inside_a_zip_mounts_lists_and_reads) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_libarchive, three_levels_of_zips_read_through_one_mount) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -404,8 +377,6 @@ UTEST(vfs_libarchive, three_levels_of_zips_read_through_one_mount) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_libarchive, a_nested_zip_path_mounts_directly) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -422,7 +393,6 @@ UTEST(vfs_libarchive, a_nested_zip_path_mounts_directly) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A large member and many archives read at once. The pattern is checked end to end, so a torn or reordered read is
 // seen.
 
@@ -431,8 +401,6 @@ UTEST(vfs_libarchive, a_nested_zip_path_mounts_directly) {
 static u8 large_file_byte(size_t position) {
     return (u8)('A' + (position % 26));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool large_file_matches(const FlVfsData* data) {
     if (!data->success || data->size != LARGE_FILE_SIZE) {
@@ -445,8 +413,6 @@ static bool large_file_matches(const FlVfsData* data) {
     }
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsMount* mount_generated_large_zip(FlArena* arena, FlString* dir_out) {
     u8* content = arena_alloc_array(arena, u8, LARGE_FILE_SIZE);
@@ -462,8 +428,6 @@ static FlVfsMount* mount_generated_large_zip(FlArena* arena, FlString* dir_out) 
     }
     return vfs_test_mount(file_build_path_os(arena, *dir_out, FL_S("large.zip")));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_libarchive, a_one_megabyte_member_reads_back_byte_for_byte) {
     ASSERT_TRUE(vfs_test_begin());
@@ -484,8 +448,6 @@ UTEST(vfs_libarchive, a_one_megabyte_member_reads_back_byte_for_byte) {
     file_remove_directory_recursive_os(dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define SAME_FILE_READS 8
 #define SAME_FILE_ROUNDS 5
@@ -517,8 +479,6 @@ UTEST(vfs_libarchive, many_reads_of_one_large_member_in_flight_each_get_the_whol
     file_remove_directory_recursive_os(dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct ArchiveReads {
     const char* archive;

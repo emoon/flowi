@@ -5,8 +5,6 @@
 #include "external/clay/clay.h"
 #include "ui_private.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Forward-declare a Clay internal function and its default sentinel (defined in clay.c via
 // CLAY_IMPLEMENTATION). This mirrors Clay_LayoutElementHashMapItem so the first two fields (boundingBox,
 // elementId) sit at matching offsets; only elementId.stringId is read.
@@ -37,13 +35,9 @@ FlString ui_get_clay_element_name(u32 element_id) {
     return (FlString) { .data = sid.chars, .length = (u64)sid.length };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 i32 ui_get_render_command_count(void) {
     return g_ui_ctx ? g_ui_ctx->last_render_command_count : 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static UiRenderCommandType map_clay_command_type(Clay_RenderCommandType t) {
     switch (t) {
@@ -65,8 +59,6 @@ static UiRenderCommandType map_clay_command_type(Clay_RenderCommandType t) {
             return UiRenderCmd_None;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Convert one Clay command into the Clay-independent snapshot type, copying the strings it exposes into
 // arena (the capture fields on FlUiCtx own them; see their declaration).
@@ -120,8 +112,6 @@ static void capture_render_command(UiRenderCommand* out, const Clay_RenderComman
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Snapshot the frame's Clay output into the context's owned, Clay-independent capture. Called from
 // ui_update_end, the one point where Clay's arrays and the caller strings they reference are all live.
 void ui_capture_render_commands(FlUiCtx* self, Clay_RenderCommandArray* commands) {
@@ -145,8 +135,6 @@ void ui_capture_render_commands(FlUiCtx* self, Clay_RenderCommandArray* commands
     self->last_render_commands = captured;
     self->last_render_command_count = count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_get_render_command(i32 index, UiRenderCommand* out) {
     if (!g_ui_ctx || index < 0 || index >= g_ui_ctx->last_render_command_count || !out) {

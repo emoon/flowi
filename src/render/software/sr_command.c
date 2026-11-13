@@ -6,7 +6,6 @@
 #include "sr_gradient_interpolation.h"
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pre-compute load_offset and shuffle_mask for every possible starting position, so tiles can start at any
 // position without runtime computation.
 
@@ -73,8 +72,6 @@ static ScaledTexturePrecomputed* calculate_shuffle_tables(FlArena* arena, float 
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void sr_command_setup(FlArena* arena, RenderCommand* command) {
     if (command->mask & RenderMask_ColorGradient) {
         i32x4 rect_int = f32x4_as_i32x4(command->aabb);
@@ -92,14 +89,10 @@ void sr_command_setup(FlArena* arena, RenderCommand* command) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct CommandBuilder {
     RenderCommand* commands;
     RenderCommand* initial_command;
 } CommandBuilder;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static CommandBuilder builder_create(FlArena* arena, RenderCommand* initial_command, int command_count) {
     return (CommandBuilder) {
@@ -107,8 +100,6 @@ static CommandBuilder builder_create(FlArena* arena, RenderCommand* initial_comm
         .initial_command = initial_command,
     };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void add_corner(CommandBuilder* builder, f32x4 aabb, float radius, RenderCorner corner) {
     RenderCommand* current = builder->commands++;
@@ -124,8 +115,6 @@ static void add_corner(CommandBuilder* builder, f32x4 aabb, float radius, Render
     current->mask |= RenderMask_Corners | render_mask_corner(corner);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void add_rect(CommandBuilder* builder, f32x4 aabb) {
     RenderCommand* current = builder->commands++;
     *current = *builder->initial_command;
@@ -138,55 +127,37 @@ static void add_rect(CommandBuilder* builder, f32x4 aabb) {
     current->aabb = aabb;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void add_corner_rect(CommandBuilder* builder, float x, float y, float radius, RenderCorner corner) {
     add_corner(builder, f32x4_new(x, y, x + radius, y + radius), radius, corner);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void add_fill_rect(CommandBuilder* builder, float x, float y, float w, float h) {
     add_rect(builder, f32x4_new(x, y, x + w, y + h));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool has_rounding(float tl, float tr, float bl, float br) {
     return (tl > 0.0f || tr > 0.0f || bl > 0.0f || br > 0.0f);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool has_uniform_corners(float tl, float tr, float bl, float br) {
     return (tl > 0.0f && tl == tr && tr == bl && bl == br);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool has_only_top_corners(float tl, float tr, float bl, float br) {
     return (tl > 0.0f && tr > 0.0f && bl == 0.0f && br == 0.0f);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool has_only_bottom_corners(float tl, float tr, float bl, float br) {
     return (tl == 0.0f && tr == 0.0f && bl > 0.0f && br > 0.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool has_only_left_corners(float tl, float tr, float bl, float br) {
     return (tl > 0.0f && tr == 0.0f && bl > 0.0f && br == 0.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool has_only_right_corners(float tl, float tr, float bl, float br) {
     return (tl == 0.0f && tr > 0.0f && bl == 0.0f && br > 0.0f);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int sr_command_split_rounded(FlArena* arena, RenderCommand* initial_command, f32x4 corners) {
     float tl = f32x4_extract(corners, 0);

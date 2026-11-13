@@ -6,17 +6,12 @@
 #include <core/arena_watchdog.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Note: Arena watchdog lifecycle is managed by fl_init/fl_destroy.
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void watchdog_force_sample(void) {
     arena_watchdog_set_interval_seconds(0);
     arena_watchdog_update();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define WATCHDOG_DEFAULT_INTERVAL_SECONDS 30
 #define WATCHDOG_DEFAULT_GROWTH_THRESHOLD 3
@@ -34,8 +29,6 @@ static void watchdog_scope_end(const int* unused) {
     arena_watchdog_set_min_growth_bytes(WATCHDOG_DEFAULT_MIN_GROWTH_BYTES);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int watchdog_scope_begin(u64 min_growth_bytes) {
     arena_watchdog_set_enabled(true);
     arena_watchdog_set_growth_threshold(WATCHDOG_DEFAULT_GROWTH_THRESHOLD);
@@ -49,8 +42,6 @@ static int watchdog_scope_begin(u64 min_growth_bytes) {
     __attribute__((cleanup(watchdog_scope_end))) const int watchdog_scope = watchdog_scope_begin(min_growth_bytes); \
     (void)watchdog_scope
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // True when the report lists the arena created at `line` of this file with the given status. The report covers every
 // tracked arena in the process, so a case asserts on its own entry only.
 static bool watchdog_lists(FlArena* scratch, FlString report, const char* status, int line) {
@@ -58,16 +49,12 @@ static bool watchdog_lists(FlArena* scratch, FlString report, const char* status
     return strstr(fl_string_to_cstr(scratch, report), expected) != nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena_watchdog, init_destroy) {
     // Just verify it doesn't crash when we configure it.
     WATCHDOG_SCOPE(WATCHDOG_DEFAULT_MIN_GROWTH_BYTES);
     arena_watchdog_set_interval_seconds(WATCHDOG_DEFAULT_INTERVAL_SECONDS);
     ASSERT_TRUE(true);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena_watchdog, no_growth_no_alert) {
     WATCHDOG_SCOPE(64);
@@ -93,8 +80,6 @@ UTEST(arena_watchdog, no_growth_no_alert) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena_watchdog, detect_monotonic_growth) {
     WATCHDOG_SCOPE(64);
 
@@ -114,8 +99,6 @@ UTEST(arena_watchdog, detect_monotonic_growth) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena_watchdog, rewind_resets_detection) {
     WATCHDOG_SCOPE(64);
@@ -142,8 +125,6 @@ UTEST(arena_watchdog, rewind_resets_detection) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena_watchdog, stale_entry_cleanup) {
     WATCHDOG_SCOPE(64);
 
@@ -168,8 +149,6 @@ UTEST(arena_watchdog, stale_entry_cleanup) {
                   "the entry for a destroyed arena is dropped on the next sample");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena_watchdog, report_format) {
     WATCHDOG_SCOPE(WATCHDOG_DEFAULT_MIN_GROWTH_BYTES);
 
@@ -192,8 +171,6 @@ UTEST(arena_watchdog, report_format) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena_watchdog, disabled_does_nothing) {
     WATCHDOG_SCOPE(WATCHDOG_DEFAULT_MIN_GROWTH_BYTES);
@@ -222,8 +199,6 @@ UTEST(arena_watchdog, disabled_does_nothing) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena_watchdog, below_min_growth_not_flagged) {
     WATCHDOG_SCOPE(MB(1));

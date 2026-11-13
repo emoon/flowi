@@ -13,16 +13,12 @@
 #include "memory.h"
 #include "sprintf.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 const char* fl_string_to_cstr(struct FlArena* arena, const FlString str) {
     char* temp = arena_alloc_array(arena, char, str.length + 1);
     memory_copy(temp, str.length + 1, str.data, str.length);
     temp[str.length] = '\0';
     return temp;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_string_to_cstr_buffer(char* dest, const u64 buffer_len, const FlString str) {
     if (buffer_len == 0) {
@@ -33,16 +29,12 @@ void fl_string_to_cstr_buffer(char* dest, const u64 buffer_len, const FlString s
     dest[copy_len] = '\0';
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_string_begins_with(const FlString str, const FlString needle) {
     if (needle.length > str.length) {
         return false;
     }
     return memory_compare(str.data, needle.data, needle.length) == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_string_equals(const FlString a, const FlString b) {
     if (a.length != b.length) {
@@ -60,13 +52,9 @@ bool fl_string_equals(const FlString a, const FlString b) {
     return memory_compare(a.data, b.data, a.length) == 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline char char_to_lower(char c) {
     return (c >= 'A' && c <= 'Z') ? (char)(c + ('a' - 'A')) : c;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_string_equals_nocase(const FlString a, const FlString b) {
     if (a.length != b.length) {
@@ -90,8 +78,6 @@ bool fl_string_equals_nocase(const FlString a, const FlString b) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int fl_string_compare_n(const FlString a, const FlString b, u64 max_len) {
     u64 compare_len = a.length < b.length ? a.length : b.length;
     // The length tie-break below is only meaningful when the full common prefix was compared; when max_len
@@ -113,23 +99,16 @@ int fl_string_compare_n(const FlString a, const FlString b, u64 max_len) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Natural string comparison (case-insensitive, with numeric awareness)
 // Compares strings in a human-friendly way: "file1" < "file2" < "file10"
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline char to_lower(char c) {
     return (c >= 'A' && c <= 'Z') ? (c + 32) : c;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline bool is_digit(char c) {
     return c >= '0' && c <= '9';
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int fl_string_compare_natural(const FlString a, const FlString b) {
     u64 i = 0, j = 0;
@@ -187,8 +166,6 @@ int fl_string_compare_natural(const FlString a, const FlString b) {
     return 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_string_concat(struct FlArena* arena, FlString s0, FlString s1) {
     const u64 total_length = s0.length + s1.length;
     char* buffer = arena_alloc_array(arena, char, total_length);
@@ -199,14 +176,10 @@ FlString fl_string_concat(struct FlArena* arena, FlString s0, FlString s1) {
     return (FlString) { .data = buffer, .length = total_length, .is_ascii = s0.is_ascii && s1.is_ascii };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline FlString string_copy_impl(char* buffer, const FlString str) {
     memory_copy(buffer, str.length, str.data, str.length);
     return (FlString) { .data = buffer, .length = str.length, .is_ascii = str.is_ascii };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_string_copy(struct FlArena* arena, const FlString str) {
     // Static strings don't need to be copied
@@ -221,8 +194,6 @@ FlString fl_string_copy(struct FlArena* arena, const FlString str) {
     char* buffer = arena_alloc_array(arena, char, str.length);
     return string_copy_impl(buffer, str);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_string_copy_malloc(const FlString str) {
     // Static strings don't need to be copied
@@ -240,8 +211,6 @@ FlString fl_string_copy_malloc(const FlString str) {
     return (FlString) { .data = buffer, .length = str.length, .is_ascii = str.is_ascii };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_string_to_lower(struct FlArena* arena, const FlString str) {
     if (str.length == 0) {
         return string_empty();
@@ -255,8 +224,6 @@ FlString fl_string_to_lower(struct FlArena* arena, const FlString str) {
     return (FlString) { .data = buffer, .length = str.length, .is_ascii = str.is_ascii };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_string_free(FlString str) {
     // Only free strings that were dynamically allocated
     // Don't free: static strings, empty strings (which point to ""), or nullptr
@@ -265,14 +232,11 @@ void fl_string_free(FlString str) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// FlStringBuilder implementation
 
 FlStringBuilder fl_sb_create(struct FlArena* arena) {
     return (FlStringBuilder) { .arena = arena, .start_pos = arena->pos };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlStringBuilder fl_sb_append_cstr(FlStringBuilder sb, const char* str) {
     if (!str)
@@ -285,8 +249,6 @@ FlStringBuilder fl_sb_append_cstr(FlStringBuilder sb, const char* str) {
     return sb;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlStringBuilder fl_sb_append_string(FlStringBuilder sb, FlString str) {
     if (str.length == 0)
         return sb;
@@ -297,16 +259,12 @@ FlStringBuilder fl_sb_append_string(FlStringBuilder sb, FlString str) {
     return sb;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlStringBuilder fl_sb_append_char(FlStringBuilder sb, char c) {
     char* dest = fl_arena_alloc_raw(sb.arena, 1, 1);
     *dest = c;
 
     return sb;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlStringBuilder fl_sb_appendf(FlStringBuilder sb, const char* format, ...) {
     va_list args;
@@ -316,21 +274,15 @@ FlStringBuilder fl_sb_appendf(FlStringBuilder sb, const char* format, ...) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlStringBuilder sb_vappendf(FlStringBuilder sb, const char* format, va_list args) {
     vsprintf_arena(sb.arena, format, args);
     return sb;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlStringBuilder fl_sb_clear(FlStringBuilder sb) {
     sb.arena->pos = sb.start_pos;
     return sb;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_sb_to_string(FlStringBuilder sb) {
     const u64 length = sb.arena->pos - sb.start_pos;
@@ -338,8 +290,6 @@ FlString fl_sb_to_string(FlStringBuilder sb) {
     // Conservative: FlStringBuilder does not track ASCII status.
     return (FlString) { .data = data, .length = length, .is_ascii = 0 };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const char* fl_sb_to_cstr(FlStringBuilder sb) {
     fl_arena_alloc_raw(sb.arena, 1, 1);
@@ -350,13 +300,9 @@ const char* fl_sb_to_cstr(FlStringBuilder sb) {
     return data;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u64 fl_sb_length(FlStringBuilder sb) {
     return sb.arena->pos - sb.start_pos;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_string_ends_with(const FlString str, const FlString needle) {
     if (needle.length > str.length) {
@@ -366,8 +312,6 @@ bool fl_string_ends_with(const FlString str, const FlString needle) {
     const char* str_end = str.data + str.length - needle.length;
     return memory_compare(str_end, needle.data, needle.length) == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static char* string_to_null_terminated(const FlString str, char* buffer, u64 buffer_size) {
     if (str.length == 0) {
@@ -384,13 +328,9 @@ static char* string_to_null_terminated(const FlString str, char* buffer, u64 buf
     return buffer;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_hex_digit(char c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static u32 hex_digit_value(char c) {
     if (c >= '0' && c <= '9')
@@ -404,8 +344,6 @@ static u32 hex_digit_value(char c) {
 
     return 0; // Should never reach here if is_hex_digit was checked
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 StringParseResultU64 fl_string_parse_u64(const FlString str) {
     if (str.length == 0 || !str.data) {
@@ -446,8 +384,6 @@ StringParseResultU64 fl_string_parse_u64(const FlString str) {
     return (StringParseResultU64) { (u64)result, StringParseStatus_Success };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_string_substr(const FlString str, u64 start, u64 length) {
     if (start >= str.length) {
         return string_empty();
@@ -461,8 +397,6 @@ FlString fl_string_substr(const FlString str, u64 start, u64 length) {
     // Substring of ASCII string is ASCII
     return (FlString) { .data = str.data + start, .length = actual_length, .is_ascii = str.is_ascii };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 StringParseResultI64 fl_string_parse_i64(const FlString str) {
     if (str.length == 0 || !str.data) {
@@ -497,8 +431,6 @@ StringParseResultI64 fl_string_parse_i64(const FlString str) {
     return (StringParseResultI64) { (i64)result, StringParseStatus_Success };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 StringParseResultU32 fl_string_parse_u32(const FlString str) {
     StringParseResultU64 result = fl_string_parse_u64(str);
 
@@ -512,8 +444,6 @@ StringParseResultU32 fl_string_parse_u32(const FlString str) {
 
     return (StringParseResultU32) { (u32)result.value, StringParseStatus_Success };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 StringParseResultI32 fl_string_parse_i32(const FlString str) {
     StringParseResultI64 result = fl_string_parse_i64(str);
@@ -532,8 +462,6 @@ StringParseResultI32 fl_string_parse_i32(const FlString str) {
 
     return (StringParseResultI32) { (i32)result.value, StringParseStatus_Success };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 StringParseResultF64 fl_string_parse_f64(const FlString str) {
     if (str.length == 0 || !str.data) {
@@ -568,8 +496,6 @@ StringParseResultF64 fl_string_parse_f64(const FlString str) {
     return (StringParseResultF64) { result, StringParseStatus_Success };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 StringParseResultF32 fl_string_parse_f32(const FlString str) {
     StringParseResultF64 result = fl_string_parse_f64(str);
 
@@ -587,8 +513,6 @@ StringParseResultF32 fl_string_parse_f32(const FlString str) {
 
     return (StringParseResultF32) { (f32)result.value, StringParseStatus_Success };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 StringParseResultU64 fl_string_parse_hex_u64(const FlString str) {
     if (str.length == 0 || !str.data) {
@@ -624,8 +548,6 @@ StringParseResultU64 fl_string_parse_hex_u64(const FlString str) {
     return (StringParseResultU64) { result, StringParseStatus_Success };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 StringParseResultU32 fl_string_parse_hex_u32(const FlString str) {
     StringParseResultU64 result = fl_string_parse_hex_u64(str);
 
@@ -640,8 +562,6 @@ StringParseResultU32 fl_string_parse_hex_u32(const FlString str) {
     return (StringParseResultU32) { (u32)result.value, StringParseStatus_Success };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 StringParseResultU64 fl_string_parse_number_u64(const FlString str) {
     if (str.length == 0 || !str.data) {
         return (StringParseResultU64) { 0, StringParseStatus_Empty };
@@ -653,8 +573,6 @@ StringParseResultU64 fl_string_parse_number_u64(const FlString str) {
 
     return fl_string_parse_u64(str);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 StringParseResultU32 fl_string_parse_number_u32(const FlString str) {
     StringParseResultU64 result = fl_string_parse_number_u64(str);
@@ -670,7 +588,6 @@ StringParseResultU32 fl_string_parse_number_u32(const FlString str) {
     return (StringParseResultU32) { (u32)result.value, StringParseStatus_Success };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlString search and URL utilities
 
 i64 fl_string_find_char(const FlString str, char c) {
@@ -681,8 +598,6 @@ i64 fl_string_find_char(const FlString str, char c) {
     }
     return -1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 i64 fl_string_find_substr(const FlString str, const FlString needle) {
     if (needle.length == 0) {
@@ -707,8 +622,6 @@ i64 fl_string_find_substr(const FlString str, const FlString needle) {
     return -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 i64 fl_string_find_char_from(const FlString str, char c, u64 offset) {
     if (offset >= str.length) {
         return -1;
@@ -722,13 +635,9 @@ i64 fl_string_find_char_from(const FlString str, char c, u64 offset) {
     return -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_string_contains(const FlString str, const FlString needle) {
     return fl_string_find_substr(str, needle) != -1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_string_contains_nocase(const FlString str, const FlString needle) {
     if (needle.length == 0) {
@@ -758,8 +667,6 @@ bool fl_string_contains_nocase(const FlString str, const FlString needle) {
     }
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define FNV1A_64_INIT 0xcbf29ce484222325ULL
 #define FNV1A_64_PRIME 0x100000001b3ULL

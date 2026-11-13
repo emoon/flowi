@@ -2,7 +2,6 @@
 
 #include "unit_tests_common.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // selection: FlSelectionSet membership + the Selection Request apply protocol.
 
 UTEST(selection, set_membership) {
@@ -154,7 +153,6 @@ UTEST(selection, apply_range_missing_endpoint_is_noop_in_release) {
 }
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // scroll_math: the canonical scroll/virtualization kernel (ui/scroll_core.c), shared by ui_scroll,
 // list_uniform and content_view.
 
@@ -245,7 +243,6 @@ UTEST(scroll_math, visible_range_virtualization_window) {
     EXPECT_EQ(end, 0u);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // input_repeat: ui_action_repeated (ui/input_actions.c). It reads only the keyboard state + delta_time, so a
 // zeroed FlUiCtx drives it deterministically. Actions sharing a physical key but differing by modifier
 // (Left vs Ctrl+Left) must never both repeat on the same frame.
@@ -439,7 +436,6 @@ UTEST(input, mouse_delta_follows_the_pointer_between_frames) {
     canvas_fixture_reset(ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // inspector_snapshot: the JSON shape fl_inspector_snapshot documents in include/flowi/ui/inspector.h. A consumer
 // parses this text, so the whole string is compared rather than searched for a name.
 
@@ -527,8 +523,6 @@ UTEST(inspector_snapshot, elements_carry_their_documented_fields) {
     image_free((ImageHandle)image);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(input, new_context_gamepads_start_at_default_dead_zone) {
     FlUiCtx* fixture = render_fixture_get();
     ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
@@ -542,7 +536,6 @@ UTEST(input, new_context_gamepads_start_at_default_dead_zone) {
     ui_destroy(ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // text_buffer: shared character filter / grow helpers (ui/ui_text_buffer.h), used by both the text-input widget
 // and the virtual keyboard so their newline policy cannot drift apart.
 
@@ -567,8 +560,6 @@ UTEST(text_buffer, explicit_allow_list_is_exact) {
     EXPECT_FALSE(text_buffer_filter_char('\n', digits));
     EXPECT_FALSE(text_buffer_filter_char('\t', digits));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(text_buffer, grow_doubles_with_floor_and_preserves) {
     FlArena* arena = arena_new();
@@ -598,7 +589,6 @@ UTEST(text_buffer, grow_doubles_with_floor_and_preserves) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // slider_format: ui_slider_format_value (ui/ui.c) - the seam that turns a slider's value + printf format into its
 // display string. The int path must apply the format to an integer, so a %d-style format never reaches a float
 // formatter. NULL falls back to a bare integer, not "5.00".
@@ -629,7 +619,6 @@ UTEST(slider_format, int_null_and_empty_format) {
     ASSERT_TRUE(e.length == 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // feedback.* - the semantic UI feedback-event seam. flowi reports what happened in the interaction layer (focus
 // moved, a nav edge was hit, a widget was activated) through one app-installed hook. These cases record the
 // callback headlessly and assert the emitted kind / from / to / dir.
@@ -839,7 +828,6 @@ UTEST(feedback, null_hook_no_emit) {
     ASSERT_EQ_MSG(ctx->focused_id, clay_b, "the move still happened (nav is independent of the hook)");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // widget_state_colors.variant_base_derivation - the variant->color base derivation: Solid pulls
 // interactive.base / text.primary, Outline its surface.base background, Ghost the secondary text, Soft the
 // accent text.
@@ -1026,8 +1014,6 @@ UTEST(input, mouse_button_readback) {
     canvas_fixture_reset(ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Gamepad readback through the public fl_input_* queries, driven the way a backend does: push events, then
 // ui_input_update closes the frame. Slot 3 keeps clear of the pad 0 the nav cases drive, and the slot
 // is handed back exactly as found.
@@ -1132,7 +1118,6 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     canvas_fixture_reset(ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // cursor - the core's per-frame cursor request is last-writer-wins and resets to the arrow when nobody asks:
 // ui_update_begin resets the request, fl_cursor_set overwrites it during the frame, then the resolved value
 // (fl_cursor_get_requested) is flushed to the headless backend, which records it.
@@ -1179,7 +1164,6 @@ UTEST(cursor, per_frame_last_writer_wins_and_arrow_reset) {
     wb.destroy(wb.user_data);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // widget_state_colors.perceptual_state_contract - the state->colour wiring of the widget prologue at the value
 // level: fl_resolve_widget_colors must lighten the background on hover, darken it on press, and ramp the border
 // onto interactive.focus under focus - all in OKLCH.
@@ -1219,7 +1203,6 @@ UTEST(widget_state_colors, perceptual_state_contract) {
                     "focus drives the derived border onto interactive.focus");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // widget_state_colors.state_color_derivation - ui_apply_state_color is base-color derivation only: hover lightens
 // by 0.15 * hot_t, press then darkens that result by 0.15 * active_t, and a null or resting item returns the base.
 // Every variant's resolved background and text go through the same derivation.
@@ -3874,7 +3857,6 @@ UTEST(ui_progress_bar, determinate_fill_and_clamping) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Two nested Scroll Targets register via ui_scroll_target(): the wheel goes only to the inner (hot) one and the
 // outer reads {0,0} (consume-takes-all). A pure Scroll Target with no Clickable/Draggable still reports wheel (the
 // read gates on item->state.hot, never signal.hovered), and a press over it still claims active_id.
@@ -3979,7 +3961,6 @@ UTEST(wheel_input, inner_shadows_outer) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // An unflagged plain layout region must keep an unconsumed wheel for the frame: after a frame over a plain region
 // that never declares itself a Scroll Target, the injected wheel still surfaces via the cache.
 
@@ -4022,7 +4003,6 @@ UTEST(wheel_input, unflagged_region_keeps_unconsumed_wheel) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A Clay-managed scroll container with a nested Scroll Target widget (the slider carries
 // Clickable|Draggable|ScrollTarget) must route the wheel to exactly ONE arbiter, never both. When the widget is hot,
 // ui_update_begin withholds the wheel from Clay and the widget reads it; the container must not ALSO scroll.
@@ -4098,7 +4078,6 @@ UTEST(wheel_input, container_and_scroll_target_no_double_consume) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Click-vs-drag threshold (FlItem_DragThreshold): an item that opts into the flag only starts dragging once the
 // cursor has moved a few pixels from the press point, so a press-and-release in place reads as a click rather than
 // a one-pixel drag. These cases drive the real input layer (ui_input_update) every frame, so signal.dragging
@@ -4173,7 +4152,6 @@ UTEST(drag_threshold, click_vs_drag) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The dropdown popup is a virtualized ui_list of label rows: clicking a row commits (1-based stable id ->
 // *selected_index, index = id - 1) and closes; max_visible_rows bounds the viewport height (min(count, max) *
 // row_stride) and the List virtualizes the rest; the substring filter feeds only the surviving subset to the List.
@@ -5264,7 +5242,6 @@ UTEST(frame_api, setter_updates_persistent_frame_envelope_alpha) {
     fl_frame_set_alpha(255);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // widget_id - ui_item_id_seed: per-item id seeding for multi-item widgets (radio group, tab strip).
 //
 // ui_item_id_seed decorrelates the instance base so the item ranges of two nearby instance keys do not overlap,
@@ -5311,7 +5288,6 @@ UTEST(widget_id, adjacent_instance_keys_do_not_collide) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The virtual keyboard lives across many frames while the caller's title/allowed_chars string storage may not,
 // so ui_virtual_keyboard_create copies the caller strings into its dedicated, rewound-per-cycle arena.
 
@@ -5427,7 +5403,6 @@ UTEST(virtual_keyboard, focus_gain_uses_vk_arena_and_does_not_grow) {
 #undef TI_FRAME
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A keyboard that closed itself is retired by the shared close-out both ui_update_end and
 // ui_virtual_keyboard_update_and_render run: a submit commits its buffer to the target input, a cancel discards it,
 // and either way both context slots clear.
@@ -5511,7 +5486,6 @@ UTEST(virtual_keyboard, close_out_commits_on_submit_and_discards_on_cancel) {
 #undef VK_TI_FRAME
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Typed text must survive the real fl_app tick order (pump -> ui_input_update -> frame body).
 // ui_input_update snapshots kb->text_input into ctx->text_input_this_frame before clearing the raw field,
 // and ui_text_input reads that snapshot - so a character
@@ -5534,7 +5508,6 @@ static void typed_text_frame(void* user_data) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Injected modifier keys hold a mask, so a headless test can drive a chord.
 
 typedef struct ChordState {
@@ -5572,7 +5545,6 @@ UTEST(input, an_injected_modifier_is_held_across_the_keys_pressed_under_it) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // OS file drops: what the frame body reads back from an injected drop, and that the reads are per-frame.
 
 typedef struct DroppedFilesState {
@@ -5644,15 +5616,12 @@ UTEST(input, typed_text_reaches_widget_under_app_tick_order) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ui_text_input reports text-changed, submit and cancel as one-frame edges on the returned signal.
 
 typedef struct TextInputEdgesState {
     FlTextInputState input;
     FlSignal signal;
 } TextInputEdgesState;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void text_input_edges_frame(void* user_data) {
     TextInputEdgesState* st = (TextInputEdgesState*)user_data;
@@ -5663,8 +5632,6 @@ static void text_input_edges_frame(void* user_data) {
         st->signal = ui_text_input(FL_S("edges_input"), &st->input, (FlTextInputConfig) { 0 });
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlApp* text_input_edges_app(TextInputEdgesState* st) {
     FlAppSettings settings = { .window_title = FL_S("edges"), .width = 400, .height = 400, .headless = true };
@@ -5766,7 +5733,6 @@ UTEST(input, text_input_reports_cancel_on_the_escape_frame_only) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The same field, never aimed at: it is the frame's first focusable widget, so it is exactly what a focus
 // auto-restore that seeds on an idle frame would hand the keyboard to.
 
@@ -5807,7 +5773,6 @@ UTEST(input, an_unaimed_text_input_consumes_nothing) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_input_text_input_active reads whether a field had keyboard focus in the frame that ended last, the frame an app
 // polling after the tick has just seen, and lets go of it once the field loses focus.
 
@@ -6101,7 +6066,6 @@ UTEST(input, public_configured_opaque_text_input) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ui_text_input_paste filters and truncates pasted text the way typed text is handled, and a selection it replaces
 // frees its own capacity.
 
@@ -6114,14 +6078,10 @@ static void paste_text_state(FlTextInputState* state, const char* text, int sel_
     stb->cursor = sel_end;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool paste_equals(const FlTextInputState* state, const char* expected) {
     FlString got = ui_text_input_get_text(state);
     return got.length == strlen(expected) && memcmp(got.data, expected, got.length) == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(text_input, paste_drops_disallowed_characters) {
     FlTextInputState state;
@@ -6135,8 +6095,6 @@ UTEST(text_input, paste_drops_disallowed_characters) {
     ASSERT_TRUE(paste_equals(&state, "1234"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(text_input, paste_truncates_to_remaining_capacity) {
     FlTextInputState state;
     paste_text_state(&state, "ab", 2, 2);
@@ -6149,8 +6107,6 @@ UTEST(text_input, paste_truncates_to_remaining_capacity) {
     ASSERT_TRUE(paste_equals(&state, "ab123"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(text_input, paste_drops_non_ascii_bytes_like_typed_text) {
     FlTextInputState state;
     paste_text_state(&state, "", 0, 0);
@@ -6162,8 +6118,6 @@ UTEST(text_input, paste_drops_non_ascii_bytes_like_typed_text) {
     ASSERT_TRUE_MSG(paste_equals(&state, "abcd"), "default filtering admits printable ASCII only");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(text_input, paste_replaces_the_selection_and_counts_its_room) {
     FlTextInputState state;
     paste_text_state(&state, "abcde", 1, 4); // "bcd" selected
@@ -6173,7 +6127,6 @@ UTEST(text_input, paste_replaces_the_selection_and_counts_its_room) {
     ASSERT_TRUE_MSG(paste_equals(&state, "a123e"), "filtered, cut to the selection's room, and replacing it");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hit testing is clipped. Clay culls against the screen, not against the clip rect, so an element that overflows
 // its clip container still reaches the hit test carrying its full, uncut bounding box.
 
@@ -6200,8 +6153,6 @@ static void hit_clip_emit(FlUiCtx* ctx) {
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hit_clip, an_overflowing_element_takes_input_only_where_it_paints) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
@@ -6257,7 +6208,6 @@ UTEST(hit_clip, an_overflowing_element_takes_input_only_where_it_paints) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // An element with both a background and a clip gets two render commands under one id; its hit-test state must
 // still advance once per frame, so the focus-gained edge survives.
 
@@ -6272,8 +6222,6 @@ static void hit_once_emit(FlUiCtx* ctx) {
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hit_clip, a_background_and_clip_update_the_item_once_per_frame) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
@@ -6310,7 +6258,6 @@ UTEST(hit_clip, a_background_and_clip_update_the_item_once_per_frame) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Clay emits an overlay-color marker under the element's id with a zero box ahead of the element's own commands. The
 // marker carries no geometry, so it must not stand in for the element's hit-test update.
 
@@ -6328,8 +6275,6 @@ static void hit_overlay_emit(FlUiCtx* ctx) {
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(hit_clip, an_element_with_an_overlay_color_still_takes_hover) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
@@ -6360,7 +6305,6 @@ UTEST(hit_clip, an_element_with_an_overlay_color_still_takes_hover) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Opens levels unrestricting clip containers, then one that restricts to 200x100. Inside it: a further clip
 // container, which is the push past the walk's stack capacity, and - after that one closes - an item tall enough to
 // reach past the restricting clip's bottom edge.
@@ -6387,8 +6331,6 @@ static void hit_clip_deep_nest(int levels) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void hit_clip_deep_emit(FlUiCtx* ctx) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
@@ -6397,7 +6339,6 @@ static void hit_clip_deep_emit(FlUiCtx* ctx) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Past the clip stack's capacity a push is dropped and its matching pop cancels the drop rather than popping a clip
 // that is still in force - the same balance the software renderer's scissor stack keeps
 // (render.scissor_stack_deep_nesting_balanced).
@@ -6444,7 +6385,6 @@ UTEST(hit_clip, a_push_past_the_stack_capacity_does_not_pop_a_live_clip) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // localization: SID_ display text resolved against the default language's string table, loaded from the
 // checked-in example manifest under examples/data/localization.
 
@@ -7140,7 +7080,6 @@ UTEST(localization, a_default_tag_the_manifest_does_not_list_never_starts_a_tabl
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_localize_fmt: lookup plus indexed-placeholder substitution.
 
 static FlFmtArg fmt_int(i64 value) {
@@ -7260,7 +7199,6 @@ UTEST(localization, fmt_leaves_text_it_cannot_substitute_as_written) {
     localization_fixture_release(ctx, mount);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_localize_plural: built-in variant selection, then the same substitution with the count as {0}.
 
 UTEST(localization, plural_rules_select_per_language_family) {
@@ -7463,7 +7401,6 @@ UTEST(localization, a_language_with_no_built_in_rules_selects_the_other_variant)
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FL_FMT / FL_PLURAL: the C call-site macros that tag bare arguments and build the FlFmtArg array at the call.
 
 #include <flowi/ui/localization_fmt.h>
@@ -7555,7 +7492,6 @@ UTEST(localization, a_macro_result_is_a_widget_text_argument) {
     localization_fixture_release(ctx, mount);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hot reload: with the opt-in flag on, editing a resident table or the manifest on disk re-runs the switch
 // machinery, so a reload lands at a frame boundary and a file that stops parsing leaves what is loaded in place.
 
@@ -7623,7 +7559,6 @@ static void hot_reload_fixture_release(LocalizationHotReload* fixture) {
     fl_arena_destroy(fixture->arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pump the frame boundary the way an app tick loop does until the watcher has asked for a reload beyond
 // requests_before and the work it started has landed. False if no request arrives within the deadline.
 static bool hot_reload_wait_for_request(const LocalizationHotReload* fixture, u64 requests_before) {
@@ -7639,8 +7574,6 @@ static bool hot_reload_wait_for_request(const LocalizationHotReload* fixture, u6
 
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static u64 hot_reload_requests(const LocalizationHotReload* fixture) {
     return localization_hot_reload_request_count(fixture->ctx->shared->localization);

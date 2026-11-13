@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: SVG-atlas bookkeeping - (image handle, quantized size) -> atlas cell over the skyline packer,
 // with one live cell per handle.
 //
@@ -13,8 +12,6 @@
 #include <ui/vector_image.h>
 
 struct FlArena;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define GPU_SVG_ATLAS_SIZE_MONO 4096  // R8 monochrome atlas extent (square): 16 MB
 #define GPU_SVG_ATLAS_SIZE_COLOR 2048 // RGBA8 multi-color atlas extent (square): 16 MB
@@ -56,8 +53,6 @@ typedef struct GpuSvgAtlas {
     struct FlArena* arena;    // create-time arena; compaction resets the packer over the existing node storage,
                               // allocating nothing new
 } GpuSvgAtlas;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // SVG-specific geometric size ladder: quantizes a physical display size onto discrete raster steps, so a
 // continuously-zooming host re-rasters only at step boundaries. Clamped to a PER-CLASS ceiling - a multi-color icon

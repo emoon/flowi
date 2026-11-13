@@ -23,7 +23,6 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Host-side compositor GL entry points (beyond GL 1.x), resolved once through SDL_GL_GetProcAddress.
 
 #define COMPOSITOR_GL_FNS(X)                           \
@@ -137,7 +136,6 @@ static GLuint build_compositor_program(const CompositorGl* gl) {
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Host-side Metal compositor (APPLE), the counterpart of the GL compositor above. Manual retain/release (no ARC):
 // every long-lived id<> the SdlWindowContext keeps is +1 retained on assignment and released on teardown. The
 // incoming Surface Texture is a non-owning cast of the void* handle; the render backend owns its retain.
@@ -205,7 +203,6 @@ static id<MTLRenderPipelineState> build_metal_compositor(id<MTLDevice> device, M
 
 #endif // FL_WINDOW_HAVE_METAL
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-window handle - the OS window the host holds opaque and passes back to the per-window seams. window_id
 // demuxes the shared OS event queue per window.
 
@@ -222,7 +219,6 @@ typedef struct FlWindow {
 #endif
 } FlWindow;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SDL Window Backend context - the OS connection. In GL mode the single shared GL context + the compositor
 // program/VAO also live here, built with the first window and torn down with the last.
 
@@ -255,7 +251,6 @@ typedef struct SdlWindowContext {
 #endif
 } SdlWindowContext;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Window lifecycle
 
 // The window every mode opens: same geometry, same high-DPI base flag plus resizable when asked, differing only in
@@ -443,7 +438,6 @@ static void sdl_destroy_window(void* ud, FlWindow* window) {
     window->window = NULL;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event pump - build the parallel windowID array the shared pump demuxes against (windows[i] -> contexts[i])
 
 static void sdl_pump_events(void* ud, FlWindow** windows, FlUiCtx** contexts, int count) {
@@ -458,7 +452,6 @@ static void sdl_pump_events(void* ud, FlWindow** windows, FlUiCtx** contexts, in
     sdl_input_common_pump_multi(&self->input, window_ids, contexts, count);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Drawable size + content scale
 
 // Live drawable size in physical pixels, per mode. Shared by drawable_size and content_scale.
@@ -489,7 +482,6 @@ static void sdl_drawable_size(void* ud, FlWindow* window, int* width, int* heigh
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The display's content scale (ddpi / 96) on the Wayland video driver. Returns 0 on any other driver or when the
 // DPI is unavailable.
 static float sdl_display_index_content_scale(int display_index) {
@@ -504,12 +496,10 @@ static float sdl_display_index_content_scale(int display_index) {
     return ddpi / 96.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static float sdl_display_content_scale(SDL_Window* window) {
     return sdl_display_index_content_scale(SDL_GetWindowDisplayIndex(window));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The primary display's scale for sizing a window before it exists; 0 where window sizes are not physical pixels.
 static float sdl_primary_display_content_scale(void* ud) {
     UNUSED(ud);
@@ -537,7 +527,6 @@ static float sdl_content_scale(void* ud, FlWindow* window) {
     return display_scale > 0.0f ? display_scale : ratio;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Cursor + hidden-drag mechanics - delegated to the shared SDL input state
 
 static void sdl_set_cursor(void* ud, FlWindow* window, FlCursor cursor) {
@@ -565,7 +554,6 @@ static void sdl_warp_mouse(void* ud, FlWindow* window, float x, float y) {
 
 #if FL_WINDOW_HAVE_SOFTWARE
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Presentation - software: blit the CPU pixel buffer to the window through a streaming texture, (re)created when the
 // source size changes.
 
@@ -605,7 +593,6 @@ static void sdl_present_software(void* ud, FlWindow* window, const void* px, u32
 
 #if FL_WINDOW_HAVE_GPU
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Presentation - GL: composite the UI surface texture over the window with premultiplied src-over blending.
 
 // Bind the shared GL context against a window's drawable without compositing or swapping.
@@ -685,7 +672,6 @@ static void sdl_present(void* ud, FlWindow* window, u32 surface_texture, u32 tex
 
 #if FL_WINDOW_HAVE_METAL
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Presentation - Metal (APPLE): composite the UI Surface Texture over the window. The compositor device/queue/
 // pipeline are built on the first present against the texture's MTLDevice. Each present uses its own command
 // buffer, render pass and drawable.
@@ -761,15 +747,12 @@ static void sdl_present_metal(void* ud, FlWindow* window, void* surface_texture,
 
 #endif // FL_WINDOW_HAVE_METAL
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void sdl_window_destroy(void* ud) {
     SdlWindowContext* self = (SdlWindowContext*)ud;
     sdl_input_common_destroy(&self->input);
     // SDL subsystems are left up (no SDL_Quit).
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Factory
 
 FlWindowBackend sdl_window_backend_create(struct FlArena* arena, FlWindowBackendMode mode) {

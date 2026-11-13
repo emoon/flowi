@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock Persistence - serialize workspace layouts to an opaque JSON blob and restore them across sessions
 // (CONTEXT.md "Workspace", "Docking").
 //
@@ -11,7 +10,6 @@
 // Parsing and reconciling are separate steps: dock_persist_from_json parses a blob, dock_persist_reconcile
 // applies the rebind-on-load rules against this session's live workspaces and declared panels. The file
 // read/write lives in the dock_workspace hooks, not here.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "dock_tree.h"
 
@@ -26,7 +24,6 @@ struct FlJsonValue;
 // bad-version-to-default rebind rule.
 #define FL_DOCK_PERSIST_VERSION 1
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // One workspace's persisted state.
 
 typedef struct FlDockPersistWorkspace {
@@ -37,13 +34,11 @@ typedef struct FlDockPersistWorkspace {
     FlDockTree* tree; // the tree (borrowed on save; owned by the caller on load - dock_tree_destroy)
 } FlDockPersistWorkspace;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Serialize count workspaces into an opaque JSON blob allocated from arena. The trees are read, never
 // mutated or freed. Returns null only if workspaces is null (a zero count yields an empty-workspaces blob).
 
 struct FlJsonValue* dock_persist_to_json(const FlDockPersistWorkspace* workspaces, u32 count, struct FlArena* arena);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Result of loading a blob. workspaces (and the array itself) are allocated from the arena passed to
 // dock_persist_from_json, but each .tree is a standalone FlDockTree owning its own arena - release every
 // surviving tree with dock_tree_destroy. ok is false on a version mismatch or a malformed blob.
@@ -59,7 +54,6 @@ typedef struct FlDockPersistLoad {
 // built (so the caller never adopts a holed tree).
 FlDockPersistLoad dock_persist_from_json(const struct FlJsonValue* blob, struct FlArena* arena);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Apply the rebind-on-load rules to a freshly-loaded layout, reconciling the saved world against this session:
 //
 //   - dangling-workspace-reparent - any loaded workspace whose id is not in live_ws_ids is dissolved; its
@@ -78,7 +72,6 @@ FlDockPersistLoad dock_persist_from_json(const struct FlJsonValue* blob, struct 
 void dock_persist_reconcile(FlDockPersistLoad* load, const u64* live_ws_ids, u32 live_count,
                             const FlDockPanelId* declared, u32 declared_count);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Structural equality of two trees: same topology, split axes, ratios (within a small epsilon - ratios round-trip
 // through JSON floats), leaf panel lists + selected tab, and floating sets (order-sensitive). Ignores node ids.
 

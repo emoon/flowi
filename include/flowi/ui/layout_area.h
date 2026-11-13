@@ -17,7 +17,6 @@
 #include <flowi/ui/ui_layout.h>
 #include <flowi/ui/ui_scroll.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public id constructor: build an FlLayoutId from a string literal. The string-literal forcing idiom
 // ("" x "") rejects a non-literal argument at compile time.
 
@@ -36,7 +35,6 @@
                               .is_static = 1 }, \
                     .id = (int_seed) })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared latch driving the one-container-per-iteration RAII loop. Nesting is safe with a single shared latch:
 // each inner loop runs to completion inside the outer loop's body before the outer increment fires, so the
 // open/close pairs nest correctly.
@@ -69,7 +67,6 @@ static inline void fl__suppress_unused_layout_latch_warning(void) {
          FL__LAYOUT_LATCH < 1; \
          FL__LAYOUT_LATCH = 1, fl_layout_end())
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Floating containers (dialogs, popups, menus) and scroll regions, same block-scoped RAII shape over the flat
 // fl_floating_* / fl_scroll_area_* primitives. Floating shares the layout close primitive (fl_layout_end);
 // scroll closes with its own fl_scroll_area_end.

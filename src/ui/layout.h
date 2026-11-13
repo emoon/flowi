@@ -14,16 +14,11 @@
 
 #define corner_radius(radius) ((FlCornerRadius) { radius, radius, radius, radius })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define STRING_ENSURE_STRING_LITERAL_ID(x) ("" x "")
 #define ID(str) ((FlLayoutId) { .name = { STRING_ENSURE_STRING_LITERAL_ID(str), sizeof(str) - 1, 1 } })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define ID_INT(str, int_id) ((FlLayoutId) { .name = { str, sizeof(str) - 1, 1 }, .id = int_id })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define LayoutDirection_LeftToRight FlLayoutDirection_LeftToRight
 #define LayoutDirection_TopToBottom FlLayoutDirection_TopToBottom
 
@@ -44,7 +39,6 @@
 #define LayoutSizingType_Percent FlLayoutSizingType_Percent
 #define LayoutSizingType_Fixed FlLayoutSizingType_Fixed
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Usage: .border = fl_border(theme->border.focus, 2)  // Creates uniform 2px border
 
 #define fl_border(col, width_value)             \
@@ -54,11 +48,7 @@
 #define fl_border_lrtb(col, left, right, top, bottom) \
     (UI__INIT(FlLayoutBorder) { .color = (col), .width = { (left), (right), (top), (bottom), 0 } })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define padding_all(padding) (UI__INIT(FlLayoutPadding) { padding, padding, padding, padding })
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define sizing_fit(...) \
     (UI__INIT(FlLayoutSizingAxis) { .size = { .min_max = { __VA_ARGS__ } }, .type = FlLayoutSizingType_Fit })
@@ -73,12 +63,10 @@
 #define sizing_percent(percent_of_parent) \
     (UI__INIT(FlLayoutSizingAxis) { .size = { .percent = (percent_of_parent) }, .type = FlLayoutSizingType_Percent })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Loop control variable of the UI_LAYOUT scope macros
 
 static int UI_LAYOUT_LATCH UNUSED_VARIABLE = 0;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The layout open/close/configure primitives are declared by the generated <flowi/ui/ui_layout.h> above.
 // Floating comes from <flowi/ui/ui_floating.h>; scroll from ui_scroll.h.
 

@@ -3,10 +3,8 @@
 #include "core.h"
 #include "string.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Application identity: app-flavored strings used by the log file and file watcher. They default to
 // neutral flowi values; a host may override them at startup, before those modules first use them.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct FlAppIdentity {
     FlString data_dir_name;      // Subdirectory under $HOME for logs, e.g. ".flowi".

@@ -30,8 +30,6 @@
 
 use crate::sys;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// One decoded OS event, as [`Application::push_input`](crate::Application::push_input)
 /// takes it. The payload types are re-exported from the crate root.
 ///
@@ -45,8 +43,6 @@ pub enum InputEvent {
     Gamepad(sys::GamepadEvent),
     Window(sys::WindowEvent),
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// The rendered pixels of one frame, borrowed from the render backend until the next
 /// frame overwrites them.

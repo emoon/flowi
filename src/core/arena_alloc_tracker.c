@@ -6,11 +6,7 @@
 #include "os/os.h"
 #include "sprintf.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define TRACKER_TABLE_SIZE 1024
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
     const char* file;
@@ -20,15 +16,11 @@ typedef struct {
     bool occupied;
 } TrackerSlot;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct ArenaAllocTracker {
     TrackerSlot slots[TRACKER_TABLE_SIZE];
     Mutex mutex;
     u32 entry_count;
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static u32 tracker_hash(const char* file, int line) {
     u64 h = (u64)(uintptr_t)file;
@@ -41,8 +33,6 @@ static u32 tracker_hash(const char* file, int line) {
     return (u32)(h & (TRACKER_TABLE_SIZE - 1));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ArenaAllocTracker* arena_alloc_tracker_create(void) {
     ArenaAllocTracker* tracker = (ArenaAllocTracker*)mi_zalloc(sizeof(ArenaAllocTracker));
     FL_VALIDATE_RET(tracker != nullptr, nullptr);
@@ -50,15 +40,11 @@ ArenaAllocTracker* arena_alloc_tracker_create(void) {
     return tracker;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_alloc_tracker_destroy(ArenaAllocTracker* tracker) {
     FL_VALIDATE(tracker != nullptr);
     mutex_destroy(&tracker->mutex);
     mi_free(tracker);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void arena_alloc_tracker_record(ArenaAllocTracker* tracker, const char* file, int line, u64 size) {
     FL_VALIDATE(tracker != nullptr);
@@ -94,8 +80,6 @@ void arena_alloc_tracker_record(ArenaAllocTracker* tracker, const char* file, in
     mutex_unlock(&tracker->mutex);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void arena_alloc_tracker_reset(ArenaAllocTracker* tracker) {
     FL_VALIDATE(tracker != nullptr);
 
@@ -104,8 +88,6 @@ void arena_alloc_tracker_reset(ArenaAllocTracker* tracker) {
     tracker->entry_count = 0;
     mutex_unlock(&tracker->mutex);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int arena_alloc_tracker_get_top(ArenaAllocTracker* tracker, FlArena* output_arena, int max_entries,
                                 ArenaAllocEntry** out_entries) {
@@ -171,8 +153,6 @@ int arena_alloc_tracker_get_top(ArenaAllocTracker* tracker, FlArena* output_aren
     *out_entries = result;
     return result_count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void arena_alloc_tracker_dump_log(ArenaAllocTracker* tracker, const char* arena_name, int max_entries) {
     FL_VALIDATE(tracker != nullptr);

@@ -2,7 +2,6 @@
 
 #include "unit_tests_common.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // list_selection.* - the List's built-in multi-selection gesture machine: plain click replaces, ctrl/⌘-click
 // toggles, shift-click ranges from the anchor, Ctrl+A selects all. The List runs the gestures internally and
 // auto-applies the emitted Selection Requests into the caller-owned FlSelectionSet (forwarding the FULL ordered
@@ -366,7 +365,6 @@ UTEST(list_selection, anchor_persists_across_idle_frames) {
     selection_set_destroy(set);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // list_keyboard.* - keyboard navigation + focus participation. The List, once focused, moves an internal focus
 // cursor on arrows / Home / End / type-ahead, activates on Enter / Space, extends the selection on Shift+arrows,
 // and consumes the nav keys it handles so they do not also drive global focus navigation. These drive the
@@ -788,7 +786,6 @@ UTEST(list_focus_request, seed_validated_with_first_row_fallback) {
     ASSERT_EQ_MSG((u64)10, r.focused_id, "an out-of-slice cursor_id falls back to the first row");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The marquee (rubber-band) gesture and its virtualization invariant. A drag begun on empty list space sweeps a
 // rectangle and selects the rows it covers; dragging past the bottom edge auto-scrolls and keeps extending the band,
 // so the covered span reaches rows that were never instantiated on the press frame. Coverage must resolve to MODEL
@@ -937,7 +934,6 @@ UTEST(list_marquee, rubber_band_with_autoscroll) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The press that arms a marquee lands on empty list space (no row consumes it) but must not blur the list's
 // keyboard focus; only a press genuinely outside the viewport blurs. Focus is observed through its effect: the
 // roving cursor on result.focused_id moves on Nav-Down only while the list holds keyboard focus.
@@ -1000,7 +996,6 @@ UTEST(list_marquee, press_keeps_keyboard_focus) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A press on a row that crosses the click-vs-drag threshold begins a reorder; on release the List returns a reorder
 // request { drag_from_ids, drag_target_id, drag_rel } describing where the drop landed (the app owns the actual
 // model mutation). Dragging any row of a multi-selection drags the WHOLE selection. Drives the REAL input layer
@@ -1131,7 +1126,6 @@ UTEST(list_drag, reorder_request) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The declarative one-call face ui_list(id, items, count, set, opts): the widget takes an array of {id, label, icon}
 // descriptors and the caller-owned set, runs the whole interaction internally (virtualization, selection, keyboard
 // nav, marquee, drag-reorder, auto-apply), and the app reads only the policy outcomes off the result. Geometry

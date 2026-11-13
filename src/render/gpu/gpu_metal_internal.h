@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Metal GPU backend internal seam: the MetalShared / MetalSurface state shared by the backend's .m files. Built
 // without ARC: long-lived id<> fields are +1 retained; frame_cmd / frame_enc are autoreleased.
 
@@ -41,7 +40,6 @@ struct FlRenderFrame;
 // creation fails instead and metal_slot_realize logs it and reports the entry unrealized.
 #define METAL_SLOT_MAX_TEXTURE_DIM 16384
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Backend-shared tier: the system MTLDevice and one command queue drive every surface - no window, no context.
 // Lives in the backend-lifetime perm_arena; destroy() releases the two objects it owns.
 
@@ -99,7 +97,6 @@ typedef struct MetalShared {
 } MetalShared;
 _Static_assert(offsetof(MetalShared, cpu) == 0, "cpu must be the first member");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-surface tier: the offscreen RGBA8 target the backend clears into plus the CPU readback buffer, sized to this
 // surface's resolution. One arena backs both this struct and the readback buffer; setup_resolution rewinds to
 // readback_reset to reallocate the buffer, leaving the struct intact.
@@ -128,7 +125,6 @@ typedef struct MetalSurface {
     u8* readback_buf;             // tight interleaved RGBA8, width*height*4, reused across readbacks
 } MetalSurface;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared Metal upload helpers.
 
 // Realize one slot-tier texture into the pool: claim a free pool index and create the texture. Alpha-coverage
@@ -149,7 +145,6 @@ void metal_texture_upload(id<MTLTexture> tex, u32 x, u32 y, u32 w, u32 h, u32 st
 // dispatch.
 id<MTLBuffer> metal_upload_ssbo(id<MTLDevice> device, const void* data, NSUInteger bytes, NSUInteger stride);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resource-prepare seams (gpu_resource_prepare_metal.m): image / glyph / SVG realization.
 
 bool metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
@@ -158,7 +153,6 @@ void metal_prepare_glyph(void* user_data, FlFontId font, uint16_t size, uint32_t
                          const FlGlyphOutline* outline);
 void metal_prepare_vector(void* user_data, FlImageHandle handle, uint16_t size, const FlVectorImage* vector);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pixel-readback seam (render_backend.h): defined in gpu_debug_readback_metal.m. Blits the offscreen target into
 // a storageModeShared MTLBuffer and copies it into the surface's readback buffer.
 

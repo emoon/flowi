@@ -38,8 +38,6 @@ pub const SHA256_LEN: usize = 32;
 /// plus the NUL they terminate with.
 const SHA256_HEX_BUFFER: usize = 65;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// CRC32 of data (zlib's polynomial).
 #[inline]
 pub fn crc32(data: &[u8]) -> u32 {
@@ -82,8 +80,6 @@ pub fn sha256_hex(data: &[u8]) -> String {
     }
     hex_string(&hex)
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// An incremental SHA256: feed it bytes with [`update`](Sha256::update), then
 /// take the digest with [`finish`](Sha256::finish) or
@@ -160,8 +156,6 @@ fn hex_string(buffer: &[u8; SHA256_HEX_BUFFER]) -> String {
         .unwrap_or(SHA256_HEX_BUFFER - 1);
     String::from_utf8_lossy(&buffer[..len]).into_owned()
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {

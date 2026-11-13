@@ -5,16 +5,12 @@
 #include <core/string.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString mmap_test_file_path(FlArena* arena, const char* name) {
     FlString temp_dir = get_temp_directory_os(arena);
     u32 pid = get_process_id_os();
     FlString filename = fl_sprintf_arena(arena, "mmap_test_%s_%u", name, pid);
     return file_build_path_os(arena, temp_dir, filename);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(mmap, open_valid_file) {
     FlArena* arena = arena_new(.reserved_size = MB(1));
@@ -35,15 +31,11 @@ UTEST(mmap, open_valid_file) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(mmap, open_nonexistent) {
     FileMmap m = file_mmap_open_os(FL_S("/tmp/nonexistent_mmap_test_file_that_does_not_exist"));
     ASSERT_EQ(m.data, nullptr);
     ASSERT_EQ(m.size, 0ULL);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(mmap, open_empty_file) {
     FlArena* arena = arena_new(.reserved_size = MB(1));
@@ -59,8 +51,6 @@ UTEST(mmap, open_empty_file) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(mmap, close_null_safe) {
     file_mmap_close_os(nullptr);
 
@@ -68,8 +58,6 @@ UTEST(mmap, close_null_safe) {
     FileMmap m = { .data = nullptr, .size = 0 };
     file_mmap_close_os(&m);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(mmap, read_binary_data) {
     FlArena* arena = arena_new(.reserved_size = MB(1));

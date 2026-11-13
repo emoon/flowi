@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Painter API - Low-level drawing primitives for custom rendering
 //
 // Direct drawing commands for custom effects (gradients, text shadows, dynamic/bitmap images, the
@@ -13,7 +12,6 @@
 //
 // All coordinates are element-local logical (authoring) space and are scaled to actual pixels here, at emit
 // time; the splice adds the element's resolved rect origin.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <core/types.h>
 #include "render_ir.h"
@@ -26,7 +24,6 @@ struct FlFontCache;
 
 typedef struct Painter Painter;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lifecycle (internal use only)
 
 Painter* painter_create(struct FlArena* arena);
@@ -41,7 +38,6 @@ void painter_destroy(Painter* p);
 void painter_begin_frame(Painter* p, struct FlFontCache* fc, float ui_scale, float text_scale,
                          struct FlArena* state_arena);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Painting scopes (internal use only - driven by the layout begin/end seam)
 //
 // A scope is pushed/popped in lockstep with each layout element's begin/end. The first painter call inside an
@@ -59,7 +55,6 @@ void painter_scope_pop(Painter* p);
 // Number of open painting scopes. ui_get_painter() is valid only when this is > 0.
 u32 painter_scope_depth(const Painter* p);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Effect state - the painter's only state, everything else (colors, geometry) stays per-call.
 
 // Set the effect every later primitive in the innermost open scope carries. A zeroed effect
@@ -68,7 +63,6 @@ u32 painter_scope_depth(const Painter* p);
 // no backend resolves an effect on a text run.
 void painter_set_effect(Painter* p, FlEffect effect);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Text drawing
 
 // Draw text with its top-left at (x, y), in the font's authored size.
@@ -80,7 +74,6 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
 // matches what gets drawn.
 void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rectangle drawing
 
 // Draw a rectangle styled by config: per-corner radius and per-corner colors at once. The three narrower
@@ -100,7 +93,6 @@ void painter_rect_rounded(Painter* p, float x, float y, float w, float h, float 
 void painter_gradient_rect(Painter* p, float x, float y, float w, float h, FlColor top_left, FlColor top_right,
                            FlColor bottom_left, FlColor bottom_right);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Crisp 1px lines (separators, grid lines, rulers)
 //
 // A hairline one logical pixel thick, scaled by the composed UI scale and snapped to the device-pixel grid so it
@@ -114,7 +106,6 @@ void painter_hline(Painter* p, float x, float y, float length, FlColor color);
 // Vertical hairline running +length along y from (x, y).
 void painter_vline(Painter* p, float x, float y, float length, FlColor color);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image drawing
 
 // Draw an image with its top-left at (x, y), scaled to w x h. A non-positive w/h uses the image's native
@@ -131,7 +122,6 @@ bool painter_image_sub(Painter* p, float dx, float dy, float dw, float dh, float
 // colorizes the alpha mask; for RGBA it tints the image (white = no tint).
 void painter_dynamic_image(Painter* p, float x, float y, FlDynamicImage* image, FlColor color);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shape drawing (optional-tier IR)
 //
 // These emit optional-tier render commands: a backend MAY ignore them without breaking correctness, layout,

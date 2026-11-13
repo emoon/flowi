@@ -7,22 +7,16 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct HashMapNodeBase {
     struct HashMapNodeBase* next;
     u64 hash;
     u8 data[];
 } HashMapNodeBase;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct HashMapBucket {
     HashMapNodeBase* first;
     HashMapNodeBase* last;
 } HashMapBucket;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct HashMapBase {
     u64 count;
@@ -37,7 +31,6 @@ typedef struct HashMapBase {
     u64 node_size;
 } HashMapBase;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Type-safe hashmap declaration using typeof
 //
 // Usage:
@@ -53,7 +46,6 @@ typedef struct HashMapBase {
         value_type* _value_type;      \
     }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Initialize a hashmap. initial_capacity is a bucket count, rounded up to a power of 2.
 
 #define hashmap_new(map, arena_ptr, initial_capacity)                                                              \
@@ -74,7 +66,6 @@ typedef struct HashMapBase {
         (map)->_value_type = nullptr;                                                                              \
     } while (0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Reads a key as an integer of the given type by copying at most sizeof(key) bytes; the rest is zero.
 
 #define hashmap__key_bits(type, key)                                                                 \
@@ -84,7 +75,6 @@ typedef struct HashMapBase {
         _bits;                                                                                       \
     })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Insert a key-value pair; evaluates to a pointer to the inserted value (nullptr if allocation failed)
 
 #define hashmap_insert(map, key_val, value_val)                                                         \
@@ -111,7 +101,6 @@ typedef struct HashMapBase {
         _node ? (_value_t*)((u8*)_node + (map)->base.value_offset) : nullptr;                           \
     })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Get a value by key; evaluates to a pointer to the value (nullptr if the key is not present)
 
 #define hashmap_get(map, key_val)                                                                                    \
@@ -135,7 +124,6 @@ typedef struct HashMapBase {
         _node ? (_value_t*)((u8*)_node + (map)->base.value_offset) : nullptr;                                        \
     })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Remove a key-value pair; evaluates to true if the key was found and removed
 
 #define hashmap_remove(map, key_val)                                                             \
@@ -158,8 +146,6 @@ typedef struct HashMapBase {
         _result;                                                                                 \
     })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define hashmap_contains(map, key_val)                                                                          \
     ({                                                                                                          \
         typedef __typeof__(*(map)->_key_type) _key_t;                                                           \
@@ -181,7 +167,6 @@ typedef struct HashMapBase {
         _result;                                                                                                \
     })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Iterate over all key-value pairs; key_var and value_var are pointers to the stored data
 
 #define _HASHMAP_CONCAT_IMPL(x, y) x##y
@@ -201,16 +186,11 @@ typedef struct HashMapBase {
                                                               + (map)->base.value_offset);                      \
                          _HASHMAP_UNIQUE(_once_); _HASHMAP_UNIQUE(_once_) = 0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define hashmap_count(map) ((map)->base.count)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Clear all entries (keeps memory allocated, resets count to 0)
 
 #define hashmap_clear(map) hashmap_clear_raw(&(map)->base)
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define ROTL32(x, r) ((x << r) | (x >> (32 - r)))
 #define ROTL64(x, r) ((x << r) | (x >> (64 - r)))
@@ -234,8 +214,6 @@ static inline u32 hashmap_hash_u32_xxhash(u32 key) {
     return h32;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline u64 hashmap_hash_u64_xxhash(u64 key) {
     const u64 PRIME1 = 11400714785074694791ULL;
     const u64 PRIME2 = 14029467366897019727ULL;
@@ -255,7 +233,6 @@ static inline u64 hashmap_hash_u64_xxhash(u64 key) {
     return h64;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hash selection by key size: 4-byte and 8-byte keys use the integer hashes, pointers hash as u64, anything else
 // hashes its bytes.
 
@@ -267,8 +244,6 @@ static inline u64 hashmap_hash_u64_xxhash(u64 key) {
      : __builtin_types_compatible_p(__typeof__(key_val), void*) ? hashmap_hash_u64_xxhash((uintptr_t)(key_val)) \
                                                                 : hashmap_hash(&(key_val), (key_size)))
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // FlString support
 
 struct FlString;
@@ -277,7 +252,6 @@ HashMapNodeBase* hashmap_insert_string_raw(HashMapBase* self, const struct FlStr
 HashMapNodeBase* hashmap_get_string_raw(HashMapBase* self, const struct FlString* key);
 bool hashmap_remove_string_raw(HashMapBase* self, const struct FlString* key);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlString-specific hashmap macros (optimized for string keys)
 
 #define hashmap_string_new(map, arena_ptr, initial_capacity) hashmap_new(map, arena_ptr, initial_capacity)
@@ -327,7 +301,6 @@ bool hashmap_remove_string_raw(HashMapBase* self, const struct FlString* key);
         hashmap_get_string_raw((HashMapBase*)_base, &_key) != nullptr;                    \
     })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Raw interface (used by macros)
 
 void hashmap_init_raw(HashMapBase* self, struct FlArena* arena, u64 capacity, u64 key_size, u64 value_size,

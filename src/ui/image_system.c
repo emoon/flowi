@@ -13,13 +13,10 @@
 #include <stdatomic.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // In-memory load job handles are tracked (in a list that grows with the burst) so they can be recycled via
 // fl_jobs_is_finished() and waited on at teardown. Without this, fire-and-forget jobs leak JobInfo slots.
 
 #define IMAGE_PENDING_JOBS_INITIAL_CAPACITY 64
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Cap the dedup cache to bound arena growth: at the limit the cache is rebuilt empty in a fresh arena.
 // With ~80 bytes per key this allows ~800 KB before a flush.
@@ -29,7 +26,6 @@
 // keys, the cache is rebuilt from the live entries.
 #define DEDUP_DEAD_KEY_BYTES_MAX 16384
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A decode whose prepare_image call is deferred to the begin-frame pump (prepare_image_on_job unset).
 // The entry's arena owns everything the deferred call needs - the entry itself, the decoded pixels, and the
 // copied request path - and is released right after the main-thread call completes. Job worker threads
@@ -96,8 +92,6 @@ struct ImageSystem {
     hashmap(FlImageLoadRequestId, RawPixelImage) raw_pixel_images;
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ImageDecodeOptions resolve_decode_options(ImageSystem* sys, const ImageDecodeOptions* options) {
     ImageDecodeOptions resolved = { 0 };
     if (options) {
@@ -109,8 +103,6 @@ static ImageDecodeOptions resolve_decode_options(ImageSystem* sys, const ImageDe
     return resolved;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct ImageLoadContext {
     ImageSystem* sys;
     _Atomic(FlImageLoadRequestId) request_id; // Atomic: written by main thread, read by worker thread
@@ -121,7 +113,6 @@ typedef struct ImageLoadContext {
     void* user_data;
 } ImageLoadContext;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Call the backend's prepare_image seam and mark the handle ready once the backend reports it realized. Runs on
 // whichever thread the backend prepares on (prepare_on_job).
 
@@ -132,7 +123,6 @@ static void prepare_and_mark(ImageSystem* sys, FlImageLoadRequestId request_id, 
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hand a completed decode to the backend's prepare_image seam, from the job worker thread.
 //
 // With prepare_on_job the call happens here against the job's scratch arena; otherwise decode_arena owns the
@@ -166,7 +156,6 @@ static void dispatch_prepare_image(ImageSystem* sys, FlArena* decode_arena, FlAr
     sys->deferred_tail = entry;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Decode data/size and hand the result to the backend's prepare_image seam. Deferring backends decode into a
 // dedicated arena the queued entry owns (released after the main-thread call); job-context backends decode into
 // scratch. Returns the decoded result, null on failure.
@@ -195,7 +184,6 @@ static const FlImageDecodeResult* decode_and_dispatch(ImageSystem* sys, const vo
     return decoded;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // VFS callback - runs in job worker thread
 
 static FlVfsData image_system_vfs_callback(void* data, i64 size, void* user_data) {
@@ -241,8 +229,6 @@ static FlVfsData image_system_vfs_callback(void* data, i64 size, void* user_data
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Register a producer before it is submitted. Refused once teardown has begun; the closing check follows the
 // increment so a concurrent image_system_close either sees this producer or this call sees closing.
 static bool producer_begin(ImageSystem* sys) {
@@ -257,8 +243,6 @@ static bool producer_begin(ImageSystem* sys) {
 static void producer_end(ImageSystem* sys) {
     atomic_fetch_sub(&sys->producers_inflight, 1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ImageSystem* image_system_create(FlArena* arena, const FlRenderBackend* backend) {
     ImageSystem* sys = arena_alloc_zero(arena, ImageSystem);
@@ -279,7 +263,6 @@ ImageSystem* image_system_create(FlArena* arena, const FlRenderBackend* backend)
     return sys;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Detach the deferred queue under the lock; entries are consumed outside it so job threads never wait on a
 // prepare_image call.
 
@@ -291,7 +274,6 @@ static DeferredPrepare* detach_deferred_prepares(ImageSystem* sys) {
     return head;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Ends a memory load's PENDING state once no further acknowledgement can arrive: drops the active record and,
 // when the backend did not realize the image, records the load as failed. A no-op for any other request id.
 
@@ -308,11 +290,7 @@ static void settle_synthetic_load(ImageSystem* sys, FlImageLoadRequestId request
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void wait_pending_jobs(ImageSystem* sys);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void image_system_close(ImageSystem* sys) {
     atomic_store(&sys->closing, true);
@@ -334,8 +312,6 @@ void image_system_close(ImageSystem* sys) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void image_system_destroy(ImageSystem* sys) {
     image_system_close(sys);
     mi_free(sys->pending_jobs);
@@ -346,7 +322,6 @@ void image_system_destroy(ImageSystem* sys) {
     fl_arena_destroy(sys->dedup_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Null-guarded: the SW backend leaves release_image unbound and relies on wholesale regen.
 
 void image_system_release_image(ImageSystem* sys, FlImageHandle handle) {
@@ -354,8 +329,6 @@ void image_system_release_image(ImageSystem* sys, FlImageHandle handle) {
         sys->release_image(sys->backend_user_data, handle);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dedup_rebuild(ImageSystem* sys, bool keep_entries) {
     FlArena* fresh = arena_new();
@@ -376,8 +349,6 @@ static void dedup_rebuild(ImageSystem* sys, bool keep_entries) {
 
     fl_arena_destroy(old_arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void image_system_begin_frame(ImageSystem* sys) {
     // Pump deferred prepare_image calls on this (main/render) thread, then release the arena that kept each
@@ -402,8 +373,6 @@ void image_system_begin_frame(ImageSystem* sys) {
         dedup_rebuild(sys, false);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlImageLoadRequestId image_system_load(ImageSystem* sys, FlVfsMount* mount, FlString relative_path,
                                        const ImageDecodeOptions* options, const ImageThumbnailOptions* thumb_options,
@@ -453,7 +422,6 @@ FlImageLoadRequestId image_system_load(ImageSystem* sys, FlVfsMount* mount, FlSt
     return request_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hash load options for dedup cache key (FNV-1a over the individual fields)
 
 static u64 hash_load_options(const ImageDecodeOptions* o, const ImageThumbnailOptions* t) {
@@ -493,8 +461,6 @@ static u64 hash_load_options(const ImageDecodeOptions* o, const ImageThumbnailOp
 
     return h;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlImageLoadRequestId image_system_load_dedup(ImageSystem* sys, FlVfsMount* mount, FlString relative_path,
                                              const ImageDecodeOptions* options,
@@ -537,8 +503,6 @@ FlImageLoadRequestId image_system_load_dedup(ImageSystem* sys, FlVfsMount* mount
     return request_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void image_system_forget_dedup(ImageSystem* sys, FlImageLoadRequestId request_id) {
     if (!sys) {
         return;
@@ -565,13 +529,10 @@ void image_system_forget_dedup(ImageSystem* sys, FlImageLoadRequestId request_id
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u64 image_system_dedup_key_bytes(const ImageSystem* sys) {
     return sys->dedup_live_key_bytes + sys->dedup_dead_key_bytes;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Drain completed memory-load jobs so their JobInfo slots get recycled.
 
 static void drain_completed_jobs(ImageSystem* sys) {
@@ -586,8 +547,6 @@ static void drain_completed_jobs(ImageSystem* sys) {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Make room for one more tracked handle, so the list can take it after the job is submitted.
 static bool reserve_pending_job(ImageSystem* sys) {
@@ -605,8 +564,6 @@ static bool reserve_pending_job(ImageSystem* sys) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void wait_pending_jobs(ImageSystem* sys) {
     for (u32 i = 0; i < sys->pending_job_count; i++) {
         fl_jobs_wait(sys->pending_jobs[i]);
@@ -614,7 +571,6 @@ static void wait_pending_jobs(ImageSystem* sys) {
     drain_completed_jobs(sys);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // In-memory image loading (no VFS I/O). Synthetic handles start at 0x80000000; VFS handles start at 1.
 
 static _Atomic u32 s_synthetic_handle_counter = 0x80000000;
@@ -635,8 +591,6 @@ typedef struct MemoryLoadContext {
     void* data; // Heap-allocated copy of source data (freed after decode)
     size_t data_size;
 } MemoryLoadContext;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void memory_load_job(void* user_data, FlJobsWorkerInfo info) {
     (void)info;
@@ -674,8 +628,6 @@ static void memory_load_job(void* user_data, FlJobsWorkerInfo info) {
     // Last access to the image system from this producer.
     atomic_fetch_sub(&sys->producers_inflight, 1);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlImageLoadRequestId image_system_load_from_memory(ImageSystem* sys, const void* data, size_t size,
                                                    const ImageDecodeOptions* options,
@@ -728,8 +680,6 @@ FlImageLoadRequestId image_system_load_from_memory(ImageSystem* sys, const void*
     return request_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void image_system_mark_load_failed(ImageSystem* sys, FlImageLoadRequestId request_id) {
     if (!sys || request_id == FL_IMAGE_LOAD_REQUEST_ID_INVALID) {
         return;
@@ -740,8 +690,6 @@ void image_system_mark_load_failed(ImageSystem* sys, FlImageLoadRequestId reques
     hashmap_insert(&sys->failed_loads, request_id, failed);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool image_system_load_failed(ImageSystem* sys, FlImageLoadRequestId request_id) {
     if (!sys) {
         return false;
@@ -751,8 +699,6 @@ bool image_system_load_failed(ImageSystem* sys, FlImageLoadRequestId request_id)
     return hashmap_get(&sys->failed_loads, request_id) != nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool image_system_load_is_active_synthetic(ImageSystem* sys, FlImageLoadRequestId request_id) {
     if (!sys) {
         return false;
@@ -761,8 +707,6 @@ bool image_system_load_is_active_synthetic(ImageSystem* sys, FlImageLoadRequestI
     mutex_lock_auto(&sys->failed_lock);
     return hashmap_get(&sys->active_synthetic_loads, request_id) != nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void image_system_clear_load_failed(ImageSystem* sys, FlImageLoadRequestId request_id) {
     if (!sys) {
@@ -774,7 +718,6 @@ void image_system_clear_load_failed(ImageSystem* sys, FlImageLoadRequestId reque
     hashmap_remove(&sys->active_synthetic_loads, request_id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Widen pixel_count pixels of src_channels bytes each to 4-byte RGBA. With premultiply the source alpha
 // is applied to RGB and kept; without it the destination alpha is opaque and any fourth source byte is dropped.
 static void expand_to_rgba(u8* dst, const u8* src, size_t pixel_count, size_t src_channels, bool premultiply) {
@@ -879,8 +822,6 @@ static bool realize_raw_pixels(ImageSystem* sys, FlImageLoadRequestId request_id
     return image_registry_is_ready((ImageHandle)request_id, &realized_w, &realized_h);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlImageLoadRequestId image_system_create_from_pixels(ImageSystem* sys, const void* pixels, int width, int height,
                                                      FlImageFormat format, bool dedicated) {
     if (!sys || !sys->prepare_image || !pixels) {
@@ -897,7 +838,6 @@ FlImageLoadRequestId image_system_create_from_pixels(ImageSystem* sys, const voi
     return request_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Re-upload into a live handle. The handle's identity, dimensions, and format are all preserved.
 //
 // The old representation is released and the registry entry cleared BEFORE the new pixels are realized, so the
@@ -931,7 +871,6 @@ bool image_system_update_pixels(ImageSystem* sys, FlImageHandle handle, const vo
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mint a handle for an image the backend realizes itself (a Viewport3d color target). No pixels cross the
 // image system: the caller hands the handle to the backend, which registers its own texture under it and acks
 // the registry.
@@ -939,8 +878,6 @@ bool image_system_update_pixels(ImageSystem* sys, FlImageHandle handle, const vo
 FlImageHandle image_system_alloc_backend_handle(void) {
     return (FlImageHandle)alloc_synthetic_handle();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool image_system_prepare_pending(ImageSystem* sys, FlImageLoadRequestId request_id) {
     mutex_lock_auto(&sys->deferred_lock);
@@ -952,15 +889,11 @@ bool image_system_prepare_pending(ImageSystem* sys, FlImageLoadRequestId request
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void image_system_set_ui_scale(ImageSystem* sys, float scale) {
     if (sys) {
         atomic_store(&sys->ui_scale, scale);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 float image_system_get_ui_scale(ImageSystem* sys) {
     if (sys) {
@@ -968,8 +901,6 @@ float image_system_get_ui_scale(ImageSystem* sys) {
     }
     return 1.0f;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 image_system_pending_job_count(ImageSystem* sys) {
     FL_VALIDATE_RET(sys != nullptr, 0);

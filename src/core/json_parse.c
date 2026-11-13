@@ -6,8 +6,6 @@
 
 #define JSON_MAX_DEPTH 256
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct JsonParser {
     FlArena* arena;
     const char* src;
@@ -39,25 +37,17 @@ typedef enum JsonItem {
 
 static FlJsonValue* parse_value(JsonParser* p);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool at_end(const JsonParser* p) {
     return p->offset >= p->size;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static char peek_at(const JsonParser* p, size_t ahead) {
     return p->offset + ahead < p->size ? p->src[p->offset + ahead] : '\0';
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static char peek(const JsonParser* p) {
     return peek_at(p, 0);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void advance(JsonParser* p) {
     if (p->src[p->offset] == '\n') {
@@ -67,15 +57,11 @@ static void advance(JsonParser* p) {
     p->offset++;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void advance_by(JsonParser* p, size_t count) {
     for (size_t i = 0; i < count; i++) {
         advance(p);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool fail(JsonParser* p, FlJsonParseError error) {
     p->failure.error = error;
@@ -85,38 +71,26 @@ static bool fail(JsonParser* p, FlJsonParseError error) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void* fail_value(JsonParser* p, FlJsonParseError error) {
     fail(p, error);
     return nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool char_in(char c, const char* set) {
     return c != '\0' && strchr(set, c) != nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool is_space(char c) {
     return char_in(c, " \t\r\n");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_digit(char c) {
     return c >= '0' && c <= '9';
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_key_char(char c) {
     return is_digit(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void skip_line_comment(JsonParser* p) {
     while (!at_end(p)) {
@@ -128,8 +102,6 @@ static void skip_line_comment(JsonParser* p) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void skip_block_comment(JsonParser* p) {
     advance_by(p, 2);
     while (!at_end(p)) {
@@ -140,8 +112,6 @@ static void skip_block_comment(JsonParser* p) {
         advance(p);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool skip_comment(JsonParser* p) {
     if (peek(p) != '/') {
@@ -159,8 +129,6 @@ static bool skip_comment(JsonParser* p) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void skip_trivia(JsonParser* p) {
     while (!at_end(p)) {
         if (is_space(peek(p))) {
@@ -171,8 +139,6 @@ static void skip_trivia(JsonParser* p) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool match_word(JsonParser* p, const char* word) {
     const size_t length = strlen(word);
     if (p->size - p->offset < length || memcmp(p->src + p->offset, word, length) != 0) {
@@ -182,16 +148,12 @@ static bool match_word(JsonParser* p, const char* word) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlJsonValue* new_value(JsonParser* p, FlJsonType type, void* payload) {
     FlJsonValue* value = arena_alloc(p->arena, FlJsonValue);
     value->type = type;
     value->payload = payload;
     return value;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static char* copy_text(JsonParser* p, const char* text, size_t length) {
     char* copy = arena_alloc_array(p->arena, char, length + 1);
@@ -200,16 +162,12 @@ static char* copy_text(JsonParser* p, const char* text, size_t length) {
     return copy;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool check_number_end(JsonParser* p) {
     if (at_end(p) || char_in(peek(p), " \t\r\n},]")) {
         return true;
     }
     return fail(p, FlJsonParseError_InvalidNumberFormat);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool scan_hex(JsonParser* p) {
     advance_by(p, 2);
@@ -222,15 +180,11 @@ static bool scan_hex(JsonParser* p) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void skip_digits(JsonParser* p) {
     while (is_digit(peek(p))) {
         advance(p);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool scan_integer(JsonParser* p) {
     if (peek(p) != '0') {
@@ -244,8 +198,6 @@ static bool scan_integer(JsonParser* p) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool scan_fraction(JsonParser* p, bool had_integer) {
     if (peek(p) != '.') {
         return true;
@@ -257,8 +209,6 @@ static bool scan_fraction(JsonParser* p, bool had_integer) {
     }
     return (p->json5 && had_integer) || fail(p, FlJsonParseError_InvalidNumberFormat);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool scan_exponent(JsonParser* p) {
     if (peek(p) != 'e' && peek(p) != 'E') {
@@ -275,8 +225,6 @@ static bool scan_exponent(JsonParser* p) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool scan_decimal(JsonParser* p) {
     const size_t start = p->offset;
     if (!scan_integer(p)) {
@@ -292,13 +240,9 @@ static bool scan_decimal(JsonParser* p) {
     return scan_exponent(p);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool match_special(JsonParser* p) {
     return match_word(p, "Infinity") || match_word(p, "NaN");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool scan_special(JsonParser* p) {
     if (!match_special(p)) {
@@ -310,13 +254,9 @@ static bool scan_special(JsonParser* p) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool at_hex_prefix(const JsonParser* p) {
     return p->json5 && peek(p) == '0' && char_in(peek_at(p, 1), "xX");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool scan_signed_number(JsonParser* p) {
     if (char_in(peek(p), p->json5 ? "+-" : "-")) {
@@ -328,14 +268,10 @@ static bool scan_signed_number(JsonParser* p) {
     return scan_decimal(p);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool scan_number(JsonParser* p) {
     const bool scanned = at_hex_prefix(p) ? scan_hex(p) : scan_signed_number(p);
     return scanned && check_number_end(p);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* parse_number_value(JsonParser* p) {
     const size_t start = p->offset;
@@ -348,8 +284,6 @@ static FlJsonValue* parse_number_value(JsonParser* p) {
     return new_value(p, FlJsonType_Number, number);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void emit(JsonSink* sink, char c) {
     if (sink->dst) {
         sink->dst[sink->length] = c;
@@ -357,13 +291,9 @@ static void emit(JsonSink* sink, char c) {
     sink->length++;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void emit_continuation(JsonSink* sink, u32 codepoint, u32 shift) {
     emit(sink, (char)(0x80u | ((codepoint >> shift) & 0x3fu)));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void emit_utf8(JsonSink* sink, u32 codepoint) {
     if (codepoint <= 0x7f) {
@@ -383,8 +313,6 @@ static void emit_utf8(JsonSink* sink, u32 codepoint) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool read_hex4(JsonParser* p, u32* out) {
     u32 value = 0;
     for (size_t i = 0; i < 4; i++) {
@@ -399,8 +327,6 @@ static bool read_hex4(JsonParser* p, u32* out) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool read_low_surrogate(JsonParser* p, u32* out) {
     if (peek(p) != '\\' || peek_at(p, 1) != 'u') {
         return false;
@@ -408,8 +334,6 @@ static bool read_low_surrogate(JsonParser* p, u32* out) {
     advance_by(p, 2);
     return read_hex4(p, out) && *out >= 0xdc00 && *out <= 0xdfff;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool decode_unicode(JsonParser* p, JsonSink* sink) {
     u32 codepoint;
@@ -429,8 +353,6 @@ static bool decode_unicode(JsonParser* p, JsonSink* sink) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static char simple_escape(char c) {
     if (c == '/') {
         return c;
@@ -438,8 +360,6 @@ static char simple_escape(char c) {
     const char* code = c != '\0' ? strchr(JSON_ESCAPE_CODES, c) : nullptr;
     return code ? JSON_ESCAPE_VALUES[code - JSON_ESCAPE_CODES] : '\0';
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool decode_escape(JsonParser* p, JsonSink* sink) {
     advance(p);
@@ -459,8 +379,6 @@ static bool decode_escape(JsonParser* p, JsonSink* sink) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool decode_plain(JsonParser* p, JsonSink* sink) {
     const char c = peek(p);
     if (c == '\0' || c == '\t') {
@@ -473,8 +391,6 @@ static bool decode_plain(JsonParser* p, JsonSink* sink) {
     advance(p);
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool decode_string(JsonParser* p, JsonSink* sink) {
     const char quote = peek(p);
@@ -492,13 +408,9 @@ static bool decode_string(JsonParser* p, JsonSink* sink) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool at_string_start(const JsonParser* p) {
     return peek(p) == '"' || (p->json5 && peek(p) == '\'');
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool parse_string(JsonParser* p, FlString* out) {
     if (!at_string_start(p)) {
@@ -517,8 +429,6 @@ static bool parse_string(JsonParser* p, FlString* out) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlJsonValue* parse_string_value(JsonParser* p) {
     FlString* string = arena_alloc(p->arena, FlString);
     if (!parse_string(p, string)) {
@@ -526,8 +436,6 @@ static FlJsonValue* parse_string_value(JsonParser* p) {
     }
     return new_value(p, FlJsonType_String, string);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool parse_bare_key(JsonParser* p, FlString* out) {
     const size_t start = p->offset;
@@ -542,16 +450,12 @@ static bool parse_bare_key(JsonParser* p, FlString* out) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool parse_key(JsonParser* p, FlString* out) {
     if (!p->json5 || at_string_start(p)) {
         return parse_string(p, out);
     }
     return parse_bare_key(p, out);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* parse_literal(JsonParser* p) {
     if (match_word(p, "true")) {
@@ -566,14 +470,10 @@ static FlJsonValue* parse_literal(JsonParser* p) {
     return fail_value(p, FlJsonParseError_InvalidValue);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static JsonItem list_fail(JsonParser* p, FlJsonParseError error) {
     fail(p, error);
     return JsonItem_Failed;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static JsonItem list_check_end(JsonParser* p, const JsonList* list) {
     if (at_end(p)) {
@@ -585,8 +485,6 @@ static JsonItem list_check_end(JsonParser* p, const JsonList* list) {
     }
     return JsonItem_Next;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static JsonItem list_next(JsonParser* p, JsonList* list) {
     skip_trivia(p);
@@ -601,8 +499,6 @@ static JsonItem list_next(JsonParser* p, JsonList* list) {
     skip_trivia(p);
     return p->json5 ? list_check_end(p, list) : JsonItem_Next;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* parse_array(JsonParser* p) {
     FlJsonArray* array = arena_alloc_zero(p->arena, FlJsonArray);
@@ -625,8 +521,6 @@ static FlJsonValue* parse_array(JsonParser* p) {
     return item == JsonItem_Done ? value : nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool parse_member(JsonParser* p, FlJsonObjectElement* element) {
     element->name = arena_alloc(p->arena, FlString);
     if (!parse_key(p, element->name)) {
@@ -640,8 +534,6 @@ static bool parse_member(JsonParser* p, FlJsonObjectElement* element) {
     element->value = parse_value(p);
     return element->value != nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* parse_object(JsonParser* p, bool global) {
     FlJsonObject* object = arena_alloc_zero(p->arena, FlJsonObject);
@@ -665,8 +557,6 @@ static FlJsonValue* parse_object(JsonParser* p, bool global) {
     return item == JsonItem_Done ? value : nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlJsonValue* parse_container(JsonParser* p, FlJsonType type, bool global) {
     if (p->depth >= JSON_MAX_DEPTH) {
         return fail_value(p, FlJsonParseError_TooDeep);
@@ -677,14 +567,10 @@ static FlJsonValue* parse_container(JsonParser* p, FlJsonType type, bool global)
     return value;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool at_number_start(const JsonParser* p) {
     const char c = peek(p);
     return is_digit(c) || c == '-' || (p->json5 && char_in(c, "+.IN"));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlJsonValue* parse_value(JsonParser* p) {
     skip_trivia(p);
@@ -706,8 +592,6 @@ static FlJsonValue* parse_value(JsonParser* p) {
     return parse_literal(p);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlJsonValue* parse_document(JsonParser* p) {
     if (p->json5) {
         skip_trivia(p);
@@ -718,14 +602,10 @@ static FlJsonValue* parse_document(JsonParser* p) {
     return parse_value(p);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool finish_document(JsonParser* p) {
     skip_trivia(p);
     return at_end(p) || fail(p, FlJsonParseError_UnexpectedTrailingCharacters);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlJsonValue* fl_json_parse_with_flags(FlArena* arena, FlString src, size_t flags_bitset, FlJsonParseResult* result) {
     if (result) {

@@ -4,8 +4,6 @@
 #include "gpu_svg_atlas.h"
 #include <ui/vector_image.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Bake a shape's solid fill and opacity into one premultiplied RGBA8 word - R in the low byte (GLSL
 // unpackUnorm4x8 order), rounded to nearest. Frame global_alpha is not folded in.
 static u32 bake_premultiplied(FlColor fill, f32 opacity) {

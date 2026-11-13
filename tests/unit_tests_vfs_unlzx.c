@@ -7,8 +7,6 @@
 
 #include <unlzx.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A test-side LZX encoder, so members far larger than the checked-in fixture can be built on the fly. The member is a
 // run of segments, each a literal followed by a match at offset 1 repeating it, coded in verbatim blocks whose
 // literals take 9-bit codes and matches 10-bit ones.
@@ -50,20 +48,15 @@ typedef struct LzxTestArchive {
     u32 crc;
 } LzxTestArchive;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Segment i: its literal, and how many times the match repeats it
 static u8 lzx_segment_literal(u32 i) {
     return (u8)(i * 131 + 7);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static u32 lzx_segment_run(u32 i) {
     return LZX_MIN_MATCH + (i % 256);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // LZX reads 16-bit big-endian words, taking bits from the least significant end
 
 static void lzx_put_bits(LzxWriter* w, u32 value, u32 count) {
@@ -78,7 +71,6 @@ static void lzx_put_bits(LzxWriter* w, u32 value, u32 count) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Huffman codes go out most significant bit first
 
 static void lzx_put_code(LzxWriter* w, u32 code, u32 length) {
@@ -87,7 +79,6 @@ static void lzx_put_code(LzxWriter* w, u32 code, u32 length) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A pretree of two 1-bit codes, then that code for every symbol of one pass over the literal lengths
 
 static void lzx_put_length_pass(LzxWriter* w, u32 first, u32 second, u32 sent, u32 symbol_count) {
@@ -98,8 +89,6 @@ static void lzx_put_length_pass(LzxWriter* w, u32 first, u32 second, u32 sent, u
         lzx_put_code(w, sent == first ? 0 : 1, 1);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void lzx_put_block_header(LzxWriter* w, u32 length, bool first_block) {
     lzx_put_bits(w, LZX_BLOCK_VERBATIM, 3);
@@ -118,8 +107,6 @@ static void lzx_put_block_header(LzxWriter* w, u32 length, bool first_block) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void lzx_put_segment(LzxWriter* w, u32 i) {
     lzx_put_code(w, lzx_segment_literal(i), LZX_LITERAL_CODE_BITS);
 
@@ -134,15 +121,12 @@ static void lzx_put_segment(LzxWriter* w, u32 i) {
     lzx_put_bits(w, extra - s_lzx_length_base[slot], s_lzx_length_extra[slot]);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void lzx_put_le32(u8* out, u32 value) {
     for_count(i, 4) {
         out[i] = (u8)(value >> (8 * i));
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Build an archive holding one compressed member, name, of at least min_size bytes. crc_flip is xored into the
 // stored CRC, so a non-zero value makes the member's data fail its check.
 
@@ -199,8 +183,6 @@ static LzxTestArchive lzx_build_archive(FlString name, u32 min_size, u32 crc_fli
     return (LzxTestArchive) { .data = w.data, .size = w.size, .unpack_size = unpack_size, .crc = crc };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define LZX_FIXTURE "test_unlzx_valid.lzx"
 #define LZX_FIXTURE_MEMBER "test.txt"
 #define LZX_FIXTURE_CONTENT "Hello from LZX test archive!\n"
@@ -210,14 +192,10 @@ static FlString lzx_temp_dir(FlArena* arena) {
     return vfs_test_temp_dir(arena, FL_S("unit_test_vfs_unlzx_tmp"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString lzx_write_temp_archive(FlArena* arena, FlString dir, LzxTestArchive archive) {
     FlString path = file_build_path_os(arena, dir, FL_S("member.lzx"));
     return file_write_os(path, archive.data, (i64)archive.size) == (i64)archive.size ? path : FL_S("");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_unlzx, a_member_of_the_checked_in_archive_lists_and_reads) {
     ASSERT_TRUE(vfs_test_begin());
@@ -231,8 +209,6 @@ UTEST(vfs_unlzx, a_member_of_the_checked_in_archive_lists_and_reads) {
     vfs_destroy();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_unlzx, a_member_that_is_not_in_the_archive_fails_to_read) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -243,8 +219,6 @@ UTEST(vfs_unlzx, a_member_that_is_not_in_the_archive_fails_to_read) {
     fl_vfs_mount_close(mount);
     vfs_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_unlzx, a_file_named_lzx_that_is_not_an_archive_ends_in_a_mount_error) {
     ASSERT_TRUE(vfs_test_begin());
@@ -267,8 +241,6 @@ UTEST(vfs_unlzx, a_file_named_lzx_that_is_not_an_archive_ends_in_a_mount_error) 
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_unlzx, a_buffer_shorter_than_the_member_takes_what_fits_and_the_next_read_carries_on) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -283,8 +255,6 @@ UTEST(vfs_unlzx, a_buffer_shorter_than_the_member_takes_what_fits_and_the_next_r
     fl_vfs_mount_close(mount);
     vfs_destroy();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define LZX_SMALL_MEMBER_SIZE (300 * 1024)
 #define LZX_ODD_CHUNK_SIZE 4097
@@ -319,8 +289,6 @@ UTEST(vfs_unlzx, chunks_that_do_not_line_up_with_the_decoder_blocks_join_up_into
     file_remove_directory_recursive_os(dir);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define LZX_CORRUPT_MEMBER_SIZE (100 * 1024)
 
@@ -374,8 +342,6 @@ UTEST(vfs_unlzx, a_member_with_a_bad_crc_fails_the_read_that_ends_it) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define LZX_LARGE_MEMBER_SIZE (32u * 1024 * 1024)
 #define LZX_HASH_CHUNK_SIZE (64 * 1024)
 
@@ -425,8 +391,6 @@ UTEST(vfs_unlzx, a_large_member_hashes_through_fixed_size_reads) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // An unlzx allocator that keeps count, so a test can see every allocation the decoder makes on any platform
 
 #define COUNTING_HEADER_SIZE 16
@@ -436,8 +400,6 @@ typedef struct CountingAllocator {
     u64 peak;
     u64 largest;
 } CountingAllocator;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void* counting_alloc(void* user, size_t size) {
     CountingAllocator* counter = (CountingAllocator*)user;
@@ -452,8 +414,6 @@ static void* counting_alloc(void* user, size_t size) {
     return block + COUNTING_HEADER_SIZE;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void counting_free(void* user, void* ptr) {
     CountingAllocator* counter = (CountingAllocator*)user;
     u8* block = (u8*)ptr - COUNTING_HEADER_SIZE;
@@ -462,8 +422,6 @@ static void counting_free(void* user, void* ptr) {
     counter->live -= size;
     free(block);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Far above the decoder's fixed state, far below the member
 #define LZX_DECODER_MEMORY_BOUND (1024 * 1024)
@@ -513,8 +471,6 @@ UTEST(vfs_unlzx, a_large_member_streams_through_bounded_decoder_allocations) {
     free(archive.data);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(vfs_unlzx, an_empty_member_lists_as_a_file) {
     ASSERT_TRUE(vfs_test_begin());
 
@@ -536,8 +492,6 @@ UTEST(vfs_unlzx, an_empty_member_lists_as_a_file) {
     free(archive.data);
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(vfs_unlzx, opening_a_member_that_is_not_in_the_archive_fails_at_open) {
     const FlVfsPlugin* plugin = vfs_driver_unlzx();

@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Compile-only parity guard: the api_gen-generated public app surface (<flowi/app/app.h>). Nothing is linked;
 // every prototype must parse and match its expected signature here.
 //

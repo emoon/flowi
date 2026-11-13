@@ -5,15 +5,11 @@
 // Double the table bounds the churn between drains: every live texture released plus their replacements.
 #define GPU_IMAGE_DEAD_CAP (GPU_IMAGE_SLOT_TABLE_CAP * 2)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gpu_image_slots_init(GpuImageSlots* slots, FlArena* arena) {
     *slots = (GpuImageSlots) { 0 };
     slots->images = arena_alloc_array(arena, GpuSlotImage, GPU_IMAGE_SLOT_TABLE_CAP);
     slots->dead_tex = arena_alloc_array(arena, u32, GPU_IMAGE_DEAD_CAP);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void push_dead(GpuImageSlots* slots, u32 tex) {
     if (tex == 0) {
@@ -33,8 +29,6 @@ static void remove_entry(GpuImageSlots* slots, u32 index) {
     slots->images[index] = slots->images[--slots->image_count];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gpu_image_slots_begin_frame(GpuImageSlots* slots) {
     slots->frame++;
     slots->table_full_diagnosed = false;
@@ -52,8 +46,6 @@ void gpu_image_slots_frame_reset(GpuImageSlots* slots) {
     slots->slot_count = 0;
     slots->overflow = 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int gpu_image_slots_find_static(const GpuImageSlots* slots, FlImageHandle handle) {
     for (u32 i = 0; i < slots->image_count; i++) {
@@ -85,8 +77,6 @@ void gpu_image_slots_release_static(GpuImageSlots* slots, FlImageHandle handle) 
         remove_entry(slots, (u32)index);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int gpu_image_slots_touch_dynamic(GpuImageSlots* slots, const void* pixels, u32 w, u32 h, u32 stride, bool alpha_only) {
     GpuSlotImage* img = NULL;
@@ -123,8 +113,6 @@ int gpu_image_slots_touch_dynamic(GpuImageSlots* slots, const void* pixels, u32 
     return (int)index;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int gpu_image_slots_assign(GpuImageSlots* slots, u32 image_index, u8 filter) {
     for (u32 s = 0; s < slots->slot_count; s++) {
         if (slots->slot_image[s] == image_index) {
@@ -140,8 +128,6 @@ int gpu_image_slots_assign(GpuImageSlots* slots, u32 image_index, u8 filter) {
     slots->slot_filter[s] = filter;
     return (int)s;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 gpu_image_slots_take_dead(GpuImageSlots* slots, const u32** out) {
     *out = slots->dead_tex;

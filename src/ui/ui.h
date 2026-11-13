@@ -44,8 +44,6 @@ FlSignal ui_button_impl(FlString string, FlWidgetConfig cfg);
 FlSignal ui_button_with_image_impl(FlString text, ImageHandle image, FlWidgetConfig cfg);
 #define ui_button_with_image(text, image, ...) ui_button_with_image_impl(text, image, (FlWidgetConfig) { __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_image_impl(ImageHandle handle, FlImageOpts opts);
 #define ui_image(handle, ...) ui_image_impl(handle, (FlImageOpts) { __VA_ARGS__ });
 
@@ -56,15 +54,11 @@ void ui_dynamic_image_impl(FlDynamicImage* image, FlImageOpts opts);
 // <flowi/ui/icon.h> prototypes. FlIcon is the toolkit-chrome icon set; index shared->icons[] with
 // FlIcon_* directly.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_text(FlString text);
 
 void ui_text_styled_impl(FlString text, FlTextConfig config);
 #define ui_text_styled(text, ...) \
     ui_text_styled_impl(text, (FlTextConfig) { .valign = FlTextVAlign_Center, __VA_ARGS__ })
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Load a font at default_size (authored px; 0 selects a built-in default). The handle keeps that authored
 // size - the current text scale is applied per draw, not baked here, so the font follows a later
@@ -82,11 +76,7 @@ bool ui_font_is_loaded(FlFontId id);
 // load several fonts and sync once before the first rendered frame. Returns false if any font failed.
 bool ui_font_ensure_loaded(void);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_theme_update(const FlThemeColors* colors);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlSignal ui_widget_behavior(FlLayoutId id, FlWidgetConfig cfg);
 
@@ -101,7 +91,6 @@ FlSignal ui_widget_behavior(FlLayoutId id, FlWidgetConfig cfg);
 // family that is not focusable by default (the scrollbar) adds the bit itself.
 FlSignal ui_item_behavior(FlLayoutId id, FlItemFlags flags, FlWidgetConfig cfg);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Checkbox widget
 
 // Checkbox with label - returns signal (clicked/hovered/focused/activated)
@@ -109,7 +98,6 @@ FlSignal ui_checkbox_impl(FlString label, bool* checked, FlCheckboxConfig cfg);
 #define ui_checkbox(label, checked, ...) \
     ui_checkbox_impl(label, checked, (FlCheckboxConfig) { .label_on_left = false, __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Switch widget
 
 // Switch with label - boolean toggle drawn as a pill track with a knob that slides across as it toggles.
@@ -119,7 +107,6 @@ FlSignal ui_switch_impl(FlString label, bool* value, FlSwitchConfig cfg);
 #define ui_switch(label, value, ...) \
     ui_switch_impl(label, value, (FlSwitchConfig) { .label_on_left = false, __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Radio group widget
 
 // Radio group - exclusive single-choice selection across options[]. Selecting one option writes its index back to
@@ -128,7 +115,6 @@ FlSignal ui_radio_group_impl(FlString* options, int option_count, int* selected_
 #define ui_radio_group(options, option_count, selected_index, ...) \
     ui_radio_group_impl(options, option_count, selected_index, (FlRadioConfig) { __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Progress bar widget
 
 // Progress bar - determinate, non-interactive. Paints a track + a fill sized to fraction (normalized [0,1],
@@ -136,7 +122,6 @@ FlSignal ui_radio_group_impl(FlString* options, int option_count, int* selected_
 void ui_progress_bar_impl(float fraction, FlProgressConfig cfg);
 #define ui_progress_bar(fraction, ...) ui_progress_bar_impl(fraction, (FlProgressConfig) { __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Slider widget
 
 // Float slider - returns signal (clicked/hovered/focused/activated)
@@ -149,7 +134,6 @@ FlSignal ui_slider_int_impl(FlString label, int* value, int min, int max, FlSlid
 #define ui_slider_int(label, value, min, max, ...) \
     ui_slider_int_impl(label, value, min, max, (FlSliderConfig) { .format = "%d", .step = 1.0f, __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pill widget - pill-shaped toggle button for category filters
 // Uses checkbox behavior with pill styling (FlRadius_Full)
 // Selected = Solid variant, Unselected = Ghost variant
@@ -157,13 +141,11 @@ FlSignal ui_slider_int_impl(FlString label, int* value, int min, int max, FlSlid
 FlSignal ui_pill_impl(FlString label, bool* selected, FlWidgetConfig cfg);
 #define ui_pill(label, selected, ...) ui_pill_impl(label, selected, (FlWidgetConfig) { __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Chip widget - small tag/badge with soft variant
 
 FlSignal ui_chip_impl(FlString label, bool* selected, FlWidgetConfig cfg);
 #define ui_chip(label, selected, ...) ui_chip_impl(label, selected, (FlWidgetConfig) { __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dropdown widget (uses popup system)
 
 // Dropdown - interactive widget for selecting from a list of options. is_open is caller-owned popup state,
@@ -174,7 +156,6 @@ void ui_dropdown_impl(FlString label, bool* is_open, FlString* options, int opti
     ui_dropdown_impl(label, is_open, options, option_count, selected_index,     \
                      (FlDropdownConfig) { .show_cancel = true, .min_width = 200.0f, __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tab bar widget - horizontal or vertical tab navigation. selected_index is in/out; returns true if the
 // selection changed this frame. Every geometry field in the config is 0 = keep the built-in default; asking
 // for strip padding or radius turns the bare layout row into a surface-colored pill that hugs its tabs.
@@ -182,7 +163,6 @@ bool ui_tab_bar_impl(FlString* tabs, int tab_count, int* selected_index, FlTabBa
 #define ui_tab_bar(tabs, tab_count, selected_index, ...) \
     ui_tab_bar_impl(tabs, tab_count, selected_index, (FlTabBarConfig) { __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Link widget - clickable text with underline for hyperlinks. Returns a signal with clicked/focused state;
 // focus adds a rounded border around the underlined text.
 FlSignal ui_link_impl(FlString text, FlLinkConfig cfg);
@@ -190,7 +170,6 @@ FlSignal ui_link_impl(FlString text, FlLinkConfig cfg);
 
 // fl_set_focus(FlLayoutId) is the public focus-set surface, in <flowi/ui/nav.h>.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Input helpers
 
 // Returns the mouse wheel delta for this frame
@@ -280,15 +259,12 @@ bool ui_take_pending_warp(float* out_x, float* out_y);
 
 // fl_action_pressed(FlAction) is the public context-free action query, in <flowi/ui/nav.h>.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Add empty space with fixed height (useful for list clipper padding in vertical layouts)
 void ui_spacer(float height);
 
 // Add empty space with fixed width (useful for virtualization spacers in horizontal layouts)
 void ui_spacer_h(float width);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Element state
 
 // Get an element's state including visibility, interaction state, and bounding box. Keyed by an element id, so it
@@ -326,7 +302,6 @@ u32 ui_hot_id(void);
 // frame. Returns {0, 0} if the element is not in the layout (see ui_get_element_state().found).
 FlVec2 ui_mouse_position(FlLayoutId layout_id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Wheel input - Scroll Target routing + scoped delta read
 
 // Mark a layout area (or widget) as a Scroll Target for this frame: it opts into mouse-wheel routing over its
@@ -342,7 +317,6 @@ void ui_scroll_target(FlLayoutId layout_id);
 // with ui_mouse_position; coexists with the unscoped global ui_get_mouse_wheel().
 FlVec2 ui_mouse_wheel_delta(FlLayoutId layout_id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI Scaling API
 
 // Set the absolute UI scale: authored logical pixels are multiplied by ui_scale (chrome) and text_scale
@@ -367,12 +341,10 @@ float ui_get_text_scale(void);
 struct Painter;
 struct Painter* ui_get_painter(void);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Register the process-wide default filesystem mount that fl_font_load / fl_image_load resolve against. The
 // runner calls this once after creating the mount; pass NULL to clear it.
 void ui_set_asset_mount(FlVfsMount* mount);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Background Image API
 //
 // Set a background image that fills the entire screen behind all UI elements.
@@ -389,7 +361,6 @@ void ui_background_set_alpha(u8 alpha);
 /// Should match theme surface.base color for visual consistency
 void ui_background_set_clear_color(u8 r, u8 g, u8 b);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Background Blend API
 //
 // Composite two background images with a SIMD-optimized lerp. Stateless: the caller passes both handles and
@@ -398,7 +369,6 @@ void ui_background_set_clear_color(u8 r, u8 g, u8 b);
 /// Blend two background images this frame: t mixes prev (0) toward current (255)
 void ui_background_set_blend(ImageHandle prev, ImageHandle current, u8 t);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Modal Popup API
 //
 // Modal dialogs block input to widgets outside the modal scope.

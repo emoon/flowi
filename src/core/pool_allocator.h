@@ -5,7 +5,6 @@
 
 struct FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pool allocator implementation with type safety using typeof
 //
 // Usage:
@@ -14,7 +13,7 @@ struct FlArena;
 //   Node* node = pool_alloc(&node_pool);
 //   pool_free(&node_pool, node);
 //
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Base pool structure (type-erased)
 
 typedef struct PoolAllocatorBase {
@@ -24,7 +23,6 @@ typedef struct PoolAllocatorBase {
     u64 item_alignment;
 } PoolAllocatorBase;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Type-safe pool declaration using typeof
 
 #define pool(element_type)           \
@@ -33,8 +31,6 @@ typedef struct PoolAllocatorBase {
         element_type* _element_type; \
     }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define pool_new(pool_ptr, arena_ptr)                                                          \
     do {                                                                                       \
         typedef __typeof__(*(pool_ptr)->_element_type) _element_t;                             \
@@ -42,15 +38,11 @@ typedef struct PoolAllocatorBase {
         (pool_ptr)->_element_type = nullptr;                                                   \
     } while (0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define pool_alloc(pool_ptr)                                       \
     ({                                                             \
         typedef __typeof__(*(pool_ptr)->_element_type) _element_t; \
         (_element_t*)pool_alloc_raw(&(pool_ptr)->base);            \
     })
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define pool_free(pool_ptr, ptr_val)                                                   \
     do {                                                                               \
@@ -60,7 +52,6 @@ typedef struct PoolAllocatorBase {
         pool_free_raw(&(pool_ptr)->base, ptr_val);                                     \
     } while (0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Raw interface (used by macros)
 
 void pool_init_raw(PoolAllocatorBase* self, FlArena* arena, u64 item_size, u64 item_alignment);

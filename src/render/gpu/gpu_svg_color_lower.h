@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: multi-color SVG -> per-shape quad ranges + baked premultiplied colors for the single-dispatch
 // color-raster shader.
 //
@@ -12,8 +11,6 @@
 
 struct FlArena;
 struct FlVectorImage;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // One shape's wire record in the Shapes SSBO, matching a GLSL std430 uvec4 (16-byte stride). The color shader loops
 // these in document order, accumulating signed-area coverage over [quad_start, quad_count), folds the fill rule,

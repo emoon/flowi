@@ -1,14 +1,11 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: vector-icon draw routing - a resolved SVG atlas cell -> FlCmdImage. An icon crosses the IR as an
 // ordinary image command.
 
 #include "gpu_atlas_pack.h"
 #include <ui/render_ir.h>
 #include <ui/vector_image.h>
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Build the FlCmdImage draw mapping for a prepared vector icon resolved to its live atlas cell (the full padded
 // extent). Routing follows the classification:

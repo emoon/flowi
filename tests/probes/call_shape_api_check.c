@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Compile-only guard for the generated call macros. With the implementation define unset, a trailing *Config / *Opts
 // argument is written as a designated-initializer list, and every other trailing argument (handle, id, color, event,
 // vector) is passed as a plain expression.
@@ -22,8 +21,6 @@
 #include <flowi/ui/ui_input.h>
 #include <flowi/ui/ui_menu.h>
 #include <flowi/ui/viewport3d.h>
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Never called; it only has to compile.
 static void call_shape_api_check_compile_only(FlColor color, FlLayoutId id, FlJobHandle job, FlImageHandle image,

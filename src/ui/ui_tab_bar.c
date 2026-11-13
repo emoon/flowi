@@ -141,7 +141,6 @@ int ui_tab_strip(FlString name, u32 instance_id, const FlString* labels, int cou
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool ui_tab_bar_impl(FlString* tabs, int tab_count, int* selected_index, FlTabBarConfig cfg) {
     FlUiCtx* self = g_ui_ctx;
 

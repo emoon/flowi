@@ -12,17 +12,12 @@
 #include <limits.h>
 #include <stdlib.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static LogChannelId FW_ID = LOG_CHANNEL_INVALID;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct MacOSWatcherData {
     FSEventStreamRef stream;
     dispatch_queue_t queue;
 } MacOSWatcherData;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void fsevent_callback(ConstFSEventStreamRef stream_ref, void* callback_info, size_t num_events,
                              void* event_paths, const FSEventStreamEventFlags event_flags[],
@@ -81,8 +76,6 @@ static void fsevent_callback(ConstFSEventStreamRef stream_ref, void* callback_in
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherError platform_start_watching(FileWatcherState* state) {
     if (FW_ID == LOG_CHANNEL_INVALID) {
@@ -157,13 +150,9 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
     return FileWatcherError_Success;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void drain_queue_noop(void* context) {
     (void)context;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void platform_stop_watching(FileWatcherState* state) {
     if (!state || !state->platform_data) {
@@ -194,8 +183,6 @@ void platform_stop_watching(FileWatcherState* state) {
 
     logc_debug(FW_ID, "FileWatcher[%u]: macOS FSEvents watcher stopped", state->handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FileWatcherError platform_poll_changes(FileWatcherState* state) {
     if (!state || !state->platform_data || !state->is_active) {

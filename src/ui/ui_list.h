@@ -1,26 +1,19 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // List API - Internal Implementation Header
 //
 // Internal header for the List widget (CONTEXT.md `## Lists`). The scoped face (ui_list_begin /
 // ui_list_item_begin / ui_list_item_end / ui_list_end) is declared below. The List reuses list_uniform's
 // virtualization core.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <core/types.h>
 #include <ui/list_api.h>
 #include "ui_selection.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct FlArena FlArena;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlListContext* ui_list_create(FlArena* arena);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scoped face - operate on the global UI context. These are the symbols the api_gen seam (ui_list.def) binds
 // to Rust; keep their names in lockstep with the seam.
 
@@ -49,7 +42,6 @@ FlListResult ui_list_end(void);
 // cursor is seeded only when the list did not already hold focus, so a stray every-frame call is redundant.
 void ui_list_request_focus(FlLayoutId id, u64 cursor_id);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Declarative face (CONTEXT.md `## Lists`). The common-case one-call API: hand it an array of simple
 // FlListItem descriptors ({ id, label, icon }, count entries) and the caller-owned set, and it runs the
 // whole list internally - virtualization, the selection gesture machine, keyboard nav, marquee, drag-reorder,

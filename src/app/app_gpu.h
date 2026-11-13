@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_app GPU host - Surface Binding for the GPU render backend.
 //
 // The GPU backend (src/render/gpu) renders into an offscreen RGBA8 target but does NOT own a GL context or a
@@ -10,7 +9,6 @@
 // resolves the surface texture.
 //
 // All EGL / GL types stay inside app_gpu.c. Compiled only when FL_APP_HAVE_GPU (OpenGL_EGL_FOUND).
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <ui/render_backend.h>
 #include <core/types.h>

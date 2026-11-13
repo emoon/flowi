@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: glyph-atlas bookkeeping - (font, size, glyph) -> R8 atlas cell over the skyline packer.
 //
 // Append-only like the packer underneath: a glyph is placed once per (font, quantized size, glyph id) and never
@@ -10,8 +9,6 @@
 #include <ui/ui_types.h>
 
 struct FlArena;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Atlas texture extent (square): GPU_GLYPH_ATLAS_SIZE^2 R8 texels (16 MB).
 #define GPU_GLYPH_ATLAS_SIZE 4096
@@ -41,8 +38,6 @@ typedef struct GpuGlyphAtlas {
     // gpu_glyph_atlas_wipe_if_needed, never mid-frame.
     bool needs_wipe;
 } GpuGlyphAtlas;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Initialize (or reset, for wholesale regeneration) the bookkeeping. Storage comes from arena on first
 // init and is reused after.

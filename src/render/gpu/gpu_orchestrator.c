@@ -8,7 +8,6 @@
 #include <ui/font_cache.h>
 #include <ui/render_ir.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Realize every glyph the frame's text runs reference into the coverage atlas, pulling outlines from the bound
 // font cache and handing each to the backend's prepare_glyph seam. prepare_glyph is idempotent, so a resident
 // glyph short-circuits and re-running every frame also repopulates the atlas after a deferred overflow wipe.
@@ -49,8 +48,6 @@ static void gpu_prepare_text_glyphs(const GpuRenderOps* ops, void* backend, cons
         p += header->byte_size;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gpu_orchestrate_frame(const GpuRenderOps* ops, void* backend, void* surface, const struct FlRenderFrame* frame,
                            u32 screen_w, u32 screen_h, GpuGlyphAtlas* glyph_atlas, FlArena* frame_arena,

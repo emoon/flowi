@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-frame input state of a FlUiCtx. The window backends feed it through the platform_input_push_* sink
 // (platform/input_types.h), which this module implements; the frame loop advances it once per frame.
 

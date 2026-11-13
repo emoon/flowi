@@ -9,8 +9,6 @@
 
 #define JSON_INFINITY_REPLACEMENT "1.7976931348623158e308"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct JsonWriter {
     char* dst;
     size_t length;
@@ -26,8 +24,6 @@ typedef struct JsonNumberText {
 
 static void write_value(JsonWriter* w, const FlJsonValue* value, size_t depth);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void put(JsonWriter* w, char c) {
     if (w->dst) {
         w->dst[w->length] = c;
@@ -35,21 +31,15 @@ static void put(JsonWriter* w, char c) {
     w->length++;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void put_text(JsonWriter* w, const char* text, size_t length) {
     for (size_t i = 0; i < length; i++) {
         put(w, text[i]);
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void put_cstr(JsonWriter* w, const char* text) {
     put_text(w, text, strlen(text));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void write_line_break(JsonWriter* w, size_t depth) {
     put_cstr(w, w->newline);
@@ -58,14 +48,10 @@ static void write_line_break(JsonWriter* w, size_t depth) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static char string_escape(char c) {
     const char* value = c != '\0' ? strchr(JSON_ESCAPE_VALUES, c) : nullptr;
     return value ? JSON_ESCAPE_CODES[value - JSON_ESCAPE_VALUES] : '\0';
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void write_string(JsonWriter* w, const FlString* string) {
     put(w, '"');
@@ -81,22 +67,16 @@ static void write_string(JsonWriter* w, const FlString* string) {
     put(w, '"');
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool starts_with(FlString text, const char* prefix) {
     const size_t length = strlen(prefix);
     return text.length >= length && memcmp(text.data, prefix, length) == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void write_hex_as_decimal(JsonWriter* w, FlString text) {
     char digits[24];
     const int length = snprintf(digits, sizeof(digits), "%" PRIu64, (u64)strtoull(text.data, nullptr, 0));
     put_text(w, digits, (size_t)length);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static JsonNumberText split_sign(const FlJsonNumber* number) {
     JsonNumberText text = { .digits = { .data = number->number, .length = number->number_size } };
@@ -106,8 +86,6 @@ static JsonNumberText split_sign(const FlJsonNumber* number) {
     }
     return text;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool write_special_number(JsonWriter* w, const JsonNumberText* text) {
     if (starts_with(text->digits, "Infinity")) {
@@ -120,8 +98,6 @@ static bool write_special_number(JsonWriter* w, const JsonNumberText* text) {
     }
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void write_decimal_number(JsonWriter* w, const JsonNumberText* text) {
     if (text->negative) {
@@ -136,8 +112,6 @@ static void write_decimal_number(JsonWriter* w, const JsonNumberText* text) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void write_number(JsonWriter* w, const FlJsonNumber* number) {
     const FlString raw = { .data = number->number, .length = number->number_size };
     if (starts_with(raw, "0x") || starts_with(raw, "0X")) {
@@ -150,8 +124,6 @@ static void write_number(JsonWriter* w, const FlJsonNumber* number) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void write_item_start(JsonWriter* w, bool first, size_t depth) {
     if (!first) {
         put(w, ',');
@@ -159,16 +131,12 @@ static void write_item_start(JsonWriter* w, bool first, size_t depth) {
     write_line_break(w, depth + 1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void write_list_end(JsonWriter* w, size_t count, size_t depth, char close) {
     if (count > 0) {
         write_line_break(w, depth);
     }
     put(w, close);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void write_array(JsonWriter* w, const FlJsonArray* array, size_t depth) {
     put(w, '[');
@@ -178,8 +146,6 @@ static void write_array(JsonWriter* w, const FlJsonArray* array, size_t depth) {
     }
     write_list_end(w, array->length, depth, ']');
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void write_object(JsonWriter* w, const FlJsonObject* object, size_t depth) {
     put(w, '{');
@@ -191,8 +157,6 @@ static void write_object(JsonWriter* w, const FlJsonObject* object, size_t depth
     }
     write_list_end(w, object->length, depth, '}');
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const char* literal_text(FlJsonType type) {
     switch (type) {
@@ -206,8 +170,6 @@ static const char* literal_text(FlJsonType type) {
             return nullptr;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void write_value(JsonWriter* w, const FlJsonValue* value, size_t depth) {
     const char* literal = literal_text(value->type);
@@ -233,8 +195,6 @@ static void write_value(JsonWriter* w, const FlJsonValue* value, size_t depth) {
             break;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_json_write_pretty(FlArena* arena, const FlJsonValue* value, const char* indent, const char* newline) {
     if (!value) {

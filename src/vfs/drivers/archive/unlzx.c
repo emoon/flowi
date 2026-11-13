@@ -15,7 +15,6 @@
 #include <string.h>
 #include <unlzx.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Handle for the archive root or one of its members
 
 typedef struct UnlzxHandle {
@@ -28,14 +27,12 @@ typedef struct UnlzxHandle {
     UnlzxStream* stream;
 } UnlzxHandle;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // True for the .lzx extension
 
 static bool is_lzx_file(FlString path) {
     return fl_path_has_extension(path, FL_S("lzx"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // True when the bytes start like an LZX archive
 
 static bool is_lzx_archive_data(const uint8_t* data, size_t size) {
@@ -44,8 +41,6 @@ static bool is_lzx_archive_data(const uint8_t* data, size_t size) {
     }
     return (data[0] == 'L' && data[1] == 'Z' && data[2] == 'X');
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void build_entry_cache(UnlzxHandle* handle) {
     if (handle->base.entries.arena || !handle->archive) {
@@ -66,7 +61,6 @@ static void build_entry_cache(UnlzxHandle* handle) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Opens a member of an already-opened archive
 
 static FlVfsOpenResult unlzx_open(void* driver_instance, void* parent_handle, FlString path, uint32_t flags,
@@ -108,15 +102,12 @@ static FlVfsOpenResult unlzx_open(void* driver_instance, void* parent_handle, Fl
                                .error = { .vfs_status = FlVfsStatus_NotImplemented } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool unlzx_is_directory(void* driver_instance, void* handle) {
     (void)driver_instance;
     UnlzxHandle* h = (UnlzxHandle*)handle;
     return h ? h->base.is_directory : false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Continue reading the handle's own entry from where the last read stopped, 0 bytes at its end
 
 static FlVfsReadResult unlzx_read_next(UnlzxHandle* handle, uint8_t* buffer, int64_t size) {
@@ -145,8 +136,6 @@ static FlVfsReadResult unlzx_read_next(UnlzxHandle* handle, uint8_t* buffer, int
 
     return (FlVfsReadResult) { .bytes_read = (int64_t)bytes_read, .error = { .vfs_status = FlVfsStatus_Success } };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsReadResult unlzx_read(void* driver_instance, void* handle_ptr, FlString path, uint8_t* buffer,
                                   int64_t size) {
@@ -199,8 +188,6 @@ static FlVfsReadResult unlzx_read(void* driver_instance, void* handle_ptr, FlStr
                                .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsSizeResult unlzx_get_size(void* driver_instance, void* handle_ptr, FlString path) {
     (void)driver_instance;
     UnlzxHandle* handle = (UnlzxHandle*)handle_ptr;
@@ -232,8 +219,6 @@ static FlVfsSizeResult unlzx_get_size(void* driver_instance, void* handle_ptr, F
     return (FlVfsSizeResult) { .size = (int64_t)entry->unpack_size, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void unlzx_list_directory(void* driver_instance, void* handle_ptr, FlString path, FlVfsListingCallback callback,
                                  void* user_data) {
     (void)driver_instance;
@@ -247,8 +232,6 @@ static void unlzx_list_directory(void* driver_instance, void* handle_ptr, FlStri
 
     vfs_archive_list_children(handle->base.entries.head, path, callback, user_data);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void unlzx_vfs_close(void* driver_instance, void* handle_ptr) {
     (void)driver_instance;
@@ -267,8 +250,6 @@ static void unlzx_vfs_close(void* driver_instance, void* handle_ptr) {
     vfs_archive_handle_release(&handle->base);
     fl_heap_free(handle);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsOpenResult unlzx_vfs_open_memory(void* driver_instance, const uint8_t* data, uint64_t size,
                                              FlString original_path) {
@@ -314,14 +295,10 @@ static FlVfsOpenResult unlzx_vfs_open_memory(void* driver_instance, const uint8_
     return (FlVfsOpenResult) { .handle = handle, .is_directory = true, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsDriverCapabilities unlzx_get_capabilities(void) {
     return FlVfsDriverCapabilities_Read | FlVfsDriverCapabilities_List | FlVfsDriverCapabilities_Memory
            | FlVfsDriverCapabilities_Archive;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsPlugin s_unlzx_plugin = {
     .api_version = FL_VFS_PLUGIN_API_VERSION,
@@ -344,8 +321,6 @@ static FlVfsPlugin s_unlzx_plugin = {
     .get_file_path = nullptr,
     .is_cached = nullptr,
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsPlugin* vfs_driver_unlzx(void) {
     return &s_unlzx_plugin;

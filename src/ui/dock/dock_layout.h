@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock Layout - turn a logical dock tree into a laid-out region by emitting Clay containers and reading the
 // computed geometry back (CONTEXT.md "Docking"). The docking layer stores topology + ratios only; Clay owns and
 // computes every pixel rect. Every node carries a stable Clay element id, so after the layout pass each node's
@@ -9,7 +8,6 @@
 // One-frame ordering: a node's computed rect is only valid AFTER a layout pass. Call dock_layout_emit inside
 // the UI frame (between ui_update_begin and ui_update_end); call dock_layout_read_rects once that frame's
 // layout has been computed (after ui_update_end).
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "dock_tree.h"
 
@@ -36,12 +34,8 @@ typedef struct FlDockLayout {
     u32 count;
 } FlDockLayout;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The UI scale (physical px per logical px), never zero.
 f32 dock_ui_scale(void);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The width band a dock tab lays out in, in reference pixels: the min keeps a blank tab hittable, the max caps
 // a long title, which elides into it. They bound the tabs of a SHARED header - a lone tab stretches to the bar

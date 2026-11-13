@@ -1,8 +1,6 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Docking - internal C-only umbrella for the docking framework layer.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "dock/dock_workspace.h"
 
@@ -27,7 +25,6 @@ extern "C" {
     for (int FL__DOCK_PANEL_LATCH = dock_panel_scope_begin(id, title) ? 0 : 2; FL__DOCK_PANEL_LATCH < 1; \
          FL__DOCK_PANEL_LATCH = 1, dock_panel_scope_end())
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Declarative first-run layout literals. Nest dock_split / dock_leaf to author the default tree, then
 // dock_tree_build (dock_tree.h) lowers + validates it. Each macro yields a `const FlDockSpec*`; nested literals
 // share the enclosing block's (or, at file scope, static) storage duration, which spans the dock_tree_build call.

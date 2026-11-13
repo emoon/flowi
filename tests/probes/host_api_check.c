@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Compile-only parity guard: the api_gen-generated public embedded-host surface (<flowi/app/host.h>). Nothing is
 // linked; every prototype must parse and match its expected signature here.
 

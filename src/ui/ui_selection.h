@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Selection API - Internal Implementation Header
 //
 // Two pieces:
@@ -10,7 +9,6 @@
 //
 // The List keeps only the gesture anchor across frames; the resolved selection lives ONLY here. The set
 // interprets the u64 as pure identity, never as data.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <core/types.h>
 #include <flowi/ui/selection.h>
@@ -21,16 +19,13 @@
 extern "C" {
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Forward Declarations
 
 typedef struct FlArena FlArena;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Selection Request - the per-frame change unit a List emits (never the resolved set; the List does not store
 // it). FlSelectionRequest / FlSelectionRequestKind are generated into flowi/ui/selection.h, included above.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlSelectionSet - lifecycle
 
 // Create an empty selection set backed by a dedicated arena. initial_capacity is a hint for the number of ids
@@ -40,7 +35,6 @@ FlSelectionSet* selection_set_create(u32 initial_capacity);
 // Destroy a set from create, freeing its dedicated arena. No-op on a null handle.
 void selection_set_destroy(FlSelectionSet* set);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlSelectionSet - membership (the per-frame query a visible row makes to decide its highlight)
 
 // True if id is currently selected.
@@ -56,7 +50,6 @@ void selection_set_clear_all(FlSelectionSet* set);
 // resolution of a SetAll(true) request.
 void selection_set_set_all(FlSelectionSet* set, const u64* ids, u64 count);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlSelectionSet - apply a batch of requests
 //
 // Folds req_count requests into the set, in array order (sequence is semantics: ClearAll then SetOne(x) nets to
@@ -68,7 +61,6 @@ void selection_set_set_all(FlSelectionSet* set, const u64* ids, u64 count);
 void selection_set_apply(FlSelectionSet* set, const FlSelectionRequest* reqs, u64 req_count, const u64* ordered_ids,
                          u64 id_count);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FlSelectionSet - read out the selection (callback-free iteration)
 
 // Number of selected ids.

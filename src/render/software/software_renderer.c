@@ -19,8 +19,6 @@
 #include <math.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int get_tile_size(int pos, int max_size, int tile_size) {
     if ((pos + tile_size) > max_size) {
         return max_size - pos;
@@ -28,8 +26,6 @@ static int get_tile_size(int pos, int max_size, int tile_size) {
         return tile_size;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool create_tile_setup(SwSurface* surface, int width, int height) {
     FlArena* arena = surface->arena;
@@ -67,7 +63,6 @@ static bool create_tile_setup(SwSurface* surface, int width, int height) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Surface lifecycle: a SW surface owns its output pixel buffer + tile grid in a dedicated arena.
 
 static FlSurface* sw_create_surface(void* user_data, int width, int height) {
@@ -93,22 +88,16 @@ static void sw_destroy_surface(void* user_data, FlSurface* surface) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void change_resolution(void* user_data, FlSurface* surface, int width, int height) {
     (void)user_data;
     (void)create_tile_setup((SwSurface*)surface, width, height); // an oversized request keeps the old setup
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // No-op: glyphs are rasterized on demand at the requested size.
 static void scale_changed(void* user_data, float ui_scale) {
     (void)user_data;
     (void)ui_scale;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void clear_tile_buffer(i16* tile_buffer, u8 clear_r, u8 clear_g, u8 clear_b) {
     const i16x8 r_clear = i16x8_new_splat((i16)clear_r << 7);
@@ -127,7 +116,6 @@ static void clear_tile_buffer(i16* tile_buffer, u8 clear_r, u8 clear_g, u8 clear
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Copy background image to tile buffer. The image is pre-scaled to screen size, so no bounds checking is
 // needed. Reads interleaved RGB or RGBA, converts to planar Q7 format.
 
@@ -187,8 +175,6 @@ static ALWAYS_INLINE void copy_background_to_tile_impl(i16* tile_buffer, const I
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void copy_background_to_tile_rgba_blend(i16* tile_buffer, const ImageData* image, u8 alpha, f32x4 tile_aabb,
                                                u8 clear_r, u8 clear_g, u8 clear_b) {
     copy_background_to_tile_impl(tile_buffer, image, alpha, tile_aabb, clear_r, clear_g, clear_b, true, true);
@@ -206,8 +192,6 @@ static void copy_background_to_tile_rgb_blend(i16* tile_buffer, const ImageData*
 static void copy_background_to_tile_rgb_direct(i16* tile_buffer, const ImageData* image, f32x4 tile_aabb) {
     copy_background_to_tile_impl(tile_buffer, image, 255, tile_aabb, 0, 0, 0, false, false);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void copy_background_to_tile(i16* tile_buffer, const ImageData* image, u8 alpha, f32x4 tile_aabb, u8 clear_r,
                                     u8 clear_g, u8 clear_b) {
@@ -229,7 +213,6 @@ static void copy_background_to_tile(i16* tile_buffer, const ImageData* image, u8
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Crossfade between two full-screen background images, both assumed screen-sized RGB (3 channels).
 // Blends with result = prev * (1-t) + curr * t.
 
@@ -283,8 +266,6 @@ static void crossfade_backgrounds_to_tile(i16* tile_buffer, const ImageData* pre
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Scalar equivalent of i16x8x2_pack_to_u8x16_narrow_shr(v, 7): reinterpret the i16 as u16, logical-shift right
 // by 7, then saturate to u8 (out-of-range values count as large positives).
@@ -355,8 +336,6 @@ static void copy_tile_to_output(u8* output, const i16* tile_data, const f32x4 ti
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void dispatch_command(RenderData* self, const RenderCommand* render_command, const TileInfo* tile_info,
                              f32x4 scissor_rect) {
     u32 render_flags = render_command->mask;
@@ -374,7 +353,6 @@ static void dispatch_command(RenderData* self, const RenderCommand* render_comma
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tiles with only clip-rect commands can use the direct-to-output fast path
 
 static bool tile_has_visual_commands(const Tile* tile, const RenderCommand* commands) {
@@ -386,8 +364,6 @@ static bool tile_has_visual_commands(const Tile* tile, const RenderCommand* comm
     }
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Scalar tail for the rightmost tile_width & 15 columns crossfade_direct_to_output skips; same widen<<7 / Q15
 // lerp / narrow>>7 math.
@@ -420,7 +396,6 @@ static NO_INLINE void crossfade_tail_to_output(u8* output, int output_pitch, con
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Crossfade two RGB backgrounds directly into the interleaved output buffer, skipping the planar tile buffer
 // so all widening/lerping/narrowing stays in registers.
 
@@ -475,7 +450,6 @@ static void crossfade_direct_to_output(u8* output, int output_pitch, const Image
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Direct copy of RGB background to output buffer, bypassing planar tile buffer
 
 static void copy_background_direct_to_output(u8* output, int output_pitch, const ImageData* image, f32x4 tile_aabb) {
@@ -496,8 +470,6 @@ static void copy_background_direct_to_output(u8* output, int output_pitch, const
         memcpy(out_row, src_row, row_bytes);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void render_tiles(RenderData* self, SwSurface* surface) {
     perf_scope_function();
@@ -630,8 +602,6 @@ static void render_tiles(RenderData* self, SwSurface* surface) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void bin_tiles(RenderData* self, SwSurface* surface, FlArena* frame_arena,
                       UiRenderCommandsArray render_commands) {
     perf_scope_function();
@@ -706,8 +676,6 @@ static void bin_tiles(RenderData* self, SwSurface* surface, FlArena* frame_arena
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The previous handle crosses only while a crossfade is active, so a valid prev is the sole crossfade signal.
 // crossfade_t round-trips through 0..1 losslessly for every 0..255 progress value.
 static BackgroundState background_from_frame(const FlBackground* bg) {
@@ -723,8 +691,6 @@ static BackgroundState background_from_frame(const FlBackground* bg) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Build the SW glyph cache on first use, once the font cache has been set.
 static SwGlyphCache* ensure_glyph_cache(RenderData* self) {
     if (self->glyph_cache == nullptr && self->font_cache != nullptr) {
@@ -732,8 +698,6 @@ static SwGlyphCache* ensure_glyph_cache(RenderData* self) {
     }
     return self->glyph_cache;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void render(void* user_data, FlSurface* surface_handle, const FlRenderFrame* frame) {
     perf_scope("sr_render");
@@ -769,8 +733,6 @@ static void render(void* user_data, FlSurface* surface_handle, const FlRenderFra
     fl_arena_rewind(self->frame_arena_2);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Optional pixel-readback capability: hand back the offscreen RGB24 buffer the last frame rendered into. The SW
 // buffer is unpadded, so stride is exactly screen_width * 3.
 static bool read_pixels(void* user_data, FlSurface* surface_handle, FlPixelReadback* out) {
@@ -785,8 +747,6 @@ static bool read_pixels(void* user_data, FlSurface* surface_handle, FlPixelReadb
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #ifdef FLOWI_UI_INSPECTOR
 // Hand back the SW work counters the last frame accumulated in bin_tiles. render_commands is left untouched.
 void sw_renderer_read_frame_stats(void* user_data, FlFrameStats* out) {
@@ -796,8 +756,6 @@ void sw_renderer_read_frame_stats(void* user_data, FlFrameStats* out) {
     out->scaled_image_setups = self->stat_scaled_image_setups;
 }
 #endif
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Tear down every arena the backend allocated plus any lazily-built glyph cache. RenderData itself lives in
 // the host arena passed to create, so it is not freed here.
@@ -818,8 +776,6 @@ static void destroy(void* user_data) {
     // Per-surface arenas belong to their SwSurface; perm_arena belongs to the host.
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Rebind the shared font layer and drop any glyph cache bound to the previous one; the next render rebuilds it.
 static void set_font_cache(void* user_data, struct FlFontCache* font_cache) {
     RenderData* self = user_data;
@@ -829,8 +785,6 @@ static void set_font_cache(void* user_data, struct FlFontCache* font_cache) {
         self->glyph_cache = nullptr;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlRenderBackend create_software_renderer(struct FlArena* arena, struct FlFontCache* font_cache,
                                          FontRenderMode render_mode) {

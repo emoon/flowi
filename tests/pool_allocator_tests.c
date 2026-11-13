@@ -13,8 +13,6 @@ typedef struct SmallItem {
     struct SmallItem* next;
 } SmallItem;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(pool_allocator, basic_allocation) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     pool(TestItem) pool;
@@ -28,8 +26,6 @@ UTEST(pool_allocator, basic_allocation) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(pool_allocator, multiple_allocations) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -59,8 +55,6 @@ UTEST(pool_allocator, multiple_allocations) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(pool_allocator, free_and_reuse) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     pool(TestItem) pool;
@@ -78,8 +72,6 @@ UTEST(pool_allocator, free_and_reuse) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(pool_allocator, free_list_lifo_behavior) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -105,8 +97,6 @@ UTEST(pool_allocator, free_list_lifo_behavior) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(pool_allocator, mixed_allocation_and_free) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -139,8 +129,6 @@ UTEST(pool_allocator, mixed_allocation_and_free) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(pool_allocator, different_types) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -166,7 +154,5 @@ UTEST(pool_allocator, different_types) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Test definitions only - main runner in core_tests.c

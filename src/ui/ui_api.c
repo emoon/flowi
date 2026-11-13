@@ -52,7 +52,6 @@
 #include "ui_tooltip.h"
 #include <ui/ui_theme.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Button / Item behavior forwarders (button.def)
 
 FlSignal fl_button_impl(FlString label, FlWidgetConfig config) {
@@ -63,7 +62,6 @@ FlSignal fl_button_image_impl(FlString label, FlImageHandle image, FlWidgetConfi
     return ui_button_with_image_impl(label, image, config);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Item::behavior (item_behavior.def): translates the flag-only public surface into the internal config-taking
 // call. FlItemFlags_auto_focus maps onto cfg.auto_focus (it takes effect only alongside
 // FlItemFlags_focusable); cfg.focusable zeroes to FlFocusable_Default, so the flag alone decides.
@@ -73,7 +71,6 @@ FlSignal fl_item_behavior(FlLayoutId id, FlItemFlags flags) {
     return ui_item_behavior(id, flags, cfg);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TextInput (text_input.def).
 
 FlTextInputState* fl_text_input_create(uint32_t capacity) {
@@ -105,7 +102,6 @@ FlSignal fl_text_input_show_impl(FlString label, FlTextInputState* state, FlText
     return ui_text_input(label, state, config);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Slider::float / Slider::int (slider.def). format is a NUL-terminated C string, so there is no
 // FlString-to-cstr bridging here.
 
@@ -117,7 +113,6 @@ FlSignal fl_slider_int_impl(FlString label, int* value, int min, int max, FlSlid
     return ui_slider_int_impl(label, value, min, max, config);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hand-written bodies for the generated Cursor api.
 
 void fl_cursor_set(FlCursor cursor) {
@@ -152,7 +147,6 @@ bool fl_cursor_get_visible(void) {
     return self->cursor_visible;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hand-written bodies for the generated Painter api. ui_get_painter() returns null outside an open layout
 // element and every primitive no-ops (or returns false) on a null painter, so the off-context case needs no
 // check here.
@@ -253,7 +247,6 @@ void fl_painter_bars(float baseline_y, const FlBar* bars, uint32_t bars_size, Fl
     painter_bars(ui_get_painter(), baseline_y, bars, bars_size, color);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hand-written bodies for the generated Text api. emit is a plain layout element in the theme primary
 // color; styled consumes the authored FlTextConfig directly.
 
@@ -274,11 +267,9 @@ FlTextMetrics fl_text_measure(FlString text, FlTextStyle style) {
     return font_cache_measure_text(self->shared->font_cache, text, font_id, style.font_size, style.letter_spacing);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The scroll (fl_scroll_area_*), floating (fl_floating_*) and layout (fl_layout_*) families are defined
 // directly in ui/ui_scroll.c and ui/layout.c - no forwarder here.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UiTheme (theme.def). The palette crosses as a caller-owned pointer (flowi stores it, so it must outlive the
 // frame); the override crosses by value.
 
@@ -294,7 +285,6 @@ void fl_theme_pop(void) {
     ui_theme_pop(g_ui_ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UiBackground (background.def). The ui_background_* callees own the g_ui_ctx no-op guard. Image handles cross
 // as FlImageHandle and pass through numerically to the internal ImageHandle.
 
@@ -314,7 +304,6 @@ void fl_background_set_blend(FlImageHandle prev, FlImageHandle current, uint8_t 
     ui_background_set_blend(prev, current, t);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Frame API. The frame envelope owns UI opacity; background composition has its own controls.
 
 void fl_frame_set_alpha(uint8_t alpha) {
@@ -333,7 +322,6 @@ FlVec2 fl_frame_screen_size(void) {
     return ui_get_screen_size();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UiInput (ui_input.def). These act on the global UI context, so there is no receiver to thread.
 
 void fl_input_scroll_target(FlLayoutId id) {
@@ -446,31 +434,21 @@ bool fl_input_gamepad_button_down(uint32_t slot, FlGamepadButton button) {
     return ui_gamepad_button_down(slot, button);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_input_gamepad_button_pressed(u32 slot, FlGamepadButton button) {
     return ui_gamepad_button_pressed(slot, button);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_input_gamepad_button_released(u32 slot, FlGamepadButton button) {
     return ui_gamepad_button_released(slot, button);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f32 fl_input_gamepad_button_hold_duration(u32 slot, FlGamepadButton button) {
     return ui_gamepad_button_hold_duration(slot, button);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f32 fl_input_gamepad_axis(u32 slot, FlGamepadAxis axis) {
     return ui_gamepad_axis(slot, axis);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The input push surface, aimed at the current context; events pushed with no context are dropped. The
 // window backends push into a named context with the internal platform_input_push_* (platform/input_types.h).
@@ -521,7 +499,6 @@ FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t coun
     return ui_list(id, items, count, set, opts);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UiList (ui_list.def).
 
 FlListRange fl_list_begin(FlLayoutId id, const uint64_t* ordered_ids, uint32_t count, FlSelectionSet* set,
@@ -545,7 +522,6 @@ void fl_list_request_focus(FlLayoutId id, uint64_t cursor_id) {
     ui_list_request_focus(id, cursor_id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ListUniform (list_uniform.def). The uniform list keeps its state on the UI context, so these thread
 // g_ui_ctx's list_uniform context into the real list_uniform_* free functions - the caller never sees the
 // receiver. The per-frame begin_update / end_update hooks stay internal: ui.c drives them around the frame.
@@ -582,7 +558,6 @@ void fl_list_uniform_end(void) {
     list_uniform_end(self->list_uniform_ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SelectionSet (ui_selection.def).
 
 FlSelectionSet* fl_selection_set_create(uint32_t initial_capacity) {
@@ -622,7 +597,6 @@ uint64_t fl_selection_set_copy_ids(FlSelectionSet* set, uint64_t* out, uint64_t 
     return selection_set_copy_ids(set, out, cap);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Font / Image (font.def / image.def). The font id / image handle round-trips as a u32 (FlFontId / ImageHandle
 // are u32-wide).
 
@@ -631,8 +605,6 @@ static FlVfsMount* s_asset_mount = nullptr;
 void ui_set_asset_mount(FlVfsMount* mount) {
     s_asset_mount = mount;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 uint32_t fl_font_load(FlString path, uint16_t default_size) {
     if (s_asset_mount == nullptr) {
@@ -699,7 +671,6 @@ bool fl_image_update_pixels(FlImageHandle handle, const void* pixels) {
     return image_update_pixels(handle, pixels);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Generated widget API (checkbox / switch / radio_group / pill / chip / progress_bar / scrollbar / dropdown /
 // tab_bar / link / image / dynamic_image / spacer defs). The array widgets take a `[*const String]` slice, so
 // the generated prototype carries an options_size/tabs_size length companion that lowers to the internal
@@ -763,7 +734,6 @@ void fl_spacer_h(float width) {
     ui_spacer_h(width);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UiMenu / UiSubmenu / UiMenubar / UiMenubarMenu (ui_menu.def, four api blocks). The stateful check/radio kinds
 // carry a caller bool*/int* out-pointer modelled in the IDL.
 
@@ -843,7 +813,6 @@ void fl_menubar_menu_end(void) {
     ui_menubar_menu_end_impl();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Popup API (popup.def). Forwards to ui_popup_begin / ui_popup_end, ui_tooltip_impl and ui_message_box_impl,
 // which act on the global UI context - there is no receiver to thread.
 
@@ -863,7 +832,6 @@ FlDialogResult fl_popup_message_box(FlString title, FlString message, bool* open
     return ui_message_box_impl(title, message, open, config);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The one variadic body in this file: formats into the frame arena.
 
 FlString fl_format_frame_string(const char* format, ...) {

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: the backend-agnostic CPU core of the resource-prepare seams, shared by the GL and Metal prepares.
 //
 // Everything a prepare seam does before it touches an API: decode validation, the atlas-or-slot tier choice,
@@ -19,7 +18,6 @@ struct FlArena;
 struct FlGlyphOutline;
 struct FlVectorImage;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image preparation.
 
 // True when decoded is a usable decode result (non-null, positive extent, 1 or 4 channels). Logs and returns
@@ -48,7 +46,6 @@ bool gpu_prepare_image_place_atlas(GpuImageAtlas* atlas, FlImageLoadRequestId re
                                    const FlImageDecodeResult* decoded, struct FlArena* scratch,
                                    GpuAtlasImageUpload* out);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Glyph preparation.
 
 // The padded atlas cell a glyph outline occupies. left / top are the cell's top-left corner in outline space
@@ -82,7 +79,6 @@ typedef struct GpuGlyphRaster {
 bool gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, struct FlArena* arena, FlFontId font, u16 size, u32 glyph_id,
                              const struct FlGlyphOutline* outline, GpuGlyphRaster* out);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Vector preparation.
 
 // The uniform fit of a vector document onto a quantized raster size: the document's larger side lands on
@@ -133,7 +129,6 @@ void gpu_prepare_vector_into(void* backend, GpuSvgAtlas* atlas, FlImageHandle ha
 void gpu_prepare_vector(void* backend, GpuSvgAtlas* mono_atlas, GpuSvgAtlas* color_atlas, FlImageHandle handle,
                         u16 size, const struct FlVectorImage* vector, GpuRasterCellFn raster_cell, u32* compact_count);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Backend lifecycle seams.
 
 // Reset the glyph and both SVG atlases' placement bookkeeping when ui_scale differs from *last_ui_scale, and

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock Splitter - the draggable divider between a split node's two children (CONTEXT.md "Dock Tree / Dock Node").
 // A thin handle on the seam that, when dragged, mutates the split's single ratio scalar through the
 // splitter-resize request op - never a direct geometry write, since Clay owns every rect. A min-size floor
@@ -11,7 +10,6 @@
 //     children.
 //   - dock_splitter_emit: draws the divider element. Call between the two child emits so it sits on the boundary.
 // Both derive the divider's element id from the split node id, so the behaviour and draw address one element.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "dock_tree.h"
 

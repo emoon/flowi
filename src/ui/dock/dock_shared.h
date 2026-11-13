@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock Shared - the app-global docking state above the per-workspace layer (dock_workspace.h): the registry of dock
 // workspaces (a per-window FlUiCtx points at the one it hosts), the injected OS-window host seam, and the deferred
 // promote queue plus the live promotion records. One per app, owned by UiShared.
@@ -10,7 +9,6 @@
 // coordinate (on Wayland the compositor places the window).
 //
 // The record is opaque; the entry-0 accessor and the promote/notify API below are the whole surface.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "dock_tree.h"
 #include "dock_workspace.h"
@@ -22,7 +20,6 @@ extern "C" {
 // Upper bound on live dock workspaces - one per window, so it tracks fl_app's window cap (FL_APP_MAX_WINDOWS = 16).
 #define FL_DOCK_MAX_WORKSPACES 16
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // OS-window promotion seam. The host opens/closes windows; flowi decides when.
 
 typedef struct FlDockHost {
@@ -34,8 +31,6 @@ typedef struct FlDockHost {
     // user/WM-initiated path runs through fl_dock_notify_window_closed instead).
     void (*close_promoted_window)(void* ud, void* host_window);
 } FlDockHost;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct FlDockShared FlDockShared;
 

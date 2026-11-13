@@ -1,9 +1,7 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Core: Clay render output -> neutral render-command IR.
 //
 // See clay_to_render_ir.h. The translation stops at intent: the backend (render_ir.h consumer) is responsible
 // for premultiplying, folding global_alpha, clamping/splitting corners, and resolving fonts/images.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "clay_to_render_ir.h"
 
@@ -17,7 +15,6 @@
 #include <math.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Clay value types carry channels as floats (0-255 by convention); the IR carries u8. Truncated with no
 // premultiply or alpha fold.
 
@@ -33,8 +30,6 @@ static inline FlCornerRadius to_em_radius(Clay_CornerRadius r) {
     return (FlCornerRadius) { r.topLeft, r.topRight, r.bottomLeft, r.bottomRight };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void clay_rectangle_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     const Clay_RectangleRenderData* rect = &cmd->renderData.rectangle;
     FlColor c = to_em_color(rect->backgroundColor);
@@ -42,16 +37,12 @@ static void clay_rectangle_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) 
     fl_ir_fill_rect(arena, to_em_rect(cmd->boundingBox), to_em_radius(rect->cornerRadius), corners, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void clay_border_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     const Clay_BorderRenderData* border = &cmd->renderData.border;
     fl_ir_border_stroked(arena, to_em_rect(cmd->boundingBox), (f32)border->width.left, (f32)border->width.right,
                          (f32)border->width.top, (f32)border->width.bottom, to_em_radius(border->cornerRadius),
                          to_em_color(border->color), (FlStrokeStyle) { border->dashLen, border->gapLen });
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void clay_image_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     const Clay_ImageRenderData* image = &cmd->renderData.image;
@@ -65,7 +56,6 @@ static void clay_image_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
                 to_em_color(image->backgroundColor), FlImageFilter_Linear, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Splice one painter span. The painter records each element's primitives in element-local pixel
 // space (origin 0,0) into a span referenced by the element's Clay CUSTOM command. Each span record is copied into
 // the frame IR verbatim, its absolute position fields translated by the element's resolved rect origin
@@ -180,8 +170,6 @@ static void clay_custom_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void clay_text_to_ir(FlArena* arena, FlArena* scratch, FlFontCache* font_cache, const Clay_RenderCommand* cmd) {
     const Clay_TextRenderData* text_data = &cmd->renderData.text;
     const Clay_BoundingBox bb = cmd->boundingBox;
@@ -224,8 +212,6 @@ static void clay_text_to_ir(FlArena* arena, FlArena* scratch, FlFontCache* font_
                       1.0f, to_em_color(text_data->textColor), (FlString) { .data = text, .length = length }, bb.x,
                       baseline_y, (float)text_data->letterSpacing);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_clay_to_render_ir(FlArena* arena, FlArena* scratch, FlFontCache* font_cache, Clay_RenderCommand* clay_commands,
                           int clay_count) {

@@ -12,7 +12,6 @@
 #include "../ui_private.h"
 #include "../ui_tokens.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Defaults
 
 // Default panel width in logical px.
@@ -24,16 +23,11 @@
 // Vertical padding of the panel around its item list.
 #define UI_MENU_PANEL_VPAD (2.0f * (float)FlSpacing_XS)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Menu core - the open-path state machine, navigation, type-ahead and scrolling shared by every menu surface.
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool menu_owned_by(const FlUiCtx* ctx, u32 scope) {
     return ctx->shared->menu.active && ctx->shared->menu.owner_scope_id == scope;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Close the chain and release its focus scope.
 void menu_close_internal(FlUiCtx* ctx) {
@@ -60,8 +54,6 @@ void menu_close_internal(FlUiCtx* ctx) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Clear a level's highlight, expansion and scroll.
 void menu_reset_level(FlUiCtx* ctx, int level) {
     UiMenuState* m = &ctx->shared->menu;
@@ -75,8 +67,6 @@ void menu_reset_level(FlUiCtx* ctx, int level) {
     m->levels[level].scroll_offset = 0.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Track the pointer position. Returns how far it moved this frame.
 FlVec2 menu_track_pointer_move(FlUiCtx* ctx, UiMenuState* m) {
     FlVec2 mp = { ctx->input_state.mouse.x, ctx->input_state.mouse.y };
@@ -87,8 +77,6 @@ FlVec2 menu_track_pointer_move(FlUiCtx* ctx, UiMenuState* m) {
     m->last_mouse_pos = mp;
     return move;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Close every level at or beyond new_depth.
 void menu_collapse_to(UiMenuState* m, int new_depth) {
@@ -109,8 +97,6 @@ void menu_collapse_to(UiMenuState* m, int new_depth) {
     m->hover_accum = 0.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // ESC: pop one level, or close the chain at the root. Returns whether the chain closed.
 static bool handle_cancel(FlUiCtx* ctx, UiMenuState* m) {
     if (m->depth > 1) {
@@ -121,8 +107,6 @@ static bool handle_cancel(FlUiCtx* ctx, UiMenuState* m) {
     menu_close_internal(ctx);
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Collapse the path back to `level`, then expand child_id there if it is a submenu.
 void menu_branch_switch(FlUiCtx* ctx, int level, u32 child_id, bool child_is_submenu) {
@@ -146,8 +130,6 @@ void menu_branch_switch(FlUiCtx* ctx, int level, u32 child_id, bool child_is_sub
     m->depth = child + 1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Index of the row with this widget id in the level, or -1.
 int menu_find_in_level(const UiMenuLevelFrame* lf, u32 id) {
     if (id == 0) {
@@ -161,8 +143,6 @@ int menu_find_in_level(const UiMenuLevelFrame* lf, u32 id) {
     }
     return -1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The menu row under the pointer.
 MenuHit menu_find_hot_item(const FlUiCtx* ctx) {
@@ -180,8 +160,6 @@ MenuHit menu_find_hot_item(const FlUiCtx* ctx) {
     return (MenuHit) { .level = -1, .index = -1 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Whether the widget under the pointer belongs to the menu's popup scope.
 static bool hot_in_scope(FlUiCtx* ctx, u32 scope) {
     if (ctx->hot_id == 0) {
@@ -190,8 +168,6 @@ static bool hot_in_scope(FlUiCtx* ctx, u32 scope) {
     ItemState* hot = hashmap_get(&ctx->shared->item_state, ctx->hot_id);
     return hot != nullptr && hot->popup_scope_id == scope;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Move the highlight to the next navigable row in `dir`, wrapping at the ends.
 void menu_move_highlight(UiMenuLevel* lvl, const UiMenuLevelFrame* lf, int dir) {
@@ -217,8 +193,6 @@ void menu_move_highlight(UiMenuLevel* lvl, const UiMenuLevelFrame* lf, int dir) 
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Store a truncated copy of a row's label for type-ahead.
 void menu_record_label(UiMenuLevelFrame* lf, int index, FlString label) {
     if (index < 0 || index >= UI_MENU_MAX_ITEMS) {
@@ -230,8 +204,6 @@ void menu_record_label(UiMenuLevelFrame* lf, int index, FlString label) {
     }
     lf->item_label_len[index] = (u8)n;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Move the level's highlight to the row matching this frame's typed text. Returns whether it moved.
 bool menu_typeahead(FlUiCtx* ctx, int level) {
@@ -268,8 +240,6 @@ bool menu_typeahead(FlUiCtx* ctx, int level) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Record a row's top and height and add it to the level's natural height.
 void menu_record_row_geometry(UiMenuFrame* mf, int level, int index, f32 height) {
     UiMenuLevelFrame* lf = &mf->levels[level];
@@ -283,8 +253,6 @@ void menu_record_row_geometry(UiMenuFrame* mf, int level, int index, f32 height)
     lf->natural_height += height;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Scroll geometry of a level: whether it is capped, its viewport height and its largest scroll offset.
 typedef struct MenuScrollGeom {
     bool capped;
@@ -292,8 +260,6 @@ typedef struct MenuScrollGeom {
     f32 viewport;
     f32 max_offset;
 } MenuScrollGeom;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static MenuScrollGeom scroll_geom(const FlUiCtx* ctx, const UiMenuLevelFrame* lf) {
     MenuScrollGeom g = { .content = lf->natural_height, .viewport = lf->natural_height, .max_offset = 0.0f };
@@ -306,8 +272,6 @@ static MenuScrollGeom scroll_geom(const FlUiCtx* ctx, const UiMenuLevelFrame* lf
     }
     return g;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Configure a level's panel, height-capped and scrollable when it is over-tall.
 void menu_configure_panel(FlUiCtx* ctx, int level, float min_w) {
@@ -337,8 +301,6 @@ void menu_configure_panel(FlUiCtx* ctx, int level, float min_w) {
     fl_layout_configure(cfg);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Scroll the level under the pointer with the mouse wheel.
 void menu_apply_wheel(FlUiCtx* ctx) {
     UiMenuState* m = &ctx->shared->menu;
@@ -357,13 +319,9 @@ void menu_apply_wheel(FlUiCtx* ctx) {
     m->levels[hit.level].scroll_offset = clamp_f32_impl(off, 0.0f, g.max_offset);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool row_recorded(const UiMenuLevelFrame* lf, int i) {
     return i >= 0 && i < UI_MENU_MAX_ITEMS && i < lf->item_count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The scroll offset that brings the row fully into the window.
 static f32 scroll_offset_to_show(f32 off, f32 top, f32 height, f32 viewport) {
@@ -373,8 +331,6 @@ static f32 scroll_offset_to_show(f32 off, f32 top, f32 height, f32 viewport) {
     f32 bottom = top + height;
     return bottom > off + viewport ? bottom - viewport : off;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Scroll the level so its highlighted row is visible.
 void menu_scroll_into_view(FlUiCtx* ctx, int level) {
@@ -394,14 +350,10 @@ void menu_scroll_into_view(FlUiCtx* ctx, int level) {
     m->levels[level].scroll_offset = clamp_f32_impl(off, 0.0f, g.max_offset);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool menu_highlight_is_submenu(const UiMenuLevel* level, const UiMenuLevelFrame* frame) {
     int hi = level->highlight_index;
     return hi >= 0 && hi < UI_MENU_MAX_ITEMS && frame->item_submenu[hi];
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Move the highlight one row in `dir` when `action` fires. Returns whether it moved.
 bool menu_step_highlight(FlUiCtx* ctx, int level, FlAction action, int dir) {
@@ -414,13 +366,9 @@ bool menu_step_highlight(FlUiCtx* ctx, int level, FlAction action, int dir) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 float menu_min_width(float requested) {
     return requested > 0.0f ? requested : UI_MENU_DEFAULT_MIN_WIDTH;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Close the chain on a press outside it or on ESC. A press on `pointer_on_surface` is not outside. Returns whether the
 // chain closed.
@@ -437,8 +385,6 @@ bool menu_dismissed(FlUiCtx* ctx, u32 scope, bool pointer_on_surface) {
     }
     return ui_action_pressed(ctx, FlAction_Cancel) && handle_cancel(ctx, m);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Open the chain for `scope` at depth 1 and reset the levels from `first_level` down.
 void menu_arm_chain(FlUiCtx* ctx, u32 scope, int first_level) {
@@ -459,15 +405,11 @@ void menu_arm_chain(FlUiCtx* ctx, u32 scope, int first_level) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Take the focus scope for the menu and disable the popup layer's auto-close.
 void menu_arm_focus_scope(FlUiCtx* ctx, u32 scope) {
     ui_focus_scope_arm(ctx, scope, true);
     ctx->popup_auto_close = false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void menu_begin_level(FlUiCtx* ctx, int level) {
     ctx->menu_frame.build_level = level;

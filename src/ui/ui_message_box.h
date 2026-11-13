@@ -4,7 +4,6 @@
 #include <flowi/ui/layout.h> // @generated FlLayoutId (api_gen)
 #include <flowi/ui/popup.h>  // @generated FlPopupConfig / FlMessageBoxConfig / FlDialogResult (api_gen)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message-box / confirm-dialog API
 //
 // A modal confirm/alert dialog: a dim, pointer-capturing full-screen backdrop with a centered panel holding a

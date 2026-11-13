@@ -12,8 +12,6 @@
 #define DOCK_PROMOTED_DEFAULT_W 480.0f
 #define DOCK_PROMOTED_DEFAULT_H 320.0f
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A deferred promote request: move panel out of src into a fresh second workspace, then have the host open a
 // window for it. Captured at dock_promote_panel, drained at the next dock_shared_flush_promotes.
 typedef struct DockPromoteRequest {
@@ -29,8 +27,6 @@ typedef struct DockPromotion {
     FlDockWorkspace* src;
     FlDockPanelId panel;
 } DockPromotion;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct FlDockShared {
     FlArena* arena; // owns this record itself; freed in dock_shared_destroy
@@ -50,7 +46,6 @@ struct FlDockShared {
     u32 promotion_count;
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lifecycle
 
 FlDockShared* dock_shared_create(void) {
@@ -62,8 +57,6 @@ FlDockShared* dock_shared_create(void) {
     return ds;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void dock_shared_destroy(FlDockShared* ds) {
     if (ds == nullptr) {
         return;
@@ -74,13 +67,10 @@ void dock_shared_destroy(FlDockShared* ds) {
     fl_arena_destroy(ds->arena); // frees the record itself (allocated from this arena)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlDockWorkspace* dock_shared_default(FlDockShared* ds) {
     return (ds != nullptr && ds->registry_count > 0) ? ds->registry[0] : nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The registry
 
 // Null when there is no shared tier - a standalone workspace driven directly by a unit test - so the entry points
@@ -93,8 +83,6 @@ static FlDockShared* dock_shared_get(void) {
     return ctx->shared->dock;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlDockWorkspace* dock_registry_add(FlDockShared* ds) {
     if (ds->registry_count >= FL_DOCK_MAX_WORKSPACES) {
         log_error("dock: workspace registry full (%d)", FL_DOCK_MAX_WORKSPACES);
@@ -104,8 +92,6 @@ static FlDockWorkspace* dock_registry_add(FlDockShared* ds) {
     ds->registry[ds->registry_count++] = ws;
     return ws;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Remove ws from the registry and destroy it, compacting the array. Entry 0 (the default) is never removed.
 static void dock_registry_remove(FlDockShared* ds, FlDockWorkspace* ws) {
@@ -121,7 +107,6 @@ static void dock_registry_remove(FlDockShared* ds, FlDockWorkspace* ws) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The host seam and the promote queue
 
 void fl_dock_register_host(FlDockHost host) {
@@ -130,8 +115,6 @@ void fl_dock_register_host(FlDockHost host) {
         ds->host = host;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void dock_promote_panel(FlDockPanelId panel) {
     FlDockShared* ds = dock_shared_get();
@@ -148,8 +131,6 @@ void dock_promote_panel(FlDockPanelId panel) {
     }
     ds->promote_queue[ds->promote_count++] = (DockPromoteRequest) { .src = src, .panel = panel };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The host's open_promoted_window typically defers the actual OS-window open to the next tick boundary, so the
 // workspace is created, bound, and handed over by pointer before that call returns.
@@ -181,8 +162,6 @@ void dock_shared_flush_promotes(void) {
     }
     ds->promote_count = 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_dock_notify_window_closed(void* host_window) {
     FlDockShared* ds = dock_shared_get();

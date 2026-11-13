@@ -27,8 +27,6 @@ static bool check_memory_pattern(void* ptr, u64 size, u8 pattern) {
 // Basic FlArena Tests
 // =============================================================================
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, new_and_destroy) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
     ASSERT_NE(arena, NULL);
@@ -38,8 +36,6 @@ UTEST(arena, new_and_destroy) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, alloc_raw_basic) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -53,8 +49,6 @@ UTEST(arena, alloc_raw_basic) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, alloc_raw_alignment) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -74,8 +68,6 @@ UTEST(arena, alloc_raw_alignment) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, alloc_array) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
@@ -94,8 +86,6 @@ UTEST(arena, alloc_array) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A wrapped count * sizeof(type) would reserve a fraction of the bytes the caller goes on to write
 // count elements into. The saturated size reaches the allocator's fatal size-overflow path instead,
 // which exits the process - so this case checks the size the macros compute rather than allocating it.
@@ -110,8 +100,6 @@ UTEST(arena, array_size_saturates_instead_of_wrapping) {
     ASSERT_EQ(arena_array_bytes(UINT64_MAX, sizeof(u64)), (u64)UINT64_MAX);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The size goes through a function call, so a count with a side effect runs once - the ternary the
 // saturation could have been written as would run it twice.
 UTEST(arena, array_macros_evaluate_count_once) {
@@ -124,8 +112,6 @@ UTEST(arena, array_macros_evaluate_count_once) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, typed_allocation_macros) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -152,8 +138,6 @@ UTEST(arena, typed_allocation_macros) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, typed_rewind_stops_at_rewind_floor) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
@@ -178,8 +162,6 @@ UTEST(arena, typed_rewind_stops_at_rewind_floor) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, typed_rewind_releases_elements) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
@@ -196,8 +178,6 @@ UTEST(arena, typed_rewind_releases_elements) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, multiple_allocations) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -217,8 +197,6 @@ UTEST(arena, multiple_allocations) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, rewind) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -247,8 +225,6 @@ UTEST(arena, rewind) {
 // Large Allocation Tests
 // =============================================================================
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, large_allocation) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
@@ -267,8 +243,6 @@ UTEST(arena, large_allocation) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, many_small_allocations) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -297,8 +271,6 @@ UTEST(arena, many_small_allocations) {
 // Stress Tests
 // =============================================================================
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, stress_alloc_rewind_cycle) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
@@ -326,8 +298,6 @@ UTEST(arena, stress_alloc_rewind_cycle) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, mixed_size_allocations) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
@@ -354,8 +324,6 @@ UTEST(arena, mixed_size_allocations) {
 // =============================================================================
 // Edge Cases
 // =============================================================================
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, compacting) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -392,8 +360,6 @@ UTEST(arena, compacting) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, zero_size_allocation) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
@@ -402,8 +368,6 @@ UTEST(arena, zero_size_allocation) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, alignment_edge_cases) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -416,8 +380,6 @@ UTEST(arena, alignment_edge_cases) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, page_boundary_allocations) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -440,8 +402,6 @@ UTEST(arena, page_boundary_allocations) {
 // =============================================================================
 // Memory Size Macro Tests
 // =============================================================================
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, memory_size_macros) {
     FlArena* arena1 = arena_new(.reserved_size = GB(2));
@@ -518,8 +478,6 @@ static void* thread_large_alloc_test(void* arg) {
     return NULL;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, thread_safe_allocation) {
     FlArenaMt* arena_mt = arena_mt_new();
 
@@ -558,8 +516,6 @@ UTEST(arena, thread_safe_allocation) {
     free(thread_data);
     arena_mt_destroy(arena_mt);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, arena_mt_growth) {
     FlArenaMt* arena_mt = arena_mt_new();
@@ -714,8 +670,6 @@ static void* mixed_size_contention_test(void* arg) {
     return NULL;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, high_contention_lock_free) {
     FlArenaMt* arena_mt = arena_mt_new();
 
@@ -766,8 +720,6 @@ UTEST(arena, high_contention_lock_free) {
     arena_mt_destroy(arena_mt);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(arena, rapid_small_allocations) {
     FlArenaMt* arena_mt = arena_mt_new();
 
@@ -813,8 +765,6 @@ UTEST(arena, rapid_small_allocations) {
     free(thread_data);
     arena_mt_destroy(arena_mt);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, mixed_size_high_contention) {
     FlArenaMt* arena_mt = arena_mt_new();
@@ -862,8 +812,6 @@ UTEST(arena, mixed_size_high_contention) {
     free(thread_data);
     free(threads);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(arena, stress_lock_free_rounds) {
     const int num_rounds = 50;

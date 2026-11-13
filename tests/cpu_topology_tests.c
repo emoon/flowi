@@ -6,8 +6,6 @@
 #include <core/os/os.h>
 #include <stdio.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // CPU ids are the OS's own numbers, so they need not be dense: an id can exceed the CPU count.
 #define CPU_ID_LIMIT 1024
 
@@ -43,8 +41,6 @@ UTEST(cpu_topology, query_cpu_ids_valid) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if PLATFORM_LINUX
 UTEST(cpu_topology, linux_detects_core_types) {
@@ -110,8 +106,6 @@ UTEST(cpu_topology, non_linux_returns_unknown) {
     fl_arena_destroy(arena);
 }
 #endif
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cpu_topology, query_by_type_performance) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
@@ -211,8 +205,6 @@ UTEST(cpu_topology, query_by_type_leaves_only_the_id_list_in_the_arena) {
     fl_arena_destroy(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Linux is the only platform that performs affinity work; everywhere else the call reports the
 // request as unsupported rather than as applied, so a well-formed request is expected to fail there.
 #if PLATFORM_LINUX
@@ -279,8 +271,6 @@ UTEST(cpu_topology, set_affinity_rejects_an_out_of_range_cpu_id) {
 
     fl_arena_destroy(arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cpu_topology, integration_query_and_pin) {
     FlArena* arena = arena_new(.reserved_size = MB(64));

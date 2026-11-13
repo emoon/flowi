@@ -9,7 +9,6 @@
 #include <flowi/ui/localization.h>
 #include "ui_private.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Localization: manifest + string-table loading and SID lookup. Widget text that starts with SID_ is resolved
 // here on its way into the display path (ui_text_styled_impl).
 
@@ -96,7 +95,6 @@ typedef struct Localization {
     hashmap(FlString, u8) warned;
 } Localization;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Find tag in the manifest's language list and return its table path, resolved against the manifest's own
 // directory and allocated in arena. Empty when the manifest lists no such tag or the entry names no file.
 
@@ -124,7 +122,6 @@ static FlString manifest_table_path(Localization* self, FlArena* arena, FlString
     return string_empty();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Runs on a VFS worker thread. Parses the manifest into its own arena and records the tag it names as the
 // default language. A failure leaves the Manifest empty, so whatever list is already in force stays untouched.
 
@@ -155,7 +152,6 @@ static FlVfsData manifest_load_callback(void* data, i64 size, void* user_data) {
     return (FlVfsData) { .success = true };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A view straight into table memory: no copy, and never a static or known-ASCII string.
 
 static FlString table_text(FlJsonValue* value) {
@@ -165,7 +161,6 @@ static FlString table_text(FlJsonValue* value) {
     return text;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The CLDR category a variant object's property name spells, false for a name that is none of the six.
 
 static bool plural_category_from_name(FlString name, LocalizationPluralCategory* out) {
@@ -180,7 +175,6 @@ static bool plural_category_from_name(FlString name, LocalizationPluralCategory*
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Read a Plural Variant object into out, allocating its variant array in arena. Unknown variant names and
 // non-string variant bodies warn and are dropped; false means the object carries no other variant, which takes
 // the whole key out of the table.
@@ -215,7 +209,6 @@ static bool parse_variants(FlArena* arena, FlString path, FlString key, FlJsonVa
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Runs on a VFS worker thread. Parses the string table into its own arena and builds the lookup map in the same
 // arena. A value that is neither a plain string nor a plural-variant object is skipped so the key falls through
 // the missing-key path.
@@ -260,7 +253,6 @@ static FlVfsData table_load_callback(void* data, i64 size, void* user_data) {
     return (FlVfsData) { .success = true };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Start the worker-side read that parses and builds the table for tag. Returns null when the manifest does not
 // list the tag or the read cannot start; the caller's current table stays in place either way.
 
@@ -295,7 +287,6 @@ typedef enum TableStatus {
     TableStatus_Failed,
 } TableStatus;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Poll one in-flight read, closing its handle as soon as the worker is done with it.
 
 static TableStatus load_poll(FlVfsHandle* handle) {
@@ -309,7 +300,6 @@ static TableStatus load_poll(FlVfsHandle* handle) {
     return ok ? TableStatus_Ready : TableStatus_Failed;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Start the worker-side read of the manifest into an arena of its own. Null when the read cannot start.
 
 static Manifest* manifest_start(Localization* self) {
@@ -327,7 +317,6 @@ static Manifest* manifest_start(Localization* self) {
     return manifest;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Destroy a replaced table's arena unless it is one of the two tables still in use.
 
 static void retire_table(StringTable* table, const StringTable* keep_a, const StringTable* keep_b) {
@@ -336,7 +325,6 @@ static void retire_table(StringTable* table, const StringTable* keep_a, const St
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Make table the active language and retire the table it replaced, unless that is the default one, which stays
 // resident as the fallback layer. A null table is a failed load, which leaves the current language alone.
 
@@ -358,14 +346,12 @@ static void switch_to_table(Localization* self, StringTable* table, FlString tag
     retire_table(old_default, self->default_table, old_active);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The tag fl_localization_set_language recorded, as a view of the pending-tag buffer.
 
 static FlString pending_tag_string(Localization* self) {
     return string_from_cstr_len(self->pending_tag, self->pending_tag_length);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Frame-boundary step for a manifest read: a no-op until the worker is done with it. The first one brings
 // localization up - a manifest that cannot be read or names no default disables it instead - and every later one
 // is a hot-reload re-read, which swaps the language list in and keeps the last good one if it did not parse.
@@ -401,7 +387,6 @@ static void manifest_poll(Localization* self) {
     self->state = self->pending_table != nullptr ? LocalizationState_DefaultLoading : LocalizationState_Ready;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Frame-boundary step for the default table: it becomes the active language on the boundary the worker finishes
 // it, and a read that failed leaves the run with no fallback layer. Either way localization is ready afterwards,
 // so a language a caller asked for before this point can start loading.
@@ -425,7 +410,6 @@ static void default_poll(Localization* self) {
     self->active_table = table;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Swap in the table a runtime switch is loading, once the worker is done with it. Until then the call is a no-op
 // and frames keep resolving against the language that is already active. A reload of the default table while
 // another language is active only replaces the fallback layer, leaving the active language where it is.
@@ -460,7 +444,6 @@ static void finish_pending_switch(Localization* self) {
     retire_table(old_default, self->active_table, self->default_table);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Record a switch to tag for the next frame boundary. default_only asks for the fallback layer to be
 // replaced in place instead of tag becoming the active language. A tag the pending-tag buffer cannot hold is
 // rejected.
@@ -477,7 +460,6 @@ static void request_tag(Localization* self, FlString tag, bool default_only) {
     self->pending_tag_default_only = default_only;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The watcher reports paths under the mount's source directory; every path localization holds is mount-relative.
 // Empty for a path that is not under the mount at all.
 
@@ -493,7 +475,6 @@ static FlString mount_relative_path(FlString change_path, FlString source_path) 
     return fl_string_substr(change_path, offset, change_path.length - offset);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Watch the directory the manifest lives in, so hot reload sees edits to it and to the tables it names.
 
 static void watcher_start(Localization* self) {
@@ -511,7 +492,6 @@ static void watcher_start(Localization* self) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hot reload. Frame-boundary drain of the watcher: a resident table's file records a reload of that table, and the
 // manifest's file starts a re-read of the language list. The drain sets the reload flags rather than switching
 // immediately (see the reload flags on Localization). No-op without a watcher.
@@ -552,7 +532,6 @@ static void watcher_poll(Localization* self) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Turn one recorded reload into the switch that carries it out, active table first. A reload of the default table
 // while another language is active replaces the fallback layer, so it goes in as a default-only switch.
 
@@ -572,8 +551,6 @@ static void start_recorded_reload(Localization* self) {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Localization* localization_create(FlVfsMount* mount, FlString manifest_path, bool hot_reload) {
     FlArena* arena = arena_new();
@@ -596,8 +573,6 @@ Localization* localization_create(FlVfsMount* mount, FlString manifest_path, boo
 
     return self;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void localization_destroy(Localization* self) {
     if (self == nullptr) {
@@ -632,8 +607,6 @@ void localization_destroy(Localization* self) {
     }
     fl_arena_destroy(self->arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void localization_frame_begin(Localization* self) {
     if (self == nullptr) {
@@ -680,8 +653,6 @@ void localization_frame_begin(Localization* self) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool localization_is_loading(Localization* self) {
     if (self == nullptr) {
         return false;
@@ -690,8 +661,6 @@ bool localization_is_loading(Localization* self) {
     return self->state == LocalizationState_DefaultLoading || self->pending_manifest != nullptr
            || self->pending_table != nullptr || self->has_pending_tag;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 localization_resident_table_count(Localization* self) {
     if (self == nullptr) {
@@ -705,19 +674,13 @@ u32 localization_resident_table_count(Localization* self) {
     return count;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u64 localization_hot_reload_request_count(Localization* self) {
     return self != nullptr ? self->hot_reload_requests : 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool localization_is_watching(Localization* self) {
     return self != nullptr && self->watcher != FL_FILE_WATCHER_INVALID;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // One bit per reason a key can warn about. The bits latch independently: a key that warned about being absent
 // can still warn about its placeholders once it is there.
@@ -729,7 +692,6 @@ typedef enum LocalizationWarnFlags {
     LocalizationWarn_PluralWithoutCount = 1 << 3,
 } LocalizationWarnFlags;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // True the first time sid is worth warning about for reason; a lookup runs per element per frame, so each key
 // warns once per reason for the run.
 
@@ -749,7 +711,6 @@ static bool first_warning_for(Localization* self, FlString sid, LocalizationWarn
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Active table, then the default table. Null means neither carries the key, which is also what tells a caller the
 // text it goes on to use is the caller's own key rather than table memory. out_table names the table the entry
 // came from, whose language decides how its plural variants are selected.
@@ -779,7 +740,6 @@ static TableEntry* lookup_entry(Localization* self, FlString sid, StringTable** 
     return nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A plural key reached without a count: the other variant is the closest thing to right, and the count the
 // caller never passed is what makes it a guess, so it warns.
 
@@ -791,7 +751,6 @@ static void warn_if_plural(Localization* self, FlString sid, const TableEntry* e
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Whether text carries a {...} placeholder slot.
 
 static bool has_placeholder(FlString text) {
@@ -805,8 +764,6 @@ static bool has_placeholder(FlString text) {
     }
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString localization_lookup(Localization* self, FlString sid) {
     StringTable* table = nullptr;
@@ -823,8 +780,6 @@ FlString localization_lookup(Localization* self, FlString sid) {
     return entry->text;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_localization_init(FlVfsMount* mount, FlString manifest_path, bool hot_reload) {
     if (mount == nullptr) {
         log_error("fl_localization_init needs a mount");
@@ -836,8 +791,6 @@ void fl_localization_init(FlVfsMount* mount, FlString manifest_path, bool hot_re
     shared->localization = localization_create(mount, manifest_path, hot_reload);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_localization_set_language(FlString tag) {
     Localization* self = g_ui_ctx->shared->localization;
     if (self == nullptr) {
@@ -848,16 +801,12 @@ void fl_localization_set_language(FlString tag) {
     request_tag(self, tag, false);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Whether kind names an arm of the union. An argument that fails this carries nothing readable, so the slot it
 // would have filled is left as written, exactly like a slot with no argument at all.
 
 static bool arg_is_readable(FlFmtArg arg) {
     return arg.kind == FlFmtArgKind_Int || arg.kind == FlFmtArgKind_Float || arg.kind == FlFmtArgKind_Str;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlStringBuilder append_arg(FlStringBuilder sb, FlFmtArg arg) {
     switch (arg.kind) {
@@ -872,7 +821,6 @@ static FlStringBuilder append_arg(FlStringBuilder sb, FlFmtArg arg) {
     return sb;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Single pass over text into arena: `{<index>}` becomes the argument at that index, and anything else - a named
 // slot, an index past the end of args, an unterminated slot - is copied through as written so the gap is visible
 // on screen. out_unmatched reports whether any slot found no argument.
@@ -900,7 +848,6 @@ static FlString substitute(FlArena* arena, FlString text, const FlFmtArg* args, 
     return fl_sb_to_string(sb);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Substitute args into text, reporting a slot that found no argument once per key.
 
 static FlString substitute_and_warn(Localization* self, FlArena* arena, FlString sid, FlString text,
@@ -914,8 +861,6 @@ static FlString substitute_and_warn(Localization* self, FlArena* arena, FlString
 
     return result;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_localize_fmt(FlString sid, const FlFmtArg* args, u32 count) {
     FlUiCtx* ctx = g_ui_ctx;
@@ -949,8 +894,6 @@ FlString fl_localize_fmt(FlString sid, const FlFmtArg* args, u32 count) {
     return substitute_and_warn(self, ctx->render_frame_allocator, sid, text, args, count);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Which of the built-in rule sets a language uses. A language none of them names selects other for every count.
 
 typedef enum PluralRules {
@@ -961,8 +904,6 @@ typedef enum PluralRules {
     PluralRules_None,
 } PluralRules;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool tag_is_one_of(FlString tag, const char* const* tags) {
     for (; *tags != nullptr; tags++) {
         if (fl_string_equals_nocase(tag, string_from_cstr(*tags))) {
@@ -972,7 +913,6 @@ static bool tag_is_one_of(FlString tag, const char* const* tags) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Only the tag's primary subtag is matched, so pt-br selects the way pt does. A language none of these lists
 // names - Arabic, Polish and Czech among them - has no rules here.
 
@@ -1000,8 +940,6 @@ static PluralRules plural_rules_for_tag(FlString tag) {
     }
     return PluralRules_None;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static LocalizationPluralCategory plural_category(PluralRules rules, i64 count) {
     // CLDR selects on the magnitude of the count.
@@ -1034,13 +972,10 @@ static LocalizationPluralCategory plural_category(PluralRules rules, i64 count) 
     return LocalizationPlural_Other;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 LocalizationPluralCategory localization_plural_category(FlString tag, i64 count) {
     return plural_category(plural_rules_for_tag(tag), count);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The variant count selects from entry, in the language of the table it came from. A category the key does not
 // carry, and a key that is a plain string rather than a variant object, both resolve to the text that is there.
 
@@ -1058,8 +993,6 @@ static FlString plural_text(StringTable* table, const TableEntry* entry, i64 cou
     const FlString variant = entry->variants[plural_category(rules, count)];
     return variant.data != nullptr ? variant : entry->text;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString fl_localize_plural(FlString sid, i64 count, const FlFmtArg* args, u32 arg_count) {
     FlUiCtx* ctx = g_ui_ctx;

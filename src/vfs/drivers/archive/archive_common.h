@@ -10,7 +10,6 @@
 #include <stdint.h>
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Cached archive entry for directory listing (linked list node)
 
 typedef struct VfsCachedEntry {
@@ -20,7 +19,6 @@ typedef struct VfsCachedEntry {
     bool is_directory; // Whether this entry is a directory
 } VfsCachedEntry;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Directory listing cache of one archive handle, built on the first listing
 
 #define VFS_ARCHIVE_CACHE_ARENA_SIZE (256 * 1024 * 1024)
@@ -31,7 +29,6 @@ typedef struct VfsEntryCache {
     VfsCachedEntry* tail;
 } VfsEntryCache;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Starts the cache. False when it was already begun.
 
 static inline bool vfs_entry_cache_begin(VfsEntryCache* cache) {
@@ -44,7 +41,6 @@ static inline bool vfs_entry_cache_begin(VfsEntryCache* cache) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Appends a copy of path to the cache
 
 static inline void vfs_entry_cache_add(VfsEntryCache* cache, FlString path, int64_t size, bool is_directory) {
@@ -62,7 +58,6 @@ static inline void vfs_entry_cache_add(VfsEntryCache* cache, FlString path, int6
     cache->tail = entry;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // State every archive driver's handle starts with
 
 typedef struct VfsArchiveHandle {
@@ -74,8 +69,6 @@ typedef struct VfsArchiveHandle {
     VfsEntryCache entries;
 } VfsArchiveHandle;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void vfs_archive_handle_init_root(VfsArchiveHandle* base, const uint8_t* data, uint64_t size) {
     base->target_path = FL_S("");
     base->is_directory = true;
@@ -85,7 +78,6 @@ static inline void vfs_archive_handle_init_root(VfsArchiveHandle* base, const ui
     base->entries = (VfsEntryCache) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A member of the parent's archive; it shares the parent's bytes without owning them
 
 static inline void vfs_archive_handle_init_child(VfsArchiveHandle* base, const VfsArchiveHandle* parent,
@@ -98,8 +90,6 @@ static inline void vfs_archive_handle_init_child(VfsArchiveHandle* base, const V
     base->entries = (VfsEntryCache) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static inline void vfs_archive_handle_release(VfsArchiveHandle* base) {
     if (base->entries.arena) {
         fl_arena_destroy(base->entries.arena);
@@ -110,14 +100,12 @@ static inline void vfs_archive_handle_release(VfsArchiveHandle* base) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The explicit path when given, otherwise the handle's own
 
 static inline FlString vfs_archive_resolve_target_path(const VfsArchiveHandle* base, FlString path) {
     return path.length > 0 ? path : base->target_path;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // True when the two paths name the same entry, ignoring one trailing slash
 
 static inline bool vfs_archive_entry_path_matches(const char* entry_path, const char* target_cstr, size_t target_len) {
@@ -146,7 +134,6 @@ static inline bool vfs_archive_entry_path_matches(const char* entry_path, const 
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Enumerates the immediate children of `path` within a cached archive entry list.
 //
 // Emits each immediate child once (collapsing shared directory prefixes to a single entry) via

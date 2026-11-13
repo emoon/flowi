@@ -3,10 +3,8 @@
 #include <core/string.h>
 #include <core/types.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Type-ahead matcher - the "type a few letters to jump to a row" gesture, over a caller-owned label slice.
 // Folding is ASCII case-insensitive only (UTF-8 bytes >= 0x80 compare verbatim).
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // How many bytes of typed prefix accumulate, and the idle gap (seconds) after which a keystroke starts a new
 // prefix.

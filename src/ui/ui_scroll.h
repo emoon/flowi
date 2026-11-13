@@ -8,7 +8,6 @@
 #include <flowi/ui/widget_config.h> // @generated FlScrollbarConfig (api_gen)
 #include <ui/ui_types.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI Scroll Area - Reusable scrolling container with automatic state management
 //
 // Usage:
@@ -20,9 +19,7 @@
 //   {
 //       // Content here
 //   }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal scroll state (stored per ID in FlUiCtx)
 
 typedef struct ScrollAreaState {
@@ -35,7 +32,6 @@ typedef struct ScrollAreaState {
     bool is_hovered;
 } ScrollAreaState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scroll-to-widget options
 
 typedef enum FlScrollAlignment {
@@ -51,7 +47,6 @@ typedef struct FlScrollToOptions {
     FlScrollAlignment align; // Alignment mode (default: Nearest)
 } FlScrollToOptions;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scroll area stack entry (one per open scroll area)
 
 #define SCROLL_AREA_STACK_MAX_DEPTH 8
@@ -64,7 +59,6 @@ typedef struct ScrollAreaStackEntry {
     FlScrollAreaConfig config;
 } ScrollAreaStackEntry;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Widget scroll info (for tracking widget position within scroll area)
 
 typedef struct WidgetScrollInfo {
@@ -73,7 +67,6 @@ typedef struct WidgetScrollInfo {
     FlVec2 size;
 } WidgetScrollInfo;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public API - Widget visibility and scroll-to-widget
 
 // Returns true if the widget is not in a scroll area, or if it is visible in the viewport.
@@ -84,13 +77,11 @@ void ui_scroll_to_widget(FlLayoutId widget_id);
 
 void ui_scroll_to_widget_ex(FlLayoutId widget_id, FlScrollToOptions opts);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scrollbar widget - returns signal with value changes tracked by signal.changed
 
 FlSignal ui_scrollbar_impl(float* value, FlScrollbarConfig cfg);
 #define ui_scrollbar(value, ...) ui_scrollbar_impl(value, (FlScrollbarConfig) { __VA_ARGS__ })
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal API (used by ui.c)
 
 // Auto-scroll to focused widget if it's off-screen (called at end of frame)

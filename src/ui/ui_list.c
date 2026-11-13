@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // List API Implementation (CONTEXT.md "Lists")
 //
 // A thin adapter over list_uniform's virtualization core: ui_list_begin/_item/_end delegate the scroll engine
@@ -15,7 +14,6 @@
 // owns the model mutation and drop validity. Dragging any row of a multi-selection drags the whole selection.
 // The candidate drop position is resolved arithmetically from content-space Y against MODEL POSITIONS (uniform
 // stride), so it reaches rows virtualized away exactly like the marquee coverage does.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "ui_list.h"
 #include <core/arena.h>
@@ -34,7 +32,6 @@
 #include <assert.h>
 #include <math.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Constants
 
 #define LIST_ROW_DEFAULT_HEIGHT 32.0f // Fallback row height when the config leaves it unset
@@ -78,7 +75,6 @@
 #define LIST_DECL_ICON_GAP 8      // gap between the leading icon and the label (logical px)
 #define LIST_DECL_ICON_INSET 4.0f // shrink the icon square this much from the row height, top and bottom
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // List Context
 
 // Per-list state persisted across frames, keyed by the list's id (string-id derived). Holds ONLY the gesture
@@ -174,7 +170,6 @@ struct FlListContext {
     FlDropRelationship drag_rel; // result.drag_rel - Before/After (Into is never produced)
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Helpers
 
 // Fetch (creating if absent) the persisted state for the list keyed by clay_id.
@@ -211,7 +206,6 @@ static i32 list_index_of_id(const FlListContext* self, u64 id) {
     return -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Feed this frame's typed text into the shared type-ahead matcher and return the row it should jump to (or -1
 // when there is nothing to jump to). cur is the current cursor index (-1 if unset); the matcher owns the
 // cycle-vs-narrow and idle-reset behavior (see type_ahead.h).
@@ -327,7 +321,6 @@ static i32 list_handle_keyboard(FlListContext* self, ListState* st, bool has_foc
     return target;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Context Creation/Destruction
 
 FlListContext* ui_list_create(FlArena* arena) {
@@ -340,7 +333,6 @@ FlListContext* ui_list_create(FlArena* arena) {
     return ctx;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Promote an armed press (item_begin) to a live drag once the drag distance crosses the threshold, latching until
 // release. Runs BEFORE any row is emitted so item_begin can suppress clicks for the whole list, and disarms on
 // disable_reorder so a press armed on an earlier frame cannot promote after the flag flips.
@@ -364,7 +356,6 @@ static void list_resolve_drag_promotion(FlListContext* self, ListState* st, bool
     self->frame_drag_active = st->drag_active;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Join the global focus ring and resolve whether the list holds focus for keyboard handling. The list container
 // ({name, 0}, the clay id list_uniform builds it under) is registered focusable per-frame, so Tab can reach it and
 // spatial nav treats it as the focus owner; the element itself is emitted by list_uniform_begin later, and
@@ -389,7 +380,6 @@ static bool list_resolve_focus(FlListContext* self, ListState* st, FlLayoutId id
     return st->has_focus;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resolve a focus seed requested this frame (ui_list_request_focus). The caller chose cursor_id before the model
 // was known, so validate it now against the ordered slice and fall back to the first row when it is 0 or absent.
 // Only on the seed frame - a roving cursor is never re-snapped.
@@ -405,7 +395,6 @@ static void list_resolve_focus_seed(FlListContext* self, ListState* st) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Core implementation (ctx explicit - the service API points here; the scoped face forwards with the global ctx)
 
 // Begin core, with the declarative face's policy toggles threaded in. The scoped list_begin_impl forwards
@@ -495,8 +484,6 @@ static FlListRange list_begin_impl(FlListContext* self, FlLayoutId id, const u64
                                    FlSelectionSet* set, FlListConfig config) {
     return list_begin_ex_impl(self, id, ordered_ids, count, set, config, false, false);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id) {
     u32 pos = self->emit_pos;
@@ -609,14 +596,11 @@ static FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id) {
     return signal;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void list_item_end_impl(FlListContext* self) {
     (void)self;
     fl_layout_end(); // close the row wrapper opened in list_item_begin_impl
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Marquee (rubber-band) selection - CONTEXT.md `## Lists`.
 //
 // A drag begun on empty list space (a gap between rows or below the content, i.e. a press no row consumed) sweeps
@@ -628,7 +612,6 @@ static void list_item_end_impl(FlListContext* self) {
 // consumed, inside the container's viewport rect". Coverage works in boundingBox/mouse pixel space and assumes
 // ui_scale == 1 (logical == physical); only the overlay's draw divides by scale.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Emit one of the list's floating overlay rectangles: a root-attached, input-passthrough float wrapping a single
 // filled child. Position and size are window-space (physical) pixels; a floating element is authored in logical
 // pixels, so both are divided by ui_scale here. A zeroed border draws no outline.
@@ -680,13 +663,10 @@ static void list_marquee_draw(FlListContext* self, f32 vp_top, f32 vp_left, f32 
                             fill, fl_border(border, 1));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool list_rect_contains(f32 x, f32 y, f32 left, f32 right, f32 top, f32 bottom) {
     return x >= left && x <= right && y >= top && y <= bottom;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The list container's viewport rect from the previous frame's resolved layout. Clay owns it independent of the
 // interaction item registry, so the container need not be a registered interactive item. False when the container
 // has not been laid out yet.
@@ -705,7 +685,6 @@ static bool list_get_viewport_rect(FlListContext* self, f32* top, f32* left, f32
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Edge auto-scroll for a held gesture: when the real (unclamped) cursor is past a viewport edge, nudge the scroll
 // for next frame, proportional to the overshoot.
 
@@ -820,7 +799,6 @@ static void list_marquee_update(FlListContext* self, ListState* st) {
     list_marquee_draw(self, vp_top, vp_left, vp_right, vp_bottom, scroll, band_lo, band_hi, mouse_x);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Drag-reorder - CONTEXT.md Drop Relationship.
 //
 // A press that landed on a row (armed in item_begin) and then crossed the click-vs-drag threshold begins an
@@ -963,8 +941,6 @@ static void list_drag_update(FlListContext* self, ListState* st) {
     list_edge_autoscroll(self, mouse_y, vp_top, vp_bottom, stride);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlListResult list_end_impl(FlListContext* self) {
     list_uniform_end(self->ui_ctx->list_uniform_ctx);
 
@@ -1030,7 +1006,6 @@ static FlListResult list_end_impl(FlListContext* self) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Declarative face - CONTEXT.md `## Lists`. One call runs the whole list on the shared core (begin/item/end): it
 // splits the array-of-descriptors into the parallel (id, label) slices the core's begin consumes and loops the
 // visible window emitting an icon + label per row.
@@ -1102,7 +1077,6 @@ static FlListResult list_decl_impl(FlListContext* self, FlLayoutId id, const FlL
     return list_end_impl(self);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scoped face - forward to the core with the global UI context's list state.
 
 FlListRange ui_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config) {

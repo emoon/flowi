@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend internal seam: the GpuShared / GpuSurface state objects and the helpers shared across the backend's
 // translation units. The Metal build cannot include this header - it pulls in GL types.
 
@@ -17,8 +16,6 @@
 #include <ui/render_ir.h>
 
 struct FlFontCache;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Per-surface tier: the offscreen RGBA8 tile-raster target, its readback FBO, the per-tile classification SSBO
 // sized to this surface's tile grid, and the CPU readback buffer. One arena backs both this struct and the
@@ -39,7 +36,6 @@ typedef struct GpuSurface {
     void* readback_buf;  // CPU readback destination (arena-backed, past readback_reset)
 } GpuSurface;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 3D tier (gpu_viewport3d.c): retained meshes and per-viewport color+depth targets, both backend-shared. A
 // viewport is keyed by the element id the core hands down. Fixed caps; both overflow with a diagnostic.
 
@@ -63,8 +59,6 @@ typedef struct GpuViewport3d {
     u32 width;
     u32 height;
 } GpuViewport3d;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct GpuShared {
     GpuCpuState cpu;      // first member: the backend user_data doubles as the GpuCpuState the shared seams read
@@ -146,7 +140,6 @@ typedef struct GpuShared {
 } GpuShared;
 _Static_assert(offsetof(GpuShared, cpu) == 0, "cpu must be the first member");
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared GL upload helpers.
 
 // Create a slot-tier texture and leave it bound on the active unit. Alpha-coverage sources are R8 swizzled to
@@ -162,7 +155,6 @@ void tex_sub_image_strided(FlArena* arena, u32 x, u32 y, u32 w, u32 h, u32 strid
 // driver's info log) on failure.
 GLuint gpu_compile_shader(const GpuGl* gl, GLenum stage, const char* const* sources, int count, const char* name);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 3D seams (gpu_viewport3d.c). The last three are wired into the FlRenderBackend vtable only when create succeeded.
 
 bool gpu_viewport3d_create(GpuShared* self);
@@ -174,7 +166,6 @@ void gpu_mesh_destroy(void* user_data, FlMeshHandle handle);
 void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color, u32 width, u32 height,
                            const f32* view_projection, const FlViewport3dDraw* draws, u32 draw_count);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resource-prepare seams (gpu_resource_prepare.c): image/glyph/SVG realization.
 
 bool prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,

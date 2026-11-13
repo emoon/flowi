@@ -3,7 +3,6 @@
 #include "unit_tests_common.h"
 #include "platform/sdl/sdl_input_common.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // multi_window.per_window_clay_context - the per-window Clay context split: each window owns a
 // distinct Clay context, ui_make_current swaps both the core singleton and Clay's current context,
 // render-command capture is isolated per window, and ui_destroy drops a dangling Clay current pointer - a
@@ -48,7 +47,6 @@ UTEST(multi_window, per_window_clay_context) {
                     "ui_destroy must null Clay's current context when it names the destroyed window");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // window_backend - the headless WindowBackend seam. Constructs the backend directly (no fl_app) and drives its
 // per-window seams: lifecycle, drawable size + content scale, and the cursor / hidden-drag state the core
 // flushes each frame.
@@ -87,7 +85,6 @@ UTEST(window_backend, headless_seam) {
     wb.destroy(wb.user_data);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // main window config - settings width/height are logical pixels scaled by the backend's pre-window display content
 // scale; the headless backend reports none, so it stays 1.0. fixed_size reaches the backend config inverted as
 // resizable.
@@ -121,7 +118,6 @@ UTEST(window_backend, main_window_config_carries_resizable) {
     ASSERT_FALSE_MSG(fl_app_main_window_config(&settings, &backend).resizable, "fixed_size reaches the config");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // window_backend - two inject_text calls before a single pump must each queue their own text. Each queued text
 // event owns its backing bytes; a shared per-window buffer would let the second inject overwrite the first
 // event's text before the pump drains it. The queued events are read back directly so a clobbered first event
@@ -162,7 +158,6 @@ UTEST(window_backend, headless_inject_text_back_to_back_keeps_distinct_text) {
     wb.destroy(wb.user_data);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Text-input events within one pump are appended in order and reach the per-frame snapshot; a lone event is
 // delivered unchanged; text past the cap keeps the earliest characters and never splits a UTF-8 codepoint.
 
@@ -173,8 +168,6 @@ static FlString typed_snapshot_after_pushing(FlUiCtx* ctx, const FlString* event
     ui_input_update(ctx, 1.0f / 60.0f);
     return ctx->text_input_this_frame;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(input, text_input_events_in_one_pump_concatenate) {
     FlUiCtx* ctx = render_fixture_get();
@@ -191,8 +184,6 @@ UTEST(input, text_input_events_in_one_pump_concatenate) {
     got = typed_snapshot_after_pushing(ctx, one, 0);
     ASSERT_EQ_MSG((int)got.length, 0, "the next frame starts with an empty snapshot");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(input, text_input_overflow_keeps_the_earliest_text) {
     FlUiCtx* ctx = render_fixture_get();
@@ -213,7 +204,6 @@ UTEST(input, text_input_overflow_keeps_the_earliest_text) {
     typed_snapshot_after_pushing(ctx, utf8, 0);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The per-frame string helpers resolve their arena through the process-global UI context. With no frame open there
 // is no arena, so the precondition check is fatal in every build type rather than log-and-continue.
 
@@ -266,8 +256,6 @@ UTEST(app, frame_str_outside_a_frame_terminates) {
     UTEST_SKIP("fork-based death test is Linux-only");
 #endif
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // A pointer/keyboard edge pumped before a tick's event poll must be visible to that SAME tick's frame() body. The
 // per-frame edge snapshot (ui_input_update, which derives mouse_pressed_this_frame from the pumped
@@ -458,7 +446,6 @@ UTEST(app, window_size_drives_logical_area) {
     fl_app_destroy(app_big);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Multi-window. The headless window backend gives each window its own injected-event queue, so these drive the
 // app-level contract end-to-end.
 
@@ -544,7 +531,6 @@ UTEST(app, multi_window_explicit_close) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared item state is retired once per app tick, after every window has refreshed its own records, so one
 // window's cleanup never drops another live window's items.
 
@@ -719,7 +705,6 @@ UTEST(app, multi_window_dup_id_tracker_is_app_global) {
 }
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Multi-window lifecycle hardening. Mid-frame open is queued and applied at the next tick boundary (never
 // mid-emit), and an optional on_close hook can veto a close (default policy: main close quits).
 
@@ -802,7 +787,6 @@ UTEST(app, multi_window_mid_frame_open_cancelled) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Multi-window per-window correctness: per-window DPI/scale composition, per-window keyboard focus restored on
 // activation, and a hidden drag that keeps its OS mouse-grab when the cursor leaves its window.
 
@@ -1128,7 +1112,6 @@ UTEST(app, on_close_clear_restores_default_policy) {
     fl_app_destroy(app);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // direct_ui_calls - the flowi UI surface is a set of plain exported `fl_*` functions; plugins link the
 // shared library and call them directly rather than through a composed service vtable.
 
@@ -1176,7 +1159,6 @@ UTEST(shared_abi, shared_library_exports_every_name_in_the_export_list) {
 
 #if BACKEND_USE_SDL
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sdl_input.* - SDL event translation driven through the real pump with a virtual controller and synthetic events.
 
 static int sdl_input_connected_count(const FlUiCtx* ctx) {
@@ -1221,8 +1203,6 @@ UTEST(sdl_input, startup_gamepad_reports_connected_once) {
     SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
     SDL_QuitSubSystem(SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool sdl_input_push_mouse_button(u32 type, u8 button) {
     SDL_Event e;

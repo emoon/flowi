@@ -5,13 +5,10 @@
 #include <flowi/ui/action.h> // @generated FlAction (api_gen)
 #include <flowi/ui/key.h>    // @generated FlKey (api_gen)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI Actions - High-level input actions for UI navigation and interaction
 //
 // Decouples physical inputs (keyboard keys, gamepad buttons) from logical actions; several physical inputs can
 // trigger the same action. Bindings are hardcoded defaults, no remapping.
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef enum InputType {
     INPUT_TYPE_KEYBOARD,
@@ -56,7 +53,6 @@ typedef struct InputBinding {
     };
 } InputBinding;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Action System State - Per-frame state for each action
 
 typedef struct ActionState {
@@ -69,7 +65,6 @@ typedef struct ActionSystemState {
     ActionState actions[FlAction_Count];
 } ActionSystemState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Query API
 
 typedef struct FlUiCtx FlUiCtx;
@@ -84,7 +79,6 @@ bool ui_action_repeated(FlUiCtx* ctx, FlAction action);
 // Action went down this frame or fires a software repeat.
 bool ui_action_pressed_or_repeated(FlUiCtx* ctx, FlAction action);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal API (used by UI system)
 
 // Called during UI context creation.

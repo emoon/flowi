@@ -20,8 +20,6 @@ use crate::Arena;
 /// The "no watcher" sentinel (FL_FILE_WATCHER_INVALID) a failed start returns.
 const FL_FILE_WATCHER_INVALID: u32 = 0;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// What a watcher should report. [`Default`] is the common case: this directory
 /// only, files only, platform-default buffering.
 #[derive(Copy, Clone, Debug)]
@@ -46,8 +44,6 @@ impl Default for WatchConfig {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// A live watch on one directory. Stops on drop.
 pub struct FileWatcher {
@@ -130,8 +126,6 @@ impl Drop for FileWatcher {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// One change record, as owned values - the storage [`FileChanges`] keeps. The
 /// borrowing view over it is [`FileChange`].
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -175,8 +169,6 @@ impl FileChanges {
         self.changes.iter().map(|raw| FileChange { raw })
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// One file system change, borrowed from the [`FileChanges`] batch that owns it.
 #[derive(Copy, Clone)]

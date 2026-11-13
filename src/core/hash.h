@@ -4,7 +4,6 @@
 
 #include "types.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CRC32 hashing (using zlib)
 
 u32 fl_hash_crc32(const u8* data, u64 size);
@@ -12,7 +11,6 @@ u32 fl_hash_crc32(const u8* data, u64 size);
 // Compute CRC32 incrementally (start with crc=0)
 u32 hash_crc32_update(u32 crc, const u8* data, u64 size);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SHA1 hashing (using teeny-sha1)
 
 void fl_hash_sha1(const u8* data, u64 size, u8 out[20]);
@@ -24,7 +22,6 @@ void hash_sha1_hex(const u8* data, u64 size, char out[41]);
 // message's last partial chunk plus padding, in [9, 72]).
 u64 hash_sha1_chunk_count(u64 size, u32* out_tail_bytes);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MD5 hashing (public domain implementation from Colin Plumb)
 
 typedef struct Md5Context {
@@ -41,7 +38,6 @@ void fl_hash_md5(const u8* data, u64 size, u8 out[16]);
 // out is 32 hex chars + null
 void hash_md5_hex(const u8* data, u64 size, char out[33]);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SHA256 hashing (public domain implementation based on Brad Conte's)
 
 typedef struct Sha256Context {

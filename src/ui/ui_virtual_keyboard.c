@@ -16,7 +16,6 @@
 #include "ui_text_input.h"
 #include <string.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Key Grid Definitions
 //
 // QWERTY layout with 4 pages: lowercase, uppercase, numbers, symbols
@@ -65,8 +64,6 @@ static const char s_keys_symbols[][13] = {
 
 typedef const char VkGridRow[VK_GRID_WIDTH];
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static VkGridRow* get_key_grid(VirtualKeyboardPage page) {
     switch (page) {
         case VK_PAGE_LOWERCASE:
@@ -82,16 +79,12 @@ static VkGridRow* get_key_grid(VirtualKeyboardPage page) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static char get_key_at(VkGridRow* grid, int32_t x, int32_t y) {
     if (x < 0 || x >= VK_GRID_WIDTH || y < 0 || y >= VK_GRID_HEIGHT) {
         return VK_KEY_EMPTY;
     }
     return grid[y][x];
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void find_next_valid_key(int32_t* x, int32_t* y, int32_t dx, int32_t dy, VkGridRow* grid) {
     int32_t start_x = *x;
@@ -126,8 +119,6 @@ static void find_next_valid_key(int32_t* x, int32_t* y, int32_t dx, int32_t dy, 
     } while (true);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString get_key_display_string(FlArena* arena, char key) {
     switch (key) {
         case VK_KEY_SPACE:
@@ -157,8 +148,6 @@ static FlString get_key_display_string(FlArena* arena, char key) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void vk_insert_char(VirtualKeyboard* self, char c) {
     if (self->config.max_length > 0 && self->buffer_length >= self->config.max_length) {
         return;
@@ -175,16 +164,12 @@ static void vk_insert_char(VirtualKeyboard* self, char c) {
     self->buffer[self->buffer_length] = '\0';
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void vk_delete_char(VirtualKeyboard* self) {
     if (self->buffer_length > 0) {
         self->buffer_length--;
         self->buffer[self->buffer_length] = '\0';
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void vk_handle_key_press(VirtualKeyboard* self, char key) {
     switch (key) {
@@ -235,7 +220,6 @@ static void vk_handle_key_press(VirtualKeyboard* self, char key) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Input handling
 
 static void vk_handle_input(VirtualKeyboard* self, FlUiCtx* ctx) {
@@ -313,7 +297,6 @@ static void vk_handle_input(VirtualKeyboard* self, FlUiCtx* ctx) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
 static void vk_render(VirtualKeyboard* self, FlUiCtx* ctx) {
@@ -408,7 +391,6 @@ static void vk_render(VirtualKeyboard* self, FlUiCtx* ctx) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Non-blocking API - Create virtual keyboard
 
 VirtualKeyboard* ui_virtual_keyboard_create(FlArena* arena, VirtualKeyboardConfig config) {
@@ -452,7 +434,6 @@ VirtualKeyboard* ui_virtual_keyboard_create(FlArena* arena, VirtualKeyboardConfi
     return vk;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Non-blocking API - Update virtual keyboard state
 
 void ui_virtual_keyboard_update(VirtualKeyboard* self, FlUiCtx* ctx) {
@@ -463,7 +444,6 @@ void ui_virtual_keyboard_update(VirtualKeyboard* self, FlUiCtx* ctx) {
     vk_handle_input(self, ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Non-blocking API - Render virtual keyboard
 
 void ui_virtual_keyboard_render(VirtualKeyboard* self, FlUiCtx* ctx) {
@@ -474,14 +454,11 @@ void ui_virtual_keyboard_render(VirtualKeyboard* self, FlUiCtx* ctx) {
     vk_render(self, ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Virtual keyboard glue between the UI context and the keyboard widget
 
 void ui_set_physical_keyboard_available(FlUiCtx* ctx, bool available) {
     ctx->physical_keyboard_available = available;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_virtual_keyboard_update_and_render(FlUiCtx* ctx) {
     if (!ctx->active_virtual_keyboard) {
@@ -495,7 +472,6 @@ void ui_virtual_keyboard_update_and_render(FlUiCtx* ctx) {
     ui_virtual_keyboard_finish_if_inactive(ctx);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Retire a virtual keyboard that closed itself (submit or cancel), committing submitted text to the target input.
 
 void ui_virtual_keyboard_finish_if_inactive(FlUiCtx* ctx) {

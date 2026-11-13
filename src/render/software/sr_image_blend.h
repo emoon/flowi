@@ -4,8 +4,6 @@
 #include "calculate_edge_rounding.h"
 #include "software_renderer_internal.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE SoaRgba splat_color(u8x16 color) {
     i16x8x2 corner_colors = u8x16_unpack_to_i16x8_wide_shl(color, 7);
     return (SoaRgba) {
@@ -16,7 +14,6 @@ static ALWAYS_INLINE SoaRgba splat_color(u8x16 color) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fused premultiplied-over composite for a premultiplied RGBA source. r/g/b_res are the premultiplied sampled
 // color (R*A), a_res the sampled alpha with the frame's global alpha folded in (A*ga). corner_alpha is the
 // anti-aliased edge coverage. Result: out = src*(ga*coverage) + bg*(1 - A*ga*coverage).

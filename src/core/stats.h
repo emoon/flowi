@@ -7,8 +7,6 @@
 #include "types.h"
 #include <stdatomic.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct StatCounter {
     _Atomic u64 value;
     bool enabled;
@@ -17,8 +15,6 @@ typedef struct StatCounter {
 } StatCounter;
 
 typedef struct StatsRegistry StatsRegistry;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Returns a registry allocated from the arena
 StatsRegistry* stats_create(FlArena* arena);
@@ -46,8 +42,6 @@ void stats_reset_counter(StatsRegistry* self, u32 counter_id);
 void stats_reset_counter_by_name(StatsRegistry* self, FlString name, FlString category);
 
 void stats_print_category(StatsRegistry* self, FlString category);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Increment counter (thread-safe)
 #define stats_inc(registry, counter_id)                                  \

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Backend-agnostic background controller.
 //
 // Holds blend / alpha / clear-color state, handed to the backend as an FlBackground snapshot at the front of
@@ -8,8 +7,6 @@
 
 #include "image.h"
 #include <ui/render_backend.h>
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct FlBackgroundState {
     ImageHandle current; // Current/incoming image (IMAGE_HANDLE_INVALID = none)
@@ -24,8 +21,6 @@ typedef struct FlBackgroundState {
 typedef struct FlBackgroundController {
     FlBackgroundState state;
 } FlBackgroundController;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Initialize with theme defaults (opaque, clear color 14/14/16, no image, no blend).
 void background_controller_init(FlBackgroundController* c);

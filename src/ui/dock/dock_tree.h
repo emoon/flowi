@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock Tree - the retained logical dock tree and the pure operations over it (CONTEXT.md "Docking",
 // "Dock Tree / Dock Node", "Workspace").
 //
@@ -14,7 +13,6 @@
 //
 // The struct layout is public and the render layer walks it each frame; dock_tree_apply is the only sanctioned
 // mutator.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <core/types.h>
 #include <flowi/ui/dock.h>
@@ -106,7 +104,6 @@ typedef struct FlDockRequest {
     f32 ratio;
 } FlDockRequest;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lifecycle. A fresh tree's root is an empty leaf (the floor).
 
 FlDockTree* dock_tree_create(void);
@@ -118,7 +115,6 @@ void dock_tree_destroy(FlDockTree* tree);
 // subsequent dock_tree_apply mints match what src would have minted).
 FlDockTree* dock_tree_clone(const FlDockTree* src);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Declarative first-run layout. FlDockSpec is one node of the literal: exactly a SPLIT (two child specs along an
 // axis at a ratio) or a LEAF (a tab group of one-or-more panel ids). The dock_split / dock_leaf macros in
 // ui/dock.h build these as nested compound literals; dock_tree_build lowers a spec onto a real tree.
@@ -144,14 +140,12 @@ struct FlDockSpec {
 // split child). A null spec yields a fresh floor (a single empty root leaf).
 FlDockTree* dock_tree_build(const FlDockSpec* spec);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mutation. Applies req in place; returns true if it changed the tree (or was an accepted no-op such as
 // re-selecting a tab), false if the request was invalid (target missing/wrong kind, panel absent where one is
 // required, etc.). On a true return the tree is invariant-clean.
 
 bool dock_tree_apply(FlDockTree* tree, const FlDockRequest* req);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The invariant chokepoint. Returns true iff: every node is split-xor-leaf; every split has exactly two distinct
 // non-null children with back-pointers and a ratio inside the min-size floor; no single-child splits; every leaf
 // except the root is non-empty; each panel id appears in at most one leaf and never both docked and floating; the
@@ -160,7 +154,6 @@ bool dock_tree_apply(FlDockTree* tree, const FlDockRequest* req);
 
 bool dock_tree_check_invariants(const FlDockTree* tree);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Queries.
 
 // The leaf currently holding panel, or null if panel is floating or absent.
@@ -179,7 +172,6 @@ bool dock_tree_has_panel(const FlDockTree* tree, FlDockPanelId panel);
 // is stated over. Returns the total count; writes up to max ids into out (pass out=null/max=0 to just count).
 u32 dock_tree_collect_panels(const FlDockTree* tree, FlDockPanelId* out, u32 max);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Arena-backed array growth, shared with the persistence layer's tree reconstruction.
 
 // Ensure the arena array items (count live elements, capacity *cap) holds need elements, growing geometrically; the

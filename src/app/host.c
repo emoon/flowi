@@ -12,8 +12,6 @@
 #include "ui/ui_private.h"
 #include "vfs/vfs.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Upper bound on live surfaces: a host with this many render targets is already pathological.
 #define FL_HOST_MAX_SURFACES 16
 
@@ -43,7 +41,6 @@ struct FlHost {
     FlUiCtx* window_ctx;
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Every fl_host_create failure path bails identically: tear down whatever came up (fl_host_destroy null-checks
 // every subsystem, so it is safe at any point in the bring-up) and return null. A macro, not a helper, so the
 // log_error reports its own call-site line.
@@ -57,7 +54,6 @@ struct FlHost {
         }                             \
     } while (0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction order: font cache -> render backend -> shared tier -> fl_vfs_init -> image_create_system ->
 // (optional) asset mount. The font cache comes first so the software renderer can be built against it.
 
@@ -114,8 +110,6 @@ FlHost* host_create(FlArena* arena, const FlHostSettings* settings, const FlRend
 
     return host;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void host_destroy(FlHost* host) {
     if (!host) {
@@ -183,7 +177,6 @@ void host_destroy(FlHost* host) {
     // The arena is the caller's; it frees the FlHost allocation along with everything else on it.
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Per-window surface + context.
 
 FlSurface* host_surface_create(FlHost* host, i32 width, i32 height) {
@@ -203,8 +196,6 @@ FlSurface* host_surface_create(FlHost* host, i32 width, i32 height) {
     return surface;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void host_surface_destroy(FlHost* host, FlSurface* surface) {
     FL_ASSERT(host != nullptr);
     if (!surface) {
@@ -220,8 +211,6 @@ void host_surface_destroy(FlHost* host, FlSurface* surface) {
         host->backend.destroy_surface(host->backend.user_data, surface);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlUiCtx* host_window_attach(FlHost* host, FlSurface* surface, i32 width, i32 height) {
     FL_ASSERT(host != nullptr);
@@ -242,16 +231,12 @@ FlUiCtx* host_window_attach(FlHost* host, FlSurface* surface, i32 width, i32 hei
     return ctx;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void host_window_detach(FlHost* host, FlUiCtx* ctx) {
     FL_ASSERT(host != nullptr);
     if (ctx) {
         ui_destroy(ctx);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool host_read_pixels(FlHost* host, FlSurface* surface, FlPixelReadback* out) {
     FL_ASSERT(host != nullptr);
@@ -263,7 +248,6 @@ bool host_read_pixels(FlHost* host, FlSurface* surface, FlPixelReadback* out) {
     return host->backend.read_pixels(host->backend.user_data, surface, out);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The public `fl_host_*` surface: thin forwarders onto the internal entry points above. flowi's own code never
 // calls these - see the note in app/host.h for why an intra-library call to an exported name is a real bug.
 
@@ -271,13 +255,10 @@ FlHost* fl_host_create(FlArena* arena, const FlHostSettings* settings) {
     return host_create(arena, settings, nullptr);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_host_destroy(FlHost* host) {
     host_destroy(host);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // One call per frame. The first opens the host's frame; every one after it closes the frame the caller just
 // emitted, pumps delta_time seconds of input into the next, and opens that.
 
@@ -293,8 +274,6 @@ void fl_host_frame_update(FlHost* host, double delta_time) {
 
     arena_watchdog_update();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_host_read_pixels(FlHost* host, FlPixelReadback* out) {
     FL_ASSERT(host != nullptr);

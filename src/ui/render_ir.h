@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // flowi neutral render-command IR.
 //
 // A single arena of variable-length tagged records describing UI drawing intent - never backend-baked data
@@ -18,7 +17,6 @@
 #include <flowi/ui/painter.h>
 #include <flowi/ui/stroke_style.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared value types
 //
 // Per-primitive opacity rides in FlColor.a; frame-wide opacity is the frame envelope's global_alpha (see
@@ -31,7 +29,6 @@ typedef struct FlRect {
     f32 h;
 } FlRect;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Command stream
 //
 // Every record begins with a fixed FlCmdHeader; iterate the arena by advancing byte_size bytes from the
@@ -71,7 +68,6 @@ typedef enum FlCmdKind {
     FlCmd_Bar,
 } FlCmdKind;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Core-tier payloads
 
 // Fill rect with optional per-corner radii. Gradient is folded in as per-corner colors: a solid fill is four
@@ -162,7 +158,6 @@ typedef struct FlCmdClipPush {
     FlRect rect;
 } FlCmdClipPush;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Optional-tier payloads (data-driven visualization primitives)
 //
 // Same conventions as the core tier: f32 pixel coordinates, raw non-premultiplied FlColor, intent only. A
@@ -232,7 +227,6 @@ typedef struct FlCmdBarSet {
     u32 bar_count; // FlBar[bar_count] inline after this struct
 } FlCmdBarSet;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Effect annotation
 //
 // A decorative, additive property appended to a command's record - after the payload and any inline trailing
@@ -243,7 +237,6 @@ typedef struct FlCmdBarSet {
 // FlEffect (kind, color, off_x, off_y, blur) and FlEffectKind are the generated types from painter.def -
 // included above via <flowi/ui/painter.h>.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Paint span - a deferred chunk of element-local IR
 //
 // The painter records primitives for one painting scope (one layout element) into a span. A span is a list of

@@ -6,12 +6,8 @@
 #include <stdarg.h>
 #include <stdatomic.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlArenaMt* g_error_arena = nullptr;
 static u64 g_error_arena_initial_pos = 0;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void error_report_init(void) {
     if (g_error_arena != nullptr) {
@@ -28,8 +24,6 @@ void error_report_init(void) {
     g_error_arena_initial_pos = atomic_load(&g_error_arena->atomic_pos);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void error_report_cleanup(void) {
     FL_VALIDATE(g_error_arena != nullptr);
 
@@ -37,8 +31,6 @@ void error_report_cleanup(void) {
     atomic_store_explicit(&arena->pos, g_error_arena_initial_pos, memory_order_relaxed);
     atomic_store(&g_error_arena->atomic_pos, g_error_arena_initial_pos);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void error_report_destroy(void) {
     if (!g_error_arena) {
@@ -48,8 +40,6 @@ void error_report_destroy(void) {
     arena_mt_destroy(g_error_arena);
     g_error_arena = nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString error_message_vformat(LogChannelId channel, LogLevel level, const char* fmt, va_list args) {
     FL_ASSERT_MSG(g_error_arena != nullptr, "error_message_vformat: Not initialized (call error_report_init first)");
@@ -64,8 +54,6 @@ FlString error_message_vformat(LogChannelId channel, LogLevel level, const char*
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString error_message_format(LogChannelId channel, LogLevel level, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -74,8 +62,6 @@ FlString error_message_format(LogChannelId channel, LogLevel level, const char* 
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString error_message_vformat_no_log(const char* fmt, va_list args) {
     FL_ASSERT_MSG(g_error_arena != nullptr,
                   "error_message_vformat_no_log: Not initialized (call error_report_init first)");
@@ -83,8 +69,6 @@ FlString error_message_vformat_no_log(const char* fmt, va_list args) {
 
     return vsprintf_arena_mt(g_error_arena, fmt, args);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString error_message_format_no_log(const char* fmt, ...) {
     va_list args;

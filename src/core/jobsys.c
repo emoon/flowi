@@ -17,8 +17,6 @@
 #define JOB_HANDLE_GEN_MASK 0x00000000FFFFFFFF
 #define JOB_HANDLE_INDEX_SHIFT 32
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 enum JobStatus {
     JOB_STATUS_NOT_STARTED = 0,
     JOB_STATUS_CLAIMED = 1,
@@ -30,8 +28,6 @@ enum JobStatus {
     // the slot stays pinned until promote_dependent_jobs finishes and JOB_STATUS_COMPLETED is published.
     JOB_STATUS_PROMOTING = 5,
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct JobInfo {
     CACHE_ALIGNED _Atomic(FlJobsFunc) function;
@@ -49,13 +45,9 @@ struct WorkerData;
 static void promote_dependent_jobs(JobInfo* completed_job);
 static void execute_job(JobInfo* work_job, FlJobsWorkerInfo* worker_info, bool nested);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct {
     u8 data[1024];
 } JobContext;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct Jobs {
     CACHE_ALIGNED _Atomic u32 shutdown;
@@ -88,8 +80,6 @@ thread_local static bool s_is_main_thread = true;
 // Thread-local pointer to current worker info (nullptr on main thread, valid on worker threads)
 thread_local static FlJobsWorkerInfo* s_current_worker_info = nullptr;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void jobs_context_free(void* context) {
     if (!context)
         return;
@@ -105,15 +95,11 @@ void jobs_context_free(void* context) {
     // If not from our pool, silently ignore (not an error)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // An out-of-range priority (including FlJobPriority_Invalid) runs as High. Applied before the priority is stored so
 // the stored value always names the queue the job sits in.
 static JobPriority clamp_priority(JobPriority priority) {
     return (u32)priority >= JOB_PRIORITY_COUNT ? JobPriority_High : priority;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void schedule_job_with_priority(Jobs* self, JobInfo* job, JobPriority priority) {
     u32 queue = (u32)priority;
@@ -149,14 +135,10 @@ static void schedule_job_with_priority(Jobs* self, JobInfo* job, JobPriority pri
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void schedule_job(Jobs* self, JobInfo* job) {
     JobPriority priority = (JobPriority)atomic_load(&job->priority);
     schedule_job_with_priority(self, job, priority);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void promote_dependent_jobs(JobInfo* completed_job) {
     Jobs* self = g_global_job_system;
@@ -180,7 +162,6 @@ static void promote_dependent_jobs(JobInfo* completed_job) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Try to dequeue a job from priority queues (High -> Normal -> Low)
 // Handles stale entries from reprioritization by checking job->priority matches queue
 
@@ -204,8 +185,6 @@ static bool try_dequeue_prioritized(Jobs* self, JobInfo** out_job) {
     }
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void execute_job(JobInfo* work_job, FlJobsWorkerInfo* worker_info, bool nested) {
     FlJobsFunc func = atomic_load(&work_job->function);
@@ -232,8 +211,6 @@ static void execute_job(JobInfo* work_job, FlJobsWorkerInfo* worker_info, bool n
     // Dependents are drained; only now is the job fully done and eligible for recycling.
     atomic_store_explicit(&work_job->status, JOB_STATUS_COMPLETED, memory_order_release);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void wait_for_work(Jobs* self, FlJobsWorkerInfo* worker_info) {
     mutex_lock(&self->idle_mutex);
@@ -266,14 +243,10 @@ static void wait_for_work(Jobs* self, FlJobsWorkerInfo* worker_info) {
     mutex_unlock(&self->idle_mutex);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct WorkerData {
     Jobs* jobs;
     int index;
 } WorkerData;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void* worker_thread(void* arg) {
     WorkerData* worker_info = arg;
@@ -312,8 +285,6 @@ static void* worker_thread(void* arg) {
 
     return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_jobs_create(FlArena* arena, const int num_threads) {
     // One job system per process, first caller wins. A dlopen'd plugin reaches the foundation through
@@ -366,8 +337,6 @@ void fl_jobs_create(FlArena* arena, const int num_threads) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlJobHandle fl_jobs_add_job_with_priority(FlJobsFunc func, void* user_data, JobPriority priority) {
     Jobs* self = g_global_job_system;
     priority = clamp_priority(priority);
@@ -416,13 +385,9 @@ FlJobHandle fl_jobs_add_job_with_priority(FlJobsFunc func, void* user_data, JobP
     return handle;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlJobHandle fl_jobs_add_job(FlJobsFunc func, void* user_data) {
     return fl_jobs_add_job_with_priority(func, user_data, JobPriority_Normal);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlJobHandle fl_jobs_add_job_with_priority_and_dependency(FlJobsFunc func, void* user_data, JobPriority priority,
                                                          FlJobHandle dependency) {
@@ -514,13 +479,9 @@ FlJobHandle fl_jobs_add_job_with_priority_and_dependency(FlJobsFunc func, void* 
     return handle;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlJobHandle fl_jobs_add_job_with_dependency(FlJobsFunc func, void* user_data, FlJobHandle dependency) {
     return fl_jobs_add_job_with_priority_and_dependency(func, user_data, JobPriority_Normal, dependency);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlJobsResult fl_jobs_is_finished(FlJobHandle handle) {
     if (handle == JOB_HANDLE_IMMEDIATE_COMPLETE) {
@@ -577,8 +538,6 @@ FlJobsResult fl_jobs_is_finished(FlJobHandle handle) {
     return FlJobsResult_NotFinished;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_jobs_wait(FlJobHandle handle) {
     if (handle == JOB_HANDLE_IMMEDIATE_COMPLETE) {
         return;
@@ -593,8 +552,6 @@ void fl_jobs_wait(FlJobHandle handle) {
         sleep_us(100);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_jobs_destroy(void) {
     Jobs* self = g_global_job_system;
@@ -630,21 +587,15 @@ void fl_jobs_destroy(void) {
     g_global_job_system = nullptr;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool jobs_global_exists(void) {
     return atomic_load(&g_global_job_system) != nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int fl_jobs_num_threads(void) {
     Jobs* self = g_global_job_system;
     FL_VALIDATE_RET(self != nullptr, 0);
     return self->num_threads;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void* fl_jobs_alloc_context(size_t size) {
     Jobs* self = g_global_job_system;
@@ -659,13 +610,9 @@ void* fl_jobs_alloc_context(size_t size) {
     return context;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_jobs_is_main_thread(void) {
     return s_is_main_thread;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static JobInfo* get_job_from_handle(FlJobHandle handle) {
     if (handle == 0 || handle == JOB_HANDLE_IMMEDIATE_COMPLETE) {
@@ -691,8 +638,6 @@ static JobInfo* get_job_from_handle(FlJobHandle handle) {
 
     return job;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_jobs_set_priority(FlJobHandle handle, JobPriority new_priority) {
     Jobs* self = g_global_job_system;
@@ -731,8 +676,6 @@ bool fl_jobs_set_priority(FlJobHandle handle, JobPriority new_priority) {
 
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlJobPriority fl_jobs_get_priority(FlJobHandle handle) {
     JobInfo* job = get_job_from_handle(handle);

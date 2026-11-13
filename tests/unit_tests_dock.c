@@ -4,7 +4,6 @@
 #include "ui/ui_popup.h"
 #include <float.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock tree - the retained logical dock tree, the seven pure operations and the invariant chokepoint
 // (ui/dock/dock_tree.{h,c}). Pure data + algebra, no rendering: a dedicated tree per case, invariants asserted
 // after every mutation.
@@ -14,8 +13,6 @@ static FlDockPanelId leaf_panel0(const FlDockNode* leaf) {
     return leaf->leaf.count > 0 ? leaf->leaf.panels[0] : 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // An arena released when the scope ends, on every exit path.
 static void dock_arena_release(FlArena** arena) {
     fl_arena_destroy(*arena);
@@ -23,14 +20,10 @@ static void dock_arena_release(FlArena** arena) {
 
 #define DOCK_ARENA(var) __attribute__((cleanup(dock_arena_release))) FlArena* var = arena_new()
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Two single-panel leaves, a and b, in an even X split.
 static FlDockTree* dock_pair_tree(FlDockPanelId a, FlDockPanelId b) {
     return dock_tree_build(dock_split(FlDockAxis_X, FL_DOCK_SPLIT_RATIO_DEFAULT, dock_leaf(a), dock_leaf(b)));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Docks panel as a tab into target_node; true when it applied and left the tree invariant-clean.
 static bool dock_tab_into(FlDockTree* tree, FlDockNodeId target_node, FlDockPanelId panel) {
@@ -469,7 +462,6 @@ UTEST(dock_tree, fuzz_conservation) {
     ASSERT_GE_MSG(applied, (u32)MIN_APPLIED, "the fuzz must apply a real share of its operations");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock layout - the logical tree → Clay emit + node-rect readback (ui/dock/dock_layout.{h,c}).
 
 #define DOCK_ASSERT_FLUSH(a, b) ASSERT_NEAR_MSG((a), (b), 0.5f, "dock rects must tile with no gap or overlap")
@@ -574,7 +566,6 @@ UTEST(dock_layout, tile_no_gaps_match_ratios) {
 
 #undef DOCK_ASSERT_FLUSH
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The minimum tile floor and the whole-pixel tile edge - both applied at emit, on the extent the previous frame's
 // layout produced, and neither ever written back into the tree.
 
@@ -744,7 +735,6 @@ UTEST(dock_layout, tile_edges_land_on_whole_pixels) {
     dock_tree_destroy(tree);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock tree structural changes as seen through the layout (ui/dock/dock_tree.{h,c}). Every op lands in
 // full on the frame it is applied - there is no transitional tier between the tree and what Clay is fed.
 
@@ -800,7 +790,6 @@ UTEST(dock_layout, a_collapse_hands_the_survivor_the_merged_rect) {
     dock_tree_destroy(tree);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock drag - the drag-to-dock targeting layer (ui/dock/dock_drag.{h,c}). The centerpiece is the PURE
 // hit-test: synthetic node rects + a cursor in, a drop zone + request out - no Clay, no state.
 
@@ -1240,7 +1229,6 @@ UTEST(dock_drag, undock_then_redock_conserves) {
     dock_tree_destroy(committed);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock splitter - the divider drag mutates a split's ratio through the splitter-resize op
 // (ui/dock/dock_splitter.{h,c}). The ratio math is pure (no Clay), so the clamp is tested directly;
 // the live drag is then exercised end-to-end through the headless fl_app loop.
@@ -1261,7 +1249,6 @@ UTEST(dock_splitter, ratio_math_and_clamp) {
     ASSERT_NEAR(dock_splitter_ratio_at(0.0f, 0.0f), 0.5f, 0.0001f);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared frame fixture for the live cases below. Everything from here on drives the headless fl_app loop, and every
 // such frame does the same three things: capture the frame's context and workspace, install a default tree on the
 // first frame a workspace exists, then open the workspace and emit its tiles.
@@ -1272,15 +1259,11 @@ typedef struct DockFixture {
     bool installed;
 } DockFixture;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A headless app that lives for one case. dock_app_close runs on every exit from the case, including an ASSERT
 // return, so the app never outlives it and the pointer is never left pressed.
 typedef struct DockApp {
     FlApp* app;
 } DockApp;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static DockApp dock_app_open(FlString title, i32 width, i32 height) {
     DockApp scope = { nullptr };
@@ -1294,8 +1277,6 @@ static DockApp dock_app_open(FlString title, i32 width, i32 height) {
     }
     return scope;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dock_app_close(DockApp* scope) {
     if (scope->app != nullptr) {
@@ -1329,8 +1310,6 @@ static FlDockWorkspace* dock_fixture_emit(DockFixture* st, const FlDockSpec* spe
     return ws;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Ticks the app n times with frame.
 static void dock_ticks(FlApp* app, void* st, void (*frame)(void*), int n) {
     for (int i = 0; i < n; ++i) {
@@ -1353,15 +1332,11 @@ static void dock_ticks(FlApp* app, void* st, void (*frame)(void*), int n) {
         ASSERT_TRUE_MSG((fx).ctx != nullptr && (fx).ws != nullptr, "frame did not run / no workspace"); \
     } while (0)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Ticks until an injected pointer move has settled: it is pumped at a tick boundary and the behaviour pass reads the
 // previous frame's hit test, so hover lands two frames late. Four ticks leaves margin.
 static void dock_settle_hover(FlApp* app, void* st, void (*frame)(void*)) {
     dock_ticks(app, st, frame, 4);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Hovers (cx, cy) until it goes hot, then presses without releasing - arming the drag latch on the hot element.
 static void dock_press_at(FlApp* app, void* st, void (*frame)(void*), i32 cx, i32 cy) {
@@ -1371,15 +1346,11 @@ static void dock_press_at(FlApp* app, void* st, void (*frame)(void*), i32 cx, i3
     fl_app_tick(app, st, frame);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Moves the pointer to (x, y) and ticks n frames.
 static void dock_move_and_tick(FlApp* app, void* st, void (*frame)(void*), i32 x, i32 y, int n) {
     fl_app_inject_mouse_move(app, x, y);
     dock_ticks(app, st, frame, n);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Releases the left button and ticks once.
 static void dock_release(FlApp* app, void* st, void (*frame)(void*)) {
@@ -1387,14 +1358,10 @@ static void dock_release(FlApp* app, void* st, void (*frame)(void*)) {
     fl_app_tick(app, st, frame);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The element data Clay laid out for a Clay id, or for a layout id.
 static Clay_ElementData dock_element(u32 clay_id) {
     return Clay_GetElementData((Clay_ElementId) { .id = clay_id });
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static Clay_ElementData dock_layout_element(FlLayoutId id) {
     return dock_element(ui_layout_id_to_clay_id(id));
@@ -1407,8 +1374,6 @@ static u32 dock_tab_clay_id(FlDockNodeId leaf_id, u32 index) {
         (FlLayoutId) { .name = FL_S("fl_dock_tab"), .id = ui_item_id_seed((u32)leaf_id << 8, index) });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The centre in px of the leaf's index-th dock tab; false when the tab was not laid out.
 static bool dock_tab_centre(const DockFixture* fx, FlDockNodeId leaf_id, u32 index, i32* cx, i32* cy) {
     const ItemState* tab = hashmap_get(&fx->ctx->shared->item_state, dock_tab_clay_id(leaf_id, index));
@@ -1419,8 +1384,6 @@ static bool dock_tab_centre(const DockFixture* fx, FlDockNodeId leaf_id, u32 ind
     *cy = (i32)(tab->state.pos.y + tab->state.size.y * 0.5f);
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Presses and holds the centre of the leaf's index-th dock tab; false when the tab was not laid out.
 static bool dock_press_tab(FlApp* app, void* st, const DockFixture* fx, void (*frame)(void*), FlDockNodeId leaf_id,
@@ -1477,7 +1440,6 @@ UTEST(dock_splitter, divider_drag_resizes_through_op) {
                     0.005f, "dragging past the far edge leaves the far child its minimum tile width");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock workspace - the immediate panel-declaration layer over the retained tree
 // (ui/dock/dock_workspace.{h,c}). Pure data + algebra - no Clay frame needed.
 
@@ -1770,8 +1732,6 @@ typedef struct DockCtxPair {
     FlDockWorkspace* other_ws;
 } DockCtxPair;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void dock_ctx_pair_release(DockCtxPair* pair) {
     ui_make_current(pair->fixture);
     if (pair->other_ws != nullptr) {
@@ -1781,8 +1741,6 @@ static void dock_ctx_pair_release(DockCtxPair* pair) {
         ui_destroy(pair->other);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Whether the active context's workspace holds panel.
 static bool dock_current_workspace_holds(FlDockPanelId panel) {
@@ -1852,8 +1810,6 @@ typedef struct DockDefaultTree {
     FlDockTree* saved;
 } DockDefaultTree;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static DockDefaultTree dock_default_tree_swap(FlUiCtx* fixture, const FlDockSpec* spec) {
     ui_make_current(fixture);
     DockDefaultTree scope = { .ws = dock_shared_default(fixture->shared->dock) };
@@ -1861,8 +1817,6 @@ static DockDefaultTree dock_default_tree_swap(FlUiCtx* fixture, const FlDockSpec
     dock_workspace_set_tree(scope.ws, dock_tree_build(spec));
     return scope;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dock_default_tree_restore(DockDefaultTree* scope) {
     dock_workspace_set_tree(scope->ws, scope->saved);
@@ -1881,8 +1835,6 @@ typedef struct DockStubHostScope {
     DockDefaultTree tree;
 } DockStubHostScope;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static DockStubHostScope dock_stub_host_begin(FlUiCtx* fixture, const FlDockSpec* spec) {
     s_stub_host = (StubDockHost) { .handle = &s_stub_host_handle };
     DockStubHostScope scope = { .tree = dock_default_tree_swap(fixture, spec) };
@@ -1890,8 +1842,6 @@ static DockStubHostScope dock_stub_host_begin(FlUiCtx* fixture, const FlDockSpec
         .user_data = &s_stub_host, .open_promoted_window = stub_dock_open, .close_promoted_window = stub_dock_close });
     return scope;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dock_stub_host_end(DockStubHostScope* scope) {
     fl_dock_register_host((FlDockHost) { 0 });
@@ -2168,14 +2118,10 @@ typedef struct DockSizeContractState {
     FlVec2 absent;     // never in the tree
 } DockSizeContractState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Whether a reported size is the {0,0} "do not act" answer.
 static bool dock_size_is_zero(FlVec2 size) {
     return fabsf(size.x) < 1e-4f && fabsf(size.y) < 1e-4f;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dock_size_contract_frame(void* user_data) {
     DockSizeContractState* st = (DockSizeContractState*)user_data;
@@ -2359,8 +2305,6 @@ static f32 dock_seam_tile_right(FlDockWorkspace* ws) {
     return tile.found ? tile.boundingBox.x + tile.boundingBox.width : -1.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Checks the overlay fill named by fill_id draws from inside panel 100's tile to past its right edge with no scissor
 // cutting it back, while the non-floating anchor is clipped to that tile.
 static void dock_seam_expect_overlay_unclipped(int* utest_result, FlDockWorkspace* ws, FlLayoutId fill_id) {
@@ -2381,16 +2325,12 @@ static void dock_seam_expect_overlay_unclipped(int* utest_result, FlDockWorkspac
                   "no scissor in force may cut the overlay back to the tile it was opened from");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(dock_workspace, root_attached_overlay_from_a_panel_crosses_the_dock_seam) {
     DOCK_APP(app, "dockseam", 600, 400);
     DockFixture st = { 0 };
     DOCK_RUN_FRAMES(app, st, st, dock_seam_frame, 2); // frame 1 installs the tree, frame 2 lays it out settled
     dock_seam_expect_overlay_unclipped(utest_result, st.ws, DOCK_SEAM_ID("seam_root_fill"));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(dock_workspace, element_attached_overlay_escapes_the_panel_clip) {
     DOCK_APP(app, "dockseam2", 600, 400);
@@ -2424,7 +2364,6 @@ UTEST(dock_workspace, tab_header_selection_changes_emitting_panel) {
     ASSERT_EQ_MSG((int)st.ws->tree->root->leaf.selected, 1, "leaf selected index must be 1");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Panel titles. Panels are declared after the emit, and the tab strip reads the title the workspace retained.
 
 typedef struct DockTitleState {
@@ -2488,8 +2427,6 @@ static bool frame_has_text(FlString want) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Same, restricted to one z band. The drag ghost carries the held panel's title, so bare text presence does not
 // tell a tab label from the ghost; the band does.
 static bool frame_has_text_at_z(FlString want, int z) {
@@ -2503,8 +2440,6 @@ static bool frame_has_text_at_z(FlString want, int z) {
     }
     return false;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(dock_workspace, tab_labels_render_retained_titles) {
     DOCK_APP(app, "docktitles", 800, 400);
@@ -2692,7 +2627,6 @@ UTEST(dock_workspace, show_after_close_rehomes_to_root) {
     dock_workspace_destroy(ws);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The active panel - one panel id per workspace, moved by a press inside a tile, plus the keyboard-ring blur that
 // rides every change of it (ui/dock/dock_workspace.{h,c}).
 
@@ -2774,8 +2708,6 @@ static bool dock_press_panel_tile(FlApp* app, DockActiveState* st, FlDockPanelId
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Settles the frame, then presses and releases panel's tile. True when the tile was laid out and panel is active.
 static bool dock_activate_panel(FlApp* app, DockActiveState* st, FlDockPanelId panel) {
     dock_active_settle(app, st);
@@ -2785,8 +2717,6 @@ static bool dock_activate_panel(FlApp* app, DockActiveState* st, FlDockPanelId p
     dock_release(app, st, dock_active_frame);
     return st->fx.ws->active_panel == panel;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Ticks once and answers the active panel after it.
 static FlDockPanelId dock_active_after_tick(FlApp* app, DockActiveState* st) {
@@ -2957,8 +2887,6 @@ UTEST(dock_workspace, a_modal_blocks_activation_and_a_popup_does_not) {
     dock_release(app, &st, dock_active_frame);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A held press that moves less than FL_DOCK_DRAG_THRESHOLD does not undock. The probe travels past the tab widget's
 // own 4px threshold, so the strip reports a grab, and stays inside the dock's.
 UTEST(dock_workspace, drag_threshold_does_not_undock) {
@@ -3093,8 +3021,6 @@ typedef struct DockEmitAgreeState {
     int floating_emitted;
     int floating_sized;
 } DockEmitAgreeState;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dock_emit_agree_frame(void* user_data) {
     DockEmitAgreeState* st = (DockEmitAgreeState*)user_data;
@@ -3296,12 +3222,9 @@ UTEST(dock_workspace, release_outside_workspace_rejoins_the_surviving_leaf) {
     DOCK_ASSERT_GESTURE_ENDED(tree);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Make-space - the hit-test runs on the live provisional layout, so the gap the drag opens is inside the geometry
 // that resolves the next frame's target ("preview feedback"). These drive the real loop because the
 // feedback only exists once Clay has laid the gap out.
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Pull the root leaf's second tab (101) out into a live drag and leave the cursor at (cx, cy), button still down.
 // False when the frame did not run, the tab was not laid out, or the pull did not arm a drag.
@@ -3538,7 +3461,6 @@ UTEST(dock_workspace, committed_split_inherits_the_gap_ratio) {
     ASSERT_TRUE(dock_tree_check_invariants(tree));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock build - the declarative first-run layout literal (dock_split/dock_leaf, ui/dock.h) lowered onto the tree by
 // dock_tree_build, validated by the invariant checker. Pure data + algebra.
 
@@ -3650,7 +3572,6 @@ UTEST(dock_build, set_tree_into_workspace) {
     dock_workspace_destroy(ws); // destroys second; authored was already destroyed by the swap
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dock persistence - serialize/restore a workspace layout to an opaque blob + the rebind-on-load rules
 // (ui/dock/dock_persist.{h,c}). Pure data in / data out, so every case is
 // headless.
@@ -3662,8 +3583,6 @@ typedef struct DockTempDir {
     FlString path;
 } DockTempDir;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static DockTempDir dock_temp_dir_make(const char* name) {
     DockTempDir dir = { .arena = arena_new() };
     FlString leaf = fl_sprintf_arena(dir.arena, "flowi_dock_%s_%u", name, get_process_id_os());
@@ -3672,14 +3591,10 @@ static DockTempDir dock_temp_dir_make(const char* name) {
     return dir;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void dock_temp_dir_remove(DockTempDir* dir) {
     file_remove_directory_recursive_os(dir->path);
     fl_arena_destroy(dir->arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Shuts the log file down if it was opened.
 static void dock_log_file_close(bool* open) {
@@ -3691,14 +3606,10 @@ static void dock_log_file_close(bool* open) {
 #define DOCK_TEMP_DIR(var, name) \
     __attribute__((cleanup(dock_temp_dir_remove))) DockTempDir var = dock_temp_dir_make(name)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Parses JSON text, with the relaxed flags the persisted layout is read with, into the arena.
 static FlJsonValue* dock_json_parse(FlArena* arena, FlString text) {
     return fl_json_parse_with_flags(arena, text, FlJsonParseFlags_AllowJson5, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Serializes trees as workspaces with ids 1..count, destroys the source trees and loads the blob back.
 static FlDockPersistLoad dock_persist_reload(FlArena* arena, FlDockTree* const* trees, u32 count) {
@@ -3716,8 +3627,6 @@ static FlDockPersistLoad dock_persist_reload(FlArena* arena, FlDockTree* const* 
     }
     return load;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // True when tree serializes, loads back as one workspace, and the loaded tree is invariant-clean and equal to it.
 static bool persist_round_trips(FlDockTree* tree) {
@@ -4079,7 +3988,6 @@ UTEST(dock_persist, rehydrated_floating_drains) {
     dock_tree_destroy(r);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The slot a split gap opens draws neither the dragged panel's tab strip nor its title; the ghost draws the panel.
 // A drop onto a tab strip previews the insertion by showing the dragged tab in that strip.
 
@@ -4200,7 +4108,6 @@ UTEST(dock_workspace, center_region_tabs_in_over_an_open_gap) {
     ASSERT_EQ_MSG((int)leaf->leaf.panels[1], 101, "a centre drop lands at the end of the strip");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // A panel body that overflows its tile is clipped to it, and so is its input. The nested column tests the whole clip
 // chain rather than the nearest clip ancestor: a scroll area inside a panel has a clip box taller than its tile.
 
@@ -4235,7 +4142,6 @@ static void dock_hit_frame(void* user_data) {
     dock_workspace_end(ws);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The bottom edge of panel 100's tile: the seam the overflowing columns above must not take input across.
 
 static f32 dock_hit_tile_bottom(FlDockWorkspace* ws) {
@@ -4247,7 +4153,6 @@ static f32 dock_hit_tile_bottom(FlDockWorkspace* ws) {
     return tile.found ? tile.boundingBox.y + tile.boundingBox.height : -1.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Settles the pointer on a position and answers the hot id it resolved to. Hot lands at the end of a frame, so one
 // tick is enough, but a second keeps the read clear of the frame that installed the position.
 
@@ -4257,15 +4162,11 @@ static u32 dock_hit_hot_at(FlApp* app, DockFixture* st, void (*frame)(void*), f3
     return st->ctx->hot_id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The hot id after the pointer settles on the centre of an element.
 static u32 dock_hit_hot_at_centre(FlApp* app, DockFixture* st, void (*frame)(void*), Clay_ElementData element) {
     return dock_hit_hot_at(app, st, frame, element.boundingBox.x + element.boundingBox.width * 0.5f,
                            element.boundingBox.y + element.boundingBox.height * 0.5f);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Checks the element named id is hot inside panel 100's tile and not hot past the tile's bottom edge, though its own
 // box reaches there.
@@ -4287,16 +4188,12 @@ static void dock_hit_expect_clipped_to_tile(int* utest_result, FlApp* app, DockF
                   "input below the tile must not reach the content that overflowed it");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(dock_workspace, panel_overflow_takes_no_input_past_the_tile) {
     DOCK_APP(app, "dockhit", 600, 400);
     DockFixture st = { 0 };
     DOCK_RUN_FRAMES(app, st, st, dock_hit_frame, 2); // frame 1 installs the tree, frame 2 lays it out settled
     dock_hit_expect_clipped_to_tile(utest_result, app, &st, DOCK_HIT_ID("hit_direct"));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(dock_workspace, a_nested_scroll_area_does_not_widen_the_tile_it_sits_in) {
     DOCK_APP(app, "dockhit2", 600, 400);
@@ -4318,7 +4215,6 @@ UTEST(dock_workspace, a_nested_scroll_area_does_not_widen_the_tile_it_sits_in) {
     dock_hit_expect_clipped_to_tile(utest_result, app, &st, DOCK_HIT_ID("hit_nested"));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The other side of the same walk: an overlay opened from a panel body is a layout root of its own, under no
 // scissor at all, so clipping the hit test must leave it hot everywhere it paints - including past the tile the
 // panel that opened it lives in. Both attach modes.
@@ -4360,8 +4256,6 @@ static void dock_overlay_hit_frame(void* user_data) {
     dock_workspace_end(ws);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(dock_workspace, an_overlay_stays_hot_past_the_tile_it_was_opened_from) {
     DOCK_APP(app, "dockovl", 600, 400);
     DockFixture st = { 0 };
@@ -4387,7 +4281,6 @@ UTEST(dock_workspace, an_overlay_stays_hot_past_the_tile_it_was_opened_from) {
                   "an overlay anchored to a widget at the tile's bottom edge is hot below the tile");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // fl_dock_dock_outer_share docks the new outer region at the named share of the root; fl_dock_dock_outer keeps the
 // even split.
 

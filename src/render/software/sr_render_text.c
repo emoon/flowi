@@ -4,8 +4,6 @@
 #include <math.h>
 #include <stddef.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static ALWAYS_INLINE SoaRgba splat_color(u8x16 color) {
     i16x8x2 corner_colors = u8x16_unpack_to_i16x8_wide_shl(color, 7);
     return (SoaRgba) {
@@ -15,8 +13,6 @@ static ALWAYS_INLINE SoaRgba splat_color(u8x16 color) {
         .a = i16x8_splat_lane(corner_colors.v0, 3),
     };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ALWAYS_INLINE static void draw_text_line(const bool lcd_mode, const bool use_write_mask, i16* line_output,
                                          const u8* glyph_line_r, const u8* glyph_line_g, const u8* glyph_line_b,
@@ -56,8 +52,6 @@ ALWAYS_INLINE static void draw_text_line(const bool lcd_mode, const bool use_wri
     i16x8_store_unaligned(result_g, line_output, g_offset);
     i16x8_store_unaligned(result_b, line_output, b_offset);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static ALWAYS_INLINE void draw_text(const bool lcd_mode, i16* tile_output, const RenderCommand* command,
                                     f32x4 scissor_rect, const TileInfo* info) {
@@ -161,21 +155,15 @@ static ALWAYS_INLINE void draw_text(const bool lcd_mode, i16* tile_output, const
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void sr_render_text_lcd(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                const TileInfo* info) {
     draw_text(true, tile_output, command, scissor_rect, info);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void sr_render_text_grayscale(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
                                      const TileInfo* info) {
     draw_text(false, tile_output, command, scissor_rect, info);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void sr_render_text(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* info) {
     if (command->render_text.data_g == nullptr) {

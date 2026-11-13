@@ -128,7 +128,6 @@
 
 // Arena from fl_init, shared by all tests (set up once in main below).
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // vfs.read_through_generated_plugin - drives the api_gen-generated FlVfsPlugin driver vtable
 // (<flowi/vfs/vfs_plugin.h>) end-to-end through a hermetic in-memory driver, no disk I/O. The driver mirrors
 // LocalFS's handle semantics (stateless instance, self-describing handles), backed by one in-memory file.
@@ -146,7 +145,6 @@ typedef struct StubVfsHandle {
 // is ever allocated.
 #define STUB_VFS_OVERSIZE ((int64_t)512 * 1024 * 1024 + 1)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // render: shared fixture - software renderer + UI context + VFS + image system + font cache.
 //
 // Created lazily by the first render_fixture_get() in a case (fl_vfs_init / ui_create / image_create_system), and
@@ -174,7 +172,6 @@ typedef struct RenderFixture {
     FlFontCache* font_cache; // the cache bound to ctx, so a case can load a font into the one the frame measures with
 } RenderFixture;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fixtures and helpers defined in unit_tests_common.c, used by more than one area's TU.
 
 extern FlArena* s_arena;

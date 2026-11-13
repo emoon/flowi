@@ -4,15 +4,12 @@
 #include "ui_private.h"
 #include "ui_tokens.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Defaults
 
 // Seconds the pointer must dwell over the anchor before the tooltip shows.
 #define UI_TOOLTIP_DEFAULT_DELAY 0.5f
 // Floating offset below the anchor's bottom-left.
 #define UI_TOOLTIP_DEFAULT_OFFSET_Y 4.0f
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ui_tooltip_impl(FlLayoutId anchor_id, FlString text, FlTooltipConfig cfg) {
     FlUiCtx* ctx = ui_get_ctx();

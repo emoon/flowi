@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: the hardware raster path behind Viewport3d and Mesh - the backend's only non-compute pipeline.
 //
 // Per viewport: a color + depth framebuffer, sized to the element's layout rect and rebuilt on resize. Per
@@ -16,16 +15,12 @@
 #include "gpu_shaders.h"
 #include <ui/image_registry.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Vertex attribute layout of FlMeshVertex, the one fixed format meshes use.
 #define MESH_ATTRIB_POS 0
 #define MESH_ATTRIB_UV 1
 #define MESH_ATTRIB_COLOR 2
 #define MESH_UV_OFFSET 12    // 3 floats of position
 #define MESH_COLOR_OFFSET 20 // + 2 floats of uv
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Delete a viewport's framebuffer, depth renderbuffer and color slot. The color texture goes back through the
 // slot table, which queues it for deletion with the context current.
@@ -131,7 +126,6 @@ static void setup_targets(GpuShared* self, GpuViewport3d* viewport, FlImageHandl
     image_registry_mark_realized((ImageHandle)color, (int)width, (int)height);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Retained meshes. The handle is the table index plus one, so zero stays the invalid handle.
 
 FlMeshHandle gpu_mesh_create(void* user_data, const FlMeshVertex* vertices, u32 vertex_count, const u16* indices,
@@ -180,8 +174,6 @@ FlMeshHandle gpu_mesh_create(void* user_data, const FlMeshVertex* vertices, u32 
     return (FlMeshHandle)(slot + 1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static GpuMesh* resolve_mesh(GpuShared* self, FlMeshHandle handle) {
     if (handle == FL_MESH_HANDLE_INVALID || handle > GPU_MESH_CAP) {
         return nullptr;
@@ -203,7 +195,6 @@ void gpu_mesh_destroy(void* user_data, FlMeshHandle handle) {
     *mesh = (GpuMesh) { 0 }; // vao 0 frees the slot for reuse
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Render one viewport's draw list. Opaque and unsorted: the depth buffer resolves visibility for
 // depth-tested draws, so their submission order does not matter, and blending stays off. Draws that opt out of
 // the depth test are the exception - they land in submission order, over whatever is already there.
@@ -286,7 +277,6 @@ void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color
     gl->MemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Compile the unlit program and resolve its uniforms. Returns false (logged) when either stage fails to
 // compile or the program fails to link, which leaves the backend without a 3D seam.
 
@@ -328,7 +318,6 @@ bool gpu_viewport3d_create(GpuShared* self) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tear down the framebuffers, depth renderbuffers, mesh buffers, and the program. The viewports' color
 // textures are NOT freed here - they live in the slot table, which the backend's destroy drains.
 

@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Software-backend-private image representation: the planar/padded form a static image takes once it has been
 // realized for the software renderer (separate R/G/B/A planes, one pixel of bilinear padding, stored in the TLSF
 // cache), plus the cache entry and eviction-metadata structs. Included only by the software image backend
@@ -14,8 +13,6 @@
 #include <vfs/vfs.h>
 #include <stdatomic.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct InternalImageData {
     u8* data;
     int width;         // Logical width (original dimensions)
@@ -28,8 +25,6 @@ typedef struct InternalImageData {
     VfsOpStatus status;
 } InternalImageData;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct ImageCacheEntry {
     CACHE_ALIGNED _Atomic u64 last_access_frame;
     ImageData public_data;
@@ -41,8 +36,6 @@ typedef struct ImageCacheEntry {
     VfsOpStatus status;
 } ImageCacheEntry;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct EvictedImageEntry {
     FlVfsMount* mount;
     FlString relative_path;     // Path (string allocator)
@@ -50,7 +43,6 @@ typedef struct EvictedImageEntry {
     _Atomic u64 eviction_frame;
 } EvictedImageEntry;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SW-cache internal entry points - called from the SW image backend, in the job worker thread.
 
 /// Allocate an entry in the image cache (copies the planar pixels into the TLSF pool)

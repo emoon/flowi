@@ -6,7 +6,6 @@
 struct FlArena;
 struct FlArenaMt;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sprintf with SIMD vector support
 //
 // Every standard format specifier works, plus one specifier per simd.h vector type. Components print
@@ -19,7 +18,6 @@ struct FlArenaMt;
 //
 //   f32x4 pos = f32x4_new(10.5f, 20.25f, -5.0f, 1.0f);
 //   fl_sprintf_arena(arena, "Position: %v4f", pos);   // "Position: [10.5, 20.25, -5, 1]"
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The result is one contiguous run of bytes in arena, whatever else is allocating from it: the
 // message is assembled in a thread-local scratch arena and the arena is bumped once. A caller
@@ -30,7 +28,6 @@ struct FlArenaMt;
 // fl_sprintf_arena is declared in <flowi/string/string.h>.
 FlString vsprintf_arena(struct FlArena* arena, const char* format, va_list args);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sprintf onto an FlArenaMt
 //
 // Same contract as fl_sprintf_arena/vsprintf_arena, for the arenas held as FlArenaMt rather than

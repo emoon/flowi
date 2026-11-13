@@ -1,11 +1,9 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Selection - FlSelectionSet implementation (CONTEXT.md Selection Set / Selection Request).
 //
 // Pure data structure + protocol: no List rendering or gesture code. The set is an arena-backed opaque handle
 // wrapping base's u64-keyed hashmap used as a set (the value slot is an unused dummy byte - identity only).
 // apply folds a batch of requests in array order; ranges resolve their endpoints against the
 // caller-supplied ordered id list, so off-screen/virtualized rows resolve too.
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "ui_selection.h"
 
@@ -22,7 +20,6 @@ struct FlSelectionSet {
     hashmap(u64, u8) map; // u64 stable id -> dummy byte; membership is "key present"
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lifecycle
 
 FlSelectionSet* selection_set_create(u32 initial_capacity) {
@@ -40,7 +37,6 @@ void selection_set_destroy(FlSelectionSet* set) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Membership
 
 bool selection_set_contains(const FlSelectionSet* set, u64 id) {
@@ -66,7 +62,6 @@ void selection_set_set_all(FlSelectionSet* set, const u64* ids, u64 count) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Apply
 
 // Linear search for id in the ordered model; ranges are rare (one per shift-select), so no auxiliary index.
@@ -122,7 +117,6 @@ void selection_set_apply(FlSelectionSet* set, const FlSelectionRequest* reqs, u6
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Read-out
 
 u64 selection_set_len(const FlSelectionSet* set) {

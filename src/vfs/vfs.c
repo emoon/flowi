@@ -12,21 +12,17 @@
 #include "vfs_private.h"
 #include "drivers/localfs.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Global state (exported to vfs_resolve.c and vfs_ops.c)
 
 LogChannelId VFS_ID = LOG_CHANNEL_INVALID;
 VfsState* g_vfs_state = nullptr;
 void (*g_vfs_test_after_read_scheduled)(FlVfsHandle read) = nullptr;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Nil VFS Entry (Read-Only Global)
 //
 // Represents invalid/empty VFS entry. Functions return pointers to this instead of nullptr.
 
 const FlVfsEntry fl_nil_vfs_entry = { 0 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_vfs_init(FlArena* arena) {
     profile_function_auto_nc("vfs:fl_vfs_init", PROFILE_COLOR_CYAN);
@@ -64,8 +60,6 @@ bool fl_vfs_init(FlArena* arena) {
 
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
     profile_function_auto_nc("vfs:vfs_register_driver", PROFILE_COLOR_CYAN);
@@ -109,7 +103,6 @@ void vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
     logc_info(VFS_ID, "VFS driver registered: %S", plugin->plugin_name);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Reference counting
 
 // Drops one reference to the mount. The last one closes every node handle, children first, and frees it, on whichever
@@ -135,8 +128,6 @@ static void vfs_mount_release(FlVfsMount* mount) {
 
     mi_free(mount);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // An error_message needs no freeing here: the op owns that storage (see vfs_op_format_error).
 static void vfs_free_data_result(FlVfsData* result, bool free_data_buffer) {
@@ -198,8 +189,6 @@ static void vfs_op_free_result(VfsOp* op) {
     op->error_text = (FlString) { 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Runs when the last reference goes: the slot is closed (or never existed), the job has run (or never will) and no
 // read is chained onto the op. Holds no lock while it works.
 static void vfs_op_destroy(VfsOp* op) {
@@ -237,8 +226,6 @@ static void vfs_op_destroy(VfsOp* op) {
     vfs_mount_release(mount);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Takes another reference on an op the caller already holds one of.
 static void vfs_op_retain(VfsOp* op) {
     atomic_fetch_add_explicit(&op->refs, 1, memory_order_relaxed);
@@ -250,7 +237,6 @@ void vfs_op_release(VfsOp* op) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Slot table
 
 VfsOp* vfs_op_acquire(FlVfsHandle id) {
@@ -270,8 +256,6 @@ VfsOp* vfs_op_acquire(FlVfsHandle id) {
     atomic_fetch_add_explicit(&(*slot)->refs, 1, memory_order_relaxed);
     return *slot;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Caller holds handle_lock. An id is in use while an open op holds it and while a closed one is still running.
 static bool vfs_id_in_use_locked(VfsState* self, FlVfsHandle id) {
@@ -312,7 +296,6 @@ static bool vfs_slot_remove_locked(VfsState* self, const VfsOp* op) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Op creation and scheduling
 
 // Everything an op is born with, filled with designated initializers at the call site. A zeroed field is the "not
@@ -384,8 +367,6 @@ static VfsOp* vfs_op_create(VfsState* self, const VfsOpParams* params) {
     return op;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Hands op to the job system, once, behind chain_after when that is set and behind its mount's own job otherwise. The
 // job gets a reference of its own, taken first because a job scheduled from a worker runs inline and may finish, and
 // release it, before this returns. The caller's reference is held throughout.
@@ -401,8 +382,6 @@ static void vfs_op_schedule(VfsOp* op, FlJobHandle chain_after) {
     atomic_store_explicit(&op->last_job, job, memory_order_release);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Create, schedule and hand back the id. The id is the caller's only reference: the creator's is dropped here.
 static FlVfsHandle allocate_op(VfsState* self, const VfsOpParams* params) {
     VfsOp* op = vfs_op_create(self, params);
@@ -417,7 +396,6 @@ static FlVfsHandle allocate_op(VfsState* self, const VfsOpParams* params) {
     return id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Waiting on the jobs of live ops
 
 typedef struct VfsJobList {
@@ -466,12 +444,9 @@ static void vfs_wait_jobs(VfsState* self, FlVfsMount* mount) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mount management
 
 static _Atomic u64 s_next_mount_id = 1;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsMountResult fl_vfs_mount_with_options(FlString source_path, FlVfsMountOptions options) {
     logc_debug(VFS_ID, "mounting %S", source_path);
@@ -541,7 +516,6 @@ FlVfsMountResult fl_vfs_mount_with_options(FlString source_path, FlVfsMountOptio
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public API
 
 void fl_vfs_set_priority(FlVfsHandle handle, FlVfsLoadPriority priority) {
@@ -564,8 +538,6 @@ void fl_vfs_set_priority(FlVfsHandle handle, FlVfsLoadPriority priority) {
     vfs_op_release(op);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlVfsDirHandle fl_vfs_get_listing(FlVfsMount* mount, FlString relative_path, int depth) {
     profile_function_auto_nc("vfs:fl_vfs_get_listing", PROFILE_COLOR_CYAN);
 
@@ -579,13 +551,9 @@ FlVfsDirHandle fl_vfs_get_listing(FlVfsMount* mount, FlString relative_path, int
                                     });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool vfs_op_is_done(const VfsOp* op) {
     return atomic_load_explicit(&op->done, memory_order_acquire);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_vfs_wait(FlVfsHandle handle) {
     profile_function_auto_nc("vfs:fl_vfs_wait", PROFILE_COLOR_CYAN);
@@ -615,8 +583,6 @@ void fl_vfs_wait(FlVfsHandle handle) {
     vfs_op_release(op);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void vfs_wait_all(void) {
     profile_function_auto_nc("vfs:vfs_wait_all", PROFILE_COLOR_CYAN);
     VfsState* self = g_vfs_state;
@@ -626,8 +592,6 @@ void vfs_wait_all(void) {
     // Ops published after the collection belong to a later wait_all call.
     vfs_wait_jobs(self, nullptr);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_vfs_is_ready(FlVfsHandle handle) {
     profile_function_auto_nc("vfs:fl_vfs_is_ready", PROFILE_COLOR_CYAN);
@@ -640,8 +604,6 @@ bool fl_vfs_is_ready(FlVfsHandle handle) {
     vfs_op_release(op);
     return ready;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The result payload of a finished read/list op, or nullptr when the op is not finished or finished without one. Then
 // *success is the op's outcome: false while unfinished, else its error-status success. Shared empty-result path of
@@ -659,8 +621,6 @@ static void* vfs_op_payload(const VfsOp* op, bool* success) {
     }
     return payload;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsData fl_vfs_get_data(FlVfsHandle handle) {
     profile_function_auto_nc("vfs:fl_vfs_get_data", PROFILE_COLOR_CYAN);
@@ -680,8 +640,6 @@ FlVfsData fl_vfs_get_data(FlVfsHandle handle) {
     return data;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 VfsOpStatus vfs_get_status(FlVfsHandle handle) {
     profile_function_auto_nc("vfs:vfs_get_status", PROFILE_COLOR_CYAN);
     VfsOp* op = vfs_op_acquire(handle);
@@ -697,8 +655,6 @@ VfsOpStatus vfs_get_status(FlVfsHandle handle) {
     vfs_op_release(op);
     return status;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsFileList fl_vfs_get_file_list(FlVfsDirHandle handle) {
     profile_function_auto_nc("vfs:fl_vfs_get_file_list", PROFILE_COLOR_CYAN);
@@ -718,7 +674,6 @@ FlVfsFileList fl_vfs_get_file_list(FlVfsDirHandle handle) {
     return list;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Error handling
 
 FlString vfs_op_format_error(VfsOp* op, const char* fmt, ...) {
@@ -735,7 +690,6 @@ FlString vfs_op_format_error(VfsOp* op, const char* fmt, ...) {
     return op->error_text;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // VFS close
 
 // The ops that run against memory the caller lent for their duration: fl_vfs_read's buffer.
@@ -778,8 +732,6 @@ void fl_vfs_close(FlVfsHandle handle) {
     vfs_op_release(op);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlVfsHandle fl_vfs_mount_read_all_with_options(FlVfsMount* mount, FlString relative_path, FlVfsReadCallback callback,
                                                void* user_data, FlVfsReleaseCallback release,
                                                FlVfsHandle reuse_handle) {
@@ -796,7 +748,6 @@ FlVfsHandle fl_vfs_mount_read_all_with_options(FlVfsMount* mount, FlString relat
                                     });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Two-phase read: allocate handle first, dispatch later.
 
 FlVfsHandle vfs_mount_read_all_prepare(FlVfsMount* mount, FlString relative_path, FlVfsReadCallback callback,
@@ -822,8 +773,6 @@ FlVfsHandle vfs_mount_read_all_prepare(FlVfsMount* mount, FlString relative_path
     return id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void vfs_dispatch(FlVfsHandle handle) {
     VfsOp* op = vfs_op_acquire(handle);
     if (!op) {
@@ -833,8 +782,6 @@ void vfs_dispatch(FlVfsHandle handle) {
     vfs_op_schedule(op, FL_JOB_HANDLE_INVALID);
     vfs_op_release(op);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsHandle fl_vfs_mount_open(FlVfsMount* mount, FlString relative_path, u32 flags) {
     FL_VALIDATE_RET(mount != nullptr, FL_VFS_HANDLE_INVALID);
@@ -846,8 +793,6 @@ FlVfsHandle fl_vfs_mount_open(FlVfsMount* mount, FlString relative_path, u32 fla
                                         .open_flags = flags,
                                     });
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Reads through an open file, chained after the last op on it. The read takes its own reference on the file, so
 // closing the file id while the read is queued or running leaves the file open until the read has run.
@@ -921,7 +866,6 @@ FlVfsHandle fl_vfs_read(FlVfsHandle file_handle, void* buffer, i64 size) {
     return id;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mount close and lifecycle
 
 // Caller holds handle_lock. Marks a listed mount closing and reports whether it was open. A mount that is not listed,
@@ -996,7 +940,6 @@ void fl_vfs_mount_close(FlVfsMount* mount) {
     vfs_mount_release(mount);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // VFS destroy
 
 // The first listed mount that nobody has closed yet, or nullptr when every remaining mount is closing.
@@ -1049,7 +992,6 @@ void vfs_destroy(void) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mount status and info
 
 FlVfsMountStatus fl_vfs_mount_get_status(FlVfsMount* mount) {
@@ -1058,8 +1000,6 @@ FlVfsMountStatus fl_vfs_mount_get_status(FlVfsMount* mount) {
 
     return (FlVfsMountStatus)atomic_load_explicit(&mount->status, memory_order_acquire);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsMountInfo fl_vfs_mount_get_info(FlVfsMount* mount) {
     FL_VALIDATE_RET(mount != nullptr, ((FlVfsMountInfo) {
@@ -1073,21 +1013,15 @@ FlVfsMountInfo fl_vfs_mount_get_info(FlVfsMount* mount) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool fl_vfs_mount_is_ready(FlVfsMount* mount) {
     profile_function_auto_nc("vfs:fl_vfs_mount_is_ready", PROFILE_COLOR_CYAN);
     return fl_vfs_mount_get_status(mount) == FlVfsMountStatus_Ready;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlJobHandle fl_vfs_mount_get_job_handle(FlVfsMount* mount) {
     FL_VALIDATE_RET(mount != nullptr, 0);
     return mount->job_handle;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u64 vfs_mount_get_id(const FlVfsMount* mount) {
     FL_VALIDATE_RET(mount != nullptr, 0);

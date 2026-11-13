@@ -8,7 +8,6 @@
 
 typedef struct FlUiCtx FlUiCtx;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Popup API
 
 // Begin a popup scope - content declared within this scope will be rendered after main UI
@@ -16,7 +15,6 @@ void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config);
 
 void ui_popup_end(void);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Internal API (used by ui system)
 
 // Check for auto-close triggers (ESC, B button)
@@ -34,7 +32,6 @@ bool ui_focus_scope_arm(FlUiCtx* ctx, u32 scope_id, bool take_over);
 // resets (saved_focused_id, popup_open_frame, ...).
 void ui_focus_scope_release(FlUiCtx* ctx);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scope-based macro (follows ui_layout_area pattern)
 
 static int UI_POPUP_LATCH UNUSED_VARIABLE = 0;

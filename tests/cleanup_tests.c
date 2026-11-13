@@ -1,4 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Automatic Cleanup Tests
 
 #include "utest/utest.h"
@@ -6,8 +5,6 @@
 #include <core/assert.h>
 #include <core/core.h>
 #include <core/log.h>
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cleanup, arena_scratch_auto_basic) {
     FlArena* scratch_arena = fl_arena_scratch_begin().arena;
@@ -26,8 +23,6 @@ UTEST(cleanup, arena_scratch_auto_basic) {
     FlArena* after_arena = fl_arena_scratch_begin().arena;
     ASSERT_EQ(after_arena->pos, start_pos);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Returns the scratch position reached inside the scope, sampled before the early return leaves it.
 static u64 scratch_auto_early_return_helper(void) {
@@ -57,8 +52,6 @@ UTEST(cleanup, arena_scratch_auto_early_return) {
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cleanup, arena_scratch_auto_nested) {
     FlArena* scratch_arena = fl_arena_scratch_begin().arena;
     u64 start_pos = scratch_arena->pos;
@@ -82,8 +75,6 @@ UTEST(cleanup, arena_scratch_auto_nested) {
 
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cleanup, arena_scratch_auto_multiple_goto_paths) {
     FlArena* scratch_arena = fl_arena_scratch_begin().arena;
@@ -115,8 +106,6 @@ path2_exit:
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cleanup, arena_temp_auto_basic) {
     FlArena* test_arena = arena_new(.reserved_size = MB(64));
     u64 start_pos = test_arena->pos;
@@ -139,8 +128,6 @@ UTEST(cleanup, arena_temp_auto_basic) {
 
     fl_arena_destroy(test_arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cleanup, arena_temp_auto_always_cleans) {
     FlArena* test_arena = arena_new(.reserved_size = MB(64));
@@ -165,8 +152,6 @@ UTEST(cleanup, arena_temp_auto_always_cleans) {
 
     fl_arena_destroy(test_arena);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cleanup, arena_scratch_auto_loop_control) {
     FlArena* scratch_arena = fl_arena_scratch_begin().arena;
@@ -197,8 +182,6 @@ UTEST(cleanup, arena_scratch_auto_loop_control) {
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cleanup, arena_scratch_auto_goto) {
     FlArena* scratch_arena = fl_arena_scratch_begin().arena;
     u64 start_pos = scratch_arena->pos;
@@ -222,8 +205,6 @@ UTEST(cleanup, arena_scratch_auto_goto) {
 cleanup:
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cleanup, arena_temp_auto_multiple_scopes) {
     FlArena* test_arena = arena_new(.reserved_size = MB(64));
@@ -253,8 +234,6 @@ UTEST(cleanup, arena_temp_auto_multiple_scopes) {
     fl_arena_destroy(test_arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cleanup, arena_scratch_manual_and_auto_separate) {
     FlArena* scratch_arena = fl_arena_scratch_begin().arena;
     u64 start_pos = scratch_arena->pos;
@@ -282,8 +261,6 @@ UTEST(cleanup, arena_scratch_manual_and_auto_separate) {
     }
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cleanup, arena_scratch_auto_complex_control_flow) {
     FlArena* scratch_arena = fl_arena_scratch_begin().arena;
@@ -331,8 +308,6 @@ nested_exit:
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cleanup, arena_scratch_auto_large_allocation) {
     FlArena* scratch_arena = fl_arena_scratch_begin().arena;
     u64 start_pos = scratch_arena->pos;
@@ -351,8 +326,6 @@ UTEST(cleanup, arena_scratch_auto_large_allocation) {
 
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cleanup, arena_scratch_auto_zero_size) {
     FlArena* scratch_arena = fl_arena_scratch_begin().arena;

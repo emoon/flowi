@@ -1,6 +1,5 @@
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GPU backend: the CPU-side placement bookkeeping and work counters both the GL and Metal backends own. A backend
 // embeds one as the first member of its shared struct, so the backend's user_data pointer is also a GpuCpuState
 // pointer for the backend-agnostic seams (gpu_release_image, the gpu_debug_* lookups).
@@ -24,7 +23,6 @@ typedef struct GpuCpuState {
                               // referencing frame
 } GpuCpuState;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Drop a prepared image's representation: an atlas cell frees for reuse, a slot entry queues its texture on the
 // dead list. A handle lives in exactly one tier, so both releases run and the other is a no-op. The render_backend
 // release_image seam for both backends; user_data is the backend's shared struct.

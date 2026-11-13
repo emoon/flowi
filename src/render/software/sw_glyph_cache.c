@@ -8,17 +8,13 @@
 #include FT_FREETYPE_H
 #include <stdatomic.h>
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define MAX_SW_FACES 128
 #define MAX_ATLASES_PER_FACE 16
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Hashmap for on-demand non-ASCII glyph caching
 
 typedef hashmap(u32, Glyph*) GlyphHashMap;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SwAtlas - per-size realized coverage glyphs (ASCII 0-127 pre-rasterized, codepoints >= 128 on demand).
 
 typedef struct SwAtlas {
@@ -32,7 +28,6 @@ typedef struct SwAtlas {
     FlJobHandle job_handle; // Handle for pending rasterization job (0 if none)
 } SwAtlas;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SwFace - the SW-side realization state for one shared font id. Sources its inputs (FreeType bytes or
 // default-font scale) from the shared font layer's raster source.
 
@@ -53,8 +48,6 @@ typedef struct SwFace {
     SwAtlas atlases[MAX_ATLASES_PER_FACE];
 } SwFace;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 struct SwGlyphCache {
     FlArena* arena;      // Owns face/atlas allocations
     FlFontCache* shared; // Shared font layer (raster sources + metrics)
@@ -70,7 +63,6 @@ struct SwGlyphCache {
     FT_Face fallback_face;  // SW-owned face for fallback on-demand rasterization (nullptr if none)
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Forward declarations for the built-in default (MICROKNIGHT 8x8) font data, defined at the bottom of this file.
 
 typedef struct {
@@ -81,8 +73,6 @@ typedef struct {
 static const u8 s_microknight_font_data[2048];
 static const CharLayout s_microknight_layout[224];
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 SwGlyphCache* sw_glyph_cache_new(struct FlArena* arena, struct FlFontCache* shared, FontRenderMode render_mode) {
     SwGlyphCache* self = arena_alloc_zero(arena, SwGlyphCache);
     self->arena = arena_new();
@@ -92,7 +82,6 @@ SwGlyphCache* sw_glyph_cache_new(struct FlArena* arena, struct FlFontCache* shar
     return self;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Create a FreeType face from in-memory font bytes, logging with ctx as context on failure. Returns nullptr
 // on error.
 
@@ -106,8 +95,6 @@ static FT_Face make_ft_face(FT_Library library, const u8* data, i64 size, const 
     }
     return face;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void sw_glyph_cache_destroy(SwGlyphCache* self) {
     FL_VALIDATE(self != nullptr);
@@ -152,7 +139,6 @@ void sw_glyph_cache_destroy(SwGlyphCache* self) {
     self->face_count = 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rasterize ASCII 0-127 into an atlas using a FreeType face.
 
 static void rasterize_and_update_glyph_table(FT_Face ft_face, SwAtlas* atlas, u16 font_size,
@@ -249,7 +235,6 @@ static void rasterize_and_update_glyph_table(FT_Face ft_face, SwAtlas* atlas, u1
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rasterize an atlas using a temporary FT_Face created from library. The caller owns the library and must
 // guarantee no other thread uses it concurrently.
 
@@ -273,8 +258,6 @@ static bool rasterize_atlas_with_temp_face(FT_Library library, SwFace* face, SwA
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct AtlasRasterizeContext {
     SwFace* face;
     SwAtlas* atlas;
@@ -282,7 +265,6 @@ typedef struct AtlasRasterizeContext {
     FontRenderMode render_mode;
 } AtlasRasterizeContext;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Job function for atlas rasterization; runs on a background thread with a job-local FT_Library.
 
 static void atlas_rasterize_job(void* user_data, FlJobsWorkerInfo info) {
@@ -305,7 +287,6 @@ static void atlas_rasterize_job(void* user_data, FlJobsWorkerInfo info) {
     ctx->atlas->status = success ? FontStatus_Ready : FontStatus_Failed;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Build the single atlas for the built-in MICROKNIGHT 8x8 default font (synchronous).
 
 static void build_default_atlas(SwFace* face) {
@@ -378,7 +359,6 @@ static void build_default_atlas(SwFace* face) {
     atomic_store_explicit(&face->atlas_count, 1, memory_order_release);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resolve (and lazily create) the SwFace for a shared font id by pulling its raster source from the shared layer.
 // Returns nullptr if the font is unknown or its source is not ready yet.
 
@@ -427,7 +407,6 @@ static SwFace* sw_face_get(SwGlyphCache* self, FlFontId font_id) {
     return face;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lazily resolve the SW-owned fallback face from the shared layer's fallback raster source.
 
 static FT_Face sw_fallback_face(SwGlyphCache* self) {
@@ -445,7 +424,6 @@ static FT_Face sw_fallback_face(SwGlyphCache* self) {
     return self->fallback_face;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Create a new FreeType atlas at the requested size for an already-resolved face (async job).
 
 static SwAtlas* create_atlas_at_size(SwGlyphCache* self, SwFace* face, u16 size) {
@@ -475,7 +453,6 @@ static SwAtlas* create_atlas_at_size(SwGlyphCache* self, SwFace* face, u16 size)
     return atlas;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Find an existing atlas or create one at exactly the requested size.
 
 static SwAtlas* get_or_create_atlas(SwGlyphCache* self, SwFace* face, u16 size) {
@@ -494,7 +471,6 @@ static SwAtlas* get_or_create_atlas(SwGlyphCache* self, SwFace* face, u16 size) 
     return create_atlas_at_size(self, face, size);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rasterize a single glyph from a specific FreeType face (on-demand path for codepoints >= 128).
 
 static Glyph* rasterize_glyph_from_face(SwGlyphCache* self, SwAtlas* atlas, FT_Face ft_face, u32 codepoint) {
@@ -573,7 +549,6 @@ static Glyph* rasterize_glyph_from_face(SwGlyphCache* self, SwAtlas* atlas, FT_F
     return glyph;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rasterize a single glyph on demand for non-ASCII codepoints, falling back to the shared fallback font.
 
 static Glyph* rasterize_glyph_on_demand(SwGlyphCache* self, SwFace* face, SwAtlas* atlas, u32 codepoint) {
@@ -594,8 +569,6 @@ static Glyph* rasterize_glyph_on_demand(SwGlyphCache* self, SwFace* face, SwAtla
 
     return nullptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const Glyph* sw_glyph_cache_get(SwGlyphCache* self, FlFontId font_id, u16 font_size, u32 codepoint) {
     SwFace* face = sw_face_get(self, font_id);
@@ -635,7 +608,6 @@ const Glyph* sw_glyph_cache_get(SwGlyphCache* self, FlFontId font_id, u16 font_s
     return new_glyph;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Default fallback font data (MICROKNIGHT 8x8 bitmap font)
 // 128x128 pixels packed with 1 bit per pixel
 
