@@ -161,8 +161,6 @@ void menu_branch_switch(FlUiCtx* ctx, int level, u32 child_id, bool child_is_sub
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The index of the recorded row with widget id `id` in the level's prev-frame set, or -1.
 int menu_find_in_level(const UiMenuLevelFrame* lf, u32 id) {
     if (id == 0) {
@@ -298,6 +296,11 @@ bool menu_typeahead(FlUiCtx* ctx, int level) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Scrollable over-tall levels. A menu level whose natural item list is taller than the viewport is height-capped and
+// its contents scroll; a level that fits stays natural-height. All offset/clamp math reuses scroll_core (scroll_max).
+// Scrolling is immediate (no smoothing) so keyboard scroll-into-view lands the highlight in a single frame.
 
 // Record one emitted row's scroll geometry: its content-space top (relative to the first row, panel padding excluded)
 // and height, plus the level's running natural height. The running height restarts as the level's first row (index 0)
