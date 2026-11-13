@@ -8,7 +8,7 @@
 #define ASSERT_ERROR_EQ(actual, expected) ASSERT_EQ((int)(actual), (int)(expected))
 #define ASSERT_ERROR_NE(actual, expected) ASSERT_NE((int)(actual), (int)(expected))
 #define ASSERT_STR_EQ(actual, expected) \
-    ASSERT_TRUE(fl_string_equals((actual), FL_S(expected)))
+    ASSERT_TRUE(fl_string_equals((actual), S(expected)))
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -75,7 +75,7 @@ UTEST(json_parser, parse_arrays_and_objects) {
     ASSERT_NE(root, nullptr);
     ASSERT_EQ((int)fl_json_value_as_object(root)->length, 2);
 
-    FlJsonArray* list = fl_json_get_array_prop(root, FL_S("list"));
+    FlJsonArray* list = fl_json_get_array_prop(root, S("list"));
     ASSERT_NE(list, nullptr);
     ASSERT_EQ((int)list->length, 4);
 
@@ -95,8 +95,8 @@ UTEST(json_parser, parse_arrays_and_objects) {
     }
     ASSERT_EQ(members, 2u);
 
-    ASSERT_EQ(fl_json_get_array_prop(root, FL_S("name")), nullptr);
-    ASSERT_EQ(fl_json_get_object_prop(root, FL_S("list")), nullptr);
+    ASSERT_EQ(fl_json_get_array_prop(root, S("name")), nullptr);
+    ASSERT_EQ(fl_json_get_object_prop(root, S("list")), nullptr);
 
     fl_arena_destroy(arena);
 }
@@ -225,9 +225,9 @@ UTEST(json_parser, json5_parses_a_global_object) {
     FlJsonValue* root = parse_json5(arena, "// config\nname: \"test\", value: 42,\ntheme: { accent: [255, 107, 53] }\n");
     ASSERT_NE(root, nullptr);
     ASSERT_EQ((int)root->type, (int)FlJsonType_Object);
-    ASSERT_STR_EQ(fl_json_get_string_prop(root, FL_S("name")), "test");
-    ASSERT_EQ(fl_json_get_u32_prop(root, FL_S("value")), 42u);
-    ASSERT_NE(fl_json_get_object_prop(root, FL_S("theme")), nullptr);
+    ASSERT_STR_EQ(fl_json_get_string_prop(root, S("name")), "test");
+    ASSERT_EQ(fl_json_get_u32_prop(root, S("value")), 42u);
+    ASSERT_NE(fl_json_get_object_prop(root, S("theme")), nullptr);
 
     FlJsonValue* empty = parse_json5(arena, "  // nothing\n");
     ASSERT_NE(empty, nullptr);
@@ -285,11 +285,11 @@ UTEST(json_parser, find_property_matches_the_full_key) {
     FlJsonValue* found = fl_json_find_property(root, nul_key);
     ASSERT_NE(found, nullptr);
     ASSERT_EQ(((FlJsonNumber*)found->payload)->number[0], '2');
-    ASSERT_EQ(fl_json_find_property(root, FL_S("a")), nullptr);
-    ASSERT_EQ(fl_json_find_property(nullptr, FL_S("key")), nullptr);
-    ASSERT_EQ(fl_json_find_property(found, FL_S("key")), nullptr);
-    ASSERT_STR_EQ(fl_json_get_string_prop(root, FL_S("key")), "v");
-    ASSERT_EQ((int)fl_json_get_string_prop(root, FL_S("a")).length, 0);
+    ASSERT_EQ(fl_json_find_property(root, S("a")), nullptr);
+    ASSERT_EQ(fl_json_find_property(nullptr, S("key")), nullptr);
+    ASSERT_EQ(fl_json_find_property(found, S("key")), nullptr);
+    ASSERT_STR_EQ(fl_json_get_string_prop(root, S("key")), "v");
+    ASSERT_EQ((int)fl_json_get_string_prop(root, S("a")).length, 0);
 
     fl_arena_destroy(arena);
 }
@@ -303,19 +303,19 @@ UTEST(json_parser, typed_number_properties) {
                                            "plus: +3, real: 2.5, text: \"9\"");
     ASSERT_NE(root, nullptr);
 
-    ASSERT_EQ(fl_json_get_u32_prop(root, FL_S("hex")), 31u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, FL_S("plus")), 3u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, FL_S("neg")), 0u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, FL_S("big")), 0u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, FL_S("huge")), 0u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, FL_S("text")), 0u);
-    ASSERT_EQ(fl_json_get_u32_prop(root, FL_S("missing")), 0u);
+    ASSERT_EQ(fl_json_get_u32_prop(root, S("hex")), 31u);
+    ASSERT_EQ(fl_json_get_u32_prop(root, S("plus")), 3u);
+    ASSERT_EQ(fl_json_get_u32_prop(root, S("neg")), 0u);
+    ASSERT_EQ(fl_json_get_u32_prop(root, S("big")), 0u);
+    ASSERT_EQ(fl_json_get_u32_prop(root, S("huge")), 0u);
+    ASSERT_EQ(fl_json_get_u32_prop(root, S("text")), 0u);
+    ASSERT_EQ(fl_json_get_u32_prop(root, S("missing")), 0u);
 
-    ASSERT_EQ(fl_json_get_f64_prop(root, FL_S("real")), 2.5);
-    ASSERT_EQ(fl_json_get_f64_prop(root, FL_S("neg")), -7.0);
-    ASSERT_EQ(fl_json_get_f64_prop(root, FL_S("hex")), 31.0);
-    ASSERT_EQ(fl_json_get_f64_prop(root, FL_S("text")), 0.0);
-    ASSERT_EQ(fl_json_get_f64_prop(root, FL_S("missing")), 0.0);
+    ASSERT_EQ(fl_json_get_f64_prop(root, S("real")), 2.5);
+    ASSERT_EQ(fl_json_get_f64_prop(root, S("neg")), -7.0);
+    ASSERT_EQ(fl_json_get_f64_prop(root, S("hex")), 31.0);
+    ASSERT_EQ(fl_json_get_f64_prop(root, S("text")), 0.0);
+    ASSERT_EQ(fl_json_get_f64_prop(root, S("missing")), 0.0);
 
     fl_arena_destroy(arena);
 }
@@ -332,8 +332,8 @@ UTEST(json_parser, number_accessors_are_bounded_by_number_size) {
     FlJsonObject members = { .start = &member, .length = 1 };
     FlJsonValue object = { .payload = &members, .type = FlJsonType_Object };
 
-    ASSERT_EQ(fl_json_get_u32_prop(&object, FL_S("n")), 12u);
-    ASSERT_EQ(fl_json_get_f64_prop(&object, FL_S("n")), 12.0);
+    ASSERT_EQ(fl_json_get_u32_prop(&object, S("n")), 12u);
+    ASSERT_EQ(fl_json_get_f64_prop(&object, S("n")), 12.0);
 
     fl_arena_destroy(arena);
 }
@@ -414,22 +414,22 @@ UTEST(json_writer, writes_builder_trees) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     FlJsonValue* root = json_build_object(arena);
-    json_build_set_int(arena, root, FL_S("count"), -3);
-    json_build_set_float(arena, root, FL_S("ratio"), 0.5);
-    json_build_set_bool(arena, root, FL_S("on"), true);
-    json_build_set_null(arena, root, FL_S("none"));
-    json_build_set_string(arena, root, FL_S("name"), FL_S("flowi"));
+    json_build_set_int(arena, root, S("count"), -3);
+    json_build_set_float(arena, root, S("ratio"), 0.5);
+    json_build_set_bool(arena, root, S("on"), true);
+    json_build_set_null(arena, root, S("none"));
+    json_build_set_string(arena, root, S("name"), S("flowi"));
     FlJsonValue* list = json_build_array(arena);
     json_build_array_push(arena, list, json_build_object(arena));
-    json_build_set_value(arena, root, FL_S("list"), list);
+    json_build_set_value(arena, root, S("list"), list);
 
     FlString written = write_pretty(arena, root);
     FlJsonValue* parsed
         = fl_json_parse_with_flags(arena, written, FlJsonParseFlags_Default, nullptr);
     ASSERT_NE(parsed, nullptr);
-    ASSERT_STR_EQ(fl_json_get_string_prop(parsed, FL_S("name")), "flowi");
-    ASSERT_EQ(fl_json_get_f64_prop(parsed, FL_S("ratio")), 0.5);
-    ASSERT_EQ((int)fl_json_get_array_prop(parsed, FL_S("list"))->length, 1);
+    ASSERT_STR_EQ(fl_json_get_string_prop(parsed, S("name")), "flowi");
+    ASSERT_EQ(fl_json_get_f64_prop(parsed, S("ratio")), 0.5);
+    ASSERT_EQ((int)fl_json_get_array_prop(parsed, S("list"))->length, 1);
 
     fl_arena_destroy(arena);
 }

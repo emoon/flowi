@@ -153,18 +153,18 @@ FlJsonArray* fl_json_get_array_prop(const FlJsonValue* object, FlString key) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const FlString k_error_descriptions[] = {
-    [FlJsonParseError_None] = FL_S_("No error"),
-    [FlJsonParseError_ExpectedCommaOrClosingBracket] = FL_S_("Expected comma or closing bracket"),
-    [FlJsonParseError_ExpectedColon] = FL_S_("Expected colon after object key"),
-    [FlJsonParseError_ExpectedOpeningQuote] = FL_S_("Expected opening quote for string"),
-    [FlJsonParseError_InvalidStringEscapeSequence] = FL_S_("Invalid string escape sequence"),
-    [FlJsonParseError_InvalidNumberFormat] = FL_S_("Invalid number format"),
-    [FlJsonParseError_InvalidValue] = FL_S_("Invalid JSON value"),
-    [FlJsonParseError_PrematureEndOfBuffer] = FL_S_("Unexpected end of file"),
-    [FlJsonParseError_InvalidString] = FL_S_("Invalid string"),
-    [FlJsonParseError_AllocatorFailed] = FL_S_("Memory allocation failed"),
-    [FlJsonParseError_UnexpectedTrailingCharacters] = FL_S_("Unexpected characters after JSON"),
-    [FlJsonParseError_TooDeep] = FL_S_("JSON nesting exceeds maximum depth"),
+    [FlJsonParseError_None] = S_("No error"),
+    [FlJsonParseError_ExpectedCommaOrClosingBracket] = S_("Expected comma or closing bracket"),
+    [FlJsonParseError_ExpectedColon] = S_("Expected colon after object key"),
+    [FlJsonParseError_ExpectedOpeningQuote] = S_("Expected opening quote for string"),
+    [FlJsonParseError_InvalidStringEscapeSequence] = S_("Invalid string escape sequence"),
+    [FlJsonParseError_InvalidNumberFormat] = S_("Invalid number format"),
+    [FlJsonParseError_InvalidValue] = S_("Invalid JSON value"),
+    [FlJsonParseError_PrematureEndOfBuffer] = S_("Unexpected end of file"),
+    [FlJsonParseError_InvalidString] = S_("Invalid string"),
+    [FlJsonParseError_AllocatorFailed] = S_("Memory allocation failed"),
+    [FlJsonParseError_UnexpectedTrailingCharacters] = S_("Unexpected characters after JSON"),
+    [FlJsonParseError_TooDeep] = S_("JSON nesting exceeds maximum depth"),
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -172,5 +172,5 @@ static const FlString k_error_descriptions[] = {
 FlString fl_json_get_error_description(FlJsonParseError error) {
     const bool known = (u32)error < sizeof(k_error_descriptions) / sizeof(k_error_descriptions[0])
                        && k_error_descriptions[error].data;
-    return known ? k_error_descriptions[error] : FL_S("Unknown JSON parse error");
+    return known ? k_error_descriptions[error] : S("Unknown JSON parse error");
 }
