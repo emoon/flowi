@@ -67,14 +67,14 @@ void painter_destroy(Painter* p) {
     p->arena = nullptr;
 }
 
-void painter_begin_frame(Painter* p, FlFontCache* fc, float ui_scale, float text_scale, FlArena* scratch) {
+void painter_begin_frame(Painter* p, const PainterFrame* frame) {
     // Spans from the previous frame are dropped with the arena.
     fl_arena_rewind(p->arena);
 
-    p->font_cache = fc;
-    p->ui_scale = ui_scale;
-    p->text_scale = text_scale > 0.0f ? text_scale : 1.0f;
-    p->scratch = scratch;
+    p->font_cache = frame->font_cache;
+    p->ui_scale = frame->ui_scale;
+    p->text_scale = frame->text_scale > 0.0f ? frame->text_scale : 1.0f;
+    p->scratch = frame->state_arena;
     p->scope_depth = 0;
 }
 
@@ -193,11 +193,11 @@ static void painter_record_end(Painter* p, FlPaintSpan* span, void* start) {
 // Text drawing. Glyphs are laid out here via the shared font cache and emitted as a positioned text run; the
 // backend re-resolves each glyph id and rasterizes it.
 
-void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, FlColor color) {
+void painter_text(Painter* p, PainterTextRun run, FlFontId font) {
     if (p == nullptr) {
         return;
     }
-    if (string_is_empty(text) || p->font_cache == nullptr) {
+    if (string_is_empty(run.text) || p->font_cache == nullptr) {
         return;
     }
 
@@ -216,12 +216,12 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
         return;
     }
 
-    float cursor_x = scale(p, x);
-    float baseline_y = scale(p, y) + (float)glyph_list.ascender / 64.0f;
+    float cursor_x = scale(p, run.x);
+    float baseline_y = scale(p, run.y) + (float)glyph_list.ascender / 64.0f;
 
     // 1:1 scale: the painter draws at the reference-scaled size directly, no separate display zoom.
-    fl_ir_text_layout(p->arena, p->scratch, p->font_cache, font, font_cache_whole_px_to_q4(font_size), 1.0f, color,
-                      text, cursor_x, baseline_y, 0.0f);
+    fl_ir_text_layout(p->arena, p->scratch, p->font_cache, font, font_cache_whole_px_to_q4(font_size), 1.0f, run.color,
+                      run.text, cursor_x, baseline_y, 0.0f);
     painter_record_end(p, span, start);
 }
 
@@ -229,11 +229,11 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
 // advances, and the n−1 letter-spacing rule with font_cache_measure_text, so a measured run matches what gets
 // drawn. Positions carry ui_scale (chrome); the size and spacing carry text_scale (type).
 
-void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color) {
+void painter_text_styled(Painter* p, PainterTextRun run, FlTextStyle style) {
     if (p == nullptr) {
         return;
     }
-    if (string_is_empty(text) || p->font_cache == nullptr) {
+    if (string_is_empty(run.text) || p->font_cache == nullptr) {
         return;
     }
 
@@ -259,11 +259,11 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
 
     // Top-left anchored like painter_text: the baseline sits one ascent below y, at the styled size.
     FlFontMetrics vm = font_cache_get_font_metrics(p->font_cache, style.font_id, size_px);
-    float cursor_x = scale(p, x);
-    float baseline_y = scale(p, y) + vm.ascent;
+    float cursor_x = scale(p, run.x);
+    float baseline_y = scale(p, run.y) + vm.ascent;
 
     // Letter spacing is authored px; it scales with text_scale.
-    fl_ir_text_layout(p->arena, p->scratch, p->font_cache, style.font_id, size_q4, 1.0f, color, text, cursor_x,
+    fl_ir_text_layout(p->arena, p->scratch, p->font_cache, style.font_id, size_q4, 1.0f, run.color, run.text, cursor_x,
                       baseline_y, style.letter_spacing * p->text_scale);
     painter_record_end(p, span, start);
 }
@@ -281,7 +281,7 @@ static void painter_emit_fill_rect(Painter* p, FlRect rect, const FlRectConfig* 
     fl_ir_fill_rect(p->arena, scaled_rect, scaled, config->corner, effect);
 }
 
-void painter_rect_styled(Painter* p, float x, float y, float w, float h, FlRectConfig config) {
+void painter_rect_styled(Painter* p, FlRect rect, FlRectConfig config) {
     if (p == nullptr) {
         return;
     }
@@ -290,12 +290,12 @@ void painter_rect_styled(Painter* p, float x, float y, float w, float h, FlRectC
     if (span == nullptr) {
         return;
     }
-    painter_emit_fill_rect(p, (FlRect) { x, y, w, h }, &config, painter_current_effect(p));
+    painter_emit_fill_rect(p, rect, &config, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
-void painter_rect(Painter* p, float x, float y, float w, float h, FlColor color) {
-    painter_rect_styled(p, x, y, w, h, (FlRectConfig) { .corner = { color, color, color, color } });
+void painter_rect(Painter* p, FlRect rect, FlColor color) {
+    painter_rect_styled(p, rect, (FlRectConfig) { .corner = { color, color, color, color } });
 }
 
 void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count) {
@@ -319,16 +319,17 @@ void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count) {
     painter_record_end(p, span, start);
 }
 
-void painter_rect_rounded(Painter* p, float x, float y, float w, float h, float radius, FlColor color) {
+void painter_rect_rounded(Painter* p, FlRect rect, float radius, FlColor color) {
     painter_rect_styled(
-        p, x, y, w, h,
+        p, rect,
         (FlRectConfig) { .radius = { radius, radius, radius, radius }, .corner = { color, color, color, color } });
 }
 
-void painter_gradient_rect(Painter* p, float x, float y, float w, float h, FlColor top_left, FlColor top_right,
-                           FlColor bottom_left, FlColor bottom_right) {
+void painter_gradient_rect(Painter* p, FlRect rect, PainterCornerColors colors) {
     // The IR's gradient is a fill rect with per-corner colors, ordered TL, TR, BL, BR.
-    painter_rect_styled(p, x, y, w, h, (FlRectConfig) { .corner = { top_left, top_right, bottom_left, bottom_right } });
+    painter_rect_styled(
+        p, rect,
+        (FlRectConfig) { .corner = { colors.top_left, colors.top_right, colors.bottom_left, colors.bottom_right } });
 }
 
 // 1px lines (separators, grid, rulers). One logical pixel thick, scaled and snapped to a whole device pixel
@@ -351,20 +352,22 @@ static void painter_record_snapped_rect(Painter* p, FlRect rect, FlColor color) 
     painter_record_end(p, span, start);
 }
 
-void painter_hline(Painter* p, float x, float y, float length, FlColor color) {
+void painter_hline(Painter* p, PainterRule rule) {
     if (p == nullptr) {
         return;
     }
     painter_record_snapped_rect(
-        p, (FlRect) { scale(p, x), scale(p, y), scale(p, length), device_hairline(p->ui_scale) }, color);
+        p, (FlRect) { scale(p, rule.x), scale(p, rule.y), scale(p, rule.length), device_hairline(p->ui_scale) },
+        rule.color);
 }
 
-void painter_vline(Painter* p, float x, float y, float length, FlColor color) {
+void painter_vline(Painter* p, PainterRule rule) {
     if (p == nullptr) {
         return;
     }
     painter_record_snapped_rect(
-        p, (FlRect) { scale(p, x), scale(p, y), device_hairline(p->ui_scale), scale(p, length) }, color);
+        p, (FlRect) { scale(p, rule.x), scale(p, rule.y), device_hairline(p->ui_scale), scale(p, rule.length) },
+        rule.color);
 }
 
 // Image drawing
@@ -374,7 +377,7 @@ static float painter_extent_or(const Painter* p, float length, float fallback_px
     return length > 0.0f ? scale(p, length) : fallback_px;
 }
 
-bool painter_image(Painter* p, float x, float y, float w, float h, FlImageHandle image, FlColor color) {
+bool painter_image(Painter* p, FlRect rect, FlImageHandle image, FlColor color) {
     if (p == nullptr) {
         return false;
     }
@@ -394,15 +397,13 @@ bool painter_image(Painter* p, float x, float y, float w, float h, FlImageHandle
     }
 
     // A non-positive dimension falls back to the image's native pixel size.
-    float sx = scale(p, x);
-    float sy = scale(p, y);
-    float sw = painter_extent_or(p, w, (float)native_w);
-    float sh = painter_extent_or(p, h, (float)native_h);
+    FlRect dst = { scale(p, rect.x), scale(p, rect.y), painter_extent_or(p, rect.w, (float)native_w),
+                   painter_extent_or(p, rect.h, (float)native_h) };
 
     FlImageSource source = { .kind = FlImageKind_Static };
     source.handle = image;
-    fl_ir_image(p->arena, source, FlImageMode_Color, (FlRect) { sx, sy, sw, sh }, (FlRect) { 0 }, color,
-                FlImageFilter_Linear, painter_current_effect(p));
+    fl_ir_image(p->arena, source, FlImageMode_Color, dst, (FlRect) { 0 }, color, FlImageFilter_Linear,
+                painter_current_effect(p));
     painter_record_end(p, span, start);
     return true;
 }
@@ -423,21 +424,21 @@ static bool painter_ready_source(FlImageHandle image, FlRect want, FlRect* out) 
     return out->w > 0.0f && out->h > 0.0f;
 }
 
-bool painter_image_sub(Painter* p, float dx, float dy, float dw, float dh, float sx, float sy, float sw, float sh,
-                       FlImageHandle image, FlColor color) {
+bool painter_image_sub(Painter* p, PainterImageSub draw) {
     if (p == nullptr) {
         return false;
     }
-    if (sw <= 0.0f || sh <= 0.0f) {
+    if (draw.src.w <= 0.0f || draw.src.h <= 0.0f) {
         return false;
     }
 
     FlRect src;
-    if (!painter_ready_source(image, (FlRect) { sx, sy, sw, sh }, &src)) {
+    if (!painter_ready_source(draw.image, draw.src, &src)) {
         return false;
     }
 
-    FlRect dst = { scale(p, dx), scale(p, dy), painter_extent_or(p, dw, src.w), painter_extent_or(p, dh, src.h) };
+    FlRect dst = { scale(p, draw.dst.x), scale(p, draw.dst.y), painter_extent_or(p, draw.dst.w, src.w),
+                   painter_extent_or(p, draw.dst.h, src.h) };
     if (dst.w <= 0.0f || dst.h <= 0.0f) {
         return false;
     }
@@ -449,13 +450,14 @@ bool painter_image_sub(Painter* p, float dx, float dy, float dw, float dh, float
     }
 
     FlImageSource source = { .kind = FlImageKind_Static };
-    source.handle = image;
-    fl_ir_image(p->arena, source, FlImageMode_Color, dst, src, color, FlImageFilter_Linear, painter_current_effect(p));
+    source.handle = draw.image;
+    fl_ir_image(p->arena, source, FlImageMode_Color, dst, src, draw.color, FlImageFilter_Linear,
+                painter_current_effect(p));
     painter_record_end(p, span, start);
     return true;
 }
 
-void painter_dynamic_image(Painter* p, float x, float y, FlDynamicImage* image, FlColor color) {
+void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColor color) {
     if (p == nullptr) {
         return;
     }
@@ -469,10 +471,7 @@ void painter_dynamic_image(Painter* p, float x, float y, FlDynamicImage* image, 
         return;
     }
 
-    float sx = scale(p, x);
-    float sy = scale(p, y);
-    float sw = (float)image->width;
-    float sh = (float)image->height;
+    FlRect dst = { scale(p, pos.x), scale(p, pos.y), (float)image->width, (float)image->height };
 
     // The dynamic buffer crosses the IR as a live buffer; the backend deinterleaves/colorizes it.
     FlImageSource source = { .kind = FlImageKind_Dynamic };
@@ -483,8 +482,7 @@ void painter_dynamic_image(Painter* p, float x, float y, FlDynamicImage* image, 
 
     // In alpha-coverage mode the tint colorizes the mask.
     FlImageMode mode = image->is_alpha_only ? FlImageMode_AlphaCoverage : FlImageMode_Color;
-    fl_ir_image(p->arena, source, mode, (FlRect) { sx, sy, sw, sh }, (FlRect) { 0 }, color, FlImageFilter_Linear,
-                painter_current_effect(p));
+    fl_ir_image(p->arena, source, mode, dst, (FlRect) { 0 }, color, FlImageFilter_Linear, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
@@ -492,12 +490,11 @@ void painter_dynamic_image(Painter* p, float x, float y, FlDynamicImage* image, 
 // bars) are scaled while being written directly into the record the builder reserved. Angles and per-point
 // intensity are unitless and pass through unscaled.
 
-void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, float width, FlColor color, u32 flags,
-                      FlColor fill_color, float baseline_y) {
+void painter_polyline(Painter* p, PainterPolyline line) {
     if (p == nullptr) {
         return;
     }
-    if (points == nullptr || point_count == 0) {
+    if (line.points == nullptr || line.point_count == 0) {
         return;
     }
     void* start;
@@ -506,18 +503,18 @@ void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, fl
         return;
     }
 
-    FlPolyPoint* dst = fl_ir_polyline(p->arena, color, fill_color, scale(p, width), scale(p, baseline_y), flags,
-                                      point_count, painter_current_effect(p));
-    for (u32 i = 0; i < point_count; i++) {
-        dst[i].x = scale(p, points[i].x);
-        dst[i].y = scale(p, points[i].y);
-        dst[i].intensity = points[i].intensity;
+    FlPolyPoint* dst
+        = fl_ir_polyline(p->arena, line.color, line.fill_color, scale(p, line.width), scale(p, line.baseline_y),
+                         line.flags, line.point_count, painter_current_effect(p));
+    for (u32 i = 0; i < line.point_count; i++) {
+        dst[i].x = scale(p, line.points[i].x);
+        dst[i].y = scale(p, line.points[i].y);
+        dst[i].intensity = line.points[i].intensity;
     }
     painter_record_end(p, span, start);
 }
 
-void painter_arc(Painter* p, float cx, float cy, float radius, float thickness, float start_angle, float sweep,
-                 FlColor color, u32 flags) {
+void painter_arc(Painter* p, PainterArc arc) {
     if (p == nullptr) {
         return;
     }
@@ -527,13 +524,12 @@ void painter_arc(Painter* p, float cx, float cy, float radius, float thickness, 
         return;
     }
     // Angles are unitless (radians) - only the lengths scale.
-    fl_ir_arc(p->arena, scale(p, cx), scale(p, cy), scale(p, radius), scale(p, thickness), start_angle, sweep, color,
-              flags, painter_current_effect(p));
+    fl_ir_arc(p->arena, scale(p, arc.cx), scale(p, arc.cy), scale(p, arc.radius), scale(p, arc.thickness),
+              arc.start_angle, arc.sweep, arc.color, arc.flags, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
-void painter_circle_stroked(Painter* p, float cx, float cy, float radius, FlColor color, FlColor border_color,
-                            float border_width, FlStrokeStyle stroke) {
+void painter_circle_stroked(Painter* p, PainterCircle circle, FlStrokeStyle stroke) {
     if (p == nullptr) {
         return;
     }
@@ -545,18 +541,16 @@ void painter_circle_stroked(Painter* p, float cx, float cy, float radius, FlColo
     // The dash pattern is a pair of lengths along the ring, so it scales like the geometry.
     stroke.dash_len = scale(p, stroke.dash_len);
     stroke.gap_len = scale(p, stroke.gap_len);
-    fl_ir_circle_stroked(p->arena, scale(p, cx), scale(p, cy), scale(p, radius), color, border_color,
-                         scale(p, border_width), stroke, painter_current_effect(p));
+    fl_ir_circle_stroked(p->arena, scale(p, circle.cx), scale(p, circle.cy), scale(p, circle.radius), circle.color,
+                         circle.border_color, scale(p, circle.border_width), stroke, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
-void painter_circle(Painter* p, float cx, float cy, float radius, FlColor color, FlColor border_color,
-                    float border_width) {
-    painter_circle_stroked(p, cx, cy, radius, color, border_color, border_width, (FlStrokeStyle) { 0 });
+void painter_circle(Painter* p, PainterCircle circle) {
+    painter_circle_stroked(p, circle, (FlStrokeStyle) { 0 });
 }
 
-void painter_diamond(Painter* p, float cx, float cy, float rx, float ry, FlColor color, FlColor border_color,
-                     float border_width) {
+void painter_diamond(Painter* p, PainterDiamond diamond) {
     if (p == nullptr) {
         return;
     }
@@ -565,16 +559,16 @@ void painter_diamond(Painter* p, float cx, float cy, float rx, float ry, FlColor
     if (span == nullptr) {
         return;
     }
-    fl_ir_diamond(p->arena, scale(p, cx), scale(p, cy), scale(p, rx), scale(p, ry), color, border_color,
-                  scale(p, border_width), painter_current_effect(p));
+    fl_ir_diamond(p->arena, scale(p, diamond.cx), scale(p, diamond.cy), scale(p, diamond.rx), scale(p, diamond.ry),
+                  diamond.color, diamond.border_color, scale(p, diamond.border_width), painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
-void painter_bars(Painter* p, float baseline_y, const FlBar* bars, u32 bar_count, FlColor color) {
+void painter_bars(Painter* p, PainterBars row) {
     if (p == nullptr) {
         return;
     }
-    if (bars == nullptr || bar_count == 0) {
+    if (row.bars == nullptr || row.bar_count == 0) {
         return;
     }
     void* start;
@@ -583,11 +577,11 @@ void painter_bars(Painter* p, float baseline_y, const FlBar* bars, u32 bar_count
         return;
     }
 
-    FlBar* dst = fl_ir_bars(p->arena, scale(p, baseline_y), color, bar_count, painter_current_effect(p));
-    for (u32 i = 0; i < bar_count; i++) {
-        dst[i].x = scale(p, bars[i].x);
-        dst[i].w = scale(p, bars[i].w);
-        dst[i].h = scale(p, bars[i].h);
+    FlBar* dst = fl_ir_bars(p->arena, scale(p, row.baseline_y), row.color, row.bar_count, painter_current_effect(p));
+    for (u32 i = 0; i < row.bar_count; i++) {
+        dst[i].x = scale(p, row.bars[i].x);
+        dst[i].w = scale(p, row.bars[i].w);
+        dst[i].h = scale(p, row.bars[i].h);
     }
     painter_record_end(p, span, start);
 }
