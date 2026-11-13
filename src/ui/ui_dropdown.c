@@ -249,11 +249,14 @@ static u64 dropdown_draw_list(const Dropdown* d, const DropdownSearch* search, c
         // An empty (all-filtered-out) list feeds NULL ids to the core, which forbids a non-NULL set, so the set is
         // dropped on that path.
         FlSelectionSet* list_set = rows->count > 0 ? highlight : nullptr;
-        FlListResult lr = ui_list(d->list_id, rows->items, (u32)rows->count, list_set,
-                                  (FlListOpts) { .row_height = UI_DROPDOWN_ROW_HEIGHT,
-                                                 .gap = UI_DROPDOWN_ROW_GAP,
-                                                 .multi_select = false,
-                                                 .reorderable = false });
+        FlListResult lr = ui_list((ListDecl) { .id = d->list_id,
+                                               .items = rows->items,
+                                               .count = (u32)rows->count,
+                                               .set = list_set,
+                                               .opts = (FlListOpts) { .row_height = UI_DROPDOWN_ROW_HEIGHT,
+                                                                      .gap = UI_DROPDOWN_ROW_GAP,
+                                                                      .multi_select = false,
+                                                                      .reorderable = false } });
 
         // Searchable hand-off OUT: Nav-Up on the list's first row (nav_up_edge) returns focus to the search input.
         // The list consumed the Nav-Up when raising the edge flag; claiming the global ring here blurs the list on
