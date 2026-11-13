@@ -1,8 +1,7 @@
 #include "localization.h"
+#include "localization_private.h"
 #include <core/arena.h>
 #include <core/file_watcher.h>
-#include <core/hashmap.h>
-#include <core/json.h>
 #include <core/log.h>
 #include <core/path.h>
 #include <vfs/vfs.h>
@@ -21,35 +20,6 @@ typedef enum LocalizationState {
     LocalizationState_Ready,
     LocalizationState_Disabled,
 } LocalizationState;
-
-// One key's text. variants is null for a plain string and otherwise points at LocalizationPlural_Count entries,
-// of which only other is guaranteed to be set. text is the plain string, or the other variant - what a
-// lookup with no count in hand resolves to either way.
-typedef struct TableEntry {
-    FlString text;
-    FlString* variants;
-} TableEntry;
-
-// One language's strings. The JSON DOM and the lookup map both live in arena, so retiring a table is exactly
-// one fl_arena_destroy. While handle is valid a VFS worker owns the arena; the main thread may read the table only
-// once fl_vfs_is_ready reports the read finished, which is what orders the worker's writes before those reads.
-typedef struct StringTable {
-    FlArena* arena;
-    FlString path;
-    FlString tag;
-    FlVfsHandle handle;
-    hashmap(FlString, TableEntry) strings;
-    bool warned_no_plural_rules;
-} StringTable;
-
-// The language list, in its own arena so a hot-reload re-read can be parsed on a worker and swapped in whole.
-// Same arena ownership rule as StringTable above.
-typedef struct Manifest {
-    FlArena* arena;
-    FlJsonValue* root;
-    FlString default_tag;
-    FlVfsHandle handle;
-} Manifest;
 
 typedef struct Localization {
     // App-lifetime: the already-warned key set and the copy of the manifest path.
@@ -122,137 +92,6 @@ static FlString manifest_table_path(Localization* self, FlArena* arena, FlString
     return string_empty();
 }
 
-// Runs on a VFS worker thread. Parses the manifest into its own arena and records the tag it names as the
-// default language. A failure leaves the Manifest empty, so whatever list is already in force stays untouched.
-
-static FlVfsData manifest_load_callback(void* data, i64 size, void* user_data) {
-    Manifest* self = (Manifest*)user_data;
-
-    if (data == nullptr || size <= 0) {
-        log_warning("Localization manifest could not be read; SID text will render as-is");
-        return (FlVfsData) { .success = false };
-    }
-
-    FlJsonParseResult result = { 0 };
-    FlJsonValue* root = fl_json_parse_with_flags(self->arena, string_from_cstr_len((const char*)data, (u64)size),
-                                                 FlJsonParseFlags_AllowJson5, &result);
-    if (root == nullptr) {
-        log_warning("Localization manifest failed to parse: %S", fl_json_get_error_description(result.error));
-        return (FlVfsData) { .success = false };
-    }
-
-    FlString default_tag = fl_json_get_string_prop(root, FL_S("default"));
-    if (string_is_empty(default_tag)) {
-        log_warning("Localization manifest has no \"default\" language tag");
-        return (FlVfsData) { .success = false };
-    }
-
-    self->root = root;
-    self->default_tag = default_tag;
-    return (FlVfsData) { .success = true };
-}
-
-// A view straight into table memory: no copy, and never a static or known-ASCII string.
-
-static FlString table_text(FlJsonValue* value) {
-    FlString text = fl_json_value_as_string(value);
-    text.is_static = 0;
-    text.is_ascii = 0;
-    return text;
-}
-
-// The CLDR category a variant object's property name spells, false for a name that is none of the six.
-
-static bool plural_category_from_name(FlString name, LocalizationPluralCategory* out) {
-    static const char* const names[LocalizationPlural_Count] = { "zero", "one", "two", "few", "many", "other" };
-
-    for (u32 i = 0; i < LocalizationPlural_Count; i++) {
-        if (fl_string_equals(name, string_from_cstr(names[i]))) {
-            *out = (LocalizationPluralCategory)i;
-            return true;
-        }
-    }
-    return false;
-}
-
-// Read a Plural Variant object into out, allocating its variant array in arena. Unknown variant names and
-// non-string variant bodies warn and are dropped; false means the object carries no other variant, which takes
-// the whole key out of the table.
-
-static bool parse_variants(FlArena* arena, FlString path, FlString key, FlJsonValue* value, TableEntry* out) {
-    FlString* variants = arena_alloc_array_zero(arena, FlString, LocalizationPlural_Count);
-    bool has_other = false;
-
-    for_each_json_property(value, name, variant) {
-        LocalizationPluralCategory category = LocalizationPlural_Other;
-        if (!plural_category_from_name(*name, &category)) {
-            log_warning("Localization key %S in %S has the unknown plural variant \"%S\"; ignoring it", key, path,
-                        *name);
-            continue;
-        }
-        if (variant->type != FlJsonType_String) {
-            log_warning("Localization key %S in %S has a non-string \"%S\" variant; ignoring it", key, path, *name);
-            continue;
-        }
-
-        variants[category] = table_text(variant);
-        has_other = has_other || category == LocalizationPlural_Other;
-    }
-
-    if (!has_other) {
-        log_warning("Localization key %S in %S has no \"other\" plural variant; skipping it", key, path);
-        return false;
-    }
-
-    out->text = variants[LocalizationPlural_Other];
-    out->variants = variants;
-    return true;
-}
-
-// Runs on a VFS worker thread. Parses the string table into its own arena and builds the lookup map in the same
-// arena. A value that is neither a plain string nor a plural-variant object is skipped so the key falls through
-// the missing-key path.
-
-static FlVfsData table_load_callback(void* data, i64 size, void* user_data) {
-    StringTable* table = (StringTable*)user_data;
-
-    if (data == nullptr || size <= 0) {
-        log_warning("Localization table %S could not be read", table->path);
-        return (FlVfsData) { .success = false };
-    }
-
-    FlJsonParseResult result = { 0 };
-    FlJsonValue* root = fl_json_parse_with_flags(table->arena, string_from_cstr_len((const char*)data, (u64)size),
-                                                 FlJsonParseFlags_AllowJson5, &result);
-    if (root == nullptr) {
-        log_warning("Localization table %S failed to parse: %S", table->path,
-                    fl_json_get_error_description(result.error));
-        return (FlVfsData) { .success = false };
-    }
-
-    FlJsonValue* strings = fl_json_get_object_prop(root, FL_S("strings"));
-    if (strings == nullptr) {
-        log_warning("Localization table %S has no \"strings\" object", table->path);
-        return (FlVfsData) { .success = false };
-    }
-
-    for_each_json_property(strings, name, value) {
-        TableEntry entry = { 0 };
-        if (value->type == FlJsonType_String) {
-            entry.text = table_text(value);
-        } else if (value->type != FlJsonType_Object) {
-            log_warning("Localization key %S in %S is neither a string nor a plural-variant object; skipping it", *name,
-                        table->path);
-            continue;
-        } else if (!parse_variants(table->arena, table->path, *name, value, &entry)) {
-            continue;
-        }
-        hashmap_string_insert(&table->strings, *name, entry);
-    }
-
-    return (FlVfsData) { .success = true };
-}
-
 // Start the worker-side read that parses and builds the table for tag. Returns null when the manifest does not
 // list the tag or the read cannot start; the caller's current table stays in place either way.
 
@@ -268,7 +107,8 @@ static StringTable* table_start(Localization* self, FlString tag) {
     }
     hashmap_string_new(&table->strings, arena, 256);
 
-    table->handle = vfs_mount_read_all(self->mount, table->path, .callback = table_load_callback, .user_data = table);
+    table->handle = vfs_mount_read_all(self->mount, table->path, .callback = localization_table_load_callback,
+                                       .user_data = table);
     if (table->handle == FL_VFS_HANDLE_INVALID) {
         log_warning("Localization could not start reading table %S", table->path);
         fl_arena_destroy(arena);
@@ -307,8 +147,8 @@ static Manifest* manifest_start(Localization* self) {
     Manifest* manifest = arena_alloc_zero(arena, Manifest);
     manifest->arena = arena;
 
-    manifest->handle = vfs_mount_read_all(self->mount, self->manifest_path, .callback = manifest_load_callback,
-                                          .user_data = manifest);
+    manifest->handle = vfs_mount_read_all(self->mount, self->manifest_path,
+                                          .callback = localization_manifest_load_callback, .user_data = manifest);
     if (manifest->handle == FL_VFS_HANDLE_INVALID) {
         fl_arena_destroy(arena);
         return nullptr;
@@ -320,7 +160,10 @@ static Manifest* manifest_start(Localization* self) {
 // Destroy a replaced table's arena unless it is one of the two tables still in use.
 
 static void retire_table(StringTable* table, const StringTable* keep_a, const StringTable* keep_b) {
-    if (table != nullptr && table != keep_a && table != keep_b) {
+    if (table == nullptr) {
+        return;
+    }
+    if (table != keep_a && table != keep_b) {
         fl_arena_destroy(table->arena);
     }
 }
@@ -469,7 +312,7 @@ static FlString mount_relative_path(FlString change_path, FlString source_path) 
     }
 
     u64 offset = source_path.length;
-    while (offset < change_path.length && (change_path.data[offset] == '/' || change_path.data[offset] == '\\')) {
+    while (offset < change_path.length && path_is_separator(change_path.data[offset])) {
         offset++;
     }
     return fl_string_substr(change_path, offset, change_path.length - offset);
@@ -492,6 +335,31 @@ static void watcher_start(Localization* self) {
     }
 }
 
+static bool is_content_change(FileChange change) {
+    const u32 content_change = FlFileChangeType_Created | FlFileChangeType_Modified;
+    return !change.is_directory && (change.change_types & content_change) != 0;
+}
+
+// Record the reload a changed file asks for: a re-read of the manifest, or a reload of a resident table.
+
+static void record_changed_path(Localization* self, FlString path) {
+    if (fl_string_equals(path, self->manifest_path)) {
+        self->hot_reload_requests++;
+        if (self->pending_manifest == nullptr) {
+            self->pending_manifest = manifest_start(self);
+        }
+        return;
+    }
+
+    if (self->active_table != nullptr && fl_string_equals(path, self->active_table->path)) {
+        self->reload_active = true;
+        self->hot_reload_requests++;
+    } else if (self->default_table != nullptr && fl_string_equals(path, self->default_table->path)) {
+        self->reload_default = true;
+        self->hot_reload_requests++;
+    }
+}
+
 // Hot reload. Frame-boundary drain of the watcher: a resident table's file records a reload of that table, and the
 // manifest's file starts a re-read of the language list. The drain sets the reload flags rather than switching
 // immediately (see the reload flags on Localization). No-op without a watcher.
@@ -508,26 +376,8 @@ static void watcher_poll(Localization* self) {
 
     while (file_change_iterator_has_next(&iter)) {
         const FileChange change = file_change_iterator_next(&iter);
-        const u32 content_change = FlFileChangeType_Created | FlFileChangeType_Modified;
-        if (change.is_directory || (change.change_types & content_change) == 0) {
-            continue;
-        }
-
-        const FlString path = mount_relative_path(change.path, source);
-        if (fl_string_equals(path, self->manifest_path)) {
-            self->hot_reload_requests++;
-            if (self->pending_manifest == nullptr) {
-                self->pending_manifest = manifest_start(self);
-            }
-            continue;
-        }
-
-        if (self->active_table != nullptr && fl_string_equals(path, self->active_table->path)) {
-            self->reload_active = true;
-            self->hot_reload_requests++;
-        } else if (self->default_table != nullptr && fl_string_equals(path, self->default_table->path)) {
-            self->reload_default = true;
-            self->hot_reload_requests++;
+        if (is_content_change(change)) {
+            record_changed_path(self, mount_relative_path(change.path, source));
         }
     }
 }
@@ -536,19 +386,19 @@ static void watcher_poll(Localization* self) {
 // while another language is active replaces the fallback layer, so it goes in as a default-only switch.
 
 static void start_recorded_reload(Localization* self) {
-    if (self->reload_active) {
-        self->reload_active = false;
-        if (self->active_table != nullptr) {
-            request_tag(self, self->active_table->tag, false);
-            return;
-        }
+    const bool reload_active = self->reload_active;
+    self->reload_active = false;
+    if (reload_active && self->active_table != nullptr) {
+        request_tag(self, self->active_table->tag, false);
+        return;
     }
 
-    if (self->reload_default) {
-        self->reload_default = false;
-        if (self->default_table != nullptr) {
-            request_tag(self, self->default_table->tag, true);
-        }
+    if (!self->reload_default) {
+        return;
+    }
+    self->reload_default = false;
+    if (self->default_table != nullptr) {
+        request_tag(self, self->default_table->tag, true);
     }
 }
 
@@ -574,6 +424,14 @@ Localization* localization_create(FlVfsMount* mount, FlString manifest_path, boo
     return self;
 }
 
+// Wait out a read that may still be running and free the arena it parses into; fl_vfs_close does not wait.
+
+static void discard_in_flight_read(FlVfsHandle handle, FlArena* arena) {
+    fl_vfs_wait(handle);
+    fl_vfs_close(handle);
+    fl_arena_destroy(arena);
+}
+
 void localization_destroy(Localization* self) {
     if (self == nullptr) {
         return;
@@ -582,10 +440,7 @@ void localization_destroy(Localization* self) {
     file_watcher_stop(self->watcher);
     self->watcher = FL_FILE_WATCHER_INVALID;
     if (self->pending_manifest != nullptr) {
-        // fl_vfs_close does not wait for a running read, and the worker parses into the arena destroyed below.
-        fl_vfs_wait(self->pending_manifest->handle);
-        fl_vfs_close(self->pending_manifest->handle);
-        fl_arena_destroy(self->pending_manifest->arena);
+        discard_in_flight_read(self->pending_manifest->handle, self->pending_manifest->arena);
         self->pending_manifest = nullptr;
     }
     if (self->manifest != nullptr) {
@@ -593,10 +448,7 @@ void localization_destroy(Localization* self) {
         self->manifest = nullptr;
     }
     if (self->pending_table != nullptr) {
-        // fl_vfs_close does not wait for a running read, and the worker parses into the arena destroyed below.
-        fl_vfs_wait(self->pending_table->handle);
-        fl_vfs_close(self->pending_table->handle);
-        fl_arena_destroy(self->pending_table->arena);
+        discard_in_flight_read(self->pending_table->handle, self->pending_table->arena);
         self->pending_table = nullptr;
     }
     if (self->active_table != nullptr && self->active_table != self->default_table) {
@@ -606,6 +458,31 @@ void localization_destroy(Localization* self) {
         fl_arena_destroy(self->default_table->arena);
     }
     fl_arena_destroy(self->arena);
+}
+
+// Start the load of the next recorded switch, if any and if nothing else is loading.
+
+static void start_next_switch(Localization* self) {
+    // One switch at a time (see the reload flags on Localization): this tag waits for the in-flight table to land.
+    if (self->pending_table != nullptr) {
+        return;
+    }
+
+    // A tag a caller set outruns a reload the watcher asked for; the reload keeps until the switch has landed.
+    if (!self->has_pending_tag) {
+        start_recorded_reload(self);
+    }
+    if (!self->has_pending_tag) {
+        return;
+    }
+    self->has_pending_tag = false;
+    self->pending_default_only = self->pending_tag_default_only;
+
+    const FlString tag = pending_tag_string(self);
+    self->pending_table = table_start(self, tag);
+    if (self->pending_table == nullptr) {
+        log_warning("Localization could not switch to %S; staying on the current language", tag);
+    }
 }
 
 void localization_frame_begin(Localization* self) {
@@ -630,27 +507,7 @@ void localization_frame_begin(Localization* self) {
     if (self->pending_table != nullptr) {
         finish_pending_switch(self);
     }
-
-    // One switch at a time (see the reload flags on Localization): this tag waits for the in-flight table to land.
-    if (self->pending_table != nullptr) {
-        return;
-    }
-
-    // A tag a caller set outruns a reload the watcher asked for; the reload keeps until the switch has landed.
-    if (!self->has_pending_tag) {
-        start_recorded_reload(self);
-    }
-    if (!self->has_pending_tag) {
-        return;
-    }
-    self->has_pending_tag = false;
-    self->pending_default_only = self->pending_tag_default_only;
-
-    const FlString tag = pending_tag_string(self);
-    self->pending_table = table_start(self, tag);
-    if (self->pending_table == nullptr) {
-        log_warning("Localization could not switch to %S; staying on the current language", tag);
-    }
+    start_next_switch(self);
 }
 
 bool localization_is_loading(Localization* self) {
@@ -717,7 +574,7 @@ static bool first_warning_for(Localization* self, FlString sid, LocalizationWarn
 
 static TableEntry* lookup_entry(Localization* self, FlString sid, StringTable** out_table) {
     *out_table = nullptr;
-    if (self->state != LocalizationState_Ready) {
+    if (self == nullptr || self->state != LocalizationState_Ready) {
         return nullptr;
     }
 
@@ -765,14 +622,23 @@ static bool has_placeholder(FlString text) {
     return false;
 }
 
-FlString localization_lookup(Localization* self, FlString sid) {
+// The entry for sid with the plural-without-count warning applied, or null when no table carries the key.
+
+static TableEntry* lookup_without_count(Localization* self, FlString sid) {
     StringTable* table = nullptr;
     TableEntry* entry = lookup_entry(self, sid, &table);
+    if (entry != nullptr) {
+        warn_if_plural(self, sid, entry);
+    }
+    return entry;
+}
+
+FlString localization_lookup(Localization* self, FlString sid) {
+    const TableEntry* entry = lookup_without_count(self, sid);
     if (entry == nullptr) {
         return sid;
     }
 
-    warn_if_plural(self, sid, entry);
     if (has_placeholder(entry->text) && first_warning_for(self, sid, LocalizationWarn_UnresolvedPlaceholder)) {
         log_warning("Localization key %S carries placeholders but was resolved without arguments", sid);
     }
@@ -801,65 +667,28 @@ void fl_localization_set_language(FlString tag) {
     request_tag(self, tag, false);
 }
 
-// Whether kind names an arm of the union. An argument that fails this carries nothing readable, so the slot it
-// would have filled is left as written, exactly like a slot with no argument at all.
+// Substitute args into text, reporting a slot that found no argument once per key. The result is allocated in the
+// frame allocator of ctx.
 
-static bool arg_is_readable(FlFmtArg arg) {
-    return arg.kind == FlFmtArgKind_Int || arg.kind == FlFmtArgKind_Float || arg.kind == FlFmtArgKind_Str;
-}
-
-static FlStringBuilder append_arg(FlStringBuilder sb, FlFmtArg arg) {
-    switch (arg.kind) {
-        case FlFmtArgKind_Int:
-            return fl_sb_appendf(sb, "%lld", (long long)arg.value.int_value);
-        case FlFmtArgKind_Float:
-            return fl_sb_appendf(sb, "%g", arg.value.float_value);
-        case FlFmtArgKind_Str:
-            return fl_sb_append_string(sb, arg.value.string_value);
-    }
-
-    return sb;
-}
-
-// Single pass over text into arena: `{<index>}` becomes the argument at that index, and anything else - a named
-// slot, an index past the end of args, an unterminated slot - is copied through as written so the gap is visible
-// on screen. out_unmatched reports whether any slot found no argument.
-
-static FlString substitute(FlArena* arena, FlString text, const FlFmtArg* args, u64 count, bool* out_unmatched) {
-    *out_unmatched = false;
-    FlStringBuilder sb = fl_sb_create(arena);
-    LocalizationToken token = { 0 };
-    u64 cursor = 0;
-
-    while (localization_next_token(text, &cursor, &token)) {
-        u32 index = 0;
-        if (token.is_slot && localization_slot_index(token.body, &index) && index < count
-            && arg_is_readable(args[index])) {
-            sb = append_arg(sb, args[index]);
-            continue;
-        }
-
-        if (token.is_slot) {
-            *out_unmatched = true;
-        }
-        sb = fl_sb_append_string(sb, token.text);
-    }
-
-    return fl_sb_to_string(sb);
-}
-
-// Substitute args into text, reporting a slot that found no argument once per key.
-
-static FlString substitute_and_warn(Localization* self, FlArena* arena, FlString sid, FlString text,
-                                    const FlFmtArg* args, u64 count) {
+static FlString substitute_and_warn(FlUiCtx* ctx, FlString sid, FlString text, FmtArgs args) {
     bool unmatched = false;
-    FlString result = substitute(arena, text, args, count, &unmatched);
+    FlString result = localization_substitute(ctx->render_frame_allocator, text, args, &unmatched);
 
-    if (unmatched && self != nullptr && first_warning_for(self, sid, LocalizationWarn_MissingArgument)) {
+    Localization* self = ctx->shared->localization;
+    if (!unmatched || self == nullptr) {
+        return result;
+    }
+
+    if (first_warning_for(self, sid, LocalizationWarn_MissingArgument)) {
         log_warning("Localization key %S has a placeholder with no matching argument; it renders as written", sid);
     }
 
     return result;
+}
+
+static bool has_brace(FlString text) {
+    return text.length != 0
+           && (memchr(text.data, '{', text.length) != nullptr || memchr(text.data, '}', text.length) != nullptr);
 }
 
 FlString fl_localize_fmt(FlString sid, const FlFmtArg* args, u32 count) {
@@ -869,111 +698,15 @@ FlString fl_localize_fmt(FlString sid, const FlFmtArg* args, u32 count) {
         return sid;
     }
 
-    if (args == nullptr) {
-        count = 0;
-    }
+    const TableEntry* entry = lookup_without_count(ctx->shared->localization, sid);
+    const FlString text = entry != nullptr ? entry->text : sid;
 
-    Localization* self = ctx->shared->localization;
-    StringTable* table = nullptr;
-    TableEntry* entry = self != nullptr ? lookup_entry(self, sid, &table) : nullptr;
-    if (entry != nullptr) {
-        warn_if_plural(self, sid, entry);
-    }
-
-    const bool found = entry != nullptr;
-    const FlString text = found ? entry->text : sid;
-
-    const bool has_brace
-        = text.length != 0
-          && (memchr(text.data, '{', text.length) != nullptr || memchr(text.data, '}', text.length) != nullptr);
-    if (!has_brace) {
+    if (!has_brace(text)) {
         // Table memory outlives the frame, the caller's own key bytes need not, so only the fallback is copied.
-        return found ? text : fl_string_copy(ctx->render_frame_allocator, text);
+        return entry != nullptr ? text : fl_string_copy(ctx->render_frame_allocator, text);
     }
 
-    return substitute_and_warn(self, ctx->render_frame_allocator, sid, text, args, count);
-}
-
-// Which of the built-in rule sets a language uses. A language none of them names selects other for every count.
-
-typedef enum PluralRules {
-    PluralRules_OneOther,
-    PluralRules_ZeroOneOther,
-    PluralRules_Slavic,
-    PluralRules_OtherOnly,
-    PluralRules_None,
-} PluralRules;
-
-static bool tag_is_one_of(FlString tag, const char* const* tags) {
-    for (; *tags != nullptr; tags++) {
-        if (fl_string_equals_nocase(tag, string_from_cstr(*tags))) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// Only the tag's primary subtag is matched, so pt-br selects the way pt does. A language none of these lists
-// names - Arabic, Polish and Czech among them - has no rules here.
-
-static PluralRules plural_rules_for_tag(FlString tag) {
-    static const char* const one_other[] = { "en", "de", "nl", "sv", "da", "no", "nb", "nn", "es",
-                                             "it", "ca", "el", "fi", "et", "bg", "hu", "tr", nullptr };
-    static const char* const zero_one_other[] = { "fr", "pt", "hi", "fa", nullptr };
-    static const char* const slavic[] = { "ru", "uk", "be", "sr", "hr", "bs", nullptr };
-    static const char* const other_only[] = { "zh", "ja", "ko", "th", "vi", "id", "ms", nullptr };
-
-    const i64 dash = fl_string_find_char(tag, '-');
-    const FlString primary = dash < 0 ? tag : fl_string_substr(tag, 0, (u64)dash);
-
-    if (tag_is_one_of(primary, one_other)) {
-        return PluralRules_OneOther;
-    }
-    if (tag_is_one_of(primary, zero_one_other)) {
-        return PluralRules_ZeroOneOther;
-    }
-    if (tag_is_one_of(primary, slavic)) {
-        return PluralRules_Slavic;
-    }
-    if (tag_is_one_of(primary, other_only)) {
-        return PluralRules_OtherOnly;
-    }
-    return PluralRules_None;
-}
-
-static LocalizationPluralCategory plural_category(PluralRules rules, i64 count) {
-    // CLDR selects on the magnitude of the count.
-    const u64 n = count < 0 ? -(u64)count : (u64)count;
-
-    switch (rules) {
-        case PluralRules_OneOther:
-            return n == 1 ? LocalizationPlural_One : LocalizationPlural_Other;
-
-        case PluralRules_ZeroOneOther:
-            return n <= 1 ? LocalizationPlural_One : LocalizationPlural_Other;
-
-        case PluralRules_Slavic: {
-            const u64 ones = n % 10;
-            const u64 tens = n % 100;
-            if (ones == 1 && tens != 11) {
-                return LocalizationPlural_One;
-            }
-            if (ones >= 2 && ones <= 4 && (tens < 12 || tens > 14)) {
-                return LocalizationPlural_Few;
-            }
-            return LocalizationPlural_Many;
-        }
-
-        case PluralRules_OtherOnly:
-        case PluralRules_None:
-            break;
-    }
-
-    return LocalizationPlural_Other;
-}
-
-LocalizationPluralCategory localization_plural_category(FlString tag, i64 count) {
-    return plural_category(plural_rules_for_tag(tag), count);
+    return substitute_and_warn(ctx, sid, text, (FmtArgs) { .items = args, .count = args != nullptr ? count : 0 });
 }
 
 // The variant count selects from entry, in the language of the table it came from. A category the key does not
@@ -984,14 +717,32 @@ static FlString plural_text(StringTable* table, const TableEntry* entry, i64 cou
         return entry->text;
     }
 
-    const PluralRules rules = plural_rules_for_tag(table->tag);
-    if (rules == PluralRules_None && !table->warned_no_plural_rules) {
+    LocalizationPluralCategory category = LocalizationPlural_Other;
+    const bool has_rules = localization_select_plural(table->tag, count, &category);
+    if (!has_rules && !table->warned_no_plural_rules) {
         table->warned_no_plural_rules = true;
         log_warning("Localization has no plural rules for %S; every count selects the \"other\" variant", table->tag);
     }
 
-    const FlString variant = entry->variants[plural_category(rules, count)];
+    const FlString variant = entry->variants[category];
     return variant.data != nullptr ? variant : entry->text;
+}
+
+// The count is the {0} argument; the caller's own arguments follow it from {1}.
+
+static FmtArgs args_with_count(FlArena* arena, i64 count, const FlFmtArg* args, u32 arg_count) {
+    if (args == nullptr) {
+        arg_count = 0;
+    }
+
+    const u64 total = (u64)arg_count + 1;
+    FlFmtArg* all = arena_alloc_array(arena, FlFmtArg, total);
+    all[0] = (FlFmtArg) { .value = { .int_value = count }, .kind = FlFmtArgKind_Int };
+    if (arg_count != 0) {
+        memcpy(all + 1, args, arg_count * sizeof(FlFmtArg));
+    }
+
+    return (FmtArgs) { .items = all, .count = total };
 }
 
 FlString fl_localize_plural(FlString sid, i64 count, const FlFmtArg* args, u32 arg_count) {
@@ -1001,22 +752,9 @@ FlString fl_localize_plural(FlString sid, i64 count, const FlFmtArg* args, u32 a
         return sid;
     }
 
-    if (args == nullptr) {
-        arg_count = 0;
-    }
-
-    Localization* self = ctx->shared->localization;
     StringTable* table = nullptr;
-    TableEntry* entry = self != nullptr ? lookup_entry(self, sid, &table) : nullptr;
+    TableEntry* entry = lookup_entry(ctx->shared->localization, sid, &table);
     const FlString text = entry != nullptr ? plural_text(table, entry, count) : sid;
 
-    // The count is the {0} argument; the caller's own arguments follow it from {1}.
-    const u64 total = (u64)arg_count + 1;
-    FlFmtArg* all = arena_alloc_array(ctx->render_frame_allocator, FlFmtArg, total);
-    all[0] = (FlFmtArg) { .value = { .int_value = count }, .kind = FlFmtArgKind_Int };
-    if (arg_count != 0) {
-        memcpy(all + 1, args, arg_count * sizeof(FlFmtArg));
-    }
-
-    return substitute_and_warn(self, ctx->render_frame_allocator, sid, text, all, total);
+    return substitute_and_warn(ctx, sid, text, args_with_count(ctx->render_frame_allocator, count, args, arg_count));
 }
