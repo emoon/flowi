@@ -341,7 +341,9 @@ static void frame(void* user_data) {
                     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(180) },
                                    .direction = LayoutDirection_TopToBottom) {
                         FlListRange r = ui_list_begin(
-                            ID("gallery_list"), s->list_ids, GALLERY_LIST_ROWS, s->list_selection,
+                            ID("gallery_list"),
+                            (ListModel) {
+                                .ordered_ids = s->list_ids, .count = GALLERY_LIST_ROWS, .set = s->list_selection },
                             (FlListConfig) { .row_height = 26.0f, .gap = 4.0f, .labels = s->list_labels });
                         for (u32 i = r.start; i < r.end; i++) {
                             // Reorder mutates the order, so read the stable id from the slice, not from i.
@@ -380,10 +382,13 @@ static void frame(void* user_data) {
                     }
                     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(150) },
                                    .direction = LayoutDirection_TopToBottom) {
-                        FlListResult dr = ui_list(
-                            ID("gallery_decl_list"), s->decl_items, GALLERY_DECL_ROWS, s->decl_selection,
-                            (FlListOpts) {
-                                .row_height = 26.0f, .gap = 4.0f, .multi_select = true, .reorderable = true });
+                        FlListResult dr = ui_list((ListDecl) {
+                            .id = ID("gallery_decl_list"),
+                            .items = s->decl_items,
+                            .count = GALLERY_DECL_ROWS,
+                            .set = s->decl_selection,
+                            .opts = (FlListOpts) {
+                                .row_height = 26.0f, .gap = 4.0f, .multi_select = true, .reorderable = true } });
                         if (dr.activated_id != 0) {
                             s->decl_activated = dr.activated_id;
                         }

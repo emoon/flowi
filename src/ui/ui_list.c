@@ -463,12 +463,13 @@ static void list_decl_row_content(const FlListItem* it, f32 row_height) {
     fl_layout_end();
 }
 
-static FlListResult list_decl_impl(FlListContext* self, FlLayoutId id, const FlListItem* items, u32 count,
-                                   FlSelectionSet* set, FlListOpts opts) {
+static FlListResult list_decl_impl(FlListContext* self, const ListDecl* decl) {
+    const FlListItem* items = decl->items;
+    const FlListOpts opts = decl->opts;
     // A NULL item array is treated as empty regardless of count - never trust a count without the backing
     // array (the loop below dereferences items[i], so a non-zero count with NULL items would fault). n is the
     // effective length forwarded to the core; the begin call and the row loop both key off it, not the raw count.
-    u32 n = (items != nullptr) ? count : 0;
+    u32 n = (items != nullptr) ? decl->count : 0;
 
     // Fold the descriptors into the two parallel slices the shared core takes - the ordered stable ids (also the
     // virtualization total) and the type-ahead labels - into the frame arena.
@@ -486,10 +487,10 @@ static FlListResult list_decl_impl(FlListContext* self, FlLayoutId id, const FlL
     // multi_select / reorderable are positive-sense opts; the core takes the inverted policy toggles.
     FlListRange r = list_begin_impl(self,
                                     (ListBeginArgs) {
-                                        .id = id,
+                                        .id = decl->id,
                                         .ordered_ids = ids,
                                         .count = n,
-                                        .set = set,
+                                        .set = decl->set,
                                         .config = {
                                             .row_height = opts.row_height,
                                             .gap = opts.gap,
@@ -511,12 +512,12 @@ static FlListResult list_decl_impl(FlListContext* self, FlLayoutId id, const FlL
 
 // Scoped face - forward to the core with the global UI context's list state.
 
-FlListRange ui_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config) {
+FlListRange ui_list_begin(FlLayoutId id, ListModel model, FlListConfig config) {
     return list_begin_impl(ui_get_ctx()->ui_list_ctx, (ListBeginArgs) {
                                                           .id = id,
-                                                          .ordered_ids = ordered_ids,
-                                                          .count = count,
-                                                          .set = set,
+                                                          .ordered_ids = model.ordered_ids,
+                                                          .count = model.count,
+                                                          .set = model.set,
                                                           .config = config,
                                                       });
 }
@@ -533,8 +534,8 @@ FlListResult ui_list_end(void) {
     return list_end_impl(ui_get_ctx()->ui_list_ctx);
 }
 
-FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelectionSet* set, FlListOpts opts) {
-    return list_decl_impl(ui_get_ctx()->ui_list_ctx, id, items, count, set, opts);
+FlListResult ui_list(ListDecl decl) {
+    return list_decl_impl(ui_get_ctx()->ui_list_ctx, &decl);
 }
 
 void ui_list_request_focus(FlLayoutId id, u64 cursor_id) {

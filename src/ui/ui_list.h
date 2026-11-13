@@ -14,16 +14,34 @@ typedef struct FlArena FlArena;
 
 FlListContext* ui_list_create(FlArena* arena);
 
+// The model a scoped list runs over: the app's full ordered id slice (count entries), and the caller-owned
+// selection storage the List auto-applies into (NULL opts out; ordered_ids is then optional).
+typedef struct ListModel {
+    const u64* ordered_ids;
+    u32 count;
+    FlSelectionSet* set;
+} ListModel;
+
+// Everything the declarative face takes: the list id, the item descriptors (count entries), the caller-owned
+// selection set and the layout/policy options.
+typedef struct ListDecl {
+    FlLayoutId id;
+    const FlListItem* items;
+    u32 count;
+    FlSelectionSet* set;
+    FlListOpts opts;
+} ListDecl;
+
 // Scoped face - operate on the global UI context. These are the symbols the api_gen seam (ui_list.def) binds
 // to Rust; keep their names in lockstep with the seam.
 
-// Begin a virtualized list over the app's full ordered id slice (ordered_ids, count entries). count is
+// Begin a virtualized list over model.ordered_ids (model.count entries). count is
 // both the virtualization total and the model length forwarded to selection_set_apply. set is the
 // caller-owned selection storage the List auto-applies emitted requests into and resolves the highlight from;
 // pass NULL to opt out of auto-apply/highlight (the app then owns them via result.requests). ordered_ids is
 // borrowed for the whole begin->end scope and is required when set is non-NULL (may be NULL when set is
 // NULL). Returns the visible index range to emit.
-FlListRange ui_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config);
+FlListRange ui_list_begin(FlLayoutId id, ListModel model, FlListConfig config);
 
 // Begin one row carrying the opaque stable_id; returns its interaction signal (computed from the previous
 // frame's rect, with selected resolved from the set's id membership). The List auto-tracks the row's
@@ -50,4 +68,4 @@ void ui_list_request_focus(FlLayoutId id, u64 cursor_id);
 // the reorder request); no per-item loop, no selection_set_apply, no Signal handling. opts carries the
 // layout knobs plus the multi_select / reorderable policy toggles. Use the scoped face above instead for
 // rows with custom content.
-FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelectionSet* set, FlListOpts opts);
+FlListResult ui_list(ListDecl decl);

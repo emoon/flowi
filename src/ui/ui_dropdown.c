@@ -222,11 +222,14 @@ void ui_dropdown_impl(FlString label, bool* is_open, FlString* options, int opti
                     // An empty (all-filtered-out) list feeds NULL ids to the core, which forbids a non-NULL set, so
                     // the set is dropped on that path.
                     FlSelectionSet* list_set = filtered_count > 0 ? highlight : nullptr;
-                    FlListResult lr = ui_list(list_id, items, (u32)filtered_count, list_set,
-                                              (FlListOpts) { .row_height = UI_DROPDOWN_ROW_HEIGHT,
-                                                             .gap = UI_DROPDOWN_ROW_GAP,
-                                                             .multi_select = false,
-                                                             .reorderable = false });
+                    FlListResult lr = ui_list((ListDecl) { .id = list_id,
+                                                           .items = items,
+                                                           .count = (u32)filtered_count,
+                                                           .set = list_set,
+                                                           .opts = { .row_height = UI_DROPDOWN_ROW_HEIGHT,
+                                                                     .gap = UI_DROPDOWN_ROW_GAP,
+                                                                     .multi_select = false,
+                                                                     .reorderable = false } });
 
                     // Searchable hand-off OUT: Nav-Up on the list's first row (nav_up_edge) returns focus to the
                     // search input. The list consumed the Nav-Up when raising the edge flag; claiming the global ring

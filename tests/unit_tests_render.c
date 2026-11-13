@@ -6837,7 +6837,8 @@ static void scene_widget_gallery(FlUiCtx* ctx, int n) {
                     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(180) },
                                    .direction = LayoutDirection_TopToBottom) {
                         FlListRange r
-                            = ui_list_begin(ID("gallery_list"), list_ids, (u32)n, list_sel,
+                            = ui_list_begin(ID("gallery_list"),
+                                            (ListModel) { .ordered_ids = list_ids, .count = (u32)n, .set = list_sel },
                                             (FlListConfig) { .row_height = 26.0f, .gap = 4.0f, .labels = list_labels });
                         for (u32 i = r.start; i < r.end; i++) {
                             ui_list_item_begin(list_ids[i]);
@@ -6854,9 +6855,13 @@ static void scene_widget_gallery(FlUiCtx* ctx, int n) {
                     gallery_section_header(FL_S("List (declarative)"));
                     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(150) },
                                    .direction = LayoutDirection_TopToBottom) {
-                        ui_list(ID("gallery_decl_list"), decl_items, GALLERY_DECL_ROWS, decl_sel,
-                                (FlListOpts) {
-                                    .row_height = 26.0f, .gap = 4.0f, .multi_select = true, .reorderable = true });
+                        ui_list((ListDecl) {
+                            .id = ID("gallery_decl_list"),
+                            .items = decl_items,
+                            .count = GALLERY_DECL_ROWS,
+                            .set = decl_sel,
+                            .opts = (FlListOpts) {
+                                .row_height = 26.0f, .gap = 4.0f, .multi_select = true, .reorderable = true } });
                     }
                 }
             }
@@ -9160,8 +9165,8 @@ static FlListRange list_render_frame(FlUiCtx* ctx, u32 total, FlColor row_color,
     // Fixed-size viewport so the list's grow container measures deterministically after frame 1.
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
         // NULL set → no selection (this case exercises virtualization only); ordered_ids is unused on that path.
-        range
-            = ui_list_begin(ID("vlist"), nullptr, total, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
+        range = ui_list_begin(ID("vlist"), (ListModel) { .ordered_ids = nullptr, .count = total, .set = nullptr },
+                              (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = range.start; i < range.end; i++) {
             // Flat static list: pass the index as the stable id (CONTEXT Item Id - allowed, loses nothing).
             FlSignal sig = ui_list_item_begin((u64)(i + 1));
@@ -9279,7 +9284,8 @@ UTEST(render, list_stable_id_split) {
         ctx->input_state.mouse.y = hover_y;
         ui_update_begin(ctx);
         ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-            FlListRange r = ui_list_begin(ID("split_list"), nullptr, total, nullptr,
+            FlListRange r = ui_list_begin(ID("split_list"),
+                                          (ListModel) { .ordered_ids = nullptr, .count = total, .set = nullptr },
                                           (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
             for (u32 i = r.start; i < r.end; i++) {
                 ui_list_item_begin((u64)i * 10ull + 1000ull);
