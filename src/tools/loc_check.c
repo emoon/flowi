@@ -49,9 +49,15 @@ static void finding_add(Checker* self, LocCheckId check, u32 language, bool is_e
 }
 
 static bool is_cldr_category(FlString name) {
-    return fl_string_equals(name, FL_S("zero")) || fl_string_equals(name, FL_S("one"))
-           || fl_string_equals(name, FL_S("two")) || fl_string_equals(name, FL_S("few"))
-           || fl_string_equals(name, FL_S("many")) || fl_string_equals(name, FL_S("other"));
+    static const FlString categories[]
+        = { FL_S_("zero"), FL_S_("one"), FL_S_("two"), FL_S_("few"), FL_S_("many"), FL_S_("other") };
+
+    for (u64 i = 0; i < sizeof_array(categories); i++) {
+        if (fl_string_equals(name, categories[i])) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Highest {n} argument index text references, or -1 when it references none. Walks the same placeholder
@@ -64,7 +70,10 @@ static i64 max_slot_index(FlString text) {
 
     while (localization_next_token(text, &cursor, &token)) {
         u32 index = 0;
-        if (token.is_slot && localization_slot_index(token.body, &index) && (i64)index > highest) {
+        if (!token.is_slot || !localization_slot_index(token.body, &index)) {
+            continue;
+        }
+        if ((i64)index > highest) {
             highest = (i64)index;
         }
     }
@@ -96,6 +105,42 @@ static i64 value_max_slot_index(FlJsonValue* value) {
     return highest;
 }
 
+// True when a "SID_ literal opens at text[i].
+
+static bool starts_sid_literal(FlString text, u64 i) {
+    if (text.data[i] != '"') {
+        return false;
+    }
+    if (i + 5 > text.length) {
+        return false;
+    }
+    return memcmp(text.data + i + 1, "SID_", 4) == 0;
+}
+
+// Finds the closing quote of the "SID_ literal opening at `start`. False when the literal is only the bare prefix or
+// does not close on its line.
+
+static bool ends_literal(char c) {
+    return c == '"' || c == '\n';
+}
+
+static bool find_sid_literal_end(FlString text, u64 start, u64* out_end) {
+    const u64 body = start + 5;
+    u64 end = body;
+
+    while (end < text.length && !ends_literal(text.data[end])) {
+        end++;
+    }
+    if (end == body || end >= text.length) {
+        return false;
+    }
+    if (text.data[end] != '"') {
+        return false;
+    }
+    *out_end = end;
+    return true;
+}
+
 // Every "SID_... literal in source, appended to the list tail ends. Grep-level: a runtime-assembled SID is not
 // seen. The bare "SID_" prefix constant is skipped.
 
@@ -108,15 +153,12 @@ static void scan_source(FlArena* arena, const LocCheckSource* source, SidRef*** 
             line++;
             continue;
         }
-        if (text.data[i] != '"' || i + 5 > text.length || memcmp(text.data + i + 1, "SID_", 4) != 0) {
+        if (!starts_sid_literal(text, i)) {
             continue;
         }
 
-        u64 end = i + 5;
-        while (end < text.length && text.data[end] != '"' && text.data[end] != '\n') {
-            end++;
-        }
-        if (end == i + 5 || end >= text.length || text.data[end] != '"') {
+        u64 end = 0;
+        if (!find_sid_literal_end(text, i, &end)) {
             continue;
         }
 
@@ -236,6 +278,23 @@ static void check_against_code(Checker* self, const LocCheckSource* sources, u32
     }
 }
 
+static void check_arity(Checker* self, u32 language, FlString name, FlJsonValue* original, FlJsonValue* value) {
+    const i64 allowed = value_max_slot_index(original);
+    const i64 referenced = value_max_slot_index(value);
+    if (referenced <= allowed) {
+        return;
+    }
+
+    FlStringBuilder sb = fl_sb_appendf(fl_sb_create(self->arena), "%S references {%lld}, but the default table ", name,
+                                       (long long)referenced);
+    if (allowed < 0) {
+        sb = fl_sb_append_cstr(sb, "uses no placeholders");
+    } else {
+        sb = fl_sb_appendf(sb, "goes no higher than {%lld}", (long long)allowed);
+    }
+    finding_add(self, LocCheckId_PlaceholderArity, language, true, fl_sb_to_string(sb));
+}
+
 // LocCheckId_MissingFromTranslation, LocCheckId_Stale and LocCheckId_PlaceholderArity: one translation against the
 // default table.
 
@@ -254,21 +313,7 @@ static void check_translation(Checker* self, u32 language, const ParsedTable* tr
             finding_add(self, LocCheckId_Stale, language, false, *name);
             continue;
         }
-
-        const i64 allowed = value_max_slot_index(*original);
-        const i64 referenced = value_max_slot_index(value);
-        if (referenced <= allowed) {
-            continue;
-        }
-
-        FlStringBuilder sb = fl_sb_appendf(fl_sb_create(self->arena), "%S references {%lld}, but the default table ",
-                                           *name, (long long)referenced);
-        if (allowed < 0) {
-            sb = fl_sb_append_cstr(sb, "uses no placeholders");
-        } else {
-            sb = fl_sb_appendf(sb, "goes no higher than {%lld}", (long long)allowed);
-        }
-        finding_add(self, LocCheckId_PlaceholderArity, language, true, fl_sb_to_string(sb));
+        check_arity(self, language, *name, *original, value);
     }
 }
 
@@ -328,42 +373,68 @@ static FlStringBuilder append_heading(FlStringBuilder sb, LocCheckId check, FlSt
     return sb;
 }
 
+static bool finding_is(const LocCheckFinding* finding, u32 language, u32 check) {
+    return finding->language == language && (u32)finding->check == check;
+}
+
+static u32 count_findings(const LocCheckResult* result, u32 language, u32 check) {
+    u32 count = 0;
+    for (const LocCheckFinding* f = result->first; f != nullptr; f = f->next) {
+        if (finding_is(f, language, check)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static FlStringBuilder append_findings(FlStringBuilder sb, const LocCheckResult* result, u32 language, u32 check) {
+    for (const LocCheckFinding* f = result->first; f != nullptr; f = f->next) {
+        if (finding_is(f, language, check)) {
+            sb = fl_sb_appendf(sb, "    %s %S\n", f->is_error ? "error  " : "warning", f->message);
+        }
+    }
+    return sb;
+}
+
+// One language's block: its tag line, then a heading and the findings for each check that fired. Nothing at all
+// when no check fired.
+
+static FlStringBuilder append_language(FlStringBuilder sb, const LocCheckResult* result, const LocCheckTable* tables,
+                                       u32 language) {
+    bool printed_tag = false;
+
+    for (u32 check = 0; check < LocCheckId_Count; check++) {
+        const u32 count = count_findings(result, language, check);
+        if (count == 0) {
+            continue;
+        }
+
+        if (!printed_tag) {
+            sb = fl_sb_appendf(sb, language == 0 ? "%S (default)\n" : "%S\n", tables[language].tag);
+            printed_tag = true;
+        }
+        sb = append_heading(sb, (LocCheckId)check, tables[language].tag, count);
+        sb = append_findings(sb, result, language, check);
+    }
+    return sb;
+}
+
+static const char* plural_suffix(u32 count) {
+    return count == 1 ? "" : "s";
+}
+
 FlString loc_check_format_report(FlArena* arena, const LocCheckResult* result, const LocCheckTable* tables,
                                  u32 table_count) {
     FlStringBuilder sb = fl_sb_create(arena);
 
     for (u32 language = 0; language < table_count; language++) {
-        bool printed_tag = false;
-
-        for (u32 check = 0; check < LocCheckId_Count; check++) {
-            u32 count = 0;
-            for (const LocCheckFinding* f = result->first; f != nullptr; f = f->next) {
-                if (f->language == language && (u32)f->check == check) {
-                    count++;
-                }
-            }
-            if (count == 0) {
-                continue;
-            }
-
-            if (!printed_tag) {
-                sb = fl_sb_appendf(sb, language == 0 ? "%S (default)\n" : "%S\n", tables[language].tag);
-                printed_tag = true;
-            }
-            sb = append_heading(sb, (LocCheckId)check, tables[language].tag, count);
-
-            for (const LocCheckFinding* f = result->first; f != nullptr; f = f->next) {
-                if (f->language == language && (u32)f->check == check) {
-                    sb = fl_sb_appendf(sb, "    %s %S\n", f->is_error ? "error  " : "warning", f->message);
-                }
-            }
-        }
+        sb = append_language(sb, result, tables, language);
     }
 
     if (result->error_count != 0 || result->warning_count != 0) {
         sb = fl_sb_append_char(sb, '\n');
     }
-    return fl_sb_to_string(fl_sb_appendf(sb, "%u %s, %u %s\n", result->error_count,
-                                         result->error_count == 1 ? "error" : "errors", result->warning_count,
-                                         result->warning_count == 1 ? "warning" : "warnings"));
+    return fl_sb_to_string(fl_sb_appendf(sb, "%u error%s, %u warning%s\n", result->error_count,
+                                         plural_suffix(result->error_count), result->warning_count,
+                                         plural_suffix(result->warning_count)));
 }
