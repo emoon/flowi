@@ -45,9 +45,7 @@ typedef struct DropdownSearch {
 typedef struct Dropdown {
     FlLayoutId button_id;
     FlLayoutId list_id;
-    const FlDropdownConfig* cfg;
-    FlString* options;
-    int option_count;
+    const UiDropdownRequest* req;
     int selected_index;
 } Dropdown;
 
@@ -73,7 +71,7 @@ typedef struct DropdownRows {
 } DropdownRows;
 
 static bool dropdown_has_search(const Dropdown* d) {
-    return d->cfg->searchable && d->cfg->search_state;
+    return d->req->cfg.searchable && d->req->cfg.search_state;
 }
 
 static char ascii_lower(char c) {
@@ -113,10 +111,10 @@ static bool dropdown_option_matches(FlString option, const DropdownSearchKey* ke
 // Build the List's item descriptors, applying the substring filter. Each row's stable id is orig_index + 1: the
 // List reserves id 0 as its "none" sentinel. Commit maps back via id - 1.
 static DropdownRows dropdown_filter_items(const Dropdown* d, const DropdownSearchKey* key) {
-    FlListItem* items = arena_alloc_array(g_ui_ctx->render_frame_allocator, FlListItem, d->option_count);
-    FlString* options = d->options;
+    FlListItem* items = arena_alloc_array(g_ui_ctx->render_frame_allocator, FlListItem, d->req->option_count);
+    const FlString* options = d->req->options;
     i32 count = 0;
-    for_count(i, d->option_count) {
+    for_count(i, d->req->option_count) {
         if (key->length > 0 && !dropdown_option_matches(options[i], key)) {
             continue;
         }
@@ -141,8 +139,8 @@ static u64 dropdown_picked_id(const FlListResult* lr) {
 // ordinary single-pass variant-coloured button (widget prologue).
 static DropdownTrigger dropdown_draw_trigger(FlString label, const Dropdown* d) {
     FlUiCtx* self = g_ui_ctx;
-    const FlDropdownConfig* cfg = d->cfg;
-    FlString current_option = d->options[d->selected_index];
+    const FlDropdownConfig* cfg = &d->req->cfg;
+    FlString current_option = d->req->options[d->selected_index];
     FlString button_text = label.length > 0 ? fl_format_frame_string("%S: %S", label, current_option) : current_option;
 
     FlWidgetVariant variant = FlWidgetVariant_Outline;
@@ -193,14 +191,14 @@ static DropdownSearch dropdown_draw_search(const Dropdown* d, float min_width) {
     }
     FlString search_id_str = fl_format_frame_string("%S_dropdown_search", d->button_id.name);
     search.clay_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = search_id_str, .id = 0 });
-    FlSignal signal = ui_text_input(search_id_str, d->cfg->search_state,
+    FlSignal signal = ui_text_input(search_id_str, d->req->cfg.search_state,
                                     (FlTextInputConfig) {
                                         .placeholder = FL_S("Search..."),
                                         .min_width = min_width,
                                         .widget = { .focusable = FlFocusable_Yes },
                                     });
     search.focused = signal.focused;
-    search.query = ui_text_input_get_text(d->cfg->search_state);
+    search.query = ui_text_input_get_text(d->req->cfg.search_state);
     return search;
 }
 
@@ -208,7 +206,7 @@ static DropdownSearch dropdown_draw_search(const Dropdown* d, float min_width) {
 // arrow keys navigate and Enter/Space commit without a first click. A searchable dropdown starts focus in its
 // search input instead and hands off to the list.
 static void dropdown_focus_list_on_open(const Dropdown* d, bool opened_this_frame) {
-    if (opened_this_frame && !d->cfg->searchable) {
+    if (opened_this_frame && !d->req->cfg.searchable) {
         ui_list_request_focus(d->list_id, (u64)(d->selected_index + 1));
     }
 }
@@ -243,7 +241,7 @@ static u64 dropdown_draw_list(const Dropdown* d, const DropdownSearch* search, c
     selection_set_set(highlight, (u64)(d->selected_index + 1), true);
 
     u64 picked = 0;
-    ui_layout_area(.sizing = { sizing_grow(0), sizing_fixed(dropdown_viewport_height(d->cfg, rows->count)) },
+    ui_layout_area(.sizing = { sizing_grow(0), sizing_fixed(dropdown_viewport_height(&d->req->cfg, rows->count)) },
                    .direction = LayoutDirection_TopToBottom) {
         dropdown_focus_list_on_open(d, opened_this_frame);
         dropdown_hand_off_search_to_list(search, rows, d->list_id);
@@ -260,7 +258,7 @@ static u64 dropdown_draw_list(const Dropdown* d, const DropdownSearch* search, c
         // Searchable hand-off OUT: Nav-Up on the list's first row (nav_up_edge) returns focus to the search input.
         // The list consumed the Nav-Up when raising the edge flag; claiming the global ring here blurs the list on
         // the next frame.
-        if (d->cfg->searchable && lr.nav_up_edge) {
+        if (d->req->cfg.searchable && lr.nav_up_edge) {
             g_ui_ctx->focused_id = search->clay_id;
         }
 
@@ -273,7 +271,7 @@ static u64 dropdown_draw_list(const Dropdown* d, const DropdownSearch* search, c
 
 // Draw the Cancel button; returns true when it was pressed.
 static bool dropdown_draw_cancel(const Dropdown* d) {
-    FlString cancel_label = d->cfg->cancel_label.length > 0 ? d->cfg->cancel_label : FL_S("Cancel");
+    FlString cancel_label = d->req->cfg.cancel_label.length > 0 ? d->req->cfg.cancel_label : FL_S("Cancel");
     FlString cancel_id_str = fl_format_frame_string("%S_cancel", d->button_id.name);
 
     FlSignal cancel_signal = ui_button_impl(cancel_label, (FlWidgetConfig) {
@@ -286,7 +284,7 @@ static bool dropdown_draw_cancel(const Dropdown* d) {
 }
 
 static DropdownOutcome dropdown_draw_popup_body(const Dropdown* d, FlColor popup_bg, bool opened_this_frame) {
-    float min_width = d->cfg->min_width > 0.0f ? d->cfg->min_width : 200.0f;
+    float min_width = d->req->cfg.min_width > 0.0f ? d->req->cfg.min_width : 200.0f;
 
     FlString panel_id_str = fl_format_frame_string("%S_dropdown_panel", d->button_id.name);
     FlLayoutId panel_id = (FlLayoutId) { .name = panel_id_str, .id = 0 };
@@ -301,7 +299,7 @@ static DropdownOutcome dropdown_draw_popup_body(const Dropdown* d, FlColor popup
 
         outcome.picked = dropdown_draw_list(d, &search, &rows, opened_this_frame);
 
-        if (d->cfg->show_cancel) {
+        if (d->req->cfg.show_cancel) {
             outcome.cancelled = dropdown_draw_cancel(d);
         }
     }
@@ -318,7 +316,7 @@ static DropdownOpenState dropdown_toggle(const Dropdown* d, bool was_open, FlSig
         state.opened_this_frame = state.is_open;
         // Clear search text when opening a searchable dropdown (reset the stb cursor too, not just the length).
         if (state.is_open && dropdown_has_search(d)) {
-            ui_text_input_clear(d->cfg->search_state);
+            ui_text_input_clear(d->req->cfg.search_state);
         }
     }
     if (state.is_open && g_ui_ctx->popup_closed_this_frame) {
@@ -344,13 +342,7 @@ static bool dropdown_commit(DropdownOutcome outcome, int* selected_index) {
 }
 
 static bool dropdown_request_valid(const UiDropdownRequest* req) {
-    bool has_targets = req->is_open && req->selected_index;
-    bool has_options = req->options && req->option_count > 0;
-    return has_targets && has_options;
-}
-
-static bool dropdown_index_in_range(int index, int count) {
-    return index >= 0 && index < count;
+    return req && req->is_open && req->selected_index && req->options && req->option_count > 0;
 }
 
 void ui_dropdown_impl(const UiDropdownRequest* req) {
@@ -360,7 +352,7 @@ void ui_dropdown_impl(const UiDropdownRequest* req) {
     }
 
     int* selected_index = req->selected_index;
-    if (!dropdown_index_in_range(*selected_index, req->option_count)) {
+    if (*selected_index < 0 || *selected_index >= req->option_count) {
         *selected_index = 0;
     }
 
@@ -370,9 +362,7 @@ void ui_dropdown_impl(const UiDropdownRequest* req) {
     const Dropdown d = {
         .button_id = button_id,
         .list_id = (FlLayoutId) { .name = list_id_str, .id = 0 },
-        .cfg = &req->cfg,
-        .options = req->options,
-        .option_count = req->option_count,
+        .req = req,
         .selected_index = *selected_index,
     };
     DropdownTrigger trigger = dropdown_draw_trigger(req->label, &d);

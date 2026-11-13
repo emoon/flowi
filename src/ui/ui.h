@@ -153,7 +153,7 @@ FlSignal ui_chip_impl(FlString label, bool* selected, FlWidgetConfig cfg);
 typedef struct UiDropdownRequest {
     FlString label;
     bool* is_open;
-    FlString* options;
+    const FlString* options;
     int option_count;
     int* selected_index;
     FlDropdownConfig cfg;

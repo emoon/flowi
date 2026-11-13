@@ -710,7 +710,7 @@ void fl_dropdown_impl(FlString label, bool* is_open, const FlString* options, ui
     ui_dropdown_impl(&(UiDropdownRequest) {
         .label = label,
         .is_open = is_open,
-        .options = (FlString*)options,
+        .options = options,
         .option_count = (int)options_size,
         .selected_index = selected_index,
         .cfg = config,
