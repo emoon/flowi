@@ -83,6 +83,8 @@ FLOWI_1.0 {
     fl_dock_workspace_end;
     fl_dropdown_impl;
     fl_dynamic_image;
+    fl_dynamic_image_create;
+    fl_dynamic_image_create_alpha;
     fl_file_watcher_has_changes;
     fl_file_watcher_is_active;
     fl_file_watcher_start;

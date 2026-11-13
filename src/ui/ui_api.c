@@ -726,6 +726,14 @@ void fl_dynamic_image(FlDynamicImage* image, FlImageOpts opts) {
     ui_dynamic_image_impl(image, opts);
 }
 
+FlDynamicImage* fl_dynamic_image_create(int32_t width, int32_t height, FlArena* arena) {
+    return dynamic_image_create(width, height, arena);
+}
+
+FlDynamicImage* fl_dynamic_image_create_alpha(int32_t width, int32_t height, FlArena* arena) {
+    return dynamic_image_create_alpha(width, height, arena);
+}
+
 void fl_spacer(float height) {
     ui_spacer(height);
 }

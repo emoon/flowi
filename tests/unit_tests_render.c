@@ -4829,6 +4829,28 @@ UTEST(image_decode, dynamic_image_refuses_stride_overflow) {
     ASSERT_EQ(8 * 4, ok->user_stride);
 }
 
+// The public constructors hand back a zeroed buffer of the right shape and refuse unusable arguments.
+UTEST(image_decode, public_dynamic_image_constructors_shape_the_buffer) {
+    FlDynamicImage* rgba = fl_dynamic_image_create(5, 3, (FlArena*)s_arena);
+    ASSERT_TRUE(rgba != nullptr);
+    ASSERT_EQ(5, rgba->width);
+    ASSERT_EQ(3, rgba->height);
+    ASSERT_EQ(5 * 4, rgba->user_stride);
+    ASSERT_FALSE(rgba->is_alpha_only);
+    for (int i = 0; i < 5 * 3 * 4; i++) {
+        ASSERT_EQ_MSG((int)rgba->user_buffer[i], 0, "public RGBA buffer starts zeroed");
+    }
+
+    FlDynamicImage* alpha = fl_dynamic_image_create_alpha(5, 3, (FlArena*)s_arena);
+    ASSERT_TRUE(alpha != nullptr);
+    ASSERT_EQ(5, alpha->user_stride);
+    ASSERT_TRUE(alpha->is_alpha_only);
+
+    ASSERT_TRUE(fl_dynamic_image_create(0, 3, (FlArena*)s_arena) == nullptr);
+    ASSERT_TRUE(fl_dynamic_image_create_alpha(5, -1, (FlArena*)s_arena) == nullptr);
+    ASSERT_TRUE(fl_dynamic_image_create(5, 3, nullptr) == nullptr);
+}
+
 static const char k_svg_declared_huge[]
     = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40000\" height=\"40000\">"
       "<rect x=\"0\" y=\"0\" width=\"40000\" height=\"40000\" fill=\"#ff0000\"/></svg>";
