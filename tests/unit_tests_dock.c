@@ -3910,6 +3910,7 @@ UTEST(dock_persist, prune_logs_the_drop) {
     DOCK_TEMP_DIR(temp, "prune_log");
     __attribute__((cleanup(dock_log_file_close))) bool log_open = fl_log_file_init(temp.path);
     ASSERT_TRUE(log_open);
+    fl_log_set_level(LogLevel_Info); // the drop is logged at info, below the test runner's level
 
     DOCK_ARENA(arena);
     FlDockTree* saved = dock_tree_build(dock_split(FlDockAxis_X, 0.5f, dock_leaf(1), dock_leaf(4242)));
