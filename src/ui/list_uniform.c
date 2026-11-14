@@ -93,7 +93,7 @@ static void update_scroll_for_selection(FlListUniformContext* self, i32 selected
     f32 max_scroll
         = scroll_max(list_content_height(self->current_total_count, item_height, gap), self->viewport_height);
 
-    self->current_state->scroll_target = clamp_f32_impl(target, 0.0f, max_scroll);
+    self->current_state->scroll_target = clamp(target, 0.0f, max_scroll);
 }
 
 void list_uniform_begin_update(FlListUniformContext* self) {
@@ -212,7 +212,7 @@ void list_uniform_nudge_scroll(FlListUniformContext* self, FlString id, f32 delt
     // Same extent policy as list_content_height (every row plus its gap == count * stride), clamped against the
     // measured viewport so a fully-scrolled list can't run past its end.
     f32 max_scroll = scroll_max((f32)total_count * item_stride, state->container_height);
-    f32 next = clamp_f32_impl(state->scroll_offset + delta_px, 0.0f, max_scroll);
+    f32 next = clamp(state->scroll_offset + delta_px, 0.0f, max_scroll);
     state->scroll_offset = next;
     state->scroll_target = next; // sticky: begin's smooth-step leaves an offset already at its target untouched
 }

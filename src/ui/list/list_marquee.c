@@ -83,10 +83,10 @@ static void request_coverage(FlListContext* self, const ListState* st, Band band
 static void draw_band(FlListContext* self, const ListState* st, const ListViewport* vp, Band band) {
     f32 scroll = list_scroll_offset(self);
     f32 mouse_x = self->ui_ctx->input_state.mouse.x;
-    f32 screen_top = clamp_f32_impl(vp->top + (band.lo - scroll), vp->top, vp->bottom);
-    f32 screen_bottom = clamp_f32_impl(vp->top + (band.hi - scroll), vp->top, vp->bottom);
-    f32 x0 = clamp_f32_impl(fminf(st->marquee_anchor_x, mouse_x), vp->left, vp->right);
-    f32 x1 = clamp_f32_impl(fmaxf(st->marquee_anchor_x, mouse_x), vp->left, vp->right);
+    f32 screen_top = clamp(vp->top + (band.lo - scroll), vp->top, vp->bottom);
+    f32 screen_bottom = clamp(vp->top + (band.hi - scroll), vp->top, vp->bottom);
+    f32 x0 = clamp(fminf(st->marquee_anchor_x, mouse_x), vp->left, vp->right);
+    f32 x1 = clamp(fmaxf(st->marquee_anchor_x, mouse_x), vp->left, vp->right);
 
     f32 w = x1 - x0;
     f32 h = screen_bottom - screen_top;

@@ -279,7 +279,7 @@ void menu_configure_panel(FlUiCtx* ctx, int level, float min_w) {
     UiMenuFrame* mf = &ctx->menu_frame;
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
     MenuScrollGeom g = scroll_geom(ctx, &mf->levels[level]);
-    m->levels[level].scroll_offset = clamp_f32_impl(m->levels[level].scroll_offset, 0.0f, g.max_offset);
+    m->levels[level].scroll_offset = clamp(m->levels[level].scroll_offset, 0.0f, g.max_offset);
 
     FlLayoutSizingAxis height = g.capped ? sizing_fixed(g.viewport + UI_MENU_PANEL_VPAD) : sizing_fit();
     FlLayoutConfig cfg = {
@@ -316,7 +316,7 @@ void menu_apply_wheel(FlUiCtx* ctx) {
         return;
     }
     f32 off = m->levels[hit.level].scroll_offset - wheel.y * UI_MENU_WHEEL_SPEED;
-    m->levels[hit.level].scroll_offset = clamp_f32_impl(off, 0.0f, g.max_offset);
+    m->levels[hit.level].scroll_offset = clamp(off, 0.0f, g.max_offset);
 }
 
 static bool row_recorded(const UiMenuLevelFrame* lf, int i) {
@@ -347,7 +347,7 @@ void menu_scroll_into_view(FlUiCtx* ctx, int level) {
         return;
     }
     f32 off = scroll_offset_to_show(m->levels[level].scroll_offset, lf->item_top[i], lf->item_height[i], g.viewport);
-    m->levels[level].scroll_offset = clamp_f32_impl(off, 0.0f, g.max_offset);
+    m->levels[level].scroll_offset = clamp(off, 0.0f, g.max_offset);
 }
 
 bool menu_highlight_is_submenu(const UiMenuLevel* level, const UiMenuLevelFrame* frame) {

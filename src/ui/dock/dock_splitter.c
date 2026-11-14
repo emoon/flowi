@@ -20,7 +20,7 @@ static FlLayoutId divider_layout_id(FlDockNodeId split_id) {
 
 f32 dock_splitter_ratio_at(f32 cursor_rel_px, f32 extent_px) {
     f32 r = (extent_px > 0.0f) ? cursor_rel_px / extent_px : 0.5f;
-    return clamp_f32_impl(r, FL_DOCK_MIN_RATIO, 1.0f - FL_DOCK_MIN_RATIO);
+    return clamp(r, FL_DOCK_MIN_RATIO, 1.0f - FL_DOCK_MIN_RATIO);
 }
 
 void dock_splitter_handle_drag(FlDockTree* tree, FlDockNodeId split_id, FlDockAxis axis) {

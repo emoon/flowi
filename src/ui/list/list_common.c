@@ -81,7 +81,7 @@ f32 list_scroll_offset(const FlListContext* self) {
 
 f32 list_clamped_content_y(const FlListContext* self, const ListViewport* vp, f32 scroll) {
     f32 mouse_y = self->ui_ctx->input_state.mouse.y;
-    return (clamp_f32_impl(mouse_y, vp->top, vp->bottom) - vp->top) + scroll;
+    return (clamp(mouse_y, vp->top, vp->bottom) - vp->top) + scroll;
 }
 
 bool list_pointer_past_drag_threshold(const FlListContext* self) {
