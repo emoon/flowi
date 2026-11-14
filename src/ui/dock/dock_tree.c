@@ -343,13 +343,17 @@ static bool apply_splitter_resize(FlDockTree* tree, const FlDockRequest* req) {
     return true;
 }
 
-FlDockTree* dock_tree_create(void) {
+FlDockTree* dock_tree_create_from(FlDockNodeId first_node_id) {
     FlArena* arena = arena_new();
     FlDockTree* tree = arena_alloc_zero(arena, FlDockTree);
     tree->arena = arena;
-    tree->next_node_id = 1; // 0 is reserved as "no node"
+    tree->next_node_id = first_node_id;
     tree->root = node_new_leaf(tree);
     return tree;
+}
+
+FlDockTree* dock_tree_create(void) {
+    return dock_tree_create_from(1); // 0 is reserved as "no node"
 }
 
 void dock_tree_destroy(FlDockTree* tree) {

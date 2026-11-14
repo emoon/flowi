@@ -2022,6 +2022,41 @@ static void dock_promote_e2e_frame(void* user_data) {
     }
 }
 
+// Two windows lay out in one tick and share one id space, so a promoted window's dock nodes must not reuse the ids
+// the main window's nodes have. The layout here is built through the ops, which keeps the main tree's first node
+// (id 1) alive, the id a fresh tree also starts from.
+typedef struct DockPromoteIds {
+    bool built;
+    bool requested;
+} DockPromoteIds;
+
+static void dock_promote_ids_frame(void* user_data) {
+    DockPromoteIds* st = (DockPromoteIds*)user_data;
+    if (!st->built) {
+        st->built = true;
+        fl_dock_add_panel(201);
+        fl_dock_dock_outer(202, FlDockSide_Right);
+    }
+    fl_dock_workspace_begin();
+    ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
+        fl_dock_workspace_emit();
+    }
+    fl_dock_workspace_end();
+    if (!st->requested) {
+        st->requested = true;
+        fl_dock_promote_panel(202);
+    }
+}
+
+UTEST(dock_workspace, a_promoted_window_shares_no_node_ids_with_the_main_one) {
+    DOCK_APP(app, "dockpromoteids", 800, 600);
+    DockPromoteIds st = { 0 };
+    for (int i = 0; i < 5; i++) {
+        fl_app_tick(app, &st, dock_promote_ids_frame); // a shared node id is fatal in the tick both windows lay out
+    }
+    ASSERT_EQ_MSG(fl_app_window_count(app), 2, "the promoted window is live and both windows laid out");
+}
+
 UTEST(dock_workspace, promote_open_close_demote_via_fl_app) {
     DOCK_APP(app, "dockpromote", 800, 600);
     DockPromoteE2E st = { 0 };

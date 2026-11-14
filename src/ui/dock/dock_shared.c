@@ -78,12 +78,37 @@ static FlDockShared* dock_shared_get(void) {
     return ctx->shared->dock;
 }
 
+// A node id names the node's layout elements, and every window of a tick lays out into one id space. So each
+// workspace mints its node ids from a block of its own. The default workspace has block 0. With 16 blocks of 2^20
+// ids a leaf id stays under 2^24, which the tab ids need (dock_layout shifts it up by 8).
+#define DOCK_NODE_ID_BLOCK_BITS 20
+_Static_assert(FL_DOCK_MAX_WORKSPACES <= 16, "a leaf id must stay under 2^24");
+
+static bool id_block_taken(const FlDockShared* ds, u32 block) {
+    for (u32 i = 0; i < ds->registry_count; ++i) {
+        if (ds->registry[i]->tree->next_node_id >> DOCK_NODE_ID_BLOCK_BITS == block) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The registry holds fewer workspaces than there are blocks whenever one more can be added, so a block is free.
+static u32 free_id_block(const FlDockShared* ds) {
+    u32 block = 1;
+    while (id_block_taken(ds, block)) {
+        block++;
+    }
+    return block;
+}
+
 static FlDockWorkspace* dock_registry_add(FlDockShared* ds) {
     if (ds->registry_count >= FL_DOCK_MAX_WORKSPACES) {
         log_error("dock: workspace registry full (%d)", FL_DOCK_MAX_WORKSPACES);
         return nullptr;
     }
     FlDockWorkspace* ws = dock_workspace_create();
+    dock_workspace_set_tree(ws, dock_tree_create_from(free_id_block(ds) << DOCK_NODE_ID_BLOCK_BITS));
     ds->registry[ds->registry_count++] = ws;
     return ws;
 }

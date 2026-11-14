@@ -106,6 +106,10 @@ typedef struct FlDockRequest {
 // Lifecycle. A fresh tree's root is an empty leaf (the floor).
 
 FlDockTree* dock_tree_create(void);
+
+// A fresh tree whose node ids start at first_node_id (the root takes it) and count up from there. dock_tree_create
+// starts at 1; 0 is "no node".
+FlDockTree* dock_tree_create_from(FlDockNodeId first_node_id);
 void dock_tree_destroy(FlDockTree* tree);
 
 // Deep-copy src into a fresh, independently owned tree (caller owns it: dock_tree_destroy). Reproduces topology,
