@@ -7,6 +7,7 @@
 #include <vfs/vfs.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_ADVANCES_H
 #include FT_OUTLINE_H
 
 // Shared font layer: FreeType face management, async file load, text measurement, per-size vertical metrics, glyph
@@ -14,6 +15,8 @@
 // job-threaded realization live in the SW backend (render/software/sw_glyph_cache.{h,c}).
 
 #define MAX_FONT_FACES 128
+#define PRINTABLE_FIRST 0x20
+#define PRINTABLE_COUNT 95
 
 typedef struct CachedGlyph {
     int advance;
@@ -42,6 +45,10 @@ typedef struct FontFace {
     CachedGlyph ascii_glyphs[128];
     u16 ascii_glyphs_size; // size key the row is valid for; 0 = none
     hashmap(u64, CachedGlyph) glyph_cache;
+
+    bool fixed_pitch;
+    u64 fixed_cells[4];
+    hashmap(u64, int) fixed_advances;
 } FontFace;
 
 typedef struct FontLoadContext {
@@ -116,6 +123,38 @@ typedef struct FontBytes {
     i64 size;
 } FontBytes;
 
+static bool is_fixed_cell(const FontFace* face, u8 byte) {
+    return (face->fixed_cells[byte >> 6] >> (byte & 63)) & 1;
+}
+
+static FT_Fixed unscaled_advance(FT_Face face, u32 codepoint) {
+    const FT_UInt index = FT_Get_Char_Index(face, codepoint);
+    FT_Fixed advance = 0;
+    if (index == 0 || FT_Get_Advance(face, index, FT_LOAD_NO_SCALE, &advance) != 0) {
+        return -1;
+    }
+    return advance;
+}
+
+static void detect_fixed_pitch(FontFace* face) {
+    FT_Fixed shared = -1;
+    for_count(i, PRINTABLE_COUNT) {
+        const u32 codepoint = PRINTABLE_FIRST + i;
+        const FT_Fixed advance = unscaled_advance(face->metrics_face, codepoint);
+        if (advance < 0) {
+            continue;
+        }
+        if (shared < 0) {
+            shared = advance;
+        }
+        if (advance != shared) {
+            return;
+        }
+        face->fixed_cells[codepoint >> 6] |= 1ull << (codepoint & 63);
+    }
+    face->fixed_pitch = shared >= 0;
+}
+
 // Copy the font file bytes into the face arena and stand up the main-thread metrics face. The bytes are
 // owned by the face for its lifetime; FreeType and the SW backend's raster faces read them.
 static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, FontBytes bytes, u16 font_size) {
@@ -129,6 +168,7 @@ static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, Fo
     FT_Error error = FT_New_Memory_Face(cache->library, face->font_data, bytes.size, 0, &face->metrics_face);
     if (!error) {
         FT_Set_Pixel_Sizes(face->metrics_face, 0, font_size);
+        detect_fixed_pitch(face);
     }
     mutex_unlock(&cache->ft_lock);
 
@@ -139,6 +179,7 @@ static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, Fo
     }
 
     hashmap_new(&face->glyph_cache, face->arena, 256);
+    hashmap_new(&face->fixed_advances, face->arena, 16);
 
     face->status = FontStatus_Ready;
     return true;
@@ -250,6 +291,9 @@ FlFontId font_cache_load_default_font(FlFontCache* self, u16 scale) {
     face->status = FontStatus_Ready;
     face->arena = arena_new();
     face->default_scale = scale;
+    face->fixed_pitch = true;
+    face->fixed_cells[0] = ~0ull;
+    face->fixed_cells[1] = ~0ull;
 
     return face->id;
 }
@@ -637,6 +681,62 @@ static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph
     return out;
 }
 
+static int shared_cell_advance(const AdvanceRun* run) {
+    int shared = -1;
+    for_count(i, 128) {
+        if (!is_fixed_cell(run->face, (u8)i)) {
+            continue;
+        }
+        const int advance = run_glyph(run, (u32)i).advance;
+        if (shared < 0) {
+            shared = advance;
+        }
+        if (advance != shared) {
+            return -1;
+        }
+    }
+    return shared;
+}
+
+static int fixed_cell_advance(const AdvanceRun* run) {
+    FontFace* face = run->face;
+    if (face->kind != FlFontRasterKind_FreeType) {
+        return default_glyph(face, 0).advance;
+    }
+    const int* known = hashmap_get(&face->fixed_advances, (u64)run->q4);
+    if (known != nullptr) {
+        return *known;
+    }
+    const int advance = shared_cell_advance(run);
+    hashmap_insert(&face->fixed_advances, (u64)run->q4, advance);
+    return advance;
+}
+
+static bool is_fixed_face_text(const FontFace* face, FlString text) {
+    return face->fixed_pitch && text.is_ascii && text.data != nullptr;
+}
+
+static bool all_fixed_cells(const FontFace* face, FlString text) {
+    bool fixed = true;
+    for_count(i, text.length) {
+        fixed &= is_fixed_cell(face, (u8)text.data[i]);
+    }
+    return fixed;
+}
+
+static FlShapedRun measure_run(const AdvanceRun* run, FlString text) {
+    const int advance = is_fixed_face_text(run->face, text) ? fixed_cell_advance(run) : -1;
+    if (advance < 0 || !all_fixed_cells(run->face, text)) {
+        return shape_run(run, text, nullptr);
+    }
+    return (FlShapedRun) { .count = (u32)text.length, .width = (i64)text.length * advance };
+}
+
+bool font_cache_is_fixed_pitch(FlFontCache* self, FlFontId font_id) {
+    const FontFace* face = find_face_by_id(self, font_id);
+    return face != nullptr && face->status == FontStatus_Ready && face->fixed_pitch;
+}
+
 FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text) {
     if (text.data == nullptr) {
         return (FlShapedRun) { 0 };
@@ -661,7 +761,7 @@ Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id
 
     u16 q4 = font_cache_whole_px_to_q4(font_size);
     AdvanceRun run = { .cache = self, .face = face, .q4 = q4, .may_claim_row = true };
-    float width = (float)shape_run(&run, text, nullptr).width / 64.0f;
+    float width = (float)measure_run(&run, text).width / 64.0f;
     return (Vec2) { width, face_vmetrics(self, face, q4).line_height };
 }
 
@@ -683,7 +783,7 @@ FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextSt
     }
 
     AdvanceRun run = { .cache = self, .face = face, .q4 = q4, .may_claim_row = false };
-    FlShapedRun shaped = shape_run(&run, text, nullptr);
+    FlShapedRun shaped = measure_run(&run, text);
     out.width = (float)shaped.width / 64.0f;
     if (shaped.count > 1) {
         out.width += style.letter_spacing * (float)(shaped.count - 1);

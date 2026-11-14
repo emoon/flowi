@@ -122,6 +122,8 @@ typedef struct FlShapedRun {
 
 FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text);
 
+bool font_cache_is_fixed_pitch(FlFontCache* self, FlFontId font_id);
+
 // String-independent vertical metrics at a fractional size (quarter-pixel quantized), for stable
 // vertical centering of dynamic readouts. font_size <= 0 falls back to the font's load size.
 // Unknown/unready fonts return zeroed metrics (with a log).

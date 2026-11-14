@@ -123,6 +123,7 @@
 #include <stdlib.h>
 
 #include "fixtures/fonts/fallback_test_font.h"
+#include "fixtures/fonts/fixed_pitch_test_fonts.h"
 #include "fixtures/fonts/glyph_test_fonts.h"
 #include "render_seam.h"
 
