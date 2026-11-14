@@ -95,6 +95,10 @@ void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count);
 
 void painter_rect_rounded(Painter* p, FlRect rect, float radius, FlColor color);
 
+// Draw the outline of a rectangle, inside rect. radius is the outer corner radius (0 = square). A stroke wider
+// than half the rect is clamped to it, which fills the rect.
+void painter_rect_stroke(Painter* p, FlRect rect, float radius, FlStroke stroke);
+
 // Draw a rectangle with a per-corner color gradient. The four colors are bilinearly interpolated across the
 // quad.
 void painter_gradient_rect(Painter* p, FlRect rect, FlCornerColors colors);
@@ -132,29 +136,36 @@ void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColo
 // or hit-testing (the software backend currently does). Coordinates, radii, and widths are logical
 // (authoring) space, scaled at emit like everything else.
 
+// Outlines take an FlStroke. Closed shapes (rect, circle, diamond) grow the stroke inward from their edge and
+// an arc grows it inward from its radius; a line or polyline is centered on its points. Only the rect and
+// circle outlines draw stroke.dash, and only the arc reads stroke.cap.
+
 // Draw a polyline.
 // points: vertices in logical (authoring) space; each point's intensity modulates the stroke alpha (1.0 = plain),
 //         lerped along segments, and scales the fill alpha when filled
-// style.width: stroke width; caps and joins are always round
+// style.stroke: width and color; caps and joins are always round
 // style.flags: FlPolylineFlags - FILLED fills between the curve and baseline_y with fill_color, CLOSED adds a
 //              last->first segment
 void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, FlPolylineStyle style);
 
-// Draw an arc / ring / circle-sector.
-// thickness: extends inward from radius; thickness >= radius makes a filled sector
+// Draw a straight round-capped line from a to b. Coincident points give a dot of the stroke width.
+void painter_line(Painter* p, FlVec2 a, FlVec2 b, FlStroke stroke);
+
+// Draw an arc or ring around center.
+// stroke.width: extends inward from radius; a width >= radius makes a filled sector
 // start_angle, sweep: radians; 0 = 12 o'clock, positive sweep = clockwise (knob convention)
-// flags: FlArcFlags - ROUND_CAPS rounds the arc ends (default butt caps keep sector pie edges clean)
-void painter_arc(Painter* p, FlArcShape arc);
+void painter_arc(Painter* p, FlVec2 center, float radius, float start_angle, float sweep, FlStroke stroke);
 
-// Draw a filled circle with an optional border ring (border_width 0 = no border).
-void painter_circle(Painter* p, FlCircleShape circle);
+// Draw a filled circle, its outline, or both as one shape. The combined form antialiases fill and ring
+// together, which a fill call followed by a stroke call cannot.
+void painter_circle(Painter* p, FlVec2 center, float radius, FlColor color);
+void painter_circle_stroke(Painter* p, FlVec2 center, float radius, FlStroke stroke);
+void painter_circle_bordered(Painter* p, FlVec2 center, float radius, FlColor color, FlStroke border);
 
-// painter_circle with the border ring dashed by stroke (zeroed = solid). Dash lengths are logical px and
-// scale with the painter like every other length.
-void painter_circle_stroked(Painter* p, FlCircleShape circle, FlStrokeStyle stroke);
-
-// Draw a filled diamond with half-extents rx, ry and an optional border ring (border_width 0 = no border).
-void painter_diamond(Painter* p, FlDiamondShape diamond);
+// Draw a filled diamond with half-extents rx, ry, its outline, or both as one shape.
+void painter_diamond(Painter* p, FlVec2 center, FlVec2 half_extent, FlColor color);
+void painter_diamond_stroke(Painter* p, FlVec2 center, FlVec2 half_extent, FlStroke stroke);
+void painter_diamond_bordered(Painter* p, FlVec2 center, FlVec2 half_extent, FlColor color, FlStroke border);
 
 // Draw a batched row of bars off a shared baseline. Bar x/w/h are logical (authoring) space; a negative h
 // draws downward from the baseline.

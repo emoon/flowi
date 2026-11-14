@@ -274,15 +274,21 @@ EXPORTS
     fl_painter_arc
     fl_painter_bars
     fl_painter_circle
-    fl_painter_circle_stroked
+    fl_painter_circle_bordered
+    fl_painter_circle_stroke
     fl_painter_diamond
+    fl_painter_diamond_bordered
+    fl_painter_diamond_stroke
     fl_painter_gradient_rect
     fl_painter_hline
     fl_painter_image
     fl_painter_image_sub
+    fl_painter_line
     fl_painter_polyline
     fl_painter_rect
     fl_painter_rect_rounded
+    fl_painter_rect_rounded_stroke
+    fl_painter_rect_stroke
     fl_painter_rect_styled
     fl_painter_rects
     fl_painter_set_effect

@@ -17,12 +17,13 @@
 extern "C" {
 #endif
 
-// Arc end-cap flags, combined with bitwise OR. With no flag set the arc has butt caps, which keep sector pie
-// edges clean.
-typedef enum FlArcFlags {
-    // Round the arc ends.
-    FlArcFlags_round_caps = 1,
-} FlArcFlags;
+// How the two ends of an open stroke are finished.
+typedef enum FlStrokeCap {
+    // Cut square at the end point. On an arc this keeps sector pie edges clean.
+    FlStrokeCap_Butt = 0,
+    // Round the end with a half disc of the stroke width.
+    FlStrokeCap_Round = 1,
+} FlStrokeCap;
 
 // Polyline draw flags, combined with bitwise OR.
 typedef enum FlPolylineFlags {
@@ -42,6 +43,21 @@ typedef enum __attribute__((__packed__)) FlEffectKind {
     // A blurred copy of the shape, centered on it and blended additively.
     FlEffectKind_Glow = 2,
 } FlEffectKind;
+
+// An outline: its width and color, plus an optional dash pattern and end cap. A zeroed dash and cap give a
+// solid, butt-capped stroke, so `{ width, color }` is the common case.
+// Closed outlines (rect, circle, diamond) grow inward from the shape's edge, and an arc grows inward from
+// its radius; a line or polyline is centered on its points.
+typedef struct FlStroke {
+    // stroke width in logical (authoring) px
+    float width;
+    // stroke color
+    FlColor color;
+    // dash pattern; drawn by the rect and circle outlines on the GPU backend, solid everywhere else
+    FlStrokeStyle dash;
+    // end cap of an arc. Lines and polylines ignore it and always have round caps and joins
+    FlStrokeCap cap;
+} FlStroke;
 
 // One polyline vertex. intensity is always present (1.0 = plain): it modulates the stroke alpha, lerped
 // along segments, and scales the fill alpha when the polyline is FILLED.
@@ -120,67 +136,10 @@ typedef struct FlCornerColors {
     FlColor bottom_right;
 } FlCornerColors;
 
-// A filled circle with an optional border ring, in logical (authoring) space.
-typedef struct FlCircleShape {
-    // center x
-    float cx;
-    // center y
-    float cy;
-    // radius
-    float radius;
-    // fill color
-    FlColor color;
-    // border ring color
-    FlColor border_color;
-    // border ring width; 0 = no border
-    float border_width;
-} FlCircleShape;
-
-// A filled diamond with an optional border ring, in logical (authoring) space.
-typedef struct FlDiamondShape {
-    // center x
-    float cx;
-    // center y
-    float cy;
-    // horizontal half-extent
-    float rx;
-    // vertical half-extent
-    float ry;
-    // fill color
-    FlColor color;
-    // border ring color
-    FlColor border_color;
-    // border ring width; 0 = no border
-    float border_width;
-} FlDiamondShape;
-
-// A stroked arc, ring or circle sector, in logical (authoring) space. Angles are radians: 0 is 12 o'clock
-// and a positive sweep runs clockwise.
-typedef struct FlArcShape {
-    // center x
-    float cx;
-    // center y
-    float cy;
-    // outer radius
-    float radius;
-    // stroke thickness, extending inward from radius; thickness >= radius makes a filled sector
-    float thickness;
-    // angle the arc starts at
-    float start_angle;
-    // angle the arc covers from start_angle
-    float sweep;
-    // stroke color
-    FlColor color;
-    // end caps (empty = butt caps)
-    FlArcFlags flags;
-} FlArcShape;
-
 // How a Painter::polyline is stroked and filled.
 typedef struct FlPolylineStyle {
-    // stroke width; caps and joins are always round
-    float width;
-    // stroke color
-    FlColor color;
+    // stroke width and color; caps and joins are always round, and the dash pattern is not drawn
+    FlStroke stroke;
     // filling and closing (empty = an open stroke)
     FlPolylineFlags flags;
     // fill color, used when flags has filled
@@ -232,6 +191,12 @@ FL_API void fl_painter_rect(float x, float y, float w, float h, FlColor color);
 FL_API void fl_painter_rects(const FlColoredRect* rects, uint32_t rects_size);
 // Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
 FL_API void fl_painter_rect_rounded(float x, float y, float w, float h, float radius, FlColor color);
+// Draw the outline of a rectangle: top-left (x, y), size (w, h), in logical space. The stroke lies
+// inside the rectangle and can be dashed; a stroke wider than half the rectangle fills it.
+FL_API void fl_painter_rect_stroke(float x, float y, float w, float h, FlStroke stroke);
+// Draw the outline of a rounded rectangle; radius is the outer corner radius. Otherwise as
+// Painter::rect_stroke.
+FL_API void fl_painter_rect_rounded_stroke(float x, float y, float w, float h, float radius, FlStroke stroke);
 // Draw a filled rectangle with a four-corner color gradient (bilinear): top-left (x, y), size (w, h),
 // in logical space.
 FL_API void fl_painter_gradient_rect(float x, float y, float w, float h, FlCornerColors colors);
@@ -246,6 +211,10 @@ FL_API void fl_painter_hline(float x, float y, float length, FlColor color);
 // Draw a crisp 1px vertical hairline of length from (x, y). Device-pixel snapped, so it stays sharp at
 // fractional scroll/zoom.
 FL_API void fl_painter_vline(float x, float y, float length, FlColor color);
+// Draw a straight line from (x0, y0) to (x1, y1), centered on the two points, with round caps that
+// extend half the stroke width past each end. Coincident points draw a dot of the stroke width. For
+// a crisp 1px horizontal or vertical rule use hline or vline instead.
+FL_API void fl_painter_line(float x0, float y0, float x1, float y1, FlStroke stroke);
 // Draw text with font (FontId::INVALID = active font) in color, top-left at (x, y).
 FL_API void fl_painter_text(float x, float y, FlString text, FlFontId font, FlColor color);
 // Draw single-line text styled by style (font, fractional pixel size, letter spacing; zero fields
@@ -257,21 +226,28 @@ FL_API void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle 
 // `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
 // (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
 FL_API bool fl_painter_image(float x, float y, float w, float h, FlImageHandle image, FlColor color);
-// Draw a filled circle with an optional border ring: center, radius and colors come from circle.
-FL_API void fl_painter_circle(FlCircleShape circle);
-// Draw a filled circle like Painter::circle, with the border ring dashed by stroke (a zeroed stroke
-// draws the same solid ring). The dash period is rescaled slightly so a whole number of
-// dashes closes the ring - no stub where the pattern wraps.
-FL_API void fl_painter_circle_stroked(FlCircleShape circle, FlStrokeStyle stroke);
-// Draw a filled diamond with an optional border ring: center, half-extents and colors come from
-// diamond.
-FL_API void fl_painter_diamond(FlDiamondShape diamond);
-// Draw a stroked arc, ring or circle sector. Angles are radians: 0 is 12 o'clock and a positive
-// sweep runs clockwise.
-FL_API void fl_painter_arc(FlArcShape arc);
+// Draw a filled circle: center (cx, cy) and radius, in logical space.
+FL_API void fl_painter_circle(float cx, float cy, float radius, FlColor color);
+// Draw the outline of a circle. The stroke lies inside radius and can be dashed; the dash period is
+// rescaled slightly so a whole number of dashes closes the ring, with no stub where the pattern wraps.
+FL_API void fl_painter_circle_stroke(float cx, float cy, float radius, FlStroke stroke);
+// Draw a filled circle and its outline as one shape. Prefer this to a circle call followed by a
+// circle_stroke call: the two are antialiased together, so no fill color shows at the outer edge.
+FL_API void fl_painter_circle_bordered(float cx, float cy, float radius, FlColor color, FlStroke border);
+// Draw a filled diamond: center (cx, cy), horizontal half-extent rx and vertical half-extent ry.
+FL_API void fl_painter_diamond(float cx, float cy, float rx, float ry, FlColor color);
+// Draw the outline of a diamond. The stroke lies inside the diamond and is always solid.
+FL_API void fl_painter_diamond_stroke(float cx, float cy, float rx, float ry, FlStroke stroke);
+// Draw a filled diamond and its outline as one shape, antialiased together like
+// Painter::circle_bordered.
+FL_API void fl_painter_diamond_bordered(float cx, float cy, float rx, float ry, FlColor color, FlStroke border);
+// Draw a stroked arc or ring around (cx, cy). Angles are radians: 0 is 12 o'clock and a positive
+// sweep runs clockwise. The stroke grows inward from radius, so a stroke width of radius or more
+// gives a filled sector. stroke.cap picks butt or round ends.
+FL_API void fl_painter_arc(float cx, float cy, float radius, float start_angle, float sweep, FlStroke stroke);
 // Draw a polyline. points are
 // vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
-// segments) and scales fill alpha. style carries the stroke width and color and the optional fill.
+// segments) and scales fill alpha. style carries the stroke and the optional fill.
 FL_API void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, FlPolylineStyle style);
 // Draw a row of bars off the shared baseline baseline_y - meters, spectrum analyzers, step sequencers.
 // The whole row is one draw, which is what a bar row buys over a rect per bar. Each bar carries its own

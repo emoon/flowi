@@ -125,7 +125,7 @@ UTEST(render_ir, optional_tier_builders_round_trip) {
     pts[0] = (FlPolyPoint) { 0.0f, 8.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 10.0f, 5.0f, 0.5f };
     pts[2] = (FlPolyPoint) { 20.0f, 8.0f, 1.0f };
-    fl_ir_arc(arena, 50.0f, 60.0f, 24.0f, 4.0f, -2.0f, 4.0f, stroke, FlArcFlags_round_caps, nullptr);
+    fl_ir_arc(arena, 50.0f, 60.0f, 24.0f, 4.0f, -2.0f, 4.0f, stroke, FL_IR_ARC_ROUND_CAPS, nullptr);
     fl_ir_circle(arena, 1.0f, 2.0f, 3.0f, stroke, fill, 1.5f, nullptr);
     fl_ir_diamond(arena, 4.0f, 5.0f, 6.0f, 7.0f, stroke, fill, 0.0f, nullptr);
     FlBar* bars = fl_ir_bars(arena, 200.0f, stroke, 2, &glow);
@@ -157,7 +157,7 @@ UTEST(render_ir, optional_tier_builders_round_trip) {
     ASSERT_TRUE_MSG(arc->cx == 50.0f && arc->cy == 60.0f, "arc center round-trips");
     ASSERT_TRUE_MSG(arc->radius == 24.0f && arc->thickness == 4.0f, "arc radius/thickness round-trip");
     ASSERT_TRUE_MSG(arc->start_angle == -2.0f && arc->sweep == 4.0f, "arc angles round-trip");
-    ASSERT_TRUE_MSG(arc->flags == FlArcFlags_round_caps, "arc flags round-trip");
+    ASSERT_TRUE_MSG(arc->flags == FL_IR_ARC_ROUND_CAPS, "arc flags round-trip");
 
     h = ir_next(h);
     ASSERT_TRUE_MSG(h->kind == FlCmd_Circle, "third record is the circle");
@@ -203,31 +203,16 @@ UTEST(render_ir, painter_shapes_scale_at_emit) {
     FlColor border = { 1, 2, 3, 4 };
     FlPolyPoint pts[2] = { { 1.0f, 2.0f, 1.0f }, { 3.0f, 4.0f, 0.25f } };
     painter_polyline(p, pts, 2,
-                     (FlPolylineStyle) { .width = 1.5f,
-                                         .color = color,
+                     (FlPolylineStyle) { .stroke = { .width = 1.5f, .color = color },
                                          .flags = FlPolylineFlags_filled,
                                          .fill_color = border,
                                          .baseline_y = 50.0f });
-    painter_arc(p, (FlArcShape) { .cx = 10.0f,
-                                  .cy = 20.0f,
-                                  .radius = 30.0f,
-                                  .thickness = 5.0f,
-                                  .start_angle = 1.0f,
-                                  .sweep = 2.5f,
-                                  .color = color,
-                                  .flags = 0 });
-    painter_circle_stroked(
-        p,
-        (FlCircleShape) {
-            .cx = 1.0f, .cy = 2.0f, .radius = 3.0f, .color = color, .border_color = border, .border_width = 0.5f },
-        (FlStrokeStyle) { .dash_len = 1.5f, .gap_len = 2.5f });
-    painter_diamond(p, (FlDiamondShape) { .cx = 4.0f,
-                                          .cy = 5.0f,
-                                          .rx = 6.0f,
-                                          .ry = 7.0f,
-                                          .color = color,
-                                          .border_color = border,
-                                          .border_width = 0.0f });
+    painter_arc(p, (FlVec2) { .x = 10.0f, .y = 20.0f }, 30.0f, 1.0f, 2.5f,
+                (FlStroke) { .width = 5.0f, .color = color });
+    painter_circle_bordered(
+        p, (FlVec2) { .x = 1.0f, .y = 2.0f }, 3.0f, color,
+        (FlStroke) { .width = 0.5f, .color = border, .dash = { .dash_len = 1.5f, .gap_len = 2.5f } });
+    painter_diamond(p, (FlVec2) { .x = 4.0f, .y = 5.0f }, (FlVec2) { .x = 6.0f, .y = 7.0f }, color);
     FlBar in_bars[2] = { { 0.0f, 2.0f, 10.0f }, { 3.0f, 2.0f, -4.0f } };
     painter_bars(p, 100.0f, in_bars, 2, color);
 
@@ -304,9 +289,7 @@ UTEST(render_ir, painter_effect_is_scoped_state) {
     painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 4.0f, .h = 4.0f }, color);
     painter_scope_pop(p);
 
-    painter_circle(
-        p, (FlCircleShape) {
-               .cx = 1.0f, .cy = 1.0f, .radius = 2.0f, .color = color, .border_color = color, .border_width = 0.0f });
+    painter_circle(p, (FlVec2) { .x = 1.0f, .y = 1.0f }, 2.0f, color);
     painter_set_effect(p, (FlEffect) { 0 });
     painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 2.0f, .h = 2.0f }, color);
     painter_scope_pop(p);

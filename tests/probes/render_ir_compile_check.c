@@ -138,7 +138,7 @@ _Static_assert(offsetof(FlCmdPolyline, baseline_y) == 12, "Polyline.baseline_y (
 _Static_assert(offsetof(FlCmdPolyline, flags) == 16, "Polyline.flags");
 _Static_assert(offsetof(FlCmdPolyline, point_count) == 20, "Polyline.point_count governs inline-array iteration");
 
-_Static_assert(FlArcFlags_round_caps == 1u, "arc ROUND_CAPS is bit 0 (default butt)");
+_Static_assert(FL_IR_ARC_ROUND_CAPS == 1u, "arc ROUND_CAPS is bit 0 (default butt)");
 
 _Static_assert(sizeof(FlCmdArc) == 32, "Arc is center + radius + thickness + angles + color + flags only");
 _Static_assert(offsetof(FlCmdArc, cx) == 0, "Arc.cx");

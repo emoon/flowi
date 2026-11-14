@@ -173,6 +173,14 @@ void fl_painter_rect_rounded(float x, float y, float w, float h, float radius, F
     painter_rect_rounded(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, radius, color);
 }
 
+void fl_painter_rect_stroke(float x, float y, float w, float h, FlStroke stroke) {
+    painter_rect_stroke(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, 0.0f, stroke);
+}
+
+void fl_painter_rect_rounded_stroke(float x, float y, float w, float h, float radius, FlStroke stroke) {
+    painter_rect_stroke(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, radius, stroke);
+}
+
 void fl_painter_gradient_rect(float x, float y, float w, float h, FlCornerColors colors) {
     painter_gradient_rect(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, colors);
 }
@@ -187,6 +195,10 @@ void fl_painter_hline(float x, float y, float length, FlColor color) {
 
 void fl_painter_vline(float x, float y, float length, FlColor color) {
     painter_vline(ui_get_painter(), x, y, length, color);
+}
+
+void fl_painter_line(float x0, float y0, float x1, float y1, FlStroke stroke) {
+    painter_line(ui_get_painter(), (FlVec2) { .x = x0, .y = y0 }, (FlVec2) { .x = x1, .y = y1 }, stroke);
 }
 
 // The two text draws are the exception: resolving the font-id zero semantic reads the context itself, so they
@@ -217,20 +229,33 @@ bool fl_painter_image_sub(FlImageSub sub) {
     return painter_image_sub(ui_get_painter(), sub);
 }
 
-void fl_painter_circle(FlCircleShape circle) {
-    painter_circle(ui_get_painter(), circle);
+void fl_painter_circle(float cx, float cy, float radius, FlColor color) {
+    painter_circle(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, radius, color);
 }
 
-void fl_painter_circle_stroked(FlCircleShape circle, FlStrokeStyle stroke) {
-    painter_circle_stroked(ui_get_painter(), circle, stroke);
+void fl_painter_circle_stroke(float cx, float cy, float radius, FlStroke stroke) {
+    painter_circle_stroke(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, radius, stroke);
 }
 
-void fl_painter_diamond(FlDiamondShape diamond) {
-    painter_diamond(ui_get_painter(), diamond);
+void fl_painter_circle_bordered(float cx, float cy, float radius, FlColor color, FlStroke border) {
+    painter_circle_bordered(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, radius, color, border);
 }
 
-void fl_painter_arc(FlArcShape arc) {
-    painter_arc(ui_get_painter(), arc);
+void fl_painter_diamond(float cx, float cy, float rx, float ry, FlColor color) {
+    painter_diamond(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, (FlVec2) { .x = rx, .y = ry }, color);
+}
+
+void fl_painter_diamond_stroke(float cx, float cy, float rx, float ry, FlStroke stroke) {
+    painter_diamond_stroke(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, (FlVec2) { .x = rx, .y = ry }, stroke);
+}
+
+void fl_painter_diamond_bordered(float cx, float cy, float rx, float ry, FlColor color, FlStroke border) {
+    painter_diamond_bordered(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, (FlVec2) { .x = rx, .y = ry }, color,
+                             border);
+}
+
+void fl_painter_arc(float cx, float cy, float radius, float start_angle, float sweep, FlStroke stroke) {
+    painter_arc(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, radius, start_angle, sweep, stroke);
 }
 
 void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, FlPolylineStyle style) {

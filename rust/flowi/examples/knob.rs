@@ -1,6 +1,6 @@
 //! A reference knob, assembled from public primitives only - the generic [`Item::behavior`] Signal to detect
 //! the grab, a hidden relative drag ([`UiInput::mouse_hidden_drag_begin`] / [`UiInput::mouse_drag_delta`] /
-//! [`UiInput::mouse_hidden_drag_end`]) for the unbounded scrub, and [`Painter::circle`] / [`Painter::arc`] for
+//! [`UiInput::mouse_hidden_drag_end`]) for the unbounded scrub, and [`Painter::circle_bordered`] / [`Painter::arc`] for
 //! the body and indicator. It needs a display; run it and drag the knob up/down:
 //!
 //! ```text
@@ -11,8 +11,8 @@
 //! reset to the default.
 
 use flowi::{
-    col, element_state, fixed, grow, layout, Application, ArcFlags, ArcShape, CircleShape, Color,
-    Item, ItemFlags, KeyModifier, Painter, Text, UiInput,
+    col, element_state, fixed, grow, layout, Application, Color, Item, ItemFlags, KeyModifier, Painter,
+    Stroke, Text, UiInput,
 };
 use std::f32::consts::PI;
 
@@ -73,17 +73,8 @@ fn knob(state: &mut Knob) {
             let body = Color { r: 50, g: 50, b: 62, a: 255 };
             let ring = Color { r: 90, g: 90, b: 110, a: 255 };
             let indicator = Color { r: 90, g: 170, b: 255, a: 255 };
-            Painter::circle(CircleShape { cx, cy, radius: r, color: body, border_color: ring, border_width: 1.5 });
-            Painter::arc(ArcShape {
-                cx,
-                cy,
-                radius: r - 2.0,
-                thickness: 4.0,
-                start_angle: ARC_START,
-                sweep: state.value * ARC_SWEEP,
-                color: indicator,
-                flags: ArcFlags::empty(),
-            });
+            Painter::circle_bordered(cx, cy, r, body, Stroke::new(1.5, ring));
+            Painter::arc(cx, cy, r - 2.0, ARC_START, state.value * ARC_SWEEP, Stroke::new(4.0, indicator));
         }
     }}
 }

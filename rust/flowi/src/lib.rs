@@ -66,8 +66,31 @@ pub use crate::sys::FontId;
 pub use crate::sys::{FontMetrics, TextMetrics, TextStyle};
 
 /// The dash pattern for a stroked outline (dash length, gap length, both logical px; zeroed = solid):
-/// what [`LayoutBorder::stroke`] and [`Painter::circle_stroked`] take.
+/// what [`LayoutBorder::stroke`] and [`Stroke::dash`] take.
 pub use crate::sys::StrokeStyle;
+
+/// The outline every [`Painter`] stroke call takes: width and color, plus an optional dash pattern and end
+/// cap ([`StrokeCap`]). [`Stroke::new`] gives the solid common case.
+pub use crate::sys::{Stroke, StrokeCap};
+
+impl Stroke {
+    /// A solid stroke of `width` logical px in `color`. Its cap is [`StrokeCap::Butt`], which only
+    /// [`Painter::arc`] reads: lines and polylines always have round caps.
+    pub const fn new(width: f32, color: Color) -> Self {
+        Self { width, color, dash: StrokeStyle { dash_len: 0.0, gap_len: 0.0 }, cap: StrokeCap::Butt }
+    }
+
+    /// The same stroke dashed, both lengths in logical px. Only the rect and circle outlines draw dashes,
+    /// and only on the GPU backend.
+    pub const fn with_dash(self, dash_len: f32, gap_len: f32) -> Self {
+        Self { dash: StrokeStyle { dash_len, gap_len }, ..self }
+    }
+
+    /// The same stroke with `cap` at its ends. Only [`Painter::arc`] reads the cap.
+    pub const fn with_cap(self, cap: StrokeCap) -> Self {
+        Self { cap, ..self }
+    }
+}
 
 /// The fill styling one [`Painter::rect_styled`] draw takes: per-corner radius ([`CornerRadius`]) plus
 /// per-corner colors, which is the only way to express a rounded gradient rect - [`Painter::rect_rounded`]
@@ -78,11 +101,9 @@ pub use crate::sys::RectConfig;
 /// One solid rectangle of a [`Painter::rects`] batch: position, size and fill color.
 pub use crate::sys::ColoredRect;
 
-/// The shapes and styles the wider [`Painter`] draws take as one value: [`Painter::circle`] and
-/// [`Painter::circle_stroked`] ([`CircleShape`]), [`Painter::diamond`] ([`DiamondShape`]), [`Painter::arc`]
-/// ([`ArcShape`]), [`Painter::gradient_rect`] ([`CornerColors`]), [`Painter::polyline`] ([`PolylineStyle`])
-/// and [`Painter::image_sub`] ([`ImageSub`]).
-pub use crate::sys::{ArcShape, CircleShape, CornerColors, DiamondShape, ImageSub, PolylineStyle};
+/// The styles the wider [`Painter`] draws take as one value: [`Painter::gradient_rect`] ([`CornerColors`]),
+/// [`Painter::polyline`] ([`PolylineStyle`]) and [`Painter::image_sub`] ([`ImageSub`]).
+pub use crate::sys::{CornerColors, ImageSub, PolylineStyle};
 
 /// The opaque, Copy image handle returned by [`Image::load`] and consumed by [`Image::is_ready`],
 /// and [`Painter::image`] (sentinel 0 = invalid).
@@ -343,8 +364,6 @@ pub fn natural_cmp_bytes(a: &[u8], b: &[u8]) -> std::cmp::Ordering {
     order.cmp(&0)
 }
 
-/// The end-cap flags [`Painter::arc`] takes.
-pub use crate::sys::ArcFlags;
 /// The workspace edge [`Dock::dock_outer`] attaches a new region to.
 pub use crate::sys::DockSide;
 /// The fill/close flags [`Painter::polyline`] takes.
@@ -513,11 +532,7 @@ mod public_surface_guard {
         crate::BorderWidthConfig = crate::sys::BorderWidthConfig,
         crate::Color = crate::sys::Color,
         crate::CornerRadius = crate::sys::CornerRadius,
-        crate::ArcFlags = crate::sys::ArcFlags,
-        crate::ArcShape = crate::sys::ArcShape,
-        crate::CircleShape = crate::sys::CircleShape,
         crate::CornerColors = crate::sys::CornerColors,
-        crate::DiamondShape = crate::sys::DiamondShape,
         crate::ImageSub = crate::sys::ImageSub,
         crate::PolylineStyle = crate::sys::PolylineStyle,
         crate::CursorShape = crate::sys::CursorShape,
@@ -592,6 +607,8 @@ mod public_surface_guard {
         crate::Signal = crate::sys::Signal,
         crate::Spacing = crate::sys::Spacing,
         crate::StrokeStyle = crate::sys::StrokeStyle,
+        crate::Stroke = crate::sys::Stroke,
+        crate::StrokeCap = crate::sys::StrokeCap,
         crate::TextInputEvent = crate::sys::TextInputEvent,
         crate::TextMetrics = crate::sys::TextMetrics,
         crate::TextStyle = crate::sys::TextStyle,
