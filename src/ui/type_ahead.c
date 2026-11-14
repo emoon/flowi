@@ -18,35 +18,43 @@ static bool type_ahead_label_has_prefix(FlString label, const char* prefix, u32 
     return true;
 }
 
-i32 type_ahead_match(TypeAheadState* state, const FlString* labels, u32 count, i32 current_index, FlString typed,
-                     f64 now, u32 prefix_cap) {
-    if (labels == nullptr) {
-        return -1;
+// Control bytes such as Enter and Tab are not part of a prefix.
+static bool type_ahead_is_printable(char c) {
+    return (unsigned char)c >= 0x20 && c != 0x7f;
+}
+
+// A single repeated letter cycles to the next match instead of growing the prefix, so the prefix stays at one
+// byte and the search advances past the current row.
+static bool type_ahead_repeats_single(const TypeAheadState* state, char c) {
+    return state->len == 1 && type_ahead_ascii_lower(c) == type_ahead_ascii_lower(state->buf[0]);
+}
+
+static void type_ahead_append(TypeAheadState* state, char c, u32 prefix_cap) {
+    if (!type_ahead_is_printable(c) || type_ahead_repeats_single(state, c)) {
+        return;
     }
+    if (state->len < prefix_cap) {
+        state->buf[state->len++] = c;
+    }
+}
+
+bool type_ahead_feed(TypeAheadState* state, FlString typed, f64 now, u32 prefix_cap) {
     if (typed.length == 0 || typed.data == nullptr) {
-        return -1;
+        return false;
     }
 
     if (now > state->deadline) {
         state->len = 0; // stale prefix: typing paused, start over
     }
 
-    // Append the printable bytes typed this frame (control bytes such as Enter and Tab are not part of a prefix).
-    for (u64 i = 0; i < typed.length; i++) {
-        char c = typed.data[i];
-        if ((unsigned char)c < 0x20 || c == 0x7f) {
-            continue;
-        }
-        // A single repeated letter cycles to the next match instead of growing the prefix, so keep the prefix
-        // at one byte and let the search below advance past the current row.
-        if (state->len == 1 && type_ahead_ascii_lower(c) == type_ahead_ascii_lower(state->buf[0])) {
-            continue;
-        }
-        if (state->len < prefix_cap) {
-            state->buf[state->len++] = c;
-        }
+    for_count(i, typed.length) {
+        type_ahead_append(state, typed.data[i], prefix_cap);
     }
     state->deadline = now + TYPE_AHEAD_TIMEOUT;
+    return state->len > 0;
+}
+
+i32 type_ahead_find(const TypeAheadState* state, TypeAheadLabels labels, i32 current_index) {
     if (state->len == 0) {
         return -1;
     }
@@ -57,9 +65,9 @@ i32 type_ahead_match(TypeAheadState* state, const FlString* labels, u32 count, i
     if (start < 0) {
         start = 0;
     }
-    for (u32 k = 0; k < count; k++) {
-        u32 idx = ((u32)start + k) % count;
-        if (type_ahead_label_has_prefix(labels[idx], state->buf, state->len)) {
+    for_count(k, labels.count) {
+        u32 idx = ((u32)start + k) % labels.count;
+        if (type_ahead_label_has_prefix(labels.label_at(labels.source, idx), state->buf, state->len)) {
             return (i32)idx;
         }
     }

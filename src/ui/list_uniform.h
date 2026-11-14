@@ -27,7 +27,7 @@ void list_uniform_end(FlListUniformContext* self);
 // begin->end scope. Both no-op / return 0 for an unknown id.
 
 // Current smoothed scroll offset (pixels from the top of the content) for list id.
-f32 list_uniform_scroll_offset(FlListUniformContext* self, FlString id);
+f64 list_uniform_scroll_offset(FlListUniformContext* self, FlString id);
 
 // Nudge list id's smooth-scroll target (and offset, so the move is immediate and sticky) by delta_px, clamped
 // to [0, max] for a uniform list of total_count rows spaced item_stride px apart. Positive scrolls toward the

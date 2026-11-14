@@ -27,18 +27,18 @@ typedef struct DropTarget {
 // Candidate insertion index in [0, count] for a reorder drag: the dragged item(s) land before row ins. The
 // cursor's row and which half it falls in decide it (top half -> before that row, bottom half -> after). It is
 // arithmetic on the uniform stride, so an off-screen target resolves exactly like an on-screen one.
-static u32 insertion_index(f32 cur_content_y, f32 stride, f32 row_height, u32 count) {
+static u32 insertion_index(f64 cur_content_y, f64 stride, f32 row_height, u32 count) {
     if (count == 0 || stride <= 0.0f) {
         return 0;
     }
-    i32 row = (i32)floorf(cur_content_y / stride);
+    i64 row = (i64)floor(cur_content_y / stride);
     if (row < 0) {
         row = 0;
     }
-    if (row > (i32)count - 1) {
-        row = (i32)count - 1;
+    if (row > (i64)count - 1) {
+        row = (i64)count - 1;
     }
-    f32 row_mid = (f32)row * stride + row_height * 0.5f;
+    f64 row_mid = (f64)row * stride + (f64)row_height * 0.5;
     return (cur_content_y < row_mid) ? (u32)row : (u32)row + 1; // in [0, count]
 }
 
@@ -49,9 +49,9 @@ static DropTarget drop_target_for(const FlListContext* self, u32 ins) {
         return drop;
     }
     if (ins == 0) {
-        drop.id = self->ordered_ids[0];
+        drop.id = list_row_id(self, 0);
     } else {
-        drop.id = self->ordered_ids[ins - 1];
+        drop.id = list_row_id(self, ins - 1);
         drop.rel = FlDropRelationship_After;
     }
     return drop;
@@ -77,9 +77,10 @@ static const u64* collect_from_ids(FlListContext* self, u64 press_id, u32* out_c
 
 // Draw the insertion line: a thin floating bar spanning the viewport width at the candidate drop boundary (the
 // centre of the gap before row ins), clamped to the viewport.
-static void draw_insertion(FlListContext* self, const ListViewport* vp, f32 scroll, u32 ins) {
-    f32 line_content_y = (f32)ins * list_row_stride(self) - self->current_gap * 0.5f; // middle of the preceding gap
-    f32 screen_y = clamp(vp->top + (line_content_y - scroll), vp->top, vp->bottom);
+static void draw_insertion(FlListContext* self, const ListViewport* vp, f64 scroll, u32 ins) {
+    f64 line_content_y
+        = (f64)ins * (f64)list_row_stride(self) - (f64)self->current_gap * 0.5; // middle of the preceding gap
+    f32 screen_y = clamp(vp->top + (f32)(line_content_y - scroll), vp->top, vp->bottom);
 
     list_draw_overlay(self, &(ListOverlay) {
                                 .float_seed = LIST_DRAG_LINE_FLOAT_SEED,
@@ -117,7 +118,7 @@ static void draw_ghost(FlListContext* self, const ListViewport* vp) {
 
 // Still dragging: expose the live state and draw the default affordances (unless the caller overrides them). A drag
 // can reach off-screen positions the same way the marquee does, so edge auto-scroll applies.
-static void show_live_drag(FlListContext* self, const ListViewport* vp, f32 scroll, u32 ins) {
+static void show_live_drag(FlListContext* self, const ListViewport* vp, f64 scroll, u32 ins) {
     self->drag_active_out = true;
     if (!self->suppress_drag_visuals) {
         draw_insertion(self, vp, scroll, ins);
@@ -151,9 +152,9 @@ void list_drag_update(FlListContext* self, ListState* st) {
 
     // Candidate insertion from the (viewport-clamped) cursor content Y. The clamp pins the candidate at the edge
     // while edge auto-scroll advances scroll underneath it.
-    f32 scroll = list_scroll_offset(self);
-    f32 cur_content_y = list_clamped_content_y(self, &vp, scroll);
-    u32 ins = insertion_index(cur_content_y, list_row_stride(self), self->current_row_height, self->ordered_count);
+    f64 scroll = list_scroll_offset(self);
+    f64 cur_content_y = list_clamped_content_y(self, &vp, scroll);
+    u32 ins = insertion_index(cur_content_y, list_row_stride(self), self->current_row_height, self->rows.count);
     DropTarget drop = drop_target_for(self, ins);
 
     u32 from_count = 0;

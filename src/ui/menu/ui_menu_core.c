@@ -201,33 +201,30 @@ void menu_record_label(UiMenuLevelFrame* lf, int index, FlString label) {
     lf->item_label_len[index] = (u8)n;
 }
 
+static FlString menu_typeahead_label(const void* source, u32 row) {
+    const UiMenuLevelFrame* lf = source;
+    if (!lf->item_navigable[row]) {
+        return (FlString) { 0 };
+    }
+    return (FlString) { .data = lf->item_label[row], .length = lf->item_label_len[row] };
+}
+
 // Move the level's highlight to the row matching this frame's typed text. Returns whether it moved.
 bool menu_typeahead(FlUiCtx* ctx, int level) {
     UiMenuState* m = &ctx->shared->menu;
-    UiMenuFrame* mf = &ctx->menu_frame;
-
     UiMenuLevel* lvl = &m->levels[level];
-    const UiMenuLevelFrame* lf = &mf->levels[level];
+    const UiMenuLevelFrame* lf = &ctx->menu_frame.levels[level];
 
-    FlString typed = ctx->text_input_this_frame;
-    if (typed.length == 0 || typed.data == nullptr) {
+    if (!type_ahead_feed(&m->typeahead, ctx->text_input_this_frame, ctx->input_state.time, UI_MENU_TYPEAHEAD_CAP)) {
         return false;
     }
 
-    int n = lf->item_count;
-    if (n > UI_MENU_MAX_ITEMS) {
-        n = UI_MENU_MAX_ITEMS;
-    }
-    if (n < 0) {
-        n = 0;
-    }
-    FlString labels[UI_MENU_MAX_ITEMS];
-    for (int i = 0; i < n; i++) {
-        labels[i] = lf->item_navigable[i] ? (FlString) { .data = lf->item_label[i], .length = lf->item_label_len[i] }
-                                          : (FlString) { 0 };
-    }
-    i32 idx = type_ahead_match(&m->typeahead, labels, (u32)n, lvl->highlight_index, typed, ctx->input_state.time,
-                               UI_MENU_TYPEAHEAD_CAP);
+    TypeAheadLabels labels = {
+        .source = lf,
+        .label_at = menu_typeahead_label,
+        .count = (u32)clamp(lf->item_count, 0, UI_MENU_MAX_ITEMS),
+    };
+    i32 idx = type_ahead_find(&m->typeahead, labels, lvl->highlight_index);
     if (idx < 0) {
         return false;
     }

@@ -17,8 +17,8 @@
 #define LIST_UNIFORM_VISIBLE_BUFFER 2 // Extra items to render outside viewport
 
 typedef struct ListUniformState {
-    f32 scroll_offset;    // Current scroll position (pixels)
-    f32 scroll_target;    // Target for smooth scrolling
+    f64 scroll_offset;    // Current scroll position (pixels)
+    f64 scroll_target;    // Target for smooth scrolling
     f32 container_height; // Actual container height from previous frame
 } ListUniformState;
 
@@ -68,30 +68,30 @@ static ListUniformState* get_or_create_state(FlListUniformContext* self, FlStrin
         return state;
     }
     ListUniformState new_state = {
-        .scroll_offset = 0.0f,
-        .scroll_target = 0.0f,
+        .scroll_offset = 0.0,
+        .scroll_target = 0.0,
     };
     return hashmap_string_insert(&self->states, id, new_state);
 }
 
 // Total content height: every item plus its gap.
 
-static f32 list_content_height(u32 count, f32 item_height, f32 gap) {
-    return (f32)count * (item_height + gap);
+static f64 list_content_height(u32 count, f32 item_height, f32 gap) {
+    return (f64)count * (f64)(item_height + gap);
 }
 
 static void update_scroll_for_selection(FlListUniformContext* self, i32 selected, f32 item_height, f32 gap) {
     f32 item_with_gap = item_height + gap;
-    f32 item_top = (f32)selected * item_with_gap;
+    f64 item_top = (f64)selected * (f64)item_with_gap;
 
     // Always position the selected item at 1/3 from the top of the viewport.
     f32 target_position = self->viewport_height * 0.33f;
-    f32 target = item_top - target_position;
+    f64 target = item_top - (f64)target_position;
 
-    f32 max_scroll
+    f64 max_scroll
         = scroll_max(list_content_height(self->current_total_count, item_height, gap), self->viewport_height);
 
-    self->current_state->scroll_target = clamp(target, 0.0f, max_scroll);
+    self->current_state->scroll_target = clamp(target, 0.0, max_scroll);
 }
 
 void list_uniform_begin_update(FlListUniformContext* self) {
@@ -128,7 +128,7 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
         update_scroll_for_selection(self, opts.scroll_to, item_height, gap);
     }
 
-    f32 max_scroll = scroll_max(list_content_height(total_count, item_height, gap), self->viewport_height);
+    f64 max_scroll = scroll_max(list_content_height(total_count, item_height, gap), self->viewport_height);
     self->current_state->scroll_offset
         = scroll_smooth_step(self->current_state->scroll_offset, self->current_state->scroll_target, max_scroll,
                              LIST_UNIFORM_SCROLL_SPEED, self->ui_ctx->delta_time);
@@ -136,9 +136,9 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
     scroll_visible_range(self->current_state->scroll_offset, self->viewport_height, item_height + gap, total_count,
                          LIST_UNIFORM_VISIBLE_BUFFER, &self->visible_start, &self->visible_end);
 
-    FlVec2 scroll_pos = { 0, -self->current_state->scroll_offset };
-
     f32 item_with_gap = item_height + gap;
+    f64 first_item_top = (f64)self->visible_start * (f64)item_with_gap;
+    FlVec2 scroll_pos = { 0, (f32)(first_item_top - self->current_state->scroll_offset) };
 
     FlLayoutId layout_id = { .name = id, .id = 0 };
     self->current_layout_id = ui_layout_id_to_clay_id(layout_id);
@@ -152,11 +152,6 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
         .child_gap = gap,
         .clip = { .vertical = true, .manual_scroll = true, .scroll_pos = scroll_pos },
     });
-
-    if (self->visible_start > 0) {
-        f32 spacer_height = (f32)self->visible_start * item_with_gap - gap;
-        ui_spacer(spacer_height);
-    }
 
     return (FlListUniformRange) {
         .start = self->visible_start,
@@ -194,9 +189,9 @@ void list_uniform_end(FlListUniformContext* self) {
     }
 }
 
-f32 list_uniform_scroll_offset(FlListUniformContext* self, FlString id) {
+f64 list_uniform_scroll_offset(FlListUniformContext* self, FlString id) {
     ListUniformState* state = hashmap_string_get(&self->states, id);
-    return state != nullptr ? state->scroll_offset : 0.0f;
+    return state != nullptr ? state->scroll_offset : 0.0;
 }
 
 void list_uniform_nudge_scroll(FlListUniformContext* self, FlString id, f32 delta_px, f32 item_stride,
@@ -207,8 +202,8 @@ void list_uniform_nudge_scroll(FlListUniformContext* self, FlString id, f32 delt
     }
     // Same extent policy as list_content_height (every row plus its gap == count * stride), clamped against the
     // measured viewport so a fully-scrolled list can't run past its end.
-    f32 max_scroll = scroll_max((f32)total_count * item_stride, state->container_height);
-    f32 next = clamp(state->scroll_offset + delta_px, 0.0f, max_scroll);
+    f64 max_scroll = scroll_max((f64)total_count * (f64)item_stride, state->container_height);
+    f64 next = clamp(state->scroll_offset + (f64)delta_px, 0.0, max_scroll);
     state->scroll_offset = next;
     state->scroll_target = next; // sticky: begin's smooth-step leaves an offset already at its target untouched
 }

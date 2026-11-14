@@ -8,6 +8,7 @@
 // The List keeps only the gesture anchor across frames; the resolved selection lives only here. The set
 // interprets the u64 as pure identity, never as data.
 
+#include "list_rows.h"
 #include <core/types.h>
 #include <flowi/ui/selection.h>
 #include <flowi/ui/ui_selection.h> // @generated FlSelectionSet (api_gen)
@@ -51,6 +52,8 @@ void selection_set_set_all(FlSelectionSet* set, const u64* ids, u64 count);
 
 void selection_set_apply(FlSelectionSet* set, const FlSelectionRequest* reqs, u64 req_count, const u64* ordered_ids,
                          u64 id_count);
+
+void selection_set_apply_rows(FlSelectionSet* set, const FlSelectionRequest* reqs, u64 req_count, const ListRows* rows);
 
 // Number of selected ids.
 u64 selection_set_len(const FlSelectionSet* set);

@@ -141,6 +141,16 @@ UTEST(selection, apply_range_deselect_and_single_endpoint) {
     selection_set_destroy(s);
 }
 
+UTEST(selection, apply_range_accepts_id_zero) {
+    FlSelectionSet* s = selection_set_create(0);
+    const u64 model[] = { 0, 1, 2, 3 };
+    FlSelectionRequest r = { .kind = FlSelectionRequestKind_SetRange, .id = 0, .to_id = 2, .selected = true };
+    selection_set_apply(s, &r, 1, model, 4);
+    EXPECT_EQ((int)selection_set_len(s), 3);
+    EXPECT_TRUE(selection_set_contains(s, 0));
+    selection_set_destroy(s);
+}
+
 #ifdef NDEBUG
 UTEST(selection, apply_range_missing_endpoint_is_noop_in_release) {
     // A missing endpoint is an app bug. Debug builds assert, and release builds apply nothing.
@@ -152,6 +162,27 @@ UTEST(selection, apply_range_missing_endpoint_is_noop_in_release) {
     selection_set_destroy(s);
 }
 #endif
+
+UTEST(selection, apply_rows_reads_ids_from_item_descriptors) {
+    FlSelectionSet* s = selection_set_create(0);
+    const FlListItem items[] = { { .id = 10 }, { .id = 20 }, { .id = 30 }, { .id = 40 } };
+    ListRows rows = list_rows_from_items(items, 4);
+
+    FlSelectionRequest range = { .kind = FlSelectionRequestKind_SetRange, .id = 30, .to_id = 20, .selected = true };
+    selection_set_apply_rows(s, &range, 1, &rows);
+    EXPECT_EQ((int)selection_set_len(s), 2);
+    EXPECT_TRUE(selection_set_contains(s, 20));
+    EXPECT_TRUE(selection_set_contains(s, 30));
+
+    FlSelectionRequest all = { .kind = FlSelectionRequestKind_SetAll, .selected = true };
+    selection_set_apply_rows(s, &all, 1, &rows);
+    EXPECT_EQ((int)selection_set_len(s), 4);
+
+    ListRows none = list_rows_from_items(nullptr, 4);
+    selection_set_apply_rows(s, &all, 1, &none);
+    EXPECT_EQ((int)selection_set_len(s), 0);
+    selection_set_destroy(s);
+}
 
 // The scroll and virtualization math in ui/scroll_core.c, shared by ui_scroll, list_uniform and content_view.
 
@@ -220,8 +251,8 @@ UTEST(scroll_math, visible_range_virtualization_window) {
     // Scrolled to the top: the buffer cannot push the window below 0.
     scroll_visible_range(0.0f, viewport, stride, total, buffer, &start, &end);
     EXPECT_EQ(start, 0u);
-    // floor(500/50) + 1 + 2*2 = 10 + 1 + 4 = 15 items from index 0.
-    EXPECT_EQ(end, 15u);
+    // floor(500/50) + 1 + 2 = 13: the row at the viewport's bottom edge plus the trailing buffer.
+    EXPECT_EQ(end, 13u);
 
     // Scrolled into the middle: first visible = floor(1000/50) - 2 = 18.
     scroll_visible_range(1000.0f, viewport, stride, total, buffer, &start, &end);
@@ -231,6 +262,17 @@ UTEST(scroll_math, visible_range_virtualization_window) {
     scroll_visible_range(4800.0f, viewport, stride, total, buffer, &start, &end);
     EXPECT_EQ(end, total);
     EXPECT_LE(start, end);
+
+    scroll_visible_range(75.0f, 30.0f, stride, total, 0, &start, &end);
+    EXPECT_EQ(start, 1u);
+    EXPECT_EQ(end, 3u);
+
+    scroll_visible_range(-2000.0f, viewport, stride, total, 0, &start, &end);
+    EXPECT_EQ(start, 0u);
+    EXPECT_EQ(end, 0u);
+    scroll_visible_range(9000.0f, viewport, stride, total, 0, &start, &end);
+    EXPECT_EQ(start, total);
+    EXPECT_EQ(end, total);
 
     // A zero stride gives an empty window and does not divide by zero.
     scroll_visible_range(100.0f, viewport, 0.0f, total, buffer, &start, &end);
@@ -2387,15 +2429,21 @@ static void menu_idle_ticks(FlApp* app, MenuTestState* st, int n) {
     }
 }
 
+static FlString test_label_at(const void* source, u32 row) {
+    const FlString* labels = source;
+    return labels[row];
+}
+
 // The menu's type-ahead prefix holds at most UI_MENU_TYPEAHEAD_CAP bytes. Two rows that share their first 24
 // bytes both match a longer typed prefix, so the cursor row stays where it is.
 UTEST(ui_menu, type_ahead_prefix_cap) {
     const char* alphabet = "abcdefghijklmnopqrstuvwxyzab";
-    FlString labels[2]
+    const FlString labels[2]
         = { { .data = "abcdefghijklmnopqrstuvwxQQQQ", .length = 28 }, { .data = alphabet, .length = 28 } };
     TypeAheadState state = { 0 };
-    i32 idx = type_ahead_match(&state, labels, 2, 0, (FlString) { .data = alphabet, .length = 28 }, 1.0,
-                               UI_MENU_TYPEAHEAD_CAP);
+    type_ahead_feed(&state, (FlString) { .data = alphabet, .length = 28 }, 1.0, UI_MENU_TYPEAHEAD_CAP);
+    TypeAheadLabels rows = { .source = labels, .label_at = test_label_at, .count = 2 };
+    i32 idx = type_ahead_find(&state, rows, 0);
     ASSERT_EQ_MSG((int)idx, 0, "a prefix past the cap truncates to the cap and keeps the current row");
     ASSERT_EQ_MSG((int)state.len, UI_MENU_TYPEAHEAD_CAP, "prefix length is bounded by the menu cap");
 }

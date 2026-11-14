@@ -58,57 +58,68 @@ void selection_set_set_all(FlSelectionSet* set, const u64* ids, u64 count) {
     }
 }
 
-// Linear search for id in the ordered model; ranges are rare (one per shift-select), so no auxiliary index.
-static bool selection_find_pos(const u64* ordered_ids, u64 id_count, u64 id, u64* out_pos) {
-    for (u64 i = 0; i < id_count; i++) {
-        if (ordered_ids[i] == id) {
-            *out_pos = i;
-            return true;
-        }
+static void selection_select_all(FlSelectionSet* set, const ListRows* rows) {
+    selection_set_clear_all(set);
+    if (!list_rows_have_ids(rows)) {
+        return;
     }
-    return false;
+    for_count(i, rows->count) {
+        hashmap_insert(&set->map, rows->id_at(rows, i), (u8)1);
+    }
+}
+
+// Direction-agnostic: flips the inclusive span between the two endpoints.
+static void selection_set_range(FlSelectionSet* set, const ListRows* rows, FlSelectionRequest req) {
+    i32 from_pos = list_rows_row_of(rows, req.id);
+    i32 to_pos = list_rows_row_of(rows, req.to_id);
+    bool found = from_pos >= 0 && to_pos >= 0;
+    // A missing endpoint signals an app bug (the ordered list is the full model); apply nothing.
+    FL_ASSERT_DEBUG(found && "SetRange endpoint id absent from ordered_ids");
+    if (!found) {
+        return;
+    }
+    u32 lo = (u32)(from_pos < to_pos ? from_pos : to_pos);
+    u32 hi = (u32)(from_pos < to_pos ? to_pos : from_pos);
+    for (u32 i = lo; i <= hi; i++) {
+        selection_set_set(set, rows->id_at(rows, i), req.selected);
+    }
+}
+
+static void selection_apply_one(FlSelectionSet* set, const ListRows* rows, FlSelectionRequest req) {
+    switch (req.kind) {
+        case FlSelectionRequestKind_ClearAll:
+            selection_set_clear_all(set);
+            break;
+
+        case FlSelectionRequestKind_SetAll:
+            if (req.selected) {
+                selection_select_all(set, rows);
+            } else {
+                selection_set_clear_all(set);
+            }
+            break;
+
+        case FlSelectionRequestKind_SetOne:
+            selection_set_set(set, req.id, req.selected);
+            break;
+
+        case FlSelectionRequestKind_SetRange:
+            selection_set_range(set, rows, req);
+            break;
+    }
+}
+
+void selection_set_apply_rows(FlSelectionSet* set, const FlSelectionRequest* reqs, u64 req_count,
+                              const ListRows* rows) {
+    for_count(r, req_count) {
+        selection_apply_one(set, rows, reqs[r]);
+    }
 }
 
 void selection_set_apply(FlSelectionSet* set, const FlSelectionRequest* reqs, u64 req_count, const u64* ordered_ids,
                          u64 id_count) {
-    for (u64 r = 0; r < req_count; r++) {
-        FlSelectionRequest req = reqs[r];
-        switch (req.kind) {
-            case FlSelectionRequestKind_ClearAll:
-                selection_set_clear_all(set);
-                break;
-
-            case FlSelectionRequestKind_SetAll:
-                if (req.selected) {
-                    selection_set_set_all(set, ordered_ids, id_count);
-                } else {
-                    selection_set_clear_all(set);
-                }
-                break;
-
-            case FlSelectionRequestKind_SetOne:
-                selection_set_set(set, req.id, req.selected);
-                break;
-
-            case FlSelectionRequestKind_SetRange: {
-                u64 from_pos, to_pos;
-                bool found = selection_find_pos(ordered_ids, id_count, req.id, &from_pos)
-                             && selection_find_pos(ordered_ids, id_count, req.to_id, &to_pos);
-                if (found) {
-                    // Direction-agnostic: flip the inclusive span between the two endpoints.
-                    u64 lo = from_pos < to_pos ? from_pos : to_pos;
-                    u64 hi = from_pos < to_pos ? to_pos : from_pos;
-                    for (u64 i = lo; i <= hi; i++) {
-                        selection_set_set(set, ordered_ids[i], req.selected);
-                    }
-                } else {
-                    // A missing endpoint signals an app bug (the ordered list is the full model); apply nothing.
-                    FL_ASSERT_DEBUG(found && "SetRange endpoint id absent from ordered_ids");
-                }
-                break;
-            }
-        }
-    }
+    ListRows rows = list_rows_from_ids(ordered_ids, nullptr, (u32)id_count);
+    selection_set_apply_rows(set, reqs, req_count, &rows);
 }
 
 u64 selection_set_len(const FlSelectionSet* set) {
