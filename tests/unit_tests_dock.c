@@ -804,53 +804,52 @@ UTEST(dock_drag, hit_test_resolution_matrix) {
     FlDockRequest req;
 
     // Corner diagonals over the whole tile, probed at 20% and 70% of the width.
-    FlDockDropZone z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 160.0f, 300.0f }, 0, 0, &req);
+    FlDockDropZone z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 160.0f, 300.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Left, "20% across the tile is the left quadrant");
     ASSERT_EQ((int)req.kind, (int)FlDockRequest_Split);
     ASSERT_EQ((int)req.side, (int)FlDockSide_Left);
     ASSERT_EQ((int)req.target_node, 7);
     ASSERT_EQ((int)req.panel, 0); // the hit test is geometry only, and the caller fills in the dragged panel
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 640.0f, 300.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 640.0f, 300.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Right, "80% across the tile is the right quadrant");
     ASSERT_EQ((int)req.side, (int)FlDockSide_Right);
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 150.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 150.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Top, "above the centre box, below the strip");
     ASSERT_EQ((int)req.side, (int)FlDockSide_Top);
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 500.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 500.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_Bottom);
     ASSERT_EQ((int)req.side, (int)FlDockSide_Bottom);
 
     // The strip and the centre box, and nothing else, tab the panel in.
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 10.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 10.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_Center);
     ASSERT_EQ((int)req.kind, (int)FlDockRequest_Tab);
     ASSERT_EQ((int)req.target_node, 7);
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 27.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 27.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Top, "one px past the 26px strip it splits again");
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 300.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 300.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "the middle of the tile tabs in");
     ASSERT_EQ((int)req.kind, (int)FlDockRequest_Tab);
     ASSERT_EQ_MSG((int)req.to_index, (int)FL_DOCK_TAB_INDEX_END, "a centre drop lands at the end of the strip");
 
     // The centre box is 40% of the tile on each axis, so it scales with the tile.
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 181.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 181.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "the box opens 30% down the tile");
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 179.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 179.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_Top);
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 241.0f, 300.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 241.0f, 300.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_Center);
-    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 239.0f, 300.0f }, 0, 0, &req),
-              (int)FlDockDropZone_Left);
+    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 239.0f, 300.0f }, &req), (int)FlDockDropZone_Left);
 
     FlDockDropNode shortish[] = { { .node = 9, .rect = { 0.0f, 0.0f, 400.0f, 200.0f }, .is_leaf = true } };
-    z = hit_test_drop_zones(shortish, 1, (FlVec2) { 200.0f, 100.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(shortish, 1, (FlVec2) { 200.0f, 100.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "a 200px tile has a 80px tall centre box");
-    z = hit_test_drop_zones(shortish, 1, (FlVec2) { 200.0f, 55.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(shortish, 1, (FlVec2) { 200.0f, 55.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_Top);
 }
 
@@ -858,7 +857,7 @@ UTEST(dock_drag, hit_test_resolution_matrix) {
 UTEST(dock_drag, hit_test_precedence) {
     FlDockRequest req;
 
-    FlDockDropZone z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 5.0f, 10.0f }, 0, 0, &req);
+    FlDockDropZone z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 5.0f, 10.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "inside the outer band but on the strip: the strip wins");
     ASSERT_EQ((int)req.kind, (int)FlDockRequest_Tab);
 
@@ -866,26 +865,26 @@ UTEST(dock_drag, hit_test_precedence) {
     FlDockDropNode narrow[] = {
         { .node = 4, .rect = { 0.0f, 0.0f, 300.0f, 60.0f }, .is_leaf = true, .is_root = true },
     };
-    z = hit_test_drop_zones(narrow, 1, (FlVec2) { 150.0f, 40.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(narrow, 1, (FlVec2) { 150.0f, 40.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "inside the outer band but in the centre box: the centre wins");
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 5.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 5.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "the workspace's top edge is a leaf's strip, not OuterTop");
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 5.0f, 300.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 5.0f, 300.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_OuterLeft, "below the band the border docks outer, not split-left");
     ASSERT_EQ((int)req.kind, (int)FlDockRequest_Outer);
     ASSERT_EQ((int)req.side, (int)FlDockSide_Left);
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 795.0f, 300.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 795.0f, 300.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_OuterRight);
     ASSERT_EQ((int)req.side, (int)FlDockSide_Right);
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 590.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 590.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_OuterBottom);
     ASSERT_EQ((int)req.side, (int)FlDockSide_Bottom);
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 30.0f, 300.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 30.0f, 300.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Left, "one px deeper than the 24px band is the left quadrant again");
     ASSERT_EQ((int)req.kind, (int)FlDockRequest_Split);
 }
@@ -901,27 +900,27 @@ UTEST(dock_drag, hit_test_nearest_leaf) {
     FlDockRequest req;
 
     // Mid-gutter, 8px from the left tile and 12px from the right one.
-    FlDockDropZone z = hit_test_drop_zones(nodes, 3, (FlVec2) { 398.0f, 300.0f }, 0, 0, &req);
+    FlDockDropZone z = hit_test_drop_zones(nodes, 3, (FlVec2) { 398.0f, 300.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Right, "the gutter resolves against the nearer tile");
     ASSERT_EQ_MSG((int)req.target_node, 2, "the nearer leaf, never the split root");
 
-    z = hit_test_drop_zones(nodes, 3, (FlVec2) { 402.0f, 300.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(nodes, 3, (FlVec2) { 402.0f, 300.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_Left);
     ASSERT_EQ((int)req.target_node, 3);
 
     // A leaf's own centre box, over the right tile.
-    z = hit_test_drop_zones(nodes, 3, (FlVec2) { 600.0f, 300.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(nodes, 3, (FlVec2) { 600.0f, 300.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_Center);
     ASSERT_EQ((int)req.kind, (int)FlDockRequest_Tab);
     ASSERT_EQ((int)req.target_node, 3);
 
     // Only a cursor outside the workspace misses, and out_req stays zeroed.
-    z = hit_test_drop_zones(nodes, 3, (FlVec2) { -50.0f, -50.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(nodes, 3, (FlVec2) { -50.0f, -50.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_None);
     ASSERT_EQ((int)req.kind, 0);
     ASSERT_EQ((int)req.target_node, 0);
 
-    z = hit_test_drop_zones(nodes, 3, (FlVec2) { 900.0f, 300.0f }, 0, 0, &req);
+    z = hit_test_drop_zones(nodes, 3, (FlVec2) { 900.0f, 300.0f }, &req);
     ASSERT_EQ((int)z, (int)FlDockDropZone_None);
 }
 
@@ -932,17 +931,15 @@ UTEST(dock_drag, hit_test_tab_insertion_index) {
     u32 previous = 0;
 
     for (f32 x = 0.0f; x < 800.0f; x += 8.0f) {
-        FlDockDropZone z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { x, 10.0f }, 0, 0, &req);
+        FlDockDropZone z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { x, 10.0f }, &req);
         ASSERT_EQ((int)z, (int)FlDockDropZone_Center);
         ASSERT_TRUE_MSG(req.to_index >= previous, "the index never walks backwards as the cursor moves right");
         previous = req.to_index;
     }
 
-    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 10.0f, 10.0f }, 0, 0, &req),
-              (int)FlDockDropZone_Center);
+    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 10.0f, 10.0f }, &req), (int)FlDockDropZone_Center);
     ASSERT_EQ_MSG((int)req.to_index, 0, "the first slot is the front of the strip");
-    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 170.0f, 10.0f }, 0, 0, &req),
-              (int)FlDockDropZone_Center);
+    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 170.0f, 10.0f }, &req), (int)FlDockDropZone_Center);
     ASSERT_EQ((int)req.to_index, 3);
 }
 
@@ -958,28 +955,31 @@ UTEST(dock_drag, hit_test_family_filter) {
         { 400.0f, 500.0f }, // bottom quadrant
         { 5.0f, 300.0f },   // outer band
     };
-    FlDockRequest req;
-
-    // A workspace filtering for FAMILY_EFFECT rejects a FAMILY_OTHER panel. No zone resolves anywhere and out_req
-    // stays zeroed, the same result as leaving the workspace, so the view shows no preview.
+    // A workspace filtering for FAMILY_EFFECT rejects a FAMILY_OTHER panel. No zone resolves anywhere and the
+    // request stays empty, the same result as leaving the workspace, so the view shows no preview.
+    FlDockDrag drag;
     for (u32 i = 0; i < sizeof_array(probes); ++i) {
-        FlDockDropZone z = hit_test_drop_zones(k_one_leaf_ws, 1, probes[i], FAMILY_OTHER, FAMILY_EFFECT, &req);
+        drag = (FlDockDrag) { .base_count = 1, .gate = { FAMILY_OTHER, FAMILY_EFFECT }, .base = { k_one_leaf_ws[0] } };
+        FlDockDropZone z = dock_drag_resolve(&drag, probes[i]);
         ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_None, "a rejected family must offer no zone");
-        ASSERT_EQ((int)req.kind, 0);
-        ASSERT_EQ((int)req.target_node, 0);
+        ASSERT_EQ((int)drag.request.kind, 0);
+        ASSERT_EQ((int)drag.request.target_node, 0);
     }
 
     FlVec2 band = { 400.0f, 10.0f };
-    FlDockDropZone z = hit_test_drop_zones(k_one_leaf_ws, 1, band, FAMILY_EFFECT, FAMILY_EFFECT, &req);
+    drag = (FlDockDrag) { .base_count = 1, .gate = { FAMILY_EFFECT, FAMILY_EFFECT }, .base = { k_one_leaf_ws[0] } };
+    FlDockDropZone z = dock_drag_resolve(&drag, band);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "matching family docks normally");
-    ASSERT_EQ((int)req.kind, (int)FlDockRequest_Tab);
-    ASSERT_EQ((int)req.target_node, 7);
+    ASSERT_EQ((int)drag.request.kind, (int)FlDockRequest_Tab);
+    ASSERT_EQ((int)drag.request.target_node, 7);
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 640.0f, 300.0f }, 0, 0, &req);
+    drag = (FlDockDrag) { .base_count = 1, .base = { k_one_leaf_ws[0] } };
+    z = dock_drag_resolve(&drag, (FlVec2) { 640.0f, 300.0f });
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Right, "the default accept-anywhere case still resolves");
-    ASSERT_EQ((int)req.kind, (int)FlDockRequest_Split);
+    ASSERT_EQ((int)drag.request.kind, (int)FlDockRequest_Split);
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, band, FAMILY_EFFECT, 0, &req);
+    drag = (FlDockDrag) { .base_count = 1, .gate = { FAMILY_EFFECT, 0 }, .base = { k_one_leaf_ws[0] } };
+    z = dock_drag_resolve(&drag, band);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "an unfiltered workspace accepts any family");
 }
 
@@ -1033,15 +1033,14 @@ UTEST(dock_drag, resolve_tab_region_beats_stickiness) {
 UTEST(dock_drag, hit_test_carries_the_gap_ratio) {
     FlDockRequest req;
 
-    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 160.0f, 300.0f }, 0, 0, &req),
-              (int)FlDockDropZone_Left);
+    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 160.0f, 300.0f }, &req), (int)FlDockDropZone_Left);
     ASSERT_NEAR(req.ratio, FL_DOCK_GAP_RATIO, 1e-6f);
 
-    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 5.0f, 300.0f }, 0, 0, &req),
+    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 5.0f, 300.0f }, &req),
               (int)FlDockDropZone_OuterLeft);
     ASSERT_NEAR(req.ratio, FL_DOCK_GAP_RATIO, 1e-6f);
 
-    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 300.0f }, 0, 0, &req),
+    ASSERT_EQ((int)hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 300.0f }, &req),
               (int)FlDockDropZone_Center);
     ASSERT_NEAR_MSG(req.ratio, 0.0f, 1e-6f, "a tab creates no split, so it names no ratio");
 }
@@ -1093,7 +1092,7 @@ UTEST(dock_drag, within_leaf_drag_reorders) {
     ASSERT_TRUE(dock_tab_into(committed, root, 30));
 
     FlDockDrag drag = { 0 };
-    dock_drag_begin_undock(&drag, committed, 30, 0, 0);
+    dock_drag_begin_undock(&drag, committed, 30, (FlDockFamilyGate) { 0 });
     ASSERT_TRUE(dock_tree_panel_is_floating(committed, 30));
 
     drag.zone = FlDockDropZone_Center;
@@ -1111,7 +1110,7 @@ UTEST(dock_drag, within_leaf_drag_reorders) {
 
     // A slot past the end of the strip clamps to the back.
     FlDockDrag again = { 0 };
-    dock_drag_begin_undock(&again, committed, 30, 0, 0);
+    dock_drag_begin_undock(&again, committed, 30, (FlDockFamilyGate) { 0 });
     again.zone = FlDockDropZone_Center;
     again.request = (FlDockRequest) { .kind = FlDockRequest_Tab, .panel = 30, .target_node = root, .to_index = 99 };
     ASSERT_TRUE(dock_drag_end(&again, committed));
@@ -1205,7 +1204,7 @@ UTEST(dock_drag, undock_then_redock_conserves) {
     ASSERT_EQ((int)before, 2);
 
     FlDockDrag drag = { 0 };
-    dock_drag_begin_undock(&drag, committed, 10, 0, 0);
+    dock_drag_begin_undock(&drag, committed, 10, (FlDockFamilyGate) { 0 });
     ASSERT_TRUE_MSG(dock_drag_active(&drag), "the undock grab arms a drag");
     ASSERT_TRUE_MSG(dock_tree_panel_is_floating(committed, 10), "the panel is now internal-floating");
     ASSERT_TRUE_MSG(dock_tree_find_leaf_with_panel(committed, 10) == nullptr, "10 is no longer in a leaf");

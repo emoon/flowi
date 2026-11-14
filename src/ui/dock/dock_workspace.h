@@ -49,7 +49,7 @@ typedef struct FlDockWorkspace {
     u32 decl_cap;
     // Persisted attributes. The host size is persisted; the OS window position never is (Wayland cannot restore it).
     u64 id;            // the host this workspace belongs to, so a multi-window layout reconciles on load; 0 = single
-    u32 family_filter; // accepted dock family, 0 = any; enforced in hit_test_drop_zones (dock_drag.h)
+    u32 family_filter; // accepted dock family, 0 = any; enforced in dock_drag_resolve (dock_drag.h)
     f32 host_width;    // logical px; 0,0 = unknown
     f32 host_height;
     // pending_grab is written during the emit walk (a tab pulled out of its header) and consumed at the next

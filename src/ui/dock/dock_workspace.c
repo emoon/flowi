@@ -501,7 +501,8 @@ static void activate_panel_under_press(FlDockWorkspace* ws) {
 static void begin_pending_undock(FlDockWorkspace* ws, FlDockPanelId grab, bool held) {
     bool armed = grab != 0 && held && !ws->grab_blocked && !dock_drag_active(&ws->drag);
     if (armed && drag_past_arm_threshold()) {
-        dock_drag_begin_undock(&ws->drag, ws->tree, grab, dock_workspace_panel_family(ws, grab), ws->family_filter);
+        FlDockFamilyGate gate = { dock_workspace_panel_family(ws, grab), ws->family_filter };
+        dock_drag_begin_undock(&ws->drag, ws->tree, grab, gate);
     }
 }
 
