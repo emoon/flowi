@@ -2,7 +2,7 @@
 
 // GPU backend: glyph-atlas bookkeeping: (font, size, glyph) -> R8 atlas cell over the skyline packer.
 //
-// Append-only like the packer underneath: a glyph is placed once per (font, quantized size, glyph id) and never
+// Append-only like the packer underneath: a glyph is placed once per (font, quantized size, glyph index) and never
 // released. There is no per-glyph eviction; re-initializing this module regenerates the atlas wholesale.
 
 #include "gpu_atlas_pack.h"
@@ -22,7 +22,7 @@ struct FlArena;
 typedef struct GpuGlyphEntry {
     FlFontId font;
     u16 size; // quarter-px fixed-point size key the outline was fetched at (light hinting is size-dependent)
-    u32 glyph_id;
+    u32 glyph_index;
     GpuAtlasCell cell; // full padded extent in the atlas; w == h == 0 for empty glyphs (e.g. space)
     // Float pixels relative to the pen position on the baseline (y-up, FreeType bearing convention).
     f32 left;
@@ -46,12 +46,12 @@ void gpu_glyph_atlas_init(GpuGlyphAtlas* atlas, struct FlArena* arena);
 // Place a glyph whose padded raster extent is w x h texels; 0 x 0 registers a metrics-only entry (an empty
 // glyph occupies no atlas space). Returns nullptr when the key is already placed, the entry table is full, or
 // the packer refuses (the atlas is full). The returned entry is valid until the next place call.
-const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id, u32 w, u32 h,
+const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_index, u32 w, u32 h,
                                            f32 left, f32 top, f32 advance);
 
 // Resolve a key to its placement. Returns nullptr when nothing was prepared for it. Valid until the next place
 // call.
-const GpuGlyphEntry* gpu_glyph_atlas_find(const GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id);
+const GpuGlyphEntry* gpu_glyph_atlas_find(const GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_index);
 
 // Record that a placement overflowed the atlas, flagging a wholesale wipe for the next frame boundary.
 void gpu_glyph_atlas_on_overflow(GpuGlyphAtlas* atlas);

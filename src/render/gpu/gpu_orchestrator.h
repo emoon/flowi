@@ -34,7 +34,8 @@ typedef struct GpuRenderOps {
     // cache, and the seam that rasterizes one outline into the coverage atlas. get_font_cache returns nullptr when
     // no cache is bound (a host driving prepare_glyph itself), which short-circuits the walk.
     struct FlFontCache* (*get_font_cache)(void* backend);
-    void (*prepare_glyph)(void* backend, FlFontId font, u16 size, u32 glyph_id, const struct FlGlyphOutline* outline);
+    void (*prepare_glyph)(void* backend, FlFontId font, u16 size, u32 glyph_index,
+                          const struct FlGlyphOutline* outline);
 
     // Translate the neutral IR into the backend's draw-command / AABB / clip arrays (gpu_ir_to_draw_cmds). Each
     // backend passes its own atlas/slot/SVG bookkeeping and logs its own overflow.

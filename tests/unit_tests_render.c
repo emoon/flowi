@@ -1305,7 +1305,7 @@ typedef struct OrchProbe {
     struct {
         FlFontId font;
         u16 size;
-        u32 glyph_id;
+        u32 glyph_index;
     } glyphs[16];
     u32 glyph_count;
 } OrchProbe;
@@ -1324,13 +1324,14 @@ static struct FlFontCache* orch_get_font_cache(void* b) {
     return ((OrchProbe*)b)->font_cache;
 }
 
-static void orch_prepare_glyph(void* b, FlFontId font, u16 size, u32 glyph_id, const struct FlGlyphOutline* outline) {
+static void orch_prepare_glyph(void* b, FlFontId font, u16 size, u32 glyph_index,
+                               const struct FlGlyphOutline* outline) {
     OrchProbe* p = b;
     (void)outline;
     if (p->glyph_count < 16) {
         p->glyphs[p->glyph_count].font = font;
         p->glyphs[p->glyph_count].size = size;
-        p->glyphs[p->glyph_count].glyph_id = glyph_id;
+        p->glyphs[p->glyph_count].glyph_index = glyph_index;
         p->glyph_count++;
     }
 }
@@ -1385,7 +1386,7 @@ static const GpuRenderOps k_orch_probe_ops = {
     .end_encoder = orch_end_encoder,
 };
 
-static FlRenderFrame orch_make_text_frame(u8* buf, FlFontId font, u16 size, const u32* codepoints, u32 n) {
+static FlRenderFrame orch_make_text_frame(u8* buf, FlFontId font, u16 size, const u32* glyph_indices, u32 n) {
     FlCmdHeader* hdr = (FlCmdHeader*)buf;
     FlCmdTextRun* run = (FlCmdTextRun*)(hdr + 1);
     FlGlyph* glyphs = (FlGlyph*)(run + 1);
@@ -1397,9 +1398,7 @@ static FlRenderFrame orch_make_text_frame(u8* buf, FlFontId font, u16 size, cons
     run->glyph_count = n;
     run->scale = 1.0f;
     for (u32 i = 0; i < n; i++) {
-        glyphs[i].glyph_id = codepoints[i];
-        glyphs[i].x = 0.0f;
-        glyphs[i].y = 0.0f;
+        glyphs[i] = (FlGlyph) { .glyph_index = glyph_indices[i] };
     }
     FlRenderFrame frame = { 0 };
     frame.commands = buf;
@@ -1417,8 +1416,8 @@ UTEST(gpu_orchestrator, canonical_sequence_and_null_font_cache_short_circuit) {
     probe.translate_result = (GpuDrawList) { .count = 7, .clip_count = 1 };
 
     u8 buf[256];
-    const u32 codepoints[] = { 'A', 'o' };
-    FlRenderFrame frame = orch_make_text_frame(buf, 1, 32, codepoints, 2);
+    const u32 glyph_indices[] = { 1, 2 };
+    FlRenderFrame frame = orch_make_text_frame(buf, 1, 32, glyph_indices, 2);
 
     gpu_orchestrate_frame(&k_orch_probe_ops, &probe, nullptr, &frame, 128, 64, &glyph_atlas, frame_arena, s_arena);
 
@@ -1450,20 +1449,87 @@ UTEST(gpu_orchestrator, text_run_realizes_each_glyph_through_op) {
     probe.translate_result = (GpuDrawList) { 0 };
 
     u8 buf[256];
-    const u32 codepoints[] = { 'A', 'o' };
-    FlRenderFrame frame = orch_make_text_frame(buf, font, size_q4, codepoints, 2);
+    const u32 glyph_indices[] = {
+        font_cache_get_glyph_index(cache, font, 'A'),
+        font_cache_get_glyph_index(cache, font, 'o'),
+    };
+    ASSERT_TRUE_MSG(glyph_indices[0] != 0 && glyph_indices[1] != 0, "the test font maps 'A' and 'o'");
+    FlRenderFrame frame = orch_make_text_frame(buf, font, size_q4, glyph_indices, 2);
 
     gpu_orchestrate_frame(&k_orch_probe_ops, &probe, nullptr, &frame, 128, 64, &glyph_atlas, frame_arena, s_arena);
 
     ASSERT_EQ_MSG((int)probe.glyph_count, 2, "both mapped glyphs realize through the prepare_glyph op");
-    ASSERT_EQ_MSG((int)probe.glyphs[0].glyph_id, (int)'A', "first glyph keeps its codepoint key");
-    ASSERT_EQ_MSG((int)probe.glyphs[1].glyph_id, (int)'o', "second glyph keeps its codepoint key");
+    ASSERT_EQ_MSG((int)probe.glyphs[0].glyph_index, (int)glyph_indices[0], "first glyph keeps its glyph index key");
+    ASSERT_EQ_MSG((int)probe.glyphs[1].glyph_index, (int)glyph_indices[1], "second glyph keeps its glyph index key");
     for (u32 i = 0; i < probe.glyph_count; i++) {
         ASSERT_EQ_MSG((int)probe.glyphs[i].font, (int)font, "the run's font id is passed through");
         ASSERT_EQ_MSG((int)probe.glyphs[i].size, (int)size_q4, "the run's raster size key is passed through");
     }
 
     fl_arena_destroy(frame_arena);
+}
+
+UTEST(gpu_orchestrator, fallback_face_run_is_keyed_by_its_own_font_and_index) {
+    GpuGlyphAtlas glyph_atlas = { 0 };
+    gpu_glyph_atlas_init(&glyph_atlas, s_arena);
+    FlArena* frame_arena = arena_new();
+
+    FlFontCache* cache = font_cache_new(s_arena);
+    const u16 size_q4 = font_cache_whole_px_to_q4(32);
+    FlFontId font = font_cache_load_font_memory(cache, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
+    FlFontId fallback = font_cache_load_font_memory(cache, k_fallback_test_ttf, k_fallback_test_ttf_size, 32);
+    ASSERT_TRUE_MSG(font != FONT_ID_INVALID && fallback != FONT_ID_INVALID, "the embedded test fonts load");
+    font_cache_set_fallback_font(cache, fallback);
+
+    OrchProbe probe = { 0 };
+    probe.font_cache = cache;
+
+    u8 buf[256];
+    const u32 glyph_indices[] = { font_cache_get_glyph_index(cache, fallback, 'B') };
+    ASSERT_TRUE_MSG(glyph_indices[0] != 0, "the fallback font maps 'B'");
+    FlRenderFrame frame = orch_make_text_frame(buf, fallback, size_q4, glyph_indices, 1);
+
+    gpu_orchestrate_frame(&k_orch_probe_ops, &probe, nullptr, &frame, 128, 64, &glyph_atlas, frame_arena, s_arena);
+
+    ASSERT_EQ_MSG((int)probe.glyph_count, 1, "the fallback-face run realizes its glyph");
+    ASSERT_EQ_MSG((int)probe.glyphs[0].font, (int)fallback, "the key is the run's font");
+    ASSERT_EQ_MSG((int)probe.glyphs[0].glyph_index, (int)glyph_indices[0], "the key is the run's glyph index");
+
+    fl_arena_destroy(frame_arena);
+    font_cache_destroy(cache);
+}
+
+UTEST(gpu_orchestrator, builtin_font_run_draws_fallback_outlines) {
+    GpuGlyphAtlas glyph_atlas = { 0 };
+    gpu_glyph_atlas_init(&glyph_atlas, s_arena);
+    FlArena* frame_arena = arena_new();
+
+    FlFontCache* cache = font_cache_new(s_arena);
+    const u16 size_q4 = font_cache_whole_px_to_q4(32);
+    FlFontId builtin = font_cache_load_default_font(cache, 1);
+    ASSERT_TRUE_MSG(builtin != FONT_ID_INVALID, "the built-in font loads");
+
+    OrchProbe probe = { 0 };
+    probe.font_cache = cache;
+
+    u8 buf[256];
+    const u32 glyph_indices[] = { 'B' };
+    FlRenderFrame frame = orch_make_text_frame(buf, builtin, size_q4, glyph_indices, 1);
+
+    gpu_orchestrate_frame(&k_orch_probe_ops, &probe, nullptr, &frame, 128, 64, &glyph_atlas, frame_arena, s_arena);
+    ASSERT_EQ_MSG((int)probe.glyph_count, 0, "with no fallback font a built-in run realizes nothing");
+
+    FlFontId fallback = font_cache_load_font_memory(cache, k_fallback_test_ttf, k_fallback_test_ttf_size, 32);
+    ASSERT_TRUE_MSG(fallback != FONT_ID_INVALID, "the fallback font loads");
+    font_cache_set_fallback_font(cache, fallback);
+
+    gpu_orchestrate_frame(&k_orch_probe_ops, &probe, nullptr, &frame, 128, 64, &glyph_atlas, frame_arena, s_arena);
+    ASSERT_EQ_MSG((int)probe.glyph_count, 1, "the fallback face supplies the outline");
+    ASSERT_EQ_MSG((int)probe.glyphs[0].font, (int)builtin, "the key keeps the run's font");
+    ASSERT_EQ_MSG((int)probe.glyphs[0].glyph_index, (int)'B', "the key keeps the run's glyph index");
+
+    fl_arena_destroy(frame_arena);
+    font_cache_destroy(cache);
 }
 
 UTEST(vector_image, svg_quantize_ladder) {

@@ -149,7 +149,7 @@ id<MTLBuffer> metal_upload_ssbo(id<MTLDevice> device, const void* data, NSUInteg
 
 bool metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
                          FlArena* scratch, const FlImageLoadRequest* request);
-void metal_prepare_glyph(void* user_data, FlFontId font, uint16_t size, uint32_t glyph_id,
+void metal_prepare_glyph(void* user_data, FlFontId font, uint16_t size, uint32_t glyph_index,
                          const FlGlyphOutline* outline);
 void metal_prepare_vector(void* user_data, FlImageHandle handle, uint16_t size, const FlVectorImage* vector);
 

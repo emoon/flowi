@@ -87,7 +87,7 @@ bool gpu_debug_read_glyph_atlas(void* renderer_user_data, struct FlArena* arena,
 
 // The CPU-side placement for a prepared glyph (nullptr when nothing was prepared for the key). Valid until the
 // next prepare_glyph call.
-const GpuGlyphEntry* gpu_debug_find_glyph(void* renderer_user_data, FlFontId font, u16 size, u32 glyph_id);
+const GpuGlyphEntry* gpu_debug_find_glyph(void* renderer_user_data, FlFontId font, u16 size, u32 glyph_index);
 
 // SVG vector-icon atlas readback: the R8 coverage texels as one width * height byte buffer (row 0 = texel row 0),
 // plus the placement lookup. Texels outside prepared cells are undefined, as in the glyph atlas above.

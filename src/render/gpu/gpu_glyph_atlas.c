@@ -21,29 +21,29 @@ void gpu_glyph_atlas_wipe_if_needed(GpuGlyphAtlas* atlas, struct FlArena* arena)
     }
 }
 
-static GpuGlyphEntry* find_entry(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id) {
+static GpuGlyphEntry* find_entry(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_index) {
     for (u32 i = 0; i < atlas->entry_count; i++) {
         GpuGlyphEntry* e = &atlas->entries[i];
-        if (e->font == font && e->size == size && e->glyph_id == glyph_id) {
+        if (e->font == font && e->size == size && e->glyph_index == glyph_index) {
             return e;
         }
     }
     return nullptr;
 }
 
-const GpuGlyphEntry* gpu_glyph_atlas_find(const GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id) {
-    return find_entry((GpuGlyphAtlas*)atlas, font, size, glyph_id);
+const GpuGlyphEntry* gpu_glyph_atlas_find(const GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_index) {
+    return find_entry((GpuGlyphAtlas*)atlas, font, size, glyph_index);
 }
 
-const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id, u32 w, u32 h,
+const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_index, u32 w, u32 h,
                                            f32 left, f32 top, f32 advance) {
     if (atlas->entry_count >= GPU_GLYPH_ATLAS_MAX_ENTRIES) {
         log_error("gpu backend: glyph atlas entry table full (%d)", GPU_GLYPH_ATLAS_MAX_ENTRIES);
         return nullptr;
     }
-    if (find_entry(atlas, font, size, glyph_id) != nullptr) {
+    if (find_entry(atlas, font, size, glyph_index) != nullptr) {
         log_error("gpu backend: glyph (font %u, size %u, glyph %u) placed twice", (unsigned)font, (unsigned)size,
-                  (unsigned)glyph_id);
+                  (unsigned)glyph_index);
         return nullptr;
     }
 
@@ -56,7 +56,7 @@ const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, 
     *entry = (GpuGlyphEntry) {
         .font = font,
         .size = size,
-        .glyph_id = glyph_id,
+        .glyph_index = glyph_index,
         .cell = cell,
         .left = left,
         .top = top,

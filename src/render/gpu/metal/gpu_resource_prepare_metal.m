@@ -130,11 +130,11 @@ bool metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const
 
 // Glyph preparation seam: place the glyph and rasterize its lowered outline into the R8 glyph atlas with one
 // compute dispatch on its own command buffer. Runs on the render thread.
-void metal_prepare_glyph(void* user_data, FlFontId font, uint16_t size, uint32_t glyph_id,
+void metal_prepare_glyph(void* user_data, FlFontId font, uint16_t size, uint32_t glyph_index,
                          const FlGlyphOutline* outline) {
     MetalShared* self = user_data;
     GpuGlyphRaster glyph;
-    if (!gpu_prepare_glyph_place(&self->cpu.glyph_atlas, self->frame_arena, font, size, glyph_id, outline, &glyph)) {
+    if (!gpu_prepare_glyph_place(&self->cpu.glyph_atlas, self->frame_arena, font, size, glyph_index, outline, &glyph)) {
         return;
     }
 
