@@ -1943,6 +1943,81 @@ UTEST(dock_workspace, a_dragged_panel_is_not_promoted) {
     ASSERT_EQ_MSG((int)dock_tree_collect_panels(src->tree, nullptr, 0), 2, "and the workspace still holds both");
 }
 
+// The drag previews a copy of the tree taken when it found its first target. A promote that pulled another panel
+// out meanwhile would leave that panel in the copy, drawn in two windows and offered as a drop target.
+UTEST(dock_workspace, a_promote_waits_for_the_drag_in_its_workspace_to_end) {
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+    DOCK_STUB_HOST(scope, fixture, dock_split(FlDockAxis_X, 0.5f, dock_leaf(101), dock_leaf(102)));
+    FlDockWorkspace* src = scope.tree.ws;
+
+    dock_drag_begin_undock(&src->drag, src->tree, 101, (FlDockFamilyGate) { 0 });
+    dock_promote_panel(102);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    int opened_mid_drag = s_stub_host.open_calls;
+    bool stayed_docked = dock_tree_find_leaf_with_panel(src->tree, 102) != nullptr;
+
+    dock_drag_cancel(&src->drag, src->tree);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+
+    ASSERT_EQ_MSG(opened_mid_drag, 0, "no window opens while the drag is in flight");
+    ASSERT_TRUE_MSG(stayed_docked, "and the panel stays where the drag's preview shows it");
+    ASSERT_EQ_MSG(s_stub_host.open_calls, 1, "the request is applied once the drag is over");
+    ASSERT_TRUE(dock_tree_find_leaf_with_panel(src->tree, 102) == nullptr);
+    ASSERT_TRUE(dock_tree_find_leaf_with_panel(s_stub_host.last_ws->tree, 102) != nullptr);
+}
+
+// A drag in another workspace holds nothing back here.
+UTEST(dock_workspace, a_drag_elsewhere_does_not_hold_a_promote) {
+    static int second_handle;
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+    DOCK_STUB_HOST(scope, fixture, dock_split(FlDockAxis_X, 0.5f, dock_leaf(101), dock_leaf(102)));
+    FlDockWorkspace* src = scope.tree.ws;
+
+    dock_promote_panel(101);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    ASSERT_EQ(s_stub_host.open_calls, 1);
+    FlDockWorkspace* promoted = s_stub_host.last_ws;
+
+    s_stub_host.handle = &second_handle;
+    dock_drag_begin_undock(&promoted->drag, promoted->tree, 101, (FlDockFamilyGate) { 0 });
+    dock_promote_panel(102);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    dock_drag_cancel(&promoted->drag, promoted->tree);
+
+    ASSERT_EQ_MSG(s_stub_host.open_calls, 2, "the main workspace has no drag, so its promote goes through");
+}
+
+// Closing a promoted window docks its panels into the source at once, because their workspace is going away. A
+// drag in flight there is cancelled first, as Escape would, so its preview never misses them.
+UTEST(dock_workspace, closing_a_promoted_window_cancels_a_drag_in_its_source) {
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+    DOCK_STUB_HOST(scope, fixture, dock_split(FlDockAxis_X, 0.5f, dock_leaf(101), dock_leaf(102)));
+    FlDockWorkspace* src = scope.tree.ws;
+
+    dock_promote_panel(101);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    ASSERT_EQ(s_stub_host.open_calls, 1);
+
+    dock_drag_begin_undock(&src->drag, src->tree, 102, (FlDockFamilyGate) { 0 });
+    fl_dock_notify_window_closed(&s_stub_host_handle);
+    bool drag_survived = dock_drag_active(&src->drag);
+    dock_drag_discard(&src->drag);
+
+    ASSERT_FALSE_MSG(drag_survived, "the drag ends when the tree changes under it");
+    ASSERT_TRUE_MSG(dock_tree_find_leaf_with_panel(src->tree, 102) != nullptr, "the dragged panel is docked again");
+    ASSERT_TRUE(dock_tree_find_leaf_with_panel(src->tree, 101) != nullptr);
+    ASSERT_EQ((int)dock_tree_collect_panels(src->tree, nullptr, 0), 2);
+    ASSERT_TRUE_MSG(src->grab_blocked, "the held button does not pick the tab straight back up");
+}
+
 // Closing a promoted window brings back everything docked in it, not only the panel it was opened for.
 UTEST(dock_workspace, closing_a_promoted_window_returns_every_panel_it_holds) {
     FlUiCtx* fixture = render_fixture_get();

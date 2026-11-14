@@ -13,7 +13,8 @@
 #define DOCK_PROMOTED_DEFAULT_H 320.0f
 
 // A deferred promote request: move panel out of src into a fresh second workspace, then have the host open a
-// window for it. Captured at dock_promote_panel, drained at the next dock_shared_flush_promotes.
+// window for it. Captured at dock_promote_panel, applied at the first dock_shared_flush_promotes that finds src
+// with no drag in flight.
 typedef struct DockPromoteRequest {
     FlDockWorkspace* src;
     FlDockPanelId panel;
@@ -209,15 +210,41 @@ static void apply_promote(FlDockShared* ds, const DockPromoteRequest* req) {
     ds->promotions[ds->promotion_count++] = (DockPromotion) { .host_window = host_window, .dst = dst, .src = req->src };
 }
 
+// A drag previews a copy of its workspace's tree, so a promote out of that workspace waits for the drag to end.
+static bool promote_is_held(const DockPromoteRequest* req) {
+    return dock_drag_active(&req->src->drag);
+}
+
+// The oldest request that can be applied now, or -1.
+static i32 next_ready_promote(const FlDockShared* ds) {
+    for (u32 i = 0; i < ds->promote_count; ++i) {
+        if (!promote_is_held(&ds->promote_queue[i])) {
+            return (i32)i;
+        }
+    }
+    return -1;
+}
+
+static DockPromoteRequest take_promote(FlDockShared* ds, u32 index) {
+    DockPromoteRequest taken = ds->promote_queue[index];
+    for (u32 j = index + 1; j < ds->promote_count; ++j) {
+        ds->promote_queue[j - 1] = ds->promote_queue[j];
+    }
+    ds->promote_count--;
+    return taken;
+}
+
+// Each request leaves the queue before it is applied, and the queue is read again for the next one. A host that
+// reports a window closed from inside its open callback can then drop queued requests without upsetting the loop.
 void dock_shared_flush_promotes(void) {
     FlDockShared* ds = dock_shared_get();
     if (ds == nullptr) {
         return;
     }
-    for (u32 i = 0; i < ds->promote_count; ++i) {
-        apply_promote(ds, &ds->promote_queue[i]);
+    for (i32 ready = next_ready_promote(ds); ready >= 0; ready = next_ready_promote(ds)) {
+        DockPromoteRequest req = take_promote(ds, (u32)ready);
+        apply_promote(ds, &req);
     }
-    ds->promote_count = 0;
 }
 
 static i32 promotion_index(const FlDockShared* ds, const void* host_window) {

@@ -86,8 +86,8 @@ bool dock_workspace_promote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPa
 // The inverse of dock_workspace_promote: move panel out of dst and re-dock it into src, rebinding by its
 // stable id (the panel's scroll/text/tab state is intact). It re-enters as a tab of src's root leaf when that
 // root is a leaf, else as an outer dock of src's root. The family tag travels back; dst returns to an empty
-// floor when panel was its only content. Returns false with no change if panel is absent from dst or
-// src == dst.
+// floor when panel was its only content. A drag in flight in src is cancelled first, since its preview was copied
+// from the tree before this panel arrived. Returns false with no change if panel is absent from dst or src == dst.
 bool dock_workspace_demote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPanelId panel);
 
 // Per-panel attributes.

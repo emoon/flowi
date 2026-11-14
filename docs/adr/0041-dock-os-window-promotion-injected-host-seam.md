@@ -84,3 +84,16 @@ registry.
   programmatic demote); the user/WM-initiated path runs through `fl_dock_notify_window_closed`.
 - **Cross-window tab re-homing is out of scope** (ADR-0040 amendment): dragging a tab from window
   A into B's tree needs the carried-panel model, a separate follow-up.
+
+## Amendment (2026-11-14): a drag in flight delays a promote and is cancelled by a demote
+
+A drag previews a copy of its workspace's tree, taken when the drag finds its first target. A promote
+or a demote that changed the committed tree after that left the copy stale: the promoted panel was
+drawn in two windows, and a drop on its leaf in the preview named a node the committed tree no
+longer had.
+
+- **Promote waits.** A queued request stays in the queue while its source workspace has a drag in
+  flight. It is applied at the first `dock_workspace_begin` after that drag ends.
+- **Demote cancels.** A closing window's workspace is about to be destroyed, so its panels cannot
+  wait. `dock_workspace_demote` cancels a drag in the workspace it docks into, the way Escape does,
+  and then docks the panel.

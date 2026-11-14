@@ -140,6 +140,7 @@ bool dock_workspace_demote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPan
 
     u32 family = dock_workspace_panel_family(dst, panel);
 
+    cancel_drag(src); // its preview was copied from the tree this is about to change
     tree_extract_panel(dst->tree, panel);
     bool docked = tree_dock_panel_at_root(src->tree, panel);
     FL_ASSERT_FATAL(docked); // a root leaf accepts a tab and a root split accepts an outer dock
