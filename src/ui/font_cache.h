@@ -57,6 +57,7 @@ FlFontId font_cache_load_font_memory(FlFontCache* self, const u8* data, i64 size
 bool font_cache_load_fallback(FlFontCache* self, FlVfsMount* mount, FlString relative_path);
 // Designate an already-loaded font as the fallback face; font_cache_load_fallback calls this after loading.
 void font_cache_set_fallback_font(FlFontCache* self, FlFontId font_id);
+bool font_cache_is_fallback_font(FlFontCache* self, FlFontId font_id);
 FlFontId font_cache_load_default_font(FlFontCache* self, u16 scale);
 // Pump I/O until the font leaves FontStatus_Loading. No timeout: a missing or unreadable file resolves to
 // FontStatus_Failed, so the wait always terminates.
@@ -149,4 +150,3 @@ bool font_cache_get_glyph_outline(FlFontCache* self, FlFontId font_id, u16 size_
 
 // Raster source access. Returns false if the font id is unknown or the font is not ready yet.
 bool font_cache_get_raster_source(FlFontCache* self, FlFontId font_id, FlFontRasterSource* out);
-bool font_cache_get_fallback_raster_source(FlFontCache* self, FlFontRasterSource* out);

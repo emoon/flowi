@@ -263,7 +263,7 @@ static void emit_border(const SrIrRequest* req, const FlCmdBorder* b) {
         &(BorderEdge) { .x0 = x + width - b->w_r, .y0 = y + r_tr, .x1 = x + width, .y1 = y + height - r_br });
 }
 
-// TextRun: re-resolve each pre-positioned glyph by id through the glyph cache and emit it.
+// TextRun: look up each pre-positioned glyph by its index in the run's font and emit it.
 
 static void emit_text_run(const SrIrRequest* req, const FlCmdTextRun* tr) {
     if (req->glyph_cache == nullptr) {
@@ -275,7 +275,7 @@ static void emit_text_run(const SrIrRequest* req, const FlCmdTextRun* tr) {
     // to whole pixels for rasterization.
     u16 size_px = font_cache_q4_to_whole_px(tr->size);
     for (u32 i = 0; i < tr->glyph_count; ++i) {
-        const Glyph* glyph = sw_glyph_cache_get(req->glyph_cache, tr->font, size_px, glyphs[i].glyph_id);
+        const Glyph* glyph = sw_glyph_cache_get(req->glyph_cache, tr->font, size_px, glyphs[i].glyph_index);
         sr_emit_glyph(req->commands_arena, glyph, glyphs[i].x, glyphs[i].y, color, req->global_alpha);
     }
 }

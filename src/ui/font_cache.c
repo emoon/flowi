@@ -277,6 +277,10 @@ void font_cache_set_fallback_font(FlFontCache* self, FlFontId font_id) {
     }
 }
 
+bool font_cache_is_fallback_font(FlFontCache* self, FlFontId font_id) {
+    return self->fallback_face != nullptr && self->fallback_face->id == font_id;
+}
+
 FontStatus font_cache_get_font_status(FlFontCache* self, FlFontId font_id) {
     FontFace* face = find_face_by_id(self, font_id);
     return face != nullptr ? face->status : FontStatus_Failed;
@@ -730,13 +734,6 @@ bool font_cache_get_raster_source(FlFontCache* self, FlFontId font_id, FlFontRas
         default:
             return false;
     }
-}
-
-bool font_cache_get_fallback_raster_source(FlFontCache* self, FlFontRasterSource* out) {
-    if (self->fallback_face == nullptr) {
-        return false;
-    }
-    return font_cache_get_raster_source(self, self->fallback_face->id, out);
 }
 
 // Glyph-outline service. FT_Outline_Decompose walks the loaded outline; the same callbacks run twice: a
