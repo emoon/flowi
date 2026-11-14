@@ -2,7 +2,6 @@
 #include <core/arena.h>
 #include <core/log.h>
 #include "dock_splitter.h"
-#include "dock_workspace.h"
 #include "../layout.h"
 #include "../pixel_snap.h"
 #include "../ui.h"
@@ -74,10 +73,12 @@ f32 dock_layout_snap_ratio(f32 ratio, f32 extent_px) {
     return ui_snap_to_pixel(ratio * extent_px) / extent_px;
 }
 
-// State shared by one emit walk: the tree the walk may restructure and the slot the first tab grab is reported
-// through.
+// State shared by one emit walk: the tree the walk may restructure, the per-panel records it reads, the panel whose
+// tab is left out, and the slot the first tab grab is reported through.
 typedef struct EmitWalk {
     FlDockTree* tree;
+    const DockPanels* panels;
+    FlDockPanelId untabbed;
     FlDockPanelId* out_grab;
 } EmitWalk;
 
@@ -90,32 +91,24 @@ typedef struct LeafTabs {
     int selected;
 } LeafTabs;
 
-// The slot a drag opened stays empty, because the overlay is the one thing drawing the dragged panel. The gap
-// leaf still holds that panel, so its tab is suppressed. A tab-into gap is excluded: showing the tab in the strip
-// is its preview.
-static bool is_new_gap_leaf(const FlDockWorkspace* ws, const FlDockNode* leaf) {
-    return dock_drag_active(&ws->drag) && ws->drag.gap_is_new && ws->drag.gap_leaf == leaf->id;
-}
-
-static LeafTabs collect_leaf_tabs(const FlDockWorkspace* ws, const FlDockNode* leaf) {
+static LeafTabs collect_leaf_tabs(const EmitWalk* walk, const FlDockNode* leaf) {
     FlUiCtx* self = g_ui_ctx;
     // Titles live in the workspace arena, so the frame-arena array can hold them by reference.
     LeafTabs tabs = {
         .labels = arena_alloc_array(self->render_frame_allocator, FlString, leaf->leaf.count),
         .shown = arena_alloc_array(self->render_frame_allocator, u32, leaf->leaf.count),
     };
-    FlDockPanelId shown_panel = dock_workspace_leaf_shown_panel(ws, leaf);
-    FlDockPanelId gap_panel = is_new_gap_leaf(ws, leaf) ? ws->drag.panel : 0;
+    FlDockPanelId shown_panel = dock_panels_shown_in_leaf(walk->panels, leaf);
 
     for_count(i, leaf->leaf.count) {
         FlDockPanelId panel = leaf->leaf.panels[i];
-        if (panel == gap_panel || !dock_workspace_panel_visible(ws, panel)) {
+        if (panel == walk->untabbed || !dock_panels_visible(walk->panels, panel)) {
             continue;
         }
         if (panel == shown_panel) {
             tabs.selected = tabs.count;
         }
-        tabs.labels[tabs.count] = dock_workspace_panel_title(ws, panel);
+        tabs.labels[tabs.count] = dock_panels_title(walk->panels, panel);
         tabs.shown[tabs.count++] = i;
     }
     return tabs;
@@ -178,8 +171,7 @@ static void emit_leaf(const EmitWalk* walk, const FlDockNode* leaf, FlLayoutSizi
                       FlLayoutSizingAxis height) {
     FlLayoutId id = node_layout_id(leaf->id);
     const FlThemeColors* theme = ui_get_theme_colors(g_ui_ctx);
-    const FlDockWorkspace* ws = dock_workspace_current();
-    LeafTabs tabs = collect_leaf_tabs(ws, leaf);
+    LeafTabs tabs = collect_leaf_tabs(walk, leaf);
 
     if (tabs.count == 0) {
         ui_layout_area_id(id, .sizing = { .width = width, .height = height }) {
@@ -207,12 +199,12 @@ static void emit_node(const EmitWalk* walk, FlDockNode* node, FlLayoutSizingAxis
 
 // True when nothing under node renders: every panel in every leaf below it is hidden. An empty leaf (only the
 // root can be one) is the floor, not a hidden subtree.
-static bool subtree_all_hidden(const FlDockWorkspace* ws, const FlDockNode* node) {
+static bool subtree_all_hidden(const DockPanels* panels, const FlDockNode* node) {
     if (node->kind == FlDockNodeKind_Split) {
-        return subtree_all_hidden(ws, node->split.child[0]) && subtree_all_hidden(ws, node->split.child[1]);
+        return subtree_all_hidden(panels, node->split.child[0]) && subtree_all_hidden(panels, node->split.child[1]);
     }
     for_count(i, node->leaf.count) {
-        if (dock_workspace_panel_visible(ws, node->leaf.panels[i])) {
+        if (dock_panels_visible(panels, node->leaf.panels[i])) {
             return false;
         }
     }
@@ -236,11 +228,10 @@ static void track_starvation(FlDockNode* node, bool starved, f32 extent) {
     }
     node->split.starve_logged = starved;
     if (starved) {
-        log_error(
-            "dock split %u: %.0fpx along %c leaves both tiles under the %.0fpx floor — the workspace "
-            "overflows its host and is clipped",
-            (unsigned)node->id, (double)extent, node->split.axis == FlDockAxis_X ? 'x' : 'y',
-            (double)min_tile_extent(node->split.axis));
+        log_error("dock split %u: %.0fpx along %c leaves both tiles under the %.0fpx floor — the workspace "
+                  "overflows its host and is clipped",
+                  (unsigned)node->id, (double)extent, node->split.axis == FlDockAxis_X ? 'x' : 'y',
+                  (double)min_tile_extent(node->split.axis));
     }
 }
 
@@ -261,9 +252,8 @@ static void emit_split(const EmitWalk* walk, FlDockNode* node, FlLayoutSizingAxi
 
     // A child everything under which is hidden is not emitted: its sibling takes the whole slot and no divider
     // is drawn. The split itself is untouched, so showing a panel back restores the exact arrangement.
-    const FlDockWorkspace* ws = dock_workspace_current();
-    bool hidden0 = subtree_all_hidden(ws, node->split.child[0]);
-    bool hidden1 = subtree_all_hidden(ws, node->split.child[1]);
+    bool hidden0 = subtree_all_hidden(walk->panels, node->split.child[0]);
+    bool hidden1 = subtree_all_hidden(walk->panels, node->split.child[1]);
 
     if (hidden0 != hidden1) {
         ui_layout_area_id(id, .direction = dir, .sizing = { .width = width, .height = height }) {
@@ -303,11 +293,11 @@ static void emit_node(const EmitWalk* walk, FlDockNode* node, FlLayoutSizingAxis
     }
 }
 
-void dock_layout_emit(FlDockTree* tree, FlDockPanelId* out_grab) {
+void dock_layout_emit(FlDockTree* tree, const DockPanels* panels, FlDockPanelId untabbed, FlDockPanelId* out_grab) {
     if (tree == nullptr || tree->root == nullptr) {
         return;
     }
-    const EmitWalk walk = { .tree = tree, .out_grab = out_grab };
+    const EmitWalk walk = { .tree = tree, .panels = panels, .untabbed = untabbed, .out_grab = out_grab };
     emit_node(&walk, tree->root, sizing_grow(), sizing_grow());
 }
 

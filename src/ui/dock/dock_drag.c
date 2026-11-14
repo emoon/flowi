@@ -435,7 +435,7 @@ static void retarget_preview(FlDockDrag* drag, FlDockTree* committed, FlDockDrop
     open_gap(drag, zone);
 }
 
-void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
+void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed, const DockPanels* panels) {
     if (!dock_drag_active(drag) || committed == nullptr) {
         return;
     }
@@ -444,7 +444,7 @@ void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
         drag->settle_frames--;
         drag->zone = FlDockDropZone_None;
         drag->request = (FlDockRequest) { 0 };
-        dock_layout_emit(committed, nullptr);
+        dock_layout_emit(committed, panels, 0, nullptr);
         return;
     }
 
@@ -460,11 +460,9 @@ void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
     FlDockDropZone zone = dock_drag_resolve(drag, cursor);
     retarget_preview(drag, committed, zone);
 
-    // No grab is taken from a drag walk, because one is already in flight. The gap needs no cover of its own: the
-    // drag overlay attaches to that same leaf and its fill and focus border already mark the slot.
-    if (drag->preview != nullptr) {
-        dock_layout_emit(drag->preview, nullptr);
-    } else {
-        dock_layout_emit(committed, nullptr);
-    }
+    // No grab is taken from a drag walk, because one is already in flight. A slot the drag opened stays empty: the
+    // overlay attached to that leaf is the one thing drawing the dragged panel, so its tab is left out there. A
+    // tab-into gap keeps the tab, which is its preview.
+    FlDockTree* shown = drag->preview != nullptr ? drag->preview : committed;
+    dock_layout_emit(shown, panels, drag->gap_is_new ? drag->panel : 0, nullptr);
 }

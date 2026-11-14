@@ -498,7 +498,7 @@ UTEST(dock_layout, tile_no_gaps_match_ratios) {
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = w, .height = h });
 
     ui_update_begin(ctx);
-    dock_layout_emit(tree, nullptr);
+    dock_layout_emit(tree, &dock_workspace_current()->panels, 0, nullptr);
     ui_update_end(ctx, 1.0f / 60.0f);
 
     FlDockLayout layout;
@@ -575,7 +575,7 @@ static void dock_layout_frame(FlUiCtx* ctx, FlDockTree* tree, f32 w, f32 h) {
     ctx->delta_time = 1.0f / 60.0f; // normally written by the app loop, which these frames do not run
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = w, .height = h });
     ui_update_begin(ctx);
-    dock_layout_emit(tree, nullptr);
+    dock_layout_emit(tree, &dock_workspace_current()->panels, 0, nullptr);
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
@@ -794,8 +794,8 @@ UTEST(dock_layout, a_collapse_hands_the_survivor_the_merged_rect) {
 // which takes node rects and a cursor and returns a drop zone and a request, with no Clay and no state.
 
 // A single leaf filling the 800x600 workspace. It has both is_leaf and is_root, so the tab region, the outer band
-// and the split quadrants are all offered over the one rect. Its strip is the header, y 0..DOCK_TAB_HEIGHT, its centre box is x 240..560
-// by y 180..420, and the diagonals cross at (400, 300).
+// and the split quadrants are all offered over the one rect. Its strip is the header, y 0..DOCK_TAB_HEIGHT, its centre
+// box is x 240..560 by y 180..420, and the diagonals cross at (400, 300).
 static const FlDockDropNode k_one_leaf_ws[] = {
     { .node = 7, .rect = { 0.0f, 0.0f, 800.0f, 600.0f }, .is_leaf = true, .is_root = true },
 };
@@ -2310,8 +2310,9 @@ static void dock_wide_id_panel(FlDockPanelId id, u32 marker) {
 }
 
 static void dock_wide_id_frame(void* user_data) {
-    FlDockWorkspace* ws = dock_fixture_emit(
-        (DockFixture*)user_data, dock_split(FlDockAxis_X, 0.5f, dock_leaf(DOCK_WIDE_ID_LOW), dock_leaf(DOCK_WIDE_ID_HIGH)));
+    FlDockWorkspace* ws
+        = dock_fixture_emit((DockFixture*)user_data,
+                            dock_split(FlDockAxis_X, 0.5f, dock_leaf(DOCK_WIDE_ID_LOW), dock_leaf(DOCK_WIDE_ID_HIGH)));
     dock_wide_id_panel(DOCK_WIDE_ID_LOW, 1);
     dock_wide_id_panel(DOCK_WIDE_ID_HIGH, 2);
     dock_workspace_end(ws);

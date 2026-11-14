@@ -20,23 +20,15 @@
 #include <flowi/core/string.h>
 
 #include "dock_drag.h"
+#include "dock_panels.h"
 #include "dock_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// A workspace owns its tree and a per-panel record of the last frame each panel was declared: "declared this
-// frame" is last_declared == frame.
-
-typedef struct DeclRecord {
-    FlDockPanelId id;
-    u64 last_declared; // the frame value at the most recent dock_workspace_declare(id)
-    u32 family;        // the panel's dock-family tag (0 = general); gates which workspaces accept it
-    FlString title;    // the tab's label, copied on change
-    bool hidden;       // set by dock_workspace_set_panel_visible; no tab, no content, slot kept
-    u32 overflow_logs; // overflow errors emitted for this panel's body; the report path emits at most one
-} DeclRecord;
+// A workspace owns its tree and a per-panel record (dock_panels.h). "Declared this frame" is a record whose
+// last_declared == frame.
 
 typedef struct FlDockWorkspace {
     FlArena* arena;
@@ -44,9 +36,7 @@ typedef struct FlDockWorkspace {
     u64 frame;         // bumped each dock_workspace_begin; starts at 1, so a record's 0 never reads as declared
     u64 emitted_frame; // the frame value at the most recent dock_workspace_emit; == frame means the tiles are live
                        // and 0 means never emitted
-    DeclRecord* decls;
-    u32 decl_count;
-    u32 decl_cap;
+    DockPanels panels;
     // Persisted attributes. The host size is persisted; the OS window position never is (Wayland cannot restore it).
     u64 id;            // the host this workspace belongs to, so a multi-window layout reconciles on load; 0 = single
     u32 family_filter; // accepted dock family, 0 = any; enforced in dock_drag_resolve (dock_drag.h)
@@ -177,11 +167,6 @@ bool dock_workspace_panel_should_emit(const FlDockWorkspace* ws, FlDockPanelId i
 // How many overflow errors have been emitted for id's body: at most one per panel, however many frames it
 // overflows for.
 u32 dock_workspace_panel_overflow_logs(const FlDockWorkspace* ws, FlDockPanelId id);
-
-// The panel leaf shows as its selected tab: its logical selection when that panel is visible, else the first
-// visible panel in tab order; 0 when every panel in the leaf is hidden. The logical selection is never rewritten,
-// so re-showing a hidden panel restores the leaf exactly.
-FlDockPanelId dock_workspace_leaf_shown_panel(const FlDockWorkspace* ws, const FlDockNode* leaf);
 
 // The room id's body has to lay out in, in logical px, read back from the previous frame's geometry. {0,0} when
 // the panel is not emitting, has no measured tile yet, or is starved past the content floor.

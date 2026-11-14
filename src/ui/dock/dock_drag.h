@@ -164,8 +164,9 @@ void dock_drag_discard(FlDockDrag* drag);
 
 // Per-frame drive while a drag is active: refresh the hit-test buffer from the layout the previous frame computed,
 // resolve the cursor against it, bring the retained preview onto the resolved target, and emit it. committed is
-// cloned once for the preview and never mutated. Call inside a UI frame. No-op if not active.
-void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed);
+// cloned once for the preview and never mutated. panels supplies the tabs' titles and visibility. Call inside a UI
+// frame. No-op if not active.
+void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed, const DockPanels* panels);
 
 #ifdef __cplusplus
 }
