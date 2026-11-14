@@ -1032,16 +1032,15 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
 
     const FlGamepadEvent b_down
         = { .type = FlGamepadEvent_Button_Down, .gamepad_id = slot, .button = { FlGamepadButton_B } };
-    platform_input_push_gamepad_event(ctx,
-                                         (FlGamepadEvent) { .type = FlGamepadEvent_Connected, .gamepad_id = slot });
+    platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Connected, .gamepad_id = slot });
     platform_input_push_gamepad_event(ctx, b_down);
     platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Axis_Motion,
-                                                                 .gamepad_id = slot,
-                                                                 .axis = { FlGamepadAxis_Left_Trigger, 0.75f } });
+                                                              .gamepad_id = slot,
+                                                              .axis = { FlGamepadAxis_Left_Trigger, 0.75f } });
     // Inside the default dead zone: the read is the raw value, not a dead-zoned 0.
     platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Axis_Motion,
-                                                                 .gamepad_id = slot,
-                                                                 .axis = { FlGamepadAxis_Right_X, -0.1f } });
+                                                              .gamepad_id = slot,
+                                                              .axis = { FlGamepadAxis_Right_X, -0.1f } });
     ui_input_update(ctx, dt);
 
     EXPECT_TRUE_MSG(fl_input_gamepad_button_pressed(slot, FlGamepadButton_B), "press edge reads on the press frame");
@@ -1103,7 +1102,7 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     platform_input_push_gamepad_event(ctx, y_down);
     ui_input_update(ctx, dt);
     platform_input_push_gamepad_event(ctx,
-                                         (FlGamepadEvent) { .type = FlGamepadEvent_Disconnected, .gamepad_id = slot });
+                                      (FlGamepadEvent) { .type = FlGamepadEvent_Disconnected, .gamepad_id = slot });
     EXPECT_FALSE_MSG(fl_input_gamepad_button_pressed(slot, FlGamepadButton_Y), "an empty slot has no press edge");
     EXPECT_EQ(0.0f, fl_input_gamepad_button_hold_duration(slot, FlGamepadButton_Y));
     EXPECT_EQ(0.0f, fl_input_gamepad_axis(slot, FlGamepadAxis_Left_Trigger));
@@ -4182,7 +4181,12 @@ static void dropdown_frame(void* user_data) {
         .search_state = st->searchable ? &st->search : nullptr,
     };
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        ui_dropdown_impl(FL_S("Pick"), &st->is_open, st->options, st->option_count, &st->choice, cfg);
+        ui_dropdown_impl(&(UiDropdownRequest) { .label = FL_S("Pick"),
+                                                .is_open = &st->is_open,
+                                                .options = st->options,
+                                                .option_count = st->option_count,
+                                                .selected_index = &st->choice,
+                                                .cfg = cfg });
     }
 }
 

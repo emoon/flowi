@@ -37,7 +37,8 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     // A dropped n−1 guard would offset the first pen while leaving the deltas/extent checks unchanged.
     ASSERT_NEAR_MSG(glyphs[0].x, 10.0f, 0.0001f, "the first glyph has no leading spacing gap");
 
-    FlTextMetrics m = font_cache_measure_text(cache, aaa, font, font_size, spacing);
+    FlTextMetrics m = font_cache_measure_text(
+        cache, aaa, (FlTextStyle) { .font_id = font, .font_size = font_size, .letter_spacing = spacing });
     ASSERT_NEAR_MSG((glyphs[2].x + adv) - glyphs[0].x, m.width, 0.0001f, "draw and measure agree on the width");
 
     fl_arena_destroy(scratch);
@@ -54,12 +55,15 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "memory-loaded font must be ready synchronously");
 
     Painter* p = painter_create(arena);
-    painter_begin_frame(p, cache, 2.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = cache, .ui_scale = 2.0f, .text_scale = 1.0f, .state_arena = arena });
 
     const FlTextStyle style = { .font_id = font, .font_size = 7.5f, .letter_spacing = 1.25f };
     void* slot = nullptr;
     painter_scope_push(p, &slot);
-    painter_text_styled(p, 10.0f, 20.0f, FL_S("AA"), style, ui_color(255, 255, 255, 255));
+    painter_text_styled(
+        p, (PainterTextRun) { .x = 10.0f, .y = 20.0f, .text = FL_S("AA"), .color = ui_color(255, 255, 255, 255) },
+        style);
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -82,7 +86,9 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     // font_size 0 falls back to the font's default size (loaded at 32 -> key 128).
     void* slot_default = nullptr;
     painter_scope_push(p, &slot_default);
-    painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
+    painter_text_styled(
+        p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
+        (FlTextStyle) { .font_id = font });
     painter_scope_pop(p);
     const FlPaintSpan* span_default = (const FlPaintSpan*)slot_default;
     ASSERT_TRUE_MSG(span_default != nullptr && span_default->first != nullptr, "size 0 still draws");
@@ -91,7 +97,9 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
 
     void* slot_unknown = nullptr;
     painter_scope_push(p, &slot_unknown);
-    painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = 9999 }, ui_color(255, 255, 255, 255));
+    painter_text_styled(
+        p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
+        (FlTextStyle) { .font_id = 9999 });
     painter_scope_pop(p);
     ASSERT_TRUE_MSG(slot_unknown == nullptr, "an unknown font attaches no paint span");
 
@@ -190,7 +198,8 @@ UTEST(render_ir, painter_shapes_scale_at_emit) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
     // ui_scale 2.0 makes scaled vs unscaled fields unambiguous. No font cache needed for shapes.
-    painter_begin_frame(p, nullptr, 2.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 2.0f, .text_scale = 1.0f, .state_arena = arena });
 
     // Open one painting scope (no Clay needed); the painter attaches the span to this local customData slot.
     void* slot = nullptr;
@@ -199,12 +208,34 @@ UTEST(render_ir, painter_shapes_scale_at_emit) {
     FlColor color = { 200, 100, 50, 255 };
     FlColor border = { 1, 2, 3, 4 };
     FlPolyPoint pts[2] = { { 1.0f, 2.0f, 1.0f }, { 3.0f, 4.0f, 0.25f } };
-    painter_polyline(p, pts, 2, 1.5f, color, FlPolylineFlags_filled, border, 50.0f);
-    painter_arc(p, 10.0f, 20.0f, 30.0f, 5.0f, 1.0f, 2.5f, color, 0);
-    painter_circle_stroked(p, 1.0f, 2.0f, 3.0f, color, border, 0.5f, (FlStrokeStyle) { 1.5f, 2.5f });
-    painter_diamond(p, 4.0f, 5.0f, 6.0f, 7.0f, color, border, 0.0f);
+    painter_polyline(p, (PainterPolyline) { .points = pts,
+                                            .point_count = 2,
+                                            .width = 1.5f,
+                                            .color = color,
+                                            .flags = FlPolylineFlags_filled,
+                                            .fill_color = border,
+                                            .baseline_y = 50.0f });
+    painter_arc(p, (PainterArc) { .cx = 10.0f,
+                                  .cy = 20.0f,
+                                  .radius = 30.0f,
+                                  .thickness = 5.0f,
+                                  .start_angle = 1.0f,
+                                  .sweep = 2.5f,
+                                  .color = color,
+                                  .flags = 0 });
+    painter_circle_stroked(p,
+                           (PainterCircle) { .cx = 1.0f,
+                                             .cy = 2.0f,
+                                             .radius = 3.0f,
+                                             .fill = { .color = color, .border_color = border, .border_width = 0.5f } },
+                           (FlStrokeStyle) { .dash_len = 1.5f, .gap_len = 2.5f });
+    painter_diamond(p, (PainterDiamond) { .cx = 4.0f,
+                                          .cy = 5.0f,
+                                          .rx = 6.0f,
+                                          .ry = 7.0f,
+                                          .fill = { .color = color, .border_color = border, .border_width = 0.0f } });
     FlBar in_bars[2] = { { 0.0f, 2.0f, 10.0f }, { 3.0f, 2.0f, -4.0f } };
-    painter_bars(p, 100.0f, in_bars, 2, color);
+    painter_bars(p, (PainterBars) { .baseline_y = 100.0f, .bars = in_bars, .bar_count = 2, .color = color });
 
     painter_scope_pop(p);
 
@@ -259,7 +290,8 @@ UTEST(render_ir, painter_shapes_scale_at_emit) {
 UTEST(render_ir, painter_effect_is_scoped_state) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
-    painter_begin_frame(p, nullptr, 1.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.0f, .text_scale = 1.0f, .state_arena = arena });
 
     FlColor color = { 10, 20, 30, 255 };
     // The plugin frame's box-shadow: 0 24px 70px #000.
@@ -271,20 +303,23 @@ UTEST(render_ir, painter_effect_is_scoped_state) {
 
     painter_scope_push(p, &outer_slot);
     painter_set_effect(p, shadow);
-    painter_rect(p, 0.0f, 0.0f, 10.0f, 10.0f, color);
-    painter_hline(p, 0.0f, 12.0f, 10.0f, color);
+    painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 10.0f, .h = 10.0f }, color);
+    painter_hline(p, (PainterRule) { .x = 0.0f, .y = 12.0f, .length = 10.0f, .color = color });
 
     painter_scope_push(p, &child_slot);
-    painter_rect(p, 0.0f, 0.0f, 4.0f, 4.0f, color);
+    painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 4.0f, .h = 4.0f }, color);
     painter_scope_pop(p);
 
-    painter_circle(p, 1.0f, 1.0f, 2.0f, color, color, 0.0f);
+    painter_circle(p, (PainterCircle) { .cx = 1.0f,
+                                        .cy = 1.0f,
+                                        .radius = 2.0f,
+                                        .fill = { .color = color, .border_color = color, .border_width = 0.0f } });
     painter_set_effect(p, (FlEffect) { 0 });
-    painter_rect(p, 0.0f, 0.0f, 2.0f, 2.0f, color);
+    painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 2.0f, .h = 2.0f }, color);
     painter_scope_pop(p);
 
     painter_scope_push(p, &sibling_slot);
-    painter_rect(p, 0.0f, 0.0f, 3.0f, 3.0f, color);
+    painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 3.0f, .h = 3.0f }, color);
     painter_scope_pop(p);
 
     const FlPaintSpan* outer = (const FlPaintSpan*)outer_slot;
@@ -323,11 +358,12 @@ UTEST(render_ir, painter_effect_is_scoped_state) {
     void* leaked_slot = nullptr;
     painter_scope_push(p, &leaked_slot);
     painter_set_effect(p, shadow);
-    painter_begin_frame(p, nullptr, 1.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.0f, .text_scale = 1.0f, .state_arena = arena });
 
     void* next_frame_slot = nullptr;
     painter_scope_push(p, &next_frame_slot);
-    painter_rect(p, 0.0f, 0.0f, 5.0f, 5.0f, color);
+    painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 5.0f, .h = 5.0f }, color);
     painter_scope_pop(p);
 
     const FlPaintSpan* next_frame = (const FlPaintSpan*)next_frame_slot;
@@ -343,7 +379,8 @@ UTEST(render_ir, painter_effect_is_scoped_state) {
 UTEST(render_ir, painter_rect_styled_emits_per_corner_radius_and_gradient) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
-    painter_begin_frame(p, nullptr, 2.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 2.0f, .text_scale = 1.0f, .state_arena = arena });
 
     FlColor tl = { 1, 0, 0, 255 };
     FlColor tr = { 0, 2, 0, 255 };
@@ -354,10 +391,10 @@ UTEST(render_ir, painter_rect_styled_emits_per_corner_radius_and_gradient) {
     painter_scope_push(p, &slot);
     // The limiter meter: rounded top, square bottom, vertical gradient.
     painter_set_effect(p, (FlEffect) { .kind = FlEffectKind_Glow, .color = { 9, 9, 9, 255 }, .blur = 3.0f });
-    painter_rect_styled(p, 10.0f, 20.0f, 30.0f, 40.0f,
+    painter_rect_styled(p, (FlRect) { .x = 10.0f, .y = 20.0f, .w = 30.0f, .h = 40.0f },
                         (FlRectConfig) { .radius = { 5.0f, 6.0f, 0.0f, 0.0f }, .corner = { tl, tr, bl, br } });
     painter_set_effect(p, (FlEffect) { 0 });
-    painter_rect_rounded(p, 0.0f, 0.0f, 8.0f, 8.0f, 3.0f, tl);
+    painter_rect_rounded(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 8.0f, .h = 8.0f }, 3.0f, tl);
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -390,13 +427,16 @@ UTEST(render_ir, painter_image_sub_emits_source_rect_and_scaled_dst) {
     image_registry_mark_realized((ImageHandle)1234, 16, 8);
 
     Painter* p = painter_create(arena);
-    painter_begin_frame(p, nullptr, 2.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 2.0f, .text_scale = 1.0f, .state_arena = arena });
 
     void* slot = nullptr;
     painter_scope_push(p, &slot);
     painter_set_effect(p, (FlEffect) { .kind = FlEffectKind_Glow, .color = { 1, 2, 3, 4 }, .blur = 6.0f });
-    ASSERT_TRUE_MSG(painter_image_sub(p, 3.0f, 4.0f, 12.0f, 6.0f, 2.0f, 1.0f, 4.0f, 3.0f, (FlImageHandle)1234,
-                                      ui_color(10, 20, 30, 40)),
+    ASSERT_TRUE_MSG(painter_image_sub(p, (PainterImageSub) { .dst = { .x = 3.0f, .y = 4.0f, .w = 12.0f, .h = 6.0f },
+                                                             .src = { .x = 2.0f, .y = 1.0f, .w = 4.0f, .h = 3.0f },
+                                                             .image = (FlImageHandle)1234,
+                                                             .color = ui_color(10, 20, 30, 40) }),
                     "painter_image_sub records for a ready image");
     painter_scope_pop(p);
 
@@ -424,13 +464,14 @@ UTEST(render_ir, painter_lines_emit_snapped_core_fill_rect) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
     // ui_scale 1.25: the thin axis snaps to a single whole device pixel while the long axis scales fractionally.
-    painter_begin_frame(p, nullptr, 1.25f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.25f, .text_scale = 1.0f, .state_arena = arena });
 
     void* slot = nullptr;
     painter_scope_push(p, &slot);
     FlColor col = { 200, 100, 50, 255 };
-    painter_hline(p, 4.0f, 10.0f, 100.0f, col);
-    painter_vline(p, 20.0f, 5.0f, 80.0f, col);
+    painter_hline(p, (PainterRule) { .x = 4.0f, .y = 10.0f, .length = 100.0f, .color = col });
+    painter_vline(p, (PainterRule) { .x = 20.0f, .y = 5.0f, .length = 80.0f, .color = col });
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -465,18 +506,22 @@ UTEST(render_ir, snapped_line_splice_rounds_at_fractional_origin) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
     // ui_scale 1.0 so element-local == device space, isolating the origin snap from any emit-time scaling.
-    painter_begin_frame(p, nullptr, 1.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.0f, .text_scale = 1.0f, .state_arena = arena });
 
     FlColor col = { 40, 200, 120, 255 };
 
     void* snapped_slot = nullptr;
     painter_scope_push(p, &snapped_slot);
-    painter_hline(p, 0.0f, 0.0f, 100.0f, col); // element-local rect {0,0,100,1}, snap-tagged
+    painter_hline(
+        p, (PainterRule) {
+               .x = 0.0f, .y = 0.0f, .length = 100.0f, .color = col }); // element-local rect {0,0,100,1}, snap-tagged
     painter_scope_pop(p);
 
     void* plain_slot = nullptr;
     painter_scope_push(p, &plain_slot);
-    painter_rect(p, 0.0f, 0.0f, 100.0f, 1.0f, col); // element-local rect {0,0,100,1}, NOT tagged
+    painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 100.0f, .h = 1.0f },
+                 col); // element-local rect {0,0,100,1}, NOT tagged
     painter_scope_pop(p);
 
     // A fractional element origin - exactly what a fractional scroll offset produces.
@@ -580,7 +625,8 @@ UTEST(render_ir, clay_text_forwards_letter_spacing_to_the_pen) {
 UTEST(render_ir, painter_span_nesting_splits_segments) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
-    painter_begin_frame(p, nullptr, 1.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.0f, .text_scale = 1.0f, .state_arena = arena });
 
     const FlColor col = { 10, 20, 30, 255 };
 
@@ -588,11 +634,12 @@ UTEST(render_ir, painter_span_nesting_splits_segments) {
     void* slot_child = nullptr;
 
     painter_scope_push(p, &slot_parent);
-    painter_rect(p, 1.0f, 0.0f, 1.0f, 1.0f, col); // parent record A (x == 1)
+    painter_rect(p, (FlRect) { .x = 1.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f }, col); // parent record A (x == 1)
     painter_scope_push(p, &slot_child);
-    painter_rect(p, 2.0f, 0.0f, 1.0f, 1.0f, col); // child record  (x == 2), interrupts the parent's run
+    painter_rect(p, (FlRect) { .x = 2.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f },
+                 col); // child record  (x == 2), interrupts the parent's run
     painter_scope_pop(p);
-    painter_rect(p, 3.0f, 0.0f, 1.0f, 1.0f, col); // parent record B (x == 3)
+    painter_rect(p, (FlRect) { .x = 3.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f }, col); // parent record B (x == 3)
     painter_scope_pop(p);
 
     const FlPaintSpan* parent = (const FlPaintSpan*)slot_parent;
@@ -954,12 +1001,14 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "memory-loaded font must be ready synchronously");
 
     Painter* p = painter_create(arena);
-    painter_begin_frame(p, cache, 1.0f, 2.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = cache, .ui_scale = 1.0f, .text_scale = 2.0f, .state_arena = arena });
 
     // painter_text: the authored 32px handle must rasterize at 64px.
     void* slot_plain = nullptr;
     painter_scope_push(p, &slot_plain);
-    painter_text(p, 0.0f, 0.0f, FL_S("A"), font, ui_color(255, 255, 255, 255));
+    painter_text(p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
+                 font);
     painter_scope_pop(p);
     const FlPaintSpan* span_plain = (const FlPaintSpan*)slot_plain;
     ASSERT_TRUE_MSG(span_plain != nullptr && span_plain->first != nullptr, "painter_text attached a paint span");
@@ -973,7 +1022,9 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     const FlTextStyle style = { .font_id = font, .font_size = 7.5f, .letter_spacing = 1.25f };
     void* slot = nullptr;
     painter_scope_push(p, &slot);
-    painter_text_styled(p, 10.0f, 20.0f, FL_S("AA"), style, ui_color(255, 255, 255, 255));
+    painter_text_styled(
+        p, (PainterTextRun) { .x = 10.0f, .y = 20.0f, .text = FL_S("AA"), .color = ui_color(255, 255, 255, 255) },
+        style);
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -995,7 +1046,9 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     // font_size 0 falls back to the font's authored load size, which scales the same way (32 -> 64).
     void* slot_default = nullptr;
     painter_scope_push(p, &slot_default);
-    painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
+    painter_text_styled(
+        p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
+        (FlTextStyle) { .font_id = font });
     painter_scope_pop(p);
     const FlPaintSpan* span_default = (const FlPaintSpan*)slot_default;
     ASSERT_TRUE_MSG(span_default != nullptr && span_default->first != nullptr, "size 0 still draws");
@@ -1027,14 +1080,18 @@ static void rect_batch_fill(FlColoredRect* rects, u32 count, float seed) {
 // The scalar reference: the same rects through painter_rect, one call each, in order.
 static void rect_batch_scalar(Painter* p, const FlColoredRect* rects, u32 count) {
     for (u32 i = 0; i < count; i++) {
-        painter_rect(p, rects[i].x, rects[i].y, rects[i].w, rects[i].h, rects[i].color);
+        painter_rect(p, (FlRect) { .x = rects[i].x, .y = rects[i].y, .w = rects[i].w, .h = rects[i].h },
+                     rects[i].color);
     }
 }
 
 UTEST(render_ir, painter_rects_emit_the_scalar_record_stream) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
-    painter_begin_frame(p, nullptr, 1.5f, 1.0f, arena); // fractional UI scale
+    painter_begin_frame(p, (PainterFrame) { .font_cache = nullptr,
+                                            .ui_scale = 1.5f,
+                                            .text_scale = 1.0f,
+                                            .state_arena = arena }); // fractional UI scale
 
     FlColoredRect rects[RECT_BATCH_COUNT];
     rect_batch_fill(rects, RECT_BATCH_COUNT, 2.0f);
@@ -1045,17 +1102,17 @@ UTEST(render_ir, painter_rects_emit_the_scalar_record_stream) {
     void* scalar_slot = nullptr;
     painter_scope_push(p, &scalar_slot);
     painter_set_effect(p, shadow);
-    painter_rect(p, 0.0f, 0.0f, 1.0f, 1.0f, edge);
+    painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f }, edge);
     rect_batch_scalar(p, rects, RECT_BATCH_COUNT);
-    painter_rect(p, 9.0f, 9.0f, 1.0f, 1.0f, edge);
+    painter_rect(p, (FlRect) { .x = 9.0f, .y = 9.0f, .w = 1.0f, .h = 1.0f }, edge);
     painter_scope_pop(p);
 
     void* batch_slot = nullptr;
     painter_scope_push(p, &batch_slot);
     painter_set_effect(p, shadow);
-    painter_rect(p, 0.0f, 0.0f, 1.0f, 1.0f, edge);
+    painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f }, edge);
     painter_rects(p, rects, RECT_BATCH_COUNT);
-    painter_rect(p, 9.0f, 9.0f, 1.0f, 1.0f, edge);
+    painter_rect(p, (FlRect) { .x = 9.0f, .y = 9.0f, .w = 1.0f, .h = 1.0f }, edge);
     painter_scope_pop(p);
 
     const FlPaintSpan* scalar = (const FlPaintSpan*)scalar_slot;
@@ -1080,7 +1137,8 @@ UTEST(render_ir, painter_rects_emit_the_scalar_record_stream) {
 UTEST(render_ir, painter_rects_noop_cases_record_nothing) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
-    painter_begin_frame(p, nullptr, 1.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.0f, .text_scale = 1.0f, .state_arena = arena });
     FlColoredRect one = { 0.0f, 0.0f, 1.0f, 1.0f, { 1, 2, 3, 4 } };
 
     painter_rects(nullptr, &one, 1);
@@ -1101,7 +1159,8 @@ UTEST(render_ir, painter_rects_noop_cases_record_nothing) {
 UTEST(render_ir, painter_rects_frame_stream_matches_scalar_loop) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
-    painter_begin_frame(p, nullptr, 2.0f, 1.0f, arena);
+    painter_begin_frame(
+        p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 2.0f, .text_scale = 1.0f, .state_arena = arena });
 
     FlColoredRect a_rects[RECT_BATCH_COUNT];
     FlColoredRect b_rects[RECT_BATCH_COUNT];

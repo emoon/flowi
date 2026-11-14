@@ -104,18 +104,23 @@ u16 font_cache_q4_to_whole_px(u16 size_q4) {
     return px < 1 ? 1 : px;
 }
 
+// A font file image in memory.
+typedef struct FontBytes {
+    const void* data;
+    i64 size;
+} FontBytes;
+
 // Copy the font file bytes into the face arena and stand up the main-thread metrics face. The bytes are
 // owned by the face for its lifetime; FreeType and the SW backend's raster faces read them.
-static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, const void* data, i64 size,
-                                          u16 font_size) {
+static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, FontBytes bytes, u16 font_size) {
     face->arena = arena_new();
-    face->font_data = arena_alloc_array(face->arena, u8, size);
-    face->font_data_size = size;
-    memcpy(face->font_data, data, size);
+    face->font_data = arena_alloc_array(face->arena, u8, bytes.size);
+    face->font_data_size = bytes.size;
+    memcpy(face->font_data, bytes.data, bytes.size);
 
     // This runs on a VFS worker thread; the lock serializes it against main-thread FreeType use of cache->library.
     mutex_lock(&cache->ft_lock);
-    FT_Error error = FT_New_Memory_Face(cache->library, face->font_data, size, 0, &face->metrics_face);
+    FT_Error error = FT_New_Memory_Face(cache->library, face->font_data, bytes.size, 0, &face->metrics_face);
     if (!error) {
         FT_Set_Pixel_Sizes(face->metrics_face, 0, font_size);
     }
@@ -142,7 +147,8 @@ static FlVfsData font_load_callback(void* data, i64 size, void* user_data) {
         return (FlVfsData) { .success = false };
     }
 
-    if (!face_init_freetype_from_bytes(ctx->cache, ctx->face, data, size, ctx->font_size)) {
+    if (!face_init_freetype_from_bytes(ctx->cache, ctx->face, (FontBytes) { .data = data, .size = size },
+                                       ctx->font_size)) {
         return (FlVfsData) { .success = false };
     }
     return (FlVfsData) { .data = nullptr, .size = 0, .success = true };
@@ -203,7 +209,7 @@ FlFontId font_cache_load_font_memory(FlFontCache* self, const u8* data, i64 size
         return FONT_ID_INVALID;
     }
 
-    if (!face_init_freetype_from_bytes(self, face, data, size, font_size)) {
+    if (!face_init_freetype_from_bytes(self, face, (FontBytes) { .data = data, .size = size }, font_size)) {
         return FONT_ID_INVALID;
     }
     return face->id;
@@ -369,6 +375,12 @@ int font_cache_get_size(FlFontCache* self, FlFontId font_id) {
     return face != nullptr ? face->size : 0;
 }
 
+// A FreeType face whose metrics face is built and ready for measurement and outlines.
+static bool face_has_metrics(const FontFace* face) {
+    return face != nullptr && face->kind == FlFontRasterKind_FreeType && face->status == FontStatus_Ready
+           && face->metrics_face != nullptr;
+}
+
 // Size a metrics face to a quarter-px key: 26.6 nominal height q4 << 4 at 72 dpi, the same FT_Request_Size
 // that FT_Set_Pixel_Sizes issues when the key is a whole pixel; fractional keys size at fractional ppem.
 static void ft_set_size_q4(FT_Face face, u16 q4) {
@@ -397,45 +409,62 @@ static int ft_compute_advance(FlFontCache* self, FontFace* face, u16 q4, u32 cod
     return (int)mf->glyph->advance.x;
 }
 
-// Cached advance for one codepoint at a quarter-px size key. Only the whole-px measure paths may claim the
-// dense ASCII row (may_claim_row), so row ownership is deterministic regardless of whether a fractional caller
-// touches the face first; the q4-keyed paths always take the hashmap.
-static int glyph_advance_q4(FlFontCache* self, FontFace* face, u16 q4, u32 codepoint, bool may_claim_row) {
-    switch (face->kind) {
-        case FlFontRasterKind_FreeType: {
-            if (face->status != FontStatus_Ready || face->metrics_face == nullptr || q4 == 0) {
-                return 0;
-            }
+// One measurement pass over a face at a quarter-px size key. Only the whole-px measure paths may claim the dense
+// ASCII row (may_claim_row), so row ownership is deterministic regardless of whether a fractional caller touches
+// the face first; the q4-keyed paths always take the hashmap.
+typedef struct AdvanceRun {
+    FlFontCache* cache;
+    FontFace* face;
+    u16 q4;
+    bool may_claim_row;
+} AdvanceRun;
 
-            if (codepoint < 128) {
-                if (may_claim_row && face->ascii_advance_size != q4) {
-                    face->ascii_advance_size = q4;
-                    for (int i = 0; i < 128; i++) {
-                        face->ascii_advance[i] = -1;
-                    }
-                }
-                if (face->ascii_advance_size == q4) {
-                    if (face->ascii_advance[codepoint] < 0) {
-                        face->ascii_advance[codepoint] = ft_compute_advance(self, face, q4, codepoint);
-                    }
-                    return face->ascii_advance[codepoint];
-                }
-            }
-
-            u64 key = ((u64)q4 << 21) | codepoint;
-            int* hit = hashmap_get(&face->advance_cache, key);
-            if (hit != nullptr) {
-                return *hit;
-            }
-            int adv = ft_compute_advance(self, face, q4, codepoint);
-            hashmap_insert(&face->advance_cache, key, adv);
-            return adv;
+// The ASCII row slot for a codepoint when the row is valid for the run's size (claiming it first if the run may),
+// otherwise nullptr.
+static int* ascii_advance_slot(const AdvanceRun* run, u32 codepoint) {
+    FontFace* face = run->face;
+    if (codepoint >= 128) {
+        return nullptr;
+    }
+    if (run->may_claim_row && face->ascii_advance_size != run->q4) {
+        face->ascii_advance_size = run->q4;
+        for (int i = 0; i < 128; i++) {
+            face->ascii_advance[i] = -1;
         }
+    }
+    return face->ascii_advance_size == run->q4 ? &face->ascii_advance[codepoint] : nullptr;
+}
+
+static int freetype_advance(const AdvanceRun* run, u32 codepoint) {
+    FontFace* face = run->face;
+    if (!face_has_metrics(face) || run->q4 == 0) {
+        return 0;
+    }
+
+    int* slot = ascii_advance_slot(run, codepoint);
+    if (slot != nullptr) {
+        if (*slot < 0) {
+            *slot = ft_compute_advance(run->cache, face, run->q4, codepoint);
+        }
+        return *slot;
+    }
+
+    u64 key = ((u64)run->q4 << 21) | codepoint;
+    int* hit = hashmap_get(&face->advance_cache, key);
+    if (hit != nullptr) {
+        return *hit;
+    }
+    int adv = ft_compute_advance(run->cache, face, run->q4, codepoint);
+    hashmap_insert(&face->advance_cache, key, adv);
+    return adv;
+}
+
+static int glyph_advance(const AdvanceRun* run, u32 codepoint) {
+    switch (run->face->kind) {
+        case FlFontRasterKind_FreeType:
+            return freetype_advance(run, codepoint);
         case FlFontRasterKind_Default:
-            if (codepoint < 128) {
-                return (8 * face->default_scale) * 64;
-            }
-            return 0;
+            return codepoint < 128 ? (8 * run->face->default_scale) * 64 : 0;
         case FlFontRasterKind_None:
         default:
             return 0;
@@ -449,9 +478,10 @@ int font_cache_get_glyph_advance(FlFontCache* self, FlFontId font_id, u16 font_s
     }
     // Quantize only for FreeType faces: the built-in font ignores size.
     if (face->kind != FlFontRasterKind_FreeType) {
-        return glyph_advance_q4(self, face, 0, codepoint, false);
+        return glyph_advance(&(AdvanceRun) { .cache = self, .face = face, .q4 = 0, .may_claim_row = false }, codepoint);
     }
-    return glyph_advance_q4(self, face, font_cache_whole_px_to_q4(font_size), codepoint, true);
+    AdvanceRun run = { .cache = self, .face = face, .q4 = font_cache_whole_px_to_q4(font_size), .may_claim_row = true };
+    return glyph_advance(&run, codepoint);
 }
 
 int font_cache_get_glyph_advance_q4(FlFontCache* self, FlFontId font_id, u16 size_q4, u32 codepoint) {
@@ -459,7 +489,8 @@ int font_cache_get_glyph_advance_q4(FlFontCache* self, FlFontId font_id, u16 siz
     if (face == nullptr) {
         return 0;
     }
-    return glyph_advance_q4(self, face, size_q4, codepoint, false);
+    return glyph_advance(&(AdvanceRun) { .cache = self, .face = face, .q4 = size_q4, .may_claim_row = false },
+                         codepoint);
 }
 
 // font_size <= 0 falls back to the face's load size.
@@ -549,27 +580,30 @@ static FlFontMetrics face_vmetrics(FlFontCache* self, FontFace* face, u16 q4) {
     return out;
 }
 
-// Advance sum (26.6) + glyph count over one line, via the shared per-glyph cache.
-static i64 sum_advances_q4(FlFontCache* self, FontFace* face, FlString text, u16 q4, bool may_claim_row,
-                           i64* out_glyphs) {
-    i64 sum = 0;
-    i64 glyphs = 0;
-    if (text.data != nullptr) {
-        if (text.is_ascii) {
-            for (size_t j = 0, count = text.length; j < count; j++) {
-                sum += glyph_advance_q4(self, face, q4, (unsigned char)text.data[j], may_claim_row);
-            }
-            glyphs = (i64)text.length;
-        } else {
-            Utf8Iter it = utf8_iter(text);
-            while (!utf8_iter_done(&it)) {
-                sum += glyph_advance_q4(self, face, q4, utf8_iter_next(&it), may_claim_row);
-                glyphs++;
-            }
-        }
+// Advance sum (26.6) and glyph count over one line, via the shared per-glyph cache.
+typedef struct AdvanceSum {
+    i64 sum;
+    i64 glyphs;
+} AdvanceSum;
+
+static AdvanceSum sum_advances(const AdvanceRun* run, FlString text) {
+    AdvanceSum out = { 0 };
+    if (text.data == nullptr) {
+        return out;
     }
-    *out_glyphs = glyphs;
-    return sum;
+    if (text.is_ascii) {
+        for (size_t j = 0; j < text.length; j++) {
+            out.sum += glyph_advance(run, (unsigned char)text.data[j]);
+        }
+        out.glyphs = (i64)text.length;
+        return out;
+    }
+    Utf8Iter it = utf8_iter(text);
+    while (!utf8_iter_done(&it)) {
+        out.sum += glyph_advance(run, utf8_iter_next(&it));
+        out.glyphs++;
+    }
+    return out;
 }
 
 Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id, u16 font_size) {
@@ -583,33 +617,33 @@ Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id
     }
 
     u16 q4 = font_cache_whole_px_to_q4(font_size);
-    i64 glyphs = 0;
-    float width = (float)sum_advances_q4(self, face, text, q4, true, &glyphs) / 64.0f;
+    AdvanceRun run = { .cache = self, .face = face, .q4 = q4, .may_claim_row = true };
+    float width = (float)sum_advances(&run, text).sum / 64.0f;
     return (Vec2) { width, face_vmetrics(self, face, q4).line_height };
 }
 
 // Fractional-size single-line measurement (quarter-px quantized). Letter spacing adds n−1 gaps only (no
 // trailing gap), so a measured pill hugs its label; the styled draw applies the same rule.
 
-FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlFontId font_id, float font_size,
-                                      float letter_spacing) {
+FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextStyle style) {
     FlTextMetrics out = { 0 };
 
-    FontFace* face = face_for_metrics(self, font_id, "font_cache_measure_text");
+    FontFace* face = face_for_metrics(self, style.font_id, "font_cache_measure_text");
     if (face == nullptr) {
         return out;
     }
 
     // A zero key (face loaded at size 0, measured with font_size <= 0) has no usable FreeType size: zeroed metrics.
-    u16 q4 = resolve_size_q4(face, font_size);
+    u16 q4 = resolve_size_q4(face, style.font_size);
     if (face->kind == FlFontRasterKind_FreeType && q4 == 0) {
         return out;
     }
 
-    i64 glyphs = 0;
-    out.width = (float)sum_advances_q4(self, face, text, q4, false, &glyphs) / 64.0f;
-    if (glyphs > 1) {
-        out.width += letter_spacing * (float)(glyphs - 1);
+    AdvanceRun run = { .cache = self, .face = face, .q4 = q4, .may_claim_row = false };
+    AdvanceSum advances = sum_advances(&run, text);
+    out.width = (float)advances.sum / 64.0f;
+    if (advances.glyphs > 1) {
+        out.width += style.letter_spacing * (float)(advances.glyphs - 1);
     }
 
     FlFontMetrics vm = face_vmetrics(self, face, q4);
@@ -690,9 +724,13 @@ static void outline_emit(OutlineDecomposeCtx* ctx, FlGlyphSegment seg) {
     ctx->count++;
 }
 
-// 26.6 inputs are exact in f32, so the open-contour check can compare exactly.
+static bool vec2_equal(FlVec2 a, FlVec2 b) {
+    return a.x == b.x && a.y == b.y;
+}
+
 static void outline_close_contour(OutlineDecomposeCtx* ctx) {
-    if (ctx->has_contour && (ctx->current.x != ctx->contour_start.x || ctx->current.y != ctx->contour_start.y)) {
+    // 26.6 inputs are exact in f32, so the open-contour check can compare exactly.
+    if (ctx->has_contour && !vec2_equal(ctx->current, ctx->contour_start)) {
         outline_emit(ctx, (FlGlyphSegment) {
                               .kind = FlGlyphSegment_Line,
                               .pts = { ctx->current, ctx->contour_start },
@@ -710,40 +748,36 @@ static int outline_move_to(const FT_Vector* to, void* user) {
     return 0;
 }
 
-// The one body behind FreeType's three curve callbacks: a segment runs from the pen through however many
-// control points the degree carries to to, and leaves the pen on to. Absent controls are passed as nullptr.
-static int outline_seg(OutlineDecomposeCtx* ctx, FlGlyphSegmentKind kind, const FT_Vector* control1,
-                       const FT_Vector* control2, const FT_Vector* to) {
+// The one body behind FreeType's three curve callbacks: a segment runs from the pen through the given control
+// points to the last point, and leaves the pen there. pts holds the controls followed by the end point.
+static int outline_seg(OutlineDecomposeCtx* ctx, FlGlyphSegmentKind kind, const FlVec2* pts, u32 count) {
     FlGlyphSegment seg = { .kind = kind, .pts = { ctx->current } };
-    u32 n = 1;
-    if (control1 != nullptr) {
-        seg.pts[n++] = outline_point(control1);
+    for_count(i, count) {
+        seg.pts[i + 1] = pts[i];
     }
-    if (control2 != nullptr) {
-        seg.pts[n++] = outline_point(control2);
-    }
-    seg.pts[n] = outline_point(to);
 
-    ctx->current = seg.pts[n];
+    ctx->current = seg.pts[count];
     outline_emit(ctx, seg);
     return 0;
 }
 
 static int outline_line_to(const FT_Vector* to, void* user) {
-    return outline_seg(user, FlGlyphSegment_Line, nullptr, nullptr, to);
+    const FlVec2 pts[] = { outline_point(to) };
+    return outline_seg(user, FlGlyphSegment_Line, pts, 1);
 }
 
 static int outline_conic_to(const FT_Vector* control, const FT_Vector* to, void* user) {
-    return outline_seg(user, FlGlyphSegment_Quadratic, control, nullptr, to);
+    const FlVec2 pts[] = { outline_point(control), outline_point(to) };
+    return outline_seg(user, FlGlyphSegment_Quadratic, pts, 2);
 }
 
 static int outline_cubic_to(const FT_Vector* control1, const FT_Vector* control2, const FT_Vector* to, void* user) {
-    return outline_seg(user, FlGlyphSegment_Cubic, control1, control2, to);
+    const FlVec2 pts[] = { outline_point(control1), outline_point(control2), outline_point(to) };
+    return outline_seg(user, FlGlyphSegment_Cubic, pts, 3);
 }
 
 static u32 face_glyph_index(FlFontCache* self, FontFace* face, u32 codepoint) {
-    if (face == nullptr || face->kind != FlFontRasterKind_FreeType || face->status != FontStatus_Ready
-        || face->metrics_face == nullptr) {
+    if (!face_has_metrics(face)) {
         return 0;
     }
     mutex_lock_auto(&self->ft_lock);
@@ -754,12 +788,16 @@ u32 font_cache_get_glyph_index(FlFontCache* self, FlFontId font_id, u32 codepoin
     return face_glyph_index(self, find_face_by_id(self, font_id), codepoint);
 }
 
+static bool fallback_applies(const FlFontCache* self, FlFontId font_id) {
+    return self->fallback_face != nullptr && self->fallback_face->id != font_id;
+}
+
 // Primary first, fallback face second - the same order ft_compute_advance takes for metrics, so a glyph's
 // outline and its advance always come from one face.
 FontGlyphRef font_cache_resolve_glyph(FlFontCache* self, FlFontId font_id, u32 codepoint) {
     FontGlyphRef ref
         = { .font = font_id, .glyph_index = face_glyph_index(self, find_face_by_id(self, font_id), codepoint) };
-    if (ref.glyph_index != 0 || self->fallback_face == nullptr || self->fallback_face->id == font_id) {
+    if (ref.glyph_index != 0 || !fallback_applies(self, font_id)) {
         return ref;
     }
 
@@ -770,11 +808,51 @@ FontGlyphRef font_cache_resolve_glyph(FlFontCache* self, FlFontId font_id, u32 c
     return (FontGlyphRef) { .font = self->fallback_face->id, .glyph_index = fallback_index };
 }
 
+typedef struct OutlineSegments {
+    FlGlyphSegment* segments;
+    u32 count;
+} OutlineSegments;
+
+// Run the decompose callbacks twice: count the segments, then fill an array allocated from the arena.
+static bool outline_collect(FT_Outline* outline, FlArena* arena, OutlineSegments* out) {
+    static const FT_Outline_Funcs funcs = {
+        .move_to = outline_move_to,
+        .line_to = outline_line_to,
+        .conic_to = outline_conic_to,
+        .cubic_to = outline_cubic_to,
+    };
+
+    *out = (OutlineSegments) { 0 };
+
+    OutlineDecomposeCtx count_pass = { 0 };
+    if (FT_Outline_Decompose(outline, &funcs, &count_pass) != 0) {
+        return false;
+    }
+    outline_close_contour(&count_pass);
+
+    out->count = count_pass.count;
+    if (count_pass.count > 0) {
+        out->segments = arena_alloc_array(arena, FlGlyphSegment, count_pass.count);
+        OutlineDecomposeCtx fill_pass = { .segments = out->segments };
+        FT_Outline_Decompose(outline, &funcs, &fill_pass);
+        outline_close_contour(&fill_pass);
+    }
+    return true;
+}
+
+// Load a glyph with light hinting (the autohinter with vertical stem snapping only, evaluated at the target pixel
+// size) and succeed only when it is an outline.
+static bool load_outline_glyph(FT_Face face, u32 glyph_id) {
+    if (FT_Load_Glyph(face, glyph_id, FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_LIGHT) != 0) {
+        return false;
+    }
+    return face->glyph->format == FT_GLYPH_FORMAT_OUTLINE;
+}
+
 bool font_cache_get_glyph_outline(FlFontCache* self, FlFontId font_id, u16 size_q4, u32 glyph_id, struct FlArena* arena,
                                   FlGlyphOutline* out) {
     FontFace* face = find_face_by_id(self, font_id);
-    if (face == nullptr || face->kind != FlFontRasterKind_FreeType || face->status != FontStatus_Ready
-        || face->metrics_face == nullptr || size_q4 == 0) {
+    if (!face_has_metrics(face) || size_q4 == 0) {
         return false;
     }
 
@@ -784,48 +862,29 @@ bool font_cache_get_glyph_outline(FlFontCache* self, FlFontId font_id, u16 size_
     mutex_lock_auto(&self->ft_lock);
     ft_set_size_q4(mf, size_q4);
 
-    // Light hinting: the autohinter with vertical stem snapping only, evaluated at the target pixel size.
-    if (FT_Load_Glyph(mf, glyph_id, FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_LIGHT) != 0) {
-        return false;
-    }
-    if (mf->glyph->format != FT_GLYPH_FORMAT_OUTLINE) {
+    if (!load_outline_glyph(mf, glyph_id)) {
         return false;
     }
     FT_Outline* outline = &mf->glyph->outline;
 
-    static const FT_Outline_Funcs funcs = {
-        .move_to = outline_move_to,
-        .line_to = outline_line_to,
-        .conic_to = outline_conic_to,
-        .cubic_to = outline_cubic_to,
-    };
-
-    OutlineDecomposeCtx count_pass = { 0 };
-    if (FT_Outline_Decompose(outline, &funcs, &count_pass) != 0) {
+    OutlineSegments collected;
+    if (!outline_collect(outline, arena, &collected)) {
         return false;
     }
-    outline_close_contour(&count_pass);
 
-    FlGlyphSegment* segments = nullptr;
-    if (count_pass.count > 0) {
-        segments = arena_alloc_array(arena, FlGlyphSegment, count_pass.count);
-        OutlineDecomposeCtx fill_pass = { .segments = segments };
-        FT_Outline_Decompose(outline, &funcs, &fill_pass);
-        outline_close_contour(&fill_pass);
+    FT_BBox cbox = { 0 }; // control box: cheap, conservative for curves - cell padding absorbs the overestimate
+    if (collected.count > 0) {
+        FT_Outline_Get_CBox(outline, &cbox);
     }
 
-    FT_BBox cbox; // control box: cheap, conservative for curves - cell padding absorbs the overestimate
-    FT_Outline_Get_CBox(outline, &cbox);
-    bool empty = count_pass.count == 0;
-
     *out = (FlGlyphOutline) {
-        .segments = segments,
-        .segment_count = count_pass.count,
+        .segments = collected.segments,
+        .segment_count = collected.count,
         .advance = (f32)mf->glyph->advance.x / 64.0f,
-        .min_x = empty ? 0.0f : (f32)cbox.xMin / 64.0f,
-        .min_y = empty ? 0.0f : (f32)cbox.yMin / 64.0f,
-        .max_x = empty ? 0.0f : (f32)cbox.xMax / 64.0f,
-        .max_y = empty ? 0.0f : (f32)cbox.yMax / 64.0f,
+        .min_x = (f32)cbox.xMin / 64.0f,
+        .min_y = (f32)cbox.yMin / 64.0f,
+        .max_x = (f32)cbox.xMax / 64.0f,
+        .max_y = (f32)cbox.yMax / 64.0f,
     };
     return true;
 }

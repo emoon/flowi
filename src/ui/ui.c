@@ -98,17 +98,17 @@ static Clay_Dimensions measure_text_function(Clay_StringSlice text, Clay_TextEle
         .is_ascii = is_ascii_quick(text.chars, text.length),
     };
 
-    FlFontId font_id = (FlFontId)config->fontId;
-    const float letter_spacing = (float)config->letterSpacing;
-
-    FlTextMetrics m = font_cache_measure_text(ctx->shared->font_cache, our_string, font_id,
-                                              (float)font_cache_quantize_size((u16)config->fontSize), letter_spacing);
+    FlTextMetrics m
+        = font_cache_measure_text(ctx->shared->font_cache, our_string,
+                                  (FlTextStyle) { .font_id = config->fontId,
+                                                  .font_size = (float)font_cache_quantize_size((u16)config->fontSize),
+                                                  .letter_spacing = (float)config->letterSpacing });
 
     if (m.height == 0.0f) {
         return (Clay_Dimensions) { 0, 0 };
     }
 
-    return (Clay_Dimensions) { m.width + letter_spacing, m.height };
+    return (Clay_Dimensions) { m.width + (float)config->letterSpacing, m.height };
 }
 
 // Clay returns a safe default after invoking this, so a release build can carry the frame to completion.
@@ -520,8 +520,10 @@ void ui_update_begin(FlUiCtx* self) {
     // The frame arenas now hold this frame's storage, so fl_frame_str is legal from here until ui_update_end.
     self->frame_open = true;
 
-    painter_begin_frame(self->painter, self->shared->font_cache, self->ui_scale, self->text_scale,
-                        self->render_frame_allocator_state);
+    painter_begin_frame(self->painter, (PainterFrame) { .font_cache = self->shared->font_cache,
+                                                        .ui_scale = self->ui_scale,
+                                                        .text_scale = self->text_scale,
+                                                        .state_arena = self->render_frame_allocator_state });
 
     list_uniform_begin_update(self->list_uniform_ctx);
 

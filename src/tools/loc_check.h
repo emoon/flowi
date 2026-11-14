@@ -50,6 +50,15 @@ typedef struct LocCheckSource {
     FlString text;
 } LocCheckSource;
 
+// Everything a run reads: the source files to scan for SID literals (none skips the code-side checks) and the
+// tables, default first.
+typedef struct LocCheckInput {
+    const LocCheckSource* sources;
+    u32 source_count;
+    const LocCheckTable* tables;
+    u32 table_count;
+} LocCheckInput;
+
 typedef struct LocCheckResult {
     LocCheckFinding* first;
     u32 error_count;
@@ -59,10 +68,13 @@ typedef struct LocCheckResult {
 // Run every LocCheckId check. `tables[0]` is the default language; the rest are translations. Findings come back in
 // check order per language, and everything they point at is allocated in arena.
 
-LocCheckResult loc_check_run(struct FlArena* arena, const LocCheckSource* sources, u32 source_count,
-                             const LocCheckTable* tables, u32 table_count);
+LocCheckResult loc_check_run(struct FlArena* arena, const LocCheckInput* input);
 
 // Render the findings as the human-readable report: grouped per language, then per check, ending in a summary line.
 
 FlString loc_check_format_report(struct FlArena* arena, const LocCheckResult* result, const LocCheckTable* tables,
                                  u32 table_count);
+
+// The label the report titles a check's group with, or null for an id that has none.
+
+const char* loc_check_heading_label(LocCheckId check);

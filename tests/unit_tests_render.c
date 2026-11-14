@@ -8,6 +8,12 @@
 #include "app/host.h"
 #include <render/software/sr_render_helpers.h>
 
+// Measures text at a font, size and letter spacing through the cache.
+static FlTextMetrics measure(FlFontCache* cache, FlString text, FlFontId font, float size, float spacing) {
+    return font_cache_measure_text(cache, text,
+                                   (FlTextStyle) { .font_id = font, .font_size = size, .letter_spacing = spacing });
+}
+
 // font_cache: quantize bucket boundaries.
 
 UTEST(font_cache, quantize_buckets) {
@@ -106,42 +112,40 @@ UTEST(font_cache, measure_text_freetype) {
     // 1600 = 25.0px in 26.6: the font's 0.8 em design advance (25.6px at 32px) after hinting.
     ASSERT_EQ_MSG(adv, 1600, "whole-px 'A' advance is pinned to its historical value");
     FlString aa = { .data = "AA", .length = 2, .is_static = 1, .is_ascii = 1 };
-    FlTextMetrics m = font_cache_measure_text(cache, aa, font, 32.0f, 0.0f);
+    FlTextMetrics m = measure(cache, aa, font, 32.0f, 0.0f);
     ASSERT_NEAR_MSG(m.width, (float)(2 * adv) / 64.0f, 0.0001f, "width = summed advances of the layout path");
     ASSERT_TRUE_MSG(m.height > 0.0f && m.ascent > 0.0f, "line metrics are filled");
     ASSERT_NEAR_MSG(m.height, m.ascent + m.descent, 2.0f, "line height tracks ascent + descent");
 
     FlString aa_utf8 = { .data = "AA", .length = 2, .is_static = 1 };
-    ASSERT_NEAR_MSG(font_cache_measure_text(cache, aa_utf8, font, 32.0f, 0.0f).width, m.width, 0.0001f,
+    ASSERT_NEAR_MSG(measure(cache, aa_utf8, font, 32.0f, 0.0f).width, m.width, 0.0001f,
                     "utf8 iteration agrees with the ascii fast path");
 
-    FlTextMetrics spaced = font_cache_measure_text(cache, aa, font, 32.0f, 1.5f);
+    FlTextMetrics spaced = measure(cache, aa, font, 32.0f, 1.5f);
     ASSERT_NEAR_MSG(spaced.width, m.width + 1.5f, 0.0001f, "two glyphs get exactly one spacing gap");
     FlString a = { .data = "A", .length = 1, .is_static = 1, .is_ascii = 1 };
-    ASSERT_NEAR_MSG(font_cache_measure_text(cache, a, font, 32.0f, 1.5f).width,
-                    font_cache_measure_text(cache, a, font, 32.0f, 0.0f).width, 0.0001f,
+    ASSERT_NEAR_MSG(measure(cache, a, font, 32.0f, 1.5f).width, measure(cache, a, font, 32.0f, 0.0f).width, 0.0001f,
                     "a single glyph gets no spacing gap");
     FlString aaa = { .data = "AAA", .length = 3, .is_static = 1, .is_ascii = 1 };
-    ASSERT_NEAR_MSG(font_cache_measure_text(cache, aaa, font, 32.0f, 1.5f).width, 3.0f * ((float)adv / 64.0f) + 3.0f,
-                    0.0001f, "three glyphs get exactly two spacing gaps (n−1, no trailing gap)");
+    ASSERT_NEAR_MSG(measure(cache, aaa, font, 32.0f, 1.5f).width, 3.0f * ((float)adv / 64.0f) + 3.0f, 0.0001f,
+                    "three glyphs get exactly two spacing gaps (n−1, no trailing gap)");
 
-    FlTextMetrics empty = font_cache_measure_text(cache, string_empty(), font, 32.0f, 4.0f);
+    FlTextMetrics empty = measure(cache, string_empty(), font, 32.0f, 4.0f);
     ASSERT_NEAR_MSG(empty.width, 0.0f, 0.0001f, "empty text has zero width");
     ASSERT_NEAR_MSG(empty.height, m.height, 0.0001f, "empty text keeps the line metrics");
 
-    FlTextMetrics q_lo = font_cache_measure_text(cache, aa, font, 7.5f, 0.0f);
-    FlTextMetrics q_hi = font_cache_measure_text(cache, aa, font, 7.6f, 0.0f);
+    FlTextMetrics q_lo = measure(cache, aa, font, 7.5f, 0.0f);
+    FlTextMetrics q_hi = measure(cache, aa, font, 7.6f, 0.0f);
     ASSERT_TRUE_MSG(q_lo.width > 0.0f && q_lo.width < m.width, "7.5px measures smaller than 32px");
     ASSERT_NEAR_MSG(q_lo.width, q_hi.width, 0.0001f, "7.5px and 7.6px share one quarter-px key");
-    ASSERT_NEAR_MSG(font_cache_measure_text(cache, aa, font, 0.0f, 0.0f).width, m.width, 0.0001f,
-                    "size 0 falls back to the load size");
+    ASSERT_NEAR_MSG(measure(cache, aa, font, 0.0f, 0.0f).width, m.width, 0.0001f, "size 0 falls back to the load size");
 
     FlFontMetrics fm = font_cache_get_font_metrics(cache, font, 32.0f);
     ASSERT_NEAR_MSG(fm.ascent, m.ascent, 0.0001f, "font metrics ascent matches measurement");
     ASSERT_NEAR_MSG(fm.descent, m.descent, 0.0001f, "font metrics descent matches measurement");
     ASSERT_NEAR_MSG(fm.line_height, m.height, 0.0001f, "font metrics line height matches measurement");
 
-    FlTextMetrics unknown = font_cache_measure_text(cache, aa, 9999, 32.0f, 0.0f);
+    FlTextMetrics unknown = measure(cache, aa, 9999, 32.0f, 0.0f);
     ASSERT_TRUE_MSG(unknown.width == 0.0f && unknown.height == 0.0f && unknown.ascent == 0.0f
                         && unknown.descent == 0.0f,
                     "unknown font measures as zeroed metrics");
@@ -157,17 +161,17 @@ UTEST(font_cache, measure_text_default_font) {
     FlFontId font = font_cache_load_default_font(cache, 2); // built-in 8x8 font at scale 2
 
     FlString ab = { .data = "AB", .length = 2, .is_static = 1, .is_ascii = 1 };
-    FlTextMetrics m = font_cache_measure_text(cache, ab, font, 0.0f, 0.0f);
+    FlTextMetrics m = measure(cache, ab, font, 0.0f, 0.0f);
     ASSERT_NEAR_MSG(m.width, 32.0f, 0.0001f, "two cells at 8px × scale 2");
     ASSERT_NEAR_MSG(m.height, 16.0f, 0.0001f, "cell height at scale 2");
     ASSERT_TRUE_MSG(m.ascent == 0.0f && m.descent == 0.0f,
                     "the built-in font's baseline sits at the cell top (zero ascent/descent)");
-    ASSERT_NEAR_MSG(font_cache_measure_text(cache, ab, font, 0.0f, 2.0f).width, 34.0f, 0.0001f,
+    ASSERT_NEAR_MSG(measure(cache, ab, font, 0.0f, 2.0f).width, 34.0f, 0.0001f,
                     "letter spacing applies to the built-in font too");
-    ASSERT_NEAR_MSG(font_cache_measure_text(cache, ab, font, 12.34f, 0.0f).width, m.width, 0.0001f,
+    ASSERT_NEAR_MSG(measure(cache, ab, font, 12.34f, 0.0f).width, m.width, 0.0001f,
                     "the built-in font ignores the requested size");
     FlString abc = { .data = "ABC", .length = 3, .is_static = 1, .is_ascii = 1 };
-    ASSERT_NEAR_MSG(font_cache_measure_text(cache, abc, font, 0.0f, 2.0f).width, 52.0f, 0.0001f,
+    ASSERT_NEAR_MSG(measure(cache, abc, font, 0.0f, 2.0f).width, 52.0f, 0.0001f,
                     "three cells plus exactly two spacing gaps (n−1)");
     ASSERT_NEAR_MSG(font_cache_get_font_metrics(cache, font, 0.0f).line_height, 16.0f, 0.0001f,
                     "font metrics report the cell height");
@@ -389,7 +393,7 @@ UTEST(font_cache, text_size_includes_fallback_advance) {
 
     ASSERT_EQ_MSG(font_cache_get_text_size(cache, b, primary, size).x, 0.0f,
                   "no fallback -> missing codepoint measures zero width");
-    ASSERT_EQ_MSG(font_cache_measure_text(cache, b, primary, 32.0f, 0.0f).width, 0.0f,
+    ASSERT_EQ_MSG(measure(cache, b, primary, 32.0f, 0.0f).width, 0.0f,
                   "no fallback -> the fractional path measures zero width too");
 
     FlFontId fallback = font_cache_load_font_memory(cache, k_fallback_test_ttf, k_fallback_test_ttf_size, size);
@@ -400,7 +404,7 @@ UTEST(font_cache, text_size_includes_fallback_advance) {
     ASSERT_TRUE_MSG(advance > 0, "fallback supplies a nonzero advance for 'B'");
     ASSERT_EQ_MSG(font_cache_get_text_size(cache, b, primary, size).x, (float)advance / 64.0f,
                   "measured width equals the per-codepoint laid-out advance (fallback included)");
-    ASSERT_NEAR_MSG(font_cache_measure_text(cache, b, primary, 32.0f, 0.0f).width, (float)advance / 64.0f, 0.0001f,
+    ASSERT_NEAR_MSG(measure(cache, b, primary, 32.0f, 0.0f).width, (float)advance / 64.0f, 0.0001f,
                     "the fractional path picks up the fallback advance too");
 
     font_cache_destroy(cache);
@@ -5158,21 +5162,24 @@ UTEST(render, primitives_and_background_blend) {
 
         // Gradient primitive - the IR's gradient has no widget/Clay emitter, so this is
         // the only path that exercises RenderMask_ColorGradient.
-        painter_gradient_rect(p, 100.0f, 400.0f, 320.0f, 200.0f, ui_color(255, 0, 0, 255), ui_color(0, 255, 0, 255),
-                              ui_color(0, 0, 255, 255), ui_color(255, 255, 0, 255));
+        painter_gradient_rect(p, (FlRect) { .x = 100.0f, .y = 400.0f, .w = 320.0f, .h = 200.0f },
+                              (PainterCornerColors) { .top_left = ui_color(255, 0, 0, 255),
+                                                      .top_right = ui_color(0, 255, 0, 255),
+                                                      .bottom_left = ui_color(0, 0, 255, 255),
+                                                      .bottom_right = ui_color(255, 255, 0, 255) });
 
         // Static image (drawn at native size).
-        ASSERT_TRUE_MSG(
-            painter_image(p, 470.0f, 400.0f, 0.0f, 0.0f, (FlImageHandle)fg_image, (FlColor) { 255, 255, 255, 255 }),
-            "painter_image: foreground not ready");
+        ASSERT_TRUE_MSG(painter_image(p, (FlRect) { .x = 470.0f, .y = 400.0f, .w = 0.0f, .h = 0.0f },
+                                      (FlImageHandle)fg_image, (FlColor) { 255, 255, 255, 255 }),
+                        "painter_image: foreground not ready");
 
-        painter_dynamic_image(p, 540.0f, 400.0f, dyn_rgba, ui_color(255, 255, 255, 255));
+        painter_dynamic_image(p, (FlVec2) { .x = 540.0f, .y = 400.0f }, dyn_rgba, ui_color(255, 255, 255, 255));
 
         // Alpha-only dynamic image, colorized via tint.
-        painter_dynamic_image(p, 620.0f, 400.0f, dyn_alpha, ui_color(80, 220, 255, 255));
+        painter_dynamic_image(p, (FlVec2) { .x = 620.0f, .y = 400.0f }, dyn_alpha, ui_color(80, 220, 255, 255));
 
         // Translucent painter rectangle (exercises alpha blend-with-background).
-        painter_rect(p, 760.0f, 400.0f, 260.0f, 200.0f, ui_color(255, 120, 0, 120));
+        painter_rect(p, (FlRect) { .x = 760.0f, .y = 400.0f, .w = 260.0f, .h = 200.0f }, ui_color(255, 120, 0, 120));
     }
 
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -5565,9 +5572,9 @@ UTEST(render, image_scaled) {
     // Full-window container at origin (0,0) so element-local painter coords equal absolute pixels.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         Painter* p = ctx->painter;
-        ASSERT_TRUE_MSG(
-            painter_image(p, draw_x, draw_y, draw_w, draw_h, (FlImageHandle)fg_image, (FlColor) { 255, 255, 255, 255 }),
-            "painter_image: foreground not ready");
+        ASSERT_TRUE_MSG(painter_image(p, (FlRect) { .x = draw_x, .y = draw_y, .w = draw_w, .h = draw_h },
+                                      (FlImageHandle)fg_image, (FlColor) { 255, 255, 255, 255 }),
+                        "painter_image: foreground not ready");
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 
@@ -5640,10 +5647,12 @@ UTEST(render, image_downscale_gather) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         Painter* p = ctx->painter;
-        ASSERT_TRUE_MSG(painter_image(p, x8, y8, w8, h8, ramp_img, ui_color(255, 255, 255, 255)),
-                        "painter_image: 8x ramp not ready");
-        ASSERT_TRUE_MSG(painter_image(p, x2, y2, w2, h2, ramp_img, ui_color(255, 255, 255, 255)),
-                        "painter_image: 2x ramp not ready");
+        ASSERT_TRUE_MSG(
+            painter_image(p, (FlRect) { .x = x8, .y = y8, .w = w8, .h = h8 }, ramp_img, ui_color(255, 255, 255, 255)),
+            "painter_image: 8x ramp not ready");
+        ASSERT_TRUE_MSG(
+            painter_image(p, (FlRect) { .x = x2, .y = y2, .w = w2, .h = h2 }, ramp_img, ui_color(255, 255, 255, 255)),
+            "painter_image: 2x ramp not ready");
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 
@@ -6085,13 +6094,17 @@ UTEST(render, image_from_pixels) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         Painter* p = ctx->painter;
-        ASSERT_TRUE_MSG(painter_image(p, 100.0f, 100.0f, 0.0f, 0.0f, rgba, ui_color(255, 255, 255, 255)),
+        ASSERT_TRUE_MSG(painter_image(p, (FlRect) { .x = 100.0f, .y = 100.0f, .w = 0.0f, .h = 0.0f }, rgba,
+                                      ui_color(255, 255, 255, 255)),
                         "painter_image: RGBA raw handle not ready");
-        ASSERT_TRUE_MSG(painter_image(p, 108.0f, 100.0f, 0.0f, 0.0f, alpha, alpha_tint),
-                        "painter_image: Alpha raw handle not ready");
-        ASSERT_TRUE_MSG(painter_image(p, 116.0f, 100.0f, 0.0f, 0.0f, rgb, ui_color(255, 255, 255, 255)),
+        ASSERT_TRUE_MSG(
+            painter_image(p, (FlRect) { .x = 108.0f, .y = 100.0f, .w = 0.0f, .h = 0.0f }, alpha, alpha_tint),
+            "painter_image: Alpha raw handle not ready");
+        ASSERT_TRUE_MSG(painter_image(p, (FlRect) { .x = 116.0f, .y = 100.0f, .w = 0.0f, .h = 0.0f }, rgb,
+                                      ui_color(255, 255, 255, 255)),
                         "painter_image: RGB raw handle not ready");
-        ASSERT_TRUE_MSG(painter_image(p, 120.0f, 100.0f, 0.0f, 0.0f, xrgb, ui_color(255, 255, 255, 255)),
+        ASSERT_TRUE_MSG(painter_image(p, (FlRect) { .x = 120.0f, .y = 100.0f, .w = 0.0f, .h = 0.0f }, xrgb,
+                                      ui_color(255, 255, 255, 255)),
                         "painter_image: XRGB raw handle not ready");
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -6156,7 +6169,8 @@ UTEST(render, image_update_pixels) {
 
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        ASSERT_TRUE_MSG(painter_image(ctx->painter, 200.0f, 200.0f, 0.0f, 0.0f, handle, ui_color(255, 255, 255, 255)),
+        ASSERT_TRUE_MSG(painter_image(ctx->painter, (FlRect) { .x = 200.0f, .y = 200.0f, .w = 0.0f, .h = 0.0f }, handle,
+                                      ui_color(255, 255, 255, 255)),
                         "painter_image: re-uploaded handle not ready");
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -6425,7 +6439,8 @@ UTEST(render, translucent_image_over) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         Painter* p = ctx->painter;
-        ASSERT_TRUE_MSG(painter_image(p, 200.0f, 200.0f, 0.0f, 0.0f, img, ui_color(255, 255, 255, 255)),
+        ASSERT_TRUE_MSG(painter_image(p, (FlRect) { .x = 200.0f, .y = 200.0f, .w = 0.0f, .h = 0.0f }, img,
+                                      ui_color(255, 255, 255, 255)),
                         "painter_image: RGBA handle not ready");
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -6636,7 +6651,8 @@ static void scene_dyn_images(FlUiCtx* ctx, int n) {
         for (int i = 0; i < n; i++) {
             const float x = (float)((i % 60) * 20); // 60-wide grid, 16px draws → all on-screen within 1920x1080
             const float y = (float)((i / 60) * 20);
-            painter_image(p, x, y, 16.0f, 16.0f, (FlImageHandle)s_dyn_image, (FlColor) { 255, 255, 255, 255 });
+            painter_image(p, (FlRect) { .x = x, .y = y, .w = 16.0f, .h = 16.0f }, (FlImageHandle)s_dyn_image,
+                          (FlColor) { 255, 255, 255, 255 });
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -8152,10 +8168,15 @@ UTEST(render, canvas_paint_z_clip_and_one_span) {
                 Painter* p = ui_get_painter();
                 ASSERT_TRUE_MSG(p != nullptr, "ui_get_painter is valid inside an open painting scope");
                 // Many primitives in one scope - these must collapse to a single CUSTOM span.
-                painter_rect(p, 0.0f, 0.0f, 200.0f, 200.0f, canvas_col);
-                painter_rect(p, 4.0f, 4.0f, 8.0f, 8.0f, canvas_col);
-                painter_circle(p, 100.0f, 100.0f, 6.0f, canvas_col, ui_color(0, 0, 0, 0), 0.0f);
-                painter_rect(p, 20.0f, 20.0f, 6.0f, 6.0f, canvas_col);
+                painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 200.0f }, canvas_col);
+                painter_rect(p, (FlRect) { .x = 4.0f, .y = 4.0f, .w = 8.0f, .h = 8.0f }, canvas_col);
+                painter_circle(p, (PainterCircle) { .cx = 100.0f,
+                                                    .cy = 100.0f,
+                                                    .radius = 6.0f,
+                                                    .fill = { .color = canvas_col,
+                                                              .border_color = ui_color(0, 0, 0, 0),
+                                                              .border_width = 0.0f } });
+                painter_rect(p, (FlRect) { .x = 20.0f, .y = 20.0f, .w = 6.0f, .h = 6.0f }, canvas_col);
 
                 // Child element, laid out at the canvas origin - must draw OVER the paint.
                 ui_layout_area(.sizing = { sizing_fixed(60), sizing_fixed(60) }, .color = child_col) {}
@@ -8633,7 +8654,7 @@ UTEST(render, canvas_paint_over_fill_and_self_clip) {
             Painter* p = ui_get_painter();
             ASSERT_TRUE_MSG(p != nullptr, "ui_get_painter is valid inside an open painting scope");
             // A paint band that overshoots the element to the right (x 0..200; the element is only 100 wide).
-            painter_rect(p, 0.0f, 0.0f, 200.0f, 50.0f, paint_col);
+            painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 50.0f }, paint_col);
             // Child box at the canvas origin - must draw OVER the paint.
             ui_layout_area(.sizing = { sizing_fixed(30), sizing_fixed(30) }, .color = child_col) {}
         }
@@ -8675,7 +8696,7 @@ UTEST(render, canvas_under_popup) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
         ui_layout_area_id(ID("canvas3"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_rect(ui_get_painter(), 0.0f, 0.0f, 200.0f, 200.0f, canvas_col);
+            painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 200.0f }, canvas_col);
         }
         // Popup: a floating element attached to the root at the origin, declared AFTER the canvas, so it composes
         // over the paint.
@@ -8719,7 +8740,7 @@ UTEST(render, canvas_custom_control) {
             (void)sig;
             Painter* p = ui_get_painter();
             painter_valid_in_scope = (p != nullptr);
-            painter_rect(p, 0.0f, 0.0f, 80.0f, 80.0f, ctrl_col);
+            painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f }, ctrl_col);
         }
     }
     ASSERT_TRUE_MSG(ui_get_painter() == nullptr, "ui_get_painter is null again once the scope closes");
@@ -8763,10 +8784,15 @@ UTEST(render, canvas_command_accounting) {
                    .direction = FlLayoutDirection_TopToBottom) {
         ui_layout_area_id(ID("acct"), .sizing = { sizing_fixed(100), sizing_fixed(100) }, .color = box_col) {
             Painter* p = ui_get_painter();
-            painter_rect(p, 0.0f, 0.0f, 100.0f, 100.0f, paint_col);
-            painter_rect(p, 2.0f, 2.0f, 4.0f, 4.0f, paint_col);
-            painter_circle(p, 50.0f, 50.0f, 6.0f, paint_col, ui_color(0, 0, 0, 0), 0.0f);
-            painter_rect(p, 8.0f, 8.0f, 4.0f, 4.0f, paint_col);
+            painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 100.0f, .h = 100.0f }, paint_col);
+            painter_rect(p, (FlRect) { .x = 2.0f, .y = 2.0f, .w = 4.0f, .h = 4.0f }, paint_col);
+            painter_circle(
+                p, (PainterCircle) {
+                       .cx = 50.0f,
+                       .cy = 50.0f,
+                       .radius = 6.0f,
+                       .fill = { .color = paint_col, .border_color = ui_color(0, 0, 0, 0), .border_width = 0.0f } });
+            painter_rect(p, (FlRect) { .x = 8.0f, .y = 8.0f, .w = 4.0f, .h = 4.0f }, paint_col);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -8791,7 +8817,8 @@ UTEST(render, canvas_paint_translated_by_origin) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom, .padding = { .left = 40, .top = 30 }) {
         ui_layout_area_id(ID("offset_canvas"), .sizing = { sizing_fixed(80), sizing_fixed(80) }) {
-            painter_rect(ui_get_painter(), 0.0f, 0.0f, 80.0f, 80.0f, canvas_col); // element-local (0,0)
+            painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
+                         canvas_col); // element-local (0,0)
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -8824,7 +8851,8 @@ UTEST(render, canvas_element_local_pointer_pos) {
             // A canvas registers as an ordinary interactive element by id; this records its resolved rect. The
             // paint emits a command carrying the element id, which is what marks the rect resolved (found).
             ui_widget_behavior(ID("ptr_canvas"), (FlWidgetConfig) { 0 });
-            painter_rect(ui_get_painter(), 0.0f, 0.0f, 80.0f, 80.0f, ui_color(40, 200, 120, 255));
+            painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
+                         ui_color(40, 200, 120, 255));
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -8862,7 +8890,8 @@ UTEST(render, canvas_element_local_pointer_pos) {
                    .padding = { .left = 40, .top = 30 }) {
         ui_layout_area_id(ID("ptr_canvas"), .sizing = { sizing_fixed(80), sizing_fixed(80) }) {
             ui_widget_behavior(ID("ptr_canvas"), (FlWidgetConfig) { 0 });
-            painter_rect(ui_get_painter(), 0.0f, 0.0f, 80.0f, 80.0f, ui_color(40, 200, 120, 255));
+            painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
+                         ui_color(40, 200, 120, 255));
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -8901,8 +8930,8 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
         ui_layout_area_id(ID("hover_canvas"), .sizing = { sizing_fixed(80), sizing_fixed(80) }) {
             ui_widget_behavior(ID("hover_canvas"), (FlWidgetConfig) { 0 });
             Painter* p = ui_get_painter();
-            painter_rect(p, 0.0f, 0.0f, 40.0f, 80.0f, base);
-            painter_rect(p, 40.0f, 0.0f, 40.0f, 80.0f, base);
+            painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, base);
+            painter_rect(p, (FlRect) { .x = 40.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, base);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -8918,8 +8947,8 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
             FlVec2 local = ui_mouse_position(ID("hover_canvas"));
             bool right = local.x >= 40.0f;
             Painter* p = ui_get_painter();
-            painter_rect(p, 0.0f, 0.0f, 40.0f, 80.0f, right ? base : hl);
-            painter_rect(p, 40.0f, 0.0f, 40.0f, 80.0f, right ? hl : base);
+            painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, right ? base : hl);
+            painter_rect(p, (FlRect) { .x = 40.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, right ? hl : base);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -8940,8 +8969,8 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
             FlVec2 local = ui_mouse_position(ID("hover_canvas"));
             bool right = local.x >= 40.0f;
             Painter* p = ui_get_painter();
-            painter_rect(p, 0.0f, 0.0f, 40.0f, 80.0f, right ? base : hl);
-            painter_rect(p, 40.0f, 0.0f, 40.0f, 80.0f, right ? hl : base);
+            painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, right ? base : hl);
+            painter_rect(p, (FlRect) { .x = 40.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, right ? hl : base);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -9079,7 +9108,8 @@ UTEST(render, snapped_line_crisp_at_fractional_dpi) {
         // Canvas at the device origin (0,0). A hairline at local y=9 lands at device y = 9 * 1.25 = 11.25, which
         // snaps to row 11; local x 0..100 covers device x 0..125, so x=50 is mid-line.
         ui_layout_area_id(ID("canvas"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_hline(ui_get_painter(), 0.0f, 9.0f, 100.0f, line_col);
+            painter_hline(ui_get_painter(),
+                          (PainterRule) { .x = 0.0f, .y = 9.0f, .length = 100.0f, .color = line_col });
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -9111,7 +9141,8 @@ UTEST(render, snapped_line_crisp_at_fractional_scroll) {
         // 0..100 with the 200 x offset covers device x 200..300, so x=250 is mid-line.
         ui_floating_area_id(ID("scrolled_canvas"), .attach_to = FlFloatingAttachTo_Root, .offset = { 200.0f, 10.4f },
                             .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_hline(ui_get_painter(), 0.0f, 0.0f, 100.0f, line_col);
+            painter_hline(ui_get_painter(),
+                          (PainterRule) { .x = 0.0f, .y = 0.0f, .length = 100.0f, .color = line_col });
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -9365,11 +9396,12 @@ static void wheel_scroll_frame(void* user_data) {
         }
 
         Painter* p = st->ctx->painter;
-        painter_rect(p, 0.0f, 0.0f, (float)WHEEL_SCROLL_W, (float)WHEEL_SCROLL_H, ui_color(18, 20, 26, 255));
+        painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = (float)WHEEL_SCROLL_W, .h = (float)WHEEL_SCROLL_H },
+                     ui_color(18, 20, 26, 255));
         for (int i = 0; i < WHEEL_SCROLL_BARS; i++) {
             float y = (float)i * WHEEL_SCROLL_PITCH - st->offset_y;
             FlColor color = ui_color((u8)(30 + i * 18), (u8)(210 - i * 14), (u8)(120 + i * 8), 255);
-            painter_rect(p, 0.0f, y, (float)WHEEL_SCROLL_W, WHEEL_SCROLL_BAR_H, color);
+            painter_rect(p, (FlRect) { .x = 0.0f, .y = y, .w = (float)WHEEL_SCROLL_W, .h = WHEEL_SCROLL_BAR_H }, color);
         }
     }
 }

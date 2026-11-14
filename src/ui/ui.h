@@ -150,11 +150,24 @@ FlSignal ui_chip_impl(FlString label, bool* selected, FlWidgetConfig cfg);
 
 // Dropdown - interactive widget for selecting from a list of options. is_open is caller-owned popup state,
 // selected_index is the caller-owned current option.
-void ui_dropdown_impl(FlString label, bool* is_open, FlString* options, int option_count, int* selected_index,
-                      FlDropdownConfig cfg);
-#define ui_dropdown(label, is_open, options, option_count, selected_index, ...) \
-    ui_dropdown_impl(label, is_open, options, option_count, selected_index,     \
-                     (FlDropdownConfig) { .show_cancel = true, .min_width = 200.0f, __VA_ARGS__ })
+typedef struct UiDropdownRequest {
+    FlString label;
+    bool* is_open;
+    const FlString* options;
+    int option_count;
+    int* selected_index;
+    FlDropdownConfig cfg;
+} UiDropdownRequest;
+
+void ui_dropdown_impl(const UiDropdownRequest* req);
+#define ui_dropdown(label_, is_open_, options_, option_count_, selected_index_, ...) \
+    ui_dropdown_impl(                                                                \
+        &(UiDropdownRequest) { .label = (label_),                                    \
+                               .is_open = (is_open_),                                \
+                               .options = (options_),                                \
+                               .option_count = (option_count_),                      \
+                               .selected_index = (selected_index_),                  \
+                               .cfg = (FlDropdownConfig) { .show_cancel = true, .min_width = 200.0f, __VA_ARGS__ } })
 
 // Tab bar widget - horizontal or vertical tab navigation. selected_index is in/out; returns true if the
 // selection changed this frame. Every geometry field in the config is 0 = keep the built-in default; asking
