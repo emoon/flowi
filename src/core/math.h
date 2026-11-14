@@ -35,52 +35,14 @@ static inline int count_trailing_zeros(unsigned int value) {
 #endif
 }
 
-static inline f32 min_f32_impl(f32 a, f32 b) {
-    return a < b ? a : b;
-}
-
-static inline f32 max_f32_impl(f32 a, f32 b) {
-    return a > b ? a : b;
-}
-
-static inline i32 min_i32_impl(i32 a, i32 b) {
-    return a < b ? a : b;
-}
-
-static inline i32 max_i32_impl(i32 a, i32 b) {
-    return a > b ? a : b;
-}
-
-static inline f32 clamp_f32_impl(f32 v, f32 min_val, f32 max_val) {
-    if (v < min_val)
-        return min_val;
-    if (v > max_val)
-        return max_val;
-    return v;
-}
-
-static inline f32 abs_f32_impl(f32 v) {
+static inline f32 abs_f32(f32 v) {
     return v < 0.0f ? -v : v;
 }
 
-static inline f32 lerp_f32_impl(f32 a, f32 b, f32 t) {
+static inline f32 lerp(f32 a, f32 b, f32 t) {
     return a + (b - a) * t;
 }
 
-static inline f32 inv_lerp_f32_impl(f32 a, f32 b, f32 v) {
+static inline f32 inv_lerp(f32 a, f32 b, f32 v) {
     return (v - a) / (b - a);
 }
-
-static inline f32 saturate_f32_impl(f32 v) {
-    return clamp_f32_impl(v, 0.0f, 1.0f);
-}
-
-// Short spellings for the f32 implementation functions
-
-#define lerp(a, b, t) lerp_f32_impl(a, b, t)
-
-#define inv_lerp(a, b, v) inv_lerp_f32_impl(a, b, v)
-
-#define saturate(v) saturate_f32_impl(v)
-
-#define abs_f32(v) abs_f32_impl(v)

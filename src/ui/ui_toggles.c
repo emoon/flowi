@@ -111,8 +111,8 @@ FlSignal ui_switch_impl(FlString label, bool* value, FlSwitchConfig cfg) {
     const float track_w = cfg.track_width > 0.0f ? cfg.track_width : track_h * 2.0f;
     const float knob_inset = cfg.knob_inset > 0.0f ? cfg.knob_inset : (float)FlSpacing_XS / 2.0f;
     // Both clamps keep knob_size and travel non-negative (the u16 padding below is derived from them).
-    const float knob_size = max_f32_impl(track_h - 2.0f * knob_inset, 0.0f);
-    const float travel = max_f32_impl(track_w - knob_size - 2.0f * knob_inset, 0.0f);
+    const float knob_size = max(track_h - 2.0f * knob_inset, 0.0f);
+    const float travel = max(track_w - knob_size - 2.0f * knob_inset, 0.0f);
 
     f32 knob_t = 0.0f;
     if (item != nullptr) {
@@ -148,8 +148,8 @@ FlSignal ui_switch_impl(FlString label, bool* value, FlSwitchConfig cfg) {
         // Padding is integer pixels; the animation value itself stays continuous. Clamped to the u16 padding
         // range.
         const float pad_max = 65535.0f;
-        u16 knob_left = (u16)clamp_f32_impl(knob_inset + travel * knob_t, 0.0f, pad_max);
-        u16 inset_pad = (u16)clamp_f32_impl(knob_inset, 0.0f, pad_max);
+        u16 knob_left = (u16)clamp(knob_inset + travel * knob_t, 0.0f, pad_max);
+        u16 inset_pad = (u16)clamp(knob_inset, 0.0f, pad_max);
         ui_layout_area(.sizing = { sizing_fixed(track_w), sizing_fixed(track_h) },
                        .radius = corner_radius(FlRadius_Full), .color = track_bg,
                        .padding = { .left = knob_left, .top = inset_pad, .bottom = inset_pad },

@@ -8543,7 +8543,7 @@ UTEST(render, scrollbar_auto_id_no_collision) {
 }
 
 // scrollbar_full_viewport_ratio_no_nan - with viewport_ratio 1.0 the thumb fills the track, so the drag path's
-// usable_track is exactly 0. The 0/0 that produced was a NaN, and clamp_f32_impl's two comparisons both fail on
+// usable_track is exactly 0. The 0/0 that produced was a NaN, and clamp's two comparisons both fail on
 // NaN, so it passed straight through into the bound value.
 UTEST(render, scrollbar_full_viewport_ratio_no_nan) {
     FlUiCtx* ctx = render_fixture_get();
