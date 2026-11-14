@@ -1,134 +1,111 @@
-#include "shaped_run_cache_fixture.h"
+#include "utest/utest.h"
+#include <core/arena.h>
+#include <core/core.h>
+#include <core/stats.h>
+#include <core/string.h>
+#include <string.h>
+#include <ui/shaped_run_cache.h>
 
-#include "fixtures/fonts/fallback_test_font.h"
-#include "fixtures/fonts/glyph_test_fonts.h"
+typedef struct RunCacheRig {
+    FlArena* arena;
+    StatsRegistry* stats;
+    ShapedRunCache* cache;
+    FontShaperRun run;
+} RunCacheRig;
 
-static FlShapedRun kept(RunCacheRig* rig, FlShapedRun run) {
-    FlShapedGlyph* copy = arena_alloc_array(rig->arena, FlShapedGlyph, run.count + 1);
-    memcpy(copy, run.glyphs, run.count * sizeof(FlShapedGlyph));
-    run.glyphs = copy;
-    return run;
+static const FlShapedGlyph k_glyphs[] = { { 1, 10, 0, 0 }, { 1, 11, 640, 0 }, { 2, 12, 1280, -64 } };
+static const FlShapedRun k_shaped = { .glyphs = k_glyphs, .count = 3, .width = 1920 };
+
+static RunCacheRig rig_open(u64 byte_limit) {
+    RunCacheRig rig = { .arena = arena_new() };
+    rig.stats = stats_create(rig.arena);
+    rig.cache = shaped_run_cache_new(rig.arena, byte_limit, rig.stats);
+    rig.run = (FontShaperRun) { .primary = { .id = 1 }, .fallback = { .id = 2 }, .size_q4 = 56 };
+    return rig;
 }
 
-static bool hit_matches_miss(RunCacheRig* rig, const FontShaperRun* run, FlString text) {
-    FlShapedRun miss = { 0 };
-    FlShapedRun hit = { 0 };
-    const u64 hits = run_cache_stat(rig, FL_S("hits"));
-    shaped_run_cache_get(rig->cache, run, text, &miss);
-    miss = kept(rig, miss);
-    shaped_run_cache_get(rig->cache, run, text, &hit);
-    const bool counted = run_cache_stat(rig, FL_S("hits")) == hits + 1;
-    return counted && miss.count > 0 && run_cache_same_glyphs(miss, hit);
+static void rig_close(RunCacheRig* rig) {
+    shaped_run_cache_destroy(rig->cache);
+    stats_destroy(rig->stats);
+    fl_arena_destroy(rig->arena);
 }
 
-UTEST(shaped_run_cache, a_hit_gives_the_glyphs_of_the_miss) {
-    RunCacheRig rig = run_cache_rig_open(KB(64));
-    ASSERT_TRUE(run_cache_rig_ready(&rig));
-
-    ASSERT_TRUE(hit_matches_miss(&rig, &rig.draw, FL_S("Toy Tracker, Today. AVATAR Wave")));
-    ASSERT_TRUE_MSG(hit_matches_miss(&rig, &rig.draw, FL_S("x\xCC\x81 e\xCC\x8A")), "GPOS offsets are kept");
-    ASSERT_EQ(run_cache_stat(&rig, FL_S("misses")), 2ULL);
-
-    run_cache_rig_close(&rig);
+static u64 rig_stat(const RunCacheRig* rig, FlString name) {
+    return stats_get_value_by_name(rig->stats, name, FL_S("shaped_run_cache"));
 }
 
-UTEST(shaped_run_cache, a_run_with_fallback_glyphs_keeps_its_faces) {
-    RunCacheRig rig = run_cache_rig_open(KB(64));
-    const FontShaperRun run = {
-        .primary = { .font = font_shaper_font_new(rig.arena, k_glyph_test_ttf, k_glyph_test_ttf_size), .id = 2 },
-        .fallback = { .font = font_shaper_font_new(rig.arena, k_fallback_test_ttf, k_fallback_test_ttf_size), .id = 3 },
-        .size_q4 = 128,
-        .glyph_arena = rig.glyphs,
-    };
-    FlShapedRun hit = { 0 };
-
-    ASSERT_TRUE(hit_matches_miss(&rig, &run, FL_S("BoAoBBAoA")));
-    shaped_run_cache_get(rig.cache, &run, FL_S("AoB"), &hit);
-    shaped_run_cache_get(rig.cache, &run, FL_S("AoB"), &hit);
-    ASSERT_EQ((int)hit.glyphs[1].font, 2);
-    ASSERT_EQ((int)hit.glyphs[2].font, 3);
-
-    run_cache_rig_close(&rig);
+static bool rig_has(RunCacheRig* rig, FlString text) {
+    FlShapedRun found;
+    return shaped_run_cache_find(rig->cache, &rig->run, text, &found);
 }
 
-UTEST(shaped_run_cache, one_entry_serves_every_size) {
-    RunCacheRig rig = run_cache_rig_open(KB(64));
-    RunCacheRig fresh = run_cache_rig_open(KB(64));
-    const FlString text = FL_S("AVATAR Wave. To: fjord office");
-    run_cache_draw(&rig, text);
+UTEST(shaped_run_cache, a_stored_run_is_found_with_its_own_copy_of_the_glyphs) {
+    RunCacheRig rig = rig_open(MB(1));
+    char text[] = "office";
+    FlShapedRun found = { 0 };
 
-    rig.draw.size_q4 = 89;
-    fresh.draw.size_q4 = 89;
-    const FlShapedRun hit = run_cache_draw(&rig, text);
-    const FlShapedRun miss = run_cache_draw(&fresh, text);
+    ASSERT_FALSE(rig_has(&rig, FL_S("office")));
+    const FlString callers_text = { .data = text, .length = 6 };
+    const FlShapedRun stored = shaped_run_cache_store(rig.cache, &rig.run, callers_text, k_shaped);
+    text[0] = 'x';
 
-    ASSERT_EQ(run_cache_stat(&rig, FL_S("misses")), 1ULL);
-    ASSERT_EQ(run_cache_stat(&rig, FL_S("hits")), 1ULL);
-    ASSERT_TRUE(run_cache_same_glyphs(hit, miss));
+    ASSERT_TRUE(shaped_run_cache_find(rig.cache, &rig.run, FL_S("office"), &found));
+    ASSERT_TRUE(found.glyphs == stored.glyphs && found.glyphs != k_glyphs);
+    ASSERT_EQ((int)found.count, 3);
+    ASSERT_EQ(found.width, (i64)1920);
+    ASSERT_EQ(memcmp(found.glyphs, k_glyphs, sizeof(k_glyphs)), 0);
+    ASSERT_EQ(rig_stat(&rig, FL_S("misses")), 1ULL);
 
-    run_cache_rig_close(&rig);
-    run_cache_rig_close(&fresh);
+    rig_close(&rig);
 }
 
-UTEST(shaped_run_cache, measure_then_draw_shapes_once) {
-    RunCacheRig rig = run_cache_rig_open(KB(64));
-    const FlString text = FL_S("Now Playing: Yesterday We Told You");
-    FlShapedRun measured = { 0 };
+UTEST(shaped_run_cache, another_text_font_fallback_or_size_is_not_found) {
+    RunCacheRig rig = rig_open(MB(1));
+    shaped_run_cache_store(rig.cache, &rig.run, FL_S("office"), k_shaped);
 
-    ASSERT_TRUE(shaped_run_cache_get(rig.cache, &rig.measure, text, &measured));
-    const FlShapedRun drawn = run_cache_draw(&rig, text);
+    ASSERT_FALSE(rig_has(&rig, FL_S("offic")));
+    rig.run.primary.id = 3;
+    ASSERT_FALSE(rig_has(&rig, FL_S("office")));
+    rig.run.primary.id = 1;
+    rig.run.fallback.id = 0;
+    ASSERT_FALSE(rig_has(&rig, FL_S("office")));
+    rig.run.fallback.id = 2;
+    rig.run.size_q4 = 57;
+    ASSERT_FALSE(rig_has(&rig, FL_S("office")));
+    rig.run.size_q4 = 56;
+    ASSERT_TRUE(rig_has(&rig, FL_S("office")));
 
-    ASSERT_TRUE(measured.glyphs == nullptr);
-    ASSERT_EQ(measured.width, drawn.width);
-    ASSERT_EQ(run_cache_stat(&rig, FL_S("misses")) + 10 * run_cache_stat(&rig, FL_S("hits")), 11ULL);
-
-    run_cache_rig_close(&rig);
+    rig_close(&rig);
 }
 
-UTEST(shaped_run_cache, another_font_or_fallback_is_another_entry) {
-    RunCacheRig rig = run_cache_rig_open(KB(64));
-    const FlString text = FL_S("office fjord");
-    run_cache_draw(&rig, text);
+UTEST(shaped_run_cache, a_full_cache_starts_over) {
+    const u64 entry_bytes = 1 + sizeof(k_glyphs);
+    RunCacheRig rig = rig_open(2 * entry_bytes);
+    shaped_run_cache_store(rig.cache, &rig.run, FL_S("a"), k_shaped);
+    shaped_run_cache_store(rig.cache, &rig.run, FL_S("b"), k_shaped);
+    ASSERT_TRUE(rig_has(&rig, FL_S("a")) && rig_has(&rig, FL_S("b")));
+    ASSERT_EQ(rig_stat(&rig, FL_S("clears")), 0ULL);
 
-    rig.draw.fallback = (FontShaperFace) { .font = rig.draw.primary.font, .id = 7 };
-    run_cache_draw(&rig, text);
-    rig.draw.primary.id = 8;
-    run_cache_draw(&rig, text);
+    shaped_run_cache_store(rig.cache, &rig.run, FL_S("c"), k_shaped);
 
-    ASSERT_EQ(run_cache_stat(&rig, FL_S("misses")), 3ULL);
-    ASSERT_EQ(run_cache_stat(&rig, FL_S("hits")), 0ULL);
+    ASSERT_EQ(rig_stat(&rig, FL_S("clears")), 1ULL);
+    ASSERT_FALSE(rig_has(&rig, FL_S("a")) || rig_has(&rig, FL_S("b")));
+    ASSERT_TRUE(rig_has(&rig, FL_S("c")));
 
-    run_cache_rig_close(&rig);
+    rig_close(&rig);
 }
 
-UTEST(shaped_run_cache, text_over_the_length_limit_is_never_cached) {
-    RunCacheRig rig = run_cache_rig_open(KB(64));
-    char* bytes = arena_alloc_array(rig.arena, char, 1025);
-    memset(bytes, 'a', 1025);
-    const FlString longest = { .data = bytes, .length = 1024 };
-    const FlString too_long = { .data = bytes, .length = 1025 };
+UTEST(shaped_run_cache, clearing_and_an_empty_run) {
+    RunCacheRig rig = rig_open(MB(1));
+    FlShapedRun found = { .count = 9 };
+    shaped_run_cache_store(rig.cache, &rig.run, FL_S(""), (FlShapedRun) { .glyphs = k_glyphs });
+    shaped_run_cache_store(rig.cache, &rig.run, FL_S("office"), k_shaped);
 
-    ASSERT_EQ((int)run_cache_draw(&rig, too_long).count, 1025);
-    ASSERT_EQ((int)run_cache_draw(&rig, too_long).count, 1025);
-    ASSERT_EQ(run_cache_stat(&rig, FL_S("misses")), 2ULL);
-    ASSERT_EQ(run_cache_stat(&rig, FL_S("bytes_used")), 0ULL);
+    ASSERT_TRUE(shaped_run_cache_find(rig.cache, &rig.run, FL_S(""), &found));
+    ASSERT_EQ((int)found.count, 0);
 
-    run_cache_draw(&rig, longest);
-    run_cache_draw(&rig, longest);
-    ASSERT_EQ(run_cache_stat(&rig, FL_S("hits")), 1ULL);
+    shaped_run_cache_clear(rig.cache);
+    ASSERT_FALSE(rig_has(&rig, FL_S("")) || rig_has(&rig, FL_S("office")));
 
-    run_cache_rig_close(&rig);
-}
-
-UTEST(shaped_run_cache, empty_text_is_an_empty_run) {
-    RunCacheRig rig = run_cache_rig_open(KB(64));
-    FlShapedRun out = { .count = 9, .width = 9 };
-
-    for_count(i, 2) {
-        ASSERT_TRUE(shaped_run_cache_get(rig.cache, &rig.draw, FL_S(""), &out));
-        ASSERT_EQ((int)out.count, 0);
-        ASSERT_EQ(out.width, (i64)0);
-    }
-
-    run_cache_rig_close(&rig);
+    rig_close(&rig);
 }
