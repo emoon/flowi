@@ -257,17 +257,14 @@ static inline void fl_ir_text_layout(FlArena* arena, FlArena* scratch, FlFontCac
                                      float baseline_y, float letter_spacing) {
     FlShapedRun shaped = font_cache_shape_run(font_cache, font, size_q4, text);
     FlGlyph* glyphs = arena_alloc_array(scratch, FlGlyph, shaped.count);
-    u32 count = 0;
 
-    // A NUL ends the drawn run, though the shaped run carries on past it.
-    while (count < shaped.count && shaped.glyphs[count].glyph_id != 0) {
-        const FlShapedGlyph* sg = &shaped.glyphs[count];
-        if (count > 0) {
+    for_count(i, shaped.count) {
+        if (i > 0) {
             cursor_x += scale * letter_spacing;
         }
-        glyphs[count++] = (FlGlyph) { .glyph_id = sg->glyph_id, .x = cursor_x, .y = baseline_y };
-        cursor_x += scale * (float)sg->advance / 64.0f;
+        glyphs[i] = (FlGlyph) { .glyph_id = shaped.glyphs[i].glyph_id, .x = cursor_x, .y = baseline_y };
+        cursor_x += scale * (float)shaped.glyphs[i].advance / 64.0f;
     }
 
-    fl_ir_text_run(arena, font, size_q4, scale, color, glyphs, count);
+    fl_ir_text_run(arena, font, size_q4, scale, color, glyphs, shaped.count);
 }

@@ -78,6 +78,15 @@ UTEST(render_ir, shaped_run_matches_measurement) {
     ASSERT_EQ_MSG((int)wide.count, 2, "glyphs are counted per codepoint, not per byte");
     ASSERT_EQ_MSG((int)wide.glyphs[1].glyph_id, 0xE9, "a multi-byte sequence decodes to one glyph");
 
+    // FL_S marks every literal ASCII, so a mislabelled one must still draw decoded.
+    FlString mislabelled = { .data = "A\xC3\xA9", .length = 3, .is_static = 1, .is_ascii = 1 };
+    ASSERT_EQ_MSG((int)font_cache_shape_run(cache, font, q4, mislabelled).count, 2, "drawing ignores is_ascii");
+
+    FlString with_nul = { .data = "AA\0A", .length = 4, .is_static = 1 };
+    FlShapedRun cut = font_cache_shape_run(cache, font, q4, with_nul);
+    ASSERT_EQ_MSG((int)cut.count, 2, "a NUL ends the run");
+    ASSERT_TRUE_MSG(cut.width == 2 * (i64)cut.glyphs[0].advance, "nothing after the NUL is counted");
+
     FlShapedRun unknown = font_cache_shape_run(cache, 9999, q4, ascii);
     ASSERT_EQ_MSG((int)unknown.count, 3, "an unknown font still yields its glyphs");
     ASSERT_TRUE_MSG(unknown.width == 0, "an unknown font advances zero");
@@ -93,6 +102,7 @@ UTEST(render_ir, shaped_run_matches_measurement) {
 UTEST(render_ir, text_layout_stops_at_nul) {
     FlFontCache* cache = font_cache_new(s_arena);
     FlFontId font = font_cache_load_font_memory(cache, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
+    ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "memory-loaded font must be ready synchronously");
     const u16 q4 = font_cache_quantize_size_q4(7.5f);
 
     FlArena* ir = arena_new();
@@ -103,6 +113,10 @@ UTEST(render_ir, text_layout_stops_at_nul) {
 
     const FlCmdTextRun* run = (const FlCmdTextRun*)((const FlCmdHeader*)start + 1);
     ASSERT_EQ_MSG((int)run->glyph_count, 2, "only the glyphs before the NUL are drawn");
+    const FlGlyph* glyphs = (const FlGlyph*)(run + 1);
+    float adv = (float)font_cache_get_glyph_advance_q4(cache, font, q4, 'A') / 64.0f;
+    ASSERT_TRUE_MSG(adv > 0.0f, "the advance is non-zero");
+    ASSERT_NEAR_MSG(glyphs[1].x - glyphs[0].x, adv, 0.0001f, "the pen steps by the advance");
 
     fl_arena_destroy(scratch);
     fl_arena_destroy(ir);

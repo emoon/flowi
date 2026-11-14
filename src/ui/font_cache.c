@@ -56,15 +56,15 @@ struct FlFontCache {
     FontFace* fallback_face;
     int face_count;
     FlFontId next_id;
-    // Storage behind the run font_cache_shape_run hands out, reused by the next call. Main thread only.
-    FlShapedGlyph* shape_glyphs;
-    size_t shape_capacity;
+    // Holds the run font_cache_shape_run hands out; rewound by the next call. Main thread only.
+    FlArena* shape_arena;
 };
 
 FlFontCache* font_cache_new(FlArena* arena) {
     FlFontCache* cache = arena_alloc_zero(arena, FlFontCache);
     cache->next_id = 1;
     cache->arena = arena_new();
+    cache->shape_arena = arena_new();
     mutex_init(&cache->ft_lock);
     FT_Init_FreeType(&cache->library);
     return cache;
@@ -310,6 +310,10 @@ void font_cache_destroy(FlFontCache* self) {
     if (self->arena) {
         fl_arena_destroy(self->arena);
         self->arena = nullptr;
+    }
+    if (self->shape_arena) {
+        fl_arena_destroy(self->shape_arena);
+        self->shape_arena = nullptr;
     }
 
     self->face_count = 0;
@@ -614,22 +618,19 @@ static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph
     return out;
 }
 
-// Room for count glyphs in the reused shaping buffer. Growth doubles, so the arena keeps at most as much dead
-// storage as the live buffer.
-static FlShapedGlyph* shape_buffer(FlFontCache* self, size_t count) {
-    if (count > self->shape_capacity) {
-        self->shape_capacity = max(count, self->shape_capacity * 2);
-        self->shape_glyphs = arena_alloc_array(self->arena, FlShapedGlyph, self->shape_capacity);
-    }
-    return self->shape_glyphs;
-}
-
+// The drawing route. It always decodes UTF-8 and ends at a NUL, as drawing did before the seam; measuring trusts
+// is_ascii and counts through a NUL.
 FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text) {
-    if (text.data == nullptr || text.length == 0) {
+    if (text.data == nullptr) {
         return (FlShapedRun) { 0 };
     }
+    text.is_ascii = 0;
+    text.length = strnlen(text.data, text.length);
+
+    fl_arena_rewind(self->shape_arena);
+    FlShapedGlyph* glyphs = arena_alloc_array(self->shape_arena, FlShapedGlyph, text.length);
     AdvanceRun run = { .cache = self, .face = find_face_by_id(self, font_id), .q4 = size_q4, .may_claim_row = false };
-    return shape_run(&run, text, shape_buffer(self, text.length));
+    return shape_run(&run, text, glyphs);
 }
 
 Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id, u16 font_size) {
