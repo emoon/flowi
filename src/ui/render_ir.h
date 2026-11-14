@@ -92,12 +92,11 @@ typedef struct FlCmdBorder {
 } FlCmdBorder;
 
 // One positioned glyph. (x, y) is the pen position on the baseline. glyph_index is the index in the run's font, or
-// the codepoint for the built-in font. glyph_id is the codepoint.
+// the codepoint for the built-in font.
 typedef struct FlGlyph {
-    u32 glyph_id;
+    u32 glyph_index;
     f32 x;
     f32 y;
-    u32 glyph_index;
 } FlGlyph;
 
 // A run of glyphs in one font/size/color. The FlGlyph[glyph_count] array follows this struct inline in the

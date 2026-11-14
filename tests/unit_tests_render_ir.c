@@ -57,7 +57,6 @@ UTEST(render_ir, shaped_run_matches_measurement) {
     ASSERT_EQ_MSG((int)run.count, 3, "one glyph per codepoint");
     i64 sum = 0;
     for_count(i, run.count) {
-        ASSERT_EQ_MSG((int)run.glyphs[i].glyph_id, (int)ascii.data[i], "the glyph id is the codepoint");
         ASSERT_EQ_MSG((int)run.glyphs[i].glyph_index, (int)font_cache_get_glyph_index(cache, font, (u32)ascii.data[i]),
                       "the glyph index is the face's index for the codepoint");
         ASSERT_EQ_MSG((int)run.glyphs[i].font, (int)font, "a codepoint the font maps stays on it");
@@ -73,7 +72,11 @@ UTEST(render_ir, shaped_run_matches_measurement) {
     FlString accented = { .data = "A\xC3\xA9", .length = 3, .is_static = 1 };
     FlShapedRun wide = font_cache_shape_run(cache, font, q4, accented);
     ASSERT_EQ_MSG((int)wide.count, 2, "glyphs are counted per codepoint, not per byte");
-    ASSERT_EQ_MSG((int)wide.glyphs[1].glyph_id, 0xE9, "a multi-byte sequence decodes to one glyph");
+    FlFontId mono = font_cache_load_font_memory(cache, k_fixed_pitch_test_ttf, k_fixed_pitch_test_ttf_size, 16);
+    const u32 eacute = font_cache_get_glyph_index(cache, mono, 0xE9);
+    ASSERT_TRUE_MSG(eacute != 0, "the fixed-pitch test font maps e-acute");
+    ASSERT_EQ_MSG((int)font_cache_shape_run(cache, mono, q4, accented).glyphs[1].glyph_index, (int)eacute,
+                  "a multi-byte sequence decodes to one glyph");
 
     FlString mislabelled = { .data = "A\xC3\xA9", .length = 3, .is_static = 1, .is_ascii = 1 };
     ASSERT_EQ_MSG((int)font_cache_shape_run(cache, font, q4, mislabelled).count, 2, "drawing ignores is_ascii");
@@ -953,7 +956,7 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
           (2047u << 10) | (2047u << 21) },
     };
 
-    for (size_t i = 0; i < sizeof_array(border_cases); i++) {
+    for_count(i, sizeof_array(border_cases)) {
         fl_arena_align(ir_arena, 8);
         const u8* start = (const u8*)fl_arena_current_pos(ir_arena);
         fl_ir_border_stroked(ir_arena, rect, 4.0f, 4.0f, 4.0f, 4.0f, (FlCornerRadius) { 0 }, color,
@@ -1075,7 +1078,7 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
 
 // Overlapping rects with varying fractional geometry and alpha, so call order and compositing both matter.
 static void rect_batch_fill(FlColoredRect* rects, u32 count, float seed) {
-    for (u32 i = 0; i < count; i++) {
+    for_count(i, count) {
         float f = (float)i;
         rects[i]
             = (FlColoredRect) { seed + f * 1.5f, 3.25f + f * 0.5f, 6.0f + f * 0.125f, 20.0f - f * 0.25f,
@@ -1085,7 +1088,7 @@ static void rect_batch_fill(FlColoredRect* rects, u32 count, float seed) {
 
 // The scalar reference: the same rects through painter_rect, one call each, in order.
 static void rect_batch_scalar(Painter* p, const FlColoredRect* rects, u32 count) {
-    for (u32 i = 0; i < count; i++) {
+    for_count(i, count) {
         painter_rect(p, (FlRect) { .x = rects[i].x, .y = rects[i].y, .w = rects[i].w, .h = rects[i].h },
                      rects[i].color);
     }
