@@ -9,9 +9,9 @@ void gpu_release_image(void* user_data, FlImageHandle handle) {
 
 // Debug seams (gpu_debug.h) answered from the CPU bookkeeping alone, identical on every backend.
 
-const GpuGlyphEntry* gpu_debug_find_glyph(void* renderer_user_data, FlFontId font, u16 size, u32 glyph_id) {
+const GpuGlyphEntry* gpu_debug_find_glyph(void* renderer_user_data, FlFontId font, u16 size, u32 glyph_index) {
     GpuCpuState* cpu = renderer_user_data;
-    return gpu_glyph_atlas_find(&cpu->glyph_atlas, font, size, glyph_id);
+    return gpu_glyph_atlas_find(&cpu->glyph_atlas, font, size, glyph_index);
 }
 
 const GpuSvgEntry* gpu_debug_find_svg(void* renderer_user_data, FlImageHandle handle) {

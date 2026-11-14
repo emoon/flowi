@@ -92,10 +92,10 @@ static void raster_coverage_cell(GpuShared* self, GLuint target, u32 x, u32 y, u
 // Glyph preparation seam: place the glyph and rasterize its lowered outline into the R8 glyph atlas with one
 // compute dispatch. Runs on the render thread.
 
-void prepare_glyph(void* user_data, FlFontId font, u16 size, u32 glyph_id, const struct FlGlyphOutline* outline) {
+void prepare_glyph(void* user_data, FlFontId font, u16 size, u32 glyph_index, const struct FlGlyphOutline* outline) {
     GpuShared* self = user_data;
     GpuGlyphRaster glyph;
-    if (!gpu_prepare_glyph_place(&self->cpu.glyph_atlas, self->frame_arena, font, size, glyph_id, outline, &glyph)) {
+    if (!gpu_prepare_glyph_place(&self->cpu.glyph_atlas, self->frame_arena, font, size, glyph_index, outline, &glyph)) {
         return;
     }
 

@@ -186,7 +186,7 @@ void gpu_translate_image(GpuTranslate* tr, const void* payload) {
 // source rect (radius[]) stays in raster texels, so the quad magnifies/minifies the cell's coverage under the
 // shader's linear sample.
 static void emit_glyph(GpuTranslate* tr, const FlCmdTextRun* run, const FlGlyph* glyph, u32 tint) {
-    const GpuGlyphEntry* e = gpu_glyph_atlas_find(tr->glyphs, run->font, run->size, glyph->glyph_id);
+    const GpuGlyphEntry* e = gpu_glyph_atlas_find(tr->glyphs, run->font, run->size, glyph->glyph_index);
     if (e == nullptr) {
         return;
     }
@@ -210,7 +210,7 @@ static void emit_glyph(GpuTranslate* tr, const FlCmdTextRun* run, const FlGlyph*
 }
 
 // A text run explodes to one GpuDraw_Glyph quad per glyph, resolved in the glyph-atlas bookkeeping by (run
-// font, run size, glyph id).
+// font, run size, glyph index).
 void gpu_translate_text_run(GpuTranslate* tr, const void* payload) {
     const FlCmdTextRun* run = payload;
     if (tr->glyphs == nullptr) {

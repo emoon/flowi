@@ -270,19 +270,18 @@ static inline void fl_ir_text_layout(FlArena* arena, FlFontCache* font_cache, Fl
         return;
     }
 
-    for (u32 i = 0; i < shaped.count;) {
-        const u32 end = fl_ir_face_span_end(&shaped, i);
-        run.font = shaped.glyphs[i].font;
-        run.glyph_count = end - i;
-        FlGlyph* dst = fl_ir_text_run_alloc(arena, &run);
-
-        for (; i < end; i++) {
-            const FlShapedGlyph* sg = &shaped.glyphs[i];
-            *dst++ = (FlGlyph) {
-                .glyph_id = sg->glyph_id, .x = cursor_x, .y = baseline_y, .glyph_index = sg->glyph_index
-            };
-            cursor_x += scale * (float)sg->advance / 64.0f;
-            cursor_x += scale * letter_spacing;
+    FlGlyph* dst = nullptr;
+    u32 span_end = 0;
+    for_count(i, shaped.count) {
+        const FlShapedGlyph* sg = &shaped.glyphs[i];
+        if (i == span_end) {
+            span_end = fl_ir_face_span_end(&shaped, i);
+            run.font = sg->font;
+            run.glyph_count = span_end - i;
+            dst = fl_ir_text_run_alloc(arena, &run);
         }
+        *dst++ = (FlGlyph) { .glyph_id = sg->glyph_id, .x = cursor_x, .y = baseline_y, .glyph_index = sg->glyph_index };
+        cursor_x += scale * (float)sg->advance / 64.0f;
+        cursor_x += scale * letter_spacing;
     }
 }

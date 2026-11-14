@@ -18,7 +18,6 @@
 
 #include <core/core.h>
 #include <core/log.h>
-#include <core/utf8.h>
 #include <render/gpu/gpu_renderer.h>
 #include <render/gpu/gpu_svg_atlas.h>
 #include "ui/font_cache.h"
@@ -230,9 +229,12 @@ static void vw_image(FlArena* a, View v, FlImageSource src, FlImageMode mode, Fl
     fl_ir_image(a, src, mode, v_rect(v, dst), src_rect, tint, filter, nullptr);
 }
 
-// Prepares the atlas entry of each on-screen glyph, then emits the run. Glyph prep is keyed by codepoint to
-// match fl_ir_text_layout's FlGlyph.glyph_id, but the outline is fetched by face glyph index, which is what
-// FT_Load_Glyph takes. scratch must be a different arena from the IR arena.
+static bool face_span_ends_at(const FlShapedRun* shaped, u32 i) {
+    return i + 1 == shaped->count || shaped->glyphs[i + 1].font != shaped->glyphs[i].font;
+}
+
+// Emits one run per face; render() prepares the glyphs through the bound font cache. scratch must be a different
+// arena from the IR arena.
 //
 // size_world is the font size at zoom 1. A glyph's pixel size must be integral, so text follows the zoom in
 // two parts:
@@ -243,8 +245,8 @@ static void vw_image(FlArena* a, View v, FlImageSource src, FlImageMode mode, Fl
 //  2. The run is laid out in world space at a fixed metrics size and the view scales the pen positions by
 //     zoom, like every other primitive. Advancing the pen at the raster size would make the spacing step with
 //     it, because hinting makes the advance per pixel vary across sizes and the error accumulates along the run.
-static void draw_text(FlArena* arena, FlArena* scratch, FlRenderBackend* backend, FlFontCache* fc, FlFontId font,
-                      View v, f32 size_world, FlColor color, FlString text, f32 x, f32 baseline_y) {
+static void draw_text(FlArena* arena, FlArena* scratch, FlFontCache* fc, FlFontId font, View v, f32 size_world,
+                      FlColor color, FlString text, f32 x, f32 baseline_y) {
     f32 display = size_world * v.zoom;
     if (display < 1.0f) {
         display = 1.0f;
@@ -267,51 +269,27 @@ static void draw_text(FlArena* arena, FlArena* scratch, FlRenderBackend* backend
     // gallery's text rasterizes at the zoomed pixel size and overflows the atlas packer, which drops glyphs.
     f32 margin = size_world;
 
-    if (backend->prepare_glyph != nullptr) {
-        f32 world_x = x;
-        Utf8Iter it = utf8_iter(text);
-        while (!utf8_iter_done(&it)) {
-            u32 codepoint = utf8_iter_next(&it);
-            if (codepoint == 0) {
-                break;
-            }
-            FlRect pen = { world_x, baseline_y, 0.0f, 0.0f };
-            if (view_visible(v, pen, margin)) {
-                fl_arena_rewind(scratch);
-                u32 glyph_index = font_cache_get_glyph_index(fc, font, codepoint);
-                FlGlyphOutline outline;
-                if (font_cache_get_glyph_outline(fc, font, raster_q4, glyph_index, scratch, &outline)) {
-                    backend->prepare_glyph(backend->user_data, font, raster_q4, codepoint, &outline);
-                }
-            }
-            world_x += (f32)font_cache_get_glyph_advance(fc, font, metrics, codepoint) / 64.0f;
-        }
-    }
-
-    // Lay out in world space, advancing the pen at the metrics size, and place each glyph at its view-mapped
-    // screen position. This is fl_ir_text_layout's loop with the advance size separate from the run's raster
-    // size, which that builder cannot express. Off-screen glyphs are dropped as in the prepare pass, so the run
-    // only references atlas cells that exist.
-    fl_arena_rewind(scratch);
-    FlGlyph* glyphs = arena_pos_type(scratch, FlGlyph);
-    u32 count = 0;
+    // Shape at the metrics size, advancing the pen in world space, and place each glyph at its view-mapped screen
+    // position. This is fl_ir_text_layout's loop with the advance size separate from the run's raster size, which
+    // that builder cannot express. Off-screen glyphs are dropped, so the run only references atlas cells that
+    // exist.
+    const FlShapedRun shaped = font_cache_shape_run(fc, font, font_cache_whole_px_to_q4(metrics), text);
     f32 world_x = x;
-    Utf8Iter it = utf8_iter(text);
-    while (!utf8_iter_done(&it)) {
-        u32 codepoint = utf8_iter_next(&it);
-        if (codepoint == 0) {
-            break;
-        }
+    fl_arena_rewind(scratch);
+    FlGlyph* glyphs = arena_alloc_array(scratch, FlGlyph, shaped.count);
+    u32 count = 0;
+    for_count(i, shaped.count) {
+        const FlShapedGlyph* sg = &shaped.glyphs[i];
         FlRect pen = { world_x, baseline_y, 0.0f, 0.0f };
         if (view_visible(v, pen, margin)) {
-            FlGlyph* eg = arena_alloc(scratch, FlGlyph);
-            *eg = (FlGlyph) { .glyph_id = codepoint, .x = v_x(v, world_x), .y = v_y(v, baseline_y) };
-            count++;
+            glyphs[count++]
+                = (FlGlyph) { .x = v_x(v, world_x), .y = v_y(v, baseline_y), .glyph_index = sg->glyph_index };
         }
-        world_x += (f32)font_cache_get_glyph_advance(fc, font, metrics, codepoint) / 64.0f;
-    }
-    if (count > 0) {
-        fl_ir_text_run(arena, font, raster_q4, scale, color, glyphs, count);
+        world_x += (f32)sg->advance / 64.0f;
+        if (count > 0 && face_span_ends_at(&shaped, i)) {
+            fl_ir_text_run(arena, sg->font, raster_q4, scale, color, glyphs, count);
+            count = 0;
+        }
     }
 }
 
@@ -339,11 +317,11 @@ static void draw_svg(FlArena* arena, FlRenderBackend* backend, View v, SvgIcon i
 }
 
 // A faint panel + label backing every gallery cell.
-static void draw_cell_chrome(FlArena* arena, FlArena* scratch, FlRenderBackend* backend, FlFontCache* fc, FlFontId font,
-                             View v, FlRect cell, FlString label) {
+static void draw_cell_chrome(FlArena* arena, FlArena* scratch, FlFontCache* fc, FlFontId font, View v, FlRect cell,
+                             FlString label) {
     vw_fill_rect(arena, v, cell, (FlCornerRadius) { 8, 8, 8, 8 }, (FlColor[4]) { k_panel, k_panel, k_panel, k_panel });
     vw_border(arena, v, cell, 1, 1, 1, 1, (FlCornerRadius) { 8, 8, 8, 8 }, k_panel_border);
-    draw_text(arena, scratch, backend, fc, font, v, LABEL_SIZE, k_dim, label, cell.x + 12.0f, cell.y + cell.h - 12.0f);
+    draw_text(arena, scratch, fc, font, v, LABEL_SIZE, k_dim, label, cell.x + 12.0f, cell.y + cell.h - 12.0f);
 }
 
 // Builds the gallery scene into the rewound arena. The scene has no animation.
@@ -359,12 +337,12 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
     fl_ir_fill_rect(arena, (FlRect) { 0, 0, (f32)width, (f32)height }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { k_bg, k_bg, k_bg, k_bg }, nullptr);
 
-    draw_text(arena, scratch, backend, fc, font, v, TITLE_SIZE, k_ink, FL_S("flowi — GPU backend primitive gallery"),
-              MARGIN, MARGIN + 26.0f);
+    draw_text(arena, scratch, fc, font, v, TITLE_SIZE, k_ink, FL_S("flowi — GPU backend primitive gallery"), MARGIN,
+              MARGIN + 26.0f);
 
     {
         FlRect c = cell_rect(0, 0);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("fill + gradient"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("fill + gradient"));
         vw_fill_rect(arena, v, (FlRect) { c.x + 16, c.y + 16, 90, 90 }, (FlCornerRadius) { 14, 14, 14, 14 },
                      (FlColor[4]) { k_accent, k_accent, k_accent, k_accent });
         const FlColor tl = { 220, 80, 80, 255 };
@@ -377,7 +355,7 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
 
     {
         FlRect c = cell_rect(1, 0);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("borders"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("borders"));
         FlRect a = { c.x + 16, c.y + 16, 90, 90 };
         vw_fill_rect(arena, v, a, (FlCornerRadius) { 12, 12, 12, 12 },
                      (FlColor[4]) { k_panel, k_panel, k_panel, k_panel });
@@ -389,7 +367,7 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
 
     {
         FlRect c = cell_rect(2, 0);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("clip"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("clip"));
         fl_ir_clip_push(arena, v_rect(v, (FlRect) { c.x + 16, c.y + 16, 120, 70 }));
         vw_fill_rect(arena, v, (FlRect) { c.x + 60, c.y + 8, 140, 110 }, (FlCornerRadius) { 0 },
                      (FlColor[4]) { k_green, k_green, k_green, k_green });
@@ -398,14 +376,14 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
 
     {
         FlRect c = cell_rect(0, 1);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("circle + diamond"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("circle + diamond"));
         vw_circle(arena, v, c.x + 62, c.y + 58, 36, k_accent, k_white, 3);
         vw_diamond(arena, v, c.x + 168, c.y + 58, 36, 46, k_warn, k_white, 3);
     }
 
     {
         FlRect c = cell_rect(1, 1);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("arc / ring / sector"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("arc / ring / sector"));
         f32 cy = c.y + 58;
         vw_arc(arena, v, c.x + 50, cy, 34, 7, 0.0f, 6.2831853f, k_accent, 0);                // full ring
         vw_arc(arena, v, c.x + 125, cy, 34, 16, 0.2f, 4.2f, k_green, FL_IR_ARC_ROUND_CAPS);  // capped sweep
@@ -414,7 +392,7 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
 
     {
         FlRect c = cell_rect(2, 1);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("polyline (stroked + filled)"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("polyline (stroked + filled)"));
         enum { N = 48 };
         f32 x0 = c.x + 14;
         f32 span = CELL_W - 28.0f;
@@ -436,7 +414,7 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
 
     {
         FlRect c = cell_rect(0, 2);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("bars (batched)"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("bars (batched)"));
         enum { N = 14 };
         f32 base = c.y + 128; // bars grow upward from a baseline near the cell's bottom
         f32 bw = 12.0f;
@@ -452,7 +430,7 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
 
     {
         FlRect c = cell_rect(1, 2);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("image (color + tint)"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("image (color + tint)"));
         FlImageSource src = { .kind = FlImageKind_Static, .handle = image };
         vw_image(arena, v, src, FlImageMode_Color, (FlRect) { c.x + 16, c.y + 16, 90, 90 }, (FlRect) { 0 }, k_white,
                  FlImageFilter_Nearest);
@@ -462,17 +440,15 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
 
     {
         FlRect c = cell_rect(2, 2);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("text (Roboto)"));
-        draw_text(arena, scratch, backend, fc, font, v, 22, k_ink, FL_S("Sphinx of black quartz,"), c.x + 14, c.y + 38);
-        draw_text(arena, scratch, backend, fc, font, v, 16, k_dim, FL_S("judge my vow. 0123456789"), c.x + 14,
-                  c.y + 66);
-        draw_text(arena, scratch, backend, fc, font, v, 14, k_green, FL_S("The quick brown fox jumps"), c.x + 14,
-                  c.y + 92);
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("text (Roboto)"));
+        draw_text(arena, scratch, fc, font, v, 22, k_ink, FL_S("Sphinx of black quartz,"), c.x + 14, c.y + 38);
+        draw_text(arena, scratch, fc, font, v, 16, k_dim, FL_S("judge my vow. 0123456789"), c.x + 14, c.y + 66);
+        draw_text(arena, scratch, fc, font, v, 14, k_green, FL_S("The quick brown fox jumps"), c.x + 14, c.y + 92);
     }
 
     {
         FlRect c = cell_rect(0, 3);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("svg (mono, tinted)"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("svg (mono, tinted)"));
         // White (identity) tint draws the icon's authored fill; any other tint recolors the coverage.
         draw_svg(arena, backend, v, svg_mono, (FlRect) { c.x + 24, c.y + 22, 80, 80 }, k_white);
         draw_svg(arena, backend, v, svg_mono, (FlRect) { c.x + 136, c.y + 22, 80, 80 }, k_warn);
@@ -480,13 +456,13 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
 
     {
         FlRect c = cell_rect(1, 3);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("svg (multi-color)"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("svg (multi-color)"));
         draw_svg(arena, backend, v, svg_color, (FlRect) { c.x + 80, c.y + 20, 90, 90 }, k_white);
     }
 
     {
         FlRect c = cell_rect(2, 3);
-        draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("effects (shadow + glow)"));
+        draw_cell_chrome(arena, scratch, fc, font, v, c, FL_S("effects (shadow + glow)"));
         // The vw_* wrappers do not take the builder's effect parameter, so call fl_ir_* directly. Offsets and
         // blur are world units scaled by zoom, so the shadow and glow follow their shape under zoom.
         FlEffect drop = { .kind = FlEffectKind_DropShadow,

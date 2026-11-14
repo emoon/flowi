@@ -74,18 +74,18 @@ GpuGlyphCell gpu_prepare_glyph_cell(const FlGlyphOutline* outline) {
     };
 }
 
-bool gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, FlArena* arena, FlFontId font, u16 size, u32 glyph_id,
+bool gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, FlArena* arena, FlFontId font, u16 size, u32 glyph_index,
                              const FlGlyphOutline* outline, GpuGlyphRaster* out) {
     if (outline == nullptr) {
         return false;
     }
-    if (gpu_glyph_atlas_find(atlas, font, size, glyph_id) != nullptr) {
+    if (gpu_glyph_atlas_find(atlas, font, size, glyph_index) != nullptr) {
         return false;
     }
 
     GpuGlyphCell cell = gpu_prepare_glyph_cell(outline);
-    const GpuGlyphEntry* entry
-        = gpu_glyph_atlas_place(atlas, font, size, glyph_id, cell.pw, cell.ph, cell.left, cell.top, outline->advance);
+    const GpuGlyphEntry* entry = gpu_glyph_atlas_place(atlas, font, size, glyph_index, cell.pw, cell.ph, cell.left,
+                                                       cell.top, outline->advance);
     if (cell.empty) {
         return false;
     }

@@ -97,7 +97,7 @@ typedef struct FlRenderBackend {
     void (*release_image)(void* ud, FlImageHandle h);
     // Glyph preparation seam: the core hands over the shared outline and the backend
     // caches its own representation. There is no release_glyph because atlases regenerate wholesale.
-    void (*prepare_glyph)(void* ud, FlFontId font, uint16_t size, uint32_t glyph_id, const FlGlyphOutline* outline);
+    void (*prepare_glyph)(void* ud, FlFontId font, uint16_t size, uint32_t glyph_index, const FlGlyphOutline* outline);
     // Vector preparation seam, parallel to prepare_glyph, for SVG vector images.
     // Nullable: only the GPU backend binds it.
     void (*prepare_vector)(void* ud, FlImageHandle handle, uint16_t size, const FlVectorImage* vector);

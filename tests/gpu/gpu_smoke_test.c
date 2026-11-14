@@ -1622,10 +1622,10 @@ static int run_text_translator_tests(void) {
 
     const FlColor run_color = { 220, 210, 40, 255 };
     FlGlyph run[4] = {
-        { 'A', 100.0f, 200.0f },
-        { ' ', 111.0f, 200.0f }, // metrics-only: emits nothing
-        { 'b', 117.0f, 200.0f },
-        { 'Z', 125.0f, 200.0f }, // never prepared: skipped like an unresolved image
+        { .x = 100.0f, .y = 200.0f, .glyph_index = 'A' },
+        { .x = 111.0f, .y = 200.0f, .glyph_index = ' ' }, // metrics-only: emits nothing
+        { .x = 117.0f, .y = 200.0f, .glyph_index = 'b' },
+        { .x = 125.0f, .y = 200.0f, .glyph_index = 'Z' }, // never prepared: skipped like an unresolved image
     };
     void* start = ir_begin(ir_arena);
     fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
@@ -1662,7 +1662,7 @@ static int run_text_translator_tests(void) {
 
     const FlColor half = { 200, 100, 50, 128 };
     start = ir_rewind_begin(ir_arena);
-    FlGlyph one = { 'A', 0.0f, 50.0f };
+    FlGlyph one = { .x = 0.0f, .y = 50.0f, .glyph_index = 'A' };
     fl_ir_text_run(ir_arena, font, size, 1.0f, half, &one, 1);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
@@ -1722,7 +1722,7 @@ static int run_text_translator_tests(void) {
           "text translate: glyphs inside a clip survive and inherit its (non-root) clip index");
 
     start = ir_rewind_begin(ir_arena);
-    FlGlyph ga = { 'A', 0.0f, 50.0f };
+    FlGlyph ga = { .x = 0.0f, .y = 50.0f, .glyph_index = 'A' };
     fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, &ga, 1);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
@@ -1742,7 +1742,7 @@ static int run_text_translator_tests(void) {
     // cell's coverage. A scale != 1 leaves the run rasterized at size but displays it at size * scale.
     const f32 s = 1.5f;
     start = ir_rewind_begin(ir_arena);
-    FlGlyph scaled = { 'A', 100.0f, 200.0f };
+    FlGlyph scaled = { .x = 100.0f, .y = 200.0f, .glyph_index = 'A' };
     fl_ir_text_run(ir_arena, font, size, s, run_color, &scaled, 1);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
@@ -1779,7 +1779,7 @@ static int run_text_translator_tests(void) {
     trun->glyph_count = 1;
     trun->scale = 1.0f;
     FlGlyph* trun_glyphs = arena_alloc_array(ir_arena, FlGlyph, 1);
-    trun_glyphs[0] = (FlGlyph) { 'A', 100.0f, 200.0f };
+    trun_glyphs[0] = (FlGlyph) { .x = 100.0f, .y = 200.0f, .glyph_index = 'A' };
     fl_ir_append_effect(ir_arena, theader, &text_fx);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
@@ -4960,8 +4960,32 @@ static int run_glyph_raster_tests(FlRenderBackend* backend) {
 // Part E: text drawing end to end. Glyphs are prepared through the seam, then an FlCmd_TextRun is rendered and read
 // back. 'A' in the embedded test font is a solid 0.6 x 0.7 em square (glyph_test_fonts.h), so a covered cell
 // is a solid block of the run's color and the rows around it stay transparent. The glyph is keyed by its
-// codepoint (FlGlyph.glyph_id is a codepoint today, the key the translator looks up); the glyph index only
-// fetches the outline.
+// glyph index, the key the translator looks up.
+
+static bool glyph_cell_has_area(const GpuGlyphEntry* e) {
+    return e != nullptr && e->cell.w * e->cell.h != 0;
+}
+
+static bool text_run_paints(FlRenderBackend* backend, FlSurface* surface, FlArena* ir_arena, FlFontId font, u16 size,
+                            u32 glyph_index) {
+    const FlColor color = { 230, 80, 200, 255 };
+    const f32 pen_x = 600.0f;
+    const f32 pen_y = 300.0f;
+    FlGlyph glyph = { .x = pen_x, .y = pen_y, .glyph_index = glyph_index };
+    void* start = ir_rewind_begin(ir_arena);
+    fl_ir_text_run(ir_arena, font, size, 1.0f, color, &glyph, 1);
+    FlRenderFrame frame = test_frame();
+    ir_frame_render(backend, surface, &frame, ir_arena, start);
+
+    const GpuGlyphEntry* e = gpu_debug_find_glyph(backend->user_data, font, size, glyph_index);
+    FlPixelReadback buf;
+    if (!glyph_cell_has_area(e) || !render_seam_read_pixels(backend, surface, &buf)) {
+        return false;
+    }
+    const int cx = (int)(pen_x + e->left) + (int)e->cell.w / 2;
+    const int cy = (int)(pen_y - e->top) + (int)e->cell.h / 2;
+    return pixel_color(pixel_at(&buf, cx, cy), color, 3.0f);
+}
 
 static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
@@ -4972,13 +4996,12 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(font != FONT_ID_INVALID, "text pixels: the embedded font loads");
 
     const u16 size = 32 * 4; // quarter-px key for 32px, the loaded size
-    const u32 cp = 'A';
-    u32 idx = font_cache_get_glyph_index(fc, font, cp);
+    u32 idx = font_cache_get_glyph_index(fc, font, 'A');
     FlGlyphOutline outline;
     CHECK(idx != 0 && font_cache_get_glyph_outline(fc, font, size, idx, arena, &outline),
           "text pixels: the square glyph's outline loads");
-    backend->prepare_glyph(ud, font, size, cp, &outline);
-    const GpuGlyphEntry* e = gpu_debug_find_glyph(ud, font, size, cp);
+    backend->prepare_glyph(ud, font, size, idx, &outline);
+    const GpuGlyphEntry* e = gpu_debug_find_glyph(ud, font, size, idx);
     CHECK(e != nullptr && e->cell.w > 0 && e->cell.h > 0, "text pixels: the glyph prepared into a real cell");
 
     // Two copies of the square in one run, far enough apart to leave a transparent gap between the cells.
@@ -4986,7 +5009,10 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     const f32 pen_y = 300.0f;
     const f32 pen_x0 = 200.0f;
     const f32 pen_x1 = 260.0f;
-    FlGlyph glyphs[2] = { { cp, pen_x0, pen_y }, { cp, pen_x1, pen_y } };
+    FlGlyph glyphs[2] = {
+        { .x = pen_x0, .y = pen_y, .glyph_index = idx },
+        { .x = pen_x1, .y = pen_y, .glyph_index = idx },
+    };
 
     void* start = ir_rewind_begin(ir_arena);
     fl_ir_text_run(ir_arena, font, size, 1.0f, text_col, glyphs, 2);
@@ -5019,33 +5045,25 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(pixel_color(pixel_at(&buf, (int)(pen_x1 + e->left) + cw / 2, cy), (FlColor) { 230, 80, 200, 255 }, 3.0f),
           "text pixels: the second glyph in the run also paints its square");
 
-    // A codepoint the run's font lacks paints the fallback face's glyph, not .notdef. 'B' is absent from the
-    // embedded test font and present in the fallback one. This leg drives render()'s own prepare pass
-    // (set_font_cache, no host-side prepare_glyph) because that pass is where resolution happens.
+    // A codepoint the font lacks shapes to the fallback face, and a run in that face paints its glyph. 'B' is
+    // absent from the embedded test font and present in the fallback one. These legs drive render()'s own
+    // prepare pass (set_font_cache, no host-side prepare_glyph).
     FlFontId fb_font = font_cache_load_font_memory(fc, k_fallback_test_ttf, k_fallback_test_ttf_size, 32);
     CHECK(fb_font != FONT_ID_INVALID, "text pixels: the fallback font loads");
     CHECK(font_cache_get_glyph_index(fc, font, 'B') == 0, "text pixels: 'B' is absent from the primary face");
     font_cache_set_fallback_font(fc, fb_font);
     backend->set_font_cache(ud, fc);
 
-    const f32 fb_pen_x = 600.0f;
-    FlGlyph fb_run[1] = { { 'B', fb_pen_x, pen_y } };
-    void* fb_start = ir_rewind_begin(ir_arena);
-    fl_ir_text_run(ir_arena, font, size, 1.0f, text_col, fb_run, 1);
-    FlRenderFrame fb_frame = test_frame();
-    ir_frame_render(backend, surface, &fb_frame, ir_arena, fb_start);
-
-    // Keyed by the run's font even though the outline came from the fallback face, the key the translator uses.
-    // An unresolved fallback would prepare the primary's empty .notdef instead: an entry with no cell.
-    const GpuGlyphEntry* fe = gpu_debug_find_glyph(ud, font, size, 'B');
-    CHECK(fe != nullptr && fe->cell.w > 0 && fe->cell.h > 0,
-          "text pixels: a fallback-only codepoint prepares a real cell (not the primary's empty .notdef)");
-
-    CHECK(render_seam_read_pixels(backend, surface, &buf), "text pixels: fallback readback");
-    CHECK(pixel_color(pixel_at(&buf, (int)(fb_pen_x + fe->left) + (int)fe->cell.w / 2,
-                               (int)(pen_y - fe->top) + (int)fe->cell.h / 2),
-                      (FlColor) { 230, 80, 200, 255 }, 3.0f),
+    const FlShapedRun shaped = font_cache_shape_run(fc, font, size, FL_S("B"));
+    CHECK(shaped.count == 1 && shaped.glyphs[0].font == fb_font && shaped.glyphs[0].glyph_index != 0,
+          "text pixels: a fallback-only codepoint shapes to the fallback face");
+    CHECK(text_run_paints(backend, surface, ir_arena, fb_font, size, shaped.glyphs[0].glyph_index),
           "text pixels: the fallback glyph paints its square in the run's color");
+
+    FlFontId builtin = font_cache_load_default_font(fc, 1);
+    CHECK(builtin != FONT_ID_INVALID, "text pixels: the built-in font loads");
+    CHECK(text_run_paints(backend, surface, ir_arena, builtin, size, 'B'),
+          "text pixels: a built-in font run paints the fallback face's glyph");
 
     backend->set_font_cache(ud, nullptr); // the cache is about to die; the pointer lives on the backend
     font_cache_destroy(fc);
@@ -5073,8 +5091,8 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // A resolution change alone does not regenerate: scale, not window size, is the trigger
     FlGlyphOutline o32;
     CHECK(font_cache_get_glyph_outline(fc, font, 32 * 4, idx, arena, &o32), "text atlas: the size-32 outline loads");
-    backend->prepare_glyph(ud, font, 32 * 4, 'A', &o32);
-    const GpuGlyphEntry* before = gpu_debug_find_glyph(ud, font, 32 * 4, 'A');
+    backend->prepare_glyph(ud, font, 32 * 4, idx, &o32);
+    const GpuGlyphEntry* before = gpu_debug_find_glyph(ud, font, 32 * 4, idx);
     CHECK(before != nullptr, "text atlas: the glyph prepares at the create resolution");
     u32 before_w = before->cell.w;
     u32 before_h = before->cell.h;
@@ -5082,10 +5100,10 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // Resizing the window only rebuilds the framebuffer; the atlas is untouched because the UI scale is an
     // absolute value the core hands in, not a function of height.
     render_seam_change_resolution(backend, surface, 2560, 1080);
-    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != nullptr,
+    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, idx) != nullptr,
           "text atlas: a width-only resize keeps the glyphs (no scale change)");
     render_seam_change_resolution(backend, surface, 2560, 720);
-    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != nullptr,
+    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, idx) != nullptr,
           "text atlas: a height resize alone no longer regenerates (scale, not window size, is the trigger)");
 
     // Wholesale regeneration on a UI-scale change, via the scale_changed seam
@@ -5093,17 +5111,17 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
 
     // An unchanged scale is a no-op (guarded on last_ui_scale, which the create set to the 1.0 default).
     backend->scale_changed(ud, 1.0f);
-    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != nullptr,
+    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, idx) != nullptr,
           "text atlas: scale_changed at the same scale is a no-op (glyphs survive)");
 
     backend->scale_changed(ud, 2.0f);
-    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') == nullptr,
+    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, idx) == nullptr,
           "text atlas: a UI-scale change forgets every glyph (wholesale regen)");
 
     FlGlyphOutline o48;
     CHECK(font_cache_get_glyph_outline(fc, font, 48 * 4, idx, arena, &o48), "text atlas: the size-48 outline loads");
-    backend->prepare_glyph(ud, font, 48 * 4, 'A', &o48);
-    const GpuGlyphEntry* after = gpu_debug_find_glyph(ud, font, 48 * 4, 'A');
+    backend->prepare_glyph(ud, font, 48 * 4, idx, &o48);
+    const GpuGlyphEntry* after = gpu_debug_find_glyph(ud, font, 48 * 4, idx);
     CHECK(after != nullptr && after->cell.x == 0 && after->cell.y == 0,
           "text atlas: the new-size glyph repacks from the origin");
     CHECK(after->cell.w > before_w && after->cell.h > before_h,
@@ -5144,10 +5162,10 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(gpu_debug_find_glyph(ud, font, big_size, 7777) != nullptr,
           "text atlas: the backend keeps placing glyphs after a wholesale repack");
 
-    backend->prepare_glyph(ud, font, 32 * 4, 'A', &o32);
-    const GpuGlyphEntry* e = gpu_debug_find_glyph(ud, font, 32 * 4, 'A');
+    backend->prepare_glyph(ud, font, 32 * 4, idx, &o32);
+    const GpuGlyphEntry* e = gpu_debug_find_glyph(ud, font, 32 * 4, idx);
     CHECK(e != nullptr && e->cell.w > 0, "text atlas: the closing glyph prepares");
-    FlGlyph one = { 'A', 300.0f, 300.0f };
+    FlGlyph one = { .x = 300.0f, .y = 300.0f, .glyph_index = idx };
     void* start = ir_rewind_begin(ir_arena);
     fl_ir_text_run(ir_arena, font, 32 * 4, 1.0f, white, &one, 1);
     FlRenderFrame frame = test_frame();
@@ -6352,16 +6370,22 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
     backend->set_font_cache(ud, fc);
 
     // scene_zoom_change: the two embedded codepoints ('A', 'o') at a spread of raster sizes. Each distinct
-    // (font, size, glyph_id) is one atlas key, so the frame carries n_sizes*2 distinct glyphs, the resident set a
+    // (font, size, glyph_index) is one atlas key, so the frame carries n_sizes*2 distinct glyphs, the resident set a
     // scale change forces the backend to rebuild. Spread horizontally so no 8x8 tile ever nears GPU_TILE_CAPACITY.
     static const u16 sizes[] = { 24, 28, 32, 36, 40 };
     const int n_sizes = (int)sizeof_array(sizes);
+    const u32 glyph_a = font_cache_get_glyph_index(fc, font, 'A');
+    const u32 glyph_o = font_cache_get_glyph_index(fc, font, 'o');
+    CHECK(glyph_a != 0 && glyph_o != 0, "perf_fence: 'A' and 'o' resolve to glyph indices");
     const u32 expect_glyph_dispatches = (u32)(n_sizes * 2); // 'A' + 'o' at each size, one dispatch per glyph
 
     void* start = ir_rewind_begin(ir_arena);
     for (int s = 0; s < n_sizes; s++) {
         const f32 x = 100.0f + 300.0f * (f32)s;
-        FlGlyph glyphs[2] = { { 'A', x, 200.0f }, { 'o', x + 60.0f, 200.0f } };
+        FlGlyph glyphs[2] = {
+            { .x = x, .y = 200.0f, .glyph_index = glyph_a },
+            { .x = x + 60.0f, .y = 200.0f, .glyph_index = glyph_o },
+        };
         fl_ir_text_run(ir_arena, font, sizes[s], 1.0f, white, glyphs, 2);
     }
     FlRenderFrame frame = test_frame();

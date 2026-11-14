@@ -76,7 +76,7 @@ typedef struct GpuGlyphRaster {
 // must dispatch the cell; the caller rewinds arena after the dispatch. Returns false with nothing allocated for
 // a null outline, an already-placed glyph, an empty glyph (metrics-only entry), or a full atlas (the wholesale
 // repack is deferred via gpu_glyph_atlas_on_overflow).
-bool gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, struct FlArena* arena, FlFontId font, u16 size, u32 glyph_id,
+bool gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, struct FlArena* arena, FlFontId font, u16 size, u32 glyph_index,
                              const struct FlGlyphOutline* outline, GpuGlyphRaster* out);
 
 // Vector preparation.
