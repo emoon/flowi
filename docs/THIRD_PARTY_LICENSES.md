@@ -1,6 +1,6 @@
 # Third-party licenses
 
-flowi itself is MIT (see [LICENSE](../LICENSE)). The eleven libraries vendored under
+flowi itself is MIT (see [LICENSE](../LICENSE)). The twelve libraries vendored under
 `external/` and the third-party files copied into `src` and `examples/` keep their own
 licenses, reproduced in the files listed below. All of them permit redistribution in source and binary form provided their notices are retained.
 
@@ -9,6 +9,7 @@ licenses, reproduced in the files listed below. All of them permit redistributio
 | [clay](https://github.com/nicbarker/clay) (**modified fork**, see below) | zlib/libpng | 2024 Nic Barker | `external/clay/clay.h` (end of file) |
 | [FreeType 2](https://freetype.org/) (2.13.3) | FreeType License (FTL) — see below | 1996-2024 David Turner, Robert Wilhelm, Werner Lemberg and others | `external/freetype2/LICENSE.TXT`, `external/freetype2/docs/FTL.TXT` |
 | [fzy](https://github.com/jhawthorn/fzy) | MIT | 2014 John Hawthorn | `external/fzy/LICENSE` |
+| [kb_text_shape](https://github.com/JimmyLefevre/kb) (2.32, commit `4eec43b`) | zlib | 2024-2025 Jimmy Lefevre | `external/kb/LICENSE` |
 | [libarchive](https://github.com/libarchive/libarchive) | BSD 2-Clause | Tim Kientzle and contributors | `external/libarchive/COPYING` |
 | [lhasa](https://github.com/fragglet/lhasa) | ISC | 2011-2025 Simon Howard | `external/lhasa/COPYING.md` |
 | [mimalloc](https://github.com/microsoft/mimalloc) | MIT | 2018-2025 Microsoft Corporation, Daan Leijen | `external/mimalloc/LICENSE` |
@@ -27,7 +28,7 @@ notice that the zlib license (clause 2) requires. Do not assume the vendored cop
 upstream v0.14; diff before re-basing. See
 [ADR-0012](adr/0012-fork-clay-as-em-layout.md).
 
-The other ten are upstream copies, except `stb_image.h` (see below). libarchive, lhasa and unlzx back the optional VFS archive
+The other eleven are upstream copies, except `stb_image.h` (see below). libarchive, lhasa and unlzx back the optional VFS archive
 drivers and are compiled only when `FLOWI_VFS_DRIVER_LIBARCHIVE`, `FLOWI_VFS_DRIVER_LHASA` or
 `FLOWI_VFS_DRIVER_UNLZX` is on. fzy is a partial vendor — only `match.c`,
 `match.h`, `bonus.h` and `config*.h`, with a flowi-authored `CMakeLists.txt`

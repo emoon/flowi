@@ -1,1 +1,2 @@
 tests/fixtures/** -text
+external/kb/kb_text_shape.h -text

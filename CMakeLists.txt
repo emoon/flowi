@@ -83,16 +83,17 @@ add_subdirectory(external/freetype2)
 # Sources
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
-    ${SRC}/app/*.c external/clay/clay.c ${SRC}/core/*.c ${SRC}/core/os/*.c ${SRC}/vfs/*.c ${SRC}/vfs/drivers/*.c
+    ${SRC}/app/*.c external/clay/clay.c external/kb/kb_text_shape.c ${SRC}/core/*.c ${SRC}/core/os/*.c ${SRC}/vfs/*.c
+    ${SRC}/vfs/drivers/*.c
     ${SRC}/image_loader/*.c ${SRC}/platform/*.c ${SRC}/ui/*.c ${SRC}/ui/dock/*.c ${SRC}/ui/image/*.c ${SRC}/ui/list/*.c ${SRC}/ui/menu/*.c ${SRC}/render/software/*.c)
 
 file(GLOB PLATFORM_SOURCES ${SRC}/platform/*.c)
 set_source_files_properties(${PLATFORM_SOURCES} PROPERTIES COMPILE_DEFINITIONS BACKEND_USE_SDL=0)
 
-file(GLOB VENDORED_SOURCES ${SRC}/image_loader/*.c ${ROOT}/external/clay/clay.c)
+file(GLOB VENDORED_SOURCES ${SRC}/image_loader/*.c ${ROOT}/external/clay/clay.c ${ROOT}/external/kb/kb_text_shape.c)
 set_source_files_properties(${VENDORED_SOURCES} PROPERTIES COMPILE_OPTIONS -w)
 
-file(GLOB OPTIMIZED_SOURCES ${SRC}/image_loader/*.c ${SRC}/render/software/*.c)
+file(GLOB OPTIMIZED_SOURCES ${SRC}/image_loader/*.c ${SRC}/render/software/*.c ${ROOT}/external/kb/kb_text_shape.c)
 set_property(SOURCE ${OPTIMIZED_SOURCES} APPEND PROPERTY COMPILE_OPTIONS -O3)
 
 # SDL backend
