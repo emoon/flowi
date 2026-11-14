@@ -15,11 +15,10 @@
 
 #define MAX_FONT_FACES 128
 
-// A codepoint at one size: its advance and the glyph that draws it.
 typedef struct CachedGlyph {
-    int advance; // 26.6, -1 = uncomputed ASCII slot
+    int advance;
     u16 glyph_index;
-    bool fallback; // glyph_index is in the fallback face
+    bool fallback;
 } CachedGlyph;
 
 typedef struct FontFace {
@@ -420,7 +419,7 @@ typedef struct AdvanceRun {
     FontFace* face;
     u16 q4;
     bool may_claim_row;
-    FlFontId font; // requested id; set only when glyphs are produced
+    FlFontId font;
 } AdvanceRun;
 
 // The ASCII row slot for a codepoint when the row is valid for the run's size (claiming it first if the run may),
@@ -439,7 +438,6 @@ static CachedGlyph* ascii_glyph_slot(const AdvanceRun* run, u32 codepoint) {
     return face->ascii_glyphs_size == run->q4 ? &face->ascii_glyphs[codepoint] : nullptr;
 }
 
-// A miss while the fallback face is loading must not be cached, or the glyph stays missing.
 static bool is_cacheable(const FlFontCache* self, CachedGlyph glyph) {
     const bool fallback_loading = self->fallback_face != nullptr && self->fallback_face->status == FontStatus_Loading;
     return glyph.glyph_index != 0 || !fallback_loading;
@@ -470,7 +468,6 @@ static CachedGlyph freetype_glyph(const AdvanceRun* run, u32 codepoint) {
     return glyph;
 }
 
-// The built-in font covers codepoints below 128; its glyph index is the codepoint.
 static CachedGlyph default_glyph(const FontFace* face, u32 codepoint) {
     if (codepoint >= 128) {
         return (CachedGlyph) { 0 };

@@ -126,8 +126,6 @@ static inline void fl_ir_image(FlArena* arena, FlImageSource source, FlImageMode
     fl_ir_append_effect(arena, header, effect);
 }
 
-// Append a text run record and return its glyph array for the caller to fill.
-
 static inline FlGlyph* fl_ir_text_run_alloc(FlArena* arena, const FlCmdTextRun* run) {
     u32 content = (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdTextRun)) + run->glyph_count * (u32)sizeof(FlGlyph);
     fl_ir_header(arena, FlCmd_TextRun, content);
@@ -248,7 +246,6 @@ static inline FlBar* fl_ir_bars(FlArena* arena, f32 baseline_y, FlColor color, u
     return bars;
 }
 
-// End of the span of glyphs, starting at first, drawn by one face.
 static inline u32 fl_ir_face_span_end(const FlShapedRun* shaped, u32 first) {
     u32 end = first;
     while (end < shaped->count && shaped->glyphs[end].font == shaped->glyphs[first].font) {
@@ -279,7 +276,6 @@ static inline void fl_ir_text_layout(FlArena* arena, FlFontCache* font_cache, Fl
         run.glyph_count = end - i;
         FlGlyph* dst = fl_ir_text_run_alloc(arena, &run);
 
-        // The spacing after the last glyph is never used.
         for (; i < end; i++) {
             const FlShapedGlyph* sg = &shaped.glyphs[i];
             *dst++ = (FlGlyph) {

@@ -305,7 +305,6 @@ static void draw_text(FlArena* arena, FlArena* scratch, FlRenderBackend* backend
         FlRect pen = { world_x, baseline_y, 0.0f, 0.0f };
         if (view_visible(v, pen, margin)) {
             FlGlyph* eg = arena_alloc(scratch, FlGlyph);
-            // glyph_index is unset; the GPU backend does not read it yet.
             *eg = (FlGlyph) { .glyph_id = codepoint, .x = v_x(v, world_x), .y = v_y(v, baseline_y) };
             count++;
         }

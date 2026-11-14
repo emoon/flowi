@@ -109,8 +109,8 @@ FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextSt
 typedef struct FlShapedGlyph {
     u32 glyph_id;
     int advance;
-    FlFontId font;   // face that draws the glyph: the run's font or the fallback
-    u32 glyph_index; // index in that face, 0 = unmapped; the codepoint for the built-in font
+    FlFontId font;
+    u32 glyph_index;
 } FlShapedGlyph;
 
 typedef struct FlShapedRun {
