@@ -182,11 +182,11 @@ void fl_painter_rect_styled(float x, float y, float w, float h, FlRectConfig con
 }
 
 void fl_painter_hline(float x, float y, float length, FlColor color) {
-    painter_hline(ui_get_painter(), x, y, length, color);
+    painter_hline(ui_get_painter(), (PainterRule) { .x = x, .y = y, .length = length, .color = color });
 }
 
 void fl_painter_vline(float x, float y, float length, FlColor color) {
-    painter_vline(ui_get_painter(), x, y, length, color);
+    painter_vline(ui_get_painter(), (PainterRule) { .x = x, .y = y, .length = length, .color = color });
 }
 
 // The two text draws are the exception: resolving the font-id zero semantic reads the context itself, so they
@@ -197,7 +197,8 @@ void fl_painter_text(float x, float y, FlString text, uint32_t font, FlColor col
     if (self == nullptr) {
         return;
     }
-    painter_text(ui_get_painter(), x, y, text, resolve_font_id(self, font), color);
+    painter_text(ui_get_painter(), (PainterTextRun) { .x = x, .y = y, .text = text, .color = color },
+                 resolve_font_id(self, font));
 }
 
 void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, FlColor color) {
@@ -206,7 +207,7 @@ void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, 
         return;
     }
     style.font_id = resolve_font_id(self, style.font_id);
-    painter_text_styled(ui_get_painter(), x, y, text, style, color);
+    painter_text_styled(ui_get_painter(), (PainterTextRun) { .x = x, .y = y, .text = text, .color = color }, style);
 }
 
 bool fl_painter_image(float x, float y, float w, float h, uint32_t image, FlColor color) {
@@ -238,7 +239,8 @@ void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, FlPoly
 }
 
 void fl_painter_bars(float baseline_y, const FlBar* bars, uint32_t bars_size, FlColor color) {
-    painter_bars(ui_get_painter(), baseline_y, bars, bars_size, color);
+    painter_bars(ui_get_painter(),
+                 (PainterBars) { .baseline_y = baseline_y, .bars = bars, .bar_count = bars_size, .color = color });
 }
 
 // Hand-written bodies for the generated Text api. emit is a plain layout element in the theme primary
@@ -257,8 +259,8 @@ FlTextMetrics fl_text_measure(FlString text, FlTextStyle style) {
     if (self == nullptr) {
         return (FlTextMetrics) { 0 };
     }
-    FlFontId font_id = resolve_font_id(self, style.font_id);
-    return font_cache_measure_text(self->shared->font_cache, text, font_id, style.font_size, style.letter_spacing);
+    style.font_id = resolve_font_id(self, style.font_id);
+    return font_cache_measure_text(self->shared->font_cache, text, style);
 }
 
 // The scroll (fl_scroll_area_*), floating (fl_floating_*) and layout (fl_layout_*) families are defined

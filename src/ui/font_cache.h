@@ -104,8 +104,7 @@ int font_cache_get_glyph_advance_q4(FlFontCache* self, FlFontId font_id, u16 siz
 // are the line metrics at the quantized size. font_size <= 0 falls back to the font's load size.
 // Unknown/unready fonts return zeroed metrics (with a log); missing glyphs measure via the
 // fallback face, same as rendering.
-FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlFontId font_id, float font_size,
-                                      float letter_spacing);
+FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextStyle style);
 
 // String-independent vertical metrics at a fractional size (quarter-pixel quantized), for stable
 // vertical centering of dynamic readouts. font_size <= 0 falls back to the font's load size.

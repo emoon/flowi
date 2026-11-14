@@ -159,18 +159,11 @@ static void headless_warp_mouse(void* ud, FlWindow* window, float x, float y) {
     self->last_warp = (FlVec2) { .x = x, .y = y };
 }
 
-// Presentation - no-op; the signature matches the seam's present slot (void* id<MTLTexture> on APPLE, u32 GL name
-// elsewhere).
-#if __APPLE__
-static void headless_present(void* ud, FlWindow* window, void* surface_texture, u32 tex_width, u32 tex_height) {
-#else
-static void headless_present(void* ud, FlWindow* window, u32 surface_texture, u32 tex_width, u32 tex_height) {
-#endif
+// Presentation - no-op; the signature matches the seam's present slot.
+static void headless_present(void* ud, FlWindow* window, FlSurfaceHandle surface_texture) {
     UNUSED(ud);
     UNUSED(window);
     UNUSED(surface_texture);
-    UNUSED(tex_width);
-    UNUSED(tex_height);
 }
 
 static void headless_destroy(void* ud) {

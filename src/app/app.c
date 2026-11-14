@@ -623,17 +623,11 @@ static void fl_app_window_present(FlApp* app, FlAppWindow* win) {
         return;
     }
 #if FL_APP_HAVE_GPU
-    // Windowed GPU: resolve the surface texture and let the backend composite it over the window + present. The
-    // handle type is platform-conditional: a void* id<MTLTexture> on APPLE, a u32 GL name elsewhere.
+    // Windowed GPU: resolve the surface texture and let the backend composite it over the window + present.
     if (app->window_backend.present) {
-#ifdef __APPLE__
-        void* tex = nullptr;
-#else
-        u32 tex = 0;
-#endif
-        u32 tex_w = 0, tex_h = 0;
-        if (fl_app_gpu_surface_texture(win->surface, &tex, &tex_w, &tex_h)) {
-            app->window_backend.present(app->window_backend.user_data, win->os_window, tex, tex_w, tex_h);
+        FlSurfaceHandle tex = { 0 };
+        if (fl_app_gpu_surface_texture(win->surface, &tex, NULL, NULL)) {
+            app->window_backend.present(app->window_backend.user_data, win->os_window, tex);
         }
         return;
     }
@@ -642,8 +636,9 @@ static void fl_app_window_present(FlApp* app, FlAppWindow* win) {
     if (app->window_backend.present_software) {
         FlPixelReadback rb;
         if (host_read_pixels(app->host, win->surface, &rb)) {
-            app->window_backend.present_software(app->window_backend.user_data, win->os_window, rb.pixels, rb.width,
-                                                 rb.height, rb.stride);
+            const FlRgb24Frame frame
+                = { .pixels = rb.pixels, .width = rb.width, .height = rb.height, .stride = rb.stride };
+            app->window_backend.present_software(app->window_backend.user_data, win->os_window, &frame);
         }
     }
 }

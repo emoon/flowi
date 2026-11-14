@@ -108,7 +108,8 @@ if(FLOWI_SDL_BACKEND)
     file(GLOB SDL_SOURCES CONFIGURE_DEPENDS ${SRC}/platform/sdl/*.c)
     set_source_files_properties(${SDL_SOURCES} PROPERTIES COMPILE_DEFINITIONS BACKEND_USE_SDL=1)
     if(APPLE)
-        set_source_files_properties(${SRC}/platform/sdl/backend_sdl_window.c PROPERTIES LANGUAGE OBJC)
+        file(GLOB SDL_WINDOW_SOURCES CONFIGURE_DEPENDS ${SRC}/platform/sdl/backend_sdl_window.c ${SRC}/platform/sdl/sdl_window_*.c)
+        set_source_files_properties(${SDL_WINDOW_SOURCES} PROPERTIES LANGUAGE OBJC)
     endif()
     list(APPEND SOURCES ${SDL_SOURCES})
 endif()
@@ -248,7 +249,12 @@ endif()
 ################################################################################
 # Tools
 
-add_executable(loc_check ${SRC}/tools/loc_check_main.c ${SRC}/tools/loc_check.c)
+set(LOC_CHECK_SRC
+    ${SRC}/tools/loc_check.c
+    ${SRC}/tools/loc_check_report.c
+    ${SRC}/tools/loc_check_scan.c
+    ${SRC}/tools/loc_check_slots.c)
+add_executable(loc_check ${SRC}/tools/loc_check_main.c ${LOC_CHECK_SRC})
 target_link_libraries(loc_check PRIVATE flowi_objects)
 apply_target_config(loc_check)
 
@@ -273,7 +279,7 @@ elseif(UNIX AND NOT APPLE)
 endif()
 
 file(GLOB TEST_SRC CONFIGURE_DEPENDS tests/*.c tests/probes/*_api_check.c)
-add_executable(unit_tests ${TEST_SRC} ${SRC}/tools/loc_check.c)
+add_executable(unit_tests ${TEST_SRC} ${LOC_CHECK_SRC})
 target_link_libraries(unit_tests PRIVATE flowi_objects external_abi_probe shared_library_smoke_probe)
 target_compile_definitions(unit_tests PRIVATE FL_API_IMPLEMENTATION=1
     FLOWI_TEST_DATA_DIR="${ROOT}/examples/data" FLOWI_TEST_FIXTURE_DIR="${ROOT}/tests/fixtures"
