@@ -229,6 +229,10 @@ static void vw_image(FlArena* a, View v, FlImageSource src, FlImageMode mode, Fl
     fl_ir_image(a, src, mode, v_rect(v, dst), src_rect, tint, filter, nullptr);
 }
 
+static bool face_span_ends_at(const FlShapedRun* shaped, u32 i) {
+    return i + 1 == shaped->count || shaped->glyphs[i + 1].font != shaped->glyphs[i].font;
+}
+
 // Emits one run per face; render() prepares the glyphs through the bound font cache. scratch must be a different
 // arena from the IR arena.
 //
@@ -271,23 +275,20 @@ static void draw_text(FlArena* arena, FlArena* scratch, FlFontCache* fc, FlFontI
     // exist.
     const FlShapedRun shaped = font_cache_shape_run(fc, font, font_cache_whole_px_to_q4(metrics), text);
     f32 world_x = x;
-    for (u32 i = 0; i < shaped.count;) {
-        const u32 end = fl_ir_face_span_end(&shaped, i);
-        const FlFontId face = shaped.glyphs[i].font;
-        fl_arena_rewind(scratch);
-        FlGlyph* glyphs = arena_alloc_array(scratch, FlGlyph, end - i);
-        u32 count = 0;
-        for (; i < end; i++) {
-            const FlShapedGlyph* sg = &shaped.glyphs[i];
-            FlRect pen = { world_x, baseline_y, 0.0f, 0.0f };
-            if (view_visible(v, pen, margin)) {
-                glyphs[count++]
-                    = (FlGlyph) { .x = v_x(v, world_x), .y = v_y(v, baseline_y), .glyph_index = sg->glyph_index };
-            }
-            world_x += (f32)sg->advance / 64.0f;
+    fl_arena_rewind(scratch);
+    FlGlyph* glyphs = arena_alloc_array(scratch, FlGlyph, shaped.count);
+    u32 count = 0;
+    for_count(i, shaped.count) {
+        const FlShapedGlyph* sg = &shaped.glyphs[i];
+        FlRect pen = { world_x, baseline_y, 0.0f, 0.0f };
+        if (view_visible(v, pen, margin)) {
+            glyphs[count++]
+                = (FlGlyph) { .x = v_x(v, world_x), .y = v_y(v, baseline_y), .glyph_index = sg->glyph_index };
         }
-        if (count > 0) {
-            fl_ir_text_run(arena, face, raster_q4, scale, color, glyphs, count);
+        world_x += (f32)sg->advance / 64.0f;
+        if (count > 0 && face_span_ends_at(&shaped, i)) {
+            fl_ir_text_run(arena, sg->font, raster_q4, scale, color, glyphs, count);
+            count = 0;
         }
     }
 }
