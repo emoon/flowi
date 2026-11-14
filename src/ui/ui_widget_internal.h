@@ -48,7 +48,8 @@ typedef struct UiWidgetState {
 // Resolve a widget's layout id from its config override or fallback label. (body in ui_item_behavior.c)
 FlLayoutId resolve_widget_id(FlString fallback, FlString id_override);
 
-// Look up a widget's persisted per-item state by layout id; nullptr when no item state exists for the id. (ui_item_behavior.c)
+// Look up a widget's persisted per-item state by layout id; nullptr when no item state exists for the id.
+// (body in ui_item_behavior.c)
 ItemState* get_item_state(FlLayoutId layout_id);
 
 // Resolve the active theme with the widget's optional scoped override merged in: when an override applies the
