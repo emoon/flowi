@@ -761,7 +761,12 @@ static bool kb_shape_run(const AdvanceRun* run, FlString text, FlArena* glyph_ar
         .size_q4 = run->q4,
         .glyph_arena = glyph_arena,
     };
-    return font_shaper_shape(run->cache->shaper, &request, text, out);
+    FontUnitRun units;
+    if (!font_shaper_shape(run->cache->shaper, &request, text, &units)) {
+        return false;
+    }
+    font_shaper_place(&units, &request, out);
+    return true;
 }
 
 static FlShapedRun measure_run(const AdvanceRun* run, FlString text) {
