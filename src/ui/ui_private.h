@@ -620,6 +620,9 @@ void ui_make_current(FlUiCtx* ctx);
 // The single active UI context, defined in ui.c. ui_get_ctx() is the thin accessor over it.
 extern FlUiCtx* g_ui_ctx;
 
+// The item's persisted state for id, created on first use and re-scoped into the current popup. Never nullptr.
+ItemState* get_or_create_key(FlUiCtx* self, u32 id);
+
 // Register this window's backend-owned render surface. The host creates the
 // surface from the render backend and hands it here; the surface-scoped render / change_resolution seams use
 // it. Until set, the context renders nothing.
