@@ -394,7 +394,7 @@ static void prune_stale_panels(FlDockPersistLoad* load, const FlDockPanelId* dec
 }
 
 // unknown-panel-to-default: a panel declared this session but absent everywhere lands loose in the target.
-static void park_unknown_panels(const FlDockPersistLoad* load, FlDockTree* target, const FlDockPanelId* declared,
+static void park_unknown_panels(FlDockPersistLoad* load, FlDockTree* target, const FlDockPanelId* declared,
                                 u32 declared_count) {
     for_count(i, declared_count) {
         if (!panel_in_any(load, declared[i])) {
@@ -404,7 +404,7 @@ static void park_unknown_panels(const FlDockPersistLoad* load, FlDockTree* targe
 }
 
 // floating-drains-on-load: dock every floating panel at its tree root.
-static void drain_all_floating(const FlDockPersistLoad* load) {
+static void drain_all_floating(FlDockPersistLoad* load) {
     for_count(i, load->count) {
         drain_floating(load->workspaces[i].tree);
     }

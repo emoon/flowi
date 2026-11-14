@@ -233,7 +233,9 @@ static void rehome_to_root(FlDockTree* tree, FlDockPanelId panel) {
         tree->root->leaf.selected = 0;
         return;
     }
-    FlDockRequest right_of_root = { .panel = panel, .side = FlDockSide_Right, .ratio = FL_DOCK_SPLIT_RATIO_DEFAULT };
+    FlDockRequest right_of_root = {
+        .kind = FlDockRequest_Outer, .panel = panel, .side = FlDockSide_Right, .ratio = FL_DOCK_SPLIT_RATIO_DEFAULT
+    };
     insert_split_at(tree, tree->root, &right_of_root);
 }
 
@@ -311,16 +313,14 @@ static bool apply_undock(FlDockTree* tree, const FlDockRequest* req) {
     return true;
 }
 
-// Move the panel at from to slot to, sliding the panels between them one slot over. Only the loop that matches
-// the direction runs.
+// Move the panel at from to slot to, sliding the panels between them one slot over.
 static void leaf_move_panel(FlDockNode* leaf, u32 from, u32 to) {
     FlDockPanelId* panels = leaf->leaf.panels;
     FlDockPanelId moved = panels[from];
-    for (u32 i = from; i < to; ++i) {
-        panels[i] = panels[i + 1];
-    }
-    for (u32 i = from; i > to; --i) {
-        panels[i] = panels[i - 1];
+    if (from < to) {
+        memmove(&panels[from], &panels[from + 1], (to - from) * sizeof(FlDockPanelId));
+    } else {
+        memmove(&panels[to + 1], &panels[to], (from - to) * sizeof(FlDockPanelId));
     }
     panels[to] = moved;
 }
