@@ -21,6 +21,25 @@ struct FlUiCtx;
 
 typedef struct FlWindow FlWindow;
 
+// The GPU Surface Texture handle handed to present: a u32 GL texture name, or an opaque void* id<MTLTexture> on
+// APPLE.
+
+#if __APPLE__
+typedef void* FlSurfaceHandle;
+#else
+typedef u32 FlSurfaceHandle;
+#endif
+
+// One RGB24 frame handed to present_software: pixels points at height rows of width 3-byte R,G,B pixels, stride
+// bytes apart. The memory belongs to the renderer and is valid for the duration of the call.
+
+typedef struct FlRgb24Frame {
+    const void* pixels;
+    u32 width;
+    u32 height;
+    u32 stride;
+} FlRgb24Frame;
+
 // Window creation parameters - title plus the initial drawable size in physical pixels and top-left position.
 
 #define FL_WINDOW_POS_DEFAULT (-2147483647 - 1) // INT32_MIN: "let the backend choose" sentinel for x/y
@@ -81,18 +100,12 @@ typedef struct FlWindowBackend {
 
     // Presentation. A backend provides exactly ONE of the two present slots and the runner selects by whichever is
     // non-null:
-    //   present - GPU windows: composite a Surface Texture over the window and swap. The handle is a
-    //                      u32 GL texture name on GL, an opaque void* id<MTLTexture> on Metal. The headless backend
-    //                      no-ops this.
-    //   present_software - software windows: blit a CPU pixel buffer (the software renderer's offscreen RGB24
-    //                      target) to the window. px points at tex_width x tex_height pixels with stride bytes
-    //                      per row.
-#if __APPLE__
-    void (*present)(void* ud, FlWindow* window, void* surface_texture, u32 tex_width, u32 tex_height);
-#else
-    void (*present)(void* ud, FlWindow* window, u32 surface_texture, u32 tex_width, u32 tex_height);
-#endif
-    void (*present_software)(void* ud, FlWindow* window, const void* px, u32 tex_width, u32 tex_height, u32 stride);
+    //   present - GPU windows: composite a Surface Texture (an FlSurfaceHandle) over the window and swap. The
+    //                      headless backend no-ops this.
+    //   present_software - software windows: blit an RGB24 frame (the software renderer's offscreen target) to the
+    //                      window.
+    void (*present)(void* ud, FlWindow* window, FlSurfaceHandle surface_texture);
+    void (*present_software)(void* ud, FlWindow* window, const FlRgb24Frame* frame);
 
     // Make the backend's shared GL context current against a window's drawable, without compositing or swapping.
     // The host calls this once before render-backend teardown. Null when the backend owns no GL context.
