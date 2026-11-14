@@ -469,11 +469,16 @@ static void activate_panel_under_press(FlDockWorkspace* ws) {
     }
 }
 
+// The grab was reported a frame ago. A promote applied since then may have taken the panel to another workspace.
+static bool grab_is_docked(const FlDockWorkspace* ws, FlDockPanelId grab) {
+    return grab != 0 && dock_tree_find_leaf_with_panel(ws->tree, grab) != nullptr;
+}
+
 // Start: a tab the previous frame's header reported as pulled out becomes an undock-and-drag, so
 // dock_drag_begin_undock snapshots the geometry that walk produced. The undock arms only past the travel threshold
 // and only while the button is still down.
 static void begin_pending_undock(FlDockWorkspace* ws, FlDockPanelId grab, bool held) {
-    bool armed = grab != 0 && held && !ws->grab_blocked && !dock_drag_active(&ws->drag);
+    bool armed = held && !ws->grab_blocked && !dock_drag_active(&ws->drag) && grab_is_docked(ws, grab);
     if (armed && drag_past_arm_threshold()) {
         FlDockFamilyGate gate = { dock_workspace_panel_family(ws, grab), ws->family_filter };
         dock_drag_begin_undock(&ws->drag, ws->tree, grab, gate);

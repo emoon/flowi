@@ -172,6 +172,15 @@ void fl_dock_register_host(FlDockHost host) {
     }
 }
 
+static bool promote_is_queued(const FlDockShared* ds, const FlDockWorkspace* src, FlDockPanelId panel) {
+    for (u32 i = 0; i < ds->promote_count; ++i) {
+        if (ds->promote_queue[i].src == src && ds->promote_queue[i].panel == panel) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void dock_promote_panel(FlDockPanelId panel) {
     FlDockShared* ds = dock_shared_get();
     if (ds == nullptr || ds->host.open_promoted_window == nullptr) {
@@ -181,6 +190,9 @@ void dock_promote_panel(FlDockPanelId panel) {
     if (dock_tree_find_leaf_with_panel(src->tree, panel) == nullptr) {
         return; // absent, or in flight on a drag that still owns it
     }
+    if (promote_is_queued(ds, src, panel)) {
+        return; // an app may ask every frame while a drag holds the request back
+    }
     if (ds->promote_count >= FL_DOCK_MAX_WORKSPACES) {
         log_error("dock: promote queue full");
         return;
@@ -188,8 +200,30 @@ void dock_promote_panel(FlDockPanelId panel) {
     ds->promote_queue[ds->promote_count++] = (DockPromoteRequest) { .src = src, .panel = panel };
 }
 
+static i32 promotion_of_workspace(const FlDockShared* ds, const FlDockWorkspace* dst) {
+    for (u32 i = 0; i < ds->promotion_count; ++i) {
+        if (ds->promotions[i].dst == dst) {
+            return (i32)i;
+        }
+    }
+    return -1;
+}
+
+static DockPromotion take_promotion(FlDockShared* ds, u32 index) {
+    DockPromotion taken = ds->promotions[index];
+    for (u32 j = index + 1; j < ds->promotion_count; ++j) {
+        ds->promotions[j - 1] = ds->promotions[j];
+    }
+    ds->promotion_count--;
+    return taken;
+}
+
 // The host's open_promoted_window typically defers the actual OS-window open to the next tick boundary, so the
 // workspace is created, bound, and handed over by pointer before that call returns.
+//
+// The promotion is recorded before the call. A host that reports the source's own window closed from inside it
+// retires the source, and the record is then re-aimed like every other one. It is looked up again afterwards
+// because that close also moves it.
 static void apply_promote(FlDockShared* ds, const DockPromoteRequest* req) {
     FlDockWorkspace* dst = dock_registry_add(ds);
     if (dst == nullptr) {
@@ -199,15 +233,18 @@ static void apply_promote(FlDockShared* ds, const DockPromoteRequest* req) {
         dock_registry_remove(ds, dst); // the panel vanished since enqueue, so remove the empty entry
         return;
     }
+    ds->promotions[ds->promotion_count++] = (DockPromotion) { .dst = dst, .src = req->src };
     void* host_window
         = ds->host.open_promoted_window(ds->host.user_data, dst, DOCK_PROMOTED_DEFAULT_W, DOCK_PROMOTED_DEFAULT_H);
+    u32 index = (u32)promotion_of_workspace(ds, dst);
     if (host_window == nullptr) {
         // The host could not open a window: demote the panel straight back, and drop dst.
-        dock_workspace_demote(req->src, dst, req->panel);
+        DockPromotion failed = take_promotion(ds, index);
+        dock_workspace_demote(failed.src, dst, req->panel);
         dock_registry_remove(ds, dst);
         return;
     }
-    ds->promotions[ds->promotion_count++] = (DockPromotion) { .host_window = host_window, .dst = dst, .src = req->src };
+    ds->promotions[index].host_window = host_window;
 }
 
 // A drag previews a copy of its workspace's tree, so a promote out of that workspace waits for the drag to end.
@@ -254,15 +291,6 @@ static i32 promotion_index(const FlDockShared* ds, const void* host_window) {
         }
     }
     return -1;
-}
-
-static DockPromotion take_promotion(FlDockShared* ds, u32 index) {
-    DockPromotion taken = ds->promotions[index];
-    for (u32 j = index + 1; j < ds->promotion_count; ++j) {
-        ds->promotions[j - 1] = ds->promotions[j];
-    }
-    ds->promotion_count--;
-    return taken;
 }
 
 void fl_dock_notify_window_closed(void* host_window) {

@@ -1790,13 +1790,17 @@ typedef struct StubDockHost {
     int close_calls;
     FlDockWorkspace* last_ws;
     void* handle;
-    bool return_null; // when set, open_promoted_window fails and returns nullptr
+    bool return_null;     // when set, open_promoted_window fails and returns nullptr
+    void* closes_on_open; // a window the host reports closed from inside open_promoted_window, or nullptr
 } StubDockHost;
 
 static void* stub_dock_open(void* ud, FlDockWorkspace* ws, f32 w, f32 h) {
     StubDockHost* s = (StubDockHost*)ud;
     s->open_calls++;
     s->last_ws = ws;
+    if (s->closes_on_open != nullptr) {
+        fl_dock_notify_window_closed(s->closes_on_open);
+    }
     (void)w;
     (void)h;
     return s->return_null ? nullptr : s->handle;
@@ -1991,6 +1995,64 @@ UTEST(dock_workspace, a_drag_elsewhere_does_not_hold_a_promote) {
     dock_drag_cancel(&promoted->drag, promoted->tree);
 
     ASSERT_EQ_MSG(s_stub_host.open_calls, 2, "the main workspace has no drag, so its promote goes through");
+}
+
+// An app may ask every frame until the panel has left. While a drag holds the request back, the copies must not
+// fill the queue and push out a request for another panel.
+UTEST(dock_workspace, a_repeated_promote_request_is_queued_once) {
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+    DOCK_STUB_HOST(
+        scope, fixture,
+        dock_split(FlDockAxis_X, 0.5f, dock_leaf(101), dock_split(FlDockAxis_Y, 0.5f, dock_leaf(102), dock_leaf(103))));
+    FlDockWorkspace* src = scope.tree.ws;
+
+    dock_drag_begin_undock(&src->drag, src->tree, 101, (FlDockFamilyGate) { 0 });
+    for (int i = 0; i < FL_DOCK_MAX_WORKSPACES; ++i) {
+        dock_promote_panel(102);
+    }
+    dock_promote_panel(103);
+    dock_drag_cancel(&src->drag, src->tree);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+
+    ASSERT_EQ_MSG(s_stub_host.open_calls, 2, "both panels get their window");
+    ASSERT_TRUE(dock_tree_find_leaf_with_panel(src->tree, 102) == nullptr);
+    ASSERT_TRUE(dock_tree_find_leaf_with_panel(src->tree, 103) == nullptr);
+}
+
+// A host may report one window closed while it is opening another. When the closed window is the one the new
+// promotion came out of, the new window's way home is that window's own source.
+UTEST(dock_workspace, a_promotion_survives_its_source_closing_while_its_window_opens) {
+    static int second_handle;
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+    DOCK_STUB_HOST(scope, fixture, dock_split(FlDockAxis_X, 0.5f, dock_leaf(101), dock_leaf(102)));
+    FlDockWorkspace* src = scope.tree.ws;
+
+    dock_promote_panel(101);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    ASSERT_EQ(s_stub_host.open_calls, 1);
+    FlDockWorkspace* first = s_stub_host.last_ws;
+    FlDockRequest tab = { .kind = FlDockRequest_Tab, .panel = 103, .target_node = first->tree->root->id };
+    ASSERT_TRUE(dock_tree_apply(first->tree, &tab));
+
+    s_stub_host.handle = &second_handle;
+    s_stub_host.closes_on_open = &s_stub_host_handle;
+    ui_ctx_set_dock_workspace(fixture, first);
+    dock_promote_panel(103);
+    ui_ctx_set_dock_workspace(fixture, src);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    s_stub_host.closes_on_open = nullptr;
+    ASSERT_EQ(s_stub_host.open_calls, 2);
+    ASSERT_TRUE_MSG(dock_tree_find_leaf_with_panel(src->tree, 101) != nullptr, "the first window closed");
+
+    fl_dock_notify_window_closed(&second_handle);
+    ASSERT_TRUE_MSG(dock_tree_find_leaf_with_panel(src->tree, 103) != nullptr,
+                    "103 comes home to the workspace its source window came from");
+    ASSERT_EQ((int)dock_tree_collect_panels(src->tree, nullptr, 0), 3);
 }
 
 // Closing a promoted window docks its panels into the source at once, because their workspace is going away. A
@@ -3320,6 +3382,28 @@ UTEST(dock_workspace, tab_drag_out_undocks_then_redocks) {
     ASSERT_TRUE_MSG(dock_tree_find_leaf_with_panel(tree, 101) == dock_tree_find_leaf_with_panel(tree, 100),
                     "releasing over the tab band re-docks the panel as a tab of that leaf");
     DOCK_ASSERT_GESTURE_ENDED(tree);
+}
+
+// The strip reports a pulled tab one frame before the workspace acts on it. A panel that left the tree in between,
+// as a promote takes it, is no longer this workspace's to drag.
+UTEST(dock_workspace, a_grab_on_a_panel_that_has_left_arms_no_drag) {
+    DOCK_APP(app, "dockgrabgone", 600, 400);
+    DockFixture st = { 0 };
+
+    DOCK_RUN_FRAMES(app, st, st, dock_tab_header_frame, 1);
+    FlDockTree* tree = st.ws->tree;
+    ASSERT_TRUE_MSG(dock_press_tab(app, &st, &st, dock_tab_header_frame, tree->root->id, 1u),
+                    "second dock tab was not laid out");
+    dock_move_and_tick(app, &st, dock_tab_header_frame, 400, 20, 1);
+    ASSERT_EQ_MSG((int)st.ws->pending_grab, 101, "the strip reported the pull");
+
+    FlDockRequest close = { .kind = FlDockRequest_Close, .panel = 101 };
+    ASSERT_TRUE(dock_tree_apply(tree, &close));
+    fl_app_tick(app, &st, dock_tab_header_frame);
+
+    ASSERT_FALSE_MSG(dock_drag_active(&st.ws->drag), "no drag starts on a panel the workspace no longer holds");
+    dock_release(app, &st, dock_tab_header_frame);
+    ASSERT_FALSE_MSG(dock_tree_has_panel(tree, 101), "and the release docks no second copy of it");
 }
 
 // Drop resolution works in logical px: a 1200x800 window at zoom 2 is a 600x400 logical tile. The release lands
