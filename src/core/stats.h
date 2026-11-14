@@ -51,3 +51,19 @@ void stats_print_category(StatsRegistry* self, FlString category);
             atomic_fetch_add(&_counter->value, 1);                       \
         }                                                                \
     } while (0)
+
+#define stats_add(registry, counter_id, amount)                          \
+    do {                                                                 \
+        StatCounter* _counter = stats_get_counter(registry, counter_id); \
+        if (FL_LIKELY(_counter && _counter->enabled)) {                  \
+            atomic_fetch_add(&_counter->value, (u64)(amount));           \
+        }                                                                \
+    } while (0)
+
+#define stats_set(registry, counter_id, new_value)                       \
+    do {                                                                 \
+        StatCounter* _counter = stats_get_counter(registry, counter_id); \
+        if (FL_LIKELY(_counter && _counter->enabled)) {                  \
+            atomic_store(&_counter->value, (u64)(new_value));            \
+        }                                                                \
+    } while (0)

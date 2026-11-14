@@ -131,4 +131,42 @@ UTEST_F(stats_fixture, multiple_categories) {
     ASSERT_EQ(stats_get_value(STATS, vfs_reads), 1ULL);
 }
 
+UTEST_F(stats_fixture, add_adds_the_amount) {
+    u32 counter_id = stats_register_counter(STATS, FL_S("test"), FL_S("test"));
+
+    stats_add(STATS, counter_id, 5);
+    stats_add(STATS, counter_id, 0);
+    stats_add(STATS, counter_id, 37);
+
+    ASSERT_EQ(stats_get_value(STATS, counter_id), 42ULL);
+}
+
+UTEST_F(stats_fixture, set_replaces_the_value) {
+    u32 counter_id = stats_register_counter(STATS, FL_S("test"), FL_S("test"));
+
+    stats_set(STATS, counter_id, 4096);
+    ASSERT_EQ(stats_get_value(STATS, counter_id), 4096ULL);
+
+    stats_set(STATS, counter_id, 12);
+    ASSERT_EQ(stats_get_value(STATS, counter_id), 12ULL);
+}
+
+UTEST_F(stats_fixture, add_and_set_skip_a_disabled_counter) {
+    u32 counter_id = stats_register_counter(STATS, FL_S("test"), FL_S("test"));
+    stats_set(STATS, counter_id, 7);
+
+    stats_enable_counter(STATS, counter_id, false);
+    stats_add(STATS, counter_id, 100);
+    stats_set(STATS, counter_id, 100);
+
+    ASSERT_EQ(stats_get_value(STATS, counter_id), 7ULL);
+}
+
+UTEST_F(stats_fixture, add_and_set_ignore_an_unknown_counter) {
+    stats_add(STATS, 999, 3);
+    stats_set(STATS, 999, 3);
+
+    ASSERT_EQ(stats_get_value(STATS, 999), 0ULL);
+}
+
 // TODO: no test covers stats_inc from several threads.
