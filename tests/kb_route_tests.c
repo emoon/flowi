@@ -99,3 +99,14 @@ UTEST(kb_route, measuring_keeps_a_shaped_run_valid) {
 
     kb_route_close(&route);
 }
+
+UTEST(kb_route, a_combining_mark_is_moved_off_the_pen) {
+    KbRoute route = kb_route_open();
+
+    const FlShapedRun run = font_cache_shape_run(route.cache, route.roboto, 56, FL_S("x\xCC\x81"));
+
+    ASSERT_EQ((int)run.count, 2);
+    ASSERT_NE((i64)run.glyphs[1].x, run.width);
+
+    kb_route_close(&route);
+}
