@@ -5,6 +5,7 @@
 #include <core/simd.h>
 #include <core/types.h>
 #include <ui/ui_types.h>
+#include "sr_background.h"
 #include "sr_command.h"
 #include "sw_glyph_cache.h"
 #include <ui/image/image.h>
@@ -46,6 +47,30 @@ typedef struct TileInfo {
     f32x4 offsets;
 } TileInfo;
 
+// Integer pixel rectangle of a tile.
+typedef struct TileRect {
+    int x0, y0, width, height;
+} TileRect;
+
+static inline TileRect tile_rect_from_aabb(f32x4 aabb) {
+    const i32x4 pixels = f32x4_as_i32x4(aabb);
+    const int x0 = i32x4_extract(pixels, 0);
+    const int y0 = i32x4_extract(pixels, 1);
+    return (TileRect) {
+        .x0 = x0,
+        .y0 = y0,
+        .width = i32x4_extract(pixels, 2) - x0,
+        .height = i32x4_extract(pixels, 3) - y0,
+    };
+}
+
+// Scalar equivalent of i16x8x2_pack_to_u8x16_narrow_shr(v, 7): reinterpret the i16 as u16, logical-shift right
+// by 7, then saturate to u8 (out-of-range values count as large positives).
+static inline u8 narrow_shr7_u8(i16 v) {
+    u16 s = (u16)v >> 7;
+    return s > 255 ? (u8)255 : (u8)s;
+}
+
 typedef struct TileRange {
     int tx0, ty0, tx1, ty1;
 } TileRange;
@@ -73,17 +98,6 @@ typedef struct Tile {
     array(render_ids, u32);
 } Tile;
 
-typedef struct BackgroundState {
-    ImageHandle image_handle;      // Handle for current/incoming image
-    ImageHandle prev_image_handle; // Handle for previous/outgoing image (crossfade)
-    u8 alpha;                      // Current image alpha: 0=transparent, 255=opaque (default: 255)
-    u8 crossfade_t;                // Crossfade progress: 0=full prev, 255=full current
-    bool crossfade_active;
-    u8 clear_r; // Clear color, used when no background image
-    u8 clear_g;
-    u8 clear_b;
-} BackgroundState;
-
 // A SW surface is its output pixel buffer plus the size-derived tile grid. One backend owns many of these;
 // the shared resources (tile scratch, glyph/image caches, arenas) live on RenderData.
 typedef struct SwSurface {
@@ -96,6 +110,8 @@ typedef struct SwSurface {
 
     int screen_width;
     int screen_height;
+    int tile_cols; // tiles_info is row-major over a tile_cols x tile_rows grid
+    int tile_rows;
 } SwSurface;
 
 typedef struct RenderData {

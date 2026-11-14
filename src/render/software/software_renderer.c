@@ -1,4 +1,5 @@
 #include "software_renderer.h"
+#include "sr_background.h"
 #include "sr_command.h"
 #include "sr_image_backend.h"
 #include "sr_ir_to_render_command.h"
@@ -39,7 +40,9 @@ static bool create_tile_setup(SwSurface* surface, int width, int height) {
     // Reset to the initial position; everything below is set up again
     fl_arena_rewind(arena);
 
-    int max_count = ((width + TILE_WIDTH - 1) / TILE_WIDTH) * ((height + TILE_HEIGHT - 1) / TILE_HEIGHT);
+    const int tile_cols = (width + TILE_WIDTH - 1) / TILE_WIDTH;
+    const int tile_rows = (height + TILE_HEIGHT - 1) / TILE_HEIGHT;
+    int max_count = tile_cols * tile_rows;
     int tile_count = 0;
     f32x4* tiles_aabb = arena_alloc_array(arena, f32x4, max_count);
 
@@ -60,6 +63,8 @@ static bool create_tile_setup(SwSurface* surface, int width, int height) {
 
     surface->screen_width = width;
     surface->screen_height = height;
+    surface->tile_cols = tile_cols;
+    surface->tile_rows = tile_rows;
     return true;
 }
 
@@ -98,192 +103,16 @@ static void scale_changed(void* user_data, float ui_scale) {
     (void)ui_scale;
 }
 
-static void clear_tile_buffer(i16* tile_buffer, u8 clear_r, u8 clear_g, u8 clear_b) {
-    const i16x8 r_clear = i16x8_new_splat((i16)clear_r << 7);
-    const i16x8 g_clear = i16x8_new_splat((i16)clear_g << 7);
-    const i16x8 b_clear = i16x8_new_splat((i16)clear_b << 7);
+// Scalar tail covering the rightmost width & 15 columns the 16-px SIMD loop skips, one pixel at a time.
+static NO_INLINE void copy_tile_tail_to_output(u8* output, int output_pitch, const i16* tile_data, TileRect rect) {
+    const int first_tail = rect.width & ~15; // == (width >> 4) * 16
 
-    for_count(y, TILE_HEIGHT) {
-        for_count(x, (TILE_WIDTH >> 3)) {
-            i16x8_store_unaligned(r_clear, tile_buffer, R_PLANE_START_OFFSET);
-            i16x8_store_unaligned(g_clear, tile_buffer, G_PLANE_START_OFFSET);
-            i16x8_store_unaligned(b_clear, tile_buffer, B_PLANE_START_OFFSET);
-            tile_buffer += 8;
-        }
-
-        tile_buffer += (TILE_STRIDE - TILE_WIDTH);
-    }
-}
-
-// Copy background image to tile buffer. The image is pre-scaled to screen size, so no bounds checking is
-// needed. Reads interleaved RGB or RGBA, converts to planar Q7 format.
-
-static ALWAYS_INLINE void copy_background_to_tile_impl(i16* tile_buffer, const ImageData* image, u8 alpha,
-                                                       f32x4 tile_aabb, u8 clear_r, u8 clear_g, u8 clear_b,
-                                                       const bool needs_blend, const bool is_rgba) {
-    const u8* src = image->data;
-    const int img_stride = image->stride;
-    const int bytes_per_pixel = is_rgba ? 4 : 3;
-
-    const i32x4 int_tile_aabb = f32x4_as_i32x4(tile_aabb);
-    const int x0 = i32x4_extract(int_tile_aabb, 0);
-    const int y0 = i32x4_extract(int_tile_aabb, 1);
-    const int tile_height = i32x4_extract(int_tile_aabb, 3) - y0;
-
-    const i16 alpha_q15 = (i16)(((i32)alpha << 7) + (alpha >> 1));
-    const i16x8 alpha_vec = i16x8_new_splat(alpha_q15);
-    const i16x8 clear_r_vec = i16x8_new_splat((i16)clear_r << 7);
-    const i16x8 clear_g_vec = i16x8_new_splat((i16)clear_g << 7);
-    const i16x8 clear_b_vec = i16x8_new_splat((i16)clear_b << 7);
-
-    for (int j = 0; j < tile_height; j++) {
-        const u8* row = src + (y0 + j) * img_stride + x0 * bytes_per_pixel;
-        i16* tile_row = tile_buffer + j * TILE_STRIDE;
-
-        for (int k = 0; k < (TILE_WIDTH >> 4); k++) {
-            i16x8x2 r, g, b;
-
-            if (is_rgba) {
-                u8x16_rgba_result px = u8x16_load_deinterleaved_4(row, k * 64);
-                r = u8x16_unpack_to_i16x8_wide_shl(px.r, 7);
-                g = u8x16_unpack_to_i16x8_wide_shl(px.g, 7);
-                b = u8x16_unpack_to_i16x8_wide_shl(px.b, 7);
-            } else {
-                u8x16_rgb_result px = u8x16_load_deinterleaved_3(row, k * 48);
-                r = u8x16_unpack_to_i16x8_wide_shl(px.r, 7);
-                g = u8x16_unpack_to_i16x8_wide_shl(px.g, 7);
-                b = u8x16_unpack_to_i16x8_wide_shl(px.b, 7);
-            }
-
-            if (needs_blend) {
-                r.v0 = i16x8_lerp(clear_r_vec, r.v0, alpha_vec);
-                g.v0 = i16x8_lerp(clear_g_vec, g.v0, alpha_vec);
-                b.v0 = i16x8_lerp(clear_b_vec, b.v0, alpha_vec);
-                r.v1 = i16x8_lerp(clear_r_vec, r.v1, alpha_vec);
-                g.v1 = i16x8_lerp(clear_g_vec, g.v1, alpha_vec);
-                b.v1 = i16x8_lerp(clear_b_vec, b.v1, alpha_vec);
-            }
-
-            i16x8_store_unaligned(r.v0, tile_row + k * 16, R_PLANE_START_OFFSET);
-            i16x8_store_unaligned(g.v0, tile_row + k * 16, G_PLANE_START_OFFSET);
-            i16x8_store_unaligned(b.v0, tile_row + k * 16, B_PLANE_START_OFFSET);
-            i16x8_store_unaligned(r.v1, tile_row + k * 16 + 8, R_PLANE_START_OFFSET);
-            i16x8_store_unaligned(g.v1, tile_row + k * 16 + 8, G_PLANE_START_OFFSET);
-            i16x8_store_unaligned(b.v1, tile_row + k * 16 + 8, B_PLANE_START_OFFSET);
-        }
-    }
-}
-
-static void copy_background_to_tile_rgba_blend(i16* tile_buffer, const ImageData* image, u8 alpha, f32x4 tile_aabb,
-                                               u8 clear_r, u8 clear_g, u8 clear_b) {
-    copy_background_to_tile_impl(tile_buffer, image, alpha, tile_aabb, clear_r, clear_g, clear_b, true, true);
-}
-
-static void copy_background_to_tile_rgba_direct(i16* tile_buffer, const ImageData* image, f32x4 tile_aabb) {
-    copy_background_to_tile_impl(tile_buffer, image, 255, tile_aabb, 0, 0, 0, false, true);
-}
-
-static void copy_background_to_tile_rgb_blend(i16* tile_buffer, const ImageData* image, u8 alpha, f32x4 tile_aabb,
-                                              u8 clear_r, u8 clear_g, u8 clear_b) {
-    copy_background_to_tile_impl(tile_buffer, image, alpha, tile_aabb, clear_r, clear_g, clear_b, true, false);
-}
-
-static void copy_background_to_tile_rgb_direct(i16* tile_buffer, const ImageData* image, f32x4 tile_aabb) {
-    copy_background_to_tile_impl(tile_buffer, image, 255, tile_aabb, 0, 0, 0, false, false);
-}
-
-static void copy_background_to_tile(i16* tile_buffer, const ImageData* image, u8 alpha, f32x4 tile_aabb, u8 clear_r,
-                                    u8 clear_g, u8 clear_b) {
-    const bool is_rgba = image->channels == 4;
-    const bool needs_blend = alpha < 255;
-
-    if (is_rgba) {
-        if (needs_blend) {
-            copy_background_to_tile_rgba_blend(tile_buffer, image, alpha, tile_aabb, clear_r, clear_g, clear_b);
-        } else {
-            copy_background_to_tile_rgba_direct(tile_buffer, image, tile_aabb);
-        }
-    } else {
-        if (needs_blend) {
-            copy_background_to_tile_rgb_blend(tile_buffer, image, alpha, tile_aabb, clear_r, clear_g, clear_b);
-        } else {
-            copy_background_to_tile_rgb_direct(tile_buffer, image, tile_aabb);
-        }
-    }
-}
-
-// Crossfade between two full-screen background images, both assumed screen-sized RGB (3 channels).
-// Blends with result = prev * (1-t) + curr * t.
-
-static void crossfade_backgrounds_to_tile(i16* tile_buffer, const ImageData* prev_image, const ImageData* curr_image,
-                                          u8 crossfade_t, f32x4 tile_aabb) {
-    const u8* prev_src = prev_image->data;
-    const u8* curr_src = curr_image->data;
-    const int prev_stride = prev_image->stride;
-    const int curr_stride = curr_image->stride;
-
-    const i32x4 int_tile_aabb = f32x4_as_i32x4(tile_aabb);
-    const int x0 = i32x4_extract(int_tile_aabb, 0);
-    const int y0 = i32x4_extract(int_tile_aabb, 1);
-    const int tile_height = i32x4_extract(int_tile_aabb, 3) - y0;
-
-    // Convert crossfade_t (0-255) to Q15 format for SIMD lerp
-    // t=0 means full prev, t=255 means full curr
-    const i16 t_q15 = (i16)(((i32)crossfade_t << 7) + (crossfade_t >> 1));
-    const i16x8 t_vec = i16x8_new_splat(t_q15);
-
-    for (int j = 0; j < tile_height; j++) {
-        const u8* prev_row = prev_src + (y0 + j) * prev_stride + x0 * 3;
-        const u8* curr_row = curr_src + (y0 + j) * curr_stride + x0 * 3;
-        i16* tile_row = tile_buffer + j * TILE_STRIDE;
-
-        // Process 16 pixels at a time (48 bytes RGB per iteration)
-        for (int k = 0; k < (TILE_WIDTH >> 4); k++) {
-            u8x16_rgb_result prev_px = u8x16_load_deinterleaved_3(prev_row, k * 48);
-            i16x8x2 prev_r = u8x16_unpack_to_i16x8_wide_shl(prev_px.r, 7);
-            i16x8x2 prev_g = u8x16_unpack_to_i16x8_wide_shl(prev_px.g, 7);
-            i16x8x2 prev_b = u8x16_unpack_to_i16x8_wide_shl(prev_px.b, 7);
-
-            u8x16_rgb_result curr_px = u8x16_load_deinterleaved_3(curr_row, k * 48);
-            i16x8x2 curr_r = u8x16_unpack_to_i16x8_wide_shl(curr_px.r, 7);
-            i16x8x2 curr_g = u8x16_unpack_to_i16x8_wide_shl(curr_px.g, 7);
-            i16x8x2 curr_b = u8x16_unpack_to_i16x8_wide_shl(curr_px.b, 7);
-
-            i16x8 r0 = i16x8_lerp(prev_r.v0, curr_r.v0, t_vec);
-            i16x8 g0 = i16x8_lerp(prev_g.v0, curr_g.v0, t_vec);
-            i16x8 b0 = i16x8_lerp(prev_b.v0, curr_b.v0, t_vec);
-            i16x8 r1 = i16x8_lerp(prev_r.v1, curr_r.v1, t_vec);
-            i16x8 g1 = i16x8_lerp(prev_g.v1, curr_g.v1, t_vec);
-            i16x8 b1 = i16x8_lerp(prev_b.v1, curr_b.v1, t_vec);
-
-            i16x8_store_unaligned(r0, tile_row + k * 16, R_PLANE_START_OFFSET);
-            i16x8_store_unaligned(g0, tile_row + k * 16, G_PLANE_START_OFFSET);
-            i16x8_store_unaligned(b0, tile_row + k * 16, B_PLANE_START_OFFSET);
-            i16x8_store_unaligned(r1, tile_row + k * 16 + 8, R_PLANE_START_OFFSET);
-            i16x8_store_unaligned(g1, tile_row + k * 16 + 8, G_PLANE_START_OFFSET);
-            i16x8_store_unaligned(b1, tile_row + k * 16 + 8, B_PLANE_START_OFFSET);
-        }
-    }
-}
-
-// Scalar equivalent of i16x8x2_pack_to_u8x16_narrow_shr(v, 7): reinterpret the i16 as u16, logical-shift right
-// by 7, then saturate to u8 (out-of-range values count as large positives).
-static inline u8 narrow_shr7_u8(i16 v) {
-    u16 s = (u16)v >> 7;
-    return s > 255 ? (u8)255 : (u8)s;
-}
-
-// Scalar tail covering the rightmost tile_width & 15 columns the 16-px SIMD loop skips, one pixel at a time.
-static NO_INLINE void copy_tile_tail_to_output(u8* output, const i16* tile_data, int x0, int y0, int tile_width,
-                                               int tile_height, int output_pitch) {
-    const int first_tail = tile_width & ~15; // == (tile_width >> 4) * 16
-
-    for (int j = 0; j < tile_height; j++) {
+    for (int j = 0; j < rect.height; j++) {
         const int r_plane_row_start = R_PLANE_START_OFFSET + j * TILE_STRIDE;
         const int g_plane_row_start = G_PLANE_START_OFFSET + j * TILE_STRIDE;
         const int b_plane_row_start = B_PLANE_START_OFFSET + j * TILE_STRIDE;
-        const int output_row_start = (y0 + j) * output_pitch + x0 * 3;
-        for (int k = first_tail; k < tile_width; k++) {
+        const int output_row_start = (rect.y0 + j) * output_pitch + rect.x0 * 3;
+        for (int k = first_tail; k < rect.width; k++) {
             u8* out_px = output + output_row_start + k * 3;
             out_px[0] = narrow_shr7_u8(tile_data[r_plane_row_start + k]);
             out_px[1] = narrow_shr7_u8(tile_data[g_plane_row_start + k]);
@@ -294,25 +123,16 @@ static NO_INLINE void copy_tile_tail_to_output(u8* output, const i16* tile_data,
 
 // Copy tile data from planar RGB format to interleaved RGB output buffer
 static void copy_tile_to_output(u8* output, const i16* tile_data, const f32x4 tile_aabb, int output_pitch) {
-    const i32x4 int_tile_aabb = f32x4_as_i32x4(tile_aabb);
+    const TileRect rect = tile_rect_from_aabb(tile_aabb);
 
-    const int x0 = i32x4_extract(int_tile_aabb, 0);
-    const int y0 = i32x4_extract(int_tile_aabb, 1);
-    const int x1 = i32x4_extract(int_tile_aabb, 2);
-    const int y1 = i32x4_extract(int_tile_aabb, 3);
-
-    const int tile_width = x1 - x0;
-    const int tile_height = y1 - y0;
-    const int output_row_stride = output_pitch;
-
-    for (int j = 0; j < tile_height; j++) {
+    for (int j = 0; j < rect.height; j++) {
         const int r_plane_row_start = R_PLANE_START_OFFSET + j * TILE_STRIDE;
         const int g_plane_row_start = G_PLANE_START_OFFSET + j * TILE_STRIDE;
         const int b_plane_row_start = B_PLANE_START_OFFSET + j * TILE_STRIDE;
 
-        const int output_row_start = (y0 + j) * output_row_stride + x0 * 3;
+        const int output_row_start = (rect.y0 + j) * output_pitch + rect.x0 * 3;
 
-        const int vector_chunks = tile_width >> 4;
+        const int vector_chunks = rect.width >> 4;
         for (int k = 0; k < vector_chunks; k++) {
             const int chunk_offset = k * 16;
 
@@ -330,8 +150,8 @@ static void copy_tile_to_output(u8* output, const i16* tile_data, const f32x4 ti
     }
 
     // Non-16-aligned tile widths leave a rightmost tail the SIMD loop skips.
-    if ((tile_width & 15) != 0) {
-        copy_tile_tail_to_output(output, tile_data, x0, y0, tile_width, tile_height, output_pitch);
+    if ((rect.width & 15) != 0) {
+        copy_tile_tail_to_output(output, output_pitch, tile_data, rect);
     }
 }
 
@@ -364,240 +184,146 @@ static bool tile_has_visual_commands(const Tile* tile, const RenderCommand* comm
     return false;
 }
 
-// Scalar tail for the rightmost tile_width & 15 columns crossfade_direct_to_output skips; same widen<<7 / Q15
-// lerp / narrow>>7 math.
-static NO_INLINE void crossfade_tail_to_output(u8* output, int output_pitch, const ImageData* prev_image,
-                                               const ImageData* curr_image, u8 crossfade_t, int x0, int y0,
-                                               int tile_width, int tile_height) {
-    const u8* prev_src = prev_image->data;
-    const u8* curr_src = curr_image->data;
-    const int prev_stride = prev_image->stride;
-    const int curr_stride = curr_image->stride;
+#define MAX_SCISSOR_STACK_DEPTH 16
 
-    const int t_q15 = ((int)crossfade_t << 7) + (crossfade_t >> 1);
-    const int first_tail = tile_width & ~15; // == (tile_width >> 4) * 16
+// Nested clipping regions in tile-relative coordinates; the bottom entry is the whole tile.
+// The rects live in the caller's array, so the counters stay in registers and nothing is cleared per tile.
+typedef struct ScissorStack {
+    f32x4* rects;
+    int depth;
+    // Pushes dropped at capacity; each is matched against a later pop before the real stack unwinds.
+    int ignored_pushes;
+} ScissorStack;
 
-    for (int j = 0; j < tile_height; j++) {
-        const u8* prev_row = prev_src + (y0 + j) * prev_stride + x0 * 3;
-        const u8* curr_row = curr_src + (y0 + j) * curr_stride + x0 * 3;
-        u8* out_row = output + (y0 + j) * output_pitch + x0 * 3;
-        for (int k = first_tail; k < tile_width; k++) {
-            const u8* pp = prev_row + k * 3;
-            const u8* cp = curr_row + k * 3;
-            u8* op = out_row + k * 3;
-            for (int c = 0; c < 3; c++) {
-                const int start16 = (int)pp[c] << 7;
-                const int delta = ((int)cp[c] << 7) - start16;
-                const int lerp = start16 + ((delta * t_q15 + 0x4000) >> 15);
-                op[c] = narrow_shr7_u8((i16)lerp);
-            }
-        }
+static void scissor_stack_init(ScissorStack* stack, f32x4 rects[MAX_SCISSOR_STACK_DEPTH]) {
+    rects[0] = f32x4_new(0.0f, 0.0f, (f32)TILE_WIDTH, (f32)TILE_HEIGHT);
+    stack->rects = rects;
+    stack->depth = 1;
+    stack->ignored_pushes = 0;
+}
+
+static f32x4 scissor_stack_top(const ScissorStack* stack) {
+    return stack->rects[stack->depth - 1];
+}
+
+static f32x4 intersect_rects(f32x4 a, f32x4 b) {
+    return f32x4_new(fmaxf(f32x4_extract(a, 0), f32x4_extract(b, 0)), fmaxf(f32x4_extract(a, 1), f32x4_extract(b, 1)),
+                     fminf(f32x4_extract(a, 2), f32x4_extract(b, 2)), fminf(f32x4_extract(a, 3), f32x4_extract(b, 3)));
+}
+
+static void scissor_stack_push(ScissorStack* stack, f32x4 tile_relative_clip) {
+    if (stack->depth >= MAX_SCISSOR_STACK_DEPTH) {
+        // At capacity: count the dropped push so its matching pop skips the real stack.
+        stack->ignored_pushes++;
+        return;
+    }
+    stack->rects[stack->depth] = intersect_rects(tile_relative_clip, scissor_stack_top(stack));
+    stack->depth++;
+}
+
+static void scissor_stack_pop(ScissorStack* stack) {
+    if (stack->ignored_pushes > 0) {
+        stack->ignored_pushes--;
+    } else if (stack->depth > 1) {
+        stack->depth--;
     }
 }
 
-// Crossfade two RGB backgrounds directly into the interleaved output buffer, skipping the planar tile buffer
-// so all widening/lerping/narrowing stays in registers.
+static void render_tile_commands(RenderData* self, const Tile* tile, f32x4 tile_aabb) {
+    const TileInfo tile_info = {
+        .offsets = f32x4_shuffle(tile_aabb, tile_aabb, 0, 1, 0, 1),
+    };
+    f32x4 scissor_rects[MAX_SCISSOR_STACK_DEPTH];
+    ScissorStack scissor;
+    scissor_stack_init(&scissor, scissor_rects);
 
-static void crossfade_direct_to_output(u8* output, int output_pitch, const ImageData* prev_image,
-                                       const ImageData* curr_image, u8 crossfade_t, f32x4 tile_aabb) {
-    const u8* prev_src = prev_image->data;
-    const u8* curr_src = curr_image->data;
-    const int prev_stride = prev_image->stride;
-    const int curr_stride = curr_image->stride;
+    for (int t = 0, id_count = tile->render_ids_count; t < id_count; t++) {
+        const RenderCommand* render_command = &self->render_commands[tile->render_ids[t]];
+        u32 render_flags = render_command->mask;
 
-    const i32x4 int_tile_aabb = f32x4_as_i32x4(tile_aabb);
-    const int x0 = i32x4_extract(int_tile_aabb, 0);
-    const int y0 = i32x4_extract(int_tile_aabb, 1);
-    const int tile_width = i32x4_extract(int_tile_aabb, 2) - x0;
-    const int tile_height = i32x4_extract(int_tile_aabb, 3) - y0;
-
-    const i16 t_q15 = (i16)(((i32)crossfade_t << 7) + (crossfade_t >> 1));
-    const i16x8 t_vec = i16x8_new_splat(t_q15);
-
-    for (int j = 0; j < tile_height; j++) {
-        const u8* prev_row = prev_src + (y0 + j) * prev_stride + x0 * 3;
-        const u8* curr_row = curr_src + (y0 + j) * curr_stride + x0 * 3;
-        u8* out_row = output + (y0 + j) * output_pitch + x0 * 3;
-
-        for (int k = 0; k < (tile_width >> 4); k++) {
-            u8x16_rgb_result prev_px = u8x16_load_deinterleaved_3(prev_row, k * 48);
-            u8x16_rgb_result curr_px = u8x16_load_deinterleaved_3(curr_row, k * 48);
-
-            i16x8x2 prev_r = u8x16_unpack_to_i16x8_wide_shl(prev_px.r, 7);
-            i16x8x2 curr_r = u8x16_unpack_to_i16x8_wide_shl(curr_px.r, 7);
-            i16x8x2 blended_r = { i16x8_lerp(prev_r.v0, curr_r.v0, t_vec), i16x8_lerp(prev_r.v1, curr_r.v1, t_vec) };
-            u8x16 r = i16x8x2_pack_to_u8x16_narrow_shr(blended_r, 7);
-
-            i16x8x2 prev_g = u8x16_unpack_to_i16x8_wide_shl(prev_px.g, 7);
-            i16x8x2 curr_g = u8x16_unpack_to_i16x8_wide_shl(curr_px.g, 7);
-            i16x8x2 blended_g = { i16x8_lerp(prev_g.v0, curr_g.v0, t_vec), i16x8_lerp(prev_g.v1, curr_g.v1, t_vec) };
-            u8x16 g = i16x8x2_pack_to_u8x16_narrow_shr(blended_g, 7);
-
-            i16x8x2 prev_b = u8x16_unpack_to_i16x8_wide_shl(prev_px.b, 7);
-            i16x8x2 curr_b = u8x16_unpack_to_i16x8_wide_shl(curr_px.b, 7);
-            i16x8x2 blended_b = { i16x8_lerp(prev_b.v0, curr_b.v0, t_vec), i16x8_lerp(prev_b.v1, curr_b.v1, t_vec) };
-            u8x16 b = i16x8x2_pack_to_u8x16_narrow_shr(blended_b, 7);
-
-            u8x16_store_interleaved_3(out_row, r, g, b, k * 48);
+        if (render_flags & RenderMask_ClipRectBegin) {
+            scissor_stack_push(&scissor, f32x4_sub(render_command->aabb, tile_info.offsets));
+        } else if (render_flags & RenderMask_ClipRectEnd) {
+            scissor_stack_pop(&scissor);
+        } else {
+            dispatch_command(self, render_command, &tile_info, scissor_stack_top(&scissor));
         }
-    }
-
-    // Non-16-aligned tile widths leave a rightmost tail the SIMD loop skips.
-    if ((tile_width & 15) != 0) {
-        crossfade_tail_to_output(output, output_pitch, prev_image, curr_image, crossfade_t, x0, y0, tile_width,
-                                 tile_height);
-    }
-}
-
-// Direct copy of RGB background to output buffer, bypassing planar tile buffer
-
-static void copy_background_direct_to_output(u8* output, int output_pitch, const ImageData* image, f32x4 tile_aabb) {
-    const u8* src = image->data;
-    const int img_stride = image->stride;
-
-    const i32x4 int_tile_aabb = f32x4_as_i32x4(tile_aabb);
-    const int x0 = i32x4_extract(int_tile_aabb, 0);
-    const int y0 = i32x4_extract(int_tile_aabb, 1);
-    const int tile_width = i32x4_extract(int_tile_aabb, 2) - x0;
-    const int tile_height = i32x4_extract(int_tile_aabb, 3) - y0;
-
-    const int row_bytes = tile_width * 3;
-
-    for (int j = 0; j < tile_height; j++) {
-        const u8* src_row = src + (y0 + j) * img_stride + x0 * 3;
-        u8* out_row = output + (y0 + j) * output_pitch + x0 * 3;
-        memcpy(out_row, src_row, row_bytes);
     }
 }
 
 static void render_tiles(RenderData* self, SwSurface* surface) {
     perf_scope_function();
 
-// Scissor rect stack for nested clipping regions
-#define MAX_SCISSOR_STACK_DEPTH 16
-    f32x4 scissor_stack[MAX_SCISSOR_STACK_DEPTH];
-    int scissor_stack_depth = 0;
-    // Pushes dropped at capacity; each is matched against a later pop before the real stack unwinds.
-    int scissor_ignored_pushes = 0;
-
-    const ImageData* bg_image = nullptr;
-    {
-        perf_scope("Check background image");
-
-        if (self->background.image_handle != IMAGE_HANDLE_INVALID) {
-            // Readiness comes from the core image query, pixels from the SW pixel pool.
-            if (image_get_status(image_get_data(self->background.image_handle)) == ImageStatus_Ready) {
-                bg_image = image_cache_get_data(self->background.image_handle);
-            }
-        }
-    }
-
-    const ImageData* prev_bg_image = nullptr;
-    {
-        perf_scope("Check previous background image");
-
-        if (self->background.crossfade_active && self->background.prev_image_handle != IMAGE_HANDLE_INVALID) {
-            // Readiness comes from the core image query, pixels from the SW pixel pool.
-            if (image_get_status(image_get_data(self->background.prev_image_handle)) == ImageStatus_Ready) {
-                prev_bg_image = image_cache_get_data(self->background.prev_image_handle);
-            }
-        }
-    }
-
-    // Background images are pre-scaled to the surface size and the tile-copy paths index them by tile AABB, so
-    // an image smaller than the surface is dropped and the clear color is used instead.
-    if (bg_image != nullptr && (bg_image->width < surface->screen_width || bg_image->height < surface->screen_height)) {
-        bg_image = nullptr;
-    }
-    if (prev_bg_image != nullptr
-        && (prev_bg_image->width < surface->screen_width || prev_bg_image->height < surface->screen_height)) {
-        prev_bg_image = nullptr;
-    }
-
-    const bool can_crossfade = self->background.crossfade_active && prev_bg_image != nullptr && bg_image != nullptr
-                               && prev_bg_image->channels == 3 && bg_image->channels == 3;
+    const SrBackground background
+        = sr_background_resolve(&self->background, surface->screen_width, surface->screen_height);
 
     // The SW backend renders into its own offscreen RGB24 buffer; the host presents it.
     u8* output = surface->rgb24_output_buffer;
     int pitch = surface->screen_width * 3;
 
-    // Direct copy fast path: fully opaque RGB background with no crossfade
-    const bool can_direct_copy
-        = bg_image != nullptr && bg_image->channels == 3 && self->background.alpha == 255 && !can_crossfade;
-
     for (int i = 0, count = surface->tiles_info_count; i < count; ++i) {
-        Tile* tile = &surface->tiles_info[i];
+        const Tile* tile = &surface->tiles_info[i];
+        const f32x4 tile_aabb = surface->tiles_aabb[i];
 
         // Fast path: tiles with no visual render commands bypass the planar tile buffer
         // and write directly to output, saving ~60KB memory traffic per tile
-        if (!tile_has_visual_commands(tile, self->render_commands)) {
-            if (can_crossfade) {
-                crossfade_direct_to_output(output, pitch, prev_bg_image, bg_image, self->background.crossfade_t,
-                                           surface->tiles_aabb[i]);
-                continue;
-            } else if (can_direct_copy) {
-                copy_background_direct_to_output(output, pitch, bg_image, surface->tiles_aabb[i]);
-                continue;
-            }
+        if (!tile_has_visual_commands(tile, self->render_commands)
+            && sr_background_write_direct(&background, output, pitch, tile_aabb)) {
+            continue;
         }
 
-        const u8 clear_r = self->background.clear_r;
-        const u8 clear_g = self->background.clear_g;
-        const u8 clear_b = self->background.clear_b;
+        sr_background_fill_tile(&background, self->tile_buffer, tile_aabb);
+        render_tile_commands(self, tile, tile_aabb);
+        copy_tile_to_output(output, self->tile_buffer, tile_aabb, pitch);
+    }
+}
 
-        if (can_crossfade) {
-            crossfade_backgrounds_to_tile(self->tile_buffer, prev_bg_image, bg_image, self->background.crossfade_t,
-                                          surface->tiles_aabb[i]);
-        } else if (bg_image != nullptr) {
-            copy_background_to_tile(self->tile_buffer, bg_image, self->background.alpha, surface->tiles_aabb[i],
-                                    clear_r, clear_g, clear_b);
-        } else {
-            clear_tile_buffer(self->tile_buffer, clear_r, clear_g, clear_b);
+static bool is_clip_command(const RenderCommand* cmd) {
+    return (cmd->mask & RenderMask_ClipRectBegin) || (cmd->mask & RenderMask_ClipRectEnd);
+}
+
+static void append_render_id(Tile* tile, int command_index) {
+    tile->render_ids[tile->render_ids_count++] = (u32)command_index;
+}
+
+// Clip commands affect the entire screen, so they go to every tile
+static void bin_clip_to_all_tiles(SwSurface* surface, int command_index) {
+    // Locals, because the stores in append_render_id would otherwise force a reload of both every iteration.
+    Tile* tiles = surface->tiles_info;
+    const int tile_count = surface->tiles_info_count;
+    for (int t = 0; t < tile_count; t++) {
+        append_render_id(&tiles[t], command_index);
+    }
+}
+
+static void bin_to_covered_tiles(SwSurface* surface, const RenderCommand* cmd, int command_index) {
+    const int cols = surface->tile_cols;
+    const i32x4 max_tiles = i32x4_new(cols - 1, surface->tile_rows - 1, cols - 1, surface->tile_rows - 1);
+    const TileRange range = tile_range_from_aabb(cmd->aabb, max_tiles);
+    Tile* tiles = surface->tiles_info;
+
+    for (int ty = range.ty0; ty <= range.ty1; ty++) {
+        for (int tx = range.tx0; tx <= range.tx1; tx++) {
+            append_render_id(&tiles[ty * cols + tx], command_index);
         }
+    }
+}
 
-        const f32x4 tile_aabb = surface->tiles_aabb[i];
-        const TileInfo tile_info = {
-            .offsets = f32x4_shuffle(tile_aabb, tile_aabb, 0, 1, 0, 1),
-        };
+// Reset tile render_ids; the previous frame's pointers are invalid after fl_arena_rewind.
+static void clear_tile_render_ids(SwSurface* surface) {
+    for (int t = 0; t < surface->tiles_info_count; t++) {
+        surface->tiles_info[t].render_ids = nullptr;
+        surface->tiles_info[t].render_ids_count = 0;
+    }
+}
 
-        const f32x4 tile_scissor = f32x4_new(0.0f, 0.0f, (f32)TILE_WIDTH, (f32)TILE_HEIGHT);
-        scissor_stack[0] = tile_scissor;
-        scissor_stack_depth = 1;
-        scissor_ignored_pushes = 0;
+// Single contiguous allocation for all tiles' render_ids (rewound each frame)
+static void assign_tile_render_ids(SwSurface* surface, FlArena* frame_arena, int cmd_count) {
+    u32* all_render_ids = arena_alloc_array(frame_arena, u32, (u64)surface->tiles_info_count * cmd_count);
 
-        for (int t = 0, id_count = tile->render_ids_count; t < id_count; t++) {
-            u32 index = tile->render_ids[t];
-            const RenderCommand* render_command = &self->render_commands[index];
-            u32 render_flags = render_command->mask;
-
-            if (render_flags & RenderMask_ClipRectBegin) {
-                if (scissor_stack_depth < MAX_SCISSOR_STACK_DEPTH) {
-                    const f32x4 clip_rect = render_command->aabb;
-                    f32x4 tile_relative_clip = f32x4_sub(clip_rect, tile_info.offsets);
-                    f32x4 current_scissor = scissor_stack[scissor_stack_depth - 1];
-                    f32x4 new_scissor
-                        = f32x4_new(fmaxf(f32x4_extract(tile_relative_clip, 0), f32x4_extract(current_scissor, 0)),
-                                    fmaxf(f32x4_extract(tile_relative_clip, 1), f32x4_extract(current_scissor, 1)),
-                                    fminf(f32x4_extract(tile_relative_clip, 2), f32x4_extract(current_scissor, 2)),
-                                    fminf(f32x4_extract(tile_relative_clip, 3), f32x4_extract(current_scissor, 3)));
-                    scissor_stack[scissor_stack_depth++] = new_scissor;
-                } else {
-                    // At capacity: count the dropped push so its matching pop skips the real stack.
-                    scissor_ignored_pushes++;
-                }
-            } else if (render_flags & RenderMask_ClipRectEnd) {
-                if (scissor_ignored_pushes > 0) {
-                    scissor_ignored_pushes--;
-                } else if (scissor_stack_depth > 1) {
-                    scissor_stack_depth--;
-                }
-            } else {
-                f32x4 current_scissor = scissor_stack[scissor_stack_depth - 1];
-                dispatch_command(self, render_command, &tile_info, current_scissor);
-            }
-        }
-
-        copy_tile_to_output(output, self->tile_buffer, surface->tiles_aabb[i], pitch);
+    for (int t = 0; t < surface->tiles_info_count; t++) {
+        surface->tiles_info[t].render_ids = all_render_ids + (u64)t * cmd_count;
+        surface->tiles_info[t].render_ids_count = 0;
     }
 }
 
@@ -606,71 +332,41 @@ static void bin_tiles(RenderData* self, SwSurface* surface, FlArena* frame_arena
     perf_scope_function();
     (void)self;
 
-    int cmd_count = render_commands.count;
-    int tile_count = surface->tiles_info_count;
-
 #ifdef FLOWI_UI_INSPECTOR
     self->stat_bin_alloc_bytes = 0;
     self->stat_clip_broadcasts = 0;
 #endif
 
-    if (tile_count == 0) {
+    if (surface->tiles_info_count == 0) {
         return;
     }
 
-    // Reset tile render_ids; the previous frame's pointers are invalid after fl_arena_rewind.
-    if (cmd_count == 0) {
-        for (int t = 0; t < tile_count; t++) {
-            surface->tiles_info[t].render_ids = nullptr;
-            surface->tiles_info[t].render_ids_count = 0;
-        }
+    if (render_commands.count == 0) {
+        clear_tile_render_ids(surface);
         return;
     }
-
-    // Tile grid dimensions (tiles are created in row-major order)
-    int cols = (surface->screen_width + TILE_WIDTH - 1) / TILE_WIDTH;
-    int rows = (surface->screen_height + TILE_HEIGHT - 1) / TILE_HEIGHT;
-
-    i32x4 max_tiles = i32x4_new(cols - 1, rows - 1, cols - 1, rows - 1);
 
 #ifdef FLOWI_UI_INSPECTOR
     void* bin_alloc_before = fl_arena_current_pos(frame_arena);
 #endif
 
-    // Single contiguous allocation for all tiles' render_ids (rewound each frame)
-    u32* all_render_ids = arena_alloc_array(frame_arena, u32, (u64)tile_count * cmd_count);
+    assign_tile_render_ids(surface, frame_arena, render_commands.count);
 
 #ifdef FLOWI_UI_INSPECTOR
     // Bytes the arena consumed, alignment padding included.
     self->stat_bin_alloc_bytes = (u32)((u8*)fl_arena_current_pos(frame_arena) - (u8*)bin_alloc_before);
 #endif
 
-    for (int t = 0; t < tile_count; t++) {
-        surface->tiles_info[t].render_ids = all_render_ids + (u64)t * cmd_count;
-        surface->tiles_info[t].render_ids_count = 0;
-    }
+    for (int i = 0; i < render_commands.count; i++) {
+        const RenderCommand* cmd = &render_commands.commands[i];
 
-    for (int i = 0; i < cmd_count; i++) {
-        RenderCommand* cmd = &render_commands.commands[i];
-
-        if ((cmd->mask & RenderMask_ClipRectBegin) || (cmd->mask & RenderMask_ClipRectEnd)) {
-            // Clip commands affect the entire screen, so they go to every tile
-            for (int t = 0; t < tile_count; t++) {
-                surface->tiles_info[t].render_ids[surface->tiles_info[t].render_ids_count++] = (u32)i;
-            }
+        if (is_clip_command(cmd)) {
+            bin_clip_to_all_tiles(surface, i);
 #ifdef FLOWI_UI_INSPECTOR
-            self->stat_clip_broadcasts += (u32)tile_count;
+            self->stat_clip_broadcasts += (u32)surface->tiles_info_count;
 #endif
         } else {
-            TileRange range = tile_range_from_aabb(cmd->aabb, max_tiles);
-
-            for (int ty = range.ty0; ty <= range.ty1; ty++) {
-                int row_base = ty * cols;
-                for (int tx = range.tx0; tx <= range.tx1; tx++) {
-                    int t = row_base + tx;
-                    surface->tiles_info[t].render_ids[surface->tiles_info[t].render_ids_count++] = (u32)i;
-                }
-            }
+            bin_to_covered_tiles(surface, cmd, i);
         }
     }
 }
