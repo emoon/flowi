@@ -23,7 +23,7 @@ static u16 svg_class_max_size(FlVectorClass cls) {
 u16 svg_quantize_size(u16 size, FlVectorClass cls) {
     u16 cap = svg_class_max_size(cls);
     u16 top = k_svg_size_ladder[0]; // the largest step at or below the cap (the value sizes above the cap snap to)
-    for (u32 i = 0; i < sizeof(k_svg_size_ladder) / sizeof(k_svg_size_ladder[0]); i++) {
+    for (u32 i = 0; i < sizeof_array(k_svg_size_ladder); i++) {
         u16 step = k_svg_size_ladder[i];
         if (step > cap) {
             break; // never exceed the per-class cap, even if the ladder runs higher

@@ -3265,7 +3265,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     // command samples a dedicated slot texture, not an atlas cell.
     {
         const int xs[] = { 0, 1, 128, 149, 150, 255, 256, 270, 299 };
-        for (size_t i = 0; i < sizeof(xs) / sizeof(xs[0]); i++) {
+        for (size_t i = 0; i < sizeof_array(xs); i++) {
             int x = xs[i];
             f32 b = x >= 150 ? 255.0f : 0.0f;
             CHECK(channels_near(pixel_at(&buf, 8 + x, 8), (f32)(x & 255), 0, b, 255, 1.0f)
@@ -3281,7 +3281,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     // shows only its region, scaled.
     {
         const int xs[] = { 0, 10, 149, 150, 200, 299 };
-        for (size_t i = 0; i < sizeof(xs) / sizeof(xs[0]); i++) {
+        for (size_t i = 0; i < sizeof_array(xs); i++) {
             int x = xs[i];
             f32 b = x >= 150 ? 255.0f : 0.0f;
             CHECK(channels_near(pixel_at(&buf, 8 + 2 * x, 24 + 2), (f32)(x & 255), 30, b, 255, 1.0f)
@@ -3291,7 +3291,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     }
     {
         const int xs[] = { 0, 33, 49, 50, 99 };
-        for (size_t i = 0; i < sizeof(xs) / sizeof(xs[0]); i++) {
+        for (size_t i = 0; i < sizeof_array(xs); i++) {
             int x = xs[i];
             int texel = 3 * x + 1;
             f32 b = texel >= 150 ? 255.0f : 0.0f;
@@ -3307,7 +3307,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
 
     {
         const int xs[] = { 0, 100, 255, 280 };
-        for (size_t i = 0; i < sizeof(xs) / sizeof(xs[0]); i++) {
+        for (size_t i = 0; i < sizeof_array(xs); i++) {
             f32 a = (f32)(xs[i] & 255);
             CHECK(channels_near(pixel_at(&buf, 8 + xs[i], 49), a * 200.0f / 255.0f, a * 40.0f / 255.0f,
                                 a * 50.0f / 255.0f, a, 3.0f),
@@ -4601,7 +4601,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
         { 60.0f, 64, true },  //
     };
     u32 prev_count = gpu_debug_svg_raster_count(ud);
-    for (u32 i = 0; i < sizeof(zoom) / sizeof(zoom[0]); i++) {
+    for (u32 i = 0; i < sizeof_array(zoom); i++) {
         // 4:3 icon -> larger side drives it; the monochrome class keeps the full ladder to 2048.
         u16 q = svg_raster_size_for_dst(zoom[i].dst, zoom[i].dst * 0.75f, FlVectorClass_Monochrome);
         CHECK((u32)q == zoom[i].expect_step, "svg zoom: the physical dst quantizes to the expected ladder step");
@@ -6344,7 +6344,7 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
     // (font, size, glyph_id) is one atlas key, so the frame carries n_sizes*2 distinct glyphs - the resident set a
     // scale change forces the backend to rebuild. Spread horizontally so no 8x8 tile ever nears GPU_TILE_CAPACITY.
     static const u16 sizes[] = { 24, 28, 32, 36, 40 };
-    const int n_sizes = (int)(sizeof(sizes) / sizeof(sizes[0]));
+    const int n_sizes = (int)sizeof_array(sizes);
     const u32 expect_glyph_dispatches = (u32)(n_sizes * 2); // 'A' + 'o' at each size, one dispatch per glyph
 
     void* start = ir_rewind_begin(ir_arena);

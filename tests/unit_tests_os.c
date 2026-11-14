@@ -10,7 +10,7 @@ UTEST(file_watcher, full_registry_rejects_instead_of_corrupting) {
     u32 n = 0;
     FlFileWatcherHandle h = FL_FILE_WATCHER_INVALID;
 
-    while (n < (u32)(sizeof(handles) / sizeof(handles[0]))) {
+    while (n < (u32)sizeof_array(handles)) {
         h = file_watcher_start(FL_S("."), config); // "." always exists; each start is a separate watcher
         if (h == FL_FILE_WATCHER_INVALID) {
             break;
@@ -376,7 +376,7 @@ UTEST(file_watcher, full_registry_frees_slot_on_stop) {
     FlFileWatcherHandle handles[64];
     u32 n = 0;
 
-    while (n < (u32)(sizeof(handles) / sizeof(handles[0]))) {
+    while (n < (u32)sizeof_array(handles)) {
         FlFileWatcherHandle h = file_watcher_start(FL_S("."), config);
         if (h == FL_FILE_WATCHER_INVALID) {
             break;

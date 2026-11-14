@@ -932,7 +932,7 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
           (2047u << 10) | (2047u << 21) },
     };
 
-    for (size_t i = 0; i < sizeof(border_cases) / sizeof(border_cases[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(border_cases); i++) {
         fl_arena_align(ir_arena, 8);
         const u8* start = (const u8*)fl_arena_current_pos(ir_arena);
         fl_ir_border_stroked(ir_arena, rect, 4.0f, 4.0f, 4.0f, 4.0f, (FlCornerRadius) { 0 }, color,

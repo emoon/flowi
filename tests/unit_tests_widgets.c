@@ -1239,7 +1239,7 @@ UTEST(widget_state_colors, state_color_derivation) {
 
     const FlWidgetVariant variants[]
         = { FlWidgetVariant_Solid, FlWidgetVariant_Outline, FlWidgetVariant_Ghost, FlWidgetVariant_Soft };
-    for (size_t i = 0; i < sizeof(variants) / sizeof(variants[0]); ++i) {
+    for (size_t i = 0; i < sizeof_array(variants); ++i) {
         FlWidgetColors c = fl_resolve_widget_colors(variants[i], (FlColor) { 0 }, (FlColor) { 0 }, &both, &theme, true);
         ASSERT_TRUE_MSG(color_eq(c.bg, ui_apply_state_color(ui_get_variant_bg(variants[i], &theme), &both)),
                         "variant bg is the derived state color of its base");
@@ -2057,7 +2057,7 @@ static void radio_press_frame(void* user_data) {
     st->ctx = ui_get_ctx();
     FlString options[3] = { FL_S("A"), FL_S("B"), FL_S("C") };
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        st->last_changed = ui_radio_group(options, (int)(sizeof(options) / sizeof(options[0])), &st->choice).clicked;
+        st->last_changed = ui_radio_group(options, (int)sizeof_array(options), &st->choice).clicked;
     }
 }
 
@@ -5268,7 +5268,7 @@ UTEST(widget_id, adjacent_instance_keys_do_not_collide) {
     const u32 base = 0x7ffe0100u;
     const u32 gaps[] = { 1, 2, 4, 8, 12, 16 };
     enum { ITEMS = 64 };
-    for (size_t g = 0; g < sizeof(gaps) / sizeof(gaps[0]); g++) {
+    for (size_t g = 0; g < sizeof_array(gaps); g++) {
         const u32 key_a = base;
         const u32 key_b = base + gaps[g];
         static u32 both[2 * ITEMS];

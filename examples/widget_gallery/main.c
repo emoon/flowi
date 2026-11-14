@@ -124,7 +124,7 @@ static void gallery_apply_reorder(GalleryState* s, const FlListResult* lr) {
 static void gallery_feedback(const FlUiFeedbackEvent* ev, void* user_data) {
     (void)user_data;
     static const char* dir_name[] = { "none", "up", "down", "left", "right" };
-    const char* dir = ev->dir < (FlUiFeedbackDir)(sizeof(dir_name) / sizeof(dir_name[0])) ? dir_name[ev->dir] : "?";
+    const char* dir = ev->dir < (FlUiFeedbackDir)sizeof_array(dir_name) ? dir_name[ev->dir] : "?";
     switch (ev->kind) {
         case FlUiFeedbackKind_NavMoved:
             log_info("feedback: NavMoved %s (%u -> %u) — app would play tick.wav", dir, ev->from, ev->to);
@@ -258,7 +258,7 @@ static void frame(void* user_data) {
                 section {
                     section_header(FL_S("Radio group"));
                     FlString options[] = { FL_S("Low"), FL_S("Medium"), FL_S("High") };
-                    ui_radio_group(options, (int)(sizeof(options) / sizeof(options[0])), &s->radio_choice);
+                    ui_radio_group(options, (int)sizeof_array(options), &s->radio_choice);
                 }
 
                 section {
@@ -276,14 +276,14 @@ static void frame(void* user_data) {
                 section {
                     section_header(FL_S("Dropdown"));
                     FlString options[] = { FL_S("Low"), FL_S("Medium"), FL_S("High") };
-                    ui_dropdown(FL_S("Quality"), &s->dropdown_open, options,
-                                (int)(sizeof(options) / sizeof(options[0])), &s->dropdown_choice);
+                    ui_dropdown(FL_S("Quality"), &s->dropdown_open, options, (int)sizeof_array(options),
+                                &s->dropdown_choice);
                 }
 
                 section {
                     section_header(FL_S("Tab bar"));
                     FlString tabs[] = { FL_S("General"), FL_S("Audio"), FL_S("Video") };
-                    ui_tab_bar(tabs, (int)(sizeof(tabs) / sizeof(tabs[0])), &s->tab);
+                    ui_tab_bar(tabs, (int)sizeof_array(tabs), &s->tab);
                 }
 
                 section {

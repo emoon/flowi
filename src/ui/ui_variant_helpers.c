@@ -147,7 +147,7 @@ static const size_t k_theme_slot_offset[] = {
     offsetof(FlThemeColors, feedback.info),
 };
 
-#define FL_THEME_SLOT_COUNT ((int)(sizeof(k_theme_slot_offset) / sizeof(k_theme_slot_offset[0])))
+#define FL_THEME_SLOT_COUNT ((int)sizeof_array(k_theme_slot_offset))
 
 FlThemeColors fl_theme_merge_override(const FlThemeColors* base, const FlThemeOverride* override) {
     FlThemeColors merged = *base;

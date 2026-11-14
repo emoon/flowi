@@ -309,7 +309,7 @@ static void tab_press_frame(void* user_data) {
     FlString tabs[3] = { FL_S("Gen"), FL_S("Aud"), FL_S("Vid") };
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
-        ui_tab_bar(tabs, (int)(sizeof(tabs) / sizeof(tabs[0])), &st->tab);
+        ui_tab_bar(tabs, (int)sizeof_array(tabs), &st->tab);
     }
 }
 
@@ -1139,10 +1139,10 @@ UTEST(shared_abi, headless_app_renders_through_public_shared_library) {
     // probes therefore run inside the shared library's frame rather than around a frame begun in the executable.
     static int (*const in_frame_probes[])(void)
         = { external_c_frame_format_abi_probe, external_cpp_frame_format_abi_probe };
-    ASSERT_TRUE_MSG(external_c_shared_library_smoke(FLOWI_SHARED_LIBRARY_PATH, in_frame_probes,
-                                                    (int)(sizeof(in_frame_probes) / sizeof(in_frame_probes[0]))),
-                    "public-only consumer could not render, format a frame string, and read back a frame "
-                    "through libflowi");
+    ASSERT_TRUE_MSG(
+        external_c_shared_library_smoke(FLOWI_SHARED_LIBRARY_PATH, in_frame_probes, (int)sizeof_array(in_frame_probes)),
+        "public-only consumer could not render, format a frame string, and read back a frame "
+        "through libflowi");
 }
 
 UTEST(shared_abi, shared_library_exports_every_name_in_the_export_list) {

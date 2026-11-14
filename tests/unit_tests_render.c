@@ -504,7 +504,7 @@ UTEST(color_oklch, roundtrip_srgb) {
         { 18, 52, 86, 255 }, { 200, 120, 40, 255 },  { 12, 200, 175, 255 }, { 255, 0, 0, 255 },
         { 0, 128, 64, 255 }, { 130, 130, 130, 255 }, { 0, 0, 0, 255 },      { 255, 255, 255, 255 },
     };
-    for (int i = 0; i < (int)(sizeof(samples) / sizeof(samples[0])); i++) {
+    for (int i = 0; i < (int)sizeof_array(samples); i++) {
         FlColor in = samples[i];
         FlColor out = color_oklch_to_rgb(color_rgb_to_oklch(in));
         EXPECT_NEAR((f32)out.r, (f32)in.r, 2.0f);
@@ -1782,7 +1782,7 @@ UTEST(sr_command, split_rounded_count_matches_written_commands) {
         { 0, 0, 0, 0, 1, 0, "no rounding" },  // single passthrough command, unchanged
     };
 
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+    for (size_t i = 0; i < sizeof_array(cases); ++i) {
         FlArena* arena = arena_new();
         fl_arena_align(arena, 16);
         RenderCommand* start = (RenderCommand*)fl_arena_current_pos(arena);
@@ -3670,7 +3670,7 @@ UTEST(render, text_alpha_linear_fade) {
     const int sample_x = 16, sample_y = 16;
 
     const u8 alphas[] = { 0, 64, 128, 192, 255 };
-    for (size_t i = 0; i < sizeof(alphas) / sizeof(alphas[0]); ++i) {
+    for (size_t i = 0; i < sizeof_array(alphas); ++i) {
         const u8 ga = alphas[i];
 
         FlArena* ir = arena_new();
@@ -3978,7 +3978,7 @@ UTEST(render, text_letter_spacing_and_line_height_follow_the_scale) {
         { .scale = 1.0f, .font_size = 10, .spacing = 3, .line_height = 20 },
     };
 
-    for (u32 i = 0; i < sizeof(frames) / sizeof(frames[0]); i++) {
+    for (u32 i = 0; i < sizeof_array(frames); i++) {
         ui_set_scale(frames[i].scale, frames[i].scale);
         ui_update_begin(ctx);
         fl_layout_start(ID("spaced_text_root"));
@@ -5073,7 +5073,7 @@ typedef struct RenderImages {
 static void render_images_cleanup(RenderImages* imgs) {
     ui_background_set(IMAGE_HANDLE_INVALID);
     const ImageHandle handles[] = { imgs->fg, imgs->bg_curr, imgs->bg_prev };
-    for (size_t i = 0; i < sizeof(handles) / sizeof(handles[0]); ++i) {
+    for (size_t i = 0; i < sizeof_array(handles); ++i) {
         if (handles[i] != IMAGE_HANDLE_INVALID) {
             image_free(handles[i]);
         }
@@ -5362,7 +5362,7 @@ UTEST(render, non16_width_right_edge) {
     int bad_w = 0, bad_x = -1;
     const char* bad_path = "";
 
-    for (size_t wi = 0; wi < sizeof(widths) / sizeof(widths[0]) && setup_ok; ++wi) {
+    for (size_t wi = 0; wi < sizeof_array(widths) && setup_ok; ++wi) {
         const int W = widths[wi];
         const int ry = H / 2;
         FlSurface* surf = s_render.backend.create_surface(s_render.backend.user_data, W, H);
@@ -6268,7 +6268,7 @@ UTEST(render, viewport3d_retires_unused_slots) {
 
     static const char* const names[]
         = { "vp_a", "vp_b", "vp_c", "vp_d", "vp_e", "vp_f", "vp_g", "vp_h", "vp_i", "vp_j", "vp_k", "vp_l" };
-    for (u32 n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+    for (u32 n = 0; n < sizeof_array(names); n++) {
         FlVec2 size = { 0 };
         for (int frame = 0; frame < 2; frame++) {
             ui_update_begin(ctx);
@@ -6811,7 +6811,7 @@ static void scene_widget_gallery(FlUiCtx* ctx, int n) {
                 GALLERY_SECTION {
                     gallery_section_header(FL_S("Radio group"));
                     FlString options[] = { FL_S("Low"), FL_S("Medium"), FL_S("High") };
-                    ui_radio_group(options, (int)(sizeof(options) / sizeof(options[0])), &radio_choice);
+                    ui_radio_group(options, (int)sizeof_array(options), &radio_choice);
                 }
                 GALLERY_SECTION {
                     gallery_section_header(FL_S("Slider"));
@@ -6825,13 +6825,12 @@ static void scene_widget_gallery(FlUiCtx* ctx, int n) {
                 GALLERY_SECTION {
                     gallery_section_header(FL_S("Dropdown"));
                     FlString options[] = { FL_S("Low"), FL_S("Medium"), FL_S("High") };
-                    ui_dropdown(FL_S("Quality"), &dropdown_open, options, (int)(sizeof(options) / sizeof(options[0])),
-                                &dropdown_choice);
+                    ui_dropdown(FL_S("Quality"), &dropdown_open, options, (int)sizeof_array(options), &dropdown_choice);
                 }
                 GALLERY_SECTION {
                     gallery_section_header(FL_S("Tab bar"));
                     FlString tabs[] = { FL_S("General"), FL_S("Audio"), FL_S("Video") };
-                    ui_tab_bar(tabs, (int)(sizeof(tabs) / sizeof(tabs[0])), &tab);
+                    ui_tab_bar(tabs, (int)sizeof_array(tabs), &tab);
                 }
                 GALLERY_SECTION {
                     gallery_section_header(FL_S("Tooltip"));
@@ -7370,7 +7369,7 @@ UTEST(render, variant_derivation) {
         { { 214, 40, 48, 255 }, true, false },
     };
 
-    for (size_t r = 0; r < sizeof(rows) / sizeof(rows[0]); r++) {
+    for (size_t r = 0; r < sizeof_array(rows); r++) {
         const FlColor base = rows[r].base;
         const FlColor lighter = color_lighten_perceptual(base, lighten_amt);
         const FlColor darker = color_darken_perceptual(base, darken_amt);

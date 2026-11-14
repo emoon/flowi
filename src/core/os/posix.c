@@ -572,7 +572,7 @@ bool file_remove_directory_recursive_os(FlString path) {
 FlString get_temp_directory_os(struct FlArena* arena) {
     const char* temp_dirs[] = { "TMPDIR", "TMP", "TEMP", "TEMPDIR" };
 
-    for_count(i, sizeof(temp_dirs) / sizeof(temp_dirs[0])) {
+    for_count(i, sizeof_array(temp_dirs)) {
         const char* temp = getenv(temp_dirs[i]);
         if (temp && temp[0] != '\0') {
             return fl_string_copy(arena, string_from_cstr(temp));
