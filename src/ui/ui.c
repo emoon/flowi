@@ -238,6 +238,38 @@ FlUiCtx* ui_create(FlArena* arena, UiShared* shared) {
     return ctx;
 }
 
+static void destroy_arena_and_clear(FlArena** arena) {
+    if (*arena) {
+        fl_arena_destroy(*arena);
+        *arena = nullptr;
+    }
+}
+
+static void destroy_frame_arenas(FlUiCtx* ctx) {
+    destroy_arena_and_clear(&ctx->render_frame_allocator);
+    destroy_arena_and_clear(&ctx->render_frame_allocator_state);
+    destroy_arena_and_clear(&ctx->vk_arena);
+
+#ifdef FLOWI_UI_INSPECTOR
+    if (ctx->render_command_arena) {
+        destroy_arena_and_clear(&ctx->render_command_arena);
+        ctx->last_render_commands = nullptr;
+        ctx->last_render_command_count = 0;
+    }
+#endif
+}
+
+// Cleared as a pair, matching ui_create and ui_make_current. Clay_MinMemorySize and Clay_Initialize both read
+// the current context, so leaving it dangling at this context's freed arena would fault the next ui_create.
+static void unbind_context(FlUiCtx* ctx) {
+    if (Clay_GetCurrentContext() == ctx->clay_ctx) {
+        Clay_SetCurrentContext(nullptr);
+    }
+    if (g_ui_ctx == ctx) {
+        g_ui_ctx = nullptr;
+    }
+}
+
 void ui_destroy(FlUiCtx* ctx) {
     FL_VALIDATE(ctx != nullptr);
 
@@ -253,38 +285,8 @@ void ui_destroy(FlUiCtx* ctx) {
         ctx->painter = nullptr;
     }
 
-    if (ctx->render_frame_allocator) {
-        fl_arena_destroy(ctx->render_frame_allocator);
-        ctx->render_frame_allocator = nullptr;
-    }
-
-    if (ctx->render_frame_allocator_state) {
-        fl_arena_destroy(ctx->render_frame_allocator_state);
-        ctx->render_frame_allocator_state = nullptr;
-    }
-
-    if (ctx->vk_arena) {
-        fl_arena_destroy(ctx->vk_arena);
-        ctx->vk_arena = nullptr;
-    }
-
-#ifdef FLOWI_UI_INSPECTOR
-    if (ctx->render_command_arena) {
-        fl_arena_destroy(ctx->render_command_arena);
-        ctx->render_command_arena = nullptr;
-        ctx->last_render_commands = nullptr;
-        ctx->last_render_command_count = 0;
-    }
-#endif
-
-    // Cleared as a pair, matching ui_create and ui_make_current. Clay_MinMemorySize and Clay_Initialize both read
-    // the current context, so leaving it dangling at this context's freed arena would fault the next ui_create.
-    if (Clay_GetCurrentContext() == ctx->clay_ctx) {
-        Clay_SetCurrentContext(nullptr);
-    }
-    if (g_ui_ctx == ctx) {
-        g_ui_ctx = nullptr;
-    }
+    destroy_frame_arenas(ctx);
+    unbind_context(ctx);
 
     // ctx itself lives in the caller's persistent arena; font_cache is owned by the application.
 }
@@ -465,6 +467,24 @@ struct Painter* ui_get_painter(void) {
     return g_ui_ctx->painter;
 }
 
+// The previous frame's hot_id decides the wheel's arbiter.
+static bool hot_item_is_scroll_target(const FlUiCtx* self) {
+    if (self->hot_id == 0) {
+        return false;
+    }
+    ItemState* hot_item = hashmap_get(&self->shared->item_state, self->hot_id);
+    return hot_item && (hot_item->flags & FlItemFlags_scroll_target);
+}
+
+// Worst case is every item in the hashmap being focusable, plus 4x headroom for items created during the
+// frame (sliders create multiple sub-items), with a 256 floor for page transitions that grow the item count.
+static void allocate_focus_order(FlUiCtx* self) {
+    self->focus_order_count = 0;
+    u32 max_focusable = max(hashmap_count(&self->shared->item_state) * 4, 256u);
+    self->focus_order = arena_alloc_array(self->render_frame_allocator, u32, max_focusable);
+    self->focus_order_capacity = max_focusable;
+}
+
 void ui_update_begin(FlUiCtx* self) {
     perf_scope_function();
 
@@ -486,22 +506,12 @@ void ui_update_begin(FlUiCtx* self) {
     // (set in ui_input_update before clearing).
     Clay_Vector2 scroll_delta = { -self->input_state.mouse.wheel_x_cached, -self->input_state.mouse.wheel_y_cached };
 
-    // The previous frame's hot_id decides the wheel's arbiter.
-    bool pointer_over_scroll_widget = false;
-    if (self->hot_id != 0) {
-        ItemState* hot_item = hashmap_get(&self->shared->item_state, self->hot_id);
-        if (hot_item && (hot_item->flags & FlItemFlags_scroll_target)) {
-            pointer_over_scroll_widget = true;
-        }
-    }
-
     // The wheel goes to exactly one arbiter: a hot Scroll Target widget owns it (Clay gets a zero delta and the
     // cache stays intact for the widget's read); otherwise Clay's scroll containers get it.
-    if (!pointer_over_scroll_widget) {
-        Clay_UpdateScrollContainers(true, scroll_delta, self->delta_time);
-    } else {
-        Clay_UpdateScrollContainers(true, (Clay_Vector2) { 0, 0 }, self->delta_time);
+    if (hot_item_is_scroll_target(self)) {
+        scroll_delta = (Clay_Vector2) { 0, 0 };
     }
+    Clay_UpdateScrollContainers(true, scroll_delta, self->delta_time);
 
     Clay_BeginLayout();
 
@@ -536,20 +546,7 @@ void ui_update_begin(FlUiCtx* self) {
 
     self->frame_counter++;
 
-    // Worst case is every item in the hashmap being focusable, plus 4x headroom for items created during the
-    // frame (sliders create multiple sub-items), with a 256 floor for page transitions that grow the item count.
-    self->focus_order_count = 0;
-    u32 current_items = hashmap_count(&self->shared->item_state);
-    u32 min_capacity = 256;
-    u32 max_focusable
-        = current_items > 0 ? (current_items * 4 > min_capacity ? current_items * 4 : min_capacity) : min_capacity;
-    if (max_focusable > 0) {
-        self->focus_order = arena_alloc_array(self->render_frame_allocator, u32, max_focusable);
-        self->focus_order_capacity = max_focusable;
-    } else {
-        self->focus_order = nullptr;
-        self->focus_order_capacity = 0;
-    }
+    allocate_focus_order(self);
 }
 
 void ui_app_frame_begin(FlUiCtx* self) {
@@ -858,7 +855,6 @@ FlVec2 ui_mouse_position(FlLayoutId layout_id) {
 // with FlItemFlags_scroll_target, computing the clay id exactly as the layout open path does, so the existing
 // next_hot_id/hot_id arbitration picks it up. Call it once per frame for the area you read the wheel over.
 
-static ItemState* get_or_create_key(FlUiCtx* self, u32 id);
 
 void ui_scroll_target(FlLayoutId layout_id) {
     FlUiCtx* self = g_ui_ctx;
@@ -996,7 +992,7 @@ void ui_app_frame_end(FlUiCtx* self) {
     retire_stale_items(self->shared);
 }
 
-static ItemState* get_or_create_key(FlUiCtx* self, u32 id) {
+ItemState* get_or_create_key(FlUiCtx* self, u32 id) {
     ItemState* item = hashmap_get(&self->shared->item_state, id);
 
     if (item == nullptr) {
@@ -1016,23 +1012,8 @@ static ItemState* get_or_create_key(FlUiCtx* self, u32 id) {
     return item;
 }
 
-void ui_update_end(FlUiCtx* self, float dt) {
-    perf_scope_function();
-
-    // Published for the frame just emitted; read by the app after the next frame opens.
-    self->input_state.text_input_active = self->text_input_focused_this_frame;
-    self->text_input_focused_this_frame = false;
-    Clay_RenderCommandArray commands = Clay_EndLayout(dt);
-#ifdef FLOWI_UI_INSPECTOR
-    // Snapshot the frame here, while Clay's arrays and the strings they point at are still live.
-    ui_capture_render_commands(self, &commands);
-#endif
-
-    self->should_scroll_to_focused = false;
-
-    ui_hit_test_frame(self, commands, dt);
-
-    // Mouse edges come from the state captured in ui_input_update, before input cleared the flags.
+// Mouse edges come from the state captured in ui_input_update, before input cleared the flags.
+static void update_active_id(FlUiCtx* self) {
     if (self->mouse_pressed_this_frame && self->hot_id != 0) {
         self->active_id = self->hot_id;
     }
@@ -1040,33 +1021,24 @@ void ui_update_end(FlUiCtx* self, float dt) {
     if (self->mouse_released_this_frame && self->active_id != 0) {
         self->active_id = 0;
     }
+}
 
-    // hot_id is what the next frame reads.
-    self->hot_id = self->next_hot_id;
+static bool popup_closed_by_user_code(const FlUiCtx* self) {
+    return self->popup_focus_scope_id != 0 && self->popup_stack_count == 0 && self->modal_scope_id == 0;
+}
 
-    ui_navigation_update(self);
-
-    ui_scroll_auto_to_focused();
-
-    if (!self->shared->item_epoch_app_owned) {
-        retire_stale_items(self->shared);
-    }
-
-    // A popup active last frame but not rendered this frame was closed by user code. Modals are exempt: they
-    // don't use popup_stack.
-    if (self->popup_focus_scope_id != 0 && self->popup_stack_count == 0 && self->modal_scope_id == 0) {
-        ui_popup_close_internal(self);
-    }
-
-    // Input processing only, no rendering.
+// Input processing only, no rendering.
+static void update_virtual_keyboard(FlUiCtx* self) {
     if (self->active_virtual_keyboard) {
         ui_virtual_keyboard_update(self->active_virtual_keyboard, self);
         ui_virtual_keyboard_finish_if_inactive(self);
     }
+}
 
-    // Build the neutral render IR for this frame and hand it to the injected backend. Each element's paint span
-    // is spliced inline at its Clay CUSTOM command, so a single Clay-to-IR pass produces the whole z-ordered
-    // stream. Records are 8-aligned so the backend's byte_size walk stays valid.
+// Build the neutral render IR for this frame and hand it to the injected backend. Each element's paint span
+// is spliced inline at its Clay CUSTOM command, so a single Clay-to-IR pass produces the whole z-ordered
+// stream. Records are 8-aligned so the backend's byte_size walk stays valid.
+static void render_frame(FlUiCtx* self, Clay_RenderCommandArray commands) {
     FlArena* ir_arena = self->render_frame_allocator;
     fl_arena_align(ir_arena, 8);
     void* ir_start = fl_arena_current_pos(ir_arena);
@@ -1086,6 +1058,46 @@ void ui_update_end(FlUiCtx* self, float dt) {
     if (self->surface != nullptr) {
         self->shared->renderer.render(self->shared->renderer.user_data, self->surface, &frame);
     }
+}
+
+void ui_update_end(FlUiCtx* self, float dt) {
+    perf_scope_function();
+
+    // Published for the frame just emitted; read by the app after the next frame opens.
+    self->input_state.text_input_active = self->text_input_focused_this_frame;
+    self->text_input_focused_this_frame = false;
+    Clay_RenderCommandArray commands = Clay_EndLayout(dt);
+#ifdef FLOWI_UI_INSPECTOR
+    // Snapshot the frame here, while Clay's arrays and the strings they point at are still live.
+    ui_capture_render_commands(self, &commands);
+#endif
+
+    self->should_scroll_to_focused = false;
+
+    ui_hit_test_frame(self, commands, dt);
+
+    update_active_id(self);
+
+    // hot_id is what the next frame reads.
+    self->hot_id = self->next_hot_id;
+
+    ui_navigation_update(self);
+
+    ui_scroll_auto_to_focused();
+
+    if (!self->shared->item_epoch_app_owned) {
+        retire_stale_items(self->shared);
+    }
+
+    // A popup active last frame but not rendered this frame was closed by user code. Modals are exempt: they
+    // don't use popup_stack.
+    if (popup_closed_by_user_code(self)) {
+        ui_popup_close_internal(self);
+    }
+
+    update_virtual_keyboard(self);
+
+    render_frame(self, commands);
 
     // Frame strings are not legal to mint once the frame closes.
     self->frame_open = false;
@@ -1142,311 +1154,12 @@ void ui_text_styled_impl(FlString string, FlTextConfig config) {
     Clay__OpenTextElement(clay_string, clay_config);
 }
 
-// One behavior function for every widget family, controlled by flags. Declared in ui.h for use by
-// custom widgets (like text input).
-
-FlLayoutId resolve_widget_id(FlString fallback, FlString id_override) {
-    FlString id_string = id_override.length > 0 ? id_override : fallback;
-    return (FlLayoutId) { .name = id_string, .id = 0 };
-}
-
-u32 ui_layout_id_to_clay_id(FlLayoutId layout_id) {
-    Clay_ElementId clay_id = Clay__HashString(
-        (Clay_String) { .chars = layout_id.name.data, .length = (u32)layout_id.name.length }, layout_id.id);
-    return clay_id.id;
-}
-
-ItemState* get_item_state(FlLayoutId layout_id) {
-    u32 clay_id = ui_layout_id_to_clay_id(layout_id);
-    return hashmap_get(&g_ui_ctx->shared->item_state, clay_id);
-}
-
-FlSignal ui_item_behavior(FlLayoutId lay_id, FlItemFlags flags, FlWidgetConfig cfg) {
-    FlUiCtx* self = g_ui_ctx;
-
-    // The flag says the widget family is focusable; cfg.focusable is the per-instance override on top of it.
-    // Only an explicit No subtracts, since Default is also what a zeroed config carries. Yes is honoured by the
-    // widget family instead, the only layer that knows what else focus costs it (the scrollbar pairs it with
-    // focus_animation).
-    if (cfg.focusable == FlFocusable_No) {
-        flags &= (FlItemFlags)~FlItemFlags_focusable;
-    }
-
-    u32 widget_id = ui_layout_id_to_clay_id(lay_id);
-
-    ItemState* item = get_or_create_key(self, widget_id);
-    ANALYZER_ASSUME_NONNULL(item);
-    item->flags = flags;
-
-    FlSignal signal = { 0 };
-
-    // With a popup active, input to widgets outside its scope is blocked.
-    bool input_blocked = false;
-    if (self->popup_focus_scope_id != 0 && item->popup_scope_id != self->popup_focus_scope_id) {
-        input_blocked = true;
-    }
-
-    if (flags & (FlItemFlags_clickable | FlItemFlags_draggable)) {
-        bool mouse_in_bounds = item->state.hot && !input_blocked;
-        signal.hovered = mouse_in_bounds;
-    }
-
-    // Record which scroll area contains this item, which is what ui_is_widget_visible and ui_scroll_to_widget read.
-    // Keyed on containment, not focusability: an unfocusable item in a scroll area is still clipped by it.
-    if (self->scroll_area_stack_depth > 0) {
-        ScrollAreaStackEntry* current_scroll = &self->scroll_area_stack[self->scroll_area_stack_depth - 1];
-        WidgetScrollInfo info = {
-            .scroll_area_id = current_scroll->scroll_area_id,
-            .pos_in_content = { 0, 0 }, // queried via Clay_GetElementData when needed
-            .size = { 0, 0 },
-        };
-        hashmap_insert(&self->shared->widget_scroll_map, widget_id, info);
-    }
-
-    if (flags & FlItemFlags_focusable) {
-        if (self->focus_order != nullptr && self->focus_order_count < self->focus_order_capacity) {
-            self->focus_order[self->focus_order_count++] = widget_id;
-        }
-
-        // Continued immediate-mode emission must not steal focus back after navigation moves it elsewhere.
-        if (cfg.auto_focus && !item->auto_focus_consumed) {
-            self->focused_id = widget_id;
-            item->auto_focus_consumed = true;
-        }
-
-        // Popup auto-focus lands on the first focusable widget in the popup.
-        if (self->popup_needs_initial_focus && item->popup_scope_id == self->popup_focus_scope_id) {
-            self->focused_id = widget_id;
-            self->popup_needs_initial_focus = false;
-        }
-
-        signal.focused = item->state.focused && !input_blocked;
-
-        // A widget that just gained focus does not activate on the same frame.
-        bool just_gained_focus = item->state.focused && !item->was_focused;
-        signal.activated = item->state.focused && self->nav_activate_pressed && !input_blocked && !just_gained_focus;
-
-        if (signal.activated) {
-            ui_emit_feedback(self, FlUiFeedbackKind_Activated, 0, widget_id, FlUiFeedbackDir_None);
-        }
-    }
-
-    if (flags & FlItemFlags_clickable && !input_blocked) {
-        bool is_active = (self->active_id == widget_id);
-        signal.pressed = signal.hovered && self->mouse_pressed_this_frame;
-        signal.released = is_active && self->mouse_released_this_frame;
-
-        signal.clicked = is_active && self->mouse_released_this_frame && signal.hovered;
-
-        // Fast tap: pressed and released in the same frame, where active_id has not been updated yet (that
-        // happens in ui_update_end, after widget rendering).
-        if (self->mouse_pressed_this_frame && self->mouse_released_this_frame && signal.hovered) {
-            signal.clicked = true;
-        }
-
-        // Keyboard activation counts as a click.
-        if (signal.activated) {
-            signal.clicked = true;
-        }
-    }
-
-    if (flags & FlItemFlags_double_click && !input_blocked) {
-        if (signal.clicked) {
-            f64 time_since_last = self->input_state.time - item->last_click_time;
-            if (time_since_last < UI_MOUSE_DOUBLE_CLICK_TIME) {
-                signal.double_clicked = true;
-                item->click_count++;
-            } else {
-                item->click_count = 1;
-            }
-            item->last_click_time = self->input_state.time;
-        }
-    }
-
-    // Edge-triggered: fires once on the right-button press over the hovered item.
-    if (flags & FlItemFlags_right_click && !input_blocked) {
-        if (signal.hovered && self->mouse_buttons_pressed_this_frame[FlMouseButton_Right]) {
-            signal.right_clicked = true;
-        }
-    }
-
-    if (flags & FlItemFlags_draggable && !input_blocked) {
-        bool is_active = (self->active_id == widget_id);
-
-        if (signal.hovered && self->mouse_pressed_this_frame) {
-            item->is_dragging = true;
-            item->drag_start_mouse = (Vec2) { self->input_state.mouse.x, self->input_state.mouse.y };
-        }
-
-        // Items that opt into FlItem_DragThreshold only start dragging once the cursor has moved a few pixels
-        // from the press point; that's how a plain click (press + release in place) stays distinct from a
-        // drag. The distance is the per-button max travelled, tracked by the input layer since the press frame.
-        // Items without the flag drag immediately.
-        bool past_threshold = !(flags & FlItem_DragThreshold)
-                              || self->input_state.mouse.drag_max_distance_sqr[FlMouseButton_Left]
-                                     > UI_MOUSE_DRAG_THRESHOLD * UI_MOUSE_DRAG_THRESHOLD;
-
-        if (is_active && item->is_dragging && past_threshold) {
-            signal.dragging = true;
-            Vec2 current_mouse = { self->input_state.mouse.x, self->input_state.mouse.y };
-            signal.drag_delta.x = current_mouse.x - item->drag_start_mouse.x;
-            signal.drag_delta.y = current_mouse.y - item->drag_start_mouse.y;
-        }
-
-        if (self->mouse_released_this_frame && is_active) {
-            item->is_dragging = false;
-        }
-    }
-
-    if (flags & FlItemFlags_scroll_target && !input_blocked) {
-        if (signal.hovered) {
-            signal.wheel_delta.x = self->input_state.mouse.wheel_x_cached;
-            signal.wheel_delta.y = self->input_state.mouse.wheel_y_cached;
-        }
-    }
-
-    signal.mouse_pos.x = self->input_state.mouse.x - ITEM_LEFT(item);
-    signal.mouse_pos.y = self->input_state.mouse.y - ITEM_TOP(item);
-
-    // The hot/active/focus animations run in item_state_update, off the flags stored above.
-
-    // Kept for test inspection.
-    item->last_signal = signal;
-
-    return signal;
-}
-
-FlSignal ui_widget_behavior(FlLayoutId id, FlWidgetConfig cfg) {
-    return ui_item_behavior(id, STANDARD_WIDGET_FLAGS, cfg);
-}
-
-void fl_font_style_register(FlFontId font_id, FlFontStyle style) {
-    FL_VALIDATE(g_ui_ctx != nullptr);
-
-    if (style < 0 || style >= FontStyle_Count) {
-        log_error("Trying to register a style outside of bounds! skipping");
-        return;
-    }
-
-    g_ui_ctx->font_styles[style] = font_id;
-}
-
-void fl_font_style_set(FlFontStyle style) {
-    FL_VALIDATE(g_ui_ctx != nullptr);
-
-    if (style < 0 || style >= FontStyle_Count) {
-        log_error("Trying to register a style outside of bounds! skipping");
-        return;
-    }
-
-    g_ui_ctx->active_font = g_ui_ctx->font_styles[style];
-}
-
-void ui_font_set(FlFontId id) {
-    FL_VALIDATE(g_ui_ctx != nullptr);
-    g_ui_ctx->active_font = id;
-}
-
 FlVec2 ui_get_screen_size(void) {
     FlUiCtx* ctx = g_ui_ctx;
     if (ctx == nullptr) {
         return (FlVec2) { 0, 0 };
     }
     return (FlVec2) { ctx->layout_width, ctx->layout_height };
-}
-
-// A font handle carries the authored size; text_scale is multiplied in on use (ui_text_styled_impl, the painter).
-// 0 means the default size; 8px is the floor.
-static u16 authored_font_size(u16 default_size) {
-    u16 size = default_size != 0 ? default_size : 28;
-    return size < 8 ? 8 : size;
-}
-
-FlFontId ui_font_load(FlVfsMount* mount, FlString relative_path, u16 default_size) {
-    FL_VALIDATE_RET(g_ui_ctx != nullptr, FONT_ID_INVALID);
-    return font_cache_load_font(g_ui_ctx->shared->font_cache, mount, relative_path, authored_font_size(default_size));
-}
-
-// The public face of ui_font_load, for a host that loads fonts from its own data mount instead of the asset
-// mount fl_font_load resolves against.
-FlFontId fl_font_load_mount(FlVfsMount* mount, FlString relative_path, u16 default_size) {
-    return ui_font_load(mount, relative_path, default_size);
-}
-
-bool fl_font_load_fallback(FlVfsMount* mount, FlString relative_path) {
-    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
-    return font_cache_load_fallback(g_ui_ctx->shared->font_cache, mount, relative_path);
-}
-
-void ui_font_wait_load(FlFontId font_id) {
-    FL_VALIDATE(g_ui_ctx != nullptr);
-    font_cache_wait_loaded(g_ui_ctx->shared->font_cache, font_id);
-}
-
-bool ui_font_is_loaded(FlFontId id) {
-    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
-    return font_cache_get_font_status(g_ui_ctx->shared->font_cache, id) == FontStatus_Ready;
-}
-
-// Pump I/O until every kicked-off font has its metrics ready (or failed), so setup can load several fonts and
-// sync once before the first rendered frame. Returns false if any font failed to load.
-
-bool ui_font_ensure_loaded(void) {
-    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
-    return font_cache_ensure_all_loaded(g_ui_ctx->shared->font_cache);
-}
-
-FlFontId fl_font_load_default(u16 default_size) {
-    FL_VALIDATE_RET(g_ui_ctx != nullptr, FONT_ID_INVALID);
-    return font_cache_load_default_font(g_ui_ctx->shared->font_cache, authored_font_size(default_size));
-}
-
-// Emit a Clay image element for a prepared neutral image-source descriptor. When fill is set the
-// element grows to fill its parent (triggers scaled rendering); otherwise it sizes to w x h pixels.
-static void ui_emit_image_element(FlImageSource* source, FlColor color, bool fill, float w, float h) {
-    if (fill) {
-        CLAY_AUTO_ID({ .backgroundColor = { color.r, color.g, color.b, 255 },
-                       .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) } },
-                       .image = { .imageData = (void*)source } }) {}
-    } else {
-        CLAY_AUTO_ID({ .backgroundColor = { color.r, color.g, color.b, 255 },
-                       .layout = { .sizing = { .width = CLAY_SIZING_FIXED(w), .height = CLAY_SIZING_FIXED(h) } },
-                       .image = { .imageData = (void*)source } }) {}
-    }
-}
-
-void ui_image_impl(ImageHandle handle, FlImageOpts opts) {
-    ImageResult data = image_get_data(handle);
-
-    ImageStatus status = image_get_status(data);
-
-    if (status != ImageStatus_Ready) {
-        return;
-    }
-
-    // Clay's imageData slot carries the image-source descriptor; the Clay->IR translator reads it and the
-    // backend resolves the handle to pixels on ingest.
-    FlImageSource* source = arena_alloc_zero(g_ui_ctx->render_frame_allocator, FlImageSource);
-    source->kind = 0;
-    source->handle = (FlImageHandle)handle;
-
-    ui_emit_image_element(source, opts.color, opts.fill_container, (float)data.width, (float)data.height);
-}
-
-void ui_dynamic_image_impl(FlDynamicImage* image, FlImageOpts opts) {
-    if (image == nullptr) {
-        return;
-    }
-
-    // The descriptor references the live RGBA buffer; the backend deinterleaves it on ingest.
-    FlImageSource* source = arena_alloc_zero(g_ui_ctx->render_frame_allocator, FlImageSource);
-    source->kind = 1;
-    source->dynamic.pixels = image->user_buffer;
-    source->dynamic.w = (u32)image->width;
-    source->dynamic.h = (u32)image->height;
-    source->dynamic.stride = (u32)image->user_stride;
-
-    ui_emit_image_element(source, opts.color, opts.fill_container, (float)image->width, (float)image->height);
 }
 
 // The core holds zero scaling policy: it stores one absolute UI scale and one absolute text scale,
