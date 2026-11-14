@@ -106,6 +106,23 @@ int font_cache_get_glyph_advance_q4(FlFontCache* self, FlFontId font_id, u16 siz
 // fallback face, same as rendering.
 FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextStyle style);
 
+// A shaped run: the glyphs a string becomes and how far the pen moves after each. Measurement and drawing both
+// read this, so a measured width is the drawn width. advance and width are 26.6 at the run's size key.
+typedef struct FlShapedGlyph {
+    u32 glyph_id; // same meaning as FlGlyph.glyph_id
+    int advance;
+} FlShapedGlyph;
+
+typedef struct FlShapedRun {
+    const FlShapedGlyph* glyphs; // owned by the font cache, valid until its next font_cache_shape_run
+    u32 count;
+    i64 width; // sum of the advances, without letter spacing
+} FlShapedRun;
+
+// Shape one line at a quarter-px size key. An unknown or unready font still yields its glyphs, with zero advances.
+// Main thread only.
+FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text);
+
 // String-independent vertical metrics at a fractional size (quarter-pixel quantized), for stable
 // vertical centering of dynamic readouts. font_size <= 0 falls back to the font's load size.
 // Unknown/unready fonts return zeroed metrics (with a log).

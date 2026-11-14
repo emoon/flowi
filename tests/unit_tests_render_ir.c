@@ -46,6 +46,69 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     font_cache_destroy(cache);
 }
 
+// A shaped run is the one answer measurement and drawing both read: its width is the measured width and its
+// per-glyph advances are the pen steps.
+
+UTEST(render_ir, shaped_run_matches_measurement) {
+    FlFontCache* cache = font_cache_new(s_arena);
+    FlFontId font = font_cache_load_font_memory(cache, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
+    ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "memory-loaded font must be ready synchronously");
+
+    const float font_size = 7.5f;
+    const u16 q4 = font_cache_quantize_size_q4(font_size);
+
+    FlString ascii = { .data = "AAB", .length = 3, .is_static = 1, .is_ascii = 1 };
+    FlShapedRun run = font_cache_shape_run(cache, font, q4, ascii);
+    ASSERT_EQ_MSG((int)run.count, 3, "one glyph per codepoint");
+    i64 sum = 0;
+    for_count(i, run.count) {
+        ASSERT_EQ_MSG((int)run.glyphs[i].glyph_id, (int)ascii.data[i], "the glyph id is the codepoint");
+        ASSERT_EQ_MSG(run.glyphs[i].advance, font_cache_get_glyph_advance_q4(cache, font, q4, (u32)ascii.data[i]),
+                      "each glyph carries the cached advance");
+        sum += run.glyphs[i].advance;
+    }
+    ASSERT_TRUE_MSG(run.width == sum, "the run width is the sum of its advances");
+
+    FlTextMetrics m = font_cache_measure_text(cache, ascii, (FlTextStyle) { .font_id = font, .font_size = font_size });
+    ASSERT_NEAR_MSG((float)run.width / 64.0f, m.width, 0.0001f, "shaping and measuring agree on the width");
+
+    // U+00E9 is two bytes and one glyph.
+    FlString accented = { .data = "A\xC3\xA9", .length = 3, .is_static = 1 };
+    FlShapedRun wide = font_cache_shape_run(cache, font, q4, accented);
+    ASSERT_EQ_MSG((int)wide.count, 2, "glyphs are counted per codepoint, not per byte");
+    ASSERT_EQ_MSG((int)wide.glyphs[1].glyph_id, 0xE9, "a multi-byte sequence decodes to one glyph");
+
+    FlShapedRun unknown = font_cache_shape_run(cache, 9999, q4, ascii);
+    ASSERT_EQ_MSG((int)unknown.count, 3, "an unknown font still yields its glyphs");
+    ASSERT_TRUE_MSG(unknown.width == 0, "an unknown font advances zero");
+
+    FlShapedRun empty = font_cache_shape_run(cache, font, q4, (FlString) { 0 });
+    ASSERT_EQ_MSG((int)empty.count, 0, "an empty string shapes to nothing");
+
+    font_cache_destroy(cache);
+}
+
+// Drawing stops at an embedded NUL; the glyphs before it are laid out as usual.
+
+UTEST(render_ir, text_layout_stops_at_nul) {
+    FlFontCache* cache = font_cache_new(s_arena);
+    FlFontId font = font_cache_load_font_memory(cache, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
+    const u16 q4 = font_cache_quantize_size_q4(7.5f);
+
+    FlArena* ir = arena_new();
+    FlArena* scratch = arena_new();
+    void* start = fl_arena_current_pos(ir);
+    FlString text = { .data = "AA\0A", .length = 4, .is_static = 1 };
+    fl_ir_text_layout(ir, scratch, cache, font, q4, 1.0f, (FlColor) { 255, 255, 255, 255 }, text, 0.0f, 0.0f, 0.0f);
+
+    const FlCmdTextRun* run = (const FlCmdTextRun*)((const FlCmdHeader*)start + 1);
+    ASSERT_EQ_MSG((int)run->glyph_count, 2, "only the glyphs before the NUL are drawn");
+
+    fl_arena_destroy(scratch);
+    fl_arena_destroy(ir);
+    font_cache_destroy(cache);
+}
+
 // Positions scale with ui_scale. The type size and spacing follow text_scale, which this frame holds at 1.
 UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     FlArena* arena = arena_new();

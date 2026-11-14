@@ -56,6 +56,9 @@ struct FlFontCache {
     FontFace* fallback_face;
     int face_count;
     FlFontId next_id;
+    // Storage behind the run font_cache_shape_run hands out, reused by the next call. Main thread only.
+    FlShapedGlyph* shape_glyphs;
+    size_t shape_capacity;
 };
 
 FlFontCache* font_cache_new(FlArena* arena) {
@@ -460,6 +463,9 @@ static int freetype_advance(const AdvanceRun* run, u32 codepoint) {
 }
 
 static int glyph_advance(const AdvanceRun* run, u32 codepoint) {
+    if (run->face == nullptr) {
+        return 0;
+    }
     switch (run->face->kind) {
         case FlFontRasterKind_FreeType:
             return freetype_advance(run, codepoint);
@@ -578,30 +584,52 @@ static FlFontMetrics face_vmetrics(FlFontCache* self, FontFace* face, u16 q4) {
     return out;
 }
 
-// Advance sum (26.6) and glyph count over one line, via the shared per-glyph cache.
-typedef struct AdvanceSum {
-    i64 sum;
-    i64 glyphs;
-} AdvanceSum;
+// Add one codepoint to a run. glyphs is nullptr when the caller only measures.
+static void shape_codepoint(const AdvanceRun* run, u32 codepoint, FlShapedGlyph* glyphs, FlShapedRun* out) {
+    const int advance = glyph_advance(run, codepoint);
+    if (glyphs != nullptr) {
+        glyphs[out->count] = (FlShapedGlyph) { .glyph_id = codepoint, .advance = advance };
+    }
+    out->count++;
+    out->width += advance;
+}
 
-static AdvanceSum sum_advances(const AdvanceRun* run, FlString text) {
-    AdvanceSum out = { 0 };
+// The single place a string becomes glyphs and advances. glyphs needs room for one entry per byte of text, or is
+// nullptr to get only the count and width.
+static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph* glyphs) {
+    FlShapedRun out = { .glyphs = glyphs };
     if (text.data == nullptr) {
         return out;
     }
     if (text.is_ascii) {
         for (size_t j = 0; j < text.length; j++) {
-            out.sum += glyph_advance(run, (unsigned char)text.data[j]);
+            shape_codepoint(run, (unsigned char)text.data[j], glyphs, &out);
         }
-        out.glyphs = (i64)text.length;
         return out;
     }
     Utf8Iter it = utf8_iter(text);
     while (!utf8_iter_done(&it)) {
-        out.sum += glyph_advance(run, utf8_iter_next(&it));
-        out.glyphs++;
+        shape_codepoint(run, utf8_iter_next(&it), glyphs, &out);
     }
     return out;
+}
+
+// Room for count glyphs in the reused shaping buffer. Growth doubles, so the arena keeps at most as much dead
+// storage as the live buffer.
+static FlShapedGlyph* shape_buffer(FlFontCache* self, size_t count) {
+    if (count > self->shape_capacity) {
+        self->shape_capacity = max(count, self->shape_capacity * 2);
+        self->shape_glyphs = arena_alloc_array(self->arena, FlShapedGlyph, self->shape_capacity);
+    }
+    return self->shape_glyphs;
+}
+
+FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text) {
+    if (text.data == nullptr || text.length == 0) {
+        return (FlShapedRun) { 0 };
+    }
+    AdvanceRun run = { .cache = self, .face = find_face_by_id(self, font_id), .q4 = size_q4, .may_claim_row = false };
+    return shape_run(&run, text, shape_buffer(self, text.length));
 }
 
 Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id, u16 font_size) {
@@ -616,7 +644,7 @@ Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id
 
     u16 q4 = font_cache_whole_px_to_q4(font_size);
     AdvanceRun run = { .cache = self, .face = face, .q4 = q4, .may_claim_row = true };
-    float width = (float)sum_advances(&run, text).sum / 64.0f;
+    float width = (float)shape_run(&run, text, nullptr).width / 64.0f;
     return (Vec2) { width, face_vmetrics(self, face, q4).line_height };
 }
 
@@ -638,10 +666,10 @@ FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextSt
     }
 
     AdvanceRun run = { .cache = self, .face = face, .q4 = q4, .may_claim_row = false };
-    AdvanceSum advances = sum_advances(&run, text);
-    out.width = (float)advances.sum / 64.0f;
-    if (advances.glyphs > 1) {
-        out.width += style.letter_spacing * (float)(advances.glyphs - 1);
+    FlShapedRun shaped = shape_run(&run, text, nullptr);
+    out.width = (float)shaped.width / 64.0f;
+    if (shaped.count > 1) {
+        out.width += style.letter_spacing * (float)(shaped.count - 1);
     }
 
     FlFontMetrics vm = face_vmetrics(self, face, q4);
