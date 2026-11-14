@@ -20,8 +20,9 @@ typedef struct DockPromoteRequest {
     FlDockPanelId panel;
 } DockPromoteRequest;
 
-// A live promotion: a workspace hosted in its own window. host_window is the host's opaque handle (the close key);
-// dst is that workspace; src is where its panels demote back to on close.
+// A live promotion: a workspace hosted in its own window. host_window is the host's opaque handle (the close key),
+// nullptr while the host is still inside open_promoted_window; dst is that workspace; src is where its panels demote
+// back to on close.
 typedef struct DockPromotion {
     void* host_window;
     FlDockWorkspace* dst;
@@ -236,10 +237,11 @@ static void apply_promote(FlDockShared* ds, const DockPromoteRequest* req) {
     ds->promotions[ds->promotion_count++] = (DockPromotion) { .dst = dst, .src = req->src };
     void* host_window
         = ds->host.open_promoted_window(ds->host.user_data, dst, DOCK_PROMOTED_DEFAULT_W, DOCK_PROMOTED_DEFAULT_H);
-    u32 index = (u32)promotion_of_workspace(ds, dst);
+    i32 index = promotion_of_workspace(ds, dst);
+    FL_ASSERT_FATAL(index >= 0); // only a close by handle removes a record, and this one has no handle yet
     if (host_window == nullptr) {
         // The host could not open a window: demote the panel straight back, and drop dst.
-        DockPromotion failed = take_promotion(ds, index);
+        DockPromotion failed = take_promotion(ds, (u32)index);
         dock_workspace_demote(failed.src, dst, req->panel);
         dock_registry_remove(ds, dst);
         return;

@@ -283,6 +283,9 @@ void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanel
     if (drag == nullptr || committed == nullptr) {
         return;
     }
+    if (!dock_tree_has_panel(committed, panel)) {
+        return;
+    }
     // Read the origin leaf before the undock dissolves it: it is the seat a drop over no zone returns to.
     FlDockNode* origin = dock_tree_find_leaf_with_panel(committed, panel);
     FlDockNodeId origin_leaf = origin != nullptr ? origin->id : 0;

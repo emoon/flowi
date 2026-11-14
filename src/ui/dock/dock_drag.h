@@ -134,8 +134,9 @@ typedef struct FlDockDrag {
 
 // Begin the "drag a tab out of its leaf" gesture: first undock panel into the internal-floating set, then arm the
 // drag so the now-floating panel can be re-docked through the same overlay. The undock mutates committed at the
-// safe input-handling point, before any per-frame emit walk. Undocking a panel that is not currently docked is a
-// no-op on the tree; the drag is armed regardless so the grab still tracks the panel. Call from a UI frame.
+// safe input-handling point, before any per-frame emit walk. A panel already in the floating set is dragged as it
+// is. A panel the tree does not hold arms nothing: a drop would dock a copy of a panel that lives in another
+// workspace. Call from a UI frame.
 void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanelId panel, FlDockFamilyGate gate);
 
 // Resolve cursor (logical px) against the drag's hit-test buffer and latch the result into `drag->zone` /

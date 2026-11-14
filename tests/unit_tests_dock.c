@@ -2055,6 +2055,35 @@ UTEST(dock_workspace, a_promotion_survives_its_source_closing_while_its_window_o
     ASSERT_EQ((int)dock_tree_collect_panels(src->tree, nullptr, 0), 3);
 }
 
+// The same close, from a host that then fails to open the window: the panel goes back to a workspace that still
+// exists.
+UTEST(dock_workspace, a_failed_open_demotes_past_a_source_that_closed_meanwhile) {
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+    DOCK_STUB_HOST(scope, fixture, dock_split(FlDockAxis_X, 0.5f, dock_leaf(101), dock_leaf(102)));
+    FlDockWorkspace* src = scope.tree.ws;
+
+    dock_promote_panel(101);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    ASSERT_EQ(s_stub_host.open_calls, 1);
+    FlDockWorkspace* first = s_stub_host.last_ws;
+    FlDockRequest tab = { .kind = FlDockRequest_Tab, .panel = 103, .target_node = first->tree->root->id };
+    ASSERT_TRUE(dock_tree_apply(first->tree, &tab));
+
+    s_stub_host.return_null = true;
+    s_stub_host.closes_on_open = &s_stub_host_handle;
+    ui_ctx_set_dock_workspace(fixture, first);
+    dock_promote_panel(103);
+    ui_ctx_set_dock_workspace(fixture, src);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+
+    ASSERT_EQ(s_stub_host.open_calls, 2);
+    ASSERT_TRUE_MSG(dock_tree_find_leaf_with_panel(src->tree, 103) != nullptr, "103 lands in the main workspace");
+    ASSERT_EQ((int)dock_tree_collect_panels(src->tree, nullptr, 0), 3);
+}
+
 // Closing a promoted window docks its panels into the source at once, because their workspace is going away. A
 // drag in flight there is cancelled first, as Escape would, so its preview never misses them.
 UTEST(dock_workspace, closing_a_promoted_window_cancels_a_drag_in_its_source) {

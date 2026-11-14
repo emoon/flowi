@@ -26,7 +26,8 @@ extern "C" {
 typedef struct FlDockHost {
     void* user_data;
     // Open an OS window hosting ws (rendered via the app's dock frame fn the host already holds). Returns an
-    // opaque host handle identifying the window (used as the demote-on-close key), or nullptr on failure.
+    // opaque host handle identifying the window (used as the demote-on-close key), or nullptr on failure. The host
+    // may report another promoted window closed from inside this call, but not the window whose frame is running.
     void* (*open_promoted_window)(void* ud, FlDockWorkspace* ws, f32 w, f32 h);
     // Close a window previously returned by open_promoted_window (the flowi-initiated teardown path; the
     // user/WM-initiated path runs through fl_dock_notify_window_closed instead).
