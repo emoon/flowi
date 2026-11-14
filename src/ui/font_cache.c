@@ -69,6 +69,7 @@ struct FlFontCache {
     int face_count;
     FlFontId next_id;
     FlArena* shape_arena;
+    FontShaper* shaper;
 };
 
 FlFontCache* font_cache_new(FlArena* arena) {
@@ -76,6 +77,7 @@ FlFontCache* font_cache_new(FlArena* arena) {
     cache->next_id = 1;
     cache->arena = arena_new();
     cache->shape_arena = arena_new();
+    cache->shaper = font_shaper_new(cache->arena);
     mutex_init(&cache->ft_lock);
     FT_Init_FreeType(&cache->library);
     return cache;
@@ -351,6 +353,7 @@ void font_cache_destroy(FlFontCache* self) {
         self->library = nullptr;
     }
     mutex_destroy(&self->ft_lock);
+    font_shaper_destroy(self->shaper);
     fl_arena_destroy(self->arena);
     fl_arena_destroy(self->shape_arena);
 
@@ -710,7 +713,62 @@ static bool all_printable_ascii(FlString text) {
     return printable;
 }
 
+static bool is_ready(const FontFace* face) {
+    return face != nullptr && face->status == FontStatus_Ready;
+}
+
+static bool has_shaper_font(const FontFace* face) {
+    return is_ready(face) && face->shaper_font != nullptr;
+}
+
+static bool is_proportional(const FontFace* face) {
+    return has_shaper_font(face) && !face->fixed_pitch;
+}
+
+static FontFace* run_fallback(const AdvanceRun* run) {
+    FontFace* fallback = run->cache->fallback_face;
+    return is_ready(fallback) && fallback != run->face ? fallback : nullptr;
+}
+
+static bool fallback_can_shape(const AdvanceRun* run) {
+    const FontFace* fallback = run_fallback(run);
+    return fallback == nullptr || fallback->shaper_font != nullptr;
+}
+
+static bool is_shaped_size(const AdvanceRun* run) {
+    return is_proportional(run->face) && run->q4 != 0;
+}
+
+static bool is_kb_run(const AdvanceRun* run) {
+    return is_shaped_size(run) && fallback_can_shape(run);
+}
+
+static FontShaperFace kb_fallback_face(const AdvanceRun* run) {
+    const FontFace* fallback = run_fallback(run);
+    if (fallback == nullptr) {
+        return (FontShaperFace) { 0 };
+    }
+    return (FontShaperFace) { .font = fallback->shaper_font, .id = fallback->id };
+}
+
+static bool kb_shape_run(const AdvanceRun* run, FlString text, FlArena* glyph_arena, FlShapedRun* out) {
+    if (!is_kb_run(run) || text.data == nullptr) {
+        return false;
+    }
+    const FontShaperRun request = {
+        .primary = { .font = run->face->shaper_font, .id = run->face->id },
+        .fallback = kb_fallback_face(run),
+        .size_q4 = run->q4,
+        .glyph_arena = glyph_arena,
+    };
+    return font_shaper_shape(run->cache->shaper, &request, text, out);
+}
+
 static FlShapedRun measure_run(const AdvanceRun* run, FlString text) {
+    FlShapedRun shaped;
+    if (kb_shape_run(run, text, nullptr, &shaped)) {
+        return shaped;
+    }
     const int advance = is_fixed_face_text(run->face, text) ? fixed_cell_advance(run) : -1;
     if (advance < 0 || !all_printable_ascii(text)) {
         return shape_run(run, text, nullptr);
@@ -729,9 +787,14 @@ FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q
     }
     text.is_ascii = 0;
 
+    AdvanceRun run = { .cache = self, .face = find_face_by_id(self, font_id), .q4 = size_q4, .font = font_id };
+    FlShapedRun shaped;
+    fl_arena_rewind(self->shape_arena);
+    if (kb_shape_run(&run, text, self->shape_arena, &shaped)) {
+        return shaped;
+    }
     fl_arena_rewind(self->shape_arena);
     FlShapedGlyph* glyphs = arena_alloc_array_st(self->shape_arena, FlShapedGlyph, text.length);
-    AdvanceRun run = { .cache = self, .face = find_face_by_id(self, font_id), .q4 = size_q4, .font = font_id };
     return shape_run(&run, text, glyphs);
 }
 

@@ -51,6 +51,11 @@ static bool can_measure(FlUiCtx* ctx) {
     return ctx && ctx->shared->font_cache;
 }
 
+static float prefix_width(FlUiCtx* ctx, const FlTextInputState* state, int length) {
+    FlString prefix = { .data = state->buffer, .length = (size_t)length, .is_static = 0 };
+    return ui_text_edit_measure(ctx, prefix).x;
+}
+
 static float STB_TEXTEDIT_GETWIDTH(FlTextInputState* state, int line_start, int char_idx) {
     (void)line_start; // Single-line input, line_start unused
     if (char_idx < 0 || char_idx >= (int)state->buffer_length) {
@@ -62,8 +67,7 @@ static float STB_TEXTEDIT_GETWIDTH(FlTextInputState* state, int line_start, int 
         return 8.0f; // Fallback width
     }
 
-    FlString single_char = { .data = &state->buffer[char_idx], .length = 1, .is_static = 0 };
-    return ui_text_edit_measure(ctx, single_char).x;
+    return prefix_width(ctx, state, char_idx + 1) - prefix_width(ctx, state, char_idx);
 }
 
 static void STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* row, FlTextInputState* state, int line_start) {
@@ -76,9 +80,10 @@ static void STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* row, FlTextInputState* state,
     row->ymax = font_height;
     row->num_chars = state->buffer_length - line_start;
 
-    row->x1 = 0.0f;
-    for_count(i, row->num_chars) {
-        row->x1 += STB_TEXTEDIT_GETWIDTH(state, line_start, line_start + i);
+    if (can_measure(ctx)) {
+        row->x1 = prefix_width(ctx, state, (int)state->buffer_length) - prefix_width(ctx, state, line_start);
+    } else {
+        row->x1 = 8.0f * (float)row->num_chars;
     }
 }
 

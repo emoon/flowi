@@ -29,7 +29,7 @@ impl Text {
         unsafe { crate::sys::fl_text_styled({ let s = text; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, config) }
     }
 
-    /// Measure a single-line string without drawing it: summed glyph advances plus letter spacing
+    /// Measure a single-line string without drawing it: its laid-out width plus letter spacing
     /// (n−1 gaps), and the line's vertical metrics at the styled size. Uses the same styling inputs
     /// as the painter styled draw, so a measured run matches what gets drawn. An unloaded font
     /// measures as all zeroes; missing glyphs measure via the fallback face, same as rendering.

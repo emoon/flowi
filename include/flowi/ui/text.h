@@ -25,7 +25,7 @@ typedef struct FlTextStyle {
 
 // Measured extents of a single-line string. All values are logical px.
 typedef struct FlTextMetrics {
-    // Summed glyph advances plus letter spacing (n−1 gaps).
+    // Laid-out width of the text plus letter spacing (n−1 gaps).
     float width;
     // Line height at this size.
     float height;
@@ -43,7 +43,7 @@ FL_API void fl_text_emit(FlString text);
 // Emit a configurable layout-participating text element: config carries font, size, color, spacing,
 // vertical alignment, and wrap control.
 FL_API void fl_text_styled(FlString text, FlTextConfig config);
-// Measure a single-line string without drawing it: summed glyph advances plus letter spacing
+// Measure a single-line string without drawing it: its laid-out width plus letter spacing
 // (n−1 gaps), and the line's vertical metrics at the styled size. Uses the same styling inputs
 // as the painter styled draw, so a measured run matches what gets drawn. An unloaded font
 // measures as all zeroes; missing glyphs measure via the fallback face, same as rendering.

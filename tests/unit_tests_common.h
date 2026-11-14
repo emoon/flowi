@@ -236,6 +236,7 @@ int render_cmd_collect(UiRenderCommandType type, UiRenderCommand* out, int max);
 bool tab_color_eq(UiColor4 got, FlColor want);
 void canvas_fixture_reset(FlUiCtx* ctx);
 bool focus_ring_drawn(void);
+int laid_out_advance_q4(FlFontCache* cache, FlFontId font, u16 q4, u32 codepoint);
 #if defined(__linux__)
 int count_open_fds(void);
 #endif
