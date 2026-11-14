@@ -360,7 +360,7 @@ void font_cache_destroy(FlFontCache* self) {
     self->face_count = 0;
 }
 
-void font_cache_update(FlFontCache* self) {
+static void pump_font_loads(FlFontCache* self) {
     for_count(i, self->face_count) {
         FontFace* face = &self->faces[i];
 
@@ -382,9 +382,13 @@ void font_cache_update(FlFontCache* self) {
     }
 }
 
+void font_cache_update(FlFontCache* self) {
+    pump_font_loads(self);
+}
+
 void font_cache_wait_loaded(FlFontCache* self, FlFontId id) {
     while (font_cache_get_font_status(self, id) == FontStatus_Loading) {
-        font_cache_update(self);
+        pump_font_loads(self);
         sleep_us(500);
     }
 }
@@ -405,7 +409,7 @@ bool font_cache_ensure_all_loaded(FlFontCache* self) {
         if (!any_loading) {
             break;
         }
-        font_cache_update(self);
+        pump_font_loads(self);
         sleep_us(500);
     }
 
