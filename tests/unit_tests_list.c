@@ -45,8 +45,7 @@ static FlListResult sel_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* 
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(viewport_h) },
                    .direction = FlLayoutDirection_TopToBottom) {
-        FlListRange r = ui_list_begin(list_id, (ListModel) { .ordered_ids = ids, .count = count, .set = set },
-                                      (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
+        FlListRange r = ui_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = r.start; i < r.end; i++) {
             FlSignal sig = ui_list_item_begin((u64)(i + 1));
             if (out_signals != nullptr) {
@@ -78,8 +77,7 @@ static FlListRange sel_setup(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* s
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(viewport_h) },
                    .direction = FlLayoutDirection_TopToBottom) {
-        range = ui_list_begin(list_id, (ListModel) { .ordered_ids = ids, .count = count, .set = set },
-                              (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
+        range = ui_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = range.start; i < range.end; i++) {
             ui_list_item_begin((u64)(i + 1));
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
@@ -413,7 +411,7 @@ static FlListResult kb_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* s
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(viewport_h) },
                    .direction = FlLayoutDirection_TopToBottom) {
-        FlListRange r = ui_list_begin(list_id, (ListModel) { .ordered_ids = ids, .count = count, .set = set },
+        FlListRange r = ui_list_begin(list_id, ids, count, set,
                                       (FlListConfig) { .row_height = 24.0f, .gap = 4.0f, .labels = labels });
         for (u32 i = r.start; i < r.end; i++) {
             ui_list_item_begin(ids[i]);
@@ -666,8 +664,8 @@ static FlListResult focusreq_frame(FlUiCtx* ctx, FlLayoutId list_id, const u64* 
         if (request) {
             ui_list_request_focus(list_id, seed);
         }
-        FlListRange r = ui_list_begin(list_id, (ListModel) { .ordered_ids = ids, .count = count, .set = nullptr },
-                                      (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
+        FlListRange r
+            = ui_list_begin(list_id, ids, count, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = r.start; i < r.end; i++) {
             ui_list_item_begin(ids[i]);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
@@ -821,8 +819,7 @@ static FlListRange marquee_frame_ex(FlUiCtx* ctx, FlLayoutId list_id, FlSelectio
     ui_update_begin(ctx);
     ui_layout_area_id(ID("marquee_root"), .sizing = { sizing_fixed(300), sizing_fixed(120) },
                       .direction = LayoutDirection_TopToBottom) {
-        range = ui_list_begin(list_id, (ListModel) { .ordered_ids = ids, .count = count, .set = set },
-                              (FlListConfig) { .row_height = 24.0f, .gap = 12.0f });
+        range = ui_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 12.0f });
         for (u32 i = range.start; i < range.end; i++) {
             ui_list_item_begin(ids[i]);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
@@ -1025,8 +1022,8 @@ static FlListResult drag_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet*
     ui_update_begin(ctx);
     ui_layout_area_id(ID("drag_root"), .sizing = { sizing_fixed(300), sizing_fixed(120) },
                       .direction = LayoutDirection_TopToBottom) {
-        FlListRange range = ui_list_begin(list_id, (ListModel) { .ordered_ids = ids, .count = count, .set = set },
-                                          (FlListConfig) { .row_height = 24.0f, .gap = 12.0f });
+        FlListRange range
+            = ui_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 12.0f });
         for (u32 i = range.start; i < range.end; i++) {
             ui_list_item_begin(ids[i]);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
@@ -1129,7 +1126,7 @@ UTEST(list_drag, reorder_request) {
     fl_app_destroy(app);
 }
 
-// The declarative one-call face ui_list(a ListDecl (id, items, count, set, opts)): the widget takes an array of {id,
+// The declarative one-call face ui_list(id, items, count, set, opts): the widget takes an array of {id,
 // label, icon} descriptors and the caller-owned set, runs the whole interaction internally (virtualization, selection,
 // keyboard nav, marquee, drag-reorder, auto-apply), and the app reads only the policy outcomes off the result. Geometry
 // mirrors the drag case: row_height 24 + gap 12 -> 36px stride in a 120px viewport at the window origin (ui_scale 1,
@@ -1158,7 +1155,7 @@ static FlListResult decl_frame_ex(FlUiCtx* ctx, FlLayoutId list_id, const FlList
     ui_update_begin(ctx);
     ui_layout_area_id(ID("decl_root"), .sizing = { sizing_fixed(300), sizing_fixed(120) },
                       .direction = LayoutDirection_TopToBottom) {
-        lr = ui_list((ListDecl) { .id = list_id, .items = items, .count = count, .set = set, .opts = opts });
+        lr = ui_list(list_id, items, count, set, opts);
     }
     ui_update_end(ctx, 1.0f / 60.0f);
     return lr;
@@ -1296,7 +1293,7 @@ UTEST(list_declarative, policy_outcomes) {
 
     // ---------------------------------------------------------------------------------------------------------------
     // (6) Empty / NULL edges: count==0 and items==NULL both render a clean empty list (no crash, zero result). The
-    // NULL-items case feeds a non-zero count to prove list_decl_impl ignores the count without its backing array.
+    // NULL-items case feeds a non-zero count to prove ui_list ignores the count without its backing array.
     FlListResult empty = decl_frame_ex(ctx, ID("decl_empty"), items, 0, nullptr, -100.0f, -100.0f, false, false, false,
                                        false, false, FlKeyModifier_None, no_reorder);
     ASSERT_EQ_MSG((u64)0, empty.activated_id, "empty list: nothing activated");

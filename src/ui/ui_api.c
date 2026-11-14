@@ -173,12 +173,8 @@ void fl_painter_rect_rounded(float x, float y, float w, float h, float radius, F
     painter_rect_rounded(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, radius, color);
 }
 
-void fl_painter_gradient_rect(float x, float y, float w, float h, FlColor top_left, FlColor top_right,
-                              FlColor bottom_left, FlColor bottom_right) {
-    painter_gradient_rect(
-        ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h },
-        (PainterCornerColors) {
-            .top_left = top_left, .top_right = top_right, .bottom_left = bottom_left, .bottom_right = bottom_right });
+void fl_painter_gradient_rect(float x, float y, float w, float h, FlCornerColors colors) {
+    painter_gradient_rect(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, colors);
 }
 
 void fl_painter_rect_styled(float x, float y, float w, float h, FlRectConfig config) {
@@ -186,11 +182,11 @@ void fl_painter_rect_styled(float x, float y, float w, float h, FlRectConfig con
 }
 
 void fl_painter_hline(float x, float y, float length, FlColor color) {
-    painter_hline(ui_get_painter(), (PainterRule) { .x = x, .y = y, .length = length, .color = color });
+    painter_hline(ui_get_painter(), x, y, length, color);
 }
 
 void fl_painter_vline(float x, float y, float length, FlColor color) {
-    painter_vline(ui_get_painter(), (PainterRule) { .x = x, .y = y, .length = length, .color = color });
+    painter_vline(ui_get_painter(), x, y, length, color);
 }
 
 // The two text draws are the exception: resolving the font-id zero semantic reads the context itself, so they
@@ -201,8 +197,7 @@ void fl_painter_text(float x, float y, FlString text, uint32_t font, FlColor col
     if (self == nullptr) {
         return;
     }
-    painter_text(ui_get_painter(), (PainterTextRun) { .x = x, .y = y, .text = text, .color = color },
-                 resolve_font_id(self, font));
+    painter_text(ui_get_painter(), x, y, text, resolve_font_id(self, font), color);
 }
 
 void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, FlColor color) {
@@ -211,78 +206,39 @@ void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, 
         return;
     }
     style.font_id = resolve_font_id(self, style.font_id);
-    painter_text_styled(ui_get_painter(), (PainterTextRun) { .x = x, .y = y, .text = text, .color = color }, style);
+    painter_text_styled(ui_get_painter(), x, y, text, style, color);
 }
 
 bool fl_painter_image(float x, float y, float w, float h, uint32_t image, FlColor color) {
     return painter_image(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, image, color);
 }
 
-bool fl_painter_image_sub(float dx, float dy, float dw, float dh, float sx, float sy, float sw, float sh,
-                          FlImageHandle image, FlColor color) {
-    return painter_image_sub(ui_get_painter(), (PainterImageSub) { .dst = { .x = dx, .y = dy, .w = dw, .h = dh },
-                                                                   .src = { .x = sx, .y = sy, .w = sw, .h = sh },
-                                                                   .image = image,
-                                                                   .color = color });
+bool fl_painter_image_sub(FlImageSub sub) {
+    return painter_image_sub(ui_get_painter(), sub);
 }
 
-void fl_painter_circle(float cx, float cy, float radius, FlColor color, FlColor border_color, float border_width) {
-    painter_circle(
-        ui_get_painter(),
-        (PainterCircle) { .cx = cx,
-                          .cy = cy,
-                          .radius = radius,
-                          .fill = { .color = color, .border_color = border_color, .border_width = border_width } });
+void fl_painter_circle(FlCircleShape circle) {
+    painter_circle(ui_get_painter(), circle);
 }
 
-void fl_painter_circle_stroked(float cx, float cy, float radius, FlColor color, FlColor border_color,
-                               float border_width, FlStrokeStyle stroke) {
-    painter_circle_stroked(
-        ui_get_painter(),
-        (PainterCircle) { .cx = cx,
-                          .cy = cy,
-                          .radius = radius,
-                          .fill = { .color = color, .border_color = border_color, .border_width = border_width } },
-        stroke);
+void fl_painter_circle_stroked(FlCircleShape circle, FlStrokeStyle stroke) {
+    painter_circle_stroked(ui_get_painter(), circle, stroke);
 }
 
-void fl_painter_diamond(float cx, float cy, float rx, float ry, FlColor color, FlColor border_color,
-                        float border_width) {
-    painter_diamond(
-        ui_get_painter(),
-        (PainterDiamond) { .cx = cx,
-                           .cy = cy,
-                           .rx = rx,
-                           .ry = ry,
-                           .fill = { .color = color, .border_color = border_color, .border_width = border_width } });
+void fl_painter_diamond(FlDiamondShape diamond) {
+    painter_diamond(ui_get_painter(), diamond);
 }
 
-void fl_painter_arc(float cx, float cy, float radius, float thickness, float start_angle, float sweep, FlColor color,
-                    FlArcFlags flags) {
-    painter_arc(ui_get_painter(), (PainterArc) { .cx = cx,
-                                                 .cy = cy,
-                                                 .radius = radius,
-                                                 .thickness = thickness,
-                                                 .start_angle = start_angle,
-                                                 .sweep = sweep,
-                                                 .color = color,
-                                                 .flags = flags });
+void fl_painter_arc(FlArcShape arc) {
+    painter_arc(ui_get_painter(), arc);
 }
 
-void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, float width, FlColor color,
-                         FlPolylineFlags flags, FlColor fill_color, float baseline_y) {
-    painter_polyline(ui_get_painter(), (PainterPolyline) { .points = points,
-                                                           .point_count = points_size,
-                                                           .width = width,
-                                                           .color = color,
-                                                           .flags = flags,
-                                                           .fill_color = fill_color,
-                                                           .baseline_y = baseline_y });
+void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, FlPolylineStyle style) {
+    painter_polyline(ui_get_painter(), points, points_size, style);
 }
 
 void fl_painter_bars(float baseline_y, const FlBar* bars, uint32_t bars_size, FlColor color) {
-    painter_bars(ui_get_painter(),
-                 (PainterBars) { .baseline_y = baseline_y, .bars = bars, .bar_count = bars_size, .color = color });
+    painter_bars(ui_get_painter(), baseline_y, bars, bars_size, color);
 }
 
 // Hand-written bodies for the generated Text api. emit is a plain layout element in the theme primary
@@ -534,14 +490,14 @@ void fl_input_push_window_event(FlWindowEvent event) {
 // Declarative List one-call face - the list slot on the UiInput domain (ui_input.def).
 FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t count, FlSelectionSet* set,
                            FlListOpts opts) {
-    return ui_list((ListDecl) { .id = id, .items = items, .count = count, .set = set, .opts = opts });
+    return ui_list(id, items, count, set, opts);
 }
 
 // UiList (ui_list.def).
 
 FlListRange fl_list_begin(FlLayoutId id, const uint64_t* ordered_ids, uint32_t count, FlSelectionSet* set,
                           FlListConfig config) {
-    return ui_list_begin(id, (ListModel) { .ordered_ids = ordered_ids, .count = count, .set = set }, config);
+    return ui_list_begin(id, ordered_ids, count, set, config);
 }
 
 FlSignal fl_list_item_begin(uint64_t stable_id) {
@@ -745,14 +701,7 @@ FlSignal fl_scrollbar_impl(float* value, FlScrollbarConfig config) {
 
 void fl_dropdown_impl(FlString label, bool* is_open, const FlString* options, uint32_t options_size,
                       int32_t* selected_index, FlDropdownConfig config) {
-    ui_dropdown_impl(&(UiDropdownRequest) {
-        .label = label,
-        .is_open = is_open,
-        .options = options,
-        .option_count = (int)options_size,
-        .selected_index = selected_index,
-        .cfg = config,
-    });
+    ui_dropdown_impl(label, is_open, options, (int)options_size, selected_index, config);
 }
 
 bool fl_tab_bar_impl(const FlString* tabs, uint32_t tabs_size, int32_t* selected_index, FlTabBarConfig config) {

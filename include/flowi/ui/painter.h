@@ -108,6 +108,111 @@ typedef struct FlColoredRect {
     FlColor color;
 } FlColoredRect;
 
+// The four corner colors of a Painter::gradient_rect, interpolated bilinearly across the rectangle.
+typedef struct FlCornerColors {
+    // top-left corner
+    FlColor top_left;
+    // top-right corner
+    FlColor top_right;
+    // bottom-left corner
+    FlColor bottom_left;
+    // bottom-right corner
+    FlColor bottom_right;
+} FlCornerColors;
+
+// A filled circle with an optional border ring, in logical (authoring) space.
+typedef struct FlCircleShape {
+    // center x
+    float cx;
+    // center y
+    float cy;
+    // radius
+    float radius;
+    // fill color
+    FlColor color;
+    // border ring color
+    FlColor border_color;
+    // border ring width; 0 = no border
+    float border_width;
+} FlCircleShape;
+
+// A filled diamond with an optional border ring, in logical (authoring) space.
+typedef struct FlDiamondShape {
+    // center x
+    float cx;
+    // center y
+    float cy;
+    // horizontal half-extent
+    float rx;
+    // vertical half-extent
+    float ry;
+    // fill color
+    FlColor color;
+    // border ring color
+    FlColor border_color;
+    // border ring width; 0 = no border
+    float border_width;
+} FlDiamondShape;
+
+// A stroked arc, ring or circle sector, in logical (authoring) space. Angles are radians: 0 is 12 o'clock
+// and a positive sweep runs clockwise.
+typedef struct FlArcShape {
+    // center x
+    float cx;
+    // center y
+    float cy;
+    // outer radius
+    float radius;
+    // stroke thickness, extending inward from radius; thickness >= radius makes a filled sector
+    float thickness;
+    // angle the arc starts at
+    float start_angle;
+    // angle the arc covers from start_angle
+    float sweep;
+    // stroke color
+    FlColor color;
+    // end caps (empty = butt caps)
+    FlArcFlags flags;
+} FlArcShape;
+
+// How a Painter::polyline is stroked and filled.
+typedef struct FlPolylineStyle {
+    // stroke width; caps and joins are always round
+    float width;
+    // stroke color
+    FlColor color;
+    // filling and closing (empty = an open stroke)
+    FlPolylineFlags flags;
+    // fill color, used when flags has filled
+    FlColor fill_color;
+    // y the fill extends to, used when flags has filled
+    float baseline_y;
+} FlPolylineStyle;
+
+// A source rectangle of an image drawn into a destination rectangle.
+typedef struct FlImageSub {
+    // destination left edge, in logical (authoring) space
+    float dx;
+    // destination top edge
+    float dy;
+    // destination width; non-positive uses the source width
+    float dw;
+    // destination height; non-positive uses the source height
+    float dh;
+    // source left edge, in source image pixels
+    float sx;
+    // source top edge
+    float sy;
+    // source width
+    float sw;
+    // source height
+    float sh;
+    // the `ImageHandle` from Image::load
+    FlImageHandle image;
+    // multiplicatively tints color images and colorizes alpha atlases
+    FlColor color;
+} FlImageSub;
+
 // Custom-drawing primitives: the painter's shape, line, text, and image commands. Call these to draw
 // directly into the current frame.
 // Set the effect every later painter call in the current element carries - effects are group-shaped, so
@@ -127,9 +232,9 @@ FL_API void fl_painter_rect(float x, float y, float w, float h, FlColor color);
 FL_API void fl_painter_rects(const FlColoredRect* rects, uint32_t rects_size);
 // Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
 FL_API void fl_painter_rect_rounded(float x, float y, float w, float h, float radius, FlColor color);
-// Draw a filled rectangle with a four-corner color gradient (bilinear), corners named clockwise from
-// top-left.
-FL_API void fl_painter_gradient_rect(float x, float y, float w, float h, FlColor top_left, FlColor top_right, FlColor bottom_left, FlColor bottom_right);
+// Draw a filled rectangle with a four-corner color gradient (bilinear): top-left (x, y), size (w, h),
+// in logical space.
+FL_API void fl_painter_gradient_rect(float x, float y, float w, float h, FlCornerColors colors);
 // Draw a filled rectangle styled by config: per-corner radius and a per-corner color gradient in one
 // draw, which is what rect_rounded (solid only) and gradient_rect (square only) cannot express
 // together. Top-left (x, y), size (w, h), in logical space. Each radius clamps to half the smaller
@@ -152,34 +257,32 @@ FL_API void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle 
 // `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
 // (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
 FL_API bool fl_painter_image(float x, float y, float w, float h, FlImageHandle image, FlColor color);
-// Draw a filled circle centered at (cx, cy) with radius, plus an optional border
-// (border_color, border_width).
-FL_API void fl_painter_circle(float cx, float cy, float radius, FlColor color, FlColor border_color, float border_width);
-// Draw a filled circle like circle, with the border ring dashed by stroke (a zeroed stroke
-// draws the same solid ring circle does). The dash period is rescaled slightly so a whole
-// number of dashes closes the ring - no stub where the pattern wraps.
-FL_API void fl_painter_circle_stroked(float cx, float cy, float radius, FlColor color, FlColor border_color, float border_width, FlStrokeStyle stroke);
-// Draw a filled diamond centered at (cx, cy) with half-extents (rx, ry), plus an optional border
-// (border_color, border_width).
-FL_API void fl_painter_diamond(float cx, float cy, float rx, float ry, FlColor color, FlColor border_color, float border_width);
-// Draw a stroked arc centered at (cx, cy): radius, stroke thickness, from start_angle sweeping
-// sweep radians. flags selects the end caps (empty = butt caps).
-FL_API void fl_painter_arc(float cx, float cy, float radius, float thickness, float start_angle, float sweep, FlColor color, FlArcFlags flags);
+// Draw a filled circle with an optional border ring: center, radius and colors come from circle.
+FL_API void fl_painter_circle(FlCircleShape circle);
+// Draw a filled circle like Painter::circle, with the border ring dashed by stroke (a zeroed stroke
+// draws the same solid ring). The dash period is rescaled slightly so a whole number of
+// dashes closes the ring - no stub where the pattern wraps.
+FL_API void fl_painter_circle_stroked(FlCircleShape circle, FlStrokeStyle stroke);
+// Draw a filled diamond with an optional border ring: center, half-extents and colors come from
+// diamond.
+FL_API void fl_painter_diamond(FlDiamondShape diamond);
+// Draw a stroked arc, ring or circle sector. Angles are radians: 0 is 12 o'clock and a positive
+// sweep runs clockwise.
+FL_API void fl_painter_arc(FlArcShape arc);
 // Draw a polyline. points are
 // vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
-// segments) and scales fill alpha. width is the stroke width (caps/joins always round). flags selects
-// filling and closing (empty = an open stroke).
-FL_API void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, float width, FlColor color, FlPolylineFlags flags, FlColor fill_color, float baseline_y);
+// segments) and scales fill alpha. style carries the stroke width and color and the optional fill.
+FL_API void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, FlPolylineStyle style);
 // Draw a row of bars off the shared baseline baseline_y - meters, spectrum analyzers, step sequencers.
 // The whole row is one draw, which is what a bar row buys over a rect per bar. Each bar carries its own
 // x, width, and height, all in logical (authoring) space; a negative height draws downward. This is an
 // optional-tier primitive: a backend may skip it (today the software backend does).
 FL_API void fl_painter_bars(float baseline_y, const FlBar* bars, uint32_t bars_size, FlColor color);
-// Draw source rectangle (sx, sy, sw, sh), in source image pixels, into destination rectangle
-// (dx, dy, dw, dh), in logical (authoring) space. A non-positive destination width or height uses the
-// source width or height, respectively. color multiplicatively tints color images and colorizes alpha
-// atlases. Returns false (and draws nothing) until the image is ready or when the source rect is empty.
-FL_API bool fl_painter_image_sub(float dx, float dy, float dw, float dh, float sx, float sy, float sw, float sh, FlImageHandle image, FlColor color);
+// Draw a source rectangle of an image, in source image pixels, into a destination rectangle in
+// logical (authoring) space. A non-positive destination width or height uses the source width or
+// height. Returns false (and draws nothing) until the image is ready or when the source rect is
+// empty.
+FL_API bool fl_painter_image_sub(FlImageSub sub);
 
 #define fl_painter_rect_styled_impl(x, y, w, h, config) (fl_painter_rect_styled)(x, y, w, h, config)
 #ifndef FL_API_IMPLEMENTATION
