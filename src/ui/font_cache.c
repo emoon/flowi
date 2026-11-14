@@ -745,10 +745,10 @@ static FontFace* run_fallback(const AdvanceRun* run) {
 
 static bool kb_request(const AdvanceRun* run, FontShaperRun* out) {
     const FontFace* face = run->face;
-    const FontFace* fallback = run_fallback(run);
     if (!is_proportional(face) || run->q4 == 0) {
         return false;
     }
+    const FontFace* fallback = run_fallback(run);
     *out = (FontShaperRun) { .primary = { .font = face->shaper_font, .id = face->id }, .size_q4 = run->q4 };
     if (fallback == nullptr) {
         return true;
