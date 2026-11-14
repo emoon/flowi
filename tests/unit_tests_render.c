@@ -5163,10 +5163,10 @@ UTEST(render, primitives_and_background_blend) {
         // Gradient primitive - the IR's gradient has no widget/Clay emitter, so this is
         // the only path that exercises RenderMask_ColorGradient.
         painter_gradient_rect(p, (FlRect) { .x = 100.0f, .y = 400.0f, .w = 320.0f, .h = 200.0f },
-                              (PainterCornerColors) { .top_left = ui_color(255, 0, 0, 255),
-                                                      .top_right = ui_color(0, 255, 0, 255),
-                                                      .bottom_left = ui_color(0, 0, 255, 255),
-                                                      .bottom_right = ui_color(255, 255, 0, 255) });
+                              (FlCornerColors) { .top_left = ui_color(255, 0, 0, 255),
+                                                 .top_right = ui_color(0, 255, 0, 255),
+                                                 .bottom_left = ui_color(0, 0, 255, 255),
+                                                 .bottom_right = ui_color(255, 255, 0, 255) });
 
         // Static image (drawn at native size).
         ASSERT_TRUE_MSG(painter_image(p, (FlRect) { .x = 470.0f, .y = 400.0f, .w = 0.0f, .h = 0.0f },
@@ -6479,9 +6479,18 @@ UTEST(render, image_sub_atlas) {
 
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        ASSERT_TRUE_MSG(fl_painter_image_sub(100.0f, 100.0f, 0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 2.0f, atlas, left_tint),
+        ASSERT_TRUE_MSG(fl_painter_image_sub((FlImageSub) {
+                            .dx = 100.0f, .dy = 100.0f, .sw = 2.0f, .sh = 2.0f, .image = atlas, .color = left_tint }),
                         "direct image_sub draw failed");
-        ASSERT_TRUE_MSG(fl_painter_image_sub(108.0f, 100.0f, 2.0f, 2.0f, 2.0f, 0.0f, 2.0f, 2.0f, atlas, right_tint),
+        ASSERT_TRUE_MSG(fl_painter_image_sub((FlImageSub) { .dx = 108.0f,
+                                                            .dy = 100.0f,
+                                                            .dw = 2.0f,
+                                                            .dh = 2.0f,
+                                                            .sx = 2.0f,
+                                                            .sw = 2.0f,
+                                                            .sh = 2.0f,
+                                                            .image = atlas,
+                                                            .color = right_tint }),
                         "second image_sub draw failed");
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -6850,8 +6859,7 @@ static void scene_widget_gallery(FlUiCtx* ctx, int n) {
                     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(180) },
                                    .direction = LayoutDirection_TopToBottom) {
                         FlListRange r
-                            = ui_list_begin(ID("gallery_list"),
-                                            (ListModel) { .ordered_ids = list_ids, .count = (u32)n, .set = list_sel },
+                            = ui_list_begin(ID("gallery_list"), list_ids, (u32)n, list_sel,
                                             (FlListConfig) { .row_height = 26.0f, .gap = 4.0f, .labels = list_labels });
                         for (u32 i = r.start; i < r.end; i++) {
                             ui_list_item_begin(list_ids[i]);
@@ -6868,13 +6876,9 @@ static void scene_widget_gallery(FlUiCtx* ctx, int n) {
                     gallery_section_header(FL_S("List (declarative)"));
                     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(150) },
                                    .direction = LayoutDirection_TopToBottom) {
-                        ui_list((ListDecl) {
-                            .id = ID("gallery_decl_list"),
-                            .items = decl_items,
-                            .count = GALLERY_DECL_ROWS,
-                            .set = decl_sel,
-                            .opts = (FlListOpts) {
-                                .row_height = 26.0f, .gap = 4.0f, .multi_select = true, .reorderable = true } });
+                        ui_list(ID("gallery_decl_list"), decl_items, GALLERY_DECL_ROWS, decl_sel,
+                                (FlListOpts) {
+                                    .row_height = 26.0f, .gap = 4.0f, .multi_select = true, .reorderable = true });
                     }
                 }
             }
@@ -8167,12 +8171,12 @@ UTEST(render, canvas_paint_z_clip_and_one_span) {
                 // Many primitives in one scope - these must collapse to a single CUSTOM span.
                 painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 200.0f }, canvas_col);
                 painter_rect(p, (FlRect) { .x = 4.0f, .y = 4.0f, .w = 8.0f, .h = 8.0f }, canvas_col);
-                painter_circle(p, (PainterCircle) { .cx = 100.0f,
+                painter_circle(p, (FlCircleShape) { .cx = 100.0f,
                                                     .cy = 100.0f,
                                                     .radius = 6.0f,
-                                                    .fill = { .color = canvas_col,
-                                                              .border_color = ui_color(0, 0, 0, 0),
-                                                              .border_width = 0.0f } });
+                                                    .color = canvas_col,
+                                                    .border_color = ui_color(0, 0, 0, 0),
+                                                    .border_width = 0.0f });
                 painter_rect(p, (FlRect) { .x = 20.0f, .y = 20.0f, .w = 6.0f, .h = 6.0f }, canvas_col);
 
                 // Child element, laid out at the canvas origin - must draw OVER the paint.
@@ -8783,12 +8787,12 @@ UTEST(render, canvas_command_accounting) {
             Painter* p = ui_get_painter();
             painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 100.0f, .h = 100.0f }, paint_col);
             painter_rect(p, (FlRect) { .x = 2.0f, .y = 2.0f, .w = 4.0f, .h = 4.0f }, paint_col);
-            painter_circle(
-                p, (PainterCircle) {
-                       .cx = 50.0f,
-                       .cy = 50.0f,
-                       .radius = 6.0f,
-                       .fill = { .color = paint_col, .border_color = ui_color(0, 0, 0, 0), .border_width = 0.0f } });
+            painter_circle(p, (FlCircleShape) { .cx = 50.0f,
+                                                .cy = 50.0f,
+                                                .radius = 6.0f,
+                                                .color = paint_col,
+                                                .border_color = ui_color(0, 0, 0, 0),
+                                                .border_width = 0.0f });
             painter_rect(p, (FlRect) { .x = 8.0f, .y = 8.0f, .w = 4.0f, .h = 4.0f }, paint_col);
         }
     }
@@ -9105,8 +9109,7 @@ UTEST(render, snapped_line_crisp_at_fractional_dpi) {
         // Canvas at the device origin (0,0). A hairline at local y=9 lands at device y = 9 * 1.25 = 11.25, which
         // snaps to row 11; local x 0..100 covers device x 0..125, so x=50 is mid-line.
         ui_layout_area_id(ID("canvas"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_hline(ui_get_painter(),
-                          (PainterRule) { .x = 0.0f, .y = 9.0f, .length = 100.0f, .color = line_col });
+            painter_hline(ui_get_painter(), 0.0f, 9.0f, 100.0f, line_col);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -9138,8 +9141,7 @@ UTEST(render, snapped_line_crisp_at_fractional_scroll) {
         // 0..100 with the 200 x offset covers device x 200..300, so x=250 is mid-line.
         ui_floating_area_id(ID("scrolled_canvas"), .attach_to = FlFloatingAttachTo_Root, .offset = { 200.0f, 10.4f },
                             .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_hline(ui_get_painter(),
-                          (PainterRule) { .x = 0.0f, .y = 0.0f, .length = 100.0f, .color = line_col });
+            painter_hline(ui_get_painter(), 0.0f, 0.0f, 100.0f, line_col);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -9193,8 +9195,8 @@ static FlListRange list_render_frame(FlUiCtx* ctx, u32 total, FlColor row_color,
     // Fixed-size viewport so the list's grow container measures deterministically after frame 1.
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
         // NULL set → no selection (this case exercises virtualization only); ordered_ids is unused on that path.
-        range = ui_list_begin(ID("vlist"), (ListModel) { .ordered_ids = nullptr, .count = total, .set = nullptr },
-                              (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
+        range
+            = ui_list_begin(ID("vlist"), nullptr, total, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = range.start; i < range.end; i++) {
             // Flat static list: pass the index as the stable id (CONTEXT Item Id - allowed, loses nothing).
             FlSignal sig = ui_list_item_begin((u64)(i + 1));
@@ -9312,8 +9314,7 @@ UTEST(render, list_stable_id_split) {
         ctx->input_state.mouse.y = hover_y;
         ui_update_begin(ctx);
         ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-            FlListRange r = ui_list_begin(ID("split_list"),
-                                          (ListModel) { .ordered_ids = nullptr, .count = total, .set = nullptr },
+            FlListRange r = ui_list_begin(ID("split_list"), nullptr, total, nullptr,
                                           (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
             for (u32 i = r.start; i < r.end; i++) {
                 ui_list_item_begin((u64)i * 10ull + 1000ull);

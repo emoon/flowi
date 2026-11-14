@@ -61,9 +61,7 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     const FlTextStyle style = { .font_id = font, .font_size = 7.5f, .letter_spacing = 1.25f };
     void* slot = nullptr;
     painter_scope_push(p, &slot);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 10.0f, .y = 20.0f, .text = FL_S("AA"), .color = ui_color(255, 255, 255, 255) },
-        style);
+    painter_text_styled(p, 10.0f, 20.0f, FL_S("AA"), style, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -86,9 +84,7 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     // font_size 0 falls back to the font's default size (loaded at 32 -> key 128).
     void* slot_default = nullptr;
     painter_scope_push(p, &slot_default);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
-        (FlTextStyle) { .font_id = font });
+    painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
     const FlPaintSpan* span_default = (const FlPaintSpan*)slot_default;
     ASSERT_TRUE_MSG(span_default != nullptr && span_default->first != nullptr, "size 0 still draws");
@@ -97,9 +93,7 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
 
     void* slot_unknown = nullptr;
     painter_scope_push(p, &slot_unknown);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
-        (FlTextStyle) { .font_id = 9999 });
+    painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = 9999 }, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
     ASSERT_TRUE_MSG(slot_unknown == nullptr, "an unknown font attaches no paint span");
 
@@ -208,14 +202,13 @@ UTEST(render_ir, painter_shapes_scale_at_emit) {
     FlColor color = { 200, 100, 50, 255 };
     FlColor border = { 1, 2, 3, 4 };
     FlPolyPoint pts[2] = { { 1.0f, 2.0f, 1.0f }, { 3.0f, 4.0f, 0.25f } };
-    painter_polyline(p, (PainterPolyline) { .points = pts,
-                                            .point_count = 2,
-                                            .width = 1.5f,
-                                            .color = color,
-                                            .flags = FlPolylineFlags_filled,
-                                            .fill_color = border,
-                                            .baseline_y = 50.0f });
-    painter_arc(p, (PainterArc) { .cx = 10.0f,
+    painter_polyline(p, pts, 2,
+                     (FlPolylineStyle) { .width = 1.5f,
+                                         .color = color,
+                                         .flags = FlPolylineFlags_filled,
+                                         .fill_color = border,
+                                         .baseline_y = 50.0f });
+    painter_arc(p, (FlArcShape) { .cx = 10.0f,
                                   .cy = 20.0f,
                                   .radius = 30.0f,
                                   .thickness = 5.0f,
@@ -223,19 +216,20 @@ UTEST(render_ir, painter_shapes_scale_at_emit) {
                                   .sweep = 2.5f,
                                   .color = color,
                                   .flags = 0 });
-    painter_circle_stroked(p,
-                           (PainterCircle) { .cx = 1.0f,
-                                             .cy = 2.0f,
-                                             .radius = 3.0f,
-                                             .fill = { .color = color, .border_color = border, .border_width = 0.5f } },
-                           (FlStrokeStyle) { .dash_len = 1.5f, .gap_len = 2.5f });
-    painter_diamond(p, (PainterDiamond) { .cx = 4.0f,
+    painter_circle_stroked(
+        p,
+        (FlCircleShape) {
+            .cx = 1.0f, .cy = 2.0f, .radius = 3.0f, .color = color, .border_color = border, .border_width = 0.5f },
+        (FlStrokeStyle) { .dash_len = 1.5f, .gap_len = 2.5f });
+    painter_diamond(p, (FlDiamondShape) { .cx = 4.0f,
                                           .cy = 5.0f,
                                           .rx = 6.0f,
                                           .ry = 7.0f,
-                                          .fill = { .color = color, .border_color = border, .border_width = 0.0f } });
+                                          .color = color,
+                                          .border_color = border,
+                                          .border_width = 0.0f });
     FlBar in_bars[2] = { { 0.0f, 2.0f, 10.0f }, { 3.0f, 2.0f, -4.0f } };
-    painter_bars(p, (PainterBars) { .baseline_y = 100.0f, .bars = in_bars, .bar_count = 2, .color = color });
+    painter_bars(p, 100.0f, in_bars, 2, color);
 
     painter_scope_pop(p);
 
@@ -304,16 +298,15 @@ UTEST(render_ir, painter_effect_is_scoped_state) {
     painter_scope_push(p, &outer_slot);
     painter_set_effect(p, shadow);
     painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 10.0f, .h = 10.0f }, color);
-    painter_hline(p, (PainterRule) { .x = 0.0f, .y = 12.0f, .length = 10.0f, .color = color });
+    painter_hline(p, 0.0f, 12.0f, 10.0f, color);
 
     painter_scope_push(p, &child_slot);
     painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 4.0f, .h = 4.0f }, color);
     painter_scope_pop(p);
 
-    painter_circle(p, (PainterCircle) { .cx = 1.0f,
-                                        .cy = 1.0f,
-                                        .radius = 2.0f,
-                                        .fill = { .color = color, .border_color = color, .border_width = 0.0f } });
+    painter_circle(
+        p, (FlCircleShape) {
+               .cx = 1.0f, .cy = 1.0f, .radius = 2.0f, .color = color, .border_color = color, .border_width = 0.0f });
     painter_set_effect(p, (FlEffect) { 0 });
     painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 2.0f, .h = 2.0f }, color);
     painter_scope_pop(p);
@@ -433,10 +426,16 @@ UTEST(render_ir, painter_image_sub_emits_source_rect_and_scaled_dst) {
     void* slot = nullptr;
     painter_scope_push(p, &slot);
     painter_set_effect(p, (FlEffect) { .kind = FlEffectKind_Glow, .color = { 1, 2, 3, 4 }, .blur = 6.0f });
-    ASSERT_TRUE_MSG(painter_image_sub(p, (PainterImageSub) { .dst = { .x = 3.0f, .y = 4.0f, .w = 12.0f, .h = 6.0f },
-                                                             .src = { .x = 2.0f, .y = 1.0f, .w = 4.0f, .h = 3.0f },
-                                                             .image = (FlImageHandle)1234,
-                                                             .color = ui_color(10, 20, 30, 40) }),
+    ASSERT_TRUE_MSG(painter_image_sub(p, (FlImageSub) { .dx = 3.0f,
+                                                        .dy = 4.0f,
+                                                        .dw = 12.0f,
+                                                        .dh = 6.0f,
+                                                        .sx = 2.0f,
+                                                        .sy = 1.0f,
+                                                        .sw = 4.0f,
+                                                        .sh = 3.0f,
+                                                        .image = (FlImageHandle)1234,
+                                                        .color = ui_color(10, 20, 30, 40) }),
                     "painter_image_sub records for a ready image");
     painter_scope_pop(p);
 
@@ -470,8 +469,8 @@ UTEST(render_ir, painter_lines_emit_snapped_core_fill_rect) {
     void* slot = nullptr;
     painter_scope_push(p, &slot);
     FlColor col = { 200, 100, 50, 255 };
-    painter_hline(p, (PainterRule) { .x = 4.0f, .y = 10.0f, .length = 100.0f, .color = col });
-    painter_vline(p, (PainterRule) { .x = 20.0f, .y = 5.0f, .length = 80.0f, .color = col });
+    painter_hline(p, 4.0f, 10.0f, 100.0f, col);
+    painter_vline(p, 20.0f, 5.0f, 80.0f, col);
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -513,9 +512,7 @@ UTEST(render_ir, snapped_line_splice_rounds_at_fractional_origin) {
 
     void* snapped_slot = nullptr;
     painter_scope_push(p, &snapped_slot);
-    painter_hline(
-        p, (PainterRule) {
-               .x = 0.0f, .y = 0.0f, .length = 100.0f, .color = col }); // element-local rect {0,0,100,1}, snap-tagged
+    painter_hline(p, 0.0f, 0.0f, 100.0f, col); // element-local rect {0,0,100,1}, snap-tagged
     painter_scope_pop(p);
 
     void* plain_slot = nullptr;
@@ -1000,8 +997,7 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     // painter_text: the authored 32px handle must rasterize at 64px.
     void* slot_plain = nullptr;
     painter_scope_push(p, &slot_plain);
-    painter_text(p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
-                 font);
+    painter_text(p, 0.0f, 0.0f, FL_S("A"), font, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
     const FlPaintSpan* span_plain = (const FlPaintSpan*)slot_plain;
     ASSERT_TRUE_MSG(span_plain != nullptr && span_plain->first != nullptr, "painter_text attached a paint span");
@@ -1015,9 +1011,7 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     const FlTextStyle style = { .font_id = font, .font_size = 7.5f, .letter_spacing = 1.25f };
     void* slot = nullptr;
     painter_scope_push(p, &slot);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 10.0f, .y = 20.0f, .text = FL_S("AA"), .color = ui_color(255, 255, 255, 255) },
-        style);
+    painter_text_styled(p, 10.0f, 20.0f, FL_S("AA"), style, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -1039,9 +1033,7 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     // font_size 0 falls back to the font's authored load size, which scales the same way (32 -> 64).
     void* slot_default = nullptr;
     painter_scope_push(p, &slot_default);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
-        (FlTextStyle) { .font_id = font });
+    painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
     const FlPaintSpan* span_default = (const FlPaintSpan*)slot_default;
     ASSERT_TRUE_MSG(span_default != nullptr && span_default->first != nullptr, "size 0 still draws");

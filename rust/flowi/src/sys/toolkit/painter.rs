@@ -167,6 +167,193 @@ const _: () = {
     assert!(core::mem::offset_of!(ColoredRect, color) == 16, "ColoredRect.color offset drift");
 };
 
+/// The four corner colors of a Painter::gradient_rect, interpolated bilinearly across the rectangle.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct CornerColors {
+    /// top-left corner
+    pub top_left: crate::sys::Color,
+    /// top-right corner
+    pub top_right: crate::sys::Color,
+    /// bottom-left corner
+    pub bottom_left: crate::sys::Color,
+    /// bottom-right corner
+    pub bottom_right: crate::sys::Color,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<CornerColors>() == 16, "CornerColors size drift");
+    assert!(core::mem::align_of::<CornerColors>() == 1, "CornerColors align drift");
+    assert!(core::mem::offset_of!(CornerColors, top_left) == 0, "CornerColors.top_left offset drift");
+    assert!(core::mem::offset_of!(CornerColors, top_right) == 4, "CornerColors.top_right offset drift");
+    assert!(core::mem::offset_of!(CornerColors, bottom_left) == 8, "CornerColors.bottom_left offset drift");
+    assert!(core::mem::offset_of!(CornerColors, bottom_right) == 12, "CornerColors.bottom_right offset drift");
+};
+
+/// A filled circle with an optional border ring, in logical (authoring) space.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct CircleShape {
+    /// center x
+    pub cx: f32,
+    /// center y
+    pub cy: f32,
+    /// radius
+    pub radius: f32,
+    /// fill color
+    pub color: crate::sys::Color,
+    /// border ring color
+    pub border_color: crate::sys::Color,
+    /// border ring width; 0 = no border
+    pub border_width: f32,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<CircleShape>() == 24, "CircleShape size drift");
+    assert!(core::mem::align_of::<CircleShape>() == 4, "CircleShape align drift");
+    assert!(core::mem::offset_of!(CircleShape, cx) == 0, "CircleShape.cx offset drift");
+    assert!(core::mem::offset_of!(CircleShape, cy) == 4, "CircleShape.cy offset drift");
+    assert!(core::mem::offset_of!(CircleShape, radius) == 8, "CircleShape.radius offset drift");
+    assert!(core::mem::offset_of!(CircleShape, color) == 12, "CircleShape.color offset drift");
+    assert!(core::mem::offset_of!(CircleShape, border_color) == 16, "CircleShape.border_color offset drift");
+    assert!(core::mem::offset_of!(CircleShape, border_width) == 20, "CircleShape.border_width offset drift");
+};
+
+/// A filled diamond with an optional border ring, in logical (authoring) space.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct DiamondShape {
+    /// center x
+    pub cx: f32,
+    /// center y
+    pub cy: f32,
+    /// horizontal half-extent
+    pub rx: f32,
+    /// vertical half-extent
+    pub ry: f32,
+    /// fill color
+    pub color: crate::sys::Color,
+    /// border ring color
+    pub border_color: crate::sys::Color,
+    /// border ring width; 0 = no border
+    pub border_width: f32,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<DiamondShape>() == 28, "DiamondShape size drift");
+    assert!(core::mem::align_of::<DiamondShape>() == 4, "DiamondShape align drift");
+    assert!(core::mem::offset_of!(DiamondShape, cx) == 0, "DiamondShape.cx offset drift");
+    assert!(core::mem::offset_of!(DiamondShape, cy) == 4, "DiamondShape.cy offset drift");
+    assert!(core::mem::offset_of!(DiamondShape, rx) == 8, "DiamondShape.rx offset drift");
+    assert!(core::mem::offset_of!(DiamondShape, ry) == 12, "DiamondShape.ry offset drift");
+    assert!(core::mem::offset_of!(DiamondShape, color) == 16, "DiamondShape.color offset drift");
+    assert!(core::mem::offset_of!(DiamondShape, border_color) == 20, "DiamondShape.border_color offset drift");
+    assert!(core::mem::offset_of!(DiamondShape, border_width) == 24, "DiamondShape.border_width offset drift");
+};
+
+/// A stroked arc, ring or circle sector, in logical (authoring) space. Angles are radians: 0 is 12 o'clock
+/// and a positive sweep runs clockwise.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct ArcShape {
+    /// center x
+    pub cx: f32,
+    /// center y
+    pub cy: f32,
+    /// outer radius
+    pub radius: f32,
+    /// stroke thickness, extending inward from radius; thickness >= radius makes a filled sector
+    pub thickness: f32,
+    /// angle the arc starts at
+    pub start_angle: f32,
+    /// angle the arc covers from start_angle
+    pub sweep: f32,
+    /// stroke color
+    pub color: crate::sys::Color,
+    /// end caps (empty = butt caps)
+    pub flags: crate::sys::ArcFlags,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<ArcShape>() == 32, "ArcShape size drift");
+    assert!(core::mem::align_of::<ArcShape>() == 4, "ArcShape align drift");
+    assert!(core::mem::offset_of!(ArcShape, cx) == 0, "ArcShape.cx offset drift");
+    assert!(core::mem::offset_of!(ArcShape, cy) == 4, "ArcShape.cy offset drift");
+    assert!(core::mem::offset_of!(ArcShape, radius) == 8, "ArcShape.radius offset drift");
+    assert!(core::mem::offset_of!(ArcShape, thickness) == 12, "ArcShape.thickness offset drift");
+    assert!(core::mem::offset_of!(ArcShape, start_angle) == 16, "ArcShape.start_angle offset drift");
+    assert!(core::mem::offset_of!(ArcShape, sweep) == 20, "ArcShape.sweep offset drift");
+    assert!(core::mem::offset_of!(ArcShape, color) == 24, "ArcShape.color offset drift");
+    assert!(core::mem::offset_of!(ArcShape, flags) == 28, "ArcShape.flags offset drift");
+};
+
+/// How a Painter::polyline is stroked and filled.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct PolylineStyle {
+    /// stroke width; caps and joins are always round
+    pub width: f32,
+    /// stroke color
+    pub color: crate::sys::Color,
+    /// filling and closing (empty = an open stroke)
+    pub flags: crate::sys::PolylineFlags,
+    /// fill color, used when flags has filled
+    pub fill_color: crate::sys::Color,
+    /// y the fill extends to, used when flags has filled
+    pub baseline_y: f32,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<PolylineStyle>() == 20, "PolylineStyle size drift");
+    assert!(core::mem::align_of::<PolylineStyle>() == 4, "PolylineStyle align drift");
+    assert!(core::mem::offset_of!(PolylineStyle, width) == 0, "PolylineStyle.width offset drift");
+    assert!(core::mem::offset_of!(PolylineStyle, color) == 4, "PolylineStyle.color offset drift");
+    assert!(core::mem::offset_of!(PolylineStyle, flags) == 8, "PolylineStyle.flags offset drift");
+    assert!(core::mem::offset_of!(PolylineStyle, fill_color) == 12, "PolylineStyle.fill_color offset drift");
+    assert!(core::mem::offset_of!(PolylineStyle, baseline_y) == 16, "PolylineStyle.baseline_y offset drift");
+};
+
+/// A source rectangle of an image drawn into a destination rectangle.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct ImageSub {
+    /// destination left edge, in logical (authoring) space
+    pub dx: f32,
+    /// destination top edge
+    pub dy: f32,
+    /// destination width; non-positive uses the source width
+    pub dw: f32,
+    /// destination height; non-positive uses the source height
+    pub dh: f32,
+    /// source left edge, in source image pixels
+    pub sx: f32,
+    /// source top edge
+    pub sy: f32,
+    /// source width
+    pub sw: f32,
+    /// source height
+    pub sh: f32,
+    /// the `ImageHandle` from Image::load
+    pub image: crate::sys::ImageHandle,
+    /// multiplicatively tints color images and colorizes alpha atlases
+    pub color: crate::sys::Color,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<ImageSub>() == 40, "ImageSub size drift");
+    assert!(core::mem::align_of::<ImageSub>() == 4, "ImageSub align drift");
+    assert!(core::mem::offset_of!(ImageSub, dx) == 0, "ImageSub.dx offset drift");
+    assert!(core::mem::offset_of!(ImageSub, dy) == 4, "ImageSub.dy offset drift");
+    assert!(core::mem::offset_of!(ImageSub, dw) == 8, "ImageSub.dw offset drift");
+    assert!(core::mem::offset_of!(ImageSub, dh) == 12, "ImageSub.dh offset drift");
+    assert!(core::mem::offset_of!(ImageSub, sx) == 16, "ImageSub.sx offset drift");
+    assert!(core::mem::offset_of!(ImageSub, sy) == 20, "ImageSub.sy offset drift");
+    assert!(core::mem::offset_of!(ImageSub, sw) == 24, "ImageSub.sw offset drift");
+    assert!(core::mem::offset_of!(ImageSub, sh) == 28, "ImageSub.sh offset drift");
+    assert!(core::mem::offset_of!(ImageSub, image) == 32, "ImageSub.image offset drift");
+    assert!(core::mem::offset_of!(ImageSub, color) == 36, "ImageSub.color offset drift");
+};
+
 // Custom-drawing primitives: the painter's shape, line, text, and image commands. Call these to draw
 // directly into the current frame.
 extern "C" {
@@ -187,9 +374,9 @@ extern "C" {
     pub fn fl_painter_rects(rects: *const crate::sys::ColoredRect, rects_size: u32);
     /// Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
     pub fn fl_painter_rect_rounded(x: f32, y: f32, w: f32, h: f32, radius: f32, color: crate::sys::Color);
-    /// Draw a filled rectangle with a four-corner color gradient (bilinear), corners named clockwise from
-    /// top-left.
-    pub fn fl_painter_gradient_rect(x: f32, y: f32, w: f32, h: f32, top_left: crate::sys::Color, top_right: crate::sys::Color, bottom_left: crate::sys::Color, bottom_right: crate::sys::Color);
+    /// Draw a filled rectangle with a four-corner color gradient (bilinear): top-left (x, y), size (w, h),
+    /// in logical space.
+    pub fn fl_painter_gradient_rect(x: f32, y: f32, w: f32, h: f32, colors: crate::sys::CornerColors);
     /// Draw a filled rectangle styled by config: per-corner radius and a per-corner color gradient in one
     /// draw, which is what rect_rounded (solid only) and gradient_rect (square only) cannot express
     /// together. Top-left (x, y), size (w, h), in logical space. Each radius clamps to half the smaller
@@ -212,33 +399,31 @@ extern "C" {
     /// `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
     /// (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
     pub fn fl_painter_image(x: f32, y: f32, w: f32, h: f32, image: crate::sys::ImageHandle, color: crate::sys::Color) -> bool;
-    /// Draw a filled circle centered at (cx, cy) with radius, plus an optional border
-    /// (border_color, border_width).
-    pub fn fl_painter_circle(cx: f32, cy: f32, radius: f32, color: crate::sys::Color, border_color: crate::sys::Color, border_width: f32);
-    /// Draw a filled circle like circle, with the border ring dashed by stroke (a zeroed stroke
-    /// draws the same solid ring circle does). The dash period is rescaled slightly so a whole
-    /// number of dashes closes the ring - no stub where the pattern wraps.
-    pub fn fl_painter_circle_stroked(cx: f32, cy: f32, radius: f32, color: crate::sys::Color, border_color: crate::sys::Color, border_width: f32, stroke: crate::sys::StrokeStyle);
-    /// Draw a filled diamond centered at (cx, cy) with half-extents (rx, ry), plus an optional border
-    /// (border_color, border_width).
-    pub fn fl_painter_diamond(cx: f32, cy: f32, rx: f32, ry: f32, color: crate::sys::Color, border_color: crate::sys::Color, border_width: f32);
-    /// Draw a stroked arc centered at (cx, cy): radius, stroke thickness, from start_angle sweeping
-    /// sweep radians. flags selects the end caps (empty = butt caps).
-    pub fn fl_painter_arc(cx: f32, cy: f32, radius: f32, thickness: f32, start_angle: f32, sweep: f32, color: crate::sys::Color, flags: crate::sys::ArcFlags);
+    /// Draw a filled circle with an optional border ring: center, radius and colors come from circle.
+    pub fn fl_painter_circle(circle: crate::sys::CircleShape);
+    /// Draw a filled circle like Painter::circle, with the border ring dashed by stroke (a zeroed stroke
+    /// draws the same solid ring). The dash period is rescaled slightly so a whole number of
+    /// dashes closes the ring - no stub where the pattern wraps.
+    pub fn fl_painter_circle_stroked(circle: crate::sys::CircleShape, stroke: crate::sys::StrokeStyle);
+    /// Draw a filled diamond with an optional border ring: center, half-extents and colors come from
+    /// diamond.
+    pub fn fl_painter_diamond(diamond: crate::sys::DiamondShape);
+    /// Draw a stroked arc, ring or circle sector. Angles are radians: 0 is 12 o'clock and a positive
+    /// sweep runs clockwise.
+    pub fn fl_painter_arc(arc: crate::sys::ArcShape);
     /// Draw a polyline. points are
     /// vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
-    /// segments) and scales fill alpha. width is the stroke width (caps/joins always round). flags selects
-    /// filling and closing (empty = an open stroke).
-    pub fn fl_painter_polyline(points: *const crate::sys::PolyPoint, points_size: u32, width: f32, color: crate::sys::Color, flags: crate::sys::PolylineFlags, fill_color: crate::sys::Color, baseline_y: f32);
+    /// segments) and scales fill alpha. style carries the stroke width and color and the optional fill.
+    pub fn fl_painter_polyline(points: *const crate::sys::PolyPoint, points_size: u32, style: crate::sys::PolylineStyle);
     /// Draw a row of bars off the shared baseline baseline_y - meters, spectrum analyzers, step sequencers.
     /// The whole row is one draw, which is what a bar row buys over a rect per bar. Each bar carries its own
     /// x, width, and height, all in logical (authoring) space; a negative height draws downward. This is an
     /// optional-tier primitive: a backend may skip it (today the software backend does).
     pub fn fl_painter_bars(baseline_y: f32, bars: *const crate::sys::Bar, bars_size: u32, color: crate::sys::Color);
-    /// Draw source rectangle (sx, sy, sw, sh), in source image pixels, into destination rectangle
-    /// (dx, dy, dw, dh), in logical (authoring) space. A non-positive destination width or height uses the
-    /// source width or height, respectively. color multiplicatively tints color images and colorizes alpha
-    /// atlases. Returns false (and draws nothing) until the image is ready or when the source rect is empty.
-    pub fn fl_painter_image_sub(dx: f32, dy: f32, dw: f32, dh: f32, sx: f32, sy: f32, sw: f32, sh: f32, image: crate::sys::ImageHandle, color: crate::sys::Color) -> bool;
+    /// Draw a source rectangle of an image, in source image pixels, into a destination rectangle in
+    /// logical (authoring) space. A non-positive destination width or height uses the source width or
+    /// height. Returns false (and draws nothing) until the image is ready or when the source rect is
+    /// empty.
+    pub fn fl_painter_image_sub(sub: crate::sys::ImageSub) -> bool;
 }
 

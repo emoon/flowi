@@ -78,6 +78,12 @@ pub use crate::sys::RectConfig;
 /// One solid rectangle of a [`Painter::rects`] batch: position, size and fill color.
 pub use crate::sys::ColoredRect;
 
+/// The shapes and styles the wider [`Painter`] draws take as one value: [`Painter::circle`] and
+/// [`Painter::circle_stroked`] ([`CircleShape`]), [`Painter::diamond`] ([`DiamondShape`]), [`Painter::arc`]
+/// ([`ArcShape`]), [`Painter::gradient_rect`] ([`CornerColors`]), [`Painter::polyline`] ([`PolylineStyle`])
+/// and [`Painter::image_sub`] ([`ImageSub`]).
+pub use crate::sys::{ArcShape, CircleShape, CornerColors, DiamondShape, ImageSub, PolylineStyle};
+
 /// The opaque, Copy image handle returned by [`Image::load`] and consumed by [`Image::is_ready`],
 /// and [`Painter::image`] (sentinel 0 = invalid).
 pub use crate::sys::ImageHandle;
@@ -508,6 +514,12 @@ mod public_surface_guard {
         crate::Color = crate::sys::Color,
         crate::CornerRadius = crate::sys::CornerRadius,
         crate::ArcFlags = crate::sys::ArcFlags,
+        crate::ArcShape = crate::sys::ArcShape,
+        crate::CircleShape = crate::sys::CircleShape,
+        crate::CornerColors = crate::sys::CornerColors,
+        crate::DiamondShape = crate::sys::DiamondShape,
+        crate::ImageSub = crate::sys::ImageSub,
+        crate::PolylineStyle = crate::sys::PolylineStyle,
         crate::CursorShape = crate::sys::CursorShape,
         crate::DockSide = crate::sys::DockSide,
         crate::PolylineFlags = crate::sys::PolylineFlags,

@@ -6105,12 +6105,12 @@ static void fl_app_gpu_frame(void* user_data) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         Painter* p = ui_get_painter();
         painter_rect(p, (FlRect) { .x = 20.0f, .y = 20.0f, .w = 100.0f, .h = 100.0f }, ui_color(40, 60, 200, 255));
-        painter_circle(p, (PainterCircle) { .cx = 180.0f,
+        painter_circle(p, (FlCircleShape) { .cx = 180.0f,
                                             .cy = 180.0f,
                                             .radius = 50.0f,
-                                            .fill = { .color = ui_color(230, 80, 60, 255),
-                                                      .border_color = ui_color(0, 0, 0, 0),
-                                                      .border_width = 0.0f } });
+                                            .color = ui_color(230, 80, 60, 255),
+                                            .border_color = ui_color(0, 0, 0, 0),
+                                            .border_width = 0.0f });
     }
 }
 
