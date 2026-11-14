@@ -114,6 +114,9 @@ static inline u64 monotonic_ticks_to_ns(u64 ticks, u64 ticks_per_second) {
 void sleep_us(u64 microseconds);
 void sleep_ms(u64 milliseconds);
 
+// Gives up the rest of the time slice to another ready thread and returns at once when there is none.
+void os_thread_yield(void);
+
 // Splits a duration into whole seconds and the remaining nanoseconds (below one second), the form nanosleep takes.
 static inline void sleep_ms_split(u64 milliseconds, u64* out_seconds, u32* out_nanoseconds) {
     *out_seconds = milliseconds / 1000;

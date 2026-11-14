@@ -8,9 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
-#if PLATFORM_LINUX
 #include <sched.h>
-#endif
 #include "../arena.h"
 #include "../sprintf.h"
 #include "../math.h"
@@ -688,6 +686,10 @@ void sleep_ms(u64 milliseconds) {
     sleep_ms_split(milliseconds, &seconds, &nanoseconds);
     struct timespec req = { .tv_sec = (time_t)seconds, .tv_nsec = (long)nanoseconds };
     while (nanosleep(&req, &req) == -1 && errno == EINTR) {}
+}
+
+void os_thread_yield(void) {
+    sched_yield();
 }
 
 // Environment variables
