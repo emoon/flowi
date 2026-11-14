@@ -102,14 +102,17 @@ static void dock_registry_remove(FlDockShared* ds, FlDockWorkspace* ws) {
     }
 }
 
-// Take ws out of the app for good. Anything still pointing at it is re-aimed first: a promotion that would demote
-// into ws demotes into heir instead, and a queued promote out of ws is dropped along with its source.
-static void retire_workspace(FlDockShared* ds, FlDockWorkspace* ws, FlDockWorkspace* heir) {
+// A promotion that would demote into ws demotes into heir instead.
+static void reaim_promotions(FlDockShared* ds, const FlDockWorkspace* ws, FlDockWorkspace* heir) {
     for (u32 i = 0; i < ds->promotion_count; ++i) {
         if (ds->promotions[i].src == ws) {
             ds->promotions[i].src = heir;
         }
     }
+}
+
+// A queued promote out of ws goes with its source.
+static void drop_queued_promotes(FlDockShared* ds, const FlDockWorkspace* ws) {
     u32 kept = 0;
     for (u32 i = 0; i < ds->promote_count; ++i) {
         if (ds->promote_queue[i].src != ws) {
@@ -117,6 +120,12 @@ static void retire_workspace(FlDockShared* ds, FlDockWorkspace* ws, FlDockWorksp
         }
     }
     ds->promote_count = kept;
+}
+
+// Take ws out of the app for good, once nothing points at it any more.
+static void retire_workspace(FlDockShared* ds, FlDockWorkspace* ws, FlDockWorkspace* heir) {
+    reaim_promotions(ds, ws, heir);
+    drop_queued_promotes(ds, ws);
     dock_registry_remove(ds, ws);
 }
 
@@ -155,33 +164,53 @@ void dock_promote_panel(FlDockPanelId panel) {
 
 // The host's open_promoted_window typically defers the actual OS-window open to the next tick boundary, so the
 // workspace is created, bound, and handed over by pointer before that call returns.
+static void apply_promote(FlDockShared* ds, const DockPromoteRequest* req) {
+    FlDockWorkspace* dst = dock_registry_add(ds);
+    if (dst == nullptr) {
+        return; // registry full, so the request is dropped
+    }
+    if (!dock_workspace_promote(req->src, dst, req->panel)) {
+        dock_registry_remove(ds, dst); // the panel vanished since enqueue, so remove the empty entry
+        return;
+    }
+    void* host_window
+        = ds->host.open_promoted_window(ds->host.user_data, dst, DOCK_PROMOTED_DEFAULT_W, DOCK_PROMOTED_DEFAULT_H);
+    if (host_window == nullptr) {
+        // The host could not open a window: demote the panel straight back, and drop dst.
+        dock_workspace_demote(req->src, dst, req->panel);
+        dock_registry_remove(ds, dst);
+        return;
+    }
+    ds->promotions[ds->promotion_count++] = (DockPromotion) { .host_window = host_window, .dst = dst, .src = req->src };
+}
+
 void dock_shared_flush_promotes(void) {
     FlDockShared* ds = dock_shared_get();
     if (ds == nullptr) {
         return;
     }
     for (u32 i = 0; i < ds->promote_count; ++i) {
-        DockPromoteRequest* req = &ds->promote_queue[i];
-        FlDockWorkspace* dst = dock_registry_add(ds);
-        if (dst == nullptr) {
-            continue; // registry full, so the request is dropped
-        }
-        if (!dock_workspace_promote(req->src, dst, req->panel)) {
-            dock_registry_remove(ds, dst); // the panel vanished since enqueue, so remove the empty entry
-            continue;
-        }
-        void* host_window
-            = ds->host.open_promoted_window(ds->host.user_data, dst, DOCK_PROMOTED_DEFAULT_W, DOCK_PROMOTED_DEFAULT_H);
-        if (host_window == nullptr) {
-            // The host could not open a window: demote the panel straight back, and drop dst.
-            dock_workspace_demote(req->src, dst, req->panel);
-            dock_registry_remove(ds, dst);
-            continue;
-        }
-        ds->promotions[ds->promotion_count++]
-            = (DockPromotion) { .host_window = host_window, .dst = dst, .src = req->src };
+        apply_promote(ds, &ds->promote_queue[i]);
     }
     ds->promote_count = 0;
+}
+
+static i32 promotion_index(const FlDockShared* ds, const void* host_window) {
+    for (u32 i = 0; i < ds->promotion_count; ++i) {
+        if (ds->promotions[i].host_window == host_window) {
+            return (i32)i;
+        }
+    }
+    return -1;
+}
+
+static DockPromotion take_promotion(FlDockShared* ds, u32 index) {
+    DockPromotion taken = ds->promotions[index];
+    for (u32 j = index + 1; j < ds->promotion_count; ++j) {
+        ds->promotions[j - 1] = ds->promotions[j];
+    }
+    ds->promotion_count--;
+    return taken;
 }
 
 void fl_dock_notify_window_closed(void* host_window) {
@@ -189,17 +218,11 @@ void fl_dock_notify_window_closed(void* host_window) {
     if (ds == nullptr || host_window == nullptr) {
         return;
     }
-    for (u32 i = 0; i < ds->promotion_count; ++i) {
-        if (ds->promotions[i].host_window != host_window) {
-            continue;
-        }
-        DockPromotion p = ds->promotions[i];
-        for (u32 j = i + 1; j < ds->promotion_count; ++j) {
-            ds->promotions[j - 1] = ds->promotions[j];
-        }
-        ds->promotion_count--;
-        demote_all(p.src, p.dst); // rebind into the source by stable id
-        retire_workspace(ds, p.dst, p.src);
+    i32 index = promotion_index(ds, host_window);
+    if (index < 0) {
         return;
     }
+    DockPromotion p = take_promotion(ds, (u32)index);
+    demote_all(p.src, p.dst); // rebind into the source by stable id
+    retire_workspace(ds, p.dst, p.src);
 }
