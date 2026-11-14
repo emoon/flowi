@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <flowi/core/string.h>
 #include <flowi/ui/image_handle.h>
+#include <flowi/ui/scrollbar_display.h>
 #include <flowi/ui/selection.h>
 
 #ifdef __cplusplus
@@ -45,6 +46,8 @@ typedef struct FlListConfig {
     // Drag-reorder visuals: false (default) draws the built-in ghost + insertion line; true suppresses them
     // so the caller overrides the look from the live `drag_*` fields on `ListResult`. Gates only the drawing.
     bool suppress_drag_visuals;
+    // When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    FlScrollbarDisplayMode scrollbar_mode;
 } FlListConfig;
 
 // Options for Input::list: the layout knobs plus the two policy toggles the caller chooses.
@@ -60,6 +63,8 @@ typedef struct FlListOpts {
     // true -> the caller draws its own ghost/insertion line from the result's `drag_*` fields; false -> the
     // List draws the built-in affordances.
     bool suppress_drag_visuals;
+    // When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    FlScrollbarDisplayMode scrollbar_mode;
 } FlListOpts;
 
 // The visible index window a List emits, returned by List::begin. The caller iterates `[start, end)`

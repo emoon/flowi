@@ -193,6 +193,7 @@ static FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
                                                   .height_hint = row_height,
                                                   .gap = gap,
                                                   .scroll_to = scroll_to,
+                                                  .scrollbar_mode = args.config.scrollbar_mode,
                                               });
 
     // Position auto-tracking starts at the first visible row (the caller emits [start, end)).
@@ -471,6 +472,7 @@ FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelect
                                             .row_height = opts.row_height,
                                             .gap = opts.gap,
                                             .suppress_drag_visuals = opts.suppress_drag_visuals,
+                                            .scrollbar_mode = opts.scrollbar_mode,
                                         },
                                         .single_select = !opts.multi_select,
                                         .disable_reorder = !opts.reorderable,

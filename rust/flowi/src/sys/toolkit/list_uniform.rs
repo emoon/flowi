@@ -13,14 +13,17 @@ pub struct ListUniformOpts {
     /// viewport height below the top (clamped to the scrollable extent) and the offset eases toward it.
     /// Negative or out of range leaves the scroll target alone.
     pub scroll_to: i32,
+    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    pub scrollbar_mode: crate::sys::ScrollbarDisplayMode,
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<ListUniformOpts>() == 12, "ListUniformOpts size drift");
+    assert!(core::mem::size_of::<ListUniformOpts>() == 16, "ListUniformOpts size drift");
     assert!(core::mem::align_of::<ListUniformOpts>() == 4, "ListUniformOpts align drift");
     assert!(core::mem::offset_of!(ListUniformOpts, height_hint) == 0, "ListUniformOpts.height_hint offset drift");
     assert!(core::mem::offset_of!(ListUniformOpts, gap) == 4, "ListUniformOpts.gap offset drift");
     assert!(core::mem::offset_of!(ListUniformOpts, scroll_to) == 8, "ListUniformOpts.scroll_to offset drift");
+    assert!(core::mem::offset_of!(ListUniformOpts, scrollbar_mode) == 12, "ListUniformOpts.scrollbar_mode offset drift");
 };
 
 /// The visible index window a uniform list emits, returned by begin. The caller iterates `[start, end)` and

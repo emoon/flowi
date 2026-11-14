@@ -40,6 +40,7 @@
 #include "image/image_registry.h"
 #include "input_actions.h"
 #include "layout.h"
+#include "wheel_scope.h"
 #include "scroll_core.h"
 #include "list_uniform.h"
 #include "localization.h"
@@ -141,6 +142,7 @@ UiShared* ui_shared_create(FlArena* arena, FlRenderBackend* backend) {
     hashmap_new(&shared->item_state, arena, 256);
     hashmap_new(&shared->scroll_states, arena, 64);
     hashmap_new(&shared->widget_scroll_map, arena, 128);
+    hashmap_new(&shared->wheel_scopes, arena, 64);
 
     // App-global docking state: the workspace registry (entry 0 is the default/main workspace),
     // the injected host seam, and the deferred promote queue. Owns the workspaces' arenas.
@@ -540,6 +542,7 @@ void ui_update_begin(FlUiCtx* self) {
 
     // The stack's memory went with the arena rewind above.
     self->popup_stack_count = 0;
+    self->wheel_scope_id = 0;
 
     // Scoped theme overrides are frame-local; a caller that forgets to pop must not leak the override into the
     // next frame. Reset to the base theme at the top of every frame.

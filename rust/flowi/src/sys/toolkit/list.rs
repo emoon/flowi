@@ -52,6 +52,8 @@ pub struct ListConfig {
     /// Drag-reorder visuals: false (default) draws the built-in ghost + insertion line; true suppresses them
     /// so the caller overrides the look from the live `drag_*` fields on `ListResult`. Gates only the drawing.
     pub suppress_drag_visuals: bool,
+    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    pub scrollbar_mode: crate::sys::ScrollbarDisplayMode,
 }
 
 const _: () = {
@@ -61,6 +63,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ListConfig, gap) == 4, "ListConfig.gap offset drift");
     assert!(core::mem::offset_of!(ListConfig, labels) == 8, "ListConfig.labels offset drift");
     assert!(core::mem::offset_of!(ListConfig, suppress_drag_visuals) == 16, "ListConfig.suppress_drag_visuals offset drift");
+    assert!(core::mem::offset_of!(ListConfig, scrollbar_mode) == 20, "ListConfig.scrollbar_mode offset drift");
 };
 
 /// Options for Input::list: the layout knobs plus the two policy toggles the caller chooses.
@@ -78,16 +81,19 @@ pub struct ListOpts {
     /// true -> the caller draws its own ghost/insertion line from the result's `drag_*` fields; false -> the
     /// List draws the built-in affordances.
     pub suppress_drag_visuals: bool,
+    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    pub scrollbar_mode: crate::sys::ScrollbarDisplayMode,
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<ListOpts>() == 12, "ListOpts size drift");
+    assert!(core::mem::size_of::<ListOpts>() == 16, "ListOpts size drift");
     assert!(core::mem::align_of::<ListOpts>() == 4, "ListOpts align drift");
     assert!(core::mem::offset_of!(ListOpts, row_height) == 0, "ListOpts.row_height offset drift");
     assert!(core::mem::offset_of!(ListOpts, gap) == 4, "ListOpts.gap offset drift");
     assert!(core::mem::offset_of!(ListOpts, multi_select) == 8, "ListOpts.multi_select offset drift");
     assert!(core::mem::offset_of!(ListOpts, reorderable) == 9, "ListOpts.reorderable offset drift");
     assert!(core::mem::offset_of!(ListOpts, suppress_drag_visuals) == 10, "ListOpts.suppress_drag_visuals offset drift");
+    assert!(core::mem::offset_of!(ListOpts, scrollbar_mode) == 12, "ListOpts.scrollbar_mode offset drift");
 };
 
 /// The visible index window a List emits, returned by List::begin. The caller iterates `[start, end)`

@@ -22,6 +22,8 @@ struct ListConfig {
     /// Drag-reorder visuals: false (default) draws the built-in ghost + insertion line; true suppresses them
     /// so the caller overrides the look from the live `drag_*` fields on `ListResult`. Gates only the drawing.
     suppress_drag_visuals: bool,
+    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    scrollbar_mode: ScrollbarDisplayMode,
 }
 
 /// Options for Input::list: the layout knobs plus the two policy toggles the caller chooses.
@@ -38,6 +40,8 @@ struct ListOpts {
     /// true -> the caller draws its own ghost/insertion line from the result's `drag_*` fields; false -> the
     /// List draws the built-in affordances.
     suppress_drag_visuals: bool,
+    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    scrollbar_mode: ScrollbarDisplayMode,
 }
 
 /// Where a `List` drag-reorder lands, relative to a target stable id. A flat list produces only
