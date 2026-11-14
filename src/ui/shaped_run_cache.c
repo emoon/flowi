@@ -240,7 +240,7 @@ static void release_block(ShapedRunCache* self, const ShapedRunHot* hot) {
         return;
     }
     void* block = self->pool_memory + hot->block;
-    set_bytes_used(self, self->bytes_used - tlsf_block_size(block) - tlsf_alloc_overhead());
+    set_bytes_used(self, self->bytes_used - tlsf_block_size(block));
     tlsf_free(self->pool, block);
 }
 
@@ -274,7 +274,7 @@ static void* pool_alloc(ShapedRunCache* self, u64 bytes) {
         block = tlsf_malloc(self->pool, bytes);
     }
     if (block != nullptr) {
-        set_bytes_used(self, self->bytes_used + tlsf_block_size(block) + tlsf_alloc_overhead());
+        set_bytes_used(self, self->bytes_used + tlsf_block_size(block));
     }
     return block;
 }
