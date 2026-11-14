@@ -1,5 +1,5 @@
 // Shared GPU frame orchestrator: the canonical per-frame sequence both backends drive, plus the IR-driven
-// glyph-realization walk that feeds it. Backend-agnostic - no GL or Metal type appears here; every
+// glyph-realization walk that feeds it. Backend-agnostic: no GL or Metal type appears here; every
 // device-specific step goes through the GpuRenderOps table (gpu_orchestrator.h).
 
 #include "gpu_orchestrator.h"
@@ -24,7 +24,7 @@ static void gpu_prepare_text_glyphs(const GpuRenderOps* ops, void* backend, cons
     while (p < end) {
         const FlCmdHeader* header = (const FlCmdHeader*)p;
         if (header->byte_size == 0) {
-            break; // zero-size record
+            break;
         }
         if (header->kind == FlCmd_TextRun) {
             const FlCmdTextRun* run = (const FlCmdTextRun*)(header + 1);
@@ -32,14 +32,14 @@ static void gpu_prepare_text_glyphs(const GpuRenderOps* ops, void* backend, cons
             for (u32 i = 0; i < run->glyph_count; i++) {
                 u32 codepoint = glyphs[i].glyph_id; // the IR keys glyphs by codepoint (ui/render_ir.h: FlGlyph)
                 FlTempArena scratch = fl_arena_scratch_begin();
-                // A codepoint the run's font lacks resolves to the fallback face - otherwise the glyph occupies
+                // A codepoint the run's font lacks resolves to the fallback face; otherwise the glyph occupies
                 // its fallback advance width but rasterizes as .notdef.
                 FontGlyphRef glyph = font_cache_resolve_glyph(font_cache, run->font, codepoint);
                 FlGlyphOutline outline;
                 if (font_cache_get_glyph_outline(font_cache, glyph.font, run->size, glyph.glyph_index, scratch.arena,
                                                  &outline)) {
-                    // Atlas key is the RUN's font + codepoint + raster size - the same key the translator looks
-                    // up - regardless of which face supplied the outline.
+                    // The atlas key is the run's font + codepoint + raster size (the key the translator looks
+                    // up), regardless of which face supplied the outline.
                     ops->prepare_glyph(backend, run->font, run->size, codepoint, &outline);
                 }
                 fl_arena_scratch_end(scratch);
@@ -56,12 +56,11 @@ void gpu_orchestrate_frame(const GpuRenderOps* ops, void* backend, void* surface
     ops->frame_begin(backend);
     gpu_prepare_text_glyphs(ops, backend, frame);
 
-    // Translate the neutral IR into the backend's draw-command / AABB / clip arrays.
     GpuDrawList list = ops->translate(backend, frame, screen_w, screen_h);
 
     // The two-dispatch all-compute pipeline: classification (one thread per tile) writes each tile's
     // command list, then raster (one workgroup per tile) blends the classified commands into the offscreen
-    // target. An empty frame still runs both passes - classification zeroes every tile count and raster clears
+    // target. An empty frame still runs both passes: classification zeroes every tile count and raster clears
     // the target to transparent.
     ops->begin_encoder(backend, surface);
     ops->upload_inputs(backend, &list);

@@ -22,8 +22,6 @@
 // Atomic: written by main thread (cache_new/cache_destroy), read by worker threads (alloc_entry, mark_finished)
 static _Atomic(struct ImageCache*) s_image_cache;
 
-// Statistics
-
 typedef struct ImageCacheStats {
     u32 cache_misses;
     u32 images_cached;
@@ -79,11 +77,11 @@ struct ImageCache {
 };
 
 static u32 image_format_bytes_per_pixel(InternalImageData* image) {
-    // The channels field always matches the actual bytes per pixel, deinterleaved included
+    // The channels field always matches the bytes per pixel, deinterleaved included
     return (u32)image->channels;
 }
 
-// Batch size for eviction - collect this many oldest entries in a single scan
+// Eviction batch size: one scan collects this many of the oldest entries
 #define EVICTION_BATCH_SIZE 32
 
 typedef struct EvictionBatch {
@@ -137,7 +135,7 @@ FlString image_cache_copy_string(FlString str) {
         return string_empty();
     }
 
-    // Protect string allocator (arena) access with cache mutex
+    // The cache mutex guards the string allocator's arena
     mutex_lock(&self->mutex);
     FlString result = string_allocator_copy(self->string_allocator, str);
     mutex_unlock(&self->mutex);
@@ -219,7 +217,7 @@ void image_cache_update(ImageCache* self, u64 frame_counter) {
     self->pending_free_count = 0;
     mutex_unlock(&self->mutex);
 
-    // Very infrequent cleanup - every 10 seconds at 60fps
+    // Cleanup runs every 600 frames (10 seconds at 60fps)
     if (frame_counter % 600 == 0) {
         if (self->config.enable_evicted_cache) {
             mutex_lock(&self->mutex);
@@ -280,10 +278,10 @@ static void image_cache_track_eviction(ImageCache* self, ImageCacheEntry* entry,
         return;
     }
 
-    // NOTE: This function is called within mutex-protected sections
+    // Called with the cache mutex held
     EvictedImageEntry* evicted = pool_alloc(&self->evicted_pool);
     evicted->mount = entry->mount;
-    evicted->relative_path = entry->relative_path; // Just copy the string (already allocated on string allocator)
+    evicted->relative_path = entry->relative_path; // the string already lives in the string allocator
     evicted->options = entry->options;
     evicted->eviction_frame = atomic_load(&self->current_frame);
 
@@ -386,7 +384,8 @@ ImageCacheEntry* image_cache_alloc_entry(InternalImageData* image) {
     return entry;
 }
 
-// Get the data back given a ImageHandle. Will only show return non null after we marked the request as finished
+// Pixels for a handle. Returns nullptr until the request is marked finished. An evicted handle starts a reload
+// and returns nullptr until that completes.
 
 ImageData* image_cache_get_data(ImageHandle handle) {
     ImageCache* self = atomic_load(&s_image_cache);
@@ -406,7 +405,7 @@ ImageData* image_cache_get_data(ImageHandle handle) {
     if (evicted_lookup) {
         EvictedImageEntry* evicted = *evicted_lookup;
 
-        // Trigger async reload reusing the SAME handle
+        // Trigger an async reload that reuses the same handle
         ImageHandle reloaded_handle
             = image_reload_evicted(evicted->mount, evicted->relative_path, evicted->options, handle);
 
@@ -415,7 +414,7 @@ ImageData* image_cache_get_data(ImageHandle handle) {
             hashmap_remove(&self->evicted_lookup, handle);
         }
 
-        // Return null - data will be available when reload completes
+        // nullptr until the reload completes
         return nullptr;
     }
 
@@ -475,15 +474,15 @@ void image_cache_free_handle(ImageHandle handle) {
 
     EvictedImageEntry** evicted_ptr = hashmap_get(&self->evicted_lookup, handle);
     if (evicted_ptr) {
-        // Already evicted - this is a double-free, just ignore it
-        // The evicted cache keeps the handle alive for potential reload
+        // Already evicted, so this is a double free and is ignored. The evicted cache keeps the handle alive
+        // for a potential reload.
         mutex_unlock(&self->mutex);
         return;
     }
 
     mutex_unlock(&self->mutex);
     // Not in either cache: invalid, already freed, or being reloaded after eviction. No fl_vfs_close() in any
-    // of those cases - on a reloading handle it would cancel the reload.
+    // of those cases; on a reloading handle it would cancel the reload.
 }
 
 // Pool-residency hooks for tests (see image_cache.h): evict_keep removes an entry from the lookup but keeps its

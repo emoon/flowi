@@ -13,20 +13,21 @@ use crate::{Signal, WidgetConfig};
 /// Per-call configuration for [`Slider::float`] / [`Slider::int`] (and the [`slider_float_with`] /
 /// [`slider_int_with`] sugar over them). Build one with
 /// ..Default::default() and set only what you need; [`vertical`](Self::vertical) +
-/// [`logarithmic`](Self::logarithmic) together give a vertical logarithmic fader. [`Default`]: an empty [`format`](Self::format) selects the per-type default ("%.2f" for float, "%d" for int)
-/// and every other field is zero ([`step`](Self::step) 0.0 → auto, 1% of range).
+/// [`logarithmic`](Self::logarithmic) together give a vertical logarithmic fader. [`Default`]: an empty
+/// [`format`](Self::format) selects the per-type default ("%.2f" for float, "%d" for int) and every other
+/// field is zero ([`step`](Self::step) 0.0 → auto, 1% of range).
 #[derive(Copy, Clone)]
 pub struct SliderConfig<'a> {
     /// printf format for the value readout; "" uses the per-type default ("%.2f" float, "%d" int).
     /// Must be literal text plus exactly one conversion matching the slider's type (%f/%.2f/%g etc. for
-    /// float, %d/%03d for int; %% is a literal percent). A format with the wrong or extra conversions -
-    /// or hazards like %s/%n - is silently ignored and the per-type default used instead.
+    /// float, %d/%03d for int; %% is a literal percent). A format with the wrong or extra conversions,
+    /// or hazards like %s/%n, is silently ignored and the per-type default used instead.
     pub format: &'a str,
     /// Keyboard / mouse-wheel step; 0.0 auto-calculates 1% of the range.
     pub step: f32,
-    /// Logarithmic taper - the volume-fader curve (linear when false).
+    /// Logarithmic taper, the volume-fader curve (linear when false).
     pub logarithmic: bool,
-    /// Vertical orientation - up/down adjust the value, left/right navigate away (horizontal when false).
+    /// Vertical orientation: up/down adjust the value, left/right navigate away (horizontal when false).
     pub vertical: bool,
     /// Track bar thickness in pixels; 0.0 keeps the default 8. A track thinner than
     /// [`thumb_size`](Self::thumb_size) centers vertically against the thumb, so the row stays the thumb's
@@ -35,7 +36,7 @@ pub struct SliderConfig<'a> {
     /// Thumb diameter in pixels; 0.0 keeps the default 24. Also the track row's height, and the span the
     /// thumb travels short of so it reaches neither edge.
     pub thumb_size: f32,
-    /// Shared widget config - id override, explicit colours, variant/size token, focus and tab order,
+    /// Shared widget config: id override, explicit colours, variant/size token, focus and tab order,
     /// per-widget theme override.
     pub widget: WidgetConfig<'a>,
 }
@@ -152,12 +153,12 @@ impl Slider {
     }
 }
 
-/// Emit a float slider for label bound to a caller &mut, default config - sugar over
+/// Emit a float slider for label bound to a caller &mut, with the default config. Sugar over
 /// [`Slider::float`]. The bound value is read and written in place each frame (drag, wheel, and
-/// keyboard all flow back through the pointer). Like [`Button::new`](crate::Button::new), label accepts any `impl AsRef<str>`
-/// copied into the per-frame arena; call inside a frame callback. For a fader - a vertical,
-/// logarithmically-tapered slider - use [`slider_float_with`] with a [`SliderConfig`] setting vertical and
-/// logarithmic.
+/// keyboard all flow back through the pointer). Like [`Button::new`](crate::Button::new), label accepts
+/// any `impl AsRef<str>` copied into the per-frame arena; call inside a frame callback. For a fader (a
+/// vertical, logarithmically tapered slider) use [`slider_float_with`] with a [`SliderConfig`] setting
+/// vertical and logarithmic.
 pub fn slider_float(label: impl AsRef<str>, value: &mut f32, min: f32, max: f32) -> Signal {
     slider_float_with(label, value, min, max, SliderConfig::default())
 }
@@ -240,7 +241,7 @@ fn slider_format_cstring(fmt: &str, is_int: bool) -> std::ffi::CString {
     std::ffi::CString::new(fmt).unwrap_or_default()
 }
 
-/// Emit a float slider with an explicit [`SliderConfig`] - the path to a vertical logarithmic fader. See
+/// Emit a float slider with an explicit [`SliderConfig`], which is how to get a vertical logarithmic fader. See
 /// [`slider_float`] for the binding contract. An invalid [`format`](SliderConfig::format) is silently
 /// replaced by the per-type default, as for [`Slider::float`].
 pub fn slider_float_with(

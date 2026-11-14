@@ -1,14 +1,13 @@
-// examples/two_windows - two real OS windows driven by one fl_app.
+// Two OS windows driven by one fl_app.
 //
-// The main window (the one fl_app_create opens) shows one UI; a second window opened with fl_app_window_open shows
-// a different UI, each with its own per-frame callback + state. fl_app pumps the shared event queue once per tick,
-// demuxes events to each window by id, and ticks + presents both from the single shared GPU backend - so both
-// windows are independently interactive. Closing the SECOND window leaves the main one running; closing the MAIN
-// window quits.
+// The main window (opened by fl_app_create) and a second one opened with fl_app_window_open each have their own
+// frame callback and state. fl_app pumps the shared event queue once per tick, routes events to each window by
+// id, and ticks and presents both from the one shared GPU backend. Closing the second window leaves the main one
+// running; closing the main window quits.
 //
-// Manual demo only: the monorepo never compiles it and it is not a CI test - the headless multi-window contract is
-// covered in unit_tests (app.multi_window_*). GPU-only: the all-compute backend aborts under a software
-// rasterizer. Run from the repo root so the working-directory asset mount resolves the bundled font.
+// Run by hand; it is not a CI test. unit_tests covers headless multi-window (app.multi_window_*). GPU only: the
+// compute backend aborts under a software rasterizer. Run from the repo root so the working-directory asset
+// mount finds the bundled font.
 
 #include <stdio.h>
 #include <string.h>
@@ -29,8 +28,8 @@ typedef struct WindowState {
     int clicks;
 } WindowState;
 
-// Per-window close hook: the host intercepts a window-manager close. Returning true lets the close proceed;
-// returning false vetoes it (e.g. to raise an unsaved-changes prompt first).
+// Called when the window manager asks to close window two. Returning true lets the close proceed; returning
+// false vetoes it, for example to show an unsaved-changes prompt first.
 static bool window_two_on_close(void* user_data) {
     WindowState* st = (WindowState*)user_data;
     log_info("two_windows: window two closing (had %d clicks) — approving", st->clicks);
@@ -40,8 +39,7 @@ static bool window_two_on_close(void* user_data) {
 static void window_frame(void* user_data) {
     WindowState* st = (WindowState*)user_data;
 
-    // The outline font lives in the shared font cache but must be the active font on THIS window's context; set
-    // it every frame so both windows render text regardless of which one was created last.
+    // The font lives in the shared font cache, but the active font is per window context, so set it every frame.
     ui_font_set(st->font);
 
     char buf[64];
@@ -60,8 +58,8 @@ static void window_frame(void* user_data) {
 }
 
 int main(void) {
-    // GPU renderer: multi-window present composites each window's surface texture through the SDL window backend.
-    // There is no software multi-window path - the second window needs the window backend.
+    // Multi-window present composites each window's surface texture through the SDL window backend, which needs
+    // the GPU renderer. There is no software multi-window path.
     FlAppSettings settings = {
         .window_title = FL_S("flowi — window one"),
         .width = 640,
@@ -75,9 +73,9 @@ int main(void) {
         return 1;
     }
 
-    // The GPU backend computes glyph coverage from outlines, so the built-in 1-bit default font will not
-    // render - load a real TTF through the runner's working-directory asset mount. The load is async; block once so
-    // the first frames lay out against a ready font.
+    // The GPU backend computes glyph coverage from outlines, so the built-in 1-bit default font does not render.
+    // Load a TTF through the runner's working-directory asset mount. The load is async; wait for it so the first
+    // frames lay out with the font ready.
     FlFontId font = fl_font_load(FL_S("examples/data/Roboto-Regular.ttf"), 20);
     ui_font_set(font);
     ui_font_wait_load(font);

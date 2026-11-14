@@ -1,8 +1,8 @@
-// Pass 1: classification - one thread per TILE_SIZE-square tile, building each tile's command index list.
+// Pass 1, classification: one thread per TILE_SIZE-square tile, building each tile's command index list.
 //
 // Frame shape: classification then raster, both compute, into an offscreen RGBA8 target. This pass reads the
 // draw commands and the pre-intersected AABBs and writes the per-tile index lists; it reads no clip rects.
-// The tile-list layout is TILE_STRIDE u32 per tile - [count, overflow, index * TILE_CAPACITY] - where count
+// The tile-list layout is TILE_STRIDE u32 per tile, [count, overflow, index * TILE_CAPACITY], where count
 // is clamped to capacity and overflow counts the commands that did not fit.
 //
 // Signature seam (shader_compat_metal.h): GL declares the SSBOs and uniforms at global scope; MSL takes them as
@@ -41,8 +41,8 @@ KERNEL(main) {
         if (bb.x < bounds.z && bb.z > bounds.x && bb.y < bounds.w && bb.w > bounds.y) {
             // Line-aware narrow phase for stroke segments: a tile inside the segment's AABB but far from
             // the line (a long diagonal's box over-covers) is rejected, so only tiles the capsule can reach
-            // keep the command. The bound - segment distance to the tile center minus the tile half-diagonal -
-            // is conservative and never drops a tile the capsule actually touches.
+            // keep the command. The bound (segment distance to the tile center minus the tile half-diagonal)
+            // is conservative and never drops a tile the capsule touches.
             if (cmds[i].kind == KIND_POLYLINE && (cmds[i].flags & POLY_STROKE) != 0u) {
                 float4 seg = cmds[i].rect;
                 float reach = cmds[i].radius.x + 0.5; // half-width plus the AA ramp

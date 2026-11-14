@@ -24,7 +24,7 @@ enum JobStatus {
     JOB_STATUS_FREE = 3, // Job is completed and has been added to free list
     JOB_STATUS_WAITING_FOR_DEPENDENCY = 4,
     // Function has run and dependents are being drained. Treated as "done" by an adder's self-promotion
-    // check (so a late dependent still gets scheduled) but NOT as recyclable by fl_jobs_is_finished, so
+    // check (so a late dependent still gets scheduled) but not as recyclable by fl_jobs_is_finished, so
     // the slot stays pinned until promote_dependent_jobs finishes and JOB_STATUS_COMPLETED is published.
     JOB_STATUS_PROMOTING = 5,
 };
@@ -92,7 +92,7 @@ void jobs_context_free(void* context) {
         pool_free(&self->context_pool, (JobContext*)context);
         mutex_unlock(&self->context_mutex);
     }
-    // If not from our pool, silently ignore (not an error)
+    // A pointer from outside the pool is ignored.
 }
 
 // An out-of-range priority (including FlJobPriority_Invalid) runs as High. Applied before the priority is stored so
@@ -107,7 +107,7 @@ static void schedule_job_with_priority(Jobs* self, JobInfo* job, JobPriority pri
     if (!try_enqueue(&self->work_queues[queue], &job)) {
         // The queue is saturated and a worker must not block on a slot: with every worker stuck
         // promoting dependents into full queues, nothing is left to drain them. Claim the job with the
-        // same status CAS a dequeuing worker would use and run it inline - the queue never saw it, so
+        // same status CAS a dequeuing worker would use and run it inline. The queue never saw it, so
         // it cannot run twice. This recurses one stack frame per chained dependent while saturation
         // persists.
         if (s_current_worker_info != nullptr) {
@@ -115,7 +115,7 @@ static void schedule_job_with_priority(Jobs* self, JobInfo* job, JobPriority pri
             if (atomic_compare_exchange_strong(&job->status, &expected, JOB_STATUS_CLAIMED)) {
                 execute_job(job, s_current_worker_info, true);
             }
-            // CAS failure means another thread already owns the job - nothing left to do here.
+            // A failed CAS means another thread already owns the job.
             return;
         }
         // Non-worker producer (main thread, a subsystem's own threads): apply backpressure until a slot frees.
@@ -156,22 +156,21 @@ static void promote_dependent_jobs(JobInfo* completed_job) {
         if (atomic_compare_exchange_strong(&dependent->status, &expected, JOB_STATUS_NOT_STARTED)) {
             schedule_job(self, dependent);
         }
-        // If CAS failed, the job already self-promoted - skip it
+        // A failed CAS means the job already promoted itself.
 
         dependent = next;
     }
 }
 
-// Try to dequeue a job from priority queues (High -> Normal -> Low)
-// Handles stale entries from reprioritization by checking job->priority matches queue
-
+// Dequeues from the priority queues, High first. An entry whose job->priority no longer matches its
+// queue is stale (reprioritization left it behind) and is skipped.
 static bool try_dequeue_prioritized(Jobs* self, JobInfo** out_job) {
     for (int p = JOB_PRIORITY_COUNT - 1; p >= 0; p--) {
         JobInfo* job = nullptr;
         while (try_dequeue(&self->work_queues[p], &job)) {
             u32 current_priority = atomic_load(&job->priority);
             if (current_priority != (u32)p) {
-                // Stale entry - the job will be picked up from its correct queue
+                // Stale entry: the job is picked up from its current queue.
                 continue;
             }
 
@@ -203,8 +202,8 @@ static void execute_job(JobInfo* work_job, FlJobsWorkerInfo* worker_info, bool n
     }
     // Publish PROMOTING (release) before draining dependents: it is the release point for the job's
     // writes, and the signal a racing fl_jobs_add_job_with_dependency needs to self-promote a dependent
-    // prepended after the drain below. PROMOTING is not recyclable - fl_jobs_is_finished reports it as
-    // not-yet-finished - so the slot cannot be freed while promote_dependent_jobs still walks the list.
+    // prepended after the drain below. PROMOTING is not recyclable (fl_jobs_is_finished reports it as
+    // not finished), so the slot cannot be freed while promote_dependent_jobs still walks the list.
     atomic_store_explicit(&work_job->status, JOB_STATUS_PROMOTING, memory_order_release);
     // Promote any jobs that were waiting for this one to complete, while the slot is still pinned.
     promote_dependent_jobs(work_job);
@@ -215,9 +214,9 @@ static void execute_job(JobInfo* work_job, FlJobsWorkerInfo* worker_info, bool n
 static void wait_for_work(Jobs* self, FlJobsWorkerInfo* worker_info) {
     mutex_lock(&self->idle_mutex);
 
-    // Register as idle BEFORE re-checking the queues, all under idle_mutex. A producer enqueuing after
-    // the re-check then observes this increment - the relevant atomics, including the seq_cst queue in
-    // mcmpq.h, share one total order - and signals under idle_mutex instead of skipping. Counting a
+    // Register as idle before re-checking the queues, all under idle_mutex. A producer enqueuing after
+    // the re-check then observes this increment (the relevant atomics, including the seq_cst queue in
+    // mcmpq.h, share one total order) and signals under idle_mutex instead of skipping. Counting a
     // worker idle while it is still re-checking is harmless: the re-check below claims any queued job.
     atomic_fetch_add(&self->idle_workers, 1);
 
@@ -415,11 +414,12 @@ FlJobHandle fl_jobs_add_job_with_priority_and_dependency(FlJobsFunc func, void* 
     JobInfo* dep_job = &self->start_jobs[dep_index];
 
     // Not paired with the status read below: the dependency can finish and its slot be reused across the
-    // free-list section, leaving that read and the prepend on the new occupant. Harmless - a slot is only
-    // recycled after its job completed, so the dependency is done, and the re-check after the prepend
-    // releases the job when the occupant reports COMPLETED/FREE/PROMOTING. Costs a wait, never an order.
+    // free-list section, leaving that read and the prepend on the new occupant. That is harmless: a slot is
+    // only recycled after its job completed, so the dependency is done, and the re-check after the prepend
+    // releases the job when the occupant reports COMPLETED/FREE/PROMOTING. It can cost a wait but never
+    // breaks the ordering.
     if (atomic_load(&dep_job->generation) != dep_generation) {
-        // Dependency was recycled - treat as no dependency
+        // The dependency was recycled: treat as no dependency.
         return fl_jobs_add_job_with_priority(func, user_data, priority);
     }
 
@@ -473,7 +473,7 @@ FlJobHandle fl_jobs_add_job_with_priority_and_dependency(FlJobsFunc func, void* 
         if (atomic_compare_exchange_strong(&job->status, &expected_status, JOB_STATUS_NOT_STARTED)) {
             schedule_job_with_priority(self, job, priority);
         }
-        // If CAS failed, promote_dependent_jobs() already claimed us - we're done
+        // A failed CAS means promote_dependent_jobs() already scheduled this job.
     }
 
     return handle;
@@ -521,8 +521,8 @@ FlJobsResult fl_jobs_is_finished(FlJobHandle handle) {
         // performing the recycle the new occupant's owner would have performed, never a double push.
         u32 expected = JOB_STATUS_COMPLETED;
         if (atomic_compare_exchange_strong(&job->status, &expected, JOB_STATUS_FREE)) {
-            // We successfully transitioned to FREE - add to free list. The CAS guarantees exactly one
-            // caller recycles the slot; the push is guarded because any non-worker thread may poll.
+            // The CAS lets exactly one caller recycle the slot. The push takes the mutex because any
+            // non-worker thread may poll.
             mutex_lock(&self->free_list_mutex);
             job->next = self->first_free_entity;
             self->first_free_entity = job;
@@ -652,7 +652,7 @@ bool fl_jobs_set_priority(FlJobHandle handle, JobPriority new_priority) {
 
     u32 status = atomic_load(&job->status);
     if (status != JOB_STATUS_NOT_STARTED && status != JOB_STATUS_WAITING_FOR_DEPENDENCY) {
-        return false; // Too late - job already running or done
+        return false; // Too late: the job is running or done
     }
 
     u32 old_priority = atomic_load(&job->priority);
@@ -660,19 +660,19 @@ bool fl_jobs_set_priority(FlJobHandle handle, JobPriority new_priority) {
         return true;
     }
 
-    // Update the priority field FIRST: this marks the old queue entry as stale
+    // Update the priority field first: this marks the old queue entry as stale
     atomic_store(&job->priority, (u32)new_priority);
 
-    // Re-check status AFTER updating priority to close the race window
-    // A worker might have claimed the job between our initial check and now
+    // Re-check status after updating priority: a worker might have claimed the job since the first
+    // check.
     status = atomic_load(&job->status);
     if (status == JOB_STATUS_NOT_STARTED) {
         // The old entry remains but will be skipped by workers (stale entry detection)
         schedule_job_with_priority(self, job, new_priority);
     }
 
-    // For WAITING_FOR_DEPENDENCY jobs, priority takes effect when promoted
-    // (no requeue needed - they're not in any work queue yet)
+    // A WAITING_FOR_DEPENDENCY job is in no work queue yet, so its new priority takes effect when it
+    // is promoted.
 
     return true;
 }

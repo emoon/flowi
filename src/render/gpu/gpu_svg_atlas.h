@@ -1,11 +1,11 @@
 #pragma once
 
-// GPU backend: SVG-atlas bookkeeping - (image handle, quantized size) -> atlas cell over the skyline packer,
+// GPU backend: SVG-atlas bookkeeping: (image handle, quantized size) -> atlas cell over the skyline packer,
 // with one live cell per handle.
 //
-// Cells are keyed by (handle, quantized size), but a handle resolves to its single CURRENT live cell: a size-step
-// change appends a fresh cell and ORPHANS the prior one. Orphans stay in place - the packer underneath is
-// append-only - until gpu_svg_atlas_compact reclaims them on a failed placement.
+// Cells are keyed by (handle, quantized size), but a handle resolves to its single current live cell: a size-step
+// change appends a fresh cell and orphans the prior one. Orphans stay in place (the packer underneath is
+// append-only) until gpu_svg_atlas_compact reclaims them on a failed placement.
 
 #include "gpu_atlas_pack.h"
 #include <ui/ui_types.h>
@@ -39,7 +39,7 @@ typedef struct GpuSvgEntry {
     bool live;                   // true for the handle's current cell; false once a newer size orphaned it
     GpuAtlasCell cell;           // full padded extent in the atlas
     FlVectorClass cls;           // the prepared icon's classification (monochrome vs multi-color)
-    FlColor mono_color;          // authored fill color for a monochrome icon - the default draw tint (unused otherwise)
+    FlColor mono_color;          // authored fill color for a monochrome icon, the default draw tint (unused otherwise)
     const FlVectorImage* vector; // retained geometry source, owned by the shared vector layer and stable for the
                                  // handle's lifetime. Never dereferenced here; the backend re-rasters this cell
                                  // from it after a compaction.
@@ -55,14 +55,14 @@ typedef struct GpuSvgAtlas {
 } GpuSvgAtlas;
 
 // SVG-specific geometric size ladder: quantizes a physical display size onto discrete raster steps, so a
-// continuously-zooming host re-rasters only at step boundaries. Clamped to a PER-CLASS ceiling - a multi-color icon
+// continuously-zooming host re-rasters only at step boundaries. Clamped to a per-class ceiling: a multi-color icon
 // caps at 1024 (the RGBA8 atlas is 2048^2), a monochrome one at 2048 (the R8 atlas is 4096^2). Monotonic
 // non-decreasing and idempotent at a step.
 u16 svg_quantize_size(u16 size, FlVectorClass cls);
 
 // The builder-side bridge from a draw's physical destination size to a raster size on the ladder above: quantize
 // the dst size here to key the prepare seam, then draw the resolved cell at the exact dst. Quantization is on the
-// UNIFORM size - the larger destination side - matching the prepare seam's aspect-fit of the icon's larger document
+// uniform size (the larger destination side), matching the prepare seam's aspect-fit of the icon's larger document
 // side onto the raster size. A non-uniform dst is not re-rastered per-axis; the single cell is sampled and
 // stretched. cls clamps the ladder to its per-class ceiling.
 u16 svg_raster_size_for_dst(f32 dst_w, f32 dst_h, FlVectorClass cls);
@@ -82,7 +82,7 @@ const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle,
 
 // Reclaim orphaned cells: repack only the currently-live cells into a fresh skyline, dropping every orphan. This
 // moves cells, never texels. Each surviving cell keeps its (handle, size, classification, color, geometry) and only
-// its position changes, so the texture data still sits at the pre-compaction positions - the backend must
+// its position changes, so the texture data still sits at the pre-compaction positions; the backend must
 // re-raster every surviving cell from its retained geometry afterward. After this returns every entry is live.
 void gpu_svg_atlas_compact(GpuSvgAtlas* atlas);
 

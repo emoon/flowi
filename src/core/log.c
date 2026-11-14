@@ -70,8 +70,8 @@ LogChannelId fl_log_register_channel(FlString name) {
         }
     }
 
-    // Create new channel - store first, then increment count
-    // This ensures readers see a valid channel before count increases
+    // Fill in the channel before incrementing the count, so lock-free readers never see a count
+    // that covers an unwritten slot.
     LogChannelId id = count;
     s_channels[id].name = name; // Assumes string persists (static strings)
     s_channels[id].level = s_current_log_level;
@@ -83,7 +83,7 @@ LogChannelId fl_log_register_channel(FlString name) {
         atomic_store(&s_max_channel_name_length, (u32)name.length);
     }
 
-    // Increment count last - this is the release barrier
+    // The count is stored last; it publishes the channel to readers.
     atomic_store(&s_channel_count, count + 1);
 
     mutex_unlock(&s_channel_mutex);

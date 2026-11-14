@@ -79,7 +79,7 @@ typedef struct GpuDrawCmd {
     f32 radius[4]; // Rect/Border: per-corner outer radius, TL TR BL BR; clamped to [0, half the smaller rect
                    // dimension] here. Image: the source rect in atlas texels, x0 y0 x1 y1. SlotImage: the
                    // source rect in the slot texture's own texels, x0 y0 x1 y1.
-                   // Arc: cos/sin of the sweep's bisector knob angle, then sin/cos of the half-aperture -
+                   // Arc: cos/sin of the sweep's bisector knob angle, then sin/cos of the half-aperture:
                    // the shader's wedge frame, precomputed here.
                    // Diamond: radius[0] is the border width.
                    // Polyline: stroke half-width, intensity at p0, intensity at p1, fill baseline_y.
@@ -88,20 +88,20 @@ typedef struct GpuDrawCmd {
                    // (rgb * a) with global_alpha folded; color[1..3] unused.
                    // Arc: color[0]. Circle/Diamond: color[0] fill, color[1] border.
                    // Border: color[0], then the left/right/top side widths as f32 bits (bottom rides
-                   // in aux) - the shader derives the inner geometry from these (the IR contract).
+                   // in aux). The shader derives the inner geometry from these (the IR contract).
                    // Polyline: color[0] is the stroke (capsule) or fill (trapezoid) color; intensity
                    // (in radius) scales its alpha.
     u32 kind;      // GpuDrawKind
     u32 clip;      // index into GpuDrawList.clips (0 = full target); the raster pass cuts coverage against it
     u32 flags;     // per-kind bits (GpuDraw_Image: GPU_DRAW_IMAGE_*, GpuDraw_Arc: GPU_DRAW_ARC_*); 0 for
-                   // kinds without flags. SlotImage carries no filter flag - its slot's sampler decides.
+                   // kinds without flags. SlotImage carries no filter flag; its slot's sampler decides.
                    // Border/Circle additionally carry their dash pattern in the free high bits
                    // (GPU_DRAW_DASH_*), 0 = solid.
     u32 aux;       // per-kind fourth scalar (Border: the bottom side width as f32 bits; SlotImage: the
                    // sampler-slot index, workgroup-uniform); headroom otherwise
     u32 effect[4]; // optional effect (GPU_DRAW_EFFECT_* in flags selects it; 0 in flags = none): offset x, y
                    // and blur radius as f32 bits in [0..2], the packed RGBA8 effect color in [3]. The shader
-                   // evaluates it from the shape's own SDF - offset + blurred for a drop shadow, centered +
+                   // evaluates it from the shape's own SDF: offset + blurred for a drop shadow, centered +
                    // additive for a glow.
 } GpuDrawCmd;
 
@@ -136,7 +136,7 @@ typedef struct GpuDrawList {
 //                  null, unresolved, or unprepared is skipped.
 // background:      the frame envelope's background state, emitted at the FRONT of the stream so the UI draws over
 //                  it: a clear rect (skipped at zero alpha) then up to two fullscreen slot images. A valid prev
-//                  signals a crossfade - prev draws opaque and current at crossfade_t, so over-compositing yields
+//                  signals a crossfade: prev draws opaque and current at crossfade_t, so over-compositing yields
 //                  lerp(prev, current, t). Nullable.
 //
 // Normalizations applied here, so the shaders never see a degenerate case: corner radii clamp to [0, half the
@@ -149,11 +149,11 @@ typedef struct GpuDrawList {
 // GpuDraw_Polyline per segment (fill trapezoids first, then stroke capsules, so the fill sits behind the stroke), a
 // bar set to one rect per bar. Classification is therefore per glyph and per segment, not over the whole run or
 // polyline box. An effect annotation stamps onto every command the record expands to and dilates the classification
-// AABB - shifted for a drop shadow, centered for a glow - before the clip intersection.
+// AABB (shifted for a drop shadow, centered for a glow) before the clip intersection.
 //
 // Clip state is flattened: FlCmd_ClipPush/ClipPop never reach the GPU stream. Every command carries an index into
 // the deduplicated clips array (clips[0] = the full target) and its AABB is pre-intersected with that rect, so a
-// command clipped down to nothing drops. Unbalanced push/pop is clamped and logged, never UB.
+// command clipped down to nothing drops. Unbalanced push/pop is clamped and logged.
 //
 // Slot grants run once over the single translation pass, so once every slot is taken the overflowing commands drop
 // in stream order and slots->overflow counts them. A fully clipped-out image neither claims a slot nor marks an

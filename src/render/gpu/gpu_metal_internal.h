@@ -21,7 +21,7 @@ struct FlRenderFrame;
 
 // Drop one +1-owned Objective-C resource and clear its field, so a second teardown pass cannot double-release and
 // "is this live?" is a nil check. release on nil is a no-op, so no guard is needed. The CoreFoundation form is not
-// symmetric - CFRelease(nullptr) is undefined.
+// symmetric: CFRelease(nullptr) is undefined.
 
 #define METAL_RELEASE(obj) \
     do {                   \
@@ -36,11 +36,11 @@ struct FlRenderFrame;
 #define METAL_SLOT_TEX_POOL_CAP (GPU_IMAGE_SLOT_TABLE_CAP * 3)
 
 // The assumed 2D texture cap for the slot tier: a source past this is rejected up front by the prepare TU. The
-// device is never queried for its real limit, so this is a floor, not a fact - on a device below it, texture
-// creation fails instead and metal_slot_realize logs it and reports the entry unrealized.
+// device is never queried for its real limit. On a device below this value, texture creation fails instead and
+// metal_slot_realize logs it and reports the entry unrealized.
 #define METAL_SLOT_MAX_TEXTURE_DIM 16384
 
-// Backend-shared tier: the system MTLDevice and one command queue drive every surface - no window, no context.
+// Backend-shared tier: the system MTLDevice and one command queue drive every surface; there is no window or context.
 // Lives in the backend-lifetime perm_arena; destroy() releases the two objects it owns.
 
 typedef struct MetalShared {
@@ -58,12 +58,12 @@ typedef struct MetalShared {
     id<MTLComputePipelineState> glyph_pipeline;
     id<MTLTexture> glyph_atlas_tex; // GPU_GLYPH_ATLAS_SIZE^2 R8, shader read + write; never cleared
 
-    // Backend-wide RGBA8 image atlas, sampled by the core-tier image path. Managed storage - prepare_image
+    // Backend-wide RGBA8 image atlas, sampled by the core-tier image path. Managed storage: prepare_image
     // CPU-uploads cells via replaceRegion. +1 retained (owned); released in destroy.
     id<MTLTexture> image_atlas_tex;
 
     // SVG vector-icon raster: a monochrome icon reuses glyph_pipeline above, a multi-color icon runs the color_svg
-    // program. Both atlases are backend-wide and GPU-written by their prepare dispatch - private storage,
+    // program. Both atlases are backend-wide and GPU-written by their prepare dispatch: private storage,
     // ShaderWrite + ShaderRead, never cleared, since every prepared cell writes its full padded extent. +1
     // retained (owned); released in destroy.
     id<MTLComputePipelineState> color_svg_pipeline; // multi-color composite; the mono path shares glyph_pipeline
@@ -80,7 +80,7 @@ typedef struct MetalShared {
     // raster kernel declares the whole IMAGE_SLOT_COUNT array, so unassigned slots and the realization-failure
     // fallback sample transparent rather than an arbitrary texel. +1 retained (owned).
     id<MTLTexture> slot_placeholder_tex;
-    struct FlFontCache* font_cache; // bound via set_font_cache; prepare_text_glyphs pulls outlines from it
+    struct FlFontCache* font_cache; // bound via set_font_cache; gpu_prepare_text_glyphs pulls outlines from it
     float last_ui_scale;          // scale_changed no-ops on an unchanged scale (seeded to 1.0 at create)
 
     FlArena* frame_arena; // per-frame IR-translation + per-glyph lowering scratch, rewound each use
@@ -130,7 +130,7 @@ typedef struct MetalSurface {
 // Realize one slot-tier texture into the pool: claim a free pool index and create the texture. Alpha-coverage
 // sources are R8 swizzled to (r, r, r, r); color sources are RGBA8, force_opaque swizzling alpha to 1 for dynamic
 // color buffers. Managed storage, so the source CPU-uploads via metal_texture_upload. Returns the slot module's
-// opaque texture name - the 1-based pool index, so pool[name - 1] is the texture - or 0 for unrealized when the
+// opaque texture name (the 1-based pool index, so pool[name - 1] is the texture), or 0 for unrealized when the
 // pool is full or creation failed (both logged).
 u32 metal_slot_realize(MetalShared* self, u32 w, u32 h, bool alpha_only, bool force_opaque);
 

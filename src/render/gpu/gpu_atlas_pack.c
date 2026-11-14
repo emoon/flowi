@@ -77,7 +77,7 @@ bool gpu_atlas_pack_insert(GpuAtlasPack* pack, u32 w, u32 h, u32* out_x, u32* ou
         return false;
     }
 
-    // Bottom-left heuristic: lowest resulting top edge, ties broken by leftmost x - candidates are scanned
+    // Bottom-left heuristic: lowest resulting top edge, ties broken by leftmost x. Candidates are scanned
     // left to right, so the strict improvement test keeps the leftmost of equals.
     u32 best = UINT32_MAX;
     u32 best_x = 0;

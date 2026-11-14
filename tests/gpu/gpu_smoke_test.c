@@ -1,10 +1,10 @@
 // Headless smoke test for the GPU render backend.
 //
-// Section 1 - packer + translator unit tests. Pure CPU, runs before any EGL/GL call.
+// Section 1: packer and translator unit tests. Pure CPU, runs before any EGL/GL call.
 //
-// Section 2 - the all-compute pipeline end-to-end on a GL 4.3 core context created via EGL surfaceless: no
-// window, no native display, so it runs on whatever driver EGL picks - llvmpipe in a GPU-less CI runner
-// (LIBGL_ALWAYS_SOFTWARE=1 forces it elsewhere).
+// Section 2: the all-compute pipeline end to end on a GL 4.3 core context created via EGL surfaceless. There is
+// no window and no native display, so it runs on whatever driver EGL picks, which is llvmpipe on a CI runner
+// without a GPU (LIBGL_ALWAYS_SOFTWARE=1 forces it elsewhere).
 
 #include "app/app.h"
 #include <core/arena.h>
@@ -121,7 +121,7 @@ static bool cells_overlap(GpuAtlasCell a, GpuAtlasCell b) {
 }
 
 // Walk a pixel run from outside a shape to inside it, asserting the SDF AA contract every edge shares.
-// require_partial additionally demands a genuine intermediate (a real AA ramp, not a step).
+// require_partial also demands at least one partially covered pixel, so a hard step fails.
 static int check_aa_ramp(const FlPixelReadback* buf, const int (*pts)[2], int count, FlColor color,
                          bool require_partial, const char* what) {
     u8 prev_alpha = 0;
@@ -165,7 +165,7 @@ static int check_aa_ramp_line(const FlPixelReadback* buf, int x0, int y0, int dx
     return check_aa_ramp(buf, pts, count, color, require_partial, what);
 }
 
-// Emit a polyline into the IR arena from an array of points (no scaling - these are already pixel coords).
+// Emit a polyline into the IR arena from an array of points (no scaling; the points are already pixel coordinates).
 static void emit_polyline(FlArena* arena, const FlPolyPoint* points, u32 count, FlColor color, FlColor fill_color,
                           f32 width, f32 baseline_y, u32 flags) {
     FlPolyPoint* dst = fl_ir_polyline(arena, color, fill_color, width, baseline_y, flags, count, nullptr);
@@ -208,9 +208,9 @@ static const FlColor blue = { 20, 40, 200, 128 }; // half-alpha
 
 static const f32 TAU = 6.28318530717958647692f; // one full turn, radians
 
-// Section 1: translator unit tests (no GL context - nothing here touches EGL or GL).
+// Section 1: translator unit tests (no GL context; nothing here touches EGL or GL).
 
-// Skyline packer + image-atlas bookkeeping unit tests (no GL - pure CPU placement logic).
+// Skyline packer and image-atlas bookkeeping unit tests (no GL; pure CPU placement logic).
 
 static int run_packer_tests(void) {
     FlArena* arena = arena_new();
@@ -290,7 +290,7 @@ static int run_packer_tests(void) {
     return 0;
 }
 
-// Glyph-atlas bookkeeping unit tests (no GL - pure CPU keyed placement + lookup over the packer).
+// Glyph-atlas bookkeeping unit tests (no GL; pure CPU keyed placement and lookup over the packer).
 
 static int run_glyph_atlas_tests(void) {
     FlArena* arena = arena_new();
@@ -332,7 +332,7 @@ static int run_glyph_atlas_tests(void) {
     return 0;
 }
 
-// Outline-lowering unit tests (no GL - gpu_glyph_lower.c is pure CPU).
+// Outline-lowering unit tests (no GL; gpu_glyph_lower.c is pure CPU).
 
 // Evaluate one wire-format quadratic (6 floats: p0, control, p1) at t.
 static Vec2 lowered_quad_eval(const f32* q, f32 t) {
@@ -736,8 +736,8 @@ static int run_translator_tests(void) {
 }
 
 // Effect annotations: a record's optional FlEffect expands the classification AABB to cover where the effect
-// reaches and packs the effect parameters into every command the record commits. Decorative only - it never
-// changes which command survives beyond reaching more tiles. Still Section 1 - pure CPU, no GL.
+// reaches and packs the effect parameters into every command the record commits. It is decorative only: it never
+// changes which command survives beyond reaching more tiles. Still Section 1: pure CPU, no GL.
 
 static u32 effect_kind_of(const GpuDrawCmd* cmd) {
     return (cmd->flags & GPU_DRAW_EFFECT_MASK) >> GPU_DRAW_EFFECT_SHIFT;
@@ -840,7 +840,7 @@ static int run_effect_translator_tests(void) {
               "bar glow: the one effect stamps onto every bar the set commits");
     }
 
-    // record_effect must locate the trailing FlEffect for every kind the translator renders - a wrong per-kind
+    // record_effect must locate the trailing FlEffect for every kind the translator renders; a wrong per-kind
     // payload size would mislocate it. The round-tripped color word proves it was found at the right offset.
     const FlColor fx_color = { 12, 34, 56, 255 };
     const u32 fx_packed = packed_rgba(fx_color, 255);
@@ -908,7 +908,7 @@ static int run_effect_translator_tests(void) {
 }
 
 // Optional-tier shape translation: arcs, circles, diamonds, and bar sets become their SDF draw kinds (each bar
-// of a set reuses GpuDraw_Rect). Still Section 1 - pure CPU, no GL.
+// of a set reuses GpuDraw_Rect). Still Section 1: pure CPU, no GL.
 
 static bool near_f32(f32 a, f32 b, f32 tolerance) {
     return fabsf(a - b) <= tolerance;
@@ -921,7 +921,7 @@ static int run_shape_translator_tests(void) {
     const u32 packed_green = 40u | (200u << 8) | (60u << 16) | (255u << 24);
 
     // A quarter ring from 12 to 3 o'clock. The encoding carries center + outer/inner radius and the wedge
-    // frame - bisector cos/sin and half-aperture sin/cos, all four 1/sqrt(2) for this quarter.
+    // frame: bisector cos/sin and half-aperture sin/cos, all four 1/sqrt(2) for this quarter.
     void* start = ir_begin(ir_arena);
     fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
     GpuDrawList list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
@@ -1078,9 +1078,9 @@ static int run_shape_translator_tests(void) {
     return 0;
 }
 
-// Polyline translation: a polyline expands to one GpuDraw_Polyline command per segment - a stroke capsule
+// Polyline translation: a polyline expands to one GpuDraw_Polyline command per segment: a stroke capsule
 // (line-aware classification) or, when FILLED, a fill-to-baseline trapezoid emitted before the strokes.
-// Still Section 1 - pure CPU, no GL.
+// Still Section 1: pure CPU, no GL.
 
 static int run_polyline_translator_tests(void) {
     FlArena* ir_arena = arena_new();
@@ -1186,8 +1186,8 @@ static int run_polyline_translator_tests(void) {
 }
 
 // Border translation: the outer rect, the clamped outer radii, and the four side widths cross to the shader
-// verbatim - no inner radius anywhere in the encoding (the IR contract: the backend derives the inner
-// geometry). Still Section 1 - pure CPU, no GL.
+// verbatim, with no inner radius anywhere in the encoding (the IR contract: the backend derives the inner
+// geometry). Still Section 1: pure CPU, no GL.
 
 static int run_border_translator_tests(void) {
     FlArena* ir_arena = arena_new();
@@ -1265,7 +1265,7 @@ static int run_border_translator_tests(void) {
     return 0;
 }
 
-// Sampler-slot bookkeeping unit tests (no GL - pure CPU): the gpu_image_slots registry and the per-frame
+// Sampler-slot bookkeeping unit tests (no GL; pure CPU): the gpu_image_slots registry and the per-frame
 // slot table.
 
 static u32 count_dynamic_entries(const GpuImageSlots* slots) {
@@ -1291,7 +1291,7 @@ static int run_slots_tests(void) {
           "slots: the entry keeps the image extent and texture");
     CHECK(gpu_image_slots_register_static(&slots, 7, 8, 8, 12) < 0, "slots: a handle cannot register twice");
 
-    // Dynamic entries key on the buffer pointer, so re-touching resolves to the same entry - which is what
+    // Dynamic entries key on the buffer pointer, so re-touching resolves to the same entry, which is what
     // keeps the translator's two passes consistent.
     static u8 buf_a[16 * 16 * 4];
     static u8 buf_b[16];
@@ -1491,8 +1491,8 @@ static int run_slot_translator_tests(void) {
     return 0;
 }
 
-// Background translator tests - the frame envelope's background state emits clear + fullscreen image commands
-// at the FRONT of the stream.
+// Background translator tests: the frame envelope's background state emits clear and fullscreen image commands
+// at the front of the stream.
 static int run_background_translator_tests(void) {
     FlArena* ir_arena = arena_new();
     FlArena* out_arena = arena_new();
@@ -1532,7 +1532,7 @@ static int run_background_translator_tests(void) {
                                                           .background = &bg_clearless });
     CHECK(list.count == 0, "background: a zero-alpha clear emits no command");
 
-    // A single image tints white at the background alpha, premultiplied - alpha 128 gives (128,128,128,128).
+    // A single image tints white at the background alpha, premultiplied: alpha 128 gives (128,128,128,128).
     FlBackground bg_one = { .current = 7, .prev = FL_IMAGE_HANDLE_INVALID, .alpha = 128, .clear = clear };
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .bytes = 0,
                                                           .global_alpha = 255,
@@ -1562,7 +1562,7 @@ static int run_background_translator_tests(void) {
     CHECK(list.cmds[2].kind == GpuDraw_Rect && list.cmds[2].rect[0] == 10.0f,
           "background: the UI command follows the background commands");
 
-    // A valid prev makes the background two images - prev opaque, current at crossfade_t - so over-compositing
+    // A valid prev makes the background two images (prev opaque, current at crossfade_t), so over-compositing
     // yields lerp(prev, current, t). The background's own alpha is unused here.
     FlBackground bg_xf = { .current = 8, .prev = 7, .crossfade_t = 0.5f, .alpha = 200, .clear = clear };
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .bytes = 0,
@@ -1602,7 +1602,7 @@ static int run_background_translator_tests(void) {
     return 0;
 }
 
-// Text-run translator unit tests (no GL - the glyph-atlas bookkeeping is pure CPU): a run explodes to one
+// Text-run translator unit tests (no GL; the glyph-atlas bookkeeping is pure CPU): a run explodes to one
 // GpuDraw_Glyph quad per non-empty prepared glyph, each positioned at the pen baseline offset by the cell's
 // left/top metrics, sized to the padded cell, sampling the cell's texel rect and colorized by the run's
 // premultiplied tint. The (font, size, glyph) triple is the atlas key.
@@ -1763,7 +1763,7 @@ static int run_text_translator_tests(void) {
     CHECK(list.aabbs[0].x1 == sc->rect[0] + sc->rect[2] && list.aabbs[0].y1 == sc->rect[1] + sc->rect[3],
           "text translate: the AABB bounds the scaled quad");
 
-    // A text run's effect sits past the inline FlGlyph array, not right after the payload - reading it at the
+    // A text run's effect sits past the inline FlGlyph array, not right after the payload. Reading it at the
     // wrong offset picks up glyph bytes. fl_ir_text_run takes no effect, so assemble the record directly.
     const FlColor tfx_color = { 9, 87, 65, 255 };
     FlEffect text_fx
@@ -1932,7 +1932,7 @@ static int run_svg_translator_tests(void) {
 }
 
 // Section 2 host plumbing: a GL 4.3 core context on the EGL surfaceless platform (no window, no native
-// display - exactly what CI's llvmpipe runs).
+// display, which is what CI's llvmpipe runs).
 
 static EGLDisplay create_surfaceless_gl43_context(void) {
     const char* client_exts = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
@@ -1972,7 +1972,7 @@ static EGLDisplay create_surfaceless_gl43_context(void) {
     return dpy;
 }
 
-// Part A - end-to-end through the UI core: a full-screen red container plus a text run. The text leg guards
+// Part A: end to end through the UI core, a full-screen red container plus a text run. The text leg guards
 // the IR-driven glyph path: ui_set_font_cache binds the cache to the GPU backend, and render() must realize
 // the run's glyphs into its atlas itself (no host-side prepare pass).
 
@@ -2045,7 +2045,7 @@ static int run_ui_frame_test(FlArena* arena, FlRenderBackend* backend) {
 // pump (the GPU realizes on this render thread and acks the core registry) -> ui_image() inside a real layout
 // -> render -> read back, proving the per-backend realization ack opens the emit gate and the image draws.
 
-// 4x4 solid-red RGBA PNG (color type 6) - RGBA so the decode yields the 4 channels the GPU atlas takes.
+// 4x4 solid-red RGBA PNG (color type 6); RGBA so the decode yields the 4 channels the GPU atlas takes.
 static const unsigned char k_ui_image_png_rgba_red[] = {
     0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00,
     0x04, 0x00, 0x00, 0x00, 0x04, 0x08, 0x06, 0x00, 0x00, 0x00, 0xa9, 0xf1, 0x9e, 0x7e, 0x00, 0x00, 0x00, 0x12, 0x49,
@@ -2079,7 +2079,7 @@ static int run_ui_image_widget_test(FlArena* arena, FlRenderBackend* backend) {
     CHECK(!fl_image_is_ready(handle), "ui_image widget: handle must not be ready before the backend realizes it");
 
     // The decode runs on a job worker; the GPU backend defers realization to the begin-frame pump, which
-    // ui_update_begin runs on THIS (GL) thread. So the frame where the decode lands realizes the image and
+    // ui_update_begin runs on this (GL) thread. So the frame where the decode lands realizes the image and
     // renders it in one pass.
     const int layout_w = 256;
     const int layout_h = 256;
@@ -2129,8 +2129,8 @@ static int run_ui_image_widget_test(FlArena* arena, FlRenderBackend* backend) {
 
     printf("gpu_smoke_test: ui_image() widget path (static image ready + draws on GPU) PASS\n");
 
-    // Dynamic images stay OUTSIDE the registry: they reference a live caller buffer, carry their
-    // own dimensions, and never call image_registry_mark_realized - there is no ImageHandle to key on and no
+    // Dynamic images stay outside the registry: they reference a live caller buffer, carry their
+    // own dimensions, and never call image_registry_mark_realized. There is no ImageHandle to key on and no
     // readiness gate, hence no ready-poll loop below.
     FlDynamicImage* dyn = dynamic_image_create(4, 4, arena);
     CHECK(dyn != nullptr, "ui_image widget: dynamic_image_create returned null");
@@ -2170,8 +2170,8 @@ static int run_ui_image_widget_test(FlArena* arena, FlRenderBackend* backend) {
     return 0;
 }
 
-// Menu point-anchor flip/clamp golden: a menu opened near the top-left corner opens DOWNWARD from the
-// anchor, while a menu opened near the bottom edge FLIPS to open UPWARD. A full-screen backdrop makes the
+// Menu point-anchor flip/clamp golden: a menu opened near the top-left corner opens downward from the
+// anchor, while a menu opened near the bottom edge flips to open upward. A full-screen backdrop makes the
 // (opaque, dark) menu surface trivially separable from the (red) background by the red channel.
 
 #define MENU_GOLDEN_W 400
@@ -2193,7 +2193,7 @@ static void menu_golden_render(FlUiCtx* ctx, FlLayoutId menu_id, FlVec2 anchor, 
     }
 }
 
-// Highlighted-row theme: elevated and selected differ only in the GREEN channel, both with low red so the menu
+// Highlighted-row theme: elevated and selected differ only in the green channel, both with low red so the menu
 // surface still separates from the red backdrop. A highlighted row paints surface.selected, every other row
 // surface.elevated, so probing two row centers by green channel proves which row carries the highlight.
 #define MENU_HL_ELEVATED_G 30
@@ -2224,10 +2224,10 @@ static void menu_highlight_render(FlUiCtx* ctx, FlLayoutId menu_id, FlVec2 ancho
     }
 }
 
-// Submenu placement + highlight golden (Menu S3). Under sm_theme every menu surface keeps a low RED
-// channel (so any nested-panel pixel separates from the red backdrop by red alone), while the GREEN channel
+// Submenu placement and highlight golden. Under sm_theme every menu surface keeps a low red
+// channel (so any nested-panel pixel separates from the red backdrop by red alone), while the green channel
 // encodes the highlight state: unhighlighted rows g=20, the active (deepest) row g=120, and a trail (open-parent)
-// row the 0.6 blend g=80 - three well-separated bands so a probe can tell them apart.
+// row the 0.6 blend g=80: three well-separated bands so a probe can tell them apart.
 static void menu_submenu_golden_render(FlUiCtx* ctx, FlLayoutId menu_id, FlVec2 anchor, int frames) {
     static const FlThemeColors sm_theme = {
         .surface.elevated = { 20, 20, 60, 255 },  // unhighlighted rows: low green
@@ -2273,9 +2273,9 @@ static bool menu_band_has(const FlPixelReadback* buf, int x0, int x1, int y0, in
     return false;
 }
 
-// Static-kinds golden (Menu S4a). One menu carrying every non-stateful kind - a section header, action
+// Static-kinds golden. One menu carrying every non-stateful kind: a section header, action
 // items (one with right-aligned shortcut text), a separator rule, and a disabled item. Every label is a single
-// 'A': the embedded test font renders 'A' as a SOLID square, so each text run becomes a full-coverage filled block
+// 'A': the embedded test font renders 'A' as a solid square, so each text run becomes a full-coverage filled block
 // in its text color that a band scan can find reliably.
 static void menu_static_kinds_render(FlUiCtx* ctx, FlLayoutId menu_id, FlVec2 anchor, int frames) {
     static const FlThemeColors sk_theme = {
@@ -2303,10 +2303,10 @@ static void menu_static_kinds_render(FlUiCtx* ctx, FlLayoutId menu_id, FlVec2 an
     }
 }
 
-// Stateful-kinds golden (Menu S4b). Every menu surface keeps a low RED channel (so it separates from the
-// red backdrop); the check/radio MARKER paints interactive.base = HIGH GREEN (present only on the checked checkable
-// and the selected radio); the custom swatch paints HIGH BLUE. surface.selected == surface.elevated here so the
-// open-highlight doesn't add stray green - markers are the only green, the swatch the only blue.
+// Stateful-kinds golden. Every menu surface keeps a low red channel (so it separates from the
+// red backdrop); the check/radio marker paints interactive.base = high green (present only on the checked checkable
+// and the selected radio); the custom swatch paints high blue. surface.selected == surface.elevated here so the
+// open-highlight doesn't add stray green: markers are the only green, the swatch the only blue.
 static void menu_stateful_golden_render(FlUiCtx* ctx, FlLayoutId menu_id, FlVec2 anchor, int frames) {
     static const FlThemeColors st_theme = {
         .surface.elevated = { 20, 20, 60, 255 },  // menu surface
@@ -2340,9 +2340,9 @@ static void menu_stateful_golden_render(FlUiCtx* ctx, FlLayoutId menu_id, FlVec2
     }
 }
 
-// Menu-bar golden (Menu S5). The bar is the menu core's level 0 (a persistent horizontal strip) and a
-// top's dropdown is level 1, anchored UNDER its button. Under mb_theme every menu surface (strip + dropdown) keeps
-// a low RED channel, so any menu pixel separates from the red backdrop by red alone.
+// Menu-bar golden. The bar is the menu core's level 0 (a persistent horizontal strip) and a
+// top's dropdown is level 1, anchored under its button. Under mb_theme every menu surface (strip + dropdown) keeps
+// a low red channel, so any menu pixel separates from the red backdrop by red alone.
 static void menubar_golden_render(FlUiCtx* ctx, FlLayoutId bar_id, int frames) {
     static const FlThemeColors mb_theme = {
         .surface.elevated = { 20, 20, 60, 255 },  // strip + dropdown surface: low red
@@ -2406,8 +2406,8 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
     FlPixelReadback buf;
     CHECK(ctx->shared->renderer.read_pixels != nullptr, "menu: backend has no pixel readback");
 
-    // --- Case 1: opened near the TOP-LEFT corner → opens downward. The menu is ~180 wide and ~150 tall, well
-    // inside the 400x400 layout, so neither clamp nor flip should engage. ---
+    // Case 1: opened near the top-left corner, so it opens downward. The menu is ~180 wide and ~150 tall, well
+    // inside the 400x400 layout, so neither clamp nor flip should engage.
     const FlVec2 corner = { 60.0f, 40.0f };
     menu_golden_render(ctx, menu_id, corner, 3);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "menu: read_pixels (corner) failed");
@@ -2419,7 +2419,7 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
     // Close so the next case re-anchors instead of hitting the already-open guard.
     ui_menu_close_impl(menu_id);
 
-    // --- Case 2: opened near the BOTTOM edge → flips to open upward. ---
+    // Case 2: opened near the bottom edge, so it flips to open upward.
     const FlVec2 bottom = { 60.0f, (float)MENU_GOLDEN_H - 20.0f };
     menu_golden_render(ctx, menu_id, bottom, 3);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "menu: read_pixels (flip) failed");
@@ -2429,9 +2429,9 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
 
     ui_menu_close_impl(menu_id);
 
-    // --- Case 3: opened near the RIGHT edge → clamps left to stay on-screen. Anchor x=360 + 180 wide would reach
+    // Case 3: opened near the right edge, so it clamps left to stay on-screen. Anchor x=360 + 180 wide would reach
     // 540, past the 400-wide layout, so the popup core clamps the left edge to 400-180 = 220. The clamp is what
-    // makes a pixel at x=300 (left of the un-clamped 360 origin) land on the dark menu surface instead of red. ---
+    // makes a pixel at x=300 (left of the un-clamped 360 origin) land on the dark menu surface instead of red.
     const FlVec2 right_edge = { (float)MENU_GOLDEN_W - 40.0f, 40.0f };
     menu_golden_render(ctx, menu_id, right_edge, 3);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "menu: read_pixels (clamp) failed");
@@ -2441,11 +2441,11 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
 
     ui_menu_close_impl(menu_id);
 
-    // --- Case 4 (Menu S2): the highlighted-item visual state. Open at the top-left corner under the highlight theme;
+    // Case 4: the highlighted-item visual state. Open at the top-left corner under the highlight theme;
     // the shared highlight initializes to the first navigable row on open, so row 0 paints surface.selected and the
-    // rows below paint surface.elevated. Probe two row centers at x=200 (interior, past the short labels → bare row
+    // rows below paint surface.elevated. Probe two row centers at x=200 (interior, past the short labels, so bare row
     // background, no glyphs). Rows are 36px tall under XS=4 panel padding from the y=40 anchor: row 0 spans [44,80]
-    // (center ~62), row 1 spans [80,116] (center ~98). ---
+    // (center ~62), row 1 spans [80,116] (center ~98).
     const FlVec2 hl_anchor = { 60.0f, 40.0f };
     menu_highlight_render(ctx, menu_id, hl_anchor, 3);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "menu: read_pixels (highlight) failed");
@@ -2457,16 +2457,16 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
 
     ui_menu_close_impl(menu_id);
 
-    // --- Case 5 (Menu S3): a submenu opens to the RIGHT of its parent. Root panel x in [20,200]; the nested panel
+    // Case 5: a submenu opens to the right of its parent. Root panel x in [20,200]; the nested panel
     // opens at the parent row's right edge, so a pixel well right of the root panel is dark menu surface, while the
-    // far left stays red (the submenu did not flip). Probe y=100, a non-label column. ---
+    // far left stays red (the submenu did not flip). Probe y=100, a non-label column.
     menu_submenu_golden_render(ctx, menu_id, (FlVec2) { 20.0f, 40.0f }, 4);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf),
           "menu: read_pixels (submenu right) failed");
     CHECK(pixel_at(&buf, 340, 100)[0] < 100, "submenu(right): the nested panel opened to the right of its parent");
     CHECK(pixel_at(&buf, 10, 100)[0] > 150, "submenu(right): nothing on the far left (the submenu did not flip)");
 
-    // Trail vs active highlight (criterion 7), read by the green channel. Sub is the open parent (root row 0) → trail
+    // Trail vs active highlight, read by the green channel. Sub is the open parent (root row 0), so it is the trail
     // (g~80); its child's first row Alpha is the deepest active row (g~120); the next child row Beta is unhighlighted
     // (g~20). Root panel rows: padding XS=4 from anchor y=40, so Sub spans [44,80] (center 62); the child panel
     // top-aligns to the Sub row top, with its own XS padding, so Alpha spans [48,84] (center 66) and Beta [84,120].
@@ -2482,10 +2482,10 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
 
     ui_menu_close_impl(menu_id);
 
-    // --- Case 6 (Menu S3): the submenu FLIPS LEFT when opening right would overflow. Root opened near the right edge
+    // Case 6: the submenu flips left when opening right would overflow. Root opened near the right edge
     // (x=210, width 180 -> right edge 390), so opening the 180-wide child rightward would reach 570 and overflow; it
     // flips to the parent's left instead. A pixel left of the root panel is now dark menu surface, and the sliver
-    // right of the root stays red (nothing opened rightward). ---
+    // right of the root stays red (nothing opened rightward).
     menu_submenu_golden_render(ctx, menu_id, (FlVec2) { 210.0f, 40.0f }, 4);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf),
           "menu: read_pixels (submenu flip) failed");
@@ -2494,11 +2494,11 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
 
     ui_menu_close_impl(menu_id);
 
-    // --- Case 7 (Menu S3): the submenu FLIPS UP when top-aligning would overflow the bottom edge. Root opened low
+    // Case 7: the submenu flips up when top-aligning would overflow the bottom edge. Root opened low
     // (y=300) so the root (2 rows, ~80 tall) still fits downward, but the taller child panel (3 rows, ~116 tall)
     // top-aligned at the Sub row (y~304) would reach ~420 and overflow; it bottom-aligns to the parent row instead,
-    // opening upward (spanning ~[224,340]). In the child's column (right of the root panel) a pixel ABOVE the parent
-    // row is dark menu surface, while a pixel below the child's bottom stays red. ---
+    // opening upward (spanning ~[224,340]). In the child's column (right of the root panel) a pixel above the parent
+    // row is dark menu surface, while a pixel below the child's bottom stays red.
     menu_submenu_golden_render(ctx, menu_id, (FlVec2) { 20.0f, 300.0f }, 4);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf),
           "menu: read_pixels (submenu flip-up) failed");
@@ -2508,12 +2508,12 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
 
     ui_menu_close_impl(menu_id);
 
-    // --- Case 8 (Menu S4b): stateful item kinds + custom content. Open at the top-left corner. Panel content starts
+    // Case 8: stateful item kinds and custom content. Open at the top-left corner. Panel content starts
     // at x=44 (anchor 40 + XS=4 panel padding); each check/radio row is 36px tall and stacks from y=44: row0 [44,80],
     // row1 [80,116], row2 [116,152], row3 [152,188], then the 20px swatch row [188,208]. The marker gutter sits at
     // the row's left: panel content x=44 + row SM=8 padding = 52, an 18px gutter [52,70] with a 10px dot centered
-    // (~[56,66]). A present marker is HIGH GREEN (interactive.base); the swatch is HIGH BLUE. Band scans absorb the
-    // sub-pixel placement of the small dot. ---
+    // (~[56,66]). A present marker is high green (interactive.base); the swatch is high blue. Band scans absorb the
+    // sub-pixel placement of the small dot.
     menu_stateful_golden_render(ctx, menu_id, (FlVec2) { 40.0f, 40.0f }, 4);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "menu: read_pixels (stateful) failed");
 
@@ -2532,9 +2532,9 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
 
     ui_menu_close_impl(menu_id);
 
-    // --- Case 9 (Menu S5): the menu bar with one dropdown open. The strip is 30px tall across the top (y in
-    // [0,30]); File (the first, leftmost top) is forced open so its 180-wide dropdown opens DOWNWARD below it.
-    // Probes read the red channel: menu surface is dark, the backdrop red. ---
+    // Case 9: the menu bar with one dropdown open. The strip is 30px tall across the top (y in
+    // [0,30]); File (the first, leftmost top) is forced open so its 180-wide dropdown opens downward below it.
+    // Probes read the red channel: menu surface is dark, the backdrop red.
     const FlLayoutId bar_id = { .name = FL_S("gpu_menubar"), .id = 0 };
     menubar_golden_render(ctx, bar_id, 4);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "menubar: read_pixels failed");
@@ -2552,8 +2552,8 @@ static int run_menu_flip_test(FlArena* arena, FlRenderBackend* backend) {
     return 0;
 }
 
-// Static-kinds pixel golden (Menu S4a) - the ONE menu golden that needs real glyphs. It renders 'A' labels into
-// the SHARED backend glyph atlas, so it must run AFTER run_text_atlas_tests (whose atlas-full stress assumes the
+// Static-kinds pixel golden: the one menu golden that needs real glyphs. It renders 'A' labels into
+// the shared backend glyph atlas, so it must run after run_text_atlas_tests (whose atlas-full stress assumes the
 // atlas holds only its own glyphs) and before only run_frame_lifecycle_tests (which never touches the glyph
 // atlas). It changes no resolution, so the create-resolution invariant that test relies on still holds.
 static int run_menu_static_kinds_test(FlArena* arena, FlRenderBackend* backend) {
@@ -2589,7 +2589,7 @@ static int run_menu_static_kinds_test(FlArena* arena, FlRenderBackend* backend) 
     menu_static_kinds_render(ctx, menu_id, (FlVec2) { 40.0f, 40.0f }, 4);
     CHECK(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "menu static kinds: read_pixels failed");
 
-    // On open the highlight lands on the first NAVIGABLE row (the item below), never the non-interactive header.
+    // On open the highlight lands on the first navigable row (the item below), never the non-interactive header.
     // x=150 is bare row background: right of the left label, left of the right-aligned shortcut.
     const u8* hdr_bg = pixel_at(&buf, 150, 58); // header row center
     const u8* sel_bg = pixel_at(&buf, 150, 90); // first item row center
@@ -2602,7 +2602,7 @@ static int run_menu_static_kinds_test(FlArena* arena, FlRenderBackend* backend) 
     CHECK(!menu_band_has(&buf, 60, 180, 110, 142, 0, 100, 0, 100, 180, 255),
           "static(separator): a normal item row has no rule pixel");
 
-    // The solid-'A' glyph fills at full coverage, so amber reads ~ (235,165,30): a low-BLUE discriminator (<=110)
+    // The solid-'A' glyph fills at full coverage, so amber reads ~ (235,165,30): a low-blue discriminator (<=110)
     // separates it from white text (blue ~240) and the dark surfaces stay below the red floor (>=120).
     CHECK(menu_band_has(&buf, 44, 110, 155, 187, 120, 255, 80, 215, 0, 110),
           "static(disabled): the disabled item label is greyed (secondary/amber text)");
@@ -2622,7 +2622,7 @@ static int run_menu_static_kinds_test(FlArena* arena, FlRenderBackend* backend) 
     return 0;
 }
 
-// Part B - hand-built IR in pixel coordinates, driving the backend seam directly. The readback is
+// Part B: hand-built IR in pixel coordinates, driving the backend seam directly. The readback is
 // premultiplied coverage alpha over a transparent target, so every expectation below is computable.
 
 static int run_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
@@ -2659,7 +2659,7 @@ static int run_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
           "direct IR: global_alpha must halve an opaque rect");
     CHECK(pixel_transparent(pixel_at(&buf, 200, 100)), "direct IR: the second frame must fully replace the first");
 
-    // --- Rounded corners and per-corner gradients ---------------------------------------------------------------
+    // Rounded corners and per-corner gradients
     // One frame of non-overlapping rects; every expectation below is a property of the SDF coverage model
     // (clamp on distance) and bilinear corner interpolation, not a golden image.
     const FlColor pure_red = { 255, 0, 0, 255 };
@@ -2748,7 +2748,7 @@ static int run_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
           "gradient corners: BL must be blue-dominated");
     CHECK(pixel_at(&buf, 285, 190)[0] > 200 && pixel_at(&buf, 285, 190)[1] > 200 && pixel_at(&buf, 285, 190)[2] > 200,
           "gradient corners: BR must be white-dominated");
-    // G4: an interior pixel of a half-alpha gradient over the transparent target - the stored alpha is the
+    // G4: an interior pixel of a half-alpha gradient over the transparent target: the stored alpha is the
     // interpolated alpha (no coverage loss in the interior) and RGB is premultiplied by it. At pixel center
     // x = 352.5, u = 32.5/64, the interpolated color is (200 - 180u, 40, 50 + 150u) at alpha 128.
     {
@@ -2759,18 +2759,18 @@ static int run_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
               "gradient: a half-alpha gradient must land premultiplied with the interpolated alpha");
     }
 
-    // --- Clip cut: pixels land exactly at clip boundaries -------------------------------------------------------
+    // Clip cut: pixels land exactly at clip boundaries
     start = ir_rewind_begin(ir_arena);
-    // K1: a 64x64 red rect clipped to {16,16,32,32} - every visible pixel comes from the clip, not the rect.
+    // K1: a 64x64 red rect clipped to {16,16,32,32}: every visible pixel comes from the clip, not the rect.
     fl_ir_clip_push(ir_arena, (FlRect) { 16, 16, 32, 32 });
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 64.0f, 64.0f, red);
     fl_ir_clip_pop(ir_arena);
-    // K2: a green rect whose clip starts at the fractional x = 100.5 - pixel column 100 is half covered.
+    // K2: a green rect whose clip starts at the fractional x = 100.5, so pixel column 100 is half covered.
     fl_ir_clip_push(ir_arena, (FlRect) { 100.5f, 0.0f, 32.0f, 32.0f });
     emit_solid_rect(ir_arena, 96.0f, 0.0f, 64.0f, 32.0f, green);
     fl_ir_clip_pop(ir_arena);
     // K3: a rounded rect (TL radius 16, arc circle centered at (208,48)) clipped to its left 8 pixels
-    // ({192..200} x {32..96}) - the clip edge at x = 200 slices through the corner arc.
+    // ({192..200} x {32..96}); the clip edge at x = 200 slices through the corner arc.
     fl_ir_clip_push(ir_arena, (FlRect) { 192, 32, 8, 64 });
     fl_ir_fill_rect(ir_arena, (FlRect) { 192, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
                     (FlColor[4]) { red, red, red, red }, nullptr);
@@ -2800,7 +2800,7 @@ static int run_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
           "clip on a rounded corner: the straight edge below the corner still fills inside the clip");
 
     // Tile-list capacity: the per-tile index list holds 64 entries; commands beyond that are counted as
-    // overflow and dropped. 64 red rects then 6 blue ones on a single 8x8 tile (pixels 32..40) - the blues
+    // overflow and dropped. 64 red rects then 6 blue ones on a single 8x8 tile (pixels 32..40): the blues
     // land past capacity, so the pixel must stay red and uncorrupted.
     start = ir_rewind_begin(ir_arena);
     for (int i = 0; i < 64; i++) {
@@ -2819,7 +2819,7 @@ static int run_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Border pixel tests - every expectation is a property of the outer-minus-inner SDF coverage model.
+// Border pixel tests: every expectation is a property of the outer-minus-inner SDF coverage model.
 
 static int run_border_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
@@ -2828,23 +2828,23 @@ static int run_border_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
 
     // One frame of non-overlapping borders.
     void* start = ir_rewind_begin(ir_arena);
-    // B1: square border, uniform width 4 - bands at {32..36} and {92..96} on each axis.
+    // B1: square border, uniform width 4; bands at {32..36} and {92..96} on each axis.
     fl_ir_border(ir_arena, (FlRect) { 32, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, red);
-    // B2: per-side widths l=8 r=2 t=4 b=0 - each side's band is its own width; the bottom has none.
+    // B2: per-side widths l=8 r=2 t=4 b=0; each side's band is its own width; the bottom has none.
     fl_ir_border(ir_arena, (FlRect) { 128, 32, 64, 64 }, 8, 2, 4, 0, (FlCornerRadius) { 0 }, green);
-    // B3: rounded, radius 16, width 4 - the TL outer arc is centered at (240, 48), outer 16, inner 12.
+    // B3: rounded, radius 16, width 4; the TL outer arc is centered at (240, 48), outer 16, inner 12.
     fl_ir_border(ir_arena, (FlRect) { 224, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 16, 16, 16, 16 }, red);
-    // B4: width 10 past the radius 6 - the inner corner at (330, 42) is sharp.
+    // B4: width 10 past the radius 6; the inner corner at (330, 42) is sharp.
     fl_ir_border(ir_arena, (FlRect) { 320, 32, 64, 64 }, 10, 10, 10, 10, (FlCornerRadius) { 6, 6, 6, 6 }, red);
-    // B5: widths consuming the rect - renders as a filled rounded rect in the border color.
+    // B5: widths consuming the rect, which renders as a filled rounded rect in the border color.
     fl_ir_border(ir_arena, (FlRect) { 416, 32, 64, 64 }, 40, 40, 40, 40, (FlCornerRadius) { 8, 8, 8, 8 }, red);
-    // B6: half-alpha border - band pixels land premultiplied like every other kind.
+    // B6: half-alpha border; band pixels land premultiplied like every other kind.
     fl_ir_border(ir_arena, (FlRect) { 512, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, blue);
-    // B7: rounded with per-side widths - each corner's inner radius derives from its own two adjacent
+    // B7: rounded with per-side widths; each corner's inner radius derives from its own two adjacent
     // sides (TL pairs left+top, TR right+top, BL left+bottom, BR right+bottom): radius 12 with widths
     // l=8 r=2 t=6 b=1 gives inner radii TL 4, TR 6, BL 4, BR 10, with the inner rect at {616, 38, 54, 57}.
     fl_ir_border(ir_arena, (FlRect) { 608, 32, 64, 64 }, 8, 2, 6, 1, (FlCornerRadius) { 12, 12, 12, 12 }, red);
-    // B8: fractional uniform width 4.5 - the inner edge sits on a half-pixel boundary at x = 708.5.
+    // B8: fractional uniform width 4.5; the inner edge sits on a half-pixel boundary at x = 708.5.
     fl_ir_border(ir_arena, (FlRect) { 704, 32, 64, 64 }, 4.5f, 4.5f, 4.5f, 4.5f, (FlCornerRadius) { 0 }, red);
     // B9: dashed, 8 on 8 off. Both runs are 64 long, an exact 4 periods, so the rescale is the identity and
     // the pattern lands on known coordinates: dashes at 0..8, 16..24, 32..40, 48..56 along each edge,
@@ -2885,7 +2885,7 @@ static int run_border_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
           "border rounded: straight-edge band midpoints keep full coverage");
     CHECK(pixel_transparent(pixel_at(&buf, 256, 64)), "border rounded: the interior hole stays untouched");
 
-    // B4: a width past the radius makes the inner corner sharp - a rounded inner corner would leave the
+    // B4: a width past the radius makes the inner corner sharp. A rounded inner corner would leave the
     // pixel diagonally outside it partial rather than fully covered.
     CHECK(pixel_color(pixel_at(&buf, 329, 41), red, 2.0f),
           "border width>radius: the pixel diagonally outside the sharp inner corner is fully covered");
@@ -2908,7 +2908,7 @@ static int run_border_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     }
 
     // B7: the per-corner derivation, probed where the corners disagree. Each probe sits ~4.95px from its
-    // corner's inner arc center along the corner diagonal - past TL's inner radius 4 (band) but within
+    // corner's inner arc center along the corner diagonal: past TL's inner radius 4 (band) but within
     // TR's inner radius 6 (hole), so swapping which sides feed which corner cannot pass both. BR's inner
     // radius 10 is probed at 9.19px (hole) and 10.61px (band) from its arc center at (660, 85).
     CHECK(pixel_color(pixel_at(&buf, 616, 38), red, 2.0f),
@@ -2923,7 +2923,7 @@ static int run_border_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
               && pixel_color(pixel_at(&buf, 640, 95), red, 2.0f) && pixel_transparent(pixel_at(&buf, 640, 94)),
           "border per-corner: the straight-edge bands still match their own side widths");
 
-    // B8: width 4.5 puts the inner edge through pixel-center column 708.5 - opaque band, exact half
+    // B8: width 4.5 puts the inner edge through pixel-center column 708.5: opaque band, exact half
     // coverage, then the untouched hole.
     CHECK(pixel_color(pixel_at(&buf, 707, 64), red, 2.0f),
           "border fractional: the band pixel before the inner edge is fully covered");
@@ -2932,7 +2932,7 @@ static int run_border_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(pixel_transparent(pixel_at(&buf, 709, 64)),
           "border fractional: the hole begins right past the fractional inner edge");
 
-    // B9: each side measures its own run - the top band reads the pattern across x while the left band reads
+    // B9: each side measures its own run: the top band reads the pattern across x while the left band reads
     // it down y, so a probe that is a dash on one axis and a gap on the other pins which run the pixel was
     // assigned to. Every probe sits >= 3px of arc length clear of a dash boundary, past the 0.5px AA ramp.
     CHECK(pixel_color(pixel_at(&buf, 804, 34), red, 2.0f), "border dashed: the top band is drawn inside a dash");
@@ -2949,7 +2949,7 @@ static int run_border_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Image pixel tests - synthetic decodes go through the backend's prepare_image seam (render
+// Image pixel tests: synthetic decodes go through the backend's prepare_image seam (render
 // thread; the GPU backend leaves prepare_image_on_job unset), then FlCmd_Image frames property-check both
 // modes off the readback. Atlas placement is backend-private, so every expectation reads only rendered pixels.
 
@@ -3004,8 +3004,8 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(backend->prepare_image(backend->user_data, 103, &ramp_decode, scratch, &req),
           "prepare_image: the backend reports the image realized");
 
-    // Strided source: 2x2 RGBA whose rows carry 4 bytes of padding (stride 12 over a tight 8) - the upload
-    // path must repack rows, never read the padding.
+    // Strided source: 2x2 RGBA whose rows carry 4 bytes of padding (stride 12 over a tight 8). The upload
+    // path must repack rows and never read the padding.
     static u8 strided_px[2 * 12] = {
         10, 20, 30, 255, 40,  50,  60,  255, 0xAA, 0xAA, 0xAA, 0xAA, // row 0 + padding
         70, 80, 90, 255, 110, 120, 130, 255, 0xAA, 0xAA, 0xAA, 0xAA, // row 1 + padding
@@ -3022,7 +3022,7 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
           "prepare_image: the backend reports the image realized");
 
     // Oversized source: past the per-image cap the seam routes to a dedicated slot texture instead of the
-    // atlas - the handle keeps rendering. The slot-image section owns the thorough coverage.
+    // atlas, and the handle keeps rendering. The slot-image section owns the thorough coverage.
     static u8 big_dummy[(GPU_IMAGE_ATLAS_MAX_DIM + 1) * 4 * 4];
     memset(big_dummy, 0x40, sizeof(big_dummy));
     FlImageDecodeResult big_decode = {
@@ -3064,7 +3064,7 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the image frame");
 
-    // Color mode at native size is texel passthrough - for nearest and linear alike (pixel centers map to
+    // Color mode at native size is texel passthrough for nearest and linear alike (pixel centers map to
     // texel centers, where linear weights collapse to one texel).
     for (int y = 0; y < IMG_H; y++) {
         for (int x = 0; x < IMG_W; x++) {
@@ -3086,7 +3086,7 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
               && channels_near(pixel_at(&buf, 115, 19), 7 * 30, 7 * 30, 77, 255, 1.0f),
           "image color: a src sub-rect must sample only its region");
 
-    // Alpha-coverage: stored white x alpha, colorized by the tint - column x carries alpha x * 85,
+    // Alpha-coverage is stored white x alpha, colorized by the tint: column x carries alpha x * 85,
     // premultiplied against the tint.
     for (int x = 0; x < 4; x++) {
         f32 a = (f32)(x * 85);
@@ -3141,11 +3141,11 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-#endif // !defined(__APPLE__) - pause the GL-only block for the cross-backend slot-image suite below
+#endif // !defined(__APPLE__): pause the GL-only block for the cross-backend slot-image suite below
 
-// Cross-backend slot-image pixel tests - the non-atlas image paths end-to-end: large statics on
+// Cross-backend slot-image pixel tests for the non-atlas image paths end to end: large statics on
 // dedicated slot textures, dynamic buffers streamed on referencing frames, strided rows, full slot occupancy,
-// and release_image on the slot tier. Runs on BOTH backends through the neutral seam; slot assignment is
+// and release_image on the slot tier. Runs on both backends through the neutral seam; slot assignment is
 // backend-private, so every expectation reads only rendered pixels and no per-backend golden fork is needed.
 static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
@@ -3184,7 +3184,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
             large_alpha[y * LW + x] = (u8)x;
         }
     }
-    // Stride 0 = tightly packed, so the upload derives the row pitch as w * bpp itself - the single-channel
+    // Stride 0 = tightly packed, so the upload derives the row pitch as w * bpp itself. This is the single-channel
     // side of that fallback, which a source spelling its tight stride explicitly never reaches.
     FlImageDecodeResult alpha_decode = { .pixels = large_alpha, .width = LW, .height = 4, .stride = 0, .channels = 1 };
     CHECK(backend->prepare_image(backend->user_data, 202, &alpha_decode, scratch, &req),
@@ -3238,7 +3238,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     const FlImageSource img_dyn_repack
         = { .kind = FlImageKind_Dynamic, .dynamic = { .pixels = dyn_repack, .w = 4, .h = 2, .stride = 18 } };
 
-    // Frame 1: the slot-image matrix - large static native and scaled (nearest), src sub-rect, large
+    // Frame 1: the slot-image matrix: large static native and scaled (nearest), src sub-rect, large
     // alpha-coverage colorization, and all four dynamic buffers side by side.
     void* start = ir_rewind_begin(ir_arena);
     fl_ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 8, 8, LW, LH }, (FlRect) { 0 }, white,
@@ -3262,7 +3262,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the slot-image frame");
 
-    // Native size is texel passthrough - including columns past the 256 atlas cap, which proves the
+    // Native size is texel passthrough, including columns past the 256 atlas cap, which proves the
     // command samples a dedicated slot texture, not an atlas cell.
     {
         const int xs[] = { 0, 1, 128, 149, 150, 255, 256, 270, 299 };
@@ -3336,7 +3336,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     }
 
     // Frame 2: mutate both dynamic buffers and re-render the same commands. The color buffer's new alpha of
-    // 128 must NOT show: dynamic color renders opaque, matching the SW backend's planar (alpha-dropping)
+    // 128 must not show: dynamic color renders opaque, matching the SW backend's planar (alpha-dropping)
     // realization.
     for (int i = 0; i < DW * DH; i++) {
         dyn_px[i * 4 + 0] = 200;
@@ -3363,7 +3363,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
               "dynamic image alpha-coverage: a content change between frames re-uploads");
     }
 
-    // Frame 3: linear filtering on a slot texture - the slot's sampler comes from the referencing command.
+    // Frame 3: linear filtering on a slot texture; the slot's sampler comes from the referencing command.
     // A 2x linear upscale across the blue split at texel 150 ramps through genuine intermediates where
     // nearest (frame 1's 2x upscale) stepped 0 -> 255 between adjacent pixel pairs.
     start = ir_rewind_begin(ir_arena);
@@ -3379,7 +3379,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     CHECK(pixel_at(&buf, 8 + 299, 97)[2] < pixel_at(&buf, 8 + 300, 97)[2],
           "slot image linear: the ramp rises monotonically across the split");
 
-    // Frame 4: full slot occupancy - GPU_IMAGE_SLOT_COUNT + 2 distinct dynamic images in one frame, so the
+    // Frame 4: full slot occupancy: GPU_IMAGE_SLOT_COUNT + 2 distinct dynamic images in one frame, so the
     // trailing two land past the sampler array's capacity.
     {
         enum { OV_COUNT = GPU_IMAGE_SLOT_COUNT + 2 };
@@ -3431,7 +3431,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
         u32 c1 = gpu_debug_dynamic_upload_count(backend->user_data);
         CHECK(c1 == c0 + 1, "dynamic upload counter: a referencing frame streams the buffer exactly once");
 
-        // A plain static draw, no dynamic image - the entry stays live but uploads nothing.
+        // A plain static draw, no dynamic image: the entry stays live but uploads nothing.
         start = ir_rewind_begin(ir_arena);
         fl_ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 8, 48, LW, 4 }, (FlRect) { 0 },
                     alpha_tint, FlImageFilter_Nearest, nullptr);
@@ -3468,9 +3468,8 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
 }
 
 #if !defined(__APPLE__) // resume the GL-only block (the background suite below stays GL-only for now)
-// An axis-aligned quad in clip space at a fixed depth, UVs spanning the whole texture - the shape every 3D draw
-// uses, differing only in x extent, depth, and color. It sat outside the GL-only block for the viewport3d
-// fl_app case, but that case only ever runs from the GL/EGL branch of main(), so every caller is in here.
+// An axis-aligned quad in clip space at a fixed depth, UVs spanning the whole texture: the shape every 3D draw
+// uses, differing only in x extent, depth, and color. Every caller is inside the GL-only block.
 typedef struct TestQuad {
     FlMeshVertex verts[4];
 } TestQuad;
@@ -3635,7 +3634,7 @@ static int run_effect_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(channels_near(left, (f32)right[0], (f32)right[1], (f32)right[2], (f32)right[3], 3.0f),
           "glow: centered — equal bleed on both edges, the offset ignored");
 
-    // Additivity: over an opaque grey backdrop a glow pixel is brighter than the backdrop alone - green lifted
+    // Additivity: over an opaque grey backdrop a glow pixel is brighter than the backdrop alone: green lifted
     // by the glow, where src-over could only darken.
     const FlColor grey = { 80, 80, 80, 255 };
     start = ir_rewind_begin(ir_arena);
@@ -3654,7 +3653,7 @@ static int run_effect_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Part C - structural tests on the classification readback + the heat-map debug mode (gpu_debug.h). The
+// Part C: structural tests on the classification readback and the heat-map debug mode (gpu_debug.h). The
 // readback is the classification pass's tile lists verbatim, so these assert on the structures the raster
 // pass consumed, not on pixels.
 
@@ -3722,7 +3721,7 @@ static int run_classification_tests(FlRenderBackend* backend, FlArena* ir_arena)
     CHECK(tile_total_count(&cls) == 3, "classification: the two commands cover exactly three tiles grid-wide");
     CHECK(tile_total_overflow(&cls) == 0, "classification: a normal scene must have zero overflow on every tile");
 
-    // Heat-map debug mode: the raster pass visualizes the same per-tile data - a one-command tile lands at
+    // Heat-map debug mode: the raster pass visualizes the same per-tile data. A one-command tile lands at
     // t = 1/64 on the green->red ramp, hence near green.
     gpu_debug_set_mode(backend->user_data, GpuDebug_TileHeatMap);
     render_seam_render(backend, surface, &frame);
@@ -3769,7 +3768,7 @@ static int run_classification_tests(FlRenderBackend* backend, FlArena* ir_arena)
 
     // Arc classification: the AABB bounds the swept sector, so the rest of the circle's tiles
     // hold nothing. A 12-to-3 quarter ring at center (64, 64), radius 40: its sector AABB spans pixels
-    // x 64..104, y 24..64 - a handful of tiles in the top-right quadrant, against ~100 for the full circle.
+    // x 64..104, y 24..64: a handful of tiles in the top-right quadrant, against ~100 for the full circle.
     start = ir_rewind_begin(ir_arena);
     fl_ir_arc(ir_arena, 64.0f, 64.0f, 40.0f, 8.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -3809,7 +3808,7 @@ static int run_classification_tests(FlRenderBackend* backend, FlArena* ir_arena)
           "effect classification: the expanded AABB still bounds the shadow — tiles past its reach stay empty");
 
     // Line-aware polyline classification: a long thin diagonal stroke. An AABB would cover the
-    // whole bounding box - here ~125 x 125 = ~15600 tiles. The per-segment line walk keeps only the tiles the
+    // whole bounding box, here ~125 x 125 = ~15600 tiles. The per-segment line walk keeps only the tiles the
     // capsule reaches, so the grid-wide total stays near the diagonal's length.
     start = ir_rewind_begin(ir_arena);
     emit_polyline(ir_arena, (FlPolyPoint[]) { { 8.0f, 8.0f, 1.0f }, { 1000.0f, 1000.0f, 1.0f } }, 2, red, red, 2.0f,
@@ -3936,8 +3935,8 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
               "viewport3d: a viewport past the table cap must still build its target once idle ones are retired");
     }
 
-    // A 2x1 alpha lightmap: opaque left texel, transparent right. Small enough that the atlas would happily
-    // take it, which is exactly what makes it the test for the dedicated flag.
+    // A 2x1 alpha lightmap: opaque left texel, transparent right. Small enough that the atlas would
+    // take it, which is what makes it the test for the dedicated flag.
     static u8 lightmap[2] = { 255, 0 };
     FlImageDecodeResult lightmap_decode = { .pixels = lightmap, .width = 2, .height = 1, .stride = 2, .channels = 1 };
     const FlImageHandle dedicated_handle = 8001;
@@ -3955,10 +3954,9 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
           "viewport3d: the same pixels without the flag still atlas — the flag decides, not the size");
 
     // Three quads in clip space. Red (textured) sits alone on the left at z=0. Green and blue overlap exactly
-    // on the right, green nearer (z=0.5) than blue (z=0.9) - and green is submitted FIRST, so the order is
-    // front-to-back. That ordering is the whole point: with the depth test off, the later blue draw would
-    // simply overwrite the nearer green one, so saw_green && !saw_blue can only hold if GL_LESS actually
-    // rejected blue's fragments.
+    // on the right, green nearer (z=0.5) than blue (z=0.9), and green is submitted first, so the order is
+    // front-to-back. With the depth test off, the later blue draw would overwrite the nearer green one, so
+    // saw_green && !saw_blue can only hold if GL_LESS rejected blue's fragments.
     const FlColor red = { 255, 0, 0, 255 };
     const FlColor green = { 0, 255, 0, 255 };
     const FlColor blue = { 0, 0, 255, 255 };
@@ -4005,7 +4003,7 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
           "viewport3d: the color target is a whole texture, never an atlas cell");
 
     // Draw the viewport's color target back as an ordinary image, clipped to the left half of its 64x64
-    // destination - the clip proves the result composites through the normal image path, not a special case.
+    // destination. The clip proves the result composites through the normal image path.
     FlRenderFrame frame = test_frame();
     void* start = ir_rewind_begin(ir_arena);
     fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 32, 64 });
@@ -4039,7 +4037,7 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(saw_green, "viewport3d: the nearer untextured quad renders");
     CHECK(!saw_blue, "viewport3d: the farther quad must be occluded — the depth test did not run");
 
-    // Sampled at the red quad's far-right column, vertically mid-band - where the lightmap texel is
+    // Sampled at the red quad's far-right column, vertically mid-band, where the lightmap texel is
     // transparent, so the UI sees through the viewport.
     CHECK(pixel_transparent(pixel_at(&buf, 64 + 28, 32)),
           "viewport3d: a texel the lightmap makes transparent leaves the target transparent");
@@ -4049,16 +4047,16 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(!pixel_transparent(pixel_at(&buf, 20, 32)), "viewport3d: the clipped copy draws inside the clip rect");
     CHECK(pixel_transparent(pixel_at(&buf, 40, 32)), "viewport3d: the clipped copy is cut outside the clip rect");
 
-    // Resize: the same viewport id at a new size must rebuild its target in place AND free what it replaced.
-    // Name liveness (glIsFramebuffer on the old name) cannot test that - GL may hand a deleted name straight
-    // back to the next Gen, so leaking and freeing both leave the old name "live". Name RECYCLING is the signal
+    // Resize: the same viewport id at a new size must rebuild its target in place and free what it replaced.
+    // Name liveness (glIsFramebuffer on the old name) cannot test that: GL may hand a deleted name straight
+    // back to the next Gen, so leaking and freeing both leave the old name "live". Name recycling is the signal
     // instead: an implementation that frees gets the same handful of names back, while one that leaks must mint
     // a fresh name per resize (dropping the deletes in setup_targets turns this into RESIZE_COUNT names).
     //
-    // Driver-dependent, but one-way-safe: leaking CANNOT recycle, so a failure here is always a real leak,
-    // while passing relies on the driver handing freed names back promptly. Mesa (llvmpipe, what CI runs)
-    // allocates the lowest free id and does. A driver that never reuses names would fail this spuriously - if
-    // that ever happens, the assertion is wrong, not the backend.
+    // This depends on the driver, but only one way: leaking cannot recycle, so a failure here is always a real
+    // leak, while passing relies on the driver handing freed names back promptly. Mesa (llvmpipe, what CI runs)
+    // allocates the lowest free id and does. A driver that never reuses names would fail this spuriously, and
+    // then the assertion is what is wrong.
     enum { RESIZE_COUNT = 8, RESIZE_NAME_BUDGET = 3 };
     u32 seen_fbo[RESIZE_COUNT] = { 0 };
     u32 seen_depth[RESIZE_COUNT] = { 0 };
@@ -4067,7 +4065,7 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     u32 distinct_depth = 0;
     u32 distinct_color = 0;
     for (u32 i = 0; i < RESIZE_COUNT; i++) {
-        // Every iteration is a genuine size change, so none of them short-circuits the rebuild.
+        // Every iteration changes the size, so none of them short-circuits the rebuild.
         u32 w = 40u + i * 8u;
         u32 h = 72u - i * 4u;
         backend->viewport3d_submit(backend->user_data, viewport_id, vp_color, w, h, identity, draws, 3);
@@ -4084,7 +4082,7 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
         distinct_color = track_name(seen_color, distinct_color, step.color_tex);
 
         // Render between resizes so the slot table drains its dead list (that is where the replaced color
-        // textures are freed) - otherwise the deferred frees pile up and the count would be meaningless.
+        // textures are freed). Otherwise the deferred frees pile up and the count would be meaningless.
         start = ir_rewind_begin(ir_arena);
         ir_frame_render(backend, surface, &frame, ir_arena, start);
     }
@@ -4204,7 +4202,7 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Frame lifecycle - an all-ineligible frame still clears the target, and change_resolution rebuilds the
+// Frame lifecycle: an all-ineligible frame still clears the target, and change_resolution rebuilds the
 // offscreen target, tile lists, and readback buffer. Also covers the surface-texture seam (gpu_renderer.h),
 // whose dimensions track the resolution across the resize.
 
@@ -4213,7 +4211,7 @@ static int run_frame_lifecycle_tests(FlRenderBackend* backend, FlArena* ir_arena
     FlRenderFrame frame = test_frame();
     FlPixelReadback buf;
 
-    // Surface-texture seam at the create resolution - the sections above never resized, so the dims must
+    // Surface-texture seam at the create resolution. The sections above never resized, so the dims must
     // still be the 1920x1080 the backend was created at.
     GpuSurfaceTexture surf = gpu_renderer_surface_texture(surface);
     CHECK(surf.handle != 0, "surface seam: texture name must be non-zero after create");
@@ -4247,8 +4245,8 @@ static int run_frame_lifecycle_tests(FlRenderBackend* backend, FlArena* ir_arena
     CHECK(pixel_transparent(pixel_at(&buf, 100, 100)),
           "change_resolution: pixels outside the rect must stay transparent");
 
-    // The texture name is not asserted to change - GL may recycle a just-deleted name on the gen after
-    // resize; the new-size pixel readback above is the sound proof the target was actually rebuilt.
+    // The texture name is not asserted to change, because GL may recycle a just-deleted name on the gen after
+    // resize. The new-size pixel readback above proves the target was rebuilt.
     surf = gpu_renderer_surface_texture(surface);
     CHECK(surf.handle != 0, "surface seam: texture name must stay valid after change_resolution");
     CHECK(surf.width == 640 && surf.height == 360, "surface seam: dims must update after change_resolution");
@@ -4258,9 +4256,9 @@ static int run_frame_lifecycle_tests(FlRenderBackend* backend, FlArena* ir_arena
 }
 
 // N-surface present isolation. The windowed compositor (backend_sdl_window.c) drives N windows off the
-// ONE shared GL context, making it current per window and sampling that window's own surface texture each present.
+// one shared GL context, making it current per window and sampling that window's own surface texture each present.
 // The SDL swap itself needs a real OS window (the two_windows demo is the manual proof); what is testable
-// headlessly is the invariant the present path rests on - surfaces co-resident on one shared context stay
+// headlessly is the invariant the present path rests on: surfaces co-resident on one shared context stay
 // isolated, each resolving its own texture and its own pixels regardless of render order.
 
 static int run_n_surface_tests(FlRenderBackend* backend, FlArena* ir_arena) {
@@ -4276,7 +4274,7 @@ static int run_n_surface_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(ta.width == 128 && ta.height == 128, "n-surface: surface A texture dims");
     CHECK(tb.width == 64 && tb.height == 96, "n-surface: surface B texture dims");
 
-    // Red into A, then green into B - back-to-back on the shared context, the windowed render order.
+    // Red into A, then green into B, back to back on the shared context, the windowed render order.
     void* start = ir_rewind_begin(ir_arena);
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 128.0f, 128.0f, red);
     ir_frame_render(backend, a, &frame, ir_arena, start);
@@ -4308,7 +4306,7 @@ static int run_n_surface_tests(FlRenderBackend* backend, FlArena* ir_arena) {
 }
 
 // Surface struct reclamation. Each surface owns a single arena backing both the struct and its readback
-// buffer, freed wholesale in destroy_surface - so a churn loop must leave the backend-lifetime perm_arena's
+// buffer, freed wholesale in destroy_surface, so a churn loop must leave the backend-lifetime perm_arena's
 // allocation cursor exactly where it started, while each fresh surface still comes up with its own target
 // texture at its own dimensions.
 
@@ -4331,19 +4329,19 @@ static int run_surface_churn_leak_test(FlRenderBackend* backend) {
     return 0;
 }
 
-#endif // !defined(__APPLE__) - Sections 1 + 2 (GL/EGL all-compute suite)
+#endif // !defined(__APPLE__): Sections 1 + 2 (GL/EGL all-compute suite)
 
 // Cross-backend SVG vector-icon cases: the SVG raster / color-raster / zoom / compaction /
-// large-raster suites run on BOTH backends through the neutral seam (prepare_vector, the SVG atlas readbacks,
+// large-raster suites run on both backends through the neutral seam (prepare_vector, the SVG atlas readbacks,
 // scale_changed, and rendered icon draws). Every expectation is a property both backends satisfy (coverage
 // thresholds, painter-order compositing, even-odd holes, premultiplied opacity, partial-re-raster cadence),
-// checked with the same tolerance - no per-backend golden fork.
+// checked with the same tolerance, with no per-backend golden fork.
 
-// Part G - monochrome SVG icon end to end (GPU SVG 1b): a solid-fill icon prepared through the vector seam
+// Part G: a monochrome SVG icon end to end. A solid-fill icon prepared through the vector seam
 // (backend->prepare_vector) rasterizes coverage into the R8 SVG atlas, then draws via FlCmdImage's alpha-
 // coverage + tint path. The icon is a single full-bounds rect, so at size 32 it aspect-fits to a fully covered
-// 32 x 24 content cell - the readback interior is solid and the padding ring is clean zero, with no curved AA
-// to reason about. The tint contract: opaque-white -> the icon's authored fill; any other tint -> recolor.
+// 32 x 24 content cell: the readback interior is solid and the padding ring is clean zero, with no curved AA
+// to reason about. The tint contract: opaque white keeps the icon's authored fill; any other tint recolors.
 
 // #3296c8 = (50, 150, 200): a vivid fill clearly distinct from white, so the authored-color default is provable.
 static const char k_svg_icon[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"30\">"
@@ -4357,7 +4355,7 @@ static u8 svg_texel(const GpuSvgAtlasReadback* atlas, u32 x, u32 y) {
 }
 
 // The GPU backend retains a pointer to a handle's FlVectorImage to re-raster it on a zoom step or an atlas
-// compaction, and the backend persists across all the Part G tests - so both the struct and its contours must
+// compaction, and the backend persists across all the Part G tests, so both the struct and its contours must
 // outlive any single test. A stack-local FlVectorImage img would dangle even with its contours in an arena;
 // the Part G tests share this one persistent parse instead. All of them use the same k_svg_icon.
 static const FlVectorImage* svg_test_icon(void) {
@@ -4367,7 +4365,7 @@ static const FlVectorImage* svg_test_icon(void) {
         icon = arena_alloc_array(a, FlVectorImage, 1);
         bool ok = vector_image_parse((const u8*)k_svg_icon, sizeof(k_svg_icon) - 1, a, icon);
         if (!ok || icon->classification != FlVectorClass_Monochrome) {
-            return nullptr; // the caller CHECKs this - a parse regression fails the test rather than crashing
+            return nullptr; // the caller CHECKs this; a parse regression fails the test rather than crashing
         }
     }
     return icon;
@@ -4387,7 +4385,7 @@ static int run_svg_raster_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     const FlImageHandle handle = 555; // unused by any image-atlas/slot test -> falls through to the SVG atlas
     backend->prepare_vector(ud, handle, size, img);
 
-    // --- Atlas readback: 40x30 at size 32 -> scale 0.8 -> a 32 x 24 content block plus a 1-texel padding ring.
+    // Atlas readback: 40x30 at size 32 -> scale 0.8 -> a 32 x 24 content block plus a 1-texel padding ring.
     const GpuSvgEntry* e = gpu_debug_find_svg(ud, handle);
     CHECK(e != nullptr, "svg raster: the prepared icon resolves to a cell");
     CHECK(e->cls == FlVectorClass_Monochrome, "svg raster: the cell records the monochrome classification");
@@ -4415,7 +4413,7 @@ static int run_svg_raster_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(svg_texel(&atlas, e->cell.x + GPU_SVG_ATLAS_PAD, e->cell.y + GPU_SVG_ATLAS_PAD) >= SVG_FULL,
           "svg raster: coverage runs to the content edge (the first interior texel is full)");
 
-    // --- Pixel + tint: draw the icon twice in one frame, native 1:1 so each interior pixel reads a fully
+    // Pixel + tint: draw the icon twice in one frame, native 1:1 so each interior pixel reads a fully
     // covered texel (premultiplied alpha 255 leaves rgb intact).
     const int cw = (int)e->cell.w - 2 * GPU_SVG_ATLAS_PAD; // 32 content texels
     const int ch = (int)e->cell.h - 2 * GPU_SVG_ATLAS_PAD; // 24 content texels
@@ -4444,7 +4442,7 @@ static int run_svg_raster_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Part G1b - multi-color SVG icon end to end: an icon with >=2 distinct fills prepares through the vector seam
+// Part G1b: a multi-color SVG icon end to end. An icon with >=2 distinct fills prepares through the vector seam
 // into the RGBA8 color atlas (color_svg_prog composites its shapes in document order, painter's algorithm), then
 // draws via FlCmdImage mode 0 sampling the baked premultiplied RGBA. Property checks, not byte-exact goldens:
 // the dispatch golden is HITL on real hardware.
@@ -4456,7 +4454,7 @@ static const char k_svg_color_order[] = "<svg xmlns=\"http://www.w3.org/2000/svg
                                         "<rect x=\"0\" y=\"0\" width=\"20\" height=\"30\" fill=\"#00ff00\"/></svg>";
 
 // An even-odd blue donut (one path, outer + inner subpath -> a rectangular hole) beside a red rect. The hole
-// sits over empty space, so under even-odd it composites to transparent - the nested same-winding subpaths
+// sits over empty space, so under even-odd it composites to transparent: the nested same-winding subpaths
 // cancel.
 static const char k_svg_color_evenodd[]
     = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"30\">"
@@ -4464,7 +4462,7 @@ static const char k_svg_color_evenodd[]
       "<rect x=\"25\" y=\"0\" width=\"15\" height=\"30\" fill=\"#ff0000\"/></svg>";
 
 // A full-opacity red left half and a half-opacity blue right half (non-overlapping). The blue bakes
-// premultiplied to ~(0, 0, 128, 128) - opacity folded into the color at lowering time.
+// premultiplied to ~(0, 0, 128, 128): opacity folded into the color at lowering time.
 static const char k_svg_color_opacity_icon[]
     = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"30\">"
       "<rect x=\"0\" y=\"0\" width=\"20\" height=\"30\" fill=\"#ff0000\"/>"
@@ -4527,13 +4525,13 @@ static int run_svg_color_raster_tests(FlRenderBackend* backend, FlArena* ir_aren
     GpuColorSvgAtlasReadback ca;
     CHECK(gpu_debug_read_color_svg_atlas(ud, arena, &ca), "svg color: color atlas readback");
 
-    // --- (a) document-order compositing. Content is 32 x 24; green covers the left 16, red the full width.
+    // (a) document-order compositing. Content is 32 x 24; green covers the left 16, red the full width.
     CHECK(channels_near(color_cell_texel(&ca, eo, 8, 12), 0, 255, 0, 255, tol),
           "svg color: the later shape paints over the earlier (left half is the top green)");
     CHECK(channels_near(color_cell_texel(&ca, eo, 24, 12), 255, 0, 0, 255, tol),
           "svg color: a region only the bottom shape covers keeps its color (right half stays red)");
 
-    // --- (b) even-odd hole.
+    // (b) even-odd hole.
     CHECK(channels_near(color_cell_texel(&ca, ed, 2, 12), 0, 0, 255, 255, tol),
           "svg color: the even-odd ring is filled");
     CHECK(channels_near(color_cell_texel(&ca, ed, 8, 12), 0, 0, 0, 0, tol),
@@ -4541,13 +4539,13 @@ static int run_svg_color_raster_tests(FlRenderBackend* backend, FlArena* ir_aren
     CHECK(channels_near(color_cell_texel(&ca, ed, 26, 12), 255, 0, 0, 255, tol),
           "svg color: the second color fills its own region");
 
-    // --- (c) per-shape opacity baked premultiplied.
+    // (c) per-shape opacity baked premultiplied.
     CHECK(channels_near(color_cell_texel(&ca, ef, 8, 12), 255, 0, 0, 255, tol),
           "svg color: a full-opacity region bakes its color intact");
     CHECK(channels_near(color_cell_texel(&ca, ef, 24, 12), 0, 0, 128, 128, tol),
           "svg color: a half-opacity shape bakes premultiplied (~50% in color and alpha)");
 
-    // --- Draw path: the order icon native 1:1 with a white tint - no recolor, the colors are baked.
+    // Draw path: the order icon native 1:1 with a white tint. Nothing recolors because the colors are baked.
     const int cw = (int)eo->cell.w - 2 * GPU_SVG_ATLAS_PAD;
     const int ch = (int)eo->cell.h - 2 * GPU_SVG_ATLAS_PAD;
     const FlColor green = { 0, 255, 0, 255 };
@@ -4570,9 +4568,9 @@ static int run_svg_color_raster_tests(FlRenderBackend* backend, FlArena* ir_aren
     return 0;
 }
 
-// Part G2 - crisp under zoom (GPU SVG 1c): the builder pattern an icon host runs - quantize the physical
-// dst size onto the ladder (svg_raster_size_for_dst), prepare the cell keyed by (handle, quantized size), draw
-// at the exact dst. An icon re-rasters JUST its own cell, and only when its quantized step changes.
+// Part G2: crisp under zoom. The builder pattern an icon host runs is to quantize the physical
+// dst size onto the ladder (svg_raster_size_for_dst), prepare the cell keyed by (handle, quantized size), and draw
+// at the exact dst. An icon re-rasters only its own cell, and only when its quantized step changes.
 
 static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
@@ -4587,7 +4585,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     const FlColor authored = { 50, 150, 200, 255 };
     const FlImageSource srcA = { .kind = FlImageKind_Static, .handle = A };
 
-    // --- Partial re-raster: the dispatch count ticks only when the quantized step changes.
+    // Partial re-raster: the dispatch count ticks only when the quantized step changes.
     struct {
         f32 dst;
         u32 expect_step;
@@ -4618,7 +4616,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
         prev_count = count;
     }
 
-    // --- A crossing touches only the affected icon's cell.
+    // A crossing touches only the affected icon's cell.
     backend->prepare_vector(ud, A, 32, img);
     backend->prepare_vector(ud, B, 32, img);
     const GpuSvgEntry* b_before = gpu_debug_find_svg(ud, B);
@@ -4656,7 +4654,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(b_texels_unchanged, "svg zoom: the sibling's atlas texels are byte-unchanged by A's re-raster");
     fl_arena_destroy(arena2);
 
-    // --- Crisp at each step: a 1:1 draw at the step (dst == the cell's content extent) reads a fully covered
+    // Crisp at each step: a 1:1 draw at the step (dst == the cell's content extent) reads a fully covered
     // interior, at two distinct steps.
     const u16 steps[] = { 32, 48 };
     for (u32 i = 0; i < 2; i++) {
@@ -4676,7 +4674,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
               "svg zoom: a 1:1 draw at the quantized step is crisp (full interior coverage -> authored fill)");
     }
 
-    // --- Non-uniform stretch samples one cell. A is live at step 48 (content 48 x 36). Drawing it into a
+    // Non-uniform stretch samples one cell. A is live at step 48 (content 48 x 36). Drawing it into a
     // 48 x 48 box stretches Y (36 -> 48) by sampling, and must add no raster: the quantize is on the uniform
     // size, never per-axis.
     backend->prepare_vector(ud, A, 48, img);
@@ -4701,9 +4699,9 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Part G3 - atlas compaction on full: the append-only skyline packer leaks a handle's prior cells as
+// Part G3: atlas compaction on full. The append-only skyline packer leaks a handle's prior cells as
 // orphans every time it re-keys onto a new size step, so a long zoom session eventually fills the atlas. On the
-// placement failure the backend compacts wholesale - repack only the live cells, drop the orphans - re-rasters
+// placement failure the backend compacts wholesale (repacking only the live cells and dropping the orphans), re-rasters
 // every survivor from its retained geometry into the new layout, then retries.
 
 static int run_svg_compaction_tests(FlRenderBackend* backend, FlArena* ir_arena) {
@@ -4769,8 +4767,8 @@ static int run_svg_compaction_tests(FlRenderBackend* backend, FlArena* ir_arena)
     return 0;
 }
 
-// Part G4 - sharpening past 512px: with the R8 atlas at 4096^2 and the mono ladder
-// extended to 2048, a >512px dst keys a >512 step and prepare_vector rasters a cell whose content side exceeds
+// Part G4: sharpening past 512px. With the R8 atlas at 4096^2 and the mono ladder
+// reaching 2048, a >512px dst keys a >512 step and prepare_vector rasters a cell whose content side exceeds
 // 512, filling its interior.
 
 static int run_svg_large_raster_tests(FlRenderBackend* backend, FlArena* ir_arena) {
@@ -4815,15 +4813,15 @@ static int run_svg_large_raster_tests(FlRenderBackend* backend, FlArena* ir_aren
     return 0;
 }
 
-// Cross-backend glyph + text cases: the glyph raster / text-pixel / atlas-regen suites run on BOTH
+// Cross-backend glyph + text cases: the glyph raster / text-pixel / atlas-regen suites run on both
 // backends through the neutral seam (prepare_glyph, the glyph atlas readback, scale_changed, and rendered text
-// runs). Every expectation is a property both backends satisfy, checked with the same tolerance - no
+// runs). Every expectation is a property both backends satisfy, checked with the same tolerance, with no
 // per-backend golden fork.
 
-// Part D - glyph rasterization: light-hinted outlines from the embedded test fonts through the
+// Part D: glyph rasterization. Light-hinted outlines from the embedded test fonts go through the
 // shared font layer and the backend's prepare_glyph seam into R8 atlas cells, verified by atlas readback.
-// The fonts (glyph_test_fonts.h) carry 'A' - a solid 0.6 x 0.7 em square - and 'o' - a ring whose counter winds
-// opposite - once as TrueType (quadratics) and once as CFF (cubics), so both curve flavors run the same checks.
+// The fonts (glyph_test_fonts.h) carry 'A' (a solid 0.6 x 0.7 em square) and 'o' (a ring whose counter winds
+// opposite), once as TrueType (quadratics) and once as CFF (cubics), so both curve flavors run the same checks.
 
 static u8 glyph_texel(const GpuGlyphAtlasReadback* atlas, u32 x, u32 y) {
     return atlas->texels[(size_t)y * atlas->width + x];
@@ -4850,7 +4848,7 @@ static int run_glyph_font_checks(FlRenderBackend* backend, FlFontCache* fc, FlAr
           "glyph raster: 'o' outline must load");
     backend->prepare_glyph(backend->user_data, font, size, glyph_o, &outline);
 
-    // .notdef (glyph 0) is empty in the test fonts: the metrics-only path - an entry, no cell, no dispatch.
+    // .notdef (glyph 0) is empty in the test fonts: the metrics-only path (an entry, no cell, no dispatch).
     CHECK(font_cache_get_glyph_outline(fc, font, size, 0, arena, &outline),
           "glyph raster: the empty .notdef outline must load");
     backend->prepare_glyph(backend->user_data, font, size, 0, &outline);
@@ -4862,7 +4860,7 @@ static int run_glyph_font_checks(FlRenderBackend* backend, FlFontCache* fc, FlAr
     GpuGlyphAtlasReadback atlas;
     CHECK(gpu_debug_read_glyph_atlas(backend->user_data, arena, &atlas), "glyph raster: atlas readback");
 
-    // --- 'A', the solid square: design 0.6 x 0.7 em -> roughly 19 x 22 px at 32 px (hinting may nudge it).
+    // 'A', the solid square: design 0.6 x 0.7 em -> roughly 19 x 22 px at 32 px (hinting may nudge it).
     const GpuGlyphEntry* a = gpu_debug_find_glyph(backend->user_data, font, size, glyph_a);
     CHECK(a != nullptr, "glyph raster: the square's entry must resolve");
     CHECK(a->cell.w >= 12 && a->cell.w <= 32 && a->cell.h >= 14 && a->cell.h <= 36,
@@ -4881,8 +4879,8 @@ static int run_glyph_font_checks(FlRenderBackend* backend, FlFontCache* fc, FlAr
               "glyph raster: the padding columns must be empty");
     }
 
-    // A hinted box edge may land on a texel boundary, so the square's ramp need not have a partial step -
-    // the ring below demands one from its curves.
+    // A hinted box edge may land on a texel boundary, so the square's ramp need not have a partial step.
+    // The ring below demands one from its curves.
     u32 ax = a->cell.x + a->cell.w / 2;
     u32 ay = a->cell.y + a->cell.h / 2;
     CHECK(glyph_texel(&atlas, ax, ay) >= GLYPH_FULL, "glyph raster: the square interior is fully covered");
@@ -4901,7 +4899,7 @@ static int run_glyph_font_checks(FlRenderBackend* backend, FlFontCache* fc, FlAr
     CHECK(a != nullptr && a->cell.x == cell_before.x && a->cell.y == cell_before.y,
           "glyph raster: re-preparing a glyph keeps its cell");
 
-    // --- 'o', the ring: outer r 0.28 em, counter r 0.14 em. At mid-height the band spans the leftmost
+    // 'o', the ring: outer r 0.28 em, counter r 0.14 em. At mid-height the band spans the leftmost
     // quarter of the glyph width, so mid-ring sits an eighth in from the left bbox edge.
     const GpuGlyphEntry* o = gpu_debug_find_glyph(backend->user_data, font, size, glyph_o);
     CHECK(o != nullptr && o->cell.w >= 12 && o->cell.h >= 12, "glyph raster: the ring's entry must resolve");
@@ -4959,7 +4957,7 @@ static int run_glyph_raster_tests(FlRenderBackend* backend) {
     return 0;
 }
 
-// Part E - text drawing end to end: glyphs prepared through the seam, then an FlCmd_TextRun rendered and read
+// Part E: text drawing end to end. Glyphs are prepared through the seam, then an FlCmd_TextRun is rendered and read
 // back. 'A' in the embedded test font is a solid 0.6 x 0.7 em square (glyph_test_fonts.h), so a covered cell
 // is a solid block of the run's color and the rows around it stay transparent. The glyph is keyed by its
 // codepoint (FlGlyph.glyph_id is a codepoint today, the key the translator looks up); the glyph index only
@@ -4984,7 +4982,7 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(e != nullptr && e->cell.w > 0 && e->cell.h > 0, "text pixels: the glyph prepared into a real cell");
 
     // Two copies of the square in one run, far enough apart to leave a transparent gap between the cells.
-    const FlColor text_col = { 230, 80, 200, 255 }; // a vivid tint, clearly not white - proves colorization
+    const FlColor text_col = { 230, 80, 200, 255 }; // a vivid tint, clearly not white, which proves colorization
     const f32 pen_y = 300.0f;
     const f32 pen_x0 = 200.0f;
     const f32 pen_x1 = 260.0f;
@@ -5021,7 +5019,7 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(pixel_color(pixel_at(&buf, (int)(pen_x1 + e->left) + cw / 2, cy), (FlColor) { 230, 80, 200, 255 }, 3.0f),
           "text pixels: the second glyph in the run also paints its square");
 
-    // --- A codepoint the run's font lacks paints the fallback face's glyph, not .notdef. 'B' is absent from the
+    // A codepoint the run's font lacks paints the fallback face's glyph, not .notdef. 'B' is absent from the
     // embedded test font and present in the fallback one. This leg drives render()'s own prepare pass
     // (set_font_cache, no host-side prepare_glyph) because that pass is where resolution happens.
     FlFontId fb_font = font_cache_load_font_memory(fc, k_fallback_test_ttf, k_fallback_test_ttf_size, 32);
@@ -5037,7 +5035,7 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlRenderFrame fb_frame = test_frame();
     ir_frame_render(backend, surface, &fb_frame, ir_arena, fb_start);
 
-    // Keyed by the RUN's font even though the outline came from the fallback face - the key the translator uses.
+    // Keyed by the run's font even though the outline came from the fallback face, the key the translator uses.
     // An unresolved fallback would prepare the primary's empty .notdef instead: an entry with no cell.
     const GpuGlyphEntry* fe = gpu_debug_find_glyph(ud, font, size, 'B');
     CHECK(fe != nullptr && fe->cell.w > 0 && fe->cell.h > 0,
@@ -5057,10 +5055,10 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Part F - glyph-atlas regeneration: a UI-scale change (the scale_changed seam) regenerates the atlas
-// wholesale at the new pixel sizes, a resolution change alone does NOT (scale, not window size, is
+// Part F: glyph-atlas regeneration. A UI-scale change (the scale_changed seam) regenerates the atlas
+// wholesale at the new pixel sizes, a resolution change alone does not (scale, not window size, is
 // the trigger), and a full atlas repacks wholesale rather than evicting per glyph. Resolution and scale are
-// restored to the create state on the way out - the frame-lifecycle test that follows assumes it.
+// restored to the create state on the way out, because the frame-lifecycle test that follows assumes it.
 
 static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
@@ -5072,7 +5070,7 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     u32 idx = font_cache_get_glyph_index(fc, font, 'A');
     CHECK(idx != 0, "text atlas: 'A' resolves to a glyph index");
 
-    // --- A resolution change alone does NOT regenerate: scale, not window size, is the trigger ---
+    // A resolution change alone does not regenerate: scale, not window size, is the trigger
     FlGlyphOutline o32;
     CHECK(font_cache_get_glyph_outline(fc, font, 32 * 4, idx, arena, &o32), "text atlas: the size-32 outline loads");
     backend->prepare_glyph(ud, font, 32 * 4, 'A', &o32);
@@ -5090,7 +5088,7 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != nullptr,
           "text atlas: a height resize alone no longer regenerates (scale, not window size, is the trigger)");
 
-    // --- Wholesale regeneration on a UI-scale change, via the scale_changed seam ---
+    // Wholesale regeneration on a UI-scale change, via the scale_changed seam
     CHECK(backend->scale_changed != nullptr, "text atlas: the GPU backend exposes the scale_changed seam");
 
     // An unchanged scale is a no-op (guarded on last_ui_scale, which the create set to the 1.0 default).
@@ -5111,10 +5109,10 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(after->cell.w > before_w && after->cell.h > before_h,
           "text atlas: the glyph re-rasterizes larger at the new size (crisp, not upscaled)");
 
-    // --- Atlas-full: a wholesale repack at the frame boundary, not per-glyph eviction ---
-    // One very large glyph at many distinct keys fills the atlas. The placement that overflows flags a DEFERRED
-    // wipe (gpu_glyph_atlas_on_overflow): the backend never wipes inline - that would blank glyphs already placed
-    // this frame - so the wholesale repack is honored at the next render() boundary. The glyph is sized large so
+    // Atlas-full: a wholesale repack at the frame boundary, not per-glyph eviction
+    // One very large glyph at many distinct keys fills the atlas. The placement that overflows flags a deferred
+    // wipe (gpu_glyph_atlas_on_overflow): the backend never wipes inline (that would blank glyphs already placed
+    // this frame), so the wholesale repack is honored at the next render() boundary. The glyph is sized large so
     // the GPU_GLYPH_ATLAS_SIZE^2 skyline overflows in a small, bounded loop; the entry-table cap
     // (GPU_GLYPH_ATLAS_MAX_ENTRIES) bounds it regardless, so the loop always terminates on a rejected placement.
     const u16 big_size = 512 * 4; // quarter-px key for 512px
@@ -5172,7 +5170,7 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Shared clear-screen case - the ONE pixel case that runs on both backends against one golden. It is
+// Shared clear-screen case: the one pixel case that runs on both backends against one golden. It is
 // the whole story on Metal (the backend clears the offscreen target to the frame envelope's background colour, no
 // IR consumed) and a trivial slice of the GL pipeline (the background translator emits a fullscreen clear the
 // raster pass fills). An opaque clear premultiplies to itself, so both backends must land byte-identical RGBA8,
@@ -5191,7 +5189,7 @@ static const unsigned char k_clear_screen_golden_png[] = {
     0x77, 0xbc, 0xeb, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 };
 
-// The clear colour the case renders and the golden encodes - kept in step with k_clear_screen_golden_png.
+// The clear colour the case renders and the golden encodes, kept in step with k_clear_screen_golden_png.
 #define CLEAR_SCREEN_R 34
 #define CLEAR_SCREEN_G 68
 #define CLEAR_SCREEN_B 102
@@ -5202,7 +5200,7 @@ static int run_clear_screen_test(FlRenderBackend* backend, FlArena* ir_arena) {
 
     FlSurface* surface = backend->create_surface(backend->user_data, w, h);
 
-    // the backend exposes its offscreen target through the single-name platform-conditional accessor -
+    // The backend exposes its offscreen target through the single-name platform-conditional accessor:
     // a GL texture-name u32 or a retained id<MTLTexture> void*, both non-null once a surface exists.
     GpuSurfaceTexture tex = gpu_renderer_surface_texture(surface);
     CHECK(tex.handle != 0, "clear-screen: the surface has a backend-owned offscreen target");
@@ -5234,10 +5232,10 @@ static int run_clear_screen_test(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Shared rect + border pixel cases - the core-tier primitives running on both backends through the
+// Shared rect and border pixel cases: the core-tier primitives running on both backends through the
 // neutral seam. Every expectation is a property of the rounded-rect SDF coverage model (coverage = clamp(0.5 - d))
-// both backends compute identically, checked with the same pixel_color / channels_near tolerance - one
-// comparison, no per-backend golden fork. Both cases render over a transparent background (no clear command), so
+// both backends compute identically, checked with the same pixel_color / channels_near tolerance: one
+// comparison, with no per-backend golden fork. Both cases render over a transparent background (no clear command), so
 // an untouched pixel reads exactly zero.
 
 // The workhorse fill colour (opaque, so it stores premultiplied to itself).
@@ -5328,11 +5326,11 @@ static int run_border_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Shared polyline pixel cases - the optional-tier Polyline primitive running on both backends
+// Shared polyline pixel cases: the optional-tier Polyline primitive running on both backends
 // through the neutral seam. A polyline lowers to one draw command per edge: a stroke capsule (round caps/joins
 // by policy) or, when filled, a fill-to-baseline trapezoid, with per-point intensity modulating stroke alpha.
 // This suite pins both backends to the same coverage model within the shared pixel_color / channels_near
-// tolerance, no per-backend golden fork. Rendered over a transparent background (no clear command), so an
+// tolerance, with no per-backend golden fork. Rendered over a transparent background (no clear command), so an
 // untouched pixel reads exactly zero.
 
 // The stroke / fill colours (opaque, so they store premultiplied to themselves).
@@ -5345,7 +5343,7 @@ static int run_polyline_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena)
     FlPixelReadback buf;
 
     // A thick horizontal stroke (width 7, half-width 3.5) centered on y = 100, with a clean AA ramp across the
-    // top edge at y = 96.5 (a fractional edge lands on a pixel-row center, so it produces a genuine partial -
+    // top edge at y = 96.5 (a fractional edge lands on a pixel-row center, so it produces a partial pixel;
     // an integer edge would be exact-coverage).
     void* start = ir_rewind_begin(ir_arena);
     emit_polyline(ir_arena, (FlPolyPoint[]) { { 100.0f, 100.0f, 1.0f }, { 200.0f, 100.0f, 1.0f } }, 2, poly_stroke,
@@ -5370,7 +5368,7 @@ static int run_polyline_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena)
           "polyline diagonal: a pixel inside the bbox but off the line stays transparent (off-line miss)");
 
     // Round joins fall out of the overlapping end caps, so the vertex pixel where two capsules meet must be
-    // fully covered - no gap or seam at the join.
+    // fully covered, with no gap or seam at the join.
     start = ir_rewind_begin(ir_arena);
     emit_polyline(ir_arena,
                   (FlPolyPoint[]) { { 100.0f, 600.0f, 1.0f }, { 200.0f, 500.0f, 1.0f }, { 300.0f, 600.0f, 1.0f } }, 3,
@@ -5431,11 +5429,11 @@ static int run_polyline_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena)
     return 0;
 }
 
-// Arc / ring / circle-sector pixel cases (primitive, Metal follow-up) - the optional-tier arc
+// Arc / ring / circle-sector pixel cases: the optional-tier arc
 // SDF rendered end-to-end: a knob-indicator ring with butt caps, the same ring with round caps, a filled
 // sector (thickness reaching the centre), and a full-sweep seamless ring. Both backends are pinned to the same
 // coverage model and the same knob angle convention within the shared pixel_color / channels_near
-// tolerance, no per-backend golden fork.
+// tolerance, with no per-backend golden fork.
 
 // Sample the pixel whose center a knob-convention polar point lands on (angle 0 at 12 o'clock,
 // positive clockwise), y-down pixel space. Callers put centers on the half-pixel grid so cardinal points land
@@ -5457,7 +5455,7 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     const FlColor blue = { 20, 40, 200, 128 }; // half-alpha
     const f32 tau = 6.28318530717958647692f;   // one full turn, radians (knob angles)
 
-    // --- Knob indicator arc, butt caps --------------------------------------------------------------------
+    // Knob indicator arc, butt caps
     // Centered (100.5, 100.5), outer radius 60, thickness 12 (ring band 48..60, centerline 54), sweeping three
     // quarter-turns from 7:30 through 12 to 4:30. The bottom quarter is the gap.
     const f32 kcx = 100.5f;
@@ -5495,7 +5493,7 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(pixel_transparent(pixel_at_knob_angle(&buf, kcx, kcy, -kend - kdelta, 54.0f)),
           "knob arc: the start cap cuts sharp too");
 
-    // --- The same knob with round caps --------------------------------------------------------------------
+    // The same knob with round caps
     // The cap disc (radius 6) covers ~4px past the end angle; ~10px past stays clear.
     start = ir_rewind_begin(ir_arena);
     fl_ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, FL_IR_ARC_ROUND_CAPS, nullptr);
@@ -5506,7 +5504,7 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(pixel_transparent(pixel_at_knob_angle(&buf, kcx, kcy, kend + 10.0f / 54.0f, 54.0f)),
           "knob arc round caps: the cap disc ends at its radius");
 
-    // --- Filled sector and full ring ----------------------------------------------------------------------
+    // Filled sector and full ring
     // Thickness reaching the center makes a pie wedge; a full-turn sweep is a seamless ring.
     start = ir_rewind_begin(ir_arena);
     fl_ir_arc(ir_arena, 300.5f, 100.5f, 40.0f, 40.0f, 0.0f, 0.25f * tau, red, 0, nullptr);
@@ -5536,10 +5534,10 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Circle / diamond pixel cases (primitive, Metal follow-up) - the optional-tier filled-SDF
+// Circle / diamond pixel cases: the optional-tier filled-SDF
 // shapes rendered end-to-end: a bordered circle (inward border ring), a borderless circle, a bordered diamond,
 // and a clip-cut circle. Both backends are pinned to the same coverage model and the same border-ring split
-// (outer-minus-inner coverage) within the shared pixel_color tolerance, no per-backend golden fork.
+// (outer-minus-inner coverage) within the shared pixel_color tolerance, with no per-backend golden fork.
 static int run_circle_diamond_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
     FlRenderFrame frame = test_frame();
@@ -5548,12 +5546,12 @@ static int run_circle_diamond_pixel_tests(FlRenderBackend* backend, FlArena* ir_
     const FlColor green = { 40, 200, 60, 255 };
     const FlColor red = { 200, 40, 50, 255 };
 
-    // --- Circles and diamond (modulation points / automation nodes), plus a clip cut ----------------------
+    // Circles and diamond (modulation points / automation nodes), plus a clip cut
     void* start = ir_rewind_begin(ir_arena);
     fl_ir_circle(ir_arena, 200.5f, 300.5f, 30.0f, red, green, 6.0f, nullptr); // bordered: fill inside r = 24
     fl_ir_circle(ir_arena, 300.5f, 300.5f, 20.0f, red, green, 0.0f, nullptr); // borderless: green never shows
     // Dashed ring, 6 on 6 off around the ring centerline at radius 18 (circumference 113.10). Nine periods
-    // fit closest, so the rescale lands the pattern at 12.57 with a 6.28 dash - putting the top of the ring
+    // fit closest, so the rescale lands the pattern at 12.57 with a 6.28 dash, putting the top of the ring
     // a quarter period into a dash and the bottom a quarter period into a gap.
     fl_ir_circle_stroked(ir_arena, 700.5f, 300.5f, 20.0f, red, green, 4.0f, (FlStrokeStyle) { 6.0f, 6.0f }, nullptr);
     fl_ir_diamond(ir_arena, 400.5f, 300.5f, 30.0f, 20.0f, red, green, 4.0f, nullptr);
@@ -5606,7 +5604,7 @@ static int run_circle_diamond_pixel_tests(FlRenderBackend* backend, FlArena* ir_
     return 0;
 }
 
-// Meter-bar pixel cases (primitive, Metal follow-up) - the batched optional-tier primitive
+// Meter-bar pixel cases: the batched optional-tier primitive
 // rendered end-to-end: a single bar-set record off a shared baseline carrying a full row of bars. Bar sets are
 // batched at the IR record level (one FlCmd_Bar carries the whole row) and lower CPU-side to one GpuDraw_Rect
 // per bar off the baseline. Rendering the whole row from one fl_ir_bars record is the readback that proves the
@@ -5618,7 +5616,7 @@ static int run_bar_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
 
     const FlColor green = { 40, 200, 60, 255 };
 
-    // --- Meter bars ----------------------------------------------------------------------------------------
+    // Meter bars
     // One bar-set record off a baseline at y = 400: two upward bars, a gap, and a negative bar hanging below.
     void* start = ir_rewind_begin(ir_arena);
     FlBar* bars = fl_ir_bars(ir_arena, 400.0f, green, 3, nullptr);
@@ -5643,11 +5641,11 @@ static int run_bar_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     return 0;
 }
 
-// Shared gradient + clip + image pixel cases - the remaining core-tier primitives running on both
+// Shared gradient, clip and image pixel cases: the remaining core-tier primitives running on both
 // backends through the neutral seam: per-corner gradients (bilinear corner blend), clip cuts (the clip-rect SDF
 // cut), and the atlas sampler path (RGBA color, alpha-coverage, linear/nearest filtering, src sub-rects, and a
 // clipped image). Every expectation is a property both backends satisfy within the same channels_near
-// tolerance - no per-backend golden fork. The slot / oversize image tier stays GL-only (run_image_tests / the
+// tolerance, with no per-backend golden fork. The slot / oversize image tier stays GL-only (run_image_tests / the
 // slot suites); it is not part of the atlas sampler path.
 
 static int run_gradient_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
@@ -5669,7 +5667,7 @@ static int run_gradient_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) 
     // G2: vertical gradient green -> blue (TL/TR green, BL/BR blue).
     fl_ir_fill_rect(ir_arena, (FlRect) { 160, 0, 16, 128 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { pure_green, pure_green, pure_blue, pure_blue }, nullptr);
-    // G3: four distinct corners (TL red, TR green, BL blue, BR white) - the corner-order check.
+    // G3: four distinct corners (TL red, TR green, BL blue, BR white), the corner-order check.
     fl_ir_fill_rect(ir_arena, (FlRect) { 0, 160, 64, 64 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { pure_red, pure_green, pure_blue, white }, nullptr);
     // G4: half-alpha gradient over the transparent target (premultiplied-output check).
@@ -5746,13 +5744,13 @@ static int run_clip_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 64, 64 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { clip_red, clip_red, clip_red, clip_red }, nullptr);
     fl_ir_clip_pop(ir_arena);
-    // K2: a green rect whose clip starts at the fractional x = 100.5 - pixel column 100 is half covered.
+    // K2: a green rect whose clip starts at the fractional x = 100.5, so pixel column 100 is half covered.
     fl_ir_clip_push(ir_arena, (FlRect) { 100.5f, 0.0f, 32.0f, 32.0f });
     fl_ir_fill_rect(ir_arena, (FlRect) { 96, 0, 64, 32 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { clip_green, clip_green, clip_green, clip_green }, nullptr);
     fl_ir_clip_pop(ir_arena);
     // K3: a rounded rect (TL radius 16, arc circle centered at (208,48)) clipped to its left 8 pixels
-    // ({192..200} x {32..96}) - the clip edge at x = 200 slices through the corner arc.
+    // ({192..200} x {32..96}); the clip edge at x = 200 slices through the corner arc.
     fl_ir_clip_push(ir_arena, (FlRect) { 192, 32, 8, 64 });
     fl_ir_fill_rect(ir_arena, (FlRect) { 192, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
                     (FlColor[4]) { clip_red, clip_red, clip_red, clip_red }, nullptr);
@@ -5874,7 +5872,7 @@ static int run_painter_rects_pixel_test(FlRenderBackend* backend, FlArena* ir_ar
         drawn += readback[0][i + 3] != 0;
     }
     CHECK(drawn > 500, "painter rects: the scalar reference frame must actually draw");
-    // Scissor really clips: (65, 20) is inside canvas A's unclipped columns but outside the scissor and clear of
+    // The scissor clips: (65, 20) is inside canvas A's unclipped columns but outside the scissor and clear of
     // canvas B (which starts at y = 45); (40, 20) is inside the scissor.
     const size_t row_stride = readback_bytes / (size_t)h;
     CHECK(readback[0][20 * row_stride + 65 * 4 + 3] == 0, "painter rects: the scissor clips the scalar columns");
@@ -5927,7 +5925,7 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(backend->prepare_image(backend->user_data, 301, &color_decode, scratch, &req),
           "prepare_image: the backend reports the image realized");
 
-    // Alpha-coverage source: 4x4, one alpha step per column (0, 85, 170, 255) - the white x alpha atlas form.
+    // Alpha-coverage source: 4x4, one alpha step per column (0, 85, 170, 255), the white x alpha atlas form.
     static u8 alpha_px[4 * 4];
     for (int y = 0; y < 4; y++) {
         for (int x = 0; x < 4; x++) {
@@ -5945,7 +5943,7 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
           "prepare_image: the backend reports the image realized");
 
     // The two row-pitch forms the atlas-cell upload must handle, checked on whichever backend runs this case:
-    //  - a padded source (stride 12 over a tight 8, 0xAA sentinel padding) - the pitch rides the upload, so none
+    //  - a padded source (stride 12 over a tight 8, 0xAA sentinel padding); the pitch rides the upload, so none
     //    of the padding may leak into the cell;
     //  - a source declaring no stride at all (0 = tightly packed), where the upload derives w * bpp itself.
     // Same four texels either way, so both must land identically.
@@ -6003,7 +6001,7 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     FlPixelReadback buf;
     CHECK(render_seam_read_pixels(backend, surface, &buf), "image: read_pixels failed");
 
-    // Color mode at native size is texel passthrough - for nearest and linear alike (pixel centers map to texel
+    // Color mode at native size is texel passthrough for nearest and linear alike (pixel centers map to texel
     // centers, where the linear weights collapse to one texel).
     for (int y = 0; y < IMG_H; y++) {
         for (int x = 0; x < IMG_W; x++) {
@@ -6024,7 +6022,7 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
               && channels_near(pixel_at(&buf, 115, 19), 7 * 30, 7 * 30, 77, 255, 1.0f),
           "image color: a src sub-rect samples only its region");
 
-    // Alpha-coverage: stored white x alpha, colorized by the tint - column x carries alpha x*85, premultiplied.
+    // Alpha-coverage is stored white x alpha, colorized by the tint: column x carries alpha x*85, premultiplied.
     for (int x = 0; x < 4; x++) {
         f32 a = (f32)(x * 85);
         CHECK(channels_near(pixel_at(&buf, 16 + x, 49), a * 200.0f / 255.0f, a * 40.0f / 255.0f, a * 50.0f / 255.0f, a,
@@ -6092,7 +6090,7 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
 }
 
 // fl_app GPU path. The bare-backend cases above drive the render backend directly; this drives the
-// fl_app RUNNER on the GPU backend it selects (the headless Surface Binding - EGL-surfaceless on Linux, a bare
+// fl_app runner on the GPU backend it selects (the headless Surface Binding: EGL-surfaceless on Linux, a bare
 // MTLDevice on macOS). The frame draws a rect and a circle (the circle is a GPU-tier IR primitive the
 // software backend drops, so its presence in the readback is the GPU path's signature). fl_app owns its own
 // headless context, so on Linux this runs after the shared EGL context is torn down.
@@ -6145,7 +6143,7 @@ static const f32 k_view_bottom[16] = {
 };
 
 typedef struct Viewport3dFrameState {
-    FlMeshHandle mesh; // one mesh, drawn by both viewports - retained meshes are backend-shared
+    FlMeshHandle mesh; // one mesh, drawn by both viewports; retained meshes are backend-shared
     FlVec2 last_size;
     FlVec2 last_size_right;
     bool viewport_declared;
@@ -6173,8 +6171,8 @@ static void viewport3d_app_frame(void* user_data) {
     Viewport3dFrameState* state = user_data;
 
     if (state->mesh == FL_MESH_HANDLE_INVALID) {
-        // A single magenta quad filling most of clip space. Created on the first frame, when the UI context -
-        // and through it the render backend the seam forwards to - is up.
+        // A single magenta quad filling most of clip space. Created on the first frame, when the UI context
+        // (and through it the render backend the seam forwards to) is up.
         TestQuad quad = test_quad(-0.8f, 0.8f, 0.0f, (FlColor) { 220, 40, 200, 255 });
         static const u16 indices[6] = { 0, 1, 2, 0, 2, 3 };
         state->mesh = fl_mesh_create(quad.verts, 4, indices, 6);
@@ -6227,8 +6225,8 @@ static int run_viewport3d_app_test(void) {
     FlPixelReadback rb;
     CHECK(fl_app_read_pixels(app, &rb), "viewport3d app: fl_app_read_pixels failed");
 
-    // The two viewports are docked SIDE BY SIDE and draw the one shared mesh in the same frame, each through its
-    // own matrix - one pushes it to the top of its own rect, the other to the bottom. So split the readback by x,
+    // The two viewports are docked side by side and draw the one shared mesh in the same frame, each through its
+    // own matrix: one pushes it to the top of its own rect, the other to the bottom. So split the readback by x,
     // one tile per side, and collect each side's vertical extent: both sides must have drawn, and their two bands
     // must not overlap.
     //
@@ -6277,7 +6275,7 @@ static int run_viewport3d_app_test(void) {
     printf("gpu_smoke_test: viewport3d docked elements (two viewports, one shared mesh) PASS\n");
     return 0;
 }
-#endif // !defined(__APPLE__) - viewport3d fl_app suite
+#endif // !defined(__APPLE__): viewport3d fl_app suite
 
 static int run_em_app_gpu_path_test(void) {
     FlAppSettings settings = {
@@ -6296,7 +6294,7 @@ static int run_em_app_gpu_path_test(void) {
     CHECK(fl_app_read_pixels(app, &rb), "fl_app_read_pixels (GPU) failed");
     CHECK(rb.stride == rb.width * 4u, "GPU readback is RGBA8 (stride == width*4)");
 
-    // Scan the readback for the two distinct fills - robust to ui_scale and exact coordinates. Fills are stored
+    // Scan the readback for the two distinct fills, robust to ui_scale and exact coordinates. Fills are stored
     // premultiplied, so a fully-covered interior pixel is its own color; the dark theme clear is far below 150
     // on every channel, so it fakes neither fill.
     bool saw_rect = false;   // blue-dominant
@@ -6336,12 +6334,12 @@ static int run_em_app_gpu_path_test(void) {
 
 #if !defined(__APPLE__)
 
-// GPU perf fence - the GPU-gated sibling of unit_tests' scene_raster_fill. scene_zoom_change isolates the
+// GPU perf fence: the GPU-gated sibling of unit_tests' scene_raster_fill. scene_zoom_change isolates the
 // documented zoom-stall hot path: a UI-scale change (the scale_changed seam) wipes the glyph atlas
 // wholesale, so the next frame's prepare_text_glyphs pass re-rasterizes every resident glyph. The scene renders a
 // text frame cold, then forces that wipe and re-renders, asserting the tier-1 GPU work counters (glyph_dispatches,
 // svg_dispatches, tile_overflow) at today's locked baseline through the gpu_debug_read_frame_stats seam and printing
-// tier-3 wall-clock ns (never asserted - the llvmpipe CI GPU makes GPU timings meaningless).
+// tier-3 wall-clock ns (never asserted, because the llvmpipe CI GPU makes GPU timings meaningless).
 
 static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
     void* ud = backend->user_data;
@@ -6350,11 +6348,11 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
     FlFontCache* fc = font_cache_new(arena);
     FlFontId font = font_cache_load_font_memory(fc, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
     CHECK(font != FONT_ID_INVALID, "perf_fence: the embedded font loads");
-    // Let render()'s prepare_text_glyphs realize the runs' glyphs itself - that pass IS the zoom-stall hot path.
+    // Let render()'s prepare_text_glyphs realize the runs' glyphs itself; that pass is the zoom-stall hot path.
     backend->set_font_cache(ud, fc);
 
     // scene_zoom_change: the two embedded codepoints ('A', 'o') at a spread of raster sizes. Each distinct
-    // (font, size, glyph_id) is one atlas key, so the frame carries n_sizes*2 distinct glyphs - the resident set a
+    // (font, size, glyph_id) is one atlas key, so the frame carries n_sizes*2 distinct glyphs, the resident set a
     // scale change forces the backend to rebuild. Spread horizontally so no 8x8 tile ever nears GPU_TILE_CAPACITY.
     static const u16 sizes[] = { 24, 28, 32, 36, 40 };
     const int n_sizes = (int)sizeof_array(sizes);
@@ -6371,7 +6369,7 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
     // svg_dispatches reuses the monotonic svg_raster_count (prior SVG sections already advanced it), so the
     // meaningful per-scene assertion is a delta: a text-only scene rasterizes no SVG cell. The delta check only
     // has teeth while svg_before is nonzero (a seam bug returning 0 would then wrap the unsigned subtraction and
-    // fail loudly), which is why main() must keep an SVG section before this one - guard that ordering here.
+    // fail loudly), which is why main() must keep an SVG section before this one; the CHECK below guards it.
     const u32 svg_before = gpu_debug_svg_raster_count(ud);
     CHECK(svg_before > 0, "perf_fence: expects an earlier SVG section to have advanced svg_raster_count");
 
@@ -6380,7 +6378,7 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
     // the wipe fires regardless of the scale on entry.
     backend->scale_changed(ud, 1.5f);
 
-    // Frame 1 - cold atlas: every distinct glyph rasterizes exactly once.
+    // Frame 1, cold atlas: every distinct glyph rasterizes exactly once.
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     GpuFrameStats cold;
     gpu_debug_read_frame_stats(ud, surface, arena, &cold);
@@ -6388,7 +6386,7 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
           "perf_fence: the cold frame rasterizes every distinct glyph once (baseline drift)");
     CHECK(cold.tile_overflow == 0, "perf_fence: the sparse text scene overflows no tile (baseline drift)");
 
-    // Frame 2 - a UI-scale change wipes the atlas, so this re-render re-rasterizes the whole resident set.
+    // Frame 2: a UI-scale change wipes the atlas, so this re-render re-rasterizes the whole resident set.
     backend->scale_changed(ud, 2.0f);
     const u64 t0 = get_monotonic_time_ns_os();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -6410,7 +6408,7 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
 
     // A second micro-scene exercises the tile_overflow summation with a nonzero result (the zoom scene only ever
     // sees 0): 70 solid 8x8 rects stacked on one 8x8 tile overflow its GPU_TILE_CAPACITY (64) list, dropping
-    // exactly 6 - the same setup run_classification_tests uses, here totalled through gpu_debug_read_frame_stats.
+    // exactly 6, the same setup run_classification_tests uses, here totalled through gpu_debug_read_frame_stats.
     void* ovf_start = ir_rewind_begin(ir_arena);
     for (int i = 0; i < 70; i++) {
         emit_solid_rect(ir_arena, 32.0f, 32.0f, 8.0f, 8.0f, red);
@@ -6431,14 +6429,14 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
     printf("gpu_smoke_test: perf fence (scene_zoom_change) PASS\n");
     return 0;
 }
-#endif // !defined(__APPLE__) - GPU perf fence (Linux-only)
+#endif // !defined(__APPLE__): GPU perf fence (Linux-only)
 
 #if !defined(__APPLE__)
 
 // Partial shader-compile failure: when one of the four programs fails to compile, create_gpu_renderer must
 // delete the programs that did compile before returning the zeroed backend. The GpuShared is the failed arena's
 // first allocation, so its address is recoverable from the arena cursor; the stale program IDs it still holds
-// let glIsProgram prove the survivors were actually deleted (not just abandoned).
+// let glIsProgram prove the survivors were deleted (not just abandoned).
 
 static int run_partial_compile_failure_test(void) {
     FlArena* fail_arena = arena_new();
@@ -6462,7 +6460,7 @@ static int run_partial_compile_failure_test(void) {
     printf("gpu_smoke_test: partial shader-compile failure cleanup PASS\n");
     return 0;
 }
-#endif // !defined(__APPLE__) - partial shader-compile failure (Linux-only)
+#endif // !defined(__APPLE__): partial shader-compile failure (Linux-only)
 
 #if defined(__APPLE__)
 
@@ -6481,7 +6479,7 @@ static int run_iosurface_surface_test(FlRenderBackend* backend, FlArena* ir_aren
     const int h = 64;
     FlSurface* surface = backend->create_surface(backend->user_data, w, h);
 
-    // Latch the surface into IOSurface mode up front (the host's setup step), then render - a first accessor call
+    // Latch the surface into IOSurface mode up front (the host's setup step), then render. A first accessor call
     // rebuilds the target, so anything drawn before it would be discarded.
     GpuSurfaceIOSurface io = gpu_renderer_surface_iosurface(surface);
     CHECK(io.handle != nullptr, "iosurface: the surface exposes a backend-owned IOSurface backing");
@@ -6495,7 +6493,7 @@ static int run_iosurface_surface_test(FlRenderBackend* backend, FlArena* ir_aren
     // The primary accessor's two invalidation events (gpu_renderer.h) are the resolution change exercised further
     // down and this surface's first IOSurface call, which rebuilds the target in place. Only the second half is
     // assertable by handle: a repeat IOSurface call re-latches nothing, so both handles must survive it unchanged.
-    // (The first call's invalidation is not observable here - Metal readily hands the rebuilt target the address the
+    // (The first call's invalidation is not observable here: Metal readily hands the rebuilt target the address the
     // released one just vacated, so a stale handle can compare equal to a live one.)
     CHECK(gpu_renderer_surface_iosurface(surface).handle == io.handle,
           "iosurface: a repeat accessor call returns the same backing (no re-upgrade)");
@@ -6525,8 +6523,8 @@ static int run_iosurface_surface_test(FlRenderBackend* backend, FlArena* ir_aren
           "iosurface: the cross-context readback matches the primary accessor byte-for-byte");
 
     // change_resolution keeps the surface IOSurface-backed: a re-fetch reports the new dims and stays a valid handle.
-    // 96x48 is deliberate - its tight row (384 B) is NOT 256-aligned, so unlike the 64x64 case (256 B, already
-    // aligned) the readback's row-padding-strip arithmetic actually does work here.
+    // 96x48 is deliberate: its tight row (384 B) is not 256-aligned, so unlike the 64x64 case (256 B, already
+    // aligned) the readback's row-padding-strip arithmetic does work here.
     const int w2 = 96;
     const int h2 = 48;
     render_seam_change_resolution(backend, surface, w2, h2);
@@ -6629,7 +6627,7 @@ int main(void) {
     CHECK(arena != nullptr, "fl_init returned null arena");
 
 #if defined(__APPLE__)
-    // --- macOS / Metal: no EGL. The system default MTLDevice is the headless Surface Binding, always
+    // macOS / Metal: no EGL. The system default MTLDevice is the headless Surface Binding, always
     // available, so create the backend directly.
     FlRenderBackend backend = create_gpu_renderer(arena);
     CHECK(backend.render != nullptr, "create_gpu_renderer (Metal) failed — no MTLDevice or queue");
@@ -6659,7 +6657,7 @@ int main(void) {
         return 1;
     }
 #else
-    // --- Section 1: packer + translator unit tests, before any EGL/GL call -------------------------------------
+    // Section 1: packer + translator unit tests, before any EGL/GL call
     if (run_packer_tests() != 0 || run_glyph_atlas_tests() != 0 || run_glyph_lower_tests() != 0
         || run_translator_tests() != 0 || run_effect_translator_tests() != 0 || run_shape_translator_tests() != 0
         || run_polyline_translator_tests() != 0 || run_border_translator_tests() != 0 || run_slots_tests() != 0
@@ -6668,7 +6666,7 @@ int main(void) {
         return 1;
     }
 
-    // --- Section 2: the all-compute pipeline on an EGL surfaceless GL 4.3 context ------------------------------
+    // Section 2: the all-compute pipeline on an EGL surfaceless GL 4.3 context
     EGLDisplay dpy = create_surfaceless_gl43_context();
     CHECK(dpy != EGL_NO_DISPLAY, "EGL surfaceless GL 4.3 context creation failed");
 
@@ -6711,7 +6709,7 @@ int main(void) {
     eglTerminate(dpy);
 
     // fl_app GPU path: a self-contained run on fl_app's own EGL surfaceless context. Must come after the shared
-    // context above is torn down - fl_app makes its own context current and unbinds it on destroy.
+    // context above is torn down, because fl_app makes its own context current and unbinds it on destroy.
     if (run_em_app_gpu_path_test() != 0 || run_viewport3d_app_test() != 0) {
         return 1;
     }

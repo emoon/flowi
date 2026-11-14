@@ -1,6 +1,6 @@
 #pragma once
 
-// fl_app - first-class C runner for the flowi toolkit.
+// fl_app: the C runner for the flowi toolkit.
 //
 // fl_app owns the window, the per-frame update loop, and presentation. C owns the loop and the host is a
 // per-frame callback: the host calls fl_app_tick (one frame) or fl_app_run (block until quit) and emits its UI
@@ -55,11 +55,11 @@ typedef struct FlWindowSettings {
 } FlWindowSettings;
 
 // Open another OS window driven by the same shared backend, with its own UI context, render surface, and per-frame
-// callback. The app retains it in its window list and ticks + presents it every fl_app_tick. Returns null on
+// callback. The app retains it in its window list and ticks + presents it every fl_app_tick. Returns nullptr on
 // failure. Closing a non-main window (fl_app_window_close, an injected close, or the window manager) leaves the
 // others running; only the main window closing quits the app.
 //
-// Safe to call mid-frame (from inside a frame callback): a call made while a frame is emitting is QUEUED and the
+// Safe to call mid-frame (from inside a frame callback): a call made while a frame is emitting is queued and the
 // OS window + surface + context are created at the next fl_app_tick boundary, never mid-emit. The returned handle
 // is valid immediately and goes live (its frame callback starts running) on the next tick. The settings (including
 // the title bytes) are copied, so they need not outlive the call.
@@ -67,25 +67,25 @@ FlAppWindow* fl_app_window_open(FlApp* app, const FlWindowSettings* settings, Fl
 
 // Request that a host-opened window close. The window is removed from the list and torn down at the start of the
 // next fl_app_tick (the same path a window-manager close takes), so it is safe to call from inside a frame
-// callback. A window still queued by a mid-frame fl_app_window_open (not yet materialized) is simply dropped from
-// the open queue. Closing the main window this way is a no-op - quit by letting the main window's close reach
+// callback. A window still queued by a mid-frame fl_app_window_open (not yet materialized) is dropped from
+// the open queue. Closing the main window this way is a no-op; quit by letting the main window's close reach
 // fl_app_tick. The window's on_close callback (if any) still runs and may veto the close.
 void fl_app_window_close(FlApp* app, FlAppWindow* window);
 
-// Per-window close hook (optional). Invoked at the tick boundary when a window's close is seen - a window-manager
-// close, an injected close, or fl_app_window_close - BEFORE the window is torn down (or, for the main window,
-// before the app quits). Return true to proceed with the close; return false to VETO it (the window stays and the
+// Per-window close hook (optional). Invoked at the tick boundary when a window's close is seen (a window-manager
+// close, an injected close, or fl_app_window_close), before the window is torn down (or, for the main window,
+// before the app quits). Return true to proceed with the close; return false to veto it (the window stays and the
 // close request is cleared). With no callback the default policy holds: closing the main window quits the app,
 // closing any other window closes just it.
 typedef bool (*FlAppCloseFn)(void* user_data);
 
-// Install (or clear, with on_close == null) a window's close hook. Works for any window, the main window included
+// Install (or clear, with on_close == nullptr) a window's close hook. Works for any window, the main window included
 // (fl_app_main_window). user_data is passed to the callback; it is independent of the per-frame callback's user
 // data. The hook is consulted on every close path for that window.
 void fl_app_window_set_on_close(FlApp* app, FlAppWindow* window, FlAppCloseFn on_close, void* user_data);
 
 // One frame across every window, on one shared delta-time. The main window uses the frame callback passed here;
-// every other window uses the one it was opened with. Returns false once the MAIN window's close has been seen and
+// every other window uses the one it was opened with. Returns false once the main window's close has been seen and
 // not vetoed (the app quit).
 bool fl_app_tick(FlApp* app, void* user_data, FlAppFrameFn frame);
 
@@ -97,7 +97,7 @@ void fl_app_run(FlApp* app, void* user_data, FlAppFrameFn frame);
 // monitor content scale x zoom, recomposed for every window immediately.
 void fl_app_set_ui_zoom(FlApp* app, float zoom);
 
-// Headless harness surface - the single injection surface for C + Rust golden tests. The fl_app_inject_*
+// Headless harness surface: the injection surface for the C and Rust golden tests. The fl_app_inject_*
 // entry points assert app->headless (they drive the offscreen input backend).
 
 void fl_app_inject_mouse_move(FlApp* app, i32 x, i32 y);
@@ -123,7 +123,7 @@ void fl_app_inject_window_focus_for(FlApp* app, FlAppWindow* window, bool gained
 // recomposes that window's absolute UI scale (content_scale x ui_zoom) against it. Asserts headless.
 void fl_app_set_window_content_scale_for(FlApp* app, FlAppWindow* window, float scale);
 
-// The app's main window handle (windows[0]). Never null for a live app.
+// The app's main window handle (windows[0]). Never nullptr for a live app.
 FlAppWindow* fl_app_main_window(FlApp* app);
 
 // Live window enumeration (windows[0] is the main window), reaching windows the app opened internally.
@@ -155,5 +155,5 @@ FlString fl_frame_str(const char* ptr, size_t len);
 
 // Reserve count uninitialized FlString slots in the current frame's arena; valid until the end of the frame,
 // same contract and same assertions as fl_frame_str. The array counterpart for the widgets that take a counted
-// FlString array (dropdown options, tab labels, radio options). Returns null for count == 0.
+// FlString array (dropdown options, tab labels, radio options). Returns nullptr for count == 0.
 FlString* fl_frame_str_array(uint32_t count);

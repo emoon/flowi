@@ -5,8 +5,6 @@
 #include <mimalloc.h>
 #endif
 
-// Heap allocator implementation
-//
 // Wraps mimalloc, or the system allocator when mimalloc is disabled (sanitizers, Windows). All of
 // these are thread-safe.
 

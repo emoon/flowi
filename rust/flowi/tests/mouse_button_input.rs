@@ -1,4 +1,4 @@
-//! The mouse_button(id) query is global and unrouted - no Scroll Target, no widget Signal.
+//! The mouse_button(id) query is global and unrouted: no Scroll Target, no widget Signal.
 
 use flowi::{mouse_button, Application, MouseButton};
 

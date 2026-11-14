@@ -12,7 +12,7 @@
 // Shared font layer (CONTEXT.md "Font (shared layer)").
 //
 // Backend-agnostic font handling: FreeType face management, metrics/measurement, shaping, glyph indices, and
-// the glyph-outline service. It NEVER rasterizes - a backend realizes coverage itself, from the raster source
+// the glyph-outline service. It never rasterizes: a backend realizes coverage itself, from the raster source
 // or the glyph outline handed out here.
 
 typedef struct FlFontCache FlFontCache;
@@ -32,8 +32,8 @@ typedef enum FontStatus {
     FontStatus_Failed,
 } FontStatus;
 
-// Raster source access: the upstream input a backend needs to realize a font's glyphs itself - the FreeType
-// file bytes, or the built-in default font's scale.
+// Raster source: the upstream input a backend needs to realize a font's glyphs itself, which is the FreeType
+// file bytes or the built-in default font's scale.
 
 typedef enum FlFontRasterKind {
     FlFontRasterKind_None,     // Unknown / not loaded
@@ -83,15 +83,15 @@ u16 font_cache_whole_px_to_q4(u16 font_size);
 
 // The inverse for backends whose rasterizer works in whole pixels: round a quarter-px key to the nearest
 // whole px, never below 1. Keys formed by font_cache_whole_px_to_q4 come back as their already-bucketed size
-// (quantize exactly once - do NOT re-bucket the result).
+// (quantize exactly once; do not re-bucket the result).
 u16 font_cache_q4_to_whole_px(u16 size_q4);
 
-// Resolve a styled font size to physical pixels: font_size <= 0 falls back to the font's load size - the
-// same rule font_cache_measure_text and font_cache_get_font_metrics apply - then multiplies by scale. Load
+// Resolve a styled font size to physical pixels: font_size <= 0 falls back to the font's load size (the
+// same rule font_cache_measure_text and font_cache_get_font_metrics apply), then multiplies by scale. Load
 // sizes are authored (never pre-scaled). 0 when the font is unknown or the resolved size is unusable.
 float font_cache_resolve_size_px(FlFontCache* self, FlFontId font_id, float font_size, float scale);
 
-// Whether the font's metrics are ready - the same gate every measurement entry point applies, exposed so a
+// Whether the font's metrics are ready. This is the same gate every measurement entry point applies, exposed so a
 // draw path can skip silently while a font is still loading instead of logging per frame.
 bool font_cache_metrics_ready(FlFontCache* self, FlFontId font_id);
 
@@ -115,7 +115,7 @@ FlFontMetrics font_cache_get_font_metrics(FlFontCache* self, FlFontId font_id, f
 u32 font_cache_get_glyph_index(FlFontCache* self, FlFontId font_id, u32 codepoint);
 
 // One codepoint resolved to the face that actually maps it: the primary font, or the fallback face when the
-// primary's cmap has no entry - the same decision the advance path applies internally.
+// primary's cmap has no entry, the same decision the advance path applies internally.
 // font is the primary id and glyph_index 0 when neither face maps the codepoint (the caller gets .notdef).
 typedef struct FontGlyphRef {
     FlFontId font;   // face the index belongs to

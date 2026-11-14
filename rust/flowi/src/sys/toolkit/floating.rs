@@ -4,7 +4,7 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum FloatingAttachTo {
-    /// Floating disabled - the element lays out inline.
+    /// Floating disabled: the element lays out inline.
     None = 0,
     /// Attach to the parent element.
     Parent = 1,
@@ -60,7 +60,6 @@ const _: () = {
 pub struct FloatingConfig {
     /// Where to attach (default: None disables floating).
     pub attach_to: crate::sys::FloatingAttachTo,
-    /// Pointer-event handling.
     pub pointer_capture: crate::sys::FloatingPointerCapture,
     /// Layer order; higher draws on top.
     pub z_index: i16,

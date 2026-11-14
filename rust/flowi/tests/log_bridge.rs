@@ -48,7 +48,7 @@ fn bridge_routes_levels_and_targets_through_the_file_sink() {
         );
     }
 
-    // Levels map onto flowi's names - Warn onto WARNING, the one that is not a rename.
+    // Levels map onto flowi's names. Warn becomes WARNING; the rest keep their names.
     for level in ["[TRACE", "[DEBUG", "[INFO", "[WARNING", "[ERROR"] {
         assert!(
             contents.contains(level),

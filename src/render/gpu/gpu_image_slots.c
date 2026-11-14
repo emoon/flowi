@@ -22,7 +22,7 @@ static void push_dead(GpuImageSlots* slots, u32 tex) {
     slots->dead_tex[slots->dead_count++] = tex;
 }
 
-// Only legal between frames (begin_frame / release paths) - the per-frame slot table holds indices into
+// Only legal between frames (begin_frame / release paths): the per-frame slot table holds indices into
 // images.
 static void remove_entry(GpuImageSlots* slots, u32 index) {
     push_dead(slots, slots->images[index].tex);
@@ -36,7 +36,7 @@ void gpu_image_slots_begin_frame(GpuImageSlots* slots) {
         const GpuSlotImage* img = &slots->images[i];
         if (img->is_dynamic && slots->frame - img->last_ref > GPU_IMAGE_DYNAMIC_EVICT_FRAMES) {
             remove_entry(slots, i);
-            continue; // the swapped-in entry lands at i - re-test it
+            continue; // the swapped-in entry lands at i; re-test it
         }
         i++;
     }

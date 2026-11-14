@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-// Scrollbar widget - a standalone draggable track bound to a normalized scroll position.
+// Scrollbar widget: a standalone draggable track bound to a normalized scroll position.
 // Emit a scrollbar bound to `*value` (normalized [0,1]); dragging the thumb writes the new position
 // back. config selects orientation, sizing, and colors. Returns its interaction Signal. Call inside
 // a frame callback.

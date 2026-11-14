@@ -29,13 +29,12 @@ void background_controller_set_clear_color(FlBackgroundController* c, u8 r, u8 g
 void background_controller_set_blend(FlBackgroundController* c, ImageHandle prev, ImageHandle current, u8 t) {
     c->state.prev = prev;
     c->state.current = current;
-    c->state.t = t; // 0 = full prev, 255 = full current
+    c->state.t = t;
 }
 
 FlBackground background_controller_snapshot(const FlBackgroundController* c) {
     const FlBackgroundState* s = &c->state;
 
-    // A valid prev is the sole signal that this frame is a two-image blend; a backend reads it as such.
     return (FlBackground) {
         .current = (FlImageHandle)s->current,
         .prev = (FlImageHandle)s->prev,

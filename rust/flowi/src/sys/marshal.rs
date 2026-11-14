@@ -5,7 +5,7 @@
 
 use super::{fl_arena_alloc_raw, Arena};
 
-/// Allocate count uninitialised T out of arena - the array a result struct hands back by pointer.
+/// Allocate count uninitialised T out of arena, the array a result struct hands back by pointer.
 ///
 /// # Panics
 /// Panics on a count whose byte size does not fit a usize.
@@ -16,12 +16,12 @@ pub unsafe fn arena_alloc_array<T>(arena: *mut Arena, count: usize) -> *mut T {
     let size = count
         .checked_mul(core::mem::size_of::<T>())
         .expect("arena array size overflow");
-    // SAFETY: arena is live for the call - the caller's contract.
+    // SAFETY: by the caller's contract, arena is live for the call.
     unsafe { fl_arena_alloc_raw(arena, size as u64, core::mem::align_of::<T>() as u64) as *mut T }
 }
 
-/// Move one T into arena and return the pointer C holds it by. The value's destructor never runs - arena
-/// contents are abandoned, not dropped.
+/// Move one T into arena and return the pointer C holds it by. The value's destructor never runs: arena
+/// contents are abandoned.
 ///
 /// # Safety
 /// arena must be a live arena for the call.
@@ -35,7 +35,7 @@ pub unsafe fn arena_box<T>(arena: *mut Arena, value: T) -> *mut T {
     }
 }
 
-/// View a C (pointer, count) pair as a slice - the shape every array argument takes across the ABI.
+/// View a C (pointer, count) pair as a slice, the shape every array argument takes across the ABI.
 ///
 /// A null pointer or a zero count yields an empty slice.
 ///
@@ -51,7 +51,7 @@ pub unsafe fn borrow_slice<'a, T>(items: *const T, count: usize) -> &'a [T] {
     unsafe { core::slice::from_raw_parts(items, count) }
 }
 
-/// [`borrow_slice`] for a buffer C hands over to be written - an output array or a mix destination.
+/// [`borrow_slice`] for a buffer C hands over to be written: an output array or a mix destination.
 ///
 /// # Safety
 /// When items is non-null and count is non-zero, it must point at count contiguous, writable,
@@ -77,7 +77,7 @@ mod tests {
 
     impl TestArena {
         fn new() -> TestArena {
-            // SAFETY: fl_arena_create takes a reservation size, a NUL-terminated name and a flags word.
+            // SAFETY: fl_arena_create takes a reservation size, a NUL-terminated file name and a line number.
             TestArena(unsafe { fl_arena_create(RESERVE, c"marshal_test".as_ptr(), 0) })
         }
     }

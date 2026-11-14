@@ -78,7 +78,7 @@ static void add_cardinals(GpuAabb* bb, const GpuArcShape* s) {
 
 // The extremes of {r in [inner, outer], angle in the sweep} are the endpoints at both radii plus the
 // outer-radius cardinal directions the sweep crosses (interior maxima of sin/cos; inner-radius cardinals are
-// never extreme - the outer one dominates outward and an endpoint dominates inward).
+// never extreme: the outer one dominates outward and an endpoint dominates inward).
 GpuAabb gpu_arc_aabb(const GpuArcShape* s) {
     if (s->full) {
         return (GpuAabb) { s->cx - s->outer, s->cy - s->outer, s->cx + s->outer, s->cy + s->outer };

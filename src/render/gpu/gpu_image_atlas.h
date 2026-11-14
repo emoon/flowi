@@ -1,6 +1,6 @@
 #pragma once
 
-// GPU backend: image-atlas bookkeeping - handle -> atlas-cell map over the skyline packer.
+// GPU backend: image-atlas bookkeeping: handle -> atlas-cell map over the skyline packer.
 //
 // Released cells go on a reuse list and are claimed by the first later placement that fits; the skyline
 // packer underneath stays append-only. A reused cell keeps its full extent; the remainder is wasted until the
@@ -17,7 +17,7 @@ struct FlArena;
 
 typedef struct GpuImageAtlasEntry {
     FlImageHandle handle;
-    GpuAtlasCell cell; // full claimed extent - release returns all of it to the reuse list
+    GpuAtlasCell cell; // full claimed extent; release returns all of it to the reuse list
     u32 img_w;         // image extent within the cell (= cell.w/h for fresh placements, <= for reused cells);
     u32 img_h;         // what rendering samples
 } GpuImageAtlasEntry;
@@ -45,6 +45,6 @@ void gpu_image_atlas_release(GpuImageAtlas* atlas, FlImageHandle handle);
 // released). Valid until the next place/release call.
 const GpuImageAtlasEntry* gpu_image_atlas_find(const GpuImageAtlas* atlas, FlImageHandle handle);
 
-// Expand a single-channel coverage source into premultiplied white x alpha - rgb = alpha - in a tight RGBA8
+// Expand a single-channel coverage source into premultiplied white x alpha (rgb = alpha) in a tight RGBA8
 // destination, which must hold w*h*4 bytes. src_stride is the source's bytes per row (0 = tightly packed, i.e. w).
 void gpu_image_atlas_expand_coverage(u8* dst, const u8* src, u32 w, u32 h, u32 src_stride);

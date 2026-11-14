@@ -39,7 +39,7 @@ typedef struct InputBinding {
             u32 gamepad_index;
             FlGamepadAxis axis;
             float threshold; // Dead zone (default 0.5)
-            bool positive;   // True = positive direction, false = negative
+            bool positive;
         } gamepad_axis;
     };
 } InputBinding;
@@ -49,7 +49,7 @@ struct ActionSystemState {
     bool pressed[FlAction_Count];
 };
 
-// Default Bindings - Hardcoded sensible defaults that work out-of-the-box
+// Default bindings (hardcoded).
 
 #define BINDING_KEYBOARD(k) \
     { .type = INPUT_TYPE_KEYBOARD, .keyboard = { .key = k, .modifiers = UI_MOD_NONE } }
@@ -68,7 +68,7 @@ static const InputBinding s_bindings_confirm[] = {
     BINDING_KEYBOARD(FlKey_Enter),
     BINDING_KEYBOARD(FlKey_Space),
     BINDING_GAMEPAD(0, FlGamepadButton_A),
-    // Note: Mouse clicks are handled separately via the hot/active system, not through actions
+    // Mouse clicks go through the hot/active system, not through actions.
 };
 
 static const InputBinding s_bindings_cancel[] = {
@@ -220,7 +220,7 @@ static const BindingSet s_default_bindings[FlAction_Count] = {
     [FlAction_Increment] = { s_bindings_increment, sizeof_array(s_bindings_increment) },
     [FlAction_Decrement] = { s_bindings_decrement, sizeof_array(s_bindings_decrement) },
     [FlAction_Toggle] = { s_bindings_toggle, sizeof_array(s_bindings_toggle) },
-    // SCROLL_UP and SCROLL_DOWN are handled directly via mouse wheel in ui_actions_update
+    // Scroll_Up and Scroll_Down have no bindings; ui_actions_update reads the mouse wheel.
     [FlAction_Text_Backspace] = { s_bindings_text_backspace, sizeof_array(s_bindings_text_backspace) },
     [FlAction_Text_Delete] = { s_bindings_text_delete, sizeof_array(s_bindings_text_delete) },
     [FlAction_Text_Home] = { s_bindings_text_home, sizeof_array(s_bindings_text_home) },
@@ -333,8 +333,8 @@ void ui_actions_update(FlUiCtx* ctx) {
     }
 
     // The mouse wheel has no bindings. Reads the per-frame cached value (set by ui_input_update before it calls
-    // this, and before the live accumulator is cleared), so the actions observe the same values - including the
-    // Shift axis swap - as every other wheel consumer.
+    // this, and before the live accumulator is cleared), so the actions observe the same values (including the
+    // Shift axis swap) as every other wheel consumer.
     state->pressed[FlAction_Scroll_Up] = (input->mouse.wheel_y_cached > 0.0f);
     state->pressed[FlAction_Scroll_Down] = (input->mouse.wheel_y_cached < 0.0f);
 }

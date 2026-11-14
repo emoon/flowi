@@ -1,15 +1,12 @@
-// examples/widget_gallery - a runnable gallery of the Batch-1 widgets on the fl_app runner.
+// A gallery of the widgets on the fl_app runner, for looking at and testing the widget set by hand. It is not a
+// CI test.
 //
-// A standalone window driven entirely through the fl_app C ABI, used to eyeball and manually test the widget
-// set - button, checkbox, switch, slider, dropdown, tab bar. Manual demo only: the monorepo never compiles it
-// and it is not a CI test.
+// The renderer is chosen at runtime: GPU (the default) uses the compute backend, and --software selects the SDL
+// software host.
 //
-// The renderer is chosen at runtime: GPU (the default) drives the all-compute backend, --software selects the
-// always-available SDL software host.
-//
-// Text needs an outline font: the runner's built-in default is a 1-bit bitmap the GPU backend cannot
-// rasterize (it computes coverage from outlines), so the gallery loads a real TTF through the
-// runner's working-directory asset mount - run it from the repo root.
+// The runner's built-in default font is a 1-bit bitmap, which the GPU backend cannot rasterize because it
+// computes coverage from outlines. The gallery loads a TTF through the runner's working-directory asset mount,
+// so run it from the repo root.
 
 #include <stdio.h>
 #include <string.h>
@@ -68,8 +65,8 @@ static void section_header(FlString title) {
                    .sizing = { .width = sizing_grow() }, .color = ui_color(32, 34, 42, 255),              \
                    .radius = corner_radius(8))
 
-// The List describes the drop; the app owns the mutation. list_ids and the parallel list_labels move in
-// lockstep so the (id, type-ahead label) pairing survives, and a multi-row selection moves as one contiguous block.
+// The List describes the drop and the app applies it. list_ids and the parallel list_labels move together so
+// each id keeps its type-ahead label, and a multi-row selection moves as one contiguous block.
 static void gallery_apply_reorder(GalleryState* s, const FlListResult* lr) {
     if (lr->drag_from_count == 0) {
         return;
@@ -96,7 +93,7 @@ static void gallery_apply_reorder(GalleryState* s, const FlListResult* lr) {
             kc++;
         }
     }
-    u32 insert_at = kc; // default: target was itself dragged or missing -> append the block
+    u32 insert_at = kc; // append the block when the target was itself dragged or is missing
     for (u32 i = 0; i < kc; i++) {
         if (kept_ids[i] == lr->drag_target_id) {
             insert_at = (lr->drag_rel == FlDropRelationship_Before) ? i : i + 1;
@@ -118,9 +115,8 @@ static void gallery_apply_reorder(GalleryState* s, const FlListResult* lr) {
     }
 }
 
-// Proof-of-concept feedback sink: flowi reports what happened through the hook, the app owns the
-// effect. With no audio subsystem in the monorepo, the "audio service" is stubbed to a log line naming the sound
-// the app would play.
+// Feedback sink: flowi reports what happened through the hook and the app decides the effect. This one logs
+// the name of the sound an app would play.
 static void gallery_feedback(const FlUiFeedbackEvent* ev, void* user_data) {
     (void)user_data;
     static const char* dir_name[] = { "none", "up", "down", "left", "right" };
@@ -149,8 +145,8 @@ static void frame(void* user_data) {
 
     char buf[64];
 
-    // Message boxes are called UNCONDITIONALLY before the main content: each early-returns while its open bool is
-    // false, and placing them first means the opening frame already blocks input to the gallery behind them.
+    // The message boxes are called unconditionally before the main content. Each returns early while its open
+    // bool is false, and being first means the gallery behind is blocked from input on the frame a box opens.
     if (ui_message_box(FL_S("Heads up"), FL_S("This is a single-button alert. ESC or OK dismisses it."), &s->alert_open,
                        .confirm_label = FL_S("Got it"))
         != FlDialogResult_None) {
@@ -171,8 +167,9 @@ static void frame(void* user_data) {
     // The outer column carries no padding so the menu bar spans the full window width, outside the scroll area.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }, .color = ui_color(20, 21, 27, 255),
                    .direction = LayoutDirection_TopToBottom, .child_gap = 0) {
-        // View hosts the stateful kinds bound to the SAME state the Checkbox/Radio cards use, so flipping them here
-        // moves those cards too. Shortcuts are display-only (the core has no accelerator dispatch).
+        // The View menu's check and radio items are bound to the same state as the Checkbox and Radio cards, so
+        // changing them here changes the cards too. Shortcuts are display only; the core has no accelerator
+        // dispatch.
         ui_menubar(ID("gallery_menubar")) {
             ui_menubar_menu(FL_S("File")) {
                 if (ui_menu_item(FL_S("New"), .shortcut = FL_S("Ctrl+N")).clicked) {
@@ -217,9 +214,8 @@ static void frame(void* user_data) {
                 }
             }
             ui_menubar_menu(FL_S("View")) {
-                // Labels differ from the Checkbox/Radio cards on purpose: a layout id is derived from the label, so
-                // reusing a card's exact label would collide. State is shared through the bound pointer, not the
-                // label, so flipping these still moves the cards below.
+                // The labels differ from the Checkbox and Radio cards because a layout id is derived from the
+                // label and identical labels would collide. The state is shared through the bound pointer.
                 ui_menu_check(FL_S("Feature enabled"), &s->checkbox);
                 ui_menu_separator();
                 ui_menu_header(FL_S("Quality"));
@@ -269,7 +265,7 @@ static void frame(void* user_data) {
 
                 section {
                     section_header(FL_S("Progress bar"));
-                    // Driven off the Volume slider so the bar visibly tracks it.
+                    // Driven by the Volume slider.
                     ui_progress_bar(s->volume);
                 }
 
@@ -296,8 +292,7 @@ static void frame(void* user_data) {
 
                 section {
                     section_header(FL_S("Message box"));
-                    // The dialogs themselves are emitted at the top of frame(); these buttons just flip the
-                    // caller-owned open bools.
+                    // The dialogs are emitted at the top of frame(); these buttons only set the open bools.
                     if (ui_button(FL_S("Show alert")).clicked) {
                         s->alert_open = true;
                     }
@@ -312,8 +307,8 @@ static void frame(void* user_data) {
                 section {
                     section_header(FL_S("Context menu"));
                     ui_text(FL_S("Right-click inside the panel below."));
-                    // The region captures the right-click and opens ctx_menu at the cursor; the menu panel itself is
-                    // emitted (and floats) at frame top level, below.
+                    // The region captures the right-click and opens ctx_menu at the cursor. The menu panel is
+                    // emitted at frame top level, below.
                     ui_menu_region(ID("ctx_region"), ID("ctx_menu")) {
                         ui_layout_area(.sizing = { .width = sizing_grow() }, .padding = padding_all(24),
                                        .color = ui_color(44, 46, 56, 255), .radius = corner_radius(6),
@@ -329,15 +324,15 @@ static void frame(void* user_data) {
                 section {
                     section_header(FL_S("List (virtualized, multi-select + marquee + drag-reorder)"));
                     // A long list in a fixed-height viewport: only the rows intersecting the viewport lay out. Each
-                    // row carries an opaque u64 stable id - here its 1-based index. The List runs the selection
-                    // gestures internally, auto-applies them into the caller-owned set, and draws the row highlight
-                    // and the marquee rectangle from set membership - so the row content is transparent and just
-                    // composes over the highlight.
+                    // row has an opaque, stable u64 id, here its 1-based index. The List runs the selection
+                    // gestures, applies them to the caller-owned set, and draws the row highlight and the marquee
+                    // rectangle from set membership, so the row content is transparent and draws over the
+                    // highlight.
                     if (s->list_selection == nullptr) {
                         s->list_selection = selection_set_create(64);
                     }
-                    // The List forwards the full ordered id slice to the set, so a shift-range or Ctrl+A resolves
-                    // across rows virtualized away - not just the visible window.
+                    // The List forwards the full ordered id slice to the set, so a shift-range or Ctrl+A covers
+                    // rows that are virtualized away.
                     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(180) },
                                    .direction = LayoutDirection_TopToBottom) {
                         FlListRange r = ui_list_begin(
@@ -372,9 +367,8 @@ static void frame(void* user_data) {
 
                 section {
                     section_header(FL_S("List (declarative ui_list — one call, label/icon rows)"));
-                    // The declarative face: one ui_list call over an array of {id, label, icon} descriptors plus the
-                    // caller-owned set runs the WHOLE interaction internally and renders each row itself - no
-                    // per-item loop. The app reads only the policy outcomes off the result.
+                    // One ui_list call over an array of {id, label, icon} descriptors and the caller-owned set
+                    // runs the interaction and renders each row. The app reads the outcomes from the result.
                     if (s->decl_selection == nullptr) {
                         s->decl_selection = selection_set_create(16);
                     }
@@ -390,8 +384,8 @@ static void frame(void* user_data) {
                         if (dr.context_menu_id != 0) {
                             s->decl_menu = dr.context_menu_id; // a real app opens its own context menu at the cursor
                         }
-                        // The face describes the drop; the app owns the mutation - here just a swap of the two
-                        // endpoints' descriptors, enough to see the move across frames.
+                        // ui_list describes the drop and the app applies it. Here it swaps the two endpoints'
+                        // descriptors, which is enough to see the move.
                         if (dr.reorder_emitted && dr.drag_from_count > 0) {
                             u32 from = GALLERY_DECL_ROWS, to = GALLERY_DECL_ROWS;
                             for (u32 i = 0; i < GALLERY_DECL_ROWS; i++) {
@@ -466,17 +460,17 @@ int main(int argc, char** argv) {
 
     FlApp* app = fl_app_create(&settings);
     if (!app) {
-        // No automatic fallback: a GPU request on a build without the GPU backend lands here.
+        // There is no automatic fallback: a GPU request on a build without the GPU backend fails here.
         log_error("widget_gallery: fl_app_create failed (%s renderer)",
                   renderer == FlAppRenderer_Gpu ? "GPU" : "software");
         return 1;
     }
 
-    // A failure here only means the path didn't resolve (run from the repo root); widgets still render.
+    // A failure here means the path did not resolve (run from the repo root); widgets still render.
     FlFontId font = fl_font_load(FL_S("examples/data/Roboto-Regular.ttf"), 18);
     ui_font_set(font);
-    // TEMPORARY: block until the font is ready. Without it the first frames lay out against a not-yet-ready
-    // font and the layout settles wrong. Render-when-ready is the goal (the API should not need this).
+    // TODO: remove this wait. Without it the first frames lay out against a font that is not ready and the
+    // layout settles wrong. The API should render when the font becomes ready.
     ui_font_wait_load(font);
 
     GalleryState state = {

@@ -10,13 +10,11 @@
 #include <flowi/vfs/vfs_plugin.h>
 #include <stdatomic.h>
 
-// Forward declarations
-
 typedef struct VfsState VfsState;
 typedef struct VfsOp VfsOp;
 typedef struct StringAllocator StringAllocator;
 
-// VFS Plugin Entry - a registered driver plus its (optional) instance handle, linked into VfsState's list.
+// A registered driver and its optional instance handle, linked into VfsState's list.
 typedef struct VfsPluginEntry {
     struct VfsPluginEntry* next;
     struct VfsPluginEntry* prev;

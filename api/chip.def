@@ -1,4 +1,4 @@
-/// Chip widget - a small tag/badge toggle with a soft variant for a subtler look than a pill.
+/// Chip widget: a small tag/badge toggle with a soft variant for a subtler look than a pill.
 #[frame_context]
 api Chip {
     /// Emit a chip labelled label bound to `*selected`; activation toggles the bool. config selects

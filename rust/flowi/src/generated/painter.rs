@@ -11,12 +11,10 @@
 pub struct Painter;
 
 impl Painter {
-    /// Set the effect every later painter call in the current element carries - effects are group-shaped, so
-    /// one shadow covers a cluster of draws instead of being repeated per primitive. A zeroed effect
-    /// (kind = EffectKind::None) clears it. The effect is scoped to the element it was set in: it clears
-    /// when that element's layout scope closes and at the start of each frame, so it can never reach a
-    /// sibling, a nested child, or a later frame. Text draws ignore it - no backend resolves an effect on
-    /// a text run.
+    /// Set the effect every later painter call in the current element carries, so one shadow covers a
+    /// cluster of draws. A zeroed effect (kind = EffectKind::None) clears it. The effect is scoped to the
+    /// element it was set in: it clears when that element's layout scope closes and at the start of each
+    /// frame, so it never reaches a sibling, a nested child, or a later frame. Text draws ignore it.
     #[inline]
     pub fn set_effect(effect: crate::sys::Effect) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::set_effect");
@@ -30,7 +28,7 @@ impl Painter {
         unsafe { crate::sys::fl_painter_rect(x, y, w, h, color) }
     }
 
-    /// Draw a batch of solid filled rectangles in one call - dense visuals such as a scope waveform's
+    /// Draw a batch of solid filled rectangles in one call, for dense visuals such as a scope waveform's
     /// one-rectangle-per-pixel columns. The result is exactly that of calling rect() for each entry in
     /// order: call order (later entries paint over earlier ones), alpha compositing, clipping, UI scaling,
     /// the current effect and Canvas z-order all behave as in the scalar loop, on every render backend.
@@ -75,7 +73,7 @@ impl Painter {
     /// Draw a filled rectangle styled by config: per-corner radius and a per-corner color gradient in one
     /// draw, which is what rect_rounded (solid only) and gradient_rect (square only) cannot express
     /// together. Top-left (x, y), size (w, h), in logical space. Each radius clamps to half the smaller
-    /// dimension, so an over-large radius gives a pill rather than an artifact.
+    /// dimension, so an over-large radius gives a pill.
     #[inline]
     pub fn rect_styled(x: f32, y: f32, w: f32, h: f32, config: crate::sys::RectConfig) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::rect_styled");
@@ -117,7 +115,7 @@ impl Painter {
 
     /// Draw single-line text styled by style (font, fractional pixel size, letter spacing; zero fields
     /// fall back: font_id 0 = active font, font_size 0 = the font's default size), in color, top-left
-    /// at (x, y). Sizes quantize internally to quarter-pixel steps - the same quantizer Text::measure
+    /// at (x, y). Sizes quantize internally to quarter-pixel steps, the same quantizer Text::measure
     /// uses, so a measured run matches what gets drawn.
     #[inline]
     pub fn text_styled(x: f32, y: f32, text: impl AsRef<str>, style: crate::sys::TextStyle, color: crate::sys::Color) {
@@ -127,7 +125,7 @@ impl Painter {
     }
 
     /// Draw image image into the rect at top-left (x, y), size (w, h). image is the
-    /// `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
+    /// `ImageHandle` from Image::load. color multiplicatively tints the image; pass white
     /// (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
     #[inline]
     pub fn image(x: f32, y: f32, w: f32, h: f32, image: crate::sys::ImageHandle, color: crate::sys::Color) -> bool {
@@ -189,19 +187,19 @@ impl Painter {
         unsafe { crate::sys::fl_painter_arc(cx, cy, radius, start_angle, sweep, stroke) }
     }
 
-    /// Draw a polyline. points are
-    /// vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
-    /// segments) and scales fill alpha. style carries the stroke and the optional fill.
+    /// Draw a polyline. points are vertices in logical (authoring) space; each vertex's intensity modulates
+    /// stroke alpha (lerped along segments) and scales fill alpha. style carries the stroke and the optional
+    /// fill.
     #[inline]
     pub fn polyline(points: &[crate::sys::PolyPoint], style: crate::sys::PolylineStyle) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::polyline");
         unsafe { crate::sys::fl_painter_polyline(points.as_ptr(), points.len() as u32, style) }
     }
 
-    /// Draw a row of bars off the shared baseline baseline_y - meters, spectrum analyzers, step sequencers.
-    /// The whole row is one draw, which is what a bar row buys over a rect per bar. Each bar carries its own
-    /// x, width, and height, all in logical (authoring) space; a negative height draws downward. This is an
-    /// optional-tier primitive: a backend may skip it (today the software backend does).
+    /// Draw a row of bars off the shared baseline baseline_y, for meters, spectrum analyzers and step
+    /// sequencers. The whole row is one draw. Each bar carries its own x, width, and height, all in logical
+    /// (authoring) space; a negative height draws downward. This is an optional-tier primitive: a backend
+    /// may skip it (today the software backend does).
     #[inline]
     pub fn bars(baseline_y: f32, bars: &[crate::sys::Bar], color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::bars");

@@ -4,9 +4,7 @@
 #include "ui_private.h"
 #include <flowi/ui/modal.h>
 
-// Defaults
-
-// Default panel width in logical px - wide enough for a short prompt and a two-button row.
+// Default panel width in logical px, wide enough for a short prompt and a two-button row.
 #define UI_MESSAGE_BOX_DEFAULT_WIDTH 400.0f
 // Dim full-screen scrim, semi-transparent so the background stays faintly visible behind the dialog.
 #define UI_MESSAGE_BOX_SCRIM_COLOR ((FlColor) { 0, 0, 0, 160 })
@@ -99,7 +97,7 @@ FlDialogResult ui_message_box_impl(FlString title, FlString message, bool* open,
         } else if (has_cancel && cancel.clicked) {
             result = FlDialogResult_Cancelled;
         } else if (ui_key_pressed(FlKey_Escape)) {
-            // ESC always cancels - including single-button alerts, where it is the keyboard path to dismissal.
+            // ESC always cancels, including single-button alerts, where it is the keyboard path to dismissal.
             result = FlDialogResult_Cancelled;
         }
     }

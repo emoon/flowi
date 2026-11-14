@@ -12,14 +12,12 @@ void error_report_init(void);
 // shared bump position with no synchronization against a concurrent error_message_* call.
 void error_report_cleanup(void);
 
-// Destroy error reporting system. Call once at shutdown.
-// Thread safety: Must be called from main thread only
+// Destroys the error reporting system. Call once at shutdown, from the main thread.
 void error_report_destroy(void);
 
 // Format error message and optionally log it. Pass LOG_CHANNEL_INVALID as channel to skip logging.
 // fmt is printf-style and supports %S for FlString; the result is allocated from a thread-safe arena.
-//
-// Thread safety: Safe to call from multiple threads concurrently
+// Safe to call from several threads at once.
 FlString error_message_format(LogChannelId channel, LogLevel level, const char* fmt, ...);
 
 // As error_message_format, without logging.
@@ -30,8 +28,6 @@ FlString error_message_vformat(LogChannelId channel, LogLevel level, const char*
 
 // As error_message_format_no_log, taking a va_list.
 FlString error_message_vformat_no_log(const char* fmt, va_list args);
-
-// Convenience Macros
 
 #define error_message_error(channel, fmt, ...) error_message_format(channel, LogLevel_Error, fmt, ##__VA_ARGS__)
 #define error_message_warning(channel, fmt, ...) error_message_format(channel, LogLevel_Warning, fmt, ##__VA_ARGS__)

@@ -1,6 +1,6 @@
 #pragma once
 
-// GPU backend: what the translation pass needs to know about the layout of IR records - walking a stream,
+// GPU backend: what the translation pass needs to know about the layout of IR records: walking a stream,
 // locating a record's effect annotation and bounding how many draw commands a record can commit.
 
 #include <ui/render_ir.h>
@@ -11,7 +11,7 @@ typedef void (*GpuRecordFn)(void* user, const FlCmdHeader* header);
 void gpu_ir_walk(const void* ir_commands, size_t ir_bytes, GpuRecordFn fn, void* user);
 
 // Locate a record's effect annotation, or nullptr when it carries none. A kind-0 (none) effect reports no effect; a
-// kind whose payload size is not known here also reports none, but warns rather than dropping it silently.
+// kind whose payload size is not known here also reports none and logs a warning.
 const FlEffect* gpu_record_effect(const FlCmdHeader* header);
 
 // The most draw commands a record can ever commit: the fixed-shape kinds one each, a text run one quad per

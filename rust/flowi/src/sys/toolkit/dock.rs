@@ -4,13 +4,9 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DockSide {
-    /// Left edge.
     Left = 0,
-    /// Right edge.
     Right = 1,
-    /// Top edge.
     Top = 2,
-    /// Bottom edge.
     Bottom = 3,
 }
 
@@ -28,7 +24,7 @@ extern "C" {
     /// Close the declaration window opened by workspace_begin.
     pub fn fl_dock_workspace_end();
     /// Declare Detachable Panel id on the current workspace under title and return whether its content
-    /// should emit now - true iff id is the selected tab of the leaf holding it. A panel mid-drag is floating and
+    /// should emit now: true iff id is the selected tab of the leaf holding it. A panel mid-drag is floating and
     /// does not emit: the drag overlay draws its title, and its body draws nowhere until the drop. On true it
     /// also opens the panel's content element inside that tile, so the body's widgets land where the dock put
     /// the panel; the caller MUST close it with panel_end. Rust spells the pair
@@ -37,7 +33,7 @@ extern "C" {
     /// title is the tab's label, copied into the panel's record. Empty renders a blank tab.
     pub fn fl_dock_panel(id: u64, title: crate::sys::RawStr) -> bool;
     /// Close the content element opened by a panel call that returned true. Never call it after a panel that
-    /// returned false - that closes an element this panel does not own.
+    /// returned false: that closes an element this panel does not own.
     pub fn fl_dock_panel_end();
     /// Default-layout builder: dock panel as a tab of the current workspace's root leaf (a no-op move if the
     /// root is a split). Call repeatedly to author an initial tab group; pair with dock_outer for splits.
@@ -59,7 +55,7 @@ extern "C" {
     pub fn fl_dock_panel_should_emit(id: u64) -> bool;
     /// Show or hide Detachable Panel id on the current workspace. A hidden panel keeps its slot and its tab
     /// index but renders no tab and emits no content; a leaf whose panels are all hidden gives its space to its
-    /// neighbour. Declare the panel every frame either way - hiding never turns it reserved. Not persisted: the
+    /// neighbour. Declare the panel every frame either way: hiding never turns it reserved. Not persisted: the
     /// app re-asserts visibility each session, like the title.
     pub fn fl_dock_set_panel_visible(id: u64, visible: bool);
     /// Read back whether Detachable Panel id is shown on the current workspace. True for a panel the app has
@@ -67,26 +63,26 @@ extern "C" {
     pub fn fl_dock_panel_visible(id: u64) -> bool;
     /// The id of the leaf node currently holding id on the current workspace, or 0 if id is floating/absent.
     pub fn fl_dock_panel_leaf(id: u64) -> u32;
-    /// True if id has a slot in the current workspace's tree but was NOT declared this frame - its slot is
+    /// True if id has a slot in the current workspace's tree but was NOT declared this frame, so its slot is
     /// reserved pending a future declaration.
     pub fn fl_dock_panel_reserved(id: u64) -> bool;
-    /// The room, in logical px, the dock has given Detachable Panel id - the inner size of its tile, below the
+    /// The room, in logical px, the dock has given Detachable Panel id: the inner size of its tile, below the
     /// leaf's tab header. This is the size a panel sizes its content against; a panel's own elements report the
     /// size they LAID OUT at, which a body larger than its tile grows past (flowi clips the overflow).
     ///
     /// {0, 0} means DO NOT ACT ON THIS, and is the answer for a panel that is absent, not laid out yet, hidden,
-    /// mid-drag, a background tab in its leaf, or starved - squeezed below the
-    /// dock's minimum content size by a window too small for its layout. Reports the previous frame's layout,
-    /// like every other geometry read-back.
+    /// mid-drag, a background tab in its leaf, or starved (squeezed below the dock's minimum content size by
+    /// a window too small for its layout). Reports the previous frame's layout, like every other geometry
+    /// read-back.
     pub fn fl_dock_panel_size(id: u64) -> crate::sys::Vec2;
     /// Set Detachable Panel id's dock-family tag on the current workspace (0 = general). The tag gates which
     /// workspaces accept the panel via their family filter.
     pub fn fl_dock_set_panel_family(id: u64, family: u32);
     /// Read back Detachable Panel id's dock-family tag on the current workspace (0 = general / untagged).
     pub fn fl_dock_panel_family(id: u64) -> u32;
-    /// The Detachable Panel a press last made active on the current workspace, or 0 when none is. One panel id
-    /// rather than a focus system: a press inside a tile sets it, hover never does, and it falls back to 0 as
-    /// soon as that panel stops emitting. Not persisted - it starts at 0 each session.
+    /// The Detachable Panel a press last made active on the current workspace, or 0 when none is. A press
+    /// inside a tile sets it, hover never does, and it falls back to 0 as soon as that panel stops emitting.
+    /// Not persisted: it starts at 0 each session.
     pub fn fl_dock_active_panel() -> u64;
     /// Make Detachable Panel id the active one on the current workspace; 0 clears it. Any change of active
     /// panel blurs the keyboard focus ring, so a widget in the newly active panel has to claim it back.

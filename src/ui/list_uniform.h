@@ -1,12 +1,12 @@
 #pragma once
 
-// Uniform List - Internal Implementation Header
+// Internal header for the uniform list.
 //
-// The implementation seam behind the public fl_list_uniform_* API: the context struct and the receiver-taking
+// Sits behind the public fl_list_uniform_* API: the context struct and the receiver-taking
 // free functions the public ctx-free bodies forward into, plus the scroll introspection/drive and per-frame
 // update hooks that stay internal.
 
-#include <core/string.h> // FlString - the generated header takes it from its includer
+#include <core/string.h> // FlString; the generated header takes it from its includer
 #include <core/types.h>
 #include <flowi/ui/list_uniform.h>
 
@@ -17,8 +17,6 @@ typedef struct FlListUniformContext FlListUniformContext;
 FlListUniformContext* list_uniform_create(FlArena* arena);
 
 void list_uniform_destroy(FlListUniformContext* self);
-
-// Receiver-taking bodies behind the public ctx-free fl_list_uniform_* API
 
 FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u32 total_count, FlListUniformOpts opts);
 void list_uniform_item_begin(FlListUniformContext* self, u32 index);

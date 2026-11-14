@@ -1,6 +1,3 @@
-// Dock Drag - the drop-zone hit-test over the live provisional layout, plus the retained preview tree whose gap is
-// the drop target.
-
 #include "dock_drag.h"
 
 #include "dock_layout.h"
@@ -8,8 +5,6 @@
 #include "../ui_private.h"
 #include <external/clay/clay.h>
 #include <math.h>
-
-// Pure geometry
 
 static bool point_in_rect(FlDockRect r, FlVec2 p) {
     return p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
@@ -21,7 +16,7 @@ static f32 rect_dist_sq(FlDockRect r, FlVec2 p) {
     return dx * dx + dy * dy;
 }
 
-// Nearest leaf, not containing leaf: splitter gutters belong to no leaf, so there is not always a containing one.
+// The nearest leaf is used because splitter gutters belong to no leaf, so there is not always a containing one.
 static i32 nearest_leaf(const FlDockDropNode* nodes, u32 count, FlVec2 cursor) {
     i32 best = -1;
     f32 best_dist = 0.0f;
@@ -85,8 +80,6 @@ static bool outer_band_side(FlDockRect ws, FlVec2 cursor, FlDockSide* out_side) 
     return true;
 }
 
-// Zone taxonomy and the hit-test
-
 static FlDockDropZone zone_for_side(FlDockSide side, bool outer) {
     switch (side) {
         case FlDockSide_Left:
@@ -118,7 +111,7 @@ FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec
                                    u32 accept_filter, FlDockRequest* out_req) {
     *out_req = (FlDockRequest) { 0 };
 
-    // A panel the workspace rejects gets NO zone - no highlight, no preview, no commit.
+    // A panel the workspace rejects gets no zone, so it has no highlight, preview or commit.
     if (!family_accepted(panel_family, accept_filter)) {
         return FlDockDropZone_None;
     }
@@ -158,11 +151,9 @@ FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec
     return zone_for_side(out_req->side, false);
 }
 
-// The resolver - the hit-test plus the drag's two stabilisation rules
-
 // Sticky gap: from inside the slot the layout has opened, the cursor may push the gap around the node it opened in
 // (the side still resolves) but may not hand it to another node or another kind of dock. Only a gap that opened
-// space sticks - a tab-into displaces nothing.
+// space sticks; a tab-into displaces nothing.
 static bool gap_holds_target(const FlDockDrag* drag, FlVec2 cursor, const FlDockRequest* fresh) {
     if (drag->zone == FlDockDropZone_None || !drag->has_gap_rect || !drag->gap_is_new) {
         return false;
@@ -197,13 +188,9 @@ FlDockDropZone dock_drag_resolve(FlDockDrag* drag, FlVec2 cursor) {
     return zone;
 }
 
-// Drag controller
-
 bool dock_drag_active(const FlDockDrag* drag) {
     return drag != nullptr && drag->active;
 }
-
-// The per-frame hit-test buffer, read back off the live provisional layout
 
 // Reciprocal of the UI scale, so physical px reach logical px by multiply.
 static f32 drag_inv_scale(void) {
@@ -228,7 +215,7 @@ static void fill_base_rec(FlDockDrag* drag, const FlDockNode* node, bool is_root
         drag->gap_rect = rect;
         drag->has_gap_rect = true;
         if (drag->gap_is_new) {
-            return; // the gap is never a hit-test candidate - the sticky-gap rule owns the cursor inside it
+            return; // the gap is never a hit-test candidate; the sticky-gap rule owns the cursor inside it
         }
     }
     if (node->id == drag->pre_gap_node && drag->has_pre_gap) {
@@ -265,15 +252,12 @@ static const FlDockRect* base_rect_of(const FlDockDrag* drag, FlDockNodeId node)
     return nullptr;
 }
 
-// Lifecycle
-
 void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanelId panel, u32 panel_family,
                             u32 accept_filter) {
     if (drag == nullptr || committed == nullptr) {
         return;
     }
-    // The undock mutates the committed tree here - at the input-handling safe point, never mid-walk.
-    // Read the origin leaf BEFORE the undock dissolves it: it is the seat a drop over no zone returns to.
+    // Read the origin leaf before the undock dissolves it: it is the seat a drop over no zone returns to.
     FlDockNode* origin = dock_tree_find_leaf_with_panel(committed, panel);
     FlDockNodeId origin_leaf = origin != nullptr ? origin->id : 0;
 
@@ -407,7 +391,7 @@ void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
         return;
     }
 
-    // The layout the previous frame computed IS the provisional one, gap and all - the hit-test resolves against it.
+    // The layout the previous frame computed is the provisional one, gap included. The hit-test resolves against it.
     FlDockTree* live = drag->preview != nullptr ? drag->preview : committed;
     refresh_base(drag, live);
 
@@ -419,8 +403,8 @@ void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
     FlDockDropZone zone = dock_drag_resolve(drag, cursor);
     retarget_preview(drag, committed, zone);
 
-    // No grab is taken from a drag walk - one is already in flight. The gap needs no cover of its own: the drag
-    // overlay attaches to that same leaf and its fill and focus border already mark the slot.
+    // No grab is taken from a drag walk, because one is already in flight. The gap needs no cover of its own: the
+    // drag overlay attaches to that same leaf and its fill and focus border already mark the slot.
     if (drag->preview != nullptr) {
         dock_layout_emit(drag->preview, nullptr);
     } else {

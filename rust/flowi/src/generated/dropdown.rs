@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Dropdown widget - a button that opens a popup list to pick one of options.
+/// Dropdown widget: a button that opens a popup list to pick one of options.
 pub struct Dropdown;
 
 impl Dropdown {

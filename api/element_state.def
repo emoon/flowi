@@ -1,4 +1,4 @@
-/// Per-element interaction and geometry state, returned by value from ui_get_element_state
+/// Per-element interaction and geometry state, returned by value from Input::get_element_state
 /// for any laid-out element. Works for a plain area as well as a widget: pos/size are the
 /// element's rect, found/visible its layout presence, and hot/focused/active (with
 /// their _t animation interpolators) its interaction state. A non-widget area reports the

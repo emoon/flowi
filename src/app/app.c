@@ -24,15 +24,15 @@ _Static_assert(FL_APP_WINDOW_POS_DEFAULT == FL_WINDOW_POS_DEFAULT,
 #define FL_APP_MAX_WINDOWS 16
 
 // One host-level window: a window-backend window + a render surface + a per-window UI context, plus the per-frame
-// callback the tick loop calls for it. The main window (windows[0]) has a null frame - fl_app_tick supplies its
-// callback - while a window opened with fl_app_window_open stores its own.
+// callback the tick loop calls for it. The main window (windows[0]) has a nullptr frame (fl_app_tick supplies its
+// callback), while a window opened with fl_app_window_open stores its own.
 struct FlAppWindow {
     FlWindow* os_window; // window-backend handle (every live window has one)
     FlSurface* surface;  // this window's backend-owned render target
     FlUiCtx* ctx;        // this window's UI context (its own Clay tree, input, focus)
-    FlAppFrameFn frame;  // per-window frame callback (null for the main window; tick supplies it)
-    void* user_data;     // per-window callback user data
-    bool is_main;        // closing the main window quits the app; closing any other closes just it
+    FlAppFrameFn frame;  // per-window frame callback (nullptr for the main window; tick supplies it)
+    void* user_data;
+    bool is_main; // closing the main window quits the app; closing any other closes just it
 
     // Optional close hook: consulted at the tick boundary when a close is seen; returning false vetoes it.
     // Its user data is independent of the per-frame callback's.
@@ -40,12 +40,12 @@ struct FlAppWindow {
     void* on_close_user_data;
 
     // True between a mid-frame fl_app_window_open and its materialization at the next tick boundary: the handle
-    // exists and is returned to the caller, but its os_window/surface/ctx are null until then and it is not yet in
+    // exists and is returned to the caller, but its os_window/surface/ctx are nullptr until then and it is not yet in
     // the window list. fl_app_window_close on a still-pending handle cancels the queued open.
     bool pending;
 
     // For a promoted dock window: the workspace this window hosts. Stashed by the default dock host on the
-    // (queued) handle; app_attach_window binds it onto the context right after ui_create. Null for a plain window
+    // (queued) handle; app_attach_window binds it onto the context right after ui_create. nullptr for a plain window
     // (it keeps the registry default bound by ui_create).
     struct FlDockWorkspace* dock_workspace_to_bind;
 
@@ -76,7 +76,7 @@ struct FlApp {
 
     // The render backend the GPU paths build against before the host exists (a windowed GPU backend needs its
     // SDL-GL surface first). Staging only: host_create adopts a copy and that copy is the live one from then on.
-    // The GPU backend stays app-owned, so fl_app_destroy - not the host - calls its destroy.
+    // The GPU backend stays app-owned, so fl_app_destroy calls its destroy and the host does not.
     FlRenderBackend gpu_backend;
     bool adopted_gpu_backend;
 
@@ -89,7 +89,7 @@ struct FlApp {
 
     // The main window's OS handle in the gap between create_window and app_attach_window appending it to
     // windows[] during fl_app_create. A failure in that gap bails to fl_app_destroy, whose teardown loop only
-    // walks windows[] and so cannot see this handle. Cleared to null once attach takes ownership (the list owns
+    // walks windows[] and so cannot see this handle. Cleared to nullptr once attach takes ownership (the list owns
     // it then, so it is never double-destroyed) and never set again after create.
     FlWindow* pending_main_os_window;
 
@@ -101,7 +101,7 @@ struct FlApp {
     } pending_opens[FL_APP_MAX_WINDOWS];
     int pending_open_count;
 
-    // The single OS-integration seam for every path - headless, windowed GPU, and windowed software. Drives each
+    // The single OS-integration seam for every path (headless, windowed GPU, and windowed software). Drives each
     // window's lifecycle / pump / input / cursor / present.
     FlWindowBackend window_backend;
 
@@ -114,7 +114,7 @@ struct FlApp {
     float test_dt;
 
     // The main window's per-frame callback + user data captured each fl_app_tick. A promoted dock window reuses
-    // the SAME frame fn - dock_workspace_current() gates which panels emit, so the one fn renders whichever
+    // the same frame fn. dock_workspace_current() gates which panels emit, so the one fn renders whichever
     // workspace the current window hosts.
     FlAppFrameFn main_frame;
     void* main_frame_user_data;
@@ -125,7 +125,7 @@ struct FlApp {
 static bool s_frame_active;
 
 // Attach a host-level window to the shared tier: create its render surface and its UI context, wire the shared
-// font cache + default font onto it, and append it to the window list. os_window must already exist - the GPU
+// font cache + default font onto it, and append it to the window list. os_window must already exist, because the GPU
 // windowed path builds its render backend against the context before the surface does. The caller owns the
 // FlAppWindow handle; attach only fills the fields it owns and clears pending, so a pre-set on_close survives
 // materialization. Returns false (logging) on failure; appends on success.
@@ -153,8 +153,7 @@ static bool app_attach_window(FlApp* app, FlAppWindow* w, FlWindow* os_window, b
 
     w->ctx = host_window_attach(app->host, w->surface, width, height);
     if (!w->ctx) {
-        // This window never joins app->windows, so the destroy loop can never reach it - free the surface here
-        // or it leaks for the process lifetime.
+        // This window never joins app->windows, so the destroy loop cannot reach it. The surface is freed here.
         host_surface_destroy(app->host, w->surface);
         return false;
     }
@@ -193,7 +192,7 @@ static bool app_dock_on_close(void* user_data) {
 
 // flowi → host: open an OS window hosting the promoted workspace ws. Reuses the main window's frame fn, lets the
 // compositor place the window, stashes ws so materialization binds it, and wires demote-on-close. Returns the
-// FlAppWindow* as the opaque host handle. Called from inside a frame (the docking flush), so the open is QUEUED
+// FlAppWindow* as the opaque host handle. Called from inside a frame (the docking flush), so the open is queued
 // and materialized at the next tick boundary.
 static void* app_dock_open_promoted_window(void* ud, struct FlDockWorkspace* ws, f32 w, f32 h) {
     FlApp* app = (FlApp*)ud;
@@ -222,9 +221,9 @@ static void app_dock_close_promoted_window(void* ud, void* host_window) {
 }
 
 // Every fl_app_create failure path bails identically: tear down whatever came up (fl_app_destroy null-checks every
-// subsystem, so it is safe at any point in the bring-up) and return null. Two macros - not helpers - so the
-// log_error reports its own call-site line: FL_APP_FAIL for a failure that owns its message, FL_APP_BAIL for one
-// whose callee already logged.
+// subsystem, so it is safe at any point in the bring-up) and return nullptr. They are macros so that log_error
+// reports the call-site line: FL_APP_FAIL for a failure that owns its message, FL_APP_BAIL for one whose callee
+// already logged.
 #define FL_APP_FAIL(app, cond, msg) \
     do {                            \
         if (cond) {                 \
@@ -242,7 +241,7 @@ static void app_dock_close_promoted_window(void* ud, void* host_window) {
     } while (0)
 
 // Create the main window's OS handle from the already-assigned window_backend at the requested size + title. The
-// SDL paths must probe create_window first (a failed backend init leaves it null); the headless backend is always
+// SDL paths must probe create_window first (a failed backend init leaves it nullptr); the headless backend is always
 // initialized, so it passes check_init=false.
 static FlWindow* app_create_main_window(FlApp* app, const FlAppSettings* settings, bool check_init,
                                         const char* init_err, const char* window_err) {
@@ -278,7 +277,7 @@ FlApp* fl_app_create(const FlAppSettings* settings) {
 
     // Resolve the effective renderer. On APPLE the software windowed backend is not built: windowed + software
     // maps to Metal, headless keeps the software default. FlAppRenderer_Gpu and _Metal both name the GPU
-    // compute backend - one GL, one Metal - so both take the GPU path (create_gpu_renderer picks by build).
+    // compute backend (one GL, one Metal), so both take the GPU path (create_gpu_renderer picks by build).
     FlAppRenderer renderer = settings->renderer;
 #ifdef __APPLE__
     if (!settings->headless && renderer == FlAppRenderer_Software) {
@@ -359,7 +358,7 @@ FlApp* fl_app_create(const FlAppSettings* settings) {
 #endif
     }
 
-    // Attach the main window (windows[0]). Its frame callback is supplied per-tick by fl_app_tick (null here).
+    // Attach the main window (windows[0]). Its frame callback is supplied per-tick by fl_app_tick (nullptr here).
     FlAppWindow* main_win = arena_alloc(app->arena, FlAppWindow);
     *main_win = (FlAppWindow) { 0 };
     FL_APP_BAIL(app, !app_attach_window(app, main_win, main_os_window, /*is_main*/ true, nullptr, nullptr,
@@ -441,7 +440,7 @@ FlAppWindow* fl_app_window_open(FlApp* app, const FlWindowSettings* settings, Fl
 }
 
 // Materialize every window queued mid-frame by fl_app_window_open. Runs at the tick boundary, where mutating the
-// window list and (re)making a context current is safe. A failure leaves the handle inert (ctx/os_window null, not
+// window list and (re)making a context current is safe. A failure leaves the handle inert (ctx/os_window nullptr, not
 // in the list); the caller's pointer stays valid but dead.
 static void app_apply_pending_opens(FlApp* app) {
     for (int i = 0; i < app->pending_open_count; i++) {
@@ -461,7 +460,7 @@ void fl_app_destroy(FlApp* app) {
 
     // Teardown order: every window's context, then the host (asset mount, shared tier, surfaces, render backend,
     // the process-global VFS and image-system singletons it owns), then every window's OS handle. The GPU render
-    // backend frees its GL objects while a window - and so the shared GL context - is still alive; the OS windows
+    // backend frees its GL objects while a window (and so the shared GL context) is still alive; the OS windows
     // go last, the final one tearing the shared GL context down.
     for (int i = 0; i < app->window_count; i++) {
         if (app->windows[i]->ctx) {
@@ -470,7 +469,7 @@ void fl_app_destroy(FlApp* app) {
     }
     // The shared GL context must be current against a live window before any render-backend GL teardown (the
     // host's destroy_surface + destroy, both of which delete GL objects). The headless backend owns no GL context
-    // here - its render context is the EGL one torn down below - so it leaves make_current null and this loop is
+    // here (its render context is the EGL one torn down below), so it leaves make_current nullptr and this loop is
     // skipped.
     if (app->window_backend.make_current) {
         for (int i = 0; i < app->window_count; i++) {
@@ -484,7 +483,7 @@ void fl_app_destroy(FlApp* app) {
     // backend), so the window loop above does not have to.
     host_destroy(app->host);
     app->host = nullptr;
-    // A GPU backend is app-owned - the host only borrowed it - so its destroy runs here, still with a live GL
+    // A GPU backend is app-owned (the host only borrowed it), so its destroy runs here, still with a live GL
     // context.
     if (app->adopted_gpu_backend && app->gpu_backend.destroy) {
         app->gpu_backend.destroy(app->gpu_backend.user_data);
@@ -503,8 +502,8 @@ void fl_app_destroy(FlApp* app) {
                 app->window_backend.destroy_window(app->window_backend.user_data, app->windows[i]->os_window);
             }
         }
-        // A main window created but not yet appended to windows[] when fl_app_create bailed lives only here - the
-        // loop above cannot reach it. Null on the success path, so this is then a no-op.
+        // A main window created but not yet appended to windows[] when fl_app_create bailed lives only here; the
+        // loop above cannot reach it. nullptr on the success path, so this is then a no-op.
         if (app->pending_main_os_window) {
             app->window_backend.destroy_window(app->window_backend.user_data, app->pending_main_os_window);
         }
@@ -517,16 +516,16 @@ void fl_app_destroy(FlApp* app) {
 }
 
 // Frame loop. Ordering within a tick: pump -> ui_input_update -> begin -> frame -> end -> present.
-// ui_input_update is the edge snapshot - it derives mouse_pressed_this_frame / mouse_released_this_frame
-// from the buttons_pressed / buttons_released flags the pump just set, then clears those raw flags. It MUST run
+// ui_input_update is the edge snapshot. It derives mouse_pressed_this_frame / mouse_released_this_frame
+// from the buttons_pressed / buttons_released flags the pump just set, then clears those raw flags. It must run
 // after the pump and before the frame body, so an edge pumped this tick is visible to this tick's widgets and to
 // ui_update_end's hot/active transition.
 //
-// fl_app calls it directly, exactly once per frame, and must NOT route through ui_frame_end_and_update_input:
+// fl_app calls it directly, exactly once per frame, and must not route through ui_frame_end_and_update_input:
 // that helper calls ui_input_update itself, double-updating the input deltas.
 
 static void fl_app_pump_events(FlApp* app) {
-    // Pump the shared OS queue ONCE and demux it across every live window by id. Build the parallel
+    // Pump the shared OS queue once and demux it across every live window by id. Build the parallel
     // handle/context arrays the seam matches against.
     if (app->window_backend.pump_events) {
         FlWindow* os_windows[FL_APP_MAX_WINDOWS];
@@ -541,7 +540,7 @@ static void fl_app_pump_events(FlApp* app) {
 
 // Tear a single host-level window down: its context, then its surface, then its OS handle (mirrors the shared
 // teardown order), leaving the shared tier + backend alive. The window backend's destroy_window only reclaims its
-// shared GL state on the LAST window.
+// shared GL state on the last window.
 static void app_window_destroy(FlApp* app, FlAppWindow* w) {
     if (w->ctx) {
         host_window_detach(app->host, w->ctx);
@@ -558,7 +557,7 @@ static void app_window_destroy(FlApp* app, FlAppWindow* w) {
 }
 
 // Resolve a window's pending close through its on_close hook, at the tick boundary. Returns true to proceed with
-// the close (no hook, or the hook approved); returns false to veto - and clears the sticky quit_requested flag so
+// the close (no hook, or the hook approved); returns false to veto, and then clears the sticky quit_requested flag so
 // the window keeps running and a later tick does not re-trigger the close.
 static bool app_window_close_approved(FlAppWindow* w) {
     if (!w->ctx->input_state.quit_requested) {
@@ -572,7 +571,7 @@ static bool app_window_close_approved(FlAppWindow* w) {
 }
 
 // Close every non-main window whose close was seen this tick and not vetoed by its on_close hook, compacting the
-// list. windows[0] (main) is never removed here - its close is the app quit, handled in fl_app_tick. Runs after
+// list. windows[0] (main) is never removed here; its close is the app quit, handled in fl_app_tick. Runs after
 // the pump and before the render loop so a just-closed window is not rendered or presented this tick.
 static void app_close_requested_secondaries(FlApp* app) {
     int keep = 1; // windows[0] (main) always stays
@@ -617,7 +616,7 @@ static void fl_app_apply_window_scale(FlApp* app, FlAppWindow* win) {
 
 // Present one window's rendered surface, selecting by whichever present slot the backend provides: windowed GPU
 // composites the surface texture (present); windowed software blits the software renderer's CPU pixel buffer
-// (present_software). Headless no-ops for both renderers (the readback IS the surface).
+// (present_software). Headless no-ops for both renderers (the readback is the surface).
 static void fl_app_window_present(FlApp* app, FlAppWindow* win) {
     if (app->headless) {
         return;
@@ -650,7 +649,7 @@ static void fl_app_tick_window(FlApp* app, FlAppWindow* win, float dt, FlAppFram
 
     // Track the live window-pixel size: a tiling WM or HiDPI display hands back a size that differs from the
     // requested size, and the user can resize the window. On the first tick (applied_* start at 0) and on any
-    // change, push the true pixel size through ui_set_display_resolution - which resizes the render backend
+    // change, push the true pixel size through ui_set_display_resolution, which resizes the render backend
     // (change_resolution) and updates the layout dimensions (layout area only, no scale side effect). The software
     // present recreates its streaming texture when the readback size changes.
     int win_w = win->width;
@@ -699,7 +698,7 @@ static void fl_app_tick_window(FlApp* app, FlAppWindow* win, float dt, FlAppFram
 
 // Resolve and flush the app-global pointer-capture state once per tick, after every window has ticked. The
 // relative-mouse grab and the one-shot warp-back are app-global OS pointer state, but a hidden drag is owned by a
-// single window, so the grab must reflect whichever window currently holds one - never the last window ticked.
+// single window, so the grab must reflect whichever window currently holds one, not the last window ticked.
 // Scan the windows for the drag owner (relative mode sticky-on for its whole drag) and for a pending warp-back
 // (set on the frame a drag ends, when relative mode is already back off), then flush both once.
 static void fl_app_flush_pointer_capture(FlApp* app) {
@@ -748,7 +747,7 @@ bool fl_app_tick(FlApp* app, void* user_data, FlAppFrameFn frame) {
     // Materialize any window queued mid-frame by fl_app_window_open last tick.
     app_apply_pending_opens(app);
 
-    // The main window's close is the app quit - unless its on_close hook vetoes it. Fed identically by both
+    // The main window's close is the app quit, unless its on_close hook vetoes it. Fed identically by both
     // backends (SDL SDL_QUIT/WINDOWEVENT_CLOSE, headless inject_window_close, both via
     // platform_input_push_window_event).
     if (app_window_close_approved(app->windows[0])) {
@@ -772,7 +771,7 @@ bool fl_app_tick(FlApp* app, void* user_data, FlAppFrameFn frame) {
 
     // Clear the app-global duplicate-id tracker once here, before any window emits, so it accumulates every
     // window's ids this frame and catches cross-window id collisions. This is the boundary that spans all
-    // windows; the per-window ui_update_begin no longer clears the tracker. Debug-only no-op.
+    // windows; the per-window ui_update_begin does not clear the tracker. Debug-only no-op.
     ui_app_frame_begin(app->windows[0]->ctx);
 
     // The main window's frame callback is the one passed to fl_app_tick; every other window uses the callback it
@@ -803,8 +802,8 @@ void fl_app_window_close(FlApp* app, FlAppWindow* window) {
         log_warning("fl_app_window_close: ignoring close of the main window (close it to quit the app)");
         return;
     }
-    // A window still queued by a mid-frame open has no context to mark - drop it from the open queue so it never
-    // comes up.
+    // A window still queued by a mid-frame open has no context to mark, so it is dropped from the open queue and
+    // never comes up.
     if (window->pending) {
         int keep = 0;
         for (int i = 0; i < app->pending_open_count; i++) {
@@ -819,7 +818,7 @@ void fl_app_window_close(FlApp* app, FlAppWindow* window) {
     if (!window->ctx) {
         return; // already closed (or a failed deferred open): nothing to mark
     }
-    // Mark it for teardown at the start of the next tick - the same path a window-manager close takes - so it is
+    // Mark it for teardown at the start of the next tick (the same path a window-manager close takes) so it is
     // safe to call from inside a frame callback. Its on_close hook still runs and may veto.
     window->ctx->input_state.quit_requested = true;
 }
@@ -836,7 +835,7 @@ void fl_app_set_ui_zoom(FlApp* app, float zoom) {
     app->ui_zoom = zoom;
     // Recompose every window's scale right away, so the change is visible on the next frame even if no window
     // resizes. ui_set_scale targets the current context, so make each window current to push its scale, then
-    // restore the context that was current on entry - the setter must not leave a different window selected.
+    // restore the context that was current on entry, because the setter must not leave a different window selected.
     FlUiCtx* prev = ui_get_ctx();
     for (int i = 0; i < app->window_count; i++) {
         ui_make_current(app->windows[i]->ctx);
@@ -850,8 +849,8 @@ void fl_app_set_ui_zoom(FlApp* app, float zoom) {
 // Headless harness surface. The fl_app_inject_* entry points drive the offscreen input backend, so they
 // assert headless.
 
-// Shared precondition for every headless-only entry point. One macro (not a helper) so a failing call reports its
-// own line in the assert.
+// Shared precondition for every headless-only entry point. A macro, so a failing call reports its own line in the
+// assert.
 #define FL_APP_REQUIRE_HEADLESS(app) \
     FL_ASSERT_MSG((app) && (app)->headless, "this fl_app entry point requires headless mode")
 
@@ -975,8 +974,8 @@ FlString fl_frame_str(const char* ptr, size_t len) {
     // Fatal in every build type: the next statement allocates out of the frame arena this check just proved
     // absent.
     FL_ASSERT_FATAL_MSG(ctx != nullptr, "fl_frame_str has no active UI context");
-    // The precondition is the frame arena being live, which the UI layer owns - not the fl_app window loop. A host
-    // driving ui_update_begin/ui_update_end itself has a frame open with no fl_app frame callback on the stack.
+    // The precondition is the frame arena being live, which the UI layer owns. A host driving
+    // ui_update_begin/ui_update_end itself has a frame open with no fl_app frame callback on the stack.
     FL_ASSERT_FATAL_MSG(ctx->frame_open, "fl_frame_str called outside an active frame");
 
     char* copy = arena_alloc_array(ctx->render_frame_allocator, char, len);
@@ -996,7 +995,7 @@ FlString* fl_frame_str_array(uint32_t count) {
     if (count == 0) {
         return nullptr;
     }
-    // Uninitialized on purpose - the caller writes every slot before handing the array on. The counted-array
-    // widgets reject count == 0, so the null above never reaches one as a live options list.
+    // Uninitialized on purpose: the caller writes every slot before handing the array on. The counted-array
+    // widgets reject count == 0, so the nullptr above never reaches one as a live options list.
     return arena_alloc_array(ctx->render_frame_allocator, FlString, count);
 }

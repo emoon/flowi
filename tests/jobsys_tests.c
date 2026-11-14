@@ -43,9 +43,8 @@ typedef struct {
     _Atomic bool release;
 } GatedJob;
 
-// Runs until the test releases it, so a case that needs a job to still be in flight states that as an
-// invariant rather than betting the job outlasts a sleep - a loaded CI host hands a 50 ms sleep back whenever
-// it feels like it.
+// Runs until the test releases it. A case that needs a job still in flight keeps the gate closed, because a
+// sleep on a loaded CI host can return late.
 static void gated_job(void* data, FlJobsWorkerInfo info) {
     (void)info;
     GatedJob* gate = (GatedJob*)data;
@@ -59,7 +58,7 @@ UNUSED_FUNCTION static void cpu_intensive_job(void* data, FlJobsWorkerInfo info)
     (void)info;
     int* iterations = (int*)data;
     volatile long sum = 0;
-    (void)sum; // Unused but intentional for CPU-intensive work
+    (void)sum; // the loop only burns CPU
     for (int i = 0; i < *iterations; i++) {
         sum += i;
     }
@@ -240,9 +239,7 @@ static void check_thread_context(void* data, FlJobsWorkerInfo info) {
     check_data->worker_thread_result = fl_jobs_is_main_thread();
 }
 
-// =====================================================================================================
-// FIXTURES - Grouped by worker thread count
-// =====================================================================================================
+// Fixtures, one per worker thread count.
 
 // Swap only the global job system: fl_destroy() per test would tear down the one fl_init() runtime
 // (main arena, perf_scope, error_report, arena_watchdog) that the whole unit_tests process shares.
@@ -315,10 +312,6 @@ UTEST_F_TEARDOWN(jobs_8t) {
     jobs_fixture_teardown(utest_fixture->arena);
 }
 
-// =====================================================================================================
-// 1-THREAD TESTS
-// =====================================================================================================
-
 UTEST_F(jobs_1t, basic_functionality) {
     (void)utest_fixture;
 
@@ -329,10 +322,6 @@ UTEST_F(jobs_1t, basic_functionality) {
     ASSERT_EQ(value, 1);
     ASSERT_EQ((int)fl_jobs_is_finished(handle), (int)FlJobsResult_Finished);
 }
-
-// =====================================================================================================
-// 2-THREAD TESTS
-// =====================================================================================================
 
 UTEST_F(jobs_2t, job_handle_validity) {
     (void)utest_fixture;
@@ -503,8 +492,8 @@ UTEST_F(jobs_2t, worker_submitted_dependent_waits_for_its_dependency) {
         submitter = fl_jobs_add_job(worker_dep_submit_job, &ctx);
         fl_jobs_wait(submitter);
 
-        // Read while the dependency is provably unfinished: the dependent cannot have run, and its handle
-        // must be a genuinely pending one rather than the sentinel an inline execution hands back.
+        // Read while the dependency is provably unfinished: the dependent cannot have run and its handle
+        // must be pending. An inline execution would have handed back the sentinel.
         runs_while_gated = atomic_load(&ctx.dependent_runs);
         dependent = (FlJobHandle)atomic_load(&ctx.dependent_handle);
         pending_while_gated = fl_jobs_is_finished(dependent) == FlJobsResult_NotFinished;
@@ -525,8 +514,8 @@ UTEST_F(jobs_2t, worker_submitted_dependent_waits_for_its_dependency) {
                     "the dependent ran before the dependency it was ordered after");
 }
 
-// Verify that calling fl_jobs_is_finished() recycles the job slot for reuse.
-// Without this call, completed jobs leak their JobInfo allocation permanently.
+// fl_jobs_is_finished() recycles the slot of a completed job. A completed job that is never queried keeps
+// its JobInfo allocation.
 
 UTEST_F(jobs_2t, is_finished_recycles_job_slot) {
     (void)utest_fixture;
@@ -539,8 +528,7 @@ UTEST_F(jobs_2t, is_finished_recycles_job_slot) {
 
     ASSERT_EQ((int)fl_jobs_is_finished(handle1), (int)FlJobsResult_Finished);
 
-    // Submit another job - it should reuse the recycled slot,
-    // which increments the generation and invalidates the old handle
+    // The next job reuses the recycled slot, which increments the generation and invalidates the old handle.
     value = 0;
     FlJobHandle handle2 = fl_jobs_add_job(simple_job, &value);
     fl_jobs_wait(handle2);
@@ -550,10 +538,9 @@ UTEST_F(jobs_2t, is_finished_recycles_job_slot) {
     ASSERT_EQ((int)fl_jobs_is_finished(handle2), (int)FlJobsResult_Finished);
 }
 
-// Regression: a handle whose job has completed must never answer NotFinished, no matter how often its slot is
-// recycled underneath it. fl_jobs_is_finished reads the slot's generation and status as two separate loads; a
-// status load that straddles a recycle used to describe the slot's new occupant, so a long-finished handle
-// could report NotFinished.
+// A handle whose job has completed must never answer NotFinished, however often its slot is recycled
+// underneath it. fl_jobs_is_finished reads the slot's generation and status as two separate loads, and a
+// status load that straddles a recycle must not report the slot's new occupant.
 
 #define STALE_HANDLE_THREADS 6
 #define STALE_HANDLE_TARGET_CYCLES 40000
@@ -577,7 +564,7 @@ static void* stale_handle_race_thread(void* user_data) {
             // Spin until done; the call that observes completion also frees the slot to the free list
         }
         // A peer may claim that slot at any instant from here. Re-querying the same handle must answer
-        // Finished or Invalid - never NotFinished, which would be the new occupant's status leaking out.
+        // Finished or Invalid. NotFinished would be the new occupant's status leaking out.
         if (fl_jobs_is_finished(handle) == FlJobsResult_NotFinished) {
             atomic_store(&ctx->saw_not_finished, true);
         }
@@ -591,8 +578,8 @@ UTEST_F(jobs_8t, stale_handle_never_reports_not_finished) {
 
     StaleHandleCtx ctx = { 0 };
 
-    // Oversubscribe the fixture's workers so threads get preempted mid-query and actually straddle a
-    // recycle instead of always winning both loads before one can land.
+    // Oversubscribe the fixture's workers so threads get preempted mid-query and straddle a recycle.
+    // Otherwise a thread wins both loads before a recycle can land.
     Thread threads[STALE_HANDLE_THREADS];
     for (int i = 0; i < STALE_HANDLE_THREADS; i++) {
         ASSERT_TRUE(os_thread_create(&threads[i], stale_handle_race_thread, &ctx));
@@ -612,10 +599,6 @@ UTEST_F(jobs_8t, stale_handle_never_reports_not_finished) {
     ASSERT_FALSE_MSG(atomic_load(&ctx.saw_not_finished),
                      "a completed job's handle reported NotFinished after its slot was recycled");
 }
-
-// =====================================================================================================
-// 4-THREAD TESTS
-// =====================================================================================================
 
 UTEST_F(jobs_4t, multiple_jobs) {
     (void)utest_fixture;
@@ -891,7 +874,7 @@ UTEST_F(jobs_4t, priority_stress_reprioritize) {
 UTEST_F(jobs_4t, priority_stress_rapid_changes) {
     (void)utest_fixture;
 
-    // Create blocker jobs to keep workers busy
+    // Blocker jobs keep every worker busy.
     DelayedJob blocker_data[4];
     FlJobHandle blockers[4];
     for (int i = 0; i < 4; i++) {
@@ -904,10 +887,8 @@ UTEST_F(jobs_4t, priority_stress_rapid_changes) {
 
     FlJobHandle job = fl_jobs_add_job_with_priority(priority_low_job, &test_data, JobPriority_Low);
 
-    // A worker may claim the job mid-loop if blockers finish or the main thread is
-    // preempted, so we cannot assert a specific final priority value. The important
-    // invariants are: the job executes exactly once, all jobs complete, and the system
-    // remains in a consistent state.
+    // A worker may claim the job mid-loop if a blocker finishes or the main thread is preempted, so the
+    // final priority is not asserted. The job must still run exactly once and every job must complete.
     for (int i = 0; i < 10; i++) {
         fl_jobs_set_priority(job, JobPriority_High);
         fl_jobs_set_priority(job, JobPriority_Low);
@@ -982,10 +963,6 @@ UTEST_F(jobs_4t, priority_ordering_validation) {
     // ideal, leaving room for the few lows a worker may claim as the blockers stagger their release.
     ASSERT_GT(avg_high_before_low, 25.0f);
 }
-
-// =====================================================================================================
-// 8-THREAD TESTS
-// =====================================================================================================
 
 UTEST_F(jobs_8t, stress_test_dependencies) {
     (void)utest_fixture;

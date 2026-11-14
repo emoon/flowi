@@ -1,5 +1,5 @@
 //! A menu item lays out under the (label, per-level-index) id the C core hashes, so the same (name, seed)
-//! query - element_state(("Cut", 0)) - finds its rect.
+//! query, element_state(("Cut", 0)), finds its rect.
 
 use flowi::{element_state, menu, menu_item, menu_region, Application, ElementState, Menu};
 

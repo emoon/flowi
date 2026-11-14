@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-// Chip widget - a small tag/badge toggle with a soft variant for a subtler look than a pill.
+// Chip widget: a small tag/badge toggle with a soft variant for a subtler look than a pill.
 // Emit a chip labelled label bound to `*selected`; activation toggles the bool. config selects
 // colors and id overrides. Returns its interaction Signal (.clicked the frame it toggles). Call
 // inside a frame callback.

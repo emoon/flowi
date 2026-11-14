@@ -256,13 +256,13 @@ UTEST(path, filename_prefix_no_dot) {
 }
 
 UTEST(path, filename_prefix_hidden_file) {
-    // Hidden files (starting with dot) should not treat leading dot as separator
+    // The leading dot of a hidden file is not a separator.
     FlString prefix = path_get_filename_prefix(FL_S(".gitignore"));
     ASSERT_EQ(0UL, (u64)prefix.length);
 }
 
 UTEST(path, filename_prefix_hidden_file_with_extension) {
-    // The prefix should be ".config" (part before the second dot)
+    // The prefix is ".config", the part before the second dot.
     FlString prefix = path_get_filename_prefix(FL_S(".config.json"));
     ASSERT_EQ(7UL, (u64)prefix.length);
     ASSERT_EQ(0, memcmp(prefix.data, ".config", 7));
@@ -275,7 +275,7 @@ UTEST(path, filename_prefix_regular_extension) {
 }
 
 UTEST(path, filename_prefix_multiple_dots) {
-    // Prefix is everything before FIRST dot: "file"
+    // The prefix is everything before the first dot: "file"
     FlString prefix = path_get_filename_prefix(FL_S("file.tar.gz"));
     ASSERT_EQ(4UL, (u64)prefix.length);
     ASSERT_EQ(0, memcmp(prefix.data, "file", 4));
@@ -1066,7 +1066,7 @@ UTEST(path, find_directory_relative_vs_absolute) {
             if (parent_dir.length > 0 && fl_path_is_absolute(parent_dir)) {
                 FlString result = path_find_directory(arena, current_name);
 
-                // Result should either be empty (not found) or a valid path
+                // The result is either empty (not found) or an existing directory.
                 if (result.length > 0) {
                     ASSERT_TRUE(file_directory_exists_os(result));
                 }

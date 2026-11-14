@@ -1,4 +1,4 @@
-// Toggle family: checkbox, switch, radio group, pill, chip - plus the shared toggle_widget_prepare helper
+// Toggle family: checkbox, switch, radio group, pill, chip, plus the shared toggle_widget_prepare helper
 // and ToggleWidgetState.
 
 #include "ui.h"
@@ -83,7 +83,7 @@ FlSignal ui_checkbox_impl(FlString label, bool* checked, FlCheckboxConfig cfg) {
     return signal;
 }
 
-// Switch implementation
+// Switch
 //
 // Same boolean role as the checkbox (the same click-toggle on a bool), but drawn as a pill track with a knob that
 // slides from the left (off) to the right (on). The knob position is driven by a shared toggle-animation value
@@ -167,7 +167,7 @@ FlSignal ui_switch_impl(FlString label, bool* value, FlSwitchConfig cfg) {
     return signal;
 }
 
-// Radio group implementation
+// Radio group
 //
 // Exclusive single-choice selection across options[]: each option is an outline circle + label, the selected one
 // filled with an accent dot. Selecting an option writes its index back to *selected_index, which clears the rest
@@ -195,7 +195,7 @@ FlSignal ui_radio_group_impl(FlString* options, int option_count, int* selected_
 
     FlSignal group_signal = { 0 };
 
-    // Behavior pass - resolve the selection from this frame's input before any option lays out. Radio options
+    // Behavior pass: resolve the selection from this frame's input before any option lays out. Radio options
     // select on click/activate (release), like the checkbox, not on press. Each option's ui_item_behavior runs
     // once here; the render pass reads cached state via get_item_state.
     for (int i = 0; i < option_count; i++) {
@@ -267,7 +267,7 @@ FlSignal ui_radio_group_impl(FlString* options, int option_count, int* selected_
     return group_signal;
 }
 
-// Toggle widget helper - shared logic for pill and chip widgets
+// Shared logic for the pill and chip widgets.
 
 typedef struct ToggleWidgetState {
     FlLayoutId id;
@@ -322,8 +322,6 @@ static ToggleWidgetState toggle_widget_prepare(FlString label, bool* selected, F
     return state;
 }
 
-// Pill widget - pill-shaped toggle button for category filters
-
 // clang-format off
 FlSignal ui_pill_impl(FlString label, bool* selected, FlWidgetConfig cfg) {
     FlWidgetVariant variant = (selected && *selected) ? FlWidgetVariant_Solid : FlWidgetVariant_Ghost;
@@ -345,8 +343,6 @@ FlSignal ui_pill_impl(FlString label, bool* selected, FlWidgetConfig cfg) {
     return s.signal;
 }
 // clang-format on
-
-// Chip widget - small tag/badge with soft variant
 
 static const f32 CHIP_SELECTED_ALPHA_BOOST = 1.5f;
 

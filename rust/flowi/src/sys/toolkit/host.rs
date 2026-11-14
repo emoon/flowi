@@ -28,7 +28,7 @@ const _: () = {
 /// caller holds it solely behind that pointer. Created by fl_host_create, destroyed by fl_host_destroy.
 pub enum Host {}
 
-// Everything fl_app brings up except the window, the input pump and presentation - the tier an
+// Everything fl_app brings up except the window, the input pump and presentation: the tier an
 // embedding host needs when it owns its own OS integration.
 //
 // A host with its own display/input/audio backends (a kiosk shell, a bare-metal frontend) calls
@@ -47,9 +47,9 @@ extern "C" {
     pub fn fl_host_destroy(host: *mut crate::sys::Host);
     /// Advance one frame. The first call opens the host's frame; every one after it closes the frame just
     /// emitted, pumps delta_time seconds of input into the next, and opens that. Everything the host
-    /// draws happens between two of these calls - it is the entire frame boundary.
+    /// draws happens between two of these calls.
     pub fn fl_host_frame_update(host: *mut crate::sys::Host, delta_time: f64);
-    /// Read back the last-rendered pixels (native interleaved - RGB24 software, RGBA8 GPU) so the host can
+    /// Read back the last-rendered pixels (native interleaved: RGB24 software, RGBA8 GPU) so the host can
     /// copy them into its own framebuffer. False when the backend has no readback capability.
     pub fn fl_host_read_pixels(host: *mut crate::sys::Host, out: *mut crate::sys::PixelReadback) -> bool;
 }

@@ -51,7 +51,7 @@ impl Default for Probe {
 
 fn frame(p: &mut Probe) {
     col! { width: grow!(), height: grow!() {
-        // Borrowed &'static str literals - the common case.
+        // Borrowed &'static str literals, the common case.
         p.tab_changed = TabBar::new(&TABS, &mut p.tab, Default::default());
 
         // Owned Strings dropped at the end of the statement, in a runtime-length slice.

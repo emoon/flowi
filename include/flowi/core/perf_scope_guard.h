@@ -13,6 +13,7 @@ static inline void fl_perf_scope_guard_cleanup(FlPerfScopeGuard* guard) {
     fl_perf_scope_end(guard->handle);
 }
 
+// Times the enclosing block: opens a perf scope called name and ends it when the block exits.
 #if defined(__clang__) || defined(__GNUC__)
 #define fl_perf_scope(name)                                                                      \
     __attribute__((cleanup(fl_perf_scope_guard_cleanup))) FlPerfScopeGuard FL_PERF_SCOPE_CONCAT( \

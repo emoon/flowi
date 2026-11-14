@@ -2,7 +2,7 @@
 
 // GPU backend: debug readback + debug render modes.
 //
-// Backend-private - not part of the FlRenderBackend seam. Callers pass the FlRenderBackend's user_data; no GL type
+// Backend-private, not part of the FlRenderBackend seam. Callers pass the FlRenderBackend's user_data; no GL type
 // crosses this header. Two facilities: readback of the classification pass's per-tile lists, and a raster-shader
 // switch that visualizes the same per-tile data as a heat-map.
 //
@@ -28,7 +28,7 @@ struct FlArena;
 #define GPU_TILE_CAPACITY 64
 #define GPU_TILE_STRIDE_U32 (2 + GPU_TILE_CAPACITY)
 
-// The classification pass's output for one frame, read back verbatim. tile_lists is the raw SSBO contents -
+// The classification pass's output for one frame, read back verbatim. tile_lists is the raw SSBO contents:
 // tile_cols * tile_rows records of GPU_TILE_STRIDE_U32 u32 each, in row-major tile order. List slots at and
 // past a tile's count are unspecified (the shader never writes them).
 
@@ -57,12 +57,12 @@ static inline u32 gpu_tile_cmd_index(const GpuTileClassification* c, int tile_x,
 
 // Read the given surface's most recently rendered frame's classification results back to CPU memory, allocated
 // from arena. The tile grid and its SSBO are per-surface. Requires the backend's GL context current and at
-// least one render() call on that surface. Off the per-frame path - this stalls the pipeline like pixel readback.
+// least one render() call on that surface. Not for the per-frame path: it stalls the pipeline like pixel readback.
 
 bool gpu_debug_read_tile_classification(void* renderer_user_data, FlSurface* surface, struct FlArena* arena,
                                         GpuTileClassification* out);
 
-// Debug render modes - a raster-shader switch consuming the same per-tile data as the blend loop.
+// Debug render modes: a raster-shader switch consuming the same per-tile data as the blend loop.
 
 typedef enum GpuDebugMode {
     GpuDebug_Off = 0,     // normal rendering
@@ -113,7 +113,7 @@ u32 gpu_debug_svg_raster_count(void* renderer_user_data);
 u32 gpu_debug_svg_compact_count(void* renderer_user_data);
 
 // Monotonic count of dynamic-image texture uploads since backend create: ticks once per frame that references a
-// dynamic slot entry. Statics never tick it - they upload at prepare_image, not per frame.
+// dynamic slot entry. Statics never tick it: they upload at prepare_image.
 u32 gpu_debug_dynamic_upload_count(void* renderer_user_data);
 
 // True when handle resolves to a cell of the shared image atlas rather than a texture of its own. An image
@@ -159,7 +159,7 @@ const GpuSvgEntry* gpu_debug_find_color_svg(void* renderer_user_data, FlImageHan
 
 typedef struct GpuFrameStats {
     u32 glyph_dispatches; // glyph cell-raster dispatches this frame
-    u32 svg_dispatches;   // SVG cell-raster dispatches, monotonic since backend create - assert on a delta
+    u32 svg_dispatches;   // SVG cell-raster dispatches, monotonic since backend create; assert on a delta
     u32 tile_overflow;    // commands dropped past GPU_TILE_CAPACITY, summed over the surface's tiles this frame
 } GpuFrameStats;
 

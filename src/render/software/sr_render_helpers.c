@@ -1,5 +1,3 @@
-// Shared render helpers implementation
-
 #include "sr_render_helpers.h"
 
 #include <core/arena.h>

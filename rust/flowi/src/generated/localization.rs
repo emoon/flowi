@@ -32,7 +32,7 @@ pub struct Localize;
 
 impl Localize {
     /// Look sid up in the active language and substitute the count arguments at args into its
-    /// indexed placeholders - {0} is the first argument, {1} the second, and a repeated index
+    /// indexed placeholders: {0} is the first argument, {1} the second, and a repeated index
     /// substitutes at every occurrence. {{ and }} render as a literal brace; a placeholder with no
     /// matching argument renders as itself and warns. Integers and floats format C-style (. decimal
     /// point, no digit grouping) and string arguments substitute as-is. The result lives in the frame

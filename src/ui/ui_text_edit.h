@@ -1,7 +1,5 @@
 #pragma once
 
-// Text editing - Internal API
-//
 // Edit operations on an FlTextInputState. ui_text_edit.c owns the stb_textedit integration and the buffer; the
 // widget (ui_text_input.c) drives it through these calls and reads the caret through STB_STATE.
 

@@ -1,10 +1,8 @@
-################################################################################
-# examples/gpu_window — standalone SDL + GL window driving the internal GPU backend. Dev/hardware-only.
-################################################################################
+# Standalone SDL + GL window driving the internal GPU backend. A development tool that needs GPU hardware.
 
-# Embed a binary asset as a C byte array header at configure time — the demo loads its font and
-# SVG icons straight from memory (synchronous, no VFS mount or asset-path resolution at runtime).
-# Generated into the build tree, not committed. Roboto is Apache-2.0; the SVGs are first-party.
+# Embeds a binary asset as a C byte-array header at configure time, so the demo loads its font and
+# SVG icons from memory without a VFS mount. The headers are written to the build tree.
+# Roboto is Apache-2.0; the SVGs are first-party.
 function(embed_asset src_path out_header var_name)
     file(READ ${src_path} _hex HEX)
     string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," _bytes ${_hex})

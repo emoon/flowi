@@ -9,7 +9,7 @@ pub enum DropRelationship {
     Before = 0,
     /// Insert the dragged item(s) immediately after the target.
     After = 1,
-    /// Reparent onto the target - reserved for the tree view; never produced.
+    /// Reparent onto the target. Reserved for the tree view; never produced.
     Into = 2,
 }
 
@@ -18,14 +18,14 @@ const _: () = {
     assert!(core::mem::align_of::<DropRelationship>() == 4, "DropRelationship align drift");
 };
 
-/// One declarative row descriptor for `ui_list`: a stable id, the label the List draws and type-aheads on, and an
+/// One declarative row descriptor for Input::list: a stable id, the label the List draws and type-aheads on, and an
 /// optional leading icon.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ListItem {
-    /// Opaque stable id - pure identity, the selection/result key.
+    /// Opaque stable id: the selection/result key.
     pub id: u64,
-    /// Row text the List draws (and type-aheads on); borrowed for the `ui_list` call.
+    /// Row text the List draws (and type-aheads on); borrowed for the Input::list call.
     pub label: crate::sys::RawStr,
     /// Optional leading icon; `ImageHandle` invalid (or a not-ready handle) draws nothing.
     pub icon: crate::sys::ImageHandle,
@@ -39,7 +39,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ListItem, icon) == 24, "ListItem.icon offset drift");
 };
 
-/// Configuration for a List, consumed by ui_list_begin.
+/// Configuration for a List, consumed by List::begin.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ListConfig {
@@ -63,7 +63,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ListConfig, suppress_drag_visuals) == 16, "ListConfig.suppress_drag_visuals offset drift");
 };
 
-/// Options for `ui_list`: the layout knobs plus the two policy toggles the caller chooses.
+/// Options for Input::list: the layout knobs plus the two policy toggles the caller chooses.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ListOpts {
@@ -90,7 +90,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ListOpts, suppress_drag_visuals) == 10, "ListOpts.suppress_drag_visuals offset drift");
 };
 
-/// The visible index window a List emits, returned by ui_list_begin. The caller iterates `[start, end)`
+/// The visible index window a List emits, returned by List::begin. The caller iterates `[start, end)`
 /// and emits one row per index; total echoes the full item count.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -99,7 +99,7 @@ pub struct ListRange {
     pub start: u32,
     /// One past the last visible index (exclusive).
     pub end: u32,
-    /// Total item count passed to ui_list_begin.
+    /// Total item count passed to List::begin.
     pub total: u32,
 }
 
@@ -111,7 +111,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ListRange, total) == 8, "ListRange.total offset drift");
 };
 
-/// The per-frame result a List hands back from ui_list_end. Keyed on the app-supplied opaque u64
+/// The per-frame result a List hands back from List::end. Keyed on the app-supplied opaque u64
 /// stable ids, never on dense position; 0 means "none".
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -120,7 +120,7 @@ pub struct ListResult {
     pub activated_id: u64,
     /// Stable id of the focused item, or 0.
     pub focused_id: u64,
-    /// Stable id of the item right-clicked this frame, or 0. The List opens no menu - it reports the row so the
+    /// Stable id of the item right-clicked this frame, or 0. The List opens no menu: it reports the row so the
     /// app opens its own context menu at the cursor.
     pub context_menu_id: u64,
     /// The Selection Requests the List emitted this frame; always populated, even when the List auto-applied

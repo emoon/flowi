@@ -6,7 +6,7 @@
 // existing image path, and no 3D geometry crosses the render IR.
 //
 // Per frame a viewport collects a view-projection matrix and a draw list between begin() and end(); end()
-// hands them to the backend, which renders into the target immediately - during the frame callback, ahead of
+// hands them to the backend, which renders into the target immediately, during the frame callback, ahead of
 // the UI raster pass that later samples it. The element is emitted at begin() with the handle from the
 // previous frame's submit, which is also why begin() reports the previous frame's pixel size (layout runs
 // after the callback): a viewport shows nothing on its first frame and is one frame stale across a resize.
@@ -31,7 +31,7 @@
 // viewport's first frame.
 #define VIEWPORT3D_PLACEHOLDER_FILL (Clay_Color) { 24, 24, 28, 255 }
 
-// No tint on the color target - the element draws the 3D result as authored.
+// No tint on the color target: the element draws the 3D result as authored.
 #define VIEWPORT3D_NO_TINT (Clay_Color) { 255, 255, 255, 255 }
 
 typedef struct Viewport3d {
@@ -51,7 +51,7 @@ typedef struct Viewport3d {
 // this table is per-app too. Not per-window state: two windows may each show the same viewport id.
 static Viewport3d s_viewports[VIEWPORT3D_MAX];
 static u32 s_viewport_count;
-static Viewport3d* s_open; // the viewport between begin() and end(), null outside the bracket
+static Viewport3d* s_open; // the viewport between begin() and end(), nullptr outside the bracket
 
 static const f32 k_identity[16] = {
     1.0f, 0.0f, 0.0f, 0.0f, //
@@ -123,7 +123,7 @@ void viewport3d_release_owner(const FlUiCtx* ctx) {
 }
 
 // Emit the viewport's layout element: a grow-sized box drawing the previous frame's color target as an
-// ordinary image, or - before the first submit, and under a backend with no 3D seam - a flat placeholder.
+// ordinary image, or (before the first submit, and under a backend with no 3D seam) a flat placeholder.
 // Tracked by id so the next frame can read back the rect this one lays out.
 
 static void emit_element(FlLayoutId id, FlImageHandle color) {
@@ -161,7 +161,7 @@ FlVec2 fl_viewport3d_begin(FlLayoutId id) {
         return (FlVec2) { 0 };
     }
 
-    // The rect this element was laid out at on the previous frame, in device pixels - the size the backend
+    // The rect this element was laid out at on the previous frame, in device pixels. This is the size the backend
     // sizes the color+depth target to, and the size the caller builds its projection matrix from.
     FlElementState state = ui_get_element_state_by_id(element_id);
     self->width = (u32)state.size.x;
@@ -189,7 +189,7 @@ void fl_viewport3d_set_view_projection(const float* matrix, uint32_t matrix_size
     memcpy(s_open->view_projection, matrix, sizeof(s_open->view_projection));
 }
 
-// Append one draw to the open viewport's list - the bracket check, the invalid-mesh drop and the overflow
+// Append one draw to the open viewport's list. The bracket check, the invalid-mesh drop and the overflow
 // diagnostic live here once for both public draw entry points.
 static void push_draw(FlViewport3dDraw draw, const char* what) {
     if (s_open == nullptr) {

@@ -15,7 +15,6 @@ enum CursorShape {
     ResizeDiagonal2 = 5,
     /// I-beam text caret.
     Text = 6,
-    /// Crosshair.
     Crosshair = 7,
     /// Not-allowed / blocked.
     NotAllowed = 8,
@@ -23,7 +22,7 @@ enum CursorShape {
     Count = 9,
 }
 
-/// The opaque cursor handle fl_cursor_set takes, carrying a system CursorShape.
+/// The cursor value fl_cursor_set takes, carrying a system CursorShape.
 #[attributes(Copy)]
 struct Cursor {
     /// The requested system shape.

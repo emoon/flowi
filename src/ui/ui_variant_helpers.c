@@ -4,8 +4,6 @@
 #include "ui_private.h"
 #include <stddef.h> // offsetof
 
-// Constants for state color modification
-//
 // Hover/press/focus are derived from a base color perceptually (OKLCH lighten/darken, OKLab focus
 // lerp), reading interactive.base only.
 

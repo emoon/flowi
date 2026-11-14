@@ -12,7 +12,6 @@ enum AppRenderer {
 
 /// Settings for creating an application, passed to fl_app_create.
 struct AppSettings {
-    /// Window title.
     window_title: String,
     /// Window width in logical (authoring) pixels; the window is created at this times the display content scale.
     width: i32,

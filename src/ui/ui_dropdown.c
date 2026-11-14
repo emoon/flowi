@@ -2,7 +2,7 @@
 //
 // The open popup is built on the virtualized List engine (ui_list, declarative face). The dropdown reinterprets
 // the List's single-select output as a one-click commit: a per-frame selection-change (a mouse click) or
-// activated_id (double-click/Enter) → write *selected_index (index = id - 1) and close the popup.
+// activated_id (double-click/Enter) writes *selected_index (index = id - 1) and closes the popup.
 
 #include "ui.h"
 #include "ui_private.h"
@@ -204,7 +204,7 @@ static DropdownSearch dropdown_draw_search(const Dropdown* d, float min_width) {
     return search;
 }
 
-// On the frame a NON-searchable dropdown opens, start keyboard focus in the list, seeded on the current value, so
+// On the frame a non-searchable dropdown opens, start keyboard focus in the list, seeded on the current value, so
 // arrow keys navigate and Enter/Space commit without a first click. A searchable dropdown starts focus in its
 // search input instead and hands off to the list.
 static void dropdown_focus_list_on_open(const Dropdown* d, bool opened_this_frame) {
@@ -213,7 +213,7 @@ static void dropdown_focus_list_on_open(const Dropdown* d, bool opened_this_fram
     }
 }
 
-// Searchable hand-off IN: Down while the search input holds focus moves focus into the list, seeded on the first
+// Searchable hand-off in: Down while the search input holds focus moves focus into the list, seeded on the first
 // filtered row. With no filtered rows Down is a no-op; either way the Nav-Down is consumed so it neither
 // spatial-navigates out of the search box nor advances the list cursor.
 static void dropdown_hand_off_search_to_list(const DropdownSearch* search, const DropdownRows* rows,
@@ -257,7 +257,7 @@ static u64 dropdown_draw_list(const Dropdown* d, const DropdownSearch* search, c
                                                  .multi_select = false,
                                                  .reorderable = false });
 
-        // Searchable hand-off OUT: Nav-Up on the list's first row (nav_up_edge) returns focus to the search input.
+        // Searchable hand-off out: Nav-Up on the list's first row (nav_up_edge) returns focus to the search input.
         // The list consumed the Nav-Up when raising the edge flag; claiming the global ring here blurs the list on
         // the next frame.
         if (d->cfg->searchable && lr.nav_up_edge) {

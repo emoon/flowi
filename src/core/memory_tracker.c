@@ -9,9 +9,7 @@
 #include "sprintf.h"
 #include <stdarg.h>
 
-// Memory Tracker Implementation
-//
-// Collects arena and mimalloc statistics on-demand and outputs formatted reports.
+// Collects arena and mimalloc statistics on demand and formats them into reports.
 
 static void sb_append_line(FlStringBuilder* sb, FlArena* output_arena, const char* format, ...) {
     arena_scratch_auto_conflict(temp, output_arena);

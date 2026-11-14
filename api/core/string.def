@@ -52,15 +52,16 @@ struct StringParseResultF32 {
     status: StringParseStatus,
 }
 
-/// A string being concatenated in place at the end of an arena: arena is the arena it grows in and
-/// start_pos the byte offset its bytes start at. A POD value type crossed by value through the public
-/// ABI - every `sb_*` function takes one and returns the updated one, so the builder is never held by pointer.
+/// A string being built in place at the end of an arena. Passed by value: every `sb_*` function takes
+/// one and returns the updated one.
 struct StringBuilder {
+    /// The arena the string grows in.
     arena: *Arena,
+    /// Byte offset in the arena where the string starts.
     start_pos: u64,
 }
 
-/// The `fl_string_*` / `fl_sb_*` / `fl_sprintf_*` plugin service API - flowi core's FlString
+/// The `fl_string_*` / `fl_sb_*` / `fl_sprintf_*` plugin service API: flowi core's FlString
 /// manipulation, arena string builder and arena-allocating sprintf, exported as plain C symbols. FlString
 /// itself, its inline helpers and the S() literal macros come from `<flowi/core/string.h>`. Plugins link
 /// the shared library and call these symbols directly.

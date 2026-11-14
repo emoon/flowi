@@ -6,7 +6,7 @@
 // final dynamic symbol table.
 //
 // This header ships to external consumers and must stand alone, so it tests the raw compiler-defined
-// _WIN32 rather than including core.h for PLATFORM_WINDOWS.
+// _WIN32 rather than including platform.h for PLATFORM_WINDOWS.
 #ifndef FL_API
 #if defined(_WIN32)
 #if defined(FL_API_IMPLEMENTATION)

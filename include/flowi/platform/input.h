@@ -12,8 +12,8 @@
 extern "C" {
 #endif
 
-// A mouse button. The discriminant carried on a button Mouse Button State
-// event; Count is the array-size sentinel (not a button).
+// A mouse button. The discriminant carried on a mouse button event; Count is
+// the array-size sentinel (not a button).
 typedef enum FlMouseButton {
     FlMouseButton_Left = 0,
     FlMouseButton_Right = 1,
@@ -74,7 +74,7 @@ typedef enum FlMouseEventType {
     FlMouseEvent_Enter = 4,
     FlMouseEvent_Leave = 5,
     // Raw relative motion delivered while the mouse is in relative/unbounded mode
-    // (a hidden drag). Carries a raw delta only - no absolute position.
+    // (a hidden drag). Carries a raw delta and no absolute position.
     FlMouseEvent_Relative_Motion = 6,
 } FlMouseEventType;
 

@@ -23,14 +23,14 @@
 #define DEDUP_CACHE_MAX_ENTRIES 10000
 
 // A decode whose prepare_image call is deferred to the begin-frame pump (prepare_image_on_job unset).
-// The entry's arena owns everything the deferred call needs - the entry itself, the decoded pixels, and the
-// copied request path - and is released right after the main-thread call completes. Job worker threads
+// The entry's arena owns everything the deferred call needs (the entry itself, the decoded pixels, and the
+// copied request path) and is released right after the main-thread call completes. Job worker threads
 // enqueue; the main/render thread drains. Guarded by ImageSystem.deferred_lock.
 
 // One prepare_image call: the decode result and the request it answers.
 typedef struct PrepareCall {
     FlImageLoadRequestId request_id;
-    const FlImageDecodeResult* decoded; // null when decode failed (the backend still sees the failure)
+    const FlImageDecodeResult* decoded; // nullptr when decode failed (the backend still sees the failure)
     FlImageLoadRequest request;
 } PrepareCall;
 
@@ -165,7 +165,7 @@ static bool decode_and_dispatch(ImageSystem* sys, const void* data, size_t size,
     return decoded != nullptr;
 }
 
-// VFS callback - runs in job worker thread
+// VFS callback. Runs on a job worker thread.
 
 static void log_decode_failure(FlString path, FlImageLoadRequestId request_id, const void* data, i64 size) {
     const char* what = (data && size > 0) ? "decode failed" : "no data";
@@ -255,7 +255,7 @@ static DeferredPrepare* detach_deferred_prepares(ImageSystem* sys) {
     return head;
 }
 
-// Ends a memory load's PENDING state once no further acknowledgement can arrive: drops the active record and,
+// Ends a memory load's pending state once no further acknowledgement can arrive: drops the active record and,
 // when the backend did not realize the image, records the load as failed. A no-op for any other request id.
 
 static void settle_synthetic_load(ImageSystem* sys, FlImageLoadRequestId request_id) {
@@ -303,7 +303,7 @@ void image_system_destroy(ImageSystem* sys) {
     image_dedup_destroy(&sys->dedup);
 }
 
-// Null-guarded: the SW backend leaves release_image unbound and relies on wholesale regen.
+// The SW backend leaves release_image unbound and relies on wholesale regen.
 
 void image_system_release_image(ImageSystem* sys, FlImageHandle handle) {
     if (sys && sys->release_image) {
@@ -351,7 +351,7 @@ FlImageLoadRequestId image_system_load(ImageSystem* sys, FlVfsMount* mount, FlSt
 
     ctx->sys = sys;
     ctx->mount = mount;
-    // Copy the path - the worker-thread callback reads it after image_system_load returns, but the ui.h
+    // Copy the path. The worker-thread callback reads it after image_system_load returns, but the ui.h
     // contract lets the caller free/reuse its buffer immediately. fl_string_copy_malloc passes static strings
     // through untouched and heap-copies dynamic ones; the callback releases the copy with fl_string_free.
     ctx->relative_path = fl_string_copy_malloc(relative_path);
@@ -667,7 +667,7 @@ FlImageLoadRequestId image_system_create_from_pixels(ImageSystem* sys, const voi
 
 // Re-upload into a live handle. The handle's identity, dimensions, and format are all preserved.
 //
-// The old representation is released and the registry entry cleared BEFORE the new pixels are realized, so the
+// The old representation is released and the registry entry cleared before the new pixels are realized, so the
 // backend's realization ack is the only thing that can make the handle ready again; clearing afterwards would
 // leave a failed re-upload reporting "ready" against a handle the backend can no longer resolve.
 

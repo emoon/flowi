@@ -2,7 +2,7 @@
 
 #include "unit_tests_common.h"
 
-// selection: FlSelectionSet membership + the Selection Request apply protocol.
+// FlSelectionSet membership and applying Selection Requests.
 
 UTEST(selection, set_membership) {
     FlSelectionSet* s = selection_set_create(0);
@@ -27,7 +27,7 @@ UTEST(selection, clear_all_and_set_all_from_iter) {
     EXPECT_EQ((int)selection_set_len(s), 3);
     EXPECT_TRUE(selection_set_contains(s, 10));
     EXPECT_TRUE(selection_set_contains(s, 30));
-    const u64 ids2[] = { 99 }; // set_all replaces (clear-then-insert-all), not unions
+    const u64 ids2[] = { 99 }; // set_all clears the set, then inserts everything
     selection_set_set_all(s, ids2, 1);
     EXPECT_EQ((int)selection_set_len(s), 1);
     EXPECT_TRUE(selection_set_contains(s, 99));
@@ -44,13 +44,13 @@ UTEST(selection, copy_ids_snapshot) {
     u64 out[8] = { 0 };
     u64 n = selection_set_copy_ids(s, out, 8);
     EXPECT_EQ((int)n, 4);
-    u64 sum = 0; // order is unspecified, so check the multiset by sum
+    u64 sum = 0; // the order is unspecified, so compare the sum
     for (u64 i = 0; i < n; i++) {
         sum += out[i];
     }
     EXPECT_EQ((int)sum, 10);
     EXPECT_EQ((int)selection_set_copy_ids(s, out, 2), 2);
-    EXPECT_EQ((int)selection_set_copy_ids(s, nullptr, 0), 0); // size-first / no-buffer path
+    EXPECT_EQ((int)selection_set_copy_ids(s, nullptr, 0), 0); // with no buffer it returns 0
     selection_set_destroy(s);
 }
 
@@ -61,7 +61,7 @@ UTEST(selection, apply_set_one_no_enumeration_needed) {
         { .kind = FlSelectionRequestKind_SetOne, .id = 6, .selected = true },
         { .kind = FlSelectionRequestKind_SetOne, .id = 5, .selected = false },
     };
-    selection_set_apply(s, reqs, 3, nullptr, 0); // SetOne/ClearAll never need the ordered list
+    selection_set_apply(s, reqs, 3, nullptr, 0); // SetOne and ClearAll do not need the ordered list
     EXPECT_FALSE(selection_set_contains(s, 5));
     EXPECT_TRUE(selection_set_contains(s, 6));
     EXPECT_EQ((int)selection_set_len(s), 1);
@@ -96,7 +96,7 @@ UTEST(selection, apply_set_all_resolves_from_ordered_ids) {
 }
 
 UTEST(selection, apply_range_spans_offscreen_ids) {
-    // apply walks the full ordered model, not the visible window, so a range spans rows a virtualized List
+    // apply walks the full ordered model and not the visible window, so a range covers rows a virtualized List
     // never emitted.
     FlSelectionSet* s = selection_set_create(0);
     const u64 model[] = { 10, 20, 30, 40, 50 };
@@ -143,7 +143,7 @@ UTEST(selection, apply_range_deselect_and_single_endpoint) {
 
 #ifdef NDEBUG
 UTEST(selection, apply_range_missing_endpoint_is_noop_in_release) {
-    // A missing endpoint is an app bug -> debug-assert in debug builds; in release it applies nothing.
+    // A missing endpoint is an app bug. Debug builds assert, and release builds apply nothing.
     FlSelectionSet* s = selection_set_create(0);
     const u64 model[] = { 1, 2, 3 };
     FlSelectionRequest r = { .kind = FlSelectionRequestKind_SetRange, .id = 2, .to_id = 99, .selected = true };
@@ -153,8 +153,7 @@ UTEST(selection, apply_range_missing_endpoint_is_noop_in_release) {
 }
 #endif
 
-// scroll_math: the canonical scroll/virtualization kernel (ui/scroll_core.c), shared by ui_scroll,
-// list_uniform and content_view.
+// The scroll and virtualization math in ui/scroll_core.c, shared by ui_scroll, list_uniform and content_view.
 
 UTEST(scroll_math, max_never_negative) {
     EXPECT_NEAR(scroll_max(1000.0f, 300.0f), 700.0f, 0.001f);
@@ -168,34 +167,34 @@ UTEST(scroll_math, smooth_step_eases_then_snaps_and_clamps) {
     f32 speed = 8.0f;
 
     f32 o = scroll_smooth_step(0.0f, 100.0f, 1000.0f, speed, dt);
-    EXPECT_NEAR(o, 100.0f * (speed * dt), 0.01f); // ~13.33px after one 60fps frame
+    EXPECT_NEAR(o, 100.0f * (speed * dt), 0.01f); // about 13.33px after one 60fps frame
     EXPECT_GT(o, 0.0f);
     EXPECT_LT(o, 100.0f);
 
-    // Within half a pixel of the target it snaps exactly...
+    // Within half a pixel of the target it snaps to it.
     EXPECT_EQ(scroll_smooth_step(99.7f, 100.0f, 1000.0f, speed, dt), 100.0f);
-    // ...but just beyond the snap epsilon it eases: diff = 0.6 > 0.5.
+    // Just beyond that it eases: diff = 0.6 > 0.5.
     f32 near = scroll_smooth_step(100.0f, 100.6f, 1000.0f, speed, dt);
     EXPECT_NEAR(near, 100.0f + 0.6f * (speed * dt), 0.01f);
     EXPECT_GT(near, 100.0f);
     EXPECT_LT(near, 100.6f);
 
-    EXPECT_EQ(scroll_smooth_step(40.0f, 500.0f, 50.0f, speed, dt), 50.0f); // eased past max -> clamped
-    EXPECT_EQ(scroll_smooth_step(10.0f, -100.0f, 50.0f, speed, dt), 0.0f); // negative target -> clamped to 0
+    EXPECT_EQ(scroll_smooth_step(40.0f, 500.0f, 50.0f, speed, dt), 50.0f); // eased past max, so clamped
+    EXPECT_EQ(scroll_smooth_step(10.0f, -100.0f, 50.0f, speed, dt), 0.0f); // a negative target clamps to 0
 }
 
 UTEST(scroll_math, smooth_step_is_frame_rate_independent) {
     f32 speed = 8.0f;
     f32 target = 600.0f, max = 1000.0f;
 
-    // From a standstill (linear regime) a single step's progress is exactly target * speed * dt.
+    // From a standstill, one step's progress is exactly target * speed * dt.
     f32 step_120 = scroll_smooth_step(0.0f, target, max, speed, 1.0f / 120.0f);
     f32 step_60 = scroll_smooth_step(0.0f, target, max, speed, 1.0f / 60.0f);
     EXPECT_NEAR(step_120, target * speed / 120.0f, 0.01f); // 40px
     EXPECT_NEAR(step_60, target * speed / 60.0f, 0.01f);   // 80px
     EXPECT_NEAR(step_60, step_120 * 2.0f, 0.01f);
 
-    // Over a fixed wall-clock duration both frame rates converge on the target.
+    // Over the same wall-clock duration both frame rates converge on the target.
     f32 lo = 0.0f, hi = 0.0f;
     for (int i = 0; i < 60; i++) {
         lo = scroll_smooth_step(lo, target, max, speed, 1.0f / 60.0f); // 1s at 60fps
@@ -206,7 +205,7 @@ UTEST(scroll_math, smooth_step_is_frame_rate_independent) {
     EXPECT_EQ(lo, target);
     EXPECT_EQ(hi, target);
 
-    // A degenerate dt of 0 makes no progress; a huge dt clamps the lerp factor to 1 (snap to target).
+    // A dt of 0 makes no progress. A huge dt clamps the lerp factor to 1, which snaps to the target.
     EXPECT_EQ(scroll_smooth_step(10.0f, 200.0f, 1000.0f, speed, 0.0f), 10.0f);
     EXPECT_EQ(scroll_smooth_step(10.0f, 200.0f, 1000.0f, speed, 10.0f), 200.0f);
 }
@@ -218,7 +217,7 @@ UTEST(scroll_math, visible_range_virtualization_window) {
     u32 buffer = 2;
     u32 total = 100;
 
-    // Scrolled to the top: buffer can't push the window below 0.
+    // Scrolled to the top: the buffer cannot push the window below 0.
     scroll_visible_range(0.0f, viewport, stride, total, buffer, &start, &end);
     EXPECT_EQ(start, 0u);
     // floor(500/50) + 1 + 2*2 = 10 + 1 + 4 = 15 items from index 0.
@@ -233,7 +232,7 @@ UTEST(scroll_math, visible_range_virtualization_window) {
     EXPECT_EQ(end, total);
     EXPECT_LE(start, end);
 
-    // Degenerate stride must not divide by zero - yields an empty window.
+    // A zero stride gives an empty window and does not divide by zero.
     scroll_visible_range(100.0f, viewport, 0.0f, total, buffer, &start, &end);
     EXPECT_EQ(start, 0u);
     EXPECT_EQ(end, 0u);
@@ -243,9 +242,9 @@ UTEST(scroll_math, visible_range_virtualization_window) {
     EXPECT_EQ(end, 0u);
 }
 
-// input_repeat: ui_action_repeated (ui/input_actions.c). It reads only the keyboard state + delta_time, so a
-// zeroed FlUiCtx drives it deterministically. Actions sharing a physical key but differing by modifier
-// (Left vs Ctrl+Left) must never both repeat on the same frame.
+// ui_action_repeated (ui/input_actions.c) reads only the keyboard state and delta_time, so a zeroed FlUiCtx is
+// enough to drive it. Actions that share a physical key but differ by modifier (Left and Ctrl+Left) never both
+// repeat on the same frame.
 
 UTEST(input_repeat, modifier_disambiguation_no_double_fire) {
     FlUiCtx* ctx = arena_alloc(s_arena, FlUiCtx);
@@ -255,7 +254,7 @@ UTEST(input_repeat, modifier_disambiguation_no_double_fire) {
     KeyboardState* kb = &ctx->input_state.keyboard;
     kb->keys[FlKey_Left] = true;
     kb->keys[FlKey_Right] = true;
-    // Held just past the repeat delay: time_since_delay is a fraction of a frame, so a repeat is due this frame.
+    // Held just past the repeat delay. time_since_delay is a fraction of a frame, so a repeat is due this frame.
     kb->key_hold_duration[FlKey_Left] = UI_NAV_REPEAT_DELAY + ctx->delta_time * 0.5f;
     kb->key_hold_duration[FlKey_Right] = UI_NAV_REPEAT_DELAY + ctx->delta_time * 0.5f;
 
@@ -274,14 +273,14 @@ UTEST(input_repeat, modifier_disambiguation_no_double_fire) {
     // A key that is not held never repeats.
     EXPECT_FALSE(ui_action_repeated(ctx, FlAction_Text_Backspace));
 
-    // Held but still inside the initial delay window: no repeat yet.
+    // Held but still inside the initial delay, so no repeat yet.
     kb->modifiers = 0;
     kb->key_hold_duration[FlKey_Left] = UI_NAV_REPEAT_DELAY * 0.5f;
     EXPECT_FALSE(ui_action_repeated(ctx, FlAction_Text_Move_Left));
 }
 
-// Key codes outside [0, FlKey_Count) must be dropped before any keyboard-state array is indexed: the arrays
-// are FlKey_Count long, so an unchecked index corrupts the adjacent KeyboardState fields.
+// Key codes outside [0, FlKey_Count) are dropped before any keyboard-state array is indexed. The arrays are
+// FlKey_Count long, so an unchecked index would corrupt the adjacent KeyboardState fields.
 UTEST(input_key_event, out_of_range_key_is_ignored) {
     FlUiCtx* ctx = arena_alloc(s_arena, FlUiCtx);
     *ctx = (FlUiCtx) { 0 };
@@ -368,15 +367,14 @@ UTEST(input, out_of_range_gamepad_button_or_axis_is_ignored) {
     EXPECT_EQ(0.5f, gamepad->axes[FlGamepadAxis_Left_X]);
 }
 
-// fl_input_gamepad_connected is the public read over the slot table; slots past the table are documented to read as
-// disconnected rather than index out of it. Slot 3 keeps clear of the pad 0 the nav cases drive, and is handed back
-// exactly as found.
+// fl_input_gamepad_connected reads the slot table, and slots past the table read as disconnected. Slot 3 keeps
+// clear of pad 0, which the nav cases use, and is restored to the state it was found in.
 UTEST(input, gamepad_connected_reads_the_slot_and_out_of_range_slots_as_disconnected) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
     canvas_fixture_reset(ctx);
 
-    // fl_input_* read the global context; one frame binds it to this fixture.
+    // fl_input_* read the global context, and one frame binds it to this fixture.
     ui_update_begin(ctx);
     ui_update_end(ctx, 1.0f / 60.0f);
 
@@ -402,8 +400,8 @@ UTEST(input, gamepad_connected_reads_the_slot_and_out_of_range_slots_as_disconne
     canvas_fixture_reset(ctx);
 }
 
-// The delta is position-derived: this frame's pointer position minus the last frame's. Driven the way a backend
-// does, by setting the pointer and letting ui_input_update close the frame.
+// The delta is this frame's pointer position minus the last frame's. The case sets the pointer and lets
+// ui_input_update close the frame, as a backend does.
 UTEST(input, mouse_delta_follows_the_pointer_between_frames) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -428,7 +426,7 @@ UTEST(input, mouse_delta_follows_the_pointer_between_frames) {
     EXPECT_EQ(30.0f, fl_input_mouse_delta().x);
     EXPECT_EQ(-5.0f, fl_input_mouse_delta().y);
 
-    // Holding still afterwards reads as no movement, not as the last step repeated.
+    // Holding still afterwards reads as no movement. The last step is not repeated.
     ui_input_update(ctx, 1.0 / 60.0);
     EXPECT_EQ(0.0f, fl_input_mouse_delta().x);
     EXPECT_EQ(0.0f, fl_input_mouse_delta().y);
@@ -436,8 +434,8 @@ UTEST(input, mouse_delta_follows_the_pointer_between_frames) {
     canvas_fixture_reset(ctx);
 }
 
-// inspector_snapshot: the JSON shape fl_inspector_snapshot documents in include/flowi/ui/inspector.h. A consumer
-// parses this text, so the whole string is compared rather than searched for a name.
+// The JSON shape fl_inspector_snapshot documents in include/flowi/ui/inspector.h. A consumer parses this text, so
+// the whole string is compared.
 
 static void inspector_emit_frame(FlUiCtx* ctx, bool with_elements, FlImageHandle image) {
     ctx->layout_width = 256.0f;
@@ -481,7 +479,7 @@ UTEST(inspector_snapshot, elements_carry_their_documented_fields) {
     ASSERT_NE((FlImageHandle)FL_IMAGE_HANDLE_INVALID, image);
     inspector_emit_frame(ctx, true, image);
 
-    // The ids are hashes, so they are read back rather than spelled out; everything else is the documented text.
+    // The ids are hashes, so they are read back. Everything else is the documented text.
     ASSERT_EQ(4, fl_inspector_element_count());
     FlInspectorElement elements[4];
     for (int32_t i = 0; i < 4; i++) {
@@ -536,11 +534,11 @@ UTEST(input, new_context_gamepads_start_at_default_dead_zone) {
     ui_destroy(ctx);
 }
 
-// text_buffer: shared character filter / grow helpers (ui/ui_text_buffer.h), used by both the text-input widget
-// and the virtual keyboard so their newline policy cannot drift apart.
+// The character filter and grow helpers in ui/ui_text_buffer.h, shared by the text-input widget and the virtual
+// keyboard so both apply the same newline policy.
 
 UTEST(text_buffer, empty_filter_permits_control_whitespace) {
-    // With no allow-list the control-whitespace trio is permitted.
+    // With no allow-list, '\n', '\r' and '\t' are permitted.
     FlString no_filter = (FlString) { .data = nullptr, .length = 0 };
     EXPECT_TRUE(text_buffer_filter_char('\n', no_filter));
     EXPECT_TRUE(text_buffer_filter_char('\r', no_filter));
@@ -553,7 +551,7 @@ UTEST(text_buffer, empty_filter_permits_control_whitespace) {
 }
 
 UTEST(text_buffer, explicit_allow_list_is_exact) {
-    // A non-empty allow-list is an exact set: the newline rule does not re-admit '\n'/'\r'/'\t'.
+    // A non-empty allow-list is an exact set. The newline rule does not admit '\n', '\r' or '\t' again.
     FlString digits = (FlString) { .data = "0123456789", .length = 10 };
     EXPECT_TRUE(text_buffer_filter_char('5', digits));
     EXPECT_FALSE(text_buffer_filter_char('a', digits));
@@ -570,7 +568,7 @@ UTEST(text_buffer, grow_doubles_with_floor_and_preserves) {
     u32 capacity = 4;
     u32 length = 2;
 
-    // Requesting beyond the current capacity grows using a 256-byte floor (doubling 4 would still be tiny).
+    // Growing past the current capacity uses a 256-byte floor, since doubling 4 would still be tiny.
     text_buffer_grow(arena, &buffer, &capacity, length, capacity + 1);
     EXPECT_EQ(capacity, 256u);
     EXPECT_EQ(buffer[0], 'h');
@@ -589,15 +587,15 @@ UTEST(text_buffer, grow_doubles_with_floor_and_preserves) {
     fl_arena_destroy(arena);
 }
 
-// slider_format: ui_slider_format_value (ui/ui.c) - the seam that turns a slider's value + printf format into its
-// display string. The int path must apply the format to an integer, so a %d-style format never reaches a float
-// formatter. nullptr falls back to a bare integer, not "5.00".
+// ui_slider_format_value (ui/ui.c) turns a slider's value and printf format into its display string. The int
+// path applies the format to an integer, so a %d-style format never reaches a float formatter. A nullptr format
+// prints a bare integer, not "5.00".
 
 UTEST(slider_format, int_arbitrary_formats) {
     FlString a = ui_slider_format_value(s_arena, "%d", 5.0f, true);
     ASSERT_TRUE(a.length == 1 && a.data[0] == '5');
 
-    // Width/padding format - feeding this float-formatted would be undefined behavior.
+    // A width and padding format. Passing a float to it would be undefined behavior.
     FlString b = ui_slider_format_value(s_arena, "%3d", 5.0f, true);
     ASSERT_TRUE(b.length == 3 && b.data[0] == ' ' && b.data[1] == ' ' && b.data[2] == '5');
 
@@ -614,14 +612,14 @@ UTEST(slider_format, int_null_and_empty_format) {
     FlString n = ui_slider_format_value(s_arena, nullptr, 5.0f, true);
     ASSERT_TRUE(n.length == 1 && n.data[0] == '5');
 
-    // An empty format yields an empty string.
+    // An empty format gives an empty string.
     FlString e = ui_slider_format_value(s_arena, "", 5.0f, true);
     ASSERT_TRUE(e.length == 0);
 }
 
-// feedback.* - the semantic UI feedback-event seam. flowi reports what happened in the interaction layer (focus
-// moved, a nav edge was hit, a widget was activated) through one app-installed hook. These cases record the
-// callback headlessly and assert the emitted kind / from / to / dir.
+// flowi reports what happened in the interaction layer (focus moved, a nav edge was hit, a widget was activated)
+// through one app-installed feedback hook. These cases record the callback headlessly and check the emitted
+// kind, from, to and dir.
 
 #define FEEDBACK_MAX_EVENTS 16
 
@@ -638,8 +636,8 @@ static void feedback_record(const FlUiFeedbackEvent* ev, void* user_data) {
     r->count++;
 }
 
-// Lay out two stacked focusable areas (A above B) and run one frame: positions register in item_state, so the
-// next frame's spatial nav has real bounding boxes to reason about.
+// Lays out two stacked focusable areas, A above B, and runs one frame. That registers their positions in
+// item_state, so the next frame's spatial nav has bounding boxes to work with.
 static void feedback_emit_two_focusables(FlUiCtx* ctx, FlLayoutId id_a, FlLayoutId id_b) {
     ctx->layout_width = 256.0f;
     ctx->layout_height = 256.0f;
@@ -658,8 +656,8 @@ static void feedback_emit_two_focusables(FlUiCtx* ctx, FlLayoutId id_a, FlLayout
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// Lay out a single focusable area and run one frame, returning its interaction signal. Used to warm a widget's
-// focus state up (across frames) and to drive the activation frame.
+// Lays out a single focusable area, runs one frame and returns its interaction signal. Used to settle a widget's
+// focus state across frames and to run the activation frame.
 static FlSignal feedback_emit_one_focusable(FlUiCtx* ctx, FlLayoutId id) {
     ctx->layout_width = 256.0f;
     ctx->layout_height = 256.0f;
@@ -676,8 +674,8 @@ static FlSignal feedback_emit_one_focusable(FlUiCtx* ctx, FlLayoutId id) {
     return sig;
 }
 
-// feedback.nav_moved_spatial - arrow/D-pad spatial nav from A down to B emits exactly one NavMoved with the
-// from/to widget ids and the pressed direction.
+// Arrow or D-pad spatial nav from A down to B emits exactly one NavMoved with the from and to widget ids and the
+// pressed direction.
 UTEST(feedback, nav_moved_spatial) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -689,7 +687,7 @@ UTEST(feedback, nav_moved_spatial) {
     const u32 clay_a = ui_layout_id_to_clay_id(id_a);
     const u32 clay_b = ui_layout_id_to_clay_id(id_b);
 
-    // Frame 1 establishes positions and focuses A; no hook yet, so nothing is recorded.
+    // Frame 1 establishes positions and focuses A. No hook is installed yet, so nothing is recorded.
     feedback_emit_two_focusables(ctx, id_a, id_b);
     ctx->focused_id = clay_a;
 
@@ -708,9 +706,8 @@ UTEST(feedback, nav_moved_spatial) {
     ASSERT_EQ_MSG(ctx->focused_id, clay_b, "focus actually moved to B");
 }
 
-// feedback.nav_moved_tab_order - Tab/Shift+Tab focus movement is a distinct emit branch from spatial nav: it
-// runs through ui_navigate_tab_order and reports dir == None (no spatial direction). A is declared before B, so
-// Tab-next from A lands on B.
+// Tab and Shift+Tab focus movement goes through ui_navigate_tab_order, separate from spatial nav, and reports
+// dir == None. A is declared before B, so Tab from A lands on B.
 UTEST(feedback, nav_moved_tab_order) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -741,8 +738,8 @@ UTEST(feedback, nav_moved_tab_order) {
     ASSERT_EQ_MSG(ctx->focused_id, clay_b, "focus actually moved to B");
 }
 
-// feedback.nav_blocked_edge - pressing a direction with no candidate (up from the topmost widget) emits
-// NavBlocked, focus stays put, and to is 0.
+// Pressing a direction with no candidate (up from the topmost widget) emits NavBlocked. Focus stays where it is
+// and to is 0.
 UTEST(feedback, nav_blocked_edge) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -754,7 +751,7 @@ UTEST(feedback, nav_blocked_edge) {
     const u32 clay_a = ui_layout_id_to_clay_id(id_a);
 
     feedback_emit_two_focusables(ctx, id_a, id_b);
-    ctx->focused_id = clay_a; // A is the topmost widget: nothing above it.
+    ctx->focused_id = clay_a; // A is the topmost widget, with nothing above it
 
     FeedbackRecorder rec = { 0 };
     fl_ui_set_feedback_hook(feedback_record, &rec);
@@ -771,8 +768,7 @@ UTEST(feedback, nav_blocked_edge) {
     ASSERT_EQ_MSG(ctx->focused_id, clay_a, "focus stayed on A");
 }
 
-// feedback.activated - activating the focused widget (Enter/Space/Gamepad-A) emits an Activated event naming the
-// widget.
+// Activating the focused widget (Enter, Space or gamepad A) emits an Activated event naming the widget.
 UTEST(feedback, activated) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -782,8 +778,8 @@ UTEST(feedback, activated) {
     const FlLayoutId id = ID("fb_act");
     const u32 clay_id = ui_layout_id_to_clay_id(id);
 
-    // Warm-up frames: keep the widget focused with no activate press so its focused state settles past the
-    // just-gained-focus guard.
+    // Warm-up frames keep the widget focused with no activate press, so its focused state gets past the
+    // just-gained-focus check.
     for (int frame = 0; frame < 3; ++frame) {
         ctx->nav_activate_pressed = false;
         feedback_emit_one_focusable(ctx, id);
@@ -804,8 +800,7 @@ UTEST(feedback, activated) {
     ASSERT_EQ_MSG((int)rec.events[0].dir, (int)FlUiFeedbackDir_None, "Activated carries no direction");
 }
 
-// feedback.null_hook_no_emit - with no hook installed (the default), driving a real nav move records nothing:
-// the seam is inert until an app opts in.
+// With no hook installed, which is the default, a nav move records nothing.
 UTEST(feedback, null_hook_no_emit) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -828,9 +823,8 @@ UTEST(feedback, null_hook_no_emit) {
     ASSERT_EQ_MSG(ctx->focused_id, clay_b, "the move still happened (nav is independent of the hook)");
 }
 
-// widget_state_colors.variant_base_derivation - the variant->color base derivation: Solid pulls
-// interactive.base / text.primary, Outline its surface.base background, Ghost the secondary text, Soft the
-// accent text.
+// The base colors each variant derives from: Solid takes interactive.base and text.primary, Outline the
+// surface.base background, Ghost the secondary text, Soft the accent text.
 
 UTEST(widget_state_colors, variant_base_derivation) {
     static const FlThemeColors theme = {
@@ -853,15 +847,15 @@ UTEST(widget_state_colors, variant_base_derivation) {
                     "Soft text derives from text.accent");
 }
 
-// Modifier readback: ui_keyboard_modifiers() returns the raw keyboard modifier bitmask the input layer holds
-// (Shift=1, Ctrl=2, Alt=4, Super=8). The bare render fixture has no key pump, so the bits are driven straight
-// onto the context.
+// ui_keyboard_modifiers() returns the raw keyboard modifier bitmask the input layer holds (Shift=1, Ctrl=2,
+// Alt=4, Super=8). The bare render fixture has no key pump, so the bits are written straight onto the context.
 UTEST(input, modifiers_readback) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
     canvas_fixture_reset(ctx);
 
-    // ui_keyboard_modifiers() reads the global context; one frame binds s_ctx to this fixture (it survives end).
+    // ui_keyboard_modifiers() reads the global context. One frame binds s_ctx to this fixture, and the binding
+    // outlasts the frame.
     ui_update_begin(ctx);
     ui_update_end(ctx, 1.0f / 60.0f);
 
@@ -882,10 +876,10 @@ UTEST(input, modifiers_readback) {
     canvas_fixture_reset(ctx);
 }
 
-// Shift+wheel axis swap: ui_input_update swaps the frame's accumulated wheel axes when Shift is
-// held, and the swap must land in the cached values consumers actually read (Clay scroll, ui_mouse_wheel,
-// hover signals) - the live accumulators are cleared each frame. The Scroll_Up/Scroll_Down actions derive
-// from the same cached value, so they fire under the real tick order, swapped and unswapped alike.
+// ui_input_update swaps the frame's accumulated wheel axes when Shift is held. The swap has to be in the cached
+// values consumers read (Clay scroll, ui_mouse_wheel, hover signals), because the live accumulators are cleared
+// each frame. The Scroll_Up and Scroll_Down actions derive from the same cached value, so they fire in the real
+// tick order with and without the swap.
 UTEST(input, shift_wheel_axis_swap_lands_in_cache) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -903,8 +897,8 @@ UTEST(input, shift_wheel_axis_swap_lands_in_cache) {
     ASSERT_TRUE_MSG(ui_action_pressed(ctx, FlAction_Scroll_Up), "Scroll_Up fires from positive wheel y");
     ASSERT_FALSE_MSG(ui_action_pressed(ctx, FlAction_Scroll_Down), "Scroll_Down stays off");
 
-    // Under Shift the scroll actions follow the swapped y: accumulated x is positive, so Scroll_Up fires, and
-    // the negative accumulated y lands on x.
+    // Under Shift the scroll actions follow the swapped y. The accumulated x is positive, so Scroll_Up fires, and
+    // the negative accumulated y ends up on x.
     in->keyboard.modifiers = FlKeyModifier_Shift;
     in->mouse.wheel_x = 5.0f;
     in->mouse.wheel_y = -2.0f;
@@ -915,14 +909,14 @@ UTEST(input, shift_wheel_axis_swap_lands_in_cache) {
     ASSERT_TRUE_MSG(ui_action_pressed(ctx, FlAction_Scroll_Up), "Scroll_Up fires from the swapped positive y");
     ASSERT_FALSE_MSG(ui_action_pressed(ctx, FlAction_Scroll_Down), "Scroll_Down stays off after swap");
 
-    // One quiet update: the cached wheel, swap flag, and scroll-action state clear.
+    // One quiet update clears the cached wheel, the swap flag and the scroll-action state.
     in->keyboard.modifiers = FlKeyModifier_None;
     ui_input_update(ctx, 1.0 / 60.0);
     ASSERT_FALSE_MSG(ui_action_pressed(ctx, FlAction_Scroll_Up), "scroll action clears on a wheel-quiet frame");
 }
 
-// Click-run counting: the double-click window is the gap between consecutive clicks, not a budget for the
-// whole run, so a triple-click is no harder to perform than a double-click.
+// The double-click window is the gap between consecutive clicks and not a budget for the whole run, so a
+// triple-click is no harder to perform than a double-click.
 UTEST(input, click_count_window_is_per_gap) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -931,7 +925,7 @@ UTEST(input, click_count_window_is_per_gap) {
     FlInputState* in = &ctx->input_state;
     MouseState* mouse = &in->mouse;
 
-    // Each gap sits inside the window but three of them exceed it, so a whole-run budget would reset the
+    // Each gap is inside the window but three of them exceed it, so a budget for the whole run would reset the
     // count on the third click.
     const double gap = UI_MOUSE_DOUBLE_CLICK_TIME * 0.7;
     ASSERT_TRUE_MSG(3.0 * gap > UI_MOUSE_DOUBLE_CLICK_TIME, "gap must distinguish per-gap from whole-run");
@@ -947,12 +941,12 @@ UTEST(input, click_count_window_is_per_gap) {
         ASSERT_EQ_MSG((int)expected, (int)mouse->click_count[FlMouseButton_Left], "click run keeps accumulating");
     }
 
-    // A gap wider than the window still starts a fresh run.
+    // A gap wider than the window starts a new run.
     mouse->buttons_pressed[FlMouseButton_Left] = true;
     ui_input_update(ctx, UI_MOUSE_DOUBLE_CLICK_TIME * 1.5);
     ASSERT_EQ_MSG(1, (int)mouse->click_count[FlMouseButton_Left], "a gap past the window resets the run");
 
-    // A click far from its predecessor starts a fresh run even inside the window.
+    // A click far from the one before it starts a new run even inside the window.
     mouse->x = 100.0f + UI_MOUSE_DOUBLE_CLICK_MAX_DIST * 2.0f;
     mouse->buttons_pressed[FlMouseButton_Left] = true;
     ui_input_update(ctx, gap);
@@ -963,16 +957,17 @@ UTEST(input, click_count_window_is_per_gap) {
     canvas_fixture_reset(ctx);
 }
 
-// Mouse-button readback: ui_mouse_pressed/released read the context's per-frame edge snapshot
-// (mouse_buttons_*_this_frame, captured before ui_input_update clears the raw buttons_pressed/released
-// arrays), and ui_mouse_down reads the surviving input_state.mouse.buttons[] level. Buttons are global and
-// unrouted, so the bare render fixture drives the context fields straight.
+// ui_mouse_pressed and ui_mouse_released read the context's per-frame edge snapshot
+// (mouse_buttons_*_this_frame, captured before ui_input_update clears the raw buttons_pressed and
+// buttons_released arrays). ui_mouse_down reads the level in input_state.mouse.buttons[]. Buttons are global and
+// not routed, so the bare render fixture writes the context fields directly.
 UTEST(input, mouse_button_readback) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
     canvas_fixture_reset(ctx);
 
-    // ui_mouse_* read the global context; one frame binds s_ctx to this fixture (it survives end).
+    // ui_mouse_* read the global context. One frame binds s_ctx to this fixture, and the binding outlasts the
+    // frame.
     ui_update_begin(ctx);
     ui_update_end(ctx, 1.0f / 60.0f);
 
@@ -999,7 +994,7 @@ UTEST(input, mouse_button_readback) {
     ASSERT_TRUE_MSG(ui_mouse_released(FlMouseButton_Left), "Left release edge reads back");
     ASSERT_FALSE_MSG(ui_mouse_down(FlMouseButton_Left), "Left no longer held after release");
 
-    // Same-frame tap: pressed and released both set in one frame (a fast click).
+    // A fast click: pressed and released both set in one frame.
     memset(mouse->buttons, 0, sizeof(mouse->buttons));
     memset(ctx->mouse_buttons_pressed_this_frame, 0, sizeof(ctx->mouse_buttons_pressed_this_frame));
     memset(ctx->mouse_buttons_released_this_frame, 0, sizeof(ctx->mouse_buttons_released_this_frame));
@@ -1014,15 +1009,15 @@ UTEST(input, mouse_button_readback) {
     canvas_fixture_reset(ctx);
 }
 
-// Gamepad readback through the public fl_input_* queries, driven the way a backend does: push events, then
-// ui_input_update closes the frame. Slot 3 keeps clear of the pad 0 the nav cases drive, and the slot
-// is handed back exactly as found.
+// Gamepad readback through the public fl_input_* queries. The case pushes events and lets ui_input_update close
+// the frame, as a backend does. Slot 3 keeps clear of pad 0, which the nav cases use, and is restored to the
+// state it was found in.
 UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
     canvas_fixture_reset(ctx);
 
-    // fl_input_* read the global context; one frame binds it to this fixture.
+    // fl_input_* read the global context, and one frame binds it to this fixture.
     ui_update_begin(ctx);
     ui_update_end(ctx, 1.0f / 60.0f);
 
@@ -1037,7 +1032,7 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Axis_Motion,
                                                               .gamepad_id = slot,
                                                               .axis = { FlGamepadAxis_Left_Trigger, 0.75f } });
-    // Inside the default dead zone: the read is the raw value, not a dead-zoned 0.
+    // Inside the default dead zone the read is still the raw value.
     platform_input_push_gamepad_event(ctx, (FlGamepadEvent) { .type = FlGamepadEvent_Axis_Motion,
                                                               .gamepad_id = slot,
                                                               .axis = { FlGamepadAxis_Right_X, -0.1f } });
@@ -1072,7 +1067,7 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     ui_input_update(ctx, dt);
     EXPECT_FALSE_MSG(fl_input_gamepad_button_released(slot, FlGamepadButton_B), "the release edge lasts one frame");
 
-    // Same-frame tap: down and up land before one update, so both edges read and nothing is held.
+    // Down and up arrive before one update, so both edges read and nothing is held.
     const FlGamepadEvent x_down
         = { .type = FlGamepadEvent_Button_Down, .gamepad_id = slot, .button = { FlGamepadButton_X } };
     const FlGamepadEvent x_up
@@ -1084,7 +1079,7 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     EXPECT_TRUE_MSG(fl_input_gamepad_button_released(slot, FlGamepadButton_X), "tap: released set in the same frame");
     EXPECT_EQ(0.0f, fl_input_gamepad_button_hold_duration(slot, FlGamepadButton_X));
 
-    // Out-of-range buttons and axes on a connected slot read as false/0.
+    // Out-of-range buttons and axes on a connected slot read as false and 0.
     const FlGamepadButton bad_buttons[] = { (FlGamepadButton)FlGamepadButton_Count, (FlGamepadButton)-1 };
     for_count(b, sizeof_array(bad_buttons)) {
         EXPECT_FALSE(fl_input_gamepad_button_pressed(slot, bad_buttons[b]));
@@ -1096,7 +1091,7 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
         EXPECT_EQ(0.0f, fl_input_gamepad_axis(slot, bad_axes[a]));
     }
 
-    // A pad unplugged mid-press reads as an empty slot: no edge, no hold, every axis at 0.
+    // A pad unplugged while a button is down reads as an empty slot: no edge, no hold, every axis at 0.
     const FlGamepadEvent y_down
         = { .type = FlGamepadEvent_Button_Down, .gamepad_id = slot, .button = { FlGamepadButton_Y } };
     platform_input_push_gamepad_event(ctx, y_down);
@@ -1117,8 +1112,8 @@ UTEST(input, gamepad_edges_hold_duration_and_axis_read_back_per_slot) {
     canvas_fixture_reset(ctx);
 }
 
-// cursor - the core's per-frame cursor request is last-writer-wins and resets to the arrow when nobody asks:
-// ui_update_begin resets the request, fl_cursor_set overwrites it during the frame, then the resolved value
+// The per-frame cursor request goes to the last writer and resets to the arrow when nobody asks. ui_update_begin
+// resets the request, fl_cursor_set overwrites it during the frame, and the resolved value
 // (fl_cursor_get_requested) is flushed to the headless backend, which records it.
 
 UTEST(cursor, per_frame_last_writer_wins_and_arrow_reset) {
@@ -1133,7 +1128,7 @@ UTEST(cursor, per_frame_last_writer_wins_and_arrow_reset) {
 
     const float dt = 1.0f / 60.0f;
 
-    // Frame 1: the last writer (Hand) wins over the earlier Crosshair request.
+    // Frame 1: Hand, the last writer, replaces the earlier Crosshair request.
     ui_update_begin(ctx);
     fl_cursor_set((FlCursor) { .shape = FlCursorShape_Crosshair });
     fl_cursor_set((FlCursor) { .shape = FlCursorShape_Hand });
@@ -1151,7 +1146,7 @@ UTEST(cursor, per_frame_last_writer_wins_and_arrow_reset) {
     ASSERT_EQ_MSG(window_backend_headless_last_cursor(&wb).shape, FlCursorShape_Arrow,
                   "a frame with no request resets the cursor to the arrow");
 
-    // Visibility is a sticky toggle, flushed independently of the per-frame shape.
+    // Visibility is a toggle that stays set, and it is flushed independently of the per-frame shape.
     fl_cursor_set_visible(false);
     wb.set_cursor_visible(wb.user_data, w, fl_cursor_get_visible());
     ASSERT_FALSE_MSG(window_backend_headless_cursor_visible(&wb), "set_visible(false) hides the cursor");
@@ -1163,12 +1158,11 @@ UTEST(cursor, per_frame_last_writer_wins_and_arrow_reset) {
     wb.destroy(wb.user_data);
 }
 
-// widget_state_colors.perceptual_state_contract - the state->colour wiring of the widget prologue at the value
-// level: fl_resolve_widget_colors must lighten the background on hover, darken it on press, and ramp the border
-// onto interactive.focus under focus - all in OKLCH.
+// fl_resolve_widget_colors lightens the background on hover, darkens it on press, and moves the border toward
+// interactive.focus under focus, all in OKLCH.
 UTEST(widget_state_colors, perceptual_state_contract) {
     FlThemeColors theme = { 0 };
-    theme.interactive.base = (FlColor) { 128, 128, 128, 255 }; // mid-lightness so lighten/darken are unambiguous
+    theme.interactive.base = (FlColor) { 128, 128, 128, 255 }; // mid lightness, so lightening and darkening both show
     theme.interactive.focus = (FlColor) { 40, 120, 240, 255 };
 
     const float l_base = color_rgb_to_oklch(theme.interactive.base).l;
@@ -1193,7 +1187,7 @@ UTEST(widget_state_colors, perceptual_state_contract) {
     ASSERT_LT_MSG((double)color_rgb_to_oklch(c_press.bg).l, (double)l_base,
                   "press lowers the OKLCH lightness of the background");
 
-    // The Solid border has a transparent base, so at focused_t = 1 it ramps exactly onto interactive.focus.
+    // The Solid border has a transparent base, so at focused_t = 1 it is exactly interactive.focus.
     ItemState focus = { 0 };
     focus.state.focused_t = 1.0f;
     FlWidgetColors c_focus
@@ -1202,9 +1196,9 @@ UTEST(widget_state_colors, perceptual_state_contract) {
                     "focus drives the derived border onto interactive.focus");
 }
 
-// widget_state_colors.state_color_derivation - ui_apply_state_color is base-color derivation only: hover lightens
-// by 0.15 * hot_t, press then darkens that result by 0.15 * active_t, and a null or resting item returns the base.
-// Every variant's resolved background and text go through the same derivation.
+// ui_apply_state_color derives from the base color only: hover lightens by 0.15 * hot_t, press then darkens that
+// result by 0.15 * active_t, and a null or resting item returns the base. Every variant's resolved background and
+// text go through the same derivation.
 UTEST(widget_state_colors, state_color_derivation) {
     const FlColor base = { 120, 90, 200, 255 };
 
@@ -1248,14 +1242,14 @@ UTEST(widget_state_colors, state_color_derivation) {
     }
 }
 
-// ui_switch.toggles_and_animates - the switch shares the checkbox click/activate behavior (toggles a bool*) and
-// drives a 0..1 knob animation that eases toward the on/off target. Direct-FlUiCtx path with a controlled dt,
-// asserting the toggle, the returned signal, and that the knob animation transitions toward its target.
+// The switch shares the checkbox's click and activate behavior (it toggles a bool*) and has a 0..1 knob animation
+// that eases toward the on or off target. The case uses the FlUiCtx directly with a fixed dt and checks the
+// toggle, the returned signal, and that the knob animation moves toward its target.
 UTEST(ui_switch, toggles_and_animates) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Identity scale (ui_scale == 1.0); a fixed dt makes the animation deterministic.
+    // ui_scale is 1.0, and a fixed dt makes the animation deterministic.
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
@@ -1278,7 +1272,7 @@ UTEST(ui_switch, toggles_and_animates) {
 
     FlSignal sig = { 0 };
 
-    // Frame 1: lay out the switch once so its interactive ItemState exists and the knob starts off (0.0).
+    // Frame 1: lay out the switch once so its ItemState exists and the knob starts off (0.0).
     ctx->mouse_pressed_this_frame = false;
     ctx->mouse_released_this_frame = false;
     SWITCH_FRAME(sig);
@@ -1287,11 +1281,11 @@ UTEST(ui_switch, toggles_and_animates) {
     ASSERT_TRUE_MSG(item != nullptr, "switch registered an interactive item");
     ASSERT_NEAR_MSG((double)item->check_anim_t, 0.0, 1e-6, "knob starts at the off position");
 
-    // Mark the switch hot so the fast tap in the next frame registers as a click, shortcutting the multi-frame
-    // hover -> hot_id -> state.hot propagation.
+    // Mark the switch hot so the fast tap in the next frame registers as a click. This skips the frames hover
+    // takes to propagate (hover -> hot_id -> state.hot).
     item->state.hot = 1;
 
-    // Frame 2: a fast tap (pressed + released in the same frame) on the hot switch toggles the bool on.
+    // Frame 2: a fast tap (pressed and released in the same frame) on the hot switch toggles the bool on.
     ctx->mouse_pressed_this_frame = true;
     ctx->mouse_released_this_frame = true;
     SWITCH_FRAME(sig);
@@ -1336,8 +1330,8 @@ UTEST(ui_switch, toggles_and_animates) {
 #undef SWITCH_FRAME
 }
 
-// One frame's solid rects, captured off the render seam. A switch draws exactly three: the hit-test
-// container, the track, then the knob (parent before child, in Clay's render order).
+// One frame's solid rects, captured from the render call. A switch draws exactly three: the hit-test container,
+// the track, then the knob (parent before child, in Clay's render order).
 typedef struct SwitchRects {
     FlRect rect[8];
     int count;
@@ -1360,27 +1354,27 @@ static void switch_rects_capture(void* user_data, FlSurface* surface, const FlRe
     s_switch_rects_next(user_data, surface, frame);
 }
 
-// ui_switch.geometry_follows_config - the track is FlSwitchConfig's track_width x track_height, the knob the
-// circle that fits inside knob_inset, and zero on any of the three keeps the built-in 48x24 pill with its 20px
-// knob. Asserted off the emitted fill rects rather than pixels so the numbers in the assertions ARE the geometry.
+// The track is FlSwitchConfig's track_width x track_height and the knob is the circle that fits inside
+// knob_inset. Zero in any of the three keeps the built-in 48x24 pill with its 20px knob. The case checks the
+// emitted fill rects, so the numbers in the assertions are the geometry.
 UTEST(ui_switch, geometry_follows_config) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Identity scale so the emitted physical-px rects are the logical geometry the config asks for.
+    // At ui_scale 1.0 the emitted physical-px rects are the logical geometry the config asks for.
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
     const float dt = 1.0f / 60.0f;
 
-    // ui_shared_create copied the backend, so the seam to intercept is the one the core holds, not the
+    // ui_shared_create copied the backend, so the render call to intercept is the one the core holds and not the
     // fixture's own struct.
     s_switch_rects_next = ctx->shared->renderer.render;
     ctx->shared->renderer.render = switch_rects_capture;
 
-    // Renders one switch with cfg and value, leaving its three rects in s_switch_rects. Two frames per case:
-    // the first registers the widget's ItemState (stamping only works once the item exists), the second runs
-    // with its knob animation stamped to an exact 0 or 1 rather than whatever fraction one dt of easing gives.
+    // Renders one switch with cfg and value and leaves its three rects in s_switch_rects. Each case takes two
+    // frames: the first registers the widget's ItemState, and the second runs with the knob animation set to
+    // exactly 0 or 1, which one dt of easing would not give.
     bool value = false;
 #define SWITCH_GEOM_FRAME(label_str, ...)                                                                     \
     do {                                                                                                      \
@@ -1399,7 +1393,7 @@ UTEST(ui_switch, geometry_follows_config) {
         ASSERT_EQ_MSG(s_switch_rects.count, 3, "a switch draws the hit-test container, the track, the knob"); \
     } while (0)
 
-    // Default geometry: a 48x24 pill, knob 24 - 2*2 = 20 across, sitting 2px in from the track's left edge.
+    // Default geometry: a 48x24 pill with a knob 24 - 2*2 = 20 across, 2px in from the track's left edge.
     SWITCH_GEOM_FRAME("geom_default", .track_width = 0.0f);
     FlRect track = s_switch_rects.rect[1];
     FlRect knob = s_switch_rects.rect[2];
@@ -1409,12 +1403,13 @@ UTEST(ui_switch, geometry_follows_config) {
     ASSERT_NEAR_MSG((double)knob.h, 20.0, 1e-4, "the knob is square (a circle at full radius)");
     ASSERT_NEAR_MSG((double)(knob.x - track.x), 2.0, 1e-4, "the off knob sits one inset in from the left");
 
-    // track_height alone still derives the width, so the pill proportion survives a height-only skin.
+    // track_height alone still derives the width, so a skin that sets only the height keeps the pill's
+    // proportion.
     SWITCH_GEOM_FRAME("geom_height_only", .track_height = 13.0f);
     ASSERT_NEAR_MSG((double)s_switch_rects.rect[1].w, 26.0, 1e-4, "width still derives from the skinned height");
     ASSERT_NEAR_MSG((double)s_switch_rects.rect[1].h, 13.0, 1e-4, "the skinned height applies");
 
-    // the compact skin, off: a 26x13 track with a 9px knob.
+    // The compact skin, off: a 26x13 track with a 9px knob.
     SWITCH_GEOM_FRAME("geom_skin", .track_width = 26.0f, .track_height = 13.0f);
     track = s_switch_rects.rect[1];
     knob = s_switch_rects.rect[2];
@@ -1423,7 +1418,7 @@ UTEST(ui_switch, geometry_follows_config) {
     ASSERT_NEAR_MSG((double)knob.w, 9.0, 1e-4, "the knob derives as track_height - 2 * knob_inset");
     ASSERT_NEAR_MSG((double)(knob.x - track.x), 2.0, 1e-4, "the off knob sits one inset in from the left");
 
-    // Same skin, fully on: the knob has travelled to x = 15 within the track (26 - 9 - 2).
+    // The same skin fully on: the knob is at x = 15 within the track (26 - 9 - 2).
     value = true;
     SWITCH_GEOM_FRAME("geom_skin", .track_width = 26.0f, .track_height = 13.0f);
     track = s_switch_rects.rect[1];
@@ -1432,21 +1427,21 @@ UTEST(ui_switch, geometry_follows_config) {
 
     value = false;
 
-    // An explicit knob_inset drives the knob size directly: 13 - 2*4 = 5.
+    // An explicit knob_inset sets the knob size directly: 13 - 2*4 = 5.
     SWITCH_GEOM_FRAME("geom_inset", .track_height = 13.0f, .knob_inset = 4.0f);
     track = s_switch_rects.rect[1];
     knob = s_switch_rects.rect[2];
     ASSERT_NEAR_MSG((double)knob.w, 5.0, 1e-4, "an explicit inset eats into the derived knob size");
     ASSERT_NEAR_MSG((double)(knob.x - track.x), 4.0, 1e-4, "the off knob sits one explicit inset in from the left");
 
-    // An inset past half the track height leaves no knob rather than a negative one.
+    // An inset past half the track height leaves no knob. The size does not go negative.
     SWITCH_GEOM_FRAME("geom_fat_inset", .track_height = 13.0f, .knob_inset = 10.0f);
     knob = s_switch_rects.rect[2];
     ASSERT_NEAR_MSG((double)knob.w, 0.0, 1e-4, "an over-large inset collapses the knob instead of inverting it");
     ASSERT_NEAR_MSG((double)knob.h, 0.0, 1e-4, "an over-large inset collapses the knob instead of inverting it");
 
-    // A track narrower than its own knob leaves no travel at all. Unclamped this would be negative, and the
-    // knob's left padding is an unsigned pixel count - the knob would wrap to the far side of the screen.
+    // A track narrower than its own knob leaves no travel. Without the clamp the travel would be negative, and
+    // the knob's left padding is an unsigned pixel count, so the knob would wrap to the far side of the screen.
     value = true;
     SWITCH_GEOM_FRAME("geom_narrow", .track_width = 8.0f, .track_height = 12.0f);
     track = s_switch_rects.rect[1];
@@ -1456,9 +1451,9 @@ UTEST(ui_switch, geometry_follows_config) {
 #undef SWITCH_GEOM_FRAME
 }
 
-// One frame's solid rects for a slider, captured off the render seam. A slider draws exactly four: the
-// hit-test row, then the filled segment, the thumb and the unfilled segment (parent before children, in
-// Clay's render order).
+// One frame's solid rects for a slider, captured from the render call. A slider draws exactly four: the hit-test
+// row, then the filled segment, the thumb and the unfilled segment (parent before children, in Clay's render
+// order).
 static SwitchRects s_slider_rects;
 
 static void (*s_slider_rects_next)(void*, FlSurface*, const FlRenderFrame*);
@@ -1475,28 +1470,27 @@ static void slider_rects_capture(void* user_data, FlSurface* surface, const FlRe
     s_slider_rects_next(user_data, surface, frame);
 }
 
-// ui_slider.geometry_follows_config - the thumb is FlSliderConfig's thumb_size square, the track bar is
-// track_height thick and centered against that thumb, and zero on either keeps the built-in 24px thumb over an
-// 8px bar. Asserted off the emitted fill rects rather than pixels so the numbers in the assertions ARE the
-// geometry.
+// The thumb is a square of FlSliderConfig's thumb_size, and the track bar is track_height thick and centered
+// against that thumb. Zero in either keeps the built-in 24px thumb over an 8px bar. The case checks the emitted
+// fill rects, so the numbers in the assertions are the geometry.
 UTEST(ui_slider, geometry_follows_config) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Identity scale so the emitted physical-px rects are the logical geometry the config asks for.
+    // At ui_scale 1.0 the emitted physical-px rects are the logical geometry the config asks for.
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
     const float dt = 1.0f / 60.0f;
 
-    // ui_shared_create copied the backend, so the seam to intercept is the one the core holds, not the
+    // ui_shared_create copied the backend, so the render call to intercept is the one the core holds and not the
     // fixture's own struct.
     s_slider_rects_next = ctx->shared->renderer.render;
     ctx->shared->renderer.render = slider_rects_capture;
 
-    // Renders one slider with cfg, leaving its four rects in s_slider_rects. Two frames per case: the filled
-    // and unfilled widths are derived from the row width the item carried over from the previous frame, so the
-    // first frame lays out against a zero-width row and only the second reflects the value.
+    // Renders one slider with cfg and leaves its four rects in s_slider_rects. Each case takes two frames: the
+    // filled and unfilled widths come from the row width the item kept from the previous frame, so the first
+    // frame lays out against a zero-width row and only the second reflects the value.
     float value = 0.5f;
 #define SLIDER_GEOM_FRAME(label_str, ...)                                          \
     do {                                                                           \
@@ -1512,7 +1506,7 @@ UTEST(ui_slider, geometry_follows_config) {
                       "unfilled bar");                                             \
     } while (0)
 
-    // Default geometry: a 24px thumb over an 8px bar, the bar centered in the row ((24 - 8) / 2 = 8 down).
+    // Default geometry: a 24px thumb over an 8px bar, with the bar centered in the row ((24 - 8) / 2 = 8 down).
     SLIDER_GEOM_FRAME("slider_geom_default", .thumb_size = 0.0f);
     FlRect row = s_slider_rects.rect[0];
     FlRect filled = s_slider_rects.rect[1];
@@ -1524,12 +1518,12 @@ UTEST(ui_slider, geometry_follows_config) {
     ASSERT_NEAR_MSG((double)filled.h, 8.0, 1e-4, "the default track bar is 8px thick");
     ASSERT_NEAR_MSG((double)unfilled.h, 8.0, 1e-4, "both track segments share the bar thickness");
     ASSERT_NEAR_MSG((double)(filled.y - row.y), 8.0, 1e-4, "the thin bar centers vertically against the thumb");
-    // At 0.5 the thumb sits mid-travel, so the two segments split the row's width less the thumb evenly.
+    // At 0.5 the thumb is at mid travel, so the two segments share the row's width less the thumb evenly.
     ASSERT_NEAR_MSG((double)filled.w, (double)unfilled.w, 1e-4, "a half-value slider splits its travel evenly");
     ASSERT_NEAR_MSG((double)(filled.w + thumb.w + unfilled.w), (double)row.w, 1e-4,
                     "the three children fill the row exactly");
 
-    // the compact skin: a 3px bar under a 13px thumb, the bar centered at (13 - 3) / 2 = 5 down.
+    // The compact skin: a 3px bar under a 13px thumb, with the bar centered at (13 - 3) / 2 = 5 down.
     SLIDER_GEOM_FRAME("slider_geom_skin", .track_height = 3.0f, .thumb_size = 13.0f);
     row = s_slider_rects.rect[0];
     filled = s_slider_rects.rect[1];
@@ -1540,7 +1534,7 @@ UTEST(ui_slider, geometry_follows_config) {
     ASSERT_NEAR_MSG((double)filled.h, 3.0, 1e-4, "the skinned track thickness applies");
     ASSERT_NEAR_MSG((double)(filled.y - row.y), 5.0, 1e-4, "the 3px bar centers against the 13px thumb");
 
-    // Either field alone keeps the other's default, so a thickness-only or thumb-only skin is well-defined.
+    // Either field alone keeps the other's default.
     SLIDER_GEOM_FRAME("slider_geom_track_only", .track_height = 3.0f);
     ASSERT_NEAR_MSG((double)s_slider_rects.rect[2].w, 24.0, 1e-4, "the thumb keeps its default beside a thin bar");
     ASSERT_NEAR_MSG((double)s_slider_rects.rect[1].h, 3.0, 1e-4, "the skinned thickness applies on its own");
@@ -1551,15 +1545,15 @@ UTEST(ui_slider, geometry_follows_config) {
 #undef SLIDER_GEOM_FRAME
 }
 
-// One frame of a synthetic gesture over a slider: place the cursor, set the left-button state, run the real
-// input layer, then lay the slider out and let it consume the click. Going through ui_input_update
-// rather than poking the context means signal.clicked/hovered come from the genuine hit-testing path.
+// One frame of a synthetic gesture over a slider: place the cursor, set the left-button state, run the real input
+// layer, then lay the slider out and let it consume the click. Because the frame goes through ui_input_update,
+// signal.clicked and signal.hovered come from the real hit testing.
 static void slider_click_frame(FlUiCtx* ctx, FlString label, float thumb_size, float* value, float mx, float my,
                                bool held, bool pressed, bool released) {
     FlInputState* in = &ctx->input_state;
     ui_input_set_mouse_position(ctx, mx, my);
     in->mouse.buttons[FlMouseButton_Left] = held;
-    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed; // ui_input_update consumes + clears this edge
+    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed; // ui_input_update consumes and clears this edge
     in->mouse.buttons_released[FlMouseButton_Left] = released;
     ui_input_update(ctx, 1.0f / 60.0f);
 
@@ -1570,14 +1564,14 @@ static void slider_click_frame(FlUiCtx* ctx, FlString label, float thumb_size, f
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// Clicks click_x pixels in from the slider row's left edge and returns the value the slider wrote, reporting
-// the row's width through out_row_w so the caller can state the expected mapping in terms of the geometry
-// rather than a magic number. label doubles as the widget id, so each thumb size needs its own.
+// Clicks click_x pixels in from the slider row's left edge and returns the value the slider wrote. out_row_w
+// receives the row's width, so the caller can write the expected mapping from the geometry. label is also the
+// widget id, so each thumb size needs its own.
 static float slider_click_value(FlUiCtx* ctx, FlString label, float thumb_size, float click_x, float* out_row_w) {
     float value = 0.0f;
 
-    // Two frames with the cursor parked off-window: the first lays the row out (the drag math divides by the
-    // width it carried over from the previous frame), the second settles it before any hover.
+    // Two frames with the cursor parked off the window. The first lays the row out (the drag math divides by the
+    // width kept from the previous frame) and the second settles it before any hover.
     slider_click_frame(ctx, label, thumb_size, &value, -100.0f, -100.0f, false, false, false);
     slider_click_frame(ctx, label, thumb_size, &value, -100.0f, -100.0f, false, false, false);
 
@@ -1591,8 +1585,8 @@ static float slider_click_value(FlUiCtx* ctx, FlString label, float thumb_size, 
     const float mx = row->state.pos.x + click_x;
     const float my = row->state.pos.y + row->state.size.y / 2.0f;
 
-    // Hover (two frames: the row becomes hot_id at the end of the first and its state.hot flips on the second,
-    // and a press needs signal.hovered), then press, then release - the release frame is where clicked fires.
+    // Hover for two frames: the row becomes hot_id at the end of the first and its state.hot is set on the
+    // second, and a press needs signal.hovered. Then press, then release. clicked fires on the release frame.
     slider_click_frame(ctx, label, thumb_size, &value, mx, my, false, false, false);
     slider_click_frame(ctx, label, thumb_size, &value, mx, my, false, false, false);
     slider_click_frame(ctx, label, thumb_size, &value, mx, my, true, true, false);
@@ -1600,9 +1594,8 @@ static float slider_click_value(FlUiCtx* ctx, FlString label, float thumb_size, 
     return value;
 }
 
-// ui_slider.hit_math_follows_thumb_size - clicking a point on the track maps to a value through the configured
-// thumb size, not the built-in 24px one. The expected values are written as the mapping itself - mouse-x less
-// half a thumb, over the travel the thumb has - so the assertion states the formula, not a precomputed constant.
+// Clicking a point on the track maps to a value through the configured thumb size and not the built-in 24px. The
+// expected values are written as the mapping: mouse x less half a thumb, over the travel the thumb has.
 UTEST(ui_slider, hit_math_follows_thumb_size) {
     FlAppSettings settings = { .window_title = FL_S("slider_hit"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
@@ -1613,7 +1606,7 @@ UTEST(ui_slider, hit_math_follows_thumb_size) {
     ctx->layout_height = 400.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
 
-    // The same click point on both sliders. Well inside the track, so neither mapping clamps at an end.
+    // The same click point on both sliders, well inside the track so neither mapping clamps at an end.
     const float click_x = 100.0f;
 
     float row_w = 0.0f;
@@ -1630,27 +1623,28 @@ UTEST(ui_slider, hit_math_follows_thumb_size) {
     ASSERT_NEAR_MSG((double)got_skin, (double)want_skin, 1e-4,
                     "the configured thumb_size drives the click mapping, not UI_SLIDER_THUMB_WIDTH");
 
-    // The two mappings really do differ, so the assertions above are not both satisfied by the default math.
+    // The two mappings differ, so the default math cannot satisfy both assertions above.
     ASSERT_TRUE_MSG(got_skin != got_default, "a smaller thumb maps the same click to a different value");
 
     fl_app_destroy(app);
 }
 
-// ui_tab_bar.geometry_follows_config - FlTabBarConfig's item/strip knobs steer the tab geometry, and a zeroed
-// config leaves the strip at its built-in geometry (the dock leaf header passes a zeroed one). Asserted off the
-// debug render-command snapshot rather than pixels, so the numbers in the assertions ARE the geometry.
+// FlTabBarConfig's item and strip fields set the tab geometry, and a zeroed config leaves the strip at its
+// built-in geometry (the dock leaf header passes a zeroed one). The case checks the debug render-command
+// snapshot, so the numbers in the assertions are the geometry.
 UTEST(ui_tab_bar, geometry_follows_config) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Identity scale, so the snapshot's logical rects are the pixels the config asked for.
+    // At ui_scale 1.0 the snapshot's logical rects are the pixels the config asked for.
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
     const float dt = 1.0f / 60.0f;
 
-    // The tabs are fit-sized around their labels, so the strip needs real text metrics. Built-in 8x8 font.
+    // The tabs are fit-sized around their labels, so the strip needs text metrics. This uses the built-in 8x8
+    // font.
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 1));
 
     FlString tabs[] = { FL_S("One"), FL_S("Two"), FL_S("Three") };
@@ -1658,9 +1652,9 @@ UTEST(ui_tab_bar, geometry_follows_config) {
     UiRenderCommand rects[8];
     int count = 0;
 
-    // Renders one tab bar with the given config and leaves its rectangles in rects/count. Two frames per case:
-    // the first registers each tab's ItemState so the hover/focus animation has somewhere to land, and only the
-    // second is measured.
+    // Renders one tab bar with the given config and leaves its rectangles in rects and count. Each case takes two
+    // frames: the first registers each tab's ItemState for the hover and focus animation, and only the second is
+    // measured.
 #define TAB_GEOM_FRAME(...)                                              \
     do {                                                                 \
         for (int geom_pass = 0; geom_pass < 2; geom_pass++) {            \
@@ -1693,8 +1687,8 @@ UTEST(ui_tab_bar, geometry_follows_config) {
                     "and hugs them across too, rather than stretching the row like the bare strip does");
     ASSERT_LT_MSG((double)skin_h, (double)FlWidgetHeight_MD, "item padding takes the tab off the fixed height");
 
-    // Padding-driven on both axes: 10px more padding per side is 20px more tab. Stated as a delta against the
-    // case above so no font metric is baked into the expected numbers.
+    // Padding sets the size on both axes: 10px more padding per side is 20px more tab. The check is a delta
+    // against the case above, so no font metric appears in the expected numbers.
     TAB_GEOM_FRAME(.item_padding_h = 18.0f, .item_padding_v = 16.0f, .item_radius = 6.0f, .container_padding = 3.0f,
                    .container_radius = 8.0f);
     ASSERT_NEAR_MSG((double)(rects[1].height - skin_h), 20.0, 1e-4, "vertical padding drives the tab height");
@@ -1702,9 +1696,9 @@ UTEST(ui_tab_bar, geometry_follows_config) {
                    .container_radius = 8.0f);
     ASSERT_NEAR_MSG((double)(rects[1].width - skin_w), 20.0, 1e-4, "horizontal padding drives the tab width");
 
-    // child_gap steers the space between tabs, stated as a delta against the 4px default so no font metric is
-    // baked in: the strip's first tab never moves, the last one moves by two extra gaps. A negative value lands
-    // the second tab flush against the first, which 0 cannot ask for.
+    // child_gap sets the space between tabs. The check is a delta against the 4px default, so no font metric
+    // appears in it: the strip's first tab does not move and the last one moves by two extra gaps. A negative
+    // value puts the second tab flush against the first, which 0 cannot ask for.
     TAB_GEOM_FRAME(.item_padding_h = 18.0f, .item_padding_v = 6.0f, .container_padding = 3.0f);
     const float gap_default_last_x = rects[3].x;
     const float gap_default_pill_w = rects[0].width;
@@ -1720,7 +1714,7 @@ UTEST(ui_tab_bar, geometry_follows_config) {
     ASSERT_NEAR_MSG((double)(gap_default_pill_w - rects[0].width), 8.0, 1e-4,
                     "so the strip loses both gaps off its pinned width");
 
-    // Either strip knob alone is enough to paint the pill, and each item knob stands on its own default.
+    // Either strip field alone is enough to paint the pill, and each item field keeps its own default.
     TAB_GEOM_FRAME(.container_radius = 8.0f);
     ASSERT_EQ_MSG(count, 4, "container_radius alone paints the pill");
     ASSERT_NEAR_MSG((double)rects[1].height, (double)FlWidgetHeight_MD, 1e-4,
@@ -1730,8 +1724,8 @@ UTEST(ui_tab_bar, geometry_follows_config) {
     ASSERT_NEAR_MSG((double)rects[0].corner_radius.tl, 6.0, 1e-4, "the tab radius applies on its own");
     ASSERT_NEAR_MSG((double)rects[0].height, (double)FlWidgetHeight_MD, 1e-4, "and leaves the height alone");
 
-    // font_size lands on the run and the snapshot carries it directly; letter_spacing has no snapshot field, so
-    // it is read off the fit-sized tab's width instead. "One" has three glyphs, so two gaps.
+    // font_size goes on the run, and the snapshot carries it. letter_spacing has no snapshot field, so it is read
+    // from the fit-sized tab's width. "One" has three glyphs, so two gaps.
     TAB_GEOM_FRAME(.font_size = 10);
     UiRenderCommand texts[8];
     ASSERT_EQ_MSG(render_cmd_collect(UiRenderCmd_Text, texts, 8), 3, "one label per tab");
@@ -1744,7 +1738,7 @@ UTEST(ui_tab_bar, geometry_follows_config) {
 #undef TAB_GEOM_FRAME
 }
 
-// Tab colors come out of the shared variant prologue: Solid for the selected tab, Ghost for the rest.
+// Tab colors come from the shared variant color code: Solid for the selected tab, Ghost for the rest.
 UTEST(ui_tab_bar, colors_follow_theme) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -1755,7 +1749,7 @@ UTEST(ui_tab_bar, colors_follow_theme) {
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
     const float dt = 1.0f / 60.0f;
 
-    // Pin the theme these colors resolve through.
+    // The theme these colors resolve through.
     static const FlThemeColors base = {
         .interactive.base = { 200, 30, 40, 255 }, // selected tab fill (Solid)
         .interactive.focus = { 255, 255, 255, 255 },
@@ -1768,8 +1762,8 @@ UTEST(ui_tab_bar, colors_follow_theme) {
     };
     ui_set_theme(ctx, &base);
 
-    // Park the cursor off the strip: hover lightens both fill and label perceptually, which would pull every
-    // color below off its exact theme value.
+    // Park the cursor off the strip. Hover lightens both fill and label, which would move every color below off
+    // its exact theme value.
     ctx->input_state.mouse.x = -1000.0f;
     ctx->input_state.mouse.y = -1000.0f;
 
@@ -1802,8 +1796,8 @@ UTEST(ui_tab_bar, colors_follow_theme) {
                     "the selected label follows the theme, not a hardcoded black");
     ASSERT_TRUE_MSG(tab_color_eq(texts[1].text_color, base.text.secondary), "an unselected label is secondary text");
 
-    // Per-widget override as a named local: a compound literal inside the ui_tab_bar() macro would split on its
-    // internal commas (the preprocessor only protects parentheses, not braces).
+    // The per-widget override is a named local because a compound literal inside the ui_tab_bar() macro would
+    // split on its internal commas. The preprocessor protects parentheses but not braces.
     const FlColor I1 = { 20, 60, 200, 255 };
     const FlColor T1 = { 10, 250, 90, 255 };
     const FlThemeOverride ov = {
@@ -1816,9 +1810,9 @@ UTEST(ui_tab_bar, colors_follow_theme) {
     ASSERT_TRUE_MSG(tab_color_eq(rects[1].bg_color, base.surface.base),
                     "slots the override does not flag stay on the base theme");
 
-    // FlWidgetConfig::color is deliberately NOT forwarded as this widget's background override, unlike every
-    // other caller of fl_resolve_widget_colors: one override spans both tab states, so honouring it would paint
-    // the selected and unselected tabs the same and erase the selection cue.
+    // FlWidgetConfig::color is not forwarded as this widget's background override, unlike in every other caller
+    // of fl_resolve_widget_colors. One override covers both tab states, so using it would paint the selected and
+    // unselected tabs the same.
     TAB_COLOR_FRAME(.widget.color = { 250, 5, 250, 255 });
     ASSERT_TRUE_MSG(tab_color_eq(rects[0].bg_color, base.interactive.base),
                     "a widget color override leaves the selected tab on the theme's accent");
@@ -1827,8 +1821,8 @@ UTEST(ui_tab_bar, colors_follow_theme) {
 #undef TAB_COLOR_FRAME
 }
 
-// A checkbox and a switch driven toward the same target with the same dt share anim_toggle_toward, so their
-// check_anim_t must match every frame.
+// A checkbox and a switch moving toward the same target with the same dt share anim_toggle_toward, so their
+// check_anim_t match every frame.
 UTEST(ui_checkbox, fill_eases_like_switch) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -1844,7 +1838,7 @@ UTEST(ui_checkbox, fill_eases_like_switch) {
     const u32 cb_clay = ui_layout_id_to_clay_id(cb_id);
     const u32 sw_clay = ui_layout_id_to_clay_id(sw_id);
 
-    // No clicks needed: the fill animation reads the bound bool directly, so identical bools yield identical curves.
+    // No clicks are needed. The fill animation reads the bound bool, so identical bools give identical curves.
     bool checked = true;
     bool switched = true;
 
@@ -1885,8 +1879,8 @@ UTEST(ui_checkbox, fill_eases_like_switch) {
 #undef BOTH_FRAME
 }
 
-// Each dismissal route returns a one-shot FlDialogResult and clears the caller-owned open bool. Frame 1 opens
-// the dialog (which returns None on the opening frame by design); the dismissal lands on frame 2.
+// Each dismissal route returns a one-shot FlDialogResult and clears the caller-owned open bool. Frame 1 opens the
+// dialog, which returns None on the opening frame, and the dismissal happens on frame 2.
 UTEST(ui_message_box, result_paths) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -1909,7 +1903,7 @@ UTEST(ui_message_box, result_paths) {
         ui_update_end(ctx, dt);                                                                              \
     } while (0)
 
-    // --- OK confirms ---
+    // OK confirms.
     {
         bool open = true;
         ctx->mouse_pressed_this_frame = false;
@@ -1920,7 +1914,7 @@ UTEST(ui_message_box, result_paths) {
 
         ItemState* ok = hashmap_get(&ctx->shared->item_state, ok_clay);
         ASSERT_TRUE_MSG(ok != nullptr, "OK button registered an interactive item");
-        ok->state.hot = 1; // shortcut hover->hot propagation, like the switch case
+        ok->state.hot = 1; // skips the frames hover takes to propagate, as in the switch case
 
         ctx->mouse_pressed_this_frame = true;
         ctx->mouse_released_this_frame = true;
@@ -1929,7 +1923,7 @@ UTEST(ui_message_box, result_paths) {
         ASSERT_FALSE_MSG(open, "confirming clears the caller-owned open bool");
     }
 
-    // --- Cancel button cancels ---
+    // The Cancel button cancels.
     {
         bool open = true;
         ctx->mouse_pressed_this_frame = false;
@@ -1948,7 +1942,7 @@ UTEST(ui_message_box, result_paths) {
         ASSERT_FALSE_MSG(open, "cancelling clears the caller-owned open bool");
     }
 
-    // --- ESC cancels ---
+    // ESC cancels.
     {
         bool open = true;
         ctx->mouse_pressed_this_frame = false;
@@ -1956,8 +1950,8 @@ UTEST(ui_message_box, result_paths) {
         MB_FRAME(&open);
         ASSERT_EQ_MSG((int)result, (int)FlDialogResult_None, "opening frame returns None");
 
-        // ui_key_pressed reads the per-frame edge snapshot, normally captured by ui_input_update, which
-        // this direct-FlUiCtx fixture never runs.
+        // ui_key_pressed reads the per-frame edge snapshot. ui_input_update normally captures it, and this
+        // fixture never runs ui_input_update.
         ctx->keys_pressed_this_frame[FlKey_Escape] = true;
         MB_FRAME(&open);
         ctx->keys_pressed_this_frame[FlKey_Escape] = false;
@@ -1965,7 +1959,7 @@ UTEST(ui_message_box, result_paths) {
         ASSERT_FALSE_MSG(open, "ESC clears the caller-owned open bool");
     }
 
-    // --- ESC cancels a single-button alert too (empty cancel_label) ---
+    // ESC also cancels a single-button alert (empty cancel_label).
     {
         bool open = true;
         ctx->mouse_pressed_this_frame = false;
@@ -1975,7 +1969,7 @@ UTEST(ui_message_box, result_paths) {
         ui_update_end(ctx, dt);
         ASSERT_EQ_MSG((int)result, (int)FlDialogResult_None, "alert opening frame returns None");
 
-        ctx->keys_pressed_this_frame[FlKey_Escape] = true; // edge-snapshot field, as above
+        ctx->keys_pressed_this_frame[FlKey_Escape] = true; // the edge snapshot, as above
         ui_update_begin(ctx);
         result = ui_message_box(FL_S("Title"), FL_S("Message"), &open, .confirm_label = FL_S("OK"));
         ui_update_end(ctx, dt);
@@ -1987,8 +1981,8 @@ UTEST(ui_message_box, result_paths) {
 #undef MB_FRAME
 }
 
-// While the dialog is open the modal scope blocks input to widgets emitted outside it; closing it is the positive
-// control that shows the same click is otherwise live.
+// While the dialog is open the modal scope blocks input to widgets emitted outside it. Closing it is the control
+// that shows the same click works otherwise.
 UTEST(ui_message_box, blocks_input_behind) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -2003,8 +1997,8 @@ UTEST(ui_message_box, blocks_input_behind) {
     bool open = true;
     FlSignal bg = { 0 };
 
-    // The dialog is emitted before the background content (the documented ordering), so the opening frame already
-    // blocks the button behind it.
+    // The dialog is emitted before the background content, which is the documented order, so the opening frame
+    // already blocks the button behind it.
 #define BLOCK_FRAME()                                                                          \
     do {                                                                                       \
         ui_update_begin(ctx);                                                                  \
@@ -2028,7 +2022,7 @@ UTEST(ui_message_box, blocks_input_behind) {
     BLOCK_FRAME();
     ASSERT_FALSE_MSG(bg.clicked, "the dialog blocks input to the button behind it");
 
-    // Positive control.
+    // Control: with the dialog closed, the click reaches the button.
     open = false;
     bgi = hashmap_get(&ctx->shared->item_state, bg_clay);
     ASSERT_TRUE_MSG(bgi != nullptr, "the background button is still registered on the control frame");
@@ -2044,11 +2038,11 @@ UTEST(ui_message_box, blocks_input_behind) {
 #undef BLOCK_FRAME
 }
 
-// Exclusive single-choice selection and index clamping, driven through the real headless fl_app loop so selection
-// rides the genuine hover -> hot -> click path rather than poked state.
+// Exclusive single-choice selection and index clamping. The case runs the headless fl_app loop, so selection goes
+// through the real hover -> hot -> click path.
 typedef struct RadioPressState {
     int choice;
-    FlUiCtx* ctx; // captured during the tick so we can read laid-out option geometry afterwards
+    FlUiCtx* ctx; // captured during the tick so the laid-out option geometry can be read afterwards
     bool last_changed;
 } RadioPressState;
 
@@ -2061,8 +2055,8 @@ static void radio_press_frame(void* user_data) {
     }
 }
 
-// The id mirrors ui_radio_group_impl: instance id = the selected_index pointer, folded with the option index via
-// ui_item_id_seed.
+// The id is built as in ui_radio_group_impl: instance id = the selected_index pointer, folded with the option
+// index by ui_item_id_seed.
 static bool radio_option_center(RadioPressState* st, int index, i32* out_cx, i32* out_cy) {
     u32 opt_id = ui_layout_id_to_clay_id(
         (FlLayoutId) { .name = FL_S("radio"), .id = ui_item_id_seed((u32)(uintptr_t)&st->choice, (u32)index) });
@@ -2093,7 +2087,7 @@ UTEST(ui_radio_group, exclusive_selection_and_clamping) {
     fl_app_tick(app, &st, radio_press_frame);
     ASSERT_EQ_MSG(st.choice, 0, "out-of-range selected_index clamps to 0");
 
-    // Hover option 2 for a couple of ticks so hot state propagates (next_hot_id -> hot_id -> state.hot).
+    // Hover option 2 for two ticks so the hot state propagates (next_hot_id -> hot_id -> state.hot).
     i32 cx = 0, cy = 0;
     ASSERT_TRUE_MSG(radio_option_center(&st, 2, &cx, &cy), "option 2 was not laid out");
     fl_app_inject_mouse_move(app, cx, cy);
@@ -2120,7 +2114,7 @@ UTEST(ui_radio_group, exclusive_selection_and_clamping) {
     ASSERT_EQ_MSG(st.choice, 0, "selection moved to option 0 (exclusive — option 2 cleared)");
     ASSERT_TRUE_MSG(st.last_changed, "moving the selection reports a change");
 
-    // Re-select the option that is already current.
+    // Select the option that is already current.
     fl_app_inject_mouse_button(app, FlMouseButton_Left, true);
     fl_app_tick(app, &st, radio_press_frame);
     fl_app_inject_mouse_button(app, FlMouseButton_Left, false);
@@ -2131,11 +2125,11 @@ UTEST(ui_radio_group, exclusive_selection_and_clamping) {
     fl_app_destroy(app);
 }
 
-// Menu cases drive the real headless fl_app loop so the menu rides the genuine right-click -> hover -> hot -> click
-// path rather than poked state.
+// The menu cases run the headless fl_app loop, so the menu goes through the real right-click -> hover -> hot ->
+// click path.
 typedef struct MenuTestState {
     FlUiCtx* ctx;
-    bool menu_open; // ui_menu_is_open snapshot AFTER the menu block (post-dismissal) on the last tick
+    bool menu_open; // ui_menu_is_open read after the menu block on the last tick, so after any dismissal
     bool cut_clicked;
     bool stay_clicked;
     bool disabled_clicked;
@@ -2150,7 +2144,7 @@ static void menu_frame(void* user_data) {
     MenuTestState* st = (MenuTestState*)user_data;
     st->ctx = ui_get_ctx();
 
-    // The region is the top-level element; Clay grows it to fill the window.
+    // The region is the top-level element, and Clay grows it to fill the window.
     ui_menu_region(k_menu_region_id, k_menu_id) {}
 
     ui_menu(k_menu_id, .min_width = 200) {
@@ -2166,11 +2160,11 @@ static void menu_frame(void* user_data) {
         }
     }
 
-    // Snapshot AFTER the block so an item-close / dismissal that fires inside ui_menu_end is reflected this tick.
+    // Read after the block, so an item close or dismissal inside ui_menu_end shows on this tick.
     st->menu_open = ui_menu_is_open_impl(k_menu_id);
 }
 
-// Mirrors menu_emit_row's id derivation, which folds the level into the seed so rows at different levels never
+// Same id derivation as menu_emit_row, which folds the level into the seed so rows at different levels never
 // collide (ui_menu_row_id_seed).
 static bool menu_item_center(MenuTestState* st, FlString label, int level, int index, i32* out_cx, i32* out_cy) {
     u32 id = ui_layout_id_to_clay_id((FlLayoutId) { .name = label, .id = ui_menu_row_id_seed(level, index) });
@@ -2186,9 +2180,9 @@ static bool menu_item_center(MenuTestState* st, FlString label, int level, int i
 static void menu_open_at(FlApp* app, MenuTestState* st, i32 x, i32 y) {
     fl_app_inject_mouse_move(app, x, y);
     fl_app_tick(app, st, menu_frame);
-    fl_app_tick(app, st, menu_frame); // let hover settle into hot state on the region
+    fl_app_tick(app, st, menu_frame); // hover settles into hot state on the region
     fl_app_inject_mouse_button(app, FlMouseButton_Right, true);
-    fl_app_tick(app, st, menu_frame); // right-press edge opens the menu at the cursor
+    fl_app_tick(app, st, menu_frame); // the right-press edge opens the menu at the cursor
     fl_app_inject_mouse_button(app, FlMouseButton_Right, false);
     fl_app_tick(app, st, menu_frame);
 }
@@ -2204,8 +2198,8 @@ static void menu_click_at(FlApp* app, MenuTestState* st, i32 x, i32 y) {
     fl_app_tick(app, st, menu_frame);
 }
 
-// The press tick carries the action press edge into the frame body (begin() reads it and moves/activates the
-// highlight); the release tick clears it. Mouse stays put so keyboard owns the highlight.
+// The press tick carries the action press edge into the frame body, where begin() reads it and moves or activates
+// the highlight. The release tick clears it. The mouse stays put, so the keyboard owns the highlight.
 static void menu_key_tap(FlApp* app, MenuTestState* st, FlKey key) {
     fl_app_inject_key(app, key, true);
     fl_app_tick(app, st, menu_frame);
@@ -2213,8 +2207,8 @@ static void menu_key_tap(FlApp* app, MenuTestState* st, FlKey key) {
     fl_app_tick(app, st, menu_frame);
 }
 
-// Settles hover into a hovered signal: the move feeds next_hot_id one frame, hot_id the next, state.hot the frame
-// after. Returns false if the item was not laid out.
+// Settles hover into a hovered signal: the move feeds next_hot_id one frame, hot_id the next, and state.hot the
+// frame after. Returns false if the item was not laid out.
 static bool menu_hover_item(FlApp* app, MenuTestState* st, FlString label, int level, int index) {
     i32 cx = 0, cy = 0;
     if (!menu_item_center(st, label, level, index, &cx, &cy)) {
@@ -2230,7 +2224,7 @@ static bool menu_hover_item(FlApp* app, MenuTestState* st, FlString label, int l
 UTEST(ui_menu, context_menu_tracer) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
-    // A roomy window so the menu opens fully downward (no flip/clamp) - geometry stays simple for the click paths.
+    // A roomy window, so the menu opens fully downward with no flip or clamp.
     FlAppSettings settings = { .window_title = FL_S("menu"), .width = 800, .height = 600, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
@@ -2248,7 +2242,7 @@ UTEST(ui_menu, context_menu_tracer) {
     ASSERT_TRUE_MSG(menu_item_center(&st, FL_S("Cut"), 0, 0, &cx, &cy), "Cut item was not laid out");
 
     // Three ticks let the hover settle into a hovered signal during item emission: the move feeds next_hot_id one
-    // frame, hot_id picks it up the next, and state.hot (read while the item is emitted) lands the frame after that.
+    // frame, hot_id picks it up the next, and state.hot (read while the item is emitted) is set the frame after.
     i32 copyx = 0, copyy = 0;
     ASSERT_TRUE_MSG(menu_item_center(&st, FL_S("Copy"), 0, 1, &copyx, &copyy), "Copy item was not laid out");
     fl_app_inject_mouse_move(app, copyx, copyy);
@@ -2264,7 +2258,7 @@ UTEST(ui_menu, context_menu_tracer) {
     ASSERT_EQ_MSG((int)st.ctx->shared->menu.levels[0].highlight_index, 0,
                   "moving to Cut moves the highlight to index 0");
 
-    // Hovering the disabled Paste item still lights it - availability is the greyed label's job, not the highlight's.
+    // Hovering the disabled Paste item still highlights it. The greyed label shows that it is unavailable.
     ASSERT_TRUE_MSG(menu_hover_item(app, &st, FL_S("Paste"), 0, 2), "Paste item was not laid out");
     ASSERT_EQ_MSG((int)st.ctx->shared->menu.levels[0].highlight_index, 2,
                   "hovering a disabled row moves the highlight onto it");
@@ -2307,8 +2301,9 @@ UTEST(ui_menu, context_menu_tracer) {
     fl_app_destroy(app);
 }
 
-// Keyboard as the second driver of the per-level highlight, arbitrated last-input-wins against hover. Gamepad A/B
-// share CONFIRM/CANCEL with Enter/ESC, so these paths exercise the pad plumbing too (headless has no pad injection).
+// The keyboard also drives the per-level highlight, and the most recent input (keyboard or hover) owns it.
+// Gamepad A and B share CONFIRM and CANCEL with Enter and ESC, so these paths cover the pad actions too. Headless
+// has no pad injection.
 UTEST(ui_menu, keyboard_nav) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -2349,7 +2344,7 @@ UTEST(ui_menu, keyboard_nav) {
     ASSERT_EQ_MSG((int)st.ctx->shared->menu.levels[0].highlight_index, 1,
                   "keyboard reclaims the highlight from a stationary hover (Stay -> Copy)");
 
-    // Copy has no handler in menu_frame, so move to Cut (which sets cut_clicked) before activating.
+    // Copy has no handler in menu_frame, so move to Cut, which sets cut_clicked, before activating.
     menu_key_tap(app, &st, FlKey_Up);
     ASSERT_EQ_MSG((int)st.ctx->shared->menu.levels[0].highlight_index, 0, "Up: Copy -> Cut before activate");
     fl_app_inject_key(app, FlKey_Enter, true);
@@ -2370,30 +2365,30 @@ UTEST(ui_menu, keyboard_nav) {
     fl_app_destroy(app);
 }
 
-// inject_text queues the character into the headless backend; the next tick's pump drains it into
-// text_input_this_frame and the menu's begin() folds it into the type-ahead prefix. The mouse stays put across the
-// tick so type-ahead owns the shared highlight (last-input-wins).
+// inject_text queues the character in the headless backend. The next tick's pump drains it into
+// text_input_this_frame and the menu's begin() adds it to the type-ahead prefix. The mouse stays put across the
+// tick, so type-ahead keeps the shared highlight.
 static void menu_type_char(FlApp* app, MenuTestState* st, FlString ch) {
     fl_app_inject_text(app, ch);
     fl_app_tick(app, st, menu_frame);
 }
 
-// Forces the accumulated type-ahead prefix stale so the next character starts fresh, without depending on the
-// headless frame delta to cross the timeout: any positive input-clock time is then "past" it.
+// Makes the accumulated type-ahead prefix stale so the next character starts a new one, without relying on the
+// headless frame delta to cross the timeout. Any positive input-clock time is then past it.
 static void menu_typeahead_reset(MenuTestState* st) {
     st->ctx->shared->menu.typeahead.deadline = 0.0;
 }
 
-// Ticks with no input so the input clock advances - lets the type-ahead timeout elapse in real time (with a pinned
-// dt) rather than via the whitebox reset above.
+// Ticks with no input so the input clock advances and the type-ahead timeout elapses in real time, with a pinned
+// dt, without the reset above.
 static void menu_idle_ticks(FlApp* app, MenuTestState* st, int n) {
     for (int i = 0; i < n; i++) {
         fl_app_tick(app, st, menu_frame);
     }
 }
 
-// The menu's type-ahead prefix is bounded at UI_MENU_TYPEAHEAD_CAP bytes: two rows sharing their first 24 bytes both
-// match a longer typed prefix, so the cursor row stays put.
+// The menu's type-ahead prefix holds at most UI_MENU_TYPEAHEAD_CAP bytes. Two rows that share their first 24
+// bytes both match a longer typed prefix, so the cursor row stays where it is.
 UTEST(ui_menu, type_ahead_prefix_cap) {
     const char* alphabet = "abcdefghijklmnopqrstuvwxyzab";
     FlString labels[2]
@@ -2405,7 +2400,8 @@ UTEST(ui_menu, type_ahead_prefix_cap) {
     ASSERT_EQ_MSG((int)state.len, UI_MENU_TYPEAHEAD_CAP, "prefix length is bounded by the menu cap");
 }
 
-// The trail highlight truncates each channel of the float blend; a rounding or reordered lerp shifts the result.
+// The trail highlight truncates each channel of the float blend. Rounding, or a lerp in another order, changes
+// the result.
 UTEST(ui_menu, blend_truncates_channels) {
     FlColor a = { 5, 5, 5, 255 };
     FlColor b = { 0, 0, 0, 255 };
@@ -2414,15 +2410,15 @@ UTEST(ui_menu, blend_truncates_channels) {
     ASSERT_EQ_MSG((int)c.a, 255, "an equal alpha stays put");
 }
 
-// A printable character jumps the deepest level's highlight to the next item whose label starts with it - the third
-// driver of the per-level highlight, alongside hover and the arrow keys.
+// A printable character moves the deepest level's highlight to the next item whose label starts with it. This is
+// the third input that drives the per-level highlight, with hover and the arrow keys.
 UTEST(ui_menu, type_ahead) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
     FlAppSettings settings = { .window_title = FL_S("menu_type"), .width = 800, .height = 600, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    fl_app_set_test_dt(app, 0.1f); // pinned 0.1s/tick so the ~1.0s type-ahead timeout below is reproducible
+    fl_app_set_test_dt(app, 0.1f); // 0.1s per tick, so the type-ahead timeout of about 1.0s below is reproducible
 
     MenuTestState st = { 0 };
     fl_app_tick(app, &st, menu_frame);
@@ -2454,25 +2450,25 @@ UTEST(ui_menu, type_ahead) {
     menu_type_char(app, &st, FL_S("p"));
     ASSERT_EQ_MSG((int)m->levels[0].highlight_index, 3, "disabled Paste is not a type-ahead target");
 
-    // From Stay, hover Cut; then 'c' cycles to Copy though the pointer still rests on Cut.
+    // From Stay, hover Cut. Then 'c' cycles to Copy although the pointer is still on Cut.
     ASSERT_TRUE_MSG(menu_hover_item(app, &st, FL_S("Cut"), 0, 0), "Cut item was not laid out for hover");
     ASSERT_EQ_MSG((int)m->levels[0].highlight_index, 0, "hover reclaims the highlight from type-ahead (Stay -> Cut)");
     menu_typeahead_reset(&st);
     menu_type_char(app, &st, FL_S("c"));
     ASSERT_EQ_MSG((int)m->levels[0].highlight_index, 1, "type reclaims from a stationary hover (Cut -> Copy)");
 
-    // Timeout stale-out with real elapsed time (not the whitebox reset): after the idle, 'u' is a fresh no-match
-    // rather than an accumulated "cu" (which would narrow to Cut).
+    // The timeout with real elapsed time: after the idle, 'u' starts a new prefix that matches nothing. An
+    // accumulated "cu" would narrow to Cut.
     menu_click_at(app, &st, 5, 5);
     menu_open_at(app, &st, 120, 120);
     menu_type_char(app, &st, FL_S("c"));
     ASSERT_EQ_MSG((int)m->levels[0].highlight_index, 1, "timeout setup: 'c' Cut -> Copy");
-    menu_idle_ticks(app, &st, 12); // 12 * 0.1s = 1.2s > TYPE_AHEAD_TIMEOUT - the prefix goes stale
+    menu_idle_ticks(app, &st, 12); // 12 * 0.1s = 1.2s > TYPE_AHEAD_TIMEOUT, so the prefix goes stale
     menu_type_char(app, &st, FL_S("u"));
     ASSERT_EQ_MSG((int)m->levels[0].highlight_index, 1, "after a >1s pause 'u' is a fresh no-match, not 'cu'");
 
-    // Multi-byte prefix WITHOUT a pause: 'c' then 'u' accumulates "cu", which only Cut matches - the second byte
-    // narrows rather than cycling.
+    // Two characters without a pause: 'c' then 'u' accumulates "cu", which only Cut matches. The second byte
+    // narrows the match and does not cycle.
     menu_click_at(app, &st, 5, 5);
     ASSERT_FALSE_MSG(st.menu_open, "click-outside closed the menu before the multi-char case");
     menu_open_at(app, &st, 120, 120);
@@ -2485,8 +2481,8 @@ UTEST(ui_menu, type_ahead) {
     fl_app_destroy(app);
 }
 
-// Submenus extend the open path to depth > 1 under the same focus scope. Driven with a pinned delta-time so the
-// hover-dwell and branch-switch grace timers are reproducible.
+// Submenus extend the open path past depth 1 under the same focus scope. The delta time is pinned so the hover
+// dwell and branch-switch grace timers are reproducible.
 //
 // Submenu tree (level.index):
 //   L0: Item0(0)  Sub(1, submenu)  Item2(2)
@@ -2509,7 +2505,7 @@ static void submenu_frame(void* user_data) {
             ui_menu_item(FL_S("S1"));
         }
         ui_menu_item(FL_S("Item2"));
-        ui_submenu(FL_S("DisSub"), .disabled = true) { // index 3: a disabled submenu must never open
+        ui_submenu(FL_S("DisSub"), .disabled = true) { // index 3: a disabled submenu never opens
             ui_menu_item(FL_S("X"));
         }
     }
@@ -2523,8 +2519,7 @@ static void s3_ticks(FlApp* app, MenuTestState* st, int n) {
     }
 }
 
-// (100,100) is the top-left anchor, over Item0 - not over the Sub row - so opening never accidentally dwells a
-// submenu.
+// (100,100) is the top-left anchor, over Item0 and not over the Sub row, so opening does not dwell on a submenu.
 static void s3_open(FlApp* app, MenuTestState* st) {
     fl_app_inject_mouse_move(app, 100, 100);
     s3_ticks(app, st, 2);
@@ -2534,7 +2529,7 @@ static void s3_open(FlApp* app, MenuTestState* st) {
     s3_ticks(app, st, 1);
 }
 
-// Click outside the chain to close it fully (sticky empty-space would NOT close, so use an actual press).
+// A click outside the chain closes it fully. Moving into empty space would not, so this uses a press.
 static void s3_close(FlApp* app, MenuTestState* st) {
     fl_app_inject_mouse_move(app, 5, 5);
     s3_ticks(app, st, 2);
@@ -2559,11 +2554,12 @@ static void s3_type_char(FlApp* app, MenuTestState* st, FlString ch) {
 UTEST(ui_menu, submenu_open_path) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
-    // 800x600 so submenus open rightward with room (no flip): L0 at x=100 w=200, L1 at x=300, L2 at x=500.
+    // 800x600 leaves room for submenus to open rightward without flipping: L0 at x=100 w=200, L1 at x=300, L2 at
+    // x=500.
     FlAppSettings settings = { .window_title = FL_S("submenu"), .width = 800, .height = 600, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    fl_app_set_test_dt(app, 0.1f); // pinned 0.1s/tick so the dwell (~0.3s) and grace (~0.25s) timers are reproducible
+    fl_app_set_test_dt(app, 0.1f); // 0.1s per tick keeps the dwell (~0.3s) and grace (~0.25s) timers reproducible
 
     MenuTestState st = { 0 };
     fl_app_tick(app, &st, submenu_frame);
@@ -2571,7 +2567,7 @@ UTEST(ui_menu, submenu_open_path) {
 
     UiMenuState* m = &st.ctx->shared->menu;
 
-    // --- Keyboard descend / ascend, including depth 3 ---
+    // Keyboard descend and ascend, including depth 3.
     s3_open(app, &st);
     ASSERT_TRUE_MSG(st.menu_open, "right-click opened the menu");
     ASSERT_EQ_MSG((int)m->depth, 1, "fresh menu is a single level");
@@ -2593,8 +2589,8 @@ UTEST(ui_menu, submenu_open_path) {
     s3_key_tap(app, &st, FlKey_Left);
     ASSERT_EQ_MSG((int)m->depth, 1, "Left ascends back to the root");
 
-    // --- ESC pops one level, closing only at the root ---
-    s3_close(app, &st); // reopen fresh so the highlight resets to the first row
+    // ESC pops one level and closes only at the root.
+    s3_close(app, &st); // reopen so the highlight is back on the first row
     s3_open(app, &st);
     s3_key_tap(app, &st, FlKey_Down);
     s3_key_tap(app, &st, FlKey_Right);
@@ -2605,14 +2601,14 @@ UTEST(ui_menu, submenu_open_path) {
     s3_key_tap(app, &st, FlKey_Escape);
     ASSERT_FALSE_MSG(st.menu_open, "ESC at the root closes the chain");
 
-    // --- Cold-open hover-dwell: sub-threshold stays closed, crossing ~0.3s opens ---
+    // Hover dwell from closed: under the threshold the submenu stays closed, and past about 0.3s it opens.
     s3_open(app, &st);
     i32 sx = 0, sy = 0;
     ASSERT_TRUE_MSG(menu_item_center(&st, FL_S("Sub"), 0, 1, &sx, &sy), "Sub row was not laid out");
     fl_app_inject_mouse_move(app, sx, sy);
-    s3_ticks(app, &st, 2); // hover settles onto Sub; accumulated dwell <= ~0.1s
+    s3_ticks(app, &st, 2); // hover settles onto Sub, with at most about 0.1s of dwell
     ASSERT_EQ_MSG((int)m->depth, 1, "a brief hover (< dwell threshold) does not open the submenu");
-    s3_ticks(app, &st, 6); // keep resting on Sub → cross the ~0.3s dwell
+    s3_ticks(app, &st, 6); // stay on Sub past the dwell of about 0.3s
     ASSERT_EQ_MSG((int)m->depth, 2, "resting past the dwell threshold opens the submenu");
     ASSERT_EQ_MSG((int)m->levels[0].expanded_child_id,
                   (int)ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("Sub"), .id = 1 }),
@@ -2621,7 +2617,7 @@ UTEST(ui_menu, submenu_open_path) {
     ASSERT_EQ_MSG((int)m->levels[0].highlight_index, 1, "the parent level keeps a trail highlight on the Sub row");
     ASSERT_EQ_MSG((int)m->levels[1].highlight_index, 0, "the deepest level has its own active highlight (S0)");
 
-    // --- Diagonal INTO the open submenu survives (no collapse) ---
+    // A diagonal move into the open submenu keeps it open.
     i32 s0x = 0, s0y = 0;
     ASSERT_TRUE_MSG(menu_item_center(&st, FL_S("S0"), 1, 0, &s0x, &s0y), "S0 (level 1) was not laid out");
     fl_app_inject_mouse_move(app, s0x, s0y);
@@ -2629,28 +2625,28 @@ UTEST(ui_menu, submenu_open_path) {
     ASSERT_EQ_MSG((int)m->depth, 2, "moving into the open submenu keeps it open");
     ASSERT_EQ_MSG((int)m->levels[1].highlight_index, 0, "hover drives the deepest-level highlight onto S0");
 
-    // --- Branch-switch grace: a stationary sibling collapses the deeper path only after ~0.25s ---
+    // Branch-switch grace: resting on a sibling collapses the deeper path only after about 0.25s.
     i32 i0x = 0, i0y = 0;
     ASSERT_TRUE_MSG(menu_item_center(&st, FL_S("Item0"), 0, 0, &i0x, &i0y), "Item0 was not laid out");
     fl_app_inject_mouse_move(app, i0x, i0y);
-    s3_ticks(app, &st, 2); // grace not yet elapsed (<= ~0.1s)
+    s3_ticks(app, &st, 2); // at most about 0.1s, so the grace has not elapsed
     ASSERT_EQ_MSG((int)m->depth, 2, "a sibling hover within the grace window keeps the deeper path open");
-    s3_ticks(app, &st, 4); // cross the ~0.25s grace
+    s3_ticks(app, &st, 4); // past the grace of about 0.25s
     ASSERT_EQ_MSG((int)m->depth, 1, "a sibling-leaf hover past the grace collapses the deeper path");
 
-    // --- Early-cancel: moving AWAY from the open submenu collapses immediately (before the grace elapses) ---
+    // Moving away from the open submenu collapses it at once, before the grace elapses.
     fl_app_inject_mouse_move(app, sx, sy);
     s3_ticks(app, &st, 8);
     ASSERT_EQ_MSG((int)m->depth, 2, "re-opened Sub for the early-cancel case");
-    fl_app_inject_mouse_move(app, i0x, i0y); // land on the Item0 sibling (approach from the right, not 'away')
+    fl_app_inject_mouse_move(app, i0x, i0y); // onto the Item0 sibling from the right, which is not a move away
     s3_ticks(app, &st, 1);
     ASSERT_EQ_MSG((int)m->depth, 2, "just landed on the sibling — grace has not elapsed yet");
-    fl_app_inject_mouse_move(app, i0x - 60, i0y); // a leftward move = away from the right-opened submenu
+    fl_app_inject_mouse_move(app, i0x - 60, i0y); // leftward is away from the submenu, which opened to the right
     s3_ticks(app, &st, 1);
     ASSERT_EQ_MSG((int)m->depth, 1, "moving away from the open submenu cancels the grace and collapses immediately");
 
-    // --- Click opens a submenu instantly (no dwell) ---
-    // The short dt keeps the dwell timer far from its threshold, so the open is attributable to the click.
+    // A click opens a submenu at once, with no dwell. The short dt keeps the dwell timer far from its threshold,
+    // so the open can only come from the click.
     fl_app_set_test_dt(app, 0.02f);
     s3_close(app, &st);
     s3_open(app, &st);
@@ -2664,17 +2660,17 @@ UTEST(ui_menu, submenu_open_path) {
     s3_ticks(app, &st, 1);
     ASSERT_EQ_MSG((int)m->depth, 2, "clicking a submenu parent opens it instantly");
 
-    // --- A disabled submenu never opens, even resting well past the dwell threshold ---
+    // A disabled submenu never opens, even after resting well past the dwell threshold.
     fl_app_set_test_dt(app, 0.1f);
     s3_close(app, &st);
     s3_open(app, &st);
     i32 dsx = 0, dsy = 0;
     ASSERT_TRUE_MSG(menu_item_center(&st, FL_S("DisSub"), 0, 3, &dsx, &dsy), "DisSub row was not laid out");
     fl_app_inject_mouse_move(app, dsx, dsy);
-    s3_ticks(app, &st, 8); // ~0.8s, well past the ~0.3s dwell
+    s3_ticks(app, &st, 8); // about 0.8s, well past the dwell of about 0.3s
     ASSERT_EQ_MSG((int)m->depth, 1, "a disabled submenu never opens on hover-dwell");
 
-    // --- Sticky: moving the cursor into empty space keeps the chain open (only click-outside / ESC / action close) ---
+    // Moving the cursor into empty space keeps the chain open. Only a click outside, ESC or an action closes it.
     fl_app_inject_mouse_move(app, 600, 300); // empty space, clear of every menu rect
     s3_ticks(app, &st, 2);
     ASSERT_TRUE_MSG(st.menu_open, "moving into empty space does not close the chain (sticky)");
@@ -2685,7 +2681,7 @@ UTEST(ui_menu, submenu_open_path) {
     fl_app_destroy(app);
 }
 
-// Type-ahead operates on the deepest open level only, not the whole open path.
+// Type-ahead applies to the deepest open level only.
 UTEST(ui_menu, type_ahead_submenu) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -2707,8 +2703,8 @@ UTEST(ui_menu, type_ahead_submenu) {
     ASSERT_EQ_MSG((int)m->depth, 2, "the submenu is open (depth 2)");
     ASSERT_EQ_MSG((int)m->levels[1].highlight_index, 0, "the child level highlights its first item (S0)");
 
-    // S0, Sub2, S1 all begin with 'S', so typing 's' at the deepest level cycles among them (a submenu parent is a
-    // navigable type-ahead target too).
+    // S0, Sub2 and S1 all begin with 'S', so typing 's' at the deepest level cycles among them. A submenu parent
+    // is a type-ahead target too.
     s3_type_char(app, &st, FL_S("s"));
     ASSERT_EQ_MSG((int)m->levels[1].highlight_index, 1, "type 's' at L1: S0 -> Sub2");
     s3_type_char(app, &st, FL_S("s"));
@@ -2723,12 +2719,12 @@ UTEST(ui_menu, type_ahead_submenu) {
     fl_app_destroy(app);
 }
 
-// A menu row's id folds its build level in alongside its in-level index (ui_menu_row_id_seed), so a parent-level row
-// and one of its open submenu's rows that share BOTH a label and an in-level index still resolve to distinct ids.
+// A menu row's id includes its build level as well as its index in the level (ui_menu_row_id_seed), so a row in
+// the parent level and a row in its open submenu that share both a label and an index still get distinct ids.
 //
 // Layout (level.index):
 //   L0: Branch(0, submenu)  Open(1)
-//   L1 (under Branch): First(0)  Open(1)   <- same label "Open" AND same in-level index (1) as the L0 row
+//   L1 (under Branch): First(0)  Open(1)   <- same label "Open" and same index (1) as the L0 row
 typedef struct MenuCollideState {
     FlUiCtx* ctx;
     bool menu_open;
@@ -2792,7 +2788,7 @@ static void collide_key_tap(FlApp* app, MenuCollideState* st, FlKey key) {
 
 static void collide_click_at(FlApp* app, MenuCollideState* st, i32 x, i32 y) {
     fl_app_inject_mouse_move(app, x, y);
-    collide_ticks(app, st, 3); // settle hover -> hot on the target row
+    collide_ticks(app, st, 3); // hover settles into hot on the target row
     fl_app_inject_mouse_button(app, FlMouseButton_Left, true);
     collide_ticks(app, st, 1);
     fl_app_inject_mouse_button(app, FlMouseButton_Left, false);
@@ -2805,7 +2801,7 @@ UTEST(ui_menu, submenu_id_collision) {
     FlAppSettings settings = { .window_title = FL_S("menu_collide"), .width = 800, .height = 600, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    fl_app_set_test_dt(app, 0.02f); // short dt so a stray hover never dwells a submenu open on its own
+    fl_app_set_test_dt(app, 0.02f); // a short dt, so a stray hover does not dwell a submenu open
 
     MenuCollideState st = { 0 };
     fl_app_tick(app, &st, collide_frame);
@@ -2831,7 +2827,7 @@ UTEST(ui_menu, submenu_id_collision) {
     ASSERT_TRUE_MSG(collide_center(&st, FL_S("Open"), 1, 1, &sox, &soy), "submenu-level Open row was not laid out");
     ASSERT_TRUE_MSG(sox != pox || soy != poy, "the two Open rows occupy different screen positions");
 
-    // With colliding ids the shared row state would set the parent level's highlight too.
+    // With colliding ids, the shared row state would set the parent level's highlight too.
     fl_app_inject_mouse_move(app, sox, soy);
     collide_ticks(app, &st, 3);
     ASSERT_EQ_MSG((int)m->levels[1].highlight_index, 1, "hovering the submenu Open highlights it at level 1");
@@ -2845,10 +2841,10 @@ UTEST(ui_menu, submenu_id_collision) {
     fl_app_destroy(app);
 }
 
-// The non-stateful item kinds: a section header, a separator, the disabled flag, and right-aligned shortcut text.
-// Header / separator / disabled rows lay out yet are skipped by keyboard navigation and never activate, and a click
-// on a header or separator stays inside the menu (they are part of the surface, not click-outside). Shortcut text is
-// display-only - no key dispatch is wired anywhere.
+// The item kinds without state: a section header, a separator, the disabled flag and right-aligned shortcut text.
+// Header, separator and disabled rows are laid out but skipped by keyboard navigation, and they never activate.
+// A click on a header or separator stays inside the menu, because they are part of its surface. Shortcut text is
+// display only, and no key dispatch is connected to it.
 //
 // Menu layout (per-level index in parens; navigable rows are the action items only):
 //   0 header "Edit"            (non-nav)
@@ -2943,11 +2939,11 @@ UTEST(ui_menu, static_item_kinds) {
     s4a_key_tap(app, &st, FlKey_Up);
     ASSERT_EQ_MSG((int)m->levels[0].highlight_index, 5, "Up wraps Cut -> Delete (past the header)");
 
-    // 'e' matches only the non-navigable header "Edit". The separator records a zero-length label, so it is never a
-    // match target.
+    // 'e' matches only the header "Edit", which is not navigable. The separator records a zero-length label, so it
+    // never matches.
     s4a_type_char(app, &st, FL_S("e"));
     ASSERT_EQ_MSG((int)m->levels[0].highlight_index, 5, "type 'e' does not land on the non-navigable header");
-    menu_typeahead_reset(&st); // 'c' is an independent jump, not an accumulated "ec" prefix
+    menu_typeahead_reset(&st); // so 'c' starts a new prefix and does not extend "e" to "ec"
     s4a_type_char(app, &st, FL_S("c"));
     ASSERT_EQ_MSG((int)m->levels[0].highlight_index, 1, "type 'c' finds Cut, scanning past the skipped header");
 
@@ -2963,7 +2959,7 @@ UTEST(ui_menu, static_item_kinds) {
     ASSERT_FALSE_MSG(st.disabled_clicked, "a disabled item never reports .clicked");
     ASSERT_TRUE_MSG(st.menu_open, "clicking a disabled item leaves the menu open");
 
-    // Hand control to the keyboard (one Down), then walk to Delete (index 5) deterministically before confirming.
+    // One Down gives the keyboard the highlight. Then walk to Delete (index 5) before confirming.
     s4a_key_tap(app, &st, FlKey_Down);
     while (m->levels[0].highlight_index != 5) {
         s4a_key_tap(app, &st, FlKey_Down);
@@ -2975,11 +2971,10 @@ UTEST(ui_menu, static_item_kinds) {
     fl_app_destroy(app);
 }
 
-// The stateful leaf kinds and their keep-open behavior, plus a confirmation that arbitrary custom content composes
-// between items.
+// The leaf kinds with state and their keep-open behavior, and custom content placed between items.
 typedef struct MenuStatefulState {
     FlUiCtx* ctx;
-    bool menu_open; // ui_menu_is_open snapshot AFTER the menu block on the last tick
+    bool menu_open; // ui_menu_is_open read after the menu block on the last tick
     bool chk;
     bool chk_close;
     i32 radio_sel;
@@ -3002,7 +2997,7 @@ static void menu_stateful_frame(void* user_data) {
         ui_menu_radio(FL_S("R"), &st->radio_sel, 0);                                              // 2
         ui_menu_radio(FL_S("R"), &st->radio_sel, 1);                                              // 3
         ui_menu_radio(FL_S("R"), &st->radio_sel, 2);                                              // 4
-        // Custom content between items: a plain button, no menu API.
+        // Custom content between items: a plain button that uses no menu API.
         if (ui_button(FL_S("Custom")).clicked) {
             st->custom_hit = true;
         }
@@ -3011,7 +3006,7 @@ static void menu_stateful_frame(void* user_data) {
     st->menu_open = ui_menu_is_open_impl(k_menu_sf_id);
 }
 
-// ui_menu_item and ui_button derive their ids the same way - name + index, index 0 for a button.
+// ui_menu_item and ui_button derive their ids the same way, from name + index, with index 0 for a button.
 static bool menu_sf_center(MenuStatefulState* st, FlString label, int index, i32* out_cx, i32* out_cy) {
     u32 id = ui_layout_id_to_clay_id((FlLayoutId) { .name = label, .id = index });
     ItemState* item = hashmap_get(&st->ctx->shared->item_state, id);
@@ -3097,8 +3092,8 @@ UTEST(ui_menu, stateful_item_kinds) {
     fl_app_destroy(app);
 }
 
-// The menu-bar shell reuses the menu core's builder, highlight and open-path while supplying its own open trigger:
-// a click, not a hover-dwell.
+// The menu bar reuses the menu core's builder, highlight and open path, and has its own open trigger: a click
+// where a context menu uses hover dwell.
 typedef struct MenuBarState {
     FlUiCtx* ctx;
     bool open_clicked;
@@ -3127,8 +3122,8 @@ static void menubar_frame(void* user_data) {
     }
 }
 
-// Mirrors menu_emit_row's level-folded id derivation. Tops are level-0 items (File=0, Edit=1, View=2); dropdown items
-// are level-1 items indexed within their dropdown.
+// Same level-folded id derivation as menu_emit_row. Tops are level-0 items (File=0, Edit=1, View=2), and dropdown
+// items are level-1 items indexed within their dropdown.
 static bool menubar_center(FlUiCtx* ctx, FlString label, int level, int index, i32* out_cx, i32* out_cy) {
     u32 id = ui_layout_id_to_clay_id((FlLayoutId) { .name = label, .id = ui_menu_row_id_seed(level, index) });
     ItemState* item = hashmap_get(&ctx->shared->item_state, id);
@@ -3174,7 +3169,8 @@ static void mb_type_char(FlApp* app, MenuBarState* st, FlString ch) {
     fl_app_tick(app, st, menubar_frame);
 }
 
-// The bar shares the one app-wide type-ahead accumulator; staling it makes the next character an independent jump.
+// The bar shares the one app-wide type-ahead accumulator. Making it stale starts the next character as a new
+// prefix.
 static void mb_typeahead_reset(MenuBarState* st) {
     st->ctx->shared->menu.typeahead.deadline = 0.0;
 }
@@ -3231,7 +3227,7 @@ UTEST(ui_menu, menubar) {
     ASSERT_EQ_MSG((unsigned)m->levels[0].expanded_child_id, (unsigned)edit_id,
                   "Down opened Edit (the highlighted top)");
 
-    // Close the chain completely so the next open is a fresh click rather than a hover-switch onto an open neighbour.
+    // Close the chain completely, so the next open is a click and not a hover switch onto an open neighbour.
     mb_key_tap(app, &st, FlKey_Escape); // dropdown -> focused strip
     mb_key_tap(app, &st, FlKey_Escape); // focused strip -> closed
     ASSERT_FALSE_MSG(ui_menubar_is_open_impl(k_menubar_id), "a second ESC closes the focused bar entirely");
@@ -3290,8 +3286,8 @@ UTEST(ui_menu, disabled_highlight_is_dimmer) {
                     &dead),
         "the hovered disabled row painted no background");
 
-    // Stated as a fraction of the available row's travel so it holds whichever direction the theme's selected
-    // surface sits.
+    // Written as a fraction of the available row's travel, so it holds whichever direction the theme's selected
+    // surface lies in.
     float live_travel = live.r - resting;
     float dead_travel = dead.r - resting;
     ASSERT_TRUE_MSG(dead_travel != 0.0f, "a hovered disabled row is still visibly highlighted");
@@ -3316,13 +3312,13 @@ static void bar_over_content_frame(void* user_data) {
             ui_menu_item(FL_S("Undo"));
         }
     }
-    // Content drawn after the bar must NOT inherit the bar's popup scope, or a click on it reads as a click inside
-    // the menu and the chain never dismisses.
+    // Content drawn after the bar is outside the bar's popup scope. Inside it, a click on the content would count
+    // as a click inside the menu and the chain would never dismiss.
     ui_button(FL_S("under_the_bar"));
 }
 
-// The two mouse ways out of an open menu bar: a click on app content outside the menu dismisses the whole chain, and
-// re-pressing the open top releases it rather than collapsing to a focused strip that still owns input.
+// The two ways out of an open menu bar with the mouse. A click on app content outside the menu dismisses the whole
+// chain. Pressing the open top again closes the bar fully, where collapsing to a focused strip would keep input.
 UTEST(ui_menu, menubar_dismissal) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -3336,12 +3332,12 @@ UTEST(ui_menu, menubar_dismissal) {
 
     i32 fx = 0, fy = 0;
     ASSERT_TRUE_MSG(menubar_center(st.ctx, FL_S("File"), 0, 0, &fx, &fy), "File top was not laid out");
-    // Membership in the bar's popup scope is exactly what the click-outside test reads, so this asserts on the scope
-    // rather than on a click, which would need the content placed clear of the dropdown's rect.
+    // The click-outside test reads membership in the bar's popup scope, so this asserts on the scope. Asserting
+    // on a click would need the content placed clear of the dropdown's rect.
     mb_click(app, &st, fx, fy);
     ASSERT_TRUE_MSG(ui_menubar_is_open_impl(k_menubar_id), "clicking the File top opened its dropdown");
 
-    fl_app_tick(app, &st, bar_over_content_frame); // settle: the opening frame re-lays the content out
+    fl_app_tick(app, &st, bar_over_content_frame); // the opening frame lays the content out again, so let it settle
     u32 bar_scope = ui_layout_id_to_clay_id(k_menubar_id);
     ItemState* under = hashmap_get(&st.ctx->shared->item_state,
                                    ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("under_the_bar"), .id = 0 }));
@@ -3391,7 +3387,7 @@ static void bar_and_popup_menu(BarAndPopupState* st) {
         ui_menu_open_impl(k_popup_id, (FlVec2) { 100.0f, 200.0f });
     }
     ui_menu(k_popup_id, .min_width = 200) {
-        // The header takes row 0, so item i sits at row i + 1 - the same index as the bar top it used to alias.
+        // The header takes row 0, so item i is at row i + 1, an index a bar top also has.
         ui_menu_header(FL_S("Generators"));
         for (int i = 0; i < 4; i++) {
             FlString label = string_from_cstr_len(k_popup_labels[i], strlen(k_popup_labels[i]));
@@ -3429,8 +3425,9 @@ static void bp_click(FlApp* app, BarAndPopupState* st, i32 x, i32 y) {
     bp_ticks(app, st, 1);
 }
 
-// A passive menu bar keeps its tops out of the popup's level-0 rows: clicking popup row i must activate that row, not
-// the bar top that shares index i, and must leave the bar closed. The bar still opens normally once the popup is gone.
+// A passive menu bar keeps its tops out of the popup's level-0 rows. Clicking popup row i activates that row and
+// not the bar top that shares index i, and leaves the bar closed. The bar still opens normally once the popup is
+// gone.
 UTEST(ui_menu, menubar_beside_popup) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -3485,9 +3482,9 @@ static void widerow_frame(void* user_data) {
     }
 }
 
-// A menu panel takes its min_width as a MINIMUM, not as a fixed width, so a row wider than it widens the panel
-// instead of drawing its trailing shortcut outside the painted surface. Run at a HiDPI content scale so the
-// min_width -> physical multiply is covered too.
+// A menu panel treats min_width as a minimum, so a row wider than it widens the panel and its trailing shortcut
+// stays inside the painted surface. The case runs at a HiDPI content scale to cover the multiply from min_width
+// to physical px as well.
 UTEST(ui_menu, panel_fits_wide_rows) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -3514,7 +3511,7 @@ UTEST(ui_menu, panel_fits_wide_rows) {
     fl_app_tick(app, &st, widerow_frame);
     ASSERT_TRUE_MSG(ui_menubar_is_open_impl(k_menubar_id), "clicking the Edit top opened its dropdown");
 
-    // The dropdown's floating panel: ui_popup_begin keys it by (anchor label, the bar's popup scope id).
+    // The dropdown's floating panel. ui_popup_begin keys it by (anchor label, the bar's popup scope id).
     u32 bar_scope = ui_layout_id_to_clay_id(k_menubar_id);
     u32 panel_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("Edit"), .id = bar_scope });
     Clay_ElementData panel = Clay_GetElementData((Clay_ElementId) { .id = panel_id });
@@ -3545,8 +3542,8 @@ UTEST(ui_menu, panel_fits_wide_rows) {
     fl_app_destroy(app);
 }
 
-// The menu-bar surface routes type-ahead through the same deepest-level path as the context menu, within an open
-// dropdown and across the bar's own tops.
+// The menu bar routes type-ahead through the same deepest-level path as the context menu, within an open dropdown
+// and across the bar's own tops.
 UTEST(ui_menu, type_ahead_menubar) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -3566,15 +3563,15 @@ UTEST(ui_menu, type_ahead_menubar) {
     ASSERT_TRUE_MSG(ui_menubar_is_open_impl(k_menubar_id), "clicking File opened its dropdown");
     ASSERT_EQ_MSG((int)m->depth, 2, "an open dropdown is depth 2");
 
-    // Each is an independent single-letter jump, so stale the prefix between them.
+    // Each is a separate single-letter jump, so the prefix is made stale between them.
     mb_type_char(app, &st, FL_S("o"));
     ASSERT_EQ_MSG((int)m->levels[1].highlight_index, 1, "dropdown type 'o': -> Open");
     mb_typeahead_reset(&st);
     mb_type_char(app, &st, FL_S("n"));
     ASSERT_EQ_MSG((int)m->levels[1].highlight_index, 0, "dropdown type 'n': -> New");
 
-    // With the dropdown collapsed, type-ahead runs across the bar's own tops, so their labels are recorded even while
-    // their dropdowns are closed. The strip highlight was on File.
+    // With the dropdown collapsed, type-ahead runs across the bar's own tops, so their labels are recorded even
+    // while their dropdowns are closed. The strip highlight was on File.
     mb_key_tap(app, &st, FlKey_Escape);
     ASSERT_EQ_MSG((int)m->depth, 1, "ESC collapsed the dropdown to the focused strip");
     mb_typeahead_reset(&st);
@@ -3587,15 +3584,16 @@ UTEST(ui_menu, type_ahead_menubar) {
     fl_app_destroy(app);
 }
 
-// ── Menu: scrollable over-tall levels ───────────────────────────────────────────────────────────────────────────
-// A menu level whose natural item list is taller than the viewport is height-capped and scrolls: the mouse wheel over
-// the hovered level, and keyboard scroll-into-view when the highlight moves past the visible edge. The state asserted
-// is the per-level scroll_offset the panel's clip rides on; a level that fits keeps offset 0.
+// Scrollable menu levels. A level whose item list is taller than the viewport is capped in height and scrolls:
+// with the mouse wheel over the hovered level, and with keyboard scroll-into-view when the highlight moves past
+// the visible edge. The cases check the per-level scroll_offset that positions the panel's clipped content. A
+// level that fits keeps offset 0.
 
 #define MENU_TALL_COUNT 15
 
-// Distinct, stable labels for the root leaf rows and the submenu rows (FL_S_() gives the brace-init form for an array).
-// Multi-char names keep the derived widget ids clear of the submenu panel id (which is hashed from the parent row id).
+// Distinct, stable labels for the root leaf rows and the submenu rows. FL_S_() gives the brace-init form an array
+// needs. Names of several characters keep the derived widget ids clear of the submenu panel id, which is hashed
+// from the parent row id.
 static const FlString k_tall_root[MENU_TALL_COUNT] = {
     FL_S_("root_00"), FL_S_("root_01"), FL_S_("root_02"), FL_S_("root_03"), FL_S_("root_04"),
     FL_S_("root_05"), FL_S_("root_06"), FL_S_("root_07"), FL_S_("root_08"), FL_S_("root_09"),
@@ -3608,8 +3606,8 @@ static const FlString k_tall_sub[MENU_TALL_COUNT] = {
     FL_S_("sub_10"), FL_S_("sub_11"), FL_S_("sub_12"), FL_S_("sub_13"), FL_S_("sub_14"),
 };
 
-// An over-tall submenu parent ("More") at index 0, then MENU_TALL_COUNT leaf rows (indices 1..MENU_TALL_COUNT). Both
-// the root level and the submenu overflow the short test window, so each is scrollable.
+// A submenu parent ("More") at index 0, then MENU_TALL_COUNT leaf rows (indices 1..MENU_TALL_COUNT). Both the root
+// level and the submenu overflow the short test window, so each scrolls.
 static void menu_tall_frame(void* user_data) {
     MenuTestState* st = (MenuTestState*)user_data;
     st->ctx = ui_get_ctx();
@@ -3630,7 +3628,7 @@ static void menu_tall_frame(void* user_data) {
     st->menu_open = ui_menu_is_open_impl(k_menu_id);
 }
 
-// A right-click opens the chain without dwelling a submenu (dwell needs a stationary hover, which this does not do).
+// A right-click opens the chain without opening a submenu. Dwell needs a stationary hover, which this is not.
 static void menu_tall_open(FlApp* app, MenuTestState* st) {
     fl_app_inject_mouse_move(app, 20, 20);
     fl_app_tick(app, st, menu_tall_frame);
@@ -3648,7 +3646,7 @@ static void menu_tall_key_tap(FlApp* app, MenuTestState* st, FlKey key) {
     fl_app_tick(app, st, menu_tall_frame);
 }
 
-// Settle the pointer over a laid-out row so the wheel (and Clay's scroll-target arbitration) targets that level.
+// Settles the pointer over a laid-out row so the wheel, and Clay's scroll-target arbitration, targets that level.
 static bool menu_tall_hover(FlApp* app, MenuTestState* st, FlString label, int level, int index) {
     i32 cx = 0, cy = 0;
     if (!menu_item_center(st, label, level, index, &cx, &cy)) {
@@ -3661,7 +3659,7 @@ static bool menu_tall_hover(FlApp* app, MenuTestState* st, FlString label, int l
     return true;
 }
 
-// Inject one wheel delta and let it land (observed on the following tick). Positive dy scrolls up.
+// Injects one wheel delta and ticks so it takes effect, which shows on the following tick. Positive dy scrolls up.
 static void menu_tall_wheel(FlApp* app, MenuTestState* st, f32 dy) {
     fl_app_inject_wheel(app, 0.0f, dy);
     fl_app_tick(app, st, menu_tall_frame);
@@ -3671,7 +3669,7 @@ static void menu_tall_wheel(FlApp* app, MenuTestState* st, f32 dy) {
 UTEST(ui_menu, overtall_wheel) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
-    // A deliberately short window so the ~16-row menu overflows and the root level becomes scrollable.
+    // A short window, so the menu of about 16 rows overflows and the root level scrolls.
     FlAppSettings settings = { .window_title = FL_S("menu_tall_wheel"), .width = 400, .height = 240, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
@@ -3685,7 +3683,7 @@ UTEST(ui_menu, overtall_wheel) {
     ASSERT_TRUE_MSG(st.menu_open, "tall menu opened");
     ASSERT_EQ_MSG(0.0, (double)m->levels[0].scroll_offset, "a freshly opened level starts scrolled to the top");
 
-    // natural_height is last frame's recorded total.
+    // natural_height is the total recorded last frame.
     ASSERT_GT_MSG((double)st.ctx->menu_frame.levels[0].natural_height, (double)st.ctx->layout_height,
                   "the root item list is taller than the whole viewport (scroll must engage)");
 
@@ -3708,9 +3706,9 @@ UTEST(ui_menu, overtall_wheel) {
     }
     ASSERT_EQ_MSG(0.0, (double)m->levels[0].scroll_offset, "wheel up returns to the top and clamps at 0");
 
-    // The wheel scrolls the hovered level only, leaving the still-open (also over-tall) parent at the top.
+    // The wheel scrolls only the hovered level and leaves the parent, still open and also too tall, at the top.
     ASSERT_TRUE_MSG(menu_tall_hover(app, &st, FL_S("More"), 0, 0), "More row for the descend was not laid out");
-    menu_tall_key_tap(app, &st, FlKey_Right); // highlight is on More → descend into its submenu (level 1)
+    menu_tall_key_tap(app, &st, FlKey_Right); // the highlight is on More, so this descends into its submenu (level 1)
     ASSERT_EQ_MSG((int)m->depth, 2, "descended into the More submenu for the wheel-isolation check");
     ASSERT_TRUE_MSG(menu_tall_hover(app, &st, k_tall_sub[0], 1, 0), "first submenu row was not laid out");
     menu_tall_wheel(app, &st, -4.0f);
@@ -3720,8 +3718,8 @@ UTEST(ui_menu, overtall_wheel) {
     fl_app_destroy(app);
 }
 
-// Arrow-key navigation past the visible edge scrolls the highlight into view in BOTH directions, and an over-tall
-// submenu scrolls independently of its (also over-tall) parent level.
+// Arrow-key navigation past the visible edge scrolls the highlight into view in both directions, and a submenu
+// that is too tall scrolls independently of its parent level, which is too tall as well.
 UTEST(ui_menu, overtall_keyboard) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -3748,11 +3746,11 @@ UTEST(ui_menu, overtall_keyboard) {
     ASSERT_EQ_MSG(0.0, (double)m->levels[0].scroll_offset,
                   "wrapping back to the first row scrolls the root to the top");
 
-    // --- Per-level independence ---
-    // The highlight sits on "More" (index 0). Right descends into its submenu (level 1).
+    // Each level scrolls on its own. The highlight is on "More" (index 0), and Right descends into its submenu
+    // (level 1).
     menu_tall_key_tap(app, &st, FlKey_Right);
     ASSERT_EQ_MSG((int)m->depth, 2, "Right descends into the More submenu (depth 2)");
-    // A couple of ticks so the just-opened submenu records its geometry before we navigate it.
+    // Two ticks so the submenu that just opened records its geometry before it is navigated.
     fl_app_tick(app, &st, menu_tall_frame);
     fl_app_tick(app, &st, menu_tall_frame);
     ASSERT_EQ_MSG(0.0, (double)m->levels[1].scroll_offset, "the freshly opened submenu starts at the top");
@@ -3772,11 +3770,11 @@ UTEST(ui_menu, overtall_keyboard) {
     fl_app_destroy(app);
 }
 
-// The progress bar is pure paint: a track plus a fill sized to a normalized fraction in [0,1]. The widget has no id,
-// so each rect is identified by its theme color (track = surface.elevated, fill = interactive.base); the fill width
-// as a fraction of the track must equal the requested fraction, and out-of-range input clamps rather than wraps.
+// The progress bar only paints: a track plus a fill sized to a normalized fraction in [0,1]. The widget has no id,
+// so each rect is found by its theme color (track = surface.elevated, fill = interactive.base). The fill width as
+// a fraction of the track equals the requested fraction, and out-of-range input clamps.
 
-// Distinctive track/fill colors so each progress rect is identifiable by color alone in the snapshot.
+// Track and fill colors that nothing else in the snapshot uses.
 static const FlColor PROGRESS_TRACK_COLOR = { 40, 40, 44, 255 };
 
 static const FlColor PROGRESS_FILL_COLOR = { 10, 200, 80, 255 };
@@ -3788,18 +3786,18 @@ typedef struct ProgressFrameState {
 static void progress_frame(void* user_data) {
     ProgressFrameState* st = (ProgressFrameState*)user_data;
     static const FlThemeColors theme = {
-        .surface.elevated = { 40, 40, 44, 255 },  // track slot (PROGRESS_TRACK_COLOR)
-        .interactive.base = { 10, 200, 80, 255 }, // fill slot (PROGRESS_FILL_COLOR)
+        .surface.elevated = { 40, 40, 44, 255 },  // track (PROGRESS_TRACK_COLOR)
+        .interactive.base = { 10, 200, 80, 255 }, // fill (PROGRESS_FILL_COLOR)
         .text.primary = { 240, 240, 240, 255 },
     };
     ui_set_theme(ui_get_ctx(), &theme);
-    // A padded full-window column holding only the bar, so the track grows to a single determinate width.
+    // A padded full-window column holding only the bar, so the track grows to one known width.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }, .padding = padding_all(20)) {
         ui_progress_bar(st->fraction);
     }
 }
 
-// Widest rectangle painted in want, or -1 if none was emitted.
+// Width of the widest rectangle painted in want, or -1 if none was emitted.
 static f32 progress_rect_width(FlColor want) {
     f32 widest = -1.0f;
     const int n = ui_get_render_command_count();
@@ -3856,17 +3854,17 @@ UTEST(ui_progress_bar, determinate_fill_and_clamping) {
     fl_app_destroy(app);
 }
 
-// Two nested Scroll Targets register via ui_scroll_target(): the wheel goes only to the inner (hot) one and the
-// outer reads {0,0} (consume-takes-all). A pure Scroll Target with no Clickable/Draggable still reports wheel (the
-// read gates on item->state.hot, never signal.hovered), and a press over it still claims active_id.
+// Two nested Scroll Targets register through ui_scroll_target(). The wheel goes only to the inner, hot one and the
+// outer reads {0,0}. A Scroll Target with no Clickable or Draggable flag still reports the wheel, because the
+// read checks item->state.hot and not signal.hovered, and a press over it still claims active_id.
 
 UTEST(wheel_input, inner_shadows_outer) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
-    // Drive an app-owned context, not the shared render fixture: fl_app_create()/ui_create() set the global UI
-    // context fresh (an earlier fl_app teardown nulls the global). Headless inject_wheel is deferred, so the wheel
-    // cache is set directly and ui_update_begin/end pumped here rather than through fl_app_tick, which would reset
-    // the wheel each frame.
+    // The case uses an app-owned context and not the shared render fixture: fl_app_create() and ui_create() set
+    // the global UI context anew, and an earlier fl_app teardown clears it. Headless inject_wheel is deferred, so
+    // the wheel cache is set directly and ui_update_begin/end are called here. fl_app_tick would reset the wheel
+    // each frame.
     FlAppSettings settings = { .window_title = FL_S("wheel_input"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
@@ -3875,22 +3873,22 @@ UTEST(wheel_input, inner_shadows_outer) {
 
     const int layout_w = 400;
     const int layout_h = 400;
-    ctx->ui_scale = 1.0f; // sizing_fixed() multiplies by ui_scale; keep logical == physical for exact rects.
+    ctx->ui_scale = 1.0f; // sizing_fixed() multiplies by ui_scale, so 1.0 keeps the rects exact
     ctx->layout_width = (float)layout_w;
     ctx->layout_height = (float)layout_h;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = (float)layout_w, .height = (float)layout_h });
 
-    // outer is the full 400x400 area; inner is a 200x200 child at its top-left. (100,100) lands inside both, so
-    // both are under the cursor and the deeper (inner, rendered last) wins arbitration.
+    // outer is the full 400x400 area and inner is a 200x200 child at its top-left. (100,100) is inside both, so
+    // both are under the cursor and the deeper one (inner, rendered last) wins arbitration.
     const FlColor outer_color = ui_color(40, 40, 60, 255);
     const FlColor inner_color = ui_color(60, 90, 60, 255);
 
-    // A pure Scroll Target carries NO Clickable/Draggable - the only signal it gets is the wheel, via state.hot.
+    // A Scroll Target with no Clickable or Draggable flag gets only the wheel, through state.hot.
     const u32 inner_clay_id = ui_layout_id_to_clay_id(ID("wheel_inner"));
     const u32 outer_clay_id = ui_layout_id_to_clay_id(ID("wheel_outer"));
 
-    // Frame 1: cursor over inner, no wheel yet. Registers both targets and lays them out; hot_id resolves to
-    // inner at end-of-frame but state.hot does not flip until the next frame's update.
+    // Frame 1: cursor over inner, no wheel yet. This registers both targets and lays them out. hot_id resolves to
+    // inner at the end of the frame, but state.hot is not set until the next frame's update.
     ctx->input_state.mouse.x = 100.0f;
     ctx->input_state.mouse.y = 100.0f;
     ctx->input_state.mouse.wheel_x_cached = 0.0f;
@@ -3911,8 +3909,9 @@ UTEST(wheel_input, inner_shadows_outer) {
 
     ASSERT_EQ_MSG(inner_clay_id, ctx->hot_id, "after frame 1 the inner Scroll Target must be the hot id");
 
-    // Frame 2: inject a downward wheel tick. ui_update_begin sees the previous frame's hot id is a ScrollTarget,
-    // so it withholds the wheel from Clay's scroll containers and leaves the cache intact for the scoped read.
+    // Frame 2: inject a downward wheel tick. ui_update_begin sees that the previous frame's hot id is a
+    // ScrollTarget, so it withholds the wheel from Clay's scroll containers and leaves the cache for the scoped
+    // read.
     ctx->input_state.mouse.wheel_y_cached = 120.0f;
 
     ui_update_begin(ctx);
@@ -3933,16 +3932,16 @@ UTEST(wheel_input, inner_shadows_outer) {
     ASSERT_NEAR_MSG(0.0, (double)outer_wheel.y, 0.001, "outer Scroll Target is shadowed by the inner — reads {0,0}");
     ASSERT_NEAR_MSG(0.0, (double)outer_wheel.x, 0.001, "outer Scroll Target is shadowed by the inner — reads {0,0}");
 
-    // The read does NOT depend on signal.hovered: this element never declared Clickable or Draggable, so
-    // signal.hovered is always false for it, yet the scoped read returned the wheel.
+    // The read does not depend on signal.hovered. This element never declared Clickable or Draggable, so
+    // signal.hovered is always false for it, and the scoped read still returned the wheel.
     ItemState* inner_item = hashmap_get(&ctx->shared->item_state, inner_clay_id);
     ASSERT_TRUE_MSG(inner_item != nullptr, "inner Scroll Target must be present in item_state");
     ASSERT_TRUE_MSG(inner_item->state.hot, "the scoped read keys off item->state.hot, which must be set");
     ASSERT_FALSE_MSG(inner_item->last_signal.hovered,
                      "a pure Scroll Target never sets signal.hovered, yet still reports wheel via the scoped read");
 
-    // A press over a pure Scroll Target still claims active_id, because the generic hot->active promotion in
-    // ui_update_end keys off the flag-agnostic hot_id, not any Clickable behavior.
+    // A press over such a Scroll Target still claims active_id, because the hot -> active promotion in
+    // ui_update_end uses hot_id, whatever flags the item has.
     ctx->mouse_pressed_this_frame = true;
     ui_update_begin(ctx);
     ui_layout_area_id(ID("wheel_outer"), .sizing = { .width = sizing_fixed(400), .height = sizing_fixed(400) },
@@ -3960,8 +3959,8 @@ UTEST(wheel_input, inner_shadows_outer) {
     fl_app_destroy(app);
 }
 
-// An unflagged plain layout region must keep an unconsumed wheel for the frame: after a frame over a plain region
-// that never declares itself a Scroll Target, the injected wheel still surfaces via the cache.
+// A plain layout region that never declares itself a Scroll Target leaves the wheel unconsumed for the frame, and
+// the injected wheel is still readable from the cache afterwards.
 
 UTEST(wheel_input, unflagged_region_keeps_unconsumed_wheel) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
@@ -3977,7 +3976,8 @@ UTEST(wheel_input, unflagged_region_keeps_unconsumed_wheel) {
     ctx->layout_height = 400.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
 
-    // Cursor over a plain layout area that declares no Scroll Target and no clip - nothing consumes the wheel.
+    // The cursor is over a plain layout area that declares no Scroll Target and no clip, so nothing consumes the
+    // wheel.
     ctx->input_state.mouse.x = 100.0f;
     ctx->input_state.mouse.y = 100.0f;
     ctx->input_state.mouse.wheel_x_cached = 0.0f;
@@ -3985,14 +3985,14 @@ UTEST(wheel_input, unflagged_region_keeps_unconsumed_wheel) {
     ctx->mouse_pressed_this_frame = false;
     ctx->mouse_released_this_frame = false;
 
-    // hot_id is not a Scroll Target, so ui_update_begin takes the Clay branch; the cache must survive it untouched.
+    // hot_id is not a Scroll Target, so ui_update_begin takes the Clay branch, which leaves the cache untouched.
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_fixed(400), .height = sizing_fixed(400) },
                    .color = ui_color(30, 30, 40, 255)) {}
     ui_update_end(ctx, 1.0f / 60.0f);
 
-    // Observed via the unscoped ui_get_mouse_wheel() / cached fields, NOT mouse_wheel_delta(id) - the scoped query
-    // self-gates to a hot Scroll Target and would read zero for this unflagged region.
+    // Read through the unscoped ui_get_mouse_wheel() and the cached fields. mouse_wheel_delta(id) answers only
+    // for a hot Scroll Target and would read zero for this region.
     FlVec2 wheel = ui_get_mouse_wheel();
     ASSERT_NEAR_MSG(120.0, (double)wheel.y, 0.001, "an unconsumed wheel over a plain region survives the frame");
     ASSERT_NEAR_MSG(0.0, (double)wheel.x, 0.001, "no horizontal wheel was injected");
@@ -4002,12 +4002,12 @@ UTEST(wheel_input, unflagged_region_keeps_unconsumed_wheel) {
     fl_app_destroy(app);
 }
 
-// A Clay-managed scroll container with a nested Scroll Target widget (the slider carries
-// Clickable|Draggable|ScrollTarget) must route the wheel to exactly ONE arbiter, never both. When the widget is hot,
-// ui_update_begin withholds the wheel from Clay and the widget reads it; the container must not ALSO scroll.
+// A Clay-managed scroll container with a nested Scroll Target widget (the slider has Clickable, Draggable and
+// ScrollTarget) routes the wheel to exactly one of them. When the widget is hot, ui_update_begin withholds the
+// wheel from Clay and the widget reads it, and the container does not scroll.
 
 // A 400x400 vertical clip container whose content is taller than it (a 200x40 slider at the top plus an 800px
-// filler), so Clay CAN scroll it. The slider is the deeper element under the cursor, so it wins hot arbitration.
+// filler), so Clay can scroll it. The slider is the deeper element under the cursor, so it wins hot arbitration.
 static FlSignal wheel_dbl_frame(FlUiCtx* ctx) {
     FlSignal sig = { 0 };
     const FlItemFlags slider_flags = FlItemFlags_clickable | FlItemFlags_draggable | FlItemFlags_scroll_target;
@@ -4042,7 +4042,7 @@ UTEST(wheel_input, container_and_scroll_target_no_double_consume) {
     const u32 container_clay_id = ui_layout_id_to_clay_id(ID("wheel_scroll_box"));
     const u32 slider_clay_id = ui_layout_id_to_clay_id(ID("wheel_slider"));
 
-    // Cursor at (100,20) lands on the slider. No wheel yet.
+    // The cursor at (100,20) is on the slider. No wheel yet.
     ctx->input_state.mouse.x = 100.0f;
     ctx->input_state.mouse.y = 20.0f;
     ctx->input_state.mouse.wheel_x_cached = 0.0f;
@@ -4050,15 +4050,15 @@ UTEST(wheel_input, container_and_scroll_target_no_double_consume) {
     ctx->mouse_pressed_this_frame = false;
     ctx->mouse_released_this_frame = false;
 
-    // Frames 1-2 settle the hot state. hot_id resolves to the slider at the end of frame 1, but signal.hovered keys
-    // off item->state.hot, which item_state_update fills from the PRIOR frame's hot_id - so it only flips true on
-    // frame 3. Two warm-up frames let the signal.wheel_delta path (the actual double-read vector) engage.
+    // Frames 1 and 2 settle the hot state. hot_id resolves to the slider at the end of frame 1, but
+    // signal.hovered reads item->state.hot, which item_state_update fills from the previous frame's hot_id, so
+    // it becomes true only on frame 3. signal.wheel_delta, the second place the wheel could be read, needs that.
     wheel_dbl_frame(ctx);
     ASSERT_EQ_MSG(slider_clay_id, ctx->hot_id, "after frame 1 the nested Scroll Target slider must be the hot id");
     wheel_dbl_frame(ctx);
 
-    // Frame 3: inject a downward wheel. hot_id is the slider (a Scroll Target), so ui_update_begin gives Clay a zero
-    // delta and leaves the cache for the widget. The slider is now hovered, so it reads via signal.wheel_delta.
+    // Frame 3: inject a downward wheel. hot_id is the slider, a Scroll Target, so ui_update_begin gives Clay a
+    // zero delta and leaves the cache for the widget. The slider is hovered now and reads signal.wheel_delta.
     ctx->input_state.mouse.wheel_y_cached = 120.0f;
     FlSignal slider_sig = wheel_dbl_frame(ctx);
 
@@ -4077,14 +4077,14 @@ UTEST(wheel_input, container_and_scroll_target_no_double_consume) {
     fl_app_destroy(app);
 }
 
-// Click-vs-drag threshold (FlItem_DragThreshold): an item that opts into the flag only starts dragging once the
-// cursor has moved a few pixels from the press point, so a press-and-release in place reads as a click rather than
-// a one-pixel drag. These cases drive the real input layer (ui_input_update) every frame, so signal.dragging
-// is gated by the genuine drag-distance tracking - not a value poked straight into the context.
+// Click-vs-drag threshold (FlItem_DragThreshold). An item with the flag starts dragging only once the cursor has
+// moved a few pixels from the press point, so a press and release in place is a click and not a one-pixel drag.
+// The cases run the real input layer (ui_input_update) every frame, so signal.dragging depends on the real
+// drag-distance tracking.
 
 typedef struct DragGesture {
-    FlSignal move;    // signal captured on the frame the cursor moved while the button was held
-    FlSignal release; // signal captured on the release frame
+    FlSignal move;    // signal from the frame the cursor moved with the button held
+    FlSignal release; // signal from the release frame
 } DragGesture;
 
 static void drag_threshold_frame(FlUiCtx* ctx, float x, float y, bool held, bool pressed, bool released,
@@ -4092,7 +4092,7 @@ static void drag_threshold_frame(FlUiCtx* ctx, float x, float y, bool held, bool
     FlInputState* in = &ctx->input_state;
     ui_input_set_mouse_position(ctx, x, y);
     in->mouse.buttons[FlMouseButton_Left] = held;
-    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed; // ui_input_update consumes + clears this edge
+    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed; // ui_input_update consumes and clears this edge
     in->mouse.buttons_released[FlMouseButton_Left] = released;
     ui_input_update(ctx, 1.0f / 60.0f);
 
@@ -4109,13 +4109,13 @@ static void drag_threshold_frame(FlUiCtx* ctx, float x, float y, bool held, bool
     }
 }
 
-// Press at the item centre (100,100), move by move_dx while held, then release.
+// Presses at the item centre (100,100), moves by move_dx while held, then releases.
 static DragGesture drag_threshold_run(FlUiCtx* ctx, float move_dx) {
-    // Two warm-up frames: the item becomes hot_id at the end of frame 1 and its state.hot flips on frame 2. A press
-    // needs signal.hovered, which keys off state.hot.
+    // Two warm-up frames: the item becomes hot_id at the end of frame 1 and its state.hot is set on frame 2. A
+    // press needs signal.hovered, which reads state.hot.
     drag_threshold_frame(ctx, 100.0f, 100.0f, false, false, false, nullptr);
     drag_threshold_frame(ctx, 100.0f, 100.0f, false, false, false, nullptr);
-    // Press in place. active_id latches at end-of-frame, so dragging cannot fire on the press frame itself.
+    // Press in place. active_id is set at the end of the frame, so dragging cannot fire on the press frame.
     drag_threshold_frame(ctx, 100.0f, 100.0f, true, true, false, nullptr);
 
     DragGesture g = { 0 };
@@ -4124,26 +4124,26 @@ static DragGesture drag_threshold_run(FlUiCtx* ctx, float move_dx) {
     return g;
 }
 
-// Both scenarios share one app (a single fl_app per case, like wheel_input) and the same item id; each gesture's
-// warm-up frames re-establish hot state and the press resets the drag-distance tracking, so they don't bleed.
+// Both scenarios share one app and the same item id. Each gesture's warm-up frames set the hot state again and
+// the press resets the drag-distance tracking, so nothing carries over.
 UTEST(drag_threshold, click_vs_drag) {
     FlAppSettings settings = { .window_title = FL_S("drag_threshold"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
     FlUiCtx* ctx = ui_get_ctx();
-    ctx->ui_scale = 1.0f; // sizing_fixed() multiplies by ui_scale; keep logical == physical so the item lands at 0,0.
+    ctx->ui_scale = 1.0f; // sizing_fixed() multiplies by ui_scale, so 1.0 puts the item at 0,0
     ctx->layout_width = 400.0f;
     ctx->layout_height = 400.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
 
-    // 2px of travel - under UI_MOUSE_DRAG_THRESHOLD (4px): the gesture stays a click.
+    // 2px of travel is under UI_MOUSE_DRAG_THRESHOLD (4px), so the gesture stays a click.
     DragGesture click = drag_threshold_run(ctx, 2.0f);
     ASSERT_FALSE_MSG(click.move.dragging, "a sub-threshold move must not latch dragging");
     ASSERT_NEAR_MSG(0.0, (double)click.move.drag_delta.x, 0.001, "no drag means no drag_delta");
     ASSERT_FALSE_MSG(click.release.dragging, "a sub-threshold release still must not drag");
     ASSERT_TRUE_MSG(click.release.clicked, "a press-and-release under the threshold reads as a click");
 
-    // 10px of travel - well past the threshold.
+    // 10px of travel is well past the threshold.
     DragGesture drag = drag_threshold_run(ctx, 10.0f);
     ASSERT_TRUE_MSG(drag.move.dragging, "a move past the threshold latches dragging");
     ASSERT_NEAR_MSG(10.0, (double)drag.move.drag_delta.x, 0.001, "drag_delta tracks movement from the press point");
@@ -4151,30 +4151,31 @@ UTEST(drag_threshold, click_vs_drag) {
     fl_app_destroy(app);
 }
 
-// The dropdown popup is a virtualized ui_list of label rows: clicking a row commits (1-based stable id ->
-// *selected_index, index = id - 1) and closes; max_visible_rows bounds the viewport height (min(count, max) *
-// row_stride) and the List virtualizes the rest; the substring filter feeds only the surviving subset to the List.
+// The dropdown popup is a virtualized ui_list of label rows. Clicking a row commits (1-based stable id to
+// *selected_index, index = id - 1) and closes. max_visible_rows bounds the viewport height to min(count, max) *
+// row_stride and the List virtualizes the rest. The substring filter passes only the matching subset to the
+// List.
 //
 // Row layout ids: list_item_begin_impl keys each row on {list-container name, emit_pos + 1}. The container name
-// is "<label>_dropdown_list" (button id is the label verbatim; see resolve_widget_id), and emit_pos is the
-// absolute index into the (filtered) item array, so row at filtered position p has clay id {name, p + 1}.
+// is "<label>_dropdown_list" (the button id is the label verbatim, see resolve_widget_id), and emit_pos is the
+// absolute index into the filtered item array, so the row at filtered position p has clay id {name, p + 1}.
 
 typedef struct DropdownState {
     bool is_open;
     int choice;   // *selected_index, written on commit
-    FlUiCtx* ctx; // captured during the tick so we can read laid-out row/container geometry afterwards
+    FlUiCtx* ctx; // captured during the tick so the laid-out row and container geometry can be read afterwards
     FlString* options;
     int option_count;
     int max_visible_rows; // DropdownConfig.max_visible_rows (0 = default)
     bool searchable;
-    FlTextInputState search; // auto-initialized by the dropdown on the first open frame
+    FlTextInputState search; // the dropdown initializes this on the first open frame
 } DropdownState;
 
 static void dropdown_frame(void* user_data) {
     DropdownState* st = (DropdownState*)user_data;
     st->ctx = ui_get_ctx();
     FlDropdownConfig cfg = {
-        .show_cancel = false, // keep the popup to just the list so the geometry reads are unambiguous
+        .show_cancel = false, // the popup holds only the list, which keeps the geometry simple to read
         .min_width = 200.0f,
         .max_visible_rows = st->max_visible_rows,
         .searchable = st->searchable,
@@ -4185,16 +4186,16 @@ static void dropdown_frame(void* user_data) {
     }
 }
 
-// The list container is emitted under {name "Pick_dropdown_list", id 0}; its laid-out height is the bounded
-// viewport (min(count, max_visible_rows) * (row_height + gap)). Returns -1 if not laid out yet.
+// The list container is emitted under {name "Pick_dropdown_list", id 0}. Its laid-out height is the bounded
+// viewport, min(count, max_visible_rows) * (row_height + gap). Returns -1 if it is not laid out yet.
 static float dropdown_list_height(DropdownState* st) {
     u32 cid = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("Pick_dropdown_list"), .id = 0 });
     ItemState* it = hashmap_get(&st->ctx->shared->item_state, cid);
     return (it != nullptr && it->state.size.y > 0.0f) ? it->state.size.y : -1.0f;
 }
 
-// Center of the option row at filtered position pos (its clay id is {name, pos + 1}). False if not laid out
-// (e.g. virtualized away) - that absence is itself the virtualization signal the clamp case asserts on.
+// Center of the option row at filtered position pos, whose clay id is {name, pos + 1}. False if it is not laid
+// out, for example because it is virtualized away, which the clamp case relies on.
 static bool dropdown_row_center(DropdownState* st, int pos, i32* out_cx, i32* out_cy) {
     u32 rid = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("Pick_dropdown_list"), .id = (i32)(pos + 1) });
     ItemState* it = hashmap_get(&st->ctx->shared->item_state, rid);
@@ -4206,9 +4207,8 @@ static bool dropdown_row_center(DropdownState* st, int pos, i32* out_cx, i32* ou
     return true;
 }
 
-// True if the frame drew a rectangle in the theme's surface.selected colour - i.e. the List drew the
-// selection-highlight fill on the row seeded from *selected_index. (Unselected rows use a transparent fill that
-// emits no rectangle, so any surface.selected rect is the current-selection highlight.)
+// True if the frame drew a rectangle in the theme's surface.selected color, which is the List's selection fill on
+// the row seeded from *selected_index. Unselected rows use a transparent fill that emits no rectangle.
 static bool dropdown_selection_highlight_drawn(void) {
     FlColor want = fl_theme_colors()->surface.selected;
     const int n = ui_get_render_command_count();
@@ -4225,21 +4225,22 @@ static bool dropdown_selection_highlight_drawn(void) {
     return false;
 }
 
-// FlDropdownConfig's padding_h/padding_v/corner_radius steer the closed trigger's box; a zeroed config falls back
-// to the default metrics. Asserted off the debug render-command snapshot rather than pixels, so the numbers in the
-// assertions ARE the geometry. The dropdown stays closed throughout; the popup keeps its own metrics.
+// FlDropdownConfig's padding_h, padding_v and corner_radius set the closed trigger's box, and a zeroed config
+// falls back to the default metrics. The case checks the debug render-command snapshot, so the numbers in the
+// assertions are the geometry. The dropdown stays closed throughout, and the popup keeps its own metrics.
 UTEST(dropdown, trigger_geometry_follows_config) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Identity scale, so the snapshot's logical rects are the pixels the config asked for.
+    // At ui_scale 1.0 the snapshot's logical rects are the pixels the config asked for.
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
     const float dt = 1.0f / 60.0f;
 
-    // A padding-driven trigger fits around its label, so the strip needs real text metrics. Built-in 8x8 font.
+    // A trigger sized by padding fits around its label, so it needs text metrics. This uses the built-in 8x8
+    // font.
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 1));
 
     FlString opts[2] = { FL_S("Sine"), FL_S("Saw") };
@@ -4248,9 +4249,9 @@ UTEST(dropdown, trigger_geometry_follows_config) {
     UiRenderCommand rects[4];
     UiRenderCommand texts[4];
 
-    // Two frames per case: the first registers the trigger's ItemState so the hover/focus animation has somewhere
-    // to land, and only the second is measured. Each case passes its own label because a label is also the widget's
-    // id, and the fixture's ItemState map outlives a case.
+    // Each case takes two frames: the first registers the trigger's ItemState for the hover and focus animation,
+    // and only the second is measured. Each case passes its own label because a label is also the widget's id,
+    // and the fixture's ItemState map outlives a case.
 #define DROPDOWN_GEOM_FRAME(label_str, ...)                                                    \
     do {                                                                                       \
         for (int geom_pass = 0; geom_pass < 2; geom_pass++) {                                  \
@@ -4265,7 +4266,7 @@ UTEST(dropdown, trigger_geometry_follows_config) {
         ASSERT_EQ_MSG(render_cmd_collect(UiRenderCmd_Text, texts, 4), 1, "and one label run"); \
     } while (0)
 
-    // Zeroed: the fixed FlWidgetHeight_MD box with FlRadius_MD corners and the FlSpacing_MD/SM padding pair.
+    // Zeroed: the fixed FlWidgetHeight_MD box with FlRadius_MD corners and FlSpacing_MD/SM padding.
     DROPDOWN_GEOM_FRAME("dropdown_geom_default", .show_cancel = true);
     ASSERT_NEAR_MSG((double)rects[0].height, (double)FlWidgetHeight_MD, 1e-4,
                     "a zeroed config keeps the fixed trigger height");
@@ -4273,20 +4274,20 @@ UTEST(dropdown, trigger_geometry_follows_config) {
     ASSERT_NEAR_MSG((double)(texts[0].x - rects[0].x), (double)FlSpacing_MD, 1e-4,
                     "and the default horizontal padding, read as the label's inset");
 
-    // the compact pill: 12x7 padding at radius 8. The radius matches FlRadius_MD, so the height and the inset are
-    // what separate this from the default case; the radius is pinned on its own below.
+    // The compact pill: 12x7 padding at radius 8. The radius equals FlRadius_MD, so only the height and the inset
+    // tell this from the default case. The radius is checked on its own below.
     DROPDOWN_GEOM_FRAME("dropdown_geom_pill", .padding_h = 12.0f, .padding_v = 7.0f, .corner_radius = 8.0f);
     const float pill_h = rects[0].height;
     ASSERT_LT_MSG((double)pill_h, (double)FlWidgetHeight_MD, "padding_v takes the trigger off the fixed height");
     ASSERT_NEAR_MSG((double)(texts[0].x - rects[0].x), 12.0, 1e-4, "padding_h insets the label");
 
-    // The switched-on sizing really is padding-driven: 10px more padding per side is 20px more trigger. Stated
-    // as a delta against the case above so no font metric is baked into the expected number.
+    // With padding set, the size comes from the padding: 10px more per side is 20px more trigger. The check is a
+    // delta against the case above, so no font metric appears in the expected number.
     DROPDOWN_GEOM_FRAME("dropdown_geom_taller", .padding_h = 12.0f, .padding_v = 17.0f, .corner_radius = 8.0f);
     ASSERT_NEAR_MSG((double)(rects[0].height - pill_h), 20.0, 1e-4, "padding_v drives the trigger height");
 
-    // Each knob stands on its own default. padding_h has no say in the sizing switch - the trigger grows to its
-    // row horizontally either way - so it insets the label and leaves the fixed height alone.
+    // Each field keeps its own default. padding_h does not turn on padding-based sizing, since the trigger grows
+    // to its row horizontally either way, so it insets the label and leaves the fixed height alone.
     DROPDOWN_GEOM_FRAME("dropdown_geom_radius_only", .corner_radius = 4.0f);
     ASSERT_NEAR_MSG((double)rects[0].corner_radius.tl, 4.0, 1e-4, "corner_radius applies on its own");
     ASSERT_NEAR_MSG((double)rects[0].height, (double)FlWidgetHeight_MD, 1e-4, "and leaves the height alone");
@@ -4304,7 +4305,7 @@ UTEST(dropdown, trigger_geometry_follows_config) {
 #undef DROPDOWN_GEOM_FRAME
 }
 
-// Clicking an option row commits its index to *selected_index (1-based id -> index = id - 1) and closes the popup.
+// Clicking an option row commits its index to *selected_index (index = id - 1) and closes the popup.
 UTEST(dropdown, click_commits_and_closes) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4314,8 +4315,8 @@ UTEST(dropdown, click_commits_and_closes) {
     FlString opts[4] = { FL_S("Red"), FL_S("Green"), FL_S("Blue"), FL_S("Alpha") };
     DropdownState st = { .is_open = true, .choice = 2, .options = opts, .option_count = 4 };
 
-    // Settle: the list needs one frame to establish the container height for virtualization and another to emit
-    // the visible rows so their ItemStates exist. The popup stays open (no click yet).
+    // The list needs one frame to establish the container height for virtualization and another to emit the
+    // visible rows so their ItemStates exist. The popup stays open, since nothing is clicked yet.
     for (int f = 0; f < 4; f++) {
         fl_app_tick(app, &st, dropdown_frame);
     }
@@ -4324,10 +4325,10 @@ UTEST(dropdown, click_commits_and_closes) {
     ASSERT_EQ_MSG(st.choice, 2, "selection unchanged before any click");
 
     // The current selection (choice 2) is highlighted: the transient set seeded from *selected_index makes the
-    // List draw its surface.selected fill on that row before any click happens.
+    // List draw its surface.selected fill on that row before any click.
     ASSERT_TRUE_MSG(dropdown_selection_highlight_drawn(), "the current selection's row is highlighted while open");
 
-    // Click option 0 ("Red"): hover to propagate hot, then press + release.
+    // Click option 0 ("Red"): hover so hot propagates, then press and release.
     i32 cx = 0, cy = 0;
     ASSERT_TRUE_MSG(dropdown_row_center(&st, 0, &cx, &cy), "option row 0 was not laid out");
     fl_app_inject_mouse_move(app, cx, cy);
@@ -4344,18 +4345,18 @@ UTEST(dropdown, click_commits_and_closes) {
     fl_app_destroy(app);
 }
 
-// max_visible_rows bounds the popup viewport: a long list clamps to max_visible_rows and virtualizes the rest; a
-// short list sizes to its content (fewer than max_visible_rows).
+// max_visible_rows bounds the popup viewport. A long list is cut to max_visible_rows and the rest is virtualized.
+// A list with fewer rows than max_visible_rows is sized to its content.
 UTEST(dropdown, max_visible_rows_clamps_and_virtualizes) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
 
-    // Matches the file-local UI_DROPDOWN_ROW_HEIGHT (28) + UI_DROPDOWN_ROW_GAP (2) in ui_dropdown.c.
+    // The file-local UI_DROPDOWN_ROW_HEIGHT (28) + UI_DROPDOWN_ROW_GAP (2) in ui_dropdown.c.
     const float row_stride = 28.0f + 2.0f;
 
-    // Long list (100 options) clamped to 5 visible rows.
+    // A long list (100 options) cut to 5 visible rows.
     FlString many[100];
     static char many_labels[100][8];
     for (int i = 0; i < 100; i++) {
@@ -4368,12 +4369,12 @@ UTEST(dropdown, max_visible_rows_clamps_and_virtualizes) {
     }
     ASSERT_NEAR(dropdown_list_height(&st), 5.0f * row_stride, 1.5f);
 
-    // Virtualization: the top rows are laid out, a row well past the viewport is not emitted at all.
+    // The top rows are laid out, and a row well past the viewport is not emitted at all.
     i32 cx = 0, cy = 0;
     ASSERT_TRUE_MSG(dropdown_row_center(&st, 0, &cx, &cy), "top row is laid out");
     ASSERT_FALSE_MSG(dropdown_row_center(&st, 60, &cx, &cy), "a row far past the viewport is virtualized away");
 
-    // Short list (3 options) with the same cap sizes to content, not to the cap.
+    // A short list (3 options) with the same cap is sized to its content.
     FlString few[3] = { FL_S("A"), FL_S("B"), FL_S("C") };
     DropdownState st2 = { .is_open = true, .choice = 0, .options = few, .option_count = 3, .max_visible_rows = 5 };
     for (int f = 0; f < 4; f++) {
@@ -4381,8 +4382,8 @@ UTEST(dropdown, max_visible_rows_clamps_and_virtualizes) {
     }
     ASSERT_NEAR(dropdown_list_height(&st2), 3.0f * row_stride, 1.5f);
 
-    // max_visible_rows left at 0 resolves to the default cap (UI_DROPDOWN_DEFAULT_MAX_ROWS = 10): a 20-option
-    // list clamps to 10 rows, distinguishing "default cap" from "no cap at all".
+    // max_visible_rows left at 0 means the default cap (UI_DROPDOWN_DEFAULT_MAX_ROWS = 10): a 20-option list is
+    // cut to 10 rows, which shows the default is a cap and not "no cap".
     DropdownState st3 = { .is_open = true, .choice = 0, .options = many, .option_count = 20, .max_visible_rows = 0 };
     for (int f = 0; f < 4; f++) {
         fl_app_tick(app, &st3, dropdown_frame);
@@ -4392,8 +4393,8 @@ UTEST(dropdown, max_visible_rows_clamps_and_virtualizes) {
     fl_app_destroy(app);
 }
 
-// When the substring filter matches nothing, the popup shows an empty list: no rows, no crash, selection
-// unchanged, popup still open.
+// When the substring filter matches nothing, the popup shows an empty list. The selection is unchanged and the
+// popup stays open.
 UTEST(dropdown, empty_when_all_filtered_out) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4403,7 +4404,7 @@ UTEST(dropdown, empty_when_all_filtered_out) {
     FlString opts[3] = { FL_S("Red"), FL_S("Green"), FL_S("Blue") };
     DropdownState st = { .is_open = true, .choice = 1, .options = opts, .option_count = 3, .searchable = true };
 
-    // First frame lets the dropdown auto-initialize the search buffer; then poke a query that matches no option.
+    // The first frame lets the dropdown initialize the search buffer. Then set a query that matches no option.
     fl_app_tick(app, &st, dropdown_frame);
     ASSERT_TRUE_MSG(st.search.buffer != nullptr, "searchable dropdown initialized its search buffer");
     memcpy(st.search.buffer, "zzz", 3);
@@ -4422,9 +4423,9 @@ UTEST(dropdown, empty_when_all_filtered_out) {
     fl_app_destroy(app);
 }
 
-// Clicking a row of a FILTERED list commits the ORIGINAL option index, not the filtered position: stable id =
-// orig_index + 1 is baked into the descriptor during the filter, so index = id - 1 resolves past the filtered-out
-// rows. Options "zero".."four"; the substring "o" keeps {zero(0), one(1), two(2), four(4)} - "three" has no 'o'.
+// Clicking a row of a filtered list commits the original option index and not the filtered position. The stable
+// id orig_index + 1 is put in the descriptor during the filter, so index = id - 1 accounts for the rows filtered
+// out. The options are "zero".."four", and the substring "o" keeps {zero(0), one(1), two(2), four(4)}.
 UTEST(dropdown, searchable_filter_click_commits_original_index) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4434,7 +4435,7 @@ UTEST(dropdown, searchable_filter_click_commits_original_index) {
     FlString opts[5] = { FL_S("zero"), FL_S("one"), FL_S("two"), FL_S("three"), FL_S("four") };
     DropdownState st = { .is_open = true, .choice = 0, .options = opts, .option_count = 5, .searchable = true };
 
-    // Let the dropdown auto-initialize the search buffer, then poke the query "o".
+    // Let the dropdown initialize the search buffer, then set the query "o".
     fl_app_tick(app, &st, dropdown_frame);
     ASSERT_TRUE_MSG(st.search.buffer != nullptr, "searchable dropdown initialized its search buffer");
     memcpy(st.search.buffer, "o", 1);
@@ -4443,7 +4444,7 @@ UTEST(dropdown, searchable_filter_click_commits_original_index) {
         fl_app_tick(app, &st, dropdown_frame);
     }
 
-    // The filter feeds only the surviving subset to the List: 4 rows survive, so a 5th filtered position does not.
+    // The filter passes only the matching subset to the List. 4 rows match, so there is no 5th filtered position.
     i32 cx = 0, cy = 0;
     ASSERT_TRUE_MSG(dropdown_row_center(&st, 3, &cx, &cy), "the 4th surviving row (filtered position 3) is laid out");
     ASSERT_FALSE_MSG(dropdown_row_center(&st, 4, &cx, &cy), "only 4 options survive the filter — no 5th row");
@@ -4463,8 +4464,8 @@ UTEST(dropdown, searchable_filter_click_commits_original_index) {
     fl_app_destroy(app);
 }
 
-// Center of the trigger button ("Pick" - the label verbatim, no override; resolve_widget_id gives {name, 0}), from
-// its laid-out ItemState. False if not laid out yet.
+// Center of the trigger button from its laid-out ItemState. Its id is the label "Pick" verbatim, with no
+// override, so resolve_widget_id gives {name, 0}. False if it is not laid out yet.
 static bool dropdown_trigger_center(DropdownState* st, i32* out_cx, i32* out_cy) {
     u32 bid = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("Pick"), .id = 0 });
     ItemState* it = hashmap_get(&st->ctx->shared->item_state, bid);
@@ -4492,8 +4493,8 @@ static bool dropdown_click_trigger(FlApp* app, DropdownState* st) {
     return true;
 }
 
-// Tap a key through the real app loop (press tick + release tick); the pointer stays parked off the rows so the
-// keyboard, not hover, owns the list's focus cursor.
+// Taps a key through the real app loop (press tick, then release tick). The pointer stays parked off the rows, so
+// the keyboard and not hover owns the list's focus cursor.
 static void dropdown_key_tap(FlApp* app, DropdownState* st, FlKey key) {
     fl_app_inject_key(app, key, true);
     fl_app_tick(app, st, dropdown_frame);
@@ -4501,9 +4502,9 @@ static void dropdown_key_tap(FlApp* app, DropdownState* st, FlKey key) {
     fl_app_tick(app, st, dropdown_frame);
 }
 
-// A non-searchable dropdown opens with the list focused: the focus ring is on the current-value row immediately,
-// arrow keys navigate without a first click, and Enter and Space commit the focused option (mapping the List
-// activation back to *selected_index and closing), matching the click-commit path.
+// A non-searchable dropdown opens with the list focused. The focus ring is on the current-value row at once, arrow
+// keys navigate without a first click, and Enter and Space commit the focused option, which maps the List
+// activation back to *selected_index and closes, as a click does.
 UTEST(dropdown, keyboard_opens_focused_and_enter_space_commit) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4513,14 +4514,15 @@ UTEST(dropdown, keyboard_opens_focused_and_enter_space_commit) {
     FlString opts[5] = { FL_S("Red"), FL_S("Green"), FL_S("Blue"), FL_S("Alpha"), FL_S("Cyan") };
     DropdownState st = { .is_open = false, .choice = 1, .options = opts, .option_count = 5 };
 
-    // Warm up with the popup closed so the trigger button lays out; it stays closed until clicked.
+    // Warm up with the popup closed so the trigger button is laid out. It stays closed until clicked.
     for (int f = 0; f < 3; f++) {
         fl_app_tick(app, &st, dropdown_frame);
     }
     ASSERT_TRUE_MSG(st.ctx != nullptr, "frame did not run / no UI context");
     ASSERT_FALSE_MSG(st.is_open, "popup stays closed until the trigger is clicked");
 
-    // Click the trigger: the false->true edge requests list focus (non-searchable), seeded on the current value.
+    // Click the trigger. Going from closed to open requests list focus (non-searchable), seeded on the current
+    // value.
     ASSERT_TRUE_MSG(dropdown_click_trigger(app, &st), "trigger button was not laid out");
     ASSERT_TRUE_MSG(st.is_open, "clicking the trigger opens the popup");
 
@@ -4530,17 +4532,17 @@ UTEST(dropdown, keyboard_opens_focused_and_enter_space_commit) {
         fl_app_tick(app, &st, dropdown_frame);
     }
 
-    // Focus-on-open: the list is focused and its ring is drawn on the seeded (current-value) row before any click.
+    // The list is focused and its ring is drawn on the row of the current value before any click.
     ASSERT_TRUE_MSG(focus_ring_drawn(), "the freshly-opened non-searchable dropdown draws the list focus ring");
     ASSERT_EQ_MSG(st.choice, 1, "opening the popup does not change the selection");
 
-    // Arrow Down moves the cursor to option 2 (id 3); Enter commits index 2 and closes - no row click needed.
+    // Arrow Down moves the cursor to option 2 (id 3). Enter commits index 2 and closes, with no row click.
     dropdown_key_tap(app, &st, FlKey_Down);
     dropdown_key_tap(app, &st, FlKey_Enter);
     ASSERT_EQ_MSG(st.choice, 2, "Down then Enter commits the roved option (index 2)");
     ASSERT_FALSE_MSG(st.is_open, "Enter-commit closes the popup");
 
-    // Reopen (now on choice 2), rove Down to option 3 (id 4), and commit with Space this time.
+    // Reopen, now on choice 2, move Down to option 3 (id 4), and commit with Space this time.
     ASSERT_TRUE_MSG(dropdown_click_trigger(app, &st), "trigger button was not laid out on reopen");
     ASSERT_TRUE_MSG(st.is_open, "clicking the trigger reopens the popup");
     fl_app_inject_mouse_move(app, 5, 5);
@@ -4555,9 +4557,9 @@ UTEST(dropdown, keyboard_opens_focused_and_enter_space_commit) {
     fl_app_destroy(app);
 }
 
-// Reopening a non-searchable dropdown reseeds the focus cursor onto the CURRENT value, even after a previous open
-// session left the cursor roved to a different row and closed WITHOUT committing. The List's has_focus is never
-// cleared while the popup is closed, so the re-arm guard also checks global-ring ownership.
+// Reopening a non-searchable dropdown puts the focus cursor on the current value, even after an earlier open left
+// the cursor on a different row and closed without committing. The List's has_focus is not cleared while the
+// popup is closed, so the request also checks who owns the global focus ring.
 UTEST(dropdown, reopen_reseeds_cursor_to_current_value) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4571,7 +4573,7 @@ UTEST(dropdown, reopen_reseeds_cursor_to_current_value) {
         fl_app_tick(app, &st, dropdown_frame);
     }
 
-    // Open (current value = choice 1, seeded on id 2), then rove Down to option 2 (id 3) WITHOUT committing.
+    // Open (current value = choice 1, seeded on id 2), then move Down to option 2 (id 3) without committing.
     ASSERT_TRUE_MSG(dropdown_click_trigger(app, &st), "trigger button was not laid out");
     ASSERT_TRUE_MSG(st.is_open, "clicking the trigger opens the popup");
     fl_app_inject_mouse_move(app, 5, 5);
@@ -4580,16 +4582,16 @@ UTEST(dropdown, reopen_reseeds_cursor_to_current_value) {
     }
     dropdown_key_tap(app, &st, FlKey_Down);
 
-    // Close without committing (caller-owned is_open): the selection stays choice 1. While closed the List is not
-    // emitted, so its has_focus stays stuck true and the roved cursor (id 3) lingers in the persisted state.
+    // Close without committing (is_open is caller-owned), so the selection stays choice 1. While closed the List
+    // is not emitted, so its has_focus stays true and the moved cursor (id 3) stays in the persisted state.
     st.is_open = false;
     for (int f = 0; f < 3; f++) {
         fl_app_tick(app, &st, dropdown_frame);
     }
     ASSERT_EQ_MSG(st.choice, 1, "closing without committing leaves the selection unchanged");
 
-    // Reopen and immediately commit with Enter - no arrow. A correct reseed lands the cursor back on the current
-    // value (choice 1, id 2), so Enter commits index 1; a stale cursor (id 3) would wrongly commit index 2.
+    // Reopen and commit with Enter at once, with no arrow. The cursor is back on the current value (choice 1, id
+    // 2), so Enter commits index 1. A stale cursor (id 3) would commit index 2.
     ASSERT_TRUE_MSG(dropdown_click_trigger(app, &st), "trigger button was not laid out on reopen");
     ASSERT_TRUE_MSG(st.is_open, "clicking the trigger reopens the popup");
     fl_app_inject_mouse_move(app, 5, 5);
@@ -4603,8 +4605,8 @@ UTEST(dropdown, reopen_reseeds_cursor_to_current_value) {
     fl_app_destroy(app);
 }
 
-// Clay id of the searchable dropdown's visible search input ({name "Pick_dropdown_search", id 0}) and its
-// containing list. Keyboard ownership is routed by which of these holds the global focus ring.
+// Clay id of the searchable dropdown's visible search input ({name "Pick_dropdown_search", id 0}) and of its
+// containing list. Whichever holds the global focus ring gets the keyboard.
 static u32 dropdown_search_clay_id(void) {
     return ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("Pick_dropdown_search"), .id = 0 });
 }
@@ -4613,9 +4615,9 @@ static u32 dropdown_list_clay_id(void) {
     return ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("Pick_dropdown_list"), .id = 0 });
 }
 
-// A SEARCHABLE dropdown renders a real visible text input at the top of the popup, and keyboard focus starts
-// THERE on open (not in the list): the input is the first focusable widget in the popup scope, so the popup's
-// initial-focus lands on it. The list therefore holds no focus and draws no ring until the user hands off to it.
+// A searchable dropdown renders a visible text input at the top of the popup, and keyboard focus starts there on
+// open: the input is the first focusable widget in the popup scope, so the popup's initial focus goes to it. The
+// list holds no focus and draws no ring until focus is handed to it.
 UTEST(dropdown, searchable_renders_input_and_focuses_it_on_open) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4647,8 +4649,8 @@ UTEST(dropdown, searchable_renders_input_and_focuses_it_on_open) {
     fl_app_destroy(app);
 }
 
-// Typing into the visible search input drives the filter: the buffer text (not a hidden keystroke buffer) selects
-// the surviving option subset. Options "zero".."four", typing "o" keeps {zero, one, two, four} - "three" has no 'o'.
+// Typing into the visible search input drives the filter: the input's buffer text selects the matching options.
+// The options are "zero".."four", and typing "o" keeps {zero, one, two, four}.
 UTEST(dropdown, searchable_typing_visible_input_filters_list) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4662,7 +4664,7 @@ UTEST(dropdown, searchable_typing_visible_input_filters_list) {
         fl_app_tick(app, &st, dropdown_frame);
     }
 
-    // Open and settle so the search input is focused (it consumes typed text only while focused).
+    // Open and settle so the search input is focused. It consumes typed text only while focused.
     ASSERT_TRUE_MSG(dropdown_click_trigger(app, &st), "trigger button was not laid out");
     ASSERT_TRUE_MSG(st.is_open, "clicking the trigger opens the searchable popup");
     fl_app_inject_mouse_move(app, 5, 5);
@@ -4672,7 +4674,7 @@ UTEST(dropdown, searchable_typing_visible_input_filters_list) {
     ASSERT_EQ_MSG((u64)dropdown_search_clay_id(), (u64)st.ctx->focused_id,
                   "focus is in the search input before typing");
 
-    // Type "o" as a real keystroke (queued into the headless backend; the next tick drains it into the input).
+    // Type "o" as a keystroke. It is queued in the headless backend and the next tick drains it into the input.
     fl_app_inject_text(app, FL_S("o"));
     for (int f = 0; f < 4; f++) {
         fl_app_tick(app, &st, dropdown_frame);
@@ -4688,9 +4690,9 @@ UTEST(dropdown, searchable_typing_visible_input_filters_list) {
     fl_app_destroy(app);
 }
 
-// Focus is routed by hand-off: Down from the search input moves focus INTO the list (its ring appears on the first
-// row), and Up on the list's first row (nav_up_edge) returns focus to the input (its ring disappears). Both edges
-// are driven through the real app loop.
+// Down from the search input moves focus into the list, and its ring appears on the first row. Up on the list's
+// first row (nav_up_edge) returns focus to the input, and the ring disappears. Both go through the real app
+// loop.
 UTEST(dropdown, searchable_focus_handoff_input_list_input) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4729,8 +4731,8 @@ UTEST(dropdown, searchable_focus_handoff_input_list_input) {
     fl_app_destroy(app);
 }
 
-// After Down hands focus into the list, arrow keys and type-ahead navigate the filtered subset and Enter commits -
-// exactly the List keyboard path the non-searchable dropdown uses, now reached through the search input.
+// After Down hands focus to the list, arrow keys and type-ahead navigate the filtered subset and Enter commits.
+// This is the List keyboard path the non-searchable dropdown uses, reached through the search input.
 UTEST(dropdown, searchable_into_list_arrow_typeahead_commit) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4744,7 +4746,7 @@ UTEST(dropdown, searchable_into_list_arrow_typeahead_commit) {
         fl_app_tick(app, &st, dropdown_frame);
     }
 
-    // Hand focus into the list, seeded on row 0 ("Red").
+    // Hand focus to the list, with the cursor on row 0 ("Red").
     ASSERT_TRUE_MSG(dropdown_click_trigger(app, &st), "trigger button was not laid out");
     fl_app_inject_mouse_move(app, 5, 5);
     for (int f = 0; f < 3; f++) {
@@ -4758,14 +4760,15 @@ UTEST(dropdown, searchable_into_list_arrow_typeahead_commit) {
     ASSERT_EQ_MSG(st.choice, 1, "arrow-nav within the filtered list then Enter commits the roved option (index 1)");
     ASSERT_FALSE_MSG(st.is_open, "Enter-commit closes the popup");
 
-    // Reopen (now on choice 1); hand into the list, then type-ahead: 'c' jumps to "Cyan" (index 4). Enter commits.
+    // Reopen, now on choice 1, hand focus to the list, then type 'c', which jumps to "Cyan" (index 4). Enter
+    // commits.
     ASSERT_TRUE_MSG(dropdown_click_trigger(app, &st), "trigger button was not laid out on reopen");
     fl_app_inject_mouse_move(app, 5, 5);
     for (int f = 0; f < 3; f++) {
         fl_app_tick(app, &st, dropdown_frame);
     }
     dropdown_key_tap(app, &st, FlKey_Down); // input -> list
-    fl_app_inject_text(app, FL_S("c"));     // type-ahead within the list (input is no longer focused)
+    fl_app_inject_text(app, FL_S("c"));     // type-ahead within the list, since the input is no longer focused
     for (int f = 0; f < 2; f++) {
         fl_app_tick(app, &st, dropdown_frame);
     }
@@ -4776,11 +4779,10 @@ UTEST(dropdown, searchable_into_list_arrow_typeahead_commit) {
     fl_app_destroy(app);
 }
 
-// The Down hand-off seeds the list cursor from the FILTERED subset, not the original option array: when a query
-// removes leading options the cursor lands on the first SURVIVING option, and arrow-nav within the narrowed set
-// commits the correct ORIGINAL index across the filtered-out gap. Options "zero".."four"; typing "t" keeps
-// {two(2), three(3)} - "zero"/"one"/"four" have no 't'. So the first surviving row is "two" (original index 2),
-// not "zero" (index 0), and the row below it is "three" (original index 3), proving the seed and the id mapping.
+// The Down hand-off puts the list cursor on a row of the filtered subset. When a query removes leading options
+// the cursor lands on the first remaining one, and arrow navigation within the subset commits the right original
+// index. The options are "zero".."four", and typing "t" keeps {two(2), three(3)}. So the first remaining row is
+// "two" (original index 2) and the row below it is "three" (original index 3).
 UTEST(dropdown, searchable_filtered_handoff_commits_original_index) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4794,7 +4796,7 @@ UTEST(dropdown, searchable_filtered_handoff_commits_original_index) {
         fl_app_tick(app, &st, dropdown_frame);
     }
 
-    // Open, settle, type "t": only "two" and "three" survive (a 2-row filtered subset that drops leading options).
+    // Open, settle, type "t". Only "two" and "three" remain, a subset that drops the leading options.
     ASSERT_TRUE_MSG(dropdown_click_trigger(app, &st), "trigger button was not laid out");
     fl_app_inject_mouse_move(app, 5, 5);
     for (int f = 0; f < 3; f++) {
@@ -4809,8 +4811,8 @@ UTEST(dropdown, searchable_filtered_handoff_commits_original_index) {
                     "the 't' filter keeps 2 options: the 2nd survivor is laid out");
     ASSERT_FALSE_MSG(dropdown_row_center(&st, 2, &cx, &cy), "only 2 options survive the 't' filter — no 3rd row");
 
-    // Down seeds the list cursor on the first SURVIVING row ("two", original index 2). Enter with no arrow commits
-    // index 2 - if the seed had wrongly landed on original option 0 ("zero", filtered out), it would commit 0.
+    // Down puts the list cursor on the first remaining row ("two", original index 2), and Enter with no arrow
+    // commits index 2. A cursor on original option 0 ("zero", filtered out) would commit 0.
     dropdown_key_tap(app, &st, FlKey_Down);
     ASSERT_EQ_MSG((u64)dropdown_list_clay_id(), (u64)st.ctx->focused_id, "Down hands focus to the filtered list");
     dropdown_key_tap(app, &st, FlKey_Enter);
@@ -4818,8 +4820,8 @@ UTEST(dropdown, searchable_filtered_handoff_commits_original_index) {
                   "the hand-off seeds the first surviving filtered row (\"two\"), so Enter commits index 2");
     ASSERT_FALSE_MSG(st.is_open, "Enter-commit closes the popup");
 
-    // Reopen (choice now 2, search cleared): re-filter to {two, three}, hand off, arrow Down to the 2nd survivor
-    // ("three", original index 3), Enter. This proves arrow-nav within the filtered subset maps back past the gap.
+    // Reopen (choice is 2 and the search is cleared), filter to {two, three} again, hand off, arrow Down to the
+    // second remaining row ("three", original index 3), Enter.
     ASSERT_TRUE_MSG(dropdown_click_trigger(app, &st), "trigger button was not laid out on reopen");
     fl_app_inject_mouse_move(app, 5, 5);
     for (int f = 0; f < 3; f++) {
@@ -4838,9 +4840,9 @@ UTEST(dropdown, searchable_filtered_handoff_commits_original_index) {
     fl_app_destroy(app);
 }
 
-// Pressing Down in the search input when the filter matched NOTHING is a no-op: there is no list to enter (and an
-// empty list can never raise nav_up_edge to hand focus back), so focus stays in the input rather than stranding on
-// the empty list. This is the `filtered_count > 0` condition on the hand-off.
+// Pressing Down in the search input when the filter matched nothing does nothing. There is no list to enter, and
+// an empty list can never raise nav_up_edge to hand focus back, so focus stays in the input. This is the
+// `filtered_count > 0` condition on the hand-off.
 UTEST(dropdown, searchable_down_with_empty_filter_keeps_focus_in_input) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
@@ -4898,8 +4900,8 @@ UTEST(direct_ui_calls, calls_reach_real_bodies_in_a_live_frame) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// The public measurement entry points: font_id 0 resolves to the active font, and a missing context is a
-// safe zeroed-metrics no-op.
+// The public measurement calls: font_id 0 means the active font, and with no context they do nothing and return
+// zeroed metrics.
 UTEST(direct_ui_calls, text_measure_resolves_the_active_font) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -4925,18 +4927,16 @@ UTEST(direct_ui_calls, text_measure_resolves_the_active_font) {
     ASSERT_TRUE_MSG(none_fm.line_height == 0.0f, "no-context font metrics returns zeroed metrics");
 }
 
-// Two sides of one decision, which is why they are stated together: a real frame carries the context's
-// text_scale into the painter, and the public measure API deliberately does not apply it.
-//
-// An app authors in logical pixels and feeds the measured results back into layout, which applies the scale
-// itself - scaling here too would apply it twice.
+// A real frame passes the context's text_scale to the painter, and the public measure API does not apply it. An
+// app authors in logical pixels and feeds the measured results back into layout, which applies the scale, so
+// scaling in the measure API would apply it twice.
 UTEST(direct_ui_calls, a_frame_scales_painter_text_but_not_the_measure_api) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
     ui_set_scale(1.0f, 1.0f);
 
-    // A FreeType face, not the built-in default: the default font reports the same metrics whatever size it
-    // is asked for, so it cannot tell a scaled query from an unscaled one.
+    // A FreeType face is needed here. The built-in default font reports the same metrics at every size, so it
+    // cannot tell a scaled query from an unscaled one.
     const u16 authored = 16;
     FlFontId font
         = font_cache_load_font_memory(ctx->shared->font_cache, k_glyph_test_ttf, k_glyph_test_ttf_size, authored);
@@ -4961,7 +4961,8 @@ UTEST(direct_ui_calls, a_frame_scales_painter_text_but_not_the_measure_api) {
         ASSERT_TRUE_MSG(p != nullptr, "a painter is available inside the layout scope");
         void* slot = nullptr;
         painter_scope_push(p, &slot);
-        // font_size 0 takes the authored load size, the path that most depends on the scale arriving here.
+        // font_size 0 takes the authored load size, the path that depends most on the scale reaching the
+        // painter.
         fl_painter_text_styled(4.0f, 4.0f, FL_S("AA"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
         painter_scope_pop(p);
         drawn = (const FlPaintSpan*)slot;
@@ -4980,8 +4981,8 @@ UTEST(direct_ui_calls, a_frame_scales_painter_text_but_not_the_measure_api) {
                     "fl_font_metrics stays logical for the same reason");
 }
 
-// The painter styled-draw entry point resolves font_id 0 to the active font - the same rule fl_text_measure
-// applies, so draw and measure agree on which font a zero meant - and a missing context is a safe no-op.
+// The painter's styled draw call treats font_id 0 as the active font, the same rule fl_text_measure applies, so
+// draw and measure agree. With no context it does nothing.
 UTEST(direct_ui_calls, painter_text_styled_resolves_the_active_font) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -5003,7 +5004,7 @@ UTEST(direct_ui_calls, painter_text_styled_resolves_the_active_font) {
         painter_scope_push(p, &slot_id);
         fl_painter_text_styled(4.0f, 4.0f, FL_S("AA"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
         painter_scope_pop(p);
-        // The plain painter text entry point honors the same rule: font 0 draws with the active font.
+        // The plain painter text call follows the same rule: font 0 draws with the active font.
         void* slot_plain = nullptr;
         painter_scope_push(p, &slot_plain);
         fl_painter_text(4.0f, 4.0f, FL_S("AA"), 0, ui_color(255, 255, 255, 255));
@@ -5034,8 +5035,8 @@ UTEST(direct_ui_calls, painter_text_styled_resolves_the_active_font) {
     g_ui_ctx = active;
 }
 
-// The public effect entry point reaches the painter body inside a live frame, and is a safe no-op with no
-// context (hence no open scope).
+// The public effect call reaches the painter inside a live frame, and does nothing with no context, when no scope
+// is open.
 UTEST(direct_ui_calls, painter_set_effect_reaches_the_body) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -5070,8 +5071,8 @@ UTEST(direct_ui_calls, painter_set_effect_reaches_the_body) {
     g_ui_ctx = active;
 }
 
-// The public bar-row entry point reaches the painter body inside a live frame: the whole row crosses the
-// pointer+count seam into one batched record, and it is a safe no-op with no context.
+// The public bar-row call reaches the painter inside a live frame, where the whole row (pointer and count)
+// becomes one batched record. With no context it does nothing.
 UTEST(direct_ui_calls, painter_bars_reaches_the_body) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -5108,15 +5109,14 @@ UTEST(direct_ui_calls, painter_bars_reaches_the_body) {
     g_ui_ctx = active;
 }
 
-// The get-or-bail preamble every context-touching forwarder in ui_api.c shares. With no active context these
-// public entry points must be safe no-ops handing back the value their contract documents as "nothing" - not a
-// crash, and not a zeroed struct whose fields read as real data: the cursor is visible by default (so a zeroed
-// false would invert it).
+// Every forwarder in ui_api.c that touches the context starts by fetching it and returning if there is none. With
+// no active context these public calls do nothing and return the value their contract documents as "nothing". A
+// zeroed struct is not always that value: the cursor is visible by default, so a zeroed false would invert it.
 UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // --- live context: each forwarder reaches its body ---
+    // With a live context each forwarder reaches its body.
 
     fl_cursor_set((FlCursor) { .shape = FlCursorShape_Hand });
     ASSERT_EQ_MSG((int)fl_cursor_get_requested().shape, (int)FlCursorShape_Hand,
@@ -5128,8 +5128,7 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     ASSERT_TRUE_MSG(ctx->input_state.mouse.x == 42.0f && ctx->input_state.mouse.y == 24.0f,
                     "the pushed event reaches the context's input state");
 
-    // Snapshot the two fields the payload-gated pushes below would write, so the no-context half can be shown
-    // not to have landed.
+    // Save the two fields the pushes below would write, so the no-context half can show they were not written.
     const uint32_t text_len_before = ctx->input_state.keyboard.text_input.length;
     const bool focus_gained_before = ctx->input_state.window_events.focus_gained;
     const bool key0_before = ctx->input_state.keyboard.keys[0];
@@ -5149,7 +5148,7 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
         }
         fl_list_uniform_end();
 
-        // The frame arena the variadic formatter writes into is only live inside the frame, so copy out here.
+        // The frame arena the variadic formatter writes into is live only inside the frame, so copy out here.
         FlString formatted = fl_format_frame_string("%d-%s", 7, "ok");
         live_fmt_len = formatted.length;
         if (formatted.length > 0 && formatted.length < sizeof(live_fmt)) {
@@ -5163,7 +5162,7 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     ASSERT_EQ_MSG(live_fmt_len, 4u, "the variadic formatter reaches the frame arena");
     ASSERT_TRUE_MSG(memcmp(live_fmt, "7-ok", 4) == 0, "the formatted frame string crosses the seam intact");
 
-    // --- no context: every one of them bails, none of them crash ---
+    // With no context every one of them returns early.
 
     FlUiCtx* active = g_ui_ctx;
     g_ui_ctx = nullptr;
@@ -5174,8 +5173,8 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
                   "no context resolves to the arrow, the documented fallback shape");
     ASSERT_TRUE_MSG(fl_cursor_get_visible(), "no context reports the default-visible cursor, not a zeroed false");
 
-    // begin and end must bail as a pair: each half opens/closes a layout element, so a guard on only one of
-    // them would leave the layout stack unbalanced rather than merely returning the wrong value.
+    // begin and end have to return early as a pair. Each opens or closes a layout element, so a guard on only one
+    // of them would leave the layout stack unbalanced.
     FlListUniformRange range = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100,
                                                      (FlListUniformOpts) { .height_hint = 24.0f, .scroll_to = -1 });
     ASSERT_TRUE_MSG(range.start == 0 && range.end == 0 && range.total == 0,
@@ -5187,15 +5186,14 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     FlString bailed = fl_format_frame_string("%d", 1);
     ASSERT_TRUE_MSG(bailed.length == 0, "no context yields an empty frame string");
 
-    // The push surface guards here rather than in the callee: platform_input_push_* opens with
-    // `&ctx->input_state` and takes a non-null context as a precondition, so an unguarded forwarder would
-    // write through null instead of dropping the event. Every payload below is chosen to reach a branch that
-    // actually writes - a zero-valued FlTextInputEvent (length 0) and a zero-valued FlWindowEvent
-    // (FlWindowEvent_None) are both no-ops in the callee, so they would pass whether or not the guard exists.
-    fl_input_push_key_event((FlKeyEvent) { 0 });                              // key 0 is in range -> keys[0] write
-    fl_input_push_text_input_event((FlTextInputEvent) { .text = FL_S("x") }); // length > 0 -> text buffer write
+    // The push calls are guarded in the forwarder: platform_input_push_* starts with `&ctx->input_state` and
+    // requires a non-null context, so an unguarded forwarder would write through null. Every payload below reaches
+    // a branch that writes. A zero FlTextInputEvent (length 0) and a zero FlWindowEvent (FlWindowEvent_None) do
+    // nothing in the callee, so they would pass with or without the guard.
+    fl_input_push_key_event((FlKeyEvent) { 0 });                              // key 0 is in range, so it writes keys[0]
+    fl_input_push_text_input_event((FlTextInputEvent) { .text = FL_S("x") }); // length > 0, so it writes the text
     fl_input_push_mouse_event((FlMouseEvent) { .type = FlMouseEvent_Move, .move = { .x = 1.0f, .y = 1.0f } });
-    fl_input_push_gamepad_event((FlGamepadEvent) { 0 }); // slot 0 is in range -> buttons write
+    fl_input_push_gamepad_event((FlGamepadEvent) { 0 }); // slot 0 is in range, so it writes buttons
     fl_input_push_window_event((FlWindowEvent) { .type = FlWindowEvent_Focus_Gained });
 
     g_ui_ctx = active;
@@ -5241,14 +5239,13 @@ UTEST(frame_api, setter_updates_persistent_frame_envelope_alpha) {
     fl_frame_set_alpha(255);
 }
 
-// widget_id - ui_item_id_seed: per-item id seeding for multi-item widgets (radio group, tab strip).
-//
-// ui_item_id_seed decorrelates the instance base so the item ranges of two nearby instance keys do not overlap,
-// while staying a bijection in index for a fixed key (items within one widget never alias each other).
+// ui_item_id_seed gives each item of a multi-item widget (radio group, tab strip) its id seed. It spreads the
+// instance base so the item ranges of two nearby instance keys do not overlap, and for a fixed key it is a
+// bijection in the index, so items within one widget never share an id.
 
 UTEST(widget_id, seed_is_bijection_within_one_instance) {
-    // For a fixed instance key, distinct item indices must map to distinct seeds - otherwise two items in the
-    // same widget would share per-item state and trip the duplicate-id assert.
+    // For a fixed instance key, distinct item indices map to distinct seeds. Otherwise two items in the same
+    // widget would share per-item state and trip the duplicate-id assert.
     const u32 key = 0x00400000u;
     enum { N = 512 };
     static u32 seeds[N];
@@ -5263,8 +5260,8 @@ UTEST(widget_id, seed_is_bijection_within_one_instance) {
 }
 
 UTEST(widget_id, adjacent_instance_keys_do_not_collide) {
-    // Cover the small gaps that arise from adjacent 4- and 8-byte fields, with item counts well past any real
-    // radio group / tab bar.
+    // Covers the small gaps between adjacent 4- and 8-byte fields, with item counts well past any real radio
+    // group or tab bar.
     const u32 base = 0x7ffe0100u;
     const u32 gaps[] = { 1, 2, 4, 8, 12, 16 };
     enum { ITEMS = 64 };
@@ -5287,14 +5284,14 @@ UTEST(widget_id, adjacent_instance_keys_do_not_collide) {
     }
 }
 
-// The virtual keyboard lives across many frames while the caller's title/allowed_chars string storage may not,
-// so ui_virtual_keyboard_create copies the caller strings into its dedicated, rewound-per-cycle arena.
+// The virtual keyboard lives across many frames while the caller's title and allowed_chars storage may not, so
+// ui_virtual_keyboard_create copies the caller's strings into its own arena, which is rewound for each cycle.
 
 UTEST(virtual_keyboard, create_owns_strings_and_does_not_leak) {
     FlArena* arena = arena_new();
     ASSERT_TRUE(arena != nullptr);
 
-    // Non-static (dynamic) caller strings backed by mutable stack buffers.
+    // Caller strings that are not static, in mutable stack buffers.
     char title_buf[] = "Enter name";
     char chars_buf[] = "abc";
     VirtualKeyboardConfig config = { .max_length = 0,
@@ -5305,27 +5302,27 @@ UTEST(virtual_keyboard, create_owns_strings_and_does_not_leak) {
                                      .initial_page = VK_PAGE_LOWERCASE };
 
     VirtualKeyboard* vk = ui_virtual_keyboard_create(arena, config);
-    // Copied, not aliased.
+    // The strings are copies and do not point at the caller's buffers.
     ASSERT_TRUE(vk->config.title.data != title_buf);
     ASSERT_TRUE(vk->config.allowed_chars.data != chars_buf);
     ASSERT_EQ((u64)vk->config.title.length, (u64)(sizeof(title_buf) - 1));
     ASSERT_EQ((u64)vk->config.allowed_chars.length, (u64)(sizeof(chars_buf) - 1));
 
-    // Clobber the caller buffers; the keyboard's owned copies must be unaffected.
+    // Overwrite the caller's buffers. The keyboard's copies are unaffected.
     memory_set(title_buf, sizeof(title_buf), 'X', sizeof(title_buf));
     memory_set(chars_buf, sizeof(chars_buf), 'X', sizeof(chars_buf));
     ASSERT_EQ(memory_compare(vk->config.title.data, "Enter name", 10), 0);
     ASSERT_EQ(memory_compare(vk->config.allowed_chars.data, "abc", 3), 0);
 
-    // Static (FL_S("...")) strings are already stable storage: fl_string_copy short-circuits and returns them
-    // unchanged (no allocation).
+    // Static (FL_S("...")) strings are already stable storage, so fl_string_copy returns them unchanged without
+    // allocating.
     VirtualKeyboardConfig static_cfg = config;
     static_cfg.title = FL_S("Static title");
     VirtualKeyboard* vk_static = ui_virtual_keyboard_create(arena, static_cfg);
     ASSERT_TRUE(vk_static->config.title.data == FL_S("Static title").data);
 
-    // No per-cycle leak: with a rewind before each create (as the focus-gain path does), the arena position
-    // after N cycles equals the position after a single create - growth is O(1), not O(N).
+    // With a rewind before each create, as the focus-gain path does, the arena position after N cycles equals the
+    // position after a single create.
     fl_arena_rewind(arena);
     ui_virtual_keyboard_create(arena, config);
     void* pos_after_one = fl_arena_current_pos(arena);
@@ -5338,8 +5335,8 @@ UTEST(virtual_keyboard, create_owns_strings_and_does_not_leak) {
     fl_arena_destroy(arena);
 }
 
-// Drive a real ui_text_input through the focus-gain path and confirm the keyboard is allocated from
-// ctx->vk_arena (not the persistent arena) and that repeated focus-gain cycles do not grow it.
+// Runs a real ui_text_input through the focus-gain path and checks that the keyboard is allocated from
+// ctx->vk_arena and not the persistent arena, and that repeated focus-gain cycles do not grow it.
 UTEST(virtual_keyboard, focus_gain_uses_vk_arena_and_does_not_grow) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -5350,7 +5347,7 @@ UTEST(virtual_keyboard, focus_gain_uses_vk_arena_and_does_not_grow) {
     ui_set_scale(1.0f, 1.0f);
     const float dt = 1.0f / 60.0f;
 
-    // No physical keyboard => focus-gain on a text input spawns the virtual keyboard.
+    // With no physical keyboard, a text input that gains focus opens the virtual keyboard.
     ctx->physical_keyboard_available = false;
     ctx->active_virtual_keyboard = nullptr;
     ctx->vk_target_text_input = nullptr;
@@ -5370,14 +5367,14 @@ UTEST(virtual_keyboard, focus_gain_uses_vk_arena_and_does_not_grow) {
     } while (0)
 
     // Focus takes effect one frame after focused_id is set (item->state.focused is written from focused_id in the
-    // command pass), and focus_gained needs a prior unfocused frame - a short bounded loop reaches it.
+    // command pass), and focus_gained needs an unfocused frame before it, so a short bounded loop gets there.
     ctx->focused_id = ti_clay;
     for (int i = 0; i < 8 && ctx->active_virtual_keyboard == nullptr; i++) {
         TI_FRAME();
     }
     ASSERT_TRUE_MSG(ctx->active_virtual_keyboard != nullptr, "focus-gain with no physical keyboard spawns a VK");
 
-    // The keyboard must live in vk_arena, not the persistent arena.
+    // The keyboard is in vk_arena and not the persistent arena.
     const u8* vk_lo = (const u8*)ctx->vk_arena->ptr;
     const u8* vk_hi = (const u8*)fl_arena_current_pos(ctx->vk_arena);
     const u8* vk_ptr = (const u8*)ctx->active_virtual_keyboard;
@@ -5385,7 +5382,7 @@ UTEST(virtual_keyboard, focus_gain_uses_vk_arena_and_does_not_grow) {
 
     void* pos_cycle1 = fl_arena_current_pos(ctx->vk_arena);
 
-    // Dismiss and run a second full focus-gain cycle; the per-cycle fl_arena_rewind must keep growth at zero.
+    // Dismiss and run a second full focus-gain cycle. The fl_arena_rewind per cycle keeps the growth at zero.
     ctx->active_virtual_keyboard = nullptr;
     ctx->vk_target_text_input = nullptr;
     ctx->focused_id = 0;
@@ -5402,9 +5399,9 @@ UTEST(virtual_keyboard, focus_gain_uses_vk_arena_and_does_not_grow) {
 #undef TI_FRAME
 }
 
-// A keyboard that closed itself is retired by the shared close-out both ui_update_end and
-// ui_virtual_keyboard_update_and_render run: a submit commits its buffer to the target input, a cancel discards it,
-// and either way both context slots clear.
+// A keyboard that closed itself is retired by the close-out code that ui_update_end and
+// ui_virtual_keyboard_update_and_render both run. A submit commits its buffer to the target input and a cancel
+// discards it. Both clear the two context slots.
 
 UTEST(virtual_keyboard, close_out_commits_on_submit_and_discards_on_cancel) {
     FlUiCtx* ctx = render_fixture_get();
@@ -5433,7 +5430,7 @@ UTEST(virtual_keyboard, close_out_commits_on_submit_and_discards_on_cancel) {
         ui_update_end(ctx, dt);                                                          \
     } while (0)
 
-    // Submit: the keyboard's buffer lands in the target input.
+    // Submit: the keyboard's buffer is written to the target input.
     ctx->focused_id = ti_clay;
     for (int i = 0; i < 8 && ctx->active_virtual_keyboard == nullptr; i++) {
         VK_TI_FRAME();
@@ -5485,10 +5482,9 @@ UTEST(virtual_keyboard, close_out_commits_on_submit_and_discards_on_cancel) {
 #undef VK_TI_FRAME
 }
 
-// Typed text must survive the real fl_app tick order (pump -> ui_input_update -> frame body).
-// ui_input_update snapshots kb->text_input into ctx->text_input_this_frame before clearing the raw field,
-// and ui_text_input reads that snapshot - so a character
-// injected before the tick reaches the widget's buffer.
+// Typed text survives the real fl_app tick order (pump -> ui_input_update -> frame body). ui_input_update copies
+// kb->text_input into ctx->text_input_this_frame before clearing the raw field, and ui_text_input reads that
+// copy, so a character injected before the tick reaches the widget's buffer.
 
 typedef struct TypedTextState {
     FlUiCtx* ctx;
@@ -5498,8 +5494,8 @@ typedef struct TypedTextState {
 static void typed_text_frame(void* user_data) {
     TypedTextState* st = (TypedTextState*)user_data;
     st->ctx = ui_get_ctx();
-    // Hold the field focused every frame (a physical keyboard, so no virtual keyboard steals the path) - focus
-    // survives the tick, but re-asserting it is immune to any focus auto-restore reshuffle.
+    // The field is given focus every frame, with a physical keyboard so no virtual keyboard opens. Focus survives
+    // the tick anyway, and setting it again makes the case independent of focus auto-restore.
     st->ctx->physical_keyboard_available = true;
     st->ctx->focused_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("typed_input"), .id = 0 });
     ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
@@ -5597,14 +5593,14 @@ UTEST(input, typed_text_reaches_widget_under_app_tick_order) {
 
     TypedTextState st = { 0 };
 
-    // Settle: let the widget register and focus propagate (signal.focused lags focused_id by a frame).
+    // Let the widget register and focus propagate. signal.focused lags focused_id by a frame.
     for (int f = 0; f < 4; f++) {
         fl_app_tick(app, &st, typed_text_frame);
     }
     ASSERT_TRUE_MSG(st.ctx != nullptr, "frame did not run / no UI context");
 
-    // Type one character. inject_text queues it into the headless backend; the NEXT tick's pump drains it into
-    // kb->text_input BEFORE ui_input_update runs.
+    // Type one character. inject_text queues it in the headless backend, and the next tick's pump drains it into
+    // kb->text_input before ui_input_update runs.
     fl_app_inject_text(app, FL_S("a"));
     fl_app_tick(app, &st, typed_text_frame);
 
@@ -5823,8 +5819,8 @@ UTEST(input, text_input_typing_replaces_a_shift_selection) {
     fl_app_destroy(app);
 }
 
-// The same field, never aimed at: it is the frame's first focusable widget, so it is exactly what a focus
-// auto-restore that seeds on an idle frame would hand the keyboard to.
+// The same field, never given focus. It is the frame's first focusable widget, so a focus auto-restore that
+// seeded on an idle frame would hand the keyboard to it.
 
 typedef struct UnaimedTextState {
     FlUiCtx* ctx;
@@ -5863,8 +5859,8 @@ UTEST(input, an_unaimed_text_input_consumes_nothing) {
     fl_app_destroy(app);
 }
 
-// fl_input_text_input_active reads whether a field had keyboard focus in the frame that ended last, the frame an app
-// polling after the tick has just seen, and lets go of it once the field loses focus.
+// fl_input_text_input_active reports whether a field had keyboard focus in the frame that ended last, which is the
+// frame an app polling after the tick has just seen. It turns false once the field loses focus.
 
 typedef struct EditingTextState {
     FlUiCtx* ctx;
@@ -5932,9 +5928,8 @@ static void public_text_input_frame(void* user_data) {
     }
 }
 
-// The caret's position is measured through the active font, so this frame installs a real FreeType face:
-// the built-in bitmap default reports the same metrics whatever size it is asked for, which would make the
-// scale invisible here for reasons that have nothing to do with the code under test.
+// The caret's position is measured through the active font, so this frame installs a real FreeType face. The
+// built-in bitmap default reports the same metrics at every size, which would hide the scale.
 static FlFontId s_caret_font;
 
 static float s_caret_min_width = 300.0f; // narrowed by the scrolling case so the text overflows its box
@@ -5959,9 +5954,8 @@ typedef struct CaretRect {
     float x, y, height;
 } CaretRect;
 
-// The caret is the only rectangle in this frame two authored px wide, so its width identifies it. The blink
-// hides it half the time; the caller ticks until it appears rather than trying to predict the phase. Returns
-// false while it is hidden.
+// The caret is the only rectangle in this frame that is two authored px wide, so its width identifies it. The
+// blink hides it half the time, and the caller ticks until it appears. Returns false while it is hidden.
 static bool find_text_caret(float expected_width, CaretRect* out) {
     const int n = ui_get_render_command_count();
     for (int i = 0; i < n; i++) {
@@ -5987,11 +5981,10 @@ static bool tick_to_caret(FlApp* app, PublicTextInputState* st, float expected_w
     return false;
 }
 
-// The text-input caret is a floating element configured straight through Clay rather than through
-// fl_floating_configure, so it is the one spot in the widget where the scale has to be applied by hand - and
-// it also measures how far along the string the caret sits, using a font size that is authored rather than
-// pre-scaled. The scale arrives through fl_app_set_ui_zoom, the way a real app's does - pushing ui_set_scale
-// directly would be overwritten by the tick loop's own composition.
+// The text-input caret is a floating element configured directly through Clay and not through
+// fl_floating_configure, so the widget applies the scale to it by hand. It also measures how far along the
+// string the caret is, with a font size that is authored and not yet scaled. The scale is set with
+// fl_app_set_ui_zoom, as in a real app. A direct ui_set_scale would be overwritten by the tick loop.
 UTEST(input, text_input_caret_follows_the_scale_with_the_text) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("caret scale"), .width = 800, .height = 200, .headless = true };
@@ -6002,8 +5995,8 @@ UTEST(input, text_input_caret_follows_the_scale_with_the_text) {
     s_caret_min_width = 300.0f;
     PublicTextInputState st = { .input = fl_text_input_create(64) };
     ASSERT_TRUE_MSG(st.input != nullptr, "opaque text-input state creation failed");
-    // Only 'A' and 'o' are mapped in the embedded test face; unmapped glyphs measure zero and would
-    // leave the caret sitting on the padding, where the assertion below would hold for free.
+    // Only 'A' and 'o' are mapped in the embedded test face. Unmapped glyphs measure zero and would leave the
+    // caret on the padding, where the assertion below holds trivially.
     fl_text_input_set_text(st.input, FL_S("AAAAAAAA"));
 
     for (int f = 0; f < 4; f++) {
@@ -6014,8 +6007,8 @@ UTEST(input, text_input_caret_follows_the_scale_with_the_text) {
     CaretRect at_1 = { 0 };
     ASSERT_TRUE_MSG(tick_to_caret(app, &st, 2.0f, &at_1), "the caret must render at identity scale");
     const float caret_at_1 = at_1.x;
-    // Well past the padding: a zero-width measurement (unmapped glyphs, or a caret still at index 0) would
-    // make the doubling assertion below pass on the padding alone, testing nothing.
+    // Well past the padding. With a zero-width measurement (unmapped glyphs, or a caret still at index 0) the
+    // doubling assertion below would pass on the padding alone.
     ASSERT_TRUE_MSG(caret_at_1 > 50.0f, "the caret sits several characters into the string, not on the padding");
 
     fl_app_set_ui_zoom(app, 2.0f);
@@ -6028,18 +6021,16 @@ UTEST(input, text_input_caret_follows_the_scale_with_the_text) {
                     "the caret must still render at double scale, and at double its authored width");
     const float caret_at_2 = at_2.x;
 
-    // Stated as a band, not an equality: glyph advances re-hint at the larger ppem, so eight of them at 32px
-    // are not exactly twice eight at 16px (this face lands near 1.8x). The band still separates the two
-    // outcomes cleanly - a caret measured at the authored size instead of the scaled one barely moves at all,
-    // landing near 1.0x, which is nowhere close to the lower bound.
+    // A band and not an equality: glyph advances are hinted again at the larger ppem, so eight of them at 32px
+    // are not exactly twice eight at 16px (this face gives about 1.8x). A caret measured at the authored size
+    // and not the scaled one barely moves, about 1.0x, far below the lower bound.
     ASSERT_TRUE_MSG(caret_at_2 > caret_at_1 * 1.6f,
                     "the caret's distance along the text grows with the scale, like the glyphs it follows");
     ASSERT_TRUE_MSG(caret_at_2 < caret_at_1 * 2.2f, "and does not overshoot, which would mean a double-scale");
 
-    // The caret's own box, not just where it sits. Its height is the text height (type, re-hinted at the
-    // larger ppem, hence a band again) plus an authored 4px nudge (chrome); its y is the authored vertical
-    // centring inside the box. Both come from the same hand-applied scaling as the offset, and an unscaled
-    // one leaves a 2x caret drawn at 1x proportions inside doubled chrome.
+    // The caret's own box. Its height is the text height (hinted again at the larger ppem, so a band again) plus
+    // an authored 4px, and its y is the authored vertical centring inside the box. Both use the same hand-applied
+    // scaling as the offset. Without it a 2x caret would be drawn at 1x proportions inside doubled chrome.
     ASSERT_TRUE_MSG(at_2.height > at_1.height * 1.6f, "the caret grows in height with the type it marks");
     ASSERT_TRUE_MSG(at_2.height < at_1.height * 2.3f, "without overshooting");
     ASSERT_TRUE_MSG(at_1.y > 0.0f, "the caret is centred inside the box, not pinned to its top edge");
@@ -6050,13 +6041,11 @@ UTEST(input, text_input_caret_follows_the_scale_with_the_text) {
     fl_app_destroy(app);
 }
 
-// The scrolled regime, which the case above never enters: once the string outruns its box, the caret's
-// position stops being "how far along the text am I" and becomes "where does the viewport end", because the
-// scroll offset is clamped to text width - viewport. That makes this the branch where the viewport width
-// and the 10px trigger margin have to be scaled - they are authored lengths being compared against a
-// measurement already in screen coordinates. It also makes the assertion exact rather than a band: with the
-// clamp saturated the caret lands on `inner_padding * scale + viewport * scale`, all layout constants, so
-// the glyph re-hinting that forced a band above cancels out entirely.
+// The scrolled case. Once the string is wider than its box, the scroll offset is clamped to text width -
+// viewport, so the caret's position is where the viewport ends. Here the viewport width and the 10px trigger
+// margin have to be scaled, because they are authored lengths compared with a measurement already in screen
+// coordinates. The assertion is exact: with the clamp saturated the caret is at `inner_padding * scale +
+// viewport * scale`, all layout constants, so the glyph hinting that needed a band above does not enter.
 UTEST(input, text_input_caret_stays_in_the_box_when_the_text_scrolls) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlAppSettings settings = { .window_title = FL_S("caret scroll"), .width = 800, .height = 200, .headless = true };
@@ -6064,13 +6053,13 @@ UTEST(input, text_input_caret_stays_in_the_box_when_the_text_scrolls) {
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
 
     s_caret_font = 0;
-    s_caret_min_width = 90.0f; // narrow enough that the string below overflows it at either scale
+    s_caret_min_width = 90.0f; // narrow enough that the string below overflows it at both scales
     PublicTextInputState st = { .input = fl_text_input_create(64) };
     ASSERT_TRUE_MSG(st.input != nullptr, "opaque text-input state creation failed");
     fl_text_input_set_text(st.input, FL_S("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")); // 30 mapped glyphs
 
-    // The scroll offset eases toward its target (0.3 per frame), so let it settle before reading the caret;
-    // a caret sampled mid-ease would drift with tick count rather than with the scale.
+    // The scroll offset eases toward its target (0.3 per frame), so let it settle before reading the caret. A
+    // caret read mid-ease would depend on the tick count.
     for (int f = 0; f < 40; f++) {
         fl_app_tick(app, &st, scaled_caret_frame);
     }
@@ -6092,8 +6081,8 @@ UTEST(input, text_input_caret_stays_in_the_box_when_the_text_scrolls) {
     const float caret_at_2 = scrolled_2.x;
     ASSERT_TRUE_MSG(caret_at_2 > 0.0f && caret_at_2 <= 180.0f, "and stay inside the doubled box");
 
-    // An unscaled viewport would clamp the scroll against roughly half the box it should, parking the caret
-    // near its 1x position (about 1.1x) instead of tracking the box out to 2x.
+    // An unscaled viewport would clamp the scroll against about half the box, which leaves the caret near its 1x
+    // position (about 1.1x) when it should follow the box out to 2x.
     ASSERT_NEAR_MSG(caret_at_2, caret_at_1 * 2.0f, caret_at_1 * 2.0f * 0.05f,
                     "the scrolled caret tracks the scaled viewport edge, not the authored one");
 
@@ -6156,8 +6145,8 @@ UTEST(input, public_configured_opaque_text_input) {
     fl_app_destroy(app);
 }
 
-// ui_text_input_paste filters and truncates pasted text the way typed text is handled, and a selection it replaces
-// frees its own capacity.
+// ui_text_input_paste filters and truncates pasted text as typed text is, and the selection it replaces frees its
+// own capacity.
 
 static void paste_text_state(FlTextInputState* state, const char* text, int sel_start, int sel_end) {
     ui_text_input_init(state, s_arena);
@@ -6217,10 +6206,10 @@ UTEST(text_input, paste_replaces_the_selection_and_counts_its_room) {
     ASSERT_TRUE_MSG(paste_equals(&state, "a123e"), "filtered, cut to the selection's room, and replacing it");
 }
 
-// Hit testing is clipped. Clay culls against the screen, not against the clip rect, so an element that overflows
-// its clip container still reaches the hit test carrying its full, uncut bounding box.
+// Hit testing is clipped. Clay culls against the screen and not against the clip rect, so an element that
+// overflows its clip container reaches the hit test with its full bounding box.
 
-// 60x120 placed at y=140 inside a 200x200 clip box: 60px of it survive the clip, 60px are cut away.
+// 60x120 placed at y=140 inside a 200x200 clip box, so 60px of it are inside the clip and 60px are cut away.
 static void hit_clip_emit(FlUiCtx* ctx) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
@@ -6233,7 +6222,7 @@ static void hit_clip_emit(FlUiCtx* ctx) {
                               .placed = { .enabled = true, .offset = { 20.0f, 140.0f } }) {
                 ui_item_behavior(ID("hc_item"), FlItemFlags_clickable, (FlWidgetConfig) { 0 });
             }
-            // Cut away by the clip box entirely, while its own rect stays well inside the 400x400 window.
+            // Entirely cut away by the clip box, while its own rect is well inside the 400x400 window.
             ui_layout_area_id(ID("hc_hidden"), .sizing = { sizing_fixed(60), sizing_fixed(60) },
                               .color = ui_color(200, 60, 40, 255),
                               .placed = { .enabled = true, .offset = { 20.0f, 260.0f } }) {
@@ -6253,7 +6242,7 @@ UTEST(hit_clip, an_overflowing_element_takes_input_only_where_it_paints) {
     FlUiCtx* ctx = ui_get_ctx();
     ASSERT_TRUE_MSG(ctx != nullptr, "fl_app_create did not establish a global UI context");
 
-    ctx->ui_scale = 1.0f; // sizing_fixed() multiplies by ui_scale; keep logical == physical for exact rects.
+    ctx->ui_scale = 1.0f; // sizing_fixed() multiplies by ui_scale, so 1.0 keeps the rects exact
     ctx->layout_width = 400.0f;
     ctx->layout_height = 400.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
@@ -6281,7 +6270,7 @@ UTEST(hit_clip, an_overflowing_element_takes_input_only_where_it_paints) {
     hit_clip_emit(ctx);
     ASSERT_NE_MSG(item_id, ctx->hot_id, "past the clip it paints nothing, so it must take no input either");
 
-    // FlElementState.visible reads the same clip chain: "within the visible/clip region", not merely on screen.
+    // FlElementState.visible uses the same clip chain: it means inside the clip region, not only on screen.
     Clay_ElementData hidden_box
         = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(ID("hc_hidden")) });
     ASSERT_TRUE_MSG(hidden_box.found, "the fully clipped element must still lay out");
@@ -6298,8 +6287,8 @@ UTEST(hit_clip, an_overflowing_element_takes_input_only_where_it_paints) {
     fl_app_destroy(app);
 }
 
-// An element with both a background and a clip gets two render commands under one id; its hit-test state must
-// still advance once per frame, so the focus-gained edge survives.
+// An element with both a background and a clip gets two render commands under one id. Its hit-test state still
+// advances once per frame, so the focus-gained edge is reported.
 
 static void hit_once_emit(FlUiCtx* ctx) {
     ui_update_begin(ctx);
@@ -6348,8 +6337,8 @@ UTEST(hit_clip, a_background_and_clip_update_the_item_once_per_frame) {
     fl_app_destroy(app);
 }
 
-// Clay emits an overlay-color marker under the element's id with a zero box ahead of the element's own commands. The
-// marker carries no geometry, so it must not stand in for the element's hit-test update.
+// Clay emits an overlay-color marker under the element's id, with a zero box, ahead of the element's own
+// commands. The marker has no geometry, so it does not count as the element's hit-test update.
 
 static void hit_overlay_emit(FlUiCtx* ctx) {
     ui_update_begin(ctx);
@@ -6395,9 +6384,9 @@ UTEST(hit_clip, an_element_with_an_overlay_color_still_takes_hover) {
     fl_app_destroy(app);
 }
 
-// Opens levels unrestricting clip containers, then one that restricts to 200x100. Inside it: a further clip
-// container, which is the push past the walk's stack capacity, and - after that one closes - an item tall enough to
-// reach past the restricting clip's bottom edge.
+// Opens levels clip containers that do not restrict, then one that restricts to 200x100. Inside that one are a
+// further clip container, which is the push past the walk's stack capacity, and after it closes an item tall
+// enough to reach past the restricting clip's bottom edge.
 
 static void hit_clip_deep_nest(int levels) {
     if (levels > 0) {
@@ -6429,8 +6418,8 @@ static void hit_clip_deep_emit(FlUiCtx* ctx) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// Past the clip stack's capacity a push is dropped and its matching pop cancels the drop rather than popping a clip
-// that is still in force - the same balance the software renderer's scissor stack keeps
+// Past the clip stack's capacity a push is dropped, and its matching pop cancels the drop without popping a clip
+// that is still in force. The software renderer's scissor stack keeps the same balance
 // (render.scissor_stack_deep_nesting_balanced).
 
 UTEST(hit_clip, a_push_past_the_stack_capacity_does_not_pop_a_live_clip) {
@@ -6475,8 +6464,8 @@ UTEST(hit_clip, a_push_past_the_stack_capacity_does_not_pop_a_live_clip) {
     fl_app_destroy(app);
 }
 
-// localization: SID_ display text resolved against the default language's string table, loaded from the
-// checked-in example manifest under examples/data/localization.
+// SID_ display text resolved against the default language's string table, loaded from the checked-in example
+// manifest under examples/data/localization.
 
 #include "ui/localization.h"
 #include <flowi/ui/localization.h>
@@ -6491,8 +6480,8 @@ static FlVfsMount* localization_mount(void) {
     return mount.mount;
 }
 
-// Drive frame boundaries until nothing is in flight, the way an app tick loop does. Every read is built on a VFS
-// worker, so a case that wants a loaded table has to reach it by ticking rather than by one call.
+// Runs frame boundaries until nothing is in flight, as an app tick loop does. Every read runs on a VFS worker, so
+// a case that wants a loaded table has to tick until it arrives.
 static void localization_settle(struct Localization* loc) {
     for (u32 i = 0; i < 100000; i++) {
         localization_frame_begin(loc);
@@ -6503,7 +6492,7 @@ static void localization_settle(struct Localization* loc) {
     }
 }
 
-// Init localization against the example data and tick until the default table is up.
+// Initializes localization against the example data and ticks until the default table is loaded.
 static FlUiCtx* localization_fixture(FlVfsMount** out_mount, FlString manifest_path) {
     FlUiCtx* ctx = render_fixture_get();
     if (ctx == nullptr) {
@@ -6526,7 +6515,7 @@ static void localization_fixture_release(FlUiCtx* ctx, FlVfsMount* mount) {
     }
 }
 
-// Emit one frame holding label as text inside an element identified by id_source, then serialize the tree.
+// Emits one frame holding label as text inside an element identified by id_source, then serializes the tree.
 // Returns the size the snapshot needed, so a caller can tell a truncated buffer from an absent string.
 static int32_t localization_emit(FlUiCtx* ctx, FlString id_source, FlString label, char* snapshot,
                                  int32_t snapshot_size) {
@@ -6536,7 +6525,7 @@ static int32_t localization_emit(FlUiCtx* ctx, FlString id_source, FlString labe
 
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        // A background colour is what makes the area emit a render command, which is what the inspector reads.
+        // The background colour makes the area emit a render command, which the inspector reads.
         ui_layout_area_id(resolve_widget_id(id_source, string_empty()),
                           .sizing = { sizing_fixed(200), sizing_fixed(40) }, .color = ui_color(40, 200, 60, 255)) {
             ui_text(label);
@@ -6580,8 +6569,8 @@ UTEST(localization, a_plural_key_on_the_implicit_path_resolves_the_other_variant
     FlUiCtx* ctx = localization_fixture(&mount, FL_S("manifest.json"));
     ASSERT_TRUE_MSG(ctx != nullptr, "localization fixture creation failed");
 
-    // No count reaches the implicit path, so the key resolves to its "other" variant with the placeholder left
-    // visible rather than to the SID literal.
+    // The implicit path has no count, so the key resolves to its "other" variant with the placeholder left
+    // visible, and not to the SID literal.
     ASSERT_TRUE_MSG(
         fl_string_equals(localization_lookup(ctx->shared->localization, FL_S("SID_file_count")), FL_S("{0} files")),
         "a plural key with no count in hand renders its other variant");
@@ -6652,7 +6641,7 @@ UTEST(localization, startup_never_blocks_and_text_resolves_once_the_table_lands)
     char snapshot[8192];
     int32_t needed = fl_inspector_snapshot(snapshot, (int32_t)sizeof(snapshot));
 
-    // The snapshot is read for an absence, so a truncated buffer would pass that check for the wrong reason.
+    // The check below is for an absence, which a truncated buffer would also satisfy.
     ASSERT_TRUE_MSG(needed > 0 && needed < (int32_t)sizeof(snapshot), "snapshot fits the buffer");
     // Whether the manifest and table have landed by the first frame is a race with the async read,
     // so the frame is only required to have rendered the SID one way or the other.
@@ -6680,7 +6669,7 @@ UTEST(localization, unparseable_manifest_disables_localization) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // A manifest that reads fine but is not JSON takes the parse-failure branch, distinct from the
+    // A manifest that reads but is not JSON takes the parse-failure branch, which is separate from the
     // file-not-found branch above.
     FlArena* arena = arena_new();
     FlString dir_path = file_build_path_os(arena, get_current_directory_os(arena), FL_S("unit_test_localization_tmp"));
@@ -6948,8 +6937,8 @@ UTEST(localization, a_switch_still_in_flight_at_teardown_is_waited_out) {
     localization_frame_begin(loc);
     ASSERT_TRUE_MSG(localization_is_loading(loc), "the boundary that starts the read leaves it in flight");
 
-    // Teardown has to wait out the worker before retiring the arena it may still be writing into, so this case
-    // fails as a hang or a use-after-free rather than an assertion.
+    // Teardown waits for the worker before releasing the arena it may still be writing into. A failure here shows
+    // as a hang or a use-after-free.
     localization_fixture_release(ctx, mount);
 }
 
@@ -7067,7 +7056,7 @@ UTEST(localization, an_unusable_tag_is_rejected_and_the_last_tag_set_wins) {
                     "a tag that is empty or too long is rejected outright, never recorded as pending");
     ASSERT_EQ_MSG((u32)1, localization_resident_table_count(loc), "a rejected tag loads nothing");
 
-    // One pending slot, not a queue: only the last tag set before the boundary is applied.
+    // There is one pending slot and no queue, so only the last tag set before the boundary is applied.
     fl_localization_set_language(FL_S("pt-br"));
     fl_localization_set_language(FL_S("de"));
     localization_settle(loc);
@@ -7200,7 +7189,7 @@ UTEST(localization, fmt_substitutes_indexed_placeholders) {
     ASSERT_TRUE_MSG(fl_string_equals(fl_localize_fmt(FL_S("SID_fmt_repeated"), two, 2), FL_S("first, first and first")),
                     "a repeated index substitutes at every occurrence");
 
-    // An argument no slot names is simply unused, not an error.
+    // An argument that no slot names is unused. It is not an error.
     ASSERT_TRUE_MSG(fl_string_equals(fl_localize_fmt(FL_S("SID_greeting"), two, 2), FL_S("Hello, first!")),
                     "arguments past the slots the text uses are ignored");
 
@@ -7326,7 +7315,7 @@ UTEST(localization, plural_rules_select_per_language_family) {
     ASSERT_EQ((int)LocalizationPlural_Other, (int)localization_plural_category(FL_S("zh"), 1));
     ASSERT_EQ((int)LocalizationPlural_Other, (int)localization_plural_category(FL_S("ko"), 2));
 
-    // A language with no built-in rules selects "other" the same way, rather than borrowing a neighbour's.
+    // A language with no built-in rules also selects "other", and does not borrow a neighbour's rules.
     ASSERT_EQ((int)LocalizationPlural_Other, (int)localization_plural_category(FL_S("ar"), 1));
     ASSERT_EQ((int)LocalizationPlural_Other, (int)localization_plural_category(FL_S("pl"), 2));
     ASSERT_EQ((int)LocalizationPlural_Other, (int)localization_plural_category(string_empty(), 1));
@@ -7479,8 +7468,8 @@ UTEST(localization, a_language_with_no_built_in_rules_selects_the_other_variant)
     fl_localization_init(mount.mount, FL_S("manifest.json"), false);
     localization_settle(ctx->shared->localization);
 
-    // The count that would select "one" in a language flowi knows the rules for selects "other" here, and it warns
-    // once rather than once per lookup.
+    // The count that would select "one" in a language flowi has rules for selects "other" here, and the warning
+    // is logged once and not once per lookup.
     ASSERT_TRUE_MSG(fl_string_equals(fl_localize_plural(FL_S("SID_count"), 1, nullptr, 0), FL_S("1 things")),
                     "a language with no built-in rules selects the other variant for every count");
     ASSERT_TRUE_MSG(fl_string_equals(fl_localize_plural(FL_S("SID_count"), 1, nullptr, 0), FL_S("1 things")),
@@ -7558,8 +7547,8 @@ UTEST(localization, a_macro_result_is_a_widget_text_argument) {
     FlUiCtx* ctx = localization_fixture(&mount, FL_S("manifest.json"));
     ASSERT_TRUE_MSG(ctx != nullptr, "localization fixture creation failed");
 
-    // Wide enough that neither line wraps: the two texts share the row, and a wrapped line would reach the
-    // snapshot as several text elements rather than one.
+    // Wide enough that neither line wraps. The two texts share the row, and a wrapped line would reach the
+    // snapshot as several text elements.
     ctx->layout_width = 1024.0f;
     ctx->layout_height = 256.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1024.0f, .height = 256.0f });
@@ -7609,8 +7598,8 @@ static bool hot_reload_write(const LocalizationHotReload* fixture, FlString name
     return file_write_os(path, (const u8*)text, length) == length;
 }
 
-// A scratch localization directory the case can rewrite mid-run, mounted with file watching on so hot reload has
-// something to hear, with the default language already up.
+// A scratch localization directory the case can rewrite during the run, mounted with file watching on so hot
+// reload sees the changes, with the default language already loaded.
 static bool hot_reload_fixture_create(LocalizationHotReload* fixture, FlString dir_name, bool hot_reload) {
     fixture->arena = arena_new();
     fixture->dir = file_build_path_os(fixture->arena, get_current_directory_os(fixture->arena), dir_name);
@@ -7649,8 +7638,8 @@ static void hot_reload_fixture_release(LocalizationHotReload* fixture) {
     fl_arena_destroy(fixture->arena);
 }
 
-// Pump the frame boundary the way an app tick loop does until the watcher has asked for a reload beyond
-// requests_before and the work it started has landed. False if no request arrives within the deadline.
+// Runs the frame boundary as an app tick loop does until the watcher has asked for a reload beyond
+// requests_before and the work it started has finished. False if no request arrives within the deadline.
 static bool hot_reload_wait_for_request(const LocalizationHotReload* fixture, u64 requests_before) {
     struct Localization* loc = fixture->ctx->shared->localization;
 
@@ -7669,7 +7658,7 @@ static u64 hot_reload_requests(const LocalizationHotReload* fixture) {
     return localization_hot_reload_request_count(fixture->ctx->shared->localization);
 }
 
-// Pump until sid resolves to expected, false if it never does within iterations milliseconds.
+// Runs frame boundaries until sid resolves to expected. False if it does not within iterations milliseconds.
 static bool hot_reload_wait_for(const LocalizationHotReload* fixture, FlString sid, FlString expected, u32 iterations) {
     struct Localization* loc = fixture->ctx->shared->localization;
 

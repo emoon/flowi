@@ -4,9 +4,8 @@
 
 FlArena* s_arena;
 
-// arena: reservation lifecycle - fl_arena_destroy must release its VMA, not merely decommit
-
 #if defined(__linux__)
+// Number of mappings in /proc/self/maps.
 u64 count_proc_self_maps(void) {
     FILE* f = fopen("/proc/self/maps", "r");
     if (!f) {
@@ -22,7 +21,7 @@ u64 count_proc_self_maps(void) {
         prev = c;
     }
     if (prev != '\n') {
-        lines++; // final line without trailing newline
+        lines++; // final line without a trailing newline
     }
     fclose(f);
     return lines;
@@ -39,24 +38,22 @@ FlVfsDriverError stub_vfs_not_found(void) {
     return (FlVfsDriverError) { .vfs_status = FlVfsStatus_FileNotFound };
 }
 
-// Balance counters: every plugin handle the driver hands out must come back through close.
-// vfs.destroy_closes_leaked_handles_across_cycles diffs these around a create/destroy cycle.
+// Handles the driver handed out and handles that came back through close. The two match when nothing leaked.
 _Atomic int s_stub_vfs_alloc_count;
 
 _Atomic int s_stub_vfs_close_count;
-_Atomic int s_stub_vfs_read_count; // Reads that reached the driver
+_Atomic int s_stub_vfs_read_count; // reads that reached the driver
 
-// When set, a parent-less probe of the file resolves to a file handle (default: parent-less probe
-// is the mount-root open and yields a directory). Lets a test drive the resolver's file-read
-// branch directly. When set, read reports one byte short of what get_size promised, forcing the
-// resolver's short-read error branch.
+// When set, opening the file with no parent handle yields a file handle. By default an open with no parent is
+// the mount-root open and yields a directory.
 bool s_stub_vfs_open_as_file;
 
+// When set, read reports one byte fewer than get_size promised.
 bool s_stub_vfs_short_read;
 
 bool s_stub_vfs_oversize;
 
-// Optional encoded payload used by mounted-image tests. Null keeps the ordinary VFS fixture's text payload.
+// Encoded payload for the mounted-image tests. nullptr keeps the text payload in k_stub_vfs_data.
 const u8* s_stub_vfs_override_data;
 
 size_t s_stub_vfs_override_size;
@@ -80,7 +77,7 @@ StubVfsHandle* stub_vfs_alloc(bool is_dir) {
     return h;
 }
 
-// Match the single file both relative to the mount root ("hello.txt") and absolute ("/hello.txt").
+// Matches the single file relative to the mount root ("hello.txt") and absolute ("/hello.txt").
 bool stub_vfs_is_file(FlString path) {
     const int n = (int)sizeof(STUB_VFS_FILE) - 1;
     if (path.length == n && memcmp(path.data, STUB_VFS_FILE, (size_t)n) == 0) {
@@ -92,8 +89,8 @@ bool stub_vfs_is_file(FlString path) {
     return false;
 }
 
-// Match the mount sources the cases use ("/stub", "/stub-image-a", ...), with or without the leading slash.
-// The bare root ("" / "/") matches too: a case that drives the resolver by hand opens it directly.
+// Matches the mount sources the cases use ("/stub", "/stub-image-a", ...), with or without the leading slash.
+// The bare root ("" or "/") matches too, because a case that drives the resolver by hand opens it directly.
 bool stub_vfs_is_stub_root(FlString path) {
     FlString name = path;
     if (name.length > 0 && name.data[0] == '/') {
@@ -113,7 +110,7 @@ bool stub_vfs_supports_path(FlString path) {
 
 bool stub_vfs_can_open(FlString path) {
     (void)path;
-    return true; // the only registered driver - accept the mount source
+    return true;
 }
 
 FlVfsOpenResult stub_vfs_open(void* instance, void* parent_handle, FlString path, uint32_t flags,
@@ -122,12 +119,11 @@ FlVfsOpenResult stub_vfs_open(void* instance, void* parent_handle, FlString path
     (void)flags;
     (void)mount_options;
 
-    // parent_handle == nullptr is the mount-root open: hand back the root directory. When the
-    // open-as-file toggle is set, a parent-less probe of the file yields a file handle instead,
-    // so a test can drive the resolver's file-read branch.
+    // A nullptr parent_handle is the mount-root open and returns the root directory, or a file handle for the
+    // file when s_stub_vfs_open_as_file is set.
     //
-    // Only the /stub* sources the cases mount are claimed: driver resolution tries registered drivers before
-    // the built-in LocalFS fallback, so a broader claim here would shadow it for every path.
+    // The driver claims only the /stub* sources the cases mount. Driver resolution tries registered drivers before
+    // the built-in LocalFS fallback, so a broader claim would shadow LocalFS for every path.
     if (parent_handle == nullptr) {
         if (!stub_vfs_is_stub_root(path) && !stub_vfs_is_file(path)) {
             return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
@@ -162,7 +158,7 @@ FlVfsSizeResult stub_vfs_get_size(void* instance, void* handle, FlString relativ
     if (!h) {
         return (FlVfsSizeResult) { .size = -1, .error = stub_vfs_not_found() };
     }
-    // Empty path: size of the already-open file.
+    // An empty path asks for the size of the open file.
     if (relative_path.length == 0) {
         if (h->is_dir) {
             return (FlVfsSizeResult) { .size = -1, .error = stub_vfs_not_found() };
@@ -174,7 +170,7 @@ FlVfsSizeResult stub_vfs_get_size(void* instance, void* handle, FlString relativ
         (void)stub_vfs_data(&data_size);
         return (FlVfsSizeResult) { .size = (int64_t)data_size, .error = stub_vfs_ok() };
     }
-    // Non-empty path: a size/existence probe under this handle. Only our file resolves.
+    // A non-empty path is a size or existence probe under this handle. Only the stub file resolves.
     if (stub_vfs_is_file(relative_path)) {
         size_t data_size = 0;
         (void)stub_vfs_data(&data_size);
@@ -183,8 +179,8 @@ FlVfsSizeResult stub_vfs_get_size(void* instance, void* handle, FlString relativ
     return (FlVfsSizeResult) { .size = -1, .error = stub_vfs_not_found() };
 }
 
-// Opt-in gate, off unless a case arms it: see the declaration in unit_tests_common.h. A gated read gives up after
-// the timeout, so a case that fails while holding it cannot hang the run.
+// A gated read gives up after 20 seconds, so a case that fails while holding the gate cannot hang the run. The
+// gate is described at its declaration in unit_tests_common.h.
 #define STUB_VFS_GATE_TIMEOUT_NS 20000000000ull
 
 _Atomic bool s_stub_vfs_read_gate_armed;
@@ -217,7 +213,6 @@ FlVfsReadResult stub_vfs_read(void* instance, void* handle, FlString relative_pa
         memcpy(buffer, data + h->offset, (size_t)n);
         h->offset += n;
     }
-    // Report one byte short of what was actually delivered so callers see a short read.
     int64_t reported = (s_stub_vfs_short_read && n > 0) ? n - 1 : n;
     return (FlVfsReadResult) { .bytes_read = reported, .error = stub_vfs_ok() };
 }
@@ -302,16 +297,16 @@ void render_fixture_capture(void* user_data, FlSurface* surface, const FlRenderF
 
 FlUiCtx* render_fixture_get(void) {
     if (s_render.created) {
-        // Re-select the fixture's context (core singleton + Clay tree) on every fetch: a preceding case may have
-        // created and torn down its own context, leaving a different context current.
+        // An earlier case may have created and torn down its own context and left a different one current, so
+        // every fetch selects the fixture's context again (core singleton and Clay tree).
         ui_make_current(s_render.ctx);
         s_render.ctx->focused_id = 0;
         s_render.ctx->last_focused_id = 0;
         return s_render.ctx;
     }
 
-    // perf_fence scene_many_elements lays out more than Clay's 8192 default element cap. Must be raised before
-    // ui_create - Clay_MinMemorySize/Clay_Initialize read it to size the layout arena.
+    // scene_many_elements lays out more than Clay's default cap of 8192 elements. The cap has to be raised
+    // before ui_create, because Clay_MinMemorySize and Clay_Initialize read it to size the layout arena.
     Clay_SetMaxElementCount(32768);
 
     s_render.arena = arena_new();
@@ -324,18 +319,18 @@ FlUiCtx* render_fixture_get(void) {
         return nullptr;
     }
 
-    // Pair the context with its one render surface at the fixture's fixed 1920x1080 output size.
+    // The fixture's output size is fixed at 1920x1080.
     ui_set_surface(ctx, s_render.backend.create_surface(s_render.backend.user_data, 1920, 1080));
 
-    // ui_update_begin() pumps the VFS, so it must be initialized. No drivers are registered - headless
+    // ui_update_begin() pumps the VFS, so it must be initialized. No drivers are registered, because headless
     // render-only frames never resolve a path.
     s_render.owns_vfs = fl_vfs_init(s_render.arena);
 
-    // create_software_renderer (above) already created the SW pixel pool; this wires up the
-    // load/decode system used by image_load_from_memory.
+    // create_software_renderer already created the SW pixel pool. This creates the load and decode system that
+    // image_load_from_memory uses.
     s_render.owns_image_system = image_create_system(s_render.arena, &s_render.backend);
 
-    // ui_update_begin() also pumps the font cache; it must be non-null even when a frame draws no text.
+    // ui_update_begin() also pumps the font cache, which must be non-null even when a frame draws no text.
     s_render.font_cache = font_cache_new(s_render.arena);
     ui_set_font_cache(ctx, s_render.font_cache);
 
@@ -344,9 +339,9 @@ FlUiCtx* render_fixture_get(void) {
     return ctx;
 }
 
-// scene_many_elements: N flat fixed-size children in one clipped vertical container. Stresses layout O(n), id
-// string-hashing and bin_tiles. N exceeds Clay's 8192 default element cap, so it only lays out because the
-// fixture raised the cap via Clay_SetMaxElementCount.
+// Lays out n flat fixed-size children in one clipped vertical container, which loads layout, id string hashing
+// and bin_tiles. n may exceed Clay's default cap of 8192 elements because the fixture raises the cap with
+// Clay_SetMaxElementCount.
 void scene_many_elements(FlUiCtx* ctx, int n) {
     const FlColor fill = ui_color(80, 120, 200, 255);
 
@@ -367,23 +362,21 @@ void scene_many_elements(FlUiCtx* ctx, int n) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// render.theme_scope - scoped subtree theme overrides (ui_theme_push / ui_theme_pop): an override replaces
-// only its flagged slots and inherits the rest, nests, and unwinds on pop.
-
 bool color_eq(FlColor a, FlColor b) {
     return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
 }
 
-// The render-command snapshot stores colors as f32 (0..255); our theme colors are u8. Compare within half an LSB.
+// The render-command snapshot stores colors as f32 in 0..255 and theme colors are u8, so compare within half an
+// LSB.
 bool slot_override_color_eq(UiColor4 got, FlColor want) {
     return fabsf(got.r - (float)want.r) < 0.5f && fabsf(got.g - (float)want.g) < 0.5f
            && fabsf(got.b - (float)want.b) < 0.5f && fabsf(got.a - (float)want.a) < 0.5f;
 }
 
-// The commands of one type that the last frame painted, in Clay's render order - parents before children, so a
-// widget's own box precedes whatever it contains. A tab strip emits its pill (when it paints one) before the
-// tabs and each tab before its label, so the k-th rectangle after the pill and the k-th text belong to the k-th
-// tab.
+// Collects the commands of one type that the last frame painted, in Clay's render order: parents before
+// children, so a widget's own box precedes whatever it contains. A tab strip emits its pill (when it paints one)
+// before the tabs and each tab before its label, so the k-th rectangle after the pill and the k-th text belong
+// to the k-th tab.
 int render_cmd_collect(UiRenderCommandType type, UiRenderCommand* out, int max) {
     int count = 0;
     const int n = ui_get_render_command_count();
@@ -396,37 +389,25 @@ int render_cmd_collect(UiRenderCommandType type, UiRenderCommand* out, int max) 
     return count;
 }
 
-// The snapshot stores colors as f32 (0..255) against u8 theme colors; compare within half an LSB.
+// Same half-LSB comparison as slot_override_color_eq.
 bool tab_color_eq(UiColor4 got, FlColor want) {
     return fabsf(got.r - (float)want.r) < 0.5f && fabsf(got.g - (float)want.g) < 0.5f
            && fabsf(got.b - (float)want.b) < 0.5f && fabsf(got.a - (float)want.a) < 0.5f;
 }
 
-// canvas - the Canvas seam: painter calls inside a layout element draw at that element's z, under its child
-// elements, bracketed by the live layout scissor stack, with floating elements declared later on top. These
-// cases drive a real frame through the software backend and sample the offscreen buffer (targeted pixel
-// samples, robust to the SW pipeline's ~1 LSB rounding), plus assert the Clay→IR command
-// structure via the debug render-command snapshot.
-
-// Configure the shared render fixture for 1:1 logical→physical mapping over a known clear color (no background
-// image), so element-local painter coordinates land at absolute pixels.
+// Sets the shared render fixture to a 1:1 logical to physical mapping over a known clear color with no
+// background image, so element-local painter coordinates land at absolute pixels.
 void canvas_fixture_reset(FlUiCtx* ctx) {
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
-    ui_set_scale(1.0f, 1.0f); // identity scale: true 1:1 logical->physical, clearing any prior fractional scale
+    ui_set_scale(1.0f, 1.0f); // clears any fractional scale an earlier case left
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
-    ui_background_set(IMAGE_HANDLE_INVALID); // clear any image/crossfade from earlier cases; resets alpha
+    ui_background_set(IMAGE_HANDLE_INVALID); // drops any image or crossfade from earlier cases and resets alpha
     ui_background_set_clear_color(12, 12, 14);
 }
 
-// list_focus_request.* - ui_list_request_focus: the opt-in seam a freshly-opened popup calls on its open edge so
-// keyboard nav and Enter/Space-commit work before any row click. It engages the list's has_focus AND claims the
-// global focus ring together (so the focus sticks past the frame the trigger widget blurs), and seeds the focus
-// cursor to a stable id (validated in begin, fallback to the first row) - only when the list did not already
-// hold focus (the re-arm guard).
-
-// True if this frame drew the keyboard focus ring - a border render command bearing the theme's border.focus
-// colour (the cursor row's border; item_begin draws it only on the frame_focus_cursor row).
+// True if this frame drew the keyboard focus ring: a border render command in the theme's border.focus color.
+// item_begin draws it only on the frame_focus_cursor row.
 bool focus_ring_drawn(void) {
     FlColor want = fl_theme_colors()->border.focus;
     const int n = ui_get_render_command_count();
@@ -443,14 +424,11 @@ bool focus_ring_drawn(void) {
     return false;
 }
 
-// A perf_counters session owns one descriptor, so the cases that open one compare this before and
-// after to prove it was closed (core/os/perf_counters_linux.inc).
-
 #if defined(__linux__)
 #include <dirent.h>
 
-// Count the process's open file descriptors via /proc/self/fd. The directory handle itself adds one
-// entry, identical in both snapshots, so before/after comparisons stay exact.
+// Counts the process's open file descriptors through /proc/self/fd. The directory handle adds one entry to
+// every count, so the difference between two counts is exact.
 int count_open_fds(void) {
     DIR* dir = opendir("/proc/self/fd");
     if (!dir) {
@@ -468,23 +446,18 @@ int count_open_fds(void) {
 }
 #endif
 
-// Tear the render fixture down. Idempotent: a TU that never touched the fixture, or one that runs
-// after an earlier teardown already ran, finds nothing to release.
-
+// Safe to call when the fixture was never created or is already torn down.
 void render_fixture_teardown(void) {
     if (!s_render.created) {
-        return; // render cases were filtered out; nothing to tear down
+        return;
     }
     UiShared* shared = s_render.ctx->shared;
     FlSurface* surface = s_render.ctx->surface;
     ui_destroy(s_render.ctx);
-    // The shared resource tier outlives the per-window context; tear it down after ui_destroy,
-    // mirroring app.c's fl_app_destroy ordering.
+    // The shared resources outlive the per-window context, and a surface is destroyed before the backend that
+    // created it.
     ui_shared_destroy(shared);
-    // Surfaces are host-owned and torn down before the backend that created them; frees the SW
-    // per-surface arena.
     s_render.backend.destroy_surface(s_render.backend.user_data, surface);
-    // The host owns the backend's lifetime: tear it down explicitly (frees the SW arenas).
     s_render.backend.destroy(s_render.backend.user_data);
     font_cache_destroy(s_render.font_cache);
     if (s_render.owns_image_system) {

@@ -2,7 +2,7 @@
 
 // Software backend: neutral render IR (ui/render_ir.h) -> internal RenderCommand list.
 //
-// Font ids and image handles are resolved here, backend-side - the IR never carries baked glyph bitmaps or
+// Font ids and image handles are resolved here, backend-side; the IR never carries baked glyph bitmaps or
 // ImageData pointers.
 
 #include "software_renderer_internal.h"

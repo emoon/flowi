@@ -39,8 +39,7 @@
 #define LayoutSizingType_Percent FlLayoutSizingType_Percent
 #define LayoutSizingType_Fixed FlLayoutSizingType_Fixed
 
-// Usage: .border = fl_border(theme->border.focus, 2)  // Creates uniform 2px border
-
+// Uniform border on all four sides, as in .border = fl_border(theme->border.focus, 2).
 #define fl_border(col, width_value)             \
     (UI__INIT(FlLayoutBorder) { .color = (col), \
                                 .width = { (width_value), (width_value), (width_value), (width_value), 0 } })
@@ -72,9 +71,9 @@ static int UI_LAYOUT_LATCH UNUSED_VARIABLE = 0;
 
 FlVec2 ui_get_scroll_offset(void);
 
-// Viewport size + content extent of a scroll container, keyed by its clay element id. The one sanctioned
-// wrapper over Clay_GetScrollContainerData - content_extent is the piece ui_get_element_state does not expose
-// (it carries only the element rect). found=false when the container is not in the previous frame's layout.
+// Viewport size + content extent of a scroll container, keyed by its clay element id. This is the only wrapper
+// over Clay_GetScrollContainerData; content_extent is the piece ui_get_element_state does not expose (it carries
+// only the element rect). found=false when the container is not in the previous frame's layout.
 typedef struct FlScrollContainerExtent {
     FlVec2 viewport_size;
     FlVec2 content_extent;
@@ -98,48 +97,48 @@ UI__WRAPPER_STRUCT(FlFloatingConfig);
 UI__WRAPPER_STRUCT(FlScrollAreaConfig);
 
 // clang-format off
-// Layout area with explicit ID - use when you need to track the element (e.g., for interaction, bounding box queries)
+// Layout area with an explicit ID, for when the element has to be tracked (interaction, bounding box queries)
 #define ui_layout_area_id(id, ...)  \
     for ( \
          UI_LAYOUT_LATCH = (fl_layout_start(id), fl_layout_configure_impl(UI__CONFIG_WRAPPER(FlLayoutConfig, __VA_ARGS__)), 0); \
          UI_LAYOUT_LATCH < 1; \
          UI_LAYOUT_LATCH = 1, fl_layout_end())
 
-// Layout area without ID - use for pure layout containers that don't need tracking
+// Layout area without an ID, for pure layout containers that need no tracking
 #define ui_layout_area(...)  \
     for ( \
          UI_LAYOUT_LATCH = (fl_layout_start_auto(), fl_layout_configure_impl(UI__CONFIG_WRAPPER(FlLayoutConfig, __VA_ARGS__)), 0); \
          UI_LAYOUT_LATCH < 1; \
          UI_LAYOUT_LATCH = 1, fl_layout_end())
 
-// Layout area with pre-built config struct - use with inline functions that return FlLayoutConfig
+// Layout area with a pre-built config struct, for inline functions that return FlLayoutConfig
 #define ui_layout_area_cfg(cfg)  \
     for ( \
          UI_LAYOUT_LATCH = (fl_layout_start_auto(), fl_layout_configure_impl(cfg), 0); \
          UI_LAYOUT_LATCH < 1; \
          UI_LAYOUT_LATCH = 1, fl_layout_end())
 
-// Floating area with explicit ID - for dialogs/popups that need a specific ID
+// Floating area with an explicit ID, for dialogs and popups that need a specific ID
 #define ui_floating_area_id(id, ...)  \
     for ( \
          UI_LAYOUT_LATCH = (fl_floating_start(id), fl_floating_configure_impl(UI__CONFIG_WRAPPER(FlFloatingConfig, __VA_ARGS__)), 0); \
          UI_LAYOUT_LATCH < 1; \
          UI_LAYOUT_LATCH = 1, fl_layout_end())
 
-// Floating area without explicit ID - uses __LINE__ for unique ID
-// Note: Clay's auto-ID doesn't work for floating elements (they don't increment parent's child count)
+// Floating area without an explicit ID; __LINE__ makes the ID unique. Clay's auto-ID does not work for floating
+// elements because they do not increment the parent's child count.
 #define ui_floating_area(...)  \
     ui_floating_area_id(ID_INT("_Floating", __LINE__), __VA_ARGS__)
 
-// Scroll area with explicit ID - use when you need to reference the scroll area programmatically
+// Scroll area with an explicit ID, for when code has to refer to the scroll area
 #define ui_scroll_area_id(id, ...)  \
     for ( \
          UI_LAYOUT_LATCH = (fl_scroll_area_begin_impl(id, UI__CONFIG_WRAPPER(FlScrollAreaConfig, __VA_ARGS__)), 0); \
          UI_LAYOUT_LATCH < 1; \
          UI_LAYOUT_LATCH = 1, fl_scroll_area_end())
 
-// Scroll area without explicit ID - uses __LINE__ for stable unique ID
-// Scroll state persists across frames as long as code structure doesn't change
+// Scroll area without an explicit ID; __LINE__ gives a stable unique ID, so scroll state persists across frames
+// as long as the code structure does not change.
 #define ui_scroll_area(...)  \
     ui_scroll_area_id(ID_INT("_Scroll", __LINE__), __VA_ARGS__)
 // clang-format on

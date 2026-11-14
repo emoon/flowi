@@ -72,7 +72,7 @@ UTEST_F(error_report_fixture, many_allocations) {
         ASSERT_TRUE(error.data != nullptr);
         ASSERT_GT((u64)error.length, 0);
 
-        // Periodically cleanup to avoid running out of arena space
+        // Clean up periodically so the arena does not run out of space.
         if (i % 1000 == 999) {
             error_report_cleanup();
         }

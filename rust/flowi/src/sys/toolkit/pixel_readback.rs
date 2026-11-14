@@ -7,7 +7,7 @@
 /// native channel layout (SW: RGB24; GPU: RGBA8); stride is bytes per row. Used
 /// off the per-frame present path (smoke tests, screenshots).
 ///
-/// Contract: readback rows are tightly packed - `stride == width * channels`
+/// Readback rows are tightly packed: `stride == width * channels`
 /// with no per-row padding, so a consumer recovers the channel count as
 /// stride / width. A renderer that pads rows (e.g. for alignment) must repack
 /// to tight before filling this struct.

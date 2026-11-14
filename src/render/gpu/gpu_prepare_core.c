@@ -130,7 +130,7 @@ bool gpu_prepare_svg_cell_geometry(FlArena* arena, const GpuSvgEntry* entry, con
         return false;
     }
     // Content height: the placed cell is content_h plus the padding ring. Taken off the entry (not the fit) so a
-    // survivor re-rasters against the cell it actually occupies.
+    // survivor re-rasters against the cell it occupies.
     f32 content_h = (f32)(entry->cell.h - 2 * GPU_SVG_ATLAS_PAD);
 
     u32 total_segments = 0;
@@ -146,7 +146,7 @@ bool gpu_prepare_svg_cell_geometry(FlArena* arena, const GpuSvgEntry* entry, con
 
     if (color) {
         // Lower every shape independently into the shared curve buffer, each recording its contiguous quad range
-        // and baked premultiplied color - the color shader composites them in document order (painter's
+        // and baked premultiplied color. The color shader composites them in document order (painter's
         // algorithm).
         out->shapes = arena_alloc_array(arena, GpuColorShape, vector->shape_count);
         out->quad_count
@@ -182,7 +182,7 @@ void gpu_prepare_vector_into(void* backend, GpuSvgAtlas* atlas, FlImageHandle ha
                              const FlVectorImage* vector, bool color, GpuRasterCellFn raster_cell, u32* compact_count) {
     const GpuSvgEntry* live = gpu_svg_atlas_find(atlas, handle);
     if (live != nullptr && live->size == size) {
-        return; // already rasterized at this size - no re-dispatch
+        return; // already rasterized at this size
     }
 
     GpuSvgCellFit fit;
@@ -193,7 +193,7 @@ void gpu_prepare_vector_into(void* backend, GpuSvgAtlas* atlas, FlImageHandle ha
     const GpuSvgEntry* entry
         = gpu_svg_atlas_place(atlas, handle, size, fit.pw, fit.ph, vector->classification, vector->mono_color, vector);
     if (entry == nullptr) {
-        // Atlas full: compact wholesale - reclaim the orphaned cells by repacking only the live ones - then
+        // Atlas full: compact wholesale (reclaim the orphaned cells by repacking only the live ones), then
         // re-raster every survivor into its new position from its retained geometry (the texels still sit at the
         // pre-compaction positions) before retrying.
         gpu_svg_atlas_compact(atlas);

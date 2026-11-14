@@ -5,43 +5,24 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ThemeSlot {
-    /// interactive.base.
     InteractiveBase = 1,
-    /// interactive.hover.
     InteractiveHover = 2,
-    /// interactive.press.
     InteractivePress = 4,
-    /// interactive.focus.
     InteractiveFocus = 8,
-    /// interactive.disabled.
     InteractiveDisabled = 16,
-    /// surface.base.
     SurfaceBase = 32,
-    /// surface.elevated.
     SurfaceElevated = 64,
-    /// surface.overlay.
     SurfaceOverlay = 128,
-    /// surface.selected.
     SurfaceSelected = 256,
-    /// border.default_color.
     BorderDefault = 512,
-    /// border.focus.
     BorderFocus = 1024,
-    /// border.separator.
     BorderSeparator = 2048,
-    /// text.primary.
     TextPrimary = 4096,
-    /// text.secondary.
     TextSecondary = 8192,
-    /// text.accent.
     TextAccent = 16384,
-    /// feedback.success.
     FeedbackSuccess = 32768,
-    /// feedback.warning.
     FeedbackWarning = 65536,
-    /// feedback.error.
     FeedbackError = 131072,
-    /// feedback.info.
     FeedbackInfo = 262144,
 }
 
@@ -80,9 +61,9 @@ const _: () = {
 pub struct ThemeSurface {
     /// Main window/app background (darkest in the dark theme).
     pub base: crate::sys::Color,
-    /// Cards, buttons, inputs - sits above base (slightly lighter).
+    /// Cards, buttons, inputs. Sits above base (slightly lighter).
     pub elevated: crate::sys::Color,
-    /// Modals, popups, dropdowns - darkened backdrop.
+    /// Modals, popups, dropdowns: darkened backdrop.
     pub overlay: crate::sys::Color,
     /// Selected-item highlight (often the interactive accent).
     pub selected: crate::sys::Color,
@@ -157,19 +138,14 @@ const _: () = {
     assert!(core::mem::offset_of!(ThemeFeedback, info) == 12, "ThemeFeedback.info offset drift");
 };
 
-/// The resolved theme palette read when laying out and painting widgets - interactive, surface, border,
+/// The resolved theme palette read when laying out and painting widgets: interactive, surface, border,
 /// text, and feedback color groups.
 #[repr(C)]
 pub struct ThemeColors {
-    /// Interactive accent state colors.
     pub interactive: crate::sys::ThemeInteractive,
-    /// Surface/background colors.
     pub surface: crate::sys::ThemeSurface,
-    /// Border and divider colors.
     pub border: crate::sys::ThemeBorder,
-    /// Typography colors.
     pub text: crate::sys::ThemeText,
-    /// Status/feedback colors.
     pub feedback: crate::sys::ThemeFeedback,
 }
 
@@ -187,7 +163,7 @@ const _: () = {
 /// the resolved parent theme at push time. Push it to retheme a subtree without touching the global theme.
 #[repr(C)]
 pub struct ThemeOverride {
-    /// Bitwise-OR of ThemeSlot - which slots to replace.
+    /// Bitwise OR of ThemeSlot: which slots to replace.
     pub slots: u32,
     /// Slot values, read only where the matching slots bit is set.
     pub colors: crate::sys::ThemeColors,
@@ -212,9 +188,8 @@ extern "C" {
     pub fn fl_theme_push(theme_override: crate::sys::ThemeOverride);
     /// Pop the most recently pushed override, restoring the parent theme.
     pub fn fl_theme_pop();
-    /// Read the live resolved theme palette flowi is currently painting with - the innermost active push
-    /// override, or the base palette set by update. The read half of update/push/pop. The returned pointer has no safe Rust
-    /// wrapper.
+    /// Read the resolved theme palette flowi is currently painting with: the innermost active push
+    /// override, or the base palette set by update. The returned pointer has no safe Rust wrapper.
     pub fn fl_theme_colors() -> *const crate::sys::ThemeColors;
 }
 

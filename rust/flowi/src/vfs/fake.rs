@@ -1,7 +1,7 @@
 //! The per-thread stand-in for the C VFS that [`ffi`] dispatches to under cfg(test).
 //!
 //! The table is generated from [`vfs_slots!`](super::slots::vfs_slots). The fixture the cases
-//! drive it with - the per-thread [`FakeState`], the slot implementations and `fake_table` - lives
+//! drive it with (the per-thread [`FakeState`], the slot implementations and `fake_table`) lives
 //! here too.
 
 use super::payload::OwnedEntry;
@@ -60,8 +60,8 @@ pub(crate) fn table() -> VfsApi {
     TABLE.with(|table| *table.borrow())
 }
 
-// The fixture the cases drive the table with: the per-thread FakeState that stands in for an
-// async operation, the slot implementations that read and write it, and fake_table().
+// The fixture: the per-thread FakeState that stands in for an async operation, the slot
+// implementations that read and write it, and fake_table().
 
 pub(super) struct FakeState {
     /// is_ready returns false this many polls, then true.
@@ -72,9 +72,9 @@ pub(super) struct FakeState {
     pub(super) fail: bool,
     /// When set, the launch calls return the invalid sentinel.
     pub(super) launch_invalid: bool,
-    /// When set, a launch accepts the read callback but does not run it - the
-    /// real VFS's "still in flight" state, which is when a read_with slot is
-    /// still holding its untouched transform.
+    /// When set, a launch accepts the read callback but does not run it. This is
+    /// the real VFS's "still in flight" state, when a read_with slot is still
+    /// holding its untouched transform.
     pub(super) hold_callback: bool,
     /// Entries get_file_list reports.
     pub(super) entries: Vec<OwnedEntry>,
@@ -102,7 +102,7 @@ pub(super) struct FakeState {
     /// Where the next fl_vfs_read starts in prefix. An open rewinds it and each read advances it, so
     /// successive reads on one file walk prefix the way they walk a real file.
     pub(super) read_pos: usize,
-    /// The names/entries the callback path saw, so a read_with test can
+    /// The size the read callback was last run with, so a read_with test can
     /// assert the transform ran on the bytes the read produced.
     pub(super) last_callback_size: i64,
     /// What fl_vfs_mount_get_job_handle reports for the mount.
@@ -161,8 +161,8 @@ impl Default for FakeState {
 thread_local! {
     static FAKE: RefCell<FakeState> = RefCell::new(FakeState::default());
     /// The FlVfsEntry array the fake listing points at. Held per-thread so it
-    /// outlives the fl_vfs_get_file_list call that returns a pointer into it -
-    /// exactly like the C listing's own storage.
+    /// outlives the fl_vfs_get_file_list call that returns a pointer into it,
+    /// like the C listing's own storage.
     static FAKE_ENTRIES: RefCell<Vec<sys::VfsEntry>> = const { RefCell::new(Vec::new()) };
 }
 
@@ -374,9 +374,9 @@ unsafe extern "C" fn fake_get_data(_handle: u32) -> sys::VfsData {
 unsafe extern "C" fn fake_get_file_list(_handle: u32) -> sys::VfsFileList {
     // Materialise the C entry array into thread-local storage the returned
     // pointer can name, with each name borrowed from the fake state's own
-    // String - so the listing's storage lives exactly as long as the fake
-    // state does, and is invalidated by a reset_fake the way a real listing
-    // is invalidated by its handle closing.
+    // String. The listing's storage then lives as long as the fake state
+    // does, and a reset_fake invalidates it the way a handle closing
+    // invalidates a real listing.
     FAKE.with(|state| {
         let state = state.borrow();
         FAKE_ENTRIES.with(|storage| {
@@ -458,9 +458,6 @@ unsafe extern "C" fn fake_register_builtin_drivers() {
 unsafe extern "C" fn fake_mount_get_job_handle(_mount: *mut sys::FlVfsMount) -> sys::JobHandle {
     with_fake(|f| sys::JobHandle(f.mount_job_handle))
 }
-
-// -----------------------------------------------------------------------
-// Owning listings.
 
 pub(super) fn entry(name: &str, is_directory: bool) -> OwnedEntry {
     OwnedEntry {

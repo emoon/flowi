@@ -1,6 +1,6 @@
-// Core: Clay render output -> neutral render-command IR.
+// Translates Clay render output to the neutral render-command IR (see clay_to_render_ir.h).
 //
-// See clay_to_render_ir.h. The translation stops at intent: the backend (render_ir.h consumer) is responsible
+// The translation stops at intent: the backend (render_ir.h consumer) is responsible
 // for premultiplying, folding global_alpha, clamping/splitting corners, and resolving fonts/images.
 
 #include "clay_to_render_ir.h"
@@ -74,7 +74,7 @@ static void splice_paint_record(FlArena* arena, const FlCmdHeader* rec, float dx
             c->rect.x += dx;
             c->rect.y += dy;
             if (dst->flags & FL_SNAP_DEVICE_PX) {
-                // Snap to the device-pixel grid in absolute space - the element origin (carrying a fractional
+                // Snap to the device-pixel grid in absolute space, now that the element origin (carrying a fractional
                 // scroll offset or fractional DPI) is folded in.
                 c->rect.x = roundf(c->rect.x);
                 c->rect.y = roundf(c->rect.y);

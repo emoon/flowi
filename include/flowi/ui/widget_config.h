@@ -41,7 +41,6 @@ typedef enum FlWidgetSize {
 typedef enum FlScrollbarOrientation {
     // Vertical scrollbar (the C zero default).
     FlScrollbarOrientation_Vertical = 0,
-    // Horizontal scrollbar.
     FlScrollbarOrientation_Horizontal = 1,
 } FlScrollbarOrientation;
 
@@ -80,7 +79,7 @@ typedef struct FlWidgetConfig {
     // Explicit tab order index.
     int32_t tab_index;
     // Optional per-widget state-slot theme override; null means none. This is a sparse FlThemeOverride
-    // layered over the resolved theme for this widget only - siblings are unaffected, and it composes with
+    // layered over the resolved theme for this widget only: siblings are unaffected, and it composes with
     // scoped subtree overrides with widget-level slots winning. The explicit per-object color field still
     // bypasses the theme entirely.
     const FlThemeOverride* theme_override;
@@ -165,7 +164,7 @@ typedef struct FlDropdownConfig {
     // Type to filter options while the popup is open.
     bool searchable;
     // Buffer for search text; required when searchable is true. Opaque state the callee owns and
-    // mutates; null disables search regardless of searchable. Reachable only from C for now - the Rust
+    // mutates; null disables search regardless of searchable. Reachable only from C: the Rust
     // binding has no safe wrapper for the opaque FlTextInputState.
     FlTextInputState* search_state;
     // Max option rows the open popup shows before it scrolls (0 = default ~10); the List virtualizes the rest.
@@ -187,12 +186,12 @@ typedef struct FlTabBarConfig {
     float item_radius;
     // Padding between the strip's edge and its tabs, in pixels (0 = none). Set either this or
     // container_radius and the strip paints as a surface-colored pill behind the tabs; leave both zero
-    // and it stays the bare layout row it has always been.
+    // and it stays a bare layout row.
     float container_padding;
     // Corner radius of that pill, in pixels (0 = square corners).
     float container_radius;
-    // Gap between adjacent tabs, in pixels (0 = 4). A negative value asks for a flush strip with no gap
-    // at all - the shape of a segmented control - which 0 cannot express while it stands for the default.
+    // Gap between adjacent tabs, in pixels (0 = 4). A negative value gives a flush strip with no gap
+    // (a segmented control), since 0 stands for the default.
     float child_gap;
     // Label pixel size (0 = the font's default size).
     uint16_t font_size;
@@ -234,8 +233,8 @@ typedef struct FlTextInputConfig {
     // Character limit (0 = unlimited).
     uint32_t max_length;
     // Allowed character set (FlString); empty means all printable characters. Read per keypress while
-    // the field has focus, so it need only live for the frame - the one consumer that outlives the frame,
-    // the on-screen keyboard, copies the bytes into its own arena (ui_virtual_keyboard_create).
+    // the field has focus, so it need only live for the frame. The on-screen keyboard copies the bytes
+    // into its own arena.
     FlString allowed_chars;
     // Show bullets instead of text.
     bool password_mode;

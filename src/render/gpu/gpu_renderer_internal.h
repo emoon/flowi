@@ -1,7 +1,7 @@
 #pragma once
 
 // GPU backend internal seam: the GpuShared / GpuSurface state objects and the helpers shared across the backend's
-// translation units. The Metal build cannot include this header - it pulls in GL types.
+// translation units. The Metal build cannot include this header because it pulls in GL types.
 
 #include "gpu_debug.h"
 #include "gpu_gl.h"
@@ -82,7 +82,7 @@ typedef struct GpuShared {
     GLuint sampler_nearest;
 
     // Sampler-slot images (gpu_image_slots.h): large statics on dedicated textures, dynamic buffers on
-    // streaming textures - bound per frame to units GPU_IMAGE_SLOT_UNIT0..+GPU_IMAGE_SLOT_COUNT-1.
+    // streaming textures, bound per frame to units GPU_IMAGE_SLOT_UNIT0..+GPU_IMAGE_SLOT_COUNT-1.
     GLint max_texture_size;
 
     // The shared font layer (bound via set_font_cache). render() pulls each text run's glyph outlines from it to
@@ -108,8 +108,8 @@ typedef struct GpuShared {
     GLuint shapes_ssbo;
 
     u64 viewport3d_frame;     // advanced once per rendered frame; stamps viewport submits so idle ones can be retired
-    u32 glyph_dispatch_count; // glyph cell-raster dispatches this frame. render() zeroes it before the
-                              // prepare_text_glyphs pass; prepare_glyph ticks it once per DispatchCompute, so a
+    u32 glyph_dispatch_count; // glyph cell-raster dispatches this frame. frame_begin zeroes it before the
+                              // gpu_prepare_text_glyphs pass; prepare_glyph ticks it once per DispatchCompute, so a
                               // resident short-circuit does not count.
 
     // 3D tier: the unlit vertex/fragment program plus the retained meshes and per-viewport targets it draws with.

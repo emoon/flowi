@@ -7,7 +7,7 @@ use crate::frame_thread::frame_thread_guard;
 use crate::ImageOpts;
 
 /// An owned, fixed-size, tightly packed RGBA8 pixel buffer for [`DynamicImage::new`]. The buffer never
-/// reallocates or moves its pixels, so its address is stable for the buffer's whole life - the renderer
+/// reallocates or moves its pixels, so its address is stable for the buffer's whole life. The renderer
 /// identifies a dynamic image by that address across frames.
 pub struct DynamicImageBuffer {
     pixels: Box<[u8]>,
@@ -57,7 +57,7 @@ impl DynamicImageBuffer {
     }
 }
 
-/// Dynamic image widget - draws a [`DynamicImageBuffer`] the caller refreshes each frame.
+/// Draws a [`DynamicImageBuffer`] the caller refreshes each frame.
 pub struct DynamicImage;
 
 impl DynamicImage {

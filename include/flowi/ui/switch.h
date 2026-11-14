@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-// Switch widget - a boolean toggle drawn as a pill track with a sliding knob. Same role as a checkbox.
+// Switch widget: a boolean toggle drawn as a pill track with a sliding knob. Same role as a checkbox.
 // Emit a switch labelled label bound to `*value`; activation toggles the bool. config selects label
 // side, colors, and id overrides. Returns its interaction Signal (.clicked the frame it toggles).
 // Call inside a frame callback.

@@ -65,7 +65,7 @@ impl MenuConfig {
 pub struct MenuItemConfig<'a> {
     /// Close behaviour on activation (0 = the item kind's natural default).
     pub close_policy: crate::sys::MenuClosePolicy,
-    /// Optional shortcut text shown right-aligned (display only - no dispatch).
+    /// Optional shortcut text shown right-aligned (display only, no dispatch).
     pub shortcut: &'a str,
     /// Greyed out and non-interactive.
     pub disabled: bool,
@@ -108,9 +108,8 @@ impl MenuItemConfig<'_> {
     }
 }
 
-/// Configuration for a submenu parent. A submenu parent is a pure container - it never carries
-/// a close policy or shortcut, only the child panel's min_width and a disabled (greyed,
-/// non-opening) flag. A zeroed config uses the defaults (min_width 0 → 180, same as the root menu).
+/// Configuration for a submenu parent. A zeroed config uses the defaults (min_width 0 → 180, same as
+/// the root menu).
 ///
 /// The safe twin of [`crate::sys::SubmenuConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -119,7 +118,7 @@ impl MenuItemConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct SubmenuConfig {
-    /// Child panel width in logical px (0 = C default, 180 - same as the root menu).
+    /// Child panel width in logical px (0 = C default, 180, same as the root menu).
     pub min_width: f32,
     /// Greyed out and non-opening.
     pub disabled: bool,
@@ -155,8 +154,8 @@ impl SubmenuConfig {
     }
 }
 
-/// Configuration for the menu-bar strip - the persistent File/Edit/View surface. The bar carries
-/// only the dropdowns' render order; the per-dropdown width lives on MenuBarMenuConfig. A zeroed
+/// Configuration for the menu-bar strip: the persistent File/Edit/View surface. The bar carries
+/// only the dropdowns' render order; the per-dropdown width is on MenuBarMenuConfig. A zeroed
 /// config uses the default (z_index 0 → 1000, same as a context menu).
 ///
 /// The safe twin of [`crate::sys::MenuBarConfig`]: each FlString field is a plain &str and each optional
@@ -198,9 +197,7 @@ impl MenuBarConfig {
     }
 }
 
-/// Configuration for one top-level entry in the menu bar. Like a submenu parent it is a pure
-/// container - it never carries a close policy or shortcut, only the dropdown panel's min_width
-/// and a disabled (greyed, non-opening) flag. A zeroed config uses the default
+/// Configuration for one top-level entry in the menu bar. A zeroed config uses the default
 /// (min_width 0 → 180, same as a context menu).
 ///
 /// The safe twin of [`crate::sys::MenuBarMenuConfig`]: each FlString field is a plain &str and each optional
@@ -210,7 +207,7 @@ impl MenuBarConfig {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct MenuBarMenuConfig {
-    /// Dropdown panel width in logical px (0 = C default, 180 - same as a context menu).
+    /// Dropdown panel width in logical px (0 = C default, 180, same as a context menu).
     pub min_width: f32,
     /// Greyed-out top that never highlights, opens, or accepts a switch.
     pub disabled: bool,

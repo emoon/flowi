@@ -103,8 +103,8 @@
 #define NO_INLINE
 #endif
 
-// A function that never comes back. Telling the compiler lets it drop the code after the call - and lets a static
-// analyser stop exploring the path that reached it.
+// Marks a function that never returns, so the compiler can drop the code after the call and a static analyser
+// stops exploring that path.
 
 #if COMPILER_MSVC
 #define NORETURN __declspec(noreturn)

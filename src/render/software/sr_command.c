@@ -176,7 +176,7 @@ int sr_command_split_rounded(FlArena* arena, RenderCommand* initial_command, f32
         return 1;
     }
 
-    // Uniform corners - optimized 7-rect layout
+    // Uniform corners: 7-rect layout
     if (FL_LIKELY(has_uniform_corners(tl, tr, bl, br))) {
         CommandBuilder builder = builder_create(arena, initial_command, 7);
         float radius = tl;
@@ -237,7 +237,7 @@ int sr_command_split_rounded(FlArena* arena, RenderCommand* initial_command, f32
         return 4;
     }
 
-    // General case - 9-grid layout for mixed corner patterns
+    // General case: 9-grid layout for mixed corner patterns
 
     // Only non-zero corners emit a corner command, so size the allocation to exactly the commands we write
     // (corners + 5 fills). Over-allocating leaves uninitialized slots that the caller's arena_count would walk.

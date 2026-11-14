@@ -22,7 +22,6 @@ const _: () = {
 /// Settings for creating an application, passed to fl_app_create.
 #[repr(C)]
 pub struct AppSettings {
-    /// Window title.
     pub window_title: crate::sys::RawStr,
     /// Window width in logical (authoring) pixels; the window is created at this times the display content scale.
     pub width: i32,

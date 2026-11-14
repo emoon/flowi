@@ -12,8 +12,6 @@
 #include "../ui_private.h"
 #include "../ui_tokens.h"
 
-// Defaults
-
 // Default panel width in logical px.
 #define UI_MENU_DEFAULT_MIN_WIDTH 180.0f
 // Gap kept between a scrolling level and the top and bottom of the viewport.
@@ -22,8 +20,6 @@
 #define UI_MENU_WHEEL_SPEED 30.0f
 // Vertical padding of the panel around its item list.
 #define UI_MENU_PANEL_VPAD (2.0f * (float)FlSpacing_XS)
-
-// Menu core - the open-path state machine, navigation, type-ahead and scrolling shared by every menu surface.
 
 bool menu_owned_by(const FlUiCtx* ctx, u32 scope) {
     return ctx->shared->menu.active && ctx->shared->menu.owner_scope_id == scope;

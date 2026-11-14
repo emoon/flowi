@@ -4,8 +4,6 @@
 #include "input_actions.h"
 #include "ui_private.h"
 
-// Public API
-
 void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
     FlUiCtx* ctx = ui_get_ctx();
 
@@ -40,8 +38,8 @@ void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
     if (config.anchor == FlPopupAnchor_Point) {
         // Point anchoring: position the popup at an absolute screen coordinate (root-attached + offset), with
         // off-screen avoidance computed here. Sizing is FIT, so the popup's measured box is only known one frame
-        // late - the previous frame's box drives flip/clamp. On the very first frame the size is unknown and the
-        // popup simply opens downward from the point; it corrects on the next frame.
+        // late: the previous frame's box drives flip/clamp. On the very first frame the size is unknown and the
+        // popup opens downward from the point; it corrects on the next frame.
         Clay_ElementData prev = Clay_GetElementData(popup_element_id);
         float w = prev.found ? prev.boundingBox.width : 0.0f;
         float h = prev.found ? prev.boundingBox.height : 0.0f;
@@ -63,7 +61,7 @@ void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
         // anchor the popup's bottom-left to the point so it opens upward instead. Otherwise clamp downward.
         Clay_FloatingAttachPointType elem_y = CLAY_ATTACH_POINT_LEFT_TOP;
         if (h > 0.0f && py + h > sh && py - h >= 0.0f) {
-            elem_y = CLAY_ATTACH_POINT_LEFT_BOTTOM; // bottom-left of popup sits at the point → opens upward
+            elem_y = CLAY_ATTACH_POINT_LEFT_BOTTOM; // bottom-left of popup sits at the point, so it opens upward
         } else if (h > 0.0f && sh > 0.0f && py + h > sh) {
             py = sh - h;
             if (py < 0.0f) {
@@ -100,7 +98,7 @@ void ui_popup_end(void) {
     ctx->rendering_popup = false;
 }
 
-// Auto-close logic (called from ui_update_begin, AFTER ui_input_update captures mouse state)
+// Auto-close, called from ui_update_begin after ui_input_update captures mouse state.
 
 void ui_popup_check_auto_close(FlUiCtx* ctx) {
     if (ctx->popup_focus_scope_id == 0) {

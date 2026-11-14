@@ -67,7 +67,6 @@ static bool create_tile_setup(SwSurface* surface, int width, int height) {
 
 static FlSurface* sw_create_surface(void* user_data, int width, int height) {
     (void)user_data;
-    // The SwSurface lives in its own arena together with the output buffer and tile grid.
     FlArena* arena = arena_new();
     SwSurface* surface = arena_alloc_zero(arena, SwSurface);
     surface->arena = arena;
@@ -642,7 +641,7 @@ static void bin_tiles(RenderData* self, SwSurface* surface, FlArena* frame_arena
     u32* all_render_ids = arena_alloc_array(frame_arena, u32, (u64)tile_count * cmd_count);
 
 #ifdef FLOWI_UI_INSPECTOR
-    // Bytes the arena actually consumed, alignment padding included.
+    // Bytes the arena consumed, alignment padding included.
     self->stat_bin_alloc_bytes = (u32)((u8*)fl_arena_current_pos(frame_arena) - (u8*)bin_alloc_before);
 #endif
 
@@ -655,7 +654,7 @@ static void bin_tiles(RenderData* self, SwSurface* surface, FlArena* frame_arena
         RenderCommand* cmd = &render_commands.commands[i];
 
         if ((cmd->mask & RenderMask_ClipRectBegin) || (cmd->mask & RenderMask_ClipRectEnd)) {
-            // Clip commands affect the entire screen - add to all tiles
+            // Clip commands affect the entire screen, so they go to every tile
             for (int t = 0; t < tile_count; t++) {
                 surface->tiles_info[t].render_ids[surface->tiles_info[t].render_ids_count++] = (u32)i;
             }
@@ -807,7 +806,7 @@ FlRenderBackend create_software_renderer(struct FlArena* arena, struct FlFontCac
     // Per-tile scratch is fixed-size and resolution-independent.
     render_data->tile_buffer = arena_alloc_array(render_data->tile_arena, i16, TILE_STRIDE * TILE_WIDTH * 6);
 
-    // No surface is created here - the host builds per-window output buffers via the surface seam.
+    // No surface is created here: the host builds per-window output buffers via the surface seam.
 
     return (FlRenderBackend) {
         .user_data = render_data,

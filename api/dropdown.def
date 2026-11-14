@@ -1,4 +1,4 @@
-/// Dropdown widget - a button that opens a popup list to pick one of options.
+/// Dropdown widget: a button that opens a popup list to pick one of options.
 #[frame_context]
 api Dropdown {
     /// Emit a dropdown labelled label. `*is_open` tracks the popup open state (caller-owned); selecting an

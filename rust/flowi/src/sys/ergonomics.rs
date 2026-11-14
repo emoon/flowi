@@ -1,5 +1,5 @@
 //! Constructors and conversions for the layout types, so a config can be spelled the short
-//! way - radius: 4.0, padding: (8, 12), ..Default::default() - instead of naming every field.
+//! way (radius: 4.0, padding: (8, 12), ..Default::default()) instead of naming every field.
 
 use super::{
     BorderWidthConfig, Color, CornerRadius, LayoutAlignmentX, LayoutAlignmentY, LayoutBorder,
@@ -19,7 +19,7 @@ impl CornerRadius {
         }
     }
 
-    /// Round the left and right corner pairs independently - the segmented-control end-cap case.
+    /// Round the left and right corner pairs independently, as for a segmented control's end caps.
     pub const fn sides(left: f32, right: f32) -> CornerRadius {
         CornerRadius {
             tl: left,
@@ -65,8 +65,8 @@ impl From<(u16, u16)> for LayoutPadding {
 }
 
 impl From<[u16; 4]> for LayoutPadding {
-    /// CSS's four-value shorthand, clockwise from the top: `[top, right, bottom, left]` - not
-    /// the struct's own field order.
+    /// CSS's four-value shorthand, clockwise from the top: `[top, right, bottom, left]`. This
+    /// is not the struct's field order.
     fn from([top, right, bottom, left]: [u16; 4]) -> LayoutPadding {
         LayoutPadding {
             left,

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ui/ui_types.h> // FlString/bool - base types the generated headers below rely on
+#include <ui/ui_types.h> // FlString/bool, which the generated headers below rely on
 #include <flowi/core/platform.h>
 #include <flowi/ui/layout.h> // @generated FlLayoutId (api_gen)
 #include <flowi/ui/menu.h>   // @generated FlMenuRegionConfig (api_gen)
@@ -23,9 +23,9 @@
 // on activation by default (per-item close policy). The activating item's FlSignal reports .clicked the same frame
 // the menu tears down.
 
-// Open the menu chain identified by menu_id at an absolute screen point (captured once - no live-follow).
-// Idempotent re-anchor while already open. Normally called for you by ui_menu_region; exposed for callers that want
-// to open a menu from a custom trigger.
+// Open the menu chain identified by menu_id at an absolute screen point (captured once; the menu does not follow
+// the cursor). Idempotent re-anchor while already open. Normally called for you by ui_menu_region; exposed for
+// callers that want to open a menu from a custom trigger.
 void ui_menu_open_impl(FlLayoutId menu_id, FlVec2 point);
 
 // Linear blend of two colors, truncating each channel (the menu's highlight blend).
@@ -47,14 +47,14 @@ FlSignal ui_menu_item_impl(FlString label, FlMenuItemConfig config);
 
 // Emit a checkable item: a leaf that toggles `*checked` on activation and shows a check marker in
 // a leading gutter while `*checked` is true. Keep-open by default (so several toggles can be flipped without
-// reopening) - pass .close_policy = FlMenuClosePolicy_Close to force a dismiss. Returns the row's signal (.clicked
-// the frame it toggles). A null checked shows no mark and toggles nothing (still a live, hoverable row).
+// reopening). Pass .close_policy = FlMenuClosePolicy_Close to force a dismiss. Returns the row's signal (.clicked
+// the frame it toggles). A nullptr checked shows no mark and toggles nothing (still a live, hoverable row).
 FlSignal ui_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig config);
 
 // Emit a radio item: one option in a group whose selection state is the caller's `*selected`.
 // Activation sets `*selected = value`; the bullet marker shows while `*selected == value`, so a group of radio items
-// sharing one selected is mutually exclusive for free. Keep-open by default (same override as ui_menu_check).
-// Returns the row's signal. A null selected shows no mark and selects nothing.
+// sharing one selected is mutually exclusive. Keep-open by default (same override as ui_menu_check).
+// Returns the row's signal. A nullptr selected shows no mark and selects nothing.
 FlSignal ui_menu_radio_impl(FlString label, int* selected, int value, FlMenuItemConfig config);
 
 // Emit a separator: a non-interactive horizontal rule between items. It occupies a row but is
@@ -66,8 +66,8 @@ void ui_menu_separator_impl(void);
 // it occupies a row, is skipped by navigation, and never activates.
 void ui_menu_header_impl(FlString label);
 
-// Begin a submenu parent. Emits the parent row (a pure container - chevron, never an action
-// signal) at the current level, and returns true ONLY while this submenu is the one expanded at its level, opening a
+// Begin a submenu parent. Emits the parent row (a container: it shows a chevron and reports no action
+// signal) at the current level, and returns true only while this submenu is the one expanded at its level, opening a
 // nested floating panel beside the parent (right by default, flipped left on overflow). The body then emits the child
 // items into the deeper level; pair ui_submenu_end_impl with it only when it returned true (the ui_submenu macro does
 // this for you). A cold submenu opens on hover-dwell, click, or Right-arrow; Left-arrow / ESC collapse it one level.
@@ -84,15 +84,15 @@ void ui_menu_end_impl(void);
 FlSignal ui_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlMenuRegionConfig config);
 void ui_menu_region_end_impl(void);
 
-// Menu bar - the persistent File/Edit/View strip.
+// Menu bar: the persistent File/Edit/View strip.
 //
 // The bar is the core's level 0, rendered as a horizontal strip instead of a floating panel; each top's dropdown is
-// level 1, anchored under its bar button (element-anchor). A top opens on CLICK (never the cold hover-dwell the
+// level 1, anchored under its bar button (element-anchor). A top opens on click (never the cold hover-dwell the
 // submenu uses). Once a dropdown is open, hovering a sibling top switches the open root instantly; Left/Right move
 // between tops and Down opens the highlighted one.
 //
 //   ui_menubar(bar_id) {                              // the strip; the body always runs (tops are always visible)
-//       ui_menubar_menu(FL_S("File")) {                  // a top; the body runs only while THIS dropdown is open
+//       ui_menubar_menu(FL_S("File")) {                  // a top; the body runs only while this dropdown is open
 //           if (ui_menu_item(FL_S("Open")).clicked) { ... }
 //       }
 //       ui_menubar_menu(FL_S("Edit")) { ui_menu_item(FL_S("Undo")); }
@@ -104,7 +104,7 @@ void ui_menu_region_end_impl(void);
 void ui_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig config);
 void ui_menubar_end_impl(void);
 
-// Emit one top-level entry into the strip and return true ONLY while this top's dropdown is open, opening the dropdown
+// Emit one top-level entry into the strip and return true only while this top's dropdown is open, opening the dropdown
 // panel anchored under the button. The body then emits the dropdown's items into the
 // deeper level; pair ui_menubar_menu_end_impl with it only when it returned true (the ui_menubar_menu macro does this).
 bool ui_menubar_menu_begin_impl(FlString label, FlMenuBarMenuConfig config);
@@ -132,19 +132,19 @@ static int UI_MENUBAR_MENU_LATCH UNUSED_VARIABLE = 0;
 
 #define ui_menu_item(label, ...) ui_menu_item_impl(label, (FlMenuItemConfig) { __VA_ARGS__ })
 
-// Stateful item kinds - a checkable toggle over a bool*, and a radio option over a shared int* group state.
+// Stateful item kinds: a checkable toggle over a bool*, and a radio option over a shared int* group state.
 // Both keep the menu open on activation by default (override with .close_policy).
 #define ui_menu_check(label, checked, ...) ui_menu_check_impl(label, checked, (FlMenuItemConfig) { __VA_ARGS__ })
 #define ui_menu_radio(label, selected, value, ...) \
     ui_menu_radio_impl(label, selected, value, (FlMenuItemConfig) { __VA_ARGS__ })
 
-// Static (non-interactive) item kinds - a separator rule and a section-header caption.
+// Static (non-interactive) item kinds: a separator rule and a section-header caption.
 #define ui_menu_separator() ui_menu_separator_impl()
 #define ui_menu_header(label) ui_menu_header_impl(label)
 
-// Runs the body (and ui_submenu_end) only while THIS submenu is expanded; a closed submenu still emits its parent row
+// Runs the body (and ui_submenu_end) only while this submenu is expanded; a closed submenu still emits its parent row
 // (inside begin) but skips the body. Nesting is safe even though the latch is a file static: each loop re-evaluates
-// the latch from its own begin() at init and the for-update always pairs the matching end() - see ui_layout_area.
+// the latch from its own begin() at init and the for-update always pairs the matching end() (see ui_layout_area).
 #define ui_submenu(label, ...) \
     for ( \
          UI_MENU_SUBMENU_LATCH = (ui_submenu_begin_impl(label, (FlSubmenuConfig) { __VA_ARGS__ }) ? 0 : 1); \
@@ -157,8 +157,8 @@ static int UI_MENUBAR_MENU_LATCH UNUSED_VARIABLE = 0;
          UI_MENU_REGION_LATCH < 1; \
          UI_MENU_REGION_LATCH = 1, ui_menu_region_end_impl())
 
-// The strip body ALWAYS runs (tops are persistent), so ui_menubar latches like ui_layout_area, not
-// like ui_menu. ui_menubar_menu runs its body only while THIS top's dropdown is open (like ui_submenu).
+// The strip body always runs (tops are persistent), so ui_menubar latches like ui_layout_area, not
+// like ui_menu. ui_menubar_menu runs its body only while this top's dropdown is open (like ui_submenu).
 #define ui_menubar(bar_id, ...) \
     for ( \
          UI_MENUBAR_LATCH = (ui_menubar_begin_impl(bar_id, (FlMenuBarConfig) { __VA_ARGS__ }), 0); \

@@ -29,8 +29,8 @@ impl App {
         unsafe { crate::sys::fl_app_inject_mouse_move(self.handle, x, y) }
     }
 
-    /// Headless harness: inject a raw relative-motion delta - a hidden-drag scrub. The delta is read that frame
-    /// (scaled) via the drag-delta query.
+    /// Headless harness: inject a raw relative-motion delta, as a hidden drag produces. The drag-delta query
+    /// reads it, scaled, that frame.
     #[inline]
     pub fn inject_mouse_delta(&mut self, delta_x: f32, delta_y: f32) {
         unsafe { crate::sys::fl_app_inject_mouse_delta(self.handle, delta_x, delta_y) }

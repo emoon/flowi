@@ -9,7 +9,7 @@ struct TestArena(*mut Arena);
 
 impl TestArena {
     fn new() -> TestArena {
-        // SAFETY: fl_arena_create takes a reservation size, a NUL-terminated name and a flags word.
+        // SAFETY: fl_arena_create takes a reservation size, a NUL-terminated file name and a line number.
         TestArena(unsafe { fl_arena_create(RESERVE, c"rawstr_test".as_ptr(), 0) })
     }
 }
@@ -83,7 +83,6 @@ fn arena_str_maps_the_empty_string_to_the_sentinel() {
     assert!(!packed.is_ascii());
 }
 
-/// is_ascii is set from the content, not unconditionally.
 #[test]
 fn arena_str_sets_the_ascii_bit_from_the_content() {
     let arena = TestArena::new();
@@ -109,7 +108,7 @@ fn arena_str_nul_terminates_without_counting_the_terminator() {
     let packed = unsafe { RawStr::in_arena_nul(arena.0, "hvsc") };
     assert_eq!(packed.len(), 4);
     assert_eq!(packed_bytes(packed), b"hvsc");
-    // SAFETY: as above - the byte one past the reported length is the terminator.
+    // SAFETY: as above: the byte one past the reported length is the terminator.
     assert_eq!(unsafe { *packed.data.add(4) }, 0);
 }
 

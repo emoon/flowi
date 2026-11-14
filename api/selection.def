@@ -1,4 +1,4 @@
-/// The kind discriminant of a SelectionRequest - the tag set on each per-frame selection change.
+/// The kind of a SelectionRequest: the tag set on each per-frame selection change.
 enum SelectionRequestKind {
     /// Empty the set. selected / id / to_id unused.
     ClearAll = 0,
@@ -12,9 +12,8 @@ enum SelectionRequestKind {
     SetRange,
 }
 
-/// One selection change a List emits per frame - never the resolved set. A flat tagged struct where kind
-/// selects which fields are read; ranges are given by their two endpoint item ids (id .. to_id) rather
-/// than by enumerating the span.
+/// One selection change a List emits per frame. The List emits changes, never the resolved set. kind
+/// selects which fields are read; a range is given by its two endpoint item ids (id .. to_id).
 #[attributes(Copy)]
 struct SelectionRequest {
     /// Which variant this is; selects which fields below are read.

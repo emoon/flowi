@@ -1,9 +1,9 @@
 //! A minimal List demo: a scrollable, virtualized column of caller-emitted rows driven through the scoped
 //! [`List`] face, with the List's built-in multi-selection and drag-reorder. Each row carries an opaque u64
-//! stable id (here the id at its position); the List runs the selection gestures internally - plain click
-//! replaces, ctrl/⌘-click toggles, shift-click ranges from the anchor, Ctrl+A selects all - auto-applying them
-//! into the caller-owned [`SelectionSet`] and drawing the row highlight from set membership. Dragging a row past
-//! the threshold begins a reorder: the List draws the ghost + insertion line, and on release returns a
+//! stable id (here the id at its position). The List runs the selection gestures internally (plain click
+//! replaces, ctrl/⌘-click toggles, shift-click ranges from the anchor, Ctrl+A selects all), applies them
+//! to the caller-owned [`SelectionSet`] and draws the row highlight from set membership. Dragging a row past
+//! the threshold begins a reorder: the List draws the ghost and insertion line, and on release returns a
 //! [`Reorder`] request the app applies to its own ordered model (here the ordered Vec). Only the rows in the
 //! visible window are emitted; the rest never lay out, yet Ctrl+A still selects them and a reorder still
 //! resolves their stable ids because the List forwards the full ordered slice.
@@ -33,7 +33,7 @@ fn apply_reorder(ordered: &mut Vec<u64>, r: &Reorder) {
             DropRelationship::After => p + 1,
             DropRelationship::Into => p + 1, // a List never produces Into; treat as After
         },
-        None => ordered.len(), // target was itself dragged or is absent - append to the end
+        None => ordered.len(), // target was itself dragged or is absent; append to the end
     };
     for (k, id) in moving.into_iter().enumerate() {
         ordered.insert(insert_at + k, id);

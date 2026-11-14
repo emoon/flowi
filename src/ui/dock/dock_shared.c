@@ -1,5 +1,5 @@
-// Dock Shared - the app-global workspace registry, the injected host seam, and the deferred promote queue. Reached
-// from the entry points below via g_ui_ctx->shared->dock.
+// Dock Shared: the app-global workspace registry, the injected host seam, and the deferred promote queue. The entry
+// points below reach it through the current context's shared->dock.
 
 #include "dock_shared.h"
 
@@ -29,7 +29,7 @@ typedef struct DockPromotion {
 } DockPromotion;
 
 struct FlDockShared {
-    FlArena* arena; // owns this record itself; freed in dock_shared_destroy
+    FlArena* arena; // owns this record itself
 
     // The workspace registry: the app-global set of trees. [0] is the default (main) workspace, created with the
     // tier; promoting adds another and demote dissolves it. Each entry is owned here; per-window contexts only
@@ -45,8 +45,6 @@ struct FlDockShared {
     DockPromotion promotions[FL_DOCK_MAX_WORKSPACES];
     u32 promotion_count;
 };
-
-// Lifecycle
 
 FlDockShared* dock_shared_create(void) {
     FlArena* arena = arena_new();
@@ -64,17 +62,15 @@ void dock_shared_destroy(FlDockShared* ds) {
     for (u32 i = 0; i < ds->registry_count; ++i) {
         dock_workspace_destroy(ds->registry[i]);
     }
-    fl_arena_destroy(ds->arena); // frees the record itself (allocated from this arena)
+    fl_arena_destroy(ds->arena);
 }
 
 FlDockWorkspace* dock_shared_default(FlDockShared* ds) {
     return (ds != nullptr && ds->registry_count > 0) ? ds->registry[0] : nullptr;
 }
 
-// The registry
-
-// Null when there is no shared tier - a standalone workspace driven directly by a unit test - so the entry points
-// below must no-op safely on it.
+// nullptr when there is no shared tier (a standalone workspace driven directly by a unit test), so the entry points
+// below must no-op on it.
 static FlDockShared* dock_shared_get(void) {
     FlUiCtx* ctx = ui_get_ctx();
     if (ctx == nullptr || ctx->shared == nullptr) {
@@ -106,8 +102,6 @@ static void dock_registry_remove(FlDockShared* ds, FlDockWorkspace* ws) {
         }
     }
 }
-
-// The host seam and the promote queue
 
 void fl_dock_register_host(FlDockHost host) {
     FlDockShared* ds = dock_shared_get();
@@ -143,10 +137,10 @@ void dock_shared_flush_promotes(void) {
         DockPromoteRequest* req = &ds->promote_queue[i];
         FlDockWorkspace* dst = dock_registry_add(ds);
         if (dst == nullptr) {
-            continue; // registry full - drop the request
+            continue; // registry full, so the request is dropped
         }
         if (!dock_workspace_promote(req->src, dst, req->panel)) {
-            dock_registry_remove(ds, dst); // promote rejected (panel vanished since enqueue): undo the empty entry
+            dock_registry_remove(ds, dst); // the panel vanished since enqueue, so remove the empty entry
             continue;
         }
         void* host_window
@@ -174,7 +168,7 @@ void fl_dock_notify_window_closed(void* host_window) {
         }
         DockPromotion p = ds->promotions[i];
         dock_workspace_demote(p.src, p.dst, p.panel); // rebind into the source by stable id
-        dock_registry_remove(ds, p.dst);              // dissolve the now-empty second workspace + its entry
+        dock_registry_remove(ds, p.dst);              // the second workspace is empty after the demote
         for (u32 j = i + 1; j < ds->promotion_count; ++j) {
             ds->promotions[j - 1] = ds->promotions[j];
         }

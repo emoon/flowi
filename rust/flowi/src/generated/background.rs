@@ -33,9 +33,9 @@ impl Background {
         unsafe { crate::sys::fl_background_set_clear_color(r, g, b) }
     }
 
-    /// Blend two background images for this frame: t mixes prev (0) toward current (255). Stateless - the
-    /// caller passes both handles and t every frame; flowi holds no transition state. An app-side crossfade
-    /// drives its own timing and calls this per frame.
+    /// Blend two background images for this frame: t mixes prev (0) toward current (255). flowi holds no
+    /// transition state, so the caller passes both handles and t every frame and drives its own crossfade
+    /// timing.
     #[inline]
     pub fn set_blend(prev: crate::sys::ImageHandle, current: crate::sys::ImageHandle, t: u8) {
         let _frame = crate::frame_thread::frame_thread_guard("Background::set_blend");

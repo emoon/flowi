@@ -1,4 +1,4 @@
-// Glyph rasterization: one compute dispatch per prepared glyph - one thread per cell texel
+// Glyph rasterization: one compute dispatch per prepared glyph, one thread per cell texel
 // looping the glyph's curve segments from an SSBO, accumulating winding/signed coverage, writing R8.
 //
 // The SSBO carries quadratic Beziers only (3 vec2 per segment: p0, control, p1) in padded-cell-local pixel
@@ -27,7 +27,7 @@ LOCAL_SIZE_2D(8, 8);
 BUFFER(Curves, float2, curve_pts, 0); // CURVE_STRIDE float2 per quadratic
 IMAGE2D_WRITE(r8, glyph_atlas, 0);
 UNIFORM(uint2, cell_origin); // the padded cell's texel position in the atlas
-UNIFORM(uint2, cell_size);   // padded cell extent - every texel gets written
+UNIFORM(uint2, cell_size);   // padded cell extent; every texel gets written
 UNIFORM(uint, seg_count);
 KERNEL(main) {
 #endif

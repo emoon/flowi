@@ -57,7 +57,7 @@ ImageHandle image_load_from_memory(const void* data, size_t size, FlImageLoadOpt
 
 ImageHandle image_create_from_pixels(const void* pixels, int width, int height, FlImageFormat format);
 
-/// As above, but the image always gets a texture of its own and never enters a shared image atlas - required
+/// As above, but the image always gets a texture of its own and never enters a shared image atlas. Required
 /// for anything a mesh samples, since mesh UVs address the whole texture.
 
 ImageHandle image_create_dedicated(const void* pixels, int width, int height, FlImageFormat format);

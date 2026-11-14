@@ -46,18 +46,18 @@ typedef struct FlMeshVertex {
 
 // Retained geometry, created once and drawn from any Viewport3d. Vertices use the one fixed format
 // (MeshVertex); indices are 16-bit and address vertices. Triangles and lines are the same resource with
-// different index grouping - create makes one of the first, create_lines one of the second.
+// different index grouping: create makes one of the first, create_lines one of the second.
 // Create a triangle mesh from vertices and 16-bit indices (three per triangle). The caller may free both
 // arrays after this returns. Returns MeshHandle::INVALID when the active backend has no 3D
 // support or the geometry is malformed.
 FL_API FlMeshHandle fl_mesh_create(const FlMeshVertex* vertices, uint32_t vertices_size, const uint16_t* indices, uint32_t indices_size);
-// Create a line mesh - wireframes, voxel boxes, gizmos, camera paths - from vertices and 16-bit
+// Create a line mesh (wireframes, voxel boxes, gizmos, camera paths) from vertices and 16-bit
 // indices (two per segment). Lines are drawn with Viewport3d::draw_lines, take their color from the
 // vertices, and are never textured. Same lifetime and sharing rules as create.
 FL_API FlMeshHandle fl_mesh_create_lines(const FlMeshVertex* vertices, uint32_t vertices_size, const uint16_t* indices, uint32_t indices_size);
 // Destroy a mesh and release its backend buffers. The handle is invalid afterwards: drawing it renders
-// nothing - until a later create reuses its slot and hands the same value back out, at which point the
-// stale handle silently draws the new mesh. Drop your copies when you destroy one.
+// nothing until a later create reuses its slot and hands the same value back out, at which point the
+// stale handle draws the new mesh. Drop your copies when you destroy one.
 FL_API void fl_mesh_destroy(FlMeshHandle mesh);
 
 // A 3D scene rendered into a regular layout element: a view-projection matrix plus depth-tested
@@ -67,7 +67,7 @@ FL_API void fl_mesh_destroy(FlMeshHandle mesh);
 // Bracket a frame's draws with begin/end. begin returns the element's size in device pixels so
 // the caller can build its projection matrix; that size is the previous frame's, because layout runs
 // after the frame callback, so it is zero on an element's first frame and one frame stale across a
-// resize. Lighting, materials and cameras are not flowi's: the shading is fixed and unlit, and camera
+// resize. flowi does no lighting, materials or cameras: the shading is fixed and unlit, and camera
 // math, picking and gizmos live in the caller. A backend without a 3D path draws a placeholder.
 // Declare the 3D viewport element id and open its draw list. Returns the element's device-pixel
 // size from the previous frame ((0, 0) on its first). Call inside a frame callback and pair with end.
@@ -76,7 +76,7 @@ FL_API FlVec2 fl_viewport3d_begin(FlLayoutId id);
 // column-major, the same convention `gl_Position = matrix * vec4(pos, 1.0)` implies.
 FL_API void fl_viewport3d_set_view_projection(const float* matrix, uint32_t matrix_size);
 // Draw a triangle mesh with depth testing, modulating its vertex colors by texture sampled with
-// filter - pass ImageFilter::Nearest to see a lightmap's individual texels rather than a smoothed
+// filter. Pass ImageFilter::Nearest to see a lightmap's individual texels rather than a smoothed
 // blend. Pass ImageHandle::INVALID to draw with vertex colors alone. Draws render in submission order
 // with no sorting; a textured draw needs a dedicated image (Image::create_dedicated), because mesh UVs
 // address the whole texture.

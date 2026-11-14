@@ -6,8 +6,8 @@
 
 #define VFS_AWAIT_FLAG_TIMEOUT_NS 20000000000ull
 
-// Spins until flag is set or the deadline passes; false on the deadline. Every wait on a flag another thread sets goes
-// through it, so a failed case reports instead of leaving the only worker spinning.
+// Spins until flag is set or the deadline passes, and returns false on the deadline. Every wait on a flag that
+// another thread sets goes through it, so a failed case reports and does not leave the only worker spinning.
 static bool vfs_await_flag(_Atomic bool* flag) {
     u64 deadline_ns = get_monotonic_time_ns_os() + VFS_AWAIT_FLAG_TIMEOUT_NS;
     while (!atomic_load(flag)) {
@@ -19,8 +19,7 @@ static bool vfs_await_flag(_Atomic bool* flag) {
     return true;
 }
 
-// The plugin handles a fake driver has opened and closed since the watch began, read off its pair of counters. A case
-// that must leak none asserts the two agree, or the count it expects.
+// The plugin handles a fake driver has opened and closed since the watch began, read from its two counters.
 typedef struct LeakWatch {
     const _Atomic int* alloc_counter;
     const _Atomic int* close_counter;
@@ -43,19 +42,14 @@ static int leak_watch_closed(const LeakWatch* watch) {
     return atomic_load(watch->close_counter) - watch->closes_before;
 }
 
-// vfs_destroy must close each leaked plugin file handle exactly once and release operation-owned heap
-// allocations and listing arenas.
+// vfs_destroy closes each leaked plugin file handle exactly once and releases operation-owned heap allocations and
+// listing arenas.
 //
-// This deliberately does NOT diff mimalloc's byte counters across the cycle. mi_stats_get() copies
-// _mi_stats_main, which only ever accumulates the stats of threads that have called mi_stats_merge()
-// (or exited): mimalloc credits an allocation to the allocating thread and the matching free to the
-// freeing thread. The VFS runs operations on job workers - fl_vfs_mount_read_all_with_options allocates
-// its buffer on a worker, vfs_destroy frees it on this thread - so the worker's `+` sits in
-// thread-local stats that are never merged while the worker lives, and only the `-` lands in the
-// numbers we can read. The counter therefore drops ~216 bytes per cycle indefinitely, which says
-// nothing about whether anything leaked. Heap release is covered instead by the close accounting
-// below and by the /proc/self/maps check; a byte-accurate assertion needs a process-wide counter
-// that flowi does not have yet.
+// The case does not compare mimalloc's byte counters across the cycle. mimalloc credits an allocation to the
+// allocating thread and the free to the freeing thread, and a job worker's thread-local stats are not merged
+// while it lives. A read-all buffer allocated on a worker and freed here therefore lowers the readable counter
+// every cycle whether or not anything leaked. Heap release is checked through the close counts and
+// /proc/self/maps.
 
 // A leak adds at least one mapping per cycle, so the count may drift by less than the cycle count for reasons
 // unrelated to the VFS (other threads mapping memory) without failing the case.
@@ -76,7 +70,7 @@ UTEST(vfs, destroy_closes_leaked_handles_across_cycles) {
         vfs_wait_all();
         ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
-        // Every resource-owning operation variant is left open on purpose: vfs_destroy must reap them all.
+        // One of every operation that owns a resource is left open for vfs_destroy to release.
         FlVfsHandle file = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
         ASSERT_NE(file, FL_VFS_HANDLE_INVALID);
         uint8_t read_buffer[sizeof(k_stub_vfs_data)] = { 0 };
@@ -156,8 +150,8 @@ UTEST(vfs, builtin_localfs_reads_real_file) {
     }
     ASSERT_TRUE_MSG(found, "listing must include the file written to the mounted directory");
 
-    // DirectPath: the driver hands back the real OS path, so VFS core can open on-disk archives by path
-    // instead of loading them into RAM.
+    // DirectPath: the driver returns the real OS path, so VFS core can open on-disk archives by path without
+    // loading them into RAM.
     const FlVfsPlugin* driver = localfs_plugin();
     ASSERT_TRUE((driver->get_capabilities() & FlVfsDriverCapabilities_DirectPath) != 0);
     ASSERT_TRUE(driver->get_file_path != nullptr);
@@ -175,7 +169,7 @@ UTEST(vfs, builtin_localfs_reads_real_file) {
     scratch_dir_destroy(&scratch);
 }
 
-// get_size and read must agree on relative_path: what the first sizes, the second must be the bytes of.
+// get_size and read resolve relative_path the same way: read returns the bytes of the file get_size measured.
 UTEST(vfs, builtin_localfs_read_resolves_relative_path) {
     ScratchDir scratch;
     ASSERT_TRUE(scratch_dir_create(&scratch, FL_S("unit_test_localfs_relpath_tmp")));
@@ -204,11 +198,11 @@ UTEST(vfs, builtin_localfs_read_resolves_relative_path) {
     ASSERT_EQ((int)sizeof(payload), (int)read.bytes_read);
     ASSERT_EQ(memcmp(got, payload, sizeof(payload)), 0);
 
-    // Reading the directory itself still fails rather than returning container bytes.
+    // Reading the directory itself fails. It does not return container bytes.
     FlVfsReadResult dir_read = driver->read(nullptr, dir.handle, FL_S(""), got, 1);
     ASSERT_EQ((int)-1, (int)dir_read.bytes_read);
 
-    // A file handle plus a child path resolves the path; it must not silently fall back to the handle's bytes.
+    // A file handle plus a child path resolves the path. It does not fall back to the handle's own bytes.
     FlVfsOpenResult file = driver->open(nullptr, nullptr, file_path, FlVfsOpenFlags_Read, (FlVfsMountOptions) { 0 });
     ASSERT_EQ(file.error.vfs_status, FlVfsStatus_Success);
     FlVfsReadResult missing = driver->read(nullptr, file.handle, FL_S("no_such.bin"), got, 1);
@@ -275,8 +269,8 @@ static FlVfsPlugin s_memory_only_plugin = {
     .open_memory = memory_only_open_memory,
 };
 
-// A short read (fewer bytes than get_size promised) takes the resolver's error branch, which must close
-// the file handle try_open_file just opened before returning.
+// A short read (fewer bytes than get_size promised) takes the resolver's error branch, which closes the file
+// handle try_open_file just opened before returning.
 UTEST(vfs, resolve_short_read_closes_plugin_handle) {
     const LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
 
@@ -287,7 +281,7 @@ UTEST(vfs, resolve_short_read_closes_plugin_handle) {
     VfsState state = { .plugin_first = &memory_entry, .plugin_last = &memory_entry };
     VfsPluginEntry root_entry = { .plugin = &s_stub_vfs_plugin, .plugin_instance = nullptr };
 
-    // Root directory handle the resolver owns while walking the path (mirrors a mounted root).
+    // The root directory handle the resolver owns while walking the path, as for a mounted root.
     FlVfsOpenResult root = stub_vfs_open(nullptr, nullptr, FL_S("/"), 0, (FlVfsMountOptions) { 0 });
     ASSERT_TRUE(root.handle != nullptr);
     ASSERT_TRUE(root.is_directory);
@@ -311,10 +305,10 @@ static FlVfsDriverCapabilities counting_fake_capabilities(void) {
                                      | FlVfsDriverCapabilities_Memory);
 }
 
-// Descending through nested archives (a zip inside a zip) transitions to a new memory-mounted container at
-// each layer, and each transition must close the outgoing container handle. This stub doubles as a file
-// opener (can_open/open) and a memory-archive opener (open_memory): a probed "file" reads a few bytes, and
-// open_memory mounts those bytes as a directory-shaped archive.
+// Descending through nested archives (a zip inside a zip) moves to a new memory-mounted container at each layer
+// and closes the container it leaves. This stub opens files (can_open/open) and archives from memory
+// (open_memory): a probed "file" reads a few bytes, and open_memory mounts those bytes as a directory-shaped
+// archive.
 
 typedef struct NestHandle {
     bool is_dir;
@@ -335,7 +329,7 @@ static NestHandle* nest_alloc(bool is_dir) {
     return h;
 }
 
-// Match a reconstructed path segment against a name, tolerating an optional leading '/'.
+// Matches a reconstructed path segment against a name, with or without a leading '/'.
 static bool nest_name_eq(FlString path, const char* name) {
     const char* d = path.data;
     int n = (int)path.length;
@@ -392,7 +386,7 @@ static FlVfsOpenResult nest_open_memory(void* instance, const uint8_t* data, uin
     (void)instance;
     (void)size;
     (void)original_path;
-    // Takes ownership of the VFS-allocated buffer and frees it, mirroring a real archive plugin.
+    // Takes ownership of the VFS-allocated buffer and frees it, as a real archive plugin does.
     mi_free((void*)data);
     NestHandle* h = nest_alloc(true);
     return (FlVfsOpenResult) { .handle = h, .is_directory = true, .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
@@ -422,7 +416,7 @@ static FlVfsPlugin s_nest_vfs_plugin = {
 UTEST(vfs, resolve_nested_archives_close_intermediate_handles) {
     const LeakWatch leaks = leak_watch_begin(&s_nest_alloc_count, &s_nest_close_count);
 
-    // State carrying the nested-archive stub so find_plugin_for_memory can mount each layer as we descend.
+    // The state holds the nested-archive stub so find_plugin_for_memory can mount each layer on the way down.
     VfsPluginEntry entry = { .plugin = &s_nest_vfs_plugin, .plugin_instance = nullptr };
     VfsState state = { 0 };
     state.plugin_first = &entry;
@@ -432,20 +426,20 @@ UTEST(vfs, resolve_nested_archives_close_intermediate_handles) {
     NestHandle* root = nest_alloc(true); // root directory the resolver walks from, and takes ownership of
     ASSERT_TRUE(root != nullptr);
 
-    // "l0/l1" descends through two archive layers, so the resolver must close the intermediate archive1
-    // handle when it moves to archive2.
+    // "l0/l1" descends through two archive layers, so the resolver closes the intermediate archive1 handle when
+    // it moves to archive2.
     const int root_serial = root->serial;
     PathComponents comp = path_components(s_arena, FL_S("l0/l1"));
     FinalDriver result = vfs_resolve_from_root(&state, &root_entry, root, &comp, 0, s_arena);
 
     ASSERT_EQ_MSG(result.error, VfsResolveError_None, "nested-archive path must resolve");
     ASSERT_TRUE(result.handle != nullptr);
-    // By serial, not by address: the resolver closes the root, and the allocator is free to hand its address
+    // Compared by serial and not by address: the resolver closes the root, and the allocator may hand its address
     // straight back for the innermost archive's handle.
     ASSERT_NE_MSG(((NestHandle*)result.handle)->serial, root_serial,
                   "resolved handle is the innermost archive, not the root");
 
-    // The resolver consumed the root; only the final resolved handle is left for the caller to close.
+    // The resolver consumed the root. Only the final resolved handle is left for the caller to close.
     nest_close(nullptr, result.handle);
 
     ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 5, "root + two probed files + two mounted archive layers");
@@ -453,10 +447,10 @@ UTEST(vfs, resolve_nested_archives_close_intermediate_handles) {
                   "descending through nested archives must close every intermediate container handle");
 }
 
-// The resolver's segment-walking loop only runs when the root plugin matched a strict prefix of the mount path.
-// This stub's open() resolves the first segment ("root") and nothing longer, so driving it through
-// vfs_resolve_mount_path always enters that loop, and every loop exit must leave zero handles live apart from the
-// one returned in FinalDriver.handle.
+// The resolver's segment-walking loop runs only when the root plugin matched a strict prefix of the mount path.
+// This stub's open() resolves the first segment ("root") and nothing longer, so vfs_resolve_mount_path always
+// enters that loop. Every exit from the loop leaves no handle live except the one returned in
+// FinalDriver.handle.
 
 typedef struct PfxHandle {
     bool is_dir;
@@ -529,12 +523,12 @@ static FlVfsOpenResult pfx_open_memory(void* instance, const uint8_t* data, uint
     (void)size;
     (void)original_path;
 
-    // A rejecting plugin must leave the buffer alone; the resolver frees it.
+    // A plugin that rejects the buffer leaves it alone, and the resolver frees it.
     if (!s_pfx_memory_mountable) {
         return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
     }
 
-    mi_free((void*)data); // takes ownership, mirroring a real archive plugin
+    mi_free((void*)data); // takes ownership, as a real archive plugin does
     PfxHandle* h = pfx_alloc(true);
     return (FlVfsOpenResult) { .handle = h, .is_directory = true, .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
 }
@@ -580,7 +574,7 @@ UTEST(vfs, mount_path_directory_exit_closes_container) {
 
     ASSERT_EQ_MSG(result.error, VfsResolveError_None, "directory at the end of the path must resolve");
     ASSERT_TRUE(result.handle != nullptr);
-    // The container was closed before we got here; the returned handle must still be usable.
+    // The container is already closed, and the returned handle is still usable.
     ASSERT_TRUE(pfx_is_directory(nullptr, result.handle));
 
     pfx_close(nullptr, result.handle);
@@ -611,8 +605,8 @@ UTEST(vfs, mount_path_missing_remainder_closes_container) {
     const LeakWatch leaks = leak_watch_begin(&s_pfx_alloc_count, &s_pfx_close_count);
     s_pfx_memory_mountable = true;
 
-    // Nothing under "root" matches "nope", so try_open_file reports FileNotFound without having opened
-    // a handle - the one case where the resolver legitimately has no probed handle to close.
+    // Nothing under "root" matches "nope", so try_open_file reports FileNotFound without opening a handle. This
+    // is the one case where the resolver has no probed handle to close.
     VfsState state;
     VfsPluginEntry entry;
     FinalDriver result = pfx_mount(&state, &entry, FL_S("root/nope"));
@@ -629,8 +623,8 @@ UTEST(vfs, mount_path_nested_archives_close_root_and_containers) {
     const LeakWatch leaks = leak_watch_begin(&s_pfx_alloc_count, &s_pfx_close_count);
     s_pfx_memory_mountable = true;
 
-    // "root/l0/l1" descends two archive layers below the root container, so the handles closed here are
-    // the root plus an intermediate container.
+    // "root/l0/l1" descends two archive layers below the root container, so the handles closed here are the root
+    // and an intermediate container.
     VfsState state;
     VfsPluginEntry entry;
     FinalDriver result = pfx_mount(&state, &entry, FL_S("root/l0/l1"));
@@ -646,8 +640,8 @@ UTEST(vfs, mount_path_nested_archives_close_root_and_containers) {
                   "root and every intermediate container must be closed");
 }
 
-// fl_vfs_close must not deadlock when a read job is still pending. Reads are started and closed immediately,
-// many times, so the worker is often mid-job when close runs. A regression hangs (CI timeout).
+// fl_vfs_close does not deadlock when a read job is still pending. Reads are started and closed at once, many
+// times, so the worker is often mid-job when close runs. A deadlock shows as a hang.
 
 UTEST(vfs, close_during_pending_read_no_deadlock) {
     fl_vfs_init(s_arena); // idempotent
@@ -661,10 +655,10 @@ UTEST(vfs, close_during_pending_read_no_deadlock) {
         FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr,
                                                                 nullptr, FL_VFS_HANDLE_INVALID);
         ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
-        fl_vfs_close(handle); // close with the read job still pending - must not deadlock
+        fl_vfs_close(handle); // the read job may still be pending
     }
 
-    // Sanity: a normal read still round-trips after all that churn.
+    // A normal read still works afterwards.
     FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
                                                             FL_VFS_HANDLE_INVALID);
     ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
@@ -677,9 +671,9 @@ UTEST(vfs, close_during_pending_read_no_deadlock) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// fl_vfs_mount_close must drain in-flight jobs and reap leaked handles for THIS mount before it tears down the
-// mount's root handle, strings and arena. Reads are fired and the mount closed WITHOUT waiting or closing the handles,
-// many times: the close must drain them, reap the orphans, and leave the VFS reusable.
+// fl_vfs_mount_close drains this mount's in-flight jobs and releases its leaked handles before it tears down the
+// mount's root handle, strings and arena. The case starts reads and closes the mount without waiting or closing
+// the handles, many times, and then checks the VFS is still usable.
 
 UTEST(vfs, mount_close_drains_inflight_and_reaps_handles) {
     fl_vfs_init(s_arena); // idempotent
@@ -688,19 +682,19 @@ UTEST(vfs, mount_close_drains_inflight_and_reaps_handles) {
     for (int i = 0; i < 32; ++i) {
         FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
         ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-        vfs_wait_all(); // make the mount ready so the reads below are the in-flight jobs
+        vfs_wait_all(); // the mount is ready, so the reads below are the in-flight jobs
 
-        // Neither waited nor closed: still in-flight and still leaked when the mount closes.
+        // Neither waited for nor closed, so still in flight and still leaked when the mount closes.
         for (int j = 0; j < 4; ++j) {
             FlVfsHandle h = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr,
                                                                nullptr, FL_VFS_HANDLE_INVALID);
             ASSERT_NE(h, FL_VFS_HANDLE_INVALID);
         }
 
-        fl_vfs_mount_close(mount.mount); // must drain the reads and reap their handles, not UAF or hang
+        fl_vfs_mount_close(mount.mount);
     }
 
-    // The VFS is still usable after all that: a fresh mount + read round-trips.
+    // The VFS is still usable: a new mount and read work.
     FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
     vfs_wait_all();
@@ -715,11 +709,10 @@ UTEST(vfs, mount_close_drains_inflight_and_reaps_handles) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// Handle-lifetime contract: multi-threaded handle churn. Several threads run the full
-// open/read/wait/get-result/close cycle on overlapping paths while a hostile thread steals handle ids out of
-// shared slots and closes them (so close races wait/get_data/close on the same id), and the main thread
-// closes a second mount mid-churn with reads still in flight (drain + reap under concurrent map traffic).
-// Each second-mount close waits for the churn threads to complete another batch of cycles.
+// Multi-threaded handle churn. Several threads run the full open/read/wait/get-result/close cycle on overlapping
+// paths. Another thread takes handle ids out of shared slots and closes them, so a close races wait, get_data and
+// close on the same id. The main thread closes a second mount during the churn with reads still in flight. Each
+// second-mount close waits for the churn threads to complete another batch of cycles.
 
 #define VFS_CHURN_WAIT_MS 5000
 #define VFS_CHURN_BATCH 20
@@ -729,13 +722,13 @@ UTEST(vfs, mount_close_drains_inflight_and_reaps_handles) {
 typedef struct VfsChurnCtx {
     FlVfsMount* mount;
     _Atomic bool stop;
-    _Atomic(FlVfsHandle) slots[4]; // Churn threads publish live handles here; the closer thread steals them
+    _Atomic(FlVfsHandle) slots[4]; // churn threads publish live handles here and the closer thread takes them
     _Atomic int cycles;
 } VfsChurnCtx;
 
 static void* vfs_churn_thread(void* user_data) {
     VfsChurnCtx* ctx = user_data;
-    // Overlapping paths: every thread reads the same file, so all threads hit the same driver handle
+    // Every thread reads the same file, so all threads use the same driver handle
     unsigned iter = 0;
     while (!atomic_load(&ctx->stop)) {
         FlVfsHandle h = fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
@@ -745,16 +738,16 @@ static void* vfs_churn_thread(void* user_data) {
         }
 
         if (iter++ & 1) {
-            // Shared handle: publish it so the closer thread races a close against the calls below. Only
-            // lookup-safe APIs here - dereferencing the result payload concurrently with a close of the
-            // same handle is caller error by contract, so no fl_vfs_get_data on this branch.
+            // Shared handle: publish it so the closer thread races a close against the calls below. Reading the
+            // result payload while another thread closes the same handle is caller error, so this branch does
+            // not call fl_vfs_get_data.
             atomic_store(&ctx->slots[(iter / 2) % 4], h);
             fl_vfs_wait(h);
             (void)fl_vfs_is_ready(h);
             (void)vfs_get_status(h);
-            fl_vfs_close(h); // May double-close with the closer thread - second close must be a clean no-op
+            fl_vfs_close(h); // the closer thread may have closed it already, and a second close is a no-op
         } else {
-            // Private handle: full open/read/wait/get-result/close cycle, payload deref included
+            // Private handle: the full open/read/wait/get-result/close cycle, including reading the payload
             fl_vfs_wait(h);
             (void)fl_vfs_is_ready(h);
             (void)vfs_get_status(h);
@@ -773,10 +766,10 @@ static void* vfs_closer_thread(void* user_data) {
         for (int i = 0; i < 4; i++) {
             FlVfsHandle h = atomic_exchange(&ctx->slots[i], FL_VFS_HANDLE_INVALID);
             if (h != FL_VFS_HANDLE_INVALID) {
-                fl_vfs_close(h); // Races the owner's wait/get_data/close on the same id
+                fl_vfs_close(h); // races the owner's wait, get_data and close on the same id
             }
         }
-        // Also churn its own handle: close with the read job possibly still pending
+        // The closer also closes a handle of its own while the read job may still be pending
         FlVfsHandle h = fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
                                                            FL_VFS_HANDLE_INVALID);
         if (h != FL_VFS_HANDLE_INVALID) {
@@ -807,8 +800,8 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
     }
     ASSERT_TRUE(os_thread_create(&closer, vfs_closer_thread, &ctx));
 
-    // Mid-churn: close a second mount with reads still in flight, so the drain + reap sweep runs while the
-    // other threads hammer the handle map. The churn threads never touch this mount.
+    // Close a second mount with reads still in flight, so its drain runs while the other threads use the handle
+    // map. The churn threads never touch this mount.
     for (int i = 0; i < 8; i++) {
         FlVfsMountResult second = vfs_mount(FL_S("/stub"));
         ASSERT_EQ(second.status, FlVfsMountErrorStatus_Success);
@@ -834,7 +827,7 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
     }
     os_thread_join(&closer);
 
-    // Reap any handle still parked in a slot when the loops stopped
+    // Close any handle still in a slot when the loops stopped
     for (int i = 0; i < 4; i++) {
         FlVfsHandle h = atomic_exchange(&ctx.slots[i], FL_VFS_HANDLE_INVALID);
         if (h != FL_VFS_HANDLE_INVALID) {
@@ -842,9 +835,9 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
         }
     }
 
-    ASSERT_GT(atomic_load(&ctx.cycles), 0); // The churn actually ran
+    ASSERT_GT(atomic_load(&ctx.cycles), 0);
 
-    // The VFS survived: a normal read still round-trips
+    // A normal read still works afterwards
     FlVfsHandle h = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
                                                        FL_VFS_HANDLE_INVALID);
     ASSERT_NE(h, FL_VFS_HANDLE_INVALID);
@@ -857,8 +850,8 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// vfs_wait_all collects the jobs of every live op while other threads create and close ops. Each churn thread owns
-// its handles through close, isolating the collection race from the same-handle races covered above.
+// vfs_wait_all collects the jobs of every live op while other threads create and close ops. Each churn thread
+// closes only its own handles, which keeps this race apart from the same-handle races covered above.
 
 typedef struct VfsWaitAllChurnCtx {
     FlVfsMount* mount;
@@ -923,8 +916,8 @@ UTEST(vfs, wait_all_concurrent_op_churn) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// Handle-lifetime contract: reads chained onto a file keep the file alive past its own close, so the file's driver
-// handle is never closed under a read that is queued or running.
+// Reads chained onto a file keep the file alive past its own close, so the file's driver handle is never closed
+// under a read that is queued or running.
 
 UTEST(vfs, file_handle_chained_reads_survive_file_close) {
     fl_vfs_init(s_arena); // idempotent
@@ -940,7 +933,7 @@ UTEST(vfs, file_handle_chained_reads_survive_file_close) {
 
     u8 buf1[sizeof(k_stub_vfs_data)] = { 0 };
     u8 buf2[sizeof(k_stub_vfs_data)] = { 0 };
-    FlVfsHandle r1 = fl_vfs_read(file, buf1, sizeof(buf1)); // chains onto the (possibly unfinished) open job
+    FlVfsHandle r1 = fl_vfs_read(file, buf1, sizeof(buf1)); // chains onto the open job, which may not have finished
     FlVfsHandle r2 = fl_vfs_read(file, buf2, sizeof(buf2)); // chains onto r1
     ASSERT_NE(r1, FL_VFS_HANDLE_INVALID);
     ASSERT_NE(r2, FL_VFS_HANDLE_INVALID);
@@ -957,15 +950,15 @@ UTEST(vfs, file_handle_chained_reads_survive_file_close) {
     fl_vfs_close(r2);
     fl_vfs_close(file);
 
-    // Close the file with chained reads still pending; iterate so the worker is often mid-chain.
+    // Close the file with chained reads still pending. The loop makes it likely the worker is mid-chain.
     for (int i = 0; i < 16; ++i) {
         FlVfsHandle f = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
         ASSERT_NE(f, FL_VFS_HANDLE_INVALID);
         u8 buf[sizeof(k_stub_vfs_data)] = { 0 };
         FlVfsHandle r = fl_vfs_read(f, buf, sizeof(buf));
         ASSERT_NE(r, FL_VFS_HANDLE_INVALID);
-        fl_vfs_close(f); // returns at once; the file handle is kept until the chained read has run
-        // The read handle survives its file's close; its result is still harvestable.
+        fl_vfs_close(f); // returns at once, and the file handle is kept until the chained read has run
+        // The read handle outlives its file's close and its result can still be read.
         fl_vfs_wait(r);
         ASSERT_TRUE(fl_vfs_is_ready(r));
         ASSERT_TRUE(fl_vfs_get_data(r).success);
@@ -975,8 +968,8 @@ UTEST(vfs, file_handle_chained_reads_survive_file_close) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// A read-all of a file whose reported size exceeds the 512 MB cap must fail hard before allocating the
-// buffer - never return truncated data as success - and still close the plugin file handle.
+// A read-all of a file whose reported size exceeds the 512 MB cap fails before allocating the buffer and still
+// closes the plugin file handle. It never returns truncated data as success.
 
 UTEST(vfs, read_all_over_cap_reports_error_and_closes_handle) {
     fl_vfs_init(s_arena); // idempotent
@@ -1236,9 +1229,9 @@ UTEST(vfs, failed_listings_carry_an_error_message_until_closed) {
     vfs_destroy();
 }
 
-// A read-all callback owns whatever its user_data points at, so it must be invoked on failure too - with no
-// data - or that ownership is stranded. Covers both notification sites: the in-job error path
-// (read_all_set_error, reached here via the over-cap branch) and the pre-dispatch cancellation gate.
+// A read-all callback owns whatever its user_data points at, so it is also called on failure, with no data, to
+// let it release that. The case covers both places that notify: the error path inside the job
+// (read_all_set_error, reached here through the over-cap branch) and the cancellation check before dispatch.
 
 typedef struct FailNotifyStats {
     _Atomic int calls;
@@ -1288,10 +1281,10 @@ UTEST(vfs, read_all_failure_notifies_the_callback) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// fl_jobs_wait() does nothing on a job worker, so fl_vfs_wait() cannot wait out a running job from one. fl_vfs_close()
-// needs no wait: it only gives up the id, and the running job keeps the op alive until it ends. The read-all callback
-// is the reachable form of that: it runs on the worker inside the read's own job, so a close issued there is one
-// against an in-flight handle.
+// fl_jobs_wait() does nothing on a job worker, so fl_vfs_wait() cannot wait for a running job from one.
+// fl_vfs_close() needs no wait: it only gives up the id, and the running job keeps the op alive until it ends. A
+// read-all callback runs on the worker inside the read's own job, so a close issued there is a close of an
+// in-flight handle.
 
 typedef struct VfsWorkerCloseCtx {
     FlVfsHandle handle;
@@ -1304,8 +1297,8 @@ typedef struct VfsWorkerCloseCtx {
 static FlVfsData vfs_worker_close_callback(void* data, i64 size, void* user_data) {
     VfsWorkerCloseCtx* ctx = (VfsWorkerCloseCtx*)user_data;
 
-    // fl_vfs_wait() cannot block a worker either; a regression that made it block would hang here. Its guard
-    // only logs, so the flag below pins the close as a genuinely in-flight one rather than the wait itself.
+    // fl_vfs_wait() cannot block a worker either, and its guard only logs. The flag below marks that the close
+    // happened while the job was in flight.
     fl_vfs_wait(ctx->handle);
     atomic_store(&ctx->ready_during_wait, fl_vfs_is_ready(ctx->handle));
 
@@ -1340,7 +1333,8 @@ UTEST(vfs, close_from_worker_takes_effect_and_the_running_job_still_finishes) {
     ASSERT_NE(ctx.handle, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(ctx.handle);
 
-    // The close retires the id, so fl_vfs_wait(id) is a no-op here: the release hook is what reports the job is over.
+    // The close retires the id, so fl_vfs_wait(id) does nothing here. The release hook reports that the job is
+    // over.
     u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
     while (atomic_load(&ctx.releases) == 0 && get_monotonic_time_ns_os() < deadline_ns) {
         sleep_ms(1);
@@ -1354,17 +1348,17 @@ UTEST(vfs, close_from_worker_takes_effect_and_the_running_job_still_finishes) {
     ASSERT_EQ_MSG(atomic_load(&ctx.releases), 1, "the hook runs once, when the job ends");
     ASSERT_TRUE_MSG(atomic_load(&ctx.released_after_close), "the hook must not run before the job's callback is done");
 
-    fl_vfs_close(ctx.handle); // a stale id: nothing to do
+    fl_vfs_close(ctx.handle); // a stale id, so nothing happens
     vfs_wait_all();
     ASSERT_EQ_MSG(atomic_load(&ctx.releases), 1, "a second close and a wait_all must not release again");
 
     fl_vfs_mount_close(mount.mount);
 }
 
-// A read issued from a worker against a mount that is still coming up is scheduled behind that mount's own
-// job, so the worker's wait cannot make it ready. Its close from the worker takes effect all the same, and the read
-// still runs once the mount is up. unit_tests runs a one-worker job system: parking that worker in a read-all
-// callback is what keeps the second mount below pending.
+// A read issued from a worker against a mount that is still coming up is scheduled behind that mount's own job,
+// so the worker's wait cannot make it ready. Its close from the worker still takes effect, and the read still
+// runs once the mount is up. unit_tests runs a one-worker job system, and parking that worker in a read-all
+// callback keeps the second mount below pending.
 
 typedef struct VfsPendingMountCtx {
     _Atomic(FlVfsMount*) mount;
@@ -1451,9 +1445,9 @@ UTEST(vfs, worker_read_against_a_pending_mount_is_deferred_and_still_runs_after_
     ASSERT_NE(parker, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(parker);
 
-    // Every wait below is deadlined and breaks rather than asserting, and the release is unconditional:
-    // from here on the only worker is parked in the callback, and an ASSERT returns from the case without
-    // releasing it, which would leave vfs_destroy's wait with nothing to wait on but a spinning worker.
+    // Every wait below has a deadline and breaks without asserting, and the release is unconditional. From here
+    // on the only worker is parked in the callback. An ASSERT returns from the case without releasing it, which
+    // would leave vfs_destroy waiting on a spinning worker.
     bool callback_started = true;
     u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
     while (!atomic_load(&ctx.in_callback)) {
@@ -1490,8 +1484,8 @@ UTEST(vfs, worker_read_against_a_pending_mount_is_deferred_and_still_runs_after_
     ASSERT_FALSE_MSG(atomic_load(&ctx.ready_after_wait),
                      "a read deferred behind a pending mount must not be ready after a worker's no-op wait");
 
-    // The close took effect on the worker, and the read it left behind still ran once the mount was up: its callback
-    // once, then its release hook once.
+    // The close took effect on the worker, and the read it left behind still ran once the mount was up: its
+    // callback once, then its release hook once.
     FlVfsHandle ticket = atomic_load(&ctx.ticket);
     ASSERT_NE(ticket, FL_VFS_HANDLE_INVALID);
     ASSERT_FALSE_MSG(fl_vfs_is_ready(ticket), "the worker's close must have retired the ticket");
@@ -1505,10 +1499,10 @@ UTEST(vfs, worker_read_against_a_pending_mount_is_deferred_and_still_runs_after_
     fl_vfs_mount_close(ready_mount.mount);
 }
 
-// A worker runs a chained read inline because it cannot wait for the op it chains onto. Against an open that
-// has not run yet that would read a file handle whose plugin_file_handle is still null ("File not opened"),
-// so the chain must refuse instead. unit_tests runs a one-worker job system: parking that worker in a
-// read-all callback keeps the open below queued for as long as the callback holds it.
+// A worker runs a chained read inline because it cannot wait for the op it chains onto. Against an open that has
+// not run yet, that would read a file handle whose plugin_file_handle is still null ("File not opened"), so the
+// chain is refused. unit_tests runs a one-worker job system, and parking that worker in a read-all callback
+// keeps the open below queued for as long as the callback holds it.
 
 typedef struct VfsWorkerChainCtx {
     _Atomic FlVfsHandle file;
@@ -1556,7 +1550,7 @@ UTEST(vfs, chained_read_from_worker_refuses_unfinished_open) {
     ASSERT_NE(reader, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(reader);
 
-    // The worker is parked until ctx.file is stored, so nothing may ASSERT before it is: findings go into locals.
+    // The worker is parked until ctx.file is stored, so nothing may ASSERT before then. Findings go into locals.
     const bool parked = vfs_await_flag(&ctx.in_callback);
 
     FlVfsHandle file = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
@@ -1577,7 +1571,7 @@ UTEST(vfs, chained_read_from_worker_refuses_unfinished_open) {
     ASSERT_TRUE(fl_vfs_get_data(reader).success);
     fl_vfs_close(reader);
 
-    // The refusal left the open untouched: it still completes, and still serves a read from the main thread.
+    // The refusal left the open untouched: it still completes and still serves a read from the main thread.
     u8 buffer[sizeof(k_stub_vfs_data)] = { 0 };
     FlVfsHandle read = fl_vfs_read(file, buffer, sizeof(buffer));
     ASSERT_NE(read, FL_VFS_HANDLE_INVALID);
@@ -1591,7 +1585,7 @@ UTEST(vfs, chained_read_from_worker_refuses_unfinished_open) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// unit_tests runs a one-worker job system: parking that worker in a read-all callback keeps everything issued
+// unit_tests runs a one-worker job system. Parking that worker in a read-all callback keeps everything issued
 // after it queued until the case lets it go.
 
 typedef struct VfsParkCtx {
@@ -1606,9 +1600,9 @@ static FlVfsData vfs_park_callback(void* data, i64 size, void* user_data) {
     return (FlVfsData) { .data = data, .size = size, .success = true };
 }
 
-// Parks the only worker in parker's callback; false if it never got there. The caller stores ctx->release
-// unconditionally before its first ASSERT: an ASSERT returns from the case, and a worker still parked then
-// leaves vfs_destroy's wait with nothing to wait on but a spinning worker.
+// Parks the only worker in parker's callback, and returns false if it never got there. The caller stores
+// ctx->release unconditionally before its first ASSERT. An ASSERT returns from the case, and a worker still
+// parked then leaves vfs_destroy waiting on a spinning worker.
 static bool vfs_park_worker(VfsParkCtx* ctx, FlVfsMount* mount, FlVfsHandle* parker, FlString path) {
     atomic_init(&ctx->in_callback, false);
     atomic_init(&ctx->release, false);
@@ -1627,10 +1621,10 @@ static bool vfs_park_worker(VfsParkCtx* ctx, FlVfsMount* mount, FlVfsHandle* par
     return true;
 }
 
-// A read chained onto a file holds a reference to it from creation until it has run. This drives a close into
-// that span: the worker parks in a read-all callback and chains a read onto an already-finished open from there,
-// the gated stub read holds the read open, and the main thread closes the file handle while it is held. The
-// close gives up the id but must not free the file - or the plugin_file_handle the blocked read is still using.
+// A read chained onto a file holds a reference to it from creation until it has run. The case closes the file in
+// that span: the worker parks in a read-all callback and chains a read onto an open that has already finished,
+// the gated stub read holds the read open, and the main thread closes the file handle meanwhile. The close gives
+// up the id but does not free the file or the plugin_file_handle the blocked read is using.
 
 typedef struct VfsChainRaceCtx {
     _Atomic bool in_callback;
@@ -1668,8 +1662,8 @@ UTEST(vfs, close_racing_a_chained_read_defers_instead_of_freeing_the_file_handle
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
     vfs_wait_all();
 
-    // The open must finish before the worker parks: a chain onto an unfinished open is refused outright, and
-    // it is the finished predecessor that makes the pre-guard close believe the handle is idle.
+    // The open has to finish before the worker parks. A chain onto an unfinished open is refused, and a finished
+    // predecessor is what makes the handle look idle to a close that does not check for chained reads.
     FlVfsHandle file = fl_vfs_mount_open(mount.mount, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read);
     ASSERT_NE(file, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(file);
@@ -1690,11 +1684,11 @@ UTEST(vfs, close_racing_a_chained_read_defers_instead_of_freeing_the_file_handle
     ASSERT_NE(parker, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(parker);
 
-    // From here the worker is parked, so nothing may ASSERT until it is released below: an ASSERT returns
-    // from the case and leaves teardown waiting on a worker that never comes back. Findings go into locals.
+    // From here the worker is parked, so nothing may ASSERT until it is released below. An ASSERT returns from
+    // the case and leaves teardown waiting on a worker that never comes back. Findings go into locals.
     bool parked = vfs_await_flag(&ctx.in_callback);
 
-    // Arm the gate only now: the read-all's own read of the file has already gone through stub_vfs_read.
+    // The gate is armed only now, after the read-all's own read of the file has gone through stub_vfs_read.
     atomic_store(&s_stub_vfs_read_entered, false);
     atomic_store(&s_stub_vfs_read_release, false);
     atomic_store(&s_stub_vfs_read_gate_armed, true);
@@ -1726,8 +1720,8 @@ UTEST(vfs, close_racing_a_chained_read_defers_instead_of_freeing_the_file_handle
                   "the read chained across the close must still complete against a live file handle");
     ASSERT_TRUE_MSG(atomic_load(&ctx.chained_matched), "the chained read must deliver the file's bytes");
 
-    // Deferred, not cancelled: the read hands the file back when it ends, which frees it, and the driver's file
-    // handle, exactly once.
+    // The close was deferred and not cancelled: the read hands the file back when it ends, which frees the file
+    // and the driver's file handle exactly once.
     ASSERT_EQ_MSG(s_stub_vfs_close_count - closes_before, 1,
                   "the deferred close must still release the plugin file handle exactly once");
 
@@ -1735,10 +1729,10 @@ UTEST(vfs, close_racing_a_chained_read_defers_instead_of_freeing_the_file_handle
 }
 
 // An op whose dispatch has not returned yet has no job handle recorded, so a mount close has nothing to wait on
-// for it; what keeps the close from freeing it is the job's own reference. This drives that window: the only worker
-// parks in a read-all on a second mount and dispatches a read-all on the mount under test from there, which runs
-// inline and blocks in the gated stub read while the dispatch is still unrecorded. The close must neither free
-// the op, release hook and all, nor return, while the job is still reading through it.
+// for it. The job's own reference keeps the close from freeing it. To reach that window, the only worker parks
+// in a read-all on a second mount and dispatches a read-all on the mount under test from there. That one runs
+// inline and blocks in the gated stub read while the dispatch is still unrecorded. While the job is reading
+// through the op, the close neither frees the op (or runs its release hook) nor returns.
 
 typedef struct VfsDispatchRaceCtx {
     FlVfsMount* target; // the mount the close under test tears down
@@ -1769,8 +1763,8 @@ static void vfs_dispatch_race_victim_release(void* user_data) {
     atomic_store(&ctx->victim_released, true);
 }
 
-// Runs on the only worker: scheduling from there runs the dispatched job inline, so vfs_dispatch stays in
-// its unlocked window for as long as the gated stub read holds that job.
+// Runs on the only worker. Scheduling from there runs the dispatched job inline, so vfs_dispatch stays in its
+// unlocked window for as long as the gated stub read holds that job.
 static FlVfsData vfs_dispatch_race_callback(void* data, i64 size, void* user_data) {
     VfsDispatchRaceCtx* ctx = (VfsDispatchRaceCtx*)user_data;
     atomic_store(&ctx->in_callback, true);
@@ -1786,8 +1780,8 @@ static FlVfsData vfs_dispatch_race_callback(void* data, i64 size, void* user_dat
     return (FlVfsData) { .data = data, .size = size, .success = true };
 }
 
-// Lets the gated read go once the close has had its chance to free the victim early. The main thread cannot
-// do it itself: with the guard in place its fl_vfs_mount_close is inside the wait this releases.
+// Lets the gated read go once the close has had its chance to free the victim early. The main thread cannot do
+// it, because its fl_vfs_mount_close is waiting for this release.
 static void* vfs_dispatch_race_releaser(void* user_data) {
     VfsDispatchRaceCtx* ctx = (VfsDispatchRaceCtx*)user_data;
 
@@ -1806,8 +1800,8 @@ UTEST(vfs, mount_close_waits_out_a_dispatch_that_has_not_recorded_its_job) {
     fl_vfs_init(s_arena); // idempotent
     vfs_test_register_driver(&s_stub_vfs_plugin);
 
-    // Two mounts: the close under test tears down target, while the parked worker's own read-all lives on
-    // host, which that close neither drains nor frees.
+    // Two mounts: the close under test tears down target, while the parked worker's own read-all is on host,
+    // which that close neither drains nor frees.
     FlVfsMountResult target = vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(target.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
     FlVfsMountResult host = vfs_mount(FL_S("/stub"));
@@ -1832,12 +1826,11 @@ UTEST(vfs, mount_close_waits_out_a_dispatch_that_has_not_recorded_its_job) {
     ASSERT_NE(parker, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(parker);
 
-    // From here the only worker is parked, so nothing may ASSERT until it is released below: an ASSERT
-    // returns from the case and leaves teardown waiting on a worker that never comes back. Findings go into
-    // locals.
+    // From here the only worker is parked, so nothing may ASSERT until it is released below. An ASSERT returns
+    // from the case and leaves teardown waiting on a worker that never comes back. Findings go into locals.
     bool parked = vfs_await_flag(&ctx.in_callback);
 
-    // Arm the gate only now: the parker's own read of the file has already gone through stub_vfs_read.
+    // The gate is armed only now, after the parker's own read of the file has gone through stub_vfs_read.
     atomic_store(&s_stub_vfs_read_entered, false);
     atomic_store(&s_stub_vfs_read_release, false);
     atomic_store(&s_stub_vfs_read_gate_armed, true);
@@ -1886,8 +1879,8 @@ UTEST(vfs, mount_close_waits_out_a_dispatch_that_has_not_recorded_its_job) {
     ASSERT_TRUE_MSG(atomic_load(&ctx.victim_bytes_matched), "the dispatched read must deliver the file's bytes");
 }
 
-// A read-all's callback and release hook are counted separately, so a case can pin when the VFS reaches each and
-// that the release comes after the callback: it is what tells user_data's owner the worker is done with it.
+// A read-all's callback and release hook are counted separately, so a case can check when the VFS reaches each
+// and that the release comes after the callback. The release tells user_data's owner the worker is done with it.
 typedef struct VfsReleaseCtx {
     _Atomic int callback_calls;
     _Atomic int release_calls;
@@ -1908,8 +1901,8 @@ static void vfs_count_release(void* user_data) {
     atomic_fetch_add(&ctx->release_calls, 1);
 }
 
-// fl_vfs_close() of a handle whose job has not run returns at once, leaves the job to finish on its own, and the
-// op is released by the job when it ends. A close that waited would wait on a gate this thread opens only after the
+// fl_vfs_close() of a handle whose job has not run returns at once and leaves the job to finish on its own. The
+// job releases the op when it ends. A close that waited would wait on a gate this thread opens only after the
 // close has returned.
 
 UTEST(vfs, close_of_a_queued_read_returns_and_the_job_releases_it) {
@@ -1933,8 +1926,8 @@ UTEST(vfs, close_of_a_queued_read_returns_and_the_job_releases_it) {
     FlVfsHandle victim = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), vfs_count_callback, &ctx,
                                                             vfs_count_release, FL_VFS_HANDLE_INVALID);
 
-    // The gate: the worker is parked, so the read cannot have run. A close that waited for it would never
-    // return, since the release below runs on this thread after it.
+    // The worker is parked, so the read cannot have run. A close that waited for it would never return, since
+    // the release below runs on this thread after it.
     fl_vfs_close(victim);
     int calls_at_close = atomic_load(&ctx.callback_calls);
     int releases_at_close = atomic_load(&ctx.release_calls);
@@ -1944,7 +1937,7 @@ UTEST(vfs, close_of_a_queued_read_returns_and_the_job_releases_it) {
     fl_vfs_wait(parker);
 
     // The victim's job runs once the worker is free, and releases the op as it ends. Nothing here closes or waits
-    // on anything else. Deadlined rather than asserted so the parker is never left parked.
+    // on anything else. The wait has a deadline and no assert, so the parker is never left parked.
     bool released_by_job = false;
     u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
     while (get_monotonic_time_ns_os() < deadline_ns) {
@@ -1980,8 +1973,8 @@ UTEST(vfs, close_of_a_queued_read_returns_and_the_job_releases_it) {
     ASSERT_EQ_MSG(atomic_load(&finished.release_calls), 1, "an immediate close releases user_data before returning");
     ASSERT_FALSE(atomic_load(&finished.released_before_callback));
 
-    // A handle never closed is reaped by its mount's close, release hook included: the path every leaked
-    // read takes at shutdown.
+    // A handle that is never closed is released by its mount's close, release hook included. Every leaked read
+    // takes this path at shutdown.
     static VfsReleaseCtx leaked;
     memset(&leaked, 0, sizeof(leaked));
     atomic_init(&leaked.callback_calls, 0);
@@ -1998,8 +1991,8 @@ UTEST(vfs, close_of_a_queued_read_returns_and_the_job_releases_it) {
     ASSERT_FALSE(atomic_load(&leaked.released_before_callback));
 }
 
-// Closing a file handle with a read chained onto it returns at once as well; the file stays alive until the
-// read has run, the read still gets its bytes, and nothing chains onto the closed file afterwards.
+// Closing a file handle with a read chained onto it also returns at once. The file stays alive until the read
+// has run, the read still gets its bytes, and nothing chains onto the closed file afterwards.
 
 UTEST(vfs, close_of_a_queued_file_handle_returns_and_its_chained_read_still_completes) {
     fl_vfs_init(s_arena); // idempotent
@@ -2018,7 +2011,7 @@ UTEST(vfs, close_of_a_queued_file_handle_returns_and_its_chained_read_still_comp
     u8 buf[sizeof(k_stub_vfs_data)] = { 0 };
     FlVfsHandle read = fl_vfs_read(file, buf, sizeof(buf)); // chained onto the queued open
 
-    fl_vfs_close(file); // returns: the open has not run
+    fl_vfs_close(file); // returns although the open has not run
     bool file_absent_after_close = !fl_vfs_is_ready(file);
     u8 late_buf[sizeof(k_stub_vfs_data)] = { 0 };
     FlVfsHandle late_read = fl_vfs_read(file, late_buf, sizeof(late_buf));
@@ -2048,9 +2041,9 @@ UTEST(vfs, close_of_a_queued_file_handle_returns_and_its_chained_read_still_comp
     fl_vfs_mount_close(mount.mount);
 }
 
-// Closing an id retires it, and the id stays reserved until the old op has finished and been destroyed: a reload
-// under the same id must not race the closed op's completion. Reuse of an id that is still open, or retiring, is
-// refused with a warning, and succeeds once the old op is gone.
+// Closing an id retires it, and the id stays reserved until the old op has finished and been destroyed, so a
+// reload under the same id cannot race the closed op's completion. Reuse of an id that is still open or retiring
+// is refused with a warning, and succeeds once the old op is gone.
 
 UTEST(vfs, a_closed_id_stays_reserved_until_its_old_op_has_run) {
     fl_vfs_init(s_arena); // idempotent
@@ -2106,10 +2099,10 @@ UTEST(vfs, a_closed_id_stays_reserved_until_its_old_op_has_run) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// A destroy that must wait out a queued read cannot return until the parked worker is released, so something other
-// than the destroying thread has to release it. The releaser does so once destroy_returned says destroy came back;
-// a destroy that waits can never set that, so the deadline is what lets it through, and a destroy that does not wait
-// is back long before it.
+// A destroy that waits for a queued read cannot return until the parked worker is released, so something other
+// than the destroying thread has to release it. The releaser does so once destroy_returned says destroy came
+// back. A destroy that waits can never set that, so the releaser's deadline lets it through. A destroy that does
+// not wait is back long before the deadline.
 
 typedef struct VfsTeardownCtx {
     VfsParkCtx* park;
@@ -2126,7 +2119,7 @@ static void* vfs_teardown_releaser(void* user_data) {
     return nullptr;
 }
 
-// Starts the releaser; without one the worker is released here, so the destroy under test cannot block forever.
+// Starts the releaser. If that fails the worker is released here, so the destroy under test cannot block forever.
 static bool vfs_teardown_begin(VfsTeardownCtx* ctx, VfsParkCtx* park, Thread* releaser) {
     ctx->park = park;
     atomic_init(&ctx->destroy_returned, false);
@@ -2137,8 +2130,8 @@ static bool vfs_teardown_begin(VfsTeardownCtx* ctx, VfsParkCtx* park, Thread* re
     return false;
 }
 
-// Call right after the destroy under test returns. True if the parked worker had been released by then, which a
-// destroy only gets to see if it waited for the queued read.
+// Call right after the destroy under test returns. True if the parked worker had been released by then, which
+// happens only if the destroy waited for the queued read.
 static bool vfs_teardown_end(VfsTeardownCtx* ctx, bool releasing, Thread* releaser) {
     bool waited = atomic_load(&ctx->park->release);
     atomic_store(&ctx->destroy_returned, true);
@@ -2148,9 +2141,9 @@ static bool vfs_teardown_end(VfsTeardownCtx* ctx, bool releasing, Thread* releas
     return waited;
 }
 
-// font_cache_destroy frees the arena a font load's callback writes into, and the load is only closed, not stopped,
-// by fl_vfs_close: it has to wait for the queued read first. The stub bytes are not a font, so the callback fails
-// after it has touched the face and its context.
+// font_cache_destroy frees the arena a font load's callback writes into. fl_vfs_close closes the load but does
+// not stop it, so the destroy waits for the queued read first. The stub bytes are not a font, so the callback
+// fails after it has touched the face and its context.
 
 UTEST(vfs, font_cache_destroy_waits_for_a_queued_face_load) {
     fl_vfs_init(s_arena); // idempotent
@@ -2168,7 +2161,7 @@ UTEST(vfs, font_cache_destroy_waits_for_a_queued_face_load) {
     FlFontCache* cache = font_cache_new(s_arena);
     FlFontId font = font_cache_load_font(cache, mount.mount, FL_S(STUB_VFS_FILE), 16); // queued behind parker
 
-    // Nothing may ASSERT while the worker is parked; see vfs_park_worker.
+    // Nothing may ASSERT while the worker is parked. See vfs_park_worker.
     VfsTeardownCtx teardown;
     Thread releaser = { 0 };
     bool releasing = vfs_teardown_begin(&teardown, &park, &releaser);
@@ -2268,7 +2261,7 @@ UTEST(vfs, localization_destroy_waits_for_a_queued_table_read) {
     ASSERT_TRUE_MSG(waited, "localization_destroy must not return before the queued table read has been released");
 }
 
-// A read hands its file back as soon as it has run, not when its own id is closed: closing the file id afterwards
+// A read hands its file back as soon as it has run, before its own id is closed. Closing the file id afterwards
 // closes the driver's file handle at once, while the read's id is still open.
 
 UTEST(vfs, a_read_that_has_run_no_longer_keeps_its_file_open) {
@@ -2297,8 +2290,8 @@ UTEST(vfs, a_read_that_has_run_no_longer_keeps_its_file_open) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// A worker cannot wait, so a mount close from one returns at once instead of draining: it refuses new operations on
-// the mount, and the mount is freed - its root handle closed - when the last operation holding it ends.
+// A worker cannot wait, so a mount close from one returns at once without draining. It refuses new operations on
+// the mount, and the mount is freed and its root handle closed when the last operation holding it ends.
 
 typedef struct VfsWorkerMountCloseCtx {
     FlVfsMount* mount;
@@ -2341,7 +2334,7 @@ UTEST(vfs, mount_close_from_a_worker_refuses_new_ops_and_frees_on_the_last_refer
     ASSERT_NE(reader, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(reader);
 
-    // The reader's own job is the last thing holding the mount; the mount's root closes when that job ends.
+    // The reader's own job is the last thing holding the mount, and the mount's root closes when that job ends.
     bool freed = false;
     u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
     while (get_monotonic_time_ns_os() < deadline_ns) {
@@ -2361,9 +2354,9 @@ UTEST(vfs, mount_close_from_a_worker_refuses_new_ops_and_frees_on_the_last_refer
     ASSERT_FALSE_MSG(fl_vfs_is_ready(reader), "the mount close released the reader's id");
 }
 
-// A mount closed from a worker leaves the mount list only when it is freed, so vfs_wait_all still waits for the ops
-// it has running. Reader A (on the only worker) closes the mount from its callback; B was queued behind it before
-// the close and runs against a closing mount. wait_all must not return before B has run and the root has closed.
+// A mount closed from a worker leaves the mount list only when it is freed, so vfs_wait_all still waits for the
+// ops it has running. Reader A, on the only worker, closes the mount from its callback. B was queued behind it
+// before the close and runs against a closing mount. wait_all returns after B has run and the root has closed.
 
 typedef struct VfsListedCloseCtx {
     FlVfsMount* mount;
@@ -2424,8 +2417,8 @@ UTEST(vfs, wait_all_covers_the_ops_of_a_mount_closed_from_a_worker) {
                   "wait_all returned before the closed mount had been freed");
 }
 
-// vfs_dispatch schedules an op once. Dispatching a prepared op twice runs it once, and dispatching a read that a worker
-// already ran inline (its file reference handed back) must not run it again.
+// vfs_dispatch schedules an op once. Dispatching a prepared op twice runs it once, and dispatching a read that a
+// worker already ran inline (its file reference handed back) does not run it again.
 
 typedef struct VfsInlineReadCtx {
     _Atomic FlVfsHandle file;
@@ -2492,9 +2485,9 @@ UTEST(vfs, dispatching_an_op_twice_runs_it_once) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// fl_vfs_read touches its file after it has scheduled the read. The read can run, hand the file back, and have the
-// file's id closed in that gap, and the file must still be there. A test seam inside fl_vfs_read runs the read to
-// completion and closes the file id at exactly that point. Under ASAN a missing reference on the file is a
+// fl_vfs_read touches its file after it has scheduled the read. In that gap the read can run, hand the file
+// back, and have the file's id closed, and the file must still be there. A test seam inside fl_vfs_read runs the
+// read to completion and closes the file id at that point. Under ASAN a missing reference on the file is a
 // use-after-free.
 
 static FlVfsHandle s_race_file;
@@ -2502,7 +2495,7 @@ static int s_race_closes_before;
 static int s_race_closes_in_gap;
 
 static void vfs_close_file_in_the_gap(FlVfsHandle read) {
-    fl_vfs_wait(read); // main thread: the read runs to completion and hands the file back
+    fl_vfs_wait(read); // on the main thread the read runs to completion and hands the file back
     fl_vfs_close(s_race_file);
     s_race_closes_in_gap = s_stub_vfs_close_count - s_race_closes_before;
 }
@@ -2535,9 +2528,9 @@ UTEST(vfs, closing_a_file_while_its_read_is_being_scheduled_leaves_the_read_inta
     fl_vfs_mount_close(mount.mount);
 }
 
-// The release hook is caller code and runs outside every VFS lock on each path that can run it: a close of a finished
-// op, and the end of the job of an op closed while it was queued. A hook that calls back into the VFS would deadlock
-// on the registry lock if it ever ran under it.
+// The release hook is caller code and runs outside every VFS lock on each path that can run it: the close of a
+// finished op, and the end of the job of an op closed while it was queued. A hook that calls back into the VFS
+// would deadlock on the registry lock if it ran under it.
 
 typedef struct VfsReentrantCtx {
     _Atomic FlVfsHandle other;
@@ -2598,9 +2591,9 @@ UTEST(vfs, a_release_hook_may_call_back_into_the_vfs) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// A fl_vfs_read runs against the caller's buffer, and its close is the caller's signal that the buffer may go, so
-// that one close still waits for the job. A helper thread opens the gate after the close has begun; the close
-// must not return before the read has filled the buffer.
+// A fl_vfs_read runs against the caller's buffer, and its close tells the caller the buffer may go, so this
+// close does wait for the job. A helper thread opens the gate after the close has begun, and the close returns
+// only after the read has filled the buffer.
 
 typedef struct VfsDelayedReleaseCtx {
     VfsParkCtx* park;
@@ -2662,7 +2655,7 @@ UTEST(vfs, close_of_a_queued_vfs_read_waits_for_the_buffer_it_lent) {
 }
 
 // A mount resolves its source once and publishes one status. A source that does not resolve leaves the mount in
-// the error state for good, and every operation against it fails cleanly instead of reaching for a root handle.
+// the error state for good, and every operation against it fails without touching a root handle.
 
 UTEST(vfs, mount_of_a_missing_source_reports_error_and_its_ops_fail) {
     fl_vfs_init(s_arena); // idempotent
@@ -2716,8 +2709,8 @@ UTEST(vfs, mount_resolves_an_archive_nested_in_its_path_and_keeps_one_root_handl
 }
 
 // A listing asks the driver, sorts directories first and then in natural order, and flags the files an archive
-// driver claims by name without opening any of them. LocalFS is the mount's driver here, so archives are
-// recognised by this stand-in, which claims ".zip" names.
+// driver claims by name without opening any of them. LocalFS is the mount's driver here, so a stand-in driver
+// that claims ".zip" names does the recognizing.
 
 static bool arcname_supports_path(FlString path) {
     return fl_path_has_extension(path, FL_S("zip"));
@@ -2800,7 +2793,7 @@ UTEST(vfs, listing_puts_directories_first_in_natural_order_and_flags_archives_by
     ASSERT_EQ((int)inner.count, 1);
     ASSERT_TRUE(fl_string_equals(inner.entries[0].name, FL_S("inner.txt")));
 
-    // A directory that is not there lists as empty, as it did before mounts became immutable.
+    // A directory that is not there lists as empty.
     FlVfsDirHandle missing = fl_vfs_get_listing(mount.mount, FL_S("no_such_dir"), 0);
     fl_vfs_wait(missing);
     FlVfsFileList none = fl_vfs_get_file_list(missing);
@@ -2814,7 +2807,7 @@ UTEST(vfs, listing_puts_directories_first_in_natural_order_and_flags_archives_by
     scratch_dir_destroy(&scratch);
 }
 
-// One mutex per mount serializes the calls into its driver: operations from several workers on the same mount
+// One mutex per mount serializes the calls into its driver, so operations from several workers on the same mount
 // never overlap inside the driver. The driver sleeps in every call, so an overlap would be seen.
 
 static _Atomic int s_serial_in_flight;
@@ -2887,8 +2880,8 @@ static FlVfsPlugin s_serial_vfs_plugin = {
     .get_capabilities = stub_vfs_get_capabilities,
 };
 
-// The unit_tests job system has a single worker, so the operations are run by hand from several threads instead,
-// the way separate workers would run them.
+// The unit_tests job system has a single worker, so the operations are run by hand from several threads, the way
+// separate workers would run them.
 typedef struct SerialRunCtx {
     VfsOp* reads[8];
     int read_count;
@@ -2930,7 +2923,7 @@ UTEST(vfs, operations_on_one_mount_never_overlap_inside_its_driver) {
     VfsOp file_reads[THREADS] = { 0 };
     u8 buffers[THREADS][sizeof(k_stub_vfs_data)];
 
-    // Prepared but not dispatched: nothing runs until the threads below execute them.
+    // Prepared but not dispatched, so nothing runs until the threads below execute them.
     for (int i = 0; i < THREADS * READS_PER_THREAD; i++) {
         reads[i] = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
                                               FL_VFS_HANDLE_INVALID);
@@ -2983,7 +2976,7 @@ UTEST(vfs, operations_on_one_mount_never_overlap_inside_its_driver) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// Mounting from a worker thread runs the driver without holding any lock the rest of the VFS needs: while one
+// Mounting from a worker thread runs the driver without holding any lock the rest of the VFS needs. While one
 // thread is parked inside a driver's open, another mount starts and finishes.
 
 static _Atomic bool s_gate_entered;
@@ -3025,7 +3018,7 @@ typedef struct GatedMountCtx {
     _Atomic bool done;
 } GatedMountCtx;
 
-// Runs as a job, so the mount below is resolved on the worker itself rather than scheduled.
+// Runs as a job, so the mount below is resolved on the worker itself and not scheduled.
 static void gated_mount_job(void* user_data, FlJobsWorkerInfo info) {
     (void)info;
     GatedMountCtx* ctx = user_data;
@@ -3115,8 +3108,8 @@ UTEST(vfs, mount_reports_pending_until_its_job_publishes_ready) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// fl_vfs_close never waits for the mount's driver. A worker parked inside a read holds the driver lock, and closing a
-// different file of the same mount must still return at once.
+// fl_vfs_close never waits for the mount's driver. A worker parked inside a read holds the driver lock, and
+// closing a different file of the same mount still returns at once.
 
 typedef struct CloseDuringReadCtx {
     FlVfsHandle file;
@@ -3314,8 +3307,8 @@ UTEST(vfs, archive_memory_load_refused_leaves_the_node_untouched_and_frees_the_b
     ASSERT_EQ(leak_watch_allocated(&leaks), leak_watch_closed(&leaks));
 }
 
-// With libarchive built in: real archives. The zips are written by hand (stored entries) so the cases need no
-// fixture files. Archives are nested inside archives, and every path through any number of layers must list and read
+// Real archives, with libarchive built in. The zips are written by hand (stored entries) so the cases need no
+// fixture files. Archives are nested inside archives, and every path through any number of layers lists and reads
 // through a mount of the directory, of the outer archive, or of a nested path directly.
 
 #if FLOWI_VFS_DRIVER_LIBARCHIVE
@@ -3663,7 +3656,7 @@ static const char* const k_nested_listings[NESTED_LISTINGS]
 static const int k_nested_listing_counts[NESTED_LISTINGS] = { 3, 1, 1 };
 
 // The unit_tests job system has one worker, so jobs never overlap. The ops are built by hand and run from several
-// threads at once, as operations_on_one_mount_never_overlap_inside_its_driver does, with a fresh mount per round so
+// threads at once, as operations_on_one_mount_never_overlap_inside_its_driver does, with a new mount per round so
 // that the first opens of every archive race inside the tree.
 
 typedef struct NestedRaceCtx {
@@ -3776,7 +3769,7 @@ static void counting_archive_close(void* instance, void* handle) {
     vfs_driver_libarchive()->close(instance, handle);
 }
 
-// A fresh VFS whose libarchive is the counting wrapper below, and the fixture directory.
+// Starts a new VFS whose libarchive is the counting wrapper below, and creates the fixture directory.
 static bool nested_begin_counting(ScratchDir* fixture, FlString dir_name) {
     process_singletons_reset();
     if (!fl_vfs_init(s_arena) || !nested_fixture_create(fixture, dir_name)) {

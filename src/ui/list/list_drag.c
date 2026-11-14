@@ -1,4 +1,4 @@
-// List drag-reorder - CONTEXT.md Drop Relationship.
+// List drag-reorder (CONTEXT.md "Drop Relationship").
 //
 // A press that landed on a row (armed in item_begin) and then crossed the click-vs-drag threshold begins an
 // intra-list reorder. Dragging past the viewport edge auto-scrolls to extend the reach.
@@ -24,9 +24,9 @@ typedef struct DropTarget {
     FlDropRelationship rel;
 } DropTarget;
 
-// Candidate insertion index in [0, count] for a reorder drag: the dragged item(s) land BEFORE row ins. The
-// cursor's row and which half it falls in decide it (top half -> before that row, bottom half -> after), pure
-// arithmetic on the uniform stride so an off-screen target resolves exactly like an on-screen one.
+// Candidate insertion index in [0, count] for a reorder drag: the dragged item(s) land before row ins. The
+// cursor's row and which half it falls in decide it (top half -> before that row, bottom half -> after). It is
+// arithmetic on the uniform stride, so an off-screen target resolves exactly like an on-screen one.
 static u32 insertion_index(f32 cur_content_y, f32 stride, f32 row_height, u32 count) {
     if (count == 0 || stride <= 0.0f) {
         return 0;
@@ -57,9 +57,9 @@ static DropTarget drop_target_for(const FlListContext* self, u32 ins) {
     return drop;
 }
 
-// The dragged stable ids for this frame, into the frame arena: the WHOLE selection when the pressed row is
-// selected (dragging any selected row drags all of them), else just the pressed row. Recomputed each frame - the
-// selection cannot change while the drag holds (row clicks are suppressed), so this is stable across the gesture.
+// The dragged stable ids for this frame, into the frame arena: the whole selection when the pressed row is
+// selected (dragging any selected row drags all of them), else just the pressed row. Recomputed each frame. The
+// selection cannot change while the drag holds (row clicks are suppressed), so the set is stable across the gesture.
 static const u64* collect_from_ids(FlListContext* self, u64 press_id, u32* out_count) {
     if (self->set != nullptr && selection_set_contains(self->set, press_id)) {
         u64 n = selection_set_len(self->set);
@@ -93,8 +93,7 @@ static void draw_insertion(FlListContext* self, const ListViewport* vp, f32 scro
                             });
 }
 
-// Draw the drag ghost: a translucent, row-height, viewport-width wash following the cursor vertically (centred on
-// it), so the dragged row visibly floats.
+// Draw the drag ghost: a translucent, row-height, viewport-width fill centred on the cursor vertically.
 static void draw_ghost(FlListContext* self, const ListViewport* vp) {
     f32 height = self->current_row_height;
     f32 top = self->ui_ctx->input_state.mouse.y - height * 0.5f;
@@ -134,7 +133,7 @@ void list_drag_update(FlListContext* self, ListState* st) {
     FlUiCtx* ui = self->ui_ctx;
     bool released = ui->mouse_released_this_frame || !ui->input_state.mouse.buttons[FlMouseButton_Left];
 
-    // Armed but the threshold was never crossed: a release here was a plain click (handled in item_begin) - just
+    // Armed but the threshold was never crossed: a release here was a plain click (handled in item_begin), so
     // disarm. A sub-threshold hold keeps waiting.
     if (!st->drag_active) {
         if (released) {
@@ -160,7 +159,7 @@ void list_drag_update(FlListContext* self, ListState* st) {
     u32 from_count = 0;
     const u64* from_ids = collect_from_ids(self, st->drag_press_id, &from_count);
 
-    // Publish the payload - shared between the live (candidate) and committed (reorder request) phases.
+    // Publish the payload, shared between the live (candidate) and committed (reorder request) phases.
     self->drag_from_ids = from_ids;
     self->drag_from_count = from_count;
     self->drag_target_id = drop.id;

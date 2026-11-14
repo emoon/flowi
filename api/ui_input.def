@@ -17,25 +17,25 @@ api Input {
     /// Read the KeyModifier flags held this frame. Used to disambiguate same-axis
     /// gestures (plain-wheel scroll vs Ctrl/⌘+wheel zoom).
     keyboard_modifiers() -> KeyModifier
-    /// Pointer position relative to the element id, in element-local logical (authoring) coordinates -
-    /// (mouse - origin) / ui_scale, the unscaled space the Painter draws in. This is the cursor source for
-    /// hit-testing and timeline math, not the physical-pixel FlSignal.mouse_pos. Returns {0, 0} when the element has no
+    /// Pointer position relative to the element id, in element-local logical (authoring) coordinates:
+    /// (mouse - origin) / ui_scale, the unscaled space the Painter draws in. Use it for hit-testing and
+    /// timeline math; FlSignal.mouse_pos is in physical pixels. Returns {0, 0} when the element has no
     /// resolved rect this frame.
     mouse_position(id: LayoutId) -> Vec2
-    /// True if button was just pressed this frame - the down edge. Global and unrouted: every reader sees the
+    /// True if button was just pressed this frame (the down edge). Global and unrouted: every reader sees the
     /// same state regardless of what is under the cursor (buttons are never zeroed mid-frame, unlike the wheel).
     mouse_pressed(button: MouseButton) -> bool
-    /// True while button is currently held down - the level. Pair with mouse_position to follow an
+    /// True while button is currently held down (the level). Pair with mouse_position to follow an
     /// app-owned drag latch.
     mouse_down(button: MouseButton) -> bool
-    /// True if button was just released this frame - the up edge.
+    /// True if button was just released this frame (the up edge).
     mouse_released(button: MouseButton) -> bool
-    /// True if key was just pressed this frame - the down edge. Global and unrouted, like the mouse-button
+    /// True if key was just pressed this frame (the down edge). Global and unrouted, like the mouse-button
     /// queries: every reader sees the same key state regardless of focus, and the app decides what each key means.
     key_pressed(key: Key) -> bool
-    /// True while key is currently held down - the level.
+    /// True while key is currently held down (the level).
     key_down(key: Key) -> bool
-    /// True if key was just released this frame - the up edge.
+    /// True if key was just released this frame (the up edge).
     key_released(key: Key) -> bool
     /// True when a text input had keyboard focus in the frame that ended last, so it read the editing keys
     /// (characters, Backspace, Delete, the arrows). Lets an app that maps keys to its own actions leave
@@ -43,16 +43,16 @@ api Input {
     text_input_active() -> bool
     /// Read the element id's interaction-and-geometry state for this frame. Returns the full ElementState
     /// (rect, found/visible, hot/focused/active + their animation interpolators); found = false
-    /// with a zero rect when id was not laid out. The rect is physical px - divide it by get_scale to
+    /// with a zero rect when id was not laid out. The rect is physical px; divide it by get_scale to
     /// report logical px.
     get_element_state(id: LayoutId) -> ElementState
-    /// Read an element's interaction-and-geometry state by its already-hashed ElementId - the same read as
-    /// get_element_state, keyed by the hashed id rather than the LayoutId it comes from. This is the form a
-    /// caller polling from outside a frame uses: a LayoutId copies its name into the frame arena, which only
-    /// exists between update_begin and update_end, while an ElementId is a plain hash that carries across.
+    /// Read an element's interaction-and-geometry state by its already-hashed ElementId: the same read as
+    /// get_element_state, keyed by the hashed id. This is the form a caller polling from outside a frame
+    /// uses: a LayoutId copies its name into the frame arena, which only exists inside a frame, while an
+    /// ElementId is a plain hash that carries across.
     [manual] get_element_state_by_id(id: ElementId) -> ElementState
-    /// Read the absolute UI scale (logical→physical multiplier) the app last set via ui_set_scale. Use it to
-    /// normalize get_element_state's physical-px rect to logical px.
+    /// Read the absolute UI scale (logical→physical multiplier). Use it to normalize get_element_state's
+    /// physical-px rect to logical px.
     get_scale() -> f32
     /// The single topmost-hovered element across the whole frame. Returns the winning ElementId, or the
     /// 0/INVALID sentinel when nothing is hovered. The pull complement for a consumer that handles input
@@ -83,10 +83,10 @@ api Input {
     /// True while button is held on the pad in player slot (0-based). False when the slot is empty, so a
     /// caller polling every slot never sees stale buttons from an unplugged pad.
     gamepad_button_down(slot: u32, button: GamepadButton) -> bool
-    /// True if button was just pressed this frame on the pad in player slot (0-based) - the down edge. False
+    /// True if button was just pressed this frame on the pad in player slot (0-based), the down edge. False
     /// when the slot is empty.
     gamepad_button_pressed(slot: u32, button: GamepadButton) -> bool
-    /// True if button was just released this frame on the pad in player slot (0-based) - the up edge. False
+    /// True if button was just released this frame on the pad in player slot (0-based), the up edge. False
     /// when the slot is empty.
     gamepad_button_released(slot: u32, button: GamepadButton) -> bool
     /// Seconds button has been held on the pad in player slot (0-based), counting the frame it went down.
@@ -95,11 +95,12 @@ api Input {
     /// The current normalized value of axis on the pad in player slot (0-based): -1..1 for the sticks,
     /// 0..1 for the triggers, as the backend reported it with no dead zone applied. 0 when the slot is empty.
     gamepad_axis(slot: u32, axis: GamepadAxis) -> f32
-    /// Declarative List one-call face. Hand it an array of item descriptors (`count` ListItem
-    /// entries) and the caller-owned selection set (null opts out), and it runs the whole list internally
-    /// (virtualization, selection gestures, keyboard nav, marquee, drag-reorder, auto-apply) while drawing each
-    /// row's label + icon. opts is ListOpts (layout knobs + multi_select / reorderable). Returns the ListResult; the caller reads only the policy outcomes (activated_id,
-    /// context_menu_id, the reorder request). The scoped UiList face stays for rows with custom content.
+    /// One-call declarative List. Hand it an array of item descriptors (`count` ListItem entries) and the
+    /// caller-owned selection set (null opts out), and it runs the whole list internally (virtualization,
+    /// selection gestures, keyboard nav, marquee, drag-reorder, auto-apply) while drawing each row's label
+    /// and icon. opts is ListOpts (layout knobs plus multi_select / reorderable). Returns the ListResult;
+    /// the caller reads the policy outcomes (activated_id, context_menu_id, the reorder request). Use
+    /// List::begin for rows with custom content.
     [manual] list(id: LayoutId, items: *const ListItem, count: u32, set: *SelectionSet, opts: ListOpts) -> ListResult
     /// True when the semantic navigation-down action was pressed this frame, independent of whether it came
     /// from an arrow key, D-pad, or analog stick binding.
@@ -117,8 +118,7 @@ api Input {
     dropped_file_position(index: u32) -> Vec2
 
     /// Push one decoded OS keyboard event in. An application that pumps its own OS events delivers input
-    /// through these; they land in the same frame state the queries above read, so a host never has to name
-    /// a UI context to feed it.
+    /// through these; they land in the same frame state the queries above read.
     [manual] push_key_event(event: KeyEvent)
     /// Push a text-input (composed character) event.
     [manual] push_text_input_event(event: TextInputEvent)

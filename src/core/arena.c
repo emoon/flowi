@@ -229,7 +229,7 @@ u64 fl_arena_count_elements(const FlArena* self, const void* start_ptr, u64 elem
     return bytes_used / element_size;
 }
 
-// Thread-safe (CAS-based) allocation - this is the default
+// Thread-safe allocation (CAS on pos). This is the default.
 
 void* fl_arena_alloc_raw(FlArena* self, u64 size, u64 alignment) {
     while (true) {
@@ -307,7 +307,7 @@ void* fl_arena_alloc_raw(FlArena* self, u64 size, u64 alignment) {
 
             return return_ptr;
         }
-        // CAS failed, another thread updated position - retry
+        // The CAS failed because another thread moved pos, so retry.
     }
 }
 
@@ -317,7 +317,7 @@ void* fl_arena_alloc_raw_zero(FlArena* self, u64 size, u64 alignment) {
     return ptr;
 }
 
-// Single-threaded allocation - use only when arena is not shared between threads
+// Single-threaded allocation. Use only when the arena is not shared between threads.
 
 void* fl_arena_alloc_raw_st(FlArena* self, u64 size, u64 alignment) {
     u64 current_pos = atomic_load_explicit(&self->pos, memory_order_relaxed);
@@ -507,8 +507,8 @@ void fl_arena_align(FlArena* self, u64 alignment) {
 
     u64 current_committed = atomic_load_explicit(&self->committed_size, memory_order_relaxed);
     if (FL_UNLIKELY(aligned_pos > current_committed)) {
-        // Crossing into not-yet-committed pages is normal, not an OOM: commit on demand and
-        // only treat running past the reservation itself as fatal.
+        // Crossing into pages that are not committed yet is normal: commit on demand. Only
+        // running past the reservation is fatal.
         const u64 required_committed = align_pow2(aligned_pos, self->page_size);
         if (FL_UNLIKELY(required_committed > self->reserved_size)) {
             log_fatal("Out of reserved memory in arena: %s:%d", self->allocation_site_file, self->allocation_site_line);

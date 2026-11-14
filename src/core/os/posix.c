@@ -24,7 +24,7 @@
 #include <sys/statvfs.h>
 #include <time.h>
 
-// OS Path conversion - POSIX just uses UTF-8 strings directly
+// POSIX paths are UTF-8 strings, so no conversion is needed.
 
 OsPath string_to_os_path(struct FlArena* arena, FlString path) {
     OsPath result;
@@ -157,7 +157,6 @@ bool file_rename_os(FlString old_path, FlString new_path) {
 }
 
 // Writes until every byte is consumed; EINTR is retried.
-
 static void write_all(int fd, const char* data, size_t len) {
     size_t offset = 0;
 
@@ -606,7 +605,7 @@ u32 get_process_id_os(void) {
     return (u32)getpid();
 }
 
-// Thread management - POSIX implementation
+// Thread management
 
 typedef struct {
     pthread_t pthread;
@@ -636,7 +635,7 @@ void os_thread_set_name(const char* name) {
     // macOS: pthread_setname_np sets the name of the calling thread (no thread parameter)
     pthread_setname_np(name);
 #else
-    // Linux: pthread_setname_np takes thread + name, max 16 chars including null
+    // Linux: pthread_setname_np takes thread + name, max 16 chars including the terminator
     pthread_setname_np(pthread_self(), name);
 #endif
 }
@@ -743,7 +742,7 @@ DiskSpaceInfo get_disk_space_os(FlString path) {
 
         if (last_sep == path_copy) {
             if (path_copy[1] == '\0') {
-                break; // Root "/" itself was just tried and failed - give up
+                break; // The root "/" itself was just tried and failed
             }
             // Truncate to root "/" for one final attempt
             path_copy[1] = '\0';

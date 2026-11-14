@@ -5,7 +5,7 @@
 #include "types.h"
 #include <assert.h>
 
-// Type-safe arena implementation
+// A typed view over an FlArena.
 //
 // Usage:
 //   arena_typed(i32) my_i32_arena;

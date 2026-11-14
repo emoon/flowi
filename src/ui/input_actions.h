@@ -5,10 +5,10 @@
 #include <flowi/ui/action.h> // @generated FlAction (api_gen)
 #include <flowi/ui/key.h>    // @generated FlKey (api_gen)
 
-// UI Actions - High-level input actions for UI navigation and interaction
+// High-level input actions for UI navigation and interaction.
 //
-// Decouples physical inputs (keyboard keys, gamepad buttons) from logical actions; several physical inputs can
-// trigger the same action. Bindings are hardcoded defaults in input_actions.c, no remapping.
+// Logical actions are decoupled from physical inputs (keyboard keys, gamepad buttons), and several physical inputs
+// can trigger the same action. Bindings are hardcoded defaults in input_actions.c and cannot be remapped.
 
 typedef struct FlUiCtx FlUiCtx;
 typedef struct ActionSystemState ActionSystemState;

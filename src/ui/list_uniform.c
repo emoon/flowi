@@ -1,5 +1,3 @@
-// Uniform List API Implementation
-//
 // A virtualized scrollable list where all items have the same height. Callers render arbitrary content inside
 // each item using a begin/end pattern.
 
@@ -76,7 +74,7 @@ static ListUniformState* get_or_create_state(FlListUniformContext* self, FlStrin
     return hashmap_string_insert(&self->states, id, new_state);
 }
 
-// Total content height - the list's extent policy is every item plus its gap.
+// Total content height: every item plus its gap.
 
 static f32 list_content_height(u32 count, f32 item_height, f32 gap) {
     return (f32)count * (item_height + gap);
@@ -195,8 +193,6 @@ void list_uniform_end(FlListUniformContext* self) {
         self->current_state->container_height = state.size.y;
     }
 }
-
-// Scroll introspection / drive (see header).
 
 f32 list_uniform_scroll_offset(FlListUniformContext* self, FlString id) {
     ListUniformState* state = hashmap_string_get(&self->states, id);

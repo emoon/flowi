@@ -36,7 +36,6 @@ bool perf_counter_event_to_platform_event(PerfCounterEvent event, PerfCounterPla
 }
 
 // Opens a counter for event, disabled and counting user space only, or returns -1 with errno set.
-
 static int counter_open(PerfCounterEvent event) {
     PerfCounterPlatformEvent platform_event;
     if (!perf_counter_event_to_platform_event(event, &platform_event)) {

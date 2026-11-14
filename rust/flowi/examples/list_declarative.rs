@@ -1,10 +1,10 @@
 //! The declarative List in one call: [`List::show`] takes an array of [`ListItem`] descriptors
-//! ({ id, label, icon }) plus the caller-owned [`SelectionSet`] and runs the whole interaction internally -
+//! ({ id, label, icon }) plus the caller-owned [`SelectionSet`] and runs the whole interaction internally:
 //! virtualization, the multi-selection gesture machine, keyboard nav, marquee, drag-reorder, the highlight /
-//! ghost / insertion-line drawing, and auto-applying selection - while rendering each row's label + icon. The
+//! ghost / insertion-line drawing, and auto-applying selection. It also renders each row's label and icon. The
 //! app reads only the policy outcomes off the [`ListResult`](flowi::ListResult): activated_id (open), context_menu_id
-//! (right-click; the app opens its own menu), and the reorder request. Contrast examples/list.rs, which drives
-//! the scoped face for rows with custom content. It needs a display; run it and click / shift-click /
+//! (right-click; the app opens its own menu), and the reorder request. examples/list.rs drives the scoped face
+//! instead, for rows with custom content. It needs a display; run it and click / shift-click /
 //! ctrl-click / right-click / drag-reorder rows:
 //!
 //! ```text
@@ -29,7 +29,7 @@ fn apply_reorder(model: &mut Vec<(u64, String)>, r: &Reorder) {
             DropRelationship::After => p + 1,
             DropRelationship::Into => p + 1, // a List never produces Into; treat as After
         },
-        None => model.len(), // target was itself dragged or is absent - append
+        None => model.len(), // target was itself dragged or is absent; append
     };
     for (k, row) in moving.into_iter().enumerate() {
         model.insert(insert_at + k, row);

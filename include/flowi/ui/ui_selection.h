@@ -11,8 +11,7 @@
 extern "C" {
 #endif
 
-// Opaque caller-owned set of selected List stable ids. The host holds it solely behind a `*SelectionSet`.
-// Created by create, destroyed by destroy.
+// Opaque caller-owned set of selected List stable ids. Created by create, destroyed by destroy.
 typedef struct FlSelectionSet FlSelectionSet;
 
 // Caller-owned storage of selected List stable ids. Feed it the List's per-frame SelectionRequests with

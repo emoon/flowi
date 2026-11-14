@@ -2,7 +2,7 @@
 
 pub enum FlArena {}
 
-// Dynamic image widget - draws a per-frame caller-updated image buffer described by DynamicImage. create and
+// Dynamic image widget: draws a per-frame caller-updated image buffer described by DynamicImage. create and
 // create_alpha allocate the image and its pixel buffer from a caller arena; a caller that owns its own buffer
 // can fill a DynamicImage directly instead.
 extern "C" {

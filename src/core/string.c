@@ -22,7 +22,7 @@ const char* fl_string_to_cstr(struct FlArena* arena, const FlString str) {
 
 void fl_string_to_cstr_buffer(char* dest, const u64 buffer_len, const FlString str) {
     if (buffer_len == 0) {
-        return; // No room for anything, not even the null terminator
+        return; // No room for anything, not even the terminator
     }
     const u64 copy_len = str.length < buffer_len - 1 ? str.length : buffer_len - 1;
     memory_copy(dest, buffer_len, str.data, copy_len);
@@ -72,7 +72,7 @@ bool fl_string_equals(const FlString a, const FlString b) {
         return false;
     }
 
-    // Empty strings may have null data, and a shared pointer needs no byte compare
+    // Empty strings may have nullptr data, and a shared pointer needs no byte compare
     if (a.length == 0 || a.data == b.data) {
         return true;
     }
@@ -143,8 +143,7 @@ static int compare_chars_nocase(char a, char b) {
     return (lower_a > lower_b) - (lower_a < lower_b);
 }
 
-// Natural string comparison (case-insensitive, with numeric awareness)
-// Compares strings in a human-friendly way: "file1" < "file2" < "file10"
+// Natural comparison: case-insensitive, and digit runs compare as numbers, so "file1" < "file2" < "file10".
 int fl_string_compare_natural(const FlString a, const FlString b) {
     u64 i = 0;
     u64 j = 0;
@@ -519,7 +518,7 @@ StringParseResultU32 fl_string_parse_number_u32(const FlString str) {
 }
 
 // FlString search and URL utilities
-
+// FlString search
 i64 fl_string_find_char(const FlString str, char c) {
     for (u64 i = 0; i < str.length; i++) {
         if (str.data[i] == c) {

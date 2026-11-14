@@ -3,8 +3,8 @@
 #include "core.h"
 #include "string.h"
 
-// Application identity: app-flavored strings used by the log file and file watcher. They default to
-// neutral flowi values; a host may override them at startup, before those modules first use them.
+// App-specific strings used by the log file and the file watcher. They default to neutral flowi values;
+// a host may override them at startup, before those modules first use them.
 
 typedef struct FlAppIdentity {
     FlString data_dir_name;      // Subdirectory under $HOME for logs, e.g. ".flowi".
@@ -19,7 +19,7 @@ DLL_EXPORT void fl_app_identity_set(const FlAppIdentity* identity);
 // Drop every override, restoring the neutral defaults.
 void app_identity_reset(void);
 
-// Current identity fields - the host override if set, otherwise the neutral flowi default.
+// Each returns the host override if one is set, otherwise the neutral flowi default.
 DLL_EXPORT FlString fl_app_identity_data_dir_name(void);
 DLL_EXPORT FlString fl_app_identity_log_file_name(void);
 DLL_EXPORT FlString fl_app_identity_file_watcher_queue(void);

@@ -37,8 +37,7 @@ bool list_has_rows(const FlListContext* self) {
     return self->ordered_ids != nullptr && self->ordered_count > 0;
 }
 
-// Linear scan: the same enumeration selection_set_apply already walks, and the cursor/anchor mapping is at most
-// once per nav keystroke, never per row.
+// A linear scan. The cursor/anchor mapping runs at most once per nav keystroke, not once per row.
 i32 list_index_of_id(const FlListContext* self, u64 id) {
     if (id == 0 || self->ordered_ids == nullptr) {
         return -1;

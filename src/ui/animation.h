@@ -13,7 +13,6 @@
 
 #define ANIM_SPEED_FAST 24.0f
 
-// Widget state animation speeds
 #define ANIM_SPEED_HOVER 22.0f // ~150ms
 #define ANIM_SPEED_PRESS 32.0f // ~100ms
 #define ANIM_SPEED_FOCUS 20.0f // ~160ms

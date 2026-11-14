@@ -1,6 +1,6 @@
 // Render-IR inspector. Reads the internal UiRenderCommand IR through the narrow
 // accessors (ui_get_render_command_count / ui_get_render_command in ui_private.h) and re-serializes
-// it onto flowi's side of the boundary. Compiled out entirely unless FLOWI_UI_INSPECTOR is defined - see
+// it onto flowi's side of the boundary. Compiled out entirely unless FLOWI_UI_INSPECTOR is defined; see
 // include/flowi/ui/inspector.h.
 
 #include <flowi/ui/inspector.h>
@@ -49,7 +49,7 @@ static const char* inspector_type_name(UiRenderCommandType type) {
 }
 
 // snprintf-style append into a caller buffer: writes into buf + off when it fits, otherwise
-// only counts. Returns the running logical length (which may exceed buf_size - the standard
+// only counts. Returns the running logical length (which may exceed buf_size, the standard
 // truncation-detection contract). vsnprintf NUL-terminates within the size it is given.
 static int32_t inspector_appendf(char* buf, int32_t buf_size, int32_t off, const char* fmt, ...) {
     va_list ap;

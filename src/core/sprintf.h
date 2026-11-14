@@ -9,7 +9,7 @@ struct FlArenaMt;
 // sprintf with SIMD vector support
 //
 // Every standard format specifier works, plus one specifier per simd.h vector type. Components print
-// in bracket notation - floats with %.6g, integers with %d or %u - and an unrecognized vector
+// in bracket notation (floats with %.6g, integers with %d or %u), and an unrecognized vector
 // specifier is emitted as literal text with the % dropped.
 //
 //   %v4f     f32x4     %v8i16   i16x8     %v16u8   u8x16
@@ -21,7 +21,7 @@ struct FlArenaMt;
 
 // The result is one contiguous run of bytes in arena, whatever else is allocating from it: the
 // message is assembled in a thread-local scratch arena and the arena is bumped once. A caller
-// formatting into a scratch scope of its own may pass that scratch arena - assembly moves to the
+// formatting into a scratch scope of its own may pass that scratch arena; assembly then uses the
 // other one. Both entry points take the calling thread's scratch arenas, so neither may be called
 // from a signal handler or from anything reached by one.
 //

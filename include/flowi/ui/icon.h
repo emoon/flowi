@@ -9,15 +9,11 @@
 extern "C" {
 #endif
 
-// Built-in toolkit icon - flowi's own chrome renders from this set (the checkbox draws Checkmark,
-// the dropdown draws ChevronDown, error states draw Warning). Count is the size sentinel (the
-// number of real icons), not an icon.
+// Built-in toolkit icon. flowi's own chrome renders from this set: the checkbox draws Checkmark,
+// the dropdown draws ChevronDown, error states draw Warning.
 typedef enum FlIcon {
-    // Checkmark for checkboxes.
     FlIcon_Checkmark = 0,
-    // Chevron-down for dropdowns.
     FlIcon_ChevronDown = 1,
-    // Warning triangle for error states.
     FlIcon_Warning = 2,
     // Number of icons (size sentinel, not an icon).
     FlIcon_Count = 3,

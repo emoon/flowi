@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-// The kind discriminant of a SelectionRequest - the tag set on each per-frame selection change.
+// The kind of a SelectionRequest: the tag set on each per-frame selection change.
 typedef enum FlSelectionRequestKind {
     // Empty the set. selected / id / to_id unused.
     FlSelectionRequestKind_ClearAll = 0,
@@ -23,9 +23,8 @@ typedef enum FlSelectionRequestKind {
     FlSelectionRequestKind_SetRange = 3,
 } FlSelectionRequestKind;
 
-// One selection change a List emits per frame - never the resolved set. A flat tagged struct where kind
-// selects which fields are read; ranges are given by their two endpoint item ids (id .. to_id) rather
-// than by enumerating the span.
+// One selection change a List emits per frame. The List emits changes, never the resolved set. kind
+// selects which fields are read; a range is given by its two endpoint item ids (id .. to_id).
 typedef struct FlSelectionRequest {
     // Which variant this is; selects which fields below are read.
     FlSelectionRequestKind kind;

@@ -1,7 +1,3 @@
-// -----------------------------------------------------------------------------
-// Image Format Conversion for Software Renderer
-// -----------------------------------------------------------------------------
-
 #include "sr_image_convert.h"
 #include <core/arena.h>
 #include <core/simd.h>

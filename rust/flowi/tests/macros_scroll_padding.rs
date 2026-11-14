@@ -14,7 +14,7 @@ const CLEAR: Color = rgb(14, 14, 16);
 const OUTER: Color = rgb(220, 40, 40);
 const CHILD: Color = rgb(30, 180, 60);
 
-// The scroll area is a fixed 40x40 box at (0, 0) - the single top-level element, so Clay places it there.
+// The scroll area is a fixed 40x40 box at (0, 0): it is the single top-level element, so Clay places it there.
 const ROOT: f32 = 40.0;
 // A content child short enough that it never overflows, so nothing clips and every inset stays visible.
 const CONTENT_H: f32 = 12.0;

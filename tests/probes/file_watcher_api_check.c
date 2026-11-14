@@ -1,5 +1,5 @@
 // Compile-only parity guard: the api_gen-generated public file-watcher surface (<flowi/core/file_watcher.h>).
-// Nothing is linked; every prototype must parse and match its expected signature here.
+// Every prototype must parse and match its expected signature here.
 
 #include <stdbool.h>
 #include <stdint.h>

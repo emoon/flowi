@@ -1,4 +1,4 @@
-// fl_* public API forwarders - the thin hand-written bodies behind the api_gen direct API. Every
+// fl_* public API forwarders: the thin hand-written bodies behind the api_gen direct API. Every
 // fl_<domain>_* here forwards to the real ui_* / text_* / font_* / image_* free function that does the work;
 // fl_format_frame_string is the one variadic exception (a forwarding function cannot pass varargs).
 
@@ -142,13 +142,13 @@ void fl_cursor_set_visible(bool visible) {
 bool fl_cursor_get_visible(void) {
     FlUiCtx* self = g_ui_ctx;
     if (self == nullptr) {
-        return true; // the context default (ui_create), not the zero value - nothing has hidden the cursor
+        return true; // the context default (ui_create), not the zero value; nothing has hidden the cursor
     }
     return self->cursor_visible;
 }
 
-// Hand-written bodies for the generated Painter api. ui_get_painter() returns null outside an open layout
-// element and every primitive no-ops (or returns false) on a null painter, so the off-context case needs no
+// Hand-written bodies for the generated Painter api. ui_get_painter() returns nullptr outside an open layout
+// element and every primitive no-ops (or returns false) on a nullptr painter, so the off-context case needs no
 // check here.
 
 // The one home of the font-id zero semantic (0 / FontId::INVALID = active font), shared by text draw, styled
@@ -202,7 +202,7 @@ void fl_painter_line(float x0, float y0, float x1, float y1, FlStroke stroke) {
 }
 
 // The two text draws are the exception: resolving the font-id zero semantic reads the context itself, so they
-// carry the file's standard null-context guard on top of the painter's own no-op.
+// carry the file's standard nullptr-context guard on top of the painter's own no-op.
 
 void fl_painter_text(float x, float y, FlString text, uint32_t font, FlColor color) {
     FlUiCtx* self = g_ui_ctx;
@@ -287,7 +287,7 @@ FlTextMetrics fl_text_measure(FlString text, FlTextStyle style) {
 }
 
 // The scroll (fl_scroll_area_*), floating (fl_floating_*) and layout (fl_layout_*) families are defined
-// directly in ui/ui_scroll.c and ui/layout.c - no forwarder here.
+// directly in ui/ui_scroll.c and ui/layout.c, with no forwarder here.
 
 // UiTheme (theme.def). The palette crosses as a caller-owned pointer (flowi stores it, so it must outlive the
 // frame); the override crosses by value.
@@ -379,7 +379,7 @@ bool fl_input_key_pressed(FlKey key) {
     return ui_key_pressed(key);
 }
 
-// The one slot without a ui_* callee: nav is public by name, so fl_nav_down_pressed in ui.c IS the
+// The one slot without a ui_* callee: nav is public by name, so fl_nav_down_pressed in ui.c is the
 // implementation this forwards to.
 bool fl_input_nav_down_pressed(void) {
     return fl_nav_down_pressed();
@@ -512,7 +512,7 @@ void fl_input_push_window_event(FlWindowEvent event) {
     platform_input_push_window_event(self, event);
 }
 
-// Declarative List one-call face - the list slot on the UiInput domain (ui_input.def).
+// Declarative List one-call face: the list slot on the UiInput domain (ui_input.def).
 FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t count, FlSelectionSet* set,
                            FlListOpts opts) {
     return ui_list(id, items, count, set, opts);
@@ -542,7 +542,7 @@ void fl_list_request_focus(FlLayoutId id, uint64_t cursor_id) {
 }
 
 // ListUniform (list_uniform.def). The uniform list keeps its state on the UI context, so these thread
-// g_ui_ctx's list_uniform context into the real list_uniform_* free functions - the caller never sees the
+// g_ui_ctx's list_uniform context into the real list_uniform_* free functions and the caller never sees the
 // receiver. The per-frame begin_update / end_update hooks stay internal: ui.c drives them around the frame.
 
 FlListUniformRange fl_list_uniform_begin(FlString id, uint32_t total_count, FlListUniformOpts opts) {
@@ -841,7 +841,7 @@ void fl_menubar_menu_end(void) {
 }
 
 // Popup API (popup.def). Forwards to ui_popup_begin / ui_popup_end, ui_tooltip_impl and ui_message_box_impl,
-// which act on the global UI context - there is no receiver to thread.
+// which act on the global UI context, so there is no receiver to thread.
 
 void fl_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
     ui_popup_begin(anchor_id, config);

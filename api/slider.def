@@ -1,10 +1,8 @@
 /// Slider widgets. Each call emits one slider for the current frame and returns its
 /// interaction Signal; call them inside a frame callback.
-// Both slots are `[manual]` for the Rust façade: SliderConfig.format is a printf
-// template forwarded to a C sprintf, and whether one is valid depends on the slot's
-// value type (%.2f for float, %d for int) - so the format is validated per slot,
-// which a mechanical config lowering cannot do. The safe flowi::SliderConfig is
-// hand-written alongside those two methods.
+// Both functions are `[manual]`: SliderConfig.format is a printf template forwarded
+// to a C sprintf, and whether it is valid depends on the value type (%.2f for float,
+// %d for int), so the hand-written Rust binding validates it per function.
 api Slider {
     /// Emit a float slider for label bound to `*value` in [min, max] and return its interaction
     /// Signal. config selects the value-readout format, adjustment step, taper, and orientation (a

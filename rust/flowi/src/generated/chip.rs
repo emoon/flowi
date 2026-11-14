@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Chip widget - a small tag/badge toggle with a soft variant for a subtler look than a pill.
+/// Chip widget: a small tag/badge toggle with a soft variant for a subtler look than a pill.
 pub struct Chip;
 
 impl Chip {

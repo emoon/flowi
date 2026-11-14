@@ -1,4 +1,4 @@
-// List API Implementation (CONTEXT.md "Lists")
+// List implementation (CONTEXT.md "Lists").
 //
 // A thin adapter over list_uniform's virtualization core: ui_list_begin/_item/_end delegate the scroll engine
 // and the uniform-height layout to list_uniform, and layer identity, per-item interaction, and the
@@ -12,7 +12,7 @@
 //
 // Drag-reorder returns on release a single request `{ drag_from_ids[], drag_target_id, drag_rel }`; the app
 // owns the model mutation and drop validity. Dragging any row of a multi-selection drags the whole selection.
-// The candidate drop position is resolved arithmetically from content-space Y against MODEL POSITIONS (uniform
+// The candidate drop position is resolved arithmetically from content-space Y against model positions (uniform
 // stride), so it reaches rows virtualized away exactly like the marquee coverage does.
 
 #include "list/list_private.h"
@@ -23,8 +23,6 @@
 #include <flowi/ui/item_behavior.h>
 #include "layout.h"
 #include "ui.h"
-
-// Constants
 
 #define LIST_ROW_DEFAULT_HEIGHT 32.0f // Fallback row height when the config leaves it unset
 #define LIST_ROW_DEFAULT_GAP 8.0f     // Fallback gap between rows
@@ -53,8 +51,6 @@ typedef struct ListBeginArgs {
     bool disable_reorder;
 } ListBeginArgs;
 
-// Context Creation/Destruction
-
 FlListContext* ui_list_create(FlArena* arena) {
     FlListContext* ctx = arena_alloc_zero(arena, FlListContext);
     ctx->arena = arena;
@@ -66,7 +62,7 @@ FlListContext* ui_list_create(FlArena* arena) {
 }
 
 // Promote an armed press (item_begin) to a live drag once the drag distance crosses the threshold, latching until
-// release. Runs BEFORE any row is emitted so item_begin can suppress clicks for the whole list, and disarms on
+// release. Runs before any row is emitted so item_begin can suppress clicks for the whole list, and disarms on
 // self->disable_reorder so a press armed on an earlier frame cannot promote after the flag flips.
 static void list_resolve_drag_promotion(FlListContext* self, ListState* st) {
     if (self->disable_reorder) {
@@ -111,7 +107,7 @@ static bool list_resolve_focus(FlListContext* self, ListState* st, FlLayoutId id
 
 // Resolve a focus seed requested this frame (ui_list_request_focus). The caller chose cursor_id before the model
 // was known, so validate it now against the ordered slice and fall back to the first row when it is 0 or absent.
-// Only on the seed frame - a roving cursor is never re-snapped.
+// This happens only on the seed frame; a roving cursor is never re-snapped.
 static void list_resolve_focus_seed(FlListContext* self, ListState* st) {
     if (!st->focus_seed_pending) {
         return;
@@ -123,7 +119,7 @@ static void list_resolve_focus_seed(FlListContext* self, ListState* st) {
     }
 }
 
-// Core implementation (ctx explicit - the service API points here; the scoped face forwards with the global ctx)
+// Core implementation with an explicit ctx. The scoped face forwards here with the global ctx.
 
 // Reset every per-frame field and the request buffer for the list that begin is about to emit.
 static void list_reset_frame(FlListContext* self, const ListBeginArgs* args) {
@@ -150,7 +146,7 @@ static void list_reset_frame(FlListContext* self, const ListBeginArgs* args) {
     self->drag_target_id = 0;
     self->drag_rel = FlDropRelationship_Before;
 
-    // Per-frame request buffer from the frame arena: result.requests is ALWAYS populated (independent of set),
+    // Per-frame request buffer from the frame arena: result.requests is always populated (independent of set),
     // and the storage is valid only until the next frame's arena rewind.
     self->req_capacity = LIST_MAX_REQUESTS_PER_FRAME;
     self->requests = arena_alloc_array(self->ui_ctx->render_frame_allocator, FlSelectionRequest, self->req_capacity);
@@ -260,7 +256,7 @@ static void list_record_signal(FlListContext* self, u64 stable_id, FlSignal sign
     if (signal.hovered) {
         self->focused_id = stable_id;
     }
-    // Right-click is a policy outcome: the List opens no menu - it just reports the row so the app opens its own
+    // Right-click is a policy outcome: the List opens no menu and only reports the row, so the app opens its own
     // context menu at the cursor (the declarative face's menu hook; also available to the scoped face).
     if (signal.right_clicked) {
         self->context_menu_id = stable_id;
@@ -306,7 +302,7 @@ static void list_click_replace(FlListContext* self, ListState* st, u64 stable_id
     st->anchor_id = stable_id;
 }
 
-// Selection gesture state machine - all internal; the app sees only the emitted Selection Requests (which
+// Selection gesture state machine. It is all internal; the app sees only the emitted Selection Requests (which
 // auto-apply into set by default). Plain click replaces, ctrl/⌘ toggles, shift ranges from the anchor.
 static void list_apply_click(FlListContext* self, u64 stable_id, bool selected) {
     ListState* st = list_state_get(self, self->current_clay_id);
@@ -330,7 +326,7 @@ static FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id) {
     FlLayoutId item_id = { .name = self->current_id.name, .id = (i32)(self->emit_pos + 1) };
 
     // Selected-ness is resolved purely by id membership in the caller's set (CONTEXT Selection Set), so a row
-    // selected while off-screen highlights correctly once scrolled back into view. A nullptr set is never selected -
+    // selected while off-screen highlights correctly once scrolled back into view. A nullptr set is never selected;
     // the app owns its own highlight on that path.
     bool selected = (self->set != nullptr) && selection_set_contains(self->set, stable_id);
 
@@ -356,7 +352,7 @@ static void list_item_end_impl(FlListContext* self) {
     fl_layout_end(); // close the row wrapper opened in list_item_begin_impl
 }
 
-// An empty-space press takes focus into the global ring too, exactly like a row press - other widgets blur, and
+// An empty-space press takes focus into the global ring too, exactly like a row press: other widgets blur, and
 // begin's another-widget-owns-focus check won't blur the list back next frame.
 static bool list_empty_space_press_focuses(FlListContext* self) {
     ListViewport vp;
@@ -373,7 +369,7 @@ static bool list_empty_space_press_focuses(FlListContext* self) {
 
 // List-level focus: a press landing inside this list keeps focus here; a press elsewhere this frame blurs it (so
 // keyboard nav + Ctrl+A only fire while the list is the active surface). "Inside" covers both a row press
-// (frame_row_pressed) and a press on empty list space inside the viewport - the press that arms the marquee - so
+// (frame_row_pressed) and a press on empty list space inside the viewport (the press that arms the marquee), so
 // starting a rubber-band gesture does not blur the very list being swept.
 static void list_update_focus_from_press(FlListContext* self, ListState* st) {
     if (!self->ui_ctx->mouse_pressed_this_frame) {
@@ -388,20 +384,20 @@ static FlListResult list_end_impl(FlListContext* self) {
     ListState* st = list_state_get(self, self->current_clay_id);
 
     // Drag-reorder gesture: runs after the rows are emitted (the press row is armed, the threshold may have crossed)
-    // and before the marquee. A drag and the marquee are mutually exclusive - a drag arms on a row press, the
-    // marquee on empty space - so an engaged drag (armed or live this frame) suppresses the marquee for the frame.
+    // and before the marquee. A drag and the marquee are mutually exclusive (a drag arms on a row press, the
+    // marquee on empty space), so an engaged drag (armed or live this frame) suppresses the marquee for the frame.
     bool drag_engaged = st->drag_pressed;
     list_drag_update(self, st);
 
     // Marquee gesture: runs after the rows are emitted (frame_row_pressed is settled) and before auto-apply, so a
-    // covered span this frame folds into the set this frame. Never co-occurs with a click - a row press would
+    // covered span this frame folds into the set this frame. Never co-occurs with a click: a row press would
     // have set frame_row_pressed and disarmed the marquee. A single-selection list never rubber-band-selects.
     if (!drag_engaged && !self->single_select) {
         list_marquee_update(self, st);
     }
 
-    // Auto-apply (the default): fold the emitted requests into the caller's set, forwarding the FULL ordered
-    // slice so SetRange / SetAll resolve across rows virtualized away. A nullptr set applies nothing - the app
+    // Auto-apply (the default): fold the emitted requests into the caller's set, forwarding the full ordered
+    // slice so SetRange / SetAll resolve across rows virtualized away. A nullptr set applies nothing; the app
     // owns apply/highlight via result.requests.
     if (self->set != nullptr && self->req_count > 0) {
         selection_set_apply(self->set, self->requests, self->req_count, self->ordered_ids, self->ordered_count);
@@ -426,7 +422,7 @@ static FlListResult list_end_impl(FlListContext* self) {
     };
 }
 
-// Declarative face - CONTEXT.md `## Lists`. One call runs the whole list on the shared core (begin/item/end): it
+// Declarative face (CONTEXT.md `## Lists`). One call runs the whole list on the shared core (begin/item/end): it
 // splits the array-of-descriptors into the parallel (id, label) slices the core's begin consumes and loops the
 // visible window emitting an icon + label per row.
 
@@ -465,13 +461,13 @@ static void list_decl_row_content(const FlListItem* it, f32 row_height) {
 
 FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelectionSet* set, FlListOpts opts) {
     FlListContext* self = ui_get_ctx()->ui_list_ctx;
-    // A nullptr item array is treated as empty regardless of count - never trust a count without the backing
-    // array (the loop below dereferences items[i], so a non-zero count with nullptr items would fault). n is the
-    // effective length forwarded to the core; the begin call and the row loop both key off it, not the raw count.
+    // A nullptr item array is treated as empty regardless of count, because the loop below dereferences items[i] and
+    // a non-zero count with nullptr items would fault. n is the effective length forwarded to the core; the begin
+    // call and the row loop both key off it, not the raw count.
     u32 n = (items != nullptr) ? count : 0;
 
-    // Fold the descriptors into the two parallel slices the shared core takes - the ordered stable ids (also the
-    // virtualization total) and the type-ahead labels - into the frame arena.
+    // Fold the descriptors into the two parallel slices the shared core takes, allocated in the frame arena: the
+    // ordered stable ids (also the virtualization total) and the type-ahead labels.
     u64* ids = nullptr;
     FlString* labels = nullptr;
     if (n > 0) {
@@ -509,7 +505,7 @@ FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelect
     return list_end_impl(self);
 }
 
-// Scoped face - forward to the core with the global UI context's list state.
+// Scoped face: forward to the core with the global UI context's list state.
 
 FlListRange ui_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config) {
     return list_begin_impl(ui_get_ctx()->ui_list_ctx, (ListBeginArgs) {
@@ -538,8 +534,8 @@ void ui_list_request_focus(FlLayoutId id, u64 cursor_id) {
     u32 clay_id = ui_layout_id_to_clay_id(id);
     ListState* st = list_state_get(self, clay_id);
 
-    // Re-arm guard: only a call where the list does not ALREADY hold focus seeds the cursor, so a stray
-    // every-frame call cannot yank a roving cursor back. "Already holds focus" tests both has_focus AND ownership
+    // Re-arm guard: only a call where the list does not already hold focus seeds the cursor, so a stray
+    // every-frame call cannot yank a roving cursor back. "Already holds focus" tests both has_focus and ownership
     // of the global ring: has_focus is never cleared while a popup is closed (the list isn't emitted, so begin
     // never blurs it), so a plain !has_focus guard would read a genuine reopen as redundant. The seed is
     // validated against the ordered slice in begin (0 / absent -> first row).
@@ -549,8 +545,8 @@ void ui_list_request_focus(FlLayoutId id, u64 cursor_id) {
         st->focus_seed_pending = true;
     }
 
-    // Engage the list's own keyboard handling AND claim the global focus ring together: setting has_focus without
-    // the ring is dead one frame later (begin blurs it when another widget - the just-clicked trigger - owns the
+    // Engage the list's own keyboard handling and claim the global focus ring together: setting has_focus without
+    // the ring is dead one frame later (begin blurs it when another widget, the just-clicked trigger, owns the
     // ring), and claiming the ring without has_focus never runs the list's keyboard state machine.
     st->has_focus = true;
     self->ui_ctx->focused_id = clay_id;

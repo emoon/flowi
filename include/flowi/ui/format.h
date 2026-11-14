@@ -12,7 +12,7 @@ extern "C" {
 // Per-frame string formatting. The returned String is owned by the frame allocator and
 // valid only for the current frame.
 // Format fmt (printf-style, plus %S for an FlString) into a frame-allocated string. The result lives
-// until the end of the frame - capture it into durable storage if it must outlive the frame.
+// until the end of the frame. Copy it into durable storage if it must outlive the frame.
 FL_API FlString fl_format_frame_string(const char* fmt, ...);
 
 

@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-// Pill widget - a pill-shaped toggle button for category filters (solid when selected, ghost when not).
+// Pill widget: a pill-shaped toggle button for category filters (solid when selected, ghost when not).
 // Emit a pill labelled label bound to `*selected`; activation toggles the bool. config selects
 // colors and id overrides. Returns its interaction Signal (.clicked the frame it toggles). Call
 // inside a frame callback.

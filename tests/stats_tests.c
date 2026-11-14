@@ -131,4 +131,4 @@ UTEST_F(stats_fixture, multiple_categories) {
     ASSERT_EQ(stats_get_value(STATS, vfs_reads), 1ULL);
 }
 
-// TODO: Add thread safety test when threading API is available
+// TODO: no test covers stats_inc from several threads.

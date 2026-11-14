@@ -45,7 +45,7 @@ fn ui_text_styled_layout_config_color() {
     };
 
     // A 1-bit font at integer scale inks glyph interiors at full coverage, so the brightest inked pixel is the
-    // unblended source colour - the config colour, the value under test.
+    // unblended source colour: the config colour, the value under test.
     let mut ink = 0usize;
     let mut brightest = [0u8; 3];
     for y in 0..h {
@@ -62,7 +62,7 @@ fn ui_text_styled_layout_config_color() {
         }
     }
 
-    // "Styled!" is 7 glyphs of a 16px font - many inked pixels, far from the whole surface.
+    // "Styled!" is 7 glyphs of a 16px font: many inked pixels, far from the whole surface.
     assert!(ink > 50, "expected the text to ink many pixels, got {ink}");
     assert!(
         ink < w * h / 2,

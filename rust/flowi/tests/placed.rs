@@ -1,4 +1,4 @@
-//! placed! - a child positioned at an explicit content-space offset inside a manual_scroll clip
+//! placed!: a child positioned at an explicit content-space offset inside a manual_scroll clip
 //! box.
 
 use flowi::{clip, col, fixed, placed, row, Application};
@@ -25,7 +25,7 @@ fn placed_child_offset_and_clip() {
                     row! { width: fixed!(8), height: fixed!(8), color: [240, 200, 40] {} }
                     // Explicit content-space offset, not flex flow.
                     placed! { offset: [20.0, 20.0], width: fixed!(8), height: fixed!(8), color: [40, 200, 120] {} }
-                    // Placed at (46,20): straddles the right clip edge (46..54 vs box 0..50) - its tail is cropped.
+                    // Placed at (46,20): straddles the right clip edge (46..54 vs box 0..50), so its tail is cropped.
                     placed! { offset: [46.0, 20.0], width: fixed!(8), height: fixed!(8), color: [80, 140, 240] {} }
                 }}
             }}

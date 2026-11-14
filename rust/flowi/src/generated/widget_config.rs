@@ -34,7 +34,7 @@ pub struct WidgetConfig<'a> {
     /// Explicit tab order index.
     pub tab_index: i32,
     /// Optional per-widget state-slot theme override; null means none. This is a sparse FlThemeOverride
-    /// layered over the resolved theme for this widget only - siblings are unaffected, and it composes with
+    /// layered over the resolved theme for this widget only: siblings are unaffected, and it composes with
     /// scoped subtree overrides with widget-level slots winning. The explicit per-object color field still
     /// bypasses the theme entirely.
     pub theme_override: Option<&'a crate::sys::ThemeOverride>,
@@ -298,7 +298,7 @@ pub struct DropdownConfig<'a> {
     /// Type to filter options while the popup is open.
     pub searchable: bool,
     /// Buffer for search text; required when searchable is true. Opaque state the callee owns and
-    /// mutates; null disables search regardless of searchable. Reachable only from C for now - the Rust
+    /// mutates; null disables search regardless of searchable. Reachable only from C: the Rust
     /// binding has no safe wrapper for the opaque FlTextInputState.
     pub search_state: *mut crate::sys::TextInputState,
     /// Max option rows the open popup shows before it scrolls (0 = default ~10); the List virtualizes the rest.
@@ -378,12 +378,12 @@ pub struct TabBarConfig<'a> {
     pub item_radius: f32,
     /// Padding between the strip's edge and its tabs, in pixels (0 = none). Set either this or
     /// container_radius and the strip paints as a surface-colored pill behind the tabs; leave both zero
-    /// and it stays the bare layout row it has always been.
+    /// and it stays a bare layout row.
     pub container_padding: f32,
     /// Corner radius of that pill, in pixels (0 = square corners).
     pub container_radius: f32,
-    /// Gap between adjacent tabs, in pixels (0 = 4). A negative value asks for a flush strip with no gap
-    /// at all - the shape of a segmented control - which 0 cannot express while it stands for the default.
+    /// Gap between adjacent tabs, in pixels (0 = 4). A negative value gives a flush strip with no gap
+    /// (a segmented control), since 0 stands for the default.
     pub child_gap: f32,
     /// Label pixel size (0 = the font's default size).
     pub font_size: u16,
@@ -562,8 +562,8 @@ pub struct TextInputConfig<'a> {
     /// Character limit (0 = unlimited).
     pub max_length: u32,
     /// Allowed character set (FlString); empty means all printable characters. Read per keypress while
-    /// the field has focus, so it need only live for the frame - the one consumer that outlives the frame,
-    /// the on-screen keyboard, copies the bytes into its own arena (ui_virtual_keyboard_create).
+    /// the field has focus, so it need only live for the frame. The on-screen keyboard copies the bytes
+    /// into its own arena.
     pub allowed_chars: &'a str,
     /// Show bullets instead of text.
     pub password_mode: bool,

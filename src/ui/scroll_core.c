@@ -1,8 +1,6 @@
 #include "scroll_core.h"
 #include <core/math.h>
 
-// Pure scroll math (see header) - single-axis, frame-rate independent.
-
 #define SCROLL_SNAP_EPSILON 0.5f // Snap offset to target once within this many pixels
 
 f32 scroll_smooth_step(f32 offset, f32 target, f32 max, f32 speed, f32 dt) {

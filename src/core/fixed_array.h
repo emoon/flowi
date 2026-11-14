@@ -10,7 +10,7 @@
 
 struct FlArena;
 
-// Fixed-size array implementation using arena allocators with type safety
+// Typed fixed-capacity array allocated from an arena.
 //
 // Usage:
 //   fixed_array(int) int_array;

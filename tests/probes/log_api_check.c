@@ -1,5 +1,5 @@
-// Compile-only parity guard: the api_gen-generated public logging surface (<flowi/core/log.h>). Nothing is linked;
-// every fl_log_* prototype must parse and match its expected signature here.
+// Compile-only parity guard: the api_gen-generated public logging surface (<flowi/core/log.h>). Every fl_log_*
+// prototype must parse and match its expected signature here.
 //
 // The va_list fl_log_c_vmessage_loc, the LogLevel / LogChannelId internal aliases, the LOG_CHANNEL_INVALID sentinel
 // and the logc_* / log_* location macros stay in src/core/log.h and are not part of this surface.
@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// FlString is a base type api_gen does not author - the generated header names it by value without including it,
+// FlString is a base type api_gen does not author. The generated header names it by value without including it,
 // so it must be defined first.
 #include <core/string.h>
 #include <flowi/core/log.h>

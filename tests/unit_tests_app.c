@@ -3,13 +3,12 @@
 #include "unit_tests_common.h"
 #include "platform/sdl/sdl_input_common.h"
 
-// multi_window.per_window_clay_context - the per-window Clay context split: each window owns a
-// distinct Clay context, ui_make_current swaps both the core singleton and Clay's current context,
-// render-command capture is isolated per window, and ui_destroy drops a dangling Clay current pointer - a
-// stale Clay current context left by a destroy is dereferenced by the next ui_create's Clay_MinMemorySize.
+// Each window owns its own Clay context. ui_make_current swaps both the core singleton and Clay's current context,
+// and render-command capture is per window. ui_destroy clears Clay's current pointer when it points at the
+// destroyed context, because the next ui_create's Clay_MinMemorySize dereferences it.
 
 UTEST(multi_window, per_window_clay_context) {
-    // The fixture brings up the process-global systems (vfs, image, font) once and hands back primary window A.
+    // The fixture creates the process-global systems (vfs, image, font) once and returns primary window A.
     FlUiCtx* a = render_fixture_get();
     ASSERT_TRUE_MSG(a != nullptr, "render fixture creation failed");
 
@@ -17,7 +16,7 @@ UTEST(multi_window, per_window_clay_context) {
     ASSERT_TRUE_MSG(ui_get_ctx() == a, "ui_make_current must select the core singleton");
     ASSERT_TRUE_MSG(Clay_GetCurrentContext() == a->clay_ctx, "ui_make_current must select the window's Clay context");
 
-    // A second window on the SAME shared resource tier - its own Clay context, distinct from A's.
+    // A second window on the same shared resources, with its own Clay context.
     FlUiCtx* b = ui_create(s_arena, a->shared);
     ASSERT_TRUE_MSG(b != nullptr, "second-window ui_create failed");
     ASSERT_TRUE_MSG(b->clay_ctx != a->clay_ctx, "each window must own a distinct Clay context");
@@ -26,7 +25,7 @@ UTEST(multi_window, per_window_clay_context) {
     ASSERT_TRUE_MSG(ui_get_ctx() == b, "ui_make_current must reselect to B");
     ASSERT_TRUE_MSG(Clay_GetCurrentContext() == b->clay_ctx, "Clay current must follow to B's context");
 
-    // Render-command capture is per-window: B has not run a frame, so its capture is empty.
+    // B has not run a frame, so its render-command capture is empty.
     ASSERT_EQ_MSG(ui_get_render_command_count(), 0, "a window that has not run a frame has no render commands");
 
     ui_make_current(a);
@@ -47,9 +46,8 @@ UTEST(multi_window, per_window_clay_context) {
                     "ui_destroy must null Clay's current context when it names the destroyed window");
 }
 
-// window_backend - the headless WindowBackend seam. Constructs the backend directly (no fl_app) and drives its
-// per-window seams: lifecycle, drawable size + content scale, and the cursor / hidden-drag state the core
-// flushes each frame.
+// The headless WindowBackend, constructed directly without fl_app. The cases cover the per-window lifecycle, the
+// drawable size and content scale, and the cursor and hidden-drag state the core flushes each frame.
 
 UTEST(window_backend, headless_seam) {
     FlWindowBackend wb = headless_window_backend_create(s_arena);
@@ -85,9 +83,9 @@ UTEST(window_backend, headless_seam) {
     wb.destroy(wb.user_data);
 }
 
-// main window config - settings width/height are logical pixels scaled by the backend's pre-window display content
-// scale; the headless backend reports none, so it stays 1.0. fixed_size reaches the backend config inverted as
-// resizable.
+// The settings width and height are logical pixels, scaled by the backend's display content scale from before the
+// window exists. The headless backend reports none, so the scale stays 1.0. fixed_size reaches the backend config
+// inverted, as resizable.
 
 static float stub_display_scale_1_5(void* ud) {
     UNUSED(ud);
@@ -118,10 +116,9 @@ UTEST(window_backend, main_window_config_carries_resizable) {
     ASSERT_FALSE_MSG(fl_app_main_window_config(&settings, &backend).resizable, "fixed_size reaches the config");
 }
 
-// window_backend - two inject_text calls before a single pump must each queue their own text. Each queued text
-// event owns its backing bytes; a shared per-window buffer would let the second inject overwrite the first
-// event's text before the pump drains it. The queued events are read back directly so a clobbered first event
-// is caught even though the drained end state concatenates both.
+// Each queued text event owns its backing bytes, so two inject_text calls before one pump each keep their own
+// text. The queued events are read back directly, because the drained end state concatenates both and would hide
+// a first event overwritten by the second.
 
 UTEST(window_backend, headless_inject_text_back_to_back_keeps_distinct_text) {
     FlUiCtx* ctx = render_fixture_get();
@@ -133,7 +130,7 @@ UTEST(window_backend, headless_inject_text_back_to_back_keeps_distinct_text) {
     FlWindow* w = wb.create_window(wb.user_data, &cfg);
     ASSERT_TRUE_MSG(w != nullptr, "headless window creation failed");
 
-    // Back-to-back injects, no pump in between.
+    // Two injects with no pump in between.
     window_backend_headless_inject_text(&wb, w, FL_S("first"));
     window_backend_headless_inject_text(&wb, w, FL_S("second"));
 
@@ -144,9 +141,8 @@ UTEST(window_backend, headless_inject_text_back_to_back_keeps_distinct_text) {
     ASSERT_TRUE_MSG(q1.length == 6 && memcmp(q1.data, "second", 6) == 0, "the second queued text is intact");
     ASSERT_TRUE_MSG(q0.data != q1.data, "each queued text event owns distinct backing storage");
 
-    // Drain both into the input pipeline (the app pumps before ui_update_begin, so no frame is open here): the
-    // pump copies each event's text out synchronously and appends it, so the raw per-pump kb field holds both
-    // strings in order.
+    // Drain both into the input pipeline. The app pumps before ui_update_begin, so no frame is open here. The pump
+    // copies each event's text out and appends it, so the raw per-pump kb field holds both strings in order.
     FlWindow* windows[1] = { w };
     FlUiCtx* contexts[1] = { ctx };
     wb.pump_events(wb.user_data, windows, contexts, 1);
@@ -158,8 +154,8 @@ UTEST(window_backend, headless_inject_text_back_to_back_keeps_distinct_text) {
     wb.destroy(wb.user_data);
 }
 
-// Text-input events within one pump are appended in order and reach the per-frame snapshot; a lone event is
-// delivered unchanged; text past the cap keeps the earliest characters and never splits a UTF-8 codepoint.
+// Text-input events within one pump are appended in order and reach the per-frame snapshot. Text past the cap
+// keeps the earliest characters and never splits a UTF-8 codepoint.
 
 static FlString typed_snapshot_after_pushing(FlUiCtx* ctx, const FlString* events, u32 count) {
     for_count(i, count) {
@@ -204,8 +200,8 @@ UTEST(input, text_input_overflow_keeps_the_earliest_text) {
     typed_snapshot_after_pushing(ctx, utf8, 0);
 }
 
-// The per-frame string helpers resolve their arena through the process-global UI context. With no frame open there
-// is no arena, so the precondition check is fatal in every build type rather than log-and-continue.
+// The per-frame string helpers get their arena from the process-global UI context. With no frame open there is no
+// arena, and the precondition check is fatal in every build type.
 
 #if defined(__linux__)
 #include <sys/resource.h>
@@ -218,12 +214,12 @@ typedef enum FrameStrDeathCall {
 } FrameStrDeathCall;
 
 static int frame_str_no_frame_child_status(FrameStrDeathCall call) {
-    fflush(nullptr); // so the child does not inherit, and later re-emit, the parent's pending stdio
+    fflush(nullptr); // so the child does not inherit the parent's pending stdio and emit it again
     pid_t pid = fork();
     if (pid == 0) {
-        // The child is expected to abort. A zero core limit keeps the system core handler from writing a dump
-        // for it, and from stalling the run for the second or so that takes. Its streams go to /dev/null so the
-        // expected FATAL assert line does not read as a crash in an otherwise passing run.
+        // The child is expected to abort. A zero core limit keeps the system core handler from writing a dump,
+        // which takes about a second. Its streams go to /dev/null so the expected FATAL assert line does not read
+        // as a crash in a passing run.
         setrlimit(RLIMIT_CORE, &(struct rlimit) { .rlim_cur = 0, .rlim_max = 0 });
         (void)freopen("/dev/null", "w", stdout);
         (void)freopen("/dev/null", "w", stderr);
@@ -232,15 +228,15 @@ static int frame_str_no_frame_child_status(FrameStrDeathCall call) {
         } else {
             fl_frame_str_array(3);
         }
-        _exit(0); // reached only if the precondition failed to fire
+        _exit(0); // reached only if the precondition did not fire
     }
     int status = 0;
     waitpid(pid, &status, 0);
     return status;
 }
 
-// Whether the child terminated instead of running to the clean _exit(0). abort() (a signal) and exit(1) both count,
-// which is what lets one assertion cover the debug and release assert handlers alike.
+// True if the child terminated before reaching its _exit(0). abort() (a signal) and exit(1) both count, so one
+// assertion covers the debug and release assert handlers.
 static bool frame_str_child_terminated(int status) {
     return !(WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }
@@ -257,9 +253,9 @@ UTEST(app, frame_str_outside_a_frame_terminates) {
 #endif
 }
 
-// A pointer/keyboard edge pumped before a tick's event poll must be visible to that SAME tick's frame() body. The
+// A pointer or keyboard edge pumped before a tick's event poll is visible to the same tick's frame() body. The
 // per-frame edge snapshot (ui_input_update, which derives mouse_pressed_this_frame from the pumped
-// buttons_pressed and then clears it) has to run AFTER fl_app_pump_events and BEFORE the frame callback.
+// buttons_pressed and then clears it) runs after fl_app_pump_events and before the frame callback.
 typedef struct InputLatState {
     int tick;              // bumped at the top of each frame() call (1-based)
     int pressed_seen_tick; // first tick whose frame() observed mouse_pressed_this_frame (-1 = never)
@@ -271,7 +267,7 @@ static void input_lat_frame(void* user_data) {
     if (ui_get_ctx()->mouse_pressed_this_frame && st->pressed_seen_tick < 0) {
         st->pressed_seen_tick = st->tick;
     }
-    // Minimal layout so ui_update_end has a tree to walk.
+    // ui_update_end needs a tree to walk.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {}
 }
 
@@ -284,11 +280,12 @@ UTEST(app, input_edge_latency) {
 
     InputLatState st = { .tick = 0, .pressed_seen_tick = -1 };
 
-    // Queue a left-button press BEFORE the first tick's event pump: a tail-of-tick snapshot would defer it to tick 2.
+    // Queue a left-button press before the first tick's event pump. A snapshot taken at the end of the tick would
+    // defer it to tick 2.
     fl_app_inject_mouse_button(app, FlMouseButton_Left, true);
 
     fl_app_tick(app, &st, input_lat_frame); // tick 1
-    fl_app_tick(app, &st, input_lat_frame); // tick 2 (so a deferred edge is still observed, just late)
+    fl_app_tick(app, &st, input_lat_frame); // tick 2, where a deferred edge would show up
 
     ASSERT_EQ_MSG(st.pressed_seen_tick, 1,
                   "press pumped before tick 1 must reach tick-1 frame(); a value of 2 means the edge snapshot "
@@ -297,10 +294,10 @@ UTEST(app, input_edge_latency) {
     fl_app_destroy(app);
 }
 
-// A tab strip commits the new selection on mouse-DOWN, without waiting for the release.
+// A tab strip commits the new selection on mouse down, without waiting for the release.
 typedef struct TabPressState {
     int tab;
-    FlUiCtx* ctx; // captured during the tick so we can read laid-out tab geometry afterwards
+    FlUiCtx* ctx; // captured during the tick so the laid-out tab geometry can be read afterwards
 } TabPressState;
 
 static void tab_press_frame(void* user_data) {
@@ -322,8 +319,8 @@ UTEST(app, tab_bar_activates_on_press) {
 
     TabPressState st = { .tab = 0, .ctx = nullptr };
 
-    // The tab id mirrors ui_tab_bar_impl: instance id = (u32)(uintptr_t)selected_index, folded with the tab index
-    // via ui_item_id_seed.
+    // The tab id is built as in ui_tab_bar_impl: instance id = (u32)(uintptr_t)selected_index, folded with the tab
+    // index by ui_item_id_seed.
     fl_app_tick(app, &st, tab_press_frame);
     ASSERT_TRUE_MSG(st.ctx != nullptr, "frame did not run / no UI context");
 
@@ -334,13 +331,13 @@ UTEST(app, tab_bar_activates_on_press) {
     i32 cx = (i32)(tab1->state.pos.x + tab1->state.size.x * 0.5f);
     i32 cy = (i32)(tab1->state.pos.y + tab1->state.size.y * 0.5f);
 
-    // Hover the second tab for a couple of frames so hot state propagates (next_hot_id -> hot_id -> state.hot).
+    // Hover the second tab for two frames so the hot state propagates (next_hot_id -> hot_id -> state.hot).
     fl_app_inject_mouse_move(app, cx, cy);
     fl_app_tick(app, &st, tab_press_frame);
     fl_app_tick(app, &st, tab_press_frame);
     ASSERT_EQ_MSG(st.tab, 0, "hovering a tab must not change the selection");
 
-    // Press and DO NOT release.
+    // Press without releasing.
     fl_app_inject_mouse_button(app, FlMouseButton_Left, true);
     fl_app_tick(app, &st, tab_press_frame);
     ASSERT_EQ_MSG(st.tab, 1, "tab bar must select on press (mouse-down), without waiting for release");
@@ -348,13 +345,13 @@ UTEST(app, tab_bar_activates_on_press) {
     fl_app_destroy(app);
 }
 
-// fl_app owns the UI-scale policy the core does not: it pushes monitor content scale x ui_zoom to ui_set_scale on
-// init, on resize, and whenever the zoom changes. The headless display backend reports a content scale of 1.0, so
-// the composed scale is exactly the ui_zoom.
+// fl_app owns the UI-scale policy: it passes monitor content scale x ui_zoom to ui_set_scale on init, on resize
+// and whenever the zoom changes. The headless display backend reports a content scale of 1.0, so the composed
+// scale equals the ui_zoom.
 
-// A single full-window GROW root painted a solid color so it emits one rectangle covering the whole layout area.
-// Plain non-interactive layout areas are not tracked in item_state, so the laid-out size is read from the
-// render-command snapshot instead; the rect width is physical pixels, so its logical width is width / ui_scale.
+// A full-window grow root painted a solid color, so it emits one rectangle covering the whole layout area. Plain
+// non-interactive layout areas are not tracked in item_state, so the laid-out size is read from the
+// render-command snapshot. The rect width is in physical pixels, so its logical width is width / ui_scale.
 static const FlColor SCALE_ROOT_COLOR = { 30, 90, 160, 255 };
 
 static void scale_root_frame(void* user_data) {
@@ -362,7 +359,7 @@ static void scale_root_frame(void* user_data) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }, .color = SCALE_ROOT_COLOR) {}
 }
 
-// Width (physical px) of the widest rectangle in the current render-command snapshot, or -1 if none.
+// Width in physical px of the widest rectangle in the current render-command snapshot, or -1 if there is none.
 static f32 scale_root_rect_width(void) {
     f32 widest = -1.0f;
     const int n = ui_get_render_command_count();
@@ -378,8 +375,8 @@ static f32 scale_root_rect_width(void) {
     return widest;
 }
 
-// The default is DPI-correct (content 1.0 x zoom 1.0 = 1.0), and fl_app_set_ui_zoom recomposes the absolute scale
-// immediately and uniformly (ui_scale == text_scale == zoom), surviving subsequent ticks.
+// The default scale is 1.0 (content 1.0 x zoom 1.0). fl_app_set_ui_zoom recomposes the absolute scale at once,
+// sets ui_scale and text_scale to the same value, and the result holds across later ticks.
 UTEST(app, ui_zoom_recomposes_scale) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -395,7 +392,7 @@ UTEST(app, ui_zoom_recomposes_scale) {
     ASSERT_TRUE_MSG(ui_get_scale() == 1.5f, "fl_app_set_ui_zoom recomposes the UI scale at once");
     ASSERT_TRUE_MSG(ui_get_text_scale() == 1.5f, "zoom enlarges the UI uniformly (text scale tracks ui scale)");
 
-    // The per-tick recompose dedups on the unchanged product.
+    // The per-tick recompose does nothing when the product is unchanged.
     fl_app_tick(app, nullptr, scale_root_frame);
     ASSERT_TRUE_MSG(ui_get_scale() == 1.5f, "a steady tick keeps the composed scale");
 
@@ -407,8 +404,8 @@ UTEST(app, ui_zoom_recomposes_scale) {
     fl_app_destroy(app);
 }
 
-// At a fixed DPI a bigger window yields proportionally more logical layout area; raising the zoom on the same
-// window enlarges the UI uniformly without changing the logical content count.
+// At a fixed DPI a bigger window gives proportionally more logical layout area. Raising the zoom on the same
+// window enlarges the UI uniformly and shrinks the logical area by the same factor.
 UTEST(app, window_size_drives_logical_area) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -432,8 +429,8 @@ UTEST(app, window_size_drives_logical_area) {
     ASSERT_NEAR_MSG((double)logical_big, 2.0 * (double)logical_small, 2.0,
                     "a bigger window at fixed DPI yields proportionally more logical layout area");
 
-    // Zoom x2 stands in for a 2x-DPI display of the same window: the physical rect is unchanged because the window
-    // did not change, while the logical content count drops back to the small window's.
+    // Zoom x2 stands in for a 2x-DPI display of the same window. The physical rect is unchanged because the window
+    // did not change, and the logical width drops back to the small window's.
     fl_app_set_ui_zoom(app_big, 2.0f);
     fl_app_tick(app_big, nullptr, scale_root_frame);
     float physical_zoom = scale_root_rect_width();
@@ -446,8 +443,8 @@ UTEST(app, window_size_drives_logical_area) {
     fl_app_destroy(app_big);
 }
 
-// Multi-window. The headless window backend gives each window its own injected-event queue, so these drive the
-// app-level contract end-to-end.
+// Multi-window. The headless window backend gives each window its own injected-event queue, so these cases go
+// through the public fl_app calls.
 
 typedef struct WinFrameCount {
     int frames;
@@ -456,7 +453,7 @@ typedef struct WinFrameCount {
 static void win_frame_count(void* user_data) {
     WinFrameCount* c = (WinFrameCount*)user_data;
     c->frames++;
-    // Minimal layout so ui_update_end has a tree to walk.
+    // ui_update_end needs a tree to walk.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {}
 }
 
@@ -478,8 +475,8 @@ UTEST(app, multi_window_open_demux_close) {
     FlAppWindow* second = fl_app_window_open(app, &ws, win_frame_count, &sec_c);
     ASSERT_TRUE_MSG(second != nullptr, "fl_app_window_open failed");
 
-    // One tick runs BOTH windows' frame callbacks: the main window's is the one passed to fl_app_tick, the
-    // second's is the callback it was opened with - each against its own user data.
+    // One tick runs both windows' frame callbacks, each with its own user data: the main window's is the one
+    // passed to fl_app_tick, the second's is the one it was opened with.
     ASSERT_TRUE_MSG(fl_app_tick(app, &main_c, win_frame_count), "tick with two windows keeps running");
     ASSERT_EQ_MSG(main_c.frames, 1, "main window's frame ran this tick");
     ASSERT_EQ_MSG(sec_c.frames, 1, "second window's frame ran this tick (its own callback + user data)");
@@ -516,14 +513,14 @@ UTEST(app, multi_window_explicit_close) {
     ASSERT_TRUE_MSG(fl_app_tick(app, &main_c, win_frame_count), "first tick keeps running");
     ASSERT_EQ_MSG(sec_c.frames, 1, "second window ran before the explicit close");
 
-    // fl_app_window_close requests close; the window is torn down at the start of the next tick (the same deferred
-    // path a window-manager close takes), so the app keeps running and only the main window renders afterward.
+    // fl_app_window_close requests the close. The window is torn down at the start of the next tick, as for a
+    // window-manager close, so the app keeps running and only the main window renders afterward.
     fl_app_window_close(app, second);
     ASSERT_TRUE_MSG(fl_app_tick(app, &main_c, win_frame_count), "explicit close of a non-main window keeps running");
     ASSERT_EQ_MSG(main_c.frames, 2, "main window keeps ticking after fl_app_window_close");
     ASSERT_EQ_MSG(sec_c.frames, 1, "explicitly closed window's frame no longer runs");
 
-    // Quit is the main window's close through fl_app_tick, so this request is a no-op.
+    // The main window closes only through fl_app_tick's quit path, so this request is a no-op.
     fl_app_window_close(app, fl_app_main_window(app));
     ASSERT_TRUE_MSG(fl_app_tick(app, &main_c, win_frame_count), "fl_app_window_close on the main window is a no-op");
     ASSERT_EQ_MSG(main_c.frames, 3, "main window still ticking after a no-op close request");
@@ -532,7 +529,7 @@ UTEST(app, multi_window_explicit_close) {
 }
 
 // Shared item state is retired once per app tick, after every window has refreshed its own records, so one
-// window's cleanup never drops another live window's items.
+// window's cleanup does not drop another live window's items.
 
 typedef struct ItemRetireProbe {
     bool emit_extra; // main window also emits the item that later disappears
@@ -604,7 +601,7 @@ UTEST(app, multi_window_item_state_survives_cross_window_cleanup) {
 
     ASSERT_TRUE_MSG(item_retire_lookup(main_p.ctx, ID("retire_item_extra")) != nullptr, "extra item should be live");
 
-    // The extra item stops being emitted: it is retired after the complete tick, the live ones are kept.
+    // The extra item is no longer emitted. It is retired after the complete tick and the live ones are kept.
     main_p.emit_extra = false;
     fl_app_tick(app, &main_p, item_retire_frame_main);
     ASSERT_TRUE_MSG(item_retire_lookup(main_p.ctx, ID("retire_item_extra")) == nullptr,
@@ -645,11 +642,11 @@ UTEST(app, standalone_frame_prunes_disappeared_items) {
 }
 
 #ifndef NDEBUG
-// The debug duplicate-id tracker is app-global: it accumulates every window's ids across one app tick rather than
-// being wiped per-window. A true cross-window collision trips a fatal assert and so cannot be asserted in-process;
-// distinct-id accumulation across windows is the observable proxy.
+// The debug duplicate-id tracker is app-global and accumulates every window's ids across one app tick. A real
+// cross-window collision is a fatal assert and cannot be tested in-process, so the case checks that distinct ids
+// from both windows accumulate.
 typedef struct DupIdProbe {
-    FlUiCtx* ctx; // captured during the frame so the test reads THIS app's shared tier unambiguously
+    FlUiCtx* ctx; // captured during the frame so the test reads this app's shared state
 } DupIdProbe;
 
 static void dup_id_frame_a(void* user_data) {
@@ -680,7 +677,8 @@ UTEST(app, multi_window_dup_id_tracker_is_app_global) {
     FlAppWindow* second = fl_app_window_open(app, &ws, dup_id_frame_b, &sec_p);
     ASSERT_TRUE_MSG(second != nullptr, "fl_app_window_open failed");
 
-    // One tick runs both windows. The tracker is cleared once at the tick boundary, then both windows emit into it.
+    // One tick runs both windows. The tracker is cleared once at the tick boundary, then both windows emit into
+    // it.
     ASSERT_TRUE_MSG(fl_app_tick(app, &main_p, dup_id_frame_a), "tick with two windows keeps running");
     ASSERT_TRUE_MSG(main_p.ctx != nullptr && sec_p.ctx != nullptr, "both window frames ran and captured a context");
 
@@ -705,11 +703,11 @@ UTEST(app, multi_window_dup_id_tracker_is_app_global) {
 }
 #endif
 
-// Multi-window lifecycle hardening. Mid-frame open is queued and applied at the next tick boundary (never
-// mid-emit), and an optional on_close hook can veto a close (default policy: main close quits).
+// An open requested mid-frame is queued and applied at the next tick boundary. An optional on_close hook can veto
+// a close. With no hook, closing the main window quits.
 
-// Opens a second window from INSIDE its own emit. The open must be queued, not executed mid-frame, which would
-// mutate the window list and swap the current context out from under this very emit.
+// Opens a second window from inside its own emit. Running the open mid-frame would change the window list and
+// swap the current context during this emit, so it is queued.
 typedef struct MidFrameOpen {
     FlApp* app;
     FlAppFrameFn sec_frame;
@@ -744,7 +742,7 @@ UTEST(app, multi_window_mid_frame_open_deferred) {
     WinFrameCount sec_c = { 0 };
     MidFrameOpen st = { .app = app, .sec_frame = win_frame_count, .sec_user_data = &sec_c };
 
-    // Tick 1: the main frame opens a window mid-emit. The handle is returned immediately, but the window is QUEUED.
+    // Tick 1: the main frame opens a window mid-emit. The handle is returned at once, but the window is queued.
     ASSERT_TRUE_MSG(fl_app_tick(app, &st, mid_frame_open_main), "tick with a mid-frame open keeps running");
     ASSERT_TRUE_MSG(st.opened != nullptr, "fl_app_window_open returns a live handle immediately, even when queued");
     ASSERT_EQ_MSG(st.main_frames, 1, "main window emitted once");
@@ -754,7 +752,7 @@ UTEST(app, multi_window_mid_frame_open_deferred) {
     ASSERT_EQ_MSG(sec_c.frames, 1, "the queued window is live the next tick (materialized at the boundary)");
     ASSERT_EQ_MSG(st.main_frames, 2, "main window keeps emitting");
 
-    // The materialized window closes like any other (proves it really joined the live list).
+    // The materialized window closes like any other, so it is in the live list.
     fl_app_inject_window_close_for(app, st.opened);
     ASSERT_TRUE_MSG(fl_app_tick(app, &st, mid_frame_open_main), "closing the detached window leaves the app running");
     ASSERT_EQ_MSG(sec_c.frames, 1, "the closed detached window no longer runs");
@@ -776,10 +774,10 @@ UTEST(app, multi_window_mid_frame_open_cancelled) {
     ASSERT_TRUE_MSG(st.opened != nullptr, "queued open returns a handle");
     ASSERT_EQ_MSG(sec_c.frames, 0, "queued window has not run yet");
 
-    // Close the still-pending handle BEFORE the next tick materializes it: the queued open is cancelled.
+    // Closing the still-pending handle before the next tick materializes it cancels the queued open.
     fl_app_window_close(app, st.opened);
 
-    // The main frame won't re-open - st.requested is latched.
+    // st.requested is latched, so the main frame does not open another window.
     ASSERT_TRUE_MSG(fl_app_tick(app, &st, mid_frame_open_main), "second tick keeps running after the cancel");
     ASSERT_EQ_MSG(sec_c.frames, 0, "a queued open cancelled before materialization never comes up");
     ASSERT_EQ_MSG(st.main_frames, 2, "main window keeps emitting");
@@ -787,18 +785,18 @@ UTEST(app, multi_window_mid_frame_open_cancelled) {
     fl_app_destroy(app);
 }
 
-// Multi-window per-window correctness: per-window DPI/scale composition, per-window keyboard focus restored on
-// activation, and a hidden drag that keeps its OS mouse-grab when the cursor leaves its window.
+// Per-window DPI and scale composition, per-window keyboard focus restored on activation, and a hidden drag that
+// keeps its OS mouse grab when the cursor leaves its window.
 
-// Two windows on different-DPI monitors each compose THEIR OWN absolute UI scale = own content scale x the app-wide
-// ui_zoom. Each frame callback runs with its window current, so ui_get_scale() reads that window's scale.
+// Two windows on monitors with different DPI each compose their own absolute UI scale: own content scale x the
+// app-wide ui_zoom. Each frame callback runs with its window current, so ui_get_scale() reads that window's scale.
 typedef struct WinScaleProbe {
     float scale;
 } WinScaleProbe;
 
 static void win_scale_probe_frame(void* user_data) {
     WinScaleProbe* p = (WinScaleProbe*)user_data;
-    p->scale = ui_get_scale(); // current context == this window during its tick slice
+    p->scale = ui_get_scale(); // this window is the current context during its frame callback
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {}
 }
 
@@ -821,7 +819,7 @@ UTEST(app, multi_window_per_window_scale) {
     ASSERT_TRUE_MSG(second != nullptr, "fl_app_window_open failed");
     FlAppWindow* main_win = fl_app_main_window(app);
 
-    // Distinct per-window content scales (the offscreen stand-in for two different-DPI monitors).
+    // Different content scales stand in for two monitors with different DPI.
     fl_app_set_window_content_scale_for(app, main_win, 1.0f);
     fl_app_set_window_content_scale_for(app, second, 2.0f);
 
@@ -829,7 +827,7 @@ UTEST(app, multi_window_per_window_scale) {
     ASSERT_TRUE_MSG(main_p.scale == 1.0f, "main composes its own content scale (1.0) x zoom (1.0)");
     ASSERT_TRUE_MSG(sec_p.scale == 2.0f, "second composes its OWN content scale (2.0), not the main window's");
 
-    // The app-wide UI-zoom multiplies each window's own content scale (composition is per-window).
+    // The app-wide UI zoom multiplies each window's own content scale.
     fl_app_set_ui_zoom(app, 1.5f);
     fl_app_tick(app, &main_p, win_scale_probe_frame);
     ASSERT_TRUE_MSG(main_p.scale == 1.5f, "main: content 1.0 x zoom 1.5 = 1.5");
@@ -838,9 +836,9 @@ UTEST(app, multi_window_per_window_scale) {
     fl_app_destroy(app);
 }
 
-// Keyboard focus is per-window (each window's FlUiCtx holds its own focused_id) and restored on activation:
-// deactivating a window clears its focus ring; reactivating it restores the exact field it had. The probe snapshots
-// focused_id at the top of the frame, i.e. after ui_input_update has applied that tick's activation edge.
+// Keyboard focus is per window: each window's FlUiCtx holds its own focused_id. Deactivating a window clears its
+// focus ring, and reactivating it restores the field it had. The probe reads focused_id at the top of the frame,
+// after ui_input_update has applied that tick's activation edge.
 typedef struct FocusProbe {
     bool set_once;  // request focus on the next frame
     u32 focused_id; // focused_id snapshot at frame start
@@ -892,7 +890,7 @@ UTEST(app, multi_window_focus_restore) {
     const u32 main_id = ui_layout_id_to_clay_id(ID("focus_item_main"));
     const u32 sec_id = ui_layout_id_to_clay_id(ID("focus_item_sec"));
 
-    // Tick 1 sets focus in each window; tick 2 observes it persisted, per-window and distinct.
+    // Tick 1 sets focus in each window. Tick 2 sees that each window kept its own.
     fl_app_tick(app, &main_p, focus_frame_main);
     fl_app_tick(app, &main_p, focus_frame_main);
     ASSERT_EQ_MSG(main_p.focused_id, main_id, "main window holds its own focused widget");
@@ -915,10 +913,9 @@ UTEST(app, multi_window_focus_restore) {
     fl_app_destroy(app);
 }
 
-// A hidden drag started in one window holds the OS mouse-grab (relative mode) for its whole duration even though
-// the other window ticks afterwards with no drag of its own: the grab is app-global state owned by the dragging
-// window, never clobbered by the last window ticked. On drag end the cursor warps back to the press point in the
-// owning window.
+// A hidden drag started in one window holds the OS mouse grab (relative mode) for its whole duration, even though
+// the other window ticks afterwards with no drag of its own. The grab is app-global state owned by the dragging
+// window. When the drag ends the cursor warps back to the press point in the owning window.
 typedef struct DragProbe {
     bool begin_once;   // begin a hidden drag on the next frame
     bool end_once;     // end the hidden drag on the next frame
@@ -968,19 +965,19 @@ UTEST(app, multi_window_hidden_drag_capture) {
     FlAppWindow* second = fl_app_window_open(app, &ws, drag_frame_sec, &sec_p);
     ASSERT_TRUE_MSG(second != nullptr, "fl_app_window_open failed");
 
-    // Place the cursor at a known point so the drag's press point (and thus the warp-back target) is deterministic
-    // and non-zero - distinguishing "warped back" from the (0,0) initial readback.
+    // Put the cursor at a known non-zero point, so the warp back to the drag's press point can be told from the
+    // initial (0,0) readback.
     fl_app_inject_mouse_move(app, 50, 60);
 
-    // The main window begins a hidden drag; the second window ticks AFTER it with no drag of its own.
+    // The main window begins a hidden drag. The second window ticks after it with no drag of its own.
     fl_app_tick(app, &main_p, drag_frame_main);
     ASSERT_TRUE_MSG(main_p.relative_now, "the dragging window is in relative mode");
     ASSERT_FALSE_MSG(sec_p.relative_now, "the non-dragging window is not in relative mode");
     ASSERT_TRUE_MSG(fl_app_headless_relative_mouse_mode(app),
                     "the OS mouse-grab survives the non-dragging window's tick (not clobbered to false)");
 
-    // A raw delta injected into the main window is read by its drag, scaled, so the grab keeps feeding deltas to
-    // the originating window.
+    // A raw delta injected into the main window reaches its drag, scaled, so the grab still feeds deltas to the
+    // window that started it.
     fl_app_inject_mouse_delta(app, 5.0f, 0.0f);
     fl_app_tick(app, &main_p, drag_frame_main);
     ASSERT_NEAR_MSG((double)main_p.accum_x, 10.0, 0.001, "the dragging window reads the scaled delta (5 x 2.0)");
@@ -995,18 +992,18 @@ UTEST(app, multi_window_hidden_drag_capture) {
     fl_app_destroy(app);
 }
 
-// on_close hooks: one always vetoes (close blocked), one always approves. The call counter proves the hook is
-// actually consulted on each close path.
+// on_close hooks: one always vetoes, one always approves. The call counter shows the hook was consulted on each
+// close path.
 static bool on_close_veto(void* user_data) {
     int* calls = (int*)user_data;
     (*calls)++;
-    return false; // veto every close
+    return false;
 }
 
 static bool on_close_allow(void* user_data) {
     int* calls = (int*)user_data;
     (*calls)++;
-    return true; // approve every close
+    return true;
 }
 
 UTEST(app, on_close_veto_keeps_secondary) {
@@ -1037,7 +1034,7 @@ UTEST(app, on_close_veto_keeps_secondary) {
     ASSERT_EQ_MSG(veto_calls, 1, "on_close consulted on the close");
     ASSERT_EQ_MSG(sec_c.frames, 2, "vetoed window still ticked this frame (the close was blocked)");
 
-    // The veto cleared the sticky flag, so a fresh close re-consults the hook.
+    // The veto cleared the sticky flag, so a new close consults the hook again.
     fl_app_inject_window_close_for(app, second);
     ASSERT_TRUE_MSG(fl_app_tick(app, &main_c, win_frame_count), "second vetoed close still keeps running");
     ASSERT_EQ_MSG(veto_calls, 2, "on_close consulted again on the next close");
@@ -1102,7 +1099,7 @@ UTEST(app, on_close_clear_restores_default_policy) {
     ASSERT_EQ_MSG(calls, 1, "hook consulted while installed");
     ASSERT_EQ_MSG(sec_c.frames, 2, "vetoed window still alive");
 
-    // Clearing the hook (null) restores the default policy.
+    // Clearing the hook restores the default policy.
     fl_app_window_set_on_close(app, second, nullptr, nullptr);
     fl_app_inject_window_close_for(app, second);
     ASSERT_TRUE_MSG(fl_app_tick(app, &main_c, win_frame_count), "default-policy close of a secondary keeps running");
@@ -1112,8 +1109,8 @@ UTEST(app, on_close_clear_restores_default_policy) {
     fl_app_destroy(app);
 }
 
-// direct_ui_calls - the flowi UI surface is a set of plain exported `fl_*` functions; plugins link the
-// shared library and call them directly rather than through a composed service vtable.
+// The flowi UI surface is a set of plain exported `fl_*` functions. Plugins link the shared library and call them
+// directly.
 
 int external_c_variadic_abi_probe(void);
 
@@ -1136,7 +1133,7 @@ UTEST(shared_abi, external_c_and_cpp_consumers_link_and_call_public_symbols) {
 UTEST(shared_abi, headless_app_renders_through_public_shared_library) {
     // The frame-arena formatter reads the UI context of whichever flowi instance is running the frame, and
     // unit_tests keeps its statically linked internals out of .dynsym so the loaded library binds to its own. The
-    // probes therefore run inside the shared library's frame rather than around a frame begun in the executable.
+    // probes therefore run inside the shared library's frame, not around a frame begun in the executable.
     static int (*const in_frame_probes[])(void)
         = { external_c_frame_format_abi_probe, external_cpp_frame_format_abi_probe };
     ASSERT_TRUE_MSG(
@@ -1159,7 +1156,7 @@ UTEST(shared_abi, shared_library_exports_every_name_in_the_export_list) {
 
 #if BACKEND_USE_SDL
 
-// sdl_input.* - SDL event translation driven through the real pump with a virtual controller and synthetic events.
+// SDL event translation, driven through the real pump with a virtual controller and synthetic events.
 
 static int sdl_input_connected_count(const FlUiCtx* ctx) {
     int count = 0;
@@ -1190,7 +1187,7 @@ UTEST(sdl_input, startup_gamepad_reports_connected_once) {
     sdl_input_common_pump_multi(&input, window_ids, contexts, 1);
     EXPECT_EQ(sdl_input_connected_count(ctx), 1);
 
-    // SDL's own queued ADDED for the same controller must not report it a second time.
+    // SDL's own queued ADDED event for the same controller does not report it a second time.
     for (int i = 0; i < UI_INPUT_MAX_GAMEPADS; i++) {
         ctx->input_state.gamepads[i].connected = false;
     }

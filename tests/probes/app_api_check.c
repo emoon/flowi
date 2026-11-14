@@ -1,15 +1,11 @@
-// Compile-only parity guard: the api_gen-generated public app surface (<flowi/app/app.h>). Nothing is linked;
-// every prototype must parse and match its expected signature here.
-//
-// The mouse button crosses as int32_t - the public spelling of the FlMouseButton discriminant, a private
-// platform enum (src/platform/input_types.h). int32_t is ABI-identical (the enum is int-sized) and
-// matches the raw sys binding's c_int.
+// Compile-only parity guard: the api_gen-generated public app surface (<flowi/app/app.h>). Every prototype must
+// parse and match its expected signature here.
 
 #include <stdbool.h>
 #include <stdint.h>
 
-// FlString is a base type api_gen does not author - the generated headers name it without including it, so it
-// must be defined before them.
+// FlString is a base type api_gen does not author. The generated headers name it without including it, so it must
+// be defined before them.
 #include <core/string.h>
 #include <flowi/app/app.h>
 

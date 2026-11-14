@@ -16,10 +16,8 @@
 #include "ui_text_input.h"
 #include <string.h>
 
-// Key Grid Definitions
-//
-// QWERTY layout with 4 pages: lowercase, uppercase, numbers, symbols
-// Each grid is row-major (rows x cols), with VK_KEY_EMPTY for gaps
+// Key grids: a QWERTY layout with 4 pages (lowercase, uppercase, numbers, symbols). Each grid is row-major
+// (rows x cols), with VK_KEY_EMPTY for gaps.
 
 static const char s_keys_lowercase[][13] = {
     { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', VK_KEY_EMPTY },
@@ -220,15 +218,13 @@ static void vk_handle_key_press(VirtualKeyboard* self, char key) {
     }
 }
 
-// Input handling
-
 static void vk_handle_input(VirtualKeyboard* self, FlUiCtx* ctx) {
     FlInputState* input = &ctx->input_state;
     VkGridRow* grid = get_key_grid(self->current_page);
 
     bool navigation_happened = false;
 
-    // Check navigation BEFORE increment/decrement since they share keys.
+    // Check navigation before increment/decrement since they share keys.
     if (ui_action_pressed(ctx, FlAction_Nav_Left)) {
         find_next_valid_key(&self->cursor_x, &self->cursor_y, -1, 0, grid);
         navigation_happened = true;
@@ -270,8 +266,8 @@ static void vk_handle_input(VirtualKeyboard* self, FlUiCtx* ctx) {
         return;
     }
 
-    // Page switching - use increment/decrement actions (shoulder buttons)
-    // Only process if no navigation happened (to prevent arrow keys from changing pages)
+    // Page switching on the increment/decrement actions (shoulder buttons), skipped when navigation happened so
+    // the arrow keys do not change pages.
     if (!navigation_happened) {
         // Decrement = LB/L1 (previous page)
         if (ui_action_pressed(ctx, FlAction_Decrement)) {
@@ -296,8 +292,6 @@ static void vk_handle_input(VirtualKeyboard* self, FlUiCtx* ctx) {
         }
     }
 }
-
-// Rendering
 
 static void vk_render(VirtualKeyboard* self, FlUiCtx* ctx) {
     const struct FlThemeColors* theme = ui_get_theme_colors(ctx);
@@ -391,8 +385,6 @@ static void vk_render(VirtualKeyboard* self, FlUiCtx* ctx) {
     }
 }
 
-// Non-blocking API - Create virtual keyboard
-
 VirtualKeyboard* ui_virtual_keyboard_create(FlArena* arena, VirtualKeyboardConfig config) {
     VirtualKeyboard* vk = arena_alloc_zero(arena, VirtualKeyboard);
     vk->config = config;
@@ -434,8 +426,6 @@ VirtualKeyboard* ui_virtual_keyboard_create(FlArena* arena, VirtualKeyboardConfi
     return vk;
 }
 
-// Non-blocking API - Update virtual keyboard state
-
 void ui_virtual_keyboard_update(VirtualKeyboard* self, FlUiCtx* ctx) {
     if (!self || !self->active) {
         return;
@@ -443,8 +433,6 @@ void ui_virtual_keyboard_update(VirtualKeyboard* self, FlUiCtx* ctx) {
 
     vk_handle_input(self, ctx);
 }
-
-// Non-blocking API - Render virtual keyboard
 
 void ui_virtual_keyboard_render(VirtualKeyboard* self, FlUiCtx* ctx) {
     if (!self || !self->active) {

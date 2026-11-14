@@ -1,16 +1,16 @@
-// Standalone compile guard for the hand-written public nav/action query surface (<flowi/ui/nav.h>).
+// Compile guard for the hand-written public nav/action query surface (<flowi/ui/nav.h>).
 //
-// No .def single-sources this surface: the C header and the Rust binding (rust/flowi/src/sys/nav.rs) are both
-// hand-written, so FlNavFrame is hand-packed twice and the two spellings can silently diverge. This TU links
-// nothing; it proves at compile time that nav.h is self-contained valid C given only FlString, that every fl_*
-// prototype keeps its exact signature, and that FlNavFrame keeps the size, alignment and field offsets the
-// const _ block in rust/flowi/src/sys/nav.rs duplicates verbatim.
+// No .def generates this surface. The C header and the Rust binding (rust/flowi/src/sys/nav.rs) are both
+// hand-written, so FlNavFrame is packed by hand twice and the two can diverge. This file proves at compile time
+// that nav.h is self-contained valid C given only FlString, that every fl_* prototype keeps its exact signature,
+// and that FlNavFrame keeps the size, alignment and field offsets that the const _ block in
+// rust/flowi/src/sys/nav.rs repeats.
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-// FlString - includer-provided base type api_gen does not author.
+// FlString is an includer-provided base type that api_gen does not author.
 #include <core/string.h>
 
 #include <flowi/ui/nav.h>

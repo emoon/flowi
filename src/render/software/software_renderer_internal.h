@@ -126,8 +126,6 @@ typedef struct RenderData {
 #endif
 } RenderData;
 
-/// Render functions
-
 void sr_render_fill(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* info);
 void sr_render_border(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* info);
 void sr_render_image_nearest(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* info);

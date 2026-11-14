@@ -4,8 +4,6 @@
 #include "ui_private.h"
 #include "ui_tokens.h"
 
-// Defaults
-
 // Seconds the pointer must dwell over the anchor before the tooltip shows.
 #define UI_TOOLTIP_DEFAULT_DELAY 0.5f
 // Floating offset below the anchor's bottom-left.

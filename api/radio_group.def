@@ -1,4 +1,4 @@
-/// Radio group widget - exclusive single-choice selection across a set of options.
+/// Radio group widget: exclusive single-choice selection across a set of options.
 #[frame_context]
 api RadioGroup {
     /// Emit a radio group over options; selecting one writes its index to `*selected_index`, clearing the

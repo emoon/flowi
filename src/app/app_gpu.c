@@ -1,9 +1,9 @@
 #include "app/app_gpu.h"
 
 // GPU Surface Binding for fl_app. Compiled to nothing unless FL_APP_HAVE_GPU (OpenGL_EGL_FOUND). Holds the
-// headless EGL-surfaceless context plus two thin host helpers - backend construction against an already-current
-// context, and the surface-texture resolve - so app.c stays free of EGL/GL types. The windowed SDL-GL window +
-// context + compositor + present live in the SDL WindowBackend (src/platform/backend_sdl_window.c).
+// headless EGL-surfaceless context plus two host helpers (backend construction against an already-current
+// context, and the surface-texture resolve) so app.c stays free of EGL/GL types. The windowed SDL-GL window +
+// context + compositor + present live in the SDL WindowBackend (src/platform/sdl/backend_sdl_window.c).
 
 #if FL_APP_HAVE_GPU
 
@@ -13,9 +13,9 @@
 
 #ifdef __APPLE__
 
-// macOS: the GPU backend is Metal. Its surface binding is a bare MTLDevice - no window and no GL context -
+// macOS: the GPU backend is Metal. Its surface binding is a bare MTLDevice (no window and no GL context)
 // owned inside the render backend itself (gpu_metal.m), so the headless bootstrap has nothing of its own to
-// hold and just constructs the backend.
+// hold and only constructs the backend.
 
 // No context to own on Metal. A one-field placeholder so the headless caller's success check (a non-null
 // handle) works uniformly across both platforms.
@@ -44,7 +44,7 @@ bool fl_app_gpu_create_backend(struct FlArena* arena, FlRenderBackend* out_backe
 
 bool fl_app_gpu_surface_texture(FlSurface* surface, void** handle, u32* width, u32* height) {
     // Metal's surface texture is an opaque id<MTLTexture> carried as a void*: the render backend owns the
-    // retain, the compositor only samples it. The headless path never calls this (its readback IS the surface).
+    // retain, the compositor only samples it. The headless path never calls this (its readback is the surface).
     GpuSurfaceTexture surf = gpu_renderer_surface_texture(surface);
     if (handle) {
         *handle = surf.handle;
@@ -76,7 +76,7 @@ struct FlAppGpu {
     EGLContext egl_ctx;
 };
 
-// EGL surfaceless GL 4.3 core context - no window, no native display (CI's llvmpipe). Returns false (leaving
+// EGL surfaceless GL 4.3 core context with no window and no native display (CI's llvmpipe). Returns false (leaving
 // *dpy/*ctx at EGL_NO_*) on any failure.
 static bool create_surfaceless_gl43(EGLDisplay* out_dpy, EGLContext* out_ctx) {
     *out_dpy = EGL_NO_DISPLAY;

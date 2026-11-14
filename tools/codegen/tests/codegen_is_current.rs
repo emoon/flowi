@@ -1,8 +1,7 @@
 //! The committed codegen must match what api_gen produces from the current `api/*.def`.
 //!
-//! Replaces the CI step that ran the generator and asserted `git diff --exit-code`: this
-//! regenerates into a temp dir and compares, so the check never mutates the working tree
-//! and reports which file drifted rather than dumping a diff.
+//! The test regenerates into a temp dir and compares, so it never changes the working tree,
+//! and it reports which files drifted.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

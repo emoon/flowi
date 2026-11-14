@@ -5,7 +5,6 @@ bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
     pub struct FileChangeType: u32 {
-        /// No change.
         const NONE = 0;
         /// File or directory was created.
         const CREATED = 1;
@@ -78,9 +77,9 @@ const _: () = {
 /// Valid until that arena is reset.
 #[repr(C)]
 pub struct FileChanges {
-    /// The changes (nullptr when count is 0).
+    /// The changes (null when count is 0).
     pub changes: *const crate::sys::FileChange,
-    /// Number of changes in changes.
+    /// Number of entries in changes.
     pub count: u32,
     /// True when the watcher dropped changes because its buffer filled between polls.
     pub has_overflow: bool,
@@ -97,7 +96,7 @@ const _: () = {
 // Platform-independent file system monitoring for a host that reloads content when it changes on disk.
 //
 // Start a watcher on a directory, poll has_changes each frame, and take the pending batch into a
-// scratch arena when there is something to look at. Taking a batch clears it - each change is reported
+// scratch arena when there is something to look at. Taking a batch clears it, so each change is reported
 // once.
 extern "C" {
     /// Start watching path. Returns a watcher handle, or 0 when the path cannot be watched or

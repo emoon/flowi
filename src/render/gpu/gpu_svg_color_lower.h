@@ -32,7 +32,7 @@ _Static_assert(sizeof(GpuColorShape) == 16, "GpuColorShape is the std430 uvec4 w
 // (-GPU_SVG_ATLAS_PAD, content_h + GPU_SVG_ATLAS_PAD), so the y-up document space lands y-down in the padded cell.
 // out_floats must hold the worst case (sum of shape segment_count) * GPU_GLYPH_LOWER_MAX_QUADS_PER_SEGMENT * 6
 // floats; out_shapes must hold vector->shape_count records. scratch backs the per-shape scaled-segment copies.
-// Shapes stay in document order. Frame global_alpha is NOT folded into the baked color - the atlas cell persists
+// Shapes stay in document order. Frame global_alpha is not folded into the baked color: the atlas cell persists
 // across frames, so global_alpha rides the per-frame white draw tint.
 u32 gpu_svg_color_lower(struct FlArena* scratch, const struct FlVectorImage* vector, f32 scale, f32 content_h,
                         f32* out_floats, GpuColorShape* out_shapes, u32* out_shape_count);

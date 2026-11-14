@@ -35,7 +35,7 @@ impl generated::localization::Localization {
 /// One argument for an indexed placeholder. 'a is the borrow a string argument takes out on the
 /// caller's bytes; the call the argument is handed to reads them and never keeps them.
 ///
-/// Build one with From - FmtArg::from(3), FmtArg::from(1.5), FmtArg::from(name) - or let
+/// Build one with From (FmtArg::from(3), FmtArg::from(1.5), FmtArg::from(name)) or let
 /// [`loc_fmt!`](crate::loc_fmt!) / [`loc_plural!`](crate::loc_plural!) do it per argument.
 #[repr(transparent)]
 #[derive(Copy, Clone)]
@@ -104,7 +104,7 @@ impl<'a> From<f64> for FmtArg<'a> {
 }
 
 impl<'a, T: ?Sized + AsRef<str>> From<&'a T> for FmtArg<'a> {
-    /// A borrowed view of value - &str, &String, or anything else that lends a &str.
+    /// A borrowed view of value: &str, &String, or anything else that lends a &str.
     fn from(value: &'a T) -> FmtArg<'a> {
         FmtArg::new(
             FmtArgValue {
@@ -123,12 +123,12 @@ fn as_raw<'a>(args: &'a [FmtArg<'_>]) -> &'a [crate::sys::FmtArg] {
 
 /// Display text that carries runtime values: look the key up in the active language, then
 /// substitute the caller's arguments into its indexed placeholders. The result is passed to any
-/// widget the way plain text is. [`loc_fmt!`](crate::loc_fmt!) and [`loc_plural!`](crate::loc_plural!) are the call-site sugar over
-/// these two.
+/// widget the way plain text is. [`loc_fmt!`](crate::loc_fmt!) and [`loc_plural!`](crate::loc_plural!)
+/// are the call-site sugar over these two.
 pub struct Localize;
 
 impl Localize {
-    /// Look sid up in the active language and substitute args into its indexed placeholders -
+    /// Look sid up in the active language and substitute args into its indexed placeholders:
     /// {0} is the first argument, {1} the second, and a repeated index substitutes at every
     /// occurrence. {{ and }} render as a literal brace; a placeholder with no matching argument
     /// renders as itself and warns. Integers and floats format printf-style (. decimal point, no digit
@@ -149,7 +149,7 @@ impl Localize {
 }
 
 /// Look the key sid up in the active language and substitute the arguments that follow into its
-/// indexed placeholders - {0} is the first, {1} the second. Each argument converts through
+/// indexed placeholders: {0} is the first, {1} the second. Each argument converts through
 /// [`FmtArg`]'s From impls, so integers, floats and strings mix freely.
 ///
 /// ```ignore

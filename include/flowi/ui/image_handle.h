@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-// Handle to an image.
+// Handle to an image; 0 is invalid. Returned by Image::load and the `Image::create_*` calls.
 typedef uint32_t FlImageHandle;
 #define FL_IMAGE_HANDLE_INVALID 0
 

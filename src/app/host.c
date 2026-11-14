@@ -25,7 +25,7 @@ struct FlHost {
     FlFontId default_font;          // built-in 8x8 default font, made active on every window's context
     FlVfsMount* asset_mount;        // hidden default filesystem mount for Font::load / Image::load (optional)
 
-    // Whether THIS host initialized the process-global VFS / image-system singletons (first-caller-wins: both
+    // Whether this host initialized the process-global VFS / image-system singletons (first-caller-wins: both
     // are no-ops when someone else got there first). Destroy tears down only what it owns.
     bool owns_vfs;
     bool owns_image_system;
@@ -36,13 +36,13 @@ struct FlHost {
     i32 surface_count;
 
     // The single window a sized create opened, and the whole of what the public fl_host_* surface acts on.
-    // Null for fl_app, which asks for an unsized host and opens a window per OS window itself.
+    // nullptr for fl_app, which asks for an unsized host and opens a window per OS window itself.
     FlSurface* window_surface;
     FlUiCtx* window_ctx;
 };
 
 // Every fl_host_create failure path bails identically: tear down whatever came up (fl_host_destroy null-checks
-// every subsystem, so it is safe at any point in the bring-up) and return null. A macro, not a helper, so the
+// every subsystem, so it is safe at any point in the bring-up) and return nullptr. A macro, not a helper, so the
 // log_error reports its own call-site line.
 
 #define FL_HOST_FAIL(host, cond, msg) \
@@ -116,7 +116,7 @@ void host_destroy(FlHost* host) {
         return;
     }
 
-    // The host's own window goes first - contexts are torn down before the shared tier they attach to. A
+    // The host's own window goes first, because contexts are torn down before the shared tier they attach to. A
     // multi-window caller has no window here and has already detached its own.
     if (host->window_ctx) {
         ui_destroy(host->window_ctx);
@@ -129,8 +129,8 @@ void host_destroy(FlHost* host) {
         image_stop_loading();
     }
 
-    // The mount lives in the process-global VFS (its own arena), so close it explicitly rather than leaning on
-    // the host arena.
+    // The mount lives in the process-global VFS (its own arena), so it is closed explicitly. The host arena does
+    // not reclaim it.
     if (host->asset_mount) {
         ui_set_asset_mount(nullptr);
         fl_vfs_mount_close(host->asset_mount);
@@ -249,7 +249,7 @@ bool host_read_pixels(FlHost* host, FlSurface* surface, FlPixelReadback* out) {
 }
 
 // The public `fl_host_*` surface: thin forwarders onto the internal entry points above. flowi's own code never
-// calls these - see the note in app/host.h for why an intra-library call to an exported name is a real bug.
+// calls these (see the note in app/host.h).
 
 FlHost* fl_host_create(FlArena* arena, const FlHostSettings* settings) {
     return host_create(arena, settings, nullptr);

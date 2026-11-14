@@ -11,7 +11,7 @@
 // Texture-unit budget (the GL 4.3 floor guarantees 16 for compute): unit 0 is the scratch bind point every
 // upload path uses (and the glyph coverage atlas at raster time), units 1 and 2 the image atlas's two filter
 // modes, units 3..GPU_IMAGE_SLOT_UNIT0+GPU_IMAGE_SLOT_COUNT-1 (3..13) the image sampler slots, the unit just
-// past them (14) the R8 SVG coverage atlas, and the next (15) the RGBA8 multi-color SVG atlas - the last unit
+// past them (14) the R8 SVG coverage atlas, and the next (15) the RGBA8 multi-color SVG atlas, the last unit
 // within the 16-unit floor.
 #define GPU_IMAGE_SLOT_UNIT0 3
 #define GPU_SVG_ATLAS_UNIT (GPU_IMAGE_SLOT_UNIT0 + GPU_IMAGE_SLOT_COUNT)
@@ -70,14 +70,14 @@ static GLuint create_sampler(const GpuGl* gl, GLint filter) {
 
 // Empty-frame backstop: size an SSBO to a single zeroed element so binding it before the first upload (a
 // frame with no eligible commands) is never an undersized binding. zero points at a zeroed element of
-// size bytes - its content is never read on such a frame (classification sees cmd_count 0), only its size.
+// size bytes; on such a frame classification sees cmd_count 0 and never reads it.
 static void seed_empty_ssbo(const GpuGl* gl, GLuint ssbo, GLsizeiptr size, const void* zero) {
     gl->BindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
     gl->BufferData(GL_SHADER_STORAGE_BUFFER, size, zero, GL_STREAM_DRAW);
 }
 
 // (Re)build everything resolution-dependent: the offscreen target + its readback FBO, the per-tile list SSBO,
-// and the CPU readback buffer. Called from create and change_resolution.
+// and the CPU readback buffer. Called from gpu_create_surface and change_resolution.
 
 static void setup_resolution(GpuShared* self, GpuSurface* surface, int width, int height) {
     const GpuGl* gl = &self->gl;
@@ -116,7 +116,7 @@ static void setup_resolution(GpuShared* self, GpuSurface* surface, int width, in
 }
 
 // Surface lifecycle: a GPU surface owns the offscreen RGBA8 target, its readback FBO, the per-tile
-// classification SSBO sized to its tile grid, and the CPU readback buffer, all in one per-surface arena - the
+// classification SSBO sized to its tile grid, and the CPU readback buffer, all in one per-surface arena: the
 // struct first, then a readback_reset savepoint past it. destroy_surface tears down the GL objects and frees that
 // arena wholesale. The host calls it before the backend's destroy().
 static FlSurface* gpu_create_surface(void* user_data, int width, int height) {
@@ -141,8 +141,7 @@ static void gpu_destroy_surface(void* user_data, FlSurface* surface_handle) {
     glDeleteTextures(1, &surface->target_tex);
     gl->DeleteFramebuffers(1, &surface->readback_fbo);
     gl->DeleteBuffers(1, &surface->tile_ssbo);
-    fl_arena_destroy(
-        surface->arena); // frees the readback buffer AND the GpuSurface struct itself (dangling after this)
+    fl_arena_destroy(surface->arena); // frees the readback buffer and the GpuSurface struct itself
 }
 
 static void change_resolution(void* user_data, FlSurface* surface_handle, int width, int height) {
@@ -235,7 +234,7 @@ static void bind_frame_slot_textures(GpuShared* self) {
         GpuSlotImage* img = &slots->images[slots->slot_image[s]];
         glActiveTexture(GL_TEXTURE0 + GPU_IMAGE_SLOT_UNIT0 + (GLenum)s);
         if (img->tex == 0) {
-            // A dynamic entry awaiting realization - statics arrive realized from prepare_image.
+            // A dynamic entry awaiting realization; statics arrive realized from prepare_image.
             img->tex = (u32)create_slot_texture(gl, img->w, img->h, img->alpha_only, true);
         } else {
             glBindTexture(GL_TEXTURE_2D, (GLuint)img->tex);
@@ -263,8 +262,8 @@ static void bind_frame_slot_textures(GpuShared* self) {
 // barriers.
 
 // Per-frame preamble: reset the glyph-dispatch counter (refilled by the prepare pass), then
-// advance the image-slot table (evicting stale dynamic entries) and delete textures freed since the last render -
-// both before translation, which rebuilds the slot table.
+// advance the image-slot table (evicting stale dynamic entries) and delete textures freed since the last render.
+// Both run before translation, which rebuilds the slot table.
 static void gl_op_frame_begin(void* backend) {
     GpuShared* self = backend;
     self->glyph_dispatch_count = 0;
@@ -304,8 +303,8 @@ static void gl_op_begin_encoder(void* backend, void* surface) {
 }
 
 // Upload the draw arrays into the shared input SSBOs and bind them to their base points. An empty frame still runs
-// both passes - classification zeroes every tile count and raster clears the target to transparent - so on such a
-// frame the SSBOs just keep their previous storage. The per-surface tile SSBO (base 2, classify's output) is
+// both passes (classification zeroes every tile count and raster clears the target to transparent), so on such a
+// frame the SSBOs keep their previous storage. The per-surface tile SSBO (base 2, classify's output) is
 // bound in the classify op, which has the surface handle.
 static void gl_op_upload_inputs(void* backend, const GpuDrawList* list) {
     GpuShared* self = backend;
@@ -326,7 +325,7 @@ static void gl_op_upload_inputs(void* backend, const GpuDrawList* list) {
     gl->BindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, self->clip_ssbo);
 }
 
-// Pass 1: classification - one thread per tile, GPU_TILE_SIZE-square groups. Binds the per-surface tile-list SSBO
+// Pass 1, classification: one thread per tile, GPU_TILE_SIZE-square groups. Binds the per-surface tile-list SSBO
 // (base 2, this pass's output, read back by raster) before dispatch.
 static void gl_op_classify(void* backend, void* surface, u32 cmd_count) {
     GpuShared* self = backend;
@@ -347,7 +346,7 @@ static void gl_op_barrier(void* backend) {
     self->gl.MemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-// Pass 2: raster - one workgroup per tile. The atlas rides on units 1 (linear) and 2 (nearest), the frame's slot
+// Pass 2, raster: one workgroup per tile. The atlas rides on units 1 (linear) and 2 (nearest), the frame's slot
 // textures on units GPU_IMAGE_SLOT_UNIT0+; image uploads happen before this dispatch on this thread, so no
 // barrier is needed for them.
 static void gl_op_raster(void* backend, void* surface) {
@@ -422,7 +421,7 @@ static void set_font_cache(void* user_data, struct FlFontCache* font_cache) {
 }
 
 // Optional pixel-readback capability: explicit GPU -> CPU readback of the offscreen target as interleaved
-// RGBA8 (premultiplied coverage alpha). Row 0 is the top UI row - the imageStore pixel grid and glReadPixels
+// RGBA8 (premultiplied coverage alpha). Row 0 is the top UI row: the imageStore pixel grid and glReadPixels
 // both address texel row 0 first, so no flip is needed. Off the per-frame present path.
 
 static bool read_pixels(void* user_data, FlSurface* surface_handle, FlPixelReadback* out) {
@@ -445,7 +444,7 @@ static bool read_pixels(void* user_data, FlSurface* surface_handle, FlPixelReadb
 }
 
 // Surface-texture seam (gpu_renderer.h): the offscreen target's GL texture name + current
-// dimensions, for a host to sample and composite. The texture name crosses as a plain u32 - no GL type here.
+// dimensions, for a host to sample and composite. The texture name crosses as a plain u32.
 // Per-surface: the host passes the surface handle it rendered into, one per window.
 
 GpuSurfaceTexture gpu_renderer_surface_texture(FlSurface* surface_handle) {
@@ -473,7 +472,7 @@ static void destroy(void* user_data) {
         }
     }
 
-    // Shared SSBOs only - the per-tile classification SSBO is per-surface (freed in destroy_surface). The host
+    // Shared SSBOs only: the per-tile classification SSBO is per-surface (freed in destroy_surface). The host
     // tears down every surface before the backend, so no surface GL objects survive to here.
     GLuint buffers[5] = { self->cmd_ssbo, self->aabb_ssbo, self->clip_ssbo, self->curve_ssbo, self->shapes_ssbo };
     gl->DeleteBuffers(5, buffers);
@@ -541,12 +540,12 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     gl->UseProgram(self->raster_prog);
     gl->Uniform1i(gl->GetUniformLocation(self->raster_prog, "atlas_linear"), 1);
     gl->Uniform1i(gl->GetUniformLocation(self->raster_prog, "atlas_nearest"), 2);
-    // The glyph atlas samples on texture unit 0 - the upload scratch unit, free of a sampler during the raster
-    // dispatch. Its texture is bound there per frame below.
+    // The glyph atlas samples on texture unit 0, the upload scratch unit, free of a sampler during the raster
+    // dispatch. gl_op_raster binds its texture there each frame.
     gl->Uniform1i(gl->GetUniformLocation(self->raster_prog, "glyph_atlas"), 0);
-    // The SVG coverage atlas samples on the unit just past the image slots, bound per frame below.
+    // The SVG coverage atlas samples on the unit just past the image slots, bound each frame by gl_op_raster.
     gl->Uniform1i(gl->GetUniformLocation(self->raster_prog, "svg_atlas"), GPU_SVG_ATLAS_UNIT);
-    // The RGBA8 multi-color SVG atlas samples on the next unit, bound per frame below.
+    // The RGBA8 multi-color SVG atlas samples on the next unit, bound each frame by gl_op_raster.
     gl->Uniform1i(gl->GetUniformLocation(self->raster_prog, "svg_color_atlas"), GPU_COLOR_SVG_ATLAS_UNIT);
     GLint slot_units[GPU_IMAGE_SLOT_COUNT];
     for (int i = 0; i < GPU_IMAGE_SLOT_COUNT; i++) {
@@ -559,7 +558,7 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     self->frame_arena = arena_new();
 
     // Shared per-frame SSBOs (one frame in flight). The per-tile classification SSBO is per-surface and genned
-    // in create_surface; the readback buffer's arena is per-surface too.
+    // in gpu_create_surface; the readback buffer's arena is per-surface too.
     GLuint buffers[5];
     gl->GenBuffers(5, buffers);
     self->cmd_ssbo = buffers[0];
@@ -574,8 +573,8 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     seed_empty_ssbo(gl, self->aabb_ssbo, sizeof(zero_aabb), &zero_aabb);
     seed_empty_ssbo(gl, self->clip_ssbo, sizeof(zero_aabb), &zero_aabb);
 
-    // Image atlas: CPU bookkeeping + the RGBA8 texture. Immutable storage, one level (no mips - explicit-LOD
-    // sampling). The sampler-slot bookkeeping for large/dynamic images sits alongside; its
+    // Image atlas: CPU bookkeeping + the RGBA8 texture. Immutable storage, one level (no mips; sampling is
+    // explicit-LOD). The sampler-slot bookkeeping for large/dynamic images sits alongside; its
     // textures are created on demand (prepare seam / render).
     gpu_image_atlas_init(&self->cpu.image_atlas, arena);
     gpu_image_slots_init(&self->cpu.image_slots, arena);
@@ -583,7 +582,7 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     glBindTexture(GL_TEXTURE_2D, self->atlas_tex);
     gl->TexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, GPU_IMAGE_ATLAS_SIZE, GPU_IMAGE_ATLAS_SIZE);
 
-    // Glyph atlas: R8 coverage, image-stored by the glyph-raster dispatch. Never cleared - a
+    // Glyph atlas: R8 coverage, image-stored by the glyph-raster dispatch. Never cleared: a
     // prepared cell is fully written including its padding ring, and nothing samples outside prepared cells.
     gpu_glyph_atlas_init(&self->cpu.glyph_atlas, arena);
     glGenTextures(1, &self->glyph_atlas_tex);
@@ -591,14 +590,14 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     gl->TexStorage2D(GL_TEXTURE_2D, 1, GL_R8, GPU_GLYPH_ATLAS_SIZE, GPU_GLYPH_ATLAS_SIZE);
 
     // SVG vector-icon atlas: R8 coverage, image-stored by the glyph-raster dispatch reused for monochrome
-    // icons. Never cleared - every prepared cell including its padding ring is fully written, and nothing
+    // icons. Never cleared: every prepared cell including its padding ring is fully written, and nothing
     // samples outside a prepared cell.
     gpu_svg_atlas_init(&self->cpu.svg_atlas, arena, GpuSvgTexel_R8);
     glGenTextures(1, &self->svg_atlas_tex);
     glBindTexture(GL_TEXTURE_2D, self->svg_atlas_tex);
     gl->TexStorage2D(GL_TEXTURE_2D, 1, GL_R8, GPU_SVG_ATLAS_SIZE_MONO, GPU_SVG_ATLAS_SIZE_MONO);
 
-    // Multi-color SVG atlas: the same bookkeeping as the R8 atlas, but RGBA8 - its cells hold baked
+    // Multi-color SVG atlas: the same bookkeeping as the R8 atlas, but RGBA8: its cells hold baked
     // premultiplied color composited by the color-raster dispatch. Never cleared either; every prepared cell
     // including its padding ring is fully written (the ring stays transparent).
     gpu_svg_atlas_init(&self->cpu.color_svg_atlas, arena, GpuSvgTexel_Rgba8);
@@ -609,7 +608,7 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     self->sampler_linear = create_sampler(gl, GL_LINEAR);
     self->sampler_nearest = create_sampler(gl, GL_NEAREST);
 
-    // No surface is created here - the host builds per-window targets via the surface seam, so the
+    // No surface is created here: the host builds per-window targets via the surface seam, so the
     // resolution-dependent resources are created in gpu_create_surface.
 
     // The core's default scale.

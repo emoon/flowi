@@ -9,9 +9,9 @@
 extern "C" {
 #endif
 
-// Helper for efficiently rendering long uniform-height lists - the caller advances it each frame and only emits
-// the rows in `[display_start, display_end)`. The leading three fields are the caller-facing outputs; the rest
-// is internal cursor state the clipper maintains across frames.
+// Helper for rendering long uniform-height lists: the caller advances it each frame and emits only the rows
+// in `[display_start, display_end)`. The leading three fields are the caller-facing outputs; the rest is
+// internal cursor state the clipper maintains across frames.
 typedef struct FlListClipper {
     // First visible item index.
     int32_t display_start;

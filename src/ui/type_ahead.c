@@ -1,9 +1,7 @@
-// Type-ahead matcher implementation. See type_ahead.h for the shape of the gesture.
-
 #include "type_ahead.h"
 
-// ASCII lowercase fold (UTF-8 bytes >= 0x80 pass through unchanged - type-ahead is case-insensitive over ASCII
-// only).
+// ASCII lowercase fold. UTF-8 bytes >= 0x80 pass through unchanged, so type-ahead is case-insensitive over
+// ASCII only.
 static char type_ahead_ascii_lower(char c) {
     return (c >= 'A' && c <= 'Z') ? (char)(c + ('a' - 'A')) : c;
 }
@@ -33,14 +31,14 @@ i32 type_ahead_match(TypeAheadState* state, const FlString* labels, u32 count, i
         state->len = 0; // stale prefix: typing paused, start over
     }
 
-    // Append the printable bytes typed this frame (control bytes - Enter, Tab - are not part of a prefix).
+    // Append the printable bytes typed this frame (control bytes such as Enter and Tab are not part of a prefix).
     for (u64 i = 0; i < typed.length; i++) {
         char c = typed.data[i];
         if ((unsigned char)c < 0x20 || c == 0x7f) {
             continue;
         }
-        // A single repeated letter is a "cycle to next match" gesture, not a growing prefix - keep the prefix
-        // at one byte so the search below advances past the current row.
+        // A single repeated letter cycles to the next match instead of growing the prefix, so keep the prefix
+        // at one byte and let the search below advance past the current row.
         if (state->len == 1 && type_ahead_ascii_lower(c) == type_ahead_ascii_lower(state->buf[0])) {
             continue;
         }

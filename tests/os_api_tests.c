@@ -427,7 +427,7 @@ UTEST(os_api, get_disk_space_nonexistent_file_with_valid_parent) {
 
     // A nonexistent path resolves by walking up to the first parent that exists.
 #ifdef _WIN32
-    // Use the cwd's drive letter, not a hardcoded C:\ - CI runners may use a different drive.
+    // Use the cwd's drive letter, because CI runners may not run on C:.
     FlString cwd = get_current_directory_os(arena);
     char drive_path[64];
     snprintf(drive_path, sizeof(drive_path), "%c:\\this\\path\\does\\not\\exist", cwd.data[0]);

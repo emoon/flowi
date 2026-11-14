@@ -33,7 +33,7 @@ fn headless_multi_window_open_close() {
         second_frame,
     );
 
-    // One tick runs BOTH windows' callbacks, each against its own state: the main
+    // One tick runs both windows' callbacks, each against its own state: the main
     // window's is the one passed to tick, the second's is the one it was opened
     // with.
     let mut main_state = main_frames.clone();

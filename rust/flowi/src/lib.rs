@@ -26,8 +26,8 @@
 //! [`Application::tick`] drives a single frame instead, for a caller that keeps its own loop. A
 //! panic inside the frame closure aborts the process.
 //!
-//! An application that owns its own display and input - a kiosk shell, a plugin inside a host's
-//! window, a frontend rendering to DRM - creates the same type with [`Application::embedded`] and
+//! An application that owns its own display and input (a kiosk shell, a plugin inside a host's
+//! window, a frontend rendering to DRM) creates the same type with [`Application::embedded`] and
 //! drives each frame itself with [`Application::tick_embedded`], [`Application::pixels`] and
 //! [`Application::push_input`].
 //!
@@ -46,12 +46,12 @@ use std::os::raw::c_char;
 /// The toolkit's value types: a colour, a polygon point, a 2D vector.
 pub use crate::sys::{Color, PolyPoint, Vec2};
 
-/// The one shared error enum - the Err arm of the `Result<T, FlError>` a fallible slot
+/// The shared error enum: the Err arm of the `Result<T, FlError>` a fallible slot
 /// returns.
 pub use crate::sys::FlError;
 
-/// Log severity, re-exported for direct use with the log control surface. Rust records
-/// carry a log::Level instead; the bridge maps it onto this enum.
+/// Log severity for the log control surface. Rust records carry a log::Level instead;
+/// the bridge maps it onto this enum.
 pub use crate::sys::LogLevel;
 
 /// The opaque, Copy font handle returned by [`Font::load`] and consumed by [`Font::set`],
@@ -93,9 +93,9 @@ impl Stroke {
 }
 
 /// The fill styling one [`Painter::rect_styled`] draw takes: per-corner radius ([`CornerRadius`]) plus
-/// per-corner colors, which is the only way to express a rounded gradient rect - [`Painter::rect_rounded`]
-/// is solid-only and [`Painter::gradient_rect`] is square-only, and the per-element scissor is a plain rect,
-/// so a rounded well cannot be faked by clipping.
+/// per-corner colors. This is the only way to draw a rounded gradient rect: [`Painter::rect_rounded`]
+/// is solid-only, [`Painter::gradient_rect`] is square-only, and the per-element scissor is a plain rect,
+/// so clipping cannot round one.
 pub use crate::sys::RectConfig;
 
 /// One solid rectangle of a [`Painter::rects`] batch: position, size and fill color.
@@ -109,38 +109,37 @@ pub use crate::sys::{CornerColors, ImageSub, PolylineStyle};
 /// and [`Painter::image`] (sentinel 0 = invalid).
 pub use crate::sys::ImageHandle;
 
-/// The resolved within-frame identity of a laid-out element - a one-way hash of its
-/// [`LayoutId`]. Returned by [`hot_element`] (the topmost hovered element)
-/// and produced by [`LayoutId::hashed_id`]; the two share this type so a returned hot id compares directly
-/// against one you hashed yourself. The hash is one-way, so map a hot id back to your own object by hashing your
-/// own candidate ids into a `{ElementId -> object}` map - not by reversing the id. It is a per-frame hash, not
-/// a stable cross-frame handle (the stable identity is the [`LayoutId`]).
+/// The resolved within-frame identity of a laid-out element, a one-way hash of its [`LayoutId`]. Returned by
+/// [`hot_element`] (the topmost hovered element) and produced by [`LayoutId::hashed_id`]; the two share this
+/// type so a returned hot id compares directly against one you hashed yourself. The hash is one-way, so map a
+/// hot id back to your own object by hashing your own candidate ids into a `{ElementId -> object}` map. The
+/// hash is per-frame; the stable cross-frame identity is the [`LayoutId`].
 pub use crate::sys::ElementId;
 
-/// The LayoutConfig tree, re-exported for callers building a container config to hand to
-/// [`Layout::configure`]. The ergonomic layout macros build them fluently - see [`layout!`] / [`row!`] /
-/// [`col!`] - but they remain public so callers can also construct the structs directly.
+/// The LayoutConfig tree, for callers building a container config to hand to [`Layout::configure`].
+/// The layout macros ([`layout!`] / [`row!`] / [`col!`]) build these, and the structs are public for
+/// direct construction.
 pub use crate::sys::{
     BorderWidthConfig, CornerRadius, LayoutAlignmentX, LayoutAlignmentY, LayoutBorder,
     LayoutChildAlignment, LayoutClip, LayoutConfig, LayoutDirection, LayoutPadding, LayoutPlaced,
     LayoutSizing, LayoutSizingAxis, LayoutSizingAxisSize, LayoutSizingMinMax, LayoutSizingType,
 };
 
-/// The design-token scales, re-exported for callers sizing and spacing their own widgets. [`Spacing`] (gaps,
+/// The design-token scales, for callers sizing and spacing their own widgets. [`Spacing`] (gaps,
 /// padding), [`Radius`] (corner rounding), [`WidgetHeight`] (standard control heights) and [`BorderWidth`]
 /// (stroke weights) are the same steps flowi's own widgets are built on, so an app-side widget placed beside a
-/// built-in one lines up with it instead of drifting by a pixel or two.
+/// built-in one lines up with it.
 pub use crate::sys::{BorderWidth, Radius, Spacing, WidgetHeight};
 
-/// The FloatingConfig / ScrollAreaConfig trees, re-exported for callers building a floating or
-/// scroll-area config to hand to [`Floating::configure`] / [`Scroll::area_begin`]. The [`floating!`] / [`scroll!`]
-/// macros build these fluently, but they stay public for direct construction.
+/// The FloatingConfig / ScrollAreaConfig trees, for callers building a floating or scroll-area config
+/// to hand to [`Floating::configure`] / [`Scroll::area_begin`]. The [`floating!`] / [`scroll!`] macros
+/// build these, and the structs are public for direct construction.
 pub use crate::sys::{
     FloatingAttachPoint, FloatingAttachTo, FloatingConfig, FloatingPointerCapture, ScrollAreaConfig,
 };
 
-/// The visible index window [`List::begin`] returns. The other List value types - [`ListConfig`], which
-/// [`List::begin`] takes, and the per-frame [`ListResult`] [`List::end`] returns - are this crate's own.
+/// The visible index window [`List::begin`] returns. The other List value types ([`ListConfig`], which
+/// [`List::begin`] takes, and the per-frame [`ListResult`] [`List::end`] returns) are this crate's own.
 pub use crate::sys::ListRange;
 
 /// Where a [`List`] drag-reorder lands, relative to a target stable id. A [`List`] yields
@@ -155,27 +154,27 @@ pub use crate::sys::DropRelationship;
 /// Element-anchored floating element, which needs a hashed parent_id).
 ///
 /// Sizing for the width / height fields is given by the sub-macros [`fixed!`], [`grow!`], [`percent!`], and
-/// [`fit!`]; the remaining LayoutConfig fields have their own sub-macros too - [`clip!`] (clipping +
-/// manual scroll), [`border!`] (color + uniform width), and [`align!`] (child alignment). Each container macro takes an optional positional string id
-/// (a stable file:line:column id is synthesised when omitted), flat name: value fields, and a trailing { } body
-/// block.
+/// [`fit!`]. The remaining LayoutConfig fields have their own sub-macros: [`clip!`] (clipping + manual
+/// scroll), [`border!`] (color + uniform width), and [`align!`] (child alignment). Each container macro takes
+/// an optional positional string id (a stable file:line:column id is synthesised when omitted), flat
+/// name: value fields, and a trailing { } body block.
 ///
 /// padding: and radius: both take a scalar or a per-side/per-corner value, via Into: padding: accepts a
-/// u16 (uniform), a (vertical, horizontal) pair, a `[top, right, bottom, left]` array - CSS's shorthand
-/// orders - or a [`LayoutPadding`]; radius: accepts an f32 (uniform) or a [`CornerRadius`]. An unsuffixed
+/// u16 (uniform), a (vertical, horizontal) pair, a `[top, right, bottom, left]` array (both in CSS's
+/// shorthand order) or a [`LayoutPadding`]; radius: accepts an f32 (uniform) or a [`CornerRadius`]. An unsuffixed
 /// integer literal still infers for padding:, because u16 is the only integer form.
 ///
-/// [`fill`] is the flexible spacer that goes between containers - CSS's margin-left: auto.
+/// [`fill`] is the flexible spacer that goes between containers, like CSS's margin-left: auto.
 pub use flowi_macros::{
     align, border, clip, col, fit, fixed, floating, grow, layout, percent, placed, row, scroll,
 };
 
 /// A flexible spacer: an empty container that grows on both axes, eating the slack its siblings leave.
-/// This is how you spell CSS's margin-left: auto - put one before a child to push it to the end of the
+/// It does the job of CSS's margin-left: auto: put one before a child to push it to the end of the
 /// container, or between two children to push them apart.
 ///
-/// The cross-axis grow is invisible where it matters: a grown child contributes no minimum to a [`fit!`]-sized
-/// parent, so a fill inside a fit!-height row leaves that row's height alone.
+/// A grown child contributes no minimum to a [`fit!`]-sized parent, so a fill inside a fit!-height row
+/// leaves that row's height alone.
 ///
 /// It carries no id of its own, so fill is safe inside a loop and inside a helper called any number of
 /// times.
@@ -191,7 +190,7 @@ pub fn fill() {
     Layout::end();
 }
 
-/// The context-menu macros, re-exported for callers. [`menu!`] drives the Menu::begin/body/Menu::end
+/// The context-menu macros. [`menu!`] drives the Menu::begin/body/Menu::end
 /// pair with its body running only while the menu is open; [`menu_item!`] emits one action item and returns
 /// its [`Signal`]; [`menu_check!`] / [`menu_radio!`] emit the stateful item kinds over a &mut bound value;
 /// [`menu_separator!`] / [`menu_header!`] emit the static (non-interactive) rows; [`submenu!`] drives the
@@ -201,19 +200,19 @@ pub use flowi_macros::{
     menu, menu_check, menu_header, menu_item, menu_radio, menu_region, menu_separator, submenu,
 };
 
-/// The menu-bar macros, re-exported for callers. [`menubar!`] drives the
-/// MenuBar::begin/body/MenuBar::end pair with its body - emitting the tops - running every frame (the strip
+/// The menu-bar macros. [`menubar!`] drives the
+/// MenuBar::begin/body/MenuBar::end pair with its body, which emits the tops, running every frame (the strip
 /// is always visible); [`menubar_menu!`] drives the UiMenubarMenu::begin/body/UiMenubarMenu::end pair for one
 /// top with its body running only while that top's dropdown is open. Dropdown items are the same
 /// [`menu_item!`] action items as a context menu.
 pub use flowi_macros::{menubar, menubar_menu};
 
-/// The rich widget interaction result, re-exported for callers reading a widget's response. Returned by
+/// A widget's interaction result. Returned by
 /// value from [`Button::new`]; read [`Signal::clicked`](Signal#structfield.clicked) and the other
 /// bool channels (hovered, focused, pressed, ...) directly.
 pub use crate::sys::Signal;
 
-/// The per-element behavior opt-in mask, re-exported for callers driving the generic [`Item::behavior`]
+/// The per-element behavior opt-in mask for the generic [`Item::behavior`]
 /// primitive: compose the behaviors a custom element reacts to with ItemFlags::CLICKABLE |
 /// ItemFlags::DRAGGABLE | ItemFlags::DOUBLE_CLICK | ItemFlags::RIGHT_CLICK, then read the matching channels
 /// off the returned [`Signal`].
@@ -222,7 +221,7 @@ pub use crate::sys::ItemFlags;
 /// The generated façade: one `pub struct <Domain>` of forwarding methods per API block.
 mod generated;
 
-/// The typed arena API, from the foundation crate: &self alloc / &mut self rewind,
+/// The typed arena API: &self alloc / &mut self rewind,
 /// closure-scoped temp/scratch, and the ArenaVec/ArenaString collections.
 pub use crate::foundation::{Arena, ArenaString, ArenaVec, BaseArena};
 
@@ -243,7 +242,7 @@ pub use crate::vfs::{
     OwnedMount, Vfs, VfsData, WorkerMount,
 };
 
-/// What an embedding host hands flowi and gets back - decoded OS events in, rendered
+/// What an embedding host hands flowi and gets back: decoded OS events in, rendered
 /// pixels out.
 mod host;
 
@@ -256,15 +255,15 @@ pub use host::{InputEvent, Pixels};
 pub use crate::sys::{GamepadEvent, KeyEvent, MouseEvent, TextInputEvent, WindowEvent};
 
 /// The insides of those events: the type tag that selects a payload union's live arm, the
-/// unions themselves, and the per-arm data structs - what a host decoding OS events
-/// constructs.
+/// unions themselves, and the per-arm data structs. A host decoding OS events constructs
+/// these.
 pub use crate::sys::{
     GamepadAxis, GamepadAxisData, GamepadButtonData, GamepadEventPayload, GamepadEventType,
     KeyEventType, MouseButtonData, MouseEventPayload, MouseEventType, MouseMoveData,
     MouseRelativeData, MouseWheelData, WindowEventPayload, WindowEventType, WindowResizeData,
 };
 
-/// The keyboard modifier bitmask carried on a [`KeyEvent`] - the typed view of its modifiers
+/// The keyboard modifier bitmask carried on a [`KeyEvent`]: the typed view of its modifiers
 /// field, and what [`UiInput::keyboard_modifiers`] returns.
 pub use crate::sys::KeyModifier;
 
@@ -277,13 +276,13 @@ pub use crate::foundation::{FileChange, FileChanges, FileWatcher, WatchConfig};
 /// The change-kind bitmask [`FileChange::change_types`] reports.
 pub use crate::sys::FileChangeType;
 
-/// Rust-side logging: the log-crate bridge onto flowi's log channels and the RAII on-disk sink. Rust code logs with log::info! / log::warn!(target: "AUDIO",
-/// ...); targets name channels 1:1 and everything untargeted lands on "CORE", so C and Rust
-/// records interleave in one sink.
+/// Rust-side logging: the log-crate bridge onto flowi's log channels and the RAII on-disk sink.
+/// Rust code logs with log::info! / log::warn!(target: "AUDIO", ...); targets name channels 1:1
+/// and everything untargeted lands on "CORE", so C and Rust records interleave in one sink.
 ///
-/// [`install_log_bridge`] routes this binary's records at those channels - automatic for a
-/// direct-link host, installed by hand by a dlopen'd Rust cdylib, which has its own log
-/// global. [`set_target_level`] drops a noisy dependency's records below a level;
+/// [`install_log_bridge`] routes this binary's records to those channels. A direct-link host
+/// gets it automatically; a dlopen'd Rust cdylib has its own log global and installs it by
+/// hand. [`set_target_level`] drops a noisy dependency's records below a level;
 /// [`LogFile`] is the on-disk sink, open for as long as the guard lives.
 pub use crate::foundation::{install_log_bridge, set_target_level, LogFile};
 
@@ -317,16 +316,16 @@ pub use generated::localization::Localization;
 /// Content digests, identical to the ones flowi computes internally over the same bytes.
 pub mod hash;
 
-/// Path manipulation under core's rules - for a path that came out of a manifest, an archive or a
+/// Path manipulation under core's rules, for a path that came out of a manifest, an archive or a
 /// mount, where the answer has to match flowi's own path handling.
 pub use crate::foundation::path;
 
-/// Conveniences for the raw layout escape hatch - drop-guarded [`Layout`] container closures
-/// and one-field [`TextConfig`] / [`WidgetConfig`] / [`DropdownConfig`] builders for the call
-/// sites that build a [`LayoutConfig`] by hand instead of through the layout macros.
+/// Helpers for the raw layout calls: drop-guarded [`Layout`] container closures and one-field
+/// [`TextConfig`] / [`WidgetConfig`] / [`DropdownConfig`] builders for call sites that build a
+/// [`LayoutConfig`] by hand.
 pub mod layout_ext;
 
-/// The digest surfaces most callers reach for; the rest of the algorithms live in [`hash`].
+/// The digests most callers use; the other algorithms are in [`hash`].
 pub use hash::{sha256_hex, Sha256};
 
 /// The 64-bit FNV-1a of text, identical to the hash flowi computes internally.
@@ -341,16 +340,15 @@ pub fn fl_string_hash_fnv1a(text: &str) -> u64 {
 /// sorts before Disk10; everything else compares byte-wise, case-insensitively over ASCII. On a shared prefix
 /// the shorter string sorts first.
 ///
-/// This is the order flowi sorts names in internally. Two corners: a longer digit run wins outright once leading zeros are dropped (10 after 9),
-/// and bytes ≥ 0x80 compare as negative (as signed char).
+/// This is the order flowi sorts names in internally. Two corners: a longer digit run wins outright once
+/// leading zeros are dropped (10 after 9), and bytes ≥ 0x80 compare as negative (as signed char).
 #[inline]
 pub fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
     natural_cmp_bytes(a.as_bytes(), b.as_bytes())
 }
 
-/// [`natural_cmp`] over raw bytes, for names that carry no UTF-8 guarantee - a database's string pool, a
-/// record read straight off disk. The comparison is byte-wise either way, so this is the same ordering, not a
-/// looser one.
+/// [`natural_cmp`] over raw bytes, for names that carry no UTF-8 guarantee (a database's string pool, a
+/// record read straight off disk). The comparison is byte-wise either way, so the ordering is the same.
 #[inline]
 pub fn natural_cmp_bytes(a: &[u8], b: &[u8]) -> std::cmp::Ordering {
     // SAFETY: both borrows outlive the call, which is all a RawStr view has to be valid for, and the
@@ -377,7 +375,7 @@ pub use generated::dock::Dock;
 pub use generated::dropdown::Dropdown;
 pub use generated::focused::Focused;
 pub use generated::font::Font;
-/// The frame envelope: full-screen UI opacity, plus this frame's delta time and screen size - the two reads an
+/// The frame envelope: full-screen UI opacity, plus this frame's delta time and screen size, the two reads an
 /// animation integrator and a full-screen layout need.
 pub use generated::frame::Frame;
 pub use generated::icon::Icon;
@@ -418,7 +416,7 @@ pub use generated::list_clipper::ListClipper;
 /// Per-call options for [`Image::new`].
 pub use crate::sys::ImageOpts;
 
-/// The shared per-widget config every widget slot takes - id override, explicit colours, variant/size token,
+/// The shared per-widget config every widget slot takes: id override, explicit colours, variant/size token,
 /// focus and tab order, per-widget theme override. id_override is a plain &str copied into the per-frame
 /// arena at the call, and theme_override an `Option<&ThemeOverride>`. Build one with
 /// ..Default::default(); [`Default`] is the zero default (normal id source, themed colours, solid
@@ -433,10 +431,9 @@ pub use generated::widget_config::WidgetConfig;
 
 /// The three token enums [`WidgetConfig`] carries: [`WidgetVariant`] picks the chrome treatment (solid /
 /// outline / ghost / soft), [`WidgetSize`] the control-height token, and [`Focusable`] whether the widget
-/// joins the keyboard focus order. Re-exported so setting any of them needs nothing from flowi_sys; all
-/// three default to their 0 variant, which is what ..Default::default() leaves them at - for
-/// [`Focusable`] that is Default, keeping the widget family's normal focus behaviour rather than turning
-/// focus off.
+/// joins the keyboard focus order. All three default to their 0 variant, which is what
+/// ..Default::default() leaves them at. For [`Focusable`] that is Default, which keeps the widget family's
+/// normal focus behaviour.
 pub use crate::sys::{Focusable, WidgetSize, WidgetVariant};
 
 /// The per-widget config structs the remaining widget slots take. Each carries its own string fields as
@@ -463,12 +460,12 @@ pub use crate::sys::ScrollbarOrientation;
 
 /// The raw C-layout types whose crate-root name belongs to an ergonomic front-end.
 ///
-/// Some façade methods take these directly - Text::styled takes [`abi::TextConfig`], Icon::get takes
-/// [`abi::Icon`], Cursor::set takes [`abi::Cursor`] - while the crate root's [`TextConfig`], [`Icon`] and
+/// Some façade methods take these directly (Text::styled takes [`abi::TextConfig`], Icon::get takes
+/// [`abi::Icon`], Cursor::set takes [`abi::Cursor`]), while the crate root's [`TextConfig`], [`Icon`] and
 /// [`Cursor`] are the ergonomic forms. Prefer the root's forms. Fields here are ABI-shaped: raw strings
 /// instead of &str, raw pointers instead of `Option<&T>`.
 pub mod abi {
-    /// Which built-in toolkit icon - the argument [`Icon::get`](crate::Icon::get) takes. The root's
+    /// Which built-in toolkit icon: the argument [`Icon::get`](crate::Icon::get) takes. The root's
     /// [`Icon`](crate::Icon) is the registry façade (load / get), so the icon selector lives here.
     pub use crate::sys::Icon;
 
@@ -483,14 +480,14 @@ pub mod abi {
 
     /// The raw element state [`UiInput::get_element_state`](crate::UiInput::get_element_state) returns, in
     /// physical px. The root's [`ElementState`](crate::ElementState) is the normalised form
-    /// [`element_state`](crate::element_state) hands back, in logical (authoring) px - prefer it.
+    /// [`element_state`](crate::element_state) hands back, in logical (authoring) px. Prefer it.
     pub use crate::sys::ElementState;
 
     /// The ABI config [`Text::styled`](crate::Text::styled) takes. The root's
     /// [`TextConfig`](crate::TextConfig) is the &str/`Option<FontId>` ergonomic twin.
     pub use crate::sys::TextConfig;
 
-    /// The ABI twin of the safe [`WidgetConfig`](crate::WidgetConfig) - the widget field every ABI widget
+    /// The ABI twin of the safe [`WidgetConfig`](crate::WidgetConfig): the widget field every ABI widget
     /// config embeds, for the ABI structs a shim crate hand-builds.
     pub use crate::sys::WidgetConfig;
 }
@@ -499,7 +496,7 @@ pub mod abi {
 /// flowi's C ABI.
 ///
 /// Every safe signature in this crate takes &str; RawStr is for code writing `extern "C"` entry points.
-/// It promises nothing about how long its bytes live - that depends on which constructor made it.
+/// How long its bytes live depends on which constructor made it.
 pub use crate::sys::RawStr;
 
 /// Raw C ABI items for ABI-shim and plugin-SDK crates that hand-write extern "C" entry points: the panic
@@ -515,7 +512,7 @@ pub use crate::foundation::{
 /// Raw C ABI item; prefer [`Mount`]. The opaque C FlVfsMount behind `*mut FlVfsMount`.
 pub use crate::sys::FlVfsMount;
 
-/// Compile-time check that each flowi path names the same type as its flowi_sys counterpart.
+/// Compile-time check that each flowi path names the same type as its `sys` counterpart.
 mod public_surface_guard {
     macro_rules! nameable_from_flowi {
         ($($flowi_path:ty = $sys_type:ty),+ $(,)?) => {
@@ -674,13 +671,13 @@ impl Image {
         }
     }
 
-    /// Upload pixels as a static image and return a handle that is ready immediately - the route for an
-    /// image a program generates (a rendered waveform, a plotted curve, a procedural texture) and so has no
+    /// Upload pixels as a static image and return a handle that is ready immediately. Use it for an
+    /// image a program generates (a rendered waveform, a plotted curve, a procedural texture), which has no
     /// file to [`Image::load`]. The buffer is copied during the call, so the caller may drop it on return.
     ///
     /// pixels must hold exactly width × height pixels tightly packed, at the byte width format implies:
     /// 1 for [`ImageFormat::Alpha`], 3 for [`ImageFormat::RGB`], 4 for [`ImageFormat::RGBA`] and
-    /// [`ImageFormat::XRGB`]. There is no stride parameter - a buffer with padded rows must be repacked first.
+    /// [`ImageFormat::XRGB`]. There is no stride parameter: a buffer with padded rows must be repacked first.
     ///
     /// # Panics
     ///
@@ -713,8 +710,8 @@ impl Image {
             pixels.len()
         );
 
-        // SAFETY: the pointer addresses expected initialised bytes - exactly the extent the C side reads
-        // for this size and format, as the assert above just established - and the image system copies them
+        // SAFETY: the pointer addresses expected initialised bytes, which the assert above established is
+        // exactly the extent the C side reads for this size and format, and the image system copies them
         // out before returning.
         unsafe {
             crate::sys::fl_image_create_from_pixels(pixels.as_ptr().cast(), width, height, format)
@@ -727,7 +724,7 @@ impl Image {
 pub use crate::sys::FontStyle;
 
 /// Mount-relative font and icon loading, over the same [`Mount`] handle the VFS operations borrow. A host
-/// that serves its assets out of its own data mount reaches for these instead of the path-taking
+/// that serves its assets out of its own data mount uses these instead of the path-taking
 /// [`Font::load`] / [`Icon::get`], which resolve against flowi's hidden working-directory asset mount.
 impl Font {
     /// Start loading a TTF from relative_path within mount at default_size (unscaled px; 0 selects a
@@ -738,9 +735,8 @@ impl Font {
         relative_path: impl AsRef<str>,
         default_size: u16,
     ) -> crate::sys::FontId {
-        // SAFETY: the per-module opaque FlVfsMount cast, as in Image::load_mount - pointer-to-opaque,
-        // not a reinterpretation - over a mount the &Mount borrow keeps live for the call, and a path the
-        // VFS copies before returning.
+        // SAFETY: the same opaque FlVfsMount pointer cast as Image::load_mount, over a mount the &Mount
+        // borrow keeps live for the call, and a path the VFS copies before returning.
         unsafe {
             crate::sys::fl_font_load_mount(
                 mount.as_raw().cast(),
@@ -776,30 +772,29 @@ impl Icon {
     }
 }
 
-/// The resolved theme palette and its groups - handed to [`Theme::update`], returned by [`Theme::colors`].
+/// The resolved theme palette and its groups: handed to [`Theme::update`], returned by [`Theme::colors`].
 /// [`ThemeOverride`] / [`ThemeSlot`] drive the sparse subtree override [`Theme::push`] takes.
 pub use crate::sys::{
     ThemeBorder, ThemeColors, ThemeFeedback, ThemeInteractive, ThemeOverride, ThemeSlot,
     ThemeSurface, ThemeText,
 };
 
-/// The semantic action vocabulary - the logical verb a widget responds to, decoupled from the
+/// The semantic action vocabulary: the logical verb a widget responds to, independent of the
 /// physical input that triggers it. Consumed by [`action_pressed`].
 pub use crate::sys::Action;
 
 /// This frame's navigation snapshot, returned by [`nav_frame`].
 pub use crate::sys::NavFrame;
 
-/// The navigation-boundary bitmask a UI plugin's update returns - which nav edges the plugin reports having
+/// The navigation-boundary bitmask a UI plugin's update returns: which nav edges the plugin reports having
 /// reached, plus OVERRIDE for explicit edge control.
 pub use crate::sys::NavEdge;
 
-/// Vertical alignment of a text run within its line box - the typed view of TextConfig.valign.
-/// Set [`TextConfig::valign`]; it defaults to
-/// [`TextVAlign::Center`].
+/// Vertical alignment of a text run within its line box, the typed view of TextConfig.valign.
+/// Set [`TextConfig::valign`]; it defaults to [`TextVAlign::Center`].
 pub use crate::sys::TextVAlign;
 
-/// How a single-line text run that overflows its box is handled - the typed view of TextConfig.overflow.
+/// How a single-line text run that overflows its box is handled, the typed view of TextConfig.overflow.
 /// Set [`TextConfig::overflow`]; it defaults to
 /// [`Overflow::Clip`] (hard-clip). [`Overflow::Elide`] truncates to the longest fitting
 /// prefix and appends an ellipsis (U+2026), constraining the run to its box width.
@@ -867,11 +862,11 @@ end_guards! {
 ///
 /// The title is copied into the panel's record; "" gives a blank tab.
 ///
-/// The body runs only when the panel is visible this frame - the selected tab of the leaf holding it, or
-/// floating - and a hidden panel keeps its slot reserved by virtue of having been declared.
+/// The body runs only when the panel is visible this frame (the selected tab of the leaf holding it, or
+/// floating). A hidden panel keeps its slot reserved because it was declared.
 ///
 /// Evaluates to whether the body ran, for the caller that has to do something when its panel stays hidden
-/// (stop a preview, release a resource) rather than merely skip drawing.
+/// (stop a preview, release a resource).
 #[macro_export]
 macro_rules! dock_panel {
     ($id:expr, $title:expr, $body:block) => {
@@ -887,7 +882,7 @@ macro_rules! dock_panel {
 
 /// Per-call styling for [`text_styled`]. Build one with ..Default::default() and set only the fields you
 /// care about; [`Default`] is [`valign`](Self::valign) = [`TextVAlign::Center`] and every other field zero.
-/// A zero field means "use the fallback" - [`font`](Self::font) None → the active font, [`font_size`](Self::font_size) 0 → the
+/// A zero field means "use the fallback": [`font`](Self::font) None → the active font, [`font_size`](Self::font_size) 0 → the
 /// font's default size, [`no_wrap`](Self::no_wrap) false → word wrap. [`color`](Self::color) has no
 /// fallback: a zeroed colour is transparent, so set it for visible text.
 #[derive(Copy, Clone, Debug)]
@@ -896,7 +891,7 @@ pub struct TextConfig {
     pub font: Option<FontId>,
     /// Pixel size; 0 uses the font's default size.
     pub font_size: u16,
-    /// Text colour. Zeroed (transparent) by default - set it for visible text.
+    /// Text colour. Zeroed (transparent) by default, so set it for visible text.
     pub color: Color,
     /// Extra spacing between glyphs, in px.
     pub letter_spacing: u16,
@@ -947,7 +942,7 @@ impl TextConfig {
     }
 }
 
-/// Emit a configurable layout-participating text element - the [`TextConfig`] form of
+/// Emit a configurable layout-participating text element, the [`TextConfig`] form of
 /// [`Text::styled`]. Like the plain [`Text::emit`], the run lays out as a normal element inside the
 /// current container; unlike it, config carries per-call font, size, colour, spacing, vertical alignment, and
 /// wrap control. Build config with [`TextConfig::default`] plus the fields you want (e.g. TextConfig { color,
@@ -966,9 +961,9 @@ pub use slider::{
     slider_float, slider_float_with, slider_int, slider_int_with, Slider, SliderConfig,
 };
 
-/// An editable text field (inline rename, search box, any editable value). The handle closes on [`Drop`]; the field is driven with
-/// [`clear`](TextInput::clear) / [`show`](TextInput::show) / [`set_text`](TextInput::set_text) /
-/// [`text`](TextInput::text).
+/// An editable text field (inline rename, search box, any editable value). The handle closes on [`Drop`];
+/// the field is driven with [`clear`](TextInput::clear) / [`show`](TextInput::show) /
+/// [`set_text`](TextInput::set_text) / [`text`](TextInput::text).
 pub use generated::text_input::TextInput;
 
 impl TextInput {
@@ -1003,15 +998,15 @@ impl Default for TextInput {
 /// by every id-taking entry point ([`Layout::start`], [`Floating::start`], [`Scroll::area_begin`],
 /// [`UiInput::scroll_target`], [`UiInput::mouse_wheel_delta`]) through `impl Into<LayoutId>`.
 ///
-/// Construct it implicitly at the call site - never name the type:
+/// Construct it implicitly at the call site, without naming the type:
 /// - A bare string is seed 0, the common case: Layout::start("toolbar").
 /// - A (name, seed) tuple carries a disambiguating seed: Layout::start(("lane", track_index)). The seed
 ///   accepts a usize (an .enumerate() counter), i32, or u32, each cast to the stored i32.
 ///
 /// Sibling elements emitted from one source line in a loop (timeline lanes, list rows) all share the macro's
-/// synthesised file:line:column id and would collide - a fatal duplicate-id assert in debug builds. The
+/// synthesised file:line:column id and would collide, a fatal duplicate-id assert in debug builds. The
 /// seed disambiguates them without formatting a unique name per sibling. To disambiguate across more than one
-/// axis (e.g. track × clip), pack the indices into the single i32 seed yourself - `("clip", (track << 16) | clip)`.
+/// axis (e.g. track × clip), pack the indices into the single i32 seed yourself: `("clip", (track << 16) | clip)`.
 pub struct LayoutId {
     name: Box<str>,
     seed: i32,
@@ -1082,7 +1077,7 @@ impl From<(&str, u32)> for LayoutId {
 }
 
 impl LayoutId {
-    /// Resolve this id (name + seed) to the [`ElementId`] the core keys its state under - the same hash the
+    /// Resolve this id (name + seed) to the [`ElementId`] the core keys its state under. It is the hash the
     /// element is laid out under, so an id you hash here equals the [`hot_element`] result when that element
     /// is hot. The hash is one-way; hash your own candidate ids and key a `{ElementId -> object}` map on the
     /// results to map a returned hot id back to its object. Build the LayoutId the usual way ("name".into() or
@@ -1098,7 +1093,7 @@ impl LayoutId {
         &self.name
     }
 
-    /// The disambiguating seed this id was built with - 0 for a bare-string id.
+    /// The disambiguating seed this id was built with, 0 for a bare-string id.
     pub fn seed(&self) -> i32 {
         self.seed
     }
@@ -1110,7 +1105,7 @@ impl LayoutId {
 /// while this borrows name for the duration of the hash and touches no arena at all.
 ///
 /// This is the identity to hold when a host polls or drives element state from a pass that runs outside the
-/// frame - an update pass that decides what to show before rendering it. Pair it with [`element_state_id`] to
+/// frame (an update pass that decides what to show before rendering it). Pair it with [`element_state_id`] to
 /// read that element's state and [`set_focus_id`] to move focus to it. Inside a frame, prefer the [`LayoutId`]
 /// forms: they read the same, and the name stays visible at the call site.
 ///
@@ -1118,7 +1113,7 @@ impl LayoutId {
 /// [`LayoutId::hashed_id`] of the same (name, seed) and to a matching [`hot_element`] result.
 pub fn element_id(name: &str, seed: i32) -> ElementId {
     // SAFETY: the hash reads name's bytes during the call and keeps nothing, so a borrow that outlives the
-    // call is enough - no frame arena, and no frame, is involved.
+    // call is enough. No frame arena and no frame is involved.
     unsafe {
         sys::fl_input_hashed_id(sys::LayoutId {
             name: sys::RawStr::borrow(name),
@@ -1127,7 +1122,7 @@ pub fn element_id(name: &str, seed: i32) -> ElementId {
     }
 }
 
-/// When a scroll area shows its scrollbar - the value [`ScrollAreaConfig`]'s `scrollbar_mode` takes.
+/// When a scroll area shows its scrollbar: the value [`ScrollAreaConfig`]'s `scrollbar_mode` takes.
 pub use crate::sys::ScrollbarDisplayMode;
 
 /// The composing [`List`] methods, the value types they hand around, and the RAII [`SelectionSet`].
@@ -1142,15 +1137,15 @@ pub use list::{
 mod dynamic_image;
 pub use dynamic_image::{DynamicImage, DynamicImageBuffer};
 
-/// An element's interaction-and-geometry state for this frame - the result of the [`element_state`] query and the
-/// pull dual of a widget's pushed-back [`Signal`]. Keyed by an element id, so it serves a plain area (a timeline
+/// An element's interaction-and-geometry state for this frame: the result of the [`element_state`] query and the
+/// pull counterpart of a widget's pushed-back [`Signal`]. Keyed by an element id, so it serves a plain area (a timeline
 /// viewport) as readily as a built-in widget. pos/size are in [`UiInput::mouse_position`]'s logical
 /// (authoring) space, so size composes directly with cursor and content-transform math. The fields beyond hot
 /// (focused, active, and the _t interpolators) are populated by the Widget Prologue, so a plain non-widget
 /// area reports its rect / visible / hot / found and zeros for the rest.
 #[derive(Copy, Clone, Debug)]
 pub struct ElementState {
-    /// Element origin in logical (authoring) px - the same space as [`UiInput::mouse_position`].
+    /// Element origin in logical (authoring) px, the same space as [`UiInput::mouse_position`].
     pub pos: Vec2,
     /// Element size in logical (authoring) px.
     pub size: Vec2,
@@ -1160,7 +1155,7 @@ pub struct ElementState {
     pub active_t: f32,
     /// Focus animation phase, 0..1.
     pub focused_t: f32,
-    /// The element was present in this frame's layout state - when false, every other field is zero/false.
+    /// The element was present in this frame's layout state. When false, every other field is zero/false.
     pub found: bool,
     /// The element is within the visible/clip region.
     pub visible: bool,
@@ -1172,14 +1167,14 @@ pub struct ElementState {
     pub active: bool,
 }
 
-/// Read the element id's [`ElementState`] for this frame - its rect, layout presence, and interaction. The dual
-/// of a widget's [`Signal`]: a Signal is handed back by value from a widget you called, Element State is
+/// Read the element id's [`ElementState`] for this frame: its rect, layout presence, and interaction. The
+/// counterpart of a widget's [`Signal`]: a Signal is handed back by value from a widget you called, Element State is
 /// pulled by id from any element you laid out, so it works for a plain area as well as a widget. The pos/size
-/// rect is normalised to logical (authoring) px - the same space as [`UiInput::mouse_position`] and the
-/// Painter - by dividing out the absolute UI scale, so the app never handles physical pixels or ui_scale itself.
+/// rect is normalised to logical (authoring) px (the same space as [`UiInput::mouse_position`] and the
+/// Painter) by dividing out the absolute UI scale, so the app never handles physical pixels or ui_scale itself.
 /// The rect is the previous frame's resolved layout (immediate mode), so query an element that existed last
-/// frame; a never-laid-out id returns found = false with a zero rect. Note a plain area does not enter the
-/// interaction state on its own - a widget enters via its own behavior, but a bare container must opt in by
+/// frame; a never-laid-out id returns found = false with a zero rect. A plain area does not enter the
+/// interaction state on its own: a widget enters via its own behavior, but a bare container must opt in by
 /// declaring itself a [`UiInput::scroll_target`] (the timeline-viewport pattern); until it does, element_state
 /// reports found = false for it.
 ///
@@ -1194,13 +1189,13 @@ pub fn element_state(id: impl Into<LayoutId>) -> ElementState {
     element_state_raw(unsafe { sys::fl_input_get_element_state(id.into_sys()) })
 }
 
-/// Read the [`ElementState`] of an already-hashed [`ElementId`] - the same query [`element_state`] performs,
+/// Read the [`ElementState`] of an already-hashed [`ElementId`]: the same query [`element_state`] performs,
 /// keyed by the hashed id instead of the [`LayoutId`] it comes from, and normalised to logical px the same way.
 ///
 /// This is the form to use from outside a frame: handing a [`LayoutId`] to the core copies its name into the
-/// per-frame arena, which only exists between the frame's begin and end, so a host polling element state from its update
-/// pass reaches for [`element_id`] plus this. Inside a frame the two are interchangeable and [`element_state`]
-/// reads better.
+/// per-frame arena, which only exists between the frame's begin and end, so a host polling element state
+/// from its update pass uses [`element_id`] plus this. Inside a frame the two are interchangeable and
+/// [`element_state`] reads better.
 ///
 /// # Panics
 /// Panics when called off the thread that owns the live [`Application`].
@@ -1211,8 +1206,8 @@ pub fn element_state_id(id: ElementId) -> ElementState {
 }
 
 impl Default for ElementState {
-    /// The state of an element that was never laid out: found = false, an empty rect, and every phase at rest -
-    /// exactly what [`element_state`] reports for an id this frame has not seen.
+    /// The state of an element that was never laid out: found = false, an empty rect, and every phase at rest,
+    /// which is what [`element_state`] reports for an id this frame has not seen.
     fn default() -> ElementState {
         ElementState {
             pos: Vec2 { x: 0.0, y: 0.0 },
@@ -1229,7 +1224,7 @@ impl Default for ElementState {
     }
 }
 
-/// Normalise a raw ElementState - whose rect is physical px - into the logical (authoring) px the public
+/// Normalise a raw ElementState, whose rect is physical px, into the logical (authoring) px the public
 /// [`ElementState`] reports.
 fn element_state_raw(s: sys::ElementState) -> ElementState {
     // SAFETY: an argument-free read of the active context's scale; no pointer crosses.
@@ -1255,12 +1250,12 @@ fn element_state_raw(s: sys::ElementState) -> ElementState {
     }
 }
 
-/// The single topmost-hovered element across the whole frame - the core's already-arbitrated hot id, or None
+/// The single topmost-hovered element across the whole frame: the core's already-arbitrated hot id, or None
 /// when nothing is hovered. The pull complement for a consumer that handles input in a pass separate from
 /// declaration: it answers "which element is under the cursor?" in one read, without re-walking every id calling
 /// [`element_state`]. Overlapping elements resolve topmost-wins (the front one is reported). Map the returned
 /// [`ElementId`] back to your own object by hashing your candidate ids with [`LayoutId::hashed_id`] into a
-/// `{ElementId -> object}` map. The inline model - read hovered/pressed from each element's own [`Signal`] -
+/// `{ElementId -> object}` map. The inline model (read hovered/pressed from each element's own [`Signal`])
 /// needs neither this nor a re-walk, and is preferred where it fits.
 ///
 /// # Panics
@@ -1320,8 +1315,8 @@ pub fn nav_down_pressed() -> bool {
 }
 
 /// Consume a pending navigation direction so the focus system won't also act on it this frame. Call when the
-/// widget handles the direction itself - the canonical case is a list that scrolls internally until it reaches
-/// its boundary, and only then lets focus move on.
+/// widget handles the direction itself, for example a list that scrolls internally until it reaches
+/// its boundary and only then lets focus move on.
 ///
 /// # Panics
 /// Panics when called off the thread that owns the live [`Application`].
@@ -1365,8 +1360,8 @@ pub fn consume_nav_right() {
     unsafe { sys::fl_consume_nav_right() }
 }
 
-/// Programmatically move focus to the widget identified by id - e.g. restoring focus when navigating back to
-/// a page. Takes the same ergonomic [`LayoutId`] the layout macros and [`Item::behavior`] accept.
+/// Programmatically move focus to the widget identified by id, e.g. restoring focus when navigating back to
+/// a page. Takes the same [`LayoutId`] the layout macros and [`Item::behavior`] accept.
 ///
 /// # Panics
 /// Panics when called off the thread that owns the live [`Application`].
@@ -1379,7 +1374,7 @@ pub fn set_focus(id: impl Into<LayoutId>) {
     unsafe { sys::fl_set_focus(id.into_sys()) }
 }
 
-/// Programmatically move focus to an already-hashed [`ElementId`] - the form [`hot_element`] and
+/// Programmatically move focus to an already-hashed [`ElementId`], the form [`hot_element`] and
 /// [`LayoutId::hashed_id`] hand out. Prefer [`set_focus`] when the [`LayoutId`] is available, since that is the
 /// stable cross-frame identity; this is for callers that only hold the within-frame id.
 ///
@@ -1393,9 +1388,8 @@ pub fn set_focus_id(id: ElementId) {
 }
 
 impl Theme {
-    /// The active theme palette flowi is painting with. The read complement of [`Theme::update`] - a widget
-    /// deriving its own colors (a selection tint, a perceptually-adjusted hover) starts from these rather than
-    /// hard-coding a palette.
+    /// The active theme palette flowi is painting with. The read counterpart of [`Theme::update`]: a widget
+    /// deriving its own colors (a selection tint, a perceptually adjusted hover) starts from these.
     ///
     /// # Panics
     /// Panics when called off the thread that owns the live [`Application`].
@@ -1412,9 +1406,9 @@ impl Theme {
 /// Render backend selection for [`Application::with_renderer`].
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Renderer {
-    /// Software renderer - offscreen RGB24, always available. The default for [`Application::new`].
+    /// Software renderer: offscreen RGB24, always available. The default for [`Application::new`].
     Software,
-    /// GPU compute backend - offscreen RGBA8, headless EGL-surfaceless or a windowed SDL-GL surface. Available
+    /// GPU compute backend: offscreen RGBA8, headless EGL-surfaceless or a windowed SDL-GL surface. Available
     /// only in the GPU build and needs a live GL 4.3 context.
     Gpu,
 }
@@ -1428,7 +1422,7 @@ impl Renderer {
     }
 }
 
-/// A mouse button - the selector for the [`mouse_button`] query, the [`UiInput::mouse_pressed`] /
+/// A mouse button: the selector for the [`mouse_button`] query, the [`UiInput::mouse_pressed`] /
 /// [`UiInput::mouse_down`] / [`UiInput::mouse_released`] slots, and the headless injection harness
 /// ([`Application::inject_mouse_button`]). [`MouseButton::Count`] is the array-size sentinel the C enum
 /// carries, not a button.
@@ -1447,7 +1441,7 @@ pub struct MouseButtonState {
     pub released: bool,
 }
 
-/// Read button's state this frame - global and unrouted, the three channels bundled into a
+/// Read button's state this frame, global and unrouted, with the three channels bundled into a
 /// [`MouseButtonState`]. Every reader sees the same state regardless of what is under the cursor: buttons are
 /// never zeroed or re-routed mid-frame (unlike [`UiInput::mouse_wheel_delta`], which is scoped to a
 /// [`UiInput::scroll_target`]). An owned interaction (a drag) is the app's to latch: note
@@ -1470,7 +1464,7 @@ pub fn mouse_button(button: MouseButton) -> MouseButtonState {
 /// test with [`Application::inject_key`].
 pub use crate::sys::Key;
 
-/// A system cursor shape - the selector for [`Cursor::system`].
+/// A system cursor shape, the selector for [`Cursor::system`].
 pub use crate::sys::CursorShape;
 
 impl Cursor {
@@ -1480,7 +1474,7 @@ impl Cursor {
     }
 }
 
-/// Per-item close policy on menu-item activation - the typed view of [`MenuItemConfig::close_policy`].
+/// Per-item close policy on menu-item activation, the typed view of [`MenuItemConfig::close_policy`].
 /// [`MenuClosePolicy::Default`] (the zero value)
 /// lets each item kind use its natural default (an action item closes the chain on activation);
 /// [`MenuClosePolicy::Close`] / [`MenuClosePolicy::KeepOpen`] force the exception either way.
@@ -1494,8 +1488,8 @@ pub use crate::sys::MenuClosePolicy;
 pub use generated::menu::MenuConfig;
 
 /// Per-call configuration for a menu action item; shortcut is a plain &str copied into the per-frame
-/// arena at the call. Build one with ..Default::default() and set only what you need; a zero field means "use the default"
-/// ([`close_policy`](MenuItemConfig::close_policy) [`MenuClosePolicy::Default`], an empty
+/// arena at the call. Build one with ..Default::default() and set only what you need; a zero field
+/// means "use the default" ([`close_policy`](MenuItemConfig::close_policy) [`MenuClosePolicy::Default`], an empty
 /// [`shortcut`](MenuItemConfig::shortcut), not [`disabled`](MenuItemConfig::disabled)).
 /// [`shortcut`](MenuItemConfig::shortcut) is display-only right-aligned text (no dispatch). Hand to
 /// [`menu_item_with`] / [`Menu::item`] or set fields through the [`menu_item!`] macro.
@@ -1552,7 +1546,7 @@ impl Menu {
 }
 
 /// Emit one menu action item labelled label inside an open [`menu!`] / [`Menu::begin`] scope, returning its
-/// interaction [`Signal`] - read [`Signal::clicked`](Signal#structfield.clicked) the frame it activates. A plain
+/// interaction [`Signal`]: read [`Signal::clicked`](Signal#structfield.clicked) the frame it activates. A plain
 /// function so it reads naturally inline (if menu_item("Cut").clicked { ... }) and arbitrary widgets can sit
 /// between items. Uses the default [`MenuItemConfig`]; for a shortcut, disabled state, or an explicit close policy
 /// use [`menu_item_with`]. Accepts any `impl AsRef<str>`, copied into the per-frame arena.
@@ -1560,7 +1554,7 @@ pub fn menu_item(label: impl AsRef<str>) -> Signal {
     menu_item_with(label, MenuItemConfig::default())
 }
 
-/// Emit a menu action item with an explicit [`MenuItemConfig`] (shortcut text, disabled state, or close policy) -
+/// Emit a menu action item with an explicit [`MenuItemConfig`] (shortcut text, disabled state, or close policy),
 /// the config form of [`Menu::item`]. See [`menu_item`] for the contract.
 pub fn menu_item_with(label: impl AsRef<str>, config: MenuItemConfig) -> Signal {
     Menu::item(label, config)
@@ -1568,7 +1562,7 @@ pub fn menu_item_with(label: impl AsRef<str>, config: MenuItemConfig) -> Signal 
 
 /// Emit a checkable menu item labelled label bound to checked: clicking it toggles the bool (and shows a
 /// check marker while it is true), keeping the menu open by default so several toggles can be flipped without
-/// reopening. Returns its interaction [`Signal`] - read [`Signal::clicked`](Signal#structfield.clicked) the
+/// reopening. Returns its interaction [`Signal`]: read [`Signal::clicked`](Signal#structfield.clicked) the
 /// frame it toggles. Uses the default [`MenuItemConfig`]; for a shortcut, disabled state, or an explicit close
 /// policy use [`menu_check_with`]. Call inside an open [`menu!`] / [`Menu::begin`] scope.
 pub fn menu_check(label: impl AsRef<str>, checked: &mut bool) -> Signal {
@@ -1618,7 +1612,7 @@ pub use generated::menu::MenuBarConfig;
 /// [`UiMenubarMenu::begin`] or set fields through the [`menubar_menu!`](crate::menubar_menu) macro.
 pub use generated::menu::MenuBarMenuConfig;
 
-/// How a [`Popup`] scope is positioned - the typed view of [`PopupConfig::anchor`].
+/// How a [`Popup`] scope is positioned, the typed view of [`PopupConfig::anchor`].
 /// [`PopupAnchor::Element`] (the zero default) anchors to the element named by
 /// [`Popup::begin`]'s anchor_id; [`PopupAnchor::Point`] anchors to the absolute [`PopupConfig::point`].
 pub use crate::sys::PopupAnchor;
@@ -1670,9 +1664,8 @@ pub use application::{
 #[cfg(test)]
 mod tests {
     /// No generated façade signature may take a slice of the raw RawStr ABI mirror: it has no safe
-    /// constructor, so such a parameter is unreachable from this crate and forces the caller into a direct
-    /// flowi_sys dependency. The generator lowers string arrays to `&[impl AsRef<str>]` instead and packs
-    /// the mirror out of the frame arena internally.
+    /// constructor, so a caller could not build such a parameter. The generator lowers string arrays to
+    /// `&[impl AsRef<str>]` and packs the mirror out of the frame arena internally.
     #[test]
     fn no_generated_signature_takes_a_raw_str_slice() {
         // The three string-array slots.
@@ -1695,9 +1688,9 @@ mod tests {
     }
 
     /// No generated façade signature may take the raw WidgetConfig ABI mirror: its id_override is a
-    /// RawStr with no safe constructor, so such a parameter makes every non-default widget config
-    /// unreachable without a direct flowi_sys dependency. The generator lowers it to the safe twin
-    /// (crate::generated::widget_config::WidgetConfig) instead, which to_sys packs at the call.
+    /// RawStr with no safe constructor, so a caller could not build a non-default widget config. The
+    /// generator lowers it to the safe twin (crate::generated::widget_config::WidgetConfig), which to_sys
+    /// packs at the call.
     #[test]
     fn no_generated_signature_takes_the_raw_widget_config() {
         // Every def whose slots take a WidgetConfig.
@@ -1740,12 +1733,12 @@ mod tests {
         assert_eq!(natural_cmp("", ""), Ordering::Equal);
 
         // First corner: leading zeros are skipped before the runs are measured, so the remaining digit
-        // count decides - 9 vs 09 is a tie, not a difference.
+        // count decides: 9 vs 09 is a tie.
         assert_eq!(natural_cmp("file9", "file09"), Ordering::Equal);
         assert_eq!(natural_cmp("file9", "file10"), Ordering::Less);
 
         // Second corner: the C compares char, which is signed on the target ABI, so a byte >= 0x80 orders
-        // as negative - below every ASCII character rather than above it.
+        // as negative, below every ASCII character.
         assert_eq!(natural_cmp_bytes(b"\xff", b"a"), Ordering::Less);
         assert_eq!(natural_cmp_bytes(b"a", b"\xff"), Ordering::Greater);
 
@@ -1808,7 +1801,7 @@ mod tests {
     }
 
     /// The two formats the raw upload path does not accept have no byte width to validate against, so they
-    /// are rejected by name rather than silently uploading garbage.
+    /// are rejected by name.
     #[test]
     #[should_panic(expected = "does not accept")]
     fn from_pixels_rejects_a_format_the_upload_path_cannot_take() {

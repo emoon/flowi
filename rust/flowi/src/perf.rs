@@ -12,8 +12,8 @@ use crate::sys;
 
 /// A named profiler scope, open until the guard drops.
 ///
-/// Prefer the [`perf_scope!`](crate::perf_scope) macro, which names the guard for you - a bare
-/// PerfScope::new("...") whose result is not bound drops immediately and measures nothing. Reach for
+/// Prefer the [`perf_scope!`](crate::perf_scope) macro, which names the guard for you. A bare
+/// PerfScope::new("...") whose result is not bound drops immediately and measures nothing. Use
 /// the constructor directly when the name is a runtime choice between several 'static names.
 ///
 /// The name is a &'static CStr (c"my_scope"), borrowed for the whole scope.
@@ -41,8 +41,8 @@ impl Drop for PerfScope {
 /// loop with it: the profiler resets its per-frame scope stack at the begin and publishes the frame's
 /// readings at the end.
 ///
-/// A host driving [`Application::run`](crate::Application::run) never needs this - the run loop opens
-/// and closes the frame itself. It is for a host that owns its own loop
+/// A host driving [`Application::run`](crate::Application::run) never needs this, because the run loop
+/// opens and closes the frame itself. It is for a host that owns its own loop
 /// ([`Application::tick`](crate::Application::tick) / embedded mode).
 pub struct PerfFrame(());
 
@@ -103,8 +103,8 @@ mod tests {
     use super::{PerfFrame, PerfScope};
     use crate::sys;
 
-    /// Open and immediately close a probe scope, returning the stack depth the profiler reported for it -
-    /// which is the depth of whatever guards are currently open. The profiler's state is thread-local and each
+    /// Open and immediately close a probe scope, returning the stack depth the profiler reported for it,
+    /// which is the number of guards currently open. The profiler's state is thread-local and each
     /// test runs on its own thread, so this reads only what this test opened.
     fn depth() -> u32 {
         // SAFETY: a balanced begin/end pair on the calling thread's profiler state.

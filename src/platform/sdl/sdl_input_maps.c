@@ -1,5 +1,3 @@
-// SDL -> flowi enum mappings (see sdl_input_maps.h).
-
 #include "sdl_input_maps.h"
 
 #if BACKEND_USE_SDL

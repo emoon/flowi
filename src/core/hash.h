@@ -15,7 +15,7 @@ u32 hash_crc32_update(u32 crc, const u8* data, u64 size);
 
 void fl_hash_sha1(const u8* data, u64 size, u8 out[20]);
 
-// out is 40 hex chars + null
+// out is 40 hex chars + NUL
 void hash_sha1_hex(const u8* data, u64 size, char out[41]);
 
 // Number of 64-byte chunks SHA1 hashes for a size-byte message, and the byte count of the final padded tail (the
@@ -35,7 +35,7 @@ void hash_md5_update(Md5Context* ctx, const u8* data, u64 size);
 void hash_md5_final(Md5Context* ctx, u8 out[16]);
 void fl_hash_md5(const u8* data, u64 size, u8 out[16]);
 
-// out is 32 hex chars + null
+// out is 32 hex chars + NUL
 void hash_md5_hex(const u8* data, u64 size, char out[33]);
 
 // SHA256 hashing (public domain implementation based on Brad Conte's)
@@ -52,6 +52,6 @@ void fl_hash_sha256_update(Sha256Context* ctx, const u8* data, u64 size);
 void fl_hash_sha256_final(Sha256Context* ctx, u8 out[32]);
 void hash_sha256(const u8* data, u64 size, u8 out[32]);
 
-// out is 64 hex chars + null
+// out is 64 hex chars + NUL
 void fl_hash_sha256_hex(const u8* data, u64 size, char out[65]);
 void fl_hash_sha256_digest_hex(const u8 digest[32], char out[65]);

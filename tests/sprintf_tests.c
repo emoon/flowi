@@ -234,7 +234,7 @@ UTEST(sprintf, vector_extended_types_mixed) {
 UTEST(sprintf, vector_unknown_format) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    // Test unknown vector format - should be treated as literal text
+    // An unknown vector format is written out as literal text.
     FlString result = fl_sprintf_arena(arena, "Unknown: %v8x", 42);
 
     const char* expected = "Unknown: v8x";
@@ -282,7 +282,7 @@ UTEST(sprintf_std, left_justify) {
     FlString result = fl_sprintf_arena(arena, "%-5d|%-5d|", 42, -17);
     ASSERT_STREQ(result.data, "42   |-17  |");
 
-    // Left justify with zero flag (zero ignored)
+    // The zero flag is ignored when left-justifying.
     result = fl_sprintf_arena(arena, "%-05d", 42);
     ASSERT_STREQ(result.data, "42   ");
 
@@ -295,7 +295,7 @@ UTEST(sprintf_std, sign_flags) {
     FlString result = fl_sprintf_arena(arena, "%+d %+d", 42, -17);
     ASSERT_STREQ(result.data, "+42 -17");
 
-    // Space flag - shows space for positive numbers
+    // The space flag puts a space before positive numbers.
     result = fl_sprintf_arena(arena, "% d % d", 42, -17);
     ASSERT_STREQ(result.data, " 42 -17");
 
@@ -431,7 +431,7 @@ UTEST(sprintf_edge, zero_width_precision) {
     ASSERT_EQ((u64)result.length, 0UL);
     ASSERT_STREQ(result.data, "");
 
-    // Zero precision for integer - stb_sprintf prints 0 for zero value
+    // With zero precision stb_sprintf still prints 0 for a zero value.
     result = fl_sprintf_arena(arena, "%.0d", 0);
     ASSERT_STREQ(result.data, "0");
 

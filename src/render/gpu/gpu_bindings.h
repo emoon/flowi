@@ -6,7 +6,7 @@
 // GPU_BIND_RASTER_CLIPS.
 //
 // The indices are per-program, not global: index 3 is classify's cmd_count and raster's clip array, index 5 is
-// classify's tile_rows and raster's screen_size. So each constant carries its program's name - a resource is only
+// classify's tile_rows and raster's screen_size. So each constant carries its program's name, and a resource is only
 // ever bound with the constant belonging to the program the encoder just set.
 //
 // The GLSL declarations (the #ifndef FL_METAL branch of each shader) keep their literal binding = N, matching

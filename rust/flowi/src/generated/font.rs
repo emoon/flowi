@@ -12,7 +12,7 @@ pub struct Font;
 
 impl Font {
     /// Load a TTF from path at default_size (unscaled px; 0 selects a built-in default).
-    /// Returns the font id (0 = invalid). Async - poll is_loaded for completion.
+    /// Returns the font id (0 = invalid). Async: poll is_loaded for completion.
     #[inline]
     pub fn load(path: impl AsRef<str>, default_size: u16) -> crate::sys::FontId {
         let path = path.as_ref();

@@ -9,8 +9,6 @@
 // Largest file the VFS reads whole into memory: a read-all, or an archive opened from memory (512 MB)
 #define VFS_MAX_READ_SIZE (512 * 1024 * 1024)
 
-// Shared type definitions
-
 // Result of resolving a mount's source
 typedef struct {
     VfsPluginEntry* plugin_entry; // Final plugin that can handle the resolved path (nullptr on error)
@@ -111,8 +109,8 @@ FlJobHandle vfs_ops_schedule_job(FlVfsMount* mount, FlJobsFunc func, void* user_
 
 // Core VFS functions (defined in vfs.c)
 
-// Test seam, null in production: fl_vfs_read calls it on the main thread right after it has scheduled a read, with the
-// read's id, before it records the read on the file. Lets a test run the read and close the file in that gap.
+// Test seam, nullptr in production: fl_vfs_read calls it on the main thread right after it has scheduled a read, with
+// the read's id, before it records the read on the file. Lets a test run the read and close the file in that gap.
 extern void (*g_vfs_test_after_read_scheduled)(FlVfsHandle read);
 
 // Formats an error message owned by the op: it stays valid until the op is destroyed and is freed with it. A second

@@ -3,8 +3,6 @@
 #include <core/types.h>
 #include <flowi/core/math_data.h>
 
-// UI Color Utility Functions
-
 static inline FlColor ui_color_lerp(FlColor a, FlColor b, f32 t) {
     return (FlColor) {
         .r = (u8)(a.r + (b.r - a.r) * t),

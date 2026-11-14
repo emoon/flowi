@@ -34,7 +34,7 @@ static i32 resolve_target(FlListContext* self, ListState* st, i32 cur, bool* dir
     i32 count = (i32)self->ordered_count;
     *directional = true;
     if (nav.nav_down) {
-        fl_consume_nav_down(); // this list owns Down while focused - don't also spatial-nav away
+        fl_consume_nav_down(); // this list owns Down while focused, so it must not also spatial-nav away
         bool hit_edge = false;
         i32 target = step_cursor(cur, 1, count, &hit_edge);
         self->nav_down_edge |= hit_edge;
@@ -63,8 +63,8 @@ static bool activation_pressed(void) {
     return ui_key_pressed(FlKey_Enter) || ui_key_pressed(FlKey_Kp_Enter) || ui_key_pressed(FlKey_Space);
 }
 
-// Extend the selection from the anchor to the new cursor (endpoint-only range - survives virtualization through
-// selection_set_apply). The anchor stays put so a continued shift-arrow re-ranges from the same pivot.
+// Extend the selection from the anchor to the new cursor (an endpoint-only range, which survives virtualization
+// through selection_set_apply). The anchor stays put so a continued shift-arrow re-ranges from the same pivot.
 static void extend_selection(FlListContext* self, ListState* st, i32 cur, u64 new_id) {
     u64 anchor = st->anchor_id;
     if (list_index_of_id(self, anchor) < 0) {
@@ -80,7 +80,7 @@ static void extend_selection(FlListContext* self, ListState* st, i32 cur, u64 ne
                             });
 }
 
-// Ctrl+A - select all, resolved against the full ordered slice (covers rows virtualized away). It does not move
+// Ctrl+A: select all, resolved against the full ordered slice (covers rows virtualized away). It does not move
 // the cursor; emitted regardless of set, only auto-apply is gated on set != nullptr (see list_end_impl). A
 // single-selection list has no "select all", so it is suppressed there.
 static bool handle_select_all(FlListContext* self, bool ctrl) {

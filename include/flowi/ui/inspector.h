@@ -1,12 +1,12 @@
 #pragma once
 
-// Render-IR inspector seam - a narrow, stable view over flowi's per-frame snapshot of its
+// Render-IR inspector: a narrow, stable view over flowi's per-frame snapshot of its
 // last render commands. fl_inspector_snapshot serializes the current UI tree into a caller-owned text
 // buffer; the fl_inspector_hit_test_* pair locates an element by id or name and returns its center point
 // (physical px) for click automation; the fl_inspector_element_* pair enumerates the frame's elements as
 // flat records.
 //
-// The seam is compiled out entirely unless FLOWI_UI_INSPECTOR is defined.
+// Compiled out entirely unless FLOWI_UI_INSPECTOR is defined.
 
 #ifdef FLOWI_UI_INSPECTOR
 
@@ -16,7 +16,7 @@
 #include <flowi/core/string.h>
 
 // An element located by a hit-test query: its stable id, its string name (may be empty),
-// and its center point in physical px - enough to drive a click. name borrows the
+// and its center point in physical px, enough to drive a click. name borrows the
 // current frame's element-name storage and is valid until the next frame is built.
 typedef struct FlInspectorHit {
     uint32_t id;

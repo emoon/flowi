@@ -1,6 +1,6 @@
 #pragma once
 
-// GPU backend: vector-icon draw routing - a resolved SVG atlas cell -> FlCmdImage. An icon crosses the IR as an
+// GPU backend: vector-icon draw routing: a resolved SVG atlas cell -> FlCmdImage. An icon crosses the IR as an
 // ordinary image command.
 
 #include "gpu_atlas_pack.h"

@@ -61,9 +61,7 @@ struct LayoutSizingAxis {
 /// Width and height sizing for a container.
 #[attributes(Copy)]
 struct LayoutSizing {
-    /// Horizontal sizing.
     width: LayoutSizingAxis,
-    /// Vertical sizing.
     height: LayoutSizingAxis,
 }
 
@@ -110,9 +108,7 @@ struct BorderWidthConfig {
 /// Border color, widths, and dash pattern for a container.
 #[attributes(Copy)]
 struct LayoutBorder {
-    /// Border color.
     color: Color,
-    /// Per-edge border widths.
     width: BorderWidthConfig,
     /// Dash pattern, one for the whole border (zeroed = solid). The between-children divider is
     /// always solid.
@@ -121,14 +117,14 @@ struct LayoutBorder {
 
 /// Explicit content-space placement for a child. When enabled, the child is positioned at
 /// offset in its parent's content coordinate space (the same space the clip scroll offset
-/// lives in) - scrolling and clipping with the container - instead of by flex flow. A placed
+/// lives in) instead of by flex flow, so it scrolls and clips with the container. A placed
 /// child neither advances the flex cursor nor contributes to the parent's content extent, so
 /// flowed siblings lay out as if it were absent. The offset is in already-zoomed reference pixels.
 #[attributes(Copy)]
 struct LayoutPlaced {
     /// Content-space offset in reference pixels from the parent's origin.
     offset: Vec2,
-    /// Position by offset in content space instead of flex flow (default false → flex flow).
+    /// Position by offset in content space instead of flex flow (default false: flex flow).
     enabled: bool,
 }
 
@@ -148,25 +144,19 @@ struct CornerRadius {
 /// Full configuration for one layout container, consumed by fl_layout_configure.
 #[attributes(Copy)]
 struct LayoutConfig {
-    /// Width/height sizing.
     sizing: LayoutSizing,
-    /// Inner padding.
     padding: LayoutPadding,
     /// Gap between adjacent children, in reference pixels.
     child_gap: u16,
-    /// Per-corner radius.
     radius: CornerRadius,
-    /// Alignment of children on both axes.
     child_alignment: LayoutChildAlignment,
     /// Row or column.
     direction: LayoutDirection,
     /// Background color.
     color: Color,
-    /// Clipping / scroll.
     clip: LayoutClip,
-    /// Border color and widths.
     border: LayoutBorder,
-    /// Explicit content-space placement (default disabled → normal flex flow).
+    /// Explicit content-space placement (default disabled: normal flex flow).
     placed: LayoutPlaced,
 }
 

@@ -51,8 +51,7 @@ const _: () = {
 // Rows are addressed by dense index and the caller owns everything inside them; the List is the richer
 // surface that keys on stable ids and runs the selection gestures itself.
 //
-// Scroll offset and the measured container height live on the UI context keyed by the id passed to begin, so the
-// surface is ctx-free like the rest of the UI API.
+// Scroll offset and the measured container height are stored under the id passed to begin.
 extern "C" {
     /// Begin a virtualized list of total_count uniform-height rows, identified by id and laid out per opts.
     /// Returns the visible index range to emit; pair with end.

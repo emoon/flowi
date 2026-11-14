@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Radio group widget - exclusive single-choice selection across a set of options.
+/// Radio group widget: exclusive single-choice selection across a set of options.
 pub struct RadioGroup;
 
 impl RadioGroup {

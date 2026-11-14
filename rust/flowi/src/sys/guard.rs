@@ -22,9 +22,9 @@ static POISONED: AtomicBool = AtomicBool::new(false);
 /// The installed panic logger as a fn(&str) stored as its address (0 = none).
 static PANIC_LOGGER: AtomicUsize = AtomicUsize::new(0);
 
-/// Install the sink [`ffi_guard`] logs a panic payload through. Absent an
-/// installed logger the payload is dropped - the guard still poisons and returns
-/// the error.
+/// Install the sink [`ffi_guard`] logs a panic payload through. With no logger
+/// installed the payload is dropped; the guard still poisons and returns the
+/// error.
 pub fn set_panic_logger(logger: fn(&str)) {
     PANIC_LOGGER.store(logger as usize, Ordering::Release);
 }

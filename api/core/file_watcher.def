@@ -5,7 +5,6 @@ extern opaque FlArena
 /// Kinds of file system change, reported as a bitmask in FlFileChange::change_types.
 #[attributes(bitflags)]
 enum FileChangeType {
-    /// No change.
     None = 0,
     /// File or directory was created.
     Created = 1,
@@ -49,9 +48,9 @@ struct FileChange {
 /// A batch of pending changes taken from a watcher: a counted array allocated in the caller's arena.
 /// Valid until that arena is reset.
 struct FileChanges {
-    /// The changes (nullptr when count is 0).
+    /// The changes (null when count is 0).
     changes: *const FileChange,
-    /// Number of changes in changes.
+    /// Number of entries in changes.
     count: u32,
     /// True when the watcher dropped changes because its buffer filled between polls.
     has_overflow: bool,
@@ -60,7 +59,7 @@ struct FileChanges {
 /// Platform-independent file system monitoring for a host that reloads content when it changes on disk.
 ///
 /// Start a watcher on a directory, poll has_changes each frame, and take the pending batch into a
-/// scratch arena when there is something to look at. Taking a batch clears it - each change is reported
+/// scratch arena when there is something to look at. Taking a batch clears it, so each change is reported
 /// once.
 api FileWatcher {
     /// Start watching path. Returns a watcher handle, or 0 when the path cannot be watched or

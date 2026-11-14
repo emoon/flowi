@@ -21,7 +21,7 @@ pub(crate) fn record_allocation() {
 /// allocated.
 ///
 /// `what` names the path under test and appears in the failure message. `body`
-/// must not spawn threads or hand work to a pool — only the calling thread is
+/// must not spawn threads or hand work to a pool: only the calling thread is
 /// observed.
 ///
 /// # Panics

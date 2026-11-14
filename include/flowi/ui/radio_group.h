@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-// Radio group widget - exclusive single-choice selection across a set of options.
+// Radio group widget: exclusive single-choice selection across a set of options.
 // Emit a radio group over options; selecting one writes its index to `*selected_index`, clearing the
 // others. config selects layout and colors. Returns a Signal whose .clicked is set the frame the
 // selection changes. Call inside a frame callback.

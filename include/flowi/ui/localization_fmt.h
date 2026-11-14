@@ -4,8 +4,8 @@
 // arguments by type, build the FlFmtArg array on the stack, and expand to the real call, so a
 // localized message carrying runtime values passes straight into a widget.
 //
-//     ui_text(FL_FMT("SID_greeting", name));
-//     ui_text(FL_PLURAL("SID_file_count", file_count));
+//     fl_text_emit(FL_FMT("SID_greeting", name));
+//     fl_text_emit(FL_PLURAL("SID_file_count", file_count));
 
 #include <flowi/core/string.h>
 #include <flowi/ui/localization.h>
@@ -38,8 +38,8 @@ static inline FlFmtArg fl_fmt_arg_pass(FlFmtArg value) {
 #define FL_ARG_FLOAT(value) fl_fmt_arg_float((double)(value))
 #define FL_ARG_STR(value) fl_fmt_arg_string(value)
 
-// Tag one bare argument from its type. A type not listed here fails to compile rather than tagging
-// as something it is not; wrap such a value in one of the FL_ARG_* macros.
+// Tag one bare argument from its type. A type not listed here fails to compile; wrap such a value in
+// one of the FL_ARG_* macros.
 #define FL_ARG(value)                   \
     _Generic((value),                   \
         FlFmtArg: fl_fmt_arg_pass,      \
@@ -89,7 +89,7 @@ static inline FlFmtArg fl_fmt_arg_pass(FlFmtArg value) {
     FL_FMT_PICK(lead, ##__VA_ARGS__, FL_FMT_TAKES_AT_MOST_8_ARGUMENTS, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0)
 
 // Look the string-literal key sid up in the active language and substitute the arguments that
-// follow into its indexed placeholders - {0} is the first, {1} the second. At most eight
+// follow into its indexed placeholders: {0} is the first, {1} the second. At most eight
 // arguments. The result is frame-lifetime, the same as fl_localize_fmt's.
 #define FL_FMT(sid, ...) fl_localize_fmt(FL_S(sid), FL_FMT_ARG_ARRAY(0, ##__VA_ARGS__), FL_FMT_ARG_COUNT(0, ##__VA_ARGS__))
 

@@ -1,6 +1,6 @@
 /// Where a floating element attaches.
 enum FloatingAttachTo {
-    /// Floating disabled - the element lays out inline.
+    /// Floating disabled: the element lays out inline.
     None = 0,
     /// Attach to the parent element.
     Parent = 1,
@@ -36,7 +36,6 @@ enum FloatingAttachPoint {
 struct FloatingConfig {
     /// Where to attach (default: None disables floating).
     attach_to: FloatingAttachTo,
-    /// Pointer-event handling.
     pointer_capture: FloatingPointerCapture,
     /// Layer order; higher draws on top.
     z_index: i16,

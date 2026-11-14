@@ -1,6 +1,3 @@
-// Dock Layout - emit Clay containers for a logical dock tree, then read the computed node rects back. Topology +
-// ratios come from the tree; Clay computes every pixel rect.
-
 #include "dock_layout.h"
 #include <core/arena.h>
 #include <core/log.h>
@@ -13,8 +10,6 @@
 #include "../ui_widget_internal.h"
 #include <external/clay/clay.h>
 
-// Element-id mapping
-
 static FlLayoutId node_layout_id(FlDockNodeId node) {
     return ID_INT("fl_dock_node", (i32)node);
 }
@@ -23,7 +18,7 @@ u32 dock_layout_node_element_id(FlDockNodeId node) {
     return ui_layout_id_to_clay_id(node_layout_id(node));
 }
 
-// The region under a leaf's tab header - a second id on the same node; the node id covers the whole tile.
+// The region under a leaf's tab header. It is a second id on the same node; the node id covers the whole tile.
 static FlLayoutId content_layout_id(FlDockNodeId node) {
     return ID_INT("fl_dock_content", (i32)node);
 }
@@ -32,11 +27,8 @@ u32 dock_layout_content_element_id(FlDockNodeId node) {
     return ui_layout_id_to_clay_id(content_layout_id(node));
 }
 
-// The tile floor and the whole-pixel edge - both pure functions of the ratio and the extent, so a window resize
-// runs them again and never writes the tree.
-
 // The factor between Clay's physical px and the logical px every dock constant and geometry read-back is
-// denominated in; never zero.
+// denominated in. Never zero.
 f32 dock_ui_scale(void) {
     f32 scale = ui_get_scale();
     return scale > 0.0f ? scale : 1.0f;
@@ -54,8 +46,8 @@ f32 dock_layout_clamp_ratio(f32 ratio, FlDockAxis axis, f32 extent_px, bool* out
     f32 min_child = ((axis == FlDockAxis_X) ? FL_DOCK_MIN_TILE_WIDTH : FL_DOCK_MIN_TILE_HEIGHT) * scale;
     f32 divider = FL_DOCK_DIVIDER_THICKNESS * scale;
 
-    // child[0] measures ratio * extent, the divider a fixed strip, child[1] the remainder - so the two bounds are
-    // the ratios at which each of them lands exactly on the floor.
+    // child[0] measures ratio * extent, the divider is a fixed strip and child[1] takes the remainder, so the two
+    // bounds are the ratios at which each child lands exactly on the floor.
     f32 lo = min_child / extent_px;
     f32 hi = 1.0f - (min_child + divider) / extent_px;
     if (lo >= hi) {
@@ -78,14 +70,11 @@ f32 dock_layout_snap_ratio(f32 ratio, f32 extent_px) {
     return ui_snap_to_pixel(ratio * extent_px) / extent_px;
 }
 
-// Emit
-
-// Every non-empty leaf gets a tab header over a content area - a one-panel leaf included; the header is
-// also the leaf's GRAB HANDLE: clicking a tab re-selects that panel through the dock-as-tab op, and dragging a tab
-// out of the header reports the grab through out_grab for the caller to turn into an undock at its safe point.
-// Only the empty root (the floor) is a bare placeholder. The content area carries its own element id: a declared
-// panel's body attaches to it as a floating element (dock_panel_scope_begin), which is how the panel's widgets end
-// up inside the tile without the walk having to call back into the app mid-recursion.
+// Every non-empty leaf gets a tab header over a content area, a one-panel leaf included. The header is also the
+// leaf's grab handle: clicking a tab re-selects that panel through the dock-as-tab op, and dragging a tab out of
+// the header reports the grab through out_grab for the caller to turn into an undock at its safe point. Only the
+// empty root (the floor) is a bare placeholder. The content area carries its own element id, and a declared
+// panel's body attaches to it as a floating element (dock_panel_scope_begin).
 static void emit_leaf(FlDockTree* tree, const FlDockNode* leaf, FlLayoutSizingAxis width, FlLayoutSizingAxis height,
                       FlDockPanelId* out_grab) {
     FlLayoutId id = node_layout_id(leaf->id);
@@ -101,9 +90,9 @@ static void emit_leaf(FlDockTree* tree, const FlDockNode* leaf, FlLayoutSizingAx
     u32* shown = arena_alloc_array(self->render_frame_allocator, u32, leaf->leaf.count);
     FlDockPanelId shown_panel = dock_workspace_leaf_shown_panel(ws, leaf);
 
-    // The slot a drag opened is empty by contract - the overlay is the one thing drawing the dragged panel - but
-    // the gap leaf still holds that panel, so its tab is suppressed here. A tab-into gap is excluded: showing the
-    // tab in the strip IS its preview.
+    // The slot a drag opened stays empty, because the overlay is the one thing drawing the dragged panel. The gap
+    // leaf still holds that panel, so its tab is suppressed here. A tab-into gap is excluded: showing the tab in
+    // the strip is its preview.
     FlDockPanelId gap_panel = 0;
     if (dock_drag_active(&ws->drag) && ws->drag.gap_is_new && ws->drag.gap_leaf == leaf->id) {
         gap_panel = ws->drag.panel;
@@ -125,7 +114,7 @@ static void emit_leaf(FlDockTree* tree, const FlDockNode* leaf, FlLayoutSizingAx
 
     if (shown_count == 0) {
         ui_layout_area_id(id, .sizing = { .width = width, .height = height }) {
-            // The empty floor, or a leaf whose panels are all hidden - no header and nothing to grab.
+            // The empty floor, or a leaf whose panels are all hidden. It has no header and nothing to grab.
         }
         return;
     }
@@ -137,8 +126,8 @@ static void emit_leaf(FlDockTree* tree, const FlDockNode* leaf, FlLayoutSizingAx
     int dragged = -1;
 
     ui_layout_area_id(id, .direction = LayoutDirection_TopToBottom, .sizing = { .width = width, .height = height }) {
-        // The header is the tile's TITLE BAR: a full-width strip at a title-bar height carrying the leaf's
-        // tabs. A LONE panel's tab stretches across the whole bar and drops its tint. TWO OR MORE keep the
+        // The header is the tile's title bar: a full-width strip at a title-bar height carrying the leaf's
+        // tabs. A lone panel's tab stretches across the whole bar and drops its tint. Two or more keep the
         // [min, max] width band and the selected one only tints.
         const bool lone = shown_count == 1;
         const UiTabStripLayout header = {
@@ -158,7 +147,7 @@ static void emit_leaf(FlDockTree* tree, const FlDockNode* leaf, FlLayoutSizingAx
                                         theme, header, out_grab != nullptr ? &dragged : nullptr);
         }
         ui_layout_area_id(content_layout_id(leaf->id), .sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-            // The selected panel's body attaches here by id - emitted later in the frame, by the app.
+            // The selected panel's body attaches here by id. The app emits it later in the frame.
         }
     }
 
@@ -168,7 +157,7 @@ static void emit_leaf(FlDockTree* tree, const FlDockNode* leaf, FlLayoutSizingAx
         *out_grab = leaf->leaf.panels[shown[dragged]];
     }
 
-    // A selection change goes through the dock-as-tab op (re-select), the only sanctioned tree mutator.
+    // A selection change goes through the dock-as-tab op (re-select).
     if (new_selected >= 0 && shown[new_selected] != leaf->leaf.selected) {
         FlDockRequest req = {
             .kind = FlDockRequest_Tab,
@@ -219,17 +208,17 @@ static void emit_node(FlDockTree* tree, FlDockNode* node, FlLayoutSizingAxis wid
 
         if (hidden0 && hidden1) {
             ui_layout_area_id(id, .sizing = { .width = width, .height = height }) {
-                // Every panel below this split is hidden - nothing to tile.
+                // Every panel below this split is hidden, so there is nothing to tile.
             }
             return;
         }
 
-        // Resolve a divider drag against last frame's geometry BEFORE reading the ratio, so the new ratio drives
-        // THIS frame's layout. Only for a split that emits its divider - the branches above emit none.
+        // Resolve a divider drag against last frame's geometry before reading the ratio, so the new ratio drives
+        // this frame's layout. Only for a split that emits its divider; the branches above emit none.
         dock_splitter_handle_drag(tree, node->id, node->split.axis);
 
-        // The split's own box from the PREVIOUS frame's layout, like every other geometry read-back - the room the
-        // floor below is measured against. Absent on the first frame, which makes the clamp a no-op.
+        // The split's own box from the previous frame's layout, which is the room the floor below is measured
+        // against. Absent on the first frame, which makes the clamp a no-op.
         Clay_ElementData box = Clay_GetElementData((Clay_ElementId) { .id = dock_layout_node_element_id(node->id) });
         f32 extent = 0.0f;
         if (box.found) {
@@ -250,8 +239,8 @@ static void emit_node(FlDockTree* tree, FlDockNode* node, FlLayoutSizingAxis wid
         }
 
         ui_layout_area_id(id, .direction = dir, .sizing = { .width = width, .height = height }) {
-            // Floored and snapped to a whole-pixel edge on the way in. Both are pure functions of the ratio and
-            // the extent, so neither writes node->split.ratio - a resize re-derives r instead.
+            // Floored and snapped to a whole-pixel edge on the way in. Neither step writes node->split.ratio, so
+            // a resize derives r again from the stored ratio and the new extent.
             f32 r = dock_layout_snap_ratio(clamped, extent);
             // child[0] keeps its exact percent(ratio); the divider takes a fixed strip on the seam; child[1] grows
             // into the remainder, so the seam never leaves a hole.
@@ -283,7 +272,7 @@ void dock_layout_emit(FlDockTree* tree, FlDockPanelId* out_grab) {
     emit_node(tree, tree->root, sizing_grow(), sizing_grow(), out_grab);
 }
 
-// Readback - the same nodes in the same pre-order, each rect queried by element id.
+// Readback walks the same nodes in the same pre-order, each rect queried by element id.
 
 static u32 count_nodes(const FlDockNode* node) {
     if (node == nullptr) {

@@ -1,5 +1,5 @@
 //! An ArenaVec borrows the arena for its whole life, so holding one across a
-//! rewind (which needs &mut self) is a borrow error - the collection cannot
+//! rewind (which needs &mut self) is a borrow error: the collection cannot
 //! outlive the memory it points into.
 
 use flowi::{Arena, ArenaVec};

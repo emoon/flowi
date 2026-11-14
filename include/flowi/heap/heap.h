@@ -9,19 +9,19 @@
 extern "C" {
 #endif
 
-// The `fl_heap_*` plugin service API - flowi core's malloc-family heap allocator (mimalloc, or the
+// The `fl_heap_*` plugin service API: flowi core's malloc-family heap allocator (mimalloc, or the
 // system allocator when sanitizers are enabled or on Windows), exported as plain C symbols. This is
 // the individually-owned counterpart to the arena service: every allocation must be released, and the
 // two are not interchangeable. Plugins wrapping an external C library typically hand these slots to it
 // as its allocator callbacks. Plugins link the shared library and call these symbols directly.
 //
-// Allocator statistics are not part of this surface - fl_memory_tracker_get_stats already reports
-// mimalloc's allocated/freed totals alongside the arena ones.
+// For allocator statistics use fl_memory_tracker_get_stats, which reports mimalloc's allocated/freed
+// totals alongside the arena ones.
 // Allocate size bytes. Returns null on failure.
 FL_API void* fl_heap_alloc(uint64_t size);
 // Allocate count * size zero-initialized bytes. Returns null on failure.
 FL_API void* fl_heap_calloc(uint64_t count, uint64_t size);
-// Resize an allocation (ptr may be null). The original pointer may be invalidated - always use
+// Resize an allocation (ptr may be null). The original pointer may be invalidated, so always use
 // the returned one.
 FL_API void* fl_heap_realloc(void* ptr, uint64_t new_size);
 // Release an allocation from fl_heap_alloc / fl_heap_calloc / fl_heap_realloc (null is a no-op).

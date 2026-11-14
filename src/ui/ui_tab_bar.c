@@ -22,12 +22,12 @@ int ui_tab_strip(FlString name, u32 instance_id, const FlString* labels, int cou
     }
 
     // A caller that wants the pull-out gesture (the dock leaf header) opts the tabs into draggable +
-    // FlItem_DragThreshold, so a press still selects and only a press that TRAVELS reads as a drag.
+    // FlItem_DragThreshold, so a press still selects and only a press that travels reads as a drag.
     const FlItemFlags tab_flags = out_dragged != nullptr
                                       ? (STANDARD_WIDGET_FLAGS | FlItemFlags_draggable | FlItem_DragThreshold)
                                       : STANDARD_WIDGET_FLAGS;
 
-    // Behavior pass - resolve the selection from this frame's input before any tab lays out; tabs activate on
+    // Behavior pass: resolve the selection from this frame's input before any tab lays out; tabs activate on
     // press (signal.pressed). Hover state reflects last frame's geometry. ui_item_behavior runs once per tab here;
     // the render pass reads cached state via get_item_state.
     for (int i = 0; i < count; i++) {
@@ -43,7 +43,7 @@ int ui_tab_strip(FlString name, u32 instance_id, const FlString* labels, int cou
         if (signal.dragging && out_dragged != nullptr) {
             *out_dragged = i;
         }
-        // The selected tab gets the hand too - in a dock header its press begins the pull-out drag.
+        // The selected tab gets the hand too; in a dock header its press begins the pull-out drag.
         if (signal.hovered) {
             fl_cursor_set((FlCursor) { .shape = FlCursorShape_Hand });
         }
@@ -99,7 +99,7 @@ int ui_tab_strip(FlString name, u32 instance_id, const FlString* labels, int cou
             FlWidgetColors colors = fl_resolve_widget_colors(variant, (FlColor){ 0 }, cfg.widget.text_color, item,
                                                              theme, /*animate_text=*/true);
 
-            // Tab sizing: fit-to-label inside the caller's [min, max] band, or - under stretch - an even
+            // Tab sizing: fit-to-label inside the caller's [min, max] band, or, under stretch, an even
             // share of the strip, floored at min_width. Clay reads a 0 max as "no cap".
             const f32 height = layout.height > 0.0f ? layout.height : (f32)FlWidgetHeight_MD;
             FlLayoutSizingAxis tab_height = padding_driven ? sizing_fit(0) : sizing_fixed(height);

@@ -9,8 +9,7 @@ endif()
 
 project(flowi C)
 
-################################################################################
-# Options
+# Language standard and default build type
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -21,7 +20,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-################################################################################
 # Build options
 
 option(FLOWI_GPU_BACKEND "Enabled to use the GPU backend" ON)
@@ -32,7 +30,6 @@ option(FLOWI_VFS_DRIVER_UNLZX "Build the unlzx driver (Amiga LZX)" OFF)
 include(CMakeDependentOption)
 cmake_dependent_option(FLOWI_BUILD_EXAMPLES "Build the programs under examples/" ON "FLOWI_SDL_BACKEND" OFF)
 
-################################################################################
 # Compiler flags
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -57,7 +54,6 @@ if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     endif()
 endif()
 
-################################################################################
 # Dependencies
 
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR})
@@ -84,7 +80,6 @@ add_subdirectory(external/xxhash)
 add_subdirectory(external/fzy)
 add_subdirectory(external/freetype2)
 
-################################################################################
 # Sources
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
@@ -100,7 +95,6 @@ set_source_files_properties(${VENDORED_SOURCES} PROPERTIES COMPILE_OPTIONS -w)
 file(GLOB OPTIMIZED_SOURCES ${SRC}/image_loader/*.c ${SRC}/render/software/*.c)
 set_property(SOURCE ${OPTIMIZED_SOURCES} APPEND PROPERTY COMPILE_OPTIONS -O3)
 
-################################################################################
 # SDL backend
 
 if(FLOWI_SDL_BACKEND)
@@ -114,7 +108,6 @@ if(FLOWI_SDL_BACKEND)
     list(APPEND SOURCES ${SDL_SOURCES})
 endif()
 
-################################################################################
 # GPU backend
 
 if (FLOWI_GPU_BACKEND)
@@ -147,7 +140,6 @@ endif()
 file(GLOB GPU_SOURCES CONFIGURE_DEPENDS ${GPU}/*.c)
 list(APPEND SOURCES ${GPU_SOURCES})
 
-################################################################################
 # VFS drivers
 
 if(FLOWI_VFS_DRIVER_LIBARCHIVE OR FLOWI_VFS_DRIVER_LHASA OR FLOWI_VFS_DRIVER_UNLZX)
@@ -162,7 +154,6 @@ foreach(driver LIBARCHIVE LHASA UNLZX)
     endif()
 endforeach()
 
-################################################################################
 # Library
 
 add_library(flowi_objects OBJECT ${SOURCES})
@@ -191,13 +182,9 @@ if(FLOWI_VFS_DRIVER_UNLZX)
     target_link_libraries(flowi_objects PUBLIC unlzx)
 endif()
 
-################################################################################
-
 if(APPLE)
     target_link_libraries(flowi_objects PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()
-
-################################################################################
 
 if(FLOWI_SDL_BACKEND)
     target_compile_definitions(flowi_objects PRIVATE FL_APP_HAVE_SDL=1)
@@ -208,8 +195,6 @@ if(FLOWI_SDL_BACKEND)
         target_compile_definitions(flowi_objects PRIVATE FL_WINDOW_HAVE_SOFTWARE=1)
     endif()
 endif()
-
-################################################################################
 
 if(FLOWI_GPU_BACKEND)
     target_compile_definitions(flowi_objects PUBLIC FL_APP_HAVE_GPU=1)
@@ -236,7 +221,6 @@ add_library(flowi_static STATIC)
 target_link_libraries(flowi_static PRIVATE flowi_objects)
 apply_target_config(flowi_static)
 
-################################################################################
 # Exports
 
 if (WIN32)
@@ -246,7 +230,6 @@ elseif (UNIX AND NOT APPLE)
     set_target_properties(flowi PROPERTIES LINK_DEPENDS ${ROOT}/src/exports/flowi.version)
 endif()
 
-################################################################################
 # Tools
 
 set(LOC_CHECK_SRC
@@ -258,7 +241,6 @@ add_executable(loc_check ${SRC}/tools/loc_check_main.c ${LOC_CHECK_SRC})
 target_link_libraries(loc_check PRIVATE flowi_objects)
 apply_target_config(loc_check)
 
-################################################################################
 # Tests
 
 enable_language(CXX)
@@ -305,7 +287,6 @@ if(FLOWI_GPU_BACKEND)
     add_test(NAME gpu_smoke_test COMMAND gpu_smoke_test)
 endif()
 
-################################################################################
 # Examples
 
 if(FLOWI_BUILD_EXAMPLES)

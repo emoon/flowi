@@ -1,6 +1,6 @@
 #pragma once
 
-// flowi List scoped-face API - internal
+// Internal part of the List scoped-face API.
 //
 // The List data types (config / opts / range / result / drop-relationship) are authored in the IDL and emitted
 // into include/flowi/ui/list.h. This internal header keeps the hand-written pieces that stay outside the

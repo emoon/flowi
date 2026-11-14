@@ -2,8 +2,6 @@
 
 #include "unit_tests_common.h"
 
-// A full watcher registry must reject new watchers, not silently corrupt the last slot.
-
 UTEST(file_watcher, full_registry_rejects_instead_of_corrupting) {
     FlFileWatcherConfig config = { .watch_directories = true };
     FlFileWatcherHandle handles[64];
@@ -11,7 +9,7 @@ UTEST(file_watcher, full_registry_rejects_instead_of_corrupting) {
     FlFileWatcherHandle h = FL_FILE_WATCHER_INVALID;
 
     while (n < (u32)sizeof_array(handles)) {
-        h = file_watcher_start(FL_S("."), config); // "." always exists; each start is a separate watcher
+        h = file_watcher_start(FL_S("."), config); // "." always exists, and each start is a separate watcher
         if (h == FL_FILE_WATCHER_INVALID) {
             break;
         }
@@ -19,16 +17,16 @@ UTEST(file_watcher, full_registry_rejects_instead_of_corrupting) {
     }
 
     ASSERT_EQ(FL_FILE_WATCHER_INVALID, h);
-    ASSERT_TRUE(n <= 16); // never exceeded the fixed capacity
+    ASSERT_TRUE(n <= 16); // the registry holds 16 watchers
 
     for (u32 i = 0; i < n; i++) {
         file_watcher_stop(handles[i]);
     }
 }
 
-// file_watcher_path_is_direct_child backs recursive=false on platforms whose native watch API
-// is inherently recursive (FSEvents on macOS): the callback keeps only the watched root itself
-// and its immediate children, discarding deeper subtree events.
+// file_watcher_path_is_direct_child implements recursive=false on platforms whose native watch API is always
+// recursive (FSEvents on macOS). The callback keeps events for the watched root and its immediate children and
+// drops deeper ones.
 
 UTEST(file_watcher, path_is_direct_child_accepts_root_and_immediate_children) {
     // The root itself (e.g. attribute changes on the watched directory)
@@ -64,9 +62,8 @@ UTEST(file_watcher, path_is_direct_child_rejects_deep_and_unrelated_paths) {
     ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("")));
 }
 
-// A directory entry's name must stay valid across subsequent reads and close of the same handle:
-// POSIX readdir reuses its internal dirent buffer, so dir_read_next_os must copy the name into the
-// caller's arena (as Windows does) instead of aliasing that buffer.
+// POSIX readdir reuses its internal dirent buffer, so dir_read_next_os copies each name into the caller's arena,
+// as the Windows version does. The name stays valid across later reads and the close of the handle.
 
 UTEST(os_dir, entry_name_survives_next_read_and_close) {
     FlArena* arena = arena_new();
@@ -95,11 +92,9 @@ UTEST(os_dir, entry_name_survives_next_read_and_close) {
     fl_arena_destroy(arena);
 }
 
-// file_get_size_os returns -1 when stat() fails; file_read_from_handle_os must reject that
-// sentinel instead of letting min(buffer_size, -1) reach read() as a size_t (SIZE_MAX), which
-// would over-read past dest. A stat failure after a successful open can't be constructed
-// deterministically (both syscalls see the same path back-to-back inside file_read_os), so the
-// test injects the sentinel directly - the value file_read_os would forward on stat failure.
+// file_get_size_os returns -1 when stat() fails. file_read_from_handle_os has to reject that value, because
+// min(buffer_size, -1) would reach read() as SIZE_MAX. A stat failure after a successful open cannot be produced
+// on demand, so the test passes -1 directly.
 
 UTEST(os_file, negative_file_size_fails_without_reading) {
     FlString path = FL_S("unit_test_negative_size_tmp.txt");
@@ -113,7 +108,7 @@ UTEST(os_file, negative_file_size_fails_without_reading) {
 
     ASSERT_EQ(-1, (int)file_read_from_handle_os(buffer, fd, -1, (i64)sizeof(buffer)));
     for_count(i, (int)sizeof(buffer)) {
-        ASSERT_EQ(0xAB, buffer[i]); // dest untouched - no read happened
+        ASSERT_EQ(0xAB, buffer[i]); // no read happened, so dest is untouched
     }
 
     file_close_handle_os(fd);
@@ -122,8 +117,8 @@ UTEST(os_file, negative_file_size_fails_without_reading) {
 
 #if !PLATFORM_WINDOWS
 
-// get_disk_space_os walks up the directory tree retrying statvfs() on shorter prefixes. The seam
-// forces every statvfs() to fail, driving the walk all the way past the root.
+// get_disk_space_os walks up the directory tree and retries statvfs() on shorter prefixes. The seam makes every
+// statvfs() fail, so the walk goes past the root.
 
 UTEST(os_disk_space, statvfs_failure_all_the_way_to_root_terminates) {
     os_disk_space_test_force_statvfs_failure(true);
@@ -142,8 +137,8 @@ UTEST(os_disk_space, root_path_statvfs_failure_terminates) {
 }
 
 UTEST(os_disk_space, walk_up_finds_existing_ancestor) {
-    // The leaf components don't exist; the walk-up must land on an existing ancestor ("/tmp",
-    // or ultimately "/") and report its filesystem.
+    // The leaf components do not exist, so the walk up lands on an existing ancestor ("/tmp" or "/") and reports
+    // its filesystem.
     const DiskSpaceInfo info = get_disk_space_os(FL_S("/tmp/flowi_nonexistent_dir/sub/target.bin"));
 
     ASSERT_TRUE(info.is_valid);
@@ -159,9 +154,9 @@ UTEST(os_disk_space, existing_path_immediate_hit) {
 
 #endif // !PLATFORM_WINDOWS
 
-// file_create_directory_recursive_os checks each path component's existence before creating it, so a
-// concurrent creator can win the race between that check and the create call. Two threads rendezvous
-// per iteration and create the same nested path simultaneously; every call must succeed.
+// file_create_directory_recursive_os checks that each path component exists before creating it, so another
+// creator can win the race between the check and the create. Two threads meet at each iteration and create the
+// same nested path at once, and every call has to succeed.
 
 #define MKDIR_RACE_ITERATIONS 200
 
@@ -174,7 +169,7 @@ static void* mkdir_race_thread(void* user_data) {
     MkdirRaceCtx* ctx = user_data;
     char path[128];
     for (int i = 0; i < MKDIR_RACE_ITERATIONS; i++) {
-        // Rendezvous: both threads arrive here before either attempts this iteration's create.
+        // Both threads arrive here before either starts this iteration's create.
         atomic_fetch_add(&ctx->gate, 1);
         while (atomic_load(&ctx->gate) < 2 * (i + 1)) {}
         snprintf(path, sizeof(path), "flowi_mkdir_race_tmp/%d/a/b/c", i);
@@ -205,9 +200,8 @@ UTEST(os_file, recursive_mkdir_survives_concurrent_creator) {
     file_remove_directory_recursive_os(FL_S("flowi_mkdir_race_tmp"));
 }
 
-// The concurrent-creator tolerance above must not swallow genuine failures: a regular file
-// occupying a path component makes the create fail and the post-failure directory re-check false,
-// so the helper still reports the error.
+// A real failure is still reported. A regular file in place of a path component makes the create fail, and the
+// directory check after the failure is false.
 
 UTEST(os_file, recursive_mkdir_still_fails_on_file_component) {
     file_remove_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp"));
@@ -219,9 +213,8 @@ UTEST(os_file, recursive_mkdir_still_fails_on_file_component) {
     file_remove_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp"));
 }
 
-// Re-initializing the log file must close the previous init's fd before opening the new one. Equal
-// /proc/self/fd counts (count_open_fds, declared in unit_tests_common.h) across the second init prove
-// the old fd was closed and its replacement opened 1:1.
+// Re-initializing the log file closes the previous init's fd before opening the new one, so count_open_fds
+// returns the same value before and after the second init.
 
 // Other threads log into the same file, so the case's own line can sit well past the start.
 #define LOG_FILE_READ_CAP MB(4)
@@ -242,7 +235,7 @@ UTEST(log_file, reinit_closes_previous_fd) {
     ASSERT_EQ(fds_after_first_init, count_open_fds());
 #endif
 
-    // The second init's fd is live: a message logged now must land in the file it opened.
+    // A message logged now lands in the file the second init opened.
     fl_log_message(LogLevel_Fatal, __FILE__, __LINE__, "log reinit smoke %d", 42);
 
     arena_scratch_auto(temp);
@@ -254,8 +247,8 @@ UTEST(log_file, reinit_closes_previous_fd) {
     file_remove_directory_recursive_os(dir);
 }
 
-// FlString carries an explicit length and doesn't guarantee a trailing NUL, but C APIs consuming
-// the log file path need a NUL-terminated string; fl_string_to_cstr converts.
+// FlString has an explicit length and no guaranteed trailing NUL. fl_string_to_cstr gives C APIs the
+// NUL-terminated log file path they need.
 
 UTEST(log_file, path_converts_to_valid_cstr) {
     FlString dir = FL_S("/tmp/flowi_log_cstr_test");
@@ -272,7 +265,7 @@ UTEST(log_file, path_converts_to_valid_cstr) {
     ASSERT_EQ((u64)log_path.length, (u64)strlen(log_path_cstr));
     ASSERT_EQ(0, memcmp(log_path_cstr, log_path.data, log_path.length));
 
-    // The converted path is usable as a filesystem path: it names the file the logger writes to.
+    // The converted path names the file the logger writes to.
     fl_log_message(LogLevel_Fatal, __FILE__, __LINE__, "cstr path smoke %d", 7);
     u8* buffer = arena_alloc_array_zero(arena, u8, LOG_FILE_READ_CAP);
     const i64 bytes = file_read_os(buffer, string_from_cstr(log_path_cstr), (i64)LOG_FILE_READ_CAP - 1);
@@ -283,23 +276,22 @@ UTEST(log_file, path_converts_to_valid_cstr) {
     file_remove_directory_recursive_os(dir);
 }
 
-// App-identity seam: the data dir, log file name, and file-watcher queue default to neutral "flowi" values, a host
-// override replaces only the fields it sets, and fl_log_file_init routes the log file name through the seam so a
-// host (e.g. a host writing myapp.log) gets its branded filename without any hardcoded literal in core.
+// The data dir, log file name and file-watcher queue default to neutral "flowi" values. A host override replaces
+// only the fields it sets, and fl_log_file_init takes the log file name from the app identity.
 
 UTEST(app_identity, defaults_override_and_log_routing) {
     ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi")));
     ASSERT_TRUE(fl_string_equals(fl_app_identity_log_file_name(), FL_S("flowi.log")));
     ASSERT_TRUE(fl_string_equals(fl_app_identity_file_watcher_queue(), FL_S("org.flowi.filewatcher")));
 
-    // A partial override touches only the non-empty fields; empty fields keep their current value.
+    // A partial override changes only the non-empty fields.
     FlAppIdentity partial = { .log_file_name = FL_S("myapp.log") };
     fl_app_identity_set(&partial);
     ASSERT_TRUE(fl_string_equals(fl_app_identity_log_file_name(), FL_S("myapp.log")));
     ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi")));
     ASSERT_TRUE(fl_string_equals(fl_app_identity_file_watcher_queue(), FL_S("org.flowi.filewatcher")));
 
-    // fl_log_file_init builds the log file from the seam's name, so the override lands on disk.
+    // fl_log_file_init builds the log file from the overridden name, so the override shows up on disk.
     FlString dir = FL_S("/tmp/flowi_app_identity_test");
     file_remove_directory_recursive_os(dir);
     ASSERT_TRUE(fl_log_file_init(dir));
@@ -315,8 +307,6 @@ UTEST(app_identity, defaults_override_and_log_routing) {
     ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi")));
 }
 
-// The data dir name is routed through the seam: a host override replaces it.
-
 UTEST(app_identity, data_dir_name_routes_through_seam) {
     FlAppIdentity ident = { .data_dir_name = FL_S(".flowi_datadirtest") };
     fl_app_identity_set(&ident);
@@ -327,9 +317,9 @@ UTEST(app_identity, data_dir_name_routes_through_seam) {
     ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi_other")));
 }
 
-// Stopping a watcher must not relocate any other watcher's state: platform layers (FSEvents on
-// macOS) retain the FileWatcherState* passed to platform_start_watching for the stream's lifetime,
-// so removal tombstones the slot in place instead of swap-compacting the array.
+// Stopping a watcher leaves every other watcher's state where it is. Platform layers (FSEvents on macOS) keep the
+// FileWatcherState* passed to platform_start_watching for the stream's lifetime, so removal tombstones the slot
+// in place and does not compact the array.
 
 UTEST(file_watcher, stop_does_not_relocate_live_watchers) {
     FlFileWatcherConfig config = { .watch_directories = true };
@@ -356,8 +346,8 @@ UTEST(file_watcher, stop_does_not_relocate_live_watchers) {
     file_watcher_stop(h3);
 }
 
-// Freed slots must be reused: repeated start/stop cycles far beyond the 16-slot registry capacity
-// must never hit the "registry full" rejection.
+// Freed slots are reused: start/stop cycles far beyond the 16-slot registry capacity never hit the "registry
+// full" rejection.
 
 UTEST(file_watcher, slots_reused_across_stop_start_cycles) {
     FlFileWatcherConfig config = { .watch_directories = true };
@@ -368,8 +358,7 @@ UTEST(file_watcher, slots_reused_across_stop_start_cycles) {
     }
 }
 
-// Interleaved stop/start at capacity: once the registry is full, stopping one watcher must free
-// exactly one slot that a subsequent start can claim.
+// Once the registry is full, stopping one watcher frees exactly one slot for a later start.
 
 UTEST(file_watcher, full_registry_frees_slot_on_stop) {
     FlFileWatcherConfig config = { .watch_directories = true };
@@ -396,9 +385,9 @@ UTEST(file_watcher, full_registry_frees_slot_on_stop) {
     }
 }
 
-// Callback register/unregister must not race the dispatch loop in add_file_change, which runs on
-// platform threads and iterates watcher->callbacks under changes_lock. This hammers both sides
-// concurrently; an unguarded version reports a race under ThreadSanitizer and can crash without it.
+// add_file_change runs on platform threads and iterates watcher->callbacks under changes_lock. This case
+// registers and unregisters callbacks while it dispatches. Without the lock ThreadSanitizer reports a race, and
+// the run can crash.
 
 typedef struct FwCallbackRaceCtx {
     FileWatcherState* watcher;
@@ -441,7 +430,7 @@ UTEST(file_watcher, callback_registration_does_not_race_dispatch) {
     atomic_store(&ctx.stop, true);
     os_thread_join(&change_thread);
 
-    ASSERT_TRUE(file_watcher_is_active(handle)); // watcher state survived the hammering intact
+    ASSERT_TRUE(file_watcher_is_active(handle));
     file_watcher_stop(handle);
 }
 
@@ -487,22 +476,22 @@ UTEST(file_watcher, change_string_arena_rewinds_on_drain) {
             first_drain = iter;
             pos_after_first_drain = pos;
         } else {
-            // Identical traffic each cycle: any growth means drained strings were not reclaimed
+            // The traffic is identical each cycle, so any growth means drained strings were not reclaimed
             ASSERT_EQ(pos_after_first_drain, pos);
         }
     }
 
-    // Strings from an earlier drain live in the caller's arena - still intact after the
-    // internal arena has been rewound and refilled seven times since.
+    // Strings from an earlier drain live in the caller's arena, so they are intact after the internal arena has
+    // been rewound and refilled seven times.
     ASSERT_TRUE(fl_string_equals(first_drain.changes[0].path, FL_S("fw_arena_c0_f0.txt")));
     ASSERT_TRUE(fl_string_equals(first_drain.changes[31].path, FL_S("fw_arena_c0_f31.txt")));
 
-    // clear_changes is the other drain path; it must reclaim too
+    // clear_changes is the other drain path and reclaims too
     add_file_change(watcher, FL_S("fw_arena_clear.txt"), (FlString) { 0 }, FlFileChangeType_Modified, false);
     file_watcher_clear_changes(handle);
     ASSERT_EQ(pos_after_first_drain, atomic_load_explicit(&watcher->changes_arena->pos, memory_order_relaxed));
 
-    // Callbacks fire during add_file_change, before any rewind - the path must be valid there
+    // Callbacks fire during add_file_change, before any rewind, so the path is valid there
     FwArenaCbCtx cb_ctx = { .expected = FL_S("fw_arena_cb.txt") };
     FileWatcherCallbackHandle cb
         = file_watcher_register_callback(handle, FL_S("fw_arena_cb.txt"), fw_arena_on_change, &cb_ctx);
@@ -515,9 +504,9 @@ UTEST(file_watcher, change_string_arena_rewinds_on_drain) {
     fl_arena_destroy(caller_arena);
 }
 
-// A directory moved into a recursively-watched tree via rename() arrives as IN_MOVED_TO, not
-// IN_CREATE. The inotify backend must add a watch for it just like a freshly created directory,
-// or files inside the moved-in subtree change silently with no events and no callbacks.
+// A directory moved into a recursively watched tree with rename() arrives as IN_MOVED_TO, not IN_CREATE. The
+// inotify backend adds a watch for it as it does for a new directory. Without that watch, changes inside the
+// moved-in subtree produce no events.
 
 typedef struct FwMovedInCtx {
     bool fired;
@@ -546,12 +535,12 @@ UTEST(file_watcher, moved_in_directory_becomes_watched) {
                                                                   fw_moved_in_on_change, &ctx);
     ASSERT_NE(FILE_WATCHER_CALLBACK_INVALID, cb);
 
-    // Move the directory into the watched tree; polling processes the IN_MOVED_TO event and
-    // must add a watch for the moved-in directory before anything happens inside it
+    // Move the directory into the watched tree. The poll handles IN_MOVED_TO and adds a watch for the moved-in
+    // directory before anything happens inside it.
     ASSERT_TRUE(file_rename_os(FL_S("fw_moved_src"), FL_S("fw_moved_root/fw_moved_src")));
     file_watcher_has_changes(handle); // poll: consumes IN_MOVED_TO, adds the subtree watch
 
-    // A file created inside the moved-in directory must reach the registered callback
+    // A file created inside the moved-in directory reaches the registered callback
     ASSERT_EQ(1, (int)file_write_os(FL_S("fw_moved_root/fw_moved_src/inner.txt"), (const u8*)"x", 1));
     file_watcher_has_changes(handle); // poll: the create/modify events fire the callback
     ASSERT_TRUE(ctx.fired);
@@ -564,9 +553,9 @@ UTEST(file_watcher, moved_in_directory_becomes_watched) {
 #endif
 }
 
-// fl_path_normalize_full follows standard lexical normalization (Go path.Clean / Rust path-clean): an absolute input
-// stays absolute (".." at the root is dropped - "/" has no parent), while a relative input keeps un-poppable ".."
-// segments so the result still points above its unknown base.
+// fl_path_normalize_full does standard lexical normalization, like Go's path.Clean. An absolute input stays
+// absolute and ".." at the root is dropped, because "/" has no parent. A relative input keeps the ".." segments
+// it cannot pop, so the result still points above its unknown base.
 
 static bool path_normalize_full_matches(FlString input, FlString expected) {
     arena_scratch_auto(temp);
@@ -578,7 +567,7 @@ UTEST(path, normalize_full_preserves_absolute_root) {
     ASSERT_TRUE(path_normalize_full_matches(FL_S("/a/./b"), FL_S("/a/b")));
     ASSERT_TRUE(path_normalize_full_matches(FL_S("/"), FL_S("/")));
 
-    // ".." at the root has nothing to pop; "/" has no parent, so it is dropped.
+    // ".." at the root is dropped.
     ASSERT_TRUE(path_normalize_full_matches(FL_S("/../a"), FL_S("/a")));
     ASSERT_TRUE(path_normalize_full_matches(FL_S("/.."), FL_S("/")));
     ASSERT_TRUE(path_normalize_full_matches(FL_S("/a/.."), FL_S("/")));
@@ -589,7 +578,7 @@ UTEST(path, normalize_full_keeps_unpoppable_dotdot_on_relative_paths) {
     ASSERT_TRUE(path_normalize_full_matches(FL_S("a/../../b"), FL_S("../b")));
     ASSERT_TRUE(path_normalize_full_matches(FL_S(".."), FL_S("..")));
 
-    // ".." only pops a real name, never another ".." already kept in the output.
+    // ".." pops a real name and never a ".." already kept in the output.
     ASSERT_TRUE(path_normalize_full_matches(FL_S("../a/../.."), FL_S("../..")));
 }
 

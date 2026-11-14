@@ -38,8 +38,8 @@ typedef struct FileWatcherState {
 
     void* platform_data;
 
-    // Change buffer (circular) - protected by changes_lock for thread safety
-    // Appended from the macOS dispatch queue or from platform_poll_changes() on Linux/Windows
+    // Circular change buffer, protected by changes_lock. Appended from the macOS dispatch queue or
+    // from platform_poll_changes() on Linux and Windows.
     Mutex changes_lock;
     FlArena* changes_arena; // Per-event path strings; rewound whenever the ring is drained
     FileChange* changes;    // Allocated from registry arena

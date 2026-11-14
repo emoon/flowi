@@ -1,4 +1,4 @@
-// Keyboard/gamepad focus movement - tab order, spatial navigation, and focus repair.
+// Keyboard/gamepad focus movement: tab order, spatial navigation, and focus repair.
 //
 // Both walks are restricted to the current focus scope (the active popup's items when one is open, otherwise
 // items matching popup_focus_scope_id), so a menu or dialog cannot be navigated out of. Runs after hit testing
@@ -45,7 +45,7 @@ static void ui_restore_focus_if_needed(FlUiCtx* self) {
         }
     }
 
-    // A zero focused_id means nobody holds the ring; only a NON-zero id that fell out of this frame's focus order
+    // A zero focused_id means nobody holds the ring; only a non-zero id that fell out of this frame's focus order
     // is a vanished widget to repair.
     //
     // Only auto-restore focus while the window is OS-focused. A deactivated window keeps focused_id at
@@ -248,7 +248,7 @@ void ui_navigation_update(FlUiCtx* self) {
         u32 nav_from = self->focused_id;
         ui_navigate_tab_order(self, self->nav_next_pressed);
         if (self->focused_id != nav_from) {
-            // Tab order has no spatial direction - report None.
+            // Tab order has no spatial direction, so report None.
             ui_emit_feedback(self, FlUiFeedbackKind_NavMoved, nav_from, self->focused_id, FlUiFeedbackDir_None);
         }
     }

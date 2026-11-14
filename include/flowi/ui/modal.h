@@ -9,11 +9,11 @@
 extern "C" {
 #endif
 
-// Modal scope: the toolkit-owned focus save/restore + frame-level input-blocking machinery
-// behind dialogs. Open a scope to block input to widgets outside it and capture focus; emit a
-// custom body between begin/end; close tears the scope down and restores focus. Rich
-// dialogs (install prompts, overlays, system dialogs) drive their own content through this;
-// fl_popup_message_box remains the canned confirm/alert widget built over the same scope.
+// Modal scope: the focus save/restore and input blocking behind dialogs. Open a scope to block
+// input to widgets outside it and capture focus; emit a custom body between begin/end; close
+// tears the scope down and restores focus. Rich dialogs (install prompts, overlays, system
+// dialogs) drive their own content through this; fl_popup_message_box is the canned
+// confirm/alert widget built over the same scope.
 // Call at the START of each frame while the modal is visible, BEFORE any widgets render.
 // Arms input blocking so widgets emitted before the body don't receive input; on the first
 // frame it saves the currently-focused widget for restoration on close. scope_id of 0 is

@@ -8,7 +8,7 @@
 #include <flowi/ui/widget_config.h> // @generated FlScrollbarConfig (api_gen)
 #include <ui/ui_types.h>
 
-// UI Scroll Area - Reusable scrolling container with automatic state management
+// Scroll area: a reusable scrolling container that keeps its own state.
 //
 // Usage:
 //   ui_scroll_area_id(ID("my_scroll"),
@@ -20,7 +20,7 @@
 //       // Content here
 //   }
 
-// Internal scroll state (stored per ID in FlUiCtx)
+// Scroll state, stored per ID in FlUiCtx.
 
 typedef struct ScrollAreaState {
     FlVec2 scroll_offset; // Current scroll position (pixels)
@@ -31,8 +31,6 @@ typedef struct ScrollAreaState {
     u32 parent_id;  // Enclosing scroll area's element id, 0 at the top level
     bool is_hovered;
 } ScrollAreaState;
-
-// Scroll-to-widget options
 
 typedef enum FlScrollAlignment {
     FlScrollAlign_Nearest = 0, // Minimum scroll to make visible (default)
@@ -47,7 +45,7 @@ typedef struct FlScrollToOptions {
     FlScrollAlignment align; // Alignment mode (default: Nearest)
 } FlScrollToOptions;
 
-// Scroll area stack entry (one per open scroll area)
+// One entry per open scroll area.
 
 #define SCROLL_AREA_STACK_MAX_DEPTH 8
 
@@ -59,15 +57,13 @@ typedef struct ScrollAreaStackEntry {
     FlScrollAreaConfig config;
 } ScrollAreaStackEntry;
 
-// Widget scroll info (for tracking widget position within scroll area)
+// A widget's position within its scroll area.
 
 typedef struct WidgetScrollInfo {
     u32 scroll_area_id;    // Containing scroll area (0 if none)
     FlVec2 pos_in_content; // Position relative to scroll content origin
     FlVec2 size;
 } WidgetScrollInfo;
-
-// Public API - Widget visibility and scroll-to-widget
 
 // Returns true if the widget is not in a scroll area, or if it is visible in the viewport.
 bool ui_is_widget_visible(FlLayoutId widget_id);
@@ -77,12 +73,10 @@ void ui_scroll_to_widget(FlLayoutId widget_id);
 
 void ui_scroll_to_widget_ex(FlLayoutId widget_id, FlScrollToOptions opts);
 
-// Scrollbar widget - returns signal with value changes tracked by signal.changed
+// Scrollbar widget. signal.changed reports value changes.
 
 FlSignal ui_scrollbar_impl(float* value, FlScrollbarConfig cfg);
 #define ui_scrollbar(value, ...) ui_scrollbar_impl(value, (FlScrollbarConfig) { __VA_ARGS__ })
-
-// Internal API (used by ui.c)
 
 // Auto-scroll to focused widget if it's off-screen (called at end of frame)
 void ui_scroll_auto_to_focused(void);

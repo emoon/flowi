@@ -10,8 +10,8 @@
 #include <stddef.h>
 
 // Re-typedefs the FlArena tag from the generated public header (C11-legal) to add the
-// cache-aligned _Atomic body below. Must NOT redefine FlTempArena - the static_asserts
-// below pin its layout instead.
+// cache-aligned _Atomic body below. Must not redefine FlTempArena; the static_asserts
+// below pin its layout.
 #include <flowi/arena/arena.h>
 
 #define ARENA_SIZE 128
@@ -57,9 +57,7 @@ typedef struct ArenaSettings {
     int allocation_site_line;
 } ArenaSettings;
 
-/// FlArena functions
-
-// Arena allocations never return nullptr - the arena traps/aborts on OOM.
+// Arena allocations never return nullptr: the arena logs and exits when it runs out of memory.
 #if COMPILER_GCC || COMPILER_CLANG
 #define ARENA_RETURNS_NONNULL __attribute__((returns_nonnull))
 #else
@@ -76,7 +74,7 @@ FL_API FlArena* fl_arena_create(u64 reserved_size, const char* file, int line);
 FL_API ARENA_RETURNS_NONNULL void* fl_arena_alloc_raw(FlArena* arena, u64 size, u64 alignment);
 FL_API ARENA_RETURNS_NONNULL void* fl_arena_alloc_raw_zero(FlArena* arena, u64 size, u64 alignment);
 
-// Single-threaded allocation - use only when arena is not shared between threads
+// Single-threaded allocation. Use only when the arena is not shared between threads.
 FL_API ARENA_RETURNS_NONNULL void* fl_arena_alloc_raw_st(FlArena* arena, u64 size, u64 alignment);
 FL_API ARENA_RETURNS_NONNULL void* fl_arena_alloc_raw_zero_st(FlArena* arena, u64 size, u64 alignment);
 
@@ -104,8 +102,8 @@ void arena_tracker_register(FlArena* self);
 void arena_tracker_unregister(FlArena* self);
 
 // Iterate over all arenas (thread-safe). The global tracker mutex is held across every callback
-// invocation, so arenas stay alive for the walk and a callback must not create or destroy one -
-// the tracker mutex is non-recursive and would self-deadlock. Scratch-arena use is safe.
+// invocation, so arenas stay alive for the walk and a callback must not create or destroy one:
+// the tracker mutex is non-recursive and would deadlock. Scratch-arena use is safe.
 typedef void (*ArenaIteratorCallback)(FlArena* arena, void* user_data);
 void arena_tracker_iterate_all(ArenaIteratorCallback callback, void* user_data);
 
@@ -119,14 +117,12 @@ typedef struct FlArenaStats {
     i32 site_line;
 } FlArenaStats;
 
-// The three counters are read with relaxed atomics and are not sampled as one instant: a concurrent
-// allocation can land between them, so treat the result as a snapshot for reporting, not as an
-// invariant-bearing tuple. Safe to call from inside an arena_tracker_iterate_all callback - it takes
-// no lock.
+// The three counters are read with relaxed atomics and are not sampled at one instant: a concurrent
+// allocation can land between them, so the result is for reporting only. Takes no lock, so it is safe
+// to call from inside an arena_tracker_iterate_all callback.
 DLL_EXPORT void arena_stats(FlArena* arena, FlArenaStats* out);
 
 // Pin the current position as the rewind floor: everything allocated so far survives fl_arena_rewind.
-
 static inline void arena_pin_rewind_floor(FlArena* self) {
     self->rewind_pos = atomic_load_explicit(&self->pos, memory_order_relaxed);
 }

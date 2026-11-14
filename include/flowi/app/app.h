@@ -17,14 +17,12 @@
 extern "C" {
 #endif
 
-// Per-frame host callback. The host emits its UI inside this call (between the core's update_begin/update_end);
-// the per-frame fl_frame_str arena is valid for its duration. user_data is the opaque pointer the host
-// passed to fl_app_tick / fl_app_run.
+// Per-frame host callback. The host emits its UI inside this call, and the per-frame fl_frame_str arena
+// is valid for its duration. user_data is the opaque pointer the host passed to fl_app_tick / fl_app_run.
 typedef void (*FlAppFrameFn)(void* user_data);
 
-// Opaque handle for the app runner that owns the window, the per-frame update loop, and presentation. Every
-// `fl_app_*` entry point takes a `*App`; the host holds it solely behind that pointer. Created by
-// fl_app_create, destroyed by fl_app_destroy.
+// Opaque handle for the app runner that owns the window, the per-frame update loop, and presentation.
+// Created by fl_app_create, destroyed by fl_app_destroy.
 typedef struct FlApp FlApp;
 
 // Opaque handle for one window owned by an App.
@@ -64,8 +62,8 @@ FL_API void fl_app_inject_mouse_move(FlApp* app, int32_t x, int32_t y);
 // Headless harness: inject a mouse-button transition. button is the MouseButton; down is press vs. release.
 // Drives click detection a frame later.
 FL_API void fl_app_inject_mouse_button(FlApp* app, FlMouseButton button, bool down);
-// Headless harness: inject a raw relative-motion delta - a hidden-drag scrub. The delta is read that frame
-// (scaled) via the drag-delta query.
+// Headless harness: inject a raw relative-motion delta, as a hidden drag produces. The drag-delta query
+// reads it, scaled, that frame.
 FL_API void fl_app_inject_mouse_delta(FlApp* app, float delta_x, float delta_y);
 // Headless harness: inject a mouse-wheel delta. x/y are the per-frame wheel deltas (positive y =
 // scrolled up). Cached for that frame's scoped wheel-delta read, observed on the following tick.
@@ -75,13 +73,13 @@ FL_API void fl_app_inject_wheel(FlApp* app, float x, float y);
 FL_API void fl_app_inject_key(FlApp* app, FlKey key, bool down);
 // Headless harness: inject a text-input string for the active frame.
 FL_API void fl_app_inject_text(FlApp* app, FlString text);
-// Headless harness: inject a window-close request - the next tick observes it and returns false.
+// Headless harness: inject a window-close request. The next tick observes it and returns false.
 FL_API void fl_app_inject_window_close(FlApp* app);
 // Headless harness: inject an OS file drop at (x, y) in window pixels. Observed by the next tick's
 // dropped-file queries.
 FL_API void fl_app_inject_drop_file(FlApp* app, FlString path, float x, float y);
-// Headless harness: read back the CursorShape the core flushed to the
-// input backend on the last tick; a value outside the real shapes reads back as Arrow. The readback companion to the `inject_*` calls.
+// Headless harness: read back the CursorShape the core flushed to the input backend on the last tick.
+// A value outside the real shapes reads back as Arrow.
 FL_API FlCursorShape fl_app_headless_cursor_shape(FlApp* app);
 // Headless harness: read back the sticky relative-mouse-mode toggle the core flushed to the input backend
 // on the last tick (on for the whole of a hidden drag).

@@ -15,8 +15,8 @@ struct Localization* localization_create(struct FlVfsMount* mount, FlString mani
 
 void localization_destroy(struct Localization* self);
 
-// Frame-boundary hook, and the only place localization state changes. Every read - the manifest, the default
-// table, a language recorded by fl_localization_set_language - is parsed and built on a VFS worker; this polls
+// Frame-boundary hook, and the only place localization state changes. Every read (the manifest, the default
+// table, a language recorded by fl_localization_set_language) is parsed and built on a VFS worker; this polls
 // whichever one is in flight and swaps pointers on the boundary it lands, so no call here ever waits on I/O. Until
 // the default table lands, every SID resolves to itself; a switch keeps the current language until its table is
 // ready. No-op once nothing is in flight.
@@ -69,7 +69,7 @@ static inline bool localization_is_sid(FlString text) {
     return text.length >= 4 && memcmp(text.data, "SID_", 4) == 0;
 }
 
-// One step of the placeholder grammar. text is the source bytes the token spans - what a caller with nothing to
+// One step of the placeholder grammar. text is the source bytes the token spans: what a caller with nothing to
 // substitute copies through as written, already collapsed to the single brace an escaped pair stands for. body
 // is the slot body between the braces, and is meaningful only while is_slot.
 

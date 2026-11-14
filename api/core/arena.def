@@ -1,19 +1,20 @@
 #[module(arena)]
 
-/// Opaque region allocator owned by flowi core. Never crossed by value: every allocation entry point
-/// takes a `*Arena`, and the toolkit and the app hold it solely behind that pointer.
+/// Opaque region allocator. Callers hold it by pointer only.
 #[attributes(Opaque)]
 struct Arena {}
 
-/// A savepoint in an arena, restored in bulk to free everything allocated after it (a temp/scratch
-/// scope). A POD value type crossed by value through the public ABI; arena points at the saved arena and
-/// pos is its byte offset at capture.
+/// A savepoint in an arena. Restoring it frees everything allocated after it (a temp/scratch scope).
+/// Passed by value.
 struct TempArena {
+    /// The arena the savepoint belongs to.
     arena: *Arena,
+    /// The arena's byte offset when the savepoint was taken.
     pos: u64,
 }
 
-/// The `fl_arena_*` plugin service API - flowi core's bump/region allocator, exported as plain C symbols. Slots take only their own params. Plugins link the shared library and call these symbols directly.
+/// The `fl_arena_*` plugin service API: flowi core's bump/region allocator, exported as plain C symbols.
+/// Plugins link the shared library and call these symbols directly.
 #[attributes(service)]
 api Arena {
     /// Initialize flowi's process-wide core services and return the main arena. Idempotent: a
@@ -28,7 +29,7 @@ api Arena {
     fl_destroy()
 
     /// Reserve a new arena (reserved_size virtual bytes, committed on demand); file/line identify
-    /// the allocation site. Wrapper over arena_new_.
+    /// the allocation site.
     fl_arena_create(reserved_size: u64, file: *const char, line: i32) -> *Arena
     /// Destroy an arena and free all its memory.
     fl_arena_destroy(arena: *Arena)

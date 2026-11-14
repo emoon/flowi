@@ -3,7 +3,7 @@
 // Backend-agnostic background controller.
 //
 // Holds blend / alpha / clear-color state, handed to the backend as an FlBackground snapshot at the front of
-// each frame (FlRenderFrame.background - see render_backend.h). This module performs no rendering.
+// each frame (FlRenderFrame.background, see render_backend.h). This module performs no rendering.
 
 #include "image/image.h"
 #include <ui/render_backend.h>
@@ -34,10 +34,10 @@ void background_controller_set_alpha(FlBackgroundController* c, u8 alpha);
 /// Set clear color (used where no image covers).
 void background_controller_set_clear_color(FlBackgroundController* c, u8 r, u8 g, u8 b);
 
-/// Blend two images this frame: t mixes prev (0) toward current (255). Stateless - stores prev/current/t and
-/// nothing else; the caller re-supplies all three each frame.
+/// Blend two images this frame: t mixes prev (0) toward current (255). Stores prev, current and t as given;
+/// the caller supplies all three again each frame.
 void background_controller_set_blend(FlBackgroundController* c, ImageHandle prev, ImageHandle current, u8 t);
 
-/// Snapshot the controller into the FlBackground for one frame. A valid prev handle is the sole
-/// "this is a two-image blend" signal for the backend.
+/// Snapshot the controller into the FlBackground for one frame. A valid prev handle is how the backend
+/// knows the frame is a two-image blend.
 FlBackground background_controller_snapshot(const FlBackgroundController* c);

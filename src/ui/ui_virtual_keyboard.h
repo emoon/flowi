@@ -1,7 +1,5 @@
 #pragma once
 
-// Virtual Keyboard - Internal API
-//
 // A console-style on-screen keyboard for gamepad users: a grid QWERTY layout with wrapping D-pad navigation,
 // page switching (lowercase, uppercase, numbers, symbols) and the Space/Backspace/Enter/Cancel actions.
 
@@ -13,12 +11,8 @@
 extern "C" {
 #endif
 
-// Forward declarations
-
 typedef struct FlArena FlArena;
 typedef struct FlUiCtx FlUiCtx;
-
-// Virtual Keyboard Types
 
 // Special key codes for virtual keyboard (used in key grids)
 #define VK_KEY_SPACE ' '
@@ -31,7 +25,6 @@ typedef struct FlUiCtx FlUiCtx;
 #define VK_KEY_PAGE_SYM 0x07
 #define VK_KEY_EMPTY 0x00 // Empty cell in grid
 
-// Keyboard page/layout
 typedef enum VirtualKeyboardPage {
     VK_PAGE_LOWERCASE = 0, // a-z, common punctuation
     VK_PAGE_UPPERCASE = 1, // A-Z, common punctuation
@@ -54,12 +47,9 @@ typedef struct VirtualKeyboardConfig {
     VirtualKeyboardPage initial_page; // Starting page (default: lowercase)
 } VirtualKeyboardConfig;
 
-// Virtual Keyboard State (Internal)
-
 typedef struct VirtualKeyboard {
-    // Configuration
     VirtualKeyboardConfig config;
-    FlArena* arena; // Arena for allocations
+    FlArena* arena;
 
     // Text buffer
     char* buffer;
@@ -76,8 +66,6 @@ typedef struct VirtualKeyboard {
     bool cancelled;
     bool active; // Still running
 } VirtualKeyboard;
-
-// Main API Function
 
 // Non-blocking API for integration with immediate-mode UI.
 // The arena is dedicated to a single active keyboard; the caller rewinds it before each create.

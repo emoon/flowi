@@ -27,7 +27,7 @@ impl Dock {
     }
 
     /// Declare Detachable Panel id on the current workspace under title and return whether its content
-    /// should emit now - true iff id is the selected tab of the leaf holding it. A panel mid-drag is floating and
+    /// should emit now: true iff id is the selected tab of the leaf holding it. A panel mid-drag is floating and
     /// does not emit: the drag overlay draws its title, and its body draws nowhere until the drop. On true it
     /// also opens the panel's content element inside that tile, so the body's widgets land where the dock put
     /// the panel; the caller MUST close it with panel_end. Rust spells the pair
@@ -42,7 +42,7 @@ impl Dock {
     }
 
     /// Close the content element opened by a panel call that returned true. Never call it after a panel that
-    /// returned false - that closes an element this panel does not own.
+    /// returned false: that closes an element this panel does not own.
     #[inline]
     pub fn panel_end() {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_end");
@@ -99,7 +99,7 @@ impl Dock {
 
     /// Show or hide Detachable Panel id on the current workspace. A hidden panel keeps its slot and its tab
     /// index but renders no tab and emits no content; a leaf whose panels are all hidden gives its space to its
-    /// neighbour. Declare the panel every frame either way - hiding never turns it reserved. Not persisted: the
+    /// neighbour. Declare the panel every frame either way: hiding never turns it reserved. Not persisted: the
     /// app re-asserts visibility each session, like the title.
     #[inline]
     pub fn set_panel_visible(id: u64, visible: bool) {
@@ -122,7 +122,7 @@ impl Dock {
         unsafe { crate::sys::fl_dock_panel_leaf(id) }
     }
 
-    /// True if id has a slot in the current workspace's tree but was NOT declared this frame - its slot is
+    /// True if id has a slot in the current workspace's tree but was NOT declared this frame, so its slot is
     /// reserved pending a future declaration.
     #[inline]
     pub fn panel_reserved(id: u64) -> bool {
@@ -130,14 +130,14 @@ impl Dock {
         unsafe { crate::sys::fl_dock_panel_reserved(id) }
     }
 
-    /// The room, in logical px, the dock has given Detachable Panel id - the inner size of its tile, below the
+    /// The room, in logical px, the dock has given Detachable Panel id: the inner size of its tile, below the
     /// leaf's tab header. This is the size a panel sizes its content against; a panel's own elements report the
     /// size they LAID OUT at, which a body larger than its tile grows past (flowi clips the overflow).
     ///
     /// {0, 0} means DO NOT ACT ON THIS, and is the answer for a panel that is absent, not laid out yet, hidden,
-    /// mid-drag, a background tab in its leaf, or starved - squeezed below the
-    /// dock's minimum content size by a window too small for its layout. Reports the previous frame's layout,
-    /// like every other geometry read-back.
+    /// mid-drag, a background tab in its leaf, or starved (squeezed below the dock's minimum content size by
+    /// a window too small for its layout). Reports the previous frame's layout, like every other geometry
+    /// read-back.
     #[inline]
     pub fn panel_size(id: u64) -> crate::sys::Vec2 {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_size");
@@ -159,9 +159,9 @@ impl Dock {
         unsafe { crate::sys::fl_dock_panel_family(id) }
     }
 
-    /// The Detachable Panel a press last made active on the current workspace, or 0 when none is. One panel id
-    /// rather than a focus system: a press inside a tile sets it, hover never does, and it falls back to 0 as
-    /// soon as that panel stops emitting. Not persisted - it starts at 0 each session.
+    /// The Detachable Panel a press last made active on the current workspace, or 0 when none is. A press
+    /// inside a tile sets it, hover never does, and it falls back to 0 as soon as that panel stops emitting.
+    /// Not persisted: it starts at 0 each session.
     #[inline]
     pub fn active_panel() -> u64 {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::active_panel");

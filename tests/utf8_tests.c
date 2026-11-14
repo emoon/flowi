@@ -43,7 +43,7 @@ UTEST(utf8, decode_ascii_control) {
 }
 
 UTEST(utf8, decode_2byte_latin_extended) {
-    // "Café" - the 'é' is U+00E9, encoded as C3 A9
+    // "Café": the 'é' is U+00E9, encoded as C3 A9
     const char* cafe = "Caf\xC3\xA9";
     FlString str = { .data = cafe, .length = 5, .is_ascii = 0 };
 
@@ -278,7 +278,7 @@ UTEST(utf8, decode_overlong_2byte) {
 
 UTEST(utf8, decode_overlong_2byte_slash) {
     // Overlong encoding of '/' (U+002F): C0 AF instead of 2F
-    // This is a security issue if not caught (path traversal attacks)
+    // A decoder that accepts it lets a path traversal slip past a check for '/'.
     char buf[2] = { '\xC0', '\xAF' };
     FlString str = { .data = buf, .length = 2, .is_ascii = 0 };
 
@@ -366,7 +366,7 @@ UTEST(utf8, iter_empty) {
 }
 
 UTEST(utf8, iter_mixed) {
-    // "Hëllo 世界 🌍" - mix of ASCII, 2-byte, 3-byte, and 4-byte
+    // "Hëllo 世界 🌍": a mix of ASCII, 2-byte, 3-byte and 4-byte sequences
     const char* mixed = "H\xC3\xABllo \xE4\xB8\x96\xE7\x95\x8C \xF0\x9F\x8C\x8D";
     FlString str = { .data = mixed, .length = 18, .is_ascii = 0 };
 
@@ -580,5 +580,3 @@ UTEST(utf8, is_continuation) {
     ASSERT_FALSE(utf8_is_continuation(0xC0));
     ASSERT_FALSE(utf8_is_continuation(0xFF));
 }
-
-// Test definitions only - main runner in base_tests.c

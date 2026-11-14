@@ -200,7 +200,7 @@ pub struct Popup;
 impl Popup {
     /// Begin a popup scope anchored to anchor_id with config; content declared within the scope is rendered
     /// after the main UI. The scope closes when the returned guard drops, or explicitly by passing that guard to
-    /// end, which consumes it - so it can never close twice.
+    /// end, which consumes it, so it cannot close twice.
     #[inline]
     pub fn begin(anchor_id: impl Into<crate::LayoutId>, config: crate::generated::popup::PopupConfig) -> PopupScope {
         let anchor_id: crate::LayoutId = anchor_id.into();

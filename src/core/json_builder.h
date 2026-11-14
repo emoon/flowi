@@ -10,7 +10,7 @@ struct FlArena;
 struct FlJsonValue* json_build_object(struct FlArena* arena);
 struct FlJsonValue* json_build_array(struct FlArena* arena);
 
-// Object property setters - add or replace a property on a JSON object
+// Object property setters. Each adds or replaces a property on a JSON object.
 
 void json_build_set_string(struct FlArena* arena, struct FlJsonValue* obj, struct FlString key, struct FlString value);
 void json_build_set_int(struct FlArena* arena, struct FlJsonValue* obj, struct FlString key, i64 value);

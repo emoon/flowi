@@ -1,5 +1,3 @@
-// Host-side GL compositor: entry-point loading and the fullscreen-quad program.
-
 #include "../window_backend.h"
 
 #if BACKEND_USE_SDL && FL_WINDOW_HAVE_GPU

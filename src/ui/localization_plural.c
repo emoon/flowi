@@ -26,7 +26,7 @@ static bool tag_is_one_of(FlString tag, const char* const* tags) {
 }
 
 // Only the tag's primary subtag is matched, so pt-br selects the way pt does. A language none of these lists
-// names - Arabic, Polish and Czech among them - has no rules here.
+// names (Arabic, Polish and Czech among them) has no rules here.
 
 static PluralRules plural_rules_for_tag(FlString tag) {
     static const char* const one_other[] = { "en", "de", "nl", "sv", "da", "no", "nb", "nn", "es",

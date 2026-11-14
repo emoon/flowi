@@ -8,7 +8,7 @@
 
 /// Retained geometry, created once and drawn from any Viewport3d. Vertices use the one fixed format
 /// (MeshVertex); indices are 16-bit and address vertices. Triangles and lines are the same resource with
-/// different index grouping - create makes one of the first, create_lines one of the second.
+/// different index grouping: create makes one of the first, create_lines one of the second.
 pub struct Mesh;
 
 impl Mesh {
@@ -21,7 +21,7 @@ impl Mesh {
         unsafe { crate::sys::fl_mesh_create(vertices.as_ptr(), vertices.len() as u32, indices.as_ptr(), indices.len() as u32) }
     }
 
-    /// Create a line mesh - wireframes, voxel boxes, gizmos, camera paths - from vertices and 16-bit
+    /// Create a line mesh (wireframes, voxel boxes, gizmos, camera paths) from vertices and 16-bit
     /// indices (two per segment). Lines are drawn with Viewport3d::draw_lines, take their color from the
     /// vertices, and are never textured. Same lifetime and sharing rules as create.
     #[inline]
@@ -31,8 +31,8 @@ impl Mesh {
     }
 
     /// Destroy a mesh and release its backend buffers. The handle is invalid afterwards: drawing it renders
-    /// nothing - until a later create reuses its slot and hands the same value back out, at which point the
-    /// stale handle silently draws the new mesh. Drop your copies when you destroy one.
+    /// nothing until a later create reuses its slot and hands the same value back out, at which point the
+    /// stale handle draws the new mesh. Drop your copies when you destroy one.
     #[inline]
     pub fn destroy(mesh: crate::sys::MeshHandle) {
         let _frame = crate::frame_thread::frame_thread_guard("Mesh::destroy");
@@ -47,7 +47,7 @@ impl Mesh {
 /// Bracket a frame's draws with begin/end. begin returns the element's size in device pixels so
 /// the caller can build its projection matrix; that size is the previous frame's, because layout runs
 /// after the frame callback, so it is zero on an element's first frame and one frame stale across a
-/// resize. Lighting, materials and cameras are not flowi's: the shading is fixed and unlit, and camera
+/// resize. flowi does no lighting, materials or cameras: the shading is fixed and unlit, and camera
 /// math, picking and gizmos live in the caller. A backend without a 3D path draws a placeholder.
 pub struct Viewport3d;
 
@@ -70,7 +70,7 @@ impl Viewport3d {
     }
 
     /// Draw a triangle mesh with depth testing, modulating its vertex colors by texture sampled with
-    /// filter - pass ImageFilter::Nearest to see a lightmap's individual texels rather than a smoothed
+    /// filter. Pass ImageFilter::Nearest to see a lightmap's individual texels rather than a smoothed
     /// blend. Pass ImageHandle::INVALID to draw with vertex colors alone. Draws render in submission order
     /// with no sorting; a textured draw needs a dedicated image (Image::create_dedicated), because mesh UVs
     /// address the whole texture.

@@ -1,6 +1,6 @@
 //! The log-crate bridge onto flowi core's channel logging, plus the RAII file sink.
 //!
-//! Rust code logs with the log crate - log::info!("..."), log::warn!(target: "AUDIO", "...").
+//! Rust code logs with the log crate: log::info!("..."), log::warn!(target: "AUDIO", "...").
 //! Each record's target names a flowi log channel 1:1; a record without an explicit target
 //! goes to "CORE", the default channel. Rust and native records share one sink with
 //! identical formatting, and per-channel enable/level settings filter both alike.
@@ -112,7 +112,7 @@ impl log::Log for ChannelLogger {
 
 static LOGGER: ChannelLogger = ChannelLogger;
 
-/// Route this binary's log records at flowi core's channel logging.
+/// Route this binary's log records to flowi core's channel logging.
 ///
 /// Until it runs, log sits at [`LevelFilter::Off`](log::LevelFilter::Off) and records are
 /// discarded. Every flowi entry point installs the bridge as the foundation comes up; a host

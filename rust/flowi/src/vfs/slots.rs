@@ -6,7 +6,7 @@
 //! and `unimplemented()` are generated from it; `fake_table()` is written by hand.
 //!
 //! Each entry is `name(arg: Type, ...) -> Ret;`, with the return arrow omitted for a
-//! slot that returns nothing. The argument names are load-bearing: the forwarding
+//! slot that returns nothing. The argument names matter: the forwarding
 //! macros bind and pass them.
 
 macro_rules! vfs_slots {

@@ -25,13 +25,13 @@ typedef struct GradientInterpolationState {
     // BR_A-TR_A]
     i16x8 top_bottom_delta;
 
-    // Current scanline start colors (left edge) - broadcast ready
+    // Current scanline start colors (left edge), broadcast ready
     i16x8 r_left;
     i16x8 g_left;
     i16x8 b_left;
     i16x8 a_left;
 
-    // Current scanline horizontal deltas (right - left) - broadcast ready
+    // Current scanline horizontal deltas (right - left), broadcast ready
     i16x8 r_horz_delta;
     i16x8 g_horz_delta;
     i16x8 b_horz_delta;
@@ -70,7 +70,7 @@ static ALWAYS_INLINE void gradient_interpolation_step_y(GradientInterpolationSta
     state->y_blend_lr = i16x8_add(state->y_blend_lr, state->y_step);
 }
 
-// Once per quad setup - calculates invariant properties
+// Once-per-quad setup: computes the state that is the same for every tile.
 // rect_size = x0y0x1y1 (i32 for each value)
 
 static ALWAYS_INLINE void gradient_interpolation_setup(GradientQuadState* quad_state, i32x4 rect_size, u8x16 colors) {
@@ -110,8 +110,8 @@ static ALWAYS_INLINE void gradient_interpolation_setup(GradientQuadState* quad_s
     quad_state->top_bottom_delta = i16x8_sub(bottom, quad_state->top);
 }
 
-// Per-tile setup - applies tile-specific clipping
-// clip should contain [clip_x, clip_y, ...] as i16 values
+// Per-tile setup: applies tile-specific clipping.
+// clip holds [clip_x, clip_y, ...] as i16 values
 
 static ALWAYS_INLINE GradientInterpolationState gradient_interpolation_tile_setup(GradientQuadState* quad_state,
                                                                                   i16x8 clip) {

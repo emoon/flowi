@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-// Dropdown widget - a button that opens a popup list to pick one of options.
+// Dropdown widget: a button that opens a popup list to pick one of options.
 // Emit a dropdown labelled label. `*is_open` tracks the popup open state (caller-owned); selecting an
 // option writes its index to `*selected_index`. config selects width and whether a cancel row shows.
 // Call inside a frame callback.

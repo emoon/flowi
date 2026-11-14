@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Progress bar widget - determinate, non-interactive. Paints a track plus a fill sized to fraction.
+/// Progress bar widget: determinate, non-interactive. Paints a track plus a fill sized to fraction.
 pub struct ProgressBar;
 
 impl ProgressBar {

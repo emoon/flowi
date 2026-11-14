@@ -23,9 +23,7 @@
 extern "C" {
 #endif
 
-// =============================================================================
 // SIMD Type Definitions
-// =============================================================================
 
 #if CPU_X64 || CPU_X86
 typedef struct {
@@ -79,9 +77,7 @@ typedef struct {
     u16x8 v1;
 } u16x8x2;
 
-// =============================================================================
 // f32x4 Functions
-// =============================================================================
 
 static inline f32x4 f32x4_load_unaligned(const float* data) {
 #if CPU_X64 || CPU_X86
@@ -220,9 +216,7 @@ static inline f32x4 f32x4_and(f32x4 a, f32x4 b) {
 #endif
 }
 
-// Shuffle f32x4 vector - Select 4 elements from two input vectors
-//
-// Indices 0-3 select from v0, indices 4-7 select from v1.
+// Selects 4 elements from two input vectors. Indices 0-3 select from v0, indices 4-7 from v1.
 
 #define f32x4_shuffle(v0, v1, i0, i1, i2, i3) ((f32x4) { .v = __builtin_shufflevector((v0).v, (v1).v, i0, i1, i2, i3) })
 
@@ -277,9 +271,7 @@ static inline bool f32x4_test_intersect(f32x4 a, f32x4 b) {
 #endif
 }
 
-// =============================================================================
 // i32x4 Functions
-// =============================================================================
 
 static inline i32x4 i32x4_new(int32_t a, int32_t b, int32_t c, int32_t d) {
 #if CPU_X64 || CPU_X86
@@ -294,9 +286,7 @@ static inline i32x4 i32x4_new(int32_t a, int32_t b, int32_t c, int32_t d) {
 #endif
 }
 
-// =============================================================================
 // u32x4 Functions
-// =============================================================================
 
 static inline u32x4 u32x4_new(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
 #if CPU_X64 || CPU_X86
@@ -311,9 +301,7 @@ static inline u32x4 u32x4_new(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
 #endif
 }
 
-// =============================================================================
 // u16x8 Functions
-// =============================================================================
 
 static inline u8x16 u16x8_narrow_to_u8x16(u16x8 a, u16x8 b) {
 #if CPU_X64 || CPU_X86
@@ -461,9 +449,7 @@ static inline i32x4 i32x4_table_shuffle(i32x4 a, const uint8_t table[16]) {
 #endif
 }
 
-// =============================================================================
 // i16x8 Functions
-// =============================================================================
 
 static inline i16x8 i16x8_new(int16_t a, int16_t b, int16_t c, int16_t d, int16_t e, int16_t f, int16_t g, int16_t h) {
 #if CPU_X64 || CPU_X86
@@ -686,9 +672,7 @@ static inline i16x8 i16x8_select(i16x8 mask, i16x8 a, i16x8 b) {
 #endif
 }
 
-// =============================================================================
 // u8x16 Functions
-// =============================================================================
 
 static inline u8x16 u8x16_new_splat(uint8_t a) {
 #if CPU_X64 || CPU_X86
@@ -1046,9 +1030,7 @@ static inline void u8x16_store_interleaved_4(uint8_t* data, u8x16 r, u8x16 g, u8
 #endif
 }
 
-// =============================================================================
 // Cross-type conversions
-// =============================================================================
 
 static inline i32x4 f32x4_as_i32x4(f32x4 a) {
 #if CPU_X64 || CPU_X86
@@ -1058,9 +1040,7 @@ static inline i32x4 f32x4_as_i32x4(f32x4 a) {
 #endif
 }
 
-// =============================================================================
 // C11 Generic Macros
-// =============================================================================
 
 #if __STDC_VERSION__ >= 201112L
 #define simd_add(a, b) _Generic((a), f32x4: f32x4_add, i32x4: i32x4_add, i16x8: i16x8_add)(a, b)
@@ -1072,9 +1052,7 @@ static inline i32x4 f32x4_as_i32x4(f32x4 a) {
         int16_t: i16x8_new_splat, \
         uint8_t: u8x16_new_splat)(val)
 
-// =============================================================================
 // u16x8 Functions
-// =============================================================================
 
 static inline i16x8 u16x8_as_i16x8(u16x8 a) {
 #if CPU_X64 || CPU_X86
@@ -1084,9 +1062,7 @@ static inline i16x8 u16x8_as_i16x8(u16x8 a) {
 #endif
 }
 
-// =============================================================================
 // f16x8 Functions (8 half-precision floats)
-// =============================================================================
 
 #if CPU_X64 || CPU_X86
 // On x64, two f32x4 values are held internally

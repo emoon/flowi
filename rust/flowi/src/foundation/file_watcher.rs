@@ -1,7 +1,7 @@
 //! Watching a directory for file changes.
 //!
-//! A host that reloads content when it changes on disk - a theme file, a plugin
-//! directory, a media folder - starts a [`FileWatcher`] on that directory, polls
+//! A host that reloads content when it changes on disk (a theme file, a plugin
+//! directory, a media folder) starts a [`FileWatcher`] on that directory, polls
 //! [`FileWatcher::has_changes`] each frame (which allocates nothing), and takes the
 //! pending batch when there is something to look at.
 //!
@@ -9,7 +9,7 @@
 //! its paths, so it can be stashed, queued or returned like any other value; iterating
 //! it yields [`FileChange`] views borrowed from it.
 //!
-//! The watcher is owning - dropping it stops the watch and releases its resources.
+//! Dropping the watcher stops the watch and releases its resources.
 
 use core::marker::PhantomData;
 
@@ -17,7 +17,7 @@ use crate::sys;
 
 use crate::Arena;
 
-/// The "no watcher" sentinel (FL_FILE_WATCHER_INVALID) a failed start returns.
+/// The "no watcher" sentinel a failed start returns.
 const FL_FILE_WATCHER_INVALID: u32 = 0;
 
 /// What a watcher should report. [`Default`] is the common case: this directory
@@ -52,7 +52,7 @@ pub struct FileWatcher {
 }
 
 impl FileWatcher {
-    /// Start watching path. [`None`] when the path cannot be watched at all - it
+    /// Start watching path. [`None`] when the path cannot be watched at all: it
     /// does not exist, or the platform refused the watch.
     pub fn start(path: &str, config: WatchConfig) -> Option<FileWatcher> {
         let config = sys::FileWatcherConfig {
@@ -126,7 +126,7 @@ impl Drop for FileWatcher {
     }
 }
 
-/// One change record, as owned values - the storage [`FileChanges`] keeps. The
+/// One change record, as owned values, the storage [`FileChanges`] keeps. The
 /// borrowing view over it is [`FileChange`].
 #[derive(Clone, PartialEq, Eq, Debug)]
 struct OwnedChange {
@@ -158,7 +158,7 @@ impl FileChanges {
         self.changes.len()
     }
 
-    /// True when the batch is empty. Note that an empty batch can still report
+    /// True when the batch is empty. An empty batch can still report
     /// [`has_overflow`](Self::has_overflow).
     pub fn is_empty(&self) -> bool {
         self.changes.is_empty()
@@ -187,7 +187,7 @@ impl<'a> FileChange<'a> {
         &self.raw.old_path
     }
 
-    /// What happened to it - a bitmask, since one poll can coalesce several kinds.
+    /// What happened to it, as a bitmask, since one poll can coalesce several kinds.
     pub fn change_types(&self) -> sys::FileChangeType {
         self.raw.change_types
     }

@@ -1,6 +1,6 @@
 #pragma once
 
-// Text Input Widget - Internal API
+// Text input widget (internal API).
 //
 // Single-line editing built on stb_textedit.h: cursor + blink, selection (mouse drag, shift+arrows),
 // clipboard, undo/redo, horizontal scrolling, placeholder text and a character counter.
@@ -21,8 +21,6 @@
 extern "C" {
 #endif
 
-// Forward declarations
-
 typedef struct FlArena FlArena;
 
 // Editor state; the public API declares FlTextInputState opaquely.
@@ -38,8 +36,6 @@ struct FlTextInputState {
     u64 focus_gained_frame;
     FlArena* arena;
 };
-
-// Helper Functions
 
 // Initialize text input state (call once before first use)
 void ui_text_input_init(FlTextInputState* state, FlArena* arena);
@@ -60,8 +56,6 @@ void ui_text_input_clear(FlTextInputState* state);
 // Insert text at the caret, replacing the selection. Characters cfg rejects are dropped and the rest is cut to fit
 // cfg->max_length. Returns false, leaving the buffer and selection untouched, when nothing is left to insert.
 bool ui_text_input_paste(FlTextInputState* state, const FlTextInputConfig* cfg, FlString text);
-
-// Main Widget Function
 
 // Signal flags:
 //   .clicked        - Input was clicked with mouse

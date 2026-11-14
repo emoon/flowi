@@ -103,7 +103,7 @@ extern "C" fn map_release<T>(user_data: *mut c_void) {
 /// leaves a value in.
 ///
 /// Owning, like [`Handle`]: dropping it closes the operation without blocking. The
-/// transform and any value it produced are freed when the VFS frees the handle -
+/// transform and any value it produced are freed when the VFS frees the handle:
 /// at the drop for a read that has completed, on the worker as the job ends for one
 /// dropped mid-flight. Poll it with [`MappedRead::poll`].
 ///
@@ -123,7 +123,7 @@ impl<T> MappedRead<T> {
     ///
     /// [`Poll::Pending`] while the read runs. A read that failed, or whose
     /// transform failed, yields [`Err`]. Polling again after a [`Poll::Ready`]
-    /// panics - the value is yielded exactly once, like a fused future.
+    /// panics: the value is yielded exactly once.
     pub fn poll(&mut self) -> Poll<Result<T, FlError>> {
         match self.handle.poll() {
             Poll::Pending => Poll::Pending,

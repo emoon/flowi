@@ -1,6 +1,6 @@
 #pragma once
 
-// JSON parser / DOM - internal include seam over the generated <flowi/core/json.h>.
+// Internal include for the JSON parser and DOM, layered over the generated <flowi/core/json.h>.
 
 // FlString is includer-provided by convention (api_gen does not author it); the generated header below names it by
 // value and by pointer, so its full definition must be in scope first.
@@ -12,7 +12,7 @@
 // Parse flag bitset passed to fl_json_parse_with_flags as a plain size_t.
 
 typedef enum FlJsonParseFlags {
-    // strict JSON.
+    // Strict JSON.
     FlJsonParseFlags_Default = 0,
 
     // JSON5: comments, unquoted and single-quoted keys, single-quoted strings, multi-line strings, trailing commas,
@@ -39,8 +39,6 @@ static inline int json_hex_digit_value(char c) {
     }
     return -1;
 }
-
-// JSON iteration helper macros
 
 // Iterate over object properties
 #define for_each_json_property(json_obj, name_var, value_var)                                               \

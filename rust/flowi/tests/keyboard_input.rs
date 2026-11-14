@@ -1,4 +1,4 @@
-//! The key queries are global and unrouted - no widget, no focus. Enter is probed alongside Delete as the
+//! The key queries are global and unrouted: no widget, no focus. Enter is probed alongside Delete as the
 //! negative control.
 
 use flowi::{Application, Key, UiInput};

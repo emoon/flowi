@@ -10,7 +10,7 @@
 #include FT_OUTLINE_H
 
 // Shared font layer: FreeType face management, async file load, text measurement, per-size vertical metrics, glyph
-// advances, and the raster-source hand-off. This layer NEVER rasterizes - coverage bitmaps, atlases, and the
+// advances, and the raster-source hand-off. This layer never rasterizes: coverage bitmaps, atlases, and the
 // job-threaded realization live in the SW backend (render/software/sw_glyph_cache.{h,c}).
 
 #define MAX_FONT_FACES 128
@@ -24,7 +24,7 @@ typedef struct FontFace {
     u16 size; // Nominal size (FreeType: load size; default: 8*scale)
 
     // FreeType source
-    FT_Face metrics_face; // Main thread only - for text measurement
+    FT_Face metrics_face; // Main thread only, for text measurement
     u8* font_data;        // Font file data, kept so the SW backend can create raster faces
     i64 font_data_size;
 
@@ -537,8 +537,6 @@ GlyphList font_cache_get_glyph_list(FlFontCache* self, FlFontId font_id, u16 fon
     };
 }
 
-// Shared measurement core
-
 static FontFace* face_for_metrics(FlFontCache* self, FlFontId font_id, const char* caller) {
     FontFace* face = find_face_by_id(self, font_id);
     if (face == nullptr) {
@@ -653,7 +651,7 @@ FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextSt
     return out;
 }
 
-// String-independent vertical metrics at a fractional size - what font_cache_measure_text reports minus the
+// String-independent vertical metrics at a fractional size: what font_cache_measure_text reports minus the
 // string.
 
 FlFontMetrics font_cache_get_font_metrics(FlFontCache* self, FlFontId font_id, float font_size) {
@@ -676,7 +674,7 @@ bool font_cache_get_raster_source(FlFontCache* self, FlFontId font_id, FlFontRas
     switch (face->kind) {
         case FlFontRasterKind_FreeType:
             if (face->status != FontStatus_Ready || face->font_data == nullptr) {
-                return false; // Not loaded yet - the SW backend retries on a later frame.
+                return false; // Not loaded yet; the SW backend retries on a later frame.
             }
             *out = (FlFontRasterSource) {
                 .kind = FlFontRasterKind_FreeType,
@@ -700,7 +698,7 @@ bool font_cache_get_fallback_raster_source(FlFontCache* self, FlFontRasterSource
     return font_cache_get_raster_source(self, self->fallback_face->id, out);
 }
 
-// Glyph-outline service. FT_Outline_Decompose walks the loaded outline; the same callbacks run twice - a
+// Glyph-outline service. FT_Outline_Decompose walks the loaded outline; the same callbacks run twice: a
 // counting pass, then a fill pass into the caller's arena. FreeType closes contours implicitly, so a contour
 // whose last segment does not end on its start point gets its closing edge materialized as a Line segment
 // (the segment array is consumed as an independent-edge soup by winding math).
@@ -792,7 +790,7 @@ static bool fallback_applies(const FlFontCache* self, FlFontId font_id) {
     return self->fallback_face != nullptr && self->fallback_face->id != font_id;
 }
 
-// Primary first, fallback face second - the same order ft_compute_advance takes for metrics, so a glyph's
+// Primary first, fallback face second, the same order ft_compute_advance takes for metrics, so a glyph's
 // outline and its advance always come from one face.
 FontGlyphRef font_cache_resolve_glyph(FlFontCache* self, FlFontId font_id, u32 codepoint) {
     FontGlyphRef ref
@@ -872,7 +870,7 @@ bool font_cache_get_glyph_outline(FlFontCache* self, FlFontId font_id, u16 size_
         return false;
     }
 
-    FT_BBox cbox = { 0 }; // control box: cheap, conservative for curves - cell padding absorbs the overestimate
+    FT_BBox cbox = { 0 }; // control box: cheap, conservative for curves; cell padding absorbs the overestimate
     if (collected.count > 0) {
         FT_Outline_Get_CBox(outline, &cbox);
     }

@@ -1,11 +1,9 @@
-/// A semantic UI action - the logical verb a widget responds to, decoupled from the physical input
-/// that triggers it. The toolkit owns this vocabulary (Confirm, Cancel, the directional nav set, ...);
-/// which key or gamepad button maps onto each action is app-level binding configuration and is not
-/// part of this public surface. The discriminant order is a stable plugin ABI.
+/// A semantic UI action: the logical verb a widget responds to, independent of the physical input
+/// that triggers it. The app binds keys and gamepad buttons to actions; those bindings are not part
+/// of this API. The discriminant order is a stable plugin ABI.
 ///
-/// The text-editing, drag, and scroll members below are public in the enum for completeness but are
-/// internal-use: no public query function meaningfully consumes them, and they are not a supported
-/// external query target.
+/// The text-editing, drag and scroll members are for internal use. No public query function consumes
+/// them.
 enum Action {
     /// No action / unset.
     None = 0,

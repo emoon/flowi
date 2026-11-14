@@ -23,7 +23,7 @@ use crate::vfs::ffi;
 pub use core::task::Poll;
 
 /// A result type a completed VFS ticket drains into: the one hook a payload
-/// implements to turn `vfs_get_*` output into an owned Rust value.
+/// implements to turn `fl_vfs_get_*` output into an owned Rust value.
 ///
 /// Implemented by the VFS surface's result types (file bytes, directory listing).
 /// A [`Handle`] is only minted by this crate's launch calls, so an outside impl is
@@ -38,7 +38,7 @@ pub trait Payload: Sized {
 /// An owning token onto one asynchronous VFS operation: the C u32 ticket, typed.
 ///
 /// Poll it with [`poll`](Handle::poll) until it returns [`Poll::Ready`]. Dropping
-/// it - at any point, before or after completion - closes the ticket without
+/// it at any point, before or after completion, closes the ticket without
 /// blocking. !Send + !Sync, and neither Copy nor Clone.
 pub struct Handle<T: Payload> {
     ticket: u32,
@@ -50,7 +50,7 @@ pub struct Handle<T: Payload> {
 
 impl<T: Payload> Handle<T> {
     /// Wrap a successfully-launched operation's ticket, which must be live and
-    /// unclosed - the value the launch returned.
+    /// unclosed: the value the launch returned.
     #[inline]
     pub(crate) fn from_ticket(ticket: u32) -> Handle<T> {
         Handle {

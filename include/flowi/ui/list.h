@@ -19,22 +19,22 @@ typedef enum FlDropRelationship {
     FlDropRelationship_Before = 0,
     // Insert the dragged item(s) immediately after the target.
     FlDropRelationship_After = 1,
-    // Reparent onto the target - reserved for the tree view; never produced.
+    // Reparent onto the target. Reserved for the tree view; never produced.
     FlDropRelationship_Into = 2,
 } FlDropRelationship;
 
-// One declarative row descriptor for `ui_list`: a stable id, the label the List draws and type-aheads on, and an
+// One declarative row descriptor for Input::list: a stable id, the label the List draws and type-aheads on, and an
 // optional leading icon.
 typedef struct FlListItem {
-    // Opaque stable id - pure identity, the selection/result key.
+    // Opaque stable id: the selection/result key.
     uint64_t id;
-    // Row text the List draws (and type-aheads on); borrowed for the `ui_list` call.
+    // Row text the List draws (and type-aheads on); borrowed for the Input::list call.
     FlString label;
     // Optional leading icon; `ImageHandle` invalid (or a not-ready handle) draws nothing.
     FlImageHandle icon;
 } FlListItem;
 
-// Configuration for a List, consumed by ui_list_begin.
+// Configuration for a List, consumed by List::begin.
 typedef struct FlListConfig {
     // Uniform row height in logical pixels (0 -> default 32).
     float row_height;
@@ -47,7 +47,7 @@ typedef struct FlListConfig {
     bool suppress_drag_visuals;
 } FlListConfig;
 
-// Options for `ui_list`: the layout knobs plus the two policy toggles the caller chooses.
+// Options for Input::list: the layout knobs plus the two policy toggles the caller chooses.
 typedef struct FlListOpts {
     // Uniform row height in logical pixels (0 -> default 32).
     float row_height;
@@ -62,25 +62,25 @@ typedef struct FlListOpts {
     bool suppress_drag_visuals;
 } FlListOpts;
 
-// The visible index window a List emits, returned by ui_list_begin. The caller iterates `[start, end)`
+// The visible index window a List emits, returned by List::begin. The caller iterates `[start, end)`
 // and emits one row per index; total echoes the full item count.
 typedef struct FlListRange {
     // First visible index (inclusive).
     uint32_t start;
     // One past the last visible index (exclusive).
     uint32_t end;
-    // Total item count passed to ui_list_begin.
+    // Total item count passed to List::begin.
     uint32_t total;
 } FlListRange;
 
-// The per-frame result a List hands back from ui_list_end. Keyed on the app-supplied opaque u64
+// The per-frame result a List hands back from List::end. Keyed on the app-supplied opaque u64
 // stable ids, never on dense position; 0 means "none".
 typedef struct FlListResult {
     // Stable id of the item activated this frame (double-click / Enter), or 0.
     uint64_t activated_id;
     // Stable id of the focused item, or 0.
     uint64_t focused_id;
-    // Stable id of the item right-clicked this frame, or 0. The List opens no menu - it reports the row so the
+    // Stable id of the item right-clicked this frame, or 0. The List opens no menu: it reports the row so the
     // app opens its own context menu at the cursor.
     uint64_t context_menu_id;
     // The Selection Requests the List emitted this frame; always populated, even when the List auto-applied

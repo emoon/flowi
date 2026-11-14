@@ -52,7 +52,7 @@ typedef enum FlResizeFilter {
     FlResizeFilter_Nearest = 1,
 } FlResizeFilter;
 
-// Sampling filter used when a texture is drawn at a size other than its own - the render IR's per-primitive
+// Sampling filter used when a texture is drawn at a size other than its own: the render IR's per-primitive
 // filter and the per-draw filter a Viewport3d mesh samples with. Distinct from ResizeFilter, which picks
 // how pixels are resampled once at load time.
 typedef enum FlImageFilter {
@@ -80,12 +80,11 @@ typedef enum FlImageFormat {
 
 typedef struct FlVfsMount FlVfsMount;
 
-// Image widget drawing options. color tints the image (zero means transparent, so callers normally pass
-// white for no tint); fill_container scales the image to its layout box instead of native size.
+// Image widget drawing options.
 typedef struct FlImageOpts {
-    // Multiplicative tint color.
+    // Multiplicative tint color. Zero is transparent, so pass white for no tint.
     FlColor color;
-    // If true, image grows to fill the parent container.
+    // If true, the image scales to fill its layout box instead of drawing at native size.
     bool fill_container;
 } FlImageOpts;
 
@@ -109,9 +108,7 @@ typedef struct FlImageLoadOptions {
     bool detect_black_border;
     // Preserve aspect ratio when resizing.
     bool preserve_aspect_ratio;
-    // Background/thumbnail composition mode.
     FlBackgroundMode background_mode;
-    // Resize sampling algorithm.
     FlResizeFilter resize_filter;
     // Apply a vertical fade from the image toward `fade_*`.
     bool apply_vertical_fade;
@@ -127,8 +124,7 @@ typedef struct FlImageLoadOptions {
     FlString override_cache_path;
 } FlImageLoadOptions;
 
-// Public image metadata: logical dimensions only. No pixel data, stride, channel count, or format crosses the
-// public image query boundary.
+// Image metadata: logical dimensions only, with no pixel data, stride, channel count or format.
 typedef struct FlImageData {
     // Logical width in pixels.
     int32_t width;
@@ -136,7 +132,7 @@ typedef struct FlImageData {
     int32_t height;
 } FlImageData;
 
-// Public image query result. status is the raw VFS operation status; use image_get_status to interpret it.
+// Image query result. status is the raw VFS operation status; use image_get_status to interpret it.
 // data is valid when the status resolves to ImageStatus::Ready.
 typedef struct FlImageResult {
     // Logical image dimensions.
@@ -174,7 +170,7 @@ FL_API bool fl_image_is_ready(FlImageHandle handle);
 FL_API FlImageHandle fl_image_create_from_pixels(const void* pixels, int32_t width, int32_t height, FlImageFormat format);
 // Like create_from_pixels, but the image always gets a texture of its own and never enters the shared
 // image atlas. Required for anything a mesh samples, because mesh UVs address the whole texture. The flag
-// is fixed at creation - an image cannot be pulled out of the atlas afterwards.
+// is fixed at creation: an image cannot be pulled out of the atlas afterwards.
 FL_API FlImageHandle fl_image_create_dedicated(const void* pixels, int32_t width, int32_t height, FlImageFormat format);
 // Re-upload pixels into an existing handle, keeping its identity stable across the update. The
 // dimensions and format are the ones the image was created with; the caller may free pixels after this

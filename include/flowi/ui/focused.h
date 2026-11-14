@@ -9,8 +9,7 @@
 extern "C" {
 #endif
 
-// The focused-element query - the public read seam for the currently focused widget id, so callers never reach
-// for the internal FlUiCtx just to read it.
+// Query for the currently focused widget id.
 // The id of the widget that currently holds focus this frame, or 0 when nothing is focused.
 FL_API uint32_t fl_focused_id(void);
 

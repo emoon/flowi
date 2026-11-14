@@ -116,11 +116,10 @@ FLOWI_TEST_EXPORT int external_c_shared_library_smoke(const char* library_path, 
     LOAD_SHARED_SYMBOL(library, layout_configure, "fl_layout_configure");
     LOAD_SHARED_SYMBOL(library, layout_end, "fl_layout_end");
 
-    // The bootstrap every consumer of the shared library runs first (the examples all open with it): it brings up
-    // the job system, the arena tracker and the scratch arenas of the loaded library's core. Where the library
-    // bundles its own core objects rather than sharing one with the executable, that core is otherwise
-    // uninitialized and the first job the app schedules asserts. Each init is guarded, so a core already brought
-    // up by the host is left as it is.
+    // Every consumer of the shared library runs this bootstrap first. It brings up the job system, the arena
+    // tracker and the scratch arenas of the loaded library's core. Where the library bundles its own core objects,
+    // that core is otherwise uninitialized and the first job the app schedules asserts. Each init is guarded, so a
+    // core the host already brought up is left as it is.
     s_api.fl_init(1);
 
     FlAppSettings settings = {

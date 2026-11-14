@@ -49,14 +49,14 @@ void gpu_ir_walk(const void* ir_commands, size_t ir_bytes, GpuRecordFn fn, void*
     for (const u8* p = (const u8*)ir_commands; p < end; p += ((const FlCmdHeader*)p)->byte_size) {
         const FlCmdHeader* header = (const FlCmdHeader*)p;
         if (header->byte_size == 0) {
-            break; // zero-size record
+            break;
         }
         fn(user, header);
     }
 }
 
-// The effect is appended right after the payload and any inline trailing array - not at the record's
-// byte_size, which is rounded up to the 8-byte record stride and so can leave trailing padding past the effect.
+// The effect sits right after the payload and any inline trailing array. The record's byte_size is rounded up
+// to the 8-byte record stride, so it can include padding past the effect.
 const FlEffect* gpu_record_effect(const FlCmdHeader* header) {
     if ((header->flags & FL_HAS_EFFECT) == 0) {
         return nullptr;

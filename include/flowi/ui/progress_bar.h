@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-// Progress bar widget - determinate, non-interactive. Paints a track plus a fill sized to fraction.
+// Progress bar widget: determinate, non-interactive. Paints a track plus a fill sized to fraction.
 // Paint a progress bar filled to fraction (normalized [0,1], clamped). config selects colors and
 // sizing. Pure paint: no id, no interaction. The caller owns the fraction. Call inside a frame callback.
 FL_API void fl_progress_bar_impl(float fraction, FlProgressConfig config);

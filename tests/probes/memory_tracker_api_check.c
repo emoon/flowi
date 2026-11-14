@@ -1,5 +1,4 @@
 // Compile-only parity guard: the api_gen-generated public memory-tracker surface (<flowi/core/memory_tracker.h>).
-// This TU links nothing.
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -24,8 +23,7 @@ FL_MT_FN_MATCHES(fl_memory_tracker_get_stats, void(FlMemoryStats*));
 
 #undef FL_MT_FN_MATCHES
 
-// FlMemoryStats POD layout: the uint32 count then eight uint64s, 8-byte aligned (4 bytes of tail padding after the
-// leading count).
+// FlMemoryStats POD layout: the uint32 count, 4 bytes of padding, then eight 8-byte-aligned uint64s.
 _Static_assert(sizeof(FlMemoryStats) == 72, "FlMemoryStats size drift");
 _Static_assert(_Alignof(FlMemoryStats) == 8, "FlMemoryStats align drift");
 _Static_assert(offsetof(FlMemoryStats, live_arena_count) == 0, "FlMemoryStats.live_arena_count offset drift");

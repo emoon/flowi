@@ -41,7 +41,7 @@ u32 fl_perf_scope_begin(const char* name) {
 }
 
 void fl_perf_scope_end(u32 stack_index) {
-    // Sentinel from overflow - no-op
+    // UINT32_MAX is the overflow sentinel: there is nothing to end.
     if (stack_index == UINT32_MAX) {
         return;
     }
@@ -103,7 +103,6 @@ void fl_perf_scope_frame_end(void) {
         return;
     }
 
-    // Check if root entry exceeds budget
     if (state->entry_count > 0 && state->entries[0].elapsed_ns > PERF_SCOPE_FRAME_BUDGET_NS) {
         perf_scope_print_tree(state);
     }

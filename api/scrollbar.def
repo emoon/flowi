@@ -1,4 +1,4 @@
-/// Scrollbar widget - a standalone draggable track bound to a normalized scroll position.
+/// Scrollbar widget: a standalone draggable track bound to a normalized scroll position.
 #[frame_context]
 api Scrollbar {
     /// Emit a scrollbar bound to `*value` (normalized [0,1]); dragging the thumb writes the new position
