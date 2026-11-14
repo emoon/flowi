@@ -124,10 +124,9 @@ const _: () = {
     assert!(core::mem::offset_of!(StringBuilder, start_pos) == 8, "StringBuilder.start_pos offset drift");
 };
 
-// The `fl_string_*` / `fl_sb_*` / `fl_sprintf_*` plugin service API: flowi core's FlString
-// manipulation, arena string builder and arena-allocating sprintf, exported as plain C symbols. FlString
-// itself, its inline helpers and the S() literal macros come from `<flowi/core/string.h>`. Plugins link
-// the shared library and call these symbols directly.
+// FlString manipulation (`fl_string_*`), the arena string builder (`fl_sb_*`) and the arena-allocating
+// sprintf (`fl_sprintf_*`). FlString itself, its inline helpers and the S() literal macros come from
+// `<flowi/core/string.h>`.
 extern "C" {
     /// Copy str into arena as a null-terminated C string (for an external C API that needs one).
     pub fn fl_string_to_cstr(arena: *mut crate::sys::Arena, str: crate::sys::RawStr) -> *const core::ffi::c_char;

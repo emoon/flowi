@@ -82,7 +82,7 @@ pub use foundation::status::*;
 /// [`RawStr`].
 pub use foundation::string::*;
 
-/// The exported `fl_vfs_*` service functions a directly linked consumer calls.
+/// The exported `fl_vfs_*` functions a directly linked consumer calls.
 pub use vfs_abi::vfs::{
     fl_vfs_close, fl_vfs_get_data, fl_vfs_get_file_list, fl_vfs_get_listing, fl_vfs_is_ready,
     fl_vfs_mount_close, fl_vfs_mount_get_info, fl_vfs_mount_get_status, fl_vfs_mount_is_ready,

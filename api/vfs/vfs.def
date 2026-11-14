@@ -103,9 +103,8 @@ callback VfsReadCallback(data: *void, size: i64, user_data: *void) -> VfsData
 /// thread drops that last reference, outside every VFS lock.
 callback VfsReleaseCallback(user_data: *void)
 
-/// The `fl_vfs_*` consumer service API: non-blocking virtual filesystem access, exported as plain C
-/// symbols. All operations are async: the call returns a handle, and the caller polls fl_vfs_is_ready
-/// before reading the result. Plugins link the shared library and call these symbols directly.
+/// Non-blocking virtual filesystem access. All operations are async: the call returns a handle, and
+/// the caller polls fl_vfs_is_ready before reading the result.
 #[attributes(service)]
 api Vfs {
     /// Mount a resource (archive, URL, or directory) with options.

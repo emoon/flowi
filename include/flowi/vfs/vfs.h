@@ -115,9 +115,8 @@ typedef struct FlVfsMountInfo {
     bool is_ready;
 } FlVfsMountInfo;
 
-// The `fl_vfs_*` consumer service API: non-blocking virtual filesystem access, exported as plain C
-// symbols. All operations are async: the call returns a handle, and the caller polls fl_vfs_is_ready
-// before reading the result. Plugins link the shared library and call these symbols directly.
+// Non-blocking virtual filesystem access. All operations are async: the call returns a handle, and
+// the caller polls fl_vfs_is_ready before reading the result.
 // Mount a resource (archive, URL, or directory) with options.
 FL_API FlVfsMountResult fl_vfs_mount_with_options(FlString source_path, FlVfsMountOptions options);
 // Check if a mount is ready for operations (non-blocking).

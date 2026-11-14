@@ -11,12 +11,10 @@
 extern "C" {
 #endif
 
-// The `fl_path_*` plugin service API: flowi core's cross-platform path manipulation, exported as plain C
-// symbols. Paths are UTF-8 FlStrings using forward slashes as the canonical separator; backslashes are
-// folded to forward slashes on normalization. Every function that builds a new path allocates it from
-// the caller's arena, so nothing here needs freeing. fl_path_get_extension and fl_path_get_filename
-// return a view into their input and take no arena. Plugins link the shared library and call these
-// symbols directly.
+// Cross-platform path manipulation. Paths are UTF-8 FlStrings using forward slashes as the canonical
+// separator; backslashes are folded to forward slashes on normalization. Every function that builds a
+// new path allocates it from the caller's arena, so nothing here needs freeing. fl_path_get_extension
+// and fl_path_get_filename return a view into their input and take no arena.
 // Fold backslashes to forward slashes and collapse duplicate separators.
 FL_API FlString fl_path_normalize(FlArena* arena, FlString path);
 // Normalize, then resolve "." and ".." components.

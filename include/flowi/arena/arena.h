@@ -21,8 +21,7 @@ typedef struct FlTempArena {
     uint64_t pos;
 } FlTempArena;
 
-// The `fl_arena_*` plugin service API: flowi core's bump/region allocator, exported as plain C symbols.
-// Plugins link the shared library and call these symbols directly.
+// The bump/region allocator.
 // Initialize flowi's process-wide core services and return the main arena. Idempotent: a
 // second call returns the live arena and leaves the running services alone. fl_app_create
 // calls this itself, so an app only calls it directly to pick a job_threads count or to

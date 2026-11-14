@@ -161,9 +161,8 @@ const _: () = {
     assert!(core::mem::offset_of!(VfsMountInfo, is_ready) == 16, "VfsMountInfo.is_ready offset drift");
 };
 
-// The `fl_vfs_*` consumer service API: non-blocking virtual filesystem access, exported as plain C
-// symbols. All operations are async: the call returns a handle, and the caller polls fl_vfs_is_ready
-// before reading the result. Plugins link the shared library and call these symbols directly.
+// Non-blocking virtual filesystem access. All operations are async: the call returns a handle, and
+// the caller polls fl_vfs_is_ready before reading the result.
 extern "C" {
     /// Mount a resource (archive, URL, or directory) with options.
     pub fn fl_vfs_mount_with_options(source_path: crate::sys::RawStr, options: crate::sys::VfsMountOptions) -> crate::sys::VfsMountResult;
