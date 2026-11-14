@@ -269,23 +269,20 @@ static void draw_text(FlArena* arena, FlArena* scratch, FlFontCache* fc, FlFontI
     // gallery's text rasterizes at the zoomed pixel size and overflows the atlas packer, which drops glyphs.
     f32 margin = size_world;
 
-    // Shape at the metrics size, advancing the pen in world space, and place each glyph at its view-mapped screen
+    // Shape at the metrics size, in world space, and place each glyph at its view-mapped screen
     // position. This is fl_ir_text_layout's loop with the advance size separate from the run's raster size, which
     // that builder cannot express. Off-screen glyphs are dropped, so the run only references atlas cells that
     // exist.
     const FlShapedRun shaped = font_cache_shape_run(fc, font, font_cache_whole_px_to_q4(metrics), text);
-    f32 world_x = x;
     fl_arena_rewind(scratch);
     FlGlyph* glyphs = arena_alloc_array(scratch, FlGlyph, shaped.count);
     u32 count = 0;
     for_count(i, shaped.count) {
         const FlShapedGlyph* sg = &shaped.glyphs[i];
-        FlRect pen = { world_x, baseline_y, 0.0f, 0.0f };
+        FlRect pen = { x + (f32)sg->x / 64.0f, baseline_y - (f32)sg->y / 64.0f, 0.0f, 0.0f };
         if (view_visible(v, pen, margin)) {
-            glyphs[count++]
-                = (FlGlyph) { .x = v_x(v, world_x), .y = v_y(v, baseline_y), .glyph_index = sg->glyph_index };
+            glyphs[count++] = (FlGlyph) { .x = v_x(v, pen.x), .y = v_y(v, pen.y), .glyph_index = sg->glyph_index };
         }
-        world_x += (f32)sg->advance / 64.0f;
         if (count > 0 && face_span_ends_at(&shaped, i)) {
             fl_ir_text_run(arena, sg->font, raster_q4, scale, color, glyphs, count);
             count = 0;

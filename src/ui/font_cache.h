@@ -108,9 +108,10 @@ int font_cache_get_glyph_advance_q4(FlFontCache* self, FlFontId font_id, u16 siz
 FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextStyle style);
 
 typedef struct FlShapedGlyph {
-    int advance;
     FlFontId font;
     u32 glyph_index;
+    i32 x;
+    i32 y;
 } FlShapedGlyph;
 
 typedef struct FlShapedRun {

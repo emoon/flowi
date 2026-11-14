@@ -280,8 +280,10 @@ static inline void fl_ir_text_layout(FlArena* arena, FlFontCache* font_cache, Fl
             run.glyph_count = span_end - i;
             dst = fl_ir_text_run_alloc(arena, &run);
         }
-        *dst++ = (FlGlyph) { .glyph_index = sg->glyph_index, .x = cursor_x, .y = baseline_y };
-        cursor_x += scale * (float)sg->advance / 64.0f;
-        cursor_x += scale * letter_spacing;
+        *dst++ = (FlGlyph) {
+            .glyph_index = sg->glyph_index,
+            .x = cursor_x + scale * ((float)sg->x / 64.0f + (float)i * letter_spacing),
+            .y = baseline_y - scale * (float)sg->y / 64.0f,
+        };
     }
 }
