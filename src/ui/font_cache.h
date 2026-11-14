@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/math.h>
+#include <core/stats.h>
 #include <core/string.h>
 #include <core/types.h>
 #include "ui_ids.h"
@@ -51,6 +52,7 @@ typedef struct FlFontRasterSource {
 FlFontCache* font_cache_new(struct FlArena* arena);
 void font_cache_destroy(FlFontCache* self);
 void font_cache_update(FlFontCache* self);
+StatsRegistry* font_cache_stats(FlFontCache* self);
 FlFontId font_cache_load_font(FlFontCache* self, FlVfsMount* mount, FlString relative_path, u16 font_size);
 // Load a FreeType font from memory. The bytes are copied; the face is ready synchronously.
 FlFontId font_cache_load_font_memory(FlFontCache* self, const u8* data, i64 size, u16 font_size);
