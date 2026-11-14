@@ -348,7 +348,7 @@ void dock_layout_read_rects(const FlDockTree* tree, FlArena* arena, FlDockLayout
 }
 
 const FlDockRect* dock_layout_find_rect(const FlDockLayout* layout, FlDockNodeId node) {
-    for (u32 i = 0; i < layout->count; i++) {
+    for_count(i, layout->count) {
         if (layout->nodes[i].node == node && layout->nodes[i].found) {
             return &layout->nodes[i].rect;
         }

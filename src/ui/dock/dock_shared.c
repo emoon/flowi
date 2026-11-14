@@ -60,7 +60,7 @@ void dock_shared_destroy(FlDockShared* ds) {
     if (ds == nullptr) {
         return;
     }
-    for (u32 i = 0; i < ds->registry_count; ++i) {
+    for_count(i, ds->registry_count) {
         dock_workspace_destroy(ds->registry[i]);
     }
     fl_arena_destroy(ds->arena);
@@ -87,7 +87,7 @@ static FlDockShared* dock_shared_get(void) {
 _Static_assert(FL_DOCK_MAX_WORKSPACES <= 16, "a leaf id must stay under 2^24");
 
 static bool id_block_taken(const FlDockShared* ds, u32 block) {
-    for (u32 i = 0; i < ds->registry_count; ++i) {
+    for_count(i, ds->registry_count) {
         if (ds->registry[i]->tree->next_node_id >> DOCK_NODE_ID_BLOCK_BITS == block) {
             return true;
         }
@@ -131,7 +131,7 @@ static void dock_registry_remove(FlDockShared* ds, FlDockWorkspace* ws) {
 
 // A promotion that would demote into ws demotes into heir instead.
 static void reaim_promotions(FlDockShared* ds, const FlDockWorkspace* ws, FlDockWorkspace* heir) {
-    for (u32 i = 0; i < ds->promotion_count; ++i) {
+    for_count(i, ds->promotion_count) {
         if (ds->promotions[i].src == ws) {
             ds->promotions[i].src = heir;
         }
@@ -141,7 +141,7 @@ static void reaim_promotions(FlDockShared* ds, const FlDockWorkspace* ws, FlDock
 // A queued promote out of ws goes with its source.
 static void drop_queued_promotes(FlDockShared* ds, const FlDockWorkspace* ws) {
     u32 kept = 0;
-    for (u32 i = 0; i < ds->promote_count; ++i) {
+    for_count(i, ds->promote_count) {
         if (ds->promote_queue[i].src != ws) {
             ds->promote_queue[kept++] = ds->promote_queue[i];
         }
@@ -174,7 +174,7 @@ void fl_dock_register_host(FlDockHost host) {
 }
 
 static bool promote_is_queued(const FlDockShared* ds, const FlDockWorkspace* src, FlDockPanelId panel) {
-    for (u32 i = 0; i < ds->promote_count; ++i) {
+    for_count(i, ds->promote_count) {
         if (ds->promote_queue[i].src == src && ds->promote_queue[i].panel == panel) {
             return true;
         }
@@ -202,7 +202,7 @@ void dock_promote_panel(FlDockPanelId panel) {
 }
 
 static i32 promotion_of_workspace(const FlDockShared* ds, const FlDockWorkspace* dst) {
-    for (u32 i = 0; i < ds->promotion_count; ++i) {
+    for_count(i, ds->promotion_count) {
         if (ds->promotions[i].dst == dst) {
             return (i32)i;
         }
@@ -256,7 +256,7 @@ static bool promote_is_held(const DockPromoteRequest* req) {
 
 // The oldest request that can be applied now, or -1.
 static i32 next_ready_promote(const FlDockShared* ds) {
-    for (u32 i = 0; i < ds->promote_count; ++i) {
+    for_count(i, ds->promote_count) {
         if (!promote_is_held(&ds->promote_queue[i])) {
             return (i32)i;
         }
@@ -287,7 +287,7 @@ void dock_shared_flush_promotes(void) {
 }
 
 static i32 promotion_index(const FlDockShared* ds, const void* host_window) {
-    for (u32 i = 0; i < ds->promotion_count; ++i) {
+    for_count(i, ds->promotion_count) {
         if (ds->promotions[i].host_window == host_window) {
             return (i32)i;
         }

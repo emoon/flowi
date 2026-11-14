@@ -3,7 +3,7 @@
 #include <core/string.h>
 
 const DockPanel* dock_panels_find(const DockPanels* panels, FlDockPanelId id) {
-    for (u32 i = 0; i < panels->count; ++i) {
+    for_count(i, panels->count) {
         if (panels->items[i].id == id) {
             return &panels->items[i];
         }
@@ -12,7 +12,7 @@ const DockPanel* dock_panels_find(const DockPanels* panels, FlDockPanelId id) {
 }
 
 DockPanel* dock_panels_get(DockPanels* panels, FlDockPanelId id) {
-    for (u32 i = 0; i < panels->count; ++i) {
+    for_count(i, panels->count) {
         if (panels->items[i].id == id) {
             return &panels->items[i];
         }
@@ -42,7 +42,7 @@ FlString dock_panels_title(const DockPanels* panels, FlDockPanelId id) {
 
 FlDockPanelId dock_panels_shown_in_leaf(const DockPanels* panels, const FlDockNode* leaf) {
     FlDockPanelId first_shown = 0;
-    for (u32 i = 0; i < leaf->leaf.count; ++i) {
+    for_count(i, leaf->leaf.count) {
         FlDockPanelId panel = leaf->leaf.panels[i];
         if (!dock_panels_visible(panels, panel)) {
             continue;

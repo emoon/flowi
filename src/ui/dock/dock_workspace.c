@@ -222,7 +222,7 @@ static FlJsonValue* read_layout_blob(FlArena* arena, FlString path) {
 // multi-window session folds its other workspaces into ours. If the saved id does not match ours, the first saved
 // workspace is adopted as the root.
 static u64 live_workspace_id(const FlDockPersistLoad* load, u64 own_id) {
-    for (u32 i = 0; i < load->count; ++i) {
+    for_count(i, load->count) {
         if (load->workspaces[i].id == own_id) {
             return own_id;
         }

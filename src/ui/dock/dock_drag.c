@@ -20,7 +20,7 @@ static f32 rect_dist_sq(FlDockRect r, FlVec2 p) {
 static i32 nearest_leaf(const FlDockDropNode* nodes, u32 count, FlVec2 cursor) {
     i32 best = -1;
     f32 best_dist = 0.0f;
-    for (u32 i = 0; i < count; ++i) {
+    for_count(i, count) {
         if (!nodes[i].is_leaf) {
             continue;
         }
@@ -67,7 +67,7 @@ static bool outer_band_side(FlDockRect ws, FlVec2 cursor, FlDockSide* out_side) 
     FlDockSide side = FlDockSide_Left;
     f32 candidates[] = { (ws.x + ws.width) - cursor.x, cursor.y - ws.y, (ws.y + ws.height) - cursor.y };
     FlDockSide sides[] = { FlDockSide_Right, FlDockSide_Top, FlDockSide_Bottom };
-    for (u32 i = 0; i < sizeof_array(candidates); ++i) {
+    for_count(i, sizeof_array(candidates)) {
         if (candidates[i] < depth) {
             depth = candidates[i];
             side = sides[i];
@@ -107,7 +107,7 @@ static FlDockDropZone outer_zone(FlDockSide side) {
 }
 
 static i32 root_index(const FlDockDropNode* nodes, u32 count) {
-    for (u32 i = 0; i < count; ++i) {
+    for_count(i, count) {
         if (nodes[i].is_root) {
             return (i32)i;
         }
@@ -271,7 +271,7 @@ static void refresh_base(FlDockDrag* drag, const FlDockTree* live) {
 }
 
 static const FlDockRect* base_rect_of(const FlDockDrag* drag, FlDockNodeId node) {
-    for (u32 i = 0; i < drag->base_count; ++i) {
+    for_count(i, drag->base_count) {
         if (drag->base[i].node == node) {
             return &drag->base[i].rect;
         }
