@@ -89,7 +89,7 @@ add_subdirectory(external/freetype2)
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
     ${SRC}/app/*.c external/clay/clay.c ${SRC}/core/*.c ${SRC}/core/os/*.c ${SRC}/vfs/*.c ${SRC}/vfs/drivers/*.c
-    ${SRC}/image_loader/*.c ${SRC}/platform/*.c ${SRC}/ui/*.c ${SRC}/ui/dock/*.c ${SRC}/ui/image/*.c ${SRC}/ui/menu/*.c ${SRC}/render/software/*.c)
+    ${SRC}/image_loader/*.c ${SRC}/platform/*.c ${SRC}/ui/*.c ${SRC}/ui/dock/*.c ${SRC}/ui/image/*.c ${SRC}/ui/list/*.c ${SRC}/ui/menu/*.c ${SRC}/render/software/*.c)
 
 file(GLOB PLATFORM_SOURCES ${SRC}/platform/*.c)
 set_source_files_properties(${PLATFORM_SOURCES} PROPERTIES COMPILE_DEFINITIONS BACKEND_USE_SDL=0)

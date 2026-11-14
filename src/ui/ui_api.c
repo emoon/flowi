@@ -534,14 +534,14 @@ void fl_input_push_window_event(FlWindowEvent event) {
 // Declarative List one-call face - the list slot on the UiInput domain (ui_input.def).
 FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t count, FlSelectionSet* set,
                            FlListOpts opts) {
-    return ui_list(id, items, count, set, opts);
+    return ui_list((ListDecl) { .id = id, .items = items, .count = count, .set = set, .opts = opts });
 }
 
 // UiList (ui_list.def).
 
 FlListRange fl_list_begin(FlLayoutId id, const uint64_t* ordered_ids, uint32_t count, FlSelectionSet* set,
                           FlListConfig config) {
-    return ui_list_begin(id, ordered_ids, count, set, config);
+    return ui_list_begin(id, (ListModel) { .ordered_ids = ordered_ids, .count = count, .set = set }, config);
 }
 
 FlSignal fl_list_item_begin(uint64_t stable_id) {
