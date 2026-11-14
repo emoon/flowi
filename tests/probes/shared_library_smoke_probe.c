@@ -144,6 +144,7 @@ FLOWI_TEST_EXPORT int external_c_shared_library_smoke(const char* library_path, 
     return ok;
 }
 
+#if defined(FLOWI_EXPORT_LIST_PATH)
 // Extracts the symbol name from one line of the export list, or returns 0 for a line that names none. A version script
 // line is "  name;" and a module-definition line is "    name"; the labels, braces, comments and the EXPORTS keyword
 // around them are not names.
@@ -175,6 +176,7 @@ static int export_list_name(char* line, char** name) {
     *name = line;
     return 1;
 }
+#endif
 
 // Looks up every name in the export list the linker applies to libflowi (the version script on Linux, the module
 // definition on Windows) and writes the ones the loaded library does not export to `missing`, space separated and cut
