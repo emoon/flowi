@@ -9,7 +9,7 @@ struct FlArena;
 struct FlFontCache;
 struct Clay_RenderCommand;
 
-// Append IR records for the given Clay commands to arena. font_cache shapes the text runs.
+// Append IR records for the given Clay commands to arena.
 
 void fl_clay_to_render_ir(struct FlArena* arena, struct FlFontCache* font_cache,
                           struct Clay_RenderCommand* clay_commands, int clay_count);

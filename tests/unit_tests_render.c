@@ -410,8 +410,7 @@ UTEST(font_cache, text_size_includes_fallback_advance) {
     font_cache_destroy(cache);
 }
 
-// A text run holds glyphs of one face, so a backend needs no fallback lookup of its own: a codepoint the font lacks
-// arrives in a second run whose font is the fallback face, with that face's glyph index.
+// Glyphs the font lacks arrive in a second run in the fallback font, with that face's glyph index.
 UTEST(font_cache, text_layout_splits_runs_per_face) {
     FlFontCache* cache = font_cache_new(s_arena);
     const u16 size = 32;
@@ -445,7 +444,7 @@ UTEST(font_cache, text_layout_splits_runs_per_face) {
     ASSERT_EQ_MSG((int)g1[0].glyph_index, (int)font_cache_get_glyph_index(cache, fallback, 'B'),
                   "'B' carries the fallback face's index");
 
-    // The pen runs on across the split.
+    // The pen continues across the split.
     const float adv = (float)font_cache_get_glyph_advance_q4(cache, primary, q4, 'A') / 64.0f;
     ASSERT_NEAR_MSG(g1[0].x, 2.0f * adv, 0.0001f, "the fallback glyph sits where the pen left off");
 
@@ -453,7 +452,7 @@ UTEST(font_cache, text_layout_splits_runs_per_face) {
     font_cache_destroy(cache);
 }
 
-// The built-in bitmap font has no glyph table; its glyph index is the codepoint and it never uses the fallback.
+// The built-in font's glyph index is the codepoint, and it never uses the fallback.
 UTEST(font_cache, default_font_shapes_to_codepoints) {
     FlFontCache* cache = font_cache_new(s_arena);
     FlFontId builtin = font_cache_load_default_font(cache, 2);

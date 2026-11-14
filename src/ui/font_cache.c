@@ -15,12 +15,11 @@
 
 #define MAX_FONT_FACES 128
 
-// What the font layer remembers about one codepoint at one size: the glyph a backend draws for it and how far the
-// pen moves. The glyph is glyph_index in the primary face, or in the fallback face when fallback is set.
+// A codepoint at one size: its advance and the glyph that draws it.
 typedef struct CachedGlyph {
-    int advance; // 26.6; -1 marks an uncomputed ASCII slot
+    int advance; // 26.6, -1 = uncomputed ASCII slot
     u16 glyph_index;
-    bool fallback;
+    bool fallback; // glyph_index is in the fallback face
 } CachedGlyph;
 
 typedef struct FontFace {
@@ -39,12 +38,10 @@ typedef struct FontFace {
     // Default source
     u16 default_scale;
 
-    // Memoized glyphs (FreeType faces). Sizes are quarter-pixel keys (round(px × 4)) so the whole-px layout path
-    // and the fractional-size measurement path share one cache. ASCII at the active size is a dense array;
-    // everything else (other sizes, codepoints >= 128) falls back to the hashmap, keyed
-    // (quarter_px_key << 21) | codepoint.
+    // Glyphs by quarter-px size key. ASCII at the active size is a dense row; everything else is in the hashmap,
+    // keyed (size_key << 21) | codepoint.
     CachedGlyph ascii_glyphs[128];
-    u16 ascii_glyphs_size; // quarter-px key the ascii_glyphs row is valid for; 0 = none
+    u16 ascii_glyphs_size; // size key the row is valid for; 0 = none
     hashmap(u64, CachedGlyph) glyph_cache;
 } FontFace;
 
@@ -272,8 +269,7 @@ void font_cache_set_fallback_font(FlFontCache* self, FlFontId font_id) {
     FontFace* face = find_face_by_id(self, font_id);
     if (face != nullptr) {
         self->fallback_face = face;
-        // Cached glyphs for primary-missing codepoints depend on the fallback face; invalidate every face's
-        // memoization.
+        // Cached glyphs depend on the fallback face.
         for_count(i, self->face_count) {
             self->faces[i].ascii_glyphs_size = 0;
             if (self->faces[i].glyph_cache.base.buckets != nullptr) {
@@ -396,9 +392,7 @@ static void ft_set_size_q4(FT_Face face, u16 q4) {
     FT_Set_Char_Size(face, 0, (FT_F26Dot6)q4 << 4, 72, 72);
 }
 
-// One codepoint resolved and measured, recomputed only on a cache miss. The face/index pair comes from
-// font_cache_resolve_glyph and the advance is measured on that same face, so a backend's outline and the pen step
-// always agree. The advance stays zero when no face maps the codepoint or the glyph fails to load.
+// Advance and outline come from the same face. The advance is zero when no face maps the codepoint.
 static CachedGlyph ft_compute_glyph(FlFontCache* self, FontFace* face, u16 q4, u32 codepoint) {
     FontGlyphRef glyph = font_cache_resolve_glyph(self, face->id, codepoint);
     CachedGlyph out = { .glyph_index = (u16)glyph.glyph_index, .fallback = glyph.font != face->id };
@@ -427,7 +421,7 @@ typedef struct AdvanceRun {
     FontFace* face;
     u16 q4;
     bool may_claim_row;
-    FlFontId font; // the id asked for, which face is nullptr for when unknown; read only when glyphs are produced
+    FlFontId font; // requested id; set only when glyphs are produced
 } AdvanceRun;
 
 // The ASCII row slot for a codepoint when the row is valid for the run's size (claiming it first if the run may),
@@ -446,8 +440,7 @@ static CachedGlyph* ascii_glyph_slot(const AdvanceRun* run, u32 codepoint) {
     return face->ascii_glyphs_size == run->q4 ? &face->ascii_glyphs[codepoint] : nullptr;
 }
 
-// While the fallback face is still loading, a codepoint the primary lacks resolves to nothing. That answer must not
-// be remembered, or the glyph stays missing after the fallback arrives.
+// A miss while the fallback face is loading must not be cached, or the glyph stays missing.
 static bool is_cacheable(const FlFontCache* self, CachedGlyph glyph) {
     const bool fallback_loading = self->fallback_face != nullptr && self->fallback_face->status == FontStatus_Loading;
     return glyph.glyph_index != 0 || !fallback_loading;
@@ -478,7 +471,7 @@ static CachedGlyph freetype_glyph(const AdvanceRun* run, u32 codepoint) {
     return glyph;
 }
 
-// The built-in font draws codepoints below 128, one fixed cell each; its glyph index is the codepoint.
+// The built-in font covers codepoints below 128; its glyph index is the codepoint.
 static CachedGlyph default_glyph(const FontFace* face, u32 codepoint) {
     if (codepoint >= 128) {
         return (CachedGlyph) { 0 };
