@@ -10,6 +10,8 @@ struct ListUniformOpts {
     /// viewport height below the top (clamped to the scrollable extent) and the offset eases toward it.
     /// Negative or out of range leaves the scroll target alone.
     scroll_to: i32,
+    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    scrollbar_mode: ScrollbarDisplayMode,
 }
 
 /// The visible index window a uniform list emits, returned by begin. The caller iterates `[start, end)` and

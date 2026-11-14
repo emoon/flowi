@@ -172,6 +172,8 @@ pub struct ListConfig<'a> {
     /// false (default): the List draws the built-in drag ghost + insertion line. true: it draws neither, so
     /// the caller draws its own from [`List::drag_state`].
     pub suppress_drag_visuals: bool,
+    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    pub scrollbar_mode: sys::ScrollbarDisplayMode,
 }
 
 impl Default for ListConfig<'_> {
@@ -181,6 +183,7 @@ impl Default for ListConfig<'_> {
             gap: 0.0,
             labels: &[],
             suppress_drag_visuals: false,
+            scrollbar_mode: sys::ScrollbarDisplayMode::Never,
         }
     }
 }
@@ -194,6 +197,7 @@ impl ListConfig<'_> {
             gap: self.gap,
             labels,
             suppress_drag_visuals: self.suppress_drag_visuals,
+            scrollbar_mode: self.scrollbar_mode,
         }
     }
 }
@@ -355,6 +359,8 @@ pub struct ListOpts {
     /// true: the caller draws its own ghost/insertion line from the result's `drag_*`; false (default): the
     /// List draws the built-in affordances.
     pub suppress_drag_visuals: bool,
+    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    pub scrollbar_mode: sys::ScrollbarDisplayMode,
 }
 
 impl Default for ListOpts {
@@ -365,6 +371,7 @@ impl Default for ListOpts {
             multi_select: true,
             reorderable: true,
             suppress_drag_visuals: false,
+            scrollbar_mode: sys::ScrollbarDisplayMode::Never,
         }
     }
 }
@@ -378,6 +385,7 @@ impl ListOpts {
             multi_select: self.multi_select,
             reorderable: self.reorderable,
             suppress_drag_visuals: self.suppress_drag_visuals,
+            scrollbar_mode: self.scrollbar_mode,
         }
     }
 }

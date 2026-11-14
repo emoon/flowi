@@ -34,4 +34,6 @@ f64 list_uniform_scroll_offset(FlListUniformContext* self, FlString id);
 // end.
 void list_uniform_nudge_scroll(FlListUniformContext* self, FlString id, f32 delta_px, f32 item_stride, u32 total_count);
 
+bool list_uniform_scrollbar_engaged(const FlListUniformContext* self);
+
 void list_uniform_begin_update(FlListUniformContext* self);

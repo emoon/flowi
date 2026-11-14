@@ -10,6 +10,8 @@
 #include "scroll_core.h"
 #include "ui.h"
 #include "ui_private.h"
+#include "ui_scroll.h"
+#include "wheel_scope.h"
 #include <string.h>
 
 #define LIST_UNIFORM_SCROLL_SPEED 12.0f // Smooth scroll lerp factor (per-caller override)
@@ -38,6 +40,8 @@ struct FlListUniformContext {
     u32 visible_end;
 
     f32 viewport_height;
+    f64 content_height;
+    bool scrollbar_engaged;
 
     // Current item state (during item_begin/item_end)
     bool in_item;
@@ -94,6 +98,36 @@ static void update_scroll_for_selection(FlListUniformContext* self, i32 selected
     self->current_state->scroll_target = clamp(target, 0.0, max_scroll);
 }
 
+static void scroll_by_wheel(FlListUniformContext* self, f64 max_scroll) {
+    f32 wheel_y = ui_get_mouse_wheel().y;
+    if (wheel_y == 0.0f || !wheel_scope_owns_wheel(self->ui_ctx, self->current_layout_id)) {
+        return;
+    }
+    f64 target = self->current_state->scroll_target - (f64)(wheel_y * SCROLL_CORE_DEFAULT_WHEEL_SPEED);
+    self->current_state->scroll_target = clamp(target, 0.0, max_scroll);
+}
+
+static void scrollbar_update(FlListUniformContext* self) {
+    self->scrollbar_engaged = false;
+    FlScrollbarDisplayMode mode = self->current_opts.scrollbar_mode;
+    if (mode == FlScrollbarDisplayMode_Never) {
+        return;
+    }
+
+    ListUniformState* state = self->current_state;
+    ScrollExtent extent = { .viewport = self->viewport_height, .content = self->content_height };
+    f64 max_scroll = scroll_max(extent.content, extent.viewport);
+    f32 shown = max_scroll > 0.0 ? (f32)(state->scroll_offset / max_scroll) : 0.0f;
+    f32 normalized = shown;
+
+    FlSignal signal = ui_scroll_overlay_bar(self->current_layout_id, mode, extent, &normalized);
+    self->scrollbar_engaged = signal.hovered || signal.dragging;
+    if (normalized != shown) {
+        state->scroll_offset = (f64)normalized * max_scroll;
+        state->scroll_target = state->scroll_offset;
+    }
+}
+
 void list_uniform_begin_update(FlListUniformContext* self) {
     self->viewport_height = self->ui_ctx->layout_height;
 }
@@ -124,11 +158,18 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
     }
     self->viewport_height = container_height;
 
+    FlLayoutId layout_id = { .name = id, .id = 0 };
+    self->current_layout_id = ui_layout_id_to_clay_id(layout_id);
+
+    self->content_height = list_content_height(total_count, item_height, gap);
+    f64 max_scroll = scroll_max(self->content_height, self->viewport_height);
+    scroll_by_wheel(self, max_scroll);
+    wheel_scope_begin(self->ui_ctx, self->current_layout_id, max_scroll > 0.0);
+
     if (opts.scroll_to >= 0 && opts.scroll_to < (i32)total_count) {
         update_scroll_for_selection(self, opts.scroll_to, item_height, gap);
     }
 
-    f64 max_scroll = scroll_max(list_content_height(total_count, item_height, gap), self->viewport_height);
     self->current_state->scroll_offset
         = scroll_smooth_step(self->current_state->scroll_offset, self->current_state->scroll_target, max_scroll,
                              LIST_UNIFORM_SCROLL_SPEED, self->ui_ctx->delta_time);
@@ -140,14 +181,15 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
     f64 first_item_top = (f64)self->visible_start * (f64)item_with_gap;
     FlVec2 scroll_pos = { 0, (f32)(first_item_top - self->current_state->scroll_offset) };
 
-    FlLayoutId layout_id = { .name = id, .id = 0 };
-    self->current_layout_id = ui_layout_id_to_clay_id(layout_id);
+    bool has_bar = opts.scrollbar_mode != FlScrollbarDisplayMode_Never && max_scroll > 0.0;
+    f32 bar_reserve = has_bar ? ui_scroll_overlay_bar_reserve() : 0.0f;
 
     fl_layout_start(layout_id);
     // Track the container so list_uniform_end can read its measured height from item_state.
     ui_track_element(layout_id);
     fl_layout_configure((FlLayoutConfig) {
         .sizing = { sizing_grow(), sizing_grow() },
+        .padding = { .right = (u16)bar_reserve },
         .direction = LayoutDirection_TopToBottom,
         .child_gap = gap,
         .clip = { .vertical = true, .manual_scroll = true, .scroll_pos = scroll_pos },
@@ -180,13 +222,19 @@ void list_uniform_item_end(FlListUniformContext* self) {
 }
 
 void list_uniform_end(FlListUniformContext* self) {
+    scrollbar_update(self);
     fl_layout_end();
+    wheel_scope_end(self->ui_ctx);
 
     // Read the measured container height from item_state and store it for next frame.
     FlElementState state = ui_get_element_state_by_id(self->current_layout_id);
     if (state.found && state.size.y > 0.0f) {
         self->current_state->container_height = state.size.y;
     }
+}
+
+bool list_uniform_scrollbar_engaged(const FlListUniformContext* self) {
+    return self->scrollbar_engaged;
 }
 
 f64 list_uniform_scroll_offset(FlListUniformContext* self, FlString id) {

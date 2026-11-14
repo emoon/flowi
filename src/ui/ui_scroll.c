@@ -13,10 +13,11 @@
 #include "ui_tokens.h"
 #include "ui_variant_helpers.h"
 #include "ui_widget_internal.h"
+#include "wheel_scope.h"
 
 // Smooth scroll lerp factor: the shared scroll_core default (higher = faster)
 #define SCROLL_SMOOTH_LERP_SPEED SCROLL_CORE_DEFAULT_SMOOTH_SPEED
-#define SCROLL_DEFAULT_SPEED 30.0f     // Default pixels per wheel tick
+#define SCROLL_DEFAULT_SPEED SCROLL_CORE_DEFAULT_WHEEL_SPEED
 #define SCROLL_DEFAULT_MARGIN 20.0f    // Default margin when scrolling to widget
 #define SCROLLBAR_WIDTH 12.0f          // Scrollbar track width
 #define SCROLLBAR_MIN_THUMB_SIZE 40.0f // Minimum scrollbar thumb height
@@ -50,7 +51,6 @@ static ScrollAreaState* get_or_create_scroll_state(u32 element_id) {
         .content_size = { 0, 0 },
         .viewport_size = { 0, 0 },
         .last_frame = ctx->frame_counter,
-        .is_hovered = false,
     };
 
     hashmap_insert(&ctx->shared->scroll_states, element_id, new_state);
@@ -82,50 +82,6 @@ static bool get_element_bounds(u32 element_id, FlVec2* out_pos, FlVec2* out_size
     *out_pos = state.pos;
     *out_size = state.size;
     return true;
-}
-
-// Pointer is over the container's clip-cut rect from the previous frame's hit test. A scroll area not yet in
-// item_state (first frame) is not hovered.
-
-static bool scroll_area_hovered(FlUiCtx* ctx, u32 element_id) {
-    ItemState* item = hashmap_get(&ctx->shared->item_state, element_id);
-    if (item == nullptr || !item->state.found) {
-        return false;
-    }
-
-    return ui_item_hit_contains(item, (Vec2) { ctx->input_state.mouse.x, ctx->input_state.mouse.y });
-}
-
-static bool scroll_area_is_ancestor(FlUiCtx* ctx, u32 ancestor_id, u32 area_id) {
-    u32 parent_id = area_id;
-    for_count(i, SCROLL_AREA_STACK_MAX_DEPTH) {
-        ScrollAreaState* state = hashmap_get(&ctx->shared->scroll_states, parent_id);
-        if (state == nullptr || state->parent_id == 0) {
-            return false;
-        }
-        parent_id = state->parent_id;
-        if (parent_id == ancestor_id) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// The wheel goes to the innermost hovered scroll area only: an area takes it when hovered and no scroll area nested
-// inside it is also hovered.
-
-static bool scroll_area_has_hovered_descendant(FlUiCtx* ctx, u32 element_id) {
-    for_each_hashmap(&ctx->shared->scroll_states, other_id, other) {
-        (void)other;
-        if (scroll_area_hovered(ctx, *other_id) && scroll_area_is_ancestor(ctx, element_id, *other_id)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool scroll_area_owns_wheel(FlUiCtx* ctx, u32 element_id) {
-    return scroll_area_hovered(ctx, element_id) && !scroll_area_has_hovered_descendant(ctx, element_id);
 }
 
 static void handle_mouse_wheel(ScrollAreaState* state, FlVec2 max_scroll, f32 scroll_speed, bool smooth_scroll) {
@@ -285,51 +241,66 @@ FlSignal ui_scrollbar_impl(float* value, FlScrollbarConfig cfg) {
     return signal;
 }
 
-static void scroll_area_scrollbar_widget(ScrollAreaState* state, f32 viewport_ratio, f32 max_scroll,
-                                         u32 scroll_area_id) {
-    FlSignal scrollbar_signal = ui_scrollbar(
-        &state->scroll_target.y, .orientation = FlScrollbarOrientation_Vertical, .min = 0.0f, .max = max_scroll,
-        .viewport_ratio = viewport_ratio, .width = SCROLLBAR_WIDTH - SCROLLBAR_PADDING * 2,
-        .widget = { .id_override = fl_sprintf_arena(ui_get_ctx()->render_frame_allocator, "_sb_%u", scroll_area_id) });
-
-    // If user dragged scrollbar, sync offset immediately for responsiveness
-    if (scrollbar_signal.dragging || scrollbar_signal.clicked) {
-        state->scroll_offset.y = state->scroll_target.y;
+static bool overlay_bar_shown(const FlUiCtx* ctx, u32 owner_id, FlScrollbarDisplayMode mode, FlLayoutId bar_id) {
+    if (mode != FlScrollbarDisplayMode_Auto) {
+        return mode == FlScrollbarDisplayMode_Always;
     }
+    const ItemState* bar = hashmap_get(&ctx->shared->item_state, ui_layout_id_to_clay_id(bar_id));
+    return wheel_scope_hovered(ctx, owner_id) || (bar != nullptr && bar->state.active);
 }
 
-static void render_vertical_scrollbar(ScrollAreaState* state, FlScrollbarDisplayMode scrollbar_mode,
-                                      u32 scroll_area_id) {
-    FlVec2 viewport_size = state->viewport_size;
-    FlVec2 content_size = state->content_size;
-    if (scrollbar_mode == FlScrollbarDisplayMode_Never || content_size.y <= viewport_size.y) {
-        return;
+float ui_scroll_overlay_bar_reserve(void) {
+    return SCROLLBAR_WIDTH + 4.0f;
+}
+
+FlSignal ui_scroll_overlay_bar(u32 owner_id, FlScrollbarDisplayMode mode, ScrollExtent extent, float* normalized) {
+    if (extent.content <= extent.viewport || mode == FlScrollbarDisplayMode_Never) {
+        return (FlSignal) { 0 };
+    }
+    FlUiCtx* ctx = ui_get_ctx();
+    FlLayoutId bar_id = { .name = fl_sprintf_arena(ctx->render_frame_allocator, "_sb_%u", owner_id) };
+    if (!overlay_bar_shown(ctx, owner_id, mode, bar_id)) {
+        return (FlSignal) { 0 };
     }
 
-    if (scrollbar_mode == FlScrollbarDisplayMode_Auto && !state->is_hovered) {
-        return;
-    }
-
-    f32 max_scroll = content_size.y - viewport_size.y;
-    f32 viewport_ratio = viewport_size.y / content_size.y;
+    FlSignal signal = { 0 };
     u16 padding = (u16)SCROLLBAR_PADDING;
 
     // clang-format off
-    ui_floating_area_id(ID_INT("_scrollbar_float", (int)scroll_area_id),
+    ui_floating_area_id(ID_INT("_scrollbar_float", (int)owner_id),
         .attach_to = FlFloatingAttachTo_Parent,
         .parent_attach = FlFloatingAttachPoint_RightTop,
         .element_attach = FlFloatingAttachPoint_RightTop,
         .pointer_capture = FlFloatingPointerCapture_Passthrough,
-        .sizing = { sizing_fixed(SCROLLBAR_WIDTH), sizing_fixed(viewport_size.y) })
+        .sizing = { sizing_fixed(SCROLLBAR_WIDTH), sizing_fixed((f32)extent.viewport) })
     {
         ui_layout_area(
             .sizing = { sizing_grow(0), sizing_grow(0) },
             .padding = { .left = padding, .right = padding, .top = padding, .bottom = padding })
         {
-            scroll_area_scrollbar_widget(state, viewport_ratio, max_scroll, scroll_area_id);
+            signal = ui_scrollbar(normalized, .orientation = FlScrollbarOrientation_Vertical, .min = 0.0f,
+                                  .max = 1.0f, .viewport_ratio = (f32)(extent.viewport / extent.content),
+                                  .width = SCROLLBAR_WIDTH - SCROLLBAR_PADDING * 2,
+                                  .widget = { .id_override = bar_id.name });
         }
     }
     // clang-format on
+    return signal;
+}
+
+static void render_vertical_scrollbar(ScrollAreaState* state, FlScrollbarDisplayMode scrollbar_mode,
+                                      u32 scroll_area_id) {
+    ScrollExtent extent = { .viewport = state->viewport_size.y, .content = state->content_size.y };
+    f32 max_scroll = (f32)scroll_max(extent.content, extent.viewport);
+    f32 normalized = max_scroll > 0.0f ? state->scroll_target.y / max_scroll : 0.0f;
+
+    FlSignal signal = ui_scroll_overlay_bar(scroll_area_id, scrollbar_mode, extent, &normalized);
+
+    // If user dragged scrollbar, sync offset immediately for responsiveness
+    if (signal.dragging || signal.clicked) {
+        state->scroll_target.y = normalized * max_scroll;
+        state->scroll_offset.y = state->scroll_target.y;
+    }
 }
 
 // Pushes one entry. Past SCROLL_AREA_STACK_MAX_DEPTH the area is counted in scroll_area_overflow instead, so
@@ -356,6 +327,8 @@ void fl_scroll_area_begin(FlLayoutId id, FlScrollAreaConfig config) {
     FL_VALIDATE(ctx != nullptr);
 
     u32 element_id = ui_layout_id_to_clay_id(id);
+    bool owns_wheel = wheel_scope_owns_wheel(ctx, element_id);
+    wheel_scope_begin(ctx, element_id, true);
 
     ScrollAreaState* state = get_or_create_scroll_state(element_id);
     if (state == nullptr) {
@@ -387,15 +360,11 @@ void fl_scroll_area_begin(FlLayoutId id, FlScrollAreaConfig config) {
     // Wheel input goes to the innermost scroll area under the cursor.
     f32 scroll_speed = positive_or(config.scroll_speed, SCROLL_DEFAULT_SPEED);
     bool smooth = config.smooth_scroll;
-    if (scroll_area_owns_wheel(ctx, element_id)) {
+    if (owns_wheel) {
         handle_mouse_wheel(state, max_scroll, scroll_speed, smooth);
     }
 
     update_smooth_scroll(state, max_scroll, ctx->delta_time);
-
-    state->parent_id = ctx->scroll_area_stack_depth > 0
-                           ? ctx->scroll_area_stack[ctx->scroll_area_stack_depth - 1].scroll_area_id
-                           : 0;
 
     scroll_stack_push(ctx, (ScrollAreaStackEntry) {
                                .scroll_area_id = element_id,
@@ -426,7 +395,7 @@ void fl_scroll_area_begin(FlLayoutId id, FlScrollAreaConfig config) {
     // Add extra right padding when scrollbar is shown to prevent content overlapping
     FlLayoutPadding padding = config.padding;
     if (config.show_scrollbar) {
-        u16 scrollbar_space = (u16)(SCROLLBAR_WIDTH + 4.0f);
+        u16 scrollbar_space = (u16)ui_scroll_overlay_bar_reserve();
         padding.right = (u16)(padding.right + scrollbar_space);
     }
 
@@ -476,6 +445,9 @@ static void scroll_area_update_extent(ScrollAreaState* state, u32 scroll_area_id
 void fl_scroll_area_end(void) {
     FlUiCtx* ctx = ui_get_ctx();
     ScrollAreaStackEntry* entry = ctx != nullptr ? scroll_stack_pop(ctx) : nullptr;
+    if (ctx != nullptr) {
+        wheel_scope_end(ctx);
+    }
 
     if (entry != nullptr && entry->state != nullptr) {
         scroll_area_update_extent(entry->state, entry->scroll_area_id);

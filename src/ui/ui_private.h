@@ -359,6 +359,7 @@ typedef struct UiShared {
     hashmap(u32, ItemState) item_state;                      // per-widget element + interaction state
     hashmap(u32, struct ScrollAreaState) scroll_states;      // scroll offsets / content extents per scroll area
     hashmap(u32, struct WidgetScrollInfo) widget_scroll_map; // widget id -> scroll containment info
+    hashmap(u32, struct WheelScope) wheel_scopes;
 
     // Persistent menu open-path identity (one open chain app-wide). The per-frame emission scaffolding stays on the
     // per-window FlUiCtx (UiMenuFrame); only the live "what is open" identity is shared.
@@ -538,6 +539,7 @@ typedef struct FlUiCtx {
     struct ScrollAreaStackEntry* scroll_area_stack; // Stack of active scroll areas during rendering
     u32 scroll_area_stack_depth;                    // Current depth in scroll area stack
     u32 scroll_area_overflow;                       // Open scroll areas nested past the stack's capacity
+    u32 wheel_scope_id;
 
     // Popup system
     u32 popup_stack_count; // ui_popup scopes begun since the last popup close

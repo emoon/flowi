@@ -10,6 +10,14 @@
 // Default smooth-scroll lerp factor (higher is snappier); callers may override.
 #define SCROLL_CORE_DEFAULT_SMOOTH_SPEED 8.0f
 
+// Default pixels per mouse-wheel tick; callers may override.
+#define SCROLL_CORE_DEFAULT_WHEEL_SPEED 30.0f
+
+typedef struct ScrollExtent {
+    f64 viewport;
+    f64 content;
+} ScrollExtent;
+
 // Ease offset toward target, scaled by real frame time dt so the result is the same
 // regardless of frame rate (speed is the lerp factor; higher is snappier). Snaps to the
 // target once within half a pixel, then clamps the result to [0, max].

@@ -7,6 +7,7 @@
 #include <flowi/ui/ui_scroll.h>     // @generated fl_scroll_area_begin / fl_scroll_area_end prototypes (api_gen)
 #include <flowi/ui/widget_config.h> // @generated FlScrollbarConfig (api_gen)
 #include <ui/ui_types.h>
+#include "scroll_core.h"
 
 // Scroll area: a reusable scrolling container that keeps its own state.
 //
@@ -28,8 +29,6 @@ typedef struct ScrollAreaState {
     FlVec2 content_size;
     FlVec2 viewport_size;
     u64 last_frame; // Frame when last updated (for cleanup)
-    u32 parent_id;  // Enclosing scroll area's element id, 0 at the top level
-    bool is_hovered;
 } ScrollAreaState;
 
 typedef enum FlScrollAlignment {
@@ -72,6 +71,10 @@ bool ui_is_widget_visible(FlLayoutId widget_id);
 void ui_scroll_to_widget(FlLayoutId widget_id);
 
 void ui_scroll_to_widget_ex(FlLayoutId widget_id, FlScrollToOptions opts);
+
+FlSignal ui_scroll_overlay_bar(u32 owner_id, FlScrollbarDisplayMode mode, ScrollExtent extent, float* normalized);
+
+float ui_scroll_overlay_bar_reserve(void);
 
 // Scrollbar widget. signal.changed reports value changes.
 

@@ -5,6 +5,7 @@
 #include <flowi/fl_api.h>
 #include <stdint.h>
 #include <flowi/core/string.h>
+#include <flowi/ui/scrollbar_display.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,6 +22,8 @@ typedef struct FlListUniformOpts {
     // viewport height below the top (clamped to the scrollable extent) and the offset eases toward it.
     // Negative or out of range leaves the scroll target alone.
     int32_t scroll_to;
+    // When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    FlScrollbarDisplayMode scrollbar_mode;
 } FlListUniformOpts;
 
 // The visible index window a uniform list emits, returned by begin. The caller iterates `[start, end)` and
