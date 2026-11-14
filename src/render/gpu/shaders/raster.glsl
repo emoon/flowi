@@ -157,12 +157,19 @@ float circle_dash_coverage(DrawCmd cmd, float2 p) {
     float2 rel = p - cmd.rect.xy;
     return dash_coverage(dash_gap, (atan(rel.y, rel.x) + 0.5 * TAU) * mid_radius, TAU * mid_radius);
 }
+// A circle or diamond with a fully transparent fill is an outline only (painter circle_stroke /
+// diamond_stroke), so its silhouette is the border ring of width bw, not the whole shape. d is the shape's
+// outer distance.
+float ring_or_solid_dist(DrawCmd cmd, float d, float bw) {
+    bool hollow = (cmd.color.x >> 24) == 0u && bw > 0.0;
+    return hollow ? max(d, -(d + bw)) : d;
+}
 // The shape's outermost outline, dispatched by kind - what a drop shadow or glow is cast from.
 float silhouette_dist(DrawCmd cmd, float2 p) {
     if (cmd.kind == KIND_BORDER) { return max(border_outer_dist(cmd, p), -border_inner_dist(cmd, p)); }
     if (cmd.kind == KIND_ARC) { return arc_dist(cmd, p); }
-    if (cmd.kind == KIND_CIRCLE) { return circle_dist(cmd, p); }
-    if (cmd.kind == KIND_DIAMOND) { return diamond_dist(cmd, p); }
+    if (cmd.kind == KIND_CIRCLE) { return ring_or_solid_dist(cmd, circle_dist(cmd, p), cmd.rect.w); }
+    if (cmd.kind == KIND_DIAMOND) { return ring_or_solid_dist(cmd, diamond_dist(cmd, p), cmd.radius.x); }
     if (cmd.kind == KIND_POLYLINE) {
         // Only a stroke capsule casts an effect silhouette; a fill trapezoid casts none (a far distance,
         // so zero effect coverage) - the stroke over the fill carries the polyline's shadow/glow.

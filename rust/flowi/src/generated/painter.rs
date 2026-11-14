@@ -49,7 +49,7 @@ impl Painter {
     }
 
     /// Draw the outline of a rectangle: top-left (x, y), size (w, h), in logical space. The stroke lies
-    /// inside the rectangle and can be dashed. The current effect does not apply to it.
+    /// inside the rectangle and can be dashed; a stroke wider than half the rectangle fills it.
     #[inline]
     pub fn rect_stroke(x: f32, y: f32, w: f32, h: f32, stroke: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::rect_stroke");
@@ -98,8 +98,9 @@ impl Painter {
         unsafe { crate::sys::fl_painter_vline(x, y, length, color) }
     }
 
-    /// Draw a straight line from (x0, y0) to (x1, y1), centered on the two points, with round caps. For a
-    /// crisp 1px horizontal or vertical rule use hline or vline instead.
+    /// Draw a straight line from (x0, y0) to (x1, y1), centered on the two points, with round caps that
+    /// extend half the stroke width past each end. Coincident points draw a dot of the stroke width. For
+    /// a crisp 1px horizontal or vertical rule use hline or vline instead.
     #[inline]
     pub fn line(x0: f32, y0: f32, x1: f32, y1: f32, stroke: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::line");

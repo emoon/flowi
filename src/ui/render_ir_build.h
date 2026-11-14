@@ -87,18 +87,22 @@ static inline void fl_ir_fill_rect_snapped(FlArena* arena, FlRect rect, FlColor 
 // Border with per-side widths and an outer radius (the backend derives the inner geometry). The _stroked
 // variant additionally dashes the band; the plain one is that with a zeroed (solid) pattern.
 
+// The border record writer the two wrappers below share; it is also what a caller with an effect uses, since
+// the record is the payload plus an optional trailing effect. NULL effect = none.
+static inline void fl_ir_border_cmd(FlArena* arena, const FlCmdBorder* border, const FlEffect* effect) {
+    u32 content = (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdBorder)) + fl_ir_effect_bytes(effect);
+    FlCmdHeader* header = fl_ir_header(arena, FlCmd_Border, content);
+    FlCmdBorder* cmd = arena_alloc_zero(arena, FlCmdBorder);
+    *cmd = *border;
+    fl_ir_append_effect(arena, header, effect);
+}
+
 static inline void fl_ir_border_stroked(FlArena* arena, FlRect rect, f32 w_l, f32 w_r, f32 w_t, f32 w_b,
                                         FlCornerRadius radius, FlColor color, FlStrokeStyle stroke) {
-    fl_ir_header(arena, FlCmd_Border, (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdBorder)));
-    FlCmdBorder* cmd = arena_alloc_zero(arena, FlCmdBorder);
-    cmd->rect = rect;
-    cmd->w_l = w_l;
-    cmd->w_r = w_r;
-    cmd->w_t = w_t;
-    cmd->w_b = w_b;
-    cmd->radius = radius;
-    cmd->color = color;
-    cmd->stroke = stroke;
+    const FlCmdBorder border = {
+        .rect = rect, .w_l = w_l, .w_r = w_r, .w_t = w_t, .w_b = w_b, .radius = radius, .color = color, .stroke = stroke
+    };
+    fl_ir_border_cmd(arena, &border, nullptr);
 }
 
 static inline void fl_ir_border(FlArena* arena, FlRect rect, f32 w_l, f32 w_r, f32 w_t, f32 w_b, FlCornerRadius radius,

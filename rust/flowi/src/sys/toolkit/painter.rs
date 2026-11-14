@@ -60,9 +60,9 @@ pub struct Stroke {
     pub width: f32,
     /// stroke color
     pub color: crate::sys::Color,
-    /// dash pattern; drawn by the rect and circle outlines, every other shape strokes solid
+    /// dash pattern; drawn by the rect and circle outlines on the GPU backend, solid everywhere else
     pub dash: crate::sys::StrokeStyle,
-    /// end cap; read by Painter::arc. Lines and polylines always have round caps and joins
+    /// end cap of an arc. Lines and polylines ignore it and always have round caps and joins
     pub cap: crate::sys::StrokeCap,
 }
 
@@ -301,7 +301,7 @@ extern "C" {
     /// Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
     pub fn fl_painter_rect_rounded(x: f32, y: f32, w: f32, h: f32, radius: f32, color: crate::sys::Color);
     /// Draw the outline of a rectangle: top-left (x, y), size (w, h), in logical space. The stroke lies
-    /// inside the rectangle and can be dashed. The current effect does not apply to it.
+    /// inside the rectangle and can be dashed; a stroke wider than half the rectangle fills it.
     pub fn fl_painter_rect_stroke(x: f32, y: f32, w: f32, h: f32, stroke: crate::sys::Stroke);
     /// Draw the outline of a rounded rectangle; radius is the outer corner radius. Otherwise as
     /// Painter::rect_stroke.
@@ -320,8 +320,9 @@ extern "C" {
     /// Draw a crisp 1px vertical hairline of length from (x, y). Device-pixel snapped, so it stays sharp at
     /// fractional scroll/zoom.
     pub fn fl_painter_vline(x: f32, y: f32, length: f32, color: crate::sys::Color);
-    /// Draw a straight line from (x0, y0) to (x1, y1), centered on the two points, with round caps. For a
-    /// crisp 1px horizontal or vertical rule use hline or vline instead.
+    /// Draw a straight line from (x0, y0) to (x1, y1), centered on the two points, with round caps that
+    /// extend half the stroke width past each end. Coincident points draw a dot of the stroke width. For
+    /// a crisp 1px horizontal or vertical rule use hline or vline instead.
     pub fn fl_painter_line(x0: f32, y0: f32, x1: f32, y1: f32, stroke: crate::sys::Stroke);
     /// Draw text with font (FontId::INVALID = active font) in color, top-left at (x, y).
     pub fn fl_painter_text(x: f32, y: f32, text: crate::sys::RawStr, font: crate::sys::FontId, color: crate::sys::Color);

@@ -95,8 +95,8 @@ void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count);
 
 void painter_rect_rounded(Painter* p, FlRect rect, float radius, FlColor color);
 
-// Draw the outline of a rectangle, inside rect. radius is the outer corner radius (0 = square). Carries no
-// effect: the border record has no room for one.
+// Draw the outline of a rectangle, inside rect. radius is the outer corner radius (0 = square). A stroke wider
+// than half the rect is clamped to it, which fills the rect.
 void painter_rect_stroke(Painter* p, FlRect rect, float radius, FlStroke stroke);
 
 // Draw a rectangle with a per-corner color gradient. The four colors are bilinearly interpolated across the
@@ -148,7 +148,7 @@ void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColo
 //              last->first segment
 void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, FlPolylineStyle style);
 
-// Draw a straight round-capped line from a to b.
+// Draw a straight round-capped line from a to b. Coincident points give a dot of the stroke width.
 void painter_line(Painter* p, FlVec2 a, FlVec2 b, FlStroke stroke);
 
 // Draw an arc or ring around center.

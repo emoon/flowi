@@ -1,13 +1,12 @@
 // Painter outline tests
 //
 // The outline calls reuse the fill shapes' records: a rect outline is a border band, an outline-only circle
-// or diamond is the bordered shape with a zero-alpha fill, and a line is a two-point polyline. Each test
+// or diamond is the bordered shape with a transparent fill, and a line is a two-point polyline. Each test
 // records one call at ui_scale 2.0 and compares the record it produced with the expected one.
 
 #include "unit_tests_common.h"
 
 #define OUTLINE_COLOR { 200, 100, 50, 255 }
-#define OUTLINE_NO_FILL { 200, 100, 50, 0 } // the stroke color at zero alpha
 
 static const FlStroke k_outline
     = { .width = 1.5f, .color = OUTLINE_COLOR, .dash = { .dash_len = 2.0f, .gap_len = 3.0f } };
@@ -88,20 +87,14 @@ UTEST(painter_outline, circle_and_diamond_stroke_have_a_zero_alpha_fill) {
     const FlCmdCircle circle = { .cx = 10.0f,
                                  .cy = 12.0f,
                                  .radius = 14.0f,
-                                 .color = OUTLINE_NO_FILL,
                                  .border_color = OUTLINE_COLOR,
                                  .border_width = 3.0f,
                                  .stroke = { .dash_len = 4.0f, .gap_len = 6.0f } };
     ASSERT_TRUE_MSG(outline_records(draw_circle_stroke, (OutlineExpect) { FlCmd_Circle, &circle, sizeof(circle) }),
                     "the circle's ring is the stroke, dash included, over a fill that adds nothing");
 
-    const FlCmdDiamond diamond = { .cx = 10.0f,
-                                   .cy = 12.0f,
-                                   .rx = 16.0f,
-                                   .ry = 18.0f,
-                                   .color = OUTLINE_NO_FILL,
-                                   .border_color = OUTLINE_COLOR,
-                                   .border_width = 3.0f };
+    const FlCmdDiamond diamond
+        = { .cx = 10.0f, .cy = 12.0f, .rx = 16.0f, .ry = 18.0f, .border_color = OUTLINE_COLOR, .border_width = 3.0f };
     ASSERT_TRUE_MSG(outline_records(draw_diamond_stroke, (OutlineExpect) { FlCmd_Diamond, &diamond, sizeof(diamond) }),
                     "the diamond's ring is the stroke over a fill that adds nothing");
 }
@@ -117,4 +110,26 @@ UTEST(painter_outline, arc_takes_cap_and_width_from_the_stroke) {
                            .flags = FL_IR_ARC_ROUND_CAPS };
     ASSERT_TRUE_MSG(outline_records(draw_round_capped_arc, (OutlineExpect) { FlCmd_Arc, &arc, sizeof(arc) }),
                     "lengths scale, angles do not, and a round cap sets the arc's round-caps bit");
+}
+
+static void draw_over_wide_rect_stroke(Painter* p) {
+    painter_rect_stroke(p, (FlRect) { .w = 10.0f, .h = 6.0f }, 0.0f,
+                        (FlStroke) { .width = 20.0f, .color = OUTLINE_COLOR });
+}
+
+static void draw_zero_length_line(Painter* p) {
+    painter_line(p, (FlVec2) { .x = 1.0f, .y = 2.0f }, (FlVec2) { .x = 1.0f, .y = 2.0f }, k_outline);
+}
+
+UTEST(painter_outline, degenerate_outlines_stay_inside_their_shape) {
+    // Half the smaller side (3 logical px) is the widest band that still fits; it scales to 6.
+    const FlCmdBorder band = {
+        .rect = { .w = 20.0f, .h = 12.0f }, .w_l = 6.0f, .w_r = 6.0f, .w_t = 6.0f, .w_b = 6.0f, .color = OUTLINE_COLOR
+    };
+    ASSERT_TRUE_MSG(outline_records(draw_over_wide_rect_stroke, (OutlineExpect) { FlCmd_Border, &band, sizeof(band) }),
+                    "a stroke wider than the rect is clamped to half its smaller side");
+
+    const FlCmdCircle dot = { .cx = 2.0f, .cy = 4.0f, .radius = 1.5f, .color = OUTLINE_COLOR };
+    ASSERT_TRUE_MSG(outline_records(draw_zero_length_line, (OutlineExpect) { FlCmd_Circle, &dot, sizeof(dot) }),
+                    "a zero-length line is a dot of the stroke width");
 }

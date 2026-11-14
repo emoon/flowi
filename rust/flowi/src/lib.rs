@@ -70,16 +70,18 @@ pub use crate::sys::{FontMetrics, TextMetrics, TextStyle};
 pub use crate::sys::StrokeStyle;
 
 /// The outline every [`Painter`] stroke call takes: width and color, plus an optional dash pattern and end
-/// cap ([`StrokeCap`]). [`Stroke::new`] gives the solid, butt-capped common case.
+/// cap ([`StrokeCap`]). [`Stroke::new`] gives the solid common case.
 pub use crate::sys::{Stroke, StrokeCap};
 
 impl Stroke {
-    /// A solid stroke of `width` logical px in `color`, with butt caps.
+    /// A solid stroke of `width` logical px in `color`. Its cap is [`StrokeCap::Butt`], which only
+    /// [`Painter::arc`] reads: lines and polylines always have round caps.
     pub const fn new(width: f32, color: Color) -> Self {
         Self { width, color, dash: StrokeStyle { dash_len: 0.0, gap_len: 0.0 }, cap: StrokeCap::Butt }
     }
 
-    /// The same stroke dashed, both lengths in logical px. Only the rect and circle outlines draw dashes.
+    /// The same stroke dashed, both lengths in logical px. Only the rect and circle outlines draw dashes,
+    /// and only on the GPU backend.
     pub const fn with_dash(self, dash_len: f32, gap_len: f32) -> Self {
         Self { dash: StrokeStyle { dash_len, gap_len }, ..self }
     }

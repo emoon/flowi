@@ -6106,8 +6106,11 @@ static void fl_app_gpu_frame(void* user_data) {
         Painter* p = ui_get_painter();
         painter_rect(p, (FlRect) { .x = 20.0f, .y = 20.0f, .w = 100.0f, .h = 100.0f }, ui_color(40, 60, 200, 255));
         painter_circle(p, (FlVec2) { .x = 180.0f, .y = 180.0f }, 50.0f, ui_color(230, 80, 60, 255));
-        // Two green outlines in the free corners; the readback counts their pixels to tell hollow from filled.
+        // Two green outlines, the rect in the left half and the circle in the right; the readback counts each
+        // half's green pixels to tell hollow from filled. A hard green shadow rides along: cast from the
+        // ring it changes nothing, cast from the whole shape it would fill the interior.
         FlStroke outline = { .width = 6.0f, .color = ui_color(40, 220, 60, 255) };
+        painter_set_effect(p, (FlEffect) { .kind = FlEffectKind_DropShadow, .color = outline.color });
         painter_circle_stroke(p, (FlVec2) { .x = 190.0f, .y = 60.0f }, 40.0f, outline);
         painter_rect_stroke(p, (FlRect) { .x = 20.0f, .y = 150.0f, .w = 80.0f, .h = 80.0f }, 0.0f, outline);
     }
@@ -6297,7 +6300,7 @@ static int run_em_app_gpu_path_test(void) {
     // on every channel, so it fakes neither fill.
     bool saw_rect = false;   // blue-dominant
     bool saw_circle = false; // red-dominant
-    u32 outline_px = 0;      // green-dominant
+    u32 outline_px[2] = { 0 }; // green-dominant, by half: [0] left (rect outline), [1] right (circle outline)
     for (u32 y = 0; y < rb.height; ++y) {
         const u8* row = (const u8*)rb.pixels + (size_t)y * rb.stride;
         for (u32 x = 0; x < rb.width; ++x) {
@@ -6312,16 +6315,18 @@ static int run_em_app_gpu_path_test(void) {
                 saw_circle = true;
             }
             if (px[1] > 150 && px[1] > px[0] && px[1] > px[2]) {
-                outline_px++;
+                outline_px[x >= rb.width / 2u]++;
             }
         }
     }
     CHECK(saw_rect, "fl_app GPU path: the rect renders (a blue-dominant covered pixel)");
     CHECK(saw_circle, "fl_app GPU path: the circle renders on GPU through fl_app (a red-dominant covered pixel)");
-    // A 6px ring of radius 40 covers about 1400 px and a 6px band around an 80px square about 1800; filled,
-    // the two shapes would cover over 11000.
-    CHECK(outline_px > 2400 && outline_px < 4000,
-          "fl_app GPU path: circle_stroke and rect_stroke draw the outline only, with a hollow interior");
+    // A 6px band around an 80px square covers about 1800 px and a 6px ring of radius 40 about 1400; filled,
+    // they would cover 6400 and 5000.
+    CHECK(outline_px[0] > 1400 && outline_px[0] < 2200,
+          "fl_app GPU path: rect_stroke draws the band only, and its shadow is cast from the band");
+    CHECK(outline_px[1] > 1000 && outline_px[1] < 1800,
+          "fl_app GPU path: circle_stroke draws the ring only, and its shadow is cast from the ring");
     printf("gpu_smoke_test: fl_app GPU path (rect + circle + outlines) PASS\n");
 
     fl_app_destroy(app);
