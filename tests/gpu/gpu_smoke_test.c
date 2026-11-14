@@ -5855,7 +5855,7 @@ static int run_painter_rects_pixel_test(FlRenderBackend* backend, FlArena* ir_ar
         };
 
         void* start = ir_rewind_begin(ir_arena);
-        fl_clay_to_render_ir(ir_arena, scratch, nullptr, cmds, 4);
+        fl_clay_to_render_ir(ir_arena, nullptr, cmds, 4);
         FlRenderFrame frame = test_frame();
         ir_frame_render(backend, surface, &frame, ir_arena, start);
 

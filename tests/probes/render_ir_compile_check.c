@@ -61,10 +61,13 @@ _Static_assert(offsetof(FlCmdBorder, stroke) == offsetof(FlCmdBorder, color) + s
 
 // TextRun: FlFontId and pre-positioned opaque glyphs (never bitmaps); FlGlyph[glyph_count] trails inline.
 
-_Static_assert(sizeof(FlGlyph) == sizeof(u32) + 2 * sizeof(f32), "FlGlyph is exactly {glyph_id, x, y}");
-_Static_assert(offsetof(FlGlyph, glyph_id) == 0, "FlGlyph.glyph_id first (opaque id)");
+_Static_assert(sizeof(FlGlyph) == 2 * sizeof(u32) + 2 * sizeof(f32),
+               "FlGlyph is exactly {glyph_id, x, y, glyph_index}");
+_Static_assert(offsetof(FlGlyph, glyph_id) == 0, "FlGlyph.glyph_id first (codepoint)");
 _Static_assert(offsetof(FlGlyph, x) == sizeof(u32), "FlGlyph.x (baseline pen pos)");
 _Static_assert(offsetof(FlGlyph, y) == sizeof(u32) + sizeof(f32), "FlGlyph.y (baseline pen pos)");
+_Static_assert(offsetof(FlGlyph, glyph_index) == sizeof(u32) + 2 * sizeof(f32),
+               "FlGlyph.glyph_index (in the run's font)");
 
 _Static_assert(sizeof(FlCmdTextRun) == 20, "TextRun is font + size + color + glyph_count + scale");
 _Static_assert(offsetof(FlCmdTextRun, font) == 0, "TextRun.font (FlFontId)");

@@ -15,6 +15,12 @@
 
 #define MAX_FONT_FACES 128
 
+typedef struct CachedGlyph {
+    int advance;
+    u16 glyph_index;
+    bool fallback;
+} CachedGlyph;
+
 typedef struct FontFace {
     FlArena* arena;
     FlFontRasterKind kind;
@@ -31,13 +37,11 @@ typedef struct FontFace {
     // Default source
     u16 default_scale;
 
-    // Memoized glyph advances (FreeType faces). Sizes are quarter-pixel keys (round(px × 4)) so the whole-px
-    // layout path and the fractional-size measurement path share one cache. ASCII at the active size is a dense
-    // array; everything else (other sizes, codepoints >= 128) falls back to the hashmap, keyed
-    // (quarter_px_key << 21) | codepoint. Advances are in 26.6 fixed point; -1 marks an uncomputed ASCII slot.
-    int ascii_advance[128];
-    u16 ascii_advance_size; // quarter-px key the ascii_advance row is valid for; 0 = none
-    hashmap(u64, int) advance_cache;
+    // Glyphs by quarter-px size key. ASCII at the active size is a dense row; everything else is in the hashmap,
+    // keyed (size_key << 21) | codepoint.
+    CachedGlyph ascii_glyphs[128];
+    u16 ascii_glyphs_size; // size key the row is valid for; 0 = none
+    hashmap(u64, CachedGlyph) glyph_cache;
 } FontFace;
 
 typedef struct FontLoadContext {
@@ -56,7 +60,6 @@ struct FlFontCache {
     FontFace* fallback_face;
     int face_count;
     FlFontId next_id;
-    // Backs the run from font_cache_shape_run. Rewound on the next call.
     FlArena* shape_arena;
 };
 
@@ -135,7 +138,7 @@ static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, Fo
         return false;
     }
 
-    hashmap_new(&face->advance_cache, face->arena, 256);
+    hashmap_new(&face->glyph_cache, face->arena, 256);
 
     face->status = FontStatus_Ready;
     return true;
@@ -264,12 +267,11 @@ void font_cache_set_fallback_font(FlFontCache* self, FlFontId font_id) {
     FontFace* face = find_face_by_id(self, font_id);
     if (face != nullptr) {
         self->fallback_face = face;
-        // Cached advances for primary-missing glyphs depend on the fallback face; invalidate every face's
-        // advance memoization.
+        // Cached glyphs depend on the fallback face.
         for_count(i, self->face_count) {
-            self->faces[i].ascii_advance_size = 0;
-            if (self->faces[i].advance_cache.base.buckets != nullptr) {
-                hashmap_clear(&self->faces[i].advance_cache);
+            self->faces[i].ascii_glyphs_size = 0;
+            if (self->faces[i].glyph_cache.base.buckets != nullptr) {
+                hashmap_clear(&self->faces[i].glyph_cache);
             }
         }
     }
@@ -388,26 +390,25 @@ static void ft_set_size_q4(FT_Face face, u16 q4) {
     FT_Set_Char_Size(face, 0, (FT_F26Dot6)q4 << 4, 72, 72);
 }
 
-// The raw FreeType advance for a single codepoint, in 26.6 fixed point, recomputed only on a cache miss. The
-// face/index pair comes from font_cache_resolve_glyph, so the advance is measured on the face a backend takes its
-// outline from (the fallback face for codepoints the primary lacks).
-static int ft_compute_advance(FlFontCache* self, FontFace* face, u16 q4, u32 codepoint) {
+// Advance and outline come from the same face. The advance is zero when no face maps the codepoint.
+static CachedGlyph ft_compute_glyph(FlFontCache* self, FontFace* face, u16 q4, u32 codepoint) {
     FontGlyphRef glyph = font_cache_resolve_glyph(self, face->id, codepoint);
+    CachedGlyph out = { .glyph_index = (u16)glyph.glyph_index, .fallback = glyph.font != face->id };
     if (glyph.glyph_index == 0) {
-        return 0;
+        return out;
     }
     FontFace* resolved = find_face_by_id(self, glyph.font);
     if (resolved == nullptr || resolved->metrics_face == nullptr) {
-        return 0;
+        return out;
     }
 
     mutex_lock_auto(&self->ft_lock);
     FT_Face mf = resolved->metrics_face;
     ft_set_size_q4(mf, q4);
-    if (FT_Load_Glyph(mf, glyph.glyph_index, FT_LOAD_NO_BITMAP | FT_LOAD_COMPUTE_METRICS) != 0) {
-        return 0;
+    if (FT_Load_Glyph(mf, glyph.glyph_index, FT_LOAD_NO_BITMAP | FT_LOAD_COMPUTE_METRICS) == 0) {
+        out.advance = (int)mf->glyph->advance.x;
     }
-    return (int)mf->glyph->advance.x;
+    return out;
 }
 
 // One measurement pass over a face at a quarter-px size key. Only the whole-px measure paths may claim the dense
@@ -418,61 +419,79 @@ typedef struct AdvanceRun {
     FontFace* face;
     u16 q4;
     bool may_claim_row;
+    FlFontId font;
 } AdvanceRun;
 
 // The ASCII row slot for a codepoint when the row is valid for the run's size (claiming it first if the run may),
 // otherwise nullptr.
-static int* ascii_advance_slot(const AdvanceRun* run, u32 codepoint) {
+static CachedGlyph* ascii_glyph_slot(const AdvanceRun* run, u32 codepoint) {
     FontFace* face = run->face;
     if (codepoint >= 128) {
         return nullptr;
     }
-    if (run->may_claim_row && face->ascii_advance_size != run->q4) {
-        face->ascii_advance_size = run->q4;
+    if (run->may_claim_row && face->ascii_glyphs_size != run->q4) {
+        face->ascii_glyphs_size = run->q4;
         for (int i = 0; i < 128; i++) {
-            face->ascii_advance[i] = -1;
+            face->ascii_glyphs[i].advance = -1;
         }
     }
-    return face->ascii_advance_size == run->q4 ? &face->ascii_advance[codepoint] : nullptr;
+    return face->ascii_glyphs_size == run->q4 ? &face->ascii_glyphs[codepoint] : nullptr;
 }
 
-static int freetype_advance(const AdvanceRun* run, u32 codepoint) {
+static bool is_cacheable(const FlFontCache* self, CachedGlyph glyph) {
+    const bool fallback_loading = self->fallback_face != nullptr && self->fallback_face->status == FontStatus_Loading;
+    return glyph.glyph_index != 0 || !fallback_loading;
+}
+
+static CachedGlyph freetype_glyph(const AdvanceRun* run, u32 codepoint) {
     FontFace* face = run->face;
     if (!face_has_metrics(face) || run->q4 == 0) {
-        return 0;
-    }
-
-    int* slot = ascii_advance_slot(run, codepoint);
-    if (slot != nullptr) {
-        if (*slot < 0) {
-            *slot = ft_compute_advance(run->cache, face, run->q4, codepoint);
-        }
-        return *slot;
+        return (CachedGlyph) { 0 };
     }
 
     u64 key = ((u64)run->q4 << 21) | codepoint;
-    int* hit = hashmap_get(&face->advance_cache, key);
-    if (hit != nullptr) {
+    CachedGlyph* slot = ascii_glyph_slot(run, codepoint);
+    CachedGlyph* hit = slot != nullptr ? slot : hashmap_get(&face->glyph_cache, key);
+    if (hit != nullptr && hit->advance >= 0) {
         return *hit;
     }
-    int adv = ft_compute_advance(run->cache, face, run->q4, codepoint);
-    hashmap_insert(&face->advance_cache, key, adv);
-    return adv;
+
+    CachedGlyph glyph = ft_compute_glyph(run->cache, face, run->q4, codepoint);
+    if (!is_cacheable(run->cache, glyph)) {
+        return glyph;
+    }
+    if (slot != nullptr) {
+        *slot = glyph;
+    } else {
+        hashmap_insert(&face->glyph_cache, key, glyph);
+    }
+    return glyph;
 }
 
-static int glyph_advance(const AdvanceRun* run, u32 codepoint) {
+static CachedGlyph default_glyph(const FontFace* face, u32 codepoint) {
+    if (codepoint >= 128) {
+        return (CachedGlyph) { 0 };
+    }
+    return (CachedGlyph) { .advance = (8 * face->default_scale) * 64, .glyph_index = (u16)codepoint };
+}
+
+static CachedGlyph run_glyph(const AdvanceRun* run, u32 codepoint) {
     if (run->face == nullptr) {
-        return 0;
+        return (CachedGlyph) { 0 };
     }
     switch (run->face->kind) {
         case FlFontRasterKind_FreeType:
-            return freetype_advance(run, codepoint);
+            return freetype_glyph(run, codepoint);
         case FlFontRasterKind_Default:
-            return codepoint < 128 ? (8 * run->face->default_scale) * 64 : 0;
+            return default_glyph(run->face, codepoint);
         case FlFontRasterKind_None:
         default:
-            return 0;
+            return (CachedGlyph) { 0 };
     }
+}
+
+static int glyph_advance(const AdvanceRun* run, u32 codepoint) {
+    return run_glyph(run, codepoint).advance;
 }
 
 int font_cache_get_glyph_advance(FlFontCache* self, FlFontId font_id, u16 font_size, u32 codepoint) {
@@ -582,17 +601,20 @@ static FlFontMetrics face_vmetrics(FlFontCache* self, FontFace* face, u16 q4) {
     return out;
 }
 
-// glyphs is nullptr when only measuring.
 static void shape_codepoint(const AdvanceRun* run, u32 codepoint, FlShapedGlyph* glyphs, FlShapedRun* out) {
-    const int advance = glyph_advance(run, codepoint);
+    const CachedGlyph glyph = run_glyph(run, codepoint);
     if (glyphs != nullptr) {
-        glyphs[out->count] = (FlShapedGlyph) { .glyph_id = codepoint, .advance = advance };
+        glyphs[out->count] = (FlShapedGlyph) {
+            .glyph_id = codepoint,
+            .advance = glyph.advance,
+            .font = glyph.fallback ? run->cache->fallback_face->id : run->font,
+            .glyph_index = glyph.glyph_index,
+        };
     }
     out->count++;
-    out->width += advance;
+    out->width += glyph.advance;
 }
 
-// glyphs has room for one entry per byte of text, or is nullptr to get only count and width.
 static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph* glyphs) {
     FlShapedRun out = { .glyphs = glyphs };
     if (text.data == nullptr) {
@@ -611,7 +633,6 @@ static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph
     return out;
 }
 
-// Drawing decodes UTF-8 even when is_ascii is set.
 FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text) {
     if (text.data == nullptr) {
         return (FlShapedRun) { 0 };
@@ -619,8 +640,8 @@ FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q
     text.is_ascii = 0;
 
     fl_arena_rewind(self->shape_arena);
-    FlShapedGlyph* glyphs = arena_alloc_array(self->shape_arena, FlShapedGlyph, text.length);
-    AdvanceRun run = { .cache = self, .face = find_face_by_id(self, font_id), .q4 = size_q4, .may_claim_row = false };
+    FlShapedGlyph* glyphs = arena_alloc_array_st(self->shape_arena, FlShapedGlyph, text.length);
+    AdvanceRun run = { .cache = self, .face = find_face_by_id(self, font_id), .q4 = size_q4, .font = font_id };
     return shape_run(&run, text, glyphs);
 }
 
@@ -810,7 +831,7 @@ static bool fallback_applies(const FlFontCache* self, FlFontId font_id) {
     return self->fallback_face != nullptr && self->fallback_face->id != font_id;
 }
 
-// Primary first, fallback face second, the same order ft_compute_advance takes for metrics, so a glyph's
+// Primary first, fallback face second, the same order ft_compute_glyph takes for metrics, so a glyph's
 // outline and its advance always come from one face.
 FontGlyphRef font_cache_resolve_glyph(FlFontCache* self, FlFontId font_id, u32 codepoint) {
     FontGlyphRef ref

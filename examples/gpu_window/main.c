@@ -305,9 +305,7 @@ static void draw_text(FlArena* arena, FlArena* scratch, FlRenderBackend* backend
         FlRect pen = { world_x, baseline_y, 0.0f, 0.0f };
         if (view_visible(v, pen, margin)) {
             FlGlyph* eg = arena_alloc(scratch, FlGlyph);
-            eg->glyph_id = codepoint;
-            eg->x = v_x(v, world_x);
-            eg->y = v_y(v, baseline_y);
+            *eg = (FlGlyph) { .glyph_id = codepoint, .x = v_x(v, world_x), .y = v_y(v, baseline_y) };
             count++;
         }
         world_x += (f32)font_cache_get_glyph_advance(fc, font, metrics, codepoint) / 64.0f;

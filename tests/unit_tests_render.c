@@ -410,6 +410,62 @@ UTEST(font_cache, text_size_includes_fallback_advance) {
     font_cache_destroy(cache);
 }
 
+UTEST(font_cache, text_layout_splits_runs_per_face) {
+    FlFontCache* cache = font_cache_new(s_arena);
+    const u16 size = 32;
+
+    FlFontId primary = font_cache_load_font_memory(cache, k_glyph_test_ttf, k_glyph_test_ttf_size, size);
+    FlFontId fallback = font_cache_load_font_memory(cache, k_fallback_test_ttf, k_fallback_test_ttf_size, size);
+    ASSERT_TRUE_MSG(primary != FONT_ID_INVALID && fallback != FONT_ID_INVALID, "both test fonts must load");
+    font_cache_set_fallback_font(cache, fallback);
+
+    FlArena* ir = arena_new();
+    void* start = fl_arena_current_pos(ir);
+    FlString text = { .data = "AAB", .length = 3, .is_static = 1, .is_ascii = 1 };
+    const u16 q4 = font_cache_whole_px_to_q4(size);
+    fl_ir_text_layout(ir, cache, primary, q4, 1.0f, (FlColor) { 255, 255, 255, 255 }, text, 0.0f, 0.0f, 0.0f);
+
+    const FlCmdHeader* h0 = (const FlCmdHeader*)start;
+    const FlCmdTextRun* run0 = (const FlCmdTextRun*)(h0 + 1);
+    const FlGlyph* g0 = (const FlGlyph*)(run0 + 1);
+    ASSERT_EQ_MSG((int)run0->font, (int)primary, "the first run is drawn by the font asked for");
+    ASSERT_EQ_MSG((int)run0->glyph_count, 2, "it holds both glyphs the font maps");
+    ASSERT_EQ_MSG((int)g0[0].glyph_index, (int)font_cache_get_glyph_index(cache, primary, 'A'),
+                  "'A' carries the primary face's index");
+
+    const FlCmdHeader* h1 = (const FlCmdHeader*)((const u8*)h0 + h0->byte_size);
+    ASSERT_EQ_MSG((int)h1->kind, (int)FlCmd_TextRun, "the glyph the font lacks gets a run of its own");
+    const FlCmdTextRun* run1 = (const FlCmdTextRun*)(h1 + 1);
+    const FlGlyph* g1 = (const FlGlyph*)(run1 + 1);
+    ASSERT_EQ_MSG((int)run1->font, (int)fallback, "that run is drawn by the fallback face");
+    ASSERT_EQ_MSG((int)run1->size, (int)q4, "at the same size");
+    ASSERT_EQ_MSG((int)run1->glyph_count, 1, "and holds only the fallback glyph");
+    ASSERT_EQ_MSG((int)g1[0].glyph_index, (int)font_cache_get_glyph_index(cache, fallback, 'B'),
+                  "'B' carries the fallback face's index");
+
+    const float adv = (float)font_cache_get_glyph_advance_q4(cache, primary, q4, 'A') / 64.0f;
+    ASSERT_NEAR_MSG(g1[0].x, 2.0f * adv, 0.0001f, "the fallback glyph sits where the pen left off");
+
+    fl_arena_destroy(ir);
+    font_cache_destroy(cache);
+}
+
+UTEST(font_cache, default_font_shapes_to_codepoints) {
+    FlFontCache* cache = font_cache_new(s_arena);
+    FlFontId builtin = font_cache_load_default_font(cache, 2);
+    FlFontId fallback = font_cache_load_font_memory(cache, k_fallback_test_ttf, k_fallback_test_ttf_size, 32);
+    font_cache_set_fallback_font(cache, fallback);
+
+    FlString text = { .data = "B", .length = 1, .is_static = 1, .is_ascii = 1 };
+    FlShapedRun run = font_cache_shape_run(cache, builtin, 0, text);
+    ASSERT_EQ_MSG((int)run.count, 1, "one glyph");
+    ASSERT_EQ_MSG((int)run.glyphs[0].font, (int)builtin, "the built-in font draws its own ASCII");
+    ASSERT_EQ_MSG((int)run.glyphs[0].glyph_index, (int)'B', "its glyph index is the codepoint");
+    ASSERT_EQ_MSG(run.glyphs[0].advance, 16 * 64, "one 8 px cell at scale 2");
+
+    font_cache_destroy(cache);
+}
+
 // Every backend resolves glyphs through font_cache_resolve_glyph before preparing outlines. A resolved glyph index
 // is valid only for the face it resolved to.
 UTEST(font_cache, resolve_glyph_uses_the_fallback_face) {

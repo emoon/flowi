@@ -855,7 +855,6 @@ FlVec2 ui_mouse_position(FlLayoutId layout_id) {
 // with FlItemFlags_scroll_target, computing the clay id exactly as the layout open path does, so the existing
 // next_hot_id/hot_id arbitration picks it up. Call it once per frame for the area you read the wheel over.
 
-
 void ui_scroll_target(FlLayoutId layout_id) {
     FlUiCtx* self = g_ui_ctx;
     u32 clay_id = ui_layout_id_to_clay_id(layout_id);
@@ -1043,8 +1042,7 @@ static void render_frame(FlUiCtx* self, Clay_RenderCommandArray commands) {
     fl_arena_align(ir_arena, 8);
     void* ir_start = fl_arena_current_pos(ir_arena);
 
-    fl_clay_to_render_ir(ir_arena, self->render_frame_allocator_state, self->shared->font_cache, commands.internalArray,
-                         commands.length);
+    fl_clay_to_render_ir(ir_arena, self->shared->font_cache, commands.internalArray, commands.length);
 
     size_t ir_bytes = (size_t)((u8*)fl_arena_current_pos(ir_arena) - (u8*)ir_start);
 

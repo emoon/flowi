@@ -126,19 +126,24 @@ static inline void fl_ir_image(FlArena* arena, FlImageSource source, FlImageMode
     fl_ir_append_effect(arena, header, effect);
 }
 
+static inline FlGlyph* fl_ir_text_run_alloc(FlArena* arena, const FlCmdTextRun* run) {
+    u32 content = (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdTextRun)) + run->glyph_count * (u32)sizeof(FlGlyph);
+    fl_ir_header(arena, FlCmd_TextRun, content);
+    FlCmdTextRun* cmd = arena_alloc_zero(arena, FlCmdTextRun);
+    cmd->font = run->font;
+    cmd->size = run->size;
+    cmd->color = run->color;
+    cmd->glyph_count = run->glyph_count;
+    cmd->scale = run->scale;
+    return arena_alloc_array(arena, FlGlyph, run->glyph_count);
+}
+
 // A run of pre-positioned glyphs in one font/size/color. The glyphs are copied inline after the payload.
 
 static inline void fl_ir_text_run(FlArena* arena, FlFontId font, u16 size, f32 scale, FlColor color,
                                   const FlGlyph* glyphs, u32 glyph_count) {
-    u32 content = (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdTextRun)) + glyph_count * (u32)sizeof(FlGlyph);
-    fl_ir_header(arena, FlCmd_TextRun, content);
-    FlCmdTextRun* cmd = arena_alloc_zero(arena, FlCmdTextRun);
-    cmd->font = font;
-    cmd->size = size;
-    cmd->color = color;
-    cmd->glyph_count = glyph_count;
-    cmd->scale = scale;
-    FlGlyph* dst = arena_alloc_array(arena, FlGlyph, glyph_count);
+    FlCmdTextRun run = { .font = font, .size = size, .color = color, .glyph_count = glyph_count, .scale = scale };
+    FlGlyph* dst = fl_ir_text_run_alloc(arena, &run);
     if (glyph_count > 0) {
         memcpy(dst, glyphs, glyph_count * sizeof(FlGlyph));
     }
@@ -241,24 +246,43 @@ static inline FlBar* fl_ir_bars(FlArena* arena, f32 baseline_y, FlColor color, u
     return bars;
 }
 
-// Lay out a UTF-8 string as one FlCmd_TextRun. cursor_x is the pen x of the first glyph and baseline_y the text
-// baseline. scratch holds the transient glyph array and must not be arena.
+static inline u32 fl_ir_face_span_end(const FlShapedRun* shaped, u32 first) {
+    u32 end = first;
+    while (end < shaped->count && shaped->glyphs[end].font == shaped->glyphs[first].font) {
+        end++;
+    }
+    return end;
+}
+
+// Lay out a UTF-8 string as FlCmd_TextRun records, one per face: glyphs the font lacks go in a run in the fallback
+// font. An empty string appends one empty run. cursor_x is the pen x of the first glyph and baseline_y the text
+// baseline.
 //
 // size_q4 is the raster size key and scale the display zoom (1.0f for none). letter_spacing is extra px between
 // glyphs, with no trailing gap, as in font_cache_measure_text.
-static inline void fl_ir_text_layout(FlArena* arena, FlArena* scratch, FlFontCache* font_cache, FlFontId font,
-                                     u16 size_q4, f32 scale, FlColor color, FlString text, float cursor_x,
-                                     float baseline_y, float letter_spacing) {
-    FlShapedRun shaped = font_cache_shape_run(font_cache, font, size_q4, text);
-    FlGlyph* glyphs = arena_alloc_array(scratch, FlGlyph, shaped.count);
-
-    for_count(i, shaped.count) {
-        if (i > 0) {
-            cursor_x += scale * letter_spacing;
-        }
-        glyphs[i] = (FlGlyph) { .glyph_id = shaped.glyphs[i].glyph_id, .x = cursor_x, .y = baseline_y };
-        cursor_x += scale * (float)shaped.glyphs[i].advance / 64.0f;
+static inline void fl_ir_text_layout(FlArena* arena, FlFontCache* font_cache, FlFontId font, u16 size_q4, f32 scale,
+                                     FlColor color, FlString text, float cursor_x, float baseline_y,
+                                     float letter_spacing) {
+    const FlShapedRun shaped = font_cache_shape_run(font_cache, font, size_q4, text);
+    FlCmdTextRun run = { .font = font, .size = size_q4, .color = color, .scale = scale };
+    if (shaped.count == 0) {
+        fl_ir_text_run_alloc(arena, &run);
+        return;
     }
 
-    fl_ir_text_run(arena, font, size_q4, scale, color, glyphs, shaped.count);
+    for (u32 i = 0; i < shaped.count;) {
+        const u32 end = fl_ir_face_span_end(&shaped, i);
+        run.font = shaped.glyphs[i].font;
+        run.glyph_count = end - i;
+        FlGlyph* dst = fl_ir_text_run_alloc(arena, &run);
+
+        for (; i < end; i++) {
+            const FlShapedGlyph* sg = &shaped.glyphs[i];
+            *dst++ = (FlGlyph) {
+                .glyph_id = sg->glyph_id, .x = cursor_x, .y = baseline_y, .glyph_index = sg->glyph_index
+            };
+            cursor_x += scale * (float)sg->advance / 64.0f;
+            cursor_x += scale * letter_spacing;
+        }
+    }
 }
