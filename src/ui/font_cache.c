@@ -778,9 +778,11 @@ static FlShapedRun shape_uncached(const AdvanceRun* run, const FontShaperRun* re
     if (font_shaper_shape(run->cache->shaper, request, text, &shaped)) {
         return shaped;
     }
-    fl_arena_rewind(run->cache->shape_arena);
+    AdvanceRun unshaped = *run;
+    unshaped.font = run->face->id;
     text.is_ascii = 0;
-    return shape_run_into(run, text, run->cache->shape_arena);
+    fl_arena_rewind(run->cache->shape_arena);
+    return shape_run_into(&unshaped, text, run->cache->shape_arena);
 }
 
 static bool kb_shape_run(const AdvanceRun* run, FlString text, FlShapedRun* out) {

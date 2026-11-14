@@ -3,7 +3,7 @@
 #include <core/hashmap.h>
 #include <string.h>
 
-#define BUCKET_COUNT 4096
+#define BUCKET_COUNT 8192
 
 typedef struct Entry {
     FlFontId font;
@@ -12,6 +12,8 @@ typedef struct Entry {
     FlString text;
     FlShapedRun shaped;
 } Entry;
+
+#define ENTRY_BYTES (sizeof(HashMapNodeBase) + sizeof(u64) + sizeof(Entry))
 
 struct ShapedRunCache {
     FlArena* arena;
@@ -47,7 +49,7 @@ void shaped_run_cache_clear(ShapedRunCache* self) {
 
 static u64 entry_hash(const FontShaperRun* run, FlString text) {
     const u64 fonts = (u64)run->primary.id << 32 | (u64)run->fallback.id << 16 | run->size_q4;
-    return hashmap_hash_u64_xxhash(hashmap_hash(text.data, text.length) ^ fonts);
+    return hashmap_hash(text.data, text.length) ^ fonts;
 }
 
 static bool same_text(FlString a, FlString b) {
@@ -70,12 +72,16 @@ bool shaped_run_cache_find(ShapedRunCache* self, const FontShaperRun* run, FlStr
 
 FlShapedRun shaped_run_cache_store(ShapedRunCache* self, const FontShaperRun* run, FlString text, FlShapedRun shaped) {
     const u64 glyph_bytes = shaped.count * sizeof(FlShapedGlyph);
+    const u64 bytes = ENTRY_BYTES + text.length + glyph_bytes;
     stats_inc(self->stats, self->misses);
-    if (self->bytes + text.length + glyph_bytes > self->byte_limit) {
+    if (bytes > self->byte_limit) {
+        return shaped;
+    }
+    if (self->bytes + bytes > self->byte_limit) {
         stats_inc(self->stats, self->clears);
         shaped_run_cache_clear(self);
     }
-    self->bytes += text.length + glyph_bytes;
+    self->bytes += bytes;
 
     char* text_copy = arena_alloc_array(self->arena, char, text.length);
     FlShapedGlyph* glyphs = arena_alloc_array(self->arena, FlShapedGlyph, shaped.count);

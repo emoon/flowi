@@ -78,9 +78,21 @@ UTEST(shaped_run_cache, another_text_font_fallback_or_size_is_not_found) {
     rig_close(&rig);
 }
 
+UTEST(shaped_run_cache, a_run_over_the_limit_is_not_kept) {
+    RunCacheRig rig = rig_open(KB(1));
+    char big[KB(1)] = { 0 };
+    const FlString too_big = { .data = big, .length = sizeof(big) };
+    for_count(i, 3) {
+        shaped_run_cache_store(rig.cache, &rig.run, too_big, k_shaped);
+    }
+    ASSERT_FALSE(rig_has(&rig, too_big));
+    ASSERT_EQ(rig_stat(&rig, FL_S("clears")), 0ULL);
+
+    rig_close(&rig);
+}
+
 UTEST(shaped_run_cache, a_full_cache_starts_over) {
-    const u64 entry_bytes = 1 + sizeof(k_glyphs);
-    RunCacheRig rig = rig_open(2 * entry_bytes);
+    RunCacheRig rig = rig_open(300);
     shaped_run_cache_store(rig.cache, &rig.run, FL_S("a"), k_shaped);
     shaped_run_cache_store(rig.cache, &rig.run, FL_S("b"), k_shaped);
     ASSERT_TRUE(rig_has(&rig, FL_S("a")) && rig_has(&rig, FL_S("b")));
