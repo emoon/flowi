@@ -10397,3 +10397,20 @@ UTEST(image_load, dedup_key_storage_stays_bounded_under_load_free_churn) {
     image_system_destroy(sys);
     fl_vfs_mount_close(mount.mount);
 }
+
+static float emitted_glyph_x(float pen_x) {
+    static u8 coverage[4] = { 255, 255, 255, 255 };
+    const Glyph glyph = { .bitmap_data_r = coverage, .advance_x = 2 * 64, .pixel_width = 2, .width = 2, .height = 2 };
+    fl_arena_align(s_arena, _Alignof(RenderCommand));
+    const RenderCommand* cmd = arena_pos_type(s_arena, RenderCommand);
+    sr_emit_glyph(s_arena, &glyph, pen_x, 20.0f, (u8x16) { 0 }, 255);
+    return f32x4_extract(cmd->render_text.aabb, 0);
+}
+
+UTEST(software_text, glyph_pen_x_rounds_to_the_nearest_pixel) {
+    ASSERT_EQ_MSG(emitted_glyph_x(10.0f), 10.0f, "a whole pixel pen stays put");
+    ASSERT_EQ_MSG(emitted_glyph_x(10.4f), 10.0f, "below half a pixel rounds down");
+    ASSERT_EQ_MSG(emitted_glyph_x(10.5f), 11.0f, "half a pixel rounds up");
+    ASSERT_EQ_MSG(emitted_glyph_x(10.6f), 11.0f, "above half a pixel rounds up");
+    ASSERT_EQ_MSG(emitted_glyph_x(-0.4f), 0.0f, "a pen just left of zero rounds to zero");
+}
