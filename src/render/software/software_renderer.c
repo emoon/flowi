@@ -710,9 +710,14 @@ static void render(void* user_data, FlSurface* surface_handle, const FlRenderFra
 
     self->background = background_from_frame(&frame->background);
 
-    UiRenderCommandsArray render_commands
-        = sr_ir_to_render_commands(self->frame_arena, self->frame_arena_2, ensure_glyph_cache(self), frame->commands,
-                                   frame->bytes, frame->global_alpha);
+    UiRenderCommandsArray render_commands = sr_ir_to_render_commands(&(SrIrRequest) {
+        .commands_arena = self->frame_arena,
+        .state_arena = self->frame_arena_2,
+        .glyph_cache = ensure_glyph_cache(self),
+        .ir_commands = frame->commands,
+        .ir_bytes = frame->bytes,
+        .global_alpha = frame->global_alpha,
+    });
 
     self->render_commands = render_commands.commands;
 
