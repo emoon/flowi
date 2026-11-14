@@ -837,6 +837,10 @@ void sleep_ms(u64 milliseconds) {
     Sleep((DWORD)milliseconds);
 }
 
+void os_thread_yield(void) {
+    SwitchToThread();
+}
+
 // Environment variables
 
 const char* getenv_os(const char* name) {
