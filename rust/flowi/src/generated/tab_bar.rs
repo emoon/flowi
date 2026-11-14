@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Tab bar widget - horizontal or vertical tab navigation across a set of labels.
+/// Tab bar widget: horizontal or vertical tab navigation across a set of labels.
 pub struct TabBar;
 
 impl TabBar {

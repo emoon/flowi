@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Pill widget - a pill-shaped toggle button for category filters (solid when selected, ghost when not).
+/// Pill widget: a pill-shaped toggle button for category filters (solid when selected, ghost when not).
 pub struct Pill;
 
 impl Pill {

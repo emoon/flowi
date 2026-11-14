@@ -45,7 +45,7 @@ const _: () = {
 pub struct MenuItemConfig {
     /// Close behaviour on activation (0 = the item kind's natural default).
     pub close_policy: crate::sys::MenuClosePolicy,
-    /// Optional shortcut text shown right-aligned (display only - no dispatch).
+    /// Optional shortcut text shown right-aligned (display only, no dispatch).
     pub shortcut: crate::sys::RawStr,
     /// Greyed out and non-interactive.
     pub disabled: bool,
@@ -59,13 +59,12 @@ const _: () = {
     assert!(core::mem::offset_of!(MenuItemConfig, disabled) == 24, "MenuItemConfig.disabled offset drift");
 };
 
-/// Configuration for a submenu parent. A submenu parent is a pure container - it never carries
-/// a close policy or shortcut, only the child panel's min_width and a disabled (greyed,
-/// non-opening) flag. A zeroed config uses the defaults (min_width 0 → 180, same as the root menu).
+/// Configuration for a submenu parent. A zeroed config uses the defaults (min_width 0 → 180, same as
+/// the root menu).
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Default)]
 pub struct SubmenuConfig {
-    /// Child panel width in logical px (0 = C default, 180 - same as the root menu).
+    /// Child panel width in logical px (0 = C default, 180, same as the root menu).
     pub min_width: f32,
     /// Greyed out and non-opening.
     pub disabled: bool,
@@ -78,8 +77,7 @@ const _: () = {
     assert!(core::mem::offset_of!(SubmenuConfig, disabled) == 4, "SubmenuConfig.disabled offset drift");
 };
 
-/// Configuration for a right-click menu region. A zeroed sizing means grow/grow - the region
-/// covers its parent area.
+/// Configuration for a right-click menu region.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct MenuRegionConfig {
@@ -93,8 +91,8 @@ const _: () = {
     assert!(core::mem::offset_of!(MenuRegionConfig, sizing) == 0, "MenuRegionConfig.sizing offset drift");
 };
 
-/// Configuration for the menu-bar strip - the persistent File/Edit/View surface. The bar carries
-/// only the dropdowns' render order; the per-dropdown width lives on MenuBarMenuConfig. A zeroed
+/// Configuration for the menu-bar strip: the persistent File/Edit/View surface. The bar carries
+/// only the dropdowns' render order; the per-dropdown width is on MenuBarMenuConfig. A zeroed
 /// config uses the default (z_index 0 → 1000, same as a context menu).
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Default)]
@@ -109,14 +107,12 @@ const _: () = {
     assert!(core::mem::offset_of!(MenuBarConfig, z_index) == 0, "MenuBarConfig.z_index offset drift");
 };
 
-/// Configuration for one top-level entry in the menu bar. Like a submenu parent it is a pure
-/// container - it never carries a close policy or shortcut, only the dropdown panel's min_width
-/// and a disabled (greyed, non-opening) flag. A zeroed config uses the default
+/// Configuration for one top-level entry in the menu bar. A zeroed config uses the default
 /// (min_width 0 → 180, same as a context menu).
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Default)]
 pub struct MenuBarMenuConfig {
-    /// Dropdown panel width in logical px (0 = C default, 180 - same as a context menu).
+    /// Dropdown panel width in logical px (0 = C default, 180, same as a context menu).
     pub min_width: f32,
     /// Greyed-out top that never highlights, opens, or accepts a switch.
     pub disabled: bool,

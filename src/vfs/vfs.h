@@ -8,7 +8,7 @@
 
 struct FlArena;
 
-// VFS Operation Status - Hierarchical 32-bit error system (internal use only)
+// VFS operation status: a 32-bit value split into the bit ranges below. Internal use only.
 
 typedef u32 VfsOpStatus;
 
@@ -90,13 +90,13 @@ void vfs_dispatch(FlVfsHandle handle);
 // finished, and the calls below fail closed rather than pretend otherwise: fl_vfs_wait() logs and returns, and a
 // read chained onto an unfinished predecessor completes with VFS_ERROR_WOULD_BLOCK instead of running
 // against a file that is not open yet. Wait for, and chain onto, in-flight handles from the main thread.
-// Handles a worker opened itself are unaffected - the job system runs those inline, so they are already
+// Handles a worker opened itself are unaffected: the job system runs those inline, so they are already
 // finished.
 //
 // fl_vfs_close() never waits, on any thread, except for a fl_vfs_read handle (below). It gives up the id: the handle
-// reads as absent from then on, and the id stays reserved - reuse_handle refuses it - until the operation has finished
+// reads as absent from then on, and the id stays reserved (reuse_handle refuses it) until the operation has finished
 // and been destroyed. An operation is reference counted, and the job that is still running holds a reference of its
-// own, so the operation is released when the job ends - on the worker that ran it - and a read-all's release hook runs
+// own, so the operation is released when the job ends, on the worker that ran it, and a read-all's release hook runs
 // then, after its callback. The job itself runs to completion, so a read-all's user_data must stay valid past the
 // close; the release hook is what tells its owner when it may go. The exception is a handle from fl_vfs_read(): it runs
 // against memory the caller lent for the op and closing one is the caller's signal that the memory may go, so that
@@ -130,8 +130,6 @@ static inline bool vfs_is_pending(VfsOpStatus status) {
     return vfs_get_core_state(status) == VFS_STATE_PENDING;
 }
 
-// Driver Registration (for extending VFS)
-//
-// Hand a constructed driver to the VFS. Call after fl_vfs_init(). The plugin pointer must outlive the VFS.
-// instance: Optional driver instance handle passed to every driver op (nullptr for stateless drivers)
+// Hands a constructed driver to the VFS. Call after fl_vfs_init(). The plugin pointer must outlive the VFS.
+// instance is an optional driver handle passed to every driver op (nullptr for stateless drivers).
 void vfs_register_driver(const FlVfsPlugin* plugin, void* instance);

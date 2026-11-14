@@ -1,8 +1,6 @@
 #pragma once
 
-// Pixel-snap helpers
-//
-// Utilities for snapping scaled logical values to whole physical pixels. Pure math with no scaling policy;
+// Helpers for snapping scaled logical values to whole physical pixels. They carry no scaling policy;
 // the reference-fit policy is in ui/reference_fit.h.
 
 static inline float ui_snap_to_pixel(float value) {

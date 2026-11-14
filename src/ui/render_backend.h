@@ -48,7 +48,6 @@ typedef struct FlBackground {
 typedef struct FlRenderFrame {
     const void* commands;
     uint64_t bytes;
-    // frame-wide opacity, applied by the backend
     uint8_t global_alpha;
     FlBackground background;
 } FlRenderFrame;
@@ -60,11 +59,9 @@ typedef uint64_t FlImageLoadRequestId;
 // One draw in a Viewport3d's per-frame draw list. The mesh's own topology decides whether it rasterizes as
 // triangles or lines; the fields here are what the caller varies per draw.
 typedef struct FlViewport3dDraw {
-    // the retained geometry to draw
     FlMeshHandle mesh;
-    // texture the mesh's UVs sample (ImageHandle::INVALID = vertex colors only)
+    // texture the mesh's UVs sample (FL_IMAGE_HANDLE_INVALID = vertex colors only)
     FlImageHandle texture;
-    // how texture is sampled
     FlImageFilter filter;
     // false draws through whatever is in front, for overlays that must stay visible
     bool depth_test;
@@ -79,19 +76,16 @@ typedef struct FlRenderBackend {
     // Surface lifecycle. A surface is the per-window render target; the backend
     // owns it and hands back an opaque handle. The host creates one per window at
     // startup and destroys it before the backend. render, change_resolution, and
-    // read_pixels are surface-scoped - one backend drives many surfaces - while
+    // read_pixels are surface-scoped (one backend drives many surfaces), while
     // resource preparation and scale changes stay backend-shared.
     FlSurface* (*create_surface)(void* ud, int32_t width, int32_t height);
     void (*destroy_surface)(void* ud, FlSurface* surface);
-    // Renderer seam; presentation is excluded. render and change_resolution act
-    // on a surface.
     void (*change_resolution)(void* ud, FlSurface* surface, int32_t width, int32_t height);
     void (*render)(void* ud, FlSurface* surface, const FlRenderFrame* frame);
     void (*destroy)(void* ud);
-    // Scale-change seam - triggers atlas regeneration when the UI scale changes.
-    // GPU forgets every atlas placement; SW is a no-op.
+    // Called when the UI scale changes so atlases regenerate. GPU forgets every atlas placement; SW is a no-op.
     void (*scale_changed)(void* ud, float ui_scale);
-    // Font-cache seam - the host may swap the shared font layer after create.
+    // Font-cache seam: the host may swap the shared font layer after create.
     // Nullable: GPU leaves it unbound, SW binds it.
     void (*set_font_cache)(void* ud, FlFontCache* font_cache);
     // Image preparation seam for static images, called on decode-complete. Runs
@@ -101,16 +95,16 @@ typedef struct FlRenderBackend {
     // dimensions.
     bool (*prepare_image)(void* ud, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded, FlArena* scratch, const FlImageLoadRequest* request);
     void (*release_image)(void* ud, FlImageHandle h);
-    // Glyph preparation seam - the core hands the shared outline; the backend
-    // caches its own representation. No release_glyph: atlases regenerate wholesale.
+    // Glyph preparation seam: the core hands over the shared outline and the backend
+    // caches its own representation. There is no release_glyph because atlases regenerate wholesale.
     void (*prepare_glyph)(void* ud, FlFontId font, uint16_t size, uint32_t glyph_id, const FlGlyphOutline* outline);
-    // Vector preparation seam - parallel to prepare_glyph for SVG vector images.
+    // Vector preparation seam, parallel to prepare_glyph, for SVG vector images.
     // Nullable: only the GPU backend binds it.
     void (*prepare_vector)(void* ud, FlImageHandle handle, uint16_t size, const FlVectorImage* vector);
-    // Optional capability - nullable; off the per-frame present path (smoke tests,
+    // Optional and nullable; used off the per-frame present path (smoke tests,
     // screenshots). Reads back the given surface's last-rendered pixels.
     bool (*read_pixels)(void* ud, FlSurface* surface, FlPixelReadback* out);
-    // 3D seam - the hardware raster path behind Viewport3d and Mesh. Nullable as
+    // 3D seam: the hardware raster path behind Viewport3d and Mesh. Nullable as
     // a group: a backend either binds all three or none, and a core with none
     // draws a placeholder for every viewport.
     //

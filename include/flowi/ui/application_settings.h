@@ -24,7 +24,6 @@ typedef enum FlAppRenderer {
 
 // Settings for creating an application, passed to fl_app_create.
 typedef struct FlAppSettings {
-    // Window title.
     FlString window_title;
     // Window width in logical (authoring) pixels; the window is created at this times the display content scale.
     int32_t width;

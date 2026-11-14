@@ -6,9 +6,9 @@
 extern "C" {
 #endif
 
-// A keyboard key - the discriminant the global ui_key_pressed / ui_key_down /
-// ui_key_released queries take. Keys are global queries, not bound to any widget: the app
-// reads the key state and decides what it means.
+// A keyboard key: the discriminant the Input::key_pressed / key_down / key_released
+// queries take. Key queries are global and not bound to any widget: the app reads the key
+// state and decides what it means.
 typedef enum FlKey {
     // No key / unknown key.
     FlKey_Unknown = 0,

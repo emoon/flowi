@@ -10,8 +10,8 @@
 extern "C" {
 #endif
 
-// Widget interaction result - the response struct every interactive widget returns by value.
-// Each flag and vector exposes a hover/focus/press/drag channel; clicked is the common case.
+// Widget interaction result: the struct every interactive widget returns by value. clicked is
+// the common case.
 typedef struct FlSignal {
     // Mouse clicked (or keyboard activated) this frame.
     bool clicked;

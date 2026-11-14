@@ -5,9 +5,6 @@ use super::mount::MOUNT_ERRORS;
 use super::*;
 use std::sync::Arc;
 
-/// Bring-up passes the caller's arena straight through and reports what the C
-/// says - a refusal (a job system too large for the handle array, say) is a
-/// false the caller has to act on, not something the wrapper swallows.
 #[test]
 fn register_builtin_drivers_reaches_the_c_once_per_call() {
     reset_fake(FakeState::default());
@@ -15,6 +12,9 @@ fn register_builtin_drivers_reaches_the_c_once_per_call() {
     assert_eq!(with_fake(|f| f.builtin_registrations), 1);
 }
 
+/// Bring-up passes the caller's arena straight through and reports what the C
+/// says. A refusal (a job system too large for the handle array, say) is a
+/// false the caller has to act on.
 #[test]
 fn init_forwards_the_arena_and_reports_refusal() {
     reset_fake(FakeState::default());
@@ -33,7 +33,6 @@ fn init_forwards_the_arena_and_reports_refusal() {
     assert!(!Vfs::init(&arena), "a refused bring-up must report false");
 }
 
-// -----------------------------------------------------------------------
 // Mounting.
 
 #[test]
@@ -55,10 +54,9 @@ fn mount_maps_every_error_status_to_its_own_variant() {
 }
 
 /// The handle is what a caller schedules its reads after, so it must be the
-/// mount's own - not a fresh or invalid one. The zero case is the mount a
-/// driver resolved without scheduling anything, and it has to survive the trip
-/// intact rather than being turned into some "not ready yet" stand-in: the job
-/// system reads 0 as "no dependency", which is exactly right for that mount.
+/// mount's own. A mount a driver resolved without scheduling anything reports
+/// 0, and 0 must come through unchanged: the job system reads it as "no
+/// dependency".
 #[test]
 fn a_mount_reports_its_own_bring_up_job() {
     reset_fake(FakeState {
@@ -126,7 +124,6 @@ fn mount_with_forwards_its_options() {
     assert!(Vfs::mount_with("/data", options).is_ok());
 }
 
-// -----------------------------------------------------------------------
 // The frame-loop surface.
 
 #[test]
@@ -202,8 +199,8 @@ fn drop_before_completion_closes_without_blocking() {
 #[test]
 fn read_empty_data_completes_without_dereferencing_null() {
     // Empty file: size == 0 (with a non-null dangling data pointer, as an
-    // empty Vec yields). The poll must take the zero-length branch - never
-    // calling from_raw_parts on that pointer - and yield an empty VfsData.
+    // empty Vec yields). The poll must take the zero-length branch, without
+    // calling from_raw_parts on that pointer, and yield an empty VfsData.
     reset_fake(FakeState::default());
     let mount = Vfs::mount("/data").expect("mount");
     let mut handle = mount.read("empty.txt").expect("launch");
@@ -290,7 +287,6 @@ fn listing_drop_closes_ticket() {
     assert_eq!(with_fake(|f| f.close_count), 1);
 }
 
-// -----------------------------------------------------------------------
 // The closure-transported read.
 
 #[test]
@@ -396,7 +392,7 @@ fn read_with_runs_the_transform_on_an_empty_file() {
 }
 
 /// A read dropped before the worker reached it: the close is non-blocking, so
-/// the transform - and the slot it lives in - must outlive the drop for as long
+/// the transform, and the slot it lives in, must outlive the drop for as long
 /// as the worker can still call back, and be freed by that callback.
 #[test]
 fn read_with_dropped_mid_flight_keeps_its_slot_until_the_worker_lets_go() {
@@ -435,7 +431,7 @@ fn read_with_dropped_mid_flight_keeps_its_slot_until_the_worker_lets_go() {
 
 /// The other order the race can settle in: the worker completes a read whose
 /// poller has already dropped it. The transform runs on the bytes, its value has
-/// no reader, and the slot is freed - not touched after free.
+/// no reader, and the slot is freed without being touched afterwards.
 #[test]
 fn read_with_dropped_mid_flight_survives_the_worker_completing_it() {
     reset_fake(FakeState {
@@ -529,7 +525,6 @@ fn read_with_yields_its_value_exactly_once() {
     let _ = read.poll();
 }
 
-// -----------------------------------------------------------------------
 // The worker surface.
 
 #[test]
@@ -556,8 +551,7 @@ fn a_worker_view_reads_blocking_on_the_thread_that_holds_it() {
     // The queries reached through Deref are the same ones Mount carries.
     assert_eq!(view.source_path(), "/fake/source");
 
-    // And the view is Send: a job body can own one. That it works once
-    // moved is the next test.
+    // The view is Send, so a job body can own one. The next test moves it.
     fn assert_send<T: Send>(_: &T) {}
     assert_send(&view);
     let cloned = view.clone();

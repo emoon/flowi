@@ -1,6 +1,6 @@
 #pragma once
 
-// Channel-based logging - internal include seam over the generated <flowi/core/log.h>.
+// Internal include for channel-based logging, layered over the generated <flowi/core/log.h>.
 
 #include "core.h"
 #include "types.h"
@@ -11,7 +11,7 @@
 #include <flowi/core/log.h>
 #include <flowi/core/log_macros.h>
 
-// Internal LogLevel spelling - the generated FlLogLevel, named without the Fl prefix.
+// The generated FlLogLevel, named without the Fl prefix.
 
 typedef FlLogLevel LogLevel;
 
@@ -27,7 +27,7 @@ typedef FlLogLevel LogLevel;
 typedef u32 LogChannelId;
 #define LOG_CHANNEL_INVALID UINT32_MAX
 
-// va_list carve-out: NOT IDL-expressible, so it stays hand-written here (body in log.c).
+// Takes a va_list, which the IDL cannot express, so it is declared by hand here (body in log.c).
 
 DLL_EXPORT void fl_log_c_vmessage_loc(LogChannelId id, LogLevel level, const char* file, int line, const char* format,
                                       va_list args);

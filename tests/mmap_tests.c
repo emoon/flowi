@@ -54,7 +54,7 @@ UTEST(mmap, open_empty_file) {
 UTEST(mmap, close_null_safe) {
     file_mmap_close_os(nullptr);
 
-    // Double close should not crash
+    // Closing a mapping that holds no data must not crash.
     FileMmap m = { .data = nullptr, .size = 0 };
     file_mmap_close_os(&m);
 }

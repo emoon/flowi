@@ -15,7 +15,7 @@
 
 typedef hashmap(u32, Glyph*) GlyphHashMap;
 
-// SwAtlas - per-size realized coverage glyphs (ASCII 0-127 pre-rasterized, codepoints >= 128 on demand).
+// SwAtlas: per-size realized coverage glyphs (ASCII 0-127 pre-rasterized, codepoints >= 128 on demand).
 
 typedef struct SwAtlas {
     FlArena* arena; // Memory for glyph bitmaps
@@ -28,7 +28,7 @@ typedef struct SwAtlas {
     FlJobHandle job_handle; // Handle for pending rasterization job (0 if none)
 } SwAtlas;
 
-// SwFace - the SW-side realization state for one shared font id. Sources its inputs (FreeType bytes or
+// SwFace: the SW-side realization state for one shared font id. Sources its inputs (FreeType bytes or
 // default-font scale) from the shared font layer's raster source.
 
 typedef struct SwFace {
@@ -510,7 +510,7 @@ static Glyph* rasterize_glyph_from_face(SwGlyphCache* self, SwAtlas* atlas, FT_F
     glyph->pixel_width = bitmap->width;
 
     if (bitmap->width == 0 || bitmap->rows == 0) {
-        return glyph; // Empty glyph (like space) - still valid, just no bitmap data
+        return glyph; // Empty glyph (like space): still valid, with no bitmap data
     }
 
     int total_pixels = bitmap->width * bitmap->rows;
@@ -581,7 +581,7 @@ const Glyph* sw_glyph_cache_get(SwGlyphCache* self, FlFontId font_id, u16 font_s
         return nullptr;
     }
 
-    // ASCII fast path - use pre-rasterized glyphs.
+    // ASCII fast path: use the pre-rasterized glyphs.
     if (codepoint < (u32)atlas->glyph_count) {
         const Glyph* glyph = &atlas->glyphs[codepoint];
         if (glyph->advance_x != 0 || glyph->width != 0) {
@@ -594,7 +594,7 @@ const Glyph* sw_glyph_cache_get(SwGlyphCache* self, FlFontId font_id, u16 font_s
         return nullptr;
     }
 
-    // Non-ASCII - check cache first.
+    // Non-ASCII: check the cache first.
     Glyph** cached = hashmap_get(&atlas->unicode_glyphs, codepoint);
     if (cached != nullptr) {
         return *cached;

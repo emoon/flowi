@@ -1,7 +1,5 @@
-# Target Configuration Helpers
-#
-# Warning flags on flowi's own targets (the vendored deps keep their own), and
-# link-time completeness on shared libraries.
+# Applies the warning flags to flowi's own targets (vendored dependencies keep
+# their own) and makes a shared library fail to link with undefined symbols.
 
 function(apply_target_config target_name)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")

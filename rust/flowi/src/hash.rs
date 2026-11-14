@@ -1,4 +1,4 @@
-//! Content digests - CRC32, SHA1, MD5 and SHA256 over bytes.
+//! Content digests: CRC32, SHA1, MD5 and SHA256 over bytes.
 //!
 //! These are the same implementations flowi's native library uses, so a digest
 //! computed here matches one computed there over the same bytes.
@@ -161,7 +161,6 @@ fn hex_string(buffer: &[u8; SHA256_HEX_BUFFER]) -> String {
 mod tests {
     use super::*;
 
-    /// The published digests of the empty input, for every algorithm here.
     #[test]
     fn the_empty_input_hashes_to_the_published_digests() {
         assert_eq!(crc32(&[]), 0);
@@ -211,7 +210,6 @@ mod tests {
         );
     }
 
-    /// Streaming in chunks yields the one-shot digest of the same bytes.
     #[test]
     fn streaming_in_chunks_matches_the_one_shot_digest() {
         let data: Vec<u8> = (0..1000u32).map(|i| (i % 251) as u8).collect();
@@ -230,7 +228,6 @@ mod tests {
         assert_eq!(with_empties.finish_hex(), sha256_hex(&data));
     }
 
-    /// digest_hex of a raw digest agrees with finish_hex.
     #[test]
     fn rendering_a_digest_matches_finishing_to_hex() {
         let mut digest = Sha256::new();

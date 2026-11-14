@@ -1,14 +1,14 @@
 #pragma once
 
-// flowi neutral render-command IR - emit helpers.
+// Emit helpers for the flowi neutral render-command IR.
 //
 // Small inline builders that append a tagged FlCmd record (render_ir.h) to an arena, producing one contiguous,
-// backend-agnostic byte buffer. Records carry drawing intent only - colors are NOT premultiplied and the
-// frame's global_alpha is NOT folded in here (both happen backend-side).
+// backend-agnostic byte buffer. Records carry drawing intent only: colors are not premultiplied and the
+// frame's global_alpha is not folded in here (both happen backend-side).
 //
 // Each record is a header immediately followed by its payload. FlCmdImage embeds a void* (FlImageSource), so
 // records must start on an 8-byte boundary; every record is therefore started 8-aligned (fl_arena_align below)
-// and its byte_size is rounded up to a multiple of 8. That keeps the walk contract literal -
+// and its byte_size is rounded up to a multiple of 8. That keeps the walk contract literal:
 // next = (const u8*)cur + cur->byte_size always lands on the next 8-aligned record. A whole IR buffer can be
 // appended to another by copying its bytes to an 8-aligned destination.
 
@@ -20,10 +20,10 @@
 #include <string.h>
 
 // Start a record: 8-align, emit the header, and stamp byte_size rounded up to the 8-byte record stride.
-// total_bytes is the WHOLE record size (header + payload + any inline trailing data), not just the payload.
+// total_bytes is the whole record size (header + payload + any inline trailing data), not just the payload.
 
 static inline FlCmdHeader* fl_ir_header(FlArena* arena, FlCmdKind kind, u32 total_bytes) {
-    fl_arena_align(arena, 8); // records start 8-aligned (FlCmdImage embeds a void*)
+    fl_arena_align(arena, 8);
     FlCmdHeader* header = arena_alloc_zero(arena, FlCmdHeader);
     header->kind = (u16)kind;
     header->flags = 0;
@@ -51,7 +51,7 @@ static inline void fl_ir_append_effect(FlArena* arena, FlCmdHeader* header, cons
 }
 
 // Fill rect with optional per-corner radii and per-corner colors (a solid fill is four equal corner colors;
-// a gradient is four differing ones - there is no separate gradient command). nullptr effect = none.
+// a gradient is four differing ones; there is no separate gradient command). nullptr effect = none.
 
 static inline void fl_ir_fill_rect(FlArena* arena, FlRect rect, FlCornerRadius radius, const FlColor corners[4],
                                    const FlEffect* effect) {
@@ -158,7 +158,7 @@ static inline void fl_ir_clip_pop(FlArena* arena) {
 
 // Optional-tier builders. All five take an optional effect (nullptr = none), appended after the payload and any
 // inline trailing array. The variable-length builders (polyline, bars) reserve the trailing array inside the
-// record and return it; the caller MUST fill every reserved entry.
+// record and return it; the caller must fill every reserved entry.
 
 static inline FlPolyPoint* fl_ir_polyline(FlArena* arena, FlColor color, FlColor fill_color, f32 width, f32 baseline_y,
                                           u32 flags, u32 point_count, const FlEffect* effect) {
@@ -243,14 +243,14 @@ static inline FlBar* fl_ir_bars(FlArena* arena, f32 baseline_y, FlColor color, u
 
 // Lay a UTF-8 string out into a positioned FlCmd_TextRun and append it. Glyph ids are codepoints (the backend
 // re-resolves and rasterizes each), resolved here only to advance the pen. cursor_x is the pen x of the first
-// glyph; baseline_y is the text baseline. The transient FlGlyph array is built in scratch, which MUST be a
+// glyph; baseline_y is the text baseline. The transient FlGlyph array is built in scratch, which must be a
 // different arena than arena (the latter holds the contiguous IR byte stream).
 
 // size_q4 is the raster (preparation/atlas) size as a quarter-px key (font_cache_whole_px_to_q4 /
 // font_cache_quantize_size_q4); scale scales the run to its display size (see FlCmdTextRun). Advances are
 // taken at size_q4 and scaled by scale so the pen tracks the display size, matching the scaled glyph
 // quads the backend emits. Pass scale == 1.0f for 1:1 (no zoom) text. letter_spacing adds extra px
-// between glyphs only (n−1 gaps, no trailing gap) - the same rule font_cache_measure_text applies, so a
+// between glyphs only (n−1 gaps, no trailing gap), the same rule font_cache_measure_text applies, so a
 // measured run matches the drawn one.
 static inline void fl_ir_text_layout(FlArena* arena, FlArena* scratch, FlFontCache* font_cache, FlFontId font,
                                      u16 size_q4, f32 scale, FlColor color, FlString text, float cursor_x,

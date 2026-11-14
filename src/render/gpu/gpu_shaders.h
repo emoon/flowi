@@ -11,16 +11,16 @@
 // constants (tile geometry, atlas sizes, slot count), the shared GLSL snippets, and the shader body. The sources
 // functions below fill the array glShaderSource takes.
 
-// Upper bound on the source-string count any program assembles - sizes the array passed to the fillers below.
+// Upper bound on the source-string count any program assembles. Sizes the array passed to the fillers below.
 #define GPU_SHADER_MAX_SOURCES 9
 
 // Fill out (capacity GPU_SHADER_MAX_SOURCES) with one program's ordered source strings and return the count, ready
 // to hand to glShaderSource.
 
-// Pass 1: classification - one thread per tile, building each tile's command index list.
+// Pass 1, classification: one thread per tile, building each tile's command index list.
 int gpu_classify_sources(const char** out);
 
-// Pass 2: raster - one workgroup per tile, one thread per pixel, blending the tile's classified commands.
+// Pass 2, raster: one workgroup per tile, one thread per pixel, blending the tile's classified commands.
 int gpu_raster_sources(const char** out);
 
 // Glyph coverage raster: one dispatch per prepared glyph, signed-area coverage into the R8 atlas.
@@ -31,7 +31,7 @@ int gpu_glyph_sources(const char** out);
 // per-shape (quad range, premultiplied color, fill rule) records.
 int gpu_color_svg_sources(const char** out);
 
-// The Viewport3d unlit vertex and fragment stages - the backend's only hardware raster program. Both take just the
+// The Viewport3d unlit vertex and fragment stages, the backend's only hardware raster program. Both take just the
 // dialect preamble; neither the compat header nor the #define preamble applies to them.
 int gpu_mesh3d_vertex_sources(const char** out);
 int gpu_mesh3d_fragment_sources(const char** out);

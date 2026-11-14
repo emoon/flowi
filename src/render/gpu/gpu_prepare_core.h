@@ -49,8 +49,8 @@ bool gpu_prepare_image_place_atlas(GpuImageAtlas* atlas, FlImageLoadRequestId re
 // Glyph preparation.
 
 // The padded atlas cell a glyph outline occupies. left / top are the cell's top-left corner in outline space
-// (y-up), the origin gpu_glyph_lower_outline lowers against. An empty glyph - no contours, or a control box that
-// rounds out to nothing - carries a zeroed cell with empty set, earning a metrics-only atlas entry and no raster
+// (y-up), the origin gpu_glyph_lower_outline lowers against. An empty glyph (no contours, or a control box that
+// rounds out to nothing) carries a zeroed cell with empty set, earning a metrics-only atlas entry and no raster
 // dispatch.
 typedef struct GpuGlyphCell {
     u32 pw; // padded cell width, texels (0 when empty)
@@ -90,7 +90,7 @@ typedef struct GpuSvgCellFit {
 } GpuSvgCellFit;
 
 // Fit vector onto raster size size, writing the result to out. Returns false for a degenerate document
-// (no extent, or one that fits to an empty cell) - nothing to place, nothing to raster.
+// (no extent, or one that fits to an empty cell).
 bool gpu_prepare_svg_fit(const struct FlVectorImage* vector, u16 size, GpuSvgCellFit* out);
 
 // One live SVG cell's retained geometry, lowered into the curve buffer's quadratic wire format (6 f32 per

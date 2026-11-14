@@ -23,10 +23,6 @@ static bool check_memory_pattern(void* ptr, u64 size, u8 pattern) {
     return true;
 }
 
-// =============================================================================
-// Basic FlArena Tests
-// =============================================================================
-
 UTEST(arena, new_and_destroy) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
     ASSERT_NE(arena, nullptr);
@@ -88,7 +84,7 @@ UTEST(arena, alloc_array) {
 
 // A wrapped count * sizeof(type) would reserve a fraction of the bytes the caller goes on to write
 // count elements into. The saturated size reaches the allocator's fatal size-overflow path instead,
-// which exits the process - so this case checks the size the macros compute rather than allocating it.
+// which exits the process, so this case checks the size the macros compute and allocates nothing.
 UTEST(arena, array_size_saturates_instead_of_wrapping) {
     ASSERT_EQ(arena_array_bytes(0, sizeof(u32)), (u64)0);
     ASSERT_EQ(arena_array_bytes(100, sizeof(u32)), (u64)100 * sizeof(u32));
@@ -100,8 +96,8 @@ UTEST(arena, array_size_saturates_instead_of_wrapping) {
     ASSERT_EQ(arena_array_bytes(UINT64_MAX, sizeof(u64)), (u64)UINT64_MAX);
 }
 
-// The size goes through a function call, so a count with a side effect runs once - the ternary the
-// saturation could have been written as would run it twice.
+// The size goes through a function call, so a count with a side effect runs once. A ternary in the
+// macro would run it twice.
 UTEST(arena, array_macros_evaluate_count_once) {
     FlArena* arena = arena_new(.reserved_size = MB(1));
 
@@ -221,10 +217,6 @@ UTEST(arena, rewind) {
     fl_arena_destroy(arena);
 }
 
-// =============================================================================
-// Large Allocation Tests
-// =============================================================================
-
 UTEST(arena, large_allocation) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
@@ -248,7 +240,7 @@ UTEST(arena, many_small_allocations) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
     const int num_allocs = 1000;
-    // MSVC doesn't support VLAs - use heap allocation
+    // MSVC has no VLAs, so this is heap allocated.
     void** ptrs = (void**)malloc(num_allocs * sizeof(void*));
     ASSERT_NE(ptrs, nullptr);
 
@@ -266,10 +258,6 @@ UTEST(arena, many_small_allocations) {
     free(ptrs);
     fl_arena_destroy(arena);
 }
-
-// =============================================================================
-// Stress Tests
-// =============================================================================
 
 UTEST(arena, stress_alloc_rewind_cycle) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -320,10 +308,6 @@ UTEST(arena, mixed_size_allocations) {
 
     fl_arena_destroy(arena);
 }
-
-// =============================================================================
-// Edge Cases
-// =============================================================================
 
 UTEST(arena, compacting) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
@@ -399,10 +383,6 @@ UTEST(arena, page_boundary_allocations) {
     fl_arena_destroy(arena);
 }
 
-// =============================================================================
-// Memory Size Macro Tests
-// =============================================================================
-
 UTEST(arena, memory_size_macros) {
     FlArena* arena1 = arena_new(.reserved_size = GB(2));
     fl_arena_destroy(arena1);
@@ -415,9 +395,7 @@ UTEST(arena, memory_size_macros) {
     fl_arena_destroy(arena2);
 }
 
-// =============================================================================
-// Thread Safety Tests
-// =============================================================================
+// Thread safety
 
 #include <core/os/os.h>
 typedef struct ThreadTestData {
@@ -484,7 +462,7 @@ UTEST(arena, thread_safe_allocation) {
     const int num_threads = 8;
     const int allocations_per_thread = 100;
 
-    // MSVC doesn't support VLAs - use heap allocation
+    // MSVC has no VLAs, so this is heap allocated.
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
     ASSERT_NE(threads, nullptr);
     ThreadTestData* thread_data = (ThreadTestData*)malloc(num_threads * sizeof(ThreadTestData));
@@ -522,7 +500,7 @@ UTEST(arena, arena_mt_growth) {
 
     const int num_threads = 4;
 
-    // MSVC doesn't support VLAs - use heap allocation
+    // MSVC has no VLAs, so this is heap allocated.
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
     ASSERT_NE(threads, nullptr);
     ThreadTestData* thread_data = (ThreadTestData*)malloc(num_threads * sizeof(ThreadTestData));
@@ -555,9 +533,7 @@ UTEST(arena, arena_mt_growth) {
     arena_mt_destroy(arena_mt);
 }
 
-// =============================================================================
-// High Contention Lock-Free Tests
-// =============================================================================
+// High contention on the lock-free allocation path
 
 typedef struct HighContentionTestData {
     FlArenaMt* arena_mt;
@@ -584,7 +560,7 @@ static void* high_contention_alloc_test(void* arg) {
             continue;
         }
 
-        // Just count allocations (don't store pointers to avoid race condition)
+        // Count the allocations only; storing the pointers would race.
         atomic_fetch_add(&data->allocation_count, 1);
 
         fill_memory_pattern(ptr, size, pattern);
@@ -593,7 +569,7 @@ static void* high_contention_alloc_test(void* arg) {
             atomic_fetch_add(&data->errors, 1);
         }
 
-        // Small delay to create more race conditions
+        // A short spin widens the race window.
         for (volatile int j = 0; j < 10; j++)
             ;
     }
@@ -606,7 +582,7 @@ static void* rapid_small_alloc_test(void* arg) {
     HighContentionTestData* data = (HighContentionTestData*)arg;
     FlArenaMt* arena_mt = data->arena_mt;
 
-    // Rapid-fire small allocations to maximize CAS contention
+    // Small back-to-back allocations maximize CAS contention.
     for (int i = 0; i < data->num_allocations; i++) {
         size_t size = 8 + (i % 32);
         void* ptr = arena_mt_alloc_raw(arena_mt, size, 4);
@@ -676,7 +652,7 @@ UTEST(arena, high_contention_lock_free) {
     const int num_threads = 32;
     const int allocations_per_thread = 1000;
 
-    // MSVC doesn't support VLAs - use heap allocation
+    // MSVC has no VLAs, so this is heap allocated.
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
     ASSERT_NE(threads, nullptr);
     HighContentionTestData* thread_data
@@ -726,7 +702,7 @@ UTEST(arena, rapid_small_allocations) {
     const int num_threads = 16;
     const int allocations_per_thread = 5000;
 
-    // MSVC doesn't support VLAs - use heap allocation
+    // MSVC has no VLAs, so this is heap allocated.
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
     ASSERT_NE(threads, nullptr);
     HighContentionTestData* thread_data
@@ -772,7 +748,7 @@ UTEST(arena, mixed_size_high_contention) {
     const int num_threads = 24;
     const int allocations_per_thread = 500;
 
-    // MSVC doesn't support VLAs - use heap allocation
+    // MSVC has no VLAs, so this is heap allocated.
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
     ASSERT_NE(threads, nullptr);
     HighContentionTestData* thread_data
@@ -821,7 +797,7 @@ UTEST(arena, stress_lock_free_rounds) {
     for (int round = 0; round < num_rounds; round++) {
         FlArenaMt* arena_mt = arena_mt_new();
 
-        // MSVC doesn't support VLAs - use heap allocation
+        // MSVC has no VLAs, so this is heap allocated.
         Thread* threads = (Thread*)malloc(threads_per_round * sizeof(Thread));
         ASSERT_NE(threads, nullptr);
         HighContentionTestData* thread_data

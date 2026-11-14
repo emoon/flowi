@@ -2,6 +2,6 @@
 /// valid only for the current frame.
 api Format {
     /// Format fmt (printf-style, plus %S for an FlString) into a frame-allocated string. The result lives
-    /// until the end of the frame - capture it into durable storage if it must outlive the frame.
+    /// until the end of the frame. Copy it into durable storage if it must outlive the frame.
     frame_string(fmt: *const char, ...) -> String
 }

@@ -1,11 +1,10 @@
-// Dock API - hand-written bodies for the public fl_dock_* prototypes api_gen emits into flowi/ui/dock.h. Thin
-// forwarders onto the internal docking API, resolving the active window's workspace via dock_workspace_current(),
-// which always answers a workspace.
+// Dock API: hand-written bodies for the public fl_dock_* prototypes api_gen emits into flowi/ui/dock.h. They forward
+// to the internal docking API on the active window's workspace. dock_workspace_current() never returns nullptr.
 
 #include "dock_shared.h"
 #include "dock_workspace.h"
 
-#include <flowi/ui/dock.h> // generated fl_dock_* prototypes - the bodies below must match them
+#include <flowi/ui/dock.h> // generated fl_dock_* prototypes; the bodies below must match them
 
 void fl_dock_workspace_begin(void) {
     dock_workspace_begin(dock_workspace_current());

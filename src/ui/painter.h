@@ -1,13 +1,13 @@
 #pragma once
 
-// Painter API - Low-level drawing primitives for custom rendering
+// Painter: low-level drawing primitives for custom rendering.
 //
 // Direct drawing commands for custom effects (gradients, text shadows, dynamic/bitmap images, the
 // optional-tier shapes) that aren't easily expressed through the standard widget system.
 //
 // Painter calls draw inside the open layout element's immediate-mode scope: each call records
 // into that element's paint span, and fl_clay_to_render_ir splices the span into the frame at the element's
-// Clay CUSTOM marker - at the element's z, under its child elements, bracketed by the live layout scissor
+// Clay CUSTOM marker: at the element's z, under its child elements, bracketed by the live layout scissor
 // stack. A painter call outside any open scope is a no-op (see ui_get_painter).
 //
 // All coordinates are element-local logical (authoring) space and are scaled to actual pixels here, at emit
@@ -24,8 +24,6 @@ struct FlFontCache;
 
 typedef struct Painter Painter;
 
-// Lifecycle (internal use only)
-
 Painter* painter_create(struct FlArena* arena);
 
 // Releases the painter's IR arena. The Painter itself lives in the arena passed to painter_create.
@@ -34,27 +32,27 @@ void painter_destroy(Painter* p);
 // What the painter needs to know about the frame it is about to record.
 typedef struct PainterFrame {
     struct FlFontCache* font_cache;
-    // ui_scale / text_scale: absolute, set by the app via ui_set_scale - font handles carry authored sizes,
+    // ui_scale / text_scale: absolute, set by the app via ui_set_scale. Font handles carry authored sizes,
     // so text draws multiply text_scale in themselves; text_scale <= 0 means 1.0.
     float ui_scale;
     float text_scale;
-    // Per-frame state - can be the same arena used for Clay state.
+    // Per-frame state; can be the same arena used for Clay state.
     struct FlArena* state_arena;
 } PainterFrame;
 
 // Call before any painter operation this frame; resets the painter's internal arena.
 void painter_begin_frame(Painter* p, PainterFrame frame);
 
-// Painting scopes (internal use only - driven by the layout begin/end seam)
+// Painting scopes, driven by the layout begin/end seam.
 //
 // A scope is pushed/popped in lockstep with each layout element's begin/end. The first painter call inside an
 // open scope lazily creates that element's paint span and attaches it to the element's Clay CUSTOM marker via
-// custom_slot; subsequent calls append to the same span - one marker per scope, never per primitive. An
+// custom_slot. Later calls append to the same span, so there is one marker per scope, not one per primitive. An
 // empty scope attaches nothing, so non-painting elements incur no CUSTOM command.
 
 // Push a painting scope. custom_slot is the address of the open layout element's CUSTOM customData field;
-// the painter writes the span pointer through it on the scope's first paint. May be null (scope records but
-// attaches to nothing - e.g. an element the splice will not reach).
+// the painter writes the span pointer through it on the scope's first paint. May be nullptr (scope records but
+// attaches to nothing, e.g. an element the splice will not reach).
 void painter_scope_push(Painter* p, void** custom_slot);
 
 void painter_scope_pop(Painter* p);
@@ -62,26 +60,22 @@ void painter_scope_pop(Painter* p);
 // Number of open painting scopes. ui_get_painter() is valid only when this is > 0.
 u32 painter_scope_depth(const Painter* p);
 
-// Effect state - the painter's only state, everything else (colors, geometry) stays per-call.
+// Effect state is the painter's only state; everything else (colors, geometry) stays per call.
 
 // Set the effect every later primitive in the innermost open scope carries. A zeroed effect
 // (kind FlEffectKind_None) clears it. The state lives in that scope, so it is gone once the scope pops and at
-// begin_frame - it can never reach a sibling element, a nested child, or the next frame. Text draws ignore it:
+// begin_frame, and cannot reach a sibling element, a nested child, or the next frame. Text draws ignore it:
 // no backend resolves an effect on a text run.
 void painter_set_effect(Painter* p, FlEffect effect);
-
-// Text drawing
 
 // Draw text with its top-left at (x, y), in the font's authored size.
 void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, FlColor color);
 
-// Draw single-line styled text: style carries the font (already resolved - no 0-means-active here), a
+// Draw single-line styled text: style carries the font (already resolved; 0 does not mean the active font here), a
 // fractional pixel size (0 = the font's default size), and letter spacing (n−1 gaps, no trailing gap).
 // Sizes quantize to quarter-px steps, the same quantizer font_cache_measure_text uses, so a measured run
 // matches what gets drawn.
 void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color);
-
-// Rectangle drawing
 
 // Draw a rectangle styled by config: per-corner radius and per-corner colors at once. The three narrower
 // calls below are thin configs over it.
@@ -116,8 +110,6 @@ void painter_hline(Painter* p, float x, float y, float length, FlColor color);
 // Vertical hairline running +length along y from (x, y).
 void painter_vline(Painter* p, float x, float y, float length, FlColor color);
 
-// Image drawing
-
 // Draw an image into rect (logical space). rect.w or rect.h <= 0 means the image's native pixel width or height.
 // Returns false if the image is not ready/invalid.
 bool painter_image(Painter* p, FlRect rect, FlImageHandle image, FlColor color);
@@ -132,7 +124,7 @@ void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColo
 
 // Shape drawing (optional-tier IR)
 //
-// These emit optional-tier render commands: a backend MAY ignore them without breaking correctness, layout,
+// These emit optional-tier render commands: a backend may ignore them without breaking correctness, layout,
 // or hit-testing (the software backend currently does). Coordinates, radii, and widths are logical
 // (authoring) space, scaled at emit like everything else.
 
@@ -144,7 +136,7 @@ void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColo
 // points: vertices in logical (authoring) space; each point's intensity modulates the stroke alpha (1.0 = plain),
 //         lerped along segments, and scales the fill alpha when filled
 // style.stroke: width and color; caps and joins are always round
-// style.flags: FlPolylineFlags - FILLED fills between the curve and baseline_y with fill_color, CLOSED adds a
+// style.flags: FlPolylineFlags. FILLED fills between the curve and baseline_y with fill_color, CLOSED adds a
 //              last->first segment
 void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, FlPolylineStyle style);
 

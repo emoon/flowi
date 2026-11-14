@@ -67,7 +67,7 @@
 #include <string.h>
 
 // The process-global UI context: non-null between ui_create and ui_destroy. Public entry points check it once
-// with FL_VALIDATE(g_ui_ctx != nullptr); the background family no-ops on null instead.
+// with FL_VALIDATE(g_ui_ctx != nullptr); the background family no-ops on nullptr instead.
 FlUiCtx* g_ui_ctx;
 
 static bool is_ascii_quick(const char* data, i32 len) {
@@ -130,9 +130,9 @@ UiShared* ui_shared_create(FlArena* arena, FlRenderBackend* backend) {
     UiShared* shared = arena_alloc_zero(arena, UiShared);
     shared->renderer = *backend;
     // The backend-agnostic readiness registry: the single source of image readiness/dimensions, fed by each
-    // backend's realization ack. Holds no pixels - the SW realized-pixel pool belongs to the SW backend.
+    // backend's realization ack. It holds no pixels; the SW realized-pixel pool belongs to the SW backend.
     shared->image_registry = image_registry_new(arena);
-    // Base theme is injected by the Frontend after loading (ui_set_theme); null falls through to the default.
+    // Base theme is injected by the host after loading (ui_set_theme); nullptr falls through to the default.
     shared->theme_colors = nullptr;
 
     // Persistent id-keyed widget-state store: keyed by the location-independent clay hashed id, allocated
@@ -407,7 +407,7 @@ const FlThemeColors* ui_get_theme_colors(FlUiCtx* ctx) {
     return ui_theme_base_colors(ctx);
 }
 
-// Push starts from the currently resolved theme so the override inherits every slot it does not touch - that
+// Push starts from the currently resolved theme so the override inherits every slot it does not touch, which
 // is what makes nested overrides stack (an inner push layers on top of the outer's merged result).
 
 void ui_theme_push(FlUiCtx* ctx, FlThemeOverride override) {
@@ -423,7 +423,7 @@ void ui_theme_push(FlUiCtx* ctx, FlThemeOverride override) {
 }
 
 // Resolve the theme a widget renders against: the seam-resolved theme (including any active subtree overrides) with
-// the widget's own sparse override merged on top. Never returns null. With no widget override it returns the seam
+// the widget's own sparse override merged on top. Never returns nullptr. With no widget override it returns the seam
 // theme directly (no copy); when an override applies, the merged result is written into caller-owned scratch.
 
 const FlThemeColors* ui_resolve_widget_theme(FlUiCtx* self, const FlThemeOverride* override, FlThemeColors* scratch) {
@@ -441,7 +441,7 @@ void ui_theme_pop(FlUiCtx* ctx) {
     ctx->theme_override_depth--;
 }
 
-// Returns null in the pre-init window; see the g_ui_ctx declaration for the guarding rule callers must follow.
+// Returns nullptr in the pre-init window; see the g_ui_ctx declaration for the guarding rule callers must follow.
 FlUiCtx* ui_get_ctx(void) {
     return g_ui_ctx;
 }
@@ -453,14 +453,14 @@ void ui_ctx_set_dock_workspace(FlUiCtx* ctx, struct FlDockWorkspace* ws) {
 }
 
 // The current context's Painter, so the shape primitives (painter_circle, ...) are reachable without threading
-// one. Valid only inside an open painting scope (a layout element); returns null before ui_create, with no
-// active context, or outside any scope - paint draws inside an element's immediate-mode scope, never on top.
+// one. Valid only inside an open painting scope (a layout element); returns nullptr before ui_create, with no
+// active context, or outside any scope: paint draws inside an element's immediate-mode scope, never on top.
 struct Painter* ui_get_painter(void) {
     if (g_ui_ctx == nullptr || g_ui_ctx->painter == nullptr) {
         return nullptr;
     }
     if (painter_scope_depth(g_ui_ctx->painter) == 0) {
-        return nullptr; // outside any open layout element - there is nowhere to attach paint
+        return nullptr; // outside any open layout element; there is nowhere to attach paint
     }
     return g_ui_ctx->painter;
 }
@@ -475,14 +475,14 @@ void ui_update_begin(FlUiCtx* self) {
     // (last-writer-wins); when nobody does, the app flushes the arrow. Visibility is sticky and not reset here.
     self->requested_cursor = (FlCursor) { .shape = FlCursorShape_Arrow };
 
-    // Runs AFTER ui_input_update() has captured mouse_pressed_this_frame.
+    // Runs after ui_input_update() has captured mouse_pressed_this_frame.
     ui_popup_check_auto_close(self);
 
     Clay_Vector2 pointer_pos = { self->input_state.mouse.x, self->input_state.mouse.y };
     bool pointer_down = self->input_state.mouse.buttons[FlMouseButton_Left];
     Clay_SetPointerState(pointer_pos, pointer_down);
 
-    // Scroll containers must be updated BEFORE BeginLayout (as per Clay docs), from the cached wheel values
+    // Scroll containers must be updated before BeginLayout (as per Clay docs), from the cached wheel values
     // (set in ui_input_update before clearing).
     Clay_Vector2 scroll_delta = { -self->input_state.mouse.wheel_x_cached, -self->input_state.mouse.wheel_y_cached };
 
@@ -593,8 +593,8 @@ void fl_consume_nav_right(void) {
     g_ui_ctx->nav_frame.nav_right = false;
 }
 
-// Input-state accessors: the range check precedes the array access. EDGE queries read the per-frame context
-// snapshot; LEVEL queries read the raw array.
+// Input-state accessors: the range check precedes the array access. Edge queries read the per-frame context
+// snapshot; level queries read the raw array.
 
 // Level read of a keyboard state-array member (keys/keys_pressed/keys_released).
 #define key_state_get(member, key) \
@@ -712,7 +712,7 @@ f32 ui_gamepad_axis(u32 slot, FlGamepadAxis axis) {
 void ui_mouse_hidden_drag_begin(float scale) {
     g_ui_ctx->hidden_drag_active = true;
     g_ui_ctx->hidden_drag_scale = scale;
-    // Grab the current absolute mouse position as the press point - the warp-back target on end.
+    // Grab the current absolute mouse position as the press point, the warp-back target on end.
     g_ui_ctx->hidden_drag_press_x = g_ui_ctx->input_state.mouse.x;
     g_ui_ctx->hidden_drag_press_y = g_ui_ctx->input_state.mouse.y;
     g_ui_ctx->relative_mouse_mode = true;
@@ -762,8 +762,6 @@ FlNavFrame fl_get_nav_frame(void) {
 float ui_get_delta_time(void) {
     return g_ui_ctx ? g_ui_ctx->delta_time : 0.0f;
 }
-
-// Modal Popup API
 
 void fl_modal_begin_frame(u32 scope_id) {
     if (scope_id == 0) {
@@ -829,17 +827,17 @@ FlElementState ui_get_element_state(FlLayoutId layout_id) {
     return ui_get_element_state_by_id(ui_layout_id_to_clay_id(layout_id));
 }
 
-// The single topmost-hovered element id this frame - the core's already-arbitrated hot_id (0 = nothing hovered).
+// The single topmost-hovered element id this frame: the core's already-arbitrated hot_id (0 = nothing hovered).
 
 u32 ui_hot_id(void) {
     FlUiCtx* ctx = g_ui_ctx;
     return ctx ? ctx->hot_id : 0;
 }
 
-// Pointer position in an element's local logical (authoring) space - (mouse - origin) / ui_scale. The
+// Pointer position in an element's local logical (authoring) space: (mouse - origin) / ui_scale. The
 // element rect lands in physical pixels (Clay lays out at the actual resolution) and the mouse is fed in that
 // same physical space, so dividing the local delta by ui_scale converts back to the logical authoring space the
-// Painter draws in - letting a canvas hit-test the cursor against its painted geometry at any UI scale.
+// Painter draws in, so a canvas can hit-test the cursor against its painted geometry at any UI scale.
 
 FlVec2 ui_mouse_position(FlLayoutId layout_id) {
     FlElementState state = ui_get_element_state(layout_id);
@@ -855,7 +853,7 @@ FlVec2 ui_mouse_position(FlLayoutId layout_id) {
     };
 }
 
-// Scroll Target registration. A plain layout area never enters item_state on its own - only ui_item_behavior
+// Scroll Target registration. A plain layout area never enters item_state on its own: only ui_item_behavior
 // creates entries, and item_state_update skips ids not already present. This inserts the area into item_state
 // with FlItemFlags_scroll_target, computing the clay id exactly as the layout open path does, so the existing
 // next_hot_id/hot_id arbitration picks it up. Call it once per frame for the area you read the wheel over.
@@ -880,10 +878,10 @@ void ui_track_element(FlLayoutId layout_id) {
     get_or_create_key(self, ui_layout_id_to_clay_id(layout_id));
 }
 
-// Scoped per-frame wheel delta: the mouse_wheel_delta(id) query. Returns the frame's wheel delta only when this
+// Scoped per-frame wheel delta. Returns the frame's wheel delta only when this
 // id is the hot Scroll Target (consume-takes-all: the topmost hot target wins, ancestors read {0,0}). Reads
 // item->state.hot directly, not signal.wheel_delta.
-// Per-frame delta only - any cumulative offset is the caller's to accumulate.
+// Per-frame delta only; any cumulative offset is the caller's to accumulate.
 
 FlVec2 ui_mouse_wheel_delta(FlLayoutId layout_id) {
     FlUiCtx* self = g_ui_ctx;
@@ -934,7 +932,7 @@ FlListClipper fl_list_clipper_create(int32_t total_items, float item_height, flo
 }
 
 // A spacer's extent is authored logical px, exactly like every FlLayoutSizing the layout seam scales in
-// ui_apply_sizing (ui/layout.c) - so it goes through the same scale-and-snap.
+// ui_apply_sizing (ui/layout.c), so it goes through the same scale-and-snap.
 static float ui_spacer_extent(float logical) {
     const FlUiCtx* ctx = g_ui_ctx;
     return ui_scale_and_snap(logical, ctx ? ctx->ui_scale : 1.0f);
@@ -1067,7 +1065,7 @@ void ui_update_end(FlUiCtx* self, float dt) {
     }
 
     // Build the neutral render IR for this frame and hand it to the injected backend. Each element's paint span
-    // is spliced inline at its Clay CUSTOM command, so a single Clay→IR pass produces the whole z-ordered
+    // is spliced inline at its Clay CUSTOM command, so a single Clay-to-IR pass produces the whole z-ordered
     // stream. Records are 8-aligned so the backend's byte_size walk stays valid.
     FlArena* ir_arena = self->render_frame_allocator;
     fl_arena_align(ir_arena, 8);
@@ -1093,7 +1091,7 @@ void ui_update_end(FlUiCtx* self, float dt) {
     self->frame_open = false;
 }
 
-// Shared Frame Update Logic (used by both application and tests)
+// Frame end plus input update, used by both the application and tests.
 
 void ui_frame_end_and_update_input(FlUiCtx* ctx, double dt) {
     ui_update_end(ctx, dt);
@@ -1144,9 +1142,7 @@ void ui_text_styled_impl(FlString string, FlTextConfig config) {
     Clay__OpenTextElement(clay_string, clay_config);
 }
 
-// Unified item behavior function for flag-based widget composition
-//
-// One behavior function for every widget family, controlled by flags. Exported in ui_private.h for use by
+// One behavior function for every widget family, controlled by flags. Declared in ui.h for use by
 // custom widgets (like text input).
 
 FlLayoutId resolve_widget_id(FlString fallback, FlString id_override) {
@@ -1195,7 +1191,7 @@ FlSignal ui_item_behavior(FlLayoutId lay_id, FlItemFlags flags, FlWidgetConfig c
         signal.hovered = mouse_in_bounds;
     }
 
-    // Record which scroll area contains this item - what ui_is_widget_visible and ui_scroll_to_widget read.
+    // Record which scroll area contains this item, which is what ui_is_widget_visible and ui_scroll_to_widget read.
     // Keyed on containment, not focusability: an unfocusable item in a scroll area is still clipped by it.
     if (self->scroll_area_stack_depth > 0) {
         ScrollAreaStackEntry* current_scroll = &self->scroll_area_stack[self->scroll_area_stack_depth - 1];
@@ -1283,7 +1279,7 @@ FlSignal ui_item_behavior(FlLayoutId lay_id, FlItemFlags flags, FlWidgetConfig c
         }
 
         // Items that opt into FlItem_DragThreshold only start dragging once the cursor has moved a few pixels
-        // from the press point - that's how a plain click (press + release in place) stays distinct from a
+        // from the press point; that's how a plain click (press + release in place) stays distinct from a
         // drag. The distance is the per-button max travelled, tracked by the input layer since the press frame.
         // Items without the flag drag immediately.
         bool past_threshold = !(flags & FlItem_DragThreshold)
@@ -1453,8 +1449,6 @@ void ui_dynamic_image_impl(FlDynamicImage* image, FlImageOpts opts) {
     ui_emit_image_element(source, opts.color, opts.fill_container, (float)image->width, (float)image->height);
 }
 
-// UI Scaling API
-//
 // The core holds zero scaling policy: it stores one absolute UI scale and one absolute text scale,
 // multiplies authored logical pixels by them, and computes nothing. Composition (monitor DPI x user zoom, or a
 // reference-fit policy) lives in the app layer, which pushes the product here.
@@ -1483,7 +1477,7 @@ void ui_set_display_resolution(int width, int height) {
         return;
     }
 
-    // Layout area only - no scale side effect. Scale is set independently via ui_set_scale.
+    // Layout area only, with no scale side effect. Scale is set independently via ui_set_scale.
     ctx->layout_width = (float)width;
     ctx->layout_height = (float)height;
 
@@ -1505,8 +1499,6 @@ float ui_get_text_scale(void) {
     return ctx ? ctx->text_scale : 1.0f;
 }
 
-// Background Image API
-
 void ui_background_set(ImageHandle handle) {
     FlUiCtx* ctx = g_ui_ctx;
     if (!ctx)
@@ -1527,8 +1519,6 @@ void ui_background_set_clear_color(u8 r, u8 g, u8 b) {
         return;
     background_controller_set_clear_color(&ctx->background, r, g, b);
 }
-
-// Background blend API
 
 void ui_background_set_blend(ImageHandle prev, ImageHandle current, u8 t) {
     FlUiCtx* ctx = g_ui_ctx;

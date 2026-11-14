@@ -14,7 +14,7 @@ static FlTextMetrics measure(FlFontCache* cache, FlString text, FlFontId font, f
                                    (FlTextStyle) { .font_id = font, .font_size = size, .letter_spacing = spacing });
 }
 
-// font_cache: quantize bucket boundaries.
+// Quantize bucket boundaries.
 
 UTEST(font_cache, quantize_buckets) {
     ASSERT_EQ_MSG((int)font_cache_quantize_size(1), 2, "quantize(1) -> 2px (2px bucket)");
@@ -24,7 +24,7 @@ UTEST(font_cache, quantize_buckets) {
     ASSERT_EQ_MSG((int)font_cache_quantize_size(60), 64, "quantize(60) -> 64px (8px bucket)");
 }
 
-// font_cache: quarter-pixel size keys for the fractional-size text path (round(size × 4)).
+// Quarter-pixel size keys for the fractional-size text path, round(size * 4).
 
 UTEST(font_cache, quantize_q4_quarter_steps) {
     ASSERT_EQ_MSG((int)font_cache_quantize_size_q4(7.5f), 30, "7.5px resolves exactly to key 30");
@@ -38,8 +38,8 @@ UTEST(font_cache, quantize_q4_quarter_steps) {
     ASSERT_EQ_MSG((int)font_cache_quantize_size_q4(1.0e9f), 65535, "huge sizes clamp to the u16 key range");
 }
 
-// quantize is not idempotent at the bucket band boundaries, so a key formed by font_cache_whole_px_to_q4
-// must come back bucketed exactly once (29 -> 30, never 30 -> 32).
+// quantize is not idempotent at the bucket band boundaries, so a key formed by font_cache_whole_px_to_q4 is
+// bucketed exactly once (29 -> 30, and not 30 -> 32 after it).
 UTEST(font_cache, q4_to_whole_px_round_trip) {
     ASSERT_EQ_MSG((int)font_cache_q4_to_whole_px(30), 8, "a 7.5px key rasterizes at the nearest whole px (8)");
     ASSERT_EQ_MSG((int)font_cache_q4_to_whole_px(29), 7, "a 7.25px key rounds down to 7");
@@ -53,8 +53,8 @@ UTEST(font_cache, q4_to_whole_px_round_trip) {
                   "an in-band whole px round trips unchanged");
 }
 
-// font_cache: the shared face-slot allocator every load path funnels through. The default font needs no
-// font data, so it can fill the table on its own.
+// Every load path allocates its face slot through one allocator. The default font needs no font data, so it can
+// fill the table on its own.
 
 UTEST(font_cache, face_slots_are_unique_and_bounded) {
     FlFontCache* cache = font_cache_new(s_arena);
@@ -67,7 +67,7 @@ UTEST(font_cache, face_slots_are_unique_and_bounded) {
                   "the built-in font is ready on return");
     ASSERT_EQ_MSG(font_cache_get_size(cache, second), 16, "scale 2 loads at 8*scale px");
 
-    // 128 slots total; two are spoken for. Fill the rest.
+    // 128 slots in total, of which two are taken. Fill the rest.
     for (int i = 2; i < 128; i++) {
         ASSERT_TRUE_MSG(font_cache_load_default_font(cache, 1) != FONT_ID_INVALID, "slots below the cap must load");
     }
@@ -79,8 +79,8 @@ UTEST(font_cache, face_slots_are_unique_and_bounded) {
     font_cache_destroy(cache);
 }
 
-// font_cache: single-line fractional-size measurement (font_cache_measure_text / font_cache_get_font_metrics).
-// The embedded glyph test font ('A' solid square, 'o' ring; 0.8 em advances) provides known glyphs.
+// Single-line measurement at fractional sizes (font_cache_measure_text, font_cache_get_font_metrics). The embedded
+// glyph test font has known glyphs: 'A' is a solid square, 'o' a ring, and both advance 0.8 em.
 
 UTEST(font_cache, missing_font_file_settles_to_failed) {
     fl_vfs_init(s_arena); // idempotent
@@ -109,7 +109,7 @@ UTEST(font_cache, measure_text_freetype) {
 
     int adv = font_cache_get_glyph_advance(cache, font, 32, 'A');
     ASSERT_TRUE_MSG(adv > 0, "'A' advance must be non-zero");
-    // 1600 = 25.0px in 26.6: the font's 0.8 em design advance (25.6px at 32px) after hinting.
+    // 1600 is 25.0px in 26.6 fixed point: the font's 0.8 em design advance (25.6px at 32px) after hinting.
     ASSERT_EQ_MSG(adv, 1600, "whole-px 'A' advance is pinned to its historical value");
     FlString aa = { .data = "AA", .length = 2, .is_static = 1, .is_ascii = 1 };
     FlTextMetrics m = measure(cache, aa, font, 32.0f, 0.0f);
@@ -179,17 +179,17 @@ UTEST(font_cache, measure_text_default_font) {
     font_cache_destroy(cache);
 }
 
-// font_cache: the glyph-outline service over the embedded test fonts (tests/fixtures/fonts/glyph_test_fonts.h): 'A' is
-// a solid square, 'o' a ring with an opposite-wound counter; one font per outline flavor (TrueType quadratics, CFF
-// cubics). Light-hinted loading may nudge coordinates, so geometry assertions are ranges, not exact.
+// The glyph-outline service over the embedded test fonts (tests/fixtures/fonts/glyph_test_fonts.h). 'A' is a solid
+// square and 'o' a ring whose counter winds the opposite way. There is one font per outline flavor (TrueType
+// quadratics, CFF cubics). Light-hinted loading may move coordinates slightly, so the geometry checks are ranges.
 
-// forbidden is the segment kind the flavor must never produce, expected the curve kind it must.
-// (utest's ASSERT macros write through utest_result, threaded in from the calling UTEST case.)
+// forbidden is the segment kind the flavor never produces and expected is the curve kind it does. utest's ASSERT
+// macros write through utest_result, which the calling UTEST case passes in.
 static void check_outline_font(int* utest_result, const unsigned char* data, long data_size,
                                FlGlyphSegmentKind expected, FlGlyphSegmentKind forbidden) {
     FlFontCache* cache = font_cache_new(s_arena);
     const u16 size = 32;
-    const u16 size_q4 = font_cache_whole_px_to_q4(size); // the outline service is keyed in quarter-px
+    const u16 size_q4 = font_cache_whole_px_to_q4(size); // the outline service is keyed in quarter px
 
     FlFontId font = font_cache_load_font_memory(cache, data, data_size, size);
     ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "memory-loaded font must be ready synchronously");
@@ -218,7 +218,7 @@ static void check_outline_font(int* utest_result, const unsigned char* data, lon
     }
     ASSERT_TRUE_MSG(saw_expected, "the ring must decompose to curve segments");
 
-    // Per contour the edge vectors telescope to zero, so the whole soup must too.
+    // The edge vectors of each contour sum to zero, so the sum over all segments is zero too.
     f32 sum_x = 0.0f;
     f32 sum_y = 0.0f;
     for (u32 i = 0; i < outline.segment_count; i++) {
@@ -230,7 +230,7 @@ static void check_outline_font(int* utest_result, const unsigned char* data, lon
     ASSERT_TRUE_MSG(sum_x > -0.001f && sum_x < 0.001f && sum_y > -0.001f && sum_y < 0.001f,
                     "every contour must be closed (edge vectors telescope to zero)");
 
-    // Design advance is 0.8 em = 25.6 px at 32 px; the box spans 0.6 x 0.7 em.
+    // The design advance is 0.8 em, 25.6 px at 32 px, and the box spans 0.6 x 0.7 em.
     ASSERT_TRUE_MSG(outline.advance > 20.0f && outline.advance < 30.0f, "'o' advance lands near 0.8 em");
     ASSERT_TRUE_MSG(outline.max_x > outline.min_x && outline.max_y > outline.min_y, "'o' has a real bbox");
     for (u32 i = 0; i < outline.segment_count; i++) {
@@ -297,9 +297,9 @@ UTEST(font_cache, glyph_outline_rejects_non_freetype) {
     font_cache_destroy(cache);
 }
 
-// sw_glyph_cache: the built-in 8x8 default font is generated at an integer scale. bearing_y is in pixels, like
-// width/height, and positions the baseline as glyph_y = baseline_y - bearing_y; for the full-cell 8x8 font the
-// whole glyph sits above the baseline, so its ascent equals the cell height (8 * scale).
+// The built-in 8x8 default font is generated at an integer scale. bearing_y is in pixels, like width and height,
+// and positions the baseline as glyph_y = baseline_y - bearing_y. The 8x8 font fills its cell, so the whole glyph
+// is above the baseline and its ascent equals the cell height (8 * scale).
 UTEST(sw_glyph_cache, default_font_bearing_y_scales) {
     FlFontCache* shared = font_cache_new(s_arena);
     SwGlyphCache* sw = sw_glyph_cache_new(s_arena, shared, FontRenderMode_Grayscale);
@@ -308,7 +308,7 @@ UTEST(sw_glyph_cache, default_font_bearing_y_scales) {
         FlFontId font = font_cache_load_default_font(shared, scale);
         ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "default font loads at every scale");
 
-        // Default font is a single fixed-size atlas; the size argument is ignored for it.
+        // The default font is a single atlas of fixed size, and the size argument is ignored for it.
         const Glyph* glyph = sw_glyph_cache_get(sw, font, 8 * scale, 'A');
         ASSERT_TRUE_MSG(glyph != nullptr, "default-font ASCII glyph must realize");
 
@@ -327,9 +327,9 @@ UTEST(sw_glyph_cache, default_font_bearing_y_scales) {
     font_cache_destroy(shared);
 }
 
-// sw_glyph_cache: atlas jobs each own an ephemeral FT_Library, leaving the cache's shared library
-// main-thread-only. Bursting concurrent atlas jobs against the main-thread on-demand path is deterministic
-// today; it only becomes a real data-race probe under the manual TSAN build, not on CI.
+// Each atlas job owns a temporary FT_Library, so the cache's shared library is used only on the main thread. The
+// case runs concurrent atlas jobs against the main-thread on-demand path. It is deterministic as it stands, and
+// it detects a data race only under the manual TSAN build, which CI does not run.
 UTEST(sw_glyph_cache, concurrent_atlas_jobs_and_on_demand) {
     FlFontCache* shared = font_cache_new(s_arena);
     SwGlyphCache* sw = sw_glyph_cache_new(s_arena, shared, FontRenderMode_Grayscale);
@@ -340,14 +340,14 @@ UTEST(sw_glyph_cache, concurrent_atlas_jobs_and_on_demand) {
     FlFontId font = font_cache_load_font_memory(shared, k_glyph_test_ttf, k_glyph_test_ttf_size, sizes[0]);
     ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "memory-loaded FreeType font must be ready synchronously");
 
-    // The first get per size enqueues that size's atlas rasterization job.
+    // The first get for each size enqueues that size's atlas rasterization job.
     for (int i = 0; i < size_count; i++) {
         sw_glyph_cache_get(sw, font, sizes[i], 'A');
     }
 
-    // Poll until every size's 'A' is realized, firing the main-thread on-demand path (a non-ASCII codepoint) as
-    // each atlas turns Ready so it overlaps the jobs still running. The on-demand result is intentionally
-    // unchecked: the embedded test font maps no non-ASCII codepoint.
+    // Poll until every size's 'A' is realized. As each atlas turns Ready, call the main-thread on-demand path
+    // with a non-ASCII codepoint so it overlaps the jobs still running. The on-demand result is not checked,
+    // because the embedded test font maps no non-ASCII codepoint.
     const Glyph* glyphs[4] = { 0 };
     u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
     bool all_ready = false;
@@ -380,7 +380,7 @@ UTEST(sw_glyph_cache, concurrent_atlas_jobs_and_on_demand) {
     font_cache_destroy(shared);
 }
 
-// The primary font (glyph_test_fonts.h) maps only 'A'/'o'; the fallback font (fallback_test_font.h) maps 'B'.
+// The primary font (glyph_test_fonts.h) maps only 'A' and 'o'. The fallback font (fallback_test_font.h) maps 'B'.
 UTEST(font_cache, text_size_includes_fallback_advance) {
     FlFontCache* cache = font_cache_new(s_arena);
     const u16 size = 32;
@@ -410,8 +410,8 @@ UTEST(font_cache, text_size_includes_fallback_advance) {
     font_cache_destroy(cache);
 }
 
-// font_cache: the glyph-resolution seam every backend prepares outlines through. A resolved glyph index is
-// meaningful only against the face it resolved to.
+// Every backend resolves glyphs through font_cache_resolve_glyph before preparing outlines. A resolved glyph index
+// is valid only for the face it resolved to.
 UTEST(font_cache, resolve_glyph_uses_the_fallback_face) {
     FlFontCache* cache = font_cache_new(s_arena);
     const u16 size = 32;
@@ -449,32 +449,32 @@ UTEST(font_cache, resolve_glyph_uses_the_fallback_face) {
     font_cache_destroy(cache);
 }
 
-// reference_fit: the opt-in 1080p scale-to-fit policy (ui/reference_fit.h). ui_reference_fit(height) must reproduce
-// the numbers the core computes via ui_apply_scale_preset: identity at the 1080p reference, and a PAL-boosted
-// half-scale at 540p.
+// The opt-in 1080p scale-to-fit policy (ui/reference_fit.h). ui_reference_fit(height) gives the numbers the core
+// computes in ui_apply_scale_preset: identity at the 1080p reference, and half scale with the PAL text boost at
+// 540p.
 
 UTEST(reference_fit, reproduces_reference_and_pal_numbers) {
     UiScalePair ref = ui_reference_fit(1080);
     EXPECT_EQ(ref.ui_scale, 1.0f);
     EXPECT_EQ(ref.text_scale, 1.0f);
 
-    // At 540p: half UI scale, with the SD/PAL text boost (1.10) folded in: 0.5 * 1.10 = 0.55.
+    // At 540p: half UI scale, and text at 0.5 * 1.10 = 0.55 with the SD/PAL text boost (1.10).
     UiScalePair pal = ui_reference_fit(540);
     EXPECT_EQ(pal.ui_scale, 0.5f);
     EXPECT_EQ(pal.text_scale, 0.55f);
 
-    // The helper is the core's preset computation, repackaged into the pair.
+    // The helper returns the core's preset computation as a pair.
     float ui_scale, text_factor, text_scale;
     ui_apply_scale_preset(&ui_scale, &text_factor, &text_scale, 540);
     EXPECT_EQ(pal.ui_scale, ui_scale);
     EXPECT_EQ(pal.text_scale, text_scale);
 }
 
-// color_oklch: the perceptual color module (ui/color_oklch.c). Pure value math, no renderer: sRGB<->OKLab
-// <->OKLCH conversions, out-of-gamut clamping, perceptual lighten/darken/desaturate, and the luminance-based
-// readable-foreground pick.
+// The perceptual color module (ui/color_oklch.c), which needs no renderer: sRGB <-> OKLab <-> OKLCH conversions,
+// out-of-gamut clamping, perceptual lighten, darken and desaturate, and the luminance-based choice of a readable
+// foreground.
 
-// Reference OKLab/OKLCH values for the sRGB primaries, from the CSS Color 4 / Ottosson reference.
+// Reference OKLab and OKLCH values for the sRGB primaries, from CSS Color 4 and Ottosson's reference.
 UTEST(color_oklch, known_values_primaries) {
     FlColorOKLab white = color_rgb_to_oklab((FlColor) { 255, 255, 255, 255 });
     EXPECT_NEAR(white.L, 1.0f, 0.005f);
@@ -518,7 +518,7 @@ UTEST(color_oklch, roundtrip_srgb) {
     }
 }
 
-// Chroma far past the sRGB gamut must come back clamped, not wrapped.
+// Chroma far past the sRGB gamut comes back clamped and does not wrap.
 UTEST(color_oklch, out_of_gamut_clamped) {
     FlColorOKLCH wild = { .l = 0.7f, .c = 0.5f, .h = 29.0f }; // c=0.5 is well outside sRGB for this L/h
     FlColor rgb = color_oklch_to_rgb(wild);
@@ -551,12 +551,12 @@ UTEST(color_oklch, lerp_oklab_endpoints_and_alpha) {
     EXPECT_NEAR(color_perceptual_lightness(color_lerp_oklab(a, b, 0.0f)), color_perceptual_lightness(a), 0.01f);
     EXPECT_NEAR(color_perceptual_lightness(color_lerp_oklab(a, b, 1.0f)), color_perceptual_lightness(b), 0.01f);
 
-    // Midpoint lightness lies strictly between the endpoints (monotone in OKLab L).
+    // The midpoint's lightness is strictly between the endpoints', since OKLab L is monotone.
     f32 lm = color_perceptual_lightness(color_lerp_oklab(a, b, 0.5f));
     EXPECT_GT(lm, color_perceptual_lightness(a));
     EXPECT_LT(lm, color_perceptual_lightness(b));
 
-    // Alpha is interpolated linearly in sRGB, independent of the OKLab path.
+    // Alpha is interpolated linearly in sRGB, independently of the OKLab path.
     FlColor opaque = { 0, 0, 0, 0 };
     FlColor solid = { 0, 0, 0, 255 };
     EXPECT_EQ((int)color_lerp_oklab(opaque, solid, 0.0f).a, 0);
@@ -583,12 +583,12 @@ UTEST(color_oklch, readable_foreground_picks_by_lightness) {
     EXPECT_EQ((int)color_readable_foreground((FlColor) { 255, 255, 255, 255 }, light, dark).r, (int)dark.r);
     EXPECT_EQ((int)color_readable_foreground((FlColor) { 0, 0, 0, 255 }, light, dark).r, (int)light.r);
 
-    // Saturated cases: bright yellow reads dark; deep blue reads light.
+    // Saturated cases: bright yellow gets a dark foreground and deep blue a light one.
     EXPECT_EQ((int)color_readable_foreground((FlColor) { 255, 220, 0, 255 }, light, dark).r, (int)dark.r);
     EXPECT_EQ((int)color_readable_foreground((FlColor) { 20, 20, 140, 255 }, light, dark).r, (int)light.r);
 }
 
-// vector_image: the GPU SVG vector core, all headless / no GL.
+// The GPU SVG vector core, tested headless with no GL.
 
 static const char k_svg_mono[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"80\">"
                                  "<rect x=\"10\" y=\"10\" width=\"30\" height=\"30\" fill=\"#ff8000\"/>"
@@ -624,7 +624,7 @@ static const char k_svg_evenodd[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" w
                                     "<rect x=\"10\" y=\"10\" width=\"30\" height=\"30\" fill=\"#112233\" "
                                     "fill-rule=\"evenodd\"/></svg>";
 
-// Edge cases that must reject cleanly (no crash) on the GPU vector path.
+// Inputs the GPU vector path rejects.
 static const char k_svg_nofill[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\">"
                                    "<rect x=\"10\" y=\"10\" width=\"30\" height=\"30\" fill=\"none\"/></svg>";
 
@@ -682,7 +682,7 @@ UTEST(vector_image, reject_mixed_per_image_granularity) {
 }
 
 UTEST(vector_image, reject_zero_solid_shape) {
-    // fill="none" with no stroke contributes nothing: no solid fill, so the image is rejected.
+    // fill="none" with no stroke contributes no solid fill, so the image is rejected.
     FlVectorImage img = { 0 };
     ASSERT_FALSE_MSG(vector_image_parse((const u8*)k_svg_nofill, sizeof(k_svg_nofill) - 1, s_arena, &img),
                      "an SVG with no visible solid fill is rejected");
@@ -706,7 +706,8 @@ UTEST(vector_image, reject_garbage) {
 }
 
 UTEST(vector_image, sw_path_decodes_what_gpu_rejects) {
-    // A gradient SVG the GPU vector path rejects still decodes to RGBA via the shared CPU path (decode_svg).
+    // A gradient SVG that the GPU vector path rejects still decodes to RGBA through the shared CPU path
+    // (decode_svg).
     ImageDecodeOptions opts = { 0 };
     FlImageDecodeResult* result = image_decode(s_arena, k_svg_gradient, sizeof(k_svg_gradient) - 1, &opts);
     ASSERT_TRUE_MSG(result != nullptr, "SW decode_svg still rasterizes a gradient SVG");
@@ -723,8 +724,8 @@ UTEST(vector_image, parse_evenodd_fill_rule) {
 }
 
 UTEST(vector_image, lower_segments_known_geometry) {
-    // The vector path reuses the shared glyph lowering. A line lowers to one quadratic whose control is the
-    // segment midpoint, in padded-cell-local y-down coordinates: cell = (p.x - origin_x, origin_y - p.y).
+    // The vector path reuses the shared glyph lowering. A line lowers to one quadratic whose control point is the
+    // segment midpoint, in y-down coordinates local to the padded cell: cell = (p.x - origin_x, origin_y - p.y).
     FlGlyphSegment line = { .kind = FlGlyphSegment_Line, .pts = { { 2.0f, 3.0f }, { 5.0f, 9.0f } } };
     f32 out[GPU_GLYPH_LOWER_MAX_QUADS_PER_SEGMENT * 6];
     u32 quads = gpu_glyph_lower_segments(&line, 1, 1.0f, 10.0f, out);
@@ -735,9 +736,9 @@ UTEST(vector_image, lower_segments_known_geometry) {
 }
 
 UTEST(vector_image, lower_cubic_known_geometry) {
-    // A cubic with collinear, evenly-spaced control points is a degree-elevated straight line on y=0. The
-    // shared lowering halves it into four quadratics; with all input y at 0 every emitted point stays on
-    // y=0 (after the cell y-flip origin_y - p.y = 0), and the chain spans x = 0..3 end to end.
+    // A cubic with collinear, evenly spaced control points is a degree-elevated straight line on y=0. The shared
+    // lowering splits it into four quadratics. All input y are 0, so every emitted point stays on y=0 after the
+    // cell y-flip (origin_y - p.y = 0), and the chain spans x = 0..3.
     FlGlyphSegment cubic = {
         .kind = FlGlyphSegment_Cubic,
         .pts = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 2.0f, 0.0f }, { 3.0f, 0.0f } },
@@ -762,8 +763,8 @@ UTEST(vector_image, lower_parsed_shape) {
     ASSERT_TRUE_MSG(quads >= shape->segment_count, "every contour segment lowers to at least one quadratic");
 }
 
-// Color lowering: each shape lowers independently into a contiguous quad range, in document order, with its
-// solid fill + opacity baked into one premultiplied RGBA8 word.
+// Color lowering: each shape lowers independently into a contiguous quad range, in document order, with its solid
+// fill and opacity combined into one premultiplied RGBA8 word.
 UTEST(vector_image, color_lower_grouping_and_bake) {
     FlVectorImage img = { 0 };
     ASSERT_TRUE_MSG(vector_image_parse((const u8*)k_svg_color_opacity, sizeof(k_svg_color_opacity) - 1, s_arena, &img),
@@ -782,7 +783,7 @@ UTEST(vector_image, color_lower_grouping_and_bake) {
 
     ASSERT_EQ_MSG((int)shape_count, 2, "the shape count mirrors the document's shape count");
 
-    // Quad ranges are contiguous and cover every lowered quad - the shader walks [quad_start, +quad_count).
+    // The quad ranges are contiguous and cover every lowered quad. The shader walks [quad_start, +quad_count).
     ASSERT_EQ_MSG((int)shapes[0].quad_start, 0, "the first shape starts at quad 0");
     ASSERT_EQ_MSG((int)shapes[1].quad_start, (int)shapes[0].quad_count,
                   "the second shape starts where the first ends (contiguous, no gap)");
@@ -795,7 +796,7 @@ UTEST(vector_image, color_lower_grouping_and_bake) {
     ASSERT_EQ_MSG((int)shapes[0].fill_rule, 0, "shape 0 fill rule is nonzero");
     ASSERT_EQ_MSG((int)shapes[1].fill_rule, 0, "shape 1 fill rule is nonzero");
 
-    // The color is premultiplied RGBA8 with R in the low byte; opacity is baked into both the alpha and the
+    // The color is premultiplied RGBA8 with R in the low byte. Opacity is applied to the alpha and to the
     // premultiplied channels.
     ASSERT_EQ_MSG((int)(shapes[0].color & 0xff), 255, "shape 0 (red) premultiplied R = 255");
     ASSERT_EQ_MSG((int)((shapes[0].color >> 16) & 0xff), 0, "shape 0 (red) premultiplied B = 0");
@@ -805,7 +806,7 @@ UTEST(vector_image, color_lower_grouping_and_bake) {
     ASSERT_EQ_MSG((int)((shapes[1].color >> 24) & 0xff), 128, "shape 1 (blue) alpha = 128 (opacity 0.5)");
 }
 
-// Even-odd fill rule passes through the lowering verbatim; the shader folds it per shape.
+// The even-odd fill rule passes through the lowering unchanged, and the shader applies it per shape.
 UTEST(vector_image, color_lower_evenodd_passthrough) {
     FlVectorImage img = { 0 };
     ASSERT_TRUE_MSG(vector_image_parse((const u8*)k_svg_evenodd, sizeof(k_svg_evenodd) - 1, s_arena, &img),
@@ -858,13 +859,13 @@ UTEST(vector_image, atlas_one_live_cell_per_handle) {
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, h) == b, "the first handle is unaffected by the second");
 }
 
-// The backend-agnostic prepare core: the glyph cell extent, the SVG uniform fit, the mono contour scaling, and the
-// compaction-retry the GL and Metal prepare seams both drive. Headless CPU is the only cross-platform coverage
-// this math gets - gpu_resource_prepare.c (the GL half) is not compiled at all on macOS.
+// The backend-independent prepare core: the glyph cell extent, the SVG uniform fit, the mono contour scaling and
+// the compaction retry that both the GL and Metal prepare paths use. These headless CPU cases are the only
+// coverage this math gets on every platform, since gpu_resource_prepare.c (the GL half) is not compiled on macOS.
 
 UTEST(gpu_prepare_core, glyph_cell_rounds_control_box_out_plus_pad) {
-    // Control box x [1.25, 6.5], y [-2.1, 9.75] rounds out to x [1, 7] and y [-3, 10]: a 6 x 13 texel box, plus
-    // the padding ring on every side.
+    // A control box of x [1.25, 6.5], y [-2.1, 9.75] rounds out to x [1, 7] and y [-3, 10], a 6 x 13 texel box,
+    // plus the padding ring on every side.
     FlGlyphSegment seg = { .kind = FlGlyphSegment_Line, .pts = { { 2.0f, 0.0f }, { 5.0f, 8.0f } } };
     FlGlyphOutline outline = {
         .segments = &seg,
@@ -880,31 +881,31 @@ UTEST(gpu_prepare_core, glyph_cell_rounds_control_box_out_plus_pad) {
     ASSERT_FALSE_MSG(cell.empty, "a glyph with contours and a real control box earns a cell");
     ASSERT_EQ_MSG((int)cell.pw, 6 + 2 * GPU_GLYPH_ATLAS_PAD, "width = ceil(6.5) - floor(1.25), plus the ring");
     ASSERT_EQ_MSG((int)cell.ph, 13 + 2 * GPU_GLYPH_ATLAS_PAD, "height = ceil(9.75) - floor(-2.1), plus the ring");
-    // The cell origin is its top-left corner in outline space. Flooring the origin - rather than translating min
-    // to 0 - is what keeps the autohinter's subpixel stem positions.
+    // The cell origin is its top-left corner in outline space. The origin is floored, and min is not translated
+    // to 0, which keeps the autohinter's subpixel stem positions.
     ASSERT_TRUE_MSG(cell.left == 1.0f - (f32)GPU_GLYPH_ATLAS_PAD, "left = floor(min_x) - pad");
     ASSERT_TRUE_MSG(cell.top == 10.0f + (f32)GPU_GLYPH_ATLAS_PAD, "top = ceil(max_y) + pad");
 }
 
 UTEST(gpu_prepare_core, glyph_cell_empty_glyph_is_metrics_only) {
-    // A space: no contours, zeroed box. The advance is real, so the caller still places a metrics-only entry -
-    // but there is no cell and no raster dispatch.
+    // A space has no contours and a zeroed box. Its advance is real, so the caller still places a metrics-only
+    // entry, but there is no cell and no raster dispatch.
     FlGlyphOutline space = { .advance = 4.0f };
     GpuGlyphCell cell = gpu_prepare_glyph_cell(&space);
     ASSERT_TRUE_MSG(cell.empty, "an outline with no segments is empty");
     ASSERT_EQ_MSG((int)cell.pw, 0, "an empty glyph carries no cell width");
     ASSERT_EQ_MSG((int)cell.ph, 0, "an empty glyph carries no cell height");
 
-    // A glyph that HAS contours but whose control box rounds out to nothing is empty too: a zero-texel cell
-    // would otherwise dispatch a zero-sized raster.
+    // A glyph that has contours but whose control box rounds out to nothing is empty too. A zero-texel cell would
+    // dispatch a zero-sized raster.
     FlGlyphSegment seg = { .kind = FlGlyphSegment_Line, .pts = { { 0.0f, 0.0f }, { 0.0f, 0.0f } } };
     FlGlyphOutline degenerate = { .segments = &seg, .segment_count = 1 };
     ASSERT_TRUE_MSG(gpu_prepare_glyph_cell(&degenerate).empty, "a zero-extent control box is empty");
 }
 
 UTEST(gpu_prepare_core, svg_fit_lands_the_larger_document_side_on_the_raster_size) {
-    // A 100x80 document at raster size 32: the LARGER side (100) lands on 32, so scale = 0.32 and the content is
-    // 32 x ceil(80 * 0.32) = 32 x 26. Aspect is preserved - the fit is uniform, never per-axis.
+    // A 100x80 document at raster size 32: the larger side (100) maps to 32, so scale = 0.32 and the content is
+    // 32 x ceil(80 * 0.32) = 32 x 26. The fit is uniform, so the aspect ratio is kept.
     FlVectorImage img = { 0 };
     ASSERT_TRUE_MSG(vector_image_parse((const u8*)k_svg_mono, sizeof(k_svg_mono) - 1, s_arena, &img), "parses");
     ASSERT_TRUE_MSG(img.width == 100.0f && img.height == 80.0f, "the document extent is 100x80");
@@ -915,13 +916,13 @@ UTEST(gpu_prepare_core, svg_fit_lands_the_larger_document_side_on_the_raster_siz
     ASSERT_EQ_MSG((int)fit.pw, 32 + 2 * GPU_SVG_ATLAS_PAD, "content width = the raster size, plus the ring");
     ASSERT_EQ_MSG((int)fit.ph, 26 + 2 * GPU_SVG_ATLAS_PAD, "content height = ceil(80 * 0.32) = 26, plus the ring");
 
-    // A document with no extent has nothing to place - the fit rejects it rather than dividing by zero.
+    // A document with no extent has nothing to place, and the fit rejects it before dividing by zero.
     FlVectorImage no_extent = img;
     no_extent.width = 0.0f;
     no_extent.height = 0.0f;
     ASSERT_FALSE_MSG(gpu_prepare_svg_fit(&no_extent, 32, &fit), "a zero-extent document does not fit");
 
-    // A document with extent on one axis only fits to an empty cell - also rejected, since a zero-texel cell
+    // A document with extent on one axis only fits to an empty cell and is also rejected, since a zero-texel cell
     // would dispatch a zero-sized raster.
     FlVectorImage no_width = img;
     no_width.width = 0.0f;
@@ -987,7 +988,7 @@ UTEST(gpu_prepare_core, svg_cell_geometry_lowers_mono_contours_into_the_padded_c
     ASSERT_EQ_MSG((int)img.classification, (int)FlVectorClass_Monochrome, "one shared fill -> monochrome");
 
     // Raster at the document's larger side, so the fit is 1:1 and the lowered coordinates are the document's own
-    // (modulo the y flip into the cell) - the padding ring is then the only offset in play.
+    // apart from the y flip into the cell. The padding ring is then the only offset.
     GpuSvgCellFit fit = { 0 };
     ASSERT_TRUE_MSG(gpu_prepare_svg_fit(&img, 100, &fit), "fits at 1:1");
     ASSERT_TRUE_MSG(fit.scale == 1.0f, "a raster size equal to the larger document side is a 1:1 fit");
@@ -1010,10 +1011,10 @@ UTEST(gpu_prepare_core, svg_cell_geometry_lowers_mono_contours_into_the_padded_c
     ASSERT_TRUE_MSG(geom.quad_count >= total_segments,
                     "the soup carries every shape's contours — each segment lowers to at least one quadratic");
 
-    // Two flips compose here: vector_image_parse turns y-down SVG into the y-up document space the shared
-    // lowering wants (y_up = height - y_svg), and the lowering turns it back into the y-down cell
-    // (cell_y = content_h + PAD - y_up). At 1:1 they cancel exactly, so cell_y = y_svg + PAD - and cell_x is
-    // x_svg + PAD, since x is never flipped. k_svg_mono's two rects span SVG x [10, 70] and y [10, 60].
+    // Two flips are involved. vector_image_parse turns y-down SVG into the y-up document space the shared
+    // lowering expects (y_up = height - y_svg), and the lowering turns it back into the y-down cell
+    // (cell_y = content_h + PAD - y_up). At 1:1 they cancel, so cell_y = y_svg + PAD, and cell_x is x_svg + PAD
+    // since x is never flipped. k_svg_mono's two rects span SVG x [10, 70] and y [10, 60].
     PreparedExtent ext = lowered_extent(&geom);
     const f32 pad = (f32)GPU_SVG_ATLAS_PAD;
     ASSERT_TRUE_MSG(ext.min_x == 10.0f + pad, "the leftmost contour is SVG x=10, offset by the ring");
@@ -1050,8 +1051,8 @@ UTEST(gpu_prepare_core, svg_cell_geometry_scales_mono_contours_by_the_fit) {
 }
 
 UTEST(gpu_prepare_core, svg_cell_geometry_keeps_shapes_distinct_on_the_color_path) {
-    // The color path's shapes must stay separable - the shader composites them in document order - where the mono
-    // path deliberately loses that distinction.
+    // The color path keeps its shapes separate, because the shader composites them in document order. The mono
+    // path merges them.
     FlVectorImage img = { 0 };
     ASSERT_TRUE_MSG(vector_image_parse((const u8*)k_svg_multi, sizeof(k_svg_multi) - 1, s_arena, &img), "parses");
     ASSERT_EQ_MSG((int)img.classification, (int)FlVectorClass_MultiColor, "distinct fills -> multi-color");
@@ -1074,8 +1075,8 @@ UTEST(gpu_prepare_core, svg_cell_geometry_keeps_shapes_distinct_on_the_color_pat
                   "the per-shape ranges cover exactly the lowered quads");
 }
 
-// The prepare core reaches back into the backend only through a GpuRasterCellFn - the one genuinely GL-or-Metal
-// step. A counting stub stands in for that dispatch.
+// The prepare core calls back into the backend only through a GpuRasterCellFn, the one step that differs between
+// GL and Metal. A counting stub stands in for it.
 typedef struct FakeRasterBackend {
     u32 raster_calls;
 } FakeRasterBackend;
@@ -1107,7 +1108,7 @@ UTEST(gpu_prepare_core, vector_into_rasters_once_per_size_step) {
     ASSERT_EQ_MSG((int)fake.raster_calls, 2, "a size step rasters into a fresh cell");
     ASSERT_EQ_MSG((int)compact_count, 0, "a roomy atlas never compacts");
 
-    // A document with no extent is dropped before it ever reaches the atlas.
+    // A document with no extent is dropped before it reaches the atlas.
     FlVectorImage no_extent = img;
     no_extent.width = 0.0f;
     no_extent.height = 0.0f;
@@ -1117,9 +1118,10 @@ UTEST(gpu_prepare_core, vector_into_rasters_once_per_size_step) {
 }
 
 UTEST(gpu_prepare_core, vector_into_compacts_and_re_rasters_survivors_when_the_atlas_fills) {
-    // Zoom one handle up the size ladder. Each step orphans the prior cell (the packer is append-only), so the
-    // atlas eventually refuses a placement. The core then compacts wholesale, re-rasters every survivor from its
-    // retained geometry - the texels still sit at their pre-compaction positions - and retries the placement once.
+    // Move one handle up the size ladder. Each step orphans the previous cell, because the packer only appends,
+    // so the atlas eventually refuses a placement. The core then compacts the whole atlas, rasters every survivor
+    // again from its retained geometry (the texels are still at their old positions) and retries the placement
+    // once.
     FlVectorImage img = { 0 };
     ASSERT_TRUE_MSG(vector_image_parse((const u8*)k_svg_mono, sizeof(k_svg_mono) - 1, s_arena, &img), "parses");
 
@@ -1141,8 +1143,8 @@ UTEST(gpu_prepare_core, vector_into_compacts_and_re_rasters_survivors_when_the_a
                     "the compacting step rastered the surviving cell on top of the newly placed one");
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 1) != nullptr, "the retry placed the icon after the compaction");
 
-    // The entry table collapsed from steps cells to the one survivor, and the retried placement then appended
-    // the new cell, orphaning that survivor in turn - one live cell per handle.
+    // The entry table went from steps cells to the one survivor. The retried placement then appended the new
+    // cell and orphaned that survivor, so there is one live cell per handle.
     u32 live = 0;
     for (u32 i = 0; i < atlas.entry_count; i++) {
         live += atlas.entries[i].live ? 1u : 0u;
@@ -1152,8 +1154,8 @@ UTEST(gpu_prepare_core, vector_into_compacts_and_re_rasters_survivors_when_the_a
 }
 
 UTEST(gpu_prepare_core, vector_into_drops_an_icon_too_big_for_even_a_fresh_atlas) {
-    // The other side of the compaction retry: an icon whose cell cannot fit the atlas at ANY packing still fails
-    // the retried placement. It must be dropped - not rastered against a nullptr entry, and not retried forever.
+    // An icon whose cell cannot fit the atlas at any packing still fails the retried placement. It is dropped: it
+    // is not rastered against a nullptr entry and not retried again.
     FlVectorImage img = { 0 };
     ASSERT_TRUE_MSG(vector_image_parse((const u8*)k_svg_mono, sizeof(k_svg_mono) - 1, s_arena, &img), "parses");
 
@@ -1163,7 +1165,7 @@ UTEST(gpu_prepare_core, vector_into_drops_an_icon_too_big_for_even_a_fresh_atlas
     u32 compact_count = 0;
 
     // The document's larger side is 100, so a raster size past the atlas extent gives a cell wider than the whole
-    // 4096-texel atlas - unplaceable even against a freshly compacted one.
+    // 4096-texel atlas, which cannot be placed even after compaction.
     const u16 oversized = GPU_SVG_ATLAS_SIZE_MONO + 1000;
     GpuSvgCellFit fit = { 0 };
     ASSERT_TRUE_MSG(gpu_prepare_svg_fit(&img, oversized, &fit),
@@ -1177,9 +1179,9 @@ UTEST(gpu_prepare_core, vector_into_drops_an_icon_too_big_for_even_a_fresh_atlas
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 1) == nullptr, "and the icon is dropped, not left half-placed");
 }
 
-// An overflow part-way through a frame's prepare pass must not wipe the atlas inline - glyphs already
-// placed this frame have to keep resolving so they don't blank at draw. Overflow flags a deferred wipe that
-// the backend honors at the end of render(); the next frame then repacks from a fresh atlas.
+// An overflow partway through a frame's prepare pass does not wipe the atlas at once. Glyphs already placed this
+// frame have to keep resolving, or they would be blank at draw. Overflow sets a deferred wipe that the backend
+// carries out at the end of render(), and the next frame repacks into an empty atlas.
 UTEST(gpu_glyph_atlas, earlier_glyph_survives_same_frame_overflow) {
     GpuGlyphAtlas atlas = { 0 };
     gpu_glyph_atlas_init(&atlas, s_arena);
@@ -1195,7 +1197,7 @@ UTEST(gpu_glyph_atlas, earlier_glyph_survives_same_frame_overflow) {
     for (u32 i = 0; i < GPU_GLYPH_ATLAS_MAX_ENTRIES && !overflowed; i++) {
         const GpuGlyphEntry* e = gpu_glyph_atlas_place(&atlas, font, size, 1000 + i, 256, 256, 0.0f, 0.0f, 0.0f);
         if (e == nullptr) {
-            gpu_glyph_atlas_on_overflow(&atlas); // the production overflow response prepare_glyph runs
+            gpu_glyph_atlas_on_overflow(&atlas); // what prepare_glyph does on overflow
             overflowed = true;
         }
     }
@@ -1205,13 +1207,13 @@ UTEST(gpu_glyph_atlas, earlier_glyph_survives_same_frame_overflow) {
     ASSERT_TRUE_MSG(gpu_glyph_atlas_find(&atlas, font, size, 'A') != nullptr,
                     "the early glyph survives a same-frame overflow");
 
-    // End of render(): honor the deferred wipe.
+    // End of render(): carry out the deferred wipe.
     gpu_glyph_atlas_wipe_if_needed(&atlas, s_arena);
     ASSERT_FALSE_MSG(atlas.needs_wipe, "honoring the wipe clears the flag");
     ASSERT_TRUE_MSG(gpu_glyph_atlas_find(&atlas, font, size, 'A') == nullptr,
                     "after the frame-boundary wipe the atlas is empty");
 
-    // A frame with no overflow flags nothing: the honor call is then a no-op and must not wipe a populated atlas.
+    // A frame with no overflow sets nothing, so the call does nothing and a populated atlas is kept.
     const GpuGlyphEntry* fresh = gpu_glyph_atlas_place(&atlas, font, size, 'B', 8, 8, 0.0f, 0.0f, 8.0f);
     ASSERT_TRUE_MSG(fresh != nullptr, "a glyph places into the wiped atlas");
     ASSERT_FALSE_MSG(atlas.needs_wipe, "a normal placement does not flag a wipe");
@@ -1220,10 +1222,10 @@ UTEST(gpu_glyph_atlas, earlier_glyph_survives_same_frame_overflow) {
                     "an unflagged honor call is a no-op and keeps the live set intact");
 }
 
-// gpu_orchestrator: the backend-agnostic per-frame sequence + the shared text-glyph walk, exercised on CPU
-// through a fake GpuRenderOps that records the op call order and every prepare_glyph invocation. This is the only
-// coverage the shared orchestrator gets on the GL/Linux build (its render path never runs in CI); on Metal the
-// end-to-end gpu_smoke_test drives the same code.
+// The backend-independent per-frame sequence and the shared text-glyph walk, run on the CPU through a fake
+// GpuRenderOps that records the order of the op calls and every prepare_glyph call. This is the only coverage the
+// shared orchestrator gets in the GL/Linux build, whose render path never runs in CI. On Metal the end-to-end
+// gpu_smoke_test runs the same code.
 
 typedef enum {
     ORCH_FRAME_BEGIN = 1,
@@ -1237,8 +1239,8 @@ typedef enum {
 } OrchOpId;
 
 typedef struct OrchProbe {
-    struct FlFontCache* font_cache; // handed back by get_font_cache (nullptr exercises the walk short-circuit)
-    GpuDrawList translate_result;   // what translate returns (its .count must reach classify as cmd_count)
+    struct FlFontCache* font_cache; // returned by get_font_cache. With nullptr the walk returns early
+    GpuDrawList translate_result;   // what translate returns. Its .count reaches classify as cmd_count
 
     OrchOpId ops_seen[16];
     u32 op_count;
@@ -1355,7 +1357,7 @@ UTEST(gpu_orchestrator, canonical_sequence_and_null_font_cache_short_circuit) {
     FlArena* frame_arena = arena_new();
 
     OrchProbe probe = { 0 };
-    probe.font_cache = nullptr; // no cache -> the walk must not realize any glyph
+    probe.font_cache = nullptr; // with no cache the walk realizes no glyph
     probe.translate_result = (GpuDrawList) { .count = 7, .clip_count = 1 };
 
     u8 buf[256];
@@ -1424,24 +1426,24 @@ UTEST(vector_image, svg_quantize_ladder) {
     }
 }
 
-// Per-class ceiling: the same ladder, but a multi-color icon caps at 1024 (the RGBA8 atlas is 2048^2) while a
-// monochrome icon caps at 2048 (the R8 atlas is 4096^2).
+// The per-class ceiling on the same ladder: a multi-color icon stops at 1024 (the RGBA8 atlas is 2048^2) and a
+// monochrome icon at 2048 (the R8 atlas is 4096^2).
 UTEST(vector_image, svg_quantize_per_class_clamp) {
     const FlVectorClass mono = FlVectorClass_Monochrome;
     const FlVectorClass color = FlVectorClass_MultiColor;
 
-    // Below both caps the class makes no difference - the ladder is shared.
+    // Below both caps the class makes no difference, since the ladder is shared.
     ASSERT_EQ_MSG((int)svg_quantize_size(500, mono), (int)svg_quantize_size(500, color),
                   "below either cap the class does not change the step");
     ASSERT_EQ_MSG((int)svg_quantize_size(1024, mono), 1024, "1024 is an exact step for both classes");
     ASSERT_EQ_MSG((int)svg_quantize_size(1024, color), 1024, "1024 is the color cap, still an exact step");
 
-    // Just past the color cap: a color icon clamps to 1024, a mono icon climbs to the next step (1536).
+    // Just past the color cap, a color icon clamps to 1024 and a mono icon moves to the next step (1536).
     ASSERT_EQ_MSG((int)svg_quantize_size(1025, color), 1024, "past the color cap clamps to 1024");
     ASSERT_EQ_MSG((int)svg_quantize_size(1025, mono), 1536, "a mono icon keeps climbing past 1024");
     ASSERT_EQ_MSG((int)svg_quantize_size(1536, mono), 1536, "1536 is a mono-only step");
 
-    // Mono cap boundary: 2048 is the top, anything above clamps there; color stays pinned at 1024.
+    // 2048 is the top for mono and anything above clamps there. Color stays at 1024.
     ASSERT_EQ_MSG((int)svg_quantize_size(2048, mono), 2048, "2048 is the mono cap, an exact step");
     ASSERT_EQ_MSG((int)svg_quantize_size(2049, mono), 2048, "past the mono cap clamps to 2048");
     ASSERT_EQ_MSG((int)svg_quantize_size(9999, color), 1024, "a color icon never exceeds its 1024 cap");
@@ -1452,9 +1454,9 @@ UTEST(vector_image, svg_quantize_per_class_clamp) {
                   "mono clamp is idempotent at the cap");
 }
 
-// The builder-side bridge: a continuously-zooming host quantizes its physical dst size onto the ladder to key
-// the prepare seam, then draws the cell at the exact dst. Crispness comes from quantizing the UNIFORM (larger)
-// side; a non-uniform stretch rides linear sampling and must never bump the raster size on the short axis.
+// A host that zooms continuously quantizes its physical dst size onto the ladder to key the prepare call, then
+// draws the cell at the exact dst. The larger, uniform side is the one quantized. A non-uniform stretch relies on
+// linear sampling and does not raise the raster size for the short axis.
 UTEST(vector_image, raster_size_for_dst) {
     const FlVectorClass mono = FlVectorClass_Monochrome;
     ASSERT_EQ_MSG((int)svg_raster_size_for_dst(40.0f, 30.0f, mono), 48,
@@ -1466,27 +1468,27 @@ UTEST(vector_image, raster_size_for_dst) {
                   "a fractional size ceils before quantizing (33 -> 48)");
     ASSERT_EQ_MSG((int)svg_raster_size_for_dst(0.0f, 0.0f, mono), 12, "a degenerate dst snaps to the smallest step");
 
-    // A non-uniform stretch: 96x40 and 96x90 quantize to the SAME raster size, so the short axis re-uses one
-    // cell - the per-axis softness is sampled, not re-rastered.
+    // A non-uniform stretch: 96x40 and 96x90 quantize to the same raster size, so both use one cell and the
+    // short axis is sampled, with no new raster.
     ASSERT_EQ_MSG((int)svg_raster_size_for_dst(96.0f, 40.0f, mono), (int)svg_raster_size_for_dst(96.0f, 90.0f, mono),
                   "the short axis does not change the raster size — non-uniform stretch samples one cell");
 
-    // The size is continuous across the host's zoom while the raster size jumps only at ladder steps: sweeping
-    // the uniform size from 17..24 stays on step 24 (no re-key), and 24->25 is the only crossing into 32.
+    // The size is continuous across the host's zoom while the raster size changes only at ladder steps. A sweep
+    // of the uniform size over 17..24 stays on step 24, and 24 -> 25 is the only crossing into 32.
     for (f32 s = 17.0f; s <= 24.0f; s += 1.0f) {
         ASSERT_EQ_MSG((int)svg_raster_size_for_dst(s, s, mono), 24, "within a step, the raster size is constant");
     }
     ASSERT_EQ_MSG((int)svg_raster_size_for_dst(25.0f, 25.0f, mono), 32, "crossing a step boundary keys the next size");
 
-    // A mono dst beyond 512 keeps sharpening: 800px keys step 1024.
+    // A mono dst beyond 512 keeps getting sharper: 800px keys step 1024.
     ASSERT_EQ_MSG((int)svg_raster_size_for_dst(800.0f, 600.0f, mono), 1024,
                   "a >512px mono dst keys a larger-than-512 step (no longer capped at 512)");
     ASSERT_EQ_MSG((int)svg_raster_size_for_dst(1600.0f, 1200.0f, mono), 2048,
                   "a very large mono dst climbs to the 2048 mono cap");
 }
 
-// The format only records what the GL layer will store; the CPU bookkeeping never branches on it, so an RGBA8
-// atlas places / resolves / orphans / re-keys identically to the R8 one.
+// The format records only what the GL layer will store. The CPU bookkeeping never branches on it, so an RGBA8
+// atlas places, resolves, orphans and re-keys exactly as the R8 one does.
 UTEST(vector_image, atlas_format_agnostic) {
     GpuSvgAtlas r8 = { 0 };
     GpuSvgAtlas rgba = { 0 };
@@ -1514,13 +1516,13 @@ UTEST(vector_image, atlas_format_agnostic) {
     ASSERT_EQ_MSG((int)r8.entry_count, (int)rgba.entry_count, "identical entry counts after the same sequence");
 }
 
-// Compaction safety valve: the skyline packer is append-only, so re-keying a handle onto new size steps leaks
-// its prior cells as orphans until a placement fails. gpu_svg_atlas_compact repacks only the live cells into a
-// fresh atlas, dropping every orphan and retaining each live handle at its current size and geometry. The
-// bookkeeping moves cells, never texels, so R8 and RGBA8 compact to the identical live set.
+// Compaction. The skyline packer only appends, so re-keying a handle onto new size steps leaves its earlier cells
+// as orphans until a placement fails. gpu_svg_atlas_compact repacks only the live cells into an empty atlas,
+// which drops every orphan and keeps each live handle at its current size and geometry. The bookkeeping moves
+// cells and never texels, so R8 and RGBA8 compact to the same live set.
 
 typedef struct CompactObs {
-    bool overflowed;     // a placement failed (the append-only atlas filled)
+    bool overflowed;     // a placement failed because the atlas filled
     u32 orphans_before;  // orphaned cells present at overflow
     u32 count_before;    // entry count at overflow (live handles + orphans)
     u32 count_after;     // entry count after compaction (the live set)
@@ -1539,10 +1541,11 @@ static CompactObs run_compaction_sequence(GpuSvgAtlas* atlas, const FlVectorImag
     const FlImageHandle A = 1, B = 2;
     CompactObs obs = { 0 };
 
-    // A small sibling that must survive compaction at its current size.
+    // A small sibling that has to survive compaction at its current size.
     gpu_svg_atlas_place(atlas, B, 16, 16, 16, FlVectorClass_Monochrome, mono, geomB);
 
-    // Re-key A across distinct big sizes; each step orphans A's prior cell (several fit before the packer fills).
+    // Re-key A across distinct big sizes. Each step orphans A's previous cell, and several fit before the packer
+    // fills.
     for (u16 s = 1; s <= 256; s++) {
         const GpuSvgEntry* e = gpu_svg_atlas_place(atlas, A, s, 360, 360, FlVectorClass_Monochrome, mono, geomA);
         if (e == nullptr) {
@@ -1575,14 +1578,14 @@ static CompactObs run_compaction_sequence(GpuSvgAtlas* atlas, const FlVectorImag
     obs.b_size_after = lb != nullptr ? lb->size : 0;
     obs.geometry_kept = la != nullptr && lb != nullptr && la->vector == geomA && lb->vector == geomB;
 
-    // Space reclaimed: a fresh big placement the overflowed atlas refused now succeeds.
+    // Space was reclaimed: a big placement that the full atlas refused now succeeds.
     const GpuSvgEntry* refit = gpu_svg_atlas_place(atlas, 3, 7, 360, 360, FlVectorClass_Monochrome, mono, geomA);
     obs.refit = refit != nullptr;
     return obs;
 }
 
 UTEST(vector_image, atlas_compaction) {
-    FlVectorImage geomA = { 0 }, geomB = { 0 }; // distinct geometry sentinels; bookkeeping never dereferences them
+    FlVectorImage geomA = { 0 }, geomB = { 0 }; // distinct geometry sentinels that the bookkeeping never dereferences
 
     GpuSvgAtlas r8 = { 0 };
     gpu_svg_atlas_init(&r8, s_arena, GpuSvgTexel_R8);
@@ -1599,7 +1602,7 @@ UTEST(vector_image, atlas_compaction) {
     ASSERT_TRUE_MSG(r.geometry_kept, "compaction preserves each live cell's retained geometry pointer");
     ASSERT_TRUE_MSG(r.refit, "compaction reclaims orphaned space for a placement the full atlas refused");
 
-    // Format-agnostic: an RGBA8 atlas driven through the identical sequence compacts to the same live set.
+    // An RGBA8 atlas put through the same sequence compacts to the same live set.
     GpuSvgAtlas rgba = { 0 };
     gpu_svg_atlas_init(&rgba, s_arena, GpuSvgTexel_Rgba8);
     CompactObs g = run_compaction_sequence(&rgba, &geomA, &geomB);
@@ -1607,7 +1610,7 @@ UTEST(vector_image, atlas_compaction) {
                     "RGBA8 compaction behaves identically to R8 (format-blind bookkeeping)");
     ASSERT_EQ_MSG((int)g.count_after, (int)r.count_after, "RGBA8 compacts to the same live-cell count as R8");
     // The two atlases differ in extent (R8 4096^2, RGBA8 2048^2), so A reaches a different size before each
-    // overflows: EACH atlas retains A at its own last-placed size, not at a shared overflow point.
+    // overflows. Each atlas keeps A at its own last placed size.
     ASSERT_TRUE_MSG(g.a_resolved && g.a_size_after == g.a_last_placed,
                     "RGBA8 retains the re-keyed handle at its current size (its own overflow point)");
 }
@@ -1637,9 +1640,9 @@ UTEST(vector_image, translate_routing) {
     ASSERT_EQ_MSG((int)color.tint.a, 255, "white tint A");
 }
 
-// background: controller state machine and FlBackground snapshot (ui/background.{c,h}).
+// The background controller's state and the FlBackground snapshot (ui/background.{c,h}).
 
-// ImageHandle invalid is 0, so any nonzero value stands in for a real VFS handle.
+// The invalid ImageHandle is 0, so any nonzero value stands in for a real VFS handle.
 #define H_A ((ImageHandle)7)
 
 #define H_B ((ImageHandle)42)
@@ -1666,7 +1669,7 @@ UTEST(background, set_alpha_clear_color) {
     background_controller_set_clear_color(&c, 1, 2, 3);
     ASSERT_TRUE_MSG(c.state.clear_r == 1 && c.state.clear_g == 2 && c.state.clear_b == 3, "set_clear_color: updated");
 
-    // set(valid) unconditionally resets alpha to opaque.
+    // set(valid) always resets alpha to opaque.
     background_controller_set(&c, H_B);
     ASSERT_TRUE_MSG(c.state.current == H_B, "set(valid): current updated");
     ASSERT_TRUE_MSG(c.state.alpha == 255, "set(valid): alpha reset to opaque");
@@ -1678,8 +1681,8 @@ UTEST(background, set_alpha_clear_color) {
     ASSERT_TRUE_MSG(c.state.alpha == 255, "set(invalid): alpha reset to opaque");
 }
 
-// set_blend is stateless: it stores prev/current/t and nothing else. A plain set() drops the blend by
-// clearing prev - that is how an app-side crossfade "completes" (set(next)).
+// set_blend keeps no state beyond prev, current and t. A plain set() drops the blend by clearing prev, which is
+// how an app finishes a crossfade: set(next).
 UTEST(background, set_blend) {
     FlBackgroundController c;
     background_controller_init(&c);
@@ -1719,7 +1722,7 @@ UTEST(background, snapshot_handle_translation) {
     ASSERT_TRUE_MSG(snap.prev == FL_IMAGE_HANDLE_INVALID, "snapshot: prev invalid without a blend (single image)");
     ASSERT_TRUE_MSG(snap.alpha == 77, "snapshot: alpha value carried");
 
-    // A blend carries both handles; t reaches the backend normalized 0..1 (0 = full prev, 1 = full current).
+    // A blend carries both handles, and t reaches the backend normalized to 0..1 (0 = all prev, 1 = all current).
     background_controller_set_blend(&c, H_A, H_B, 0);
     snap = background_controller_snapshot(&c);
     ASSERT_TRUE_MSG(snap.prev == (FlImageHandle)H_A, "snapshot: blend prev carried");
@@ -1730,8 +1733,8 @@ UTEST(background, snapshot_handle_translation) {
     snap = background_controller_snapshot(&c);
     ASSERT_TRUE_MSG(snap.crossfade_t == 1.0f, "snapshot: t=255 -> full current");
 
-    // set_blend with an invalid prev degrades to the single-image path: no blend crosses the boundary, and
-    // the current image rides its alpha (set_blend does not touch alpha, so the earlier value is preserved).
+    // set_blend with an invalid prev falls back to the single-image path: no blend reaches the backend, and the
+    // current image uses its alpha. set_blend does not touch alpha, so the earlier value is kept.
     background_controller_set_alpha(&c, 90);
     background_controller_set_blend(&c, IMAGE_HANDLE_INVALID, H_B, 128);
     snap = background_controller_snapshot(&c);
@@ -1741,7 +1744,7 @@ UTEST(background, snapshot_handle_translation) {
 }
 
 UTEST(background, blend_t_round_trip) {
-    // The snapshot normalizes the u8 blend to 0..1; (t*255 + 0.5) must recover every 0..255 value exactly.
+    // The snapshot normalizes the u8 blend to 0..1, and (t*255 + 0.5) recovers every value 0..255 exactly.
     FlBackgroundController c;
     background_controller_init(&c);
     for (int t = 0; t <= 255; t++) {
@@ -1752,34 +1755,34 @@ UTEST(background, blend_t_round_trip) {
     }
 }
 
-// The background family no-ops on the pre-init null context, so ui_background_set_blend before ui_create must
-// be harmless. This case must run in the pre-init window, so it asserts the context really is null first.
+// The background calls do nothing on the null context that exists before init, so ui_background_set_blend before
+// ui_create is harmless. The case needs that null context, so it asserts the context is null first.
 UTEST(background, set_blend_before_init_is_noop) {
     render_fixture_teardown();
     ASSERT_TRUE_MSG(ui_get_ctx() == nullptr, "precondition: must run before any ui_create (s_ctx still null)");
 
-    ui_background_set_blend(H_A, H_B, 128); // must not crash on the null context
+    ui_background_set_blend(H_A, H_B, 128);
 }
 
-// sr_command_split_rounded: the general 9-grid case only emits a corner command for a non-zero corner, so the
-// arena advance (which the caller reads via arena_count) must equal corners-written + 5. Every written command
-// is a copy of initial_command, so a valid slot always carries the base mask bit; an uninitialized slot on a
-// fresh arena reads back as a zero mask.
+// sr_command_split_rounded: the general 9-grid case emits a corner command only for a non-zero corner, so the
+// arena advance, which the caller reads through arena_count, equals corners written + 5. Every written command is
+// a copy of initial_command, so a valid slot always has the base mask bit. An uninitialized slot on a new arena
+// reads back as a zero mask.
 UTEST(sr_command, split_rounded_count_matches_written_commands) {
     struct {
         float tl, tr, bl, br;
-        int expected; // commands the caller must see; 0 corners never reaches the general case
+        int expected; // commands the caller sees. 0 corners never reaches the general case
         int corners;  // corner-flagged commands expected among them
         const char* what;
     } cases[] = {
-        { 8, 8, 8, 0, 8, 3, "br zero" },      // single zero corner, each position
+        { 8, 8, 8, 0, 8, 3, "br zero" },      // one zero corner, in each position
         { 8, 8, 0, 8, 8, 3, "bl zero" },      //
         { 8, 0, 8, 8, 8, 3, "tr zero" },      //
         { 0, 8, 8, 8, 8, 3, "tl zero" },      //
-        { 8, 0, 0, 8, 7, 2, "diagonal" },     // two zero corners (general, not an edge special case)
-        { 8, 6, 4, 2, 9, 4, "all positive" }, // non-uniform, no zeros: the previously-working 9 path
-        { 8, 8, 8, 8, 7, 4, "uniform" },      // uniform fast path (7 commands), unchanged
-        { 0, 0, 0, 0, 1, 0, "no rounding" },  // single passthrough command, unchanged
+        { 8, 0, 0, 8, 7, 2, "diagonal" },     // two zero corners, which is the general case and not an edge case
+        { 8, 6, 4, 2, 9, 4, "all positive" }, // non-uniform with no zeros: all 9 commands
+        { 8, 8, 8, 8, 7, 4, "uniform" },      // the uniform fast path, 7 commands
+        { 0, 0, 0, 0, 1, 0, "no rounding" },  // a single passthrough command
     };
 
     for (size_t i = 0; i < sizeof_array(cases); ++i) {
@@ -1800,13 +1803,13 @@ UTEST(sr_command, split_rounded_count_matches_written_commands) {
         int corner_cmds = 0;
         u32 seen_corners = 0;
         for (int c = 0; c < count; ++c) {
-            // A slot the split intended to write is a copy of initial_command, so it keeps the base mask
-            // bit. A slot left uninitialized (the bug) reads back as zero on a fresh arena.
+            // A slot the split wrote is a copy of initial_command, so it has the base mask bit. A slot left
+            // uninitialized reads back as zero on a new arena.
             ASSERT_TRUE_MSG((start[c].mask & RenderMask_DrawQuad) != 0, cases[i].what);
             if (start[c].mask & RenderMask_Corners) {
                 corner_cmds++;
-                // The selector is a value in the corners field, not a bitmask: a split names each corner at
-                // most once, and every corner command names exactly one.
+                // The selector is a value in the corners field and not a bitmask. A split names each corner
+                // at most once, and every corner command names exactly one.
                 RenderCorner corner = render_mask_corner_of(start[c].mask);
                 ASSERT_TRUE_MSG(corner >= RenderCorner_TopLeft && corner <= RenderCorner_BottomRight, cases[i].what);
                 ASSERT_TRUE_MSG((seen_corners & (1u << corner)) == 0, cases[i].what);
@@ -1819,10 +1822,10 @@ UTEST(sr_command, split_rounded_count_matches_written_commands) {
     }
 }
 
-// The render cases reach the 3-channel deinterleave and keep_alpha=false planar paths; these cover the
-// remaining branches: the keep_alpha=true alpha plane and the XRGB format.
+// The render cases cover the 3-channel deinterleave and the planar paths with keep_alpha=false. These cover the
+// rest: the alpha plane with keep_alpha=true and the XRGB format.
 UTEST(sr_image_convert, deinterleave_pixels_all_branches) {
-    // 20 pixels = one 16-wide SIMD block plus a 4-pixel scalar tail, so both code paths run.
+    // 20 pixels is one 16-wide SIMD block plus a 4-pixel scalar tail, so both code paths run.
     enum { COUNT = 20 };
     u8 src4[COUNT * 4];
     u8 src3[COUNT * 3];
@@ -1838,7 +1841,7 @@ UTEST(sr_image_convert, deinterleave_pixels_all_branches) {
 
     u8 r[COUNT], g[COUNT], b[COUNT], a[COUNT];
 
-    // 4-channel, keep_alpha=true: all four planes written.
+    // 4 channels, keep_alpha=true: all four planes are written.
     for (int i = 0; i < COUNT; i++) {
         a[i] = 0xEE;
     }
@@ -1850,7 +1853,7 @@ UTEST(sr_image_convert, deinterleave_pixels_all_branches) {
         ASSERT_EQ((int)a[i], i + 150);
     }
 
-    // 4-channel, keep_alpha=false: RGB written, alpha buffer left untouched.
+    // 4 channels, keep_alpha=false: RGB is written and the alpha buffer is left untouched.
     for (int i = 0; i < COUNT; i++) {
         a[i] = 0xEE;
     }
@@ -1862,7 +1865,7 @@ UTEST(sr_image_convert, deinterleave_pixels_all_branches) {
         ASSERT_EQ((int)a[i], 0xEE);
     }
 
-    // 3-channel source: RGB deinterleave path.
+    // A 3-channel source takes the RGB deinterleave path.
     sr_deinterleave_pixels(src3, r, g, b, nullptr, COUNT, 3, false);
     for (int i = 0; i < COUNT; i++) {
         ASSERT_EQ((int)r[i], i + 2);
@@ -1874,7 +1877,7 @@ UTEST(sr_image_convert, deinterleave_pixels_all_branches) {
 UTEST(sr_image_convert, convert_to_planar_xrgb_and_alpha) {
     FlArena* arena = arena_new();
 
-    // 3x2 interleaved source; pixel (x,y) gets distinct per-channel bytes to catch channel swaps.
+    // A 3x2 interleaved source. Pixel (x,y) has different bytes per channel, to catch channel swaps.
     const int w = 3, h = 2;
     u8 pixels[3 * 2 * 4];
     for (int y = 0; y < h; y++) {
@@ -1898,7 +1901,7 @@ UTEST(sr_image_convert, convert_to_planar_xrgb_and_alpha) {
         .format = FlImageFormat_XRGB,
     };
 
-    // XRGB drops the X byte (keep_alpha=false) -> 3 planes, with bilinear padding (+1 w/h).
+    // XRGB drops the X byte (keep_alpha=false), giving 3 planes with bilinear padding (+1 in w and h).
     ImageData* xrgb = sr_convert_to_planar(&src, false, arena);
     ASSERT_TRUE(xrgb != nullptr);
     ASSERT_EQ(xrgb->channels, 3);
@@ -1912,17 +1915,17 @@ UTEST(sr_image_convert, convert_to_planar_xrgb_and_alpha) {
     const u8* bp = xrgb->data + plane * 2;
     int s = xrgb->stride; // == padded_width
 
-    // Logical pixel (0,0) and (2,1) deinterleaved correctly.
+    // Logical pixels (0,0) and (2,1) are deinterleaved correctly.
     ASSERT_EQ((int)rp[0], 1);
     ASSERT_EQ((int)gp[0], 31);
     ASSERT_EQ((int)bp[0], 61);
     ASSERT_EQ((int)rp[1 * s + 2], (int)(u8)(13)); // R of (2,1) = 1*10+2+1
-    // Last column padding duplicates the prior column on row 0.
+    // The padding column duplicates the last column on row 0.
     ASSERT_EQ((int)rp[w], (int)rp[w - 1]);
-    // Last (padding) row duplicates the previous row.
+    // The padding row duplicates the last row.
     ASSERT_EQ((int)rp[h * s], (int)rp[(h - 1) * s]);
 
-    // Same source as RGBA with keep_alpha=true -> 4 planes including alpha.
+    // The same source as RGBA with keep_alpha=true gives 4 planes, including alpha.
     src.format = FlImageFormat_RGBA;
     ImageData* rgba = sr_convert_to_planar(&src, true, arena);
     ASSERT_TRUE(rgba != nullptr);
@@ -1933,8 +1936,8 @@ UTEST(sr_image_convert, convert_to_planar_xrgb_and_alpha) {
     fl_arena_destroy(arena);
 }
 
-// sr_image_convert: a zero extent has no last pixel or row to duplicate, so the edge padding would read
-// before the plane. The conversion must reject it rather than produce that read.
+// A zero extent has no last pixel or row to duplicate, so the edge padding would read before the plane. The
+// conversion rejects it.
 
 UTEST(sr_image_convert, convert_to_planar_rejects_a_zero_extent) {
     FlArena* arena = arena_new();
@@ -1963,7 +1966,7 @@ UTEST(sr_image_convert, convert_to_planar_rejects_a_zero_extent) {
     fl_arena_destroy(arena);
 }
 
-// prepare_image: stub backend records how prepare_image was called.
+// The stub backend records how prepare_image was called.
 
 typedef struct PrepareStats {
     _Atomic int call_count;
@@ -1972,7 +1975,7 @@ typedef struct PrepareStats {
     bool during_pump;   // last call happened inside image_system_begin_frame
 } PrepareStats;
 
-// Raised around image_system_begin_frame so the stub can tell a pump call from a job call.
+// Set around image_system_begin_frame so the stub can tell a pump call from a job call.
 static _Atomic bool s_in_pump = false;
 
 static bool stub_prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlImageDecodeResult* decoded,
@@ -1989,12 +1992,12 @@ static bool stub_prepare_image(void* user_data, FlImageLoadRequestId request_id,
     return false;
 }
 
-// A tiny valid image so image_decode succeeds (SVG keeps it embeddable as text).
+// A tiny valid image so image_decode succeeds. SVG lets it be embedded as text.
 static const char s_svg[] = "<svg width=\"8\" height=\"8\"><rect width=\"8\" height=\"8\" fill=\"#ff0000\"/></svg>";
 
 #define PREPARE_POLL_TIMEOUT_MS 5000
 
-// prepare_image_on_job unset - the call is deferred to the begin-frame pump on this (main/render) thread.
+// With prepare_image_on_job unset the call is deferred to the begin-frame pump on this (main, render) thread.
 
 UTEST(prepare_image, deferred_to_begin_frame_pump) {
     PrepareStats stats = { 0 };
@@ -2009,16 +2012,16 @@ UTEST(prepare_image, deferred_to_begin_frame_pump) {
     FlImageLoadRequestId id = image_system_load_from_memory(sys, s_svg, sizeof(s_svg) - 1, nullptr, nullptr);
     ASSERT_NE(id, (FlImageLoadRequestId)FL_IMAGE_LOAD_REQUEST_ID_INVALID);
 
-    // Decode runs in the job worker; once complete the request must be queued - not invoked.
+    // Decode runs in the job worker. Once it completes the request is queued and not called.
     int waited = 0;
     while (!image_system_prepare_pending(sys, id) && waited < PREPARE_POLL_TIMEOUT_MS) {
         sleep_ms(1);
         waited++;
     }
     ASSERT_TRUE(image_system_prepare_pending(sys, id));
-    ASSERT_EQ(atomic_load(&stats.call_count), 0); // never invoked from job context
+    ASSERT_EQ(atomic_load(&stats.call_count), 0); // not called from the job
 
-    // The pump makes the call, exactly once, on this thread.
+    // The pump makes the call exactly once, on this thread.
     atomic_store(&s_in_pump, true);
     image_system_begin_frame(sys);
     atomic_store(&s_in_pump, false);
@@ -2029,7 +2032,7 @@ UTEST(prepare_image, deferred_to_begin_frame_pump) {
     ASSERT_TRUE(stats.decoded_valid);
     ASSERT_FALSE(image_system_prepare_pending(sys, id));
 
-    // Further pumps must not re-invoke for the same decode.
+    // Further pumps do not call again for the same decode.
     image_system_begin_frame(sys);
     image_system_begin_frame(sys);
     ASSERT_EQ(atomic_load(&stats.call_count), 1);
@@ -2037,7 +2040,7 @@ UTEST(prepare_image, deferred_to_begin_frame_pump) {
     image_system_destroy(sys);
 }
 
-// prepare_image_on_job set - the call happens in the job worker thread (SW shape, unchanged).
+// With prepare_image_on_job set the call happens in the job worker thread, as the SW backend needs.
 
 UTEST(prepare_image, job_context_when_flag_set) {
     PrepareStats stats = { 0 };
@@ -2052,7 +2055,7 @@ UTEST(prepare_image, job_context_when_flag_set) {
     FlImageLoadRequestId id = image_system_load_from_memory(sys, s_svg, sizeof(s_svg) - 1, nullptr, nullptr);
     ASSERT_NE(id, (FlImageLoadRequestId)FL_IMAGE_LOAD_REQUEST_ID_INVALID);
 
-    // No pumping: the decode job itself must invoke the seam.
+    // No pumping: the decode job itself calls prepare_image.
     int waited = 0;
     while (atomic_load(&stats.call_count) == 0 && waited < PREPARE_POLL_TIMEOUT_MS) {
         sleep_ms(1);
@@ -2067,8 +2070,8 @@ UTEST(prepare_image, job_context_when_flag_set) {
     image_system_destroy(sys);
 }
 
-// A memory load whose decode succeeds but that no backend acknowledges ends failed, not active-pending: either
-// there is no backend, or the backend's prepare_image never realizes the image into the registry.
+// A memory load whose decode succeeds but that no backend acknowledges ends as failed and does not stay pending.
+// Either there is no backend, or the backend's prepare_image never puts the image in the registry.
 
 static bool wait_synthetic_settled(ImageSystem* sys, FlImageLoadRequestId id) {
     for (int waited = 0; waited < PREPARE_POLL_TIMEOUT_MS; waited++) {
@@ -2141,10 +2144,10 @@ UTEST(prepare_image, memory_load_stays_active_until_deferred_pump) {
     image_system_destroy(sys);
 }
 
-// image_system_load must copy the caller's path FlString before returning: the worker-thread VFS callback
-// reads the path after the call returns, but ui.h's contract lets the caller free/reuse its buffer
-// immediately ("path need only live for this call"). The path is built in a mutable stack buffer so
-// is_static is 0 and the copy path is exercised.
+// image_system_load copies the caller's path FlString before returning. The VFS callback reads the path on a
+// worker thread after the call returns, and ui.h lets the caller free or reuse its buffer at once ("path need
+// only live for this call"). The path is built in a mutable stack buffer, so is_static is 0 and the copy is
+// made.
 
 typedef struct PathCaptureStats {
     _Atomic int call_count;
@@ -2183,7 +2186,7 @@ UTEST(image_load, copies_caller_path_before_async_read) {
     FlRenderBackend backend = {
         .user_data = &stats,
         .prepare_image = capture_path_prepare_image,
-        .prepare_image_on_job = true, // the call lands in the worker thread - no begin-frame pump needed
+        .prepare_image_on_job = true, // the call is made on the worker thread, so no begin-frame pump is needed
     };
     ImageSystem* sys = image_system_create(s_arena, &backend);
     ASSERT_TRUE(sys != nullptr);
@@ -2195,7 +2198,7 @@ UTEST(image_load, copies_caller_path_before_async_read) {
         = image_system_load(sys, mount.mount, path, nullptr, nullptr, nullptr, FL_IMAGE_LOAD_REQUEST_ID_INVALID);
     ASSERT_NE(id, (FlImageLoadRequestId)FL_IMAGE_LOAD_REQUEST_ID_INVALID);
 
-    // Scribble over the caller's buffer right away, exactly as the contract permits.
+    // Overwrite the caller's buffer at once, as the contract permits.
     memset(path_buf, 'X', sizeof(path_buf) - 1);
 
     int waited = 0;
@@ -2212,12 +2215,12 @@ UTEST(image_load, copies_caller_path_before_async_read) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// Every image load takes a JobContext pool slot, and nothing in the job system recycles it - the slot only
-// comes back if image_system releases it. The pool's free list is LIFO, so a slot parked on it before a load
-// reappears from the next allocation exactly when the load gave it back.
+// Every image load takes a JobContext pool slot, and the job system does not recycle it: the slot comes back only
+// if image_system releases it. The pool's free list is LIFO, so a slot put on it before a load comes back from
+// the next allocation exactly when the load returned its own.
 //
-// The pool is process-global and shared with the glyph-atlas jobs, so a single round can be perturbed by
-// unrelated traffic. Rounds are counted instead: a leak misses every round, interference misses a few.
+// The pool is process-global and shared with the glyph-atlas jobs, so unrelated traffic can disturb a single
+// round. The case counts rounds: a leak misses every round, and interference misses a few.
 
 #define CONTEXT_RECYCLE_ROUNDS 8
 
@@ -2264,8 +2267,8 @@ UTEST(image_load, load_recycles_job_context_slot) {
     int completed = count_recycled_context_slots(sys, mount.mount, FL_S(STUB_VFS_FILE));
     ASSERT_TRUE_MSG(completed >= CONTEXT_RECYCLE_ROUNDS - 2, "a completed load must return its context slot");
 
-    // A missing file fails inside the read job, not at prepare time, so the slot comes back only because the
-    // VFS notifies the callback on failure.
+    // A missing file fails inside the read job and not at prepare time, so the slot comes back only because the
+    // VFS calls the callback on failure.
     int missing = count_recycled_context_slots(sys, mount.mount, FL_S("no_such_file.png"));
     ASSERT_TRUE_MSG(missing >= CONTEXT_RECYCLE_ROUNDS - 2, "a failed read must return its context slot");
 
@@ -2273,8 +2276,8 @@ UTEST(image_load, load_recycles_job_context_slot) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// Teardown: image_system_destroy must not return while a worker can still reach the backend, and jobs that have
-// not reached the backend yet must skip it once teardown has begun.
+// image_system_destroy does not return while a worker can still reach the backend, and jobs that have not reached
+// the backend yet skip it once teardown has begun.
 
 typedef struct GatedBackend {
     _Atomic bool gate_open; // workers block in prepare_image until this is set
@@ -2298,8 +2301,7 @@ static bool gated_prepare_image(void* user_data, FlImageLoadRequestId request_id
     return false;
 }
 
-// Runs image_system_destroy (or only image_system_close) off the test thread so the test can observe it
-// blocking.
+// Runs image_system_destroy (or only image_system_close) off the test thread so the test can see it block.
 typedef struct DestroyThread {
     ImageSystem* sys;
     bool close_only;
@@ -2355,8 +2357,8 @@ UTEST(image_teardown, destroy_waits_for_worker_in_prepare) {
     ASSERT_EQ(atomic_load(&b.finished), 1);
 }
 
-// A burst well past the old 64-entry list: every load is tracked, and jobs still queued when teardown begins
-// skip the backend instead of calling one the caller is about to free.
+// A burst of more than 64 loads. Every load is tracked, and jobs still queued when teardown begins skip the
+// backend, which the caller is about to free.
 
 #define TEARDOWN_BURST 200
 
@@ -2383,8 +2385,8 @@ UTEST(image_teardown, burst_past_pending_capacity_is_tracked_and_drained) {
     ASSERT_FALSE(done_while_gated);
     ASSERT_TRUE(atomic_load(&d.done));
 
-    // Only the workers already inside the backend ran; the rest of the burst was skipped, and nothing
-    // reaches the backend after destroy returned.
+    // Only the workers already inside the backend ran. The rest of the burst was skipped, and nothing reaches
+    // the backend after destroy returned.
     int entered = atomic_load(&b.entered);
     ASSERT_LT(entered, TEARDOWN_BURST);
     ASSERT_EQ(atomic_load(&b.finished), entered);
@@ -2392,8 +2394,8 @@ UTEST(image_teardown, burst_past_pending_capacity_is_tracked_and_drained) {
     ASSERT_EQ(atomic_load(&b.entered), entered);
 }
 
-// A failed decode still reaches the backend and then records its failure; teardown waits for that record so the
-// failed-load state it writes is not destroyed under it.
+// A failed decode still reaches the backend and then records its failure. Teardown waits for that record, so the
+// failed-load state it writes is not destroyed while it is being written.
 
 UTEST(image_teardown, close_waits_for_failed_decode_in_prepare) {
     GatedBackend b = { 0 };
@@ -2421,8 +2423,8 @@ UTEST(image_teardown, close_waits_for_failed_decode_in_prepare) {
     image_system_destroy(sys);
 }
 
-// A failed decode on a deferred backend reaches the pump queue with a null result; teardown discards it, as it
-// does a successful one, without ever calling the backend.
+// A failed decode on a deferred backend reaches the pump queue with a null result. Teardown discards it, as it
+// does a successful one, without calling the backend.
 
 UTEST(image_teardown, deferred_prepares_discarded_without_backend_call) {
     PrepareStats stats = { 0 };
@@ -2449,7 +2451,7 @@ UTEST(image_teardown, deferred_prepares_discarded_without_backend_call) {
     ASSERT_EQ(atomic_load(&stats.call_count), 0);
 }
 
-// VFS read callbacks are producers too: teardown waits for one held in the backend, and refuses new VFS loads.
+// VFS read callbacks also produce loads: teardown waits for one held in the backend and refuses new VFS loads.
 
 UTEST(image_teardown, destroy_waits_for_vfs_load_in_prepare) {
     fl_vfs_init(s_arena); // idempotent
@@ -2507,8 +2509,8 @@ UTEST(image_teardown, loads_refused_after_close) {
     image_system_destroy(sys);
 }
 
-// Host teardown: the host destroys its surfaces, shared tier and backend, so it must drain image workers before
-// any of that. The surface teardown is the observable first step of the backend side.
+// The host destroys its surfaces, shared resources and backend, so it drains the image workers before any of
+// that. The surface teardown is the first step of the backend side that the test can see.
 
 static GatedBackend s_host_gate;
 static _Atomic bool s_host_surface_destroyed;
@@ -2572,25 +2574,25 @@ UTEST(image_teardown, host_destroy_drains_image_worker_before_backend_teardown) 
     ASSERT_TRUE(atomic_load(&s_host_surface_destroyed));
     ASSERT_EQ(atomic_load(&s_host_gate.finished), 1);
 
-    // The adopted backend stays the caller's; it is released only after the host is gone.
+    // The adopted backend still belongs to the caller and is released only after the host is gone.
     backend.destroy(backend.user_data);
 }
 
-// render.smoke - the full pipeline end-to-end without any display/SDL/plugins.
+// The whole pipeline end to end, with no display, SDL or plugins.
 
 UTEST(render, smoke) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Drive the layout at a small logical size; the software renderer itself is a fixed 1920x1080
-    // offscreen RGB24 buffer (built by the fixture above).
+    // The layout runs at a small logical size. The software renderer is the fixture's fixed 1920x1080 offscreen
+    // RGB24 buffer.
     const int layout_w = 256;
     const int layout_h = 256;
     ctx->layout_width = (float)layout_w;
     ctx->layout_height = (float)layout_h;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = (float)layout_w, .height = (float)layout_h });
 
-    // A distinctive red so we can tell it apart from the (dark) clear color.
+    // A red that is easy to tell from the dark clear color.
     const FlColor rect_color = ui_color(200, 40, 50, 255);
 
     // ui_update_end() rasterizes into the offscreen buffer.
@@ -2604,7 +2606,7 @@ UTEST(render, smoke) {
     ASSERT_TRUE_MSG(buf.pixels != nullptr, "render buffer data is null");
     ASSERT_TRUE_MSG(buf.width > 0 && buf.height > 0, "render buffer has zero size");
 
-    // Sample a pixel that should be well inside the rendered rectangle.
+    // A pixel well inside the rendered rectangle.
     const int px = 16;
     const int py = 16;
     ASSERT_TRUE_MSG(px < (int)buf.width && py < (int)buf.height && px < layout_w && py < layout_h,
@@ -2620,8 +2622,8 @@ UTEST(render, smoke) {
     ASSERT_TRUE_MSG(r > g && r > b, "expected red to dominate green and blue");
 }
 
-// render.layout_primitives - drives a frame through the layout primitives directly (fl_layout_start /
-// fl_layout_start_auto / fl_layout_configure / fl_layout_end) rather than the ui_layout_area macro.
+// Runs a frame through the layout primitives directly (fl_layout_start, fl_layout_start_auto,
+// fl_layout_configure, fl_layout_end) and not through the ui_layout_area macro.
 
 UTEST(render, layout_primitives) {
     FlUiCtx* ctx = render_fixture_get();
@@ -2650,7 +2652,7 @@ UTEST(render, layout_primitives) {
     ASSERT_TRUE_MSG(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "read_pixels failed");
     ASSERT_TRUE_MSG(buf.pixels != nullptr, "render buffer data is null");
 
-    // Sample inside the nested 120x120 child (top-left): green dominates, proving the nested open/close took.
+    // Inside the nested 120x120 child at the top-left, green dominates, so the nested open and close worked.
     const int px = 16, py = 16;
     const u8* pixels = (const u8*)buf.pixels;
     const size_t offset = (size_t)py * (size_t)buf.stride + (size_t)px * 3u;
@@ -2661,9 +2663,8 @@ UTEST(render, layout_primitives) {
     ASSERT_TRUE_MSG(g > r && g > b, "expected green (the nested child) to dominate");
 }
 
-// render.inspector_seam - the debug-only render-IR inspector: snapshot serialize, enumerate, and
-// hit-test by id and by name. Guarded on the same gate as the seam so a build without the inspector drops the case
-// cleanly rather than failing to link.
+// The debug-only render-IR inspector: snapshot serialize, enumerate, and hit test by id and by name. The case is
+// behind the same define as the inspector, so a build without it drops the case and still links.
 
 #ifdef FLOWI_UI_INSPECTOR
 UTEST(render, inspector_seam) {
@@ -2676,9 +2677,9 @@ UTEST(render, inspector_seam) {
     ctx->layout_height = (float)layout_h;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = (float)layout_w, .height = (float)layout_h });
 
-    // Two elements (not one) prove enumerate/hit-test actually discriminate rather than returning the sole
-    // candidate. The second element's name embeds a quote and a backslash to exercise the snapshot's JSON
-    // escaping. The fills make each emit a render command carrying its id/name/bounds.
+    // With two elements, enumerate and hit test have to choose between candidates. The second element's name
+    // contains a quote and a backslash to cover the snapshot's JSON escaping. The fills make each element emit a
+    // render command carrying its id, name and bounds.
     const float probe_w = 80.0f;
     const float probe_h = 40.0f;
     ui_update_begin(ctx);
@@ -2696,10 +2697,10 @@ UTEST(render, inspector_seam) {
     ASSERT_TRUE_MSG(needed < (int32_t)sizeof(snap), "4KB snapshot buffer was large enough (not truncated)");
     ASSERT_EQ_MSG((int32_t)strlen(snap), needed, "snapshot NUL-terminates at exactly the reported length");
     ASSERT_TRUE_MSG(strstr(snap, "inspector_probe") != nullptr, "snapshot text mentions the known element");
-    // The name a"b\c must appear JSON-escaped as a\"b\\c (the C literal below is that exact byte sequence).
+    // The name a"b\c appears JSON-escaped as a\"b\\c. The C literal below is that byte sequence.
     ASSERT_TRUE_MSG(strstr(snap, "a\\\"b\\\\c") != nullptr, "snapshot escapes quotes and backslashes in names");
 
-    // snprintf-style truncation contract.
+    // Truncation follows the snprintf contract.
     ASSERT_EQ_MSG(fl_inspector_snapshot(nullptr, 0), needed, "a zero-size buffer still reports the full length");
     char small[10];
     const int32_t small_needed = fl_inspector_snapshot(small, (int32_t)sizeof(small));
@@ -2746,18 +2747,17 @@ UTEST(render, inspector_seam) {
         fl_inspector_hit_test_name(string_from_cstr_len("no_such_element", sizeof("no_such_element") - 1), &miss),
         "hit-test by an absent name reports no hit");
 
-    // Clay never assigns id 0 - it reserves the zero hash as null.
+    // Clay never assigns id 0, because it reserves the zero hash as null.
     FlInspectorHit miss_id;
     ASSERT_FALSE_MSG(fl_inspector_hit_test_id(0u, &miss_id), "hit-test by an absent id reports no hit");
 }
 
-// render.inspector_capture_owns_strings - the frame capture must own the strings it hands back, not borrow them.
+// The frame capture owns the strings it returns.
 //
 // An element's name and text reach Clay as bare pointers into caller memory (ui_text_styled_impl passes
 // string.data straight through), and the inspector's readers run between frames, after that memory has been
-// reused. The test stands in for a per-frame arena with two plain caller buffers and scribbles over them once
-// the frame is captured, so a borrowed pointer fails as a wrong-value assert in an ordinary build, not only
-// as a use-after-poison under asan.
+// reused. The test uses two plain caller buffers in place of a per-frame arena and overwrites them once the
+// frame is captured, so a borrowed pointer fails as a wrong value in an ordinary build and not only under ASAN.
 
 #define CANARY_TEXT "capture_canary_text"
 #define CANARY_NAME "capture_canary_name"
@@ -2770,8 +2770,8 @@ UTEST(render, inspector_capture_owns_strings) {
     ctx->layout_height = 256.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 256.0f, .height = 256.0f });
 
-    // Ids are built by hand rather than with ID(): that macro marks its name a static literal, and a static
-    // string is exempt from copying. Only a non-static (runtime) string exercises the copy.
+    // The ids are built by hand and not with ID(). That macro marks its name as a static literal, and a static
+    // string is not copied. Only a runtime string goes through the copy.
     char text_storage[] = CANARY_TEXT;
     char name_storage[] = CANARY_NAME;
     const u64 text_length = sizeof(CANARY_TEXT) - 1;
@@ -2787,7 +2787,7 @@ UTEST(render, inspector_capture_owns_strings) {
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 
-    // Stand in for the frame arena being rewound and reused under the capture's feet.
+    // Stands in for the frame arena being rewound and reused after the capture.
     memory_set(text_storage, sizeof(text_storage), 'X', text_length);
     memory_set(name_storage, sizeof(name_storage), 'X', name_length);
 
@@ -2800,7 +2800,7 @@ UTEST(render, inspector_capture_owns_strings) {
                     "captured element name survives the caller's buffer being overwritten");
     ASSERT_TRUE_MSG(strstr(snap, "XXXX") == nullptr, "no scribbled bytes leak into the snapshot");
 
-    // The same ownership has to hold for every reader over the capture, not just the JSON one.
+    // Every reader over the capture needs the same ownership, not only the JSON one.
     bool found = false;
     const int32_t n = fl_inspector_element_count();
     for (int32_t i = 0; i < n; ++i) {
@@ -2822,11 +2822,11 @@ UTEST(render, inspector_capture_owns_strings) {
 #undef CANARY_NAME
 #endif // FLOWI_UI_INSPECTOR
 
-// perf_fence: the performance regression fence. scene_raster_fill isolates the SW raster fill /
-// border / rounded-rect paths and gates on tier-1 deterministic work counters (render_commands,
-// bin_alloc_bytes, clip_broadcasts). Tier-3 wall-clock ns is printed, never asserted.
+// perf_fence is the performance regression check. scene_raster_fill isolates the SW raster fill, border and
+// rounded-rect paths and asserts on deterministic work counters (render_commands, bin_alloc_bytes,
+// clip_broadcasts). Wall-clock ns is printed and never asserted.
 
-// Merges the core-side command count with the SW backend's bin/clip counters. Call after a rendered frame.
+// Merges the core's command count with the SW backend's bin and clip counters. Call after a rendered frame.
 static FlFrameStats perf_fence_frame_stats(FlUiCtx* ctx) {
     FlFrameStats stats = { 0 };
     stats.render_commands = (u32)ui_get_render_command_count();
@@ -2846,8 +2846,8 @@ static void scene_raster_fill(FlUiCtx* ctx, int n) {
         .sizing = { .width = sizing_grow(), .height = sizing_grow() },
         .direction = FlLayoutDirection_TopToBottom,
         .color = ui_color(20, 20, 24, 255),
-        // Vertical clip: exercises the SW clip-broadcast path (a scissor pair fanned out to every tile) so
-        // clip_broadcasts is a live counter, not a trivial zero.
+        // The vertical clip goes through the SW clip-broadcast path (a scissor pair sent to every tile), so
+        // clip_broadcasts is non-zero.
         .clip = { .vertical = true },
     });
     for (int i = 0; i < n; i++) {
@@ -2891,20 +2891,20 @@ UTEST(perf_fence, scene_raster_fill) {
 
     const FlFrameStats stats = perf_fence_frame_stats(ctx);
 
-    // Tier-3: wall-clock, printed for human sanity, never asserted.
+    // Wall-clock time, printed for a human to read and never asserted.
     printf("[perf_fence] scene_raster_fill(N=%d): %llu ns, render_commands=%u bin_alloc_bytes=%u clip_broadcasts=%u\n",
            n, (unsigned long long)(t1 - t0), stats.render_commands, stats.bin_alloc_bytes, stats.clip_broadcasts);
 
-    // Tier-1: deterministic work counters.
+    // Deterministic work counters.
     ASSERT_EQ_MSG(stats.render_commands, 16u, "render_commands baseline drift");
     ASSERT_EQ_MSG(stats.bin_alloc_bytes, 87720u, "bin_alloc_bytes baseline drift");
     ASSERT_EQ_MSG(stats.clip_broadcasts, 1020u, "clip_broadcasts baseline drift");
 }
 
-// scene_painter_rects: submission cost of a dense scope-style canvas - SCOPE_CHANNELS waveforms with one
-// rectangle per horizontal logical pixel - through the public per-rect call versus the batched one. The frames
-// must leave identical work (tier-1: same command count and raster bins); the time spent inside the painter
-// calls is tier-3, printed and never asserted.
+// scene_painter_rects measures the submission cost of a dense scope-style canvas (SCOPE_CHANNELS waveforms with
+// one rectangle per horizontal logical pixel) through the public per-rect call and through the batched one. Both
+// frames leave the same work, meaning the same command count and raster bins, which is asserted. The time spent
+// inside the painter calls is printed and never asserted.
 
 #define SCOPE_CHANNELS 4
 #define SCOPE_WIDTH 1920
@@ -2970,14 +2970,14 @@ UTEST(perf_fence, scene_painter_rects) {
            SCOPE_CHANNELS * SCOPE_WIDTH, (unsigned long long)best_ns[0], (unsigned long long)best_ns[1],
            stats[1].render_commands, stats[1].bin_alloc_bytes);
 
-    // Tier-1: the batch hands the backend exactly the scalar loop's work.
+    // The batch gives the backend exactly the work the scalar loop does.
     ASSERT_TRUE_MSG(stats[1].render_commands > 0, "the scope canvas rendered");
     ASSERT_EQ_MSG(stats[1].render_commands, stats[0].render_commands, "batched render_commands == scalar loop's");
     ASSERT_EQ_MSG(stats[1].bin_alloc_bytes, stats[0].bin_alloc_bytes, "batched raster bin bytes == scalar loop's");
 }
 
-// render.font_style_registry - fl_font_load_default / fl_font_style_register / fl_font_style_set end-to-end
-// on the built-in default font (headless-safe; no system font deps).
+// fl_font_load_default, fl_font_style_register and fl_font_style_set on the built-in default font, which needs no
+// system fonts and works headless.
 
 UTEST(render, font_style_registry) {
     FlUiCtx* ctx = render_fixture_get(); // also makes the fixture context current (g_ui_ctx), which these fl_* read
@@ -2991,11 +2991,11 @@ UTEST(render, font_style_registry) {
     ASSERT_EQ_MSG(ctx->active_font, font, "fl_font_style_set must make the registered style's font active");
 }
 
-// render.icon_registry - fl_icon_load / fl_icon_get over the hermetic stub VFS driver. image_load_async hands
-// back a request-id handle synchronously, so the handle is valid even though the stub serves no svg.
+// fl_icon_load and fl_icon_get over the stub VFS driver. image_load_async returns a request-id handle
+// synchronously, so the handle is valid even though the stub serves no svg.
 
 UTEST(render, icon_registry) {
-    FlUiCtx* ctx = render_fixture_get(); // wires VFS + image system and makes g_ui_ctx current (fl_icon_* read it)
+    FlUiCtx* ctx = render_fixture_get(); // creates the VFS and image system and makes g_ui_ctx current for fl_icon_*
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
     // Before any load the registry is the zeroed UiShared.icons[], which reads back as FL_IMAGE_HANDLE_INVALID.
@@ -3008,13 +3008,13 @@ UTEST(render, icon_registry) {
     ASSERT_TRUE(mount.mount != nullptr);
     vfs_wait_all();
 
-    // Null-mount guard is a no-op: nothing loads.
+    // With a null mount nothing loads.
     fl_icon_load(nullptr);
     ASSERT_EQ_MSG(fl_icon_get(FlIcon_Checkmark), (FlImageHandle)FL_IMAGE_HANDLE_INVALID,
                   "fl_icon_load(nullptr) must not load anything");
 
     fl_icon_load(mount.mount);
-    // Fetching all three slots guards against a wrong path/index in ICON_TABLE at any one of them.
+    // Fetching all three slots catches a wrong path or index in ICON_TABLE at any of them.
     const FlImageHandle checkmark = fl_icon_get(FlIcon_Checkmark);
     const FlImageHandle chevron = fl_icon_get(FlIcon_ChevronDown);
     const FlImageHandle warning = fl_icon_get(FlIcon_Warning);
@@ -3031,8 +3031,8 @@ UTEST(render, icon_registry) {
     fl_vfs_mount_close(mount.mount);
 }
 
-// render.modal_scope - fl_modal_begin_frame / begin / end / close end-to-end: focus is saved when the scope
-// opens and restored (with all popup-scope state cleared) when it closes.
+// fl_modal_begin_frame, begin, end and close. Focus is saved when the scope opens and restored, with all
+// popup-scope state cleared, when it closes.
 
 UTEST(render, modal_begin_frame_keeps_armed_scope) {
     FlUiCtx* ctx = render_fixture_get();
@@ -3074,7 +3074,7 @@ UTEST(render, modal_scope) {
 
     ui_update_begin(ctx);
 
-    // Simulate a widget owning focus before the modal opens, then arm the scope (as a dialog does at frame top).
+    // A widget owns focus before the modal opens, and the scope is armed as a dialog does at the top of a frame.
     ctx->focused_id = prior_focus;
     fl_modal_begin_frame(scope_id);
     ASSERT_EQ_MSG(ctx->saved_focused_id, prior_focus, "fl_modal_begin_frame must save the pre-modal focus on open");
@@ -3092,9 +3092,9 @@ UTEST(render, modal_scope) {
     ASSERT_EQ_MSG(ctx->saved_focused_id, 0u, "fl_modal_close must clear the saved focus");
 }
 
-// render.layout_area_macros_nest - fl_layout_area / fl_layout_area_id / FL_ID nested ≥2 deep. Open/close pairs
-// must balance: Clay's open-element id is sampled at base, inside the innermost body, and after the macros
-// unwind, so a leaked or duplicated fl_layout_end shows up as a residual.
+// fl_layout_area, fl_layout_area_id and FL_ID nested two or more deep. The open and close pairs have to balance.
+// Clay's open-element id is read before the macros, inside the innermost body and after the macros unwind, so a
+// leaked or duplicated fl_layout_end leaves a different id.
 
 UTEST(render, layout_area_macros_nest) {
     FlUiCtx* ctx = render_fixture_get();
@@ -3111,8 +3111,8 @@ UTEST(render, layout_area_macros_nest) {
 
     ui_update_begin(ctx);
 
-    // Clay_GetOpenElementId() reads the innermost open element; ui_update_begin has the root open, so this is
-    // the baseline.
+    // Clay_GetOpenElementId() reads the innermost open element. ui_update_begin has the root open, so this is the
+    // baseline.
     const uint32_t base_open = Clay_GetOpenElementId();
 
     uint32_t inner_open = base_open;
@@ -3129,7 +3129,7 @@ UTEST(render, layout_area_macros_nest) {
 
     ui_update_end(ctx, 1.0f / 60.0f);
 
-    // The innermost 120x120 green child sits top-left; sampling it proves the nesting structurally opened.
+    // The innermost 120x120 green child is at the top-left. Its color there shows that the nesting opened.
     FlPixelReadback buf;
     ASSERT_TRUE_MSG(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "read_pixels failed");
     ASSERT_TRUE_MSG(buf.pixels != nullptr, "render buffer data is null");
@@ -3141,9 +3141,9 @@ UTEST(render, layout_area_macros_nest) {
                     "expected green (the innermost child) to dominate");
 }
 
-// render.floating_scroll_area_macros - fl_floating_area / fl_floating_area_id / fl_scroll_area_id. Each must
-// open exactly one logical container and unwind it, so Clay's open-element id returns to the baseline after
-// every macro. The no-id fl_floating_area proves the FL_ID_INT(__LINE__) seed expands to a usable id.
+// fl_floating_area, fl_floating_area_id and fl_scroll_area_id. Each opens exactly one logical container and
+// closes it, so Clay's open-element id returns to the baseline after every macro. The fl_floating_area without an
+// id shows that the FL_ID_INT(__LINE__) seed expands to a usable id.
 
 UTEST(render, floating_scroll_area_macros) {
     FlUiCtx* ctx = render_fixture_get();
@@ -3155,10 +3155,10 @@ UTEST(render, floating_scroll_area_macros) {
 
     ui_update_begin(ctx);
 
-    // Baseline open element (the root opened by ui_update_begin). Every macro below must return here.
+    // The baseline open element is the root opened by ui_update_begin. Every macro below returns to it.
     const uint32_t base_open = Clay_GetOpenElementId();
 
-    // No-id floating: FL_ID_INT("_Floating", __LINE__) seeds a unique per-site id under the hood.
+    // Floating with no id: FL_ID_INT("_Floating", __LINE__) gives each call site its own id.
     uint32_t floating_open = base_open;
     fl_floating_area(.attach_to = FlFloatingAttachTo_Root, .z_index = 100,
                      .sizing = { sizing_fixed(120), sizing_fixed(120) }) {
@@ -3167,12 +3167,12 @@ UTEST(render, floating_scroll_area_macros) {
     ASSERT_NE_MSG(base_open, floating_open, "fl_floating_area must open its container");
     ASSERT_EQ_MSG(base_open, Clay_GetOpenElementId(), "fl_floating_area must close exactly what it opened");
 
-    // Explicit-id floating: closes via the shared fl_layout_end primitive.
+    // Floating with an explicit id, closed by fl_layout_end.
     fl_floating_area_id(FL_ID("floating_dialog"), .attach_to = FlFloatingAttachTo_Root, .z_index = 101,
                         .sizing = { sizing_fixed(80), sizing_fixed(80) }) {}
     ASSERT_EQ_MSG(base_open, Clay_GetOpenElementId(), "fl_floating_area_id must close exactly what it opened");
 
-    // Scroll area: opens a clipping container and closes with fl_scroll_area_end.
+    // The scroll area opens a clipping container and closes with fl_scroll_area_end.
     uint32_t scroll_open = base_open;
     fl_scroll_area_id(FL_ID("scroll_region"), .sizing = { sizing_grow(), sizing_grow() }, .show_scrollbar = true) {
         scroll_open = Clay_GetOpenElementId();
@@ -3183,12 +3183,11 @@ UTEST(render, floating_scroll_area_macros) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// render.scroll_widget_visibility_reroute - ui_scroll's visibility + scroll-to-widget + content-extent paths
-// read the scroll container's screen rect from item_state (populated because fl_scroll_area_begin registers it
-// via ui_track_element). A fixed 200x80 viewport holds eight 60px buttons (480px of content), so only the top
-// button is on-screen.
+// ui_scroll's visibility, scroll-to-widget and content-extent paths read the scroll container's screen rect from
+// item_state, which has it because fl_scroll_area_begin registers the container with ui_track_element. A fixed
+// 200x80 viewport holds eight 60px buttons (480px of content), so only the top button is on screen.
 
-// One frame of the visibility bench: a grow-to-fill scroll area holding eight MD buttons stacked top-to-bottom.
+// One frame: a grow-to-fill scroll area holding eight MD buttons stacked top to bottom.
 static void scroll_vis_frame(FlUiCtx* ctx) {
     ui_update_begin(ctx);
     fl_scroll_area_id(FL_ID("scroll_vis_area"), .sizing = { sizing_grow(), sizing_grow() },
@@ -3214,26 +3213,26 @@ UTEST(render, scroll_widget_visibility_reroute) {
     ui_set_scale(1.0f, 1.0f);
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 200.0f, .height = 80.0f });
 
-    // Two frames: frame 1 lays out and populates item_state + scroll content/viewport, frame 2 reads them back -
-    // the item_state reads lag one frame.
+    // Two frames. Frame 1 lays out and fills item_state and the scroll content and viewport sizes. Frame 2 reads
+    // them back, since the item_state reads lag one frame.
     scroll_vis_frame(ctx);
     scroll_vis_frame(ctx);
 
-    // svb0 sits at the top of the 80px viewport. svb7 is 420px down, fully clipped - Clay emits no command for
-    // it, so it is absent from item_state, which reports as NOT visible.
+    // svb0 is at the top of the 80px viewport. svb7 is 420px down and fully clipped. Clay emits no command for
+    // it, so it is absent from item_state and reports as not visible.
     ASSERT_TRUE_MSG(ui_is_widget_visible(ID("svb0")), "top child must be visible in the scroll viewport");
     ASSERT_FALSE_MSG(ui_is_widget_visible(ID("svb7")),
                      "last child is fully clipped below the viewport and must not be visible");
 
-    // Content-extent wrapper returns the real content dimensions (not the viewport-size fallback): 480px > 80px.
+    // The content extent is the real content size, 480px > 80px, and not the viewport-size fallback.
     FlScrollContainerExtent extent = ui_get_scroll_container_extent(ui_layout_id_to_clay_id(FL_ID("scroll_vis_area")));
     ASSERT_TRUE_MSG(extent.found, "scroll container extent must be queryable after two frames");
     ASSERT_TRUE_MSG(extent.content_extent.y > extent.viewport_size.y,
                     "content extent must exceed the viewport (real content dims, not the viewport fallback)");
 
     // svb1 straddles the viewport's bottom edge (y 60..120), so it is partially emitted and present in
-    // item_state - the only supported target class. Immediate mode sets the offset now; calling before the next
-    // frame's scroll_area_begin lets that frame's clip pick it up.
+    // item_state, which a scroll target has to be. Immediate mode sets the offset now, and calling before the
+    // next frame's scroll_area_begin lets that frame's clip use it.
     ui_scroll_to_widget_ex(ID("svb1"), (FlScrollToOptions) { .immediate = true });
     scroll_vis_frame(ctx);
 
@@ -3242,13 +3241,13 @@ UTEST(render, scroll_widget_visibility_reroute) {
                      "after scrolling down, the former top child must no longer be visible");
 }
 
-// render.scroll_wheel_hover_gate - fl_scroll_area_begin only applies the wheel tick to the scroll area the
-// cursor is actually over. Two sibling scroll areas are open in the same frame; the shared cached wheel delta
-// must not scroll both. The hover test reads the container's screen rect from the previous frame's layout
-// (item_state), so the scene is driven for one warm-up frame before the wheel frame.
+// fl_scroll_area_begin applies the wheel tick only to the scroll area the cursor is over. Two sibling scroll
+// areas are open in the same frame, and the shared cached wheel delta scrolls only one. The hover test reads the
+// container's screen rect from the previous frame's layout (item_state), so the scene runs one warm-up frame
+// before the wheel frame.
 
-// One frame: two 100x80 vertical scroll areas (A left, B right) separated by a 100px spacer so their rects
-// never touch. Each holds eight buttons (content taller than the 80px viewport → room to scroll).
+// One frame: two 100x80 vertical scroll areas, A left and B right, separated by a 100px spacer so their rects
+// never touch. Each holds eight buttons, so the content is taller than the 80px viewport and can scroll.
 static void scroll_wheel_frame(FlUiCtx* ctx, f32 mx, f32 my, f32 wheel_y) {
     ctx->input_state.mouse.x = mx;
     ctx->input_state.mouse.y = my;
@@ -3288,7 +3287,8 @@ UTEST(render, scroll_wheel_hover_gate) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Identity scale at a fixed size → logical == physical, so mouse coords compare directly to the container rects.
+    // ui_scale 1 at a fixed size makes logical == physical, so mouse coords compare directly with the container
+    // rects.
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
@@ -3297,8 +3297,8 @@ UTEST(render, scroll_wheel_hover_gate) {
     const u32 id_a = ui_layout_id_to_clay_id(FL_ID("wheel_area_a"));
     const u32 id_b = ui_layout_id_to_clay_id(FL_ID("wheel_area_b"));
 
-    // Warm-up: no wheel, cursor parked away from both areas, so both containers' screen rects land in
-    // item_state and their content/viewport sizes are recorded for next frame's max-scroll.
+    // Warm-up: no wheel and the cursor parked away from both areas, so both containers' screen rects are in
+    // item_state and their content and viewport sizes are recorded for the next frame's max scroll.
     scroll_wheel_frame(ctx, 1000.0f, 1000.0f, 0.0f);
     scroll_wheel_frame(ctx, 1000.0f, 1000.0f, 0.0f);
 
@@ -3308,8 +3308,8 @@ UTEST(render, scroll_wheel_hover_gate) {
     ASSERT_NEAR_MSG(0.0, (double)sa->scroll_offset.y, 0.001, "area A starts unscrolled");
     ASSERT_NEAR_MSG(0.0, (double)sb->scroll_offset.y, 0.001, "area B starts unscrolled");
 
-    // Wheel frame: cursor over area A (its rect is [0..100]x[0..80] at root origin), negative wheel delta →
-    // positive scroll. Only A is hovered, so only A consumes the tick.
+    // Wheel frame: the cursor is over area A, whose rect is [0..100]x[0..80] at the root origin, and a negative
+    // wheel delta gives a positive scroll. Only A is hovered, so only A consumes the tick.
     scroll_wheel_frame(ctx, 50.0f, 40.0f, -2.0f);
 
     sa = hashmap_get(&ctx->shared->scroll_states, id_a);
@@ -3319,9 +3319,9 @@ UTEST(render, scroll_wheel_hover_gate) {
                     "the unhovered scroll area must not move when the wheel is delivered to its sibling");
 }
 
-// render.scroll_wheel_nested - the wheel goes to the innermost hovered scroll area only, and hover is cut by the
-// clip chain the hit tester uses. The outer area (200x80) holds a header_h spacer, then an inner area (100x60 at
-// y = header_h), then a tall spacer so the outer has room to scroll.
+// The wheel goes only to the innermost hovered scroll area, and hover is cut by the clip chain the hit tester
+// uses. The outer area (200x80) holds a header_h spacer, then an inner area (100x60 at y = header_h), then a
+// tall spacer so the outer has room to scroll.
 
 static void scroll_nested_frame(FlUiCtx* ctx, f32 mx, f32 my, f32 wheel_y, f32 header_h) {
     ctx->input_state.mouse.x = mx;
@@ -3354,7 +3354,7 @@ static void scroll_nested_setup(FlUiCtx* ctx, f32 header_h) {
         state->scroll_target = (FlVec2) { 0 };
     }
 
-    // Two warm-up frames with the cursor parked away so layout rects and content sizes are recorded.
+    // Two warm-up frames with the cursor parked away, so layout rects and content sizes are recorded.
     scroll_nested_frame(ctx, 1000.0f, 1000.0f, 0.0f, header_h);
     scroll_nested_frame(ctx, 1000.0f, 1000.0f, 0.0f, header_h);
 }
@@ -3373,7 +3373,7 @@ UTEST(render, scroll_wheel_nested) {
     const u32 outer_id = ui_layout_id_to_clay_id(FL_ID("nest_outer"));
     const u32 inner_id = ui_layout_id_to_clay_id(FL_ID("nest_inner"));
 
-    // Inner sits at y 10..70, fully inside the outer viewport (0..80).
+    // The inner area is at y 10..70, fully inside the outer viewport (0..80).
     scroll_nested_setup(ctx, 10.0f);
 
     ScrollAreaState* outer = hashmap_get(&ctx->shared->scroll_states, outer_id);
@@ -3389,7 +3389,7 @@ UTEST(render, scroll_wheel_nested) {
     ASSERT_TRUE_MSG(inner->scroll_offset.y > 0.5f, "a wheel tick over the inner area scrolls the inner area");
     ASSERT_NEAR_MSG(0.0, (double)outer->scroll_offset.y, 0.001, "a wheel tick over the inner area leaves the outer");
 
-    // Over the outer area but outside the inner (the header strip): only the outer scrolls.
+    // Over the outer area but outside the inner one (the header strip), only the outer scrolls.
     f32 inner_before = inner->scroll_offset.y;
     scroll_nested_frame(ctx, 50.0f, 5.0f, -2.0f, 10.0f);
     outer = hashmap_get(&ctx->shared->scroll_states, outer_id);
@@ -3401,9 +3401,9 @@ UTEST(render, scroll_wheel_nested) {
     scroll_nested_reset_input(ctx);
 }
 
-// render.scroll_wheel_clipped_away - the part of a scroll area cut away by an enclosing clip must not take the
-// wheel. Here the inner area (y 60..120) hangs below the outer viewport (0..80); the cursor at y = 100 is inside the
-// inner's own rect but outside every visible region.
+// The part of a scroll area cut away by an enclosing clip does not take the wheel. The inner area (y 60..120)
+// hangs below the outer viewport (0..80), and the cursor at y = 100 is inside the inner's own rect but outside
+// every visible region.
 
 UTEST(render, scroll_wheel_clipped_away) {
     FlUiCtx* ctx = render_fixture_get();
@@ -3431,10 +3431,9 @@ UTEST(render, scroll_wheel_clipped_away) {
     scroll_nested_reset_input(ctx);
 }
 
-// render.scroll_state_alloc_failure_stack_balance - the fallback path fl_scroll_area_begin takes when
-// scroll-state allocation fails must still push a (null-state) stack entry, so the paired fl_scroll_area_end
-// pops its own entry instead of the enclosing scroll area's. The failure is forced via the ui_scroll test seam
-// for the inner area only; the outer area's entry and depth must come through untouched.
+// When scroll-state allocation fails, fl_scroll_area_begin still pushes a stack entry with a null state, so the
+// paired fl_scroll_area_end pops its own entry and not the enclosing scroll area's. The ui_scroll test seam
+// forces the failure for the inner area only, and the outer area's entry and depth are unchanged afterwards.
 
 UTEST(render, scroll_state_alloc_failure_stack_balance) {
     FlUiCtx* ctx = render_fixture_get();
@@ -3480,9 +3479,9 @@ UTEST(render, scroll_state_alloc_failure_stack_balance) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// render.resize - the software backend's change_resolution seam, on a standalone backend (no UI fixture /
-// global context). A pixel near the far corner of the GROWN buffer must carry the freshly rendered clear
-// color, which fails if change_resolution forgot to reallocate the RGB24 target.
+// The software backend's change_resolution on a standalone backend, with no UI fixture and no global context. A
+// pixel near the far corner of the grown buffer has the newly rendered clear color only if change_resolution
+// reallocated the RGB24 target.
 
 UTEST(render, resize) {
     FlArena* arena = arena_new();
@@ -3490,11 +3489,11 @@ UTEST(render, resize) {
     ASSERT_TRUE_MSG(backend.change_resolution != nullptr, "backend has no change_resolution seam");
     ASSERT_TRUE_MSG(backend.read_pixels != nullptr, "backend has no pixel-readback capability");
 
-    // The output buffer lives on the surface; the change_resolution seam below resizes it in place.
+    // The output buffer lives on the surface, and change_resolution below resizes it in place.
     FlSurface* surface = backend.create_surface(backend.user_data, 64, 48);
 
-    // An empty command stream still clears the whole buffer to the background clear color, which is enough to
-    // prove the target was allocated and rendered at the current resolution.
+    // An empty command stream still clears the whole buffer to the background clear color, which shows that the
+    // target was allocated and rendered at the current resolution.
     const FlColor clear = { .r = 200, .g = 40, .b = 50, .a = 255 };
     const FlRenderFrame frame = {
         .commands = nullptr,
@@ -3518,7 +3517,7 @@ UTEST(render, resize) {
     ASSERT_EQ((u32)96, after.height);
     ASSERT_EQ((u32)(128 * 3), after.stride);
 
-    // A pixel near the far corner only exists in the reallocated, freshly rendered buffer.
+    // A pixel near the far corner exists only in the reallocated buffer.
     const int px = 120;
     const int py = 90;
     const u8* pixels = (const u8*)after.pixels;
@@ -3534,9 +3533,8 @@ UTEST(render, resize) {
     fl_arena_destroy(arena);
 }
 
-// render.surface_cycle_no_perm_arena_growth - a SW surface owns a dedicated arena and the SwSurface
-// struct lives in that arena, not the renderer's perm_arena, so a full create/destroy cycle must leave
-// perm_arena's used-bytes high-water mark exactly where it started.
+// A SW surface owns its own arena and the SwSurface struct lives in that arena and not in the renderer's
+// perm_arena, so a full create and destroy cycle leaves perm_arena's used bytes where they started.
 
 UTEST(render, surface_cycle_no_perm_arena_growth) {
     FlArena* arena = arena_new();
@@ -3544,10 +3542,10 @@ UTEST(render, surface_cycle_no_perm_arena_growth) {
     ASSERT_TRUE_MSG(backend.create_surface != nullptr, "backend has no create_surface seam");
     ASSERT_TRUE_MSG(backend.destroy_surface != nullptr, "backend has no destroy_surface seam");
 
-    // Warm up one cycle so any first-touch, one-time cost settles before snapshotting the baseline.
+    // One warm-up cycle, so any one-time cost is paid before the baseline is taken.
     backend.destroy_surface(backend.user_data, backend.create_surface(backend.user_data, 64, 64));
 
-    // perm_arena is the arena we passed in; its used-bytes mark is the current write position.
+    // perm_arena is the arena passed in, and its used bytes are its current write position.
     const char* used_before = (const char*)fl_arena_current_pos(arena);
 
     const int iterations = 1000;
@@ -3557,7 +3555,7 @@ UTEST(render, surface_cycle_no_perm_arena_growth) {
     }
 
     const char* used_after = (const char*)fl_arena_current_pos(arena);
-    // Any per-iteration growth would show up as ~iterations * sizeof(SwSurface).
+    // Growth per iteration would show as about iterations * sizeof(SwSurface).
     ASSERT_EQ_MSG((ptrdiff_t)0, (ptrdiff_t)(used_after - used_before),
                   "perm_arena grew across surface create/destroy cycles — SwSurface struct is leaking");
 
@@ -3567,13 +3565,13 @@ UTEST(render, surface_cycle_no_perm_arena_growth) {
     fl_arena_destroy(arena);
 }
 
-// render.scissor_stack_deep_nesting_balanced - the SW renderer's scissor stack must stay paired with the IR
-// clip nesting even when nesting exceeds MAX_SCISSOR_STACK_DEPTH (16). A push past the cap is dropped, but the
-// matching pop must NOT pop a still-in-scope rect off the real stack; it decrements an ignored-pushes counter
-// instead, mirroring the GPU backend's ignored_pushes in gpu_ir_to_draw_cmd.c.
+// The SW renderer's scissor stack stays paired with the IR clip nesting when the nesting exceeds
+// MAX_SCISSOR_STACK_DEPTH (16). A push past the cap is dropped, and its matching pop decrements a counter of
+// ignored pushes and leaves the real stack alone, as ignored_pushes does in the GPU backend's
+// gpu_ir_to_draw_cmd.c.
 //
-// Scene on a 64x64 (single-tile) surface: 15 clips fit, the 15th restricting to the top-left 16x16. A 16th
-// push is dropped and immediately popped; the 16x16 clip must still be innermost when the fill is drawn.
+// The scene is a 64x64 surface of one tile. 15 clips fit, the 15th restricting to the top-left 16x16. A 16th
+// push is dropped and popped at once, and the 16x16 clip is still innermost when the fill is drawn.
 
 UTEST(render, scissor_stack_deep_nesting_balanced) {
     FlArena* arena = arena_new();
@@ -3589,22 +3587,22 @@ UTEST(render, scissor_stack_deep_nesting_balanced) {
     const FlRect full = { 0.0f, 0.0f, 64.0f, 64.0f };
     const FlRect corner = { 0.0f, 0.0f, 16.0f, 16.0f };
 
-    // 15 pushes fit (depth caps at MAX_SCISSOR_STACK_DEPTH == 16, slot 0 is the tile scissor). The last one
-    // that fits restricts to the top-left 16x16; the earlier 14 leave the region unrestricted.
+    // 15 pushes fit: depth is capped at MAX_SCISSOR_STACK_DEPTH == 16 and slot 0 is the tile scissor. The last
+    // one that fits restricts to the top-left 16x16, and the earlier 14 leave the region unrestricted.
     for (int i = 0; i < 14; ++i) {
         fl_ir_clip_push(ir, full);
     }
-    fl_ir_clip_push(ir, corner); // 15th push - the innermost rect that must survive the over-cap pop below
+    fl_ir_clip_push(ir, corner); // 15th push: the innermost rect, which has to survive the over-cap pop below
 
-    // 16th push is past the cap: dropped by the renderer. Its matching pop must cancel the dropped push, not
-    // pop the still-active 16x16 clip off the real stack.
+    // The 16th push is past the cap, so the renderer drops it. Its matching pop cancels the dropped push and does
+    // not pop the 16x16 clip, which is still active.
     fl_ir_clip_push(ir, full);
     fl_ir_clip_pop(ir);
 
-    // Full-surface fill drawn while the 16x16 clip should still be the innermost scissor.
+    // A full-surface fill, drawn while the 16x16 clip is the innermost scissor.
     fl_ir_fill_rect(ir, full, (FlCornerRadius) { 0 }, red4, nullptr);
 
-    // Balance the stream: pop the 15 real pushes.
+    // Pop the 15 real pushes to balance the stream.
     for (int i = 0; i < 15; ++i) {
         fl_ir_clip_pop(ir);
     }
@@ -3624,13 +3622,13 @@ UTEST(render, scissor_stack_deep_nesting_balanced) {
     ASSERT_TRUE_MSG(render_seam_read_pixels(&backend, surface, &buf), "read_pixels failed");
     const u8* pixels = (const u8*)buf.pixels;
 
-    // Control: inside the 16x16 clip the fill is drawn (red) regardless of the bug - proves the fill ran.
+    // Control: inside the 16x16 clip the fill is drawn (red) in either case, which shows the fill ran.
     const size_t in = (size_t)8 * buf.stride + (size_t)8 * 3u;
     ASSERT_TRUE_MSG(pixels[in + 0] > 150 && pixels[in + 0] > pixels[in + 1] && pixels[in + 0] > pixels[in + 2],
                     "fill must be visible (red) inside the innermost 16x16 clip");
 
-    // Discriminator: outside the 16x16 clip but inside the 14th (full-surface) clip - clipped away, or the
-    // over-cap pop exposed the full clip and the fill leaks through as red.
+    // Outside the 16x16 clip but inside the 14th, full-surface clip, the fill is clipped away. If the over-cap
+    // pop had removed the 16x16 clip, the fill would show here as red.
     const size_t out = (size_t)32 * buf.stride + (size_t)32 * 3u;
     ASSERT_EQ_MSG((u32)clear.r, (u32)pixels[out + 0], "fill leaked past the 16x16 clip — scissor pop/push imbalance");
     ASSERT_EQ_MSG((u32)clear.g, (u32)pixels[out + 1], "fill leaked past the 16x16 clip — scissor pop/push imbalance");
@@ -3644,27 +3642,27 @@ UTEST(render, scissor_stack_deep_nesting_balanced) {
     fl_arena_destroy(arena);
 }
 
-// render.text_alpha_linear_fade - the SW text/coverage raster must fold the frame's global_alpha into text
-// exactly once, matching the GPU backend. global_alpha is applied at command-emit time (sr_color_premul /
-// pack_tint_premultiplied), so draw_text must NOT re-multiply by command->global_alpha.
+// The SW text and coverage raster applies the frame's global_alpha to text exactly once, as the GPU backend does.
+// global_alpha is applied when the command is emitted (sr_color_premul, pack_tint_premultiplied), so draw_text
+// does not multiply by command->global_alpha again.
 //
-// A full-coverage (0xFF) alpha-coverage quad with an OPAQUE BLACK tint over a WHITE background, swept across
-// global_alpha values. Black tint premultiplies to zero RGB, so the covered pixel's darkening away from white
-// isolates the coverage/alpha term. The darkening must be LINEAR in global_alpha: pixel == 255 - fold(255,
-// global_alpha), where fold is the shared round-to-nearest /255 both backends use. A quadratic (double-applied)
-// fade lands far outside tolerance at partial alpha (ga=128 -> ~192, not 128).
+// The scene is a full-coverage (0xFF) alpha-coverage quad with an opaque black tint over a white background,
+// swept across global_alpha values. A black tint premultiplies to zero RGB, so how far the covered pixel darkens
+// from white depends only on the coverage and alpha term. The darkening is linear in global_alpha: pixel == 255 -
+// fold(255, global_alpha), where fold is the round-to-nearest /255 both backends use. A fade applied twice is
+// quadratic and far outside the tolerance at partial alpha (ga=128 gives about 192, not 128).
 
 UTEST(render, text_alpha_linear_fade) {
     FlArena* arena = arena_new();
     FlRenderBackend backend = create_software_renderer(arena, nullptr, FontRenderMode_Grayscale);
     FlSurface* surface = backend.create_surface(backend.user_data, 32, 32);
 
-    // 16x16 single-channel coverage buffer, fully opaque (the SW backend blits coverage 1:1).
+    // A 16x16 single-channel coverage buffer, fully opaque. The SW backend blits coverage 1:1.
     u8 coverage[16 * 16];
     memset(coverage, 0xFF, sizeof(coverage));
 
-    // Opaque black tint over a white clear color: the covered pixel darkens from 255 toward 0 purely by the
-    // alpha/coverage term. Sample a pixel well inside the dst rect (8,8)-(24,24).
+    // An opaque black tint over a white clear color: the covered pixel darkens from 255 toward 0 by the alpha and
+    // coverage term alone. The sample is well inside the dst rect (8,8)-(24,24).
     const FlColor black = { 0, 0, 0, 255 };
     const FlColor white = { 255, 255, 255, 255 };
     const int sample_x = 16, sample_y = 16;
@@ -3697,11 +3695,12 @@ UTEST(render, text_alpha_linear_fade) {
         ASSERT_TRUE_MSG(render_seam_read_pixels(&backend, surface, &buf), "read_pixels failed");
         const u8* px = (const u8*)buf.pixels + (size_t)sample_y * buf.stride + (size_t)sample_x * 3u;
 
-        // The single, round-to-nearest /255 fold both backends apply; linear output = white minus it.
+        // The one round-to-nearest /255 fold both backends apply. The linear output is white minus it.
         const int folded = (ga == 255) ? 255 : (255 * ga + 127) / 255;
         const int expected = 255 - folded;
 
-        // Tolerance absorbs the tile's Q7/Q15 coverage quantization (~1-2 LSB); a quadratic fade misses by tens.
+        // The tolerance covers the tile's Q7/Q15 coverage quantization, about 1-2 LSB. A quadratic fade misses
+        // by tens.
         for (int c = 0; c < 3; ++c) {
             const int got = px[c];
             ASSERT_TRUE_MSG(abs(got - expected) <= 4, "SW text global_alpha must fade linearly (matching GPU)");
@@ -3716,10 +3715,10 @@ UTEST(render, text_alpha_linear_fade) {
     fl_arena_destroy(arena);
 }
 
-// render.dynamic_image_stride_zero_tight - a dynamic image supplied with stride == 0 (the "tightly packed"
-// convention the GPU backend honors, tex_sub_image_strided: `if (stride == 0) stride = w * bpp;`) must render
-// consecutive source rows on the SW backend too, not row 0 repeated. Both emit_image sites are exercised: the
-// alpha-coverage path (1 byte/pixel) and the dynamic color path (4 bytes/pixel).
+// A dynamic image supplied with stride == 0 means tightly packed, as the GPU backend treats it
+// (tex_sub_image_strided: `if (stride == 0) stride = w * bpp;`). The SW backend also renders consecutive source
+// rows for it and does not repeat row 0. Both emit_image sites are covered: the alpha-coverage path (1 byte per
+// pixel) and the dynamic color path (4 bytes per pixel).
 
 UTEST(render, dynamic_image_stride_zero_tight) {
     FlArena* arena = arena_new();
@@ -3727,14 +3726,14 @@ UTEST(render, dynamic_image_stride_zero_tight) {
     FlSurface* surface = backend.create_surface(backend.user_data, 32, 32);
     const FlColor white = { 255, 255, 255, 255 };
 
-    // dst maps the 16x16 source 1:1 into (8,8)-(24,24). A top sample lands in source rows 0..7, a bottom
-    // sample in rows 8..15. Give the two halves different content so a row-0-repeated read is detectable.
+    // dst maps the 16x16 source 1:1 into (8,8)-(24,24). A top sample falls in source rows 0..7 and a bottom
+    // sample in rows 8..15. The two halves have different content, so a read that repeats row 0 shows.
     const FlRect dst = { 8.0f, 8.0f, 16.0f, 16.0f };
-    const int top_x = 16, top_y = 11; // inside dst, upper half -> source rows 0..7
-    const int bot_x = 16, bot_y = 20; // inside dst, lower half -> source rows 8..15
+    const int top_x = 16, top_y = 11; // inside dst, upper half: source rows 0..7
+    const int bot_x = 16, bot_y = 20; // inside dst, lower half: source rows 8..15
 
-    // --- Alpha-coverage path (1 byte/pixel): top half uncovered (0x00), bottom half fully covered (0xFF).
-    // Opaque black tint over white: uncovered stays white, covered darkens toward black.
+    // Alpha-coverage path (1 byte per pixel): the top half is uncovered (0x00) and the bottom half fully covered
+    // (0xFF). With an opaque black tint over white, uncovered stays white and covered darkens toward black.
     {
         u8 coverage[16 * 16];
         for (int y = 0; y < 16; ++y) {
@@ -3749,7 +3748,7 @@ UTEST(render, dynamic_image_stride_zero_tight) {
         src.dynamic.pixels = coverage;
         src.dynamic.w = 16;
         src.dynamic.h = 16;
-        src.dynamic.stride = 0; // tightly packed; must be read as w*1, not literal 0
+        src.dynamic.stride = 0; // tightly packed, read as w*1
         fl_ir_image(ir, src, FlImageMode_AlphaCoverage, dst, (FlRect) { 0.0f, 0.0f, 0.0f, 0.0f }, black,
                     FlImageFilter_Nearest, nullptr);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
@@ -3767,13 +3766,15 @@ UTEST(render, dynamic_image_stride_zero_tight) {
         const u8* top = (const u8*)buf.pixels + (size_t)top_y * buf.stride + (size_t)top_x * 3u;
         const u8* bot = (const u8*)buf.pixels + (size_t)bot_y * buf.stride + (size_t)bot_x * 3u;
 
-        // A stride-0 read would take source row 0 (uncovered) for every row, leaving the bottom white too.
+        // A read with a literal stride of 0 would take source row 0 (uncovered) for every row and leave the
+        // bottom white too.
         ASSERT_TRUE_MSG(top[0] > 200, "alpha-coverage top half (source rows 0..7) must stay ~white (uncovered)");
         ASSERT_TRUE_MSG(bot[0] < 80, "alpha-coverage bottom half must darken — stride 0 wrongly read as literal 0");
         fl_arena_destroy(ir);
     }
 
-    // --- Dynamic color path (4 bytes/pixel RGBA): top half blue, bottom half red. White tint = no modulation.
+    // Dynamic color path (4 bytes per pixel, RGBA): top half blue, bottom half red. A white tint changes
+    // nothing.
     {
         u8 rgba[16 * 16 * 4];
         for (int y = 0; y < 16; ++y) {
@@ -3793,7 +3794,7 @@ UTEST(render, dynamic_image_stride_zero_tight) {
         src.dynamic.pixels = rgba;
         src.dynamic.w = 16;
         src.dynamic.h = 16;
-        src.dynamic.stride = 0; // tightly packed; must be read as w*4, not literal 0
+        src.dynamic.stride = 0; // tightly packed, read as w*4
         fl_ir_image(ir, src, FlImageMode_Color, dst, (FlRect) { 0.0f, 0.0f, 0.0f, 0.0f }, white, FlImageFilter_Nearest,
                     nullptr);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
@@ -3811,7 +3812,7 @@ UTEST(render, dynamic_image_stride_zero_tight) {
         const u8* top = (const u8*)buf.pixels + (size_t)top_y * buf.stride + (size_t)top_x * 3u;
         const u8* bot = (const u8*)buf.pixels + (size_t)bot_y * buf.stride + (size_t)bot_x * 3u;
 
-        // A stride-0 read would take source row 0 (blue) for every destination row.
+        // A read with a literal stride of 0 would take source row 0 (blue) for every destination row.
         ASSERT_TRUE_MSG(top[2] > 200 && top[0] < 80, "color top half (source rows 0..7) must be blue");
         ASSERT_TRUE_MSG(bot[0] > 200 && bot[2] < 80,
                         "color bottom half must be red — stride 0 wrongly read as literal 0");
@@ -3825,10 +3826,10 @@ UTEST(render, dynamic_image_stride_zero_tight) {
     fl_arena_destroy(arena);
 }
 
-// Composite a GPU-packed straight color (packed RGBA8, R low byte / A high byte - GLSL unpackUnorm4x8 order)
-// over an OPAQUE background at full coverage, exactly as the GPU raster shader does: premultiply then over,
-// out = rgb·a + bg·(1−a), round-to-nearest /255. An SW pixel compared against this is compared against the GPU
-// reference, not a hand-typed constant.
+// Composites a GPU-packed straight color (packed RGBA8 with R in the low byte and A in the high byte, the order of
+// GLSL unpackUnorm4x8) over an opaque background at full coverage, as the GPU raster shader does: premultiply,
+// then over, out = rgb*a + bg*(1-a), with round-to-nearest /255. Comparing an SW pixel with this compares it with
+// the GPU result and not with a hand-typed constant.
 static void gpu_straight_over_ref(u32 packed, const FlColor* bg, int out[3]) {
     const int a = (int)((packed >> 24) & 0xffu);
     const int c[3] = { (int)(packed & 0xffu), (int)((packed >> 8) & 0xffu), (int)((packed >> 16) & 0xffu) };
@@ -3857,19 +3858,19 @@ static bool px_matches_gpu_over(const FlPixelReadback* buf, int x, int y, u32 pa
     return abs((int)p[0] - ref[0]) <= tol && abs((int)p[1] - ref[1]) <= tol && abs((int)p[2] - ref[2]) <= tol;
 }
 
-// render.translucent_fill_border_over - the SW fill/border/gradient blend must apply the source alpha exactly
-// once (straight-over: out = rgb·a + bg·(1−a)), matching the GPU backend, not rgb·a². Colors reach the renderer
-// with global_alpha folded in, so premultiplying the rgb there would apply alpha a second time via the lerp.
-// Each SW pixel is compared against the GPU backend's own compositing of the GPU-packed color for the same IR
-// (gpu_ir_to_draw_cmds → gpu_straight_over_ref).
+// The SW fill, border and gradient blend applies the source alpha exactly once (straight over: out = rgb*a +
+// bg*(1-a)), as the GPU backend does. Colors reach the renderer with global_alpha already applied, so
+// premultiplying the rgb there would apply alpha a second time in the lerp and give rgb*a*a. Each SW pixel is
+// compared with the GPU backend's own compositing of the GPU-packed color for the same IR (gpu_ir_to_draw_cmds,
+// then gpu_straight_over_ref).
 //
-// Covers all four translator sites that use straight packing: solid fill, a square (radius-0) border
-// (straight edges through the fill path), a two-color gradient fill (RenderMask_ColorGradient), and a rounded
-// border (whose corners render through process_8_pixels_border).
+// The case covers all four translator sites that use straight packing: a solid fill, a square (radius-0) border
+// whose straight edges go through the fill path, a two-color gradient fill (RenderMask_ColorGradient), and a
+// rounded border, whose corners render through process_8_pixels_border.
 
-// A layout border's dash pattern has to survive FlLayoutBorder.stroke -> Clay element config -> render data ->
-// clay_to_render_ir, and it is the only field on that path with no other consumer. Driven at ui_scale 2
-// because the lengths scale, and at scale 1 an unscaled pattern is indistinguishable from a correct one.
+// A layout border's dash pattern passes through FlLayoutBorder.stroke -> Clay element config -> render data ->
+// clay_to_render_ir, and nothing else reads it on that path. The case runs at ui_scale 2 because the lengths
+// scale, and at scale 1 an unscaled pattern looks the same as a correct one.
 UTEST(render, layout_border_dash_pattern_reaches_the_ir_scaled) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -3897,16 +3898,16 @@ UTEST(render, layout_border_dash_pattern_reaches_the_ir_scaled) {
                     "the dash pattern arrives scaled by the UI scale, like every other length");
 }
 
-// Text follows a scale change made AFTER the font was loaded. A font handle names the size the caller
-// authored; text_scale is multiplied in on the way out, so nothing about a face is frozen at the scale it
-// happened to be loaded under. Both halves are covered: an explicit config.font_size, and font_size 0 falling
-// back to the load size. Driven at scale 2 because at scale 1 an unmultiplied size looks like a correct one.
+// Text follows a scale change made after the font was loaded. A font handle names the size the caller authored,
+// and text_scale is multiplied in when the size is used, so a face keeps nothing from the scale it was loaded
+// under. Both paths are covered: an explicit config.font_size, and font_size 0 falling back to the load size.
+// The case runs at scale 2 because at scale 1 an unmultiplied size looks correct.
 UTEST(render, text_size_follows_a_scale_change_after_the_font_loads) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
     ui_set_scale(1.0f, 1.0f);
 
-    // Loaded while the scale is still 1: everything below asserts this handle follows the later change.
+    // Loaded while the scale is still 1. Everything below checks that this handle follows the later change.
     const u16 authored = 12;
     FlFontId font = font_cache_load_font_memory(s_render.font_cache, k_glyph_test_ttf, k_glyph_test_ttf_size, authored);
     ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "the embedded test font loads");
@@ -3915,7 +3916,7 @@ UTEST(render, text_size_follows_a_scale_change_after_the_font_loads) {
 
     ui_set_scale(2.0f, 2.0f);
 
-    // Explicit size: 20px authored must reach the IR as a 40px raster key.
+    // Explicit size: 20px authored reaches the IR as a 40px raster key.
     ui_update_begin(ctx);
     fl_layout_start(ID("scaled_text_root"));
     fl_layout_configure((FlLayoutConfig) { .sizing = { .width = sizing_grow(), .height = sizing_grow() } });
@@ -3926,7 +3927,7 @@ UTEST(render, text_size_follows_a_scale_change_after_the_font_loads) {
     bool explicit_found = s_render.text_run_found;
     u16 explicit_size = s_render.submitted_text_run.size;
 
-    // Size 0: the load-size fallback must scale the same way, which only holds if the load size is authored.
+    // Size 0: the load-size fallback scales the same way, which holds only if the load size is authored.
     ui_update_begin(ctx);
     fl_layout_start(ID("scaled_text_default_root"));
     fl_layout_configure((FlLayoutConfig) { .sizing = { .width = sizing_grow(), .height = sizing_grow() } });
@@ -3937,7 +3938,7 @@ UTEST(render, text_size_follows_a_scale_change_after_the_font_loads) {
     bool default_found = s_render.text_run_found;
     u16 default_size = s_render.submitted_text_run.size;
 
-    // A font loaded AFTER the change must land on the same size as the one loaded before it.
+    // A font loaded after the change gets the same size as the one loaded before it.
     FlFontId late = font_cache_load_font_memory(s_render.font_cache, k_glyph_test_ttf, k_glyph_test_ttf_size, authored);
     int late_size = font_cache_get_size(s_render.font_cache, late);
 
@@ -3950,10 +3951,10 @@ UTEST(render, text_size_follows_a_scale_change_after_the_font_loads) {
     ASSERT_EQ_MSG(late_size, (int)authored, "a font loaded under scale 2 keeps the same authored size");
 }
 
-// Letter spacing and line height are authored px too, so they must track text_scale with the glyphs. Both are
-// stated relatively - a scale-2 frame against a scale-1 frame authored at double - so no Clay line-box rule is
-// baked into the assertion. The third frame is the vacuity guard: same authored values at scale 1, so an
-// assertion that passes for the wrong reason still has to explain why that one differs.
+// Letter spacing and line height are authored px too, so they follow text_scale with the glyphs. Both are checked
+// relatively, a scale-2 frame against a scale-1 frame authored at double, so no Clay line-box rule appears in
+// the assertion. The third frame guards against a vacuous pass: it has the same authored values at scale 1, so
+// its results must differ.
 UTEST(render, text_letter_spacing_and_line_height_follow_the_scale) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -3970,8 +3971,8 @@ UTEST(render, text_letter_spacing_and_line_height_follow_the_scale) {
         float pen_step;
         float box_height;
     };
-    // Frames 1 and 2 resolve to the SAME physical size/spacing/line-height by different routes; frame 3 keeps
-    // frame 2's authored values but runs at scale 1, so everything it resolves is half.
+    // Frames 1 and 2 resolve to the same physical size, spacing and line height by different routes. Frame 3
+    // keeps frame 2's authored values but runs at scale 1, so everything it resolves is half.
     struct SpacedFrame frames[] = {
         { .scale = 1.0f, .font_size = 20, .spacing = 6, .line_height = 40 },
         { .scale = 2.0f, .font_size = 10, .spacing = 3, .line_height = 20 },
@@ -3993,7 +3994,7 @@ UTEST(render, text_letter_spacing_and_line_height_follow_the_scale) {
         ASSERT_EQ_MSG((int)s_render.text_run_glyph_count, 2, "one glyph per codepoint");
         frames[i].pen_step = s_render.text_run_glyphs[1].x - s_render.text_run_glyphs[0].x;
 
-        // The laid-out text box is only visible through the debug render-command snapshot.
+        // The laid-out text box can be read only from the debug render-command snapshot.
         const int n = ui_get_render_command_count();
         bool box_found = false;
         for (int c = 0; c < n; c++) {
@@ -4018,8 +4019,9 @@ UTEST(render, text_letter_spacing_and_line_height_follow_the_scale) {
                     "and must lay out shorter, or the scale is not reaching the line box");
 }
 
-// A tracked single-word label is laid out as wide as its glyphs are painted: the element width equals the pen
-// span (first glyph origin to the last glyph's advance end), and zero spacing leaves the plain advance sum.
+// A tracked single-word label is laid out as wide as its glyphs are painted. The element width equals the pen
+// span, from the first glyph's origin to the end of the last glyph's advance, and zero spacing leaves the plain
+// sum of advances.
 UTEST(render, tracked_single_word_element_width_matches_the_painted_extent) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -4060,9 +4062,9 @@ UTEST(render, tracked_single_word_element_width_matches_the_painted_extent) {
     ASSERT_NEAR_MSG(element_width[1] - element_width[0], 10.0f, 1.0f, "two gaps of 5px separate the two widths");
 }
 
-// font_cache_resolve_size_px is the one home of the "size <= 0 means the face's load size" rule and the point
-// the caller's type scale is applied. The refusals matter too: a scale of 0 reaching a draw path would
-// quantize to a zero key and silently drop the run.
+// font_cache_resolve_size_px is the one place that implements "size <= 0 means the face's load size" and applies
+// the caller's type scale. It also refuses a scale of 0, which on a draw path would quantize to a zero key and
+// drop the run without a trace.
 UTEST(font_cache, resolve_size_px_applies_the_scale_over_the_zero_fallback) {
     FlFontCache* cache = font_cache_new(s_arena);
     FlFontId font = font_cache_load_font_memory(cache, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
@@ -4086,8 +4088,8 @@ UTEST(font_cache, resolve_size_px_applies_the_scale_over_the_zero_fallback) {
     font_cache_destroy(cache);
 }
 
-// The same path with no pattern configured: the zeroed default must stay zeroed rather than picking up
-// whatever the previous frame left in the Clay element config.
+// The same path with no pattern configured: the zeroed default stays zeroed and does not pick up what the
+// previous frame left in the Clay element config.
 UTEST(render, layout_border_without_a_dash_pattern_stays_solid) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -4120,11 +4122,11 @@ UTEST(render, translucent_fill_border_over) {
     FlArena* commands_arena = arena_new();
 
     const FlColor clear = { .r = 60, .g = 60, .b = 60, .a = 255 };
-    const FlColor tA = { .r = 200, .g = 80, .b = 20, .a = 128 }; // ~50% alpha
+    const FlColor tA = { .r = 200, .g = 80, .b = 20, .a = 128 }; // about 50% alpha
     const FlColor tB = { .r = 40, .g = 160, .b = 220, .a = 96 }; // a second translucent color for the gradient
     FlPixelReadback buf;
 
-    // --- Solid translucent fill: sample deep inside, away from the AA edges. ---
+    // Solid translucent fill, sampled deep inside, away from the antialiased edges.
     {
         FlArena* ir = arena_new();
         fl_arena_align(ir, 8);
@@ -4143,7 +4145,7 @@ UTEST(render, translucent_fill_border_over) {
         fl_arena_destroy(ir);
     }
 
-    // --- Square (radius-0) border: straight edges render through the fill path. Sample the top band. ---
+    // Square (radius-0) border: straight edges render through the fill path. The sample is in the top band.
     {
         FlArena* ir = arena_new();
         fl_arena_align(ir, 8);
@@ -4157,15 +4159,15 @@ UTEST(render, translucent_fill_border_over) {
                 .commands = start, .bytes = bytes, .global_alpha = 255, .target_width = 128, .target_height = 128 });
         ASSERT_TRUE(g.count >= 1);
         ASSERT_TRUE_MSG(render_ir_to_surface(&backend, surface, &clear, start, bytes, &buf), "read_pixels failed");
-        // Top edge band x=70..110, y=10..22; the GPU border packs the color in color[0].
+        // The top edge band is x=70..110, y=10..22. The GPU border packs the color in color[0].
         ASSERT_TRUE_MSG(px_matches_gpu_over(&buf, 90, 16, g.cmds[0].color[0], &clear, 2),
                         "translucent square border must composite straight-over");
         fl_arena_destroy(ir);
     }
 
-    // --- Two-color gradient fill: differing corners take the RenderMask_ColorGradient path (interpolated then
-    // composited per pixel). The left corners are tA, the right tB; the leftmost interior column is dominated
-    // by tA (a half-texel of interpolation bleed toward tB), hence the ±3 tolerance. ---
+    // Two-color gradient fill: differing corners take the RenderMask_ColorGradient path, which interpolates and
+    // then composites per pixel. The left corners are tA and the right tB. The leftmost interior column is mostly
+    // tA with half a texel of interpolation toward tB, which is why the tolerance is 3.
     {
         FlArena* ir = arena_new();
         fl_arena_align(ir, 8);
@@ -4179,15 +4181,15 @@ UTEST(render, translucent_fill_border_over) {
                 .commands = start, .bytes = bytes, .global_alpha = 255, .target_width = 128, .target_height = 128 });
         ASSERT_TRUE(g.count >= 1);
         ASSERT_TRUE_MSG(render_ir_to_surface(&backend, surface, &clear, start, bytes, &buf), "read_pixels failed");
-        // color[0] = TL corner (tA); sample the leftmost interior column, dominated by tA.
+        // color[0] is the TL corner (tA). The sample is the leftmost interior column, which is mostly tA.
         ASSERT_TRUE_MSG(px_matches_gpu_over(&buf, 11, 90, g.cmds[0].color[0], &clear, 3),
                         "translucent gradient corner must composite straight-over, not rgb·a²");
         fl_arena_destroy(ir);
     }
 
-    // --- Rounded border: the corners render through process_8_pixels_border (dual-radius). A 24px-wide,
-    // radius-24 corner is a filled quarter disk (inner radius 0), so a pixel well inside it is fully covered.
-    // ±3 absorbs any sub-pixel corner-AA falloff. ---
+    // Rounded border: the corners render through process_8_pixels_border (dual radius). A corner 24px wide with
+    // radius 24 is a filled quarter disk (inner radius 0), so a pixel well inside it is fully covered. The
+    // tolerance of 3 covers any sub-pixel antialiasing at the corner.
     {
         FlArena* ir = arena_new();
         fl_arena_align(ir, 8);
@@ -4201,7 +4203,7 @@ UTEST(render, translucent_fill_border_over) {
                 .commands = start, .bytes = bytes, .global_alpha = 255, .target_width = 128, .target_height = 128 });
         ASSERT_TRUE(g.count >= 1);
         ASSERT_TRUE_MSG(render_ir_to_surface(&backend, surface, &clear, start, bytes, &buf), "read_pixels failed");
-        // (88,88) is inside the top-left corner disk centered at (94,94), radius 24 - fully covered.
+        // (88,88) is inside the top-left corner disk centered at (94,94) with radius 24, so it is fully covered.
         ASSERT_TRUE_MSG(px_matches_gpu_over(&buf, 88, 88, g.cmds[0].color[0], &clear, 3),
                         "translucent rounded border corner must composite straight-over, not rgb·a²");
         fl_arena_destroy(ir);
@@ -4215,19 +4217,17 @@ UTEST(render, translucent_fill_border_over) {
     fl_arena_destroy(arena);
 }
 
-// render.primitives_and_background_blend - drives the software renderer over two frames and asserts pixels
-// probed at positions the geometry fixes:
-//   * "primitives" - the full primitive set (rect / rounded / border / clip / gradient / static-image /
-//     dynamic-image RGBA + alpha / painter) over a single background image composited with alpha
-//     over the clear color.
-//   * "crossfade" - a background-only frame exercising the crossfade compositor, which is a distinct
-//     path that does not read background alpha or the clear color.
+// Runs the software renderer over two frames and checks pixels at positions fixed by the geometry:
+//   * "primitives": the full primitive set (rect, rounded, border, clip, gradient, static image, dynamic image
+//     in RGBA and alpha, painter) over a single background image composited with alpha over the clear color.
+//   * "crossfade": a frame with only a background, for the crossfade compositor, which is a separate path that
+//     reads neither the background alpha nor the clear color.
 //
-// image_load_from_memory decodes on a jobs worker thread, so the test blocks on the image cache until the
-// decode lands before rendering. That barrier is test-only.
+// image_load_from_memory decodes on a jobs worker thread, so the test waits on the image cache until the decode
+// has finished before rendering.
 
-// 4x4 solid-color truecolor PNGs (color type 2, 3 channels) used for the static
-// image and the two background crossfade slots.
+// 4x4 solid-color truecolor PNGs (color type 2, 3 channels) used for the static image and the two background
+// crossfade slots.
 static const unsigned char k_png_red[] = {
     0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00,
     0x04, 0x00, 0x00, 0x00, 0x04, 0x08, 0x02, 0x00, 0x00, 0x00, 0x26, 0x93, 0x09, 0x29, 0x00, 0x00, 0x00, 0x10, 0x49,
@@ -4252,7 +4252,7 @@ static uint64_t fnv1a_64(const void* data, size_t size) {
     return hash;
 }
 
-// Test-only barrier: block until an asynchronous in-memory decode has landed in the image cache.
+// Blocks until an asynchronous in-memory decode is in the image cache.
 static bool wait_image_ready(ImageHandle handle) {
     for (int i = 0; i < 5000; ++i) {
         if (image_cache_get_data(handle) != nullptr) {
@@ -4291,8 +4291,8 @@ UTEST(render, public_mounted_image_load_and_status) {
     FlImageLoadOptions resize_options = { .target_width = 2, .target_height = 2, .preserve_aspect_ratio = true };
     FlImageHandle direct = fl_image_load_mount(first_mount.mount, FL_S(STUB_VFS_FILE), resize_options);
     ASSERT_NE_MSG(direct, FL_IMAGE_HANDLE_INVALID, "direct mounted load should start");
-    // Whether the load has already completed is a race with the job system, so the fresh handle is only
-    // required to be pollable and not already failed.
+    // Whether the load has already completed is a race with the job system, so the new handle is only required
+    // to be pollable and not already failed.
     FlImageStatus started = fl_image_status(direct);
     ASSERT_TRUE_MSG(started == FlImageStatus_Pending || started == FlImageStatus_Ready,
                     "new asynchronous load should be pending or already ready");
@@ -4342,10 +4342,10 @@ static void write_ppm(const char* path, const u8* rgb24, int width, int height) 
     fclose(f);
 }
 
-// Write a rendered frame to frame_dump_<label>.ppm when DUMP_FRAMES is set, so a deliberate rendering change
-// can be reviewed as an image.
+// Writes a rendered frame to frame_dump_<label>.ppm when DUMP_FRAMES is set, so a deliberate rendering change can
+// be reviewed as an image.
 //
-// The frames are never compared as a whole: every case asserts probes computed from the geometry.
+// The frames are never compared as a whole. Every case asserts probes computed from the geometry.
 static void dump_frame(const char* label, const FlPixelReadback* buf) {
     if (getenv("DUMP_FRAMES") == nullptr) {
         return;
@@ -4389,18 +4389,18 @@ static void fill_dynamic_alpha(FlDynamicImage* img) {
 }
 
 // The Tint background mode composites the decoded image right-aligned onto a wider canvas filled with the tint
-// color, then blends a short tint->image gradient at the left seam. The right-alignment offset
-// (canvas_w - image_width) feeds both the canvas blit and the gradient seam: the source must land flush
-// against the right edge, with pure tint to the left.
+// color, then blends a short tint-to-image gradient at the left seam. The right-alignment offset
+// (canvas_w - image_width) is used by both the canvas blit and the gradient seam: the source is flush against
+// the right edge, with pure tint to the left.
 UTEST(image_decode, tint_mode_right_aligns_source) {
-    // Reference decode (no canvas) to learn the source pixels - k_png_red is a 4x4 RGB PNG.
+    // A reference decode with no canvas gives the source pixels. k_png_red is a 4x4 RGB PNG.
     ImageDecodeOptions ref_opts = { .ui_scale = 1.0f };
     FlImageDecodeResult* src = image_decode(s_arena, k_png_red, sizeof(k_png_red), &ref_opts);
     ASSERT_TRUE_MSG(src != nullptr, "reference decode of k_png_red failed");
     ASSERT_EQ_MSG((int)src->channels, 3, "RGB source");
     ASSERT_EQ_MSG(src->width, 4, "source is 4px wide");
 
-    // Tint onto an 8x4 canvas. Aspect-preserved keeps the 4x4 image 4px wide, so it right-aligns at x=4.
+    // Tint onto an 8x4 canvas. Keeping the aspect ratio leaves the 4x4 image 4px wide, so it right-aligns at x=4.
     ImageDecodeOptions opts = {
         .ui_scale = 1.0f,
         .target_width = 8,
@@ -4422,13 +4422,13 @@ UTEST(image_decode, tint_mode_right_aligns_source) {
     ASSERT_EQ_MSG(out->height, 4, "output spans the full canvas height");
     ASSERT_EQ_MSG((int)out->channels, 3, "tint canvas is RGB");
 
-    // Left fill region (x < image_start_x = 4) is pure tint color, untouched by the gradient seam.
+    // The left fill region (x < image_start_x = 4) is pure tint color, which the gradient seam does not touch.
     const u8* p_left = out->pixels; // (0,0)
     ASSERT_EQ_MSG((int)p_left[0], 10, "left column is tint red");
     ASSERT_EQ_MSG((int)p_left[1], 200, "left column is tint green");
     ASSERT_EQ_MSG((int)p_left[2], 30, "left column is tint blue");
 
-    // Rightmost canvas column (x=7) maps to source column 3 and lies past the gradient seam, so it equals the
+    // The rightmost canvas column (x=7) maps to source column 3 and is past the gradient seam, so it equals the
     // source pixel exactly.
     const u8* p_right = out->pixels + 7 * 3;   // (7,0)
     const u8* src_right = src->pixels + 3 * 3; // source (3,0)
@@ -4437,9 +4437,9 @@ UTEST(image_decode, tint_mode_right_aligns_source) {
     ASSERT_EQ_MSG((int)p_right[2], (int)src_right[2], "right column keeps source blue");
 }
 
-// Center background mode letterboxes the aspect-preserved source onto a fill-colored canvas. With a 4x4
-// source on an 8x4 canvas the source stays 4px wide and centers at offset_x=2, leaving black fill columns
-// at the edges.
+// Center background mode letterboxes the source, with its aspect ratio kept, onto a canvas of the fill color. A
+// 4x4 source on an 8x4 canvas stays 4px wide and is centered at offset_x=2, which leaves black fill columns at
+// the edges.
 UTEST(image_decode, center_mode_letterboxes_source) {
     ImageDecodeOptions ref_opts = { .ui_scale = 1.0f };
     FlImageDecodeResult* src = image_decode(s_arena, k_png_red, sizeof(k_png_red), &ref_opts);
@@ -4454,7 +4454,7 @@ UTEST(image_decode, center_mode_letterboxes_source) {
     };
     ImageThumbnailOptions thumb = {
         .background_mode = ImageDecodeBackgroundMode_Center,
-        .tint_r = 0, // Center fills letterbox margins with black (matches the caller's policy)
+        .tint_r = 0, // Center fills the letterbox margins with black, as the caller does
         .tint_g = 0,
         .tint_b = 0,
     };
@@ -4465,13 +4465,13 @@ UTEST(image_decode, center_mode_letterboxes_source) {
     ASSERT_EQ_MSG(out->height, 4, "output spans the full canvas height");
     ASSERT_EQ_MSG((int)out->channels, 3, "center canvas is RGB");
 
-    // Left margin (x=0, before the centered source at x=2) is the black fill color.
+    // The left margin (x=0, before the centered source at x=2) is the black fill color.
     const u8* p_left = out->pixels; // (0,0)
     ASSERT_EQ_MSG((int)p_left[0], 0, "left margin is black fill R");
     ASSERT_EQ_MSG((int)p_left[1], 0, "left margin is black fill G");
     ASSERT_EQ_MSG((int)p_left[2], 0, "left margin is black fill B");
 
-    // Canvas column 3 sits inside the centered source (offset_x=2) and maps to source column 1.
+    // Canvas column 3 is inside the centered source (offset_x=2) and maps to source column 1.
     const u8* p_mid = out->pixels + 3 * 3;
     const u8* src_mid = src->pixels + 1 * 3;
     ASSERT_EQ_MSG((int)p_mid[0], (int)src_mid[0], "centered source keeps red");
@@ -4479,8 +4479,8 @@ UTEST(image_decode, center_mode_letterboxes_source) {
     ASSERT_EQ_MSG((int)p_mid[2], (int)src_mid[2], "centered source keeps blue");
 }
 
-// A 4x4 binary-grayscale PGM (stb PNM decodes P5 to a single channel), feeding the channel-agnostic compose
-// path end-to-end.
+// A 4x4 binary grayscale PGM. stb's PNM decoder returns P5 as a single channel, which the compose path has to
+// handle.
 static const u8 k_pgm_gray4x4[] = {
     'P',  '5',  '\n', '4',  ' ', '4', '\n', '2', '5', '5', '\n', // header: P5 4x4 maxval 255
     0x10, 0x20, 0x30, 0x40,                                      // row 0
@@ -4489,9 +4489,9 @@ static const u8 k_pgm_gray4x4[] = {
     0xD0, 0xE0, 0xF0, 0xFF,                                      // row 3
 };
 
-// compose_source_into_canvas_rgb must not read past a source pixel's actual channel data: for a 1-channel
-// source it replicates channel 0 into R/G/B. The source is exactly width*height bytes, so R==G==B==gray also
-// pins that no stray neighbour byte leaked into G/B.
+// compose_source_into_canvas_rgb does not read past a source pixel's channel data. For a 1-channel source it
+// replicates channel 0 into R, G and B. The source is exactly width*height bytes, so R==G==B==gray also shows
+// that no neighbouring byte ended up in G or B.
 UTEST(image_decode, compose_grayscale_source_replicates_gray) {
     const u8 gray[6] = { 11, 22, 33, 44, 55, 66 }; // 3x2, 1 channel, stride 3
     FlImageDecodeResult img = {
@@ -4513,8 +4513,8 @@ UTEST(image_decode, compose_grayscale_source_replicates_gray) {
     }
 }
 
-// Same guarantee for a 2-channel (grayscale + alpha) source: the gray value is channel 0, alpha is channel 1
-// and must be dropped, not read into G/B. Source is exactly width*height*2 bytes.
+// The same for a 2-channel (grayscale and alpha) source: the gray value is channel 0, and alpha, channel 1, is
+// dropped and not read into G or B. The source is exactly width*height*2 bytes.
 UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
     const u8 ga[6] = { 100, 255, 150, 128, 200, 0 }; // 3x1, 2 channels (gray, alpha), stride 6
     FlImageDecodeResult img = {
@@ -4529,7 +4529,7 @@ UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
     const ImageCanvas target = { .pixels = canvas, .width = 3, .height = 1 };
     composite_source_into_canvas_rgb(&img, &target);
 
-    const int expected_gray[3] = { 100, 150, 200 }; // channel-0 gray of each pixel; alpha ignored
+    const int expected_gray[3] = { 100, 150, 200 }; // channel 0 of each pixel, with alpha ignored
     for (int i = 0; i < 3; i++) {
         ASSERT_EQ_MSG((int)canvas[i * 3 + 0], expected_gray[i], "gray-alpha: channel 0 into R");
         ASSERT_EQ_MSG((int)canvas[i * 3 + 1], expected_gray[i], "gray-alpha: channel 0 into G (not alpha)");
@@ -4537,9 +4537,9 @@ UTEST(image_decode, compose_gray_alpha_source_ignores_alpha) {
     }
 }
 
-// The black-border predicates once handled only 4/3/1 channels and fell through to "all black" for anything
-// else. stb hands back 2 channels for a grey+alpha PNG when force_rgb is off, so a non-black GA row must
-// report false on its grey byte, and a high alpha byte must not make a black row report non-black.
+// The black-border predicates handle 2-channel rows. stb returns 2 channels for a grey+alpha PNG when force_rgb
+// is off, so a GA row that is not black reports false from its grey byte, and a high alpha byte does not make a
+// black row report non-black.
 UTEST(image_decode, black_predicates_read_gray_alpha_channel) {
     const u8 bright_ga[6] = { 200, 0, 200, 0, 200, 0 }; // 3x1 GA: bright grey, zero alpha
     const FlImageDecodeResult bright
@@ -4557,13 +4557,13 @@ UTEST(image_decode, black_predicates_read_gray_alpha_channel) {
                     "a black grey+alpha column must report all-black regardless of alpha");
 }
 
-// When a resize fails to shrink an oversized source, the Tint/Center offsets go negative. The clamped blit
-// must crop the source to the canvas and touch nothing outside it; guard bytes flanking a 2x2 canvas catch
-// any out-of-bounds write.
+// When a resize fails to shrink an oversized source, the Tint and Center offsets go negative. The clamped blit
+// crops the source to the canvas and writes nothing outside it. Guard bytes on both sides of a 2x2 canvas catch
+// an out-of-bounds write.
 UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
     enum { CW = 2, CH = 2, CANVAS_BYTES = CW * CH * 3, GUARD = 8 };
 
-    // 4x4 RGB source, each pixel a distinct value keyed off its linear index.
+    // A 4x4 RGB source in which each pixel's value comes from its linear index.
     u8 src[4 * 4 * 3];
     for (int i = 0; i < 4 * 4; i++) {
         src[i * 3 + 0] = (u8)(i * 3 + 0);
@@ -4578,15 +4578,15 @@ UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
         .channels = 3,
     };
 
-    // Guarded buffer: [GUARD 0xAB | canvas | GUARD 0xAB]. canvas points into the middle.
+    // The guarded buffer is [GUARD 0xAB | canvas | GUARD 0xAB], and canvas points into the middle.
     u8 buf[GUARD + CANVAS_BYTES + GUARD];
     for (int i = 0; i < (int)sizeof(buf); i++) {
         buf[i] = 0xAB;
     }
     u8* canvas = buf + GUARD;
 
-    // offset (-1,-1) mimics a Center offset for a source larger than the canvas ((2-4)/2). dst_x = -1 + x, so
-    // x==0 falls before the canvas (dropped), x==3 falls past it (dropped), x==1/2 map to canvas cols 0/1.
+    // Offset (-1,-1) is the Center offset for a source larger than the canvas, (2-4)/2. dst_x = -1 + x, so x==0
+    // falls before the canvas and x==3 past it, and both are dropped. x==1 and x==2 map to canvas columns 0 and 1.
     const ImageCanvas target = {
         .pixels = canvas,
         .width = CW,
@@ -4603,7 +4603,7 @@ UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
                       "trailing guard byte untouched (no OOB write after canvas)");
     }
 
-    // Content check: canvas (col,row) == source (col+1,row+1). Confirms the surviving region is the correct crop.
+    // Canvas (col,row) == source (col+1,row+1), so the region kept is the right crop.
     for (int row = 0; row < CH; row++) {
         for (int col = 0; col < CW; col++) {
             int src_idx = (row + 1) * 4 + (col + 1);
@@ -4615,8 +4615,8 @@ UTEST(image_decode, compose_oversized_source_clamps_to_canvas) {
     }
 }
 
-// End-to-end companion to the direct compose tests: a real 1-channel decode (P5 PGM -> channels==1) must
-// survive the Center compose path without reading past the source.
+// The same through a real decode: a 1-channel image (P5 PGM, channels==1) goes through the Center compose path
+// without a read past the source.
 UTEST(image_decode, compose_grayscale_decode_center_no_overread) {
     ImageDecodeOptions ref_opts = { .ui_scale = 1.0f };
     FlImageDecodeResult* src = image_decode(s_arena, k_pgm_gray4x4, sizeof(k_pgm_gray4x4), &ref_opts);
@@ -4642,22 +4642,22 @@ UTEST(image_decode, compose_grayscale_decode_center_no_overread) {
     ASSERT_EQ_MSG(out->width, 8, "output spans the full canvas width");
     ASSERT_EQ_MSG((int)out->channels, 3, "compose canvas is RGB");
 
-    // Left margin (x=0, before the centered 4px source at offset_x=2) is the fill color.
+    // The left margin (x=0, before the centered 4px source at offset_x=2) is the fill color.
     const u8* p_left = out->pixels;
     ASSERT_EQ_MSG((int)p_left[0], 1, "left margin is fill R");
     ASSERT_EQ_MSG((int)p_left[1], 2, "left margin is fill G");
     ASSERT_EQ_MSG((int)p_left[2], 3, "left margin is fill B");
 
-    // Canvas column 2 is the first centered source column; a grayscale source yields R==G==B there.
+    // Canvas column 2 is the first centered source column, and a grayscale source gives R==G==B there.
     const u8* p_src0 = out->pixels + 2 * 3;
     ASSERT_EQ_MSG((int)p_src0[0], (int)p_src0[1], "centered grayscale pixel: R==G");
     ASSERT_EQ_MSG((int)p_src0[1], (int)p_src0[2], "centered grayscale pixel: G==B");
     ASSERT_EQ_MSG((int)p_src0[0], (int)src->pixels[0], "centered pixel matches decoded gray value");
 }
 
-// The vertical fade pass needs a 3-channel image (force_rgb provides it) and blends each row from the
-// original color at the top toward the target color at the bottom. With fade_start=0 the top row stays
-// original and the bottom row reaches the target color.
+// The vertical fade pass needs a 3-channel image, which force_rgb provides, and blends each row from the original
+// color at the top toward the target color at the bottom. With fade_start=0 the top row stays original and the
+// bottom row reaches the target color.
 UTEST(image_decode, vertical_fade_blends_toward_target) {
     ImageDecodeOptions ref_opts = { .ui_scale = 1.0f };
     FlImageDecodeResult* src = image_decode(s_arena, k_png_red, sizeof(k_png_red), &ref_opts);
@@ -4677,17 +4677,17 @@ UTEST(image_decode, vertical_fade_blends_toward_target) {
     image_thumbnail_compose(s_arena, out, &opts, &thumb);
     ASSERT_EQ_MSG((int)out->channels, 3, "faded image stays RGB");
 
-    // Top row keeps the source color (blend factor full); bottom row is pulled toward the blue target.
+    // The top row keeps the source color and the bottom row is pulled toward the blue target.
     const u8* top = out->pixels;                                      // (0,0)
     const u8* bottom = out->pixels + (out->height - 1) * out->stride; // (0, h-1)
     ASSERT_EQ_MSG((int)top[0], (int)src->pixels[0], "top row keeps the original red");
     ASSERT_TRUE_MSG((int)bottom[2] > (int)top[2], "bottom row blends toward the blue fade target");
 }
 
-// ImageDecodeResizeFilter is load-time resampling, chosen per load and applied once in the compose stage -
-// entirely separate from the draw-time FlImageFilter the render command carries. Upscaling a hard black/white
-// edge separates the two: the default filter interpolates across it, point sampling can only reproduce the two
-// source values.
+// ImageDecodeResizeFilter is load-time resampling, chosen per load and applied once in the compose stage. It is
+// separate from the draw-time FlImageFilter the render command carries. Upscaling a hard black/white edge tells
+// the filters apart: the default filter interpolates across the edge, and point sampling can only reproduce the
+// two source values.
 UTEST(image_decode, resize_filter_selects_the_load_time_resampler) {
     u8 src_pixels[2 * 2 * 3];
     for (int y = 0; y < 2; ++y) {
@@ -4739,8 +4739,8 @@ UTEST(image_decode, resize_filter_selects_the_load_time_resampler) {
 #define CROP_GRAY_SIZE (CROP_GRAY_INNER + 2 * CROP_GRAY_BORDER)
 #define CROP_GRAY_VALUE 100
 
-// RGBA image: opaque black border around an opaque gray interior. When `odd_last_row` is set, the bottom interior
-// row carries one colored pixel.
+// An RGBA image with an opaque black border around an opaque gray interior. When `odd_last_row` is set, the
+// bottom interior row has one colored pixel.
 static void fill_black_bordered_gray(u8* pixels, bool odd_last_row) {
     for (int y = 0; y < CROP_GRAY_SIZE; ++y) {
         for (int x = 0; x < CROP_GRAY_SIZE; ++x) {
@@ -4779,8 +4779,8 @@ static FlImageDecodeResult compose_black_bordered(u8* pixels, int target) {
     return result;
 }
 
-// The black-border crop is zero-copy, so the cropped image keeps the parent's row stride. Grayscale detection and
-// conversion must walk rows by that stride rather than treating the interior as packed.
+// The black-border crop does not copy, so the cropped image keeps the parent's row stride. Grayscale detection and
+// conversion walk rows by that stride and do not treat the interior as packed.
 UTEST(image_decode, crop_then_grayscale_honors_stride) {
     u8 pixels[CROP_GRAY_SIZE * CROP_GRAY_SIZE * 4];
     fill_black_bordered_gray(pixels, false);
@@ -4829,7 +4829,7 @@ UTEST(image_decode, checked_pixel_size_rejects_unrepresentable_sizes) {
     ASSERT_FALSE(image_checked_pixel_size(INT_MAX, INT_MAX, SIZE_MAX / 4, &size));
 
 #if SIZE_MAX > UINT32_MAX
-    // Larger than any int product, still representable: the full byte count comes back.
+    // Larger than any int product but still representable, so the full byte count comes back.
     ASSERT_TRUE(image_checked_pixel_size(50000, 50000, 4, &size));
     ASSERT_EQ((size_t)10000000000u, size);
 #endif
@@ -4847,7 +4847,7 @@ UTEST(image_decode, dynamic_image_refuses_stride_overflow) {
     ASSERT_EQ(8 * 4, ok->user_stride);
 }
 
-// The public constructors hand back a zeroed buffer of the right shape and refuse unusable arguments.
+// The public constructors return a zeroed buffer of the right shape and refuse unusable arguments.
 UTEST(image_decode, public_dynamic_image_constructors_shape_the_buffer) {
     FlDynamicImage* rgba = fl_dynamic_image_create(5, 3, (FlArena*)s_arena);
     ASSERT_TRUE(rgba != nullptr);
@@ -4893,7 +4893,7 @@ UTEST(image_decode, svg_at_size_cap_still_decodes) {
     ASSERT_EQ(8192, out->width);
 }
 
-// The cap applies to the final raster, so a huge declared size scaled down by a target still decodes.
+// The cap applies to the final raster, so a huge declared size that a target scales down still decodes.
 UTEST(image_decode, svg_huge_declared_size_with_small_target_decodes) {
     ImageDecodeOptions opts
         = { .ui_scale = 1.0f, .target_width = 32, .target_height = 32, .preserve_aspect_ratio = true };
@@ -4907,8 +4907,8 @@ UTEST(image_decode, svg_refuses_oversized_target) {
     ASSERT_TRUE(image_decode(s_arena, k_svg_gradient, sizeof(k_svg_gradient) - 1, &opts) == nullptr);
 }
 
-// SVG decodes are final: image_decode leaves needs_thumbnail_compose false and the compose stage must be a
-// no-op for them (even when compositing flags like detect_black_border are requested).
+// SVG decodes are final: image_decode leaves needs_thumbnail_compose false, and the compose stage does nothing
+// for them even when compositing flags such as detect_black_border are requested.
 UTEST(image_decode, svg_skips_thumbnail_compose) {
     ImageDecodeOptions opts = { .ui_scale = 1.0f, .target_width = 16, .target_height = 16 };
     FlImageDecodeResult* out = image_decode(s_arena, k_svg_gradient, sizeof(k_svg_gradient) - 1, &opts);
@@ -4928,12 +4928,12 @@ UTEST(image_decode, svg_skips_thumbnail_compose) {
     ASSERT_TRUE_MSG(out->pixels == px, "compose left svg pixels untouched");
 }
 
-// render.image_pool_evict_self_heals - the image ownership split. The SW realized-pixel pool is owned by the
-// software backend and its residency is invisible to the core readiness registry: a realized image can drop
-// out of the pool and be re-realized later without the core ever observing a "ready-but-not-resident" state.
+// The SW realized-pixel pool is owned by the software backend, and the core readiness registry does not see what
+// is resident in it. A realized image can drop out of the pool and be realized again later without the core
+// ever seeing a state that is ready but not resident.
 //
-// The headless harness has no VFS mount, so it cannot drive the real async reload; the test hooks drive only
-// the pool residency transition.
+// The headless harness has no VFS mount, so it cannot run the real async reload. The test hooks change only the
+// pool residency.
 
 UTEST(render, image_pool_evict_self_heals) {
     FlUiCtx* ctx = render_fixture_get();
@@ -4948,14 +4948,14 @@ UTEST(render, image_pool_evict_self_heals) {
     ASSERT_EQ_MSG((int)image_get_status(image_get_data(handle)), (int)ImageStatus_Ready,
                   "an acknowledged memory load must report ready, not pending or failed");
 
-    // Evict the pixels from the pool (no longer resident), keeping the entry so the test can re-make it resident.
+    // Evict the pixels from the pool but keep the entry, so the test can make it resident again.
     void* entry = image_cache_test_evict_keep(handle);
     ASSERT_TRUE_MSG(entry != nullptr, "expected a resident entry to evict");
 
     ASSERT_TRUE_MSG(image_cache_get_data(handle) == nullptr, "pixels should not be resident after eviction");
     ASSERT_TRUE_MSG(fl_image_is_ready(handle), "core readiness must survive a SW pool eviction");
 
-    // The miss self-heals: the image becomes resident again, as the reload completing would make it.
+    // The miss is repaired: the image becomes resident again, as it would when the reload completes.
     ASSERT_TRUE_MSG(image_cache_test_restore(handle, entry), "restore failed");
     ASSERT_TRUE_MSG(image_cache_get_data(handle) != nullptr, "pixels should be resident again after reload");
     ASSERT_TRUE_MSG(fl_image_is_ready(handle), "core readiness unchanged across the whole cycle");
@@ -4963,8 +4963,8 @@ UTEST(render, image_pool_evict_self_heals) {
     image_free(handle);
 }
 
-// render.image_status_realized_after_unready_poll - a memory load that is realized and out of the active set
-// when its load state is resolved reads as ready, never error.
+// A memory load that is realized and out of the active set when its load state is resolved reads as ready and
+// never as an error.
 
 UTEST(render, image_status_realized_after_unready_poll) {
     FlUiCtx* ctx = render_fixture_get();
@@ -4981,21 +4981,20 @@ UTEST(render, image_status_realized_after_unready_poll) {
     image_registry_remove(handle);
 }
 
-// render.image_load_from_memory_bad_data_reports_error - a failed in-memory decode has no VFS handle to carry
-// an error status, so the failure must be recorded against the request id (memory_load_job) and surface from
-// the poll path as an error rather than pending forever.
+// A failed in-memory decode has no VFS handle to carry an error status, so the failure is recorded against the
+// request id (memory_load_job) and the poll reports an error. Without the record it would stay pending forever.
 
 UTEST(render, image_load_from_memory_bad_data_reports_error) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Not a valid header for any supported format; the decode job fails immediately.
+    // Not a valid header for any supported format, so the decode job fails at once.
     static const u8 k_garbage[]
         = { 0xde, 0xad, 0xbe, 0xef, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b };
     ImageHandle handle = image_load_from_memory(k_garbage, sizeof(k_garbage), (FlImageLoadOptions) { 0 });
     ASSERT_TRUE_MSG(handle != IMAGE_HANDLE_INVALID, "image_load_from_memory returned invalid handle");
 
-    // Bounded poll: the load must leave pending within the window, and only ever to the error state.
+    // A bounded poll: the load leaves pending within the window, and only to the error state.
     ImageStatus status = ImageStatus_Pending;
     for (int i = 0; i < 5000 && status == ImageStatus_Pending; ++i) {
         status = image_get_status(image_get_data(handle));
@@ -5007,18 +5006,17 @@ UTEST(render, image_load_from_memory_bad_data_reports_error) {
                   "corrupt in-memory load must resolve to error, not pend forever");
     ASSERT_FALSE_MSG(fl_image_is_ready(handle), "corrupt in-memory load must never report ready");
 
-    // Repeat polls stay in the error state (the record persists until the handle is freed).
+    // Later polls stay in the error state. The record lasts until the handle is freed.
     ASSERT_EQ_MSG((int)image_get_status(image_get_data(handle)), (int)ImageStatus_Error,
                   "error status must be stable across polls");
 
     image_free(handle);
 }
 
-// render.image_cache_defer_free_drains_at_frame_boundary - the image cache's eviction/free paths run on a job
-// worker thread and must not tlsf_free pixels the render thread may still be reading through an ImageData* it
-// obtained via image_cache_get_data earlier in the frame. Freeing is deferred onto a pending list and drained
-// by image_cache_update, which runs at the top of render() on the render thread before any of the frame's
-// get_data calls.
+// The image cache's eviction and free paths run on a job worker thread, and the render thread may still be
+// reading pixels through an ImageData* it got from image_cache_get_data earlier in the frame. So frees go on a
+// pending list, which image_cache_update drains. That runs at the top of render() on the render thread, before
+// any of the frame's get_data calls.
 
 UTEST(render, image_cache_defer_free_drains_at_frame_boundary) {
     FlUiCtx* ctx = render_fixture_get();
@@ -5027,7 +5025,7 @@ UTEST(render, image_cache_defer_free_drains_at_frame_boundary) {
     ImageCache* cache = image_cache_get_sys();
     ASSERT_TRUE_MSG(cache != nullptr, "image cache singleton not initialized");
 
-    // Drain anything earlier render cases left pending so the count deltas below are unambiguous.
+    // Drain what earlier render cases left pending, so the count deltas below are exact.
     image_cache_update(cache, 1);
     ASSERT_EQ_MSG((int)image_cache_test_pending_free_count(), 0, "pending free list should start empty");
 
@@ -5039,11 +5037,11 @@ UTEST(render, image_cache_defer_free_drains_at_frame_boundary) {
     ASSERT_TRUE_MSG(data != nullptr, "pixels should be resident after realize");
     ASSERT_TRUE_MSG(data->data != nullptr, "resident entry carries pixel data");
 
-    // Snapshot a byte the render thread would read; the free below must not return this block to TLSF yet.
+    // A byte the render thread would read. The free below does not return this block to TLSF yet.
     u8* pixels = (u8*)data->data;
     u8 first_byte = pixels[0];
 
-    // free_handle is one of the two job-thread free sites: it must queue the block, not tlsf_free it immediately.
+    // free_handle is one of the two free sites on the job thread. It queues the block.
     image_cache_free_handle(handle);
     ASSERT_TRUE_MSG(image_cache_test_pending_free_count() > 0, "free_handle should defer, not free immediately");
     ASSERT_EQ_MSG((int)pixels[0], (int)first_byte, "deferred block must stay intact until the frame-boundary drain");
@@ -5052,7 +5050,7 @@ UTEST(render, image_cache_defer_free_drains_at_frame_boundary) {
     image_cache_update(cache, 2);
     ASSERT_EQ_MSG((int)image_cache_test_pending_free_count(), 0, "image_cache_update must drain the pending list");
 
-    // The reclaimed space is usable again: a fresh same-size load realizes into the pool.
+    // The reclaimed space is usable again: a new load of the same size is realized into the pool.
     ImageHandle reload = image_load_from_memory(k_png_red, sizeof(k_png_red), (FlImageLoadOptions) { 0 });
     ASSERT_TRUE_MSG(reload != IMAGE_HANDLE_INVALID, "reload after drain returned invalid handle");
     ASSERT_TRUE_MSG(wait_image_ready(reload), "same-size alloc should succeed after the drain reclaims TLSF space");
@@ -5062,8 +5060,8 @@ UTEST(render, image_cache_defer_free_drains_at_frame_boundary) {
     image_free(handle);
 }
 
-// utest's ASSERT_* macros return from the case, so a mid-body failure would otherwise strand realized images in
-// the fixed-size SW pixel pool. Clearing the background first keeps the compositor from holding a freed handle.
+// utest's ASSERT_* macros return from the case, so a failure partway through would leave realized images in the
+// fixed-size SW pixel pool. Clearing the background first keeps the compositor from holding a freed handle.
 typedef struct RenderImages {
     ImageHandle fg;
     ImageHandle bg_curr;
@@ -5088,17 +5086,17 @@ UTEST(render, primitives_and_background_blend) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Identity scale (ui_set_scale 1.0) so painter/Clay coordinates map 1:1 to the offscreen buffer. The
-    // renderer is already 1920x1080.
+    // ui_set_scale 1.0 maps painter and Clay coordinates 1:1 to the offscreen buffer, which is already
+    // 1920x1080.
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
     ASSERT_TRUE_MSG(ctx->ui_scale == 1.0f, "expected identity ui_scale 1.0");
 
-    // Foreground images load as Regular (the SW backend deinterleaves them into the planar form the texture
-    // sampler expects). Background images load with a background_mode so the SW backend keeps them
-    // interleaved RGB, which is what the background compositor (copy/crossfade) reads.
+    // Foreground images load as Regular, and the SW backend deinterleaves them into the planar form the texture
+    // sampler expects. Background images load with a background_mode, so the SW backend keeps them as
+    // interleaved RGB, which the background compositor (copy and crossfade) reads.
     render_images_auto(imgs);
     imgs.fg = image_load_from_memory(k_png_red, sizeof(k_png_red), (FlImageLoadOptions) { 0 });
     imgs.bg_curr = image_load_from_memory(k_png_red, sizeof(k_png_red),
@@ -5117,25 +5115,23 @@ UTEST(render, primitives_and_background_blend) {
     ASSERT_TRUE_MSG(wait_image_ready(bg_curr), "background (current) image did not decode in time");
     ASSERT_TRUE_MSG(wait_image_ready(bg_prev), "background (previous) image did not decode in time");
 
-    // Dynamic images (covers both the RGBA and alpha-only conversion paths).
+    // Dynamic images, for both the RGBA and the alpha-only conversion paths.
     FlDynamicImage* dyn_rgba = dynamic_image_create(48, 48, s_arena);
     FlDynamicImage* dyn_alpha = dynamic_image_create_alpha(48, 48, s_arena);
     ASSERT_TRUE_MSG(dyn_rgba != nullptr && dyn_alpha != nullptr, "dynamic image creation failed");
     fill_dynamic_rgba(dyn_rgba);
     fill_dynamic_alpha(dyn_alpha);
 
-    // ---------------------------------------------------------------------------------------
-    // Frame 1: the full primitive set drawn over a single background image composited with alpha
-    // over the clear color - the only path that reads background.alpha and the clear color.
-    // ---------------------------------------------------------------------------------------
+    // Frame 1: the full primitive set drawn over a single background image composited with alpha over the clear
+    // color. This is the only path that reads background.alpha and the clear color.
     ui_background_set_clear_color(10, 12, 16);
     ui_background_set(bg_curr);
     ui_background_set_alpha(200);
 
     ui_update_begin(ctx);
 
-    // Clay layout path: the primitives the widget/layout system expresses directly -
-    // rect / rounded / border / clip.
+    // Clay layout path: the primitives the widget and layout system express directly (rect, rounded, border,
+    // clip).
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_LeftToRight, .padding = fl_padding_md(), .child_gap = FlSpacing_LG) {
         ui_layout_area(.sizing = { sizing_fixed(120), sizing_fixed(120) }, .color = ui_color(220, 60, 60, 255)) {}
@@ -5146,39 +5142,39 @@ UTEST(render, primitives_and_background_blend) {
         ui_layout_area(.sizing = { sizing_fixed(120), sizing_fixed(120) }, .color = ui_color(40, 40, 60, 255),
                        .border = fl_border(ui_color(240, 240, 80, 255), 6)) {}
 
-        // Clip: a fixed box clipping an oversized rounded child.
+        // Clip: a fixed box that clips an oversized rounded child.
         ui_layout_area(.sizing = { sizing_fixed(120), sizing_fixed(120) },
                        .clip = { .horizontal = true, .vertical = true }) {
             ui_layout_area(.sizing = { sizing_fixed(260), sizing_fixed(260) }, .color = ui_color(200, 120, 220, 255),
                            .radius = corner_radius(40)) {}
         }
 
-        // Painter path: gradient / static-image / dynamic-image (RGBA + alpha) / text /
-        // translucent fill, painted inside this full-window container (origin 0,0, so element-local
-        // coordinates equal absolute pixels). The paint draws at the container's z - under the child boxes
-        // above - but the painted region (y >= 400) does not overlap them. Images go through the painter
-        // because it is the texture path that draws at the image's native, deterministic size.
+        // Painter path: gradient, static image, dynamic image (RGBA and alpha), text and translucent fill,
+        // painted inside this full-window container, whose origin is 0,0 so element-local coordinates equal
+        // absolute pixels. The paint draws at the container's z, under the child boxes above, but the painted
+        // region (y >= 400) does not overlap them. Images go through the painter because that texture path
+        // draws at the image's native size.
         Painter* p = ctx->painter;
 
-        // Gradient primitive - the IR's gradient has no widget/Clay emitter, so this is
-        // the only path that exercises RenderMask_ColorGradient.
+        // Gradient: the IR's gradient has no widget or Clay emitter, so this is the only path that reaches
+        // RenderMask_ColorGradient.
         painter_gradient_rect(p, (FlRect) { .x = 100.0f, .y = 400.0f, .w = 320.0f, .h = 200.0f },
                               (FlCornerColors) { .top_left = ui_color(255, 0, 0, 255),
                                                  .top_right = ui_color(0, 255, 0, 255),
                                                  .bottom_left = ui_color(0, 0, 255, 255),
                                                  .bottom_right = ui_color(255, 255, 0, 255) });
 
-        // Static image (drawn at native size).
+        // Static image, drawn at native size.
         ASSERT_TRUE_MSG(painter_image(p, (FlRect) { .x = 470.0f, .y = 400.0f, .w = 0.0f, .h = 0.0f },
                                       (FlImageHandle)fg_image, (FlColor) { 255, 255, 255, 255 }),
                         "painter_image: foreground not ready");
 
         painter_dynamic_image(p, (FlVec2) { .x = 540.0f, .y = 400.0f }, dyn_rgba, ui_color(255, 255, 255, 255));
 
-        // Alpha-only dynamic image, colorized via tint.
+        // Alpha-only dynamic image, colored by the tint.
         painter_dynamic_image(p, (FlVec2) { .x = 620.0f, .y = 400.0f }, dyn_alpha, ui_color(80, 220, 255, 255));
 
-        // Translucent painter rectangle (exercises alpha blend-with-background).
+        // Translucent painter rectangle, which blends with the background.
         painter_rect(p, (FlRect) { .x = 760.0f, .y = 400.0f, .w = 260.0f, .h = 200.0f }, ui_color(255, 120, 0, 120));
     }
 
@@ -5226,10 +5222,8 @@ UTEST(render, primitives_and_background_blend) {
                         "translucent fill blue channel");
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Frame 2: a two-image blend between the two background images. The blend compositor is a
-    // distinct path that alpha/clear do not feed; the half blend sits between the two endpoints.
-    // ---------------------------------------------------------------------------------------
+    // Frame 2: a blend between the two background images. The blend compositor is a separate path that does not
+    // use alpha or the clear color. The half blend lies between the two endpoints.
     u8 blend_px[3][3];
     const u8 blend_t[3] = { 0, 255, 128 };
     for (int i = 0; i < 3; i++) {
@@ -5253,19 +5247,19 @@ UTEST(render, primitives_and_background_blend) {
     }
 }
 
-// render.background_resize_larger_no_oob - a background image is pre-scaled to the surface size and the SW
-// compositor addresses it by the surface's current tile grid on that invariant. change_resolution rebuilds the
-// tile grid but does not re-fit an already-set background image, so a resize LARGER than the image would drive
-// the tile-copy paths to read rows/columns far past the image buffer. The renderer drops any background image
-// the surface has outgrown and falls back to the clear color; shrinking below the image must still composite.
+// A background image is scaled to the surface size when it is set, and the SW compositor addresses it by the
+// surface's current tile grid on that assumption. change_resolution rebuilds the tile grid but does not refit a
+// background image that is already set, so after a resize larger than the image the tile-copy paths would read
+// rows and columns far past the image buffer. The renderer drops a background image the surface has outgrown
+// and falls back to the clear color. Shrinking below the image still composites.
 UTEST(render, background_resize_larger_no_oob) {
-    FlUiCtx* ctx = render_fixture_get(); // brings up the image system + SW pixel pool this exercises
+    FlUiCtx* ctx = render_fixture_get(); // creates the image system and SW pixel pool the case uses
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
     FlRenderBackend* backend = &ctx->shared->renderer;
 
-    // A Center-mode background with target == a solid source fills the whole target, so the image is a uniform
-    // red RGB buffer of exactly SMALL_W x SMALL_H - the size the surface is about to outgrow.
+    // A Center-mode background whose target equals a solid source fills the whole target, so the image is a
+    // uniform red RGB buffer of exactly SMALL_W x SMALL_H, the size the surface is about to outgrow.
     const int SMALL_W = 128, SMALL_H = 96;
     ImageHandle bg = image_load_from_memory(k_png_red, sizeof(k_png_red),
                                             (FlImageLoadOptions) { .background_mode = FlBackgroundMode_Center,
@@ -5279,7 +5273,8 @@ UTEST(render, background_resize_larger_no_oob) {
     ASSERT_TRUE_MSG(bg_data->width == SMALL_W && bg_data->height == SMALL_H,
                     "background image dims must equal the load target for this test's coverage math");
 
-    // Own surface so the grow/shrink cycle never touches the shared 1920x1080 fixture surface.
+    // The case has its own surface, so the grow and shrink cycle does not touch the shared 1920x1080 fixture
+    // surface.
     FlSurface* surface = backend->create_surface(backend->user_data, SMALL_W, SMALL_H);
     ASSERT_TRUE_MSG(surface != nullptr, "surface creation failed");
 
@@ -5296,8 +5291,8 @@ UTEST(render, background_resize_larger_no_oob) {
                         .clear = clear },
     };
 
-    // Matched size: the opaque RGB background covers the surface and composites, proving the image path runs
-    // at all before the grow step drops it.
+    // At the matching size the opaque RGB background covers the surface and composites, which shows the image
+    // path runs before the grow step drops it.
     render_seam_render(backend, surface, &frame);
     FlPixelReadback base;
     ASSERT_TRUE_MSG(render_seam_read_pixels(backend, surface, &base), "read_pixels failed");
@@ -5305,24 +5300,24 @@ UTEST(render, background_resize_larger_no_oob) {
     ASSERT_TRUE_MSG(memcmp(readback_rgb_at(&base, SMALL_W / 2, SMALL_H / 2), clear_rgb, 3) != 0,
                     "matched-size background must composite, not fall back to the clear color");
 
-    // Grow past the image without re-fitting it. Every tile now addresses rows/columns beyond the SMALL_W x
-    // SMALL_H buffer, so the coverage guard must drop the outgrown image rather than let the direct-copy path
-    // read far OOB.
+    // Grow past the image without refitting it. Every tile now addresses rows and columns beyond the SMALL_W x
+    // SMALL_H buffer, so the coverage check drops the outgrown image and the direct-copy path reads nothing out
+    // of bounds.
     const int BIG_W = 256, BIG_H = 192;
     render_seam_change_resolution(backend, surface, BIG_W, BIG_H);
     render_seam_render(backend, surface, &frame);
     FlPixelReadback grown;
     ASSERT_TRUE_MSG(render_seam_read_pixels(backend, surface, &grown), "read_pixels failed");
     ASSERT_TRUE_MSG(grown.width == (u32)BIG_W && grown.height == (u32)BIG_H, "grown readback dims");
-    // A pixel the outgrown image never covered: pure fallback clear, never OOB image bytes read past the buffer.
+    // A pixel the outgrown image never covered has the clear color.
     ASSERT_TRUE_MSG(memcmp(readback_rgb_at(&grown, BIG_W - 2, BIG_H - 2), clear_rgb, 3) == 0,
                     "outgrown background: far corner must fall back to the clear color, not read past the buffer");
-    // A pixel inside the old image extent is clear too: the image is dropped wholesale, not partially composited.
+    // A pixel inside the old image extent is clear too: the image is dropped as a whole.
     ASSERT_TRUE_MSG(memcmp(readback_rgb_at(&grown, 2, 2), clear_rgb, 3) == 0,
                     "outgrown background: the whole frame falls back to the clear color");
 
-    // Shrink below the image: it still fully covers the surface, so it must keep compositing (not be
-    // spuriously dropped) while reading only a safe sub-region of its buffer.
+    // Shrink below the image. It still covers the whole surface, so it keeps compositing and reads only part of
+    // its buffer.
     const int TINY_W = 64, TINY_H = 48;
     render_seam_change_resolution(backend, surface, TINY_W, TINY_H);
     render_seam_render(backend, surface, &frame);
@@ -5335,28 +5330,28 @@ UTEST(render, background_resize_larger_no_oob) {
     backend->destroy_surface(backend->user_data, surface);
 }
 
-// render.non16_width_right_edge - both SW tile output paths process each tile row in 16-px SIMD chunks plus a
-// scalar tail, so the rightmost (tile_width & 15) columns of a non-16-aligned surface are the cold path. A
-// horizontally-uniform frame is rendered and the ENTIRE sampled row must equal its midpoint pixel - a skipped
-// tail (or any gap/overlap at the body/tail seam) leaves a column that differs. Two widths cover both regimes
-// of the rightmost tile column (TILE_WIDTH == 64):
-//   * W=168 -> rightmost tile is 40px: a 32px SIMD body FOLLOWED BY an 8px tail (the body/tail seam).
-//   * W=200 -> rightmost tile is  8px: a pure tail, zero SIMD chunks.
-// Both output paths are covered: copy_tile_to_output (a solid full-window fill - every tile has a visual
-// command) and crossfade_direct_to_output (a background-only blend - no visual command, so the fast path).
+// Both SW tile output paths process each tile row in 16-px SIMD chunks plus a scalar tail, so the rightmost
+// (tile_width & 15) columns of a surface whose width is not a multiple of 16 take the less used path. The case
+// renders a frame that is uniform horizontally and requires the whole sampled row to equal its midpoint pixel. A
+// skipped tail, or a gap or overlap where the SIMD body meets the tail, leaves a column that differs. Two widths
+// cover both forms of the rightmost tile column (TILE_WIDTH == 64):
+//   * W=168: the rightmost tile is 40px, a 32px SIMD body followed by an 8px tail.
+//   * W=200: the rightmost tile is 8px, a tail with no SIMD chunks.
+// Both output paths are covered: copy_tile_to_output (a solid full-window fill, so every tile has a visual
+// command) and crossfade_direct_to_output (a blend with only a background and no visual command, the fast path).
 //
-// The surface is swapped away from the 1920x1080 fixture surface. utest ASSERTs early-return from the function,
-// so results are captured into booleans while the swapped surface is alive and the fixture surface is restored
-// before any assertion.
+// The surface replaces the 1920x1080 fixture surface for the duration. utest ASSERTs return from the function,
+// so results go into booleans while the replacement surface is alive, and the fixture surface is restored before
+// any assertion.
 UTEST(render, non16_width_right_edge) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
     FlSurface* saved = ctx->surface;
     const int H = 120;
-    const int widths[] = { 168, 200 }; // 168 -> body+tail rightmost tile; 200 -> pure-tail rightmost tile
+    const int widths[] = { 168, 200 }; // 168: body and tail in the rightmost tile. 200: only a tail
 
-    bool setup_ok = true; // surfaces created, frames read back, crossfade actually composited
+    bool setup_ok = true; // surfaces created, frames read back, crossfade composited
     bool fill_ok = true;  // every column of the fill row equals the row midpoint
     bool xfade_ok = true; // every column of the crossfade row equals the row midpoint
     int bad_w = 0, bad_x = -1;
@@ -5376,7 +5371,7 @@ UTEST(render, non16_width_right_edge) {
         ui_set_scale(1.0f, 1.0f);
         Clay_SetLayoutDimensions((Clay_Dimensions) { .width = (float)W, .height = (float)H });
 
-        // --- Path 1: copy_tile_to_output via a solid, opaque, full-window fill (uniform across the row). ---
+        // Path 1: copy_tile_to_output, with a solid opaque full-window fill that is uniform across the row.
         ui_background_set(IMAGE_HANDLE_INVALID);
         ui_background_set_clear_color(10, 12, 16);
         ui_update_begin(ctx);
@@ -5388,7 +5383,7 @@ UTEST(render, non16_width_right_edge) {
         if (render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &fbuf) && fbuf.width == (u32)W) {
             const u8* mid = readback_rgb_at(&fbuf, W / 2, ry);
             if (!(mid[0] > 100 && mid[0] > mid[1] && mid[0] > mid[2])) {
-                setup_ok = false; // fill did not render at all - control pixel is not the expected red
+                setup_ok = false; // the fill did not render: the control pixel is not the expected red
             }
             for (int x = 0; x < W && fill_ok; ++x) {
                 if (memcmp(readback_rgb_at(&fbuf, x, ry), mid, 3) != 0) {
@@ -5402,10 +5397,10 @@ UTEST(render, non16_width_right_edge) {
             setup_ok = false;
         }
 
-        // --- Path 2: crossfade_direct_to_output via a background-only two-image blend. ---
-        // Center-mode backgrounds with target == surface size stretch each solid source to fill the whole
-        // canvas, so the row is a single uniform red/blue blend. A midpoint differing from the clear color
-        // proves the crossfade fast path ran at all; the full-row scan then covers every tail/seam column.
+        // Path 2: crossfade_direct_to_output, with a blend of two images and only a background. Center-mode
+        // backgrounds whose target equals the surface size stretch each solid source over the whole canvas, so
+        // the row is one uniform red/blue blend. A midpoint that differs from the clear color shows the crossfade
+        // fast path ran, and the scan of the full row then covers every tail and seam column.
         ImageHandle bg_prev = image_load_from_memory(
             k_png_blue, sizeof(k_png_blue),
             (FlImageLoadOptions) { .background_mode = FlBackgroundMode_Center, .target_width = W, .target_height = H });
@@ -5424,7 +5419,7 @@ UTEST(render, non16_width_right_edge) {
                 const u8* mid = readback_rgb_at(&xbuf, W / 2, ry);
                 const u8 clear_rgb[3] = { 10, 12, 16 };
                 if (memcmp(mid, clear_rgb, 3) == 0) {
-                    setup_ok = false; // crossfade did not composite - row is still the clear color
+                    setup_ok = false; // the crossfade did not composite: the row is still the clear color
                 }
                 for (int x = 0; x < W && xfade_ok; ++x) {
                     if (memcmp(readback_rgb_at(&xbuf, x, ry), mid, 3) != 0) {
@@ -5441,8 +5436,8 @@ UTEST(render, non16_width_right_edge) {
             setup_ok = false;
         }
 
-        // Restore the fixture surface, release the per-iteration images and destroy the temp surface on every
-        // iteration, unconditionally, so nothing outlives this test even on failure.
+        // On every iteration, pass or fail, restore the fixture surface, release the iteration's images and
+        // destroy the temporary surface.
         ui_background_set(IMAGE_HANDLE_INVALID);
         if (bg_prev != IMAGE_HANDLE_INVALID) {
             image_free(bg_prev);
@@ -5463,15 +5458,15 @@ UTEST(render, non16_width_right_edge) {
     ASSERT_TRUE_MSG(xfade_ok, "crossfade_direct_to_output left a non-16 tail/seam column unwritten");
 }
 
-// render.theme_seam - theme colors resolve through the seam (ui_get_theme_colors), not the raw base
-// pointer: with the override stack empty the seam resolves to the host-injected base theme, an un-injected
-// context falls back to the built-in default theme, and the box colors of a frame all come through the seam.
+// Theme colors are read through ui_get_theme_colors and not through the raw base pointer. With the override stack
+// empty it returns the base theme the host injected, a context with no injected theme falls back to the built-in
+// default theme, and every box color of a frame comes through it.
 
 UTEST(render, theme_seam) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Identity scale (ui_set_scale 1.0) so colors land unmodulated; no background image, fixed clear color.
+    // ui_set_scale 1.0 so colors are unmodified, with no background image and a fixed clear color.
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
@@ -5479,7 +5474,7 @@ UTEST(render, theme_seam) {
     ui_background_set(IMAGE_HANDLE_INVALID);
     ui_background_set_clear_color(12, 12, 14);
 
-    // A deterministic theme with a distinct value per semantic slot.
+    // A theme with a distinct value in every semantic slot.
     static const FlThemeColors known = {
         .interactive.base = { 200, 30, 40, 255 },
         .interactive.hover = { 220, 60, 70, 255 },
@@ -5506,7 +5501,7 @@ UTEST(render, theme_seam) {
     const FlThemeColors* resolved = ui_get_theme_colors(ctx);
     ASSERT_TRUE_MSG(resolved == &known, "seam must resolve to the injected base theme");
 
-    // Eight boxes, one per semantic group, each colored through the seam.
+    // Eight boxes, one per semantic group, each colored through ui_get_theme_colors.
     const FlColor slots[8] = {
         resolved->surface.base,      resolved->surface.elevated,     resolved->interactive.base,
         resolved->interactive.hover, resolved->border.default_color, resolved->text.primary,
@@ -5529,7 +5524,7 @@ UTEST(render, theme_seam) {
     ASSERT_TRUE_MSG(buf.width == 1920 && buf.height == 1080, "unexpected render buffer dimensions");
     dump_frame("theme_seam", &buf);
 
-    // An un-injected context falls back to the built-in default theme (the bottom of the resolution stack).
+    // A context with no injected theme falls back to the built-in default theme.
     ui_set_theme(ctx, nullptr);
     const FlThemeColors* def = ui_get_theme_colors(ctx);
     ASSERT_TRUE_MSG(def != nullptr, "default resolution must never return null");
@@ -5543,16 +5538,16 @@ UTEST(render, theme_seam) {
                     "default fallback text.primary must match the default theme");
 }
 
-// render.image_scaled - painter_image honors its w/h params, documented as a "scaled to fit" target
-// size. A 4x4 image drawn at a 200x200 logical size is checked by pixels inside and outside the requested
-// rect. A non-positive w/h falls back to native size; that path is
-// exercised by render.primitives_and_background_blend.
+// painter_image uses its w and h parameters as the size to scale the image to. A 4x4 image drawn at a 200x200
+// logical size is checked by pixels inside and outside the requested rect. A non-positive w or h falls back to
+// native size, which render.primitives_and_background_blend covers.
 
 UTEST(render, image_scaled) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Identity scale so painter coordinates map 1:1 to the offscreen buffer; fixed clear color, no background.
+    // ui_scale 1 so painter coordinates map 1:1 to the offscreen buffer, with a fixed clear color and no
+    // background.
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
@@ -5561,7 +5556,7 @@ UTEST(render, image_scaled) {
     const u8 clear_r = 12, clear_g = 12, clear_b = 14;
     ui_background_set_clear_color(clear_r, clear_g, clear_b);
 
-    // k_png_red is a 4x4 RGB PNG. Drawing it at a 200x200 logical size proves the w/h params scale the draw.
+    // k_png_red is a 4x4 RGB PNG, drawn here at a 200x200 logical size.
     ImageHandle fg_image = image_load_from_memory(k_png_red, sizeof(k_png_red), (FlImageLoadOptions) { 0 });
     ASSERT_TRUE_MSG(fg_image != IMAGE_HANDLE_INVALID, "image load returned invalid handle");
     ASSERT_TRUE_MSG(wait_image_ready(fg_image), "foreground image did not decode in time");
@@ -5569,7 +5564,7 @@ UTEST(render, image_scaled) {
     const float draw_x = 100.0f, draw_y = 100.0f, draw_w = 200.0f, draw_h = 200.0f;
 
     ui_update_begin(ctx);
-    // Full-window container at origin (0,0) so element-local painter coords equal absolute pixels.
+    // A full-window container at origin (0,0), so element-local painter coords equal absolute pixels.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         Painter* p = ctx->painter;
         ASSERT_TRUE_MSG(painter_image(p, (FlRect) { .x = draw_x, .y = draw_y, .w = draw_w, .h = draw_h },
@@ -5584,13 +5579,13 @@ UTEST(render, image_scaled) {
     ASSERT_TRUE_MSG(buf.pixels != nullptr, "render buffer data is null");
     ASSERT_TRUE_MSG(buf.width == 1920 && buf.height == 1080, "unexpected render buffer dimensions");
 
-    // The center of the requested 200x200 rect would equal the clear color if painter_image had drawn at the
-    // 4x4 native size instead of honoring w/h.
+    // The center of the requested 200x200 rect would have the clear color if painter_image had drawn at the 4x4
+    // native size.
     const u8* center
         = buf.pixels + (size_t)(draw_y + draw_h * 0.5f) * buf.stride + (size_t)(draw_x + draw_w * 0.5f) * 3u;
     ASSERT_TRUE_MSG(!(center[0] == clear_r && center[1] == clear_g && center[2] == clear_b),
                     "center of requested rect equals clear color — painter_image ignored w/h");
-    // A pixel comfortably outside the requested rect stays clear color.
+    // A pixel well outside the requested rect keeps the clear color.
     const u8* outside
         = buf.pixels + (size_t)(draw_y + draw_h * 0.5f) * buf.stride + (size_t)(draw_x + draw_w + 20) * 3u;
     ASSERT_TRUE_MSG(outside[0] == clear_r && outside[1] == clear_g && outside[2] == clear_b,
@@ -5599,16 +5594,17 @@ UTEST(render, image_scaled) {
     dump_frame("image_scaled", &buf);
 }
 
-// render.image_downscale_gather - scaled-image sampling stays correct past the ~4.4x downscale threshold.
+// Scaled-image sampling stays correct past a downscale of about 4.4x.
 //
 // The SW scaled sampler precomputes an 8-pixel shuffle over a fixed 32-byte source window. Once the downscale
-// ratio pushes the 8 destination pixels' source columns more than 31 bytes apart (roughly >4.4x) the window
-// can no longer cover them, so those commands route through a scalar gather (exact nearest-neighbor per pixel).
+// ratio puts the source columns of the 8 destination pixels more than 31 bytes apart (roughly above 4.4x), the
+// window cannot cover them, and those commands go through a scalar gather that takes the exact nearest neighbor
+// per pixel.
 //
-// The source is an opaque XRGB horizontal ramp (column c -> value c*3, every row identical). XRGB drops the X
-// byte, so it converts to a 3-plane RGB layout (blue last); identical rows keep the vertical scale from
-// perturbing the horizontal invariant. It is drawn at 8x (scalar-gather path) and 2x (fast windowed path)
-// downscale, and each destination pixel is checked against the reference sample floor(dst_x * x_step).
+// The source is an opaque XRGB horizontal ramp (column c has value c*3, every row identical). XRGB drops the X
+// byte, so it converts to a 3-plane RGB layout with blue last, and identical rows keep the vertical scale from
+// affecting the horizontal check. It is drawn at 8x downscale (scalar gather) and 2x (the fast windowed path),
+// and each destination pixel is checked against the reference sample floor(dst_x * x_step).
 
 UTEST(render, image_downscale_gather) {
     FlUiCtx* ctx = render_fixture_get();
@@ -5622,8 +5618,8 @@ UTEST(render, image_downscale_gather) {
     const u8 clear_r = 3, clear_g = 3, clear_b = 3;
     ui_background_set_clear_color(clear_r, clear_g, clear_b);
 
-    // XRGB is opaque (no alpha plane -> 3-plane RGB), so the scaled draw composites the exact source color.
-    // Byte order is R,G,B,X.
+    // XRGB is opaque (no alpha plane, so 3-plane RGB), and the scaled draw composites the exact source color.
+    // The byte order is R,G,B,X.
     enum { SRC_W = 80, SRC_H = 8 };
     u8 ramp[SRC_W * SRC_H * 4];
     for (int y = 0; y < SRC_H; y++) {
@@ -5633,14 +5629,14 @@ UTEST(render, image_downscale_gather) {
             px[0] = v;
             px[1] = v;
             px[2] = v;
-            px[3] = 0; // X byte, dropped by the XRGB -> planar conversion
+            px[3] = 0; // X byte, dropped by the conversion from XRGB to planar
         }
     }
     FlImageHandle ramp_img = fl_image_create_from_pixels(ramp, SRC_W, SRC_H, FlImageFormat_XRGB);
     ASSERT_NE_MSG(ramp_img, (FlImageHandle)FL_IMAGE_HANDLE_INVALID, "ramp image create returned invalid handle");
     ASSERT_TRUE_MSG(fl_image_is_ready(ramp_img), "ramp image must be ready immediately");
 
-    // 8x downscale (80 -> 10) exercises the scalar-gather path; 2x downscale (80 -> 40) the fast path.
+    // The 8x downscale (80 -> 10) takes the scalar gather path and the 2x downscale (80 -> 40) the fast path.
     const float x8 = 100.0f, y8 = 100.0f, w8 = 10.0f, h8 = 8.0f;
     const float x2 = 100.0f, y2 = 300.0f, w2 = 40.0f, h2 = 8.0f;
 
@@ -5662,9 +5658,9 @@ UTEST(render, image_downscale_gather) {
     ASSERT_TRUE_MSG(buf.pixels != nullptr, "render buffer data is null");
 
     // Walk the interior of the middle destination row, skipping the boundary pixels the fractional AABB may
-    // only partially cover. Destination pixel i (0-based from the draw's left edge) maps to source column
-    // floor(i * x_step) under nearest-neighbor.
-    const int tol = 2; // compositing/Q7 round-trip slack
+    // cover only partly. Destination pixel i (0-based from the draw's left edge) maps to source column
+    // floor(i * x_step) under nearest-neighbor sampling.
+    const int tol = 2; // slack for compositing and the Q7 round trip
     const float draws[2][4] = { { x8, y8, w8, h8 }, { x2, y2, w2, h2 } };
     for (int d = 0; d < 2; d++) {
         int row = (int)(draws[d][1] + draws[d][3] * 0.5f);
@@ -5690,21 +5686,21 @@ UTEST(render, image_downscale_gather) {
     }
 }
 
-// render.image_scale_plane_over_read_guard - the scaled sampler's fixed 32-byte window stays in bounds.
+// The scaled sampler's fixed 32-byte window stays in bounds.
 //
-// The scaled sampler (sample_plane_8 in sr_render_image_scale.c) issues two unaligned 16-byte loads per
-// plane row (at load_offset and load_offset + 16), a 32-byte window. Near the bottom-right of the last (blue)
-// plane that window reaches up to ~30 bytes past the logical 3-plane layout, so sr_convert_to_planar pads the
-// allocation by SR_SCALE_PLANE_LOAD_GUARD bytes.
+// The scaled sampler (sample_plane_8 in sr_render_image_scale.c) does two unaligned 16-byte loads per plane row,
+// at load_offset and load_offset + 16, which make a 32-byte window. Near the bottom-right of the last (blue)
+// plane that window reaches up to about 30 bytes past the logical 3-plane layout, so sr_convert_to_planar pads
+// the allocation by SR_SCALE_PLANE_LOAD_GUARD bytes.
 //
-// The plane geometry and guard come from the real sr_convert_to_planar and the shared constant, so the test
-// cannot silently drift from production. The worst-case window is replayed twice: once on the real converted
-// buffer, and once on a tightly malloc-backed replica. The replica is the actual ASan teeth - the production
-// planar buffer is arena-allocated, and arena sub-allocations carry no per-allocation redzone.
+// The plane geometry and the guard come from the real sr_convert_to_planar and the shared constant, so the test
+// follows production. The worst-case window is replayed twice: on the real converted buffer, and on a replica
+// that malloc sizes exactly. Only the replica lets ASan catch an over-read, because the production planar buffer
+// is arena-allocated and arena sub-allocations have no redzone of their own.
 
 UTEST(render, image_scale_plane_over_read_guard) {
-    // width/height are chosen so the padded 3-plane layout is non-trivial; keep_alpha=false drops the X byte,
-    // leaving blue as the last plane.
+    // width and height give a padded 3-plane layout that is not trivial. keep_alpha=false drops the X byte, which
+    // leaves blue as the last plane.
     enum { SRC_W = 39, SRC_H = 7 };
     u8 src_pixels[SRC_W * SRC_H * 4];
     memset(src_pixels, 0x5a, sizeof src_pixels);
@@ -5728,7 +5724,7 @@ UTEST(render, image_scale_plane_over_read_guard) {
     const int plane_size = planar->padded_width * planar->padded_height;
     const int total_size = plane_size * planar->channels; // logical 3-plane size, before the guard
 
-    // Worst case: last plane (blue), last row, rightmost load offset. load_offset is the clamped source
+    // The worst case is the last plane (blue), last row, rightmost load offset. load_offset is the clamped source
     // column, whose maximum is width - 1 == padded_width - 2 (padded_width = width + 1).
     const size_t load_offset = (size_t)(planar->padded_width - 2);
     const size_t row_offset = (size_t)(planar->channels - 1) * (size_t)plane_size
@@ -5742,13 +5738,13 @@ UTEST(render, image_scale_plane_over_read_guard) {
 
     u8 sink[32];
 
-    // Replay the sampler's two loads on the real converted buffer - must not crash (guard present).
+    // Replay the sampler's two loads on the real converted buffer, which has the guard.
     const u8* real_row = planar->data + row_offset;
     u8x16_store_unaligned(u8x16_load_unaligned(real_row, load_offset), sink, 0);
     u8x16_store_unaligned(u8x16_load_unaligned(real_row, load_offset + 16), sink, 16);
 
-    // Replay the identical window on a tightly malloc-backed replica - this is what ASan can actually
-    // police (a malloc redzone follows the guarded allocation).
+    // Replay the same window on the exactly sized malloc replica, where a malloc redzone follows the guarded
+    // allocation and ASan can check it.
     u8* replica = (u8*)malloc((size_t)total_size + (size_t)SR_SCALE_PLANE_LOAD_GUARD);
     ASSERT_TRUE_MSG(replica != nullptr, "planar replica allocation failed");
     memset(replica, 0, (size_t)total_size + (size_t)SR_SCALE_PLANE_LOAD_GUARD);
@@ -5761,18 +5757,18 @@ UTEST(render, image_scale_plane_over_read_guard) {
     fl_arena_destroy(arena);
 }
 
-// A zero-width image destination must be dropped, not rasterized. The scaled path precomputes a shuffle table
-// sized to the integer destination width; at dst_width == 0 the padding-fill loop in calculate_shuffle_tables
-// would index result[dst_width - 1] == result[-1], which as a size_t subscript underflows to a huge
-// out-of-bounds access. The painter clamps degenerate sizes, so this drives the raw IR path (Clay images /
-// direct fl_ir_image) that can carry a zero-width dst.
+// An image destination of zero width is dropped and not rasterized. The scaled path precomputes a shuffle table
+// sized to the integer destination width. At dst_width == 0 the padding-fill loop in calculate_shuffle_tables
+// would index result[dst_width - 1], and as a size_t subscript -1 becomes a huge out-of-bounds index. The painter
+// clamps degenerate sizes, so the case uses the raw IR path (Clay images, direct fl_ir_image), which can carry a
+// zero-width dst.
 
 UTEST(render, zero_width_image_dst_is_dropped) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // A ready 2x2 static image so the color path resolves; the only variable across the two draws below is the
-    // destination width.
+    // A ready 2x2 static image, so the color path resolves. The two draws below differ only in the destination
+    // width.
     u8 rgb_pixels[12] = { 220, 20, 30, 20, 220, 30, 20, 30, 220, 240, 240, 40 };
     FlImageHandle img = fl_image_create_from_pixels(rgb_pixels, 2, 2, FlImageFormat_RGB);
     ASSERT_NE_MSG(img, (FlImageHandle)FL_IMAGE_HANDLE_INVALID, "raw upload returned invalid handle");
@@ -5786,7 +5782,7 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     FlArena* commands_arena = arena_new();
     FlArena* state_arena = arena_new();
 
-    // Positive control: an 8x8 destination for the 2x2 source takes the scaled path and emits one command.
+    // Control: an 8x8 destination for the 2x2 source takes the scaled path and emits one command.
     fl_arena_align(ir_arena, 8);
     const u8* pos_start = (const u8*)fl_arena_current_pos(ir_arena);
     fl_ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 8.0f, 8.0f }, (FlRect) { 0 }, white,
@@ -5796,8 +5792,8 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     ASSERT_EQ_MSG(pos.count, 1u, "a positive-width scaled image emits one render command");
     ASSERT_TRUE_MSG((pos.commands[0].mask & RenderMask_TextureScaled) != 0, "8x8 dst for 2x2 src is the scaled path");
 
-    // The identical draw with dst.w == 0 must be dropped before command setup, so calculate_shuffle_tables
-    // never underflows its padding index.
+    // The same draw with dst.w == 0 is dropped before command setup, so calculate_shuffle_tables never runs for
+    // it.
     fl_arena_align(ir_arena, 8);
     const u8* zero_start = (const u8*)fl_arena_current_pos(ir_arena);
     fl_ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 0.0f, 8.0f }, (FlRect) { 0 }, white,
@@ -5821,8 +5817,8 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     image_free((ImageHandle)img);
 }
 
-// Draw an image through the SW backend onto a clear-colored 32x32 surface and read it back. The 8x8 dst for
-// the 2x2 sources below is always the scaled path.
+// Draws an image through the SW backend onto a 32x32 surface of the clear color and reads it back. The 8x8 dst
+// for the 2x2 sources below always takes the scaled path.
 
 static bool render_image_scaled(FlImageSource source, FlColor tint, u8 frame_global_alpha, FlColor clear,
                                 FlPixelReadback* out, FlArena* backend_arena, FlRenderBackend* backend,
@@ -5867,14 +5863,14 @@ static const u8* scaled_probe_px(const FlPixelReadback* buf) {
     return (const u8*)buf->pixels + (size_t)12 * buf->stride + (size_t)12 * 3u; // inside the 8x8 dst at (8,8)
 }
 
-// render.scaled_image_blends_source_alpha - a scaled RGBA image with a translucent alpha plane composites over the
-// background (premultiplied-over) instead of painting its color opaque.
+// A scaled RGBA image with a translucent alpha plane composites over the background (premultiplied over). It does
+// not paint its color opaque.
 
 UTEST(render, scaled_image_blends_source_alpha) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Straight (0, 0, 255, a=128); upload premultiplies it to (0, 0, 128, 128).
+    // Straight (0, 0, 255, a=128), which the upload premultiplies to (0, 0, 128, 128).
     u8 rgba[16];
     for (int i = 0; i < 4; ++i) {
         rgba[i * 4 + 0] = 0;
@@ -5893,7 +5889,8 @@ UTEST(render, scaled_image_blends_source_alpha) {
                                         (FlColor) { 200, 200, 200, 255 }, &buf, arena, &backend, &surface),
                     "read_pixels failed");
     const u8* px = scaled_probe_px(&buf);
-    // r = 200 * (1 - 128/255) ~ 100, b = 128 + 100 ~ 228. An alpha-ignoring draw would give r = 0, b = 128.
+    // r = 200 * (1 - 128/255), about 100, and b = 128 + 100, about 228. A draw that ignored alpha would give
+    // r = 0, b = 128.
     ASSERT_TRUE_MSG(px[0] > 90 && px[0] < 110, "scaled RGBA must blend its alpha plane over the background");
     ASSERT_TRUE_MSG(px[2] > 218 && px[2] < 238, "scaled RGBA blue must be the premultiplied-over result");
 
@@ -5901,8 +5898,8 @@ UTEST(render, scaled_image_blends_source_alpha) {
     image_free((ImageHandle)img);
 }
 
-// render.scaled_image_honours_global_alpha - a scaled opaque image under a frame fade blends toward the
-// background, for both the 4-plane static upload and the 3-plane dynamic buffer.
+// A scaled opaque image under a frame fade blends toward the background, for both the 4-plane static upload and
+// the 3-plane dynamic buffer.
 
 UTEST(render, scaled_image_honours_global_alpha) {
     FlUiCtx* ctx = render_fixture_get();
@@ -5936,7 +5933,7 @@ UTEST(render, scaled_image_honours_global_alpha) {
                                             (FlColor) { 200, 200, 200, 255 }, &buf, arena, &backend, &surface),
                         "read_pixels failed");
         const u8* px = scaled_probe_px(&buf);
-        // 50% fade: r ~ 100, b ~ 228. An ignored fade would paint r = 0, b = 255.
+        // At a 50% fade r is about 100 and b about 228. A draw that ignored the fade would paint r = 0, b = 255.
         ASSERT_TRUE_MSG(px[0] > 90 && px[0] < 110, "faded scaled image must blend toward the background");
         ASSERT_TRUE_MSG(px[2] > 218 && px[2] < 238, "faded scaled image blue must be the lerp toward the background");
         destroy_scaled_render(&backend, surface, arena);
@@ -5945,8 +5942,8 @@ UTEST(render, scaled_image_honours_global_alpha) {
     image_free((ImageHandle)img);
 }
 
-// render.scaled_alpha_image_is_tinted_coverage - a scaled 1-channel image is coverage for the tint: full coverage
-// paints the tint, zero coverage leaves the background. Only the one plane is sampled.
+// A scaled 1-channel image is coverage for the tint: full coverage paints the tint and zero coverage leaves the
+// background. Only the one plane is sampled.
 
 UTEST(render, scaled_alpha_image_is_tinted_coverage) {
     FlUiCtx* ctx = render_fixture_get();
@@ -5985,9 +5982,8 @@ UTEST(render, scaled_alpha_image_is_tinted_coverage) {
     image_free((ImageHandle)img_none);
 }
 
-// render.static_image_blocks_carry_the_sampler_guard - every static image block is allocated with
-// SR_SCALE_PLANE_LOAD_GUARD bytes past its padded planes, zeroed. The sizes below are exact multiples of the
-// allocator granularity, so an unguarded block has no slack.
+// Every static image block is allocated with SR_SCALE_PLANE_LOAD_GUARD zeroed bytes past its padded planes. The
+// sizes below are exact multiples of the allocator granularity, so an unguarded block would have no slack.
 
 UTEST(render, static_image_blocks_carry_the_sampler_guard) {
     FlUiCtx* ctx = render_fixture_get();
@@ -6022,8 +6018,7 @@ UTEST(render, static_image_blocks_carry_the_sampler_guard) {
     image_free((ImageHandle)h_rgb);
 }
 
-// render.premultiply_keeps_opaque_channels - an opaque pixel premultiplies to itself, and a half-alpha channel
-// rounds to nearest.
+// An opaque pixel premultiplies to itself, and a half-alpha channel rounds to nearest.
 
 UTEST(render, premultiply_keeps_opaque_channels) {
     const u8 in[16] = { 255, 200, 1, 255, 255, 200, 1, 255, 255, 200, 1, 255, 255, 200, 1, 255 };
@@ -6040,9 +6035,8 @@ UTEST(render, premultiply_keeps_opaque_channels) {
     ASSERT_EQ_MSG(out[1], 50, "100 at alpha 128 premultiplies to 50");
 }
 
-// render.image_from_pixels - the raw upload is synchronous and copies caller memory into a
-// backend-owned static image, so the source buffers are mutated before drawing. Covers RGBA, Alpha, RGB and
-// XRGB handles.
+// The raw upload is synchronous and copies caller memory into a static image the backend owns, so the case
+// changes the source buffers before drawing. It covers RGBA, Alpha, RGB and XRGB handles.
 
 UTEST(render, image_from_pixels) {
     FlUiCtx* ctx = render_fixture_get();
@@ -6138,8 +6132,8 @@ UTEST(render, image_from_pixels) {
     image_free((ImageHandle)xrgb);
 }
 
-// render.image_update_pixels - re-uploading into a live handle keeps the handle's identity, dimensions, and
-// format, and respects the same caller-buffer contract create_from_pixels does.
+// Uploading again into a live handle keeps the handle's identity, dimensions and format, and treats the caller's
+// buffer as create_from_pixels does.
 
 UTEST(render, image_update_pixels) {
     FlUiCtx* ctx = render_fixture_get();
@@ -6152,8 +6146,8 @@ UTEST(render, image_update_pixels) {
     ui_background_set(IMAGE_HANDLE_INVALID);
     ui_background_set_clear_color(5, 7, 11);
 
-    // Dedicated: under the software backend the flag changes nothing, but it is what the GPU backend keeps
-    // off its atlas.
+    // Dedicated changes nothing under the software backend. The GPU backend uses it to keep the image off its
+    // atlas.
     u8 pixels[4] = { 220, 30, 40, 255 };
     FlImageHandle handle = fl_image_create_dedicated(pixels, 1, 1, FlImageFormat_RGBA);
     ASSERT_NE_MSG(handle, (FlImageHandle)FL_IMAGE_HANDLE_INVALID, "dedicated raw upload returned invalid handle");
@@ -6161,7 +6155,7 @@ UTEST(render, image_update_pixels) {
 
     u8 rebaked[4] = { 30, 210, 60, 255 };
     ASSERT_TRUE_MSG(fl_image_update_pixels(handle, rebaked), "update_pixels should re-upload into a live handle");
-    memset(rebaked, 0, sizeof rebaked); // the caller may free its buffer the moment the call returns
+    memset(rebaked, 0, sizeof rebaked); // the caller may free its buffer as soon as the call returns
     ASSERT_TRUE_MSG(fl_image_is_ready(handle), "the handle stays ready across a re-upload");
 
     ui_update_begin(ctx);
@@ -6184,12 +6178,11 @@ UTEST(render, image_update_pixels) {
     image_free((ImageHandle)handle);
 }
 
-// render.viewport3d_software_placeholder - a Viewport3d under a backend with no 3D seam.
+// A Viewport3d under a backend with no 3D support.
 //
-// The software backend binds none of mesh_create / mesh_destroy / viewport3d_submit: the element must still
-// lay out and fill itself with the placeholder, mesh creation must fail rather than hand back a handle nothing
-// can draw, and every 3D call must be a logged no-op instead of a crash. The API's misuse guards are pinned
-// here too, since none of them need a GPU.
+// The software backend binds none of mesh_create, mesh_destroy and viewport3d_submit. The element still lays out
+// and fills itself with the placeholder, mesh creation fails and returns no handle, and every 3D call logs and
+// does nothing. The API's misuse checks are tested here too, since none of them need a GPU.
 
 UTEST(render, viewport3d_software_placeholder) {
     FlUiCtx* ctx = render_fixture_get();
@@ -6205,7 +6198,7 @@ UTEST(render, viewport3d_software_placeholder) {
     ASSERT_TRUE_MSG(ctx->shared->renderer.viewport3d_submit == nullptr,
                     "the software backend must not bind the 3D seam");
 
-    // Misuse outside any bracket: each of these logs and returns rather than touching the open-viewport state.
+    // Misuse outside any begin/end pair: each of these logs and returns without touching the open-viewport state.
     fl_viewport3d_end();
     fl_viewport3d_draw_mesh((FlMeshHandle)1, FL_IMAGE_HANDLE_INVALID, FlImageFilter_Linear);
     fl_viewport3d_draw_lines((FlMeshHandle)1, false);
@@ -6214,7 +6207,7 @@ UTEST(render, viewport3d_software_placeholder) {
     };
     fl_viewport3d_set_view_projection(identity, 16);
 
-    // Mesh creation has no backend to reach, so it must report failure instead of returning a handle.
+    // Mesh creation has no backend to reach, so it reports failure and returns no handle.
     FlMeshVertex verts[3] = {
         { .x = 0.0f, .y = 0.0f, .z = 0.0f, .color = { 255, 255, 255, 255 } },
         { .x = 1.0f, .y = 0.0f, .z = 0.0f, .color = { 255, 255, 255, 255 } },
@@ -6229,15 +6222,15 @@ UTEST(render, viewport3d_software_placeholder) {
                   "mesh_create_lines must fail when the backend has no 3D seam");
     ASSERT_EQ_MSG(fl_mesh_create_lines(verts, 3, tri, 3), (FlMeshHandle)FL_MESH_HANDLE_INVALID,
                   "mesh_create_lines must reject an index count that is not whole segments");
-    fl_mesh_destroy(FL_MESH_HANDLE_INVALID); // no-op, must not reach a null seam
+    fl_mesh_destroy(FL_MESH_HANDLE_INVALID); // does nothing
 
-    // Two frames: the first lays the element out (so begin reports zero), the second reads that rect back.
+    // Two frames: the first lays the element out, so begin reports zero, and the second reads that rect back.
     FlVec2 size = { 0 };
     for (int frame = 0; frame < 2; frame++) {
         ui_update_begin(ctx);
         ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
             size = fl_viewport3d_begin((FlLayoutId) { .name = FL_S("sw_viewport") });
-            fl_viewport3d_set_view_projection(identity, 3); // wrong arity: logged, matrix left untouched
+            fl_viewport3d_set_view_projection(identity, 3); // wrong count: logged, and the matrix is left untouched
             fl_viewport3d_draw_mesh(FL_MESH_HANDLE_INVALID, FL_IMAGE_HANDLE_INVALID, FlImageFilter_Linear);
             fl_viewport3d_end();
         }
@@ -6254,8 +6247,8 @@ UTEST(render, viewport3d_software_placeholder) {
                     "a Viewport3d with no 3D backend must fill itself with the placeholder");
 }
 
-// render.viewport3d_retires_unused_slots - more distinct viewport ids than the table holds, each shown for two
-// frames and then dropped, must all lay out: slots not begun in the last frame are reused.
+// More distinct viewport ids than the table holds, each shown for two frames and then dropped, all lay out,
+// because slots not begun in the last frame are reused.
 
 UTEST(render, viewport3d_retires_unused_slots) {
     FlUiCtx* ctx = render_fixture_get();
@@ -6282,8 +6275,8 @@ UTEST(render, viewport3d_retires_unused_slots) {
     }
 }
 
-// render.viewport3d_live_slots_never_displaced - eight abandoned viewports are retired by eight live ones; with
-// the table full of viewports begun every frame, a ninth id is refused and none of the eight is displaced.
+// Eight abandoned viewports are replaced by eight live ones. With the table full of viewports begun every frame, a
+// ninth id is refused and none of the eight is displaced.
 
 UTEST(render, viewport3d_live_slots_never_displaced) {
     FlUiCtx* ctx = render_fixture_get();
@@ -6296,7 +6289,7 @@ UTEST(render, viewport3d_live_slots_never_displaced) {
 
     static const char* const names[]
         = { "live_a", "live_b", "live_c", "live_d", "live_e", "live_f", "live_g", "live_h", "live_i" };
-    // Fill the table with viewports that are then abandoned; the live set below must displace them.
+    // Fill the table with viewports that are then abandoned. The live set below takes their slots.
     static const char* const idle_names[]
         = { "idle_a", "idle_b", "idle_c", "idle_d", "idle_e", "idle_f", "idle_g", "idle_h" };
     for (u32 n = 0; n < 8; n++) {
@@ -6330,8 +6323,7 @@ UTEST(render, viewport3d_live_slots_never_displaced) {
     ASSERT_TRUE_MSG(sizes[8].x == 0.0f && sizes[8].y == 0.0f, "a ninth live viewport has no slot");
 }
 
-// render.scroll_area_overflow_stays_paired - scroll areas nested past the stack capacity must not pop an
-// enclosing area's entry on end.
+// Scroll areas nested past the stack capacity do not pop an enclosing area's entry when they end.
 
 UTEST(render, scroll_area_overflow_stays_paired) {
     FlUiCtx* ctx = render_fixture_get();
@@ -6365,8 +6357,8 @@ UTEST(render, scroll_area_overflow_stays_paired) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// render.window_teardown_releases_painter_arena - each window context owns a painter arena that ui_destroy
-// releases, so opening and closing windows leaves the live arena count where it started.
+// Each window context owns a painter arena that ui_destroy releases, so opening and closing windows leaves the live
+// arena count where it started.
 
 UTEST(render, window_teardown_releases_painter_arena) {
     FlUiCtx* fixture = render_fixture_get();
@@ -6375,8 +6367,8 @@ UTEST(render, window_teardown_releases_painter_arena) {
     FlMemoryStats before;
     fl_memory_tracker_get_stats(&before);
 
-    // The arena count is process-wide, so threads outside this case can move it by a few; a context that leaked an
-    // arena would add at least one per cycle.
+    // The arena count is process-wide, so threads outside this case can move it by a few. A context that leaked
+    // an arena would add at least one per cycle.
     enum { CYCLES = 16, ARENA_COUNT_NOISE = 4 };
     for (int i = 0; i < CYCLES; i++) {
         FlUiCtx* ctx = ui_create(s_arena, fixture->shared);
@@ -6391,15 +6383,15 @@ UTEST(render, window_teardown_releases_painter_arena) {
                   "ui_destroy must release every arena ui_create made");
 }
 
-// render.translucent_image_over - the RGBA (4-channel) image blend must apply the source alpha exactly once
-// (premultiplied-over), matching the GPU backend, not rgb·a². create_from_pixels premultiplies the RGBA source
-// with the same round-to-nearest /255 rule the GPU's pack_tint_premultiplied uses, and the SW sampler carries
-// that premultiplied color + its alpha straight through. The expected value below is that shared premultiply
-// followed by premultiplied-over - exactly the GPU backend's compositing.
+// The RGBA (4-channel) image blend applies the source alpha exactly once (premultiplied over), as the GPU backend
+// does. create_from_pixels premultiplies the RGBA source with the same round-to-nearest /255 rule as the GPU's
+// pack_tint_premultiplied, and the SW sampler passes that premultiplied color and its alpha through unchanged.
+// The expected value below is that premultiply followed by premultiplied over, which is the GPU backend's
+// compositing.
 //
-// This exercises the bilinear same-size path (process_8_pixels). The nearest path composites 4-channel texels
-// through the same premul_over_8 helper, so it is covered too. The image corner-rounding branch of
-// premul_over_8 is not exercised because emit_image never sets RenderMask_Corners.
+// The case uses the bilinear same-size path (process_8_pixels). The nearest path composites 4-channel texels
+// through the same premul_over_8 helper, so it is covered as well. The corner-rounding branch of premul_over_8 is
+// not covered, because emit_image never sets RenderMask_Corners.
 
 UTEST(render, translucent_image_over) {
     FlUiCtx* ctx = render_fixture_get();
@@ -6413,7 +6405,7 @@ UTEST(render, translucent_image_over) {
     const u8 clear_r = 60, clear_g = 60, clear_b = 60;
     ui_background_set_clear_color(clear_r, clear_g, clear_b);
 
-    // A uniform 8x8 RGBA image at 50% alpha. create_from_pixels premultiplies and marks it premultiplied.
+    // A uniform 8x8 RGBA image at 50% alpha. create_from_pixels premultiplies it and marks it premultiplied.
     u8 rgba_pixels[8 * 8 * 4];
     for (int i = 0; i < 8 * 8; ++i) {
         rgba_pixels[i * 4 + 0] = 200;
@@ -6425,8 +6417,8 @@ UTEST(render, translucent_image_over) {
     ASSERT_NE_MSG(img, (FlImageHandle)FL_IMAGE_HANDLE_INVALID, "RGBA raw upload returned invalid handle");
     ASSERT_TRUE_MSG(fl_image_is_ready(img), "direct RGBA handle must be ready immediately");
 
-    // Premultiplied-over of the premultiplied source over the clear color (global_alpha 255). The premultiply
-    // uses the same round-to-nearest /255 both backends share, so out = premul(c,a) + bg·(255−a)/255.
+    // Premultiplied over of the premultiplied source on the clear color (global_alpha 255). The premultiply uses
+    // the round-to-nearest /255 both backends share, so out = premul(c,a) + bg*(255-a)/255.
     const int a = 128;
     const int premul_r = (200 * a + 127) / 255, premul_g = (80 * a + 127) / 255, premul_b = (20 * a + 127) / 255;
     const int exp_r = premul_r + (clear_r * (255 - a) + 127) / 255; // 130
@@ -6526,12 +6518,12 @@ UTEST(render, image_sub_atlas) {
     image_free((ImageHandle)atlas);
 }
 
-// perf_fence CPU micro-scenes - the remaining isolating scenes beyond scene_raster_fill. Each
-// isolates ONE hot path so a regression points at a cause, and reuses the tier-1/3 harness above.
+// perf_fence CPU micro-scenes, in addition to scene_raster_fill. Each isolates one hot path, so a regression
+// points at a cause, and they use the same harness as above.
 
-// scene_text_elided: N narrow boxes each holding a long single-word label that must elide (truncate to the
-// longest fitting prefix + U+2026). Stresses the uncached O(chars^2) elide-measurement path - every label is
-// re-measured each frame.
+// scene_text_elided: N narrow boxes, each holding a long single-word label that has to elide (truncate to the
+// longest prefix that fits, plus U+2026). It loads the uncached O(chars^2) elide measurement, since every label
+// is measured again each frame.
 static void scene_text_elided(FlUiCtx* ctx, int n) {
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 2)); // built-in 8x8 font at scale 2
     const FlString label = { .data = "AAAAAAAAAAAAAAAAAAAA", .length = 20, .is_static = 1 }; // 20 glyphs; box fits 4
@@ -6581,7 +6573,7 @@ UTEST(perf_fence, scene_many_elements) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    const int n = 16384; // > Clay's 8192 default cap: proves the fixture's Clay_SetMaxElementCount is load-bearing
+    const int n = 16384; // above Clay's default cap of 8192, so it depends on the fixture's Clay_SetMaxElementCount
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
@@ -6599,8 +6591,8 @@ UTEST(perf_fence, scene_many_elements) {
     ASSERT_EQ_MSG(stats.bin_alloc_bytes, 558960u, "bin_alloc_bytes baseline drift");
 }
 
-// scene_floating: N floating overlays attached to root, each a distinct z_index holding a small colored fill.
-// Stresses the z-index root bubble sort (O(N^2) over floating roots).
+// scene_floating: N floating overlays attached to the root, each with its own z_index and a small colored fill.
+// It loads the bubble sort of floating roots by z-index, which is O(N^2).
 static void scene_floating(FlUiCtx* ctx, int n) {
     const FlColor fill = ui_color(200, 120, 60, 255);
 
@@ -6626,7 +6618,7 @@ UTEST(perf_fence, scene_floating) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    const int n = 256; // distinct z_index 0..255 → 256^2 bubble-sort comparisons
+    const int n = 256; // z_index 0..255, so 256^2 bubble-sort comparisons
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 1920.0f, .height = 1080.0f });
@@ -6644,18 +6636,17 @@ UTEST(perf_fence, scene_floating) {
 }
 
 // scene_dyn_images: N draws of one small source image at a scaled destination size, so each draw is a
-// RenderMask_TextureScaled command that rebuilds its shuffle table every frame (calculate_shuffle_tables).
-// Isolates the per-frame re-deinterleave / shuffle-table-rebuild hot path; stat.scaled_image_setups equals N
-// and is the tier-1 anchor that a caching optimization would drop.
+// RenderMask_TextureScaled command that rebuilds its shuffle table every frame (calculate_shuffle_tables). The
+// scene isolates that rebuild. stat.scaled_image_setups equals N, and a caching optimization would lower it.
 static ImageHandle s_dyn_image
-    = IMAGE_HANDLE_INVALID; // set by the UTEST before the run; the fixed-signature scene reads it
+    = IMAGE_HANDLE_INVALID; // set by the UTEST before the run and read by the scene, whose signature is fixed
 
 static void scene_dyn_images(FlUiCtx* ctx, int n) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         Painter* p = ctx->painter;
         for (int i = 0; i < n; i++) {
-            const float x = (float)((i % 60) * 20); // 60-wide grid, 16px draws → all on-screen within 1920x1080
+            const float x = (float)((i % 60) * 20); // a grid 60 wide of 16px draws, all on screen within 1920x1080
             const float y = (float)((i / 60) * 20);
             painter_image(p, (FlRect) { .x = x, .y = y, .w = 16.0f, .h = 16.0f }, (FlImageHandle)s_dyn_image,
                           (FlColor) { 255, 255, 255, 255 });
@@ -6676,7 +6667,8 @@ UTEST(perf_fence, scene_dyn_images) {
     ui_background_set(IMAGE_HANDLE_INVALID);
     ui_background_set_clear_color(20, 20, 24);
 
-    // k_png_red is a 4x4 RGB PNG; drawing it at 16x16 (dst != src width) forces the scaled-texture path.
+    // k_png_red is a 4x4 RGB PNG. Drawing it at 16x16, where dst differs from the source width, takes the
+    // scaled-texture path.
     s_dyn_image = image_load_from_memory(k_png_red, sizeof(k_png_red), (FlImageLoadOptions) { 0 });
     ASSERT_TRUE_MSG(s_dyn_image != IMAGE_HANDLE_INVALID, "image load returned invalid handle");
     ASSERT_TRUE_MSG(wait_image_ready(s_dyn_image), "image did not decode in time");
@@ -6694,12 +6686,12 @@ UTEST(perf_fence, scene_dyn_images) {
                   "scaled_image_setups baseline drift"); // one shuffle rebuild per image
     ASSERT_EQ_MSG(
         stats.render_commands, 3u,
-        "render_commands baseline drift"); // painter draws map to one CUSTOM span, not per-image Clay commands
+        "render_commands baseline drift"); // painter draws become one CUSTOM span and not one Clay command per image
 }
 
 // scene_widget_gallery: a representative full frame adapted from examples/widget_gallery. No input is pumped, so
-// every interaction is a no-op and the fixed-value widget state makes each run identical (the two dialogs' open
-// bools are false, so ui_message_box early-returns). n is the (virtualized) List row count.
+// no interaction happens, and the fixed widget state makes every run identical. The two dialogs' open bools are
+// false, so ui_message_box returns early. n is the row count of the virtualized List.
 #define GALLERY_DECL_ROWS 12
 
 #define GALLERY_SECTION                                                                                   \
@@ -6712,9 +6704,10 @@ static void gallery_section_header(FlString title) {
 }
 
 static void scene_widget_gallery(FlUiCtx* ctx, int n) {
-    ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 2)); // built-in bitmap font, no asset dep
+    ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 2)); // built-in bitmap font, which needs no asset
 
-    // Clay holds text char pointers until ui_update_end (no copy), so any dynamic label must outlive the frame.
+    // Clay keeps the text char pointers until ui_update_end without copying, so a dynamic label has to outlive
+    // the frame.
     char clicked_buf[32];
 
     int clicks = 3;
@@ -6911,7 +6904,7 @@ UTEST(perf_fence, scene_widget_gallery) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    const int n = 500; // matches the example's list row count; the list is virtualized to a 180px viewport
+    const int n = 500; // the example's list row count. The list is virtualized to a 180px viewport
     ctx->layout_width = 1920.0f;
     ctx->layout_height = 1080.0f;
     ui_set_scale(1.0f, 1.0f);
@@ -7042,8 +7035,8 @@ UTEST(render, theme_scope) {
     dump_frame("theme_scope", &buf);
 }
 
-// render.theme_scope_frame_hygiene - a scoped override is frame-local. If a caller pushes but forgets to pop, the
-// override must not leak into the next frame: ui_update_begin resets the override depth to 0.
+// A scoped override lasts one frame. If a caller pushes and does not pop, the override does not reach the next
+// frame, because ui_update_begin resets the override depth to 0.
 
 UTEST(render, theme_scope_frame_hygiene) {
     FlUiCtx* ctx = render_fixture_get();
@@ -7059,7 +7052,7 @@ UTEST(render, theme_scope_frame_hygiene) {
     };
     ui_set_theme(ctx, &base);
 
-    // Push an override and deliberately never pop it within the frame.
+    // Push an override and do not pop it within the frame.
     ui_update_begin(ctx);
     ui_theme_push(ctx, (FlThemeOverride) {
                            .slots = FlThemeSlot_SurfaceBase,
@@ -7079,10 +7072,10 @@ UTEST(render, theme_scope_frame_hygiene) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// render.theme_stack_fl_api - drives the theme override stack through the generated direct API: fl_theme_update
-// injects the base palette, fl_theme_push layers a sparse override, fl_theme_pop unwinds it. The fl_theme_*
-// forwarders thread the file-local s_ctx (set by ui_create in the fixture). base is static because
-// fl_theme_update stores the pointer (caller-owned storage).
+// The theme override stack through the generated direct API: fl_theme_update injects the base palette,
+// fl_theme_push adds a sparse override and fl_theme_pop removes it. The fl_theme_* forwarders use the file-local
+// s_ctx, which ui_create sets in the fixture. base is static because fl_theme_update stores the pointer and the
+// caller owns the storage.
 
 UTEST(render, theme_stack_fl_api) {
     FlUiCtx* ctx = render_fixture_get();
@@ -7121,8 +7114,8 @@ UTEST(render, theme_stack_fl_api) {
                     "after pop, surface.base must revert to the injected base");
 }
 
-// render.public_read_getters - the narrow read getters: fl_theme_colors (live palette), fl_focused_id (focused
-// widget id, no FlUiCtx exposed), and fl_list_clipper_create (visible-row window).
+// The read getters: fl_theme_colors (the live palette), fl_focused_id (the focused widget id, without exposing
+// FlUiCtx) and fl_list_clipper_create (the window of visible rows).
 
 UTEST(render, public_read_getters) {
     FlUiCtx* ctx = render_fixture_get();
@@ -7141,22 +7134,22 @@ UTEST(render, public_read_getters) {
     ASSERT_EQ_MSG(fl_focused_id(), ui_layout_id_to_clay_id(ID("getters_focus_target")),
                   "fl_focused_id must return the widget id that took focus");
 
-    // 100 items of 20px, scrolled 200px into a 100px viewport → rows [10, 16): first = 200/20 = 10;
+    // 100 items of 20px scrolled 200px into a 100px viewport give rows [10, 16): first = 200/20 = 10 and
     // last = (200+100)/20 + 1 = 16.
     FlListClipper clip = fl_list_clipper_create(100, 20.0f, 200.0f, 100.0f);
     ASSERT_EQ_MSG(clip.display_start, 10, "clipper display_start must be 10 for the known viewport");
     ASSERT_EQ_MSG(clip.display_end, 16, "clipper display_end must be 16 for the known viewport");
     ASSERT_TRUE_MSG(clip.items_height == 2000.0f, "clipper items_height must be total_items * item_height");
 
-    // A zero item height (an unmeasured row on the first frame) would divide to inf and convert to int as
-    // undefined behaviour; the window must come back empty instead.
+    // A zero item height (a row not yet measured on the first frame) would divide to inf, and converting that to
+    // int is undefined behaviour. The window comes back empty.
     FlListClipper degenerate = fl_list_clipper_create(100, 0.0f, 200.0f, 100.0f);
     ASSERT_EQ_MSG(degenerate.display_start, 0, "zero item height must yield an empty window");
     ASSERT_EQ_MSG(degenerate.display_end, 0, "zero item height must yield an empty window");
 }
 
-// render.public_nav_query - the public nav/action query surface: fl_action_pressed reports the action a key press
-// bound to it raised this frame, and fl_set_focus + fl_focused_id round-trip a layout id.
+// The public nav and action queries: fl_action_pressed reports the action that a bound key press raised this
+// frame, and fl_set_focus and fl_focused_id round-trip a layout id.
 
 UTEST(render, public_nav_query) {
     FlUiCtx* ctx = render_fixture_get();
@@ -7176,9 +7169,9 @@ UTEST(render, public_nav_query) {
                   "fl_set_focus + fl_focused_id must round-trip the resolved widget id");
 }
 
-// render.public_widget_api_smoke - every widget on the public fl_* surface is called once inside one real frame
-// through its generated bare-primary name + convenience macro; a frame that emits render commands proves the
-// widgets laid out. No interaction is injected, so every returned Signal is quiescent (.clicked false).
+// Every widget in the public fl_* API is called once inside one real frame, through its generated primary name
+// and convenience macro. The frame emits render commands, which shows the widgets laid out. No interaction is
+// injected, so every returned Signal is idle (.clicked false).
 
 UTEST(render, public_widget_api_smoke) {
     FlUiCtx* ctx = render_fixture_get();
@@ -7196,7 +7189,7 @@ UTEST(render, public_widget_api_smoke) {
     FlString dropdown_opts[] = { FL_S("Low"), FL_S("High") };
     FlString tabs[] = { FL_S("General"), FL_S("Audio") };
 
-    // A small valid RGBA buffer so the dynamic-image element references real memory.
+    // A small valid RGBA buffer, so the dynamic-image element refers to real memory.
     static u8 dyn_pixels[4 * 4 * 4] = { 0 };
     FlDynamicImage dyn = {
         .user_buffer = dyn_pixels,
@@ -7219,7 +7212,7 @@ UTEST(render, public_widget_api_smoke) {
         bool tab_changed = fl_tab_bar(tabs, 2, &tab_sel);
         FlSignal lk = fl_link(FL_S("Click here"));
         fl_image(0, (FlImageOpts) { .color = ui_color(255, 255, 255,
-                                                      255) }); // invalid handle: ui_image_impl no-ops, must not crash
+                                                      255) }); // the handle is invalid, so ui_image_impl does nothing
         fl_dynamic_image(&dyn, (FlImageOpts) { .color = ui_color(255, 255, 255, 255) });
         fl_spacer(8.0f);
         fl_spacer_h(8.0f);
@@ -7241,12 +7234,12 @@ UTEST(render, public_widget_api_smoke) {
     ASSERT_EQ_MSG(tab_sel, 0, "tab selection unchanged with no input");
     ASSERT_EQ_MSG(dropdown_sel, 1, "dropdown selection unchanged with no input");
     ASSERT_FALSE_MSG(dropdown_open, "dropdown stays closed with no input");
-    // (scrollbar recomputes *value from thumb geometry every frame, so it is intentionally not asserted unchanged)
+    // The scrollbar recomputes *value from the thumb geometry every frame, so it is not asserted unchanged.
 }
 
-// render.state_derivation - interactive-state color derivation. Resolves fl_resolve_widget_colors for synthetic
-// ItemState at stepped hot_t / active_t / focused_t factors: the OKLCH lighten/darken hover/press derivation and the
-// OKLab focus-border lerp. The assertions are the endpoints the theme fixes and the direction each channel moves.
+// Interactive-state color derivation. The case calls fl_resolve_widget_colors for a synthetic ItemState at stepped
+// hot_t, active_t and focused_t factors, which covers the OKLCH lighten and darken for hover and press and the
+// OKLab focus-border lerp. It checks the endpoints the theme fixes and the direction each channel moves.
 
 enum { STATE_DERIVATION_STEPS = 5 };
 
@@ -7280,7 +7273,7 @@ UTEST(render, state_derivation) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // A deterministic theme so every derivation input is fixed.
+    // A fixed theme, so every input to the derivation is known.
     static const FlThemeColors known = {
         .interactive.base = { 200, 30, 40, 255 },
         .interactive.hover = { 220, 60, 70, 255 },
@@ -7344,9 +7337,9 @@ UTEST(render, state_derivation) {
     }
 }
 
-// render.variant_derivation - perceptual variant derivation from an arbitrary base ("Object Color") plus a
-// luminance-chosen label color. Lighten raises and darken lowers the brightness, desaturate narrows the channel
-// spread, and the readable foreground flips with the background.
+// Perceptual variant derivation from an arbitrary base color, plus a label color chosen by luminance. Lighten
+// raises the brightness and darken lowers it, desaturate narrows the channel spread, and the readable foreground
+// flips with the background.
 
 static int variant_derivation_spread(FlColor c) {
     return (int)max(max(c.r, c.g), c.b) - (int)min(min(c.r, c.g), c.b);
@@ -7356,7 +7349,7 @@ UTEST(render, variant_derivation) {
     const FlColor label_light = FL_THEME_DEFAULT_TEXT_PRIMARY;
     const FlColor label_dark = { 16, 16, 18, 255 };
 
-    // App-chosen derivation amounts (illustrative - the framework does not mandate a set).
+    // Derivation amounts an app might choose. The framework does not prescribe a set.
     const float lighten_amt = 0.12f, darken_amt = 0.12f, desat_amt = 0.5f;
 
     const struct {
@@ -7395,16 +7388,17 @@ UTEST(render, variant_derivation) {
                     "a near-black background takes the light label");
 }
 
-// render.widget_slot_override - per-widget state-slot overrides (FlWidgetConfig::theme_override). A widget
-// config carries a sparse FlThemeOverride layered over the resolved theme for that one widget, composing with any
-// active scoped subtree override (widget-level wins for the slots it flags, inherits the rest). Driven through
-// real Outline buttons - resting background surface.base, border interactive.base - read back from the debug
-// render-command snapshot.
+// Per-widget state-slot overrides (FlWidgetConfig::theme_override). A widget config carries a sparse
+// FlThemeOverride applied over the resolved theme for that one widget. It composes with any active scoped
+// subtree override: the widget-level one wins for the slots it flags and the rest are inherited. The case uses
+// real Outline buttons, whose resting background is surface.base and border interactive.base, and reads them
+// back from the debug render-command snapshot.
 
-// Collect the opaque background (rectangle) or border colors painted in the last frame, in command order. Each
-// Outline button emits exactly one fully opaque rectangle (its bg) and one opaque border, in declaration order;
-// the container draws neither, and the link drawn at the end paints only near-transparent helper rects (excluded by
-// the alpha==255 filter). So the k-th opaque rectangle and k-th opaque border belong to the k-th button.
+// Collects the opaque background (rectangle) or border colors painted in the last frame, in command order. Each
+// Outline button emits exactly one fully opaque rectangle (its background) and one opaque border, in declaration
+// order. The container draws neither, and the link drawn at the end paints only nearly transparent helper rects,
+// which the alpha == 255 filter excludes. So the k-th opaque rectangle and the k-th opaque border belong to the
+// k-th button.
 static int slot_override_collect(UiRenderCommandType type, UiColor4* out, int max) {
     int count = 0;
     const int n = ui_get_render_command_count();
@@ -7415,15 +7409,15 @@ static int slot_override_collect(UiRenderCommandType type, UiColor4* out, int ma
         }
         const UiColor4 c = (type == UiRenderCmd_Border) ? cmd.border_color : cmd.bg_color;
         if (c.a < 255.0f) {
-            continue; // skip the link's near-transparent container / underline helpers
+            continue; // the link's nearly transparent container and underline helpers
         }
         out[count++] = c;
     }
     return count;
 }
 
-// Find a text command whose color matches want (the link's text color carries its per-widget interactive.base
-// override).
+// Finds a text command whose color matches want. The link's text color is its per-widget interactive.base
+// override.
 static bool slot_override_has_text_color(FlColor want) {
     const int n = ui_get_render_command_count();
     for (int i = 0; i < n; i++) {
@@ -7450,13 +7444,13 @@ UTEST(render, widget_slot_override) {
     ui_background_set(IMAGE_HANDLE_INVALID);
     ui_background_set_clear_color(12, 12, 14);
 
-    // Built-in 8x8 font (dependency-free); buttons paint text.
+    // The built-in 8x8 font, which needs no asset. Buttons paint text.
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 3));
 
     static const FlThemeColors base = {
-        .interactive.base = { 200, 30, 40, 255 }, // I0 - Outline border at rest
+        .interactive.base = { 200, 30, 40, 255 }, // I0: Outline border at rest
         .interactive.focus = { 255, 255, 255, 255 },
-        .surface.base = { 18, 20, 24, 255 }, // S0 - Outline background at rest
+        .surface.base = { 18, 20, 24, 255 }, // S0: Outline background at rest
         .surface.elevated = { 36, 38, 44, 255 },
         .border.default_color = { 50, 52, 60, 255 },
         .text.primary = { 240, 240, 240, 255 },
@@ -7470,14 +7464,14 @@ UTEST(render, widget_slot_override) {
     const FlColor I2 = { 40, 40, 200, 255 }; // widget override: interactive.base (border)
     const FlColor S2 = { 70, 50, 10, 255 };  // widget override: surface.base (background)
 
-    // Per-widget overrides as named locals - a compound literal inline in the ui_button() macro would split on its
-    // internal commas (the preprocessor only protects parentheses, not braces).
+    // The per-widget overrides are named locals because a compound literal inside the ui_button() macro would
+    // split on its internal commas. The preprocessor protects parentheses but not braces.
     const FlThemeOverride ov_interactive
         = { .slots = FlThemeSlot_InteractiveBase, .colors = { .interactive.base = I2 } };
     const FlThemeOverride ov_surface = { .slots = FlThemeSlot_SurfaceBase, .colors = { .surface.base = S2 } };
 
-    // A link exercises the nested cfg.widget.theme_override path (vs. button's bare cfg.theme_override). At rest its
-    // text renders in interactive.base, so a unique override color is findable among the text commands.
+    // A link uses the nested cfg.widget.theme_override, where a button uses cfg.theme_override. At rest its text
+    // is drawn in interactive.base, so a unique override color can be found among the text commands.
     const FlColor LINK_OV = { 123, 60, 200, 255 };
     const FlThemeOverride ov_link = { .slots = FlThemeSlot_InteractiveBase, .colors = { .interactive.base = LINK_OV } };
 
@@ -7505,7 +7499,7 @@ UTEST(render, widget_slot_override) {
 
     ASSERT_EQ_MSG(ctx->theme_override_depth, 0, "override stack must be balanced after equal push/pop");
 
-    // Five buttons, declaration order: plain, sib, wbase, wsurf, plain2.
+    // Five buttons, in declaration order: plain, sib, wbase, wsurf, plain2.
     UiColor4 bg[5], border[5];
     ASSERT_EQ_MSG(slot_override_collect(UiRenderCmd_Rectangle, bg, 5), 5, "expected one background per button");
     ASSERT_EQ_MSG(slot_override_collect(UiRenderCmd_Border, border, 5), 5, "expected one border per button");
@@ -7525,10 +7519,9 @@ UTEST(render, widget_slot_override) {
 
     ASSERT_TRUE_MSG(slot_override_has_text_color(LINK_OV), "link: cfg.widget.theme_override retints the link text");
 
-    // Focus ring (FlThemeSlot_InteractiveFocus): driven with a synthetic focused ItemState because the render
-    // path's focus animation cannot reach focused_t=1 in a single frame. A Solid variant has a transparent base
-    // border, so at focused_t=1 the focus border lands exactly on interactive.focus (alpha-ramp, no OKLab
-    // rounding).
+    // Focus ring (FlThemeSlot_InteractiveFocus). It uses a synthetic focused ItemState because the render path's
+    // focus animation cannot reach focused_t=1 in a single frame. A Solid variant has a transparent base border,
+    // so at focused_t=1 the focus border is exactly interactive.focus, an alpha ramp with no OKLab rounding.
     const FlColor focus_ov_color = { 12, 240, 200, 255 };
     const FlThemeOverride ov_focus
         = { .slots = FlThemeSlot_InteractiveFocus, .colors = { .interactive.focus = focus_ov_color } };
@@ -7554,11 +7547,11 @@ UTEST(render, widget_slot_override) {
     dump_frame("widget_slot_override", &buf);
 }
 
-// render.switch_skin - a skin-overridden switch rendered alongside a default one.
+// A switch with a skin override rendered next to a default one.
 //
-// The asserts are computed from the geometry, not read off the render: at the skinned row's mid-height the frame
-// must be back to the clear color past x=26 (the skinned track ends there) while the default row is still painted
-// at the same x (its track runs to 48).
+// The asserts are computed from the geometry: at the mid-height of the skinned row the frame is back to the row
+// background past x=26, where the skinned track ends, while the default row is still painted at the same x,
+// since its track runs to 48.
 UTEST(render, switch_skin) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -7570,7 +7563,7 @@ UTEST(render, switch_skin) {
     ui_background_set(IMAGE_HANDLE_INVALID);
     ui_background_set_clear_color(12, 12, 14);
 
-    // Pin the theme: the track/knob colors come straight out of these slots.
+    // The track and knob colors come straight from these theme slots.
     static const FlThemeColors base = {
         .interactive.base = { 200, 30, 40, 255 }, // on-track fill
         .interactive.focus = { 255, 255, 255, 255 },
@@ -7583,12 +7576,13 @@ UTEST(render, switch_skin) {
     };
     ui_set_theme(ctx, &base);
 
-    // Built-in 8x8 font at scale 1 (dependency-free). Scale 1
-    // keeps each label inside its own row - the skinned row is only 13px tall.
+    // The built-in 8x8 font at scale 1, which needs no asset. Scale 1 keeps each label inside its own row, and
+    // the skinned row is only 13px tall.
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 1));
 
-    // Two rows, top-left, no gap: the default 48x24 pill then the compact 26x13 skin. Each switch's own container
-    // is {grow, fixed(track_height)}, so row 0 spans y 0..24 and row 1 y 24..37, both tracks flush at x = 0.
+    // Two rows at the top-left with no gap: the default 48x24 pill, then the compact 26x13 skin. Each switch's
+    // own container is {grow, fixed(track_height)}, so row 0 spans y 0..24 and row 1 y 24..37, with both tracks
+    // at x = 0.
     bool off_default = false;
     bool off_skin = false;
     ui_update_begin(ctx);
@@ -7604,27 +7598,27 @@ UTEST(render, switch_skin) {
     ASSERT_TRUE_MSG(buf.pixels != nullptr, "render buffer data is null");
     ASSERT_TRUE_MSG(buf.width == 1920 && buf.height == 1080, "unexpected render buffer dimensions");
 
-    // x = 36 is inside the default track (0..48) and well past the skinned one's right edge (26); the two rows'
-    // mid-heights are y = 12 and y = 30. Each row is compared against bare background WITHIN ITS OWN ROW
-    // (x = 200, past both tracks) rather than against the clear color: every switch lays its hit-test container
-    // across the full row width at alpha 2, so "unpainted" is the container tint, not the clear color.
+    // x = 36 is inside the default track (0..48) and well past the skinned one's right edge (26). The two rows'
+    // mid-heights are y = 12 and y = 30. Each row is compared with bare background in the same row (x = 200, past
+    // both tracks) and not with the clear color, because every switch lays its hit-test container across the
+    // full row width at alpha 2, so an unpainted pixel has the container tint.
 #define SWITCH_PX_EQ(ax, ay, bx, by) \
     (memcmp(readback_rgb_at(&buf, (ax), (ay)), readback_rgb_at(&buf, (bx), (by)), 3) == 0)
     ASSERT_FALSE_MSG(SWITCH_PX_EQ(36, 12, 200, 12), "the default track still covers x = 36");
     ASSERT_TRUE_MSG(SWITCH_PX_EQ(36, 30, 200, 30), "the skinned track stops short of x = 36");
-    // Both tracks do cover x = 10, so the row above is a width difference, not a missing skinned switch.
+    // Both tracks cover x = 10, so the check above shows a difference in width and not a missing skinned switch.
     ASSERT_FALSE_MSG(SWITCH_PX_EQ(10, 30, 200, 30), "the skinned track is painted at x = 10");
 #undef SWITCH_PX_EQ
 
     dump_frame("switch_skin", &buf);
 }
 
-// render.slider_skin - a skin-overridden slider rendered above a default one.
+// A slider with a skin override rendered above a default one.
 //
-// The assert is computed from the geometry, not read off the render: a column drawn through both tracks, clear of the
-// thumbs and of either label, must cross exactly two runs of the fill color - 8px for the default bar, then 3px for the
-// skinned one. Sliders are at rest here, so the fill is theme->text.primary unmodulated (ui_apply_state_color is
-// identity at hot_t/active_t 0).
+// The assert is computed from the geometry: a column through both tracks, clear of the thumbs and of both
+// labels, crosses exactly two runs of the fill color, 8px for the default bar and then 3px for the skinned one.
+// The sliders are at rest, so the fill is theme->text.primary unchanged (ui_apply_state_color is the identity at
+// hot_t and active_t 0).
 UTEST(render, slider_skin) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -7636,7 +7630,7 @@ UTEST(render, slider_skin) {
     ui_background_set(IMAGE_HANDLE_INVALID);
     ui_background_set_clear_color(12, 12, 14);
 
-    // Pin the theme: the fill / thumb / unfilled colors come straight out of these slots.
+    // The fill, thumb and unfilled colors come straight from these theme slots.
     static const FlThemeColors base = {
         .interactive.base = { 200, 30, 40, 255 },
         .interactive.focus = { 255, 255, 255, 255 },
@@ -7649,12 +7643,12 @@ UTEST(render, slider_skin) {
     };
     ui_set_theme(ctx, &base);
 
-    // Built-in 8x8 font at scale 1 (dependency-free).
+    // The built-in 8x8 font at scale 1, which needs no asset.
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 1));
 
-    // Two sliders, top-left: the default 24px thumb over an 8px bar, then the compact 13px thumb over a 3px bar,
-    // both at half value. The labels are also the widget ids. Two frames: the segment widths derive from the track
-    // row's width as carried over from the previous frame, so only the second is worth asserting.
+    // Two sliders at the top-left: the default 24px thumb over an 8px bar, then the compact 13px thumb over a 3px
+    // bar, both at half value. The labels are also the widget ids. There are two frames because the segment
+    // widths come from the track row's width in the previous frame, so only the second is asserted.
     float value_default = 0.5f;
     float value_skin = 0.5f;
     for (int pass = 0; pass < 2; pass++) {
@@ -7673,10 +7667,10 @@ UTEST(render, slider_skin) {
     ASSERT_TRUE_MSG(buf.pixels != nullptr, "render buffer data is null");
     ASSERT_TRUE_MSG(buf.width == 1920 && buf.height == 1080, "unexpected render buffer dimensions");
 
-    // Walk x = 200 top to bottom and measure each run of fill-colored pixels. The tracks grow to 1000px wide, so
-    // 200 is inside both filled segments; it clears the thumbs (mid-travel, around x = 490) and both labels (a
-    // few 8px glyphs at the left edge), which are drawn in this same color. The two run lengths are therefore
-    // the two bar thicknesses, in layout order.
+    // Walk x = 200 from top to bottom and measure each run of fill-colored pixels. The tracks grow to 1000px
+    // wide, so 200 is inside both filled segments. It is clear of the thumbs (mid travel, around x = 490) and of
+    // both labels (a few 8px glyphs at the left edge), which are drawn in the same color. The two run lengths
+    // are therefore the two bar thicknesses, in layout order.
     const u8 fill_rgb[3] = { 240, 240, 240 };
     int runs[8];
     int run_count = 0;
@@ -7699,12 +7693,12 @@ UTEST(render, slider_skin) {
     dump_frame("slider_skin", &buf);
 }
 
-// render.tab_bar_skin - a segmented-control-skinned tab bar rendered under a default one. The default bar is the
-// zeroed config the dock leaf header also passes.
+// A tab bar skinned as a segmented control, rendered under a default one. The default bar uses the zeroed config
+// the dock leaf header also passes.
 //
-// The gate is a scanline through the middle of the pill, positioned from the snapshot rather than
-// hand-computed: it must cross exactly one run of the accent fill (the selected tab), and the strip must show
-// the pill's own surface color between its edge and that tab.
+// The check is a scanline through the middle of the pill, positioned from the snapshot. It crosses exactly one
+// run of the accent fill (the selected tab), and the strip shows the pill's own surface color between its edge
+// and that tab.
 UTEST(render, tab_bar_skin) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -7716,7 +7710,7 @@ UTEST(render, tab_bar_skin) {
     ui_background_set(IMAGE_HANDLE_INVALID);
     ui_background_set_clear_color(12, 12, 14);
 
-    // Pin the theme: every color below comes straight out of these slots.
+    // Every color below comes straight from these theme slots.
     static const FlThemeColors base = {
         .interactive.base = { 200, 30, 40, 255 }, // selected tab fill
         .interactive.focus = { 255, 255, 255, 255 },
@@ -7729,14 +7723,15 @@ UTEST(render, tab_bar_skin) {
     };
     ui_set_theme(ctx, &base);
 
-    // Built-in 8x8 font at scale 1 (dependency-free).
+    // The built-in 8x8 font at scale 1, which needs no asset.
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 1));
 
-    // Hover lightens the fills perceptually, which would pull the scanline's colors off their theme values.
+    // Hover lightens the fills, which would move the scanline's colors off their theme values.
     ctx->input_state.mouse.x = -1000.0f;
     ctx->input_state.mouse.y = -1000.0f;
 
-    // Distinct label sets because a label is also its tab's id and the fixture's ItemState map outlives a case.
+    // The label sets differ because a label is also its tab's id, and the fixture's ItemState map outlives a
+    // case.
     FlString tabs_default[] = { FL_S("Mix"), FL_S("Fx"), FL_S("Out") };
     FlString tabs_skin[] = { FL_S("Osc"), FL_S("Env"), FL_S("Mod") };
     int sel_default = 0;
@@ -7764,7 +7759,7 @@ UTEST(render, tab_bar_skin) {
     ASSERT_TRUE_MSG(buf.pixels != nullptr, "render buffer data is null");
     ASSERT_TRUE_MSG(buf.width == 1920 && buf.height == 1080, "unexpected render buffer dimensions");
 
-    // Scan the pill's middle row across its full width: the selected tab is the only accent-filled thing on it.
+    // Scan the pill's middle row across its full width. The selected tab is the only accent fill on it.
     const u8 accent_rgb[3] = { 200, 30, 40 };
     const u8 pill_rgb[3] = { 36, 38, 44 };
     const int scan_y = (int)(pill.y + pill.height / 2.0f);
@@ -7784,12 +7779,11 @@ UTEST(render, tab_bar_skin) {
     dump_frame("tab_bar_skin", &buf);
 }
 
-// render.dropdown_skin - a pill-skinned dropdown trigger rendered under a default one.
+// A dropdown trigger skinned as a pill, rendered under a default one.
 //
-// The gate below is computed from the snapshot's own rects rather than
-// hand-placed: a column through both triggers, clear of their labels and chevrons, crosses exactly two runs of
-// the surface fill, and the skinned run falls short of the default one by exactly the height the config took
-// off. Stating it as a difference cancels the border out of both ends.
+// The check is computed from the snapshot's own rects. A column through both triggers, clear of their labels and
+// chevrons, crosses exactly two runs of the surface fill, and the skinned run is shorter than the default one by
+// exactly the height the config removed. Taking the difference cancels the border at both ends.
 UTEST(render, dropdown_skin) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -7801,7 +7795,7 @@ UTEST(render, dropdown_skin) {
     ui_background_set(IMAGE_HANDLE_INVALID);
     ui_background_set_clear_color(12, 12, 14);
 
-    // Pin the theme: the fill, border and label colors come straight out of these slots.
+    // The fill, border and label colors come straight from these theme slots.
     static const FlThemeColors base = {
         .interactive.base = { 200, 30, 40, 255 }, // the Outline trigger's border
         .interactive.focus = { 255, 255, 255, 255 },
@@ -7814,14 +7808,15 @@ UTEST(render, dropdown_skin) {
     };
     ui_set_theme(ctx, &base);
 
-    // Built-in 8x8 font at scale 1 (dependency-free).
+    // The built-in 8x8 font at scale 1, which needs no asset.
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 1));
 
-    // Hover lightens the fill perceptually, which would pull the scanned run off its theme color.
+    // Hover lightens the fill, which would move the scanned run off its theme color.
     ctx->input_state.mouse.x = -1000.0f;
     ctx->input_state.mouse.y = -1000.0f;
 
-    // Distinct labels because a label is also its trigger's id and the fixture's ItemState map outlives a case.
+    // The labels differ because a label is also its trigger's id, and the fixture's ItemState map outlives a
+    // case.
     FlString opts[2] = { FL_S("Sine"), FL_S("Saw") };
     bool open_default = false;
     bool open_skin = false;
@@ -7850,8 +7845,8 @@ UTEST(render, dropdown_skin) {
     ASSERT_TRUE_MSG(buf.width == 1920 && buf.height == 1080, "unexpected render buffer dimensions");
 
     // Walk a column down through both triggers and measure each run of the fill color. The triggers grow to the
-    // full window width, so a column at three quarters across sits well past the labels at their left edge and
-    // well before the chevrons at their right, leaving nothing but fill between the top and bottom borders.
+    // full window width, so a column three quarters of the way across is well past the labels at their left edge
+    // and well before the chevrons at their right, with only fill between the top and bottom borders.
     const u8 fill_rgb[3] = { 30, 34, 42 };
     const int scan_x = (int)(rects[0].x + rects[0].width * 0.75f);
     int runs[4];
@@ -7875,9 +7870,8 @@ UTEST(render, dropdown_skin) {
     dump_frame("dropdown_skin", &buf);
 }
 
-// render.dock_tabs - the dock leaf header's tab strip, rendered through the real dock_layout.c call path
-// ui_tab_strip is shared between the public tab bar and docking, and docking passes a
-// zeroed FlTabBarConfig, so every geometry knob must be inert there.
+// The dock leaf header's tab strip, rendered through dock_layout.c. ui_tab_strip is shared between the public tab
+// bar and docking, and docking passes a zeroed FlTabBarConfig, so no geometry field has any effect there.
 UTEST(render, dock_tabs) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -7901,7 +7895,7 @@ UTEST(render, dock_tabs) {
     };
     ui_set_theme(ctx, &base);
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 1));
-    ctx->input_state.mouse.x = -1000.0f; // hover would pull the fills off their exact theme colors
+    ctx->input_state.mouse.x = -1000.0f; // hover would move the fills off their theme colors
     ctx->input_state.mouse.y = -1000.0f;
 
     // One root leaf holding two panels, so the leaf renders a tab header.
@@ -7912,7 +7906,7 @@ UTEST(render, dock_tabs) {
     for (int pass = 0; pass < 2; pass++) {
         ui_update_begin(ctx);
         dock_workspace_begin(ws);
-        // Titles first so both passes render the same labelled strip.
+        // Titles first, so both passes render the same labelled strip.
         dock_workspace_declare(ws, 100, FL_S("Console"));
         dock_workspace_declare(ws, 101, FL_S("Log"));
         ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
@@ -7922,8 +7916,8 @@ UTEST(render, dock_tabs) {
         ui_update_end(ctx, 1.0f / 60.0f);
     }
 
-    // The leaf paints no background of its own, so the frame holds the header bar and the two tabs on it - and
-    // no pill, which is the zeroed container_padding/container_radius showing. Declaration order puts the bar
+    // The leaf paints no background of its own, so the frame holds the header bar and the two tabs on it. There
+    // is no pill, because container_padding and container_radius are zero. In declaration order the bar comes
     // first, then the selected tab, then the unselected one.
     UiRenderCommand rects[8];
     ASSERT_EQ_MSG(render_cmd_collect(UiRenderCmd_Rectangle, rects, 8), 3,
@@ -7933,8 +7927,8 @@ UTEST(render, dock_tabs) {
     ASSERT_NEAR_MSG((double)rects[1].height, (double)DOCK_TAB_HEIGHT, 1e-4,
                     "a dock tab is a title bar's height, not a button's");
     ASSERT_NEAR_MSG((double)rects[1].corner_radius.tl, (double)FlRadius_SM, 1e-4, "at the dock's tab radius");
-    // Two panels share this bar, so neither tab stretches: the selected one is Soft - an accent tint the full
-    // width of a one-panel header could carry, where the accent FILL of a plain tab bar could not.
+    // Two panels share this bar, so neither tab stretches. The selected one is Soft, an accent tint that can
+    // cover the full width of a one-panel header, which the accent fill of a plain tab bar could not.
     const FlColor soft = { base.interactive.base.r, base.interactive.base.g, base.interactive.base.b, 38 };
     ASSERT_TRUE_MSG(tab_color_eq(rects[1].bg_color, soft), "the selected dock tab tints with the accent");
     ASSERT_TRUE_MSG(tab_color_eq(rects[2].bg_color, base.surface.base), "an unselected dock tab fills from the theme");
@@ -7949,10 +7943,9 @@ UTEST(render, dock_tabs) {
     dock_workspace_destroy(ws);
 }
 
-// render.public_button_variant_config - the public fl_button takes a trailing FlWidgetConfig, so the
-// designated-initializer macro can pass .variant (and id/color/focus). Read off the emitted background fills:
-// at rest (no hover/press) the variant base color is the fill, so Solid (interactive.base) and Outline
-// (surface.base) differ exactly.
+// The public fl_button takes a trailing FlWidgetConfig, so the designated-initializer macro can pass .variant, as
+// well as id, color and focus. The case reads the emitted background fills. At rest, with no hover or press, the
+// variant's base color is the fill, so Solid (interactive.base) and Outline (surface.base) differ.
 
 UTEST(render, public_button_variant_config) {
     FlUiCtx* ctx = render_fixture_get();
@@ -7982,7 +7975,7 @@ UTEST(render, public_button_variant_config) {
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 
-    // Two buttons, declaration order: solid, outline. One opaque background fill each.
+    // Two buttons in declaration order, solid then outline, with one opaque background fill each.
     UiColor4 bg[2];
     ASSERT_EQ_MSG(slot_override_collect(UiRenderCmd_Rectangle, bg, 2), 2, "expected one background per button");
     ASSERT_TRUE_MSG(slot_override_color_eq(bg[0], base.interactive.base),
@@ -7991,16 +7984,15 @@ UTEST(render, public_button_variant_config) {
                     "Outline variant via fl_button config resolves bg to surface.base");
 }
 
-// render.item_behavior_auto_focus - FlItemFlags_auto_focus is the flag-only counterpart of
-// FlWidgetConfig.auto_focus. Two focusable elements in order: A (plain focusable) then B (focusable +
-// auto_focus). Auto-restore picks the first focusable when nothing is focused, so B ending up focused - not
-// A - is only explicable by auto_focus.
+// FlItemFlags_auto_focus is the flag form of FlWidgetConfig.auto_focus. There are two focusable elements in
+// order: A, plain focusable, then B, focusable with auto_focus. Auto-restore picks the first focusable element
+// when nothing is focused, so B ending up focused can only come from auto_focus.
 
 UTEST(render, item_behavior_auto_focus) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
 
-    // Clear any focus carried from a prior fixture user so auto-restore starts from a clean slate.
+    // Clear any focus left by an earlier user of the fixture, so auto-restore starts with nothing focused.
     ctx->focused_id = 0;
     ctx->last_focused_id = 0;
 
@@ -8010,8 +8002,8 @@ UTEST(render, item_behavior_auto_focus) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
-        // A fill makes each area emit a render command carrying its id, so per-element interaction state
-        // (found / focused) is updated in ui_update_end.
+        // The fill makes each area emit a render command carrying its id, so its interaction state (found,
+        // focused) is updated in ui_update_end.
         ui_layout_area_id(id_a, .sizing = { sizing_fixed(40), sizing_fixed(20) }, .color = ui_color(40, 40, 60, 255)) {
             fl_item_behavior(id_a, FlItemFlags_focusable);
         }
@@ -8028,10 +8020,10 @@ UTEST(render, item_behavior_auto_focus) {
     ASSERT_FALSE_MSG(sa.focused, "the first focusable element is not focused — auto_focus, not auto-restore, won");
 }
 
-// A spacer's extent is authored logical px like every other length, so it must follow ui_scale. The check is a
-// fit-width row holding one horizontal spacer: fit takes the spacer's own width, so the row's laid-out rect IS
-// the spacer's resolved extent. Driven at scale 2 because an unscaled spacer is indistinguishable from a scaled
-// one at scale 1.
+// A spacer's extent is authored in logical px like every other length, so it follows ui_scale. The check is a
+// fit-width row holding one horizontal spacer. Fit takes the spacer's own width, so the row's laid-out rect is
+// the spacer's resolved extent. The case runs at scale 2 because at scale 1 an unscaled spacer looks the same as
+// a scaled one.
 UTEST(render, a_spacer_follows_the_ui_scale) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -8040,13 +8032,13 @@ UTEST(render, a_spacer_follows_the_ui_scale) {
     const FlLayoutId row = ID("spacer_scale_row");
     const FlLayoutId col = ID("spacer_scale_col");
 
-    // Two frames: element state is published by ui_update_end, so the second frame is the first one that can
-    // read the first's rects back.
+    // Two frames: ui_update_end publishes element state, so the second frame is the first that can read the
+    // first's rects.
     for (int i = 0; i < 2; i++) {
         ui_update_begin(ctx);
         ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-            // A fill makes each box emit a render command carrying its id, which is what gives
-            // ui_get_element_state a rect to report.
+            // The fill makes each box emit a render command carrying its id, which gives ui_get_element_state a
+            // rect to report.
             ui_layout_area_id(row, .sizing = { sizing_fit(), sizing_fixed(10) }, .color = ui_color(40, 40, 60, 255)) {
                 fl_item_behavior(row, FlItemFlags_clickable);
                 fl_spacer_h(10.0f);
@@ -8068,11 +8060,11 @@ UTEST(render, a_spacer_follows_the_ui_scale) {
     ASSERT_EQ_MSG((int)v.size.y, 20, "a 10px vertical spacer is 20 physical px at scale 2");
 }
 
-// render.text_overflow_clip_vs_elide - the single-line text-overflow mode (FlTextConfig.overflow). A ten-glyph
-// run is placed twice inside the same narrow fixed-width box, once per mode, and read off the debug
-// render-command snapshot. The built-in 8x8 font is used so every ASCII glyph advances exactly 16px (monospace,
-// FreeType-free → exact widths). That font has no glyph for U+2026, so the ellipsis measures 0px here; the test
-// checks the ellipsis BYTES are present, not that it reserves width.
+// The single-line text-overflow mode (FlTextConfig.overflow). A ten-glyph run is placed twice inside the same
+// narrow fixed-width box, once per mode, and read from the debug render-command snapshot. The built-in 8x8 font
+// is used so every ASCII glyph advances exactly 16px (monospace and no FreeType, so the widths are exact). That
+// font has no glyph for U+2026, so the ellipsis measures 0px here, and the test checks that the ellipsis bytes
+// are present and not that it reserves width.
 
 UTEST(render, text_overflow_clip_vs_elide) {
     FlUiCtx* ctx = render_fixture_get();
@@ -8088,9 +8080,9 @@ UTEST(render, text_overflow_clip_vs_elide) {
     const u16 glyph_px = 16; // built-in 8x8 font at scale 2
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 2));
 
-    // A ten-glyph single word (no spaces → a genuine single-line run): 10 * 16 = 160px unwrapped.
+    // A single ten-glyph word with no spaces, so it is one line: 10 * 16 = 160px unwrapped.
     const FlString name = { .data = "AAAAAAAAAA", .length = 10, .is_static = 1 };
-    const float box_w = 64.0f; // 4 glyphs (64px) fit, the 5th (80px) does not.
+    const float box_w = 64.0f; // 4 glyphs (64px) fit and the 5th (80px) does not
     const FlColor white = { 240, 240, 240, 255 };
 
     ui_update_begin(ctx);
@@ -8099,7 +8091,7 @@ UTEST(render, text_overflow_clip_vs_elide) {
         ui_layout_area(.sizing = { sizing_fixed(box_w), sizing_fixed(40) }) {
             ui_text_styled(name, .color = white, .no_wrap = true, .overflow = FlOverflow_Clip);
         }
-        // The caller adds NO sizing declaration on the text itself - elide implies the box-width constraint.
+        // The text has no sizing declaration of its own. Elide implies the constraint to the box width.
         ui_layout_area(.sizing = { sizing_fixed(box_w), sizing_fixed(40) }) {
             ui_text_styled(name, .color = white, .no_wrap = true, .overflow = FlOverflow_Elide);
         }
@@ -8146,8 +8138,8 @@ static int canvas_custom_command_count(void) {
     return count;
 }
 
-// Paint participates in z-order (under children) and is bracketed by the live scissor stack, and many primitives
-// in one scope produce exactly one CUSTOM span (one marker per scope, never per primitive).
+// Paint takes part in z-order (it is under children) and is bracketed by the live scissor stack, and many
+// primitives in one scope produce exactly one CUSTOM span: one marker per scope, never one per primitive.
 UTEST(render, canvas_paint_z_clip_and_one_span) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -8159,21 +8151,21 @@ UTEST(render, canvas_paint_z_clip_and_one_span) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
-        // Clip container (120x120 at origin) clips its oversized canvas child - an ancestor scissor that
-        // brackets the paint. The canvas also self-clips to its own 200x200 rect, but the ancestor clip is
-        // tighter, so it is the dominant one here.
+        // The clip container (120x120 at the origin) clips its oversized canvas child, so an ancestor scissor
+        // brackets the paint. The canvas also clips to its own 200x200 rect, but the ancestor clip is tighter
+        // and is the one that applies here.
         ui_layout_area_id(ID("clipbox"), .sizing = { sizing_fixed(120), sizing_fixed(120) },
                           .clip = { .horizontal = true, .vertical = true }) {
             ui_layout_area_id(ID("canvas"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
                 Painter* p = ui_get_painter();
                 ASSERT_TRUE_MSG(p != nullptr, "ui_get_painter is valid inside an open painting scope");
-                // Many primitives in one scope - these must collapse to a single CUSTOM span.
+                // Many primitives in one scope, which become a single CUSTOM span.
                 painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 200.0f }, canvas_col);
                 painter_rect(p, (FlRect) { .x = 4.0f, .y = 4.0f, .w = 8.0f, .h = 8.0f }, canvas_col);
                 painter_circle(p, (FlVec2) { .x = 100.0f, .y = 100.0f }, 6.0f, canvas_col);
                 painter_rect(p, (FlRect) { .x = 20.0f, .y = 20.0f, .w = 6.0f, .h = 6.0f }, canvas_col);
 
-                // Child element, laid out at the canvas origin - must draw OVER the paint.
+                // A child element laid out at the canvas origin, which draws over the paint.
                 ui_layout_area(.sizing = { sizing_fixed(60), sizing_fixed(60) }, .color = child_col) {}
             }
         }
@@ -8183,22 +8175,22 @@ UTEST(render, canvas_paint_z_clip_and_one_span) {
     FlPixelReadback buf;
     ASSERT_TRUE_MSG(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "read_pixels failed");
 
-    // (30,30) sits under the child box (0..60) → the child's color, proving paint is UNDER its child element.
+    // (30,30) is under the child box (0..60), so it has the child's color: paint is under its child element.
     ASSERT_TRUE_MSG(px_near(&buf, 30, 30, child_col, 2), "child element draws over the paint (paint at element z)");
-    // (90,90) is inside the clip (0..120) and the canvas paint but not under the child → the painted fill.
+    // (90,90) is inside the clip (0..120) and the canvas paint but not under the child, so it has the fill.
     ASSERT_TRUE_MSG(px_near(&buf, 90, 90, canvas_col, 2), "paint is visible at the element's z, inside the scissor");
-    // (150,150) is within the canvas paint region (0..200) but OUTSIDE the clip (>120) → scissor cropped it.
+    // (150,150) is within the canvas paint region (0..200) but outside the clip (>120), so the scissor cut it.
     ASSERT_FALSE_MSG(px_near(&buf, 150, 150, canvas_col, 2), "paint is bracketed by the live layout scissor stack");
 
     ASSERT_EQ_MSG(canvas_custom_command_count(), 1, "one painting scope emits exactly one CUSTOM span");
 }
 
-// render.placed_child_scroll_clip - the placed-child primitive: a layout element positioned at an
-// explicit (x, y) in its parent's content coordinate space, scrolling and clipping with the container but NOT
-// advancing the flex cursor or growing the content extent. The scene is a 400x300 manual_scroll clip box at the
-// origin holding one flowed sibling D plus three placed children A/B/C (A and B overlap; C straddles the right
-// clip edge). Frame 1 (scroll 0) checks placement, overlap, flow-independence, and clipping; frame 2 re-emits
-// with a non-zero scroll and checks the placed children move by exactly the scroll delta.
+// A placed child is a layout element positioned at an explicit (x, y) in its parent's content coordinate space.
+// It scrolls and clips with the container but does not advance the flex cursor or grow the content extent. The
+// scene is a 400x300 manual_scroll clip box at the origin holding flowed siblings D and E and three placed
+// children A, B and C. A and B overlap, and C straddles the right clip edge. Frame 1 (scroll 0) checks
+// placement, overlap, independence from flow, and clipping. Frame 2 emits again with a non-zero scroll and
+// checks that the placed children move by exactly the scroll delta.
 UTEST(render, placed_child_scroll_clip) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -8206,22 +8198,23 @@ UTEST(render, placed_child_scroll_clip) {
 
     const FlColor clear_col = ui_color(12, 12, 14, 255);   // canvas_fixture_reset clear color (outside the clip box)
     const FlColor box_col = ui_color(50, 50, 60, 255);     // clip-box fill (inside the box, no child over it)
-    const FlColor flow_col = ui_color(240, 200, 40, 255);  // D: a flowed sibling, emitted BEFORE the placed children
-    const FlColor flow2_col = ui_color(200, 80, 220, 255); // E: a flowed sibling, emitted AFTER the placed children
+    const FlColor flow_col = ui_color(240, 200, 40, 255);  // D: a flowed sibling, emitted before the placed children
+    const FlColor flow2_col = ui_color(200, 80, 220, 255); // E: a flowed sibling, emitted after the placed children
     const FlColor a_col = ui_color(40, 200, 120, 255);     // A: placed at (100, 100)
     const FlColor b_col = ui_color(220, 60, 60, 255);      // B: placed at (120, 110), overlapping A
     const FlColor c_col = ui_color(80, 140, 240, 255);     // C: placed at (380, 100), straddling the right clip edge
 
-    // --- Frame 1: scroll_pos = (0, 0) ----------------------------------------------------------------------------
+    // Frame 1: scroll_pos = (0, 0).
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
-        // 400x300 clip box at the origin, owning its scroll (manual_scroll) - the content viewport. Default
-        // LeftToRight: the two flowed children D and E lay out as a row, the three placed children do not.
+        // A 400x300 clip box at the origin that owns its scroll (manual_scroll), the content viewport. With the
+        // default LeftToRight the two flowed children D and E lay out as a row, and the three placed children
+        // do not take part.
         ui_layout_area_id(
             ID("placed_clip"), .sizing = { sizing_fixed(400), sizing_fixed(300) }, .color = box_col,
             .clip = { .horizontal = true, .vertical = true, .manual_scroll = true, .scroll_pos = { 0.0f, 0.0f } }) {
-            // Flowed sibling D: first non-placed child, at the flex-cursor origin (0,0).
+            // Flowed sibling D: the first child that is not placed, at the flex-cursor origin (0,0).
             ui_layout_area(.sizing = { sizing_fixed(40), sizing_fixed(40) }, .color = flow_col) {}
             ui_layout_area(.sizing = { sizing_fixed(40), sizing_fixed(40) }, .color = a_col,
                            .placed = { .enabled = true, .offset = { 100.0f, 100.0f } }) {}
@@ -8229,8 +8222,8 @@ UTEST(render, placed_child_scroll_clip) {
                            .placed = { .enabled = true, .offset = { 120.0f, 110.0f } }) {}
             ui_layout_area(.sizing = { sizing_fixed(40), sizing_fixed(40) }, .color = c_col,
                            .placed = { .enabled = true, .offset = { 380.0f, 100.0f } }) {}
-            // Flowed sibling E: emitted AFTER the placed children. With the cursor-advance skip, E lands right
-            // after D at x=40..80; a bug that let placed children advance the cursor would push E far to the right.
+            // Flowed sibling E, emitted after the placed children. Placed children do not advance the cursor, so
+            // E lands right after D at x=40..80. If they advanced it, E would be far to the right.
             ui_layout_area(.sizing = { sizing_fixed(40), sizing_fixed(40) }, .color = flow2_col) {}
         }
     }
@@ -8239,25 +8232,25 @@ UTEST(render, placed_child_scroll_clip) {
     FlPixelReadback buf;
     ASSERT_TRUE_MSG(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "read_pixels failed");
 
-    // Placement: A renders at its explicit offset. (105,105) is inside A (100..140) but left of B (x<120) - A only.
+    // A renders at its explicit offset. (105,105) is inside A (100..140) but left of B (x<120), so only A.
     ASSERT_TRUE_MSG(px_near(&buf, 105, 105, a_col, 2), "placed child A renders at its content-space offset");
-    // The clip box fills where no child covers it, proving the placed children are its descendants.
+    // The clip box shows where no child covers it, so the placed children are its descendants.
     ASSERT_TRUE_MSG(px_near(&buf, 300, 250, box_col, 2), "clip box renders its own area under the placed children");
-    // Flow-independence: D sits at the cursor origin (x=0..40), and E - emitted AFTER the three placed children -
-    // sits immediately after D at x=40..80, NOT pushed right (a cursor-advancing bug would put E near x=160).
+    // D is at the cursor origin (x=0..40), and E, emitted after the three placed children, is right after D at
+    // x=40..80. A cursor advanced by the placed children would put E near x=160.
     ASSERT_TRUE_MSG(px_near(&buf, 20, 20, flow_col, 2), "first flowed sibling D is at the cursor origin");
     ASSERT_TRUE_MSG(px_near(&buf, 60, 20, flow2_col, 2), "flowed sibling after placed children is not displaced");
     ASSERT_FALSE_MSG(px_near(&buf, 160, 20, flow2_col, 2), "placed children did not advance the flex cursor");
-    // Overlap is expressible: A-only pixel is A, B-only pixel is B, and the overlap shows B (the later sibling).
+    // Overlap: the A-only pixel is A, the B-only pixel is B, and the overlap shows B, the later sibling.
     ASSERT_TRUE_MSG(px_near(&buf, 150, 145, b_col, 2), "placed child B renders where it does not overlap A");
     ASSERT_TRUE_MSG(px_near(&buf, 130, 130, b_col, 2), "overlapping placed children both render (later draws on top)");
-    // Clipping: C straddles the right edge - its inside half draws, its outside half is cropped to the clip area.
+    // C straddles the right edge. Its inside half is drawn and its outside half is cut at the clip area.
     ASSERT_TRUE_MSG(px_near(&buf, 390, 120, c_col, 2), "placed child C renders inside the clip area");
     ASSERT_FALSE_MSG(px_near(&buf, 410, 120, c_col, 2), "placed child is clipped to the container's active area");
     ASSERT_TRUE_MSG(px_near(&buf, 410, 120, clear_col, 2),
                     "outside the clip box is the clear color, not leaked content");
 
-    // --- Frame 2: scroll_pos = (-40, -30) - content scrolls up/left ----------------------------------------------
+    // Frame 2: scroll_pos = (-40, -30), so the content scrolls up and left.
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
@@ -8284,9 +8277,9 @@ UTEST(render, placed_child_scroll_clip) {
     ASSERT_TRUE_MSG(px_near(&buf2, 65, 75, a_col, 2), "placed child scrolls with the container by the scroll delta");
     ASSERT_FALSE_MSG(px_near(&buf2, 105, 105, a_col, 2), "placed child no longer sits at its un-scrolled position");
 
-    // Content extent: the clip container's content size reflects only the flowed children (D + E, 40px wide each,
-    // laid out as a row = 80px), never the placed children. Queried after the second frame: Clay populates
-    // contentSize once the scroll container exists; on the very first frame it is still zero.
+    // The clip container's content size counts only the flowed children (D and E, 40px wide each, in a row, so
+    // 80px) and never the placed children. It is queried after the second frame, because Clay fills contentSize
+    // once the scroll container exists and it is still zero on the first frame.
     Clay_ScrollContainerData scd
         = Clay_GetScrollContainerData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(ID("placed_clip")) });
     ASSERT_TRUE_MSG(scd.found, "clip container scroll data is queryable");
@@ -8294,19 +8287,19 @@ UTEST(render, placed_child_scroll_clip) {
                     "placed children do not grow the container's content extent (flowed D+E only)");
 }
 
-// placed_child_interaction - a placed child is a first-class interactive element: hit-testing, hover/press/
-// click, the element-local mouse_pos, and topmost-wins arbitration all land at the placed (offset) rect, not the
-// flex position it skipped. The scene is a 400x300 clip box at root origin (40, 30); two interactive placed
-// children A (offset 100,100) and B (offset 120,110) overlap.
+// A placed child is interactive like any other element: hit testing, hover, press and click, the element-local
+// mouse_pos, and topmost-wins arbitration all use the placed (offset) rect and not the flex position it skipped.
+// The scene is a 400x300 clip box at root origin (40, 30) with two overlapping interactive placed children, A
+// (offset 100,100) and B (offset 120,110).
 
 typedef struct PlacedHit {
     FlSignal a, b;
     FlElementState sa, sb;
 } PlacedHit;
 
-// Emit one frame of the two-overlapping-placed-children scene with the cursor at (mx, my); click injects a
-// same-frame press+release fast tap. A is emitted before B, so B is the topmost (later-drawn) sibling. Both are
-// clickable and carry a color so they emit a RECTANGLE that resolves their rect for the hit-test.
+// Emits one frame of the scene with the cursor at (mx, my). click injects a press and release in the same frame.
+// A is emitted before B, so B is the topmost sibling, drawn later. Both are clickable and have a color, so each
+// emits a RECTANGLE that gives the hit test its rect.
 static PlacedHit placed_interaction_frame(FlUiCtx* ctx, f32 mx, f32 my, bool click) {
     ctx->input_state.mouse.x = mx;
     ctx->input_state.mouse.y = my;
@@ -8315,7 +8308,7 @@ static PlacedHit placed_interaction_frame(FlUiCtx* ctx, f32 mx, f32 my, bool cli
 
     PlacedHit r = { 0 };
     ui_update_begin(ctx);
-    // Root padding places the clip box at origin (40, 30) so the placed rect's origin is non-trivial.
+    // Root padding puts the clip box at (40, 30), so the placed rect's origin is not zero.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .padding = { .left = 40, .top = 30 }) {
         ui_layout_area_id(
@@ -8342,17 +8335,17 @@ static PlacedHit placed_interaction_frame(FlUiCtx* ctx, f32 mx, f32 my, bool cli
 UTEST(render, placed_child_interaction) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    canvas_fixture_reset(ctx); // 1920x1080, identity scale → logical == physical
+    canvas_fixture_reset(ctx); // 1920x1080 at scale 1, so logical == physical
 
-    // Geometry (root padding origin (40,30) + placed offset, all scale 1.0):
-    //   A: content [100..140]x[100..140] → screen [140..180]x[130..170]
-    //   B: content [120..160]x[110..150] → screen [160..200]x[140..180]
-    // A-only point (150,135): inside A, left/above of B. Overlap point (170,155): inside both.
+    // Geometry (root padding origin (40,30) plus the placed offset, all at scale 1.0):
+    //   A: content [100..140]x[100..140], screen [140..180]x[130..170]
+    //   B: content [120..160]x[110..150], screen [160..200]x[140..180]
+    // The A-only point (150,135) is inside A and left of and above B. The overlap point (170,155) is inside both.
     const f32 a_only_x = 150.0f, a_only_y = 135.0f;
     const f32 overlap_x = 170.0f, overlap_y = 155.0f;
 
-    // Phase 1 - hover A alone. Hot propagates over two frames (next_hot_id → hot_id → state.hot → the Signal the
-    // behavior reads the following frame), so dwell a few frames before asserting hovered.
+    // Phase 1: hover A alone. Hot propagates over two frames (next_hot_id -> hot_id -> state.hot, then the Signal
+    // the behavior reads the following frame), so stay a few frames before asserting hovered.
     PlacedHit r = { 0 };
     for (int f = 0; f < 4; f++) {
         r = placed_interaction_frame(ctx, a_only_x, a_only_y, false);
@@ -8360,24 +8353,24 @@ UTEST(render, placed_child_interaction) {
     ASSERT_TRUE_MSG(r.a.hovered, "item_behavior on a placed child reports hovered at its placed rect");
     ASSERT_FALSE_MSG(r.b.hovered, "the non-hovered overlapping placed child does not report hovered");
 
-    // element_state returns the placed rect (origin = root origin + placed offset), not the skipped flex position.
+    // element_state returns the placed rect (root origin + placed offset) and not the skipped flex position.
     ASSERT_NEAR(r.sa.pos.x, 140.0f, 0.5f);
     ASSERT_NEAR(r.sa.pos.y, 130.0f, 0.5f);
     ASSERT_NEAR(r.sa.size.x, 40.0f, 0.5f);
     ASSERT_NEAR(r.sa.size.y, 40.0f, 0.5f);
     ASSERT_TRUE_MSG(r.sa.found, "the placed child is hit-tested as an ordinary laid-out element");
 
-    // Signal.mouse_pos is element-local relative to the PLACED rect: (cursor - placed origin) = (150-140, 135-130).
+    // Signal.mouse_pos is local to the placed rect: cursor - placed origin = (150-140, 135-130).
     ASSERT_NEAR(r.a.mouse_pos.x, 10.0f, 0.5f);
     ASSERT_NEAR(r.a.mouse_pos.y, 5.0f, 0.5f);
 
-    // Phase 2 - a fast tap (press+release same frame) on the hovered placed child clicks it.
+    // Phase 2: a fast tap (press and release in the same frame) on the hovered placed child clicks it.
     r = placed_interaction_frame(ctx, a_only_x, a_only_y, true);
     ASSERT_TRUE_MSG(r.a.pressed, "a press over the placed rect reports pressed");
     ASSERT_TRUE_MSG(r.a.clicked, "a tap over the placed rect reports clicked");
 
-    // Phase 3 - topmost-wins. With the cursor over the A∩B overlap, B (emitted last → drawn on top) takes the hover
-    // and A does not, matching paint order. Dwell to let the hot arbitration settle on B.
+    // Phase 3: topmost wins. With the cursor over the overlap of A and B, B takes the hover and A does not,
+    // because B is emitted last and drawn on top. Stay a few frames so the hot arbitration settles on B.
     for (int f = 0; f < 4; f++) {
         r = placed_interaction_frame(ctx, overlap_x, overlap_y, false);
     }
@@ -8387,17 +8380,16 @@ UTEST(render, placed_child_interaction) {
     ASSERT_FALSE_MSG(r.sa.hot, "element_state hot is not set on the shadowed placed child");
 }
 
-// placed_child_element_state - a placed child's element_state origin tracks the container scroll (it is a
-// flowed child for scroll/scissor purposes), and the element-local mouse_position stays in logical authoring
-// space under a non-identity UI scale. Single placed child A at content offset (100,100) in a manual_scroll clip
-// box at root origin (40,30).
+// A placed child's element_state origin follows the container scroll, since it scrolls and clips like a flowed
+// child, and the element-local mouse_position stays in logical authoring space when the UI scale is not 1. The
+// scene is a single placed child A at content offset (100,100) in a manual_scroll clip box at root origin
+// (40,30).
 UTEST(render, placed_child_element_state) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
     canvas_fixture_reset(ctx);
 
-    // --- Scroll tracking (identity scale) ---
-    // Frame 1, scroll (0,0): the placed rect resolves at origin + offset = (140, 130).
+    // Scroll tracking at scale 1. Frame 1, scroll (0,0): the placed rect is at origin + offset = (140, 130).
     ctx->input_state.mouse.x = 0.0f;
     ctx->input_state.mouse.y = 0.0f;
     ui_update_begin(ctx);
@@ -8420,7 +8412,7 @@ UTEST(render, placed_child_element_state) {
     ASSERT_NEAR(s0.pos.x, 140.0f, 0.5f);
     ASSERT_NEAR(s0.pos.y, 130.0f, 0.5f);
 
-    // Frame 2, scroll (-40,-30): the placed rect scrolls with the container by exactly the scroll delta → (100,100).
+    // Frame 2, scroll (-40,-30): the placed rect moves with the container by the scroll delta, to (100,100).
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .padding = { .left = 40, .top = 30 }) {
@@ -8440,10 +8432,10 @@ UTEST(render, placed_child_element_state) {
     ASSERT_NEAR(s1.pos.x, 100.0f, 0.5f); // 140 + (-40)
     ASSERT_NEAR(s1.pos.y, 100.0f, 0.5f); // 130 + (-30)
 
-    // --- Logical-space pointer under a non-identity UI scale ---
-    // At ui_scale 0.5 the placed offset (100,100 logical) scales to (50,50) physical and the root padding (40,30
-    // logical) to (20,15) physical, so A's physical origin is (70, 65). A cursor 10 physical px inside resolves to
-    // 20 logical px in - proving the placed rect flows through the logical-space mouse query (no reprojection).
+    // The pointer in logical space at a UI scale other than 1. At ui_scale 0.5 the placed offset (100,100
+    // logical) scales to (50,50) physical and the root padding (40,30 logical) to (20,15) physical, so A's
+    // physical origin is (70, 65). A cursor 10 physical px inside is 20 logical px inside, so the placed rect
+    // goes through the logical-space mouse query like any other.
     ctx->layout_width = 960.0f;
     ctx->layout_height = 540.0f;
     UiScalePair fit_540 = ui_reference_fit(540);
@@ -8479,17 +8471,18 @@ UTEST(render, placed_child_element_state) {
     ASSERT_NEAR(local.y, 20.0f, 0.5f);
 }
 
-// scrollbar_auto_id_no_collision - two ui_scrollbar widgets in one frame WITHOUT an id_override must not
-// collide. The auto id is seeded from the bound value pointer (a stable per-instance key), so each scrollbar
-// gets a distinct element id. Two side-by-side vertical scrollbars bound to different float*, one hovered and
-// tapped, the other asserted untouched.
+// Two ui_scrollbar widgets in one frame without an id_override do not collide. The automatic id is seeded from the
+// bound value pointer, which is stable per instance, so each scrollbar gets its own element id. The case has two
+// vertical scrollbars side by side, bound to different float*. One is hovered and tapped and the other is
+// checked to be untouched.
 
 typedef struct TwoScrollbars {
     FlSignal a, b;
 } TwoScrollbars;
 
-// One frame: scrollbar A (bound va) in the left box, scrollbar B (bound vb) in the right box, cursor at (mx, my)
-// with an optional same-frame press+release tap. Neither passes id_override, so both take the auto-id path.
+// One frame: scrollbar A (bound to va) in the left box and scrollbar B (bound to vb) in the right box, with the
+// cursor at (mx, my) and an optional press and release in the same frame. Neither passes id_override, so both
+// get automatic ids.
 static TwoScrollbars two_scrollbars_frame(FlUiCtx* ctx, float* va, float* vb, f32 mx, f32 my, bool click) {
     ctx->input_state.mouse.x = mx;
     ctx->input_state.mouse.y = my;
@@ -8499,8 +8492,8 @@ static TwoScrollbars two_scrollbars_frame(FlUiCtx* ctx, float* va, float* vb, f3
     TwoScrollbars r = { 0 };
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        // Left box [0..40]x[0..300] holds scrollbar A; a 160px spacer separates it from the right box so hovering
-        // A never touches B.
+        // The left box [0..40]x[0..300] holds scrollbar A. A 160px spacer separates it from the right box, so
+        // hovering A never touches B.
         ui_layout_area_id(ID("sb_box_a"), .sizing = { sizing_fixed(40), sizing_fixed(300) }) {
             r.a = ui_scrollbar(va, .min = 0.0f, .max = 100.0f, .width = 40.0f);
         }
@@ -8521,8 +8514,8 @@ UTEST(render, scrollbar_auto_id_no_collision) {
     float va = 0.0f;
     float vb = 25.0f;
 
-    // Dwell hovering over scrollbar A's track (x=20 is inside the left box's [0..40] scrollbar) so A's hot state
-    // propagates before the tap.
+    // Hover over scrollbar A's track for a few frames so A's hot state propagates before the tap. x=20 is inside
+    // the scrollbar in the left box, [0..40].
     TwoScrollbars r = { 0 };
     for (int f = 0; f < 5; f++) {
         r = two_scrollbars_frame(ctx, &va, &vb, 20.0f, 150.0f, false);
@@ -8530,16 +8523,16 @@ UTEST(render, scrollbar_auto_id_no_collision) {
     ASSERT_TRUE_MSG(r.a.hovered, "scrollbar A reports hovered while the cursor is over its track");
     ASSERT_FALSE_MSG(r.b.hovered, "scrollbar B (distinct id) does not report hovered — no shared hot state");
 
-    // Tap the middle of A's track. A's value jumps toward mid-range; B's value must be untouched (its own id, no
-    // shared drag state).
+    // Tap the middle of A's track. A's value jumps toward mid-range, and B's value is untouched, since B has its
+    // own id and no drag state is shared.
     r = two_scrollbars_frame(ctx, &va, &vb, 20.0f, 150.0f, true);
     ASSERT_TRUE_MSG(va > 1.0f, "tapping scrollbar A moves its bound value");
     ASSERT_EQ_MSG(vb, 25.0f, "scrollbar B's value is unchanged — the two scrollbars do not share drag state");
 }
 
-// scrollbar_full_viewport_ratio_no_nan - with viewport_ratio 1.0 the thumb fills the track, so the drag path's
-// usable_track is exactly 0. The 0/0 that produced was a NaN, and clamp's two comparisons both fail on
-// NaN, so it passed straight through into the bound value.
+// With viewport_ratio 1.0 the thumb fills the track, so the drag path's usable_track is exactly 0. Dividing by it
+// gives 0/0, a NaN, and both of clamp's comparisons fail on NaN, so a NaN would pass straight into the bound
+// value.
 UTEST(render, scrollbar_full_viewport_ratio_no_nan) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -8567,10 +8560,10 @@ UTEST(render, scrollbar_full_viewport_ratio_no_nan) {
     ASSERT_TRUE_MSG(value >= 0.0f && value <= 100.0f, "the bound value must stay inside [min, max]");
 }
 
-// placed_child_culling - an offscreen placed child participates in the engine's offscreen culling like any
-// flowed child: it is not drawn (emits no render command) and never becomes interactive, so the app's own
-// visible-range virtualization has a correctness backstop. The scene holds one on-screen placed child (the
-// control) and one placed far past the screen bounds, both registered interactive.
+// An offscreen placed child is culled by the engine like any flowed child: it is not drawn, emits no render
+// command and never becomes interactive. That gives the app's own visible-range virtualization a fallback. The
+// scene holds one placed child on screen as the control and one placed far past the screen bounds, both
+// registered as interactive.
 UTEST(render, placed_child_culling) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -8588,7 +8581,7 @@ UTEST(render, placed_child_culling) {
                               .placed = { .enabled = true, .offset = { 100.0f, 100.0f } }) {
                 ui_item_behavior(ID("cull_on"), FlItemFlags_clickable, (FlWidgetConfig) { 0 });
             }
-            // Placed at (3000, 3000): its rect lands far past the 1920x1080 screen → engine culls it.
+            // Placed at (3000, 3000), far past the 1920x1080 screen, so the engine culls it.
             ui_layout_area_id(ID("cull_off"), .sizing = { sizing_fixed(40), sizing_fixed(40) }, .color = offscreen_col,
                               .placed = { .enabled = true, .offset = { 3000.0f, 3000.0f } }) {
                 ui_item_behavior(ID("cull_off"), FlItemFlags_clickable, (FlWidgetConfig) { 0 });
@@ -8616,8 +8609,8 @@ UTEST(render, placed_child_culling) {
     ASSERT_TRUE_MSG(saw_onscreen, "the on-screen placed child is drawn (control)");
     ASSERT_FALSE_MSG(saw_offscreen, "the offscreen placed child is culled — not drawn downstream");
 
-    // The culled child is registered interactive (item_behavior ran) yet never resolves a rect → not found, not
-    // laid out for interaction. The on-screen control is found, proving the scene is otherwise live.
+    // The culled child is registered as interactive (item_behavior ran) but never gets a rect, so it is not
+    // found and not laid out for interaction. The on-screen control is found, so the scene itself works.
     FlElementState on = ui_get_element_state(ID("cull_on"));
     FlElementState off = ui_get_element_state(ID("cull_off"));
     ASSERT_TRUE_MSG(on.found, "the on-screen placed child is laid out and interactive");
@@ -8625,9 +8618,9 @@ UTEST(render, placed_child_culling) {
     ASSERT_FALSE_MSG(off.hot, "the culled placed child never becomes hot");
 }
 
-// An element that sets BOTH a color: background and a paint span renders the paint OVER the fill (per-element
-// z-stack background -> own scissor -> paint span -> children -> border), and the paint span is clipped to the
-// element's OWN rect - overshoot is cropped even with no ancestor clip in play.
+// An element that sets both a background color and a paint span renders the paint over the fill. The order per
+// element is background -> own scissor -> paint span -> children -> border. The paint span is clipped to the
+// element's own rect, so overshoot is cut even with no ancestor clip.
 UTEST(render, canvas_paint_over_fill_and_self_clip) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -8642,15 +8635,15 @@ UTEST(render, canvas_paint_over_fill_and_self_clip) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
-        // 100x100 canvas at origin with a solid color: fill and a 4px border. Neither it nor any ancestor clips
-        // (the root grow area is unclipped), so the only thing that can crop the paint is the canvas's own scissor.
+        // A 100x100 canvas at the origin with a solid color fill and a 4px border. Neither it nor any ancestor
+        // clips (the root grow area is unclipped), so only the canvas's own scissor can cut the paint.
         ui_layout_area_id(ID("fillcanvas"), .sizing = { sizing_fixed(100), sizing_fixed(100) }, .color = fill_col,
                           .border = fl_border(border_col, 4)) {
             Painter* p = ui_get_painter();
             ASSERT_TRUE_MSG(p != nullptr, "ui_get_painter is valid inside an open painting scope");
-            // A paint band that overshoots the element to the right (x 0..200; the element is only 100 wide).
+            // A paint band that overshoots the element to the right: x 0..200, and the element is 100 wide.
             painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 50.0f }, paint_col);
-            // Child box at the canvas origin - must draw OVER the paint.
+            // A child box at the canvas origin, which draws over the paint.
             ui_layout_area(.sizing = { sizing_fixed(30), sizing_fixed(30) }, .color = child_col) {}
         }
     }
@@ -8659,18 +8652,19 @@ UTEST(render, canvas_paint_over_fill_and_self_clip) {
     FlPixelReadback buf;
     ASSERT_TRUE_MSG(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "read_pixels failed");
 
-    // (50,25): inside the canvas, under the paint band, not under the child → paint shows OVER the color: fill.
+    // (50,25) is inside the canvas, under the paint band and not under the child, so the paint shows over the
+    // fill.
     ASSERT_TRUE_MSG(px_near(&buf, 50, 25, paint_col, 2), "paint composes over the element's own color: background");
-    // (80,80): inside the canvas but below the paint band (y>50), not under the child → the bare fill shows.
+    // (80,80) is inside the canvas but below the paint band (y>50) and not under the child, so the fill shows.
     ASSERT_TRUE_MSG(px_near(&buf, 80, 80, fill_col, 2),
                     "the color: fill is a valid backdrop where paint does not cover");
-    // (15,15): under the child box (0..30) → the child draws over the paint.
+    // (15,15) is under the child box (0..30), and the child draws over the paint.
     ASSERT_TRUE_MSG(px_near(&buf, 15, 15, child_col, 2), "children compose over the paint span");
-    // (60,2): on the canvas's own top border (y 0..4), over the paint band (y<50), clear of the child (x>30) →
-    // the border draws over the paint (border is the upward-pass top of the per-element stack).
+    // (60,2) is on the canvas's own top border (y 0..4), over the paint band (y<50) and clear of the child
+    // (x>30). The border is drawn last for the element, so it is over the paint.
     ASSERT_TRUE_MSG(px_near(&buf, 60, 2, border_col, 2), "the element's border composes over the paint span");
-    // (150,25): within the paint band's x-extent (0..200) but OUTSIDE the canvas's own 100px rect, with no
-    // ancestor clip - the canvas's own scissor crops the overshoot, so the paint must NOT appear here.
+    // (150,25) is within the paint band's x extent (0..200) but outside the canvas's own 100px rect. There is no
+    // ancestor clip, and the canvas's own scissor cuts the overshoot, so the paint does not appear here.
     ASSERT_FALSE_MSG(px_near(&buf, 150, 25, paint_col, 2),
                      "paint is clipped to the element's own rect, not bled past it");
     ASSERT_TRUE_MSG(px_near(&buf, 150, 25, clear_col, 2), "the overshoot region shows the clear color, not bled paint");
@@ -8693,8 +8687,8 @@ UTEST(render, canvas_under_popup) {
         ui_layout_area_id(ID("canvas3"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
             painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 200.0f }, canvas_col);
         }
-        // Popup: a floating element attached to the root at the origin, declared AFTER the canvas, so it composes
-        // over the paint.
+        // The popup is a floating element attached to the root at the origin and declared after the canvas, so it
+        // composes over the paint.
         ui_floating_area_id(ID("popup"), .attach_to = FlFloatingAttachTo_Root, .z_index = 1,
                             .sizing = { sizing_fixed(100), sizing_fixed(100) }) {
             ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }, .color = popup_col) {}
@@ -8705,20 +8699,21 @@ UTEST(render, canvas_under_popup) {
     FlPixelReadback buf;
     ASSERT_TRUE_MSG(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "read_pixels failed");
 
-    // (50,50) is under the popup (0..100) → the popup composes over the canvas paint.
+    // (50,50) is under the popup (0..100), which composes over the canvas paint.
     ASSERT_TRUE_MSG(px_near(&buf, 50, 50, popup_col, 2), "a later floating element draws over the canvas paint");
-    // (150,150) is canvas paint outside the popup → still the painted fill.
+    // (150,150) is canvas paint outside the popup and still has the painted fill.
     ASSERT_TRUE_MSG(px_near(&buf, 150, 150, canvas_col, 2), "the canvas paint shows where the popup does not cover");
 }
 
-// A custom control is an ordinary layout element (interaction by id via ui_widget_behavior / ui_get_element_state)
-// whose fill is painted inside its scope. Also pins ui_get_painter() scope validity.
+// A custom control is an ordinary layout element (interaction by id through ui_widget_behavior and
+// ui_get_element_state) whose fill is painted inside its scope. The case also checks when ui_get_painter() is
+// valid.
 UTEST(render, canvas_custom_control) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
     canvas_fixture_reset(ctx);
 
-    // Outside any frame/scope, the painter accessor is null - paint has nowhere to attach.
+    // Outside any frame or scope the painter accessor returns nullptr, since paint has nothing to attach to.
     ASSERT_TRUE_MSG(ui_get_painter() == nullptr, "ui_get_painter is null outside any painting scope");
 
     const FlColor ctrl_col = ui_color(200, 160, 40, 255);
@@ -8726,7 +8721,7 @@ UTEST(render, canvas_custom_control) {
     bool painter_valid_in_scope = false;
 
     ui_update_begin(ctx);
-    // A frame is open but no layout element is - still no scope.
+    // A frame is open but no layout element is, so there is still no scope.
     ASSERT_TRUE_MSG(ui_get_painter() == nullptr, "ui_get_painter is null before any layout element opens");
 
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
@@ -8752,9 +8747,9 @@ UTEST(render, canvas_custom_control) {
     ASSERT_TRUE_MSG(px_near(&buf, 40, 40, ctrl_col, 2), "the control's painted fill rendered inside its element");
 }
 
-// Command/element accounting: a non-painting scope emits zero CUSTOM, and painting many primitives into a scope
-// adds exactly one render command (the CUSTOM) and no extra layout element. The two frames render the identical
-// layout so the only difference in command count is the paint.
+// A scope that paints nothing emits no CUSTOM command, and painting many primitives into a scope adds exactly one
+// render command (the CUSTOM) and no extra layout element. The two frames render the same layout, so the paint
+// is the only difference in command count.
 UTEST(render, canvas_command_accounting) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -8763,7 +8758,8 @@ UTEST(render, canvas_command_accounting) {
     const FlColor box_col = ui_color(70, 70, 90, 255);
     const FlColor paint_col = ui_color(40, 200, 120, 255);
 
-    // Frame A: the element opens a painting scope but paints nothing → no CUSTOM command, baseline count.
+    // Frame A: the element opens a painting scope but paints nothing, so there is no CUSTOM command. This is the
+    // baseline count.
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
@@ -8773,7 +8769,7 @@ UTEST(render, canvas_command_accounting) {
     const int base_count = ui_get_render_command_count();
     ASSERT_EQ_MSG(canvas_custom_command_count(), 0, "a scope with no painter calls emits no CUSTOM command");
 
-    // Frame B: the identical layout, but the element paints several primitives.
+    // Frame B: the same layout, but the element paints several primitives.
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
@@ -8787,14 +8783,14 @@ UTEST(render, canvas_command_accounting) {
     }
     ui_update_end(ctx, 1.0f / 60.0f);
     ASSERT_EQ_MSG(canvas_custom_command_count(), 1, "many primitives in one scope emit exactly one CUSTOM command");
-    // Painting added exactly three commands: the CUSTOM span plus the SCISSOR_START/SCISSOR_END that bracket it
-    // to the element's own rect, and zero extra layout elements.
+    // Painting added exactly three commands, the CUSTOM span plus the SCISSOR_START and SCISSOR_END that clip it
+    // to the element's own rect, and no extra layout elements.
     ASSERT_EQ_MSG(ui_get_render_command_count(), base_count + 3,
                   "painting adds the CUSTOM span plus its own-rect scissor bracket, and zero extra layout elements");
 }
 
-// The splice translates element-local paint by the element's resolved rect origin. Root padding places the
-// canvas at a non-zero origin, so element-local (0,0) must land at that origin.
+// The splice translates element-local paint by the origin of the element's resolved rect. Root padding puts the
+// canvas at a non-zero origin, and element-local (0,0) lands at that origin.
 UTEST(render, canvas_paint_translated_by_origin) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -8816,30 +8812,29 @@ UTEST(render, canvas_paint_translated_by_origin) {
     FlPixelReadback buf;
     ASSERT_TRUE_MSG(render_seam_read_pixels(&ctx->shared->renderer, ctx->surface, &buf), "read_pixels failed");
 
-    // (50,40) is element-local (10,10) once the origin (40,30) is added → the painted fill.
+    // (50,40) is element-local (10,10) once the origin (40,30) is added, so it has the painted fill.
     ASSERT_TRUE_MSG(px_near(&buf, 50, 40, canvas_col, 2), "paint is translated by the element's rect origin");
-    // (5,5) is in the root padding, above-left of the canvas → element-local (0,0) did NOT land at window (0,0).
+    // (5,5) is in the root padding, above and left of the canvas, so element-local (0,0) is not at window (0,0).
     ASSERT_FALSE_MSG(px_near(&buf, 5, 5, canvas_col, 2), "the splice adds the origin, not a global (0,0) paste");
 }
 
-// Element-local pointer position: ui_mouse_position returns (mouse - origin) / ui_scale in logical
-// (authoring) coordinates - the space the painter draws in. Verified at identity scale and at 0.5 scale to
-// prove the query stays in logical authoring space at any UI scale (a physical-pixel offset would differ).
+// ui_mouse_position returns (mouse - origin) / ui_scale in logical (authoring) coordinates, the space the painter
+// draws in. It is checked at scale 1 and at scale 0.5, where an offset in physical pixels would differ.
 UTEST(render, canvas_element_local_pointer_pos) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    canvas_fixture_reset(ctx); // identity scale → ui_scale == 1.0
+    canvas_fixture_reset(ctx); // ui_scale == 1.0
 
-    // One frame resolves the element's rect; immediate mode means the query reads the previous frame's rect.
-    // Root padding places the 80x80 canvas at origin (40, 30).
+    // One frame resolves the element's rect, and the query reads the previous frame's rect. Root padding puts the
+    // 80x80 canvas at (40, 30).
     ctx->input_state.mouse.x = 0.0f;
     ctx->input_state.mouse.y = 0.0f;
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .padding = { .left = 40, .top = 30 }) {
         ui_layout_area_id(ID("ptr_canvas"), .sizing = { sizing_fixed(80), sizing_fixed(80) }) {
-            // A canvas registers as an ordinary interactive element by id; this records its resolved rect. The
-            // paint emits a command carrying the element id, which is what marks the rect resolved (found).
+            // A canvas registers by id as an ordinary interactive element, which records its resolved rect. The
+            // paint emits a command carrying the element id, and that marks the rect as resolved (found).
             ui_widget_behavior(ID("ptr_canvas"), (FlWidgetConfig) { 0 });
             painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
                          ui_color(40, 200, 120, 255));
@@ -8852,24 +8847,24 @@ UTEST(render, canvas_element_local_pointer_pos) {
     ASSERT_NEAR(st.pos.x, 40.0f, 0.5f);
     ASSERT_NEAR(st.pos.y, 30.0f, 0.5f);
 
-    // Pointer at window (50, 40) is element-local (10, 10); at scale 1.0 logical == physical.
+    // The pointer at window (50, 40) is element-local (10, 10). At scale 1.0 logical == physical.
     ctx->input_state.mouse.x = 50.0f;
     ctx->input_state.mouse.y = 40.0f;
     FlVec2 local = ui_mouse_position(ID("ptr_canvas"));
     ASSERT_NEAR(local.x, 10.0f, 0.5f);
     ASSERT_NEAR(local.y, 10.0f, 0.5f);
 
-    // An element absent from the layout has no rect → {0, 0}.
+    // An element that is not in the layout has no rect, and the result is {0, 0}.
     FlVec2 missing = ui_mouse_position(ID("ptr_canvas_absent"));
     ASSERT_EQ_MSG((int)missing.x, 0, "no rect → zero element-local x");
     ASSERT_EQ_MSG((int)missing.y, 0, "no rect → zero element-local y");
 
-    // The same authoring layout at half scale (540p → ui_scale 0.5). Padding (40,30) logical snaps to (20,15)
-    // physical; the 80-logical element is 40 physical. A pointer 10 physical px inside the element resolves to
-    // 20 logical px in - the query divides by ui_scale, so the element-local position is resolution-independent.
+    // The same authored layout at half scale (540p, ui_scale 0.5). Padding (40,30) logical becomes (20,15)
+    // physical, and the 80-logical element is 40 physical. A pointer 10 physical px inside the element is 20
+    // logical px inside, because the query divides by ui_scale.
     ctx->layout_width = 960.0f;
     ctx->layout_height = 540.0f;
-    UiScalePair fit_540 = ui_reference_fit(540); // 1080p-reference policy: ui_scale 0.5, PAL text boost folded in
+    UiScalePair fit_540 = ui_reference_fit(540); // the 1080p reference policy: ui_scale 0.5, with the PAL text boost
     ui_set_scale(fit_540.ui_scale, fit_540.text_scale);
     Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 960.0f, .height = 540.0f });
 
@@ -8898,20 +8893,19 @@ UTEST(render, canvas_element_local_pointer_pos) {
     ASSERT_NEAR(local_half.y, 20.0f, 0.5f);
 }
 
-// A painted canvas hover-highlights the half under the cursor, and the highlight tracks the
-// pointer as it moves. Synthetic mouse input is fed straight into the context (the bare render fixture has no
-// input pump). The 80x80 canvas sits at origin (40, 30); its halves split at element-local x == 40, i.e.
-// window x == 80.
+// A painted canvas highlights the half under the cursor, and the highlight follows the pointer as it moves. The
+// mouse input is written straight into the context, because the bare render fixture has no input pump. The 80x80
+// canvas is at (40, 30), and its halves split at element-local x == 40, which is window x == 80.
 UTEST(render, canvas_hover_highlight_tracks_pointer) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    canvas_fixture_reset(ctx); // identity scale → ui_scale == 1.0, element-local logical == window pixels
+    canvas_fixture_reset(ctx); // ui_scale == 1.0, so element-local logical coordinates are window pixels
 
-    const FlColor base = ui_color(40, 200, 120, 255); // un-highlighted half
-    const FlColor hl = ui_color(220, 80, 60, 255);    // highlighted (under-cursor) half
+    const FlColor base = ui_color(40, 200, 120, 255); // half without the highlight
+    const FlColor hl = ui_color(220, 80, 60, 255);    // highlighted half, under the cursor
 
-    // Frame 1: resolve the canvas rect so the next frame's query sees it (immediate mode). The pointer is far
-    // away, so nothing is highlighted yet.
+    // Frame 1 resolves the canvas rect so the next frame's query sees it. The pointer is far away, so nothing is
+    // highlighted yet.
     ctx->input_state.mouse.x = 0.0f;
     ctx->input_state.mouse.y = 0.0f;
     ui_update_begin(ctx);
@@ -8926,7 +8920,8 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 
-    // Frame 2: pointer over the RIGHT half (window x 100 → element-local x 60 ≥ 40). The right half lights up.
+    // Frame 2: the pointer is over the right half (window x 100 is element-local x 60, and 60 >= 40), which
+    // lights up.
     ctx->input_state.mouse.x = 100.0f;
     ctx->input_state.mouse.y = 70.0f;
     ui_update_begin(ctx);
@@ -8948,7 +8943,7 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
     ASSERT_TRUE_MSG(px_near(&buf, 100, 70, hl, 2), "right half (under cursor) is highlighted");
     ASSERT_TRUE_MSG(px_near(&buf, 60, 70, base, 2), "left half (away from cursor) stays base color");
 
-    // Frame 3: move the pointer to the LEFT half (window x 60 → element-local x 20 < 40). The highlight follows.
+    // Frame 3: the pointer moves to the left half (window x 60 is element-local x 20), and the highlight follows.
     ctx->input_state.mouse.x = 60.0f;
     ctx->input_state.mouse.y = 70.0f;
     ui_update_begin(ctx);
@@ -8971,9 +8966,9 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
     ASSERT_TRUE_MSG(px_near(&buf, 100, 70, base, 2), "right half reverts to base once the cursor leaves it");
 }
 
-// Hover-dwell tooltip: the floating label is revealed only after the pointer has dwelled over the anchor -
-// driven by the real stationary timer, not the eased hover value - and hides as soon as the anchor is no longer
-// hovered. Asserted on the tooltip's floating element via Clay_GetElementData rather than a pixel comparison.
+// The tooltip's floating label is shown only after the pointer has rested on the anchor, timed by the real
+// stationary timer and not by the eased hover value. It hides as soon as the anchor is no longer hovered. The
+// case checks the tooltip's floating element with Clay_GetElementData and compares no pixels.
 
 // One tooltip frame: an 80x80 anchor at window (40,30), with ui_tooltip emitted right after it. The caller sets
 // the mouse position and the dwell timer before calling.
@@ -8981,8 +8976,8 @@ static void tooltip_emit_frame(FlUiCtx* ctx, FlLayoutId anchor_id, FlString text
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .padding = { .left = 40, .top = 30 }) {
-        // A background colour makes the anchor emit a render command, so item-state hit-testing runs on it (an
-        // empty layout area produces none and would never register as hot).
+        // The background colour makes the anchor emit a render command, so item-state hit testing runs on it. An
+        // empty layout area emits none and would never become hot.
         ui_layout_area_id(anchor_id, .sizing = { sizing_fixed(80), sizing_fixed(80) },
                           .color = ui_color(40, 200, 120, 255)) {
             ui_widget_behavior(anchor_id, (FlWidgetConfig) { 0 });
@@ -8992,8 +8987,9 @@ static void tooltip_emit_frame(FlUiCtx* ctx, FlLayoutId anchor_id, FlString text
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// Is the tooltip's floating element present in the layout just produced? Mirrors ui_tooltip_impl's tip-id
-// derivation (anchor name + anchor hash as sub-id) and asks Clay whether that element was laid out this frame.
+// True if the tooltip's floating element is in the layout just produced. The tip id is derived as in
+// ui_tooltip_impl (anchor name, with the anchor hash as sub-id), and Clay reports whether it was laid out this
+// frame.
 static bool tooltip_present(FlLayoutId anchor_id) {
     u32 anchor_clay_id = ui_layout_id_to_clay_id(anchor_id);
     FlLayoutId tip_id = { .name = anchor_id.name, .id = (int)anchor_clay_id };
@@ -9009,9 +9005,9 @@ UTEST(render, tooltip_reveals_after_dwell_hides_on_unhover) {
     FlLayoutId anchor = ID("tooltip_anchor");
     FlString text = FL_S("Tooltip text");
 
-    // Settle hover with the dwell timer held at 0: the pointer rests on the anchor (rect 40..120 x 30..110), but
-    // no dwell has elapsed, so the tooltip must not show. Hot propagates next_hot_id -> hot_id -> state.hot, so a
-    // few frames are needed before hot reads 1 during emit.
+    // Let hover settle with the dwell timer held at 0. The pointer is on the anchor (rect 40..120 x 30..110), but
+    // no dwell has elapsed, so the tooltip does not show. Hot propagates next_hot_id -> hot_id -> state.hot, so
+    // it takes a few frames before hot reads 1 during emit.
     ctx->input_state.mouse.x = 80.0f;
     ctx->input_state.mouse.y = 70.0f;
     for (int i = 0; i < 3; i++) {
@@ -9021,14 +9017,14 @@ UTEST(render, tooltip_reveals_after_dwell_hides_on_unhover) {
     ASSERT_TRUE_MSG(ui_get_element_state(anchor).hot, "anchor is hovered while the pointer rests on it");
     ASSERT_FALSE_MSG(tooltip_present(anchor), "no tooltip before the dwell threshold is reached");
 
-    // Dwell satisfied: same hover, timer past the 0.5s default -> the tooltip is revealed.
+    // With the same hover and the timer past the 0.5s default, the tooltip is shown.
     ctx->input_state.mouse.stationary_timer = 0.6f;
     tooltip_emit_frame(ctx, anchor, text);
     ASSERT_TRUE_MSG(tooltip_present(anchor), "tooltip appears once the pointer has dwelled past the threshold");
 
-    // Un-hover: move the pointer off the anchor. hot trails the pointer by two frames (next_hot_id -> hot_id ->
-    // state.hot), so emit a few frames to let it settle; the dwell timer is kept high to prove it is the loss of
-    // hover (not the timer) that hides the tooltip.
+    // Move the pointer off the anchor. hot trails the pointer by two frames (next_hot_id -> hot_id ->
+    // state.hot), so a few frames let it settle. The dwell timer stays high, so the tooltip hides because hover
+    // was lost and not because of the timer.
     ctx->input_state.mouse.x = 600.0f;
     ctx->input_state.mouse.y = 500.0f;
     ctx->input_state.mouse.stationary_timer = 5.0f;
@@ -9039,10 +9035,10 @@ UTEST(render, tooltip_reveals_after_dwell_hides_on_unhover) {
     ASSERT_FALSE_MSG(tooltip_present(anchor), "tooltip hides once the anchor is no longer hovered");
 }
 
-// fl_app headless runner - drives the full tick path (pump -> begin -> frame -> end -> present(no-op) ->
-// input_update) and reads back a known clear color through fl_app_read_pixels, then verifies the quit flag.
-// fl_app's create calls for the process-global singletons (image system, VFS) are idempotent no-ops and its
-// destroy is owner-gated, so the long-lived render fixture's globals are never stranded.
+// The fl_app headless runner. The case runs the full tick path (pump -> begin -> frame -> end -> present, which
+// does nothing here -> input_update), reads a known clear color back through fl_app_read_pixels, and then checks
+// the quit flag. fl_app's create calls for the process-global singletons (image system, VFS) do nothing when
+// they already exist, and its destroy tears down only what it owns, so the render fixture's globals stay valid.
 
 typedef struct AppSmokeState {
     FlColor color;
@@ -9057,15 +9053,15 @@ static void app_smoke_frame(void* user_data) {
     FlString s = fl_frame_str("hi", 2);
     st->frame_str_ok = (s.length == 2 && s.data != nullptr && s.data[0] == 'h' && s.data[1] == 'i');
 
-    // fl_frame_str_array reserves count uninitialized FlString slots in the same frame arena; a zero count
-    // yields null rather than a one-element allocation.
+    // fl_frame_str_array reserves count uninitialized FlString slots in the same frame arena. A zero count gives
+    // null and not a one-element allocation.
     FlString* slots = fl_frame_str_array(3);
     bool array_ok = (slots != nullptr);
     if (array_ok) {
         for (int i = 0; i < 3; i++) {
             slots[i] = fl_frame_str("abc", (size_t)(i + 1));
         }
-        // Distinct slots: each kept its own length rather than every write landing on the same address.
+        // The slots are distinct: each kept its own length, so the writes did not all go to one address.
         for (int i = 0; i < 3; i++) {
             const FlString slot = slots[i];
             array_ok = array_ok && slot.length == (u64)(i + 1) && slot.data != nullptr && slot.data[0] == 'a';
@@ -9078,10 +9074,9 @@ static void app_smoke_frame(void* user_data) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }, .color = st->color) {}
 }
 
-// render.snapped_line_crisp_at_fractional_dpi - a painter 1px line renders crisp through the software backend at
-// a fractional UI scale: the snap lands it on a whole device row, so that row is solid and its neighbours are
-// pure background. A smeared (unsnapped) line would straddle two rows at partial coverage and fail both
-// neighbour checks.
+// A painter 1px line renders crisp through the software backend at a fractional UI scale. The snap puts it on a
+// whole device row, so that row is solid and its neighbours are pure background. An unsnapped line would straddle
+// two rows at partial coverage and fail both neighbour checks.
 UTEST(render, snapped_line_crisp_at_fractional_dpi) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -9095,8 +9090,8 @@ UTEST(render, snapped_line_crisp_at_fractional_dpi) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
-        // Canvas at the device origin (0,0). A hairline at local y=9 lands at device y = 9 * 1.25 = 11.25, which
-        // snaps to row 11; local x 0..100 covers device x 0..125, so x=50 is mid-line.
+        // The canvas is at the device origin (0,0). A hairline at local y=9 is at device y = 9 * 1.25 = 11.25,
+        // which snaps to row 11. Local x 0..100 covers device x 0..125, so x=50 is in the middle of the line.
         ui_layout_area_id(ID("canvas"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
             painter_hline(ui_get_painter(), 0.0f, 9.0f, 100.0f, line_col);
         }
@@ -9110,24 +9105,23 @@ UTEST(render, snapped_line_crisp_at_fractional_dpi) {
     ASSERT_FALSE_MSG(px_near(&buf, 50, 12, line_col, 2), "the row below the line (12) is pure background");
 }
 
-// render.snapped_line_crisp_at_fractional_scroll - a painter 1px line inside an element whose origin carries a
-// fractional offset renders crisp through the software backend. A floating element's offset is
-// scaled-but-unsnapped (layout.c) - the same way ui_scroll applies a scroll offset as an unsnapped element
-// translation - so it is a faithful scale-1.0 stand-in for a fractional scroll. The splice snaps the absolute
-// device position, landing the line on a whole row.
+// A painter 1px line inside an element whose origin has a fractional offset renders crisp through the software
+// backend. A floating element's offset is scaled but not snapped (layout.c), and ui_scroll applies a scroll
+// offset as an unsnapped element translation in the same way, so at scale 1.0 the floating offset stands in for
+// a fractional scroll. The splice snaps the absolute device position, which puts the line on a whole row.
 UTEST(render, snapped_line_crisp_at_fractional_scroll) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    canvas_fixture_reset(ctx); // identity scale 1.0 - isolate the fractional origin from any DPI scaling
+    canvas_fixture_reset(ctx); // scale 1.0, so the fractional origin is the only fraction involved
 
     const FlColor line_col = ui_color(90, 200, 230, 255);
 
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
-        // Floating canvas at root with a fractional y offset (10.4) - the unsnapped element origin a fractional
-        // scroll produces. The hairline at local y=0 lands at device y=10.4, which snaps to row 10; local x
-        // 0..100 with the 200 x offset covers device x 200..300, so x=250 is mid-line.
+        // A floating canvas at the root with a fractional y offset (10.4), the unsnapped element origin a
+        // fractional scroll produces. The hairline at local y=0 is at device y=10.4, which snaps to row 10. Local
+        // x 0..100 with the x offset of 200 covers device x 200..300, so x=250 is in the middle of the line.
         ui_floating_area_id(ID("scrolled_canvas"), .attach_to = FlFloatingAttachTo_Root, .offset = { 200.0f, 10.4f },
                             .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
             painter_hline(ui_get_painter(), 0.0f, 0.0f, 100.0f, line_col);
@@ -9144,13 +9138,13 @@ UTEST(render, snapped_line_crisp_at_fractional_scroll) {
     canvas_fixture_reset(ctx);
 }
 
-// render.list_virtualization - the List foundation (ui_list_begin/_item/_end on list_uniform's core). Renders a
-// 100-row list inside a fixed 240px viewport and asserts the virtualization only emits the visible window. A
-// first frame establishes the list container height (list_uniform queries it from the previous frame's Clay
-// layout); the second frame, with the viewport known, is the one asserted. Each visible row emits one
-// solid rect of a known color, so counting rects of that color is the count of rows actually rendered.
+// The List foundation (ui_list_begin, _item and _end on list_uniform's core). The case renders a 100-row list
+// inside a fixed 240px viewport and checks that virtualization emits only the visible window. The first frame
+// establishes the list container height, which list_uniform reads from the previous frame's Clay layout. The
+// second frame, with the viewport known, is the one asserted. Each visible row emits one solid rect of a known
+// color, so the number of rects of that color is the number of rows rendered.
 
-// Count UiRenderCmd_Rectangle commands whose background matches c (UiColor4 carries float channels).
+// Counts the UiRenderCmd_Rectangle commands whose background matches c. UiColor4 has float channels.
 static int list_count_row_rects(FlColor c) {
     int count = 0;
     const int n = ui_get_render_command_count();
@@ -9167,27 +9161,29 @@ static int list_count_row_rects(FlColor c) {
     return count;
 }
 
-// Emit one frame of the test list with the cursor parked off the list (so idle frames report no hover/click).
-// Returns the visible range; the per-frame result and whether any row reported a click come back via out-params.
+// Emits one frame of the test list with the cursor parked off the list, so idle frames report no hover or click.
+// Returns the visible range. The per-frame result and whether any row reported a click come back through the
+// out-params.
 static FlListRange list_render_frame(FlUiCtx* ctx, u32 total, FlColor row_color, FlListResult* out_result,
                                      bool* out_any_clicked) {
     FlListRange range = { 0, 0, 0 };
     FlListResult result = { 0, 0 };
     bool any_clicked = false;
-    // Park the cursor well off the list so no row hovers/clicks - keeps the result deterministic.
+    // The cursor is parked well off the list, so no row is hovered or clicked.
     ctx->input_state.mouse.x = -100.0f;
     ctx->input_state.mouse.y = -100.0f;
-    // Pin the clear color.
+    // A fixed clear color.
     ui_background_set(IMAGE_HANDLE_INVALID);
     ui_background_set_clear_color(12, 12, 14);
     ui_update_begin(ctx);
-    // Fixed-size viewport so the list's grow container measures deterministically after frame 1.
+    // A fixed-size viewport, so the list's grow container has a known size after frame 1.
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-        // nullptr set → no selection (this case exercises virtualization only); ordered_ids is unused on that path.
+        // A nullptr set means no selection, since this case covers only virtualization, and ordered_ids is not
+        // used then.
         range
             = ui_list_begin(ID("vlist"), nullptr, total, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = range.start; i < range.end; i++) {
-            // Flat static list: pass the index as the stable id (CONTEXT Item Id - allowed, loses nothing).
+            // A flat static list can pass the index as the stable id.
             FlSignal sig = ui_list_item_begin((u64)(i + 1));
             any_clicked |= sig.clicked;
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }, .color = row_color) {}
@@ -9219,9 +9215,9 @@ UTEST(render, list_virtualization) {
     const u32 total = 100;
     const FlColor row_color = ui_color(60, 140, 220, 255);
 
-    // Frame 1: establishes the list container height for the virtualization math.
+    // Frame 1 establishes the list container height for the virtualization math.
     list_render_frame(ctx, total, row_color, nullptr, nullptr);
-    // Frame 2: viewport is now known - assert this one.
+    // Frame 2 has the viewport and is the one asserted.
     FlListResult result;
     bool any_clicked = true;
     FlListRange range = list_render_frame(ctx, total, row_color, &result, &any_clicked);
@@ -9247,8 +9243,6 @@ UTEST(render, list_virtualization) {
     dump_frame("list", &buf);
 }
 
-// render.list_empty - a zero-item list renders cleanly.
-
 UTEST(render, list_empty) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -9270,9 +9264,8 @@ UTEST(render, list_empty) {
     ASSERT_EQ_MSG((u64)0, result.focused_id, "empty list: no focus");
 }
 
-// render.list_stable_id_split - the Item Id split (CONTEXT Item Id): the result is keyed on the app's opaque
-// u64 stable id, never on the dense emission position. The cursor is aimed at the row at position 2, and
-// focused_id must come back as that row's stable id.
+// The result is keyed on the app's opaque u64 stable id and never on the dense emission position. The cursor is
+// aimed at the row at position 2, and focused_id comes back as that row's stable id.
 
 UTEST(render, list_stable_id_split) {
     FlUiCtx* ctx = render_fixture_get();
@@ -9287,15 +9280,15 @@ UTEST(render, list_stable_id_split) {
 
     const u32 total = 50;
     const u32 target_pos = 2;
-    // Stable id mapping id(pos) = pos*10 + 1000: never equal to the position, so reporting the position instead
-    // of the id (or vice versa) is caught unambiguously.
+    // The stable id is id(pos) = pos*10 + 1000, which never equals the position, so reporting one in place of
+    // the other is caught.
     const u64 target_id = (u64)target_pos * 10ull + 1000ull;
 
     FlListResult result = { 0, 0 };
-    // Frame 0 parks the cursor off-list and locates the target row; the remaining frames hold the cursor on it.
-    // Hover propagates over two frames (item_state_update sets next_hot_id -> hot_id at one frame's end, and
-    // item->state.hot tracks hot_id at the next end, which item_behavior then reads the frame after), so the
-    // cursor must dwell a few frames before the row reports hovered/focused.
+    // Frame 0 parks the cursor off the list and finds the target row. The remaining frames hold the cursor on it.
+    // Hover propagates over two frames (item_state_update sets next_hot_id -> hot_id at the end of one frame,
+    // item->state.hot follows hot_id at the end of the next, and item_behavior reads it the frame after), so the
+    // cursor stays a few frames before the row reports hovered and focused.
     f32 hover_x = -100.0f, hover_y = -100.0f;
 
     for (int f = 0; f < 4; f++) {
@@ -9307,7 +9300,7 @@ UTEST(render, list_stable_id_split) {
                                           (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
             for (u32 i = r.start; i < r.end; i++) {
                 ui_list_item_begin((u64)i * 10ull + 1000ull);
-                // Unique red channel per row so the target row's rect is locatable from the command stream.
+                // Each row has its own red channel, so the target row's rect can be found in the command stream.
                 ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) },
                                .color = ui_color((u8)(20 + i), 120, 200, 255)) {}
                 ui_list_item_end();
@@ -9317,7 +9310,7 @@ UTEST(render, list_stable_id_split) {
         ui_update_end(ctx, 1.0f / 60.0f);
 
         if (f == 0) {
-            // Locate the target row's rect (its unique red channel) and aim the cursor at its center for frame 2.
+            // Find the target row's rect by its red channel and aim the cursor at its center for frame 2.
             const u8 want_r = (u8)(20 + target_pos);
             const int n = ui_get_render_command_count();
             for (int i = 0; i < n; i++) {
@@ -9340,13 +9333,13 @@ UTEST(render, list_stable_id_split) {
     ASSERT_TRUE_MSG(result.focused_id != (u64)target_pos, "focused_id must not be the dense position");
 }
 
-// The end-to-end wheel case: the wheel is driven through fl_app_inject_wheel over a flagged full-window
-// Scroll Target, the scoped delta accumulates into an app-owned offset, and a column of bars is painted shifted by
-// it. The frames before the wheel (offset 0) and after must differ.
+// The wheel end to end. It is injected with fl_app_inject_wheel over a full-window Scroll Target, the scoped delta
+// accumulates into an app-owned offset, and a column of bars is painted shifted by it. The frame before the
+// wheel (offset 0) and the frame after differ.
 
 typedef struct WheelScrollState {
     FlUiCtx* ctx;
-    f32 offset_y; // app-owned cumulative scroll offset; the framework holds no absolute wheel value
+    f32 offset_y; // cumulative scroll offset owned by the app. The framework holds no absolute wheel value
 } WheelScrollState;
 
 #define WHEEL_SCROLL_W 200
@@ -9359,14 +9352,14 @@ typedef struct WheelScrollState {
 
 #define WHEEL_SCROLL_BAR_H 20.0f
 
-// Content is taller than the viewport (12 * 28 = 336 > 160), so there is real range to scroll over.
+// The content is taller than the viewport (12 * 28 = 336 > 160), so there is range to scroll.
 #define WHEEL_SCROLL_MAX_OFFSET ((float)(WHEEL_SCROLL_BARS) * WHEEL_SCROLL_PITCH - (float)(WHEEL_SCROLL_H))
 
 static const FlLayoutId k_wheel_scroll_id
     = { .name = { .data = "wheel_scroll", .length = 12, .is_static = 1 }, .id = 0 };
 
-// The wheel over the target accumulates into offset_y, clamped to the content range. Solid painter rects only - no
-// text - so the frame is byte-deterministic on the software renderer.
+// The wheel over the target accumulates into offset_y, clamped to the content range. The frame holds only solid
+// painter rects and no text, so its bytes are deterministic on the software renderer.
 static void wheel_scroll_frame(void* user_data) {
     WheelScrollState* st = (WheelScrollState*)user_data;
     st->ctx = ui_get_ctx();
@@ -9374,7 +9367,7 @@ static void wheel_scroll_frame(void* user_data) {
     ui_layout_area_id(k_wheel_scroll_id, .sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         ui_scroll_target(k_wheel_scroll_id);
         FlVec2 wheel = ui_mouse_wheel_delta(k_wheel_scroll_id);
-        st->offset_y -= wheel.y; // positive dy scrolls content up (offset grows)
+        st->offset_y -= wheel.y; // positive dy scrolls the content up, so the offset grows
         if (st->offset_y < 0.0f) {
             st->offset_y = 0.0f;
         }
@@ -9403,7 +9396,7 @@ UTEST(render, wheel_scroll) {
 
     WheelScrollState st = { 0 };
 
-    // Settle the pointer over the Scroll Target so it becomes the hot (wheel-eligible) target.
+    // Let the pointer settle over the Scroll Target so it becomes hot and receives the wheel.
     fl_app_inject_mouse_move(app, WHEEL_SCROLL_W / 2, WHEEL_SCROLL_H / 2);
     for (int i = 0; i < 4; i++) {
         fl_app_tick(app, &st, wheel_scroll_frame);
@@ -9418,8 +9411,8 @@ UTEST(render, wheel_scroll) {
     uint64_t before_hash = fnv1a_64(before.pixels, (size_t)before.width * (size_t)before.height * 3u);
     dump_frame("wheel_before", &before);
 
-    // Cached wheel_y is unscaled (input caches the accumulated delta verbatim), so one inject of
-    // dy = -WHEEL_SCROLL_MAX_OFFSET drives the offset to exactly the clamped bottom.
+    // The cached wheel_y is unscaled, since input caches the accumulated delta as it is, so one inject of
+    // dy = -WHEEL_SCROLL_MAX_OFFSET moves the offset exactly to the clamped bottom.
     fl_app_inject_wheel(app, 0.0f, -WHEEL_SCROLL_MAX_OFFSET);
     fl_app_tick(app, &st, wheel_scroll_frame);
     ASSERT_NEAR_MSG((double)WHEEL_SCROLL_MAX_OFFSET, (double)st.offset_y, 0.001,
@@ -9444,13 +9437,13 @@ UTEST(render, app_headless_smoke) {
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
 
-    // The injection surface is live in headless mode: these must not trip the headless assert or quit.
+    // Injection works in headless mode: these calls neither trip the headless assert nor quit.
     fl_app_inject_mouse_move(app, 10, 10);
     fl_app_inject_key(app, FlKey_Space, true);
 
-    AppSmokeState st = { .color = ui_color(40, 160, 90, 255) }; // distinctive green vs. the clear color
+    AppSmokeState st = { .color = ui_color(40, 160, 90, 255) }; // a green that is easy to tell from the clear color
 
-    // Two ticks: the first sources dt=0 (no previous timestamp), the second exercises the real-dt branch.
+    // Two ticks: the first has dt=0, with no previous timestamp, and the second takes the branch with a real dt.
     ASSERT_TRUE_MSG(fl_app_tick(app, &st, app_smoke_frame), "first tick should keep running");
     ASSERT_TRUE_MSG(st.frame_ran, "frame callback did not run");
     ASSERT_TRUE_MSG(st.frame_str_ok, "fl_frame_str did not return the expected per-frame copy");
@@ -9464,7 +9457,7 @@ UTEST(render, app_headless_smoke) {
     ASSERT_EQ(buf.width, (u32)w);
     ASSERT_EQ(buf.height, (u32)h);
 
-    // Sample the center: it sits well inside the full-window rect.
+    // The center is well inside the full-window rect.
     const u8* pixels = (const u8*)buf.pixels;
     const size_t offset = (size_t)(h / 2) * (size_t)buf.stride + (size_t)(w / 2) * 3u;
     const u8 r = pixels[offset + 0];
@@ -9478,17 +9471,17 @@ UTEST(render, app_headless_smoke) {
 
     fl_app_destroy(app);
 
-    // With a close already queued, run()'s first tick sees the quit flag and returns false instead of blocking.
+    // With a close already queued, run()'s first tick sees the quit flag and returns false without blocking.
     FlApp* app2 = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app2 != nullptr, "second fl_app_create failed");
     fl_app_inject_window_close(app2);
-    fl_app_run(app2, &st, app_smoke_frame); // returns; would hang here if the quit flag were ignored
+    fl_app_run(app2, &st, app_smoke_frame); // returns. It would hang here if the quit flag were ignored
     fl_app_destroy(app2);
 }
 
-// render.adjacent_radio_groups_no_id_collision - end-to-end guard that adjacent multi-item widgets lay out in
-// one frame without an id collision. A collision makes the debug duplicate-id tracker (ui_open_element_with_id)
-// fatally assert, so reaching frame end proves the ids stayed distinct.
+// Adjacent multi-item widgets lay out in one frame without an id collision. A collision makes the debug
+// duplicate-id tracker (ui_open_element_with_id) assert fatally, so reaching the end of the frame shows the ids
+// are distinct.
 
 UTEST(render, adjacent_radio_groups_no_id_collision) {
     FlUiCtx* ctx = render_fixture_get();
@@ -9501,8 +9494,8 @@ UTEST(render, adjacent_radio_groups_no_id_collision) {
     ui_set_scale(1.0f, 1.0f);
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 3));
 
-    // Adjacent int fields → &sel.b == &sel.a + 4. Group A has 5 options so its top item index (4) lands exactly
-    // on group B's key under a plain linear seed.
+    // The int fields are adjacent, so &sel.b == &sel.a + 4. Group A has 5 options, so with a plain linear seed
+    // its top item index (4) would land exactly on group B's key.
     struct {
         int a;
         int b;
@@ -9517,17 +9510,16 @@ UTEST(render, adjacent_radio_groups_no_id_collision) {
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 
-    // Reaching here without the duplicate-id assert firing is the regression guard; selections stay put with no
-    // input injected.
+    // Reaching this line means the duplicate-id assert did not fire. With no input injected, the selections are
+    // unchanged.
     ASSERT_EQ_MSG(sel.a, 0, "group A selection unchanged with no input");
     ASSERT_EQ_MSG(sel.b, 0, "group B selection unchanged with no input");
     ASSERT_TRUE_MSG(ui_get_render_command_count() > 0, "adjacent radio groups must emit render commands");
 }
 
-// render.adjacent_tab_bars_no_id_collision - the tab-strip analogue of the radio guard above. Two tab bars keyed
-// on adjacent int fields (a 4-byte gap), the first with 5 tabs so its top tab index (4) aliases the second bar's
-// tab 0 under a plain linear seed - reaching frame end without the duplicate-id assert proves the ids stayed
-// distinct.
+// The same for tab strips. Two tab bars are keyed on adjacent int fields (a 4-byte gap). The first has 5 tabs, so
+// with a plain linear seed its top tab index (4) would alias the second bar's tab 0. Reaching the end of the
+// frame without the duplicate-id assert shows the ids are distinct.
 
 UTEST(render, adjacent_tab_bars_no_id_collision) {
     FlUiCtx* ctx = render_fixture_get();
@@ -9560,9 +9552,9 @@ UTEST(render, adjacent_tab_bars_no_id_collision) {
     ASSERT_TRUE_MSG(ui_get_render_command_count() > 0, "adjacent tab bars must emit render commands");
 }
 
-// render.tab_bar_keyboard_nav_uses_seeded_ids - guards the two keyboard-nav seed sites (prev/next tab in
-// ui_tab_bar_impl). A mismatch there would NOT trip the duplicate-id assert (only the render pass opens elements);
-// it would silently point fl_set_focus at the wrong id.
+// Covers the two places in ui_tab_bar_impl that seed ids for keyboard nav (previous and next tab). A mismatch
+// there would not trip the duplicate-id assert, since only the render pass opens elements. It would point
+// fl_set_focus at the wrong id without any error.
 
 UTEST(render, tab_bar_keyboard_nav_uses_seeded_ids) {
     FlUiCtx* ctx = render_fixture_get();
@@ -9584,7 +9576,7 @@ UTEST(render, tab_bar_keyboard_nav_uses_seeded_ids) {
     const u32 tab1_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("tab"), .id = tab1 });
     const u32 tab2_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("tab"), .id = tab2 });
 
-    // Frame 1: lay out a focusable tab bar so the per-tab ItemStates exist.
+    // Frame 1 lays out a focusable tab bar so the per-tab ItemStates exist.
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         ui_tab_bar(tabs, 3, &sel, .widget.focusable = FlFocusable_Yes);
@@ -9597,7 +9589,7 @@ UTEST(render, tab_bar_keyboard_nav_uses_seeded_ids) {
     ctx->focused_id = tab1_id;
     item1->state.focused_t = 1.0f;
     ui_update_begin(ctx);
-    ctx->nav_frame.nav_right = true; // set after begin; the tab bar consumes it before core spatial nav (update_end)
+    ctx->nav_frame.nav_right = true; // set after begin. The tab bar consumes it before core spatial nav in update_end
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         ui_tab_bar(tabs, 3, &sel, .widget.focusable = FlFocusable_Yes);
     }
@@ -9621,8 +9613,8 @@ UTEST(render, tab_bar_keyboard_nav_uses_seeded_ids) {
     ctx->nav_frame.nav_right = false;
 }
 
-// Auto-restore repairs a vanished focused widget; it never seeds one. The ring is unclaimed until a Tab, a click
-// or an explicit fl_set_focus moves it.
+// Auto-restore repairs focus when the focused widget disappears. It never gives focus to a widget when nothing
+// was focused. The ring belongs to nobody until a Tab, a click or an explicit fl_set_focus moves it.
 
 static void focus_idle_frame(FlUiCtx* ctx) {
     ui_update_begin(ctx);
@@ -9646,7 +9638,7 @@ UTEST(render, idle_frame_leaves_the_keyboard_ring_unclaimed) {
     ctx->focused_id = 0;
     ctx->last_focused_id = 0;
 
-    // The ring is an animation, so a single frame cannot show it not ramping: run several.
+    // The ring is animated, so one frame cannot show that it does not ramp. Run several.
     for (int frame = 0; frame < 3; frame++) {
         focus_idle_frame(ctx);
         ASSERT_EQ_MSG(fl_focused_id(), 0u, "an idle frame must leave the keyboard ring unclaimed");
@@ -9663,12 +9655,12 @@ UTEST(render, idle_frame_leaves_the_keyboard_ring_unclaimed) {
     ctx->nav_next_pressed = false;
     ASSERT_EQ_MSG(fl_focused_id(), first_id, "the first Tab must land on the first focusable widget");
 
-    // A focused widget that leaves the frame is still repaired - to last_focused_id while that one is around.
+    // A focused widget that leaves the frame is still repaired, to last_focused_id while that one exists.
     ctx->focused_id = 0xBADF0CU;
     focus_idle_frame(ctx);
     ASSERT_EQ_MSG(fl_focused_id(), first_id, "a vanished focused widget restores the last focused one");
 
-    // And to the first focusable widget when the last focused one is gone too.
+    // When the last focused one is gone too, focus goes to the first focusable widget.
     ctx->focused_id = 0xBADF0CU;
     ctx->last_focused_id = 0xBADF0DU;
     focus_idle_frame(ctx);
@@ -9678,12 +9670,12 @@ UTEST(render, idle_frame_leaves_the_keyboard_ring_unclaimed) {
     ctx->last_focused_id = 0;
 }
 
-// render.focusable_no_stays_out_of_focus_order - the focus ring is an animation, so a single frame cannot see
-// it: run several and pin focused_t at 0 throughout.
+// The focus ring is animated, so a single frame cannot show it: the case runs several and checks that focused_t
+// stays 0 throughout.
 //
-// FlFocusable_Default is what a zeroed config carries, so if Default subtracted the flag as well, every widget
-// that never named the field would silently lose keyboard access - a slider's whole arrow-key adjustment path
-// is gated on signal.focused.
+// A zeroed config carries FlFocusable_Default. If Default removed the focusable flag as No does, every widget
+// that never set the field would lose keyboard access. A slider's whole arrow-key adjustment, for one, depends
+// on signal.focused.
 
 UTEST(render, focusable_no_stays_out_of_focus_order) {
     FlUiCtx* ctx = render_fixture_get();
@@ -9696,9 +9688,9 @@ UTEST(render, focusable_no_stays_out_of_focus_order) {
     ctx->focused_id = 0;
     ctx->last_focused_id = 0;
 
-    // A strip's per-tab ids key off the selection pointer alone - the labels are not part of them - so a stack
-    // local here would reuse the slot (and the ids, and their leftover focused_t) of the tab-bar case above.
-    // A static owns an address no other case can hold.
+    // A strip's per-tab ids depend only on the selection pointer and not on the labels, so a stack local here
+    // would reuse the slot of the tab-bar case above, with its ids and their leftover focused_t. A static has an
+    // address no other case can hold.
     static int sel;
     sel = 0;
     FlString tabs[] = { FL_S("N0"), FL_S("N1"), FL_S("N2") };
@@ -9718,8 +9710,8 @@ UTEST(render, focusable_no_stays_out_of_focus_order) {
         ASSERT_LT_MSG(tab0->state.focused_t, 0.001f, "its focus ring must never ramp");
     }
 
-    // Same strip, field never named: Default must leave the family's focus behaviour alone. Auto-restore only
-    // repairs a vanished widget, so the stale id is what makes it run and land on the strip's first entry.
+    // The same strip with the field never set: Default leaves the family's focus behaviour alone. Auto-restore
+    // only repairs focus on a vanished widget, so the stale id makes it run and land on the strip's first entry.
     ctx->focused_id = 0xBADF0CU;
     ctx->last_focused_id = 0;
     ui_update_begin(ctx);
@@ -9729,16 +9721,16 @@ UTEST(render, focusable_no_stays_out_of_focus_order) {
     ui_update_end(ctx, 1.0f / 60.0f);
     ASSERT_EQ_MSG(fl_focused_id(), tab0_id, "a zeroed config (FlFocusable_Default) keeps the tab order it had");
 
-    // And the same for the widgets whose keyboard interaction dies with focus: a zero-config button and slider
-    // must still register, or FlFocusable_Default has quietly become an opt-out.
+    // The same for the widgets whose keyboard interaction depends on focus: a button and a slider with zeroed
+    // configs still register as focusable.
     ctx->focused_id = 0xBADF0CU;
     ctx->last_focused_id = 0;
     static float slider_value;
     slider_value = 0.5f;
     const u32 button_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("def_button"), .id = 0 });
 
-    // Read the slider's resolved flags inside the frame: ui_update_end prunes every ItemState the frame did not
-    // touch (remove_deleted_items), so a lookup after it races the sweep.
+    // Read the slider's resolved flags inside the frame. ui_update_end removes every ItemState the frame did not
+    // touch (remove_deleted_items), so a lookup after it could find the state already gone.
     FlItemFlags slider_flags = 0;
     bool slider_found = false;
 
@@ -9759,8 +9751,8 @@ UTEST(render, focusable_no_stays_out_of_focus_order) {
     ASSERT_TRUE_MSG((slider_flags & FlItemFlags_focusable) != 0,
                     "a zero-config slider keeps FlItemFlags_focusable — its arrow-key path needs signal.focused");
 
-    // The scrollbar is the one family that reads FlFocusable_Yes, and it is the only place Yes has any effect
-    // at all (everywhere else STANDARD_WIDGET_FLAGS already carries the bit).
+    // The scrollbar is the one family that reads FlFocusable_Yes, and the only place Yes has any effect.
+    // Everywhere else STANDARD_WIDGET_FLAGS already has the bit.
     static float bar_value;
     bar_value = 0.0f;
     FlItemFlags bar_default_flags = 0;
@@ -9775,8 +9767,8 @@ UTEST(render, focusable_no_stays_out_of_focus_order) {
         ui_scrollbar(&bar_value, .max = 100.0f, .widget.id_override = FL_S("sbar_default"));
         ui_scrollbar(&bar_value, .max = 100.0f, .widget.id_override = FL_S("sbar_yes"),
                      .widget.focusable = FlFocusable_Yes);
-        // The No bar is what separates == FlFocusable_Yes from a plain truthiness test: No is 2, so a
-        // truthiness test would opt this one IN.
+        // The No bar tells == FlFocusable_Yes from a truthiness test: No is 2, so a truthiness test would make
+        // this one focusable.
         ui_scrollbar(&bar_value, .max = 100.0f, .widget.id_override = FL_S("sbar_no"),
                      .widget.focusable = FlFocusable_No);
         ItemState* d = hashmap_get(&ctx->shared->item_state,
@@ -9813,9 +9805,8 @@ UTEST(render, focusable_no_stays_out_of_focus_order) {
     ctx->last_focused_id = 0;
 }
 
-// render.focusable_default_keeps_tab_bar_arrow_nav - the strip gates its OWN arrow-key handling on
-// cfg.widget.focusable (ui_tab_bar.c), separately from the focus_order gate in ui_item_behavior, so a zeroed
-// config has to reach it as "navigable" too.
+// The strip checks cfg.widget.focusable for its own arrow-key handling (ui_tab_bar.c), separately from the
+// focus_order check in ui_item_behavior, so a zeroed config has to count as navigable there too.
 
 UTEST(render, focusable_default_keeps_tab_bar_arrow_nav) {
     FlUiCtx* ctx = render_fixture_get();
@@ -9825,7 +9816,7 @@ UTEST(render, focusable_default_keeps_tab_bar_arrow_nav) {
     ui_set_scale(1.0f, 1.0f);
     ui_font_set(font_cache_load_default_font(ctx->shared->font_cache, 3));
 
-    // Static for the same reason as the case above: per-tab ids key off this pointer alone.
+    // Static for the same reason as in the case above: per-tab ids depend only on this pointer.
     static int sel;
     sel = 1;
     FlString tabs[] = { FL_S("D0"), FL_S("D1"), FL_S("D2") };
@@ -9833,7 +9824,7 @@ UTEST(render, focusable_default_keeps_tab_bar_arrow_nav) {
     const u32 tab1_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("tab"), .id = ui_item_id_seed(key, 1u) });
     const u32 tab2_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("tab"), .id = ui_item_id_seed(key, 2u) });
 
-    // Frame 1 lays the strip out so the per-tab ItemStates exist - with the field never named.
+    // Frame 1 lays the strip out, with the field never set, so the per-tab ItemStates exist.
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         ui_tab_bar(tabs, 3, &sel);
@@ -9843,16 +9834,16 @@ UTEST(render, focusable_default_keeps_tab_bar_arrow_nav) {
     ItemState* item1 = hashmap_get(&ctx->shared->item_state, tab1_id);
     ASSERT_TRUE_MSG(item1 != nullptr && item1->state.size.x > 0.0f, "middle tab was laid out");
 
-    // Observe the CONSUME, not just the resulting focus. Core spatial navigation would also walk tab1 -> tab2
-    // on nav-right - they are adjacent - so asserting the focus landed there passes whether or not the strip
-    // handled it, and cannot see this gate at all. Only the strip zeroes nav_frame.nav_right (to stop spatial
-    // nav double-acting), and it does so before ui_update_end reads it, so sampling the flag inside the frame
-    // is what distinguishes the two.
+    // The check is that the strip consumed the key, and not only where focus ended up. Core spatial navigation
+    // would also move tab1 -> tab2 on nav-right, since they are adjacent, so the resulting focus is the same
+    // whether or not the strip handled the key. Only the strip clears nav_frame.nav_right, to keep spatial nav
+    // from acting as well, and it does so before ui_update_end reads the flag. Reading the flag inside the frame
+    // therefore tells the two apart.
     bool consumed_by_strip = false;
     ctx->focused_id = tab1_id;
     item1->state.focused_t = 1.0f;
     ui_update_begin(ctx);
-    ctx->nav_frame.nav_right = true; // set after begin; the strip consumes it before core spatial nav
+    ctx->nav_frame.nav_right = true; // set after begin. The strip consumes it before core spatial nav
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         ui_tab_bar(tabs, 3, &sel);
         consumed_by_strip = !ctx->nav_frame.nav_right;
@@ -9867,8 +9858,8 @@ UTEST(render, focusable_default_keeps_tab_bar_arrow_nav) {
     ctx->nav_frame.nav_left = false;
 }
 
-// Raster premultiply: an opaque pixel keeps its channels in both the SIMD (16-pixel blocks) and scalar tails, and
-// both paths round c * a / 255 to nearest.
+// Raster premultiply: an opaque pixel keeps its channels in both the SIMD path (16-pixel blocks) and the scalar
+// tail, and both round c * a / 255 to nearest.
 
 UTEST(image_decode, premultiply_keeps_opaque_and_rounds_in_simd_and_scalar_paths) {
     enum { WIDTH = 20 }; // 16 pixels through the SIMD block, 4 through the scalar tail
@@ -9907,8 +9898,8 @@ UTEST(image_decode, premultiply_keeps_opaque_and_rounds_in_simd_and_scalar_paths
     }
 }
 
-// The dedup cache maps an image to its request id. Freeing the image drops that entry, so loading the same path
-// again starts a new request instead of returning the freed handle.
+// The dedup cache maps an image to its request id. Freeing the image removes that entry, so loading the same path
+// again starts a new request and does not return the freed handle.
 
 UTEST(image_load, free_then_reload_returns_a_working_handle) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
@@ -9940,8 +9931,8 @@ UTEST(image_load, free_then_reload_returns_a_working_handle) {
     s_stub_vfs_override_size = 0;
 }
 
-// The dedup key names the mount instance, not its source path: two live mounts of one source keep separate cache
-// entries, and a remount of a closed source starts clean.
+// The dedup key names the mount instance and not its source path. Two live mounts of one source keep separate
+// cache entries, and a remount of a closed source starts with none.
 
 UTEST(image_load, mounts_of_one_source_do_not_share_dedup_entries) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
@@ -9981,7 +9972,7 @@ UTEST(image_load, remount_of_a_closed_source_does_not_return_a_stale_failed_entr
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
     vfs_test_register_driver(&s_stub_vfs_plugin);
-    s_stub_vfs_override_data = nullptr; // the stub's text payload: not a decodable image
+    s_stub_vfs_override_data = nullptr; // the stub's text payload, which is not a decodable image
 
     FlVfsMountResult first = vfs_mount(FL_S("/stub-image-remount"));
     ASSERT_EQ(first.status, FlVfsMountErrorStatus_Success);
@@ -10011,7 +10002,8 @@ UTEST(image_load, remount_of_a_closed_source_does_not_return_a_stale_failed_entr
     s_stub_vfs_override_size = 0;
 }
 
-// Load/forget churn on one path leaves no live entries, so the key storage must not keep growing with the cycles.
+// Loading and forgetting one path repeatedly leaves no live entries, so the key storage does not grow with the
+// cycles.
 
 #define DEDUP_CHURN_CYCLES 2000
 

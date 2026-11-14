@@ -1,6 +1,6 @@
 // Viewport3d vertex stage: the one fixed mesh vertex format (FlMeshVertex) through a view-projection matrix.
-// Unlit - no normals, no lighting, no per-object transform; the caller folds model into the matrix. GL only, outside the compute
-// compat-header vocabulary.
+// Unlit, with no normals and no per-object transform; the caller folds model into the matrix. GL only, outside
+// the compute compat-header vocabulary.
 
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec2 in_uv;

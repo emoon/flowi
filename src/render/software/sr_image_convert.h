@@ -1,9 +1,7 @@
-// -----------------------------------------------------------------------------
-// Image Format Conversion for Software Renderer
+// Image format conversion for the software renderer.
 //
-// Converts interleaved images (RGBA, XRGB) to planar RGB format for efficient
-// tile-based rendering. Adds bilinear padding (+1 width/height).
-// -----------------------------------------------------------------------------
+// Converts interleaved images (RGBA, XRGB) to planar RGB format for tile-based
+// rendering. Adds bilinear padding (+1 width/height).
 
 #pragma once
 
@@ -16,7 +14,7 @@ struct FlArena;
 // row (two unaligned 16-byte loads at load_offset and load_offset + 16). Near the bottom-right of the last plane
 // that window reaches up to ~30 bytes past the final plane's last byte, so every buffer the sampler can read
 // (sr_convert_to_planar output and image_cache_alloc_entry blocks) is padded by this many guard bytes to keep the
-// over-read in bounds. The guard bytes are only ever loaded and discarded by the shuffle - never sampled - so their
+// over-read in bounds. The guard bytes are only ever loaded and discarded by the shuffle, never sampled, so their
 // contents never affect output.
 #define SR_SCALE_PLANE_LOAD_GUARD 32
 
@@ -34,7 +32,7 @@ void sr_deinterleave_pixels(const u8* src, u8* r, u8* g, u8* b, u8* a, int count
 // bilinear padding (+1 width/height). The returned ImageData has
 // format=FlImageFormat_Deinterleaved and channels 3 (keep_alpha=false) or 4
 // (keep_alpha=true). r/g/b read bytes 0/1/2; for XRGB the unused X byte (3) is
-// simply dropped (keep_alpha=false). Returns nullptr on error.
+// dropped (keep_alpha=false). Returns nullptr on error.
 
 ImageData* sr_convert_to_planar(const ImageData* src, bool keep_alpha, struct FlArena* arena);
 

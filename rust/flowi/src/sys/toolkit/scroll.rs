@@ -11,15 +11,12 @@ pub struct ScrollAreaConfig {
     pub direction: crate::sys::LayoutDirection,
     /// Gap between child elements.
     pub child_gap: u16,
-    /// Container padding.
     pub padding: crate::sys::LayoutPadding,
     /// Background color (default: transparent).
     pub background_color: crate::sys::Color,
-    /// Corner radius.
     pub corner_radius: crate::sys::CornerRadius,
     /// Show a scrollbar when content overflows.
     pub show_scrollbar: bool,
-    /// When to show the scrollbar.
     pub scrollbar_mode: crate::sys::ScrollbarDisplayMode,
     /// Enable smooth scroll animation.
     pub smooth_scroll: bool,

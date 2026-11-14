@@ -48,9 +48,9 @@ impl Input {
         unsafe { crate::sys::fl_input_keyboard_modifiers() }
     }
 
-    /// Pointer position relative to the element id, in element-local logical (authoring) coordinates -
-    /// (mouse - origin) / ui_scale, the unscaled space the Painter draws in. This is the cursor source for
-    /// hit-testing and timeline math, not the physical-pixel FlSignal.mouse_pos. Returns {0, 0} when the element has no
+    /// Pointer position relative to the element id, in element-local logical (authoring) coordinates:
+    /// (mouse - origin) / ui_scale, the unscaled space the Painter draws in. Use it for hit-testing and
+    /// timeline math; FlSignal.mouse_pos is in physical pixels. Returns {0, 0} when the element has no
     /// resolved rect this frame.
     #[inline]
     pub fn mouse_position(id: impl Into<crate::LayoutId>) -> crate::sys::Vec2 {
@@ -59,7 +59,7 @@ impl Input {
         unsafe { crate::sys::fl_input_mouse_position(id.into_sys()) }
     }
 
-    /// True if button was just pressed this frame - the down edge. Global and unrouted: every reader sees the
+    /// True if button was just pressed this frame (the down edge). Global and unrouted: every reader sees the
     /// same state regardless of what is under the cursor (buttons are never zeroed mid-frame, unlike the wheel).
     #[inline]
     pub fn mouse_pressed(button: crate::sys::MouseButton) -> bool {
@@ -67,7 +67,7 @@ impl Input {
         unsafe { crate::sys::fl_input_mouse_pressed(button) }
     }
 
-    /// True while button is currently held down - the level. Pair with mouse_position to follow an
+    /// True while button is currently held down (the level). Pair with mouse_position to follow an
     /// app-owned drag latch.
     #[inline]
     pub fn mouse_down(button: crate::sys::MouseButton) -> bool {
@@ -75,14 +75,14 @@ impl Input {
         unsafe { crate::sys::fl_input_mouse_down(button) }
     }
 
-    /// True if button was just released this frame - the up edge.
+    /// True if button was just released this frame (the up edge).
     #[inline]
     pub fn mouse_released(button: crate::sys::MouseButton) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Input::mouse_released");
         unsafe { crate::sys::fl_input_mouse_released(button) }
     }
 
-    /// True if key was just pressed this frame - the down edge. Global and unrouted, like the mouse-button
+    /// True if key was just pressed this frame (the down edge). Global and unrouted, like the mouse-button
     /// queries: every reader sees the same key state regardless of focus, and the app decides what each key means.
     #[inline]
     pub fn key_pressed(key: crate::sys::Key) -> bool {
@@ -90,14 +90,14 @@ impl Input {
         unsafe { crate::sys::fl_input_key_pressed(key) }
     }
 
-    /// True while key is currently held down - the level.
+    /// True while key is currently held down (the level).
     #[inline]
     pub fn key_down(key: crate::sys::Key) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Input::key_down");
         unsafe { crate::sys::fl_input_key_down(key) }
     }
 
-    /// True if key was just released this frame - the up edge.
+    /// True if key was just released this frame (the up edge).
     #[inline]
     pub fn key_released(key: crate::sys::Key) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Input::key_released");
@@ -115,7 +115,7 @@ impl Input {
 
     /// Read the element id's interaction-and-geometry state for this frame. Returns the full ElementState
     /// (rect, found/visible, hot/focused/active + their animation interpolators); found = false
-    /// with a zero rect when id was not laid out. The rect is physical px - divide it by get_scale to
+    /// with a zero rect when id was not laid out. The rect is physical px; divide it by get_scale to
     /// report logical px.
     #[inline]
     pub fn get_element_state(id: impl Into<crate::LayoutId>) -> crate::sys::ElementState {
@@ -124,8 +124,8 @@ impl Input {
         unsafe { crate::sys::fl_input_get_element_state(id.into_sys()) }
     }
 
-    /// Read the absolute UI scale (logical→physical multiplier) the app last set via ui_set_scale. Use it to
-    /// normalize get_element_state's physical-px rect to logical px.
+    /// Read the absolute UI scale (logical→physical multiplier). Use it to normalize get_element_state's
+    /// physical-px rect to logical px.
     #[inline]
     pub fn get_scale() -> f32 {
         let _frame = crate::frame_thread::frame_thread_guard("Input::get_scale");
@@ -182,7 +182,7 @@ impl Input {
         unsafe { crate::sys::fl_input_gamepad_button_down(slot, button) }
     }
 
-    /// True if button was just pressed this frame on the pad in player slot (0-based) - the down edge. False
+    /// True if button was just pressed this frame on the pad in player slot (0-based), the down edge. False
     /// when the slot is empty.
     #[inline]
     pub fn gamepad_button_pressed(slot: u32, button: crate::sys::GamepadButton) -> bool {
@@ -190,7 +190,7 @@ impl Input {
         unsafe { crate::sys::fl_input_gamepad_button_pressed(slot, button) }
     }
 
-    /// True if button was just released this frame on the pad in player slot (0-based) - the up edge. False
+    /// True if button was just released this frame on the pad in player slot (0-based), the up edge. False
     /// when the slot is empty.
     #[inline]
     pub fn gamepad_button_released(slot: u32, button: crate::sys::GamepadButton) -> bool {

@@ -8,11 +8,7 @@
 #include <core/memory.h>
 #include <core/os/os.h>
 
-// Constants
-
 #define MAX_QUEUED_EVENTS 256
-
-// Event queue types
 
 typedef enum QueuedEventType {
     QueuedEvent_Key,
@@ -33,7 +29,7 @@ typedef struct QueuedEvent {
     char text_storage[1024];
 } QueuedEvent;
 
-// Per-window handle - a fixed-size offscreen record with its own injected-event queue.
+// Per-window handle: a fixed-size offscreen record with its own injected-event queue.
 
 typedef struct FlWindow {
     int width;
@@ -48,8 +44,6 @@ typedef struct FlWindow {
     // The modifier mask held by the injected modifier keys, stamped onto each key event queued after them.
     u32 modifiers;
 } FlWindow;
-
-// Headless Window Backend context
 
 typedef struct HeadlessWindowContext {
     struct FlArena* arena;
@@ -78,7 +72,7 @@ static void headless_destroy_window(void* ud, FlWindow* window) {
     // Arena-allocated; nothing to free.
 }
 
-// Event pump - drain each window's injected queue into its own context
+// Event pump: drain each window's injected queue into its own context
 
 static void headless_drain_window(FlWindow* window, FlUiCtx* ctx) {
     for (u32 i = 0; i < window->event_count; i++) {
@@ -133,7 +127,7 @@ static float headless_content_scale(void* ud, FlWindow* window) {
     return window->content_scale;
 }
 
-// Cursor + hidden-drag - record the last-requested state
+// Cursor + hidden-drag: record the last-requested state
 
 static void headless_set_cursor(void* ud, FlWindow* window, FlCursor cursor) {
     UNUSED(window);
@@ -159,7 +153,7 @@ static void headless_warp_mouse(void* ud, FlWindow* window, float x, float y) {
     self->last_warp = (FlVec2) { .x = x, .y = y };
 }
 
-// Presentation - no-op; the signature matches the seam's present slot.
+// Presentation is a no-op; the signature matches the seam's present slot.
 static void headless_present(void* ud, FlWindow* window, FlSurfaceHandle surface_texture) {
     UNUSED(ud);
     UNUSED(window);
@@ -170,8 +164,6 @@ static void headless_destroy(void* ud) {
     UNUSED(ud);
     // Arena-allocated; nothing to free.
 }
-
-// Factory
 
 FlWindowBackend headless_window_backend_create(struct FlArena* arena) {
     HeadlessWindowContext* self = arena_alloc_zero(arena, HeadlessWindowContext);
@@ -210,7 +202,7 @@ static void queue_event(FlWindow* window, QueuedEvent event) {
     window->events[window->event_count++] = event;
 }
 
-// Test harness - inject events the next pump_events drains into the given window's FlUiCtx
+// Test harness: inject events the next pump_events drains into the given window's FlUiCtx
 
 void window_backend_headless_inject_mouse_move(FlWindowBackend* backend, FlWindow* window, i32 x, i32 y) {
     UNUSED(backend);
@@ -299,8 +291,8 @@ void window_backend_headless_inject_key(FlWindowBackend* backend, FlWindow* wind
     queue_event(window, event);
 }
 
-// Claim the next queue slot and copy src into its text_storage, truncated to fit and null-terminated. Returns null
-// when window is null or its queue is full; *out_len is the copied byte count.
+// Claim the next queue slot and copy src into its text_storage, truncated to fit and null-terminated. Returns nullptr
+// when window is nullptr or its queue is full; *out_len is the copied byte count.
 
 static QueuedEvent* queue_slot_with_string(FlWindow* window, FlString src, u64* out_len) {
     if (window == nullptr) {
@@ -378,7 +370,7 @@ FlString window_backend_headless_queued_text(FlWindow* window, u32 index) {
     return window->events[index].text.text;
 }
 
-// Test harness - read back the cursor / hidden-drag state the core flushed
+// Test harness: read back the cursor / hidden-drag state the core flushed
 
 FlCursor window_backend_headless_last_cursor(FlWindowBackend* backend) {
     HeadlessWindowContext* self = (HeadlessWindowContext*)backend->user_data;

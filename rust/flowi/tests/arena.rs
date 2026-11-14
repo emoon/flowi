@@ -21,7 +21,7 @@ fn persistent_entries_across_frames() {
     assert_eq!(entries[2], 20);
 }
 
-/// The &str borrow must end before rewind takes &mut self - hence the inner scope.
+/// The &str borrow must end before rewind takes &mut self, hence the inner scope.
 #[test]
 fn per_frame_strings_with_rewind() {
     let mut arena = Arena::new(RESERVE);
@@ -159,8 +159,8 @@ fn arena_string_write_and_freeze() {
     assert_eq!(frozen, "2+3=5");
 }
 
-/// Values moved into the arena are never dropped - they are abandoned (leaked), not
-/// destructed, at rewind, temp-scope end, scratch-scope end, and arena destroy.
+/// Values moved into the arena are never dropped: they are leaked at rewind, temp-scope end,
+/// scratch-scope end, and arena destroy.
 #[test]
 fn drop_never_runs_on_arena_contents() {
     use std::cell::Cell;

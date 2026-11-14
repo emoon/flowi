@@ -12,8 +12,8 @@
 // The shader snippets and bodies, embedded from src/render/gpu/shaders/*.glsl as NUL-terminated byte
 // arrays by the build (cmake/embed_glsl.cmake). The shared-vocabulary compat header is embedded the
 // same way and spliced ahead of every body: shader_compat_glsl.h on GL, shader_compat_metal.h on Metal
-// (selected by FLOWI_SHADER_BACKEND_METAL, the compile define the APPLE build sets - the same corpus of *.glsl
-// bodies compiles as GLSL or MSL depending only on which compat header + dialect preamble is spliced).
+// (selected by FLOWI_SHADER_BACKEND_METAL, the compile define the APPLE build sets). The same *.glsl bodies
+// compile as GLSL or MSL depending only on which compat header + dialect preamble is spliced.
 #ifdef FLOWI_SHADER_BACKEND_METAL
 extern const char gpu_glsl_shader_compat_metal[];
 #define gpu_glsl_shader_compat gpu_glsl_shader_compat_metal
@@ -39,8 +39,8 @@ extern const char gpu_glsl_mesh3d_frag[];
 static const char* gpu_shader_preamble(void) {
 #ifdef FLOWI_SHADER_BACKEND_METAL
     // Metal dialect: pull in the standard library and open the metal namespace, so the bodies' texture2d /
-    // as_type / unpack_unorm4x8_to_float / threadgroup_barrier references resolve. No offline .metallib step -
-    // the source compiles at renderer init via newLibraryWithSource:.
+    // as_type / unpack_unorm4x8_to_float / threadgroup_barrier references resolve. The source compiles at
+    // renderer init via newLibraryWithSource:, with no offline .metallib step.
     return "#include <metal_stdlib>\nusing namespace metal;\n";
 #else
     return "#version 430\n";
@@ -172,7 +172,7 @@ int gpu_color_svg_sources(const char** out) {
     return n;
 }
 
-// The Viewport3d pair: hardware vertex/fragment stages, so they take only the dialect preamble - neither the
+// The Viewport3d pair: hardware vertex/fragment stages, so they take only the dialect preamble: neither the
 // compute compat header nor the #define preamble applies, and the pair is GL only.
 
 int gpu_mesh3d_vertex_sources(const char** out) {

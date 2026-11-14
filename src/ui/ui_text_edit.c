@@ -7,8 +7,6 @@
 #include <ctype.h>
 #include <string.h>
 
-// stb_textedit integration
-//
 // All required macros and callbacks must be defined before including stb_textedit.h; see that header for
 // their full documentation. The key codes live in ui_text_edit.h.
 

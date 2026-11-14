@@ -6,7 +6,7 @@
 #include <core/arena_watchdog.h>
 #include <string.h>
 
-// Note: Arena watchdog lifecycle is managed by fl_init/fl_destroy.
+// fl_init and fl_destroy create and destroy the arena watchdog.
 
 static void watchdog_force_sample(void) {
     arena_watchdog_set_interval_seconds(0);
@@ -50,7 +50,7 @@ static bool watchdog_lists(FlArena* scratch, FlString report, const char* status
 }
 
 UTEST(arena_watchdog, init_destroy) {
-    // Just verify it doesn't crash when we configure it.
+    // Configuring the watchdog must not crash.
     WATCHDOG_SCOPE(WATCHDOG_DEFAULT_MIN_GROWTH_BYTES);
     arena_watchdog_set_interval_seconds(WATCHDOG_DEFAULT_INTERVAL_SECONDS);
     ASSERT_TRUE(true);
@@ -194,7 +194,7 @@ UTEST(arena_watchdog, disabled_does_nothing) {
 
     FlString report2 = arena_watchdog_report(temp.arena);
 
-    // Only one sample so far - GROWING needs growth_threshold consecutive increasing samples.
+    // Only one sample so far, and GROWING needs growth_threshold consecutive increasing samples.
     ASSERT_FALSE(watchdog_lists(temp.arena, report2, "GROWING", arena_line));
 
     fl_arena_destroy(arena);

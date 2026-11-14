@@ -6,8 +6,6 @@
 #include <core/os/os.h>
 #include <string.h>
 
-// Thread test helper - must be defined outside UTEST macro (C11 no nested functions)
-
 typedef struct {
     ArenaAllocTracker* tracker;
     int thread_id;
@@ -89,7 +87,7 @@ UTEST(arena_alloc_tracker, reset_clears_entries) {
 UTEST(arena_alloc_tracker, hash_collision_handling) {
     ArenaAllocTracker* tracker = arena_alloc_tracker_create();
 
-    // Record from 600 different "callsites" (more than half the 1024-slot table)
+    // 600 different call sites fill more than half of the 1024-slot table.
     const char* file = "collision.c";
     for (int i = 0; i < 600; i++) {
         arena_alloc_tracker_record(tracker, file, i, (u64)(i + 1) * 10);
@@ -145,7 +143,7 @@ UTEST(arena_alloc_tracker, thread_safety) {
         os_thread_join(&threads[i]);
     }
 
-    // Verify total: 4 threads * 1000 allocs * 64 bytes = 256000 total bytes
+    // 4 threads * 1000 allocs * 64 bytes = 256000 bytes in total.
     arena_scratch_auto(temp);
     ArenaAllocEntry* entries = nullptr;
     int count = arena_alloc_tracker_get_top(tracker, temp.arena, 10, &entries);

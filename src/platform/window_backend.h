@@ -1,6 +1,6 @@
 #pragma once
 
-// flowi window backend interface - the single OS-integration seam: window lifecycle, the event pump (demuxed per
+// flowi window backend interface, the single OS-integration seam: window lifecycle, the event pump (demuxed per
 // window by OS window id), keyboard/mouse/cursor/relative-mouse/warp, per-window drawable size + content scale,
 // and presentation. One backend owns the OS connection and creates per-window handles.
 //
@@ -17,7 +17,7 @@ struct FlArena;
 struct FlUiCtx;
 
 // Opaque, backend-owned OS-window handle. Each concrete backend defines its own struct for this incomplete type
-// and casts internally - the host never sees its layout.
+// and casts internally; the host never sees its layout.
 
 typedef struct FlWindow FlWindow;
 
@@ -40,7 +40,7 @@ typedef struct FlRgb24Frame {
     u32 stride;
 } FlRgb24Frame;
 
-// Window creation parameters - title plus the initial drawable size in physical pixels and top-left position.
+// Window creation parameters: title plus the initial drawable size in physical pixels and top-left position.
 
 #define FL_WINDOW_POS_DEFAULT (-2147483647 - 1) // INT32_MIN: "let the backend choose" sentinel for x/y
 
@@ -63,17 +63,17 @@ typedef enum FlWindowBackendMode {
     FlWindowBackendMode_Metal,    // GPU windows on APPLE: composite a Surface Texture over a CAMetalLayer (present)
 } FlWindowBackendMode;
 
-// Backend interface - one injected object, per-window seams.
+// Backend interface: one injected object, per-window seams.
 
 typedef struct FlWindowBackend {
     void* user_data;
 
-    // Window lifecycle. create_window returns null on failure; the host destroys every window before the backend
+    // Window lifecycle. create_window returns nullptr on failure; the host destroys every window before the backend
     // (destroy, below).
     FlWindow* (*create_window)(void* ud, const FlWindowConfig* config);
     void (*destroy_window)(void* ud, FlWindow* window);
 
-    // Event pump - drain the OS event queue ONCE, demux every window-addressed event by OS window id, and
+    // Event pump: drain the OS event queue once, demux every window-addressed event by OS window id, and
     // translate it into platform_input_push_* on the matching window's FlUiCtx. windows[i] pairs with contexts[i];
     // count is the live window count. windows[0]/contexts[0] is the main window: events that are not
     // window-addressed (SDL_QUIT, gamepad device/axis) route there. A per-window close pushes FlWindowEvent_Close
@@ -86,7 +86,7 @@ typedef struct FlWindowBackend {
     float (*content_scale)(void* ud, FlWindow* window);
 
     // Content scale of the primary display before any window exists, for backends whose window size is in
-    // physical pixels. Null (or <= 0) means 1.0: the window size is already in logical units.
+    // physical pixels. nullptr (or <= 0) means 1.0: the window size is already in logical units.
     float (*display_content_scale)(void* ud);
 
     // Cursor + hidden-drag seam, per window. The core resolves a per-frame last-writer-wins request and the host
@@ -98,42 +98,42 @@ typedef struct FlWindowBackend {
     void (*set_relative_mouse_mode)(void* ud, FlWindow* window, bool enabled);
     void (*warp_mouse)(void* ud, FlWindow* window, float x, float y);
 
-    // Presentation. A backend provides exactly ONE of the two present slots and the runner selects by whichever is
+    // Presentation. A backend provides exactly one of the two present slots and the runner selects by whichever is
     // non-null:
-    //   present - GPU windows: composite a Surface Texture (an FlSurfaceHandle) over the window and swap. The
-    //                      headless backend no-ops this.
-    //   present_software - software windows: blit an RGB24 frame (the software renderer's offscreen target) to the
-    //                      window.
+    //   present: GPU windows composite a Surface Texture (an FlSurfaceHandle) over the window and swap. The
+    //     headless backend no-ops this.
+    //   present_software: software windows blit an RGB24 frame (the software renderer's offscreen target) to the
+    //     window.
     void (*present)(void* ud, FlWindow* window, FlSurfaceHandle surface_texture);
     void (*present_software)(void* ud, FlWindow* window, const FlRgb24Frame* frame);
 
     // Make the backend's shared GL context current against a window's drawable, without compositing or swapping.
-    // The host calls this once before render-backend teardown. Null when the backend owns no GL context.
+    // The host calls this once before render-backend teardown. nullptr when the backend owns no GL context.
     void (*make_current)(void* ud, FlWindow* window);
 
-    // Backend teardown - called after the host has destroyed every window.
+    // Backend teardown, called after the host has destroyed every window.
     void (*destroy)(void* ud);
 } FlWindowBackend;
 
-// Factory - headless backend. Records cursor/relative-mode/warp state and queues injected events the next pump
+// Headless backend factory. Records cursor/relative-mode/warp state and queues injected events the next pump
 // drains.
 
 FlWindowBackend headless_window_backend_create(struct FlArena* arena);
 
-// Factory - SDL backend. Owns the OS connection (SDL video) and creates per-window OS windows; the construction
+// SDL backend factory. Owns the OS connection (SDL video) and creates per-window OS windows; the construction
 // mode picks the presentation path:
-//   FlWindowBackendMode_Gl - SDL-GL windows carrying a shared GL context + the fullscreen-quad compositor;
-//                                  present composites the GPU surface texture and swaps. Requires the GPU build.
-//   FlWindowBackendMode_Metal - SDL-Metal windows carrying a CAMetalLayer + the fullscreen-quad MSL compositor;
-//                                  present composites onto the layer's drawable. Requires FL_WINDOW_HAVE_METAL.
-//   FlWindowBackendMode_Software - plain SDL_Renderer windows (no GL); present_software blits the CPU pixel buffer.
-//                                  Requires FL_WINDOW_HAVE_SOFTWARE; gated out on APPLE.
+//   FlWindowBackendMode_Gl: SDL-GL windows carrying a shared GL context + the fullscreen-quad compositor;
+//     present composites the GPU surface texture and swaps. Requires the GPU build.
+//   FlWindowBackendMode_Metal: SDL-Metal windows carrying a CAMetalLayer + the fullscreen-quad MSL compositor;
+//     present composites onto the layer's drawable. Requires FL_WINDOW_HAVE_METAL.
+//   FlWindowBackendMode_Software: plain SDL_Renderer windows (no GL); present_software blits the CPU pixel buffer.
+//     Requires FL_WINDOW_HAVE_SOFTWARE; not built on APPLE.
 // A mode this build lacks, or an unavailable SDL, returns a zeroed backend (the host's windowed path checks
 // create_window before driving it).
 
 FlWindowBackend sdl_window_backend_create(struct FlArena* arena, FlWindowBackendMode mode);
 
-// Headless backend test harness - inject events into a specific window's queue (the next pump_events drains it
+// Headless backend test harness: inject events into a specific window's queue (the next pump_events drains it
 // into that window's FlUiCtx), and read back the cursor / hidden-drag state the core flushed on the last tick.
 
 void window_backend_headless_inject_mouse_move(FlWindowBackend* backend, FlWindow* window, i32 x, i32 y);
@@ -151,7 +151,7 @@ void window_backend_headless_inject_window_focus(FlWindowBackend* backend, FlWin
 // UI scale (content_scale x ui_zoom) against it.
 void window_backend_headless_set_content_scale(FlWindow* window, float scale);
 
-// Read back the text of the index-th queued (not yet pumped) event in a window's queue - empty string when the
+// Read back the text of the index-th queued (not yet pumped) event in a window's queue, or an empty string when the
 // index is out of range or the event is not a text event.
 FlString window_backend_headless_queued_text(FlWindow* window, u32 index);
 

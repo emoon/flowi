@@ -5,14 +5,13 @@
 
 struct FlArena;
 
-// Pool allocator implementation with type safety using typeof
+// Typed pool allocator.
 //
 // Usage:
 //   pool(Node) node_pool;
 //   pool_new(&node_pool, arena);
 //   Node* node = pool_alloc(&node_pool);
 //   pool_free(&node_pool, node);
-//
 
 // Base pool structure (type-erased)
 

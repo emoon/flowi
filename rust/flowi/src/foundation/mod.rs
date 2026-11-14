@@ -1,7 +1,7 @@
 //! Safe Rust over flowi-core: the C foundation the toolkit and its plugins are built on.
 //!
-//! Core is the process-wide foundation - an arena allocator, a job system, logging, path
-//! and string handling, a file watcher - and nothing above it. It owns no window, no
+//! Core is the process-wide foundation (an arena allocator, a job system, logging, path
+//! and string handling, a file watcher) and nothing above it. It owns no window, no
 //! renderer and no filesystem abstraction.
 //!
 //! Everything here is a borrow-checked wrapper over the private `sys` module, which holds the raw
@@ -15,11 +15,6 @@ use std::sync::Mutex;
 
 use crate::sys;
 
-
-
-
-
-
 /// The typed, borrow-checked arena: [`Arena::alloc`] returns a `&mut T` tied to the borrow,
 /// so [`Arena::rewind`] is a borrow error while an allocation is live. See the module docs.
 mod arena;
@@ -30,7 +25,7 @@ pub use arena::{Arena, ArenaString, ArenaVec, BaseArena};
 mod jobs;
 pub use jobs::{JobHandle, JobPriority, Jobs, JobsResult, WorkerInfo};
 
-/// Path manipulation - join, parent, absoluteness - with owned `String` results.
+/// Path manipulation (join, parent, absoluteness) with owned `String` results.
 pub mod path;
 
 /// Native file-system change notification: start a watch, drain the batch it accumulated.
@@ -114,7 +109,7 @@ fn init_raw(job_threads: i32) -> *mut sys::Arena {
     raw
 }
 
-/// Whether the foundation is up, as a single atomic load - no lock, no bring-up.
+/// Whether the foundation is up. A single atomic load: it takes no lock and brings nothing up.
 #[inline]
 pub fn is_up() -> bool {
     !BASE_ARENA.load(Ordering::Acquire).is_null()
@@ -124,11 +119,11 @@ pub fn is_up() -> bool {
 /// the main arena it created.
 ///
 /// Every core entry point does this for itself, so a caller reaching core only through
-/// [`Arena`] or [`Jobs`] never calls it. It is for the one that has to touch the foundation
-/// first - a test harness, or an embedder placing its own allocations in the main arena.
+/// [`Arena`] or [`Jobs`] never calls it. It is for a caller that has to touch the foundation
+/// first: a test harness, or an embedder placing its own allocations in the main arena.
 ///
 /// Idempotent: a foundation that is already up is adopted and `job_threads` ignored. The
-/// returned view only allocates and never destroys the arena - that is [`shutdown`]'s job -
+/// returned view only allocates and never destroys the arena ([`shutdown`] does that),
 /// so any number of views can coexist without one rewinding another's allocations.
 ///
 /// # Panics
@@ -149,7 +144,7 @@ pub fn init(job_threads: i32) -> BaseArena {
 /// main arena every long-lived allocation came from, and the calling thread's scratch
 /// arenas.
 ///
-/// Only for a host that wants a deterministic shutdown - a leak checker at process exit, or
+/// Only for a host that wants a deterministic shutdown: a leak checker at process exit, or
 /// a library embedding core that has to leave the process clean. A later constructor brings
 /// the foundation back up, and calling this twice is a no-op.
 ///

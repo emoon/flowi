@@ -4,9 +4,7 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Vec2 {
-    /// x position
     pub x: f32,
-    /// y position
     pub y: f32,
 }
 
@@ -21,13 +19,9 @@ const _: () = {
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Color {
-    /// red
     pub r: u8,
-    /// green
     pub g: u8,
-    /// blue
     pub b: u8,
-    /// alpha
     pub a: u8,
 }
 

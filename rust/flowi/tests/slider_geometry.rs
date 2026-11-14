@@ -2,8 +2,8 @@
 //!
 //! The two fields need different observations. thumb_size is the height of the track row, which lays out under
 //! the widget id, so element_state reads it back directly. track_height only sizes the filled/unfilled child
-//! rects, and those carry no id - so it is measured off the rendered frame instead, scanning a column through the
-//! track and counting the rows the bar actually paints.
+//! rects, and those carry no id, so it is measured off the rendered frame by scanning a column through the
+//! track and counting the rows the bar paints.
 
 use flowi::{
     col, element_state, grow, slider_float_with, Application, PixelView, SliderConfig, WidgetConfig,

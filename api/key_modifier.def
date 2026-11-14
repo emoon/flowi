@@ -1,11 +1,9 @@
-/// Keyboard modifier flags - the bitmask reported alongside key/text input (Shift, Control, Alt, ...).
+/// Keyboard modifier flags: the bitmask reported alongside key/text input (Shift, Control, Alt, ...).
 #[attributes(bitflags)]
 enum KeyModifier {
     /// No modifiers held.
     None = 0,
-    /// Shift.
     Shift = 1,
-    /// Control.
     Control = 2,
     /// Alt / Option.
     Alt = 4,

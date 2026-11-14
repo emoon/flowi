@@ -2,12 +2,11 @@
 
 // flowi neutral render-command IR.
 //
-// A single arena of variable-length tagged records describing UI drawing intent - never backend-baked data
-// (no SIMD types, no planar glyph bitmaps, no pre-split corners, no pixel pointers for static resources). Each
-// backend translates this IR into its own internal form on ingest.
+// A single arena of variable-length tagged records describing UI drawing intent. Nothing in it is baked for a
+// backend: no SIMD types, no planar glyph bitmaps, no pre-split corners, no pixel pointers for static resources.
+// Each backend translates this IR into its own internal form on ingest.
 //
-// Render-layer types take the Em prefix; they are laid out to pun onto FlColor/FlCornerRadius
-// field-for-field for zero-cost conversion (tests/probes/render_ir_compile_check.c pins the layouts equal).
+// tests/probes/render_ir_compile_check.c pins the record layouts.
 
 #include <core/types.h>
 #include <ui/ui_types.h>
@@ -23,7 +22,7 @@
 // render_backend.h), never folded into colors by the emitter.
 
 typedef struct FlRect {
-    f32 x; // (x, y, w, h) - not corner-pairs
+    f32 x; // (x, y, w, h), not corner pairs
     f32 y;
     f32 w;
     f32 h;
@@ -47,19 +46,19 @@ typedef enum FlCmdFlags {
 
 typedef struct FlCmdHeader {
     u16 kind;      // FlCmdKind
-    u16 flags;     // FlCmdFlags bitset. global_alpha is NOT per-command - it lives in the frame envelope.
+    u16 flags;     // FlCmdFlags bitset. global_alpha is per frame and lives in the frame envelope.
     u32 byte_size; // total bytes of this record (header + payload + any inline trailing data + effect)
 } FlCmdHeader;
 
 typedef enum FlCmdKind {
-    // Core tier - every backend must render these.
+    // Core tier: every backend must render these.
     FlCmd_FillRect,
     FlCmd_Border,
     FlCmd_TextRun,
     FlCmd_Image,
     FlCmd_ClipPush,
     FlCmd_ClipPop,
-    // Optional tier - data-driven visualization primitives. A backend MAY ignore these without breaking
+    // Optional tier: data-driven visualization primitives. A backend may ignore these without breaking
     // correctness, layout, or hit-testing; the SW backend skips them.
     FlCmd_Polyline,
     FlCmd_Arc,
@@ -79,7 +78,7 @@ typedef struct FlCmdFillRect {
 } FlCmdFillRect;
 
 // Border with per-side widths and an outer corner radius. The backend derives the inner geometry from the
-// outer radius and the side widths - no pre-split inner_radius crosses the IR. stroke dashes the whole
+// outer radius and the side widths, so no pre-split inner_radius crosses the IR. stroke dashes the whole
 // band with one pattern (zeroed = solid); it is not positional, so no phase crosses the IR either.
 typedef struct FlCmdBorder {
     FlRect rect;
@@ -101,11 +100,11 @@ typedef struct FlGlyph {
 } FlGlyph;
 
 // A run of glyphs in one font/size/color. The FlGlyph[glyph_count] array follows this struct inline in the
-// record. Bitmap-font glyphs are NOT text runs - they route through FlCmdImage's alpha-coverage mode.
+// record. Bitmap-font glyphs are not text runs; they go through FlCmdImage's alpha-coverage mode.
 //
 // size is the raster size as a quarter-px fixed-point key (round(px × 4)): the size the glyphs were prepared
 // (and the atlas keyed) at, which also fixes each glyph quad's source coverage. scale decouples the display
-// size from it - a backend multiplies each glyph quad's placement metrics and extent by scale, so text is
+// size from it: a backend multiplies each glyph quad's placement metrics and extent by scale, so text is
 // rasterized crisp at size but shown at `size * scale`. The software backend honors only scale == 1.0.
 typedef struct FlCmdTextRun {
     FlFontId font;
@@ -164,12 +163,12 @@ typedef struct FlCmdClipPush {
 // backend that ignores these kinds skips the whole record via byte_size, so trailing arrays and effects need
 // no per-kind knowledge to step over.
 
-// FlPolyPoint (one polyline vertex: x, y, intensity), FlPolylineFlags and FlArcFlags are the generated types from
-// painter.def - included above via <flowi/ui/painter.h>.
+// FlPolyPoint (one polyline vertex: x, y, intensity), and FlPolylineFlags are the generated types from
+// painter.def, included above via <flowi/ui/painter.h>.
 
-// Polyline - waveforms, oscilloscopes, filter/EQ response, envelope/LFO editors, wireframe meshes. The
-// FlPolyPoint[point_count] array follows this struct inline in the record. Caps and joins are always round -
-// a policy, not a field.
+// Polyline: waveforms, oscilloscopes, filter/EQ response, envelope/LFO editors, wireframe meshes. The
+// FlPolyPoint[point_count] array follows this struct inline in the record. Caps and joins are always round and
+// have no field.
 typedef struct FlCmdPolyline {
     FlColor color;      // stroke
     FlColor fill_color; // used when FILLED
@@ -179,7 +178,7 @@ typedef struct FlCmdPolyline {
     u32 point_count;    // FlPolyPoint[point_count] inline after this struct
 } FlCmdPolyline;
 
-// Arc / ring / circle-sector - knob indicators, modulation rings. One shape: outer radius plus inward
+// Arc / ring / circle-sector: knob indicators, modulation rings. One shape: outer radius plus inward
 // thickness; thickness >= radius reaches the center and makes a filled sector. Angles follow the knob
 // convention: zero at 12 o'clock, positive sweep clockwise.
 // FlCmdArc.flags bit: round end caps. Without it the ends are butt-cut.
@@ -196,7 +195,7 @@ typedef struct FlCmdArc {
     u32 flags; // FL_IR_ARC_ROUND_CAPS or 0
 } FlCmdArc;
 
-// Circle - modulation points, automation nodes. Filled, with an optional border ring. A hollow ring alone is
+// Circle: modulation points, automation nodes. Filled, with an optional border ring. A hollow ring alone is
 // Arc's job.
 typedef struct FlCmdCircle {
     f32 cx;
@@ -208,7 +207,7 @@ typedef struct FlCmdCircle {
     FlStrokeStyle stroke; // dash pattern for the border ring (zeroed = solid)
 } FlCmdCircle;
 
-// Diamond - field-for-field parallel to Circle with per-axis half-extents.
+// Diamond: field-for-field parallel to Circle with per-axis half-extents.
 typedef struct FlCmdDiamond {
     f32 cx;
     f32 cy;
@@ -219,10 +218,11 @@ typedef struct FlCmdDiamond {
     f32 border_width;     // 0 = no border
 } FlCmdDiamond;
 
-// FlBar (one bar: x, w, h - height from the set's baseline_y, negative draws downward; per-bar width supports
-// log-spaced spectrum bins) is the generated type from painter.def - included above via <flowi/ui/painter.h>.
+// FlBar is the generated type from painter.def, included above via <flowi/ui/painter.h>. One bar is x, w, h: h is
+// measured from the set's baseline_y and a negative h draws downward. Per-bar width supports log-spaced spectrum
+// bins.
 
-// Bar set - meters, spectrum analyzers, step sequencers. A batched command: one record carries a whole row of
+// Bar set: meters, spectrum analyzers, step sequencers. One record carries a whole row of
 // bars off a shared baseline. The FlBar[bar_count] array follows this struct inline in the record.
 typedef struct FlCmdBarSet {
     f32 baseline_y;
@@ -232,21 +232,21 @@ typedef struct FlCmdBarSet {
 
 // Effect annotation
 //
-// A decorative, additive property appended to a command's record - after the payload and any inline trailing
-// array - when FL_HAS_EFFECT is set in the header flags. One effect per command. Affects appearance only -
+// A decorative, additive property appended to a command's record (after the payload and any inline trailing
+// array) when FL_HAS_EFFECT is set in the header flags. One effect per command. It affects appearance only,
 // never geometry or hit-testing; a backend that does not support effects skips it. Drop-shadow and glow share
 // one shape (glow = centered + additive).
 //
-// FlEffect (kind, color, off_x, off_y, blur) and FlEffectKind are the generated types from painter.def -
+// FlEffect (kind, color, off_x, off_y, blur) and FlEffectKind are the generated types from painter.def,
 // included above via <flowi/ui/painter.h>.
 
-// Paint span - a deferred chunk of element-local IR
+// Paint span: a deferred chunk of element-local IR
 //
 // The painter records primitives for one painting scope (one layout element) into a span. A span is a list of
 // byte segments: when a child element paints between two of its parent's painter calls, the child's records
 // land between the parent's in the shared painter arena, so the parent's span is non-contiguous. A span is referenced
 // from its element's Clay CUSTOM command via customData; fl_clay_to_render_ir splices each span's records into the
-// frame IR at that command's position - at the element's z, under its children, bracketed by the live layout scissor
+// frame IR at that command's position: at the element's z, under its children, bracketed by the live layout scissor
 // stack. Span records are in element-local pixel space; the splice translates them by the element's resolved rect
 // origin.
 

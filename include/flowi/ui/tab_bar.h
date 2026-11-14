@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-// Tab bar widget - horizontal or vertical tab navigation across a set of labels.
+// Tab bar widget: horizontal or vertical tab navigation across a set of labels.
 // Emit a tab bar over tabs; clicking a tab writes its index to `*selected_index`. config selects
 // vertical mode and colors. Returns true the frame the selection changes. Call inside a frame callback.
 FL_API bool fl_tab_bar_impl(const FlString* tabs, uint32_t tabs_size, int32_t* selected_index, FlTabBarConfig config);

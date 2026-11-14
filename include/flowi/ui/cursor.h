@@ -26,7 +26,6 @@ typedef enum FlCursorShape {
     FlCursorShape_ResizeDiagonal2 = 5,
     // I-beam text caret.
     FlCursorShape_Text = 6,
-    // Crosshair.
     FlCursorShape_Crosshair = 7,
     // Not-allowed / blocked.
     FlCursorShape_NotAllowed = 8,
@@ -34,7 +33,7 @@ typedef enum FlCursorShape {
     FlCursorShape_Count = 9,
 } FlCursorShape;
 
-// The opaque cursor handle fl_cursor_set takes, carrying a system CursorShape.
+// The cursor value fl_cursor_set takes, carrying a system CursorShape.
 typedef struct FlCursor {
     // The requested system shape.
     FlCursorShape shape;

@@ -86,8 +86,8 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
     const char* cstr_path = fl_string_to_cstr(temp.arena, state->watch_path);
 
     // FSEvents reports every path with its symlinks resolved, and $TMPDIR on macOS is reached through one
-    // (/var -> /private/var). Canonicalizing the root here is what makes the direct-child filter below, and
-    // the paths this watcher reports, speak the same spelling as the events.
+    // (/var -> /private/var). Canonicalize the root so the direct-child filter below and the paths this
+    // watcher reports use the same spelling as the events.
     char resolved[PATH_MAX];
     if (realpath(cstr_path, resolved) != nullptr) {
         state->watch_path = fl_string_copy(get_file_watcher_registry()->arena, string_from_cstr(resolved));

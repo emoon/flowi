@@ -1,5 +1,4 @@
-// VFS Operations
-// File and directory operations (read, list, open)
+// VFS file and directory operations: read, list, open.
 
 #include <core/log.h>
 #include <core/memory.h>
@@ -108,14 +107,14 @@ void vfs_op_file_read(VfsOp* op) {
 
 // A failed read still invokes the callback, with data == nullptr and size == 0, so it can release whatever its
 // user_data owns and settle its own state. It runs before the result is published, so the op never reads ready
-// while the callback is still running, and any data it returns is dropped - a failed result has no reader for it.
+// while the callback is still running, and any data it returns is dropped: a failed result has no reader for it.
 static void read_all_notify_failure(VfsOp* op) {
     if (op->callback) {
         op->callback(nullptr, 0, op->user_data);
     }
 }
 
-// What the driver half of a read-all produced. A set error_fmt is a failure; data is then null.
+// What the driver half of a read-all produced. A set error_fmt is a failure; data is then nullptr.
 typedef struct ReadAllData {
     u8* data;
     i64 size;
@@ -174,7 +173,7 @@ static ReadAllData read_all_from_driver(VfsOp* op, FlArena* scratch) {
         }
         total_read = read_result.bytes_read;
     } else {
-        // Size is 0/unknown (e.g., gzip raw compression) - read in chunks until EOF
+        // The size is 0 or unknown (e.g. gzip raw compression): read in chunks until EOF.
         mi_free(buffer);
 
         i64 capacity = 64 * 1024;
@@ -396,7 +395,7 @@ void vfs_op_list(VfsState* self, VfsOp* op, FlArena* scratch) {
     file_list->count = collector.count;
     file_list->success = true;
 
-    // Use atomic store with release semantics to ensure all writes to file_list are visible
+    // The release store publishes every write to file_list above.
     atomic_store_explicit(&op->result_data, file_list, memory_order_release);
     op->result_arena = list_arena; // Freed with the op
     atomic_store_explicit(&op->error_status, VFS_STATE_SUCCESS, memory_order_release);
@@ -408,7 +407,7 @@ void vfs_op_mount(VfsState* self, VfsOp* op, FlArena* scratch) {
     profile_function_auto_nc("vfs:vfs_op_mount", PROFILE_COLOR_CYAN);
     FlVfsMount* mount = op->mount;
 
-    // Resolve the full path - this handles nested archives and validates it's a directory
+    // Resolving the full path handles nested archives and checks that it is a directory.
     FinalDriver result = vfs_resolve_mount_path(self, op->path, scratch);
 
     if (result.error != VfsResolveError_None) {
@@ -425,7 +424,7 @@ void vfs_op_mount(VfsState* self, VfsOp* op, FlArena* scratch) {
 
 // Job scheduling
 
-// Core execution logic - shared by both async and sync paths. Ends by publishing done, after the result and status.
+// Runs the op; shared by the async and sync paths. Ends by publishing done, after the result and status.
 static void vfs_ops_execute(VfsOp* op, FlArena* scratch) {
     profile_function_auto_nc("vfs:vfs_ops_execute", PROFILE_COLOR_CYAN);
     VfsState* self = g_vfs_state;
@@ -455,7 +454,7 @@ static void vfs_ops_execute(VfsOp* op, FlArena* scratch) {
     atomic_store_explicit(&op->done, true, memory_order_release);
 }
 
-// Async job wrapper - called by job system. The job's reference is returned last: it may be the final one, in which
+// Job entry point. The job's reference is returned last: it may be the final one, in which
 // case the op is destroyed, and its release hook runs, right here on the worker.
 void vfs_ops_do_job(void* data, FlJobsWorkerInfo info) {
     VfsOp* op = (VfsOp*)data;
@@ -463,7 +462,7 @@ void vfs_ops_do_job(void* data, FlJobsWorkerInfo info) {
     vfs_op_release(op);
 }
 
-// Synchronous execution - called when already in job context
+// Synchronous execution, for a caller already inside a job.
 void vfs_ops_execute_sync(VfsOp* op) {
     arena_scratch_auto(temp);
     vfs_ops_execute(op, temp.arena);
@@ -472,7 +471,7 @@ void vfs_ops_execute_sync(VfsOp* op) {
 FlJobHandle vfs_ops_schedule_job(FlVfsMount* mount, FlJobsFunc func, void* user_data) {
     profile_function_auto_nc("vfs:vfs_ops_schedule_job", PROFILE_COLOR_CYAN);
 
-    // Handle 0 means mount was completed synchronously - schedule immediately
+    // Handle 0 means the mount completed synchronously, so schedule at once.
     if (mount->job_handle == 0) {
         return fl_jobs_add_job(func, user_data);
     }

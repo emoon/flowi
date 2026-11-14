@@ -64,18 +64,18 @@ typedef struct FlStringParseResultF32 {
     FlStringParseStatus status;
 } FlStringParseResultF32;
 
-// A string being concatenated in place at the end of an arena: arena is the arena it grows in and
-// start_pos the byte offset its bytes start at. A POD value type crossed by value through the public
-// ABI - every `sb_*` function takes one and returns the updated one, so the builder is never held by pointer.
+// A string being built in place at the end of an arena. Passed by value: every `sb_*` function takes
+// one and returns the updated one.
 typedef struct FlStringBuilder {
+    // The arena the string grows in.
     FlArena* arena;
+    // Byte offset in the arena where the string starts.
     uint64_t start_pos;
 } FlStringBuilder;
 
-// The `fl_string_*` / `fl_sb_*` / `fl_sprintf_*` plugin service API - flowi core's FlString
-// manipulation, arena string builder and arena-allocating sprintf, exported as plain C symbols. FlString
-// itself, its inline helpers and the S() literal macros come from `<flowi/core/string.h>`. Plugins link
-// the shared library and call these symbols directly.
+// FlString manipulation (`fl_string_*`), the arena string builder (`fl_sb_*`) and the arena-allocating
+// sprintf (`fl_sprintf_*`). FlString itself, its inline helpers and the S() literal macros come from
+// `<flowi/core/string.h>`.
 // Copy str into arena as a null-terminated C string (for an external C API that needs one).
 FL_API const char* fl_string_to_cstr(FlArena* arena, FlString str);
 // Copy str into a caller-owned dest buffer of buffer_len bytes, null-terminated (truncating).

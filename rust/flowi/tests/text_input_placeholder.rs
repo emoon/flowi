@@ -69,7 +69,7 @@ fn headless_text_input_placeholder() {
          widget config to have reached C"
     );
 
-    // Same field, same empty buffer - only the placeholder was added.
+    // Same field, same empty buffer; only the placeholder was added.
     probe.placeholder = PLACEHOLDER;
     let placeholder_ink = settle_and_count_ink(&mut app, &mut probe);
 

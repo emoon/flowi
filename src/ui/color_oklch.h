@@ -34,7 +34,7 @@ FlColor color_oklab_to_rgb(FlColorOKLab lab);
 FlColorOKLCH color_rgb_to_oklch(FlColor rgb);
 FlColor color_oklch_to_rgb(FlColorOKLCH oklch);
 
-// OKLab <-> OKLCH (Cartesian <-> polar). Pure math, no gamut concerns.
+// OKLab <-> OKLCH (Cartesian <-> polar), with no gamut clamping.
 
 FlColorOKLCH color_oklab_to_oklch(FlColorOKLab lab);
 FlColorOKLab color_oklch_to_oklab(FlColorOKLCH lch);
@@ -71,8 +71,8 @@ FlColor color_lighten_perceptual(FlColor base, f32 amount);
 FlColor color_darken_perceptual(FlColor base, f32 amount);
 FlColor color_desaturate_perceptual(FlColor base, f32 amount);
 
-// Perceptual lerp between two sRGB colors through OKLab. Cartesian (L, a, b) so it stays
-// well-defined through gray, where hue is undefined - unlike an OKLCH hue lerp. Alpha is
+// Perceptual lerp between two sRGB colors through OKLab. The lerp is Cartesian (L, a, b), so it stays well
+// defined through gray, where hue is undefined and an OKLCH hue lerp would not be. Alpha is
 // lerped linearly in sRGB (OKLab carries no alpha).
 FlColor color_lerp_oklab(FlColor a, FlColor b, f32 t);
 

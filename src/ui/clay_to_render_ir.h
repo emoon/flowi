@@ -1,8 +1,8 @@
 #pragma once
 
-// Clay render output -> neutral render-command IR (render_ir.h).
+// Converts Clay render output to the neutral render-command IR (render_ir.h).
 //
-// Pure intent extraction: colors stay raw (no premultiply, no global_alpha fold), rounded rects keep their radii
+// Colors stay raw (no premultiply, no global_alpha fold), rounded rects keep their radii
 // unsplit, borders keep per-side widths, and images/text reference resources by handle/id.
 
 struct FlArena;

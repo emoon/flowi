@@ -14,8 +14,6 @@
 #include <external/clay/clay.h>
 #include <math.h>
 
-// Slider helper functions
-
 static inline float slider_value_to_log_normalized(float value, float min, float max) {
     float log_min = log10f(fmaxf(min, UI_SLIDER_LOG_EPSILON));
     float log_max = log10f(fmaxf(max, UI_SLIDER_LOG_EPSILON));
@@ -76,7 +74,7 @@ static float slider_update_value_from_input(float current_normalized, float norm
         }
     }
 
-    // Analog stick only - the D-pad is already handled by the nav keys above.
+    // Analog stick only; the D-pad is already handled by the nav keys above.
     if (signal.focused && self->input_state.gamepads[0].connected) {
         GamepadState* gamepad = &self->input_state.gamepads[0];
         float adjustment = 0.0f;
@@ -139,7 +137,7 @@ static FlSignal slider_impl(FlString label, float* value, float min, float max, 
 
     // Track / thumb geometry, each config-driven with 0 meaning "keep the default": an 8px bar with a 24px
     // round thumb. A track thinner than the thumb centers vertically against it (the row's child alignment
-    // does that), so the row height - and with it layout and hit-testing - is the thumb size either way.
+    // does that), so the row height (and with it layout and hit-testing) is the thumb size either way.
     const float thumb_size = cfg.thumb_size > 0.0f ? cfg.thumb_size : UI_SLIDER_THUMB_WIDTH;
     const float track_height = cfg.track_height > 0.0f ? cfg.track_height : UI_SLIDER_TRACK_HEIGHT;
 

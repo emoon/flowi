@@ -8,15 +8,12 @@ struct ScrollAreaConfig {
     direction: LayoutDirection,
     /// Gap between child elements.
     child_gap: u16,
-    /// Container padding.
     padding: LayoutPadding,
     /// Background color (default: transparent).
     background_color: Color,
-    /// Corner radius.
     corner_radius: CornerRadius,
     /// Show a scrollbar when content overflows.
     show_scrollbar: bool,
-    /// When to show the scrollbar.
     scrollbar_mode: ScrollbarDisplayMode,
     /// Enable smooth scroll animation.
     smooth_scroll: bool,

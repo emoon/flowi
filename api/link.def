@@ -1,4 +1,4 @@
-/// Link widget - clickable, underlined text for hyperlinks.
+/// Link widget: clickable, underlined text for hyperlinks.
 #[frame_context]
 api Link {
     /// Emit link text (link-colored, underlined). config selects font size and colors. Returns its

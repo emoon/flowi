@@ -134,11 +134,9 @@ static inline bool vfs_archive_entry_path_matches(const char* entry_path, const 
     return false;
 }
 
-// Enumerates the immediate children of `path` within a cached archive entry list.
-//
-// Emits each immediate child once (collapsing shared directory prefixes to a single entry) via
-// `callback`, consistent with filesystem directory semantics. Passing "." or "" lists the archive
-// root. Stops early if the callback returns false.
+// Calls callback once for each immediate child of path in a cached archive entry list, with shared
+// directory prefixes collapsed to one entry. Passing "." or "" lists the archive root. Stops early
+// if the callback returns false.
 
 static inline void vfs_archive_list_children(VfsCachedEntry* entries, FlString path, FlVfsListingCallback callback,
                                              void* user_data) {

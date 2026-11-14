@@ -1,8 +1,7 @@
 #[module(app)]
 
-/// Opaque handle for the app runner that owns the window, the per-frame update loop, and presentation. Every
-/// `fl_app_*` entry point takes a `*App`; the host holds it solely behind that pointer. Created by
-/// fl_app_create, destroyed by fl_app_destroy.
+/// Opaque handle for the app runner that owns the window, the per-frame update loop, and presentation.
+/// Created by fl_app_create, destroyed by fl_app_destroy.
 #[attributes(Opaque)]
 struct App {}
 
@@ -19,9 +18,8 @@ struct WindowSettings {
     y: i32,
 }
 
-/// Per-frame host callback. The host emits its UI inside this call (between the core's update_begin/update_end);
-/// the per-frame fl_frame_str arena is valid for its duration. user_data is the opaque pointer the host
-/// passed to fl_app_tick / fl_app_run.
+/// Per-frame host callback. The host emits its UI inside this call, and the per-frame fl_frame_str arena
+/// is valid for its duration. user_data is the opaque pointer the host passed to fl_app_tick / fl_app_run.
 callback AppFrameFn(user_data: *void)
 
 /// The app runner: create it, drive it one frame at a time with tick or block in run until quit, and emit
@@ -54,8 +52,8 @@ api App {
     /// Headless harness: inject a mouse-button transition. button is the MouseButton; down is press vs. release.
     /// Drives click detection a frame later.
     [manual] inject_mouse_button(app: *App, button: MouseButton, down: bool)
-    /// Headless harness: inject a raw relative-motion delta - a hidden-drag scrub. The delta is read that frame
-    /// (scaled) via the drag-delta query.
+    /// Headless harness: inject a raw relative-motion delta, as a hidden drag produces. The drag-delta query
+    /// reads it, scaled, that frame.
     inject_mouse_delta(app: *App, delta_x: f32, delta_y: f32)
     /// Headless harness: inject a mouse-wheel delta. x/y are the per-frame wheel deltas (positive y =
     /// scrolled up). Cached for that frame's scoped wheel-delta read, observed on the following tick.
@@ -65,14 +63,14 @@ api App {
     inject_key(app: *App, key: Key, down: bool)
     /// Headless harness: inject a text-input string for the active frame.
     [manual] inject_text(app: *App, text: String)
-    /// Headless harness: inject a window-close request - the next tick observes it and returns false.
+    /// Headless harness: inject a window-close request. The next tick observes it and returns false.
     [manual] inject_window_close(app: *App)
     /// Headless harness: inject an OS file drop at (x, y) in window pixels. Observed by the next tick's
     /// dropped-file queries.
     [manual] inject_drop_file(app: *App, path: String, x: f32, y: f32)
 
-    /// Headless harness: read back the CursorShape the core flushed to the
-    /// input backend on the last tick; a value outside the real shapes reads back as Arrow. The readback companion to the `inject_*` calls.
+    /// Headless harness: read back the CursorShape the core flushed to the input backend on the last tick.
+    /// A value outside the real shapes reads back as Arrow.
     [manual] headless_cursor_shape(app: *App) -> CursorShape
     /// Headless harness: read back the sticky relative-mouse-mode toggle the core flushed to the input backend
     /// on the last tick (on for the whole of a hidden drag).

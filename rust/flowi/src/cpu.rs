@@ -1,4 +1,4 @@
-//! CPU topology and thread affinity - which cores a heterogeneous SoC offers and
+//! CPU topology and thread affinity: which cores a heterogeneous SoC offers and
 //! how to pin a thread to a chosen set of them.
 //!
 //! Only Linux classifies cores (it reads /sys/devices/system/cpu/); elsewhere
@@ -35,11 +35,9 @@ pub fn performance_cores() -> Vec<i32> {
     })
 }
 
-/// Pin the calling thread to cpus, reporting whether the OS accepted it.
-///
-/// True only when the pinning was applied. False on a cpu id this machine does
-/// not have, and on every platform but Linux, which is the only one that
-/// performs affinity work at all.
+/// Pin the calling thread to cpus. Returns true only when the pinning was
+/// applied, and false for a cpu id this machine does not have and on every
+/// platform but Linux.
 ///
 /// An empty set returns false and leaves the thread's affinity unchanged.
 pub fn pin_current_thread(cpus: &[i32]) -> bool {

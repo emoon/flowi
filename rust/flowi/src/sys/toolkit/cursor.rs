@@ -19,7 +19,6 @@ pub enum CursorShape {
     ResizeDiagonal2 = 5,
     /// I-beam text caret.
     Text = 6,
-    /// Crosshair.
     Crosshair = 7,
     /// Not-allowed / blocked.
     NotAllowed = 8,
@@ -32,7 +31,7 @@ const _: () = {
     assert!(core::mem::align_of::<CursorShape>() == 4, "CursorShape align drift");
 };
 
-/// The opaque cursor handle fl_cursor_set takes, carrying a system CursorShape.
+/// The cursor value fl_cursor_set takes, carrying a system CursorShape.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Cursor {

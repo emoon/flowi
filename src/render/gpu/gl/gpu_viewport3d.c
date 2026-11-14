@@ -1,4 +1,4 @@
-// GPU backend: the hardware raster path behind Viewport3d and Mesh - the backend's only non-compute pipeline.
+// GPU backend: the hardware raster path behind Viewport3d and Mesh, the backend's only non-compute pipeline.
 //
 // Per viewport: a color + depth framebuffer, sized to the element's layout rect and rebuilt on resize. Per
 // mesh: a VAO over an interleaved vertex buffer plus a 16-bit index buffer, created once and drawn from any
@@ -6,7 +6,7 @@
 // hardware depth test (per draw), painter's order, no blending.
 //
 // The color target is registered in the image-slot table under the handle the core minted for it, so the UI's
-// raster pass samples it like a large static image and the slot table owns the texture's lifetime - this file
+// raster pass samples it like a large static image and the slot table owns the texture's lifetime; this file
 // never deletes it. Everything here runs on the render thread with the backend's GL context current, during the
 // frame callback and so ahead of the UI raster pass that samples the result.
 
@@ -89,7 +89,7 @@ static void setup_targets(GpuShared* self, GpuViewport3d* viewport, FlImageHandl
     // Publish the target as an ordinary image: the slot table resolves the handle for the raster pass and owns the
     // texture from here on. A full table fails here, before anything else is built.
     if (gpu_image_slots_register_static(&self->cpu.image_slots, color, width, height, (u32)color_tex) < 0) {
-        glDeleteTextures(1, &color_tex); // table full - register logged the reason
+        glDeleteTextures(1, &color_tex); // table full; register logged the reason
         return;                          // fbo stays 0, so the next submit retries instead of drawing into nothing
     }
 
@@ -197,7 +197,7 @@ void gpu_mesh_destroy(void* user_data, FlMeshHandle handle) {
 
 // Render one viewport's draw list. Opaque and unsorted: the depth buffer resolves visibility for
 // depth-tested draws, so their submission order does not matter, and blending stays off. Draws that opt out of
-// the depth test are the exception - they land in submission order, over whatever is already there.
+// the depth test are the exception: they land in submission order, over whatever is already there.
 
 void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color, u32 width, u32 height,
                            const f32* view_projection, const FlViewport3dDraw* draws, u32 draw_count) {
@@ -212,8 +212,8 @@ void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color
         setup_targets(self, viewport, color, width, height);
     }
     if (viewport->fbo == 0) {
-        // The target could not be built (setup_targets logged why). Bailing is not optional: framebuffer 0 is
-        // the default framebuffer, so falling through would draw this viewport's scene over the window itself.
+        // The target could not be built (setup_targets logged why). Framebuffer 0 is the default framebuffer,
+        // so falling through would draw this viewport's scene over the window.
         return;
     }
 
@@ -253,7 +253,7 @@ void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color
         }
 
         // A mesh texture is always a dedicated (never atlased) image, so it resolves to a whole slot texture
-        // and the mesh's UVs address it directly - no atlas sub-rect transform is involved.
+        // and the mesh's UVs address it directly, with no atlas sub-rect transform.
         int slot_index = gpu_image_slots_find_static(&self->cpu.image_slots, draws[i].texture);
         gl->Uniform1i(self->u_mesh3d_has_texture, slot_index >= 0 ? 1 : 0);
         if (slot_index >= 0) {
@@ -266,7 +266,7 @@ void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color
         glDrawElements(mesh->primitive, (GLsizei)mesh->index_count, GL_UNSIGNED_SHORT, (const void*)0);
     }
 
-    // Hand the context back exactly as the compute passes expect it: default framebuffer, no depth test, no
+    // Hand the context back as the compute passes expect it: default framebuffer, no depth test, no
     // bound VAO or sampler on the scratch unit.
     gl->BindVertexArray(0);
     gl->BindSampler(0, 0);
@@ -319,7 +319,7 @@ bool gpu_viewport3d_create(GpuShared* self) {
 }
 
 // Tear down the framebuffers, depth renderbuffers, mesh buffers, and the program. The viewports' color
-// textures are NOT freed here - they live in the slot table, which the backend's destroy drains.
+// textures are not freed here: they live in the slot table, which the backend's destroy drains.
 
 void gpu_viewport3d_destroy(GpuShared* self) {
     const GpuGl* gl = &self->gl;

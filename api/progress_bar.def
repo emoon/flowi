@@ -1,4 +1,4 @@
-/// Progress bar widget - determinate, non-interactive. Paints a track plus a fill sized to fraction.
+/// Progress bar widget: determinate, non-interactive. Paints a track plus a fill sized to fraction.
 #[frame_context]
 api ProgressBar {
     /// Paint a progress bar filled to fraction (normalized [0,1], clamped). config selects colors and

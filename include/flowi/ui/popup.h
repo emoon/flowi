@@ -15,7 +15,7 @@ extern "C" {
 
 // How a popup is positioned.
 typedef enum FlPopupAnchor {
-    // Anchor to the element identified by ui_popup's anchor id.
+    // Anchor to the element identified by begin's anchor_id.
     FlPopupAnchor_Element = 0,
     // Anchor to an absolute screen point captured by the caller.
     FlPopupAnchor_Point = 1,
@@ -23,7 +23,7 @@ typedef enum FlPopupAnchor {
 
 // One-shot outcome of a dialog.
 typedef enum FlDialogResult {
-    // Still open (or not open) - no decision this frame.
+    // No decision this frame: the dialog is still open, or not open.
     FlDialogResult_None = 0,
     // Dismissed via the confirm (OK) button.
     FlDialogResult_Confirmed = 1,
@@ -73,7 +73,7 @@ typedef struct FlMessageBoxConfig {
 // tooltip and message_box are standalone calls.
 // Begin a popup scope anchored to anchor_id with config; content declared within the scope is rendered
 // after the main UI. The scope closes when the returned guard drops, or explicitly by passing that guard to
-// end, which consumes it - so it can never close twice.
+// end, which consumes it, so it cannot close twice.
 FL_API void fl_popup_begin(FlLayoutId anchor_id, FlPopupConfig config);
 // End the popup scope opened by begin, consuming its guard so the scope closes exactly once.
 FL_API void fl_popup_end(void);

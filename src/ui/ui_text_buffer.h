@@ -5,8 +5,6 @@
 #include <core/string.h>
 #include <ctype.h>
 
-// Shared text-buffer helpers
-//
 // Character filtering and arena-backed buffer growth shared by the text-input widget
 // (ui_text_input.c) and the on-screen virtual keyboard (ui_virtual_keyboard.c).
 

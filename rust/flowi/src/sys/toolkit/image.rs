@@ -67,7 +67,7 @@ const _: () = {
     assert!(core::mem::align_of::<ResizeFilter>() == 4, "ResizeFilter align drift");
 };
 
-/// Sampling filter used when a texture is drawn at a size other than its own - the render IR's per-primitive
+/// Sampling filter used when a texture is drawn at a size other than its own: the render IR's per-primitive
 /// filter and the per-draw filter a Viewport3d mesh samples with. Distinct from ResizeFilter, which picks
 /// how pixels are resampled once at load time.
 #[repr(C)]
@@ -109,14 +109,13 @@ const _: () = {
 
 pub enum FlVfsMount {}
 
-/// Image widget drawing options. color tints the image (zero means transparent, so callers normally pass
-/// white for no tint); fill_container scales the image to its layout box instead of native size.
+/// Image widget drawing options.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ImageOpts {
-    /// Multiplicative tint color.
+    /// Multiplicative tint color. Zero is transparent, so pass white for no tint.
     pub color: crate::sys::Color,
-    /// If true, image grows to fill the parent container.
+    /// If true, the image scales to fill its layout box instead of drawing at native size.
     pub fill_container: bool,
 }
 
@@ -148,9 +147,7 @@ pub struct ImageLoadOptions {
     pub detect_black_border: bool,
     /// Preserve aspect ratio when resizing.
     pub preserve_aspect_ratio: bool,
-    /// Background/thumbnail composition mode.
     pub background_mode: crate::sys::BackgroundMode,
-    /// Resize sampling algorithm.
     pub resize_filter: crate::sys::ResizeFilter,
     /// Apply a vertical fade from the image toward `fade_*`.
     pub apply_vertical_fade: bool,
@@ -188,8 +185,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ImageLoadOptions, override_cache_path) == 48, "ImageLoadOptions.override_cache_path offset drift");
 };
 
-/// Public image metadata: logical dimensions only. No pixel data, stride, channel count, or format crosses the
-/// public image query boundary.
+/// Image metadata: logical dimensions only, with no pixel data, stride, channel count or format.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ImageData {
@@ -206,7 +202,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ImageData, height) == 4, "ImageData.height offset drift");
 };
 
-/// Public image query result. status is the raw VFS operation status; use image_get_status to interpret it.
+/// Image query result. status is the raw VFS operation status; use image_get_status to interpret it.
 /// data is valid when the status resolves to ImageStatus::Ready.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -265,7 +261,7 @@ extern "C" {
     pub fn fl_image_create_from_pixels(pixels: *const core::ffi::c_void, width: i32, height: i32, format: crate::sys::ImageFormat) -> crate::sys::ImageHandle;
     /// Like create_from_pixels, but the image always gets a texture of its own and never enters the shared
     /// image atlas. Required for anything a mesh samples, because mesh UVs address the whole texture. The flag
-    /// is fixed at creation - an image cannot be pulled out of the atlas afterwards.
+    /// is fixed at creation: an image cannot be pulled out of the atlas afterwards.
     pub fn fl_image_create_dedicated(pixels: *const core::ffi::c_void, width: i32, height: i32, format: crate::sys::ImageFormat) -> crate::sys::ImageHandle;
     /// Re-upload pixels into an existing handle, keeping its identity stable across the update. The
     /// dimensions and format are the ones the image was created with; the caller may free pixels after this

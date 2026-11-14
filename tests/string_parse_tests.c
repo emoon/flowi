@@ -3,7 +3,7 @@
 #include <float.h>
 #include <limits.h>
 
-// Helper macro to avoid sign comparison warnings
+// The casts avoid sign-comparison warnings.
 #define ASSERT_STATUS_EQ(actual, expected) ASSERT_EQ((int)(actual), (int)(expected))
 
 UTEST(string_parse, parse_u64_valid) {

@@ -68,9 +68,7 @@ typedef struct FlLayoutSizingAxis {
 
 // Width and height sizing for a container.
 typedef struct FlLayoutSizing {
-    // Horizontal sizing.
     FlLayoutSizingAxis width;
-    // Vertical sizing.
     FlLayoutSizingAxis height;
 } FlLayoutSizing;
 
@@ -112,9 +110,7 @@ typedef struct FlBorderWidthConfig {
 
 // Border color, widths, and dash pattern for a container.
 typedef struct FlLayoutBorder {
-    // Border color.
     FlColor color;
-    // Per-edge border widths.
     FlBorderWidthConfig width;
     // Dash pattern, one for the whole border (zeroed = solid). The between-children divider is
     // always solid.
@@ -123,13 +119,13 @@ typedef struct FlLayoutBorder {
 
 // Explicit content-space placement for a child. When enabled, the child is positioned at
 // offset in its parent's content coordinate space (the same space the clip scroll offset
-// lives in) - scrolling and clipping with the container - instead of by flex flow. A placed
+// lives in) instead of by flex flow, so it scrolls and clips with the container. A placed
 // child neither advances the flex cursor nor contributes to the parent's content extent, so
 // flowed siblings lay out as if it were absent. The offset is in already-zoomed reference pixels.
 typedef struct FlLayoutPlaced {
     // Content-space offset in reference pixels from the parent's origin.
     FlVec2 offset;
-    // Position by offset in content space instead of flex flow (default false → flex flow).
+    // Position by offset in content space instead of flex flow (default false: flex flow).
     bool enabled;
 } FlLayoutPlaced;
 
@@ -147,25 +143,19 @@ typedef struct FlCornerRadius {
 
 // Full configuration for one layout container, consumed by fl_layout_configure.
 typedef struct FlLayoutConfig {
-    // Width/height sizing.
     FlLayoutSizing sizing;
-    // Inner padding.
     FlLayoutPadding padding;
     // Gap between adjacent children, in reference pixels.
     uint16_t child_gap;
-    // Per-corner radius.
     FlCornerRadius radius;
-    // Alignment of children on both axes.
     FlLayoutChildAlignment child_alignment;
     // Row or column.
     FlLayoutDirection direction;
     // Background color.
     FlColor color;
-    // Clipping / scroll.
     FlLayoutClip clip;
-    // Border color and widths.
     FlLayoutBorder border;
-    // Explicit content-space placement (default disabled → normal flex flow).
+    // Explicit content-space placement (default disabled: normal flex flow).
     FlLayoutPlaced placed;
 } FlLayoutConfig;
 

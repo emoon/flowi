@@ -1,5 +1,4 @@
-// VFS Path Resolution
-// Resolves a mount's source path to a driver and one root handle, descending through nested archives
+// Resolves a mount's source path to a driver and one root handle, descending through nested archives.
 
 #include <core/log.h>
 #include <core/memory.h>

@@ -11,7 +11,7 @@ const CHILD_GATE: &str = "FL_UI_PANIC_ABORT_CHILD";
 fn panicking_callback_aborts() {
     if env::var_os(CHILD_GATE).is_some() {
         child_panics_in_frame();
-        return; // unreachable in practice - the line above aborts the process
+        return; // unreachable in practice: the line above aborts the process
     }
 
     let exe = env::current_exe().expect("locate test binary");

@@ -390,14 +390,14 @@ void ui_input_update(FlUiCtx* ctx, double dt) {
     state->mouse.wheel_x_cached = state->mouse.wheel_x;
     state->mouse.wheel_y_cached = state->mouse.wheel_y;
 
-    // Update input action system (evaluates actions before we clear flags)
+    // Evaluate actions before the flags are cleared.
     ui_actions_update(ctx);
 
     ctx->nav_next_pressed = ui_action_pressed(ctx, FlAction_Nav_Next);
     ctx->nav_prev_pressed = ui_action_pressed(ctx, FlAction_Nav_Prev);
     ctx->nav_activate_pressed = ui_action_pressed(ctx, FlAction_Confirm);
 
-    // Software repeat: trigger on initial press OR at intervals after delay
+    // Software repeat: trigger on initial press or at intervals after delay
     ctx->nav_frame.focused_id = ctx->focused_id;
     ctx->nav_frame.nav_up
         = ui_action_pressed(ctx, FlAction_Nav_Up)

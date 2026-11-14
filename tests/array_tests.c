@@ -89,7 +89,7 @@ UTEST(array, set_elements) {
     fixed_array_set(&int_array, 2, 200);
     fixed_array_set(&int_array, 1, 150);
 
-    ASSERT_EQ(fixed_array_length(&int_array), 3U); // Should grow to accommodate highest index + 1
+    ASSERT_EQ(fixed_array_length(&int_array), 3U); // the highest index set, plus one
     ASSERT_EQ(fixed_array_get(&int_array, 0), 100);
     ASSERT_EQ(fixed_array_get(&int_array, 1), 150);
     ASSERT_EQ(fixed_array_get(&int_array, 2), 200);
@@ -178,7 +178,7 @@ UTEST(array, capacity_exceeded) {
     ASSERT_TRUE(fixed_array_is_full(&int_array));
 
     i32 val3 = fixed_array_add(&int_array, 3);
-    ASSERT_EQ(val3, 0); // Should return default value when full
+    ASSERT_EQ(val3, 0); // a full array returns the zero value
     ASSERT_EQ(fixed_array_length(&int_array), 2U);
 
     fl_arena_destroy(arena);

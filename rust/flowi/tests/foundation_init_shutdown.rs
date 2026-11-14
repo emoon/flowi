@@ -53,7 +53,7 @@ fn the_foundation_survives_a_full_up_down_up_cycle() {
     // handle and runs no other thread.
     unsafe { flowi::shutdown() };
     // Already down: the second call has nothing left to destroy and must not double-free.
-    // SAFETY: as above - the foundation is already down and nothing uses it.
+    // SAFETY: as above; the foundation is already down and nothing uses it.
     unsafe { flowi::shutdown() };
 
     let second = flowi::init(1);

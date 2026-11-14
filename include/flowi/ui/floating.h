@@ -12,7 +12,7 @@ extern "C" {
 
 // Where a floating element attaches.
 typedef enum FlFloatingAttachTo {
-    // Floating disabled - the element lays out inline.
+    // Floating disabled: the element lays out inline.
     FlFloatingAttachTo_None = 0,
     // Attach to the parent element.
     FlFloatingAttachTo_Parent = 1,
@@ -47,7 +47,6 @@ typedef enum FlFloatingAttachPoint {
 typedef struct FlFloatingConfig {
     // Where to attach (default: None disables floating).
     FlFloatingAttachTo attach_to;
-    // Pointer-event handling.
     FlFloatingPointerCapture pointer_capture;
     // Layer order; higher draws on top.
     int16_t z_index;

@@ -4,7 +4,7 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum PopupAnchor {
-    /// Anchor to the element identified by ui_popup's anchor id.
+    /// Anchor to the element identified by begin's anchor_id.
     Element = 0,
     /// Anchor to an absolute screen point captured by the caller.
     Point = 1,
@@ -19,7 +19,7 @@ const _: () = {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DialogResult {
-    /// Still open (or not open) - no decision this frame.
+    /// No decision this frame: the dialog is still open, or not open.
     None = 0,
     /// Dismissed via the confirm (OK) button.
     Confirmed = 1,
@@ -109,7 +109,7 @@ const _: () = {
 extern "C" {
     /// Begin a popup scope anchored to anchor_id with config; content declared within the scope is rendered
     /// after the main UI. The scope closes when the returned guard drops, or explicitly by passing that guard to
-    /// end, which consumes it - so it can never close twice.
+    /// end, which consumes it, so it cannot close twice.
     pub fn fl_popup_begin(anchor_id: crate::sys::LayoutId, config: crate::sys::PopupConfig);
     /// End the popup scope opened by begin, consuming its guard so the scope closes exactly once.
     pub fn fl_popup_end();

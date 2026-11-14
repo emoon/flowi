@@ -19,13 +19,13 @@
 #import <QuartzCore/CAMetalLayer.h>
 #endif
 
-// Per-window handle - the OS window the host holds opaque and passes back to the per-window seams. window_id
+// Per-window handle: the OS window the host holds opaque and passes back to the per-window seams. window_id
 // demuxes the shared OS event queue per window.
 
 typedef struct FlWindow {
     SDL_Window* window;
     u32 window_id;
-    SDL_Renderer* renderer;  // software mode only (null in GL/Metal mode); owns the streaming blit
+    SDL_Renderer* renderer;  // software mode only (nullptr in GL/Metal mode); owns the streaming blit
     SDL_Texture* ui_texture; // software mode: streaming RGB24, (re)created to match the source size
     int tex_w;               // current ui_texture size, so a live resize triggers a recreate
     int tex_h;
@@ -35,7 +35,7 @@ typedef struct FlWindow {
 #endif
 } FlWindow;
 
-// SDL Window Backend context - the OS connection. In GL mode the single shared GL context + the compositor
+// SDL Window Backend context: the OS connection. In GL mode the single shared GL context + the compositor
 // program/VAO also live here, built with the first window and torn down with the last.
 
 typedef struct SdlWindowMode SdlWindowMode;
@@ -46,12 +46,12 @@ typedef struct SdlWindowContext {
     const SdlWindowMode* ops; // the construction mode: window create/destroy/measure + present path
 
 #if FL_WINDOW_HAVE_GPU
-    SDL_GLContext gl_ctx; // the single shared GL context; null until the first window creates it
+    SDL_GLContext gl_ctx; // the single shared GL context; nullptr until the first window creates it
     SdlCompositorGl gl;   // compositor GL entry points, resolved once with the shared context
     GLuint program;       // fullscreen-quad compositor program (shared)
     GLuint vao;           // empty VAO the core profile needs to draw (shared)
     bool gl_ready;        // the shared context + compositor are built
-    Uint64 last_present;  // perf-counter at the last swap (0 = none) - drives the adaptive frame-time cap
+    Uint64 last_present;  // perf-counter at the last swap (0 = none); drives the frame-time cap
     int window_count;     // live windows; the last one destroyed tears the shared GL state down
 #endif
 #if FL_WINDOW_HAVE_METAL
@@ -79,7 +79,7 @@ typedef struct SdlWindowParams {
 } SdlWindowParams;
 
 // One construction mode: how its windows are created, destroyed and measured, and the present slots it fills in the
-// FlWindowBackend (the slots a mode does not use stay null).
+// FlWindowBackend (the slots a mode does not use stay nullptr).
 struct SdlWindowMode {
     FlWindowBackendMode mode;
     const char* name;

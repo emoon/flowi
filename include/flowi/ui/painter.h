@@ -33,10 +33,8 @@ typedef enum FlPolylineFlags {
     FlPolylineFlags_closed = 2,
 } FlPolylineFlags;
 
-// Decorative effect kind. Drop-shadow and glow share one shape - a glow is a centered, additive shadow.
-// Packed to one byte so Effect can hold it typed without growing the record.
+// Decorative effect kind. Drop-shadow and glow share one shape: a glow is a centered, additive shadow.
 typedef enum __attribute__((__packed__)) FlEffectKind {
-    // No effect.
     FlEffectKind_None = 0,
     // A blurred copy of the shape, offset by (off_x, off_y) and drawn behind it.
     FlEffectKind_DropShadow = 1,
@@ -51,7 +49,6 @@ typedef enum __attribute__((__packed__)) FlEffectKind {
 typedef struct FlStroke {
     // stroke width in logical (authoring) px
     float width;
-    // stroke color
     FlColor color;
     // dash pattern; drawn by the rect and circle outlines on the GPU backend, solid everywhere else
     FlStrokeStyle dash;
@@ -75,18 +72,16 @@ typedef struct FlPolyPoint {
 typedef struct FlBar {
     // left edge
     float x;
-    // bar width
     float w;
     // height from the baseline; negative draws downward
     float h;
 } FlBar;
 
-// A decorative shadow or glow attached to a painter draw. Appearance only - it never changes geometry or
+// A decorative shadow or glow attached to a painter draw. It changes appearance only, never geometry or
 // hit-testing, and a backend that does not support effects skips it (today: the software backend, and text
 // runs on every backend). A zeroed effect is EffectKind::None, i.e. no effect.
 // Offsets and blur are logical (authoring) px and scale like every other painter length.
 typedef struct FlEffect {
-    // Which effect to draw.
     FlEffectKind kind;
     // Shadow / glow color.
     FlColor color;
@@ -98,10 +93,8 @@ typedef struct FlEffect {
     float blur;
 } FlEffect;
 
-// Fill styling for one rectangle: per-corner radius and per-corner colors, the two things the fill-rect
-// primitive can do at once. A solid fill is four equal corner colors (corner = {c, c, c, c}); differing
-// colors interpolate bilinearly across the quad. There is deliberately no single-color field: a zeroed
-// Color is legitimately transparent, so a fallback could not tell "unset" from "invisible".
+// Fill styling for one rectangle: per-corner radius and per-corner colors. A solid fill is four equal
+// corner colors (corner = {c, c, c, c}); differing colors interpolate bilinearly across the quad.
 typedef struct FlRectConfig {
     // Per-corner radius in logical (authoring) px; zeroed = square corners.
     FlCornerRadius radius;
@@ -116,23 +109,16 @@ typedef struct FlColoredRect {
     float x;
     // top edge
     float y;
-    // width
     float w;
-    // height
     float h;
-    // fill color
     FlColor color;
 } FlColoredRect;
 
 // The four corner colors of a Painter::gradient_rect, interpolated bilinearly across the rectangle.
 typedef struct FlCornerColors {
-    // top-left corner
     FlColor top_left;
-    // top-right corner
     FlColor top_right;
-    // bottom-left corner
     FlColor bottom_left;
-    // bottom-right corner
     FlColor bottom_right;
 } FlCornerColors;
 
@@ -174,16 +160,14 @@ typedef struct FlImageSub {
 
 // Custom-drawing primitives: the painter's shape, line, text, and image commands. Call these to draw
 // directly into the current frame.
-// Set the effect every later painter call in the current element carries - effects are group-shaped, so
-// one shadow covers a cluster of draws instead of being repeated per primitive. A zeroed effect
-// (kind = EffectKind::None) clears it. The effect is scoped to the element it was set in: it clears
-// when that element's layout scope closes and at the start of each frame, so it can never reach a
-// sibling, a nested child, or a later frame. Text draws ignore it - no backend resolves an effect on
-// a text run.
+// Set the effect every later painter call in the current element carries, so one shadow covers a
+// cluster of draws. A zeroed effect (kind = EffectKind::None) clears it. The effect is scoped to the
+// element it was set in: it clears when that element's layout scope closes and at the start of each
+// frame, so it never reaches a sibling, a nested child, or a later frame. Text draws ignore it.
 FL_API void fl_painter_set_effect(FlEffect effect);
 // Draw a filled rectangle: top-left (x, y), size (w, h), in logical (authoring) space.
 FL_API void fl_painter_rect(float x, float y, float w, float h, FlColor color);
-// Draw a batch of solid filled rectangles in one call - dense visuals such as a scope waveform's
+// Draw a batch of solid filled rectangles in one call, for dense visuals such as a scope waveform's
 // one-rectangle-per-pixel columns. The result is exactly that of calling rect() for each entry in
 // order: call order (later entries paint over earlier ones), alpha compositing, clipping, UI scaling,
 // the current effect and Canvas z-order all behave as in the scalar loop, on every render backend.
@@ -203,7 +187,7 @@ FL_API void fl_painter_gradient_rect(float x, float y, float w, float h, FlCorne
 // Draw a filled rectangle styled by config: per-corner radius and a per-corner color gradient in one
 // draw, which is what rect_rounded (solid only) and gradient_rect (square only) cannot express
 // together. Top-left (x, y), size (w, h), in logical space. Each radius clamps to half the smaller
-// dimension, so an over-large radius gives a pill rather than an artifact.
+// dimension, so an over-large radius gives a pill.
 FL_API void fl_painter_rect_styled(float x, float y, float w, float h, FlRectConfig config);
 // Draw a crisp 1px horizontal hairline of length from (x, y). Device-pixel snapped, so it stays sharp at
 // fractional scroll/zoom.
@@ -219,11 +203,11 @@ FL_API void fl_painter_line(float x0, float y0, float x1, float y1, FlStroke str
 FL_API void fl_painter_text(float x, float y, FlString text, FlFontId font, FlColor color);
 // Draw single-line text styled by style (font, fractional pixel size, letter spacing; zero fields
 // fall back: font_id 0 = active font, font_size 0 = the font's default size), in color, top-left
-// at (x, y). Sizes quantize internally to quarter-pixel steps - the same quantizer Text::measure
+// at (x, y). Sizes quantize internally to quarter-pixel steps, the same quantizer Text::measure
 // uses, so a measured run matches what gets drawn.
 FL_API void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, FlColor color);
 // Draw image image into the rect at top-left (x, y), size (w, h). image is the
-// `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
+// `ImageHandle` from Image::load. color multiplicatively tints the image; pass white
 // (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
 FL_API bool fl_painter_image(float x, float y, float w, float h, FlImageHandle image, FlColor color);
 // Draw a filled circle: center (cx, cy) and radius, in logical space.
@@ -245,14 +229,14 @@ FL_API void fl_painter_diamond_bordered(float cx, float cy, float rx, float ry, 
 // sweep runs clockwise. The stroke grows inward from radius, so a stroke width of radius or more
 // gives a filled sector. stroke.cap picks butt or round ends.
 FL_API void fl_painter_arc(float cx, float cy, float radius, float start_angle, float sweep, FlStroke stroke);
-// Draw a polyline. points are
-// vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
-// segments) and scales fill alpha. style carries the stroke and the optional fill.
+// Draw a polyline. points are vertices in logical (authoring) space; each vertex's intensity modulates
+// stroke alpha (lerped along segments) and scales fill alpha. style carries the stroke and the optional
+// fill.
 FL_API void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, FlPolylineStyle style);
-// Draw a row of bars off the shared baseline baseline_y - meters, spectrum analyzers, step sequencers.
-// The whole row is one draw, which is what a bar row buys over a rect per bar. Each bar carries its own
-// x, width, and height, all in logical (authoring) space; a negative height draws downward. This is an
-// optional-tier primitive: a backend may skip it (today the software backend does).
+// Draw a row of bars off the shared baseline baseline_y, for meters, spectrum analyzers and step
+// sequencers. The whole row is one draw. Each bar carries its own x, width, and height, all in logical
+// (authoring) space; a negative height draws downward. This is an optional-tier primitive: a backend
+// may skip it (today the software backend does).
 FL_API void fl_painter_bars(float baseline_y, const FlBar* bars, uint32_t bars_size, FlColor color);
 // Draw a source rectangle of an image, in source image pixels, into a destination rectangle in
 // logical (authoring) space. A non-positive destination width or height uses the source width or

@@ -182,7 +182,7 @@ impl Arena {
     ///
     /// The reference borrows the arena shared, so any number of allocations can
     /// coexist, but [`rewind`](Arena::rewind) (which takes &mut self) cannot run
-    /// while one is live. value's destructor never runs - it is abandoned at
+    /// while one is live. value's destructor never runs: it is abandoned at
     /// rewind/destroy.
     #[inline]
     pub fn alloc<T>(&self, value: T) -> &mut T {
@@ -235,7 +235,7 @@ impl Arena {
     }
 
     /// Run f over a scope arena savepoint, restoring it (via end) when f
-    /// returns - including on unwind, since ScopeGuard is a live local. The
+    /// returns, including on unwind, since ScopeGuard is a live local. The
     /// higher-ranked `for<'s>` lifetime means the scope arena (and anything
     /// borrowing it) cannot escape f.
     fn run_scoped<R>(
@@ -245,7 +245,7 @@ impl Arena {
     ) -> R {
         let scope = Arena::borrowed(mark.arena);
         // Dropped after f (reverse declaration order), so end runs once the
-        // scope's allocations are dead - on normal return and on panic alike.
+        // scope's allocations are dead, on normal return and on panic alike.
         let _guard = ScopeGuard { mark, end };
         f(&scope)
     }
@@ -278,7 +278,7 @@ impl Arena {
     }
 
     /// Like [`scratch`](Arena::scratch), but the scratch arena chosen avoids
-    /// conflict - use when the scratch result is copied into conflict so the
+    /// conflict. Use it when the scratch result is copied into conflict, so the
     /// two are never the same underlying arena.
     pub fn scratch_avoiding<R>(conflict: &Arena, f: impl for<'s> FnOnce(&'s Arena) -> R) -> R {
         // SAFETY: fl_arena_scratch_begin_conflict is a linked flowi-core export; conflict.raw is valid for conflict.
@@ -306,7 +306,7 @@ impl Drop for Arena {
     }
 }
 
-/// Restores a temp/scratch scope on drop - so the scope ends even if the closure
+/// Restores a temp/scratch scope on drop, so the scope ends even if the closure
 /// panics and unwinds.
 struct ScopeGuard {
     mark: TempArena,
@@ -460,7 +460,7 @@ impl<'a, T> ArenaVec<'a, T> {
     }
 
     /// Freeze the vector into a slice borrowing the arena for the rest of the
-    /// arena's borrow - consumes self so no further pushes can reallocate it.
+    /// arena's borrow. Consumes self so no further pushes can reallocate it.
     #[inline]
     pub fn into_slice(self) -> &'a mut [T] {
         // SAFETY: ptr addresses len initialized T in arena memory that lives
@@ -469,7 +469,7 @@ impl<'a, T> ArenaVec<'a, T> {
     }
 }
 
-/// A growable UTF-8 string backed by an arena - an [`ArenaVec<u8>`] that stays
+/// A growable UTF-8 string backed by an arena: an [`ArenaVec<u8>`] that stays
 /// valid UTF-8. Implements [`core::fmt::Write`], so write! and
 /// [`Arena::format`]/[`afmt!`](crate::afmt!) build into it.
 pub struct ArenaString<'a> {
@@ -522,7 +522,7 @@ impl<'a> ArenaString<'a> {
     }
 
     /// Freeze the string into a &str borrowing the arena for the rest of the
-    /// arena's borrow - consumes self.
+    /// arena's borrow. Consumes self.
     #[inline]
     pub fn into_str(self) -> &'a str {
         let bytes = self.bytes.into_slice();

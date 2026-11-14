@@ -113,7 +113,7 @@ void sr_render_image_scale(i16* output, const RenderCommand* command, f32x4 scis
         return;
     }
 
-    // Actual height, not padded_height, for the correct scaling ratio
+    // Unpadded height, not padded_height, for the correct scaling ratio
     float dest_height = f32x4_extract(command->aabb, 3) - f32x4_extract(command->aabb, 1);
     float src_height = (float)image->height;
     float y_scale = src_height / dest_height;

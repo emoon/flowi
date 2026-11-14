@@ -17,9 +17,9 @@ extern "C" {
     /// Request keyboard focus for list id on a popup's open edge: engages the list's own keyboard handling
     /// (arrows / Home / End / type-ahead / Enter-Space activate) AND claims the global focus ring so it survives
     /// the frame the trigger widget blurs. Seeds the focus cursor to cursor_id (a stable Item Id; 0 = first
-    /// row), validated against the ordered slice in begin with fallback to the first row. Opt-in and re-arm
-    /// guarded - the cursor is seeded only when the list did not already hold focus, so a stray every-frame call
-    /// is redundant rather than yanking a roving cursor.
+    /// row), validated against the ordered slice in begin with fallback to the first row. The cursor is
+    /// seeded only when the list did not already hold focus, so calling this every frame does not move a
+    /// roving cursor.
     pub fn fl_list_request_focus(id: crate::sys::LayoutId, cursor_id: u64);
 }
 

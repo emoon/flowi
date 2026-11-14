@@ -1,10 +1,8 @@
-// examples/shared_smoke - headless end-to-end proof that a sample app links and
-// runs against the shared library libflowi.so.
+// Links against the shared library libflowi.so and runs one headless frame.
 //
-// It uses only the curated exported surface: fl_init (core bootstrap), the
-// fl_app_* runner, and the fl_layout_* calls the ui_layout_area scope macro
-// expands to. Not a windowed demo or an automated test - run it manually from the
-// build tree. Automated shared-library smoke assertions are UTEST cases in
+// It uses only exported symbols: fl_init, the fl_app_* runner, and the
+// fl_layout_* calls the ui_layout_area scope macro expands to. Run it by hand
+// from the build tree. The automated shared-library checks are UTEST cases in
 // unit_tests.
 
 #include "app/app.h"

@@ -1,4 +1,4 @@
-//! A plain area never enters the interaction state on its own - only a widget's behavior or the
+//! A plain area never enters the interaction state on its own; only a widget's behavior or the
 //! [`scroll_target`] opt-in registers one.
 //!
 //! ui_scale is 1.0, so logical px equal physical px here and the fixed size reads back exactly.

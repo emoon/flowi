@@ -10,7 +10,7 @@ pub struct MountOptions<'a> {
     /// Where a caching driver writes its downloads. Empty selects the default
     /// cache; a directory given here must already exist.
     pub cache_dir: &'a str,
-    /// Revalidate cached files against the server (ETag) before using them - for
+    /// Revalidate cached files against the server (ETag) before using them, for
     /// a mutable remote resource. false uses the cache as-is.
     pub cache_validation: bool,
 }
@@ -25,11 +25,6 @@ impl MountOptions<'_> {
     }
 }
 
-/// Why a mount could not be opened.
-///
-/// This is the refusal: the request never became a mount. A mount that opens
-/// and then fails while its driver resolves it is a live [`Mount`] reporting
-/// [`MountStatus::Error`], not an error here.
 #[doc(inline)]
 pub use self::mount_error_decl::MountError;
 
@@ -56,8 +51,8 @@ macro_rules! mount_errors {
         }
 
         impl MountError {
-            /// Map a mount result's status. Success yields [`None`] - the caller has a
-            /// mount pointer to use instead.
+            /// Map a mount result's status. Success yields [`None`]: the caller has a
+            /// mount pointer to use.
             pub(super) fn from_status(status: sys::VfsMountErrorStatus) -> Option<MountError> {
                 match status {
                     sys::VfsMountErrorStatus::Success => None,
@@ -82,7 +77,7 @@ mod mount_error_decl {
         InvalidPath = InvalidPath, "invalid source path";
         /// No VFS driver claimed the source.
         PluginNotFound = PluginNotFound, "no VFS driver for this source";
-        /// A driver claimed it and failed to open it - missing, unreadable, denied.
+        /// A driver claimed it and failed to open it: missing, unreadable or denied.
         MountFailed = MountFailed, "the driver could not open the source";
         /// Allocation failed.
         OutOfMemory = OutOfMemory, "out of memory";
@@ -96,7 +91,7 @@ pub(super) use self::mount_error_decl::MOUNT_ERRORS;
 
 impl std::error::Error for MountError {}
 
-/// Mount readiness - the coarse state [`Mount::status`] reports.
+/// Mount readiness, the coarse state [`Mount::status`] reports.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum MountStatus {
     /// The mount operation is still in flight.
@@ -107,7 +102,7 @@ pub enum MountStatus {
     Error,
 }
 
-/// What a mount reports about itself, as owned values - the snapshot
+/// What a mount reports about itself, as owned values, the snapshot
 /// [`Mount::info`] takes.
 ///
 /// [`Mount::source_path`] is the zero-copy form of the path field.
@@ -135,7 +130,7 @@ pub struct Mount {
 }
 
 impl Mount {
-    /// Wrap a raw `FlVfsMount*` (as an opaque pointer) obtained from the flowi VFS -
+    /// Wrap a raw `FlVfsMount*` (as an opaque pointer) obtained from the flowi VFS:
     /// a mount a C caller opened and still owns.
     ///
     /// # Safety
@@ -173,7 +168,7 @@ impl Mount {
         }
     }
 
-    /// Where this mount was created from - the source path [`Vfs::mount`] was given.
+    /// Where this mount was created from: the source path [`Vfs::mount`] was given.
     ///
     /// Borrowed from the mount, not copied. [`Mount::info`] is the owning form.
     #[inline]
@@ -252,7 +247,7 @@ impl Mount {
     }
 
     /// A Send view of this mount, carrying the blocking form of the same
-    /// operations - what a job body reads through.
+    /// operations, which is what a job body reads through.
     ///
     /// A job body must read through this view rather than polling a [`Handle`]: the
     /// VFS runs its work on the same job pool, so a worker spinning on a handle can
@@ -260,8 +255,8 @@ impl Mount {
     /// returns. Do not use the view on the frame loop: every call blocks.
     ///
     /// # Safety
-    /// The mount must stay open until every holder of the returned view - and every
-    /// job body reading through one - is finished with it. The view is Send and
+    /// The mount must stay open until every holder of the returned view, and every
+    /// job body reading through one, is finished with it. The view is Send and
     /// carries no lifetime, so nothing but this promise ties it to the mount.
     #[inline]
     pub unsafe fn worker_view(&self) -> WorkerMount {
@@ -479,8 +474,8 @@ impl WorkerMount {
         if ticket == FL_VFS_HANDLE_INVALID {
             return Err(FlError::GenericError);
         }
-        // SAFETY: the caller's contract - ticket was just launched by this view and is not yet closed, so
-        // it is live for the wait and the drain, and this is the one place it is closed.
+        // SAFETY: by the caller's contract, ticket was just launched by this view and is not yet closed,
+        // so it is live for the wait and the drain, and this is the one place it is closed.
         unsafe {
             ffi::fl_vfs_wait(ticket);
             let drained = T::drain(ticket);
@@ -501,7 +496,7 @@ impl Vfs {
     /// Only needed when nothing else brings the VFS up (for example a test binary
     /// without an application). A second call is refused (false).
     ///
-    /// arena must outlive every mount opened against it - in practice the
+    /// arena must outlive every mount opened against it, in practice the
     /// process-wide arena `crate::init` returns.
     #[inline]
     pub fn init(arena: &crate::Arena) -> bool {
@@ -520,18 +515,18 @@ impl Vfs {
         unsafe { ffi::fl_vfs_register_builtin_drivers() }
     }
 
-    /// Mount source_path - a directory, an archive, or a URL; the VFS picks the
+    /// Mount source_path (a directory, an archive, or a URL); the VFS picks the
     /// driver. Uses the default [`MountOptions`].
     ///
     /// Mounting is asynchronous: this returns as soon as the request is accepted, and
     /// the mount reports [`MountStatus::Pending`] until its driver resolves it. A
-    /// mount that fails later still comes back here as a live handle - poll
+    /// mount that fails later still comes back here as a live handle; poll
     /// [`Mount::status`] for that. The [`Err`] is the request being refused outright.
     pub fn mount(source_path: &str) -> Result<OwnedMount, MountError> {
         Vfs::mount_with(source_path, MountOptions::default())
     }
 
-    /// Mount source_path with explicit options - a cache directory of your own,
+    /// Mount source_path with explicit options: a cache directory of your own,
     /// or revalidation against the server.
     pub fn mount_with(
         source_path: &str,

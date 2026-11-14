@@ -154,5 +154,3 @@ UTEST(pool_allocator, different_types) {
 
     fl_arena_destroy(arena);
 }
-
-// Test definitions only - main runner in core_tests.c

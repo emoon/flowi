@@ -10,7 +10,7 @@
 
 // Painting-scope bracketing. Every layout element open/close pushes/pops a painter scope in lockstep, capturing
 // the just-opened element's CUSTOM customData slot so painter calls inside the scope attach there. The
-// direct-Clay element opens elsewhere (popups, the text cursor) neither push nor pop - they are not painted into
+// direct-Clay element opens elsewhere (popups, the text cursor) neither push nor pop: they are not painted into
 // and keep the stack balanced with the public fl_layout_*/fl_floating_* opens, which always close via
 // fl_layout_end.
 
@@ -47,7 +47,7 @@ static void ui_apply_sizing(Clay_Sizing* out, FlLayoutSizing sizing, float scale
 }
 
 static void ui_open_element_with_id(FlLayoutId id) {
-    // Open with the full Clay element id - including its stringId, so Clay's hashmap retains the name.
+    // Open with the full Clay element id, including its stringId, so Clay's hashmap retains the name.
     Clay_ElementId element_id
         = Clay__HashString((Clay_String) { .chars = id.name.data, .length = (u32)id.name.length }, id.id);
 #ifndef NDEBUG
@@ -293,8 +293,8 @@ _Static_assert(offsetof(FlLayoutPadding, top) == offsetof(Clay_Padding, top),
 _Static_assert(offsetof(FlLayoutPadding, bottom) == offsetof(Clay_Padding, bottom),
                "FlLayoutPadding.bottom offset must match Clay_Padding.bottom");
 
-// FlCornerRadius member offsets - pin the generated type onto Clay's spelling so the
-// zero-cost pun (tl/tr/bl/br ↔ topLeft/topRight/bottomLeft/bottomRight) stays valid.
+// FlCornerRadius member offsets pin the generated type onto Clay's spelling so the
+// pun (tl/tr/bl/br onto topLeft/topRight/bottomLeft/bottomRight) stays valid.
 _Static_assert(offsetof(FlCornerRadius, tl) == offsetof(Clay_CornerRadius, topLeft),
                "FlCornerRadius.tl offset must match Clay_CornerRadius.topLeft");
 _Static_assert(offsetof(FlCornerRadius, tr) == offsetof(Clay_CornerRadius, topRight),

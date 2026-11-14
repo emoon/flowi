@@ -14,9 +14,7 @@
 #include "ui_variant_helpers.h"
 #include "ui_widget_internal.h"
 
-// Constants
-
-// Smooth scroll lerp factor - shared scroll_core default (higher = faster)
+// Smooth scroll lerp factor: the shared scroll_core default (higher = faster)
 #define SCROLL_SMOOTH_LERP_SPEED SCROLL_CORE_DEFAULT_SMOOTH_SPEED
 #define SCROLL_DEFAULT_SPEED 30.0f     // Default pixels per wheel tick
 #define SCROLL_DEFAULT_MARGIN 20.0f    // Default margin when scrolling to widget
@@ -361,7 +359,7 @@ void fl_scroll_area_begin(FlLayoutId id, FlScrollAreaConfig config) {
 
     ScrollAreaState* state = get_or_create_scroll_state(element_id);
     if (state == nullptr) {
-        // Fallback: render without scroll. Still push a stack entry with a null state (every stack consumer treats
+        // Fallback: render without scroll. Still push a stack entry with a nullptr state (every stack consumer treats
         // it as "no scroll tracking") so the paired fl_scroll_area_end pops this entry.
         scroll_stack_push(ctx, (ScrollAreaStackEntry) {
                                    .scroll_area_id = element_id,
@@ -515,14 +513,14 @@ bool ui_is_widget_visible(FlLayoutId widget_id) {
 
     FlVec2 viewport_pos, viewport_size;
     if (!get_element_bounds(scroll_area_id, &viewport_pos, &viewport_size)) {
-        return true; // Can't determine the viewport - assume visible
+        return true; // Can't determine the viewport; assume visible
     }
 
     // A widget absent from item_state this frame was culled out of the viewport (Clay emits no render command
     // for it), which counts as not visible.
     FlVec2 widget_pos, widget_size;
     if (!get_element_bounds(id, &widget_pos, &widget_size)) {
-        return false; // Culled out of the viewport = not visible
+        return false;
     }
 
     // Check if widget bounds intersect visible viewport (in screen space)
@@ -570,7 +568,7 @@ static f32 scroll_target_for_align(FlScrollAlignment align, f32 margin, ScrollTo
     return g.current_target;
 }
 
-// Internal helper that works with raw Clay ID (used by ui_scroll_auto_to_focused)
+// Takes the raw Clay id; used by ui_scroll_auto_to_focused.
 static void scroll_to_widget_internal(u32 widget_clay_id, FlScrollToOptions opts) {
     FlUiCtx* ctx = ui_get_ctx();
     if (ctx == nullptr) {
@@ -590,7 +588,7 @@ static void scroll_to_widget_internal(u32 widget_clay_id, FlScrollToOptions opts
     // item_state only contains elements emitted this frame; fully culled widgets have no bounds to scroll to.
     FlVec2 widget_pos, widget_size;
     if (!get_element_bounds(widget_clay_id, &widget_pos, &widget_size)) {
-        return; // Culled out of the viewport - position unknown, cannot scroll to it
+        return;
     }
 
     // Get scroll area viewport rect from item_state (screen space)

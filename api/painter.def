@@ -14,7 +14,6 @@ enum StrokeCap {
 struct Stroke {
     /// stroke width in logical (authoring) px
     width: f32,
-    /// stroke color
     color: Color,
     /// dash pattern; drawn by the rect and circle outlines on the GPU backend, solid everywhere else
     dash: StrokeStyle,
@@ -49,17 +48,14 @@ struct PolyPoint {
 struct Bar {
     /// left edge
     x: f32,
-    /// bar width
     w: f32,
     /// height from the baseline; negative draws downward
     h: f32,
 }
 
-/// Decorative effect kind. Drop-shadow and glow share one shape - a glow is a centered, additive shadow.
-/// Packed to one byte so Effect can hold it typed without growing the record.
+/// Decorative effect kind. Drop-shadow and glow share one shape: a glow is a centered, additive shadow.
 #[attributes(packed)]
 enum EffectKind {
-    /// No effect.
     None = 0,
     /// A blurred copy of the shape, offset by (off_x, off_y) and drawn behind it.
     DropShadow = 1,
@@ -67,13 +63,12 @@ enum EffectKind {
     Glow = 2,
 }
 
-/// A decorative shadow or glow attached to a painter draw. Appearance only - it never changes geometry or
+/// A decorative shadow or glow attached to a painter draw. It changes appearance only, never geometry or
 /// hit-testing, and a backend that does not support effects skips it (today: the software backend, and text
 /// runs on every backend). A zeroed effect is EffectKind::None, i.e. no effect.
 /// Offsets and blur are logical (authoring) px and scale like every other painter length.
 #[attributes(Copy)]
 struct Effect {
-    /// Which effect to draw.
     kind: EffectKind,
     /// Shadow / glow color.
     color: Color,
@@ -85,10 +80,8 @@ struct Effect {
     blur: f32,
 }
 
-/// Fill styling for one rectangle: per-corner radius and per-corner colors, the two things the fill-rect
-/// primitive can do at once. A solid fill is four equal corner colors (corner = {c, c, c, c}); differing
-/// colors interpolate bilinearly across the quad. There is deliberately no single-color field: a zeroed
-/// Color is legitimately transparent, so a fallback could not tell "unset" from "invisible".
+/// Fill styling for one rectangle: per-corner radius and per-corner colors. A solid fill is four equal
+/// corner colors (corner = {c, c, c, c}); differing colors interpolate bilinearly across the quad.
 #[attributes(Copy)]
 struct RectConfig {
     /// Per-corner radius in logical (authoring) px; zeroed = square corners.
@@ -105,24 +98,17 @@ struct ColoredRect {
     x: f32,
     /// top edge
     y: f32,
-    /// width
     w: f32,
-    /// height
     h: f32,
-    /// fill color
     color: Color,
 }
 
 /// The four corner colors of a Painter::gradient_rect, interpolated bilinearly across the rectangle.
 #[attributes(Copy)]
 struct CornerColors {
-    /// top-left corner
     top_left: Color,
-    /// top-right corner
     top_right: Color,
-    /// bottom-left corner
     bottom_left: Color,
-    /// bottom-right corner
     bottom_right: Color,
 }
 
@@ -168,16 +154,14 @@ struct ImageSub {
 /// directly into the current frame.
 #[frame_context]
 api Painter {
-    /// Set the effect every later painter call in the current element carries - effects are group-shaped, so
-    /// one shadow covers a cluster of draws instead of being repeated per primitive. A zeroed effect
-    /// (kind = EffectKind::None) clears it. The effect is scoped to the element it was set in: it clears
-    /// when that element's layout scope closes and at the start of each frame, so it can never reach a
-    /// sibling, a nested child, or a later frame. Text draws ignore it - no backend resolves an effect on
-    /// a text run.
+    /// Set the effect every later painter call in the current element carries, so one shadow covers a
+    /// cluster of draws. A zeroed effect (kind = EffectKind::None) clears it. The effect is scoped to the
+    /// element it was set in: it clears when that element's layout scope closes and at the start of each
+    /// frame, so it never reaches a sibling, a nested child, or a later frame. Text draws ignore it.
     set_effect(effect: Effect)
     /// Draw a filled rectangle: top-left (x, y), size (w, h), in logical (authoring) space.
     rect(x: f32, y: f32, w: f32, h: f32, color: Color)
-    /// Draw a batch of solid filled rectangles in one call - dense visuals such as a scope waveform's
+    /// Draw a batch of solid filled rectangles in one call, for dense visuals such as a scope waveform's
     /// one-rectangle-per-pixel columns. The result is exactly that of calling rect() for each entry in
     /// order: call order (later entries paint over earlier ones), alpha compositing, clipping, UI scaling,
     /// the current effect and Canvas z-order all behave as in the scalar loop, on every render backend.
@@ -197,7 +181,7 @@ api Painter {
     /// Draw a filled rectangle styled by config: per-corner radius and a per-corner color gradient in one
     /// draw, which is what rect_rounded (solid only) and gradient_rect (square only) cannot express
     /// together. Top-left (x, y), size (w, h), in logical space. Each radius clamps to half the smaller
-    /// dimension, so an over-large radius gives a pill rather than an artifact.
+    /// dimension, so an over-large radius gives a pill.
     rect_styled(x: f32, y: f32, w: f32, h: f32, config: RectConfig)
     /// Draw a crisp 1px horizontal hairline of length from (x, y). Device-pixel snapped, so it stays sharp at
     /// fractional scroll/zoom.
@@ -213,11 +197,11 @@ api Painter {
     text(x: f32, y: f32, text: String, font: FontId, color: Color)
     /// Draw single-line text styled by style (font, fractional pixel size, letter spacing; zero fields
     /// fall back: font_id 0 = active font, font_size 0 = the font's default size), in color, top-left
-    /// at (x, y). Sizes quantize internally to quarter-pixel steps - the same quantizer Text::measure
+    /// at (x, y). Sizes quantize internally to quarter-pixel steps, the same quantizer Text::measure
     /// uses, so a measured run matches what gets drawn.
     text_styled(x: f32, y: f32, text: String, style: TextStyle, color: Color)
     /// Draw image image into the rect at top-left (x, y), size (w, h). image is the
-    /// `ImageHandle` from Image::load. color multiplicatively tints the image - pass white
+    /// `ImageHandle` from Image::load. color multiplicatively tints the image; pass white
     /// (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
     image(x: f32, y: f32, w: f32, h: f32, image: ImageHandle, color: Color) -> bool
     /// Draw a filled circle: center (cx, cy) and radius, in logical space.
@@ -239,14 +223,14 @@ api Painter {
     /// sweep runs clockwise. The stroke grows inward from radius, so a stroke width of radius or more
     /// gives a filled sector. stroke.cap picks butt or round ends.
     arc(cx: f32, cy: f32, radius: f32, start_angle: f32, sweep: f32, stroke: Stroke)
-    /// Draw a polyline. points are
-    /// vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
-    /// segments) and scales fill alpha. style carries the stroke and the optional fill.
+    /// Draw a polyline. points are vertices in logical (authoring) space; each vertex's intensity modulates
+    /// stroke alpha (lerped along segments) and scales fill alpha. style carries the stroke and the optional
+    /// fill.
     polyline(points: [*const PolyPoint], style: PolylineStyle)
-    /// Draw a row of bars off the shared baseline baseline_y - meters, spectrum analyzers, step sequencers.
-    /// The whole row is one draw, which is what a bar row buys over a rect per bar. Each bar carries its own
-    /// x, width, and height, all in logical (authoring) space; a negative height draws downward. This is an
-    /// optional-tier primitive: a backend may skip it (today the software backend does).
+    /// Draw a row of bars off the shared baseline baseline_y, for meters, spectrum analyzers and step
+    /// sequencers. The whole row is one draw. Each bar carries its own x, width, and height, all in logical
+    /// (authoring) space; a negative height draws downward. This is an optional-tier primitive: a backend
+    /// may skip it (today the software backend does).
     bars(baseline_y: f32, bars: [*const Bar], color: Color)
     /// Draw a source rectangle of an image, in source image pixels, into a destination rectangle in
     /// logical (authoring) space. A non-positive destination width or height uses the source width or

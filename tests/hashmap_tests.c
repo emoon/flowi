@@ -135,7 +135,7 @@ UTEST(hashmap, clear_and_reuse) {
         ASSERT_EQ(hashmap_get(&map, i), nullptr);
     }
 
-    // Should be able to insert again (tests free list)
+    // An insert after a clear takes its node from the free list.
     hashmap_insert(&map, (u64)42, (u64)4200);
     u64* val = hashmap_get(&map, (u64)42);
     ASSERT_NE(val, nullptr);
@@ -380,7 +380,7 @@ UTEST(hashmap, string_keys_iteration) {
 UTEST(hashmap, string_keys_collision_handling) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    // Small capacity to potentially force collisions
+    // A small capacity makes collisions likely.
     hashmap(FlString, int) map;
     hashmap_new(&map, arena, 4);
 
@@ -425,7 +425,7 @@ UTEST(hashmap, string_keys_clear_and_reuse) {
         ASSERT_FALSE(hashmap_string_contains(&map, keys[i]));
     }
 
-    // Should be able to insert again (tests free list)
+    // An insert after a clear takes its node from the free list.
     FlString new_key = FL_S("newkey");
     hashmap_string_insert(&map, new_key, 9999);
     int* val = hashmap_string_get(&map, new_key);

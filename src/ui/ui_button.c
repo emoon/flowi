@@ -81,7 +81,7 @@ FlSignal ui_button_with_image_impl(FlString text, ImageHandle image, FlWidgetCon
 // clang-format on
 
 // Determinate progress bar: a track that grows to fill its width, with a fill rect sized to a caller-owned
-// fraction of the track. Pure paint - no id, no behavior pass, no animation.
+// fraction of the track. It only paints: there is no id, behavior pass or animation.
 
 void ui_progress_bar_impl(float fraction, FlProgressConfig cfg) {
     FlUiCtx* self = g_ui_ctx;
@@ -102,15 +102,13 @@ void ui_progress_bar_impl(float fraction, FlProgressConfig cfg) {
 
     ui_layout_area(.sizing = { sizing_grow(0), sizing_fixed(track_height) }, .radius = corner_radius(FlRadius_Full),
                    .color = track_color) {
-        // sizing_percent is 0..1. A zero fraction emits no fill rect - an empty bar is just the bare track.
+        // sizing_percent is 0..1. A zero fraction emits no fill rect, so an empty bar is the bare track.
         if (fraction > 0.0f) {
             ui_layout_area(.sizing = { sizing_percent(fraction), sizing_fixed(track_height) },
                            .radius = corner_radius(FlRadius_Full), .color = fill_color) {}
         }
     }
 }
-
-// Link widget - clickable text with underline for hyperlinks
 
 FlSignal ui_link_impl(FlString text, FlLinkConfig cfg) {
     FlUiCtx* self = g_ui_ctx;

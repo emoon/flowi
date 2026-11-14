@@ -20,7 +20,7 @@ typedef struct InternalImageData {
     int padded_width;  // Actual buffer width (width + 1 for bilinear padding)
     int padded_height; // Actual buffer height (height + 1 for bilinear padding)
     int stride;        // Bytes per row (including padding)
-    int channels;      // Number of channels (1, 3, or 4)
+    int channels;      // 1, 3, or 4
     FlImageFormat format;
     VfsOpStatus status;
 } InternalImageData;
@@ -38,12 +38,12 @@ typedef struct ImageCacheEntry {
 
 typedef struct EvictedImageEntry {
     FlVfsMount* mount;
-    FlString relative_path;     // Path (string allocator)
-    FlImageLoadOptions options; // Original load options
+    FlString relative_path; // allocated from the cache's string allocator
+    FlImageLoadOptions options;
     _Atomic u64 eviction_frame;
 } EvictedImageEntry;
 
-// SW-cache internal entry points - called from the SW image backend, in the job worker thread.
+// SW-cache internal entry points, called from the SW image backend on the job worker thread.
 
 /// Allocate an entry in the image cache (copies the planar pixels into the TLSF pool)
 ImageCacheEntry* image_cache_alloc_entry(InternalImageData* image);

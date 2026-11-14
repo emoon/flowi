@@ -201,13 +201,13 @@ ImageResult image_get_data(ImageHandle handle) {
 // leaves the active set, so readiness is re-read once the load reads as inactive.
 
 ImageResult image_resolve_unrealized(ImageHandle handle) {
-    // A failed in-memory decode has no VFS handle behind it - the synthetic handle never resolves through the
+    // A failed in-memory decode has no VFS handle behind it. The synthetic handle never resolves through the
     // VFS status checks below, so this is the only place a poller can observe the failure.
     if (image_system_load_failed(s_image_system, (FlImageLoadRequestId)handle)) {
         return (ImageResult) { .status = VFS_STATE_ERROR };
     }
 
-    // Not realized yet - pending vs error still comes from the VFS/decode path. Handle is the VFS handle.
+    // Not realized yet. Pending vs error comes from the VFS/decode path, and handle is the VFS handle.
     FlVfsHandle vfs_handle = (FlVfsHandle)handle;
 
     VfsOpStatus vfs_status = vfs_get_status(vfs_handle);
@@ -236,7 +236,7 @@ ImageResult image_resolve_unrealized(ImageHandle handle) {
         return (ImageResult) { .status = VFS_STATE_PENDING };
     }
 
-    // VFS ready, not deferred, and no realization ack landed - the decode or realization failed.
+    // VFS ready, not deferred, and no realization ack landed, so the decode or realization failed.
     log_error("image_get_data: VFS ready but not realized for handle=%u (vfs_status=0x%08x, core=0x%02x, sub=0x%04x)",
               (unsigned)handle, (unsigned)vfs_status, (unsigned)vfs_get_core_state(vfs_status),
               (unsigned)vfs_get_subsystem_error(vfs_status));

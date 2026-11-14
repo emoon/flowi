@@ -1,7 +1,7 @@
-// Dock Persistence - serialize/restore a workspace layout + the rebind-on-load rules. Data in / data out: no UI
-// context, no file I/O (that lives in the dock_workspace hooks). A restored tree is rebuilt node-by-node into a
-// fresh dock_tree's arena and then validated through the dock_tree invariant chokepoint, so a malformed blob can
-// never produce a holed tree.
+// Dock Persistence: serialize and restore a workspace layout, plus the rebind-on-load rules. Nothing here touches
+// the UI context or does file I/O (that lives in the dock_workspace hooks). A restored tree is rebuilt node by node
+// into a fresh dock_tree's arena and then validated by dock_tree_check_invariants, so a malformed blob fails the
+// load.
 
 #include "dock_persist.h"
 
@@ -14,9 +14,8 @@
 #include <math.h>
 #include <string.h>
 
-// u64 <-> decimal-string. Panel and workspace ids are full 64-bit, so they are serialized as decimal strings to
-// preserve every bit - JSON numbers route through the builder's i64 setter, which would mangle ids at or above
-// 2^63.
+// Panel and workspace ids are full 64-bit, so they are serialized as decimal strings. JSON numbers go through the
+// builder's i64 setter, which would mangle ids at or above 2^63.
 
 // Write v in decimal into dst (which must hold at least 20 chars) and return the digit count.
 static u32 write_u64_digits(char* dst, u64 v) {
@@ -75,7 +74,7 @@ static FlDockNode* leftmost_leaf(FlDockNode* node) {
 
 // Serialize
 
-// Panel ids as a single space-separated decimal string ("" when empty) - the json builder has no standalone
+// Panel ids as a single space-separated decimal string ("" when empty). The json builder has no standalone
 // string/number value constructor for array elements.
 static FlString id_list_to_str(FlArena* arena, const FlDockPanelId* ids, u32 count) {
     if (count == 0) {
@@ -160,8 +159,8 @@ static void parse_id_list(FlDockTree* tree, FlDockNode* leaf, FlString list, boo
     }
 }
 
-// Depth ceiling on the reconstructed tree. Past it build_node returns null, leaving a split short a child - a
-// shape dock_tree_check_invariants rejects, so an over-nested blob fails the load rather than yielding a tree.
+// Depth ceiling on the reconstructed tree. Past it build_node returns nullptr, leaving a split short a child.
+// dock_tree_check_invariants rejects that shape, so an over-nested blob fails the load.
 #define DOCK_PERSIST_MAX_DEPTH 64
 
 static FlDockNode* build_node(FlDockTree* tree, const FlJsonValue* nj, FlDockNode* parent, u32 depth) {
@@ -188,7 +187,7 @@ static FlDockNode* build_node(FlDockTree* tree, const FlJsonValue* nj, FlDockNod
     return node;
 }
 
-// Rebuild one workspace's tree from JSON, or null if the result fails the invariant checker. The fresh tree's
+// Rebuild one workspace's tree from JSON, or nullptr if the result fails the invariant checker. The fresh tree's
 // original floor leaf leaks into its arena.
 static FlDockTree* build_tree(const FlJsonValue* wsj) {
     FlDockTree* tree = dock_tree_create();
@@ -235,7 +234,7 @@ FlDockPersistLoad dock_persist_from_json(const FlJsonValue* blob, FlArena* arena
         const FlJsonValue* wsj = e->value;
         FlDockTree* tree = build_tree(wsj);
         if (tree == nullptr) {
-            // Malformed tree - release everything built so far.
+            // Malformed tree: release everything built so far.
             for (u32 j = 0; j < i; ++j) {
                 dock_tree_destroy(list[j].tree);
             }
@@ -286,7 +285,6 @@ static void reparent_to_root(FlDockTree* target, FlDockPanelId p) {
 }
 
 // Close every panel in tree that declared does not name. Callers skip this for an empty roster.
-
 static void prune_undeclared(FlDockTree* tree, const FlDockPanelId* declared, u32 declared_count) {
     u32 total = dock_tree_collect_panels(tree, nullptr, 0);
     if (total == 0) {
@@ -308,8 +306,7 @@ static void prune_undeclared(FlDockTree* tree, const FlDockPanelId* declared, u3
 }
 
 // Dock every parked panel into tree's root region, emptying the floating set. The count is cleared before the
-// walk, not after, so each re-dock is a plain insert and the saved order survives.
-
+// walk, so each re-dock is a plain insert and the saved order survives.
 static void drain_floating(FlDockTree* tree) {
     u32 count = tree->floating_count;
     tree->floating_count = 0;
@@ -389,7 +386,7 @@ void dock_persist_reconcile(FlDockPersistLoad* load, const u64* live_ws_ids, u32
         }
     }
 
-    // Dock every floating panel at its tree root.
+    // floating-drains-on-load: dock every floating panel at its tree root.
     for_count(i, load->count) {
         drain_floating(load->workspaces[i].tree);
     }

@@ -2,8 +2,8 @@
 
 extern opaque FlVfsMount
 
-/// Mount readiness - the coarse state fl_vfs_mount_get_status reports. Distinct from
-/// the driver-side hierarchical FlVfsStatus: consumers poll readiness only.
+/// Mount readiness, as reported by fl_vfs_mount_get_status. The driver-side FlVfsStatus
+/// carries the detailed error codes.
 enum VfsMountStatus {
     /// Mount operation in progress.
     Pending,
@@ -13,20 +13,19 @@ enum VfsMountStatus {
     Error,
 }
 
-/// Async operation priority - maps to the job system priority. Low is background/
-/// prefetch (runs when workers are idle); High/Highest is user-visible content.
+/// Async operation priority. Maps to the job system priority.
 enum VfsLoadPriority {
-    /// Background/prefetch - lowest priority.
+    /// Background or prefetch work, run when workers are idle.
     Low = 0,
     /// Default priority.
     Normal = 1,
-    /// High priority - visible content.
+    /// User-visible content.
     High = 2,
     /// Highest priority (maps to High in the job system).
     Highest = 3,
 }
 
-/// Detailed mount error code - the status field of VfsMountResult. Check for
+/// Detailed mount error code: the status field of VfsMountResult. Check for
 /// Success before using the returned mount pointer.
 enum VfsMountErrorStatus {
     /// Mount succeeded.
@@ -46,7 +45,7 @@ enum VfsMountErrorStatus {
 /// Result of a mount operation: a mount handle plus a detailed status. Check
 /// status == FlVfsMountErrorStatus_Success before using mount.
 struct VfsMountResult {
-    /// Mount handle (nullptr on error).
+    /// Mount handle (null on error).
     mount: *FlVfsMount,
     /// Success or a specific error code.
     status: VfsMountErrorStatus,
@@ -57,7 +56,7 @@ struct VfsMountResult {
 /// Result of a directory-listing operation. Check success; entries is a
 /// borrowed array of count entries valid until the owning handle is closed.
 struct VfsFileList {
-    /// Array of entries (nullptr on error).
+    /// Array of entries (null on error).
     entries: *VfsEntry,
     /// Number of entries (0 on error).
     count: u32,
@@ -71,7 +70,7 @@ struct VfsFileList {
 /// Result of a file-read operation. Check success; data/size are the read
 /// bytes, owned by the VFS and freed on close.
 struct VfsData {
-    /// File data (nullptr on error).
+    /// File data (null on error).
     data: *u8,
     /// File size in bytes (0 on error).
     size: i64,
@@ -92,7 +91,7 @@ struct VfsMountInfo {
 
 /// Optional post-processing callback invoked on read data. Receives the raw
 /// buffer, its size, and the caller's opaque user_data; returns the (possibly
-/// transformed) VfsData. A failed read invokes it once with data == nullptr
+/// transformed) VfsData. A failed read invokes it once with data == null
 /// and size == 0 so it can release what user_data owns; the VfsData it
 /// returns is ignored on that path.
 callback VfsReadCallback(data: *void, size: i64, user_data: *void) -> VfsData
@@ -104,9 +103,8 @@ callback VfsReadCallback(data: *void, size: i64, user_data: *void) -> VfsData
 /// thread drops that last reference, outside every VFS lock.
 callback VfsReleaseCallback(user_data: *void)
 
-/// The `fl_vfs_*` consumer service API - non-blocking virtual filesystem access
-/// exported as plain C symbols the toolkit and plugins call directly. All operations are async: launch
-/// returns a handle, then poll fl_vfs_is_ready before reading the result. Plugins link the shared library and call these symbols directly.
+/// Non-blocking virtual filesystem access. All operations are async: the call returns a handle, and
+/// the caller polls fl_vfs_is_ready before reading the result.
 #[attributes(service)]
 api Vfs {
     /// Mount a resource (archive, URL, or directory) with options.
@@ -136,9 +134,9 @@ api Vfs {
 
     /// Check if an async operation is complete (non-blocking).
     fl_vfs_is_ready(handle: u32) -> bool
-    /// Block until an async operation completes. The wait participates in the job
-    /// system - a worker thread that calls it keeps stealing work instead of idling -
-    /// so it is safe from inside a job body. Never call it from the frame loop.
+    /// Block until an async operation completes. A worker thread that calls it keeps
+    /// stealing work while it waits, so it is safe from inside a job body. Never call it
+    /// from the frame loop.
     fl_vfs_wait(handle: u32)
     /// Get the data from a completed read operation. Call only after fl_vfs_is_ready.
     fl_vfs_get_data(handle: u32) -> VfsData

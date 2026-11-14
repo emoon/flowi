@@ -38,8 +38,8 @@ static id<MTLTexture> metal_make_texture(id<MTLDevice> device, MTLPixelFormat fm
 }
 
 // One row per backend-wide texture create() brings up: where the +1-retained texture lands, its four descriptor
-// knobs, and the name a failure is logged under. The per-surface target is not built through this - its failure is
-// recoverable, not a backend abort.
+// knobs, and the name a failure is logged under. The per-surface target is not built through this, because its
+// failure is recoverable.
 typedef struct MetalTextureSpec {
     id<MTLTexture>* out;
     MTLPixelFormat fmt;
@@ -69,7 +69,7 @@ static bool metal_make_textures(id<MTLDevice> device, const MetalTextureSpec* sp
 
 // IOSurface-backed offscreen target for the cross-process accessor: one RGBA8 IOSurface at w x h wrapped in an
 // id<MTLTexture> with the same ShaderWrite|ShaderRead usage the private target carries. An IOSurface-backed texture
-// cannot use private storage - it is Shared on unified-memory devices and Managed on discrete ones. Both the
+// cannot use private storage; it is Shared on unified-memory devices and Managed on discrete ones. Both the
 // IOSurface (+1) and the texture (+1) are owned by the caller. Returns nil on failure, *out_surface left nullptr.
 static id<MTLTexture> metal_make_iosurface_texture(id<MTLDevice> device, u32 w, u32 h, IOSurfaceRef* out_surface) {
     *out_surface = nullptr;
@@ -124,7 +124,7 @@ static id<MTLTexture> metal_make_slot_texture(id<MTLDevice> device, u32 w, u32 h
 }
 
 // Realize a slot texture into the pool: claim a free pool index, create the texture, and hand back the slot
-// module's opaque name - the 1-based pool index, keeping 0 as its "unrealized" sentinel. The pool is sized so a
+// module's opaque name: the 1-based pool index, with 0 kept as its "unrealized" sentinel. The pool is sized so a
 // claim cannot fail within the slot module's table + dead-list bounds, so a full pool means a leak elsewhere.
 // Returns 0 with the failure logged when the pool is full or creation fails, leaving the entry unrealized.
 u32 metal_slot_realize(MetalShared* self, u32 w, u32 h, bool alpha_only, bool force_opaque) {
@@ -161,7 +161,7 @@ void metal_texture_upload(id<MTLTexture> tex, u32 x, u32 y, u32 w, u32 h, u32 st
 
 // Drain the slot module's dead-texture list: the u32 names are 1-based pool indices, so release each pooled
 // texture and free its slot. The only drain site, called at frame begin after begin_frame queues this frame's
-// evictions. Teardown does not drain - destroy releases the whole pool wholesale.
+// evictions. Teardown does not drain; destroy releases the whole pool.
 static void metal_slot_drain_dead(MetalShared* self) {
     const u32* dead = nullptr;
     u32 count = gpu_image_slots_take_dead(&self->cpu.image_slots, &dead);
@@ -215,7 +215,7 @@ static void metal_setup_resolution(MetalShared* self, MetalSurface* surface, int
         }
 
         // Per-tile classification list SSBO, sized to the tile grid: classify writes each tile's
-        // [count, overflow, index * TILE_CAPACITY], raster reads it back the same frame. Private - produced and
+        // [count, overflow, index * TILE_CAPACITY], raster reads it back the same frame. Private: produced and
         // consumed entirely on the GPU.
         NSUInteger tile_bytes = (NSUInteger)surface->tile_cols * (NSUInteger)surface->tile_rows
                                 * (NSUInteger)GPU_TILE_STRIDE_U32 * sizeof(u32);
@@ -232,7 +232,7 @@ static void metal_setup_resolution(MetalShared* self, MetalSurface* surface, int
 }
 
 // Surface lifecycle: a Metal surface owns the offscreen RGBA8 target and the CPU readback buffer, both in one
-// per-surface arena - the struct first, then a readback_reset savepoint past it. destroy_surface releases the
+// per-surface arena: the struct first, then a readback_reset savepoint past it. destroy_surface releases the
 // target texture and frees that arena wholesale. The host calls it before the backend's destroy().
 
 static FlSurface* metal_create_surface(void* user_data, int width, int height) {
@@ -255,10 +255,10 @@ static void metal_destroy_surface(void* user_data, FlSurface* surface_handle) {
     METAL_RELEASE(surface->target);
     METAL_CF_RELEASE(surface->iosurface); // the cross-process backing, if the host ever requested it
     METAL_RELEASE(surface->tile_buf);
-    fl_arena_destroy(surface->arena); // frees the readback buffer AND the MetalSurface struct itself (dangling after this)
+    fl_arena_destroy(surface->arena); // frees the readback buffer and the MetalSurface struct itself
 }
 
-// Neutral RenderInterface seams (vtable).
+// FlRenderBackend seams (vtable).
 
 static void metal_change_resolution(void* user_data, FlSurface* surface_handle, int width, int height) {
     MetalShared* self = user_data;
@@ -292,8 +292,8 @@ id<MTLBuffer> metal_upload_ssbo(id<MTLDevice> device, const void* data, NSUInteg
 // canonical per-frame order. The backend/surface handles arrive as void* and cast back to MetalShared/MetalSurface.
 
 // Per-frame preamble: advance the slot table (evicting stale dynamic entries) and release the textures freed since
-// the last render - both before translation, which rebuilds the slot table. Eviction happens only here, never
-// mid-translation, where the slot table holds indices into the entry array.
+// the last render. Both run before translation, which rebuilds the slot table. Eviction happens only here,
+// because mid-translation the slot table holds indices into the entry array.
 static void metal_op_frame_begin(void* backend) {
     MetalShared* self = backend;
     gpu_image_slots_begin_frame(&self->cpu.image_slots);
@@ -355,7 +355,7 @@ static void metal_op_begin_encoder(void* backend, void* surface) {
 static void metal_op_upload_inputs(void* backend, const GpuDrawList* list) {
     MetalShared* self = backend;
     if (self->frame_enc == nil) {
-        return; // no encoder to feed - do not allocate buffers no dispatch will read
+        return; // no encoder to feed, so no dispatch would read these buffers
     }
     self->frame_cmd_buf =
         metal_upload_ssbo(self->device, list->cmds, list->count * sizeof(GpuDrawCmd), sizeof(GpuDrawCmd));
@@ -372,7 +372,7 @@ static bool metal_frame_encodable(const MetalShared* self, const MetalSurface* s
            && self->frame_clip_buf != nil && surf->target != nil && surf->tile_buf != nil;
 }
 
-// Pass 1: classification - one thread per tile, dispatched over ceil(tiles / GPU_TILE_SIZE) threadgroups.
+// Pass 1, classification: one thread per tile, dispatched over ceil(tiles / GPU_TILE_SIZE) threadgroups.
 static void metal_op_classify(void* backend, void* surface, u32 cmd_count) {
     MetalShared* self = backend;
     MetalSurface* surf = surface;
@@ -448,7 +448,7 @@ static void metal_bind_frame_slot_textures(MetalShared* self) {
     [enc setBytes:slot_filter length:sizeof(slot_filter) atIndex:GPU_BIND_RASTER_SLOT_FILTER];
 }
 
-// Pass 2: raster - one threadgroup per tile (threadgroup_position_in_grid == gl_WorkGroupID), one thread per
+// Pass 2, raster: one threadgroup per tile (threadgroup_position_in_grid == gl_WorkGroupID), one thread per
 // pixel. Binds the offscreen target as the write image plus every atlas and the slot-image sampler array. The
 // raster pipeline declares them all, so all must be bound, though the shader fetches each only for its kind.
 static void metal_op_raster(void* backend, void* surface) {
@@ -632,7 +632,7 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     }
 
     // The backend-wide textures, one row each, every one serving every surface. The GPU-written atlases (glyph and
-    // both SVG) take private storage and are never cleared - a prepared cell writes its full padded extent,
+    // both SVG) take private storage and are never cleared: a prepared cell writes its full padded extent,
     // padding ring included. The CPU-uploaded ones (image atlas, slot placeholder) take managed storage so
     // replaceRegion can reach them. A released image-atlas cell's texels linger until a later placement overwrites
     // them; the handle stops resolving, so nothing samples them meanwhile.
@@ -689,7 +689,7 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
 }
 
 // Surface-texture seam (gpu_renderer.h): on Metal the handle is the backend-owned, retained id<MTLTexture> of the
-// offscreen RGBA8 target, carried as an opaque void*. Two events rebuild target and so invalidate the handle - a
+// offscreen RGBA8 target, carried as an opaque void*. Two events rebuild target and so invalidate the handle: a
 // change_resolution on this surface, and the surface's first gpu_renderer_surface_iosurface call, which upgrades
 // the target to IOSurface-backed storage at the unchanged resolution. Later IOSurface calls invalidate nothing.
 

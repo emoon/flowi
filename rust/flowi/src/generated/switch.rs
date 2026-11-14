@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Switch widget - a boolean toggle drawn as a pill track with a sliding knob. Same role as a checkbox.
+/// Switch widget: a boolean toggle drawn as a pill track with a sliding knob. Same role as a checkbox.
 pub struct Switch;
 
 impl Switch {

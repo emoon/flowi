@@ -1,11 +1,10 @@
 //! Layout containers with a hand-built config.
 //!
-//! The `col!` / `row!` macros cover most of what a UI draws; a container they
-//! cannot express — asymmetric padding, a config built up conditionally —
-//! reaches for the raw [`Layout::start`] / [`Layout::configure`] /
-//! [`Layout::end`] trio instead. The container helpers here wrap that trio in
-//! a closure whose end call runs on drop, so an early return or unwind still
-//! closes the container.
+//! The `col!` / `row!` macros cover most of what a UI draws. A container they
+//! cannot express (asymmetric padding, a config built up conditionally) uses
+//! the raw [`Layout::start`] / [`Layout::configure`] / [`Layout::end`] trio.
+//! The container helpers here wrap that trio in a closure whose end call runs
+//! on drop, so an early return or unwind still closes the container.
 //!
 //! The config builders each name only the one or two fields that vary,
 //! leaving the rest at their zero default.
@@ -35,8 +34,8 @@ pub fn container_auto<R>(config: LayoutConfig, body: impl FnOnce() -> R) -> R {
     body()
 }
 
-/// Padding given per edge, in left, right, top, bottom order — the struct's own
-/// field order, not CSS's clockwise one.
+/// Padding given per edge, in left, right, top, bottom order. This is the
+/// struct's field order, which differs from CSS's clockwise order.
 #[inline]
 pub fn padding(left: u16, right: u16, top: u16, bottom: u16) -> LayoutPadding {
     LayoutPadding {
@@ -47,22 +46,20 @@ pub fn padding(left: u16, right: u16, top: u16, bottom: u16) -> LayoutPadding {
     }
 }
 
-/// Padding on the left and right edges only — `LayoutPadding::from((0, amount))`.
+/// Padding on the left and right edges only.
 #[inline]
 pub fn padding_h(amount: u16) -> LayoutPadding {
     LayoutPadding::from((0, amount))
 }
 
-/// The same padding on all four edges — `LayoutPadding::from(amount)`, named for
-/// the raw-config call sites.
+/// The same padding on all four edges.
 #[inline]
 pub fn padding_all(amount: u16) -> LayoutPadding {
     LayoutPadding::from(amount)
 }
 
-/// Separate horizontal and vertical padding —
-/// `LayoutPadding::from((vertical, horizontal))` with the arguments in the
-/// opposite, horizontal-first order.
+/// Separate horizontal and vertical padding. The arguments are horizontal
+/// first, the reverse of `LayoutPadding::from((vertical, horizontal))`.
 #[inline]
 pub fn padding_hv(horizontal: u16, vertical: u16) -> LayoutPadding {
     LayoutPadding::from((vertical, horizontal))
@@ -90,8 +87,8 @@ pub fn text_config(color: Color, size: u16) -> TextConfig {
 /// The zeroed widget config with its id overridden.
 ///
 /// Widgets whose label is empty, or which appear more than once in a frame,
-/// need an explicit id — without one they would derive the same id from the
-/// same empty label and collide.
+/// need an explicit id. Without one they derive the same id from the same
+/// label and collide.
 ///
 /// The id is borrowed for the duration of the widget call, so a literal or any
 /// string that lives across the call will do.
@@ -114,15 +111,13 @@ pub fn dropdown_config(min_width: f32, widget: WidgetConfig<'_>) -> DropdownConf
     }
 }
 
-/// The same radius on all four corners — [`CornerRadius::uniform`], named to
-/// pair with the top/bottom variants below.
+/// The same radius on all four corners.
 #[inline]
 pub fn corner_radius(value: f32) -> CornerRadius {
     CornerRadius::uniform(value)
 }
 
-/// Rounding on the top two corners only — the shape a bar that caps a panel
-/// takes.
+/// Rounding on the top two corners only, the shape of a bar that caps a panel.
 #[inline]
 pub fn corner_radius_top(value: f32) -> CornerRadius {
     CornerRadius {
@@ -144,7 +139,7 @@ pub fn corner_radius_bottom(value: f32) -> CornerRadius {
     }
 }
 
-/// Fully transparent — the zero colour a container that paints nothing gets.
+/// Fully transparent, the colour of a container that paints nothing.
 pub const TRANSPARENT: Color = Color {
     r: 0,
     g: 0,

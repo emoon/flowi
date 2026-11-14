@@ -9,19 +9,19 @@
 extern "C" {
 #endif
 
-// Opaque region allocator owned by flowi core. Never crossed by value: every allocation entry point
-// takes a `*Arena`, and the toolkit and the app hold it solely behind that pointer.
+// Opaque region allocator. Callers hold it by pointer only.
 typedef struct FlArena FlArena;
 
-// A savepoint in an arena, restored in bulk to free everything allocated after it (a temp/scratch
-// scope). A POD value type crossed by value through the public ABI; arena points at the saved arena and
-// pos is its byte offset at capture.
+// A savepoint in an arena. Restoring it frees everything allocated after it (a temp/scratch scope).
+// Passed by value.
 typedef struct FlTempArena {
+    // The arena the savepoint belongs to.
     FlArena* arena;
+    // The arena's byte offset when the savepoint was taken.
     uint64_t pos;
 } FlTempArena;
 
-// The `fl_arena_*` plugin service API - flowi core's bump/region allocator, exported as plain C symbols. Slots take only their own params. Plugins link the shared library and call these symbols directly.
+// The bump/region allocator.
 // Initialize flowi's process-wide core services and return the main arena. Idempotent: a
 // second call returns the live arena and leaves the running services alone. fl_app_create
 // calls this itself, so an app only calls it directly to pick a job_threads count or to
@@ -33,7 +33,7 @@ FL_API FlArena* fl_init(int32_t job_threads);
 // services are already down; a later fl_init brings them back up.
 FL_API void fl_destroy(void);
 // Reserve a new arena (reserved_size virtual bytes, committed on demand); file/line identify
-// the allocation site. Wrapper over arena_new_.
+// the allocation site.
 FL_API FlArena* fl_arena_create(uint64_t reserved_size, const char* file, int32_t line);
 // Destroy an arena and free all its memory.
 FL_API void fl_arena_destroy(FlArena* arena);

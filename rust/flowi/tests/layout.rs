@@ -22,7 +22,7 @@ const CH: f32 = 24.0;
 const OW: f32 = 2.0 * CW + GAP as f32 + 2.0 * PAD as f32; // 8+12+6+12+8 = 46
 const OH: f32 = CH + 2.0 * PAD as f32; // 8+24+8 = 40
 
-// min == max, type Fixed - the union's min_max arm.
+// min == max, type Fixed: the union's min_max arm.
 fn fixed(px: f32) -> LayoutSizingAxis {
     LayoutSizingAxis {
         size: LayoutSizingAxisSize {
@@ -32,7 +32,7 @@ fn fixed(px: f32) -> LayoutSizingAxis {
     }
 }
 
-// Borders/radius/clip are zeroed - not exercised here.
+// Borders, radius and clip are zeroed; this test does not exercise them.
 fn config(w: f32, h: f32, color: [u8; 3], pad: u16, gap: u16) -> LayoutConfig {
     LayoutConfig {
         sizing: LayoutSizing {

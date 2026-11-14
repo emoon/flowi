@@ -1,7 +1,7 @@
 // Wallace signed-area coverage of one quadratic Bezier, the kernel shared by the monochrome glyph/SVG raster
 // (glyph.glsl) and the multi-color SVG raster (color_svg.glsl). Points arrive pre-translated so the texel
-// center is the origin (callers pass curve_pts[..] - pc). The whole-curve reject off the control hull -
-// outside the texel's y band, or entirely to its left - contributes nothing; otherwise the curve is walked as
+// center is the origin (callers pass curve_pts[..] - pc). A curve whose control hull lies outside the texel's
+// y band, or entirely to its left, contributes nothing; otherwise the curve is walked as
 // CHORD_STEPS uniform-parameter chords, each clipped to the texel's y band, and the band's signed height times
 // the fraction of the texel row left of the chord is accumulated. Summed over a closed-contour soup the net is
 // the fractional winding integral the callers fold per fill rule. Endpoint-exact, so shared segment endpoints

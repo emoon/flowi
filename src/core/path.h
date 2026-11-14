@@ -7,8 +7,6 @@
 
 struct FlArena;
 
-// Cross-platform path manipulation utilities
-
 StringArray path_split(struct FlArena* arena, FlString path);
 
 // Part of the filename before the first dot, or empty string if there is no dot or the filename

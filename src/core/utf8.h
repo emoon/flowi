@@ -5,15 +5,11 @@
 #include "string.h"
 #include "types.h"
 
-// Constants
-
-// Unicode replacement character (U+FFFD) - used for invalid UTF-8 sequences
+// U+FFFD, substituted for invalid UTF-8 sequences
 #define UTF8_REPLACEMENT_CHAR 0xFFFD
 
 // Maximum valid Unicode codepoint
 #define UTF8_MAX_CODEPOINT 0x10FFFF
-
-// Safe decoder with bounds checking (for FlString without zero-padding)
 
 // Decode next codepoint with bounds checking.
 // Returns nullptr and sets *codepoint to 0 when end is reached.
@@ -44,8 +40,6 @@ static inline u32 utf8_iter_next(Utf8Iter* it) {
     return cp;
 }
 
-// Utility functions
-
 // Count codepoints in UTF-8 string (O(n))
 u64 utf8_codepoint_count(FlString str);
 
@@ -53,7 +47,7 @@ u64 utf8_codepoint_count(FlString str);
 // Returns bytes written (1-4), or 0 for invalid codepoints.
 u32 utf8_encode(char* buf, u32 codepoint);
 
-// Validate UTF-8 string
+// True when str is valid UTF-8.
 bool utf8_is_valid(FlString str);
 
 static inline bool utf8_is_continuation(u8 byte) {

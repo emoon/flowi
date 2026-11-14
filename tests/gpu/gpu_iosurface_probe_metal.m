@@ -1,10 +1,9 @@
-// Cross-process probe for the IOSurface Surface-texture variant, test-support only. gpu_smoke_test.c is
-// plain C and never names a Metal/IOSurface type; this translation unit is its Objective-C arm, exposing one
-// C-callable function that stands in for the out-of-process host: it opens a flowi-produced IOSurface into a *second*
-// MTLTexture on a *freshly created* MTLDevice (independent of the backend's device) and blits the pixels back to CPU.
-// A successful readback of the expected pixels through that independent device is the same-process proof of
-// cross-context validity the issue's acceptance criteria ask for. Compiled into gpu_smoke_test on APPLE only; not a
-// new test executable (still the one gpu_smoke_test binary).
+// Cross-process probe for the IOSurface surface-texture variant, for tests only. gpu_smoke_test.c is plain C and
+// never names a Metal or IOSurface type, so this translation unit is its Objective-C arm. It exposes one C-callable
+// function that stands in for an out-of-process host: it opens a flowi-produced IOSurface into a second MTLTexture
+// on a freshly created MTLDevice, independent of the backend's device, and blits the pixels back to the CPU. Reading
+// the expected pixels through that device shows, within one process, that the surface is valid across contexts.
+// Compiled into gpu_smoke_test on Apple platforms only.
 
 #import <Metal/Metal.h>
 #import <IOSurface/IOSurface.h>
@@ -24,11 +23,11 @@ bool gpu_test_iosurface_readback(void* iosurface, int width, int height, u8* out
             return false;
         }
 
-        // A fresh device, not the backend's, so the readback proves the IOSurface is valid outside the context that
-        // produced it. On a single-GPU Mac this is the same physical device but an independent handle; the
-        // cross-context path (open IOSurface -> texture -> blit) is exercised regardless. The build is MRC (no ARC),
-        // so every "new"/"Create" object below is +1-owned and released before each return, matching the backend's
-        // gpu_metal.m / gpu_debug_readback_metal.m convention. [nil release] is a no-op, so the failure paths are safe.
+        // A fresh device, so the readback proves the IOSurface is valid outside the context that produced it. On a
+        // single-GPU Mac it is the same physical device behind an independent handle, and the cross-context path
+        // (open IOSurface -> texture -> blit) is exercised all the same. The build is MRC (no ARC), so every
+        // "new"/"Create" object below is +1-owned and released before each return, as in the backend's gpu_metal.m
+        // and gpu_debug_readback_metal.m. [nil release] is a no-op, so the failure paths are safe.
         id<MTLDevice> device = MTLCreateSystemDefaultDevice(); // +1 owned
         if (device == nil) {
             return false;
@@ -90,8 +89,8 @@ bool gpu_test_iosurface_readback(void* iosurface, int width, int height, u8* out
 
 // CoreFoundation retain-count probes for the IOSurface leak test (gpu_smoke_test.c). IOSurfaceRef is a CF type;
 // keeping these here lets the plain-C test assert the backend's CFRelease balance without pulling any CF/Metal type
-// into gpu_smoke_test.c. gpu_test_cf_retain holds an independent reference across a surface destroy; the retain count
-// afterwards then reveals whether the backend dropped exactly its own references (no leak, no double-free).
+// into gpu_smoke_test.c. gpu_test_cf_retain holds an independent reference across a surface destroy, and the retain
+// count afterwards shows whether the backend dropped exactly its own references.
 void gpu_test_cf_retain(void* obj) {
     if (obj != nullptr) {
         CFRetain((CFTypeRef)obj);

@@ -10,21 +10,15 @@ extern "C" {
 
 // 2D vector in logical-pixel space.
 typedef struct FlVec2 {
-    // x position
     float x;
-    // y position
     float y;
 } FlVec2;
 
 // RGBA color, 8 bits per channel.
 typedef struct FlColor {
-    // red
     uint8_t r;
-    // green
     uint8_t g;
-    // blue
     uint8_t b;
-    // alpha
     uint8_t a;
 } FlColor;
 

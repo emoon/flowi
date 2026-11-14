@@ -1,6 +1,3 @@
-// Dock Splitter - the draggable divider that mutates a split's ratio through the splitter-resize op. The tree owns
-// topology + the one ratio scalar; Clay owns every rect.
-
 #include "dock_splitter.h"
 
 #include "dock_layout.h"
@@ -11,9 +8,7 @@
 #include <flowi/ui/cursor.h>
 #include <external/clay/clay.h>
 
-// Both the behaviour pass and the draw pass derive the divider's element id from the split node id, so they
-// address one element by construction.
-
+// The behaviour pass and the draw pass both address the divider by this id.
 static FlLayoutId divider_layout_id(FlDockNodeId split_id) {
     return ID_INT("fl_dock_divider", (i32)split_id);
 }
@@ -41,7 +36,7 @@ void dock_splitter_handle_drag(FlDockTree* tree, FlDockNodeId split_id, FlDockAx
     }
 
     // Map the cursor into the split's last-frame rect and turn the offset along the axis into the new child[0]
-    // fraction. Position-based, so the divider tracks the cursor with no per-divider drag state to drift.
+    // fraction. The ratio comes from the cursor position alone, so there is no per-divider drag state.
     Clay_ElementData data = Clay_GetElementData((Clay_ElementId) { .id = dock_layout_node_element_id(split_id) });
     if (!data.found) {
         return;
@@ -53,8 +48,8 @@ void dock_splitter_handle_drag(FlDockTree* tree, FlDockNodeId split_id, FlDockAx
         return;
     }
 
-    // The drag is the one place a floor gets WRITTEN into the tree: it already holds the extent, so it stops at the
-    // same pixel floor the emit walk clamps to, on top of the fractional floor the op re-applies.
+    // The drag is the one place a floor gets written into the tree. It stops at the same pixel floor the emit walk
+    // clamps to, on top of the fractional floor the op re-applies.
     FlDockRequest req = {
         .kind = FlDockRequest_SplitterResize,
         .target_node = split_id,
@@ -78,6 +73,6 @@ void dock_splitter_emit(FlDockNodeId split_id, FlDockAxis axis) {
                                 : (FlLayoutSizing) { sizing_grow(), sizing_fixed(FL_DOCK_DIVIDER_THICKNESS) };
 
     ui_layout_area_id(divider_layout_id(split_id), .sizing = sizing, .color = color) {
-        // The strip is pure chrome + grab area; no content.
+        // The strip has no content. It is only drawn and grabbed.
     }
 }

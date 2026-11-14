@@ -1,5 +1,3 @@
-// Automatic Cleanup Tests
-
 #include "utest/utest.h"
 #include <core/arena.h>
 #include <core/assert.h>
@@ -142,7 +140,7 @@ UTEST(cleanup, arena_temp_auto_always_cleans) {
 
     ASSERT_EQ(test_arena->pos, start_pos);
 
-    // If you want to KEEP allocations, don't use temp scope - just allocate directly
+    // Allocations made outside a temp scope stay in the arena.
     {
         int* numbers = arena_alloc_array(test_arena, int, 10);
         ASSERT_TRUE(numbers != nullptr);
@@ -198,7 +196,7 @@ UTEST(cleanup, arena_scratch_auto_goto) {
             goto cleanup;
         }
 
-        // This shouldn't execute
+        // Not reached.
         ASSERT_FALSE(true);
     }
 
@@ -318,7 +316,7 @@ UTEST(cleanup, arena_scratch_auto_large_allocation) {
         char* large_buffer = arena_alloc_array(temp.arena, char, 1024 * 1024);
         ASSERT_TRUE(large_buffer != nullptr);
 
-        // Fill with data to ensure it's committed
+        // Write to the buffer so its pages are committed.
         for (int i = 0; i < 1024; i++) {
             large_buffer[i] = (char)i;
         }

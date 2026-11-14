@@ -1,6 +1,6 @@
 #pragma once
 
-// GPU backend: skyline-bottom-left rect packer. Append-only - rects are placed, never removed;
+// GPU backend: skyline-bottom-left rect packer. Append-only: rects are placed, never removed;
 // clients layer handle bookkeeping and released-cell reuse on top.
 
 #include <core/types.h>

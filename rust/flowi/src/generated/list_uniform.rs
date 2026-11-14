@@ -13,8 +13,7 @@
 /// Rows are addressed by dense index and the caller owns everything inside them; the List is the richer
 /// surface that keys on stable ids and runs the selection gestures itself.
 ///
-/// Scroll offset and the measured container height live on the UI context keyed by the id passed to begin, so the
-/// surface is ctx-free like the rest of the UI API.
+/// Scroll offset and the measured container height are stored under the id passed to begin.
 pub struct ListUniform;
 
 impl ListUniform {

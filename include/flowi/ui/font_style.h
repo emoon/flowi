@@ -6,16 +6,12 @@
 extern "C" {
 #endif
 
-// Font weight/style selector - the variant a caller picks (or that a font set is keyed by). Count is the size
-// sentinel (the number of real styles), not a style itself.
+// Font weight/style selector: the variant a caller picks (or that a font set is keyed by).
 typedef enum FlFontStyle {
     // Regular weight (the default).
     FlFontStyle_Default = 0,
-    // Bold weight.
     FlFontStyle_Bold = 1,
-    // Thin weight.
     FlFontStyle_Thin = 2,
-    // Light weight.
     FlFontStyle_Light = 3,
     // Number of real styles (size sentinel, not a style).
     FlFontStyle_Count = 4,

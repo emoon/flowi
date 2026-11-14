@@ -7,7 +7,7 @@
 // blending, a single imageStore per pixel). The target carries premultiplied coverage alpha for the host to
 // composite over the display plane; presentation stays out of this object.
 //
-// GL: the host must have a GL >= 4.3 core context current on this thread for every entry point here - create,
+// GL: the host must have a GL >= 4.3 core context current on this thread for every entry point here: create,
 // render, change_resolution, read_pixels, destroy. Metal: no GL context is involved.
 //
 // No GL type crosses this header.
@@ -27,7 +27,7 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena);
 // one per window, and requires the backend's GL context current on this thread.
 //
 // Valid after a surface is created; the dimensions track that surface's current resolution. The handle is
-// backend-owned, and rebuilding the offscreen target invalidates it - re-fetch after a change_resolution on this
+// backend-owned, and rebuilding the offscreen target invalidates it: re-fetch after a change_resolution on this
 // surface, and on Metal after this surface's first gpu_renderer_surface_iosurface call (below). Later IOSurface
 // calls invalidate nothing.
 //
@@ -55,7 +55,7 @@ GpuSurfaceTexture gpu_renderer_surface_texture(FlSurface* surface);
 //
 // The first call on a surface upgrades its offscreen target to an IOSurface-backed MTLTexture at the current
 // resolution, after which both accessors view the same resource; subsequent calls return the same handle. That first
-// call rebuilds the target and so invalidates any handle previously fetched from gpu_renderer_surface_texture - latch
+// call rebuilds the target and so invalidates any handle previously fetched from gpu_renderer_surface_texture; latch
 // the IOSurface before caching one. Backend-owned and valid until the next change_resolution for this surface; the
 // host never retains or releases it.
 //

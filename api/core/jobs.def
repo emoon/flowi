@@ -1,10 +1,6 @@
 #[module(core)]
 
-// The opaque scratch arena a job receives per-invocation (FlJobsWorkerInfo.scratch)
-// and that jobs_create() builds the system from. Referenced only by pointer; the
-// real cache-aligned body lives in hand-written core (arena.def owns the name).
-
-/// Job result status - what fl_jobs_is_finished reports for a handle.
+/// Job result status: what fl_jobs_is_finished reports for a handle.
 enum JobsResult {
     /// Job is still running or pending.
     NotFinished = 0,
@@ -28,15 +24,12 @@ enum JobPriority {
     Invalid = -1,
 }
 
-/// Opaque handle to a scheduled job. FL_JOB_HANDLE_INVALID (0) is an
-/// invalid/uninitialized handle. A u64 the scheduler hands out and the caller
-/// passes back to query/wait.
+/// Opaque handle to a scheduled job. The scheduler hands it out and the caller
+/// passes it back to query or wait. FL_JOB_HANDLE_INVALID (0) is the invalid handle.
 #[handle(u64, invalid = 0)]
 struct JobHandle {}
 
-/// Worker-thread context handed to a job function. worker_index identifies the
-/// worker (0..num_threads-1); scratch is a temporary arena, rewound after the
-/// job completes.
+/// Worker-thread context handed to a job function.
 struct JobsWorkerInfo {
     /// Index of the worker thread (0 to num_threads-1).
     worker_index: i32,
@@ -58,9 +51,9 @@ api Jobs {
     [manual] add_job(func: JobsFunc, user_data: *void) -> JobHandle
     /// Schedule a job that runs only after dependency completes. A dependency of
     /// zero, the immediate-complete sentinel, or an expired handle counts as
-    /// already satisfied and the job is scheduled as if it had none. Scheduled
-    /// from a worker against an unfinished dependency the job is deferred rather
-    /// than run inline, so the returned handle is genuinely pending.
+    /// already satisfied and the job is scheduled as if it had none. A job scheduled
+    /// from a worker against an unfinished dependency is deferred, so the returned
+    /// handle is pending.
     [manual] add_job_with_dependency(func: JobsFunc, user_data: *void, dependency: JobHandle) -> JobHandle
     /// Query whether a job has finished.
     [manual] is_finished(handle: JobHandle) -> JobsResult
@@ -75,7 +68,7 @@ api Jobs {
     [manual] num_threads() -> i32
     /// Schedule a job at a given priority.
     [manual] add_job_with_priority(func: JobsFunc, user_data: *void, priority: JobPriority) -> JobHandle
-    /// Schedule a priority job that runs only after dependency completes - see
+    /// Schedule a priority job that runs only after dependency completes. See
     /// add_job_with_dependency for how the dependency is honored.
     [manual] add_job_with_priority_and_dependency(func: JobsFunc, user_data: *void, priority: JobPriority, dependency: JobHandle) -> JobHandle
     /// Change a pending job's priority. Returns true if changed, false if it already

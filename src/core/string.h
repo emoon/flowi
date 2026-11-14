@@ -7,14 +7,14 @@
 #include <stdint.h>
 
 // FlString, its inline helpers and the FL_S() / FL_S_() / FL_S_UTF8() literal macros come from the
-// public header. Do NOT redefine FlString here - pin its layout with a _Static_assert instead.
+// public header. Do not redefine FlString here; the _Static_asserts below pin its layout.
 #include <flowi/core/string.h>
 
 struct FlArena;
 
 // The generated service header is the single public source of the parse-status enum, the six
-// parse-result PODs and FlStringBuilder. It must NOT redefine them - their layouts are pinned
-// with _Static_asserts instead.
+// parse-result PODs and FlStringBuilder. This header must not redefine them; the _Static_asserts
+// below pin their layouts.
 #include <flowi/string/string.h>
 
 // offsetof on the length bitfield is not valid C, so only data is offset-pinned.

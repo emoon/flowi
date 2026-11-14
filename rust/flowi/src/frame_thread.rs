@@ -61,8 +61,8 @@ impl Drop for FrameClaim {
 }
 
 /// Panic unless the calling thread may drive the frame context: always when no application
-/// is alive, otherwise only the application's own thread. The returned guard keeps the
-/// answer true - no application can be created, or dropped - until the caller is done.
+/// is alive, otherwise only the application's own thread. While the returned guard is held,
+/// no application can be created or dropped.
 pub(crate) fn frame_thread_guard(entry_point: &str) -> MutexGuard<'static, Option<ThreadId>> {
     let owner = locked(&FRAME_THREAD);
     let wrong_thread = owner.is_some_and(|id| id != thread::current().id());

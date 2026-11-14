@@ -18,9 +18,7 @@ LogChannelId VFS_ID = LOG_CHANNEL_INVALID;
 VfsState* g_vfs_state = nullptr;
 void (*g_vfs_test_after_read_scheduled)(FlVfsHandle read) = nullptr;
 
-// Nil VFS Entry (Read-Only Global)
-//
-// Represents invalid/empty VFS entry. Functions return pointers to this instead of nullptr.
+// The invalid, empty VFS entry. Functions return a pointer to this instead of nullptr.
 
 const FlVfsEntry fl_nil_vfs_entry = { 0 };
 
@@ -166,8 +164,8 @@ static void vfs_op_free_result(VfsOp* op) {
 
         case VfsOp_FileRead: {
             if (result) {
-                // result->data points at the caller-provided read buffer (fl_vfs_read rejects a null buffer),
-                // so the data is never ours to free - only the result struct.
+                // result->data points at the caller-provided read buffer (fl_vfs_read rejects a nullptr buffer),
+                // so only the result struct is freed here.
                 vfs_free_data_result(result, false);
             }
             break;
@@ -299,7 +297,7 @@ static bool vfs_slot_remove_locked(VfsState* self, const VfsOp* op) {
 // Op creation and scheduling
 
 // Everything an op is born with, filled with designated initializers at the call site. A zeroed field is the "not
-// applicable" case for every one of them - FL_VFS_HANDLE_INVALID is 0, as is an empty FlString.
+// applicable" case for every one of them: FL_VFS_HANDLE_INVALID is 0, as is an empty FlString.
 typedef struct VfsOpParams {
     FlVfsMount* mount;
     FlString path;
@@ -404,8 +402,8 @@ typedef struct VfsJobList {
 } VfsJobList;
 
 // Caller holds handle_lock. Collects the jobs the ops of mount still name, or of every listed mount when mount is
-// null, including ops whose id was closed but whose job has not finished. The handles are plain values: no op pointer
-// leaves the lock.
+// nullptr, including ops whose id was closed but whose job has not finished. The handles are plain values: no op
+// pointer leaves the lock.
 static VfsJobList vfs_collect_jobs_locked(VfsState* self, FlVfsMount* mount, FlArena* arena) {
     FlVfsMount* first = mount ? mount : self->mount_first;
 
@@ -431,7 +429,7 @@ static VfsJobList vfs_collect_jobs_locked(VfsState* self, FlVfsMount* mount, FlA
     return list;
 }
 
-// Waits, without any lock, for the jobs of one mount's ops or of all of them (mount null).
+// Waits, without any lock, for the jobs of one mount's ops or of all of them (mount nullptr).
 static void vfs_wait_jobs(VfsState* self, FlVfsMount* mount) {
     arena_scratch_auto(temp);
 
@@ -725,7 +723,7 @@ void fl_vfs_close(FlVfsHandle handle) {
     mutex_unlock(&self->handle_lock);
 
     // The slot's reference, unless a concurrent close already took it. If the job is still running, its own reference
-    // keeps the op alive and the last one to drop - the job's - destroys it.
+    // keeps the op alive and, being the last to drop, destroys it.
     if (listed) {
         vfs_op_release(op);
     }

@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# Assert that libflowi.so's dynamic symbol table is EXACTLY the curated export list
-# api_gen emitted. The version script (src/exports/flowi.version) names
-# the public symbols (the foundation's, the VFS's and the hand-written headers'
-# included); `nm -D` reports what the built shared library actually exports. Any drift — a symbol that leaked past `local: *`, or a curated symbol the
-# library failed to define — fails the check.
+# Checks that libflowi.so's dynamic symbol table is exactly the export list
+# api_gen emitted. The version script (src/exports/flowi.version) names the
+# public symbols and `nm -D` reports what the built library exports. The check
+# fails on a symbol that leaked past `local: *` and on a listed symbol the
+# library does not define.
 #
 # Usage: check_exports.sh [<libflowi.so>] [<flowi.version>]
-# Defaults resolve the repo-root build/ layout so a bare `bash tools/scripts/check_exports.sh`
-# works after `cmake --build build`.
+# The defaults point into the repo-root build/ directory.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -26,9 +25,8 @@ fi
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-# Expected: the symbol names in the version script's `global:` section — the
-# indented `  name;` lines (the `global:`/`local:` labels and the `*;` wildcard
-# have no `;`-terminated identifier, so they drop out).
+# Expected: the indented `  name;` lines of the version script's `global:`
+# section. The `global:` and `local:` labels and the `*;` wildcard do not match.
 sed -n '/global:/,/local:/p' "$version_script" \
     | grep -E '^[[:space:]]+[A-Za-z_][A-Za-z0-9_]*;' \
     | sed -E 's/^[[:space:]]+//; s/;.*$//' \

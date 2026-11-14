@@ -79,7 +79,7 @@ const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle,
                                        FlVectorClass cls, FlColor mono_color, const FlVectorImage* vector) {
     GpuSvgEntry* live = find_live_entry(atlas, handle);
     if (live != nullptr && live->size == size) {
-        return live; // already current at this size - idempotent, no new placement
+        return live; // already current at this size
     }
 
     if (atlas->entry_count >= GPU_SVG_ATLAS_MAX_ENTRIES) {
@@ -89,7 +89,7 @@ const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle,
 
     GpuAtlasCell cell = { 0, 0, w, h };
     if (w > 0 && h > 0 && !gpu_atlas_pack_insert(&atlas->pack, w, h, &cell.x, &cell.y)) {
-        // Pure rejecter: the backend answers a full atlas by compacting and retrying.
+        // The backend answers a full atlas by compacting and retrying.
         return nullptr;
     }
 
@@ -113,7 +113,7 @@ const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle,
 }
 
 void gpu_svg_atlas_compact(GpuSvgAtlas* atlas) {
-    // Reset the packer to an empty atlas (reuses the existing node storage - same dimensions), then re-insert
+    // Reset the packer to an empty atlas (same dimensions, so the node storage is reused), then re-insert
     // only the live cells in their existing order. The write index can only trail the read index i (write
     // advances only on a live entry while i advances every step), so reading into a local copy before the write
     // makes the in-place compaction safe.

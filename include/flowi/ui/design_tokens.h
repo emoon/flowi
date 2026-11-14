@@ -6,51 +6,49 @@
 extern "C" {
 #endif
 
-// Spacing token (logical pixels) - a consistent scale for gaps, padding and margins.
+// Spacing token (logical pixels): a consistent scale for gaps, padding and margins.
 typedef enum FlSpacing {
-    // No spacing.
     FlSpacing_None = 0,
-    // Extra small - tight spacing (icon gaps).
+    // Extra small: tight spacing (icon gaps).
     FlSpacing_XS = 4,
-    // Small - compact layouts.
+    // Small: compact layouts.
     FlSpacing_SM = 8,
-    // Medium - default gap between elements.
+    // Medium: default gap between elements.
     FlSpacing_MD = 16,
-    // Large - section spacing.
+    // Large: section spacing.
     FlSpacing_LG = 24,
-    // Extra large - major section breaks.
+    // Extra large: major section breaks.
     FlSpacing_XL = 32,
 } FlSpacing;
 
-// Corner radius token (logical pixels) - a consistent rounding scale; Full is the pill/circle radius.
+// Corner radius token (logical pixels): a consistent rounding scale; Full is the pill/circle radius.
 typedef enum FlRadius {
     // Square corners.
     FlRadius_None = 0,
-    // Small - subtle rounding (inputs, cards).
+    // Small: subtle rounding (inputs, cards).
     FlRadius_SM = 4,
-    // Medium - default for buttons.
+    // Medium: default for buttons.
     FlRadius_MD = 8,
-    // Large - prominent cards, dialogs.
+    // Large: prominent cards, dialogs.
     FlRadius_LG = 12,
-    // Extra large - hero cards.
+    // Extra large: hero cards.
     FlRadius_XL = 16,
-    // Pill shape - tags, toggle pills.
+    // Pill shape: tags, toggle pills.
     FlRadius_Full = 999,
 } FlRadius;
 
-// Widget height token (logical pixels, 1080p reference) - consistent sizing for interactive elements.
+// Widget height token (logical pixels, 1080p reference): consistent sizing for interactive elements.
 typedef enum FlWidgetHeight {
-    // Small - compact buttons, chips (WCAG AA touch target).
+    // Small: compact buttons, chips (WCAG AA touch target).
     FlWidgetHeight_SM = 44,
-    // Medium - default button height.
+    // Medium: default button height.
     FlWidgetHeight_MD = 60,
-    // Large - prominent buttons, list items.
+    // Large: prominent buttons, list items.
     FlWidgetHeight_LG = 80,
 } FlWidgetHeight;
 
 // Border width token (logical pixels).
 typedef enum FlBorderWidth {
-    // No border.
     FlBorderWidth_None = 0,
     // Default border.
     FlBorderWidth_Thin = 1,

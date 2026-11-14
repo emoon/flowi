@@ -8,14 +8,12 @@
 
 typedef struct FlUiCtx FlUiCtx;
 
-// Popup API
-
-// Begin a popup scope - content declared within this scope will be rendered after main UI
+// Begin a popup scope. Content declared within the scope is rendered after the main UI.
 void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config);
 
 void ui_popup_end(void);
 
-// Internal API (used by ui system)
+// The rest is used only by the UI system.
 
 // Check for auto-close triggers (ESC, B button)
 void ui_popup_check_auto_close(FlUiCtx* ctx);

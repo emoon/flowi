@@ -1,7 +1,6 @@
 #pragma once
 
-// Public definition of FlString - the length-prefixed string flowi crosses by value
-// through its public/plugin surface.
+// FlString: the counted string flowi passes by value through its public and plugin APIs.
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -41,8 +40,6 @@ static inline FlString string_from_cstr(const char* cstr) {
     return cstr ? string_from_cstr_len(cstr, (uint64_t)strlen(cstr)) : string_empty();
 }
 
-// FlString Literal Macros
-//
 // Use FL_S("literal") to create compile-time FlString constants from string literals.
 // FL_S() and FL_S_() assume ASCII content (is_ascii = 1) for fast-path iteration.
 // Use FL_S_UTF8("literal") for string literals containing non-ASCII UTF-8 characters.

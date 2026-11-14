@@ -1,8 +1,8 @@
 #pragma once
 
-// fl_app GPU host - Surface Binding for the GPU render backend.
+// fl_app GPU host: Surface Binding for the GPU render backend.
 //
-// The GPU backend (src/render/gpu) renders into an offscreen RGBA8 target but does NOT own a GL context or a
+// The GPU backend (src/render/gpu) renders into an offscreen RGBA8 target but does not own a GL context or a
 // window: the host creates and makes-current a GL >= 4.3 core context, then constructs the backend against it.
 // Headless, this module owns that context (the FlAppGpu handle); windowed, the SDL WindowBackend owns the window,
 // the shared GL context and the compositor/present, and this module only builds the backend against it and
@@ -37,6 +37,6 @@ bool fl_app_gpu_surface_texture(FlSurface* surface, void** handle, u32* width, u
 bool fl_app_gpu_surface_texture(FlSurface* surface, u32* texture, u32* width, u32* height);
 #endif
 
-// Tear down the headless EGL context. Call AFTER the backend's own destroy (which frees GL resources and needs
+// Tear down the headless EGL context. Call after the backend's own destroy (which frees GL resources and needs
 // the context still current).
 void fl_app_gpu_destroy(FlAppGpu* gpu);

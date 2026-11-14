@@ -11,14 +11,10 @@
 extern "C" {
 #endif
 
-// The `fl_path_*` plugin service API - flowi core's cross-platform path manipulation, exported as plain C symbols. Paths are UTF-8 FlStrings using forward slashes as the canonical separator;
-// backslashes are folded to forward slashes on normalization. Every slot that builds a new path
-// allocates it from the caller's arena, so nothing here needs freeing; the extraction slots that
-// return a view into their input (fl_path_get_extension, fl_path_get_filename) take no arena. Plugins link the shared library and call these symbols directly.
-//
-// Core's path surface is wider than this (segment splitting, PathComponents, current-directory and
-// directory-search helpers); those stay internal - they are VFS resolution machinery, not something a
-// plugin manipulating file names needs.
+// Cross-platform path manipulation. Paths are UTF-8 FlStrings using forward slashes as the canonical
+// separator; backslashes are folded to forward slashes on normalization. Every function that builds a
+// new path allocates it from the caller's arena, so nothing here needs freeing. fl_path_get_extension
+// and fl_path_get_filename return a view into their input and take no arena.
 // Fold backslashes to forward slashes and collapse duplicate separators.
 FL_API FlString fl_path_normalize(FlArena* arena, FlString path);
 // Normalize, then resolve "." and ".." components.
@@ -40,7 +36,7 @@ FL_API FlString fl_path_get_basename(FlArena* arena, FlString path);
 FL_API FlString fl_path_get_parent(FlArena* arena, FlString path);
 // Whether path is absolute (Unix: leading "/"; Windows: a drive letter or a UNC prefix).
 FL_API bool fl_path_is_absolute(FlString path);
-// Whether path is relative - the complement of fl_path_is_absolute.
+// Whether path is relative: the complement of fl_path_is_absolute.
 FL_API bool fl_path_is_relative(FlString path);
 // Whether path ends in extension (given without its dot, e.g. "zip"), ignoring ASCII case.
 FL_API bool fl_path_has_extension(FlString path, FlString extension);

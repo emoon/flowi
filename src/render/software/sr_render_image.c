@@ -24,7 +24,7 @@ static ALWAYS_INLINE SoaRgb process_8_pixels_nearest(const bool blend_with_backg
     const int b_offset = write_offset + PLANE_OFFSET_INCREMENT * 2;
 
     if (channel_count == 1) {
-        // Single alpha channel - load single texel row (no vertical neighbor)
+        // Single alpha channel: load one texel row (no vertical neighbor)
         a_res = u8x8_load_to_i16x8_wide_shl(image_line_ptr, image_r_plane, 7);
         a_res = i16x8_lerp(i16x8_new_splat(0), a_res, global_alpha);
 
@@ -38,7 +38,7 @@ static ALWAYS_INLINE SoaRgb process_8_pixels_nearest(const bool blend_with_backg
             .b = i16x8_lerp(bg_b, in_color.b, a_res),
         };
     } else {
-        // RGB or RGBA - single texel load per pixel (no interpolation)
+        // RGB or RGBA: one texel load per pixel (no interpolation)
         r_res = u8x8_load_to_i16x8_wide_shl(image_line_ptr, image_r_plane, 7);
         g_res = u8x8_load_to_i16x8_wide_shl(image_line_ptr, image_g_plane, 7);
         b_res = u8x8_load_to_i16x8_wide_shl(image_line_ptr, image_b_plane, 7);
@@ -85,8 +85,6 @@ static ALWAYS_INLINE SoaRgb process_8_pixels_nearest(const bool blend_with_backg
 
     return color;
 }
-
-// Nearest-neighbor inner loop
 
 static ALWAYS_INLINE void image_internal_nearest(const bool blend_with_background, const bool rounding,
                                                  const int channel_count, i16* output, f32x4 scissor_rect,
@@ -194,8 +192,6 @@ static ALWAYS_INLINE void image_internal_nearest(const bool blend_with_backgroun
     }
 }
 
-// Nearest-neighbor wrapper functions
-
 // 1-channel (alpha-only) permutations
 static ALWAYS_INLINE void render_image_nearest_solid_1ch(i16* tile_output, const RenderCommand* command,
                                                          f32x4 scissor_rect, const TileInfo* tile) {
@@ -238,7 +234,7 @@ static ALWAYS_INLINE void render_image_nearest_blend_rounded_3ch(i16* tile_outpu
     image_internal_nearest(true, true, 3, tile_output, scissor_rect, tile, command);
 }
 
-// 4-channel (RGBA) permutations - always blend with background due to alpha channel
+// 4-channel (RGBA) permutations: always blend with background because of the alpha channel
 static ALWAYS_INLINE void render_image_nearest_blend_4ch(i16* tile_output, const RenderCommand* command,
                                                          f32x4 scissor_rect, const TileInfo* tile) {
     image_internal_nearest(true, false, 4, tile_output, scissor_rect, tile, command);

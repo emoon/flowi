@@ -1,7 +1,5 @@
 #pragma once
 
-// Shared render helpers for software renderer
-
 #include <core/simd.h>
 #include <core/types.h>
 #include <math.h>

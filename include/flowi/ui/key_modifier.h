@@ -6,13 +6,11 @@
 extern "C" {
 #endif
 
-// Keyboard modifier flags - the bitmask reported alongside key/text input (Shift, Control, Alt, ...).
+// Keyboard modifier flags: the bitmask reported alongside key/text input (Shift, Control, Alt, ...).
 typedef enum FlKeyModifier {
     // No modifiers held.
     FlKeyModifier_None = 0,
-    // Shift.
     FlKeyModifier_Shift = 1,
-    // Control.
     FlKeyModifier_Control = 2,
     // Alt / Option.
     FlKeyModifier_Alt = 4,

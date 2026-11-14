@@ -1,5 +1,3 @@
-// Painter API Implementation
-//
 // Each painter call draws inside the open layout element's immediate-mode scope: it records the
 // neutral render-command IR (ui/render_ir.h) into that element's paint span in the painter's own per-frame
 // arena. The first call in a scope lazily attaches the span to the element's Clay CUSTOM marker;
@@ -34,13 +32,13 @@
 
 typedef struct PaintScope {
     void** custom_slot; // &element->config.custom.customData; the span pointer is written here on first paint
-    FlPaintSpan* span;  // null until the first painter call in this scope
+    FlPaintSpan* span;  // nullptr until the first painter call in this scope
     FlEffect effect;    // this scope's current effect; zeroed (kind None) = none. Dies with the scope.
 } PaintScope;
 
 struct Painter {
-    FlArena* arena;       // Painter's own arena, reset each frame - holds the element-local IR byte stream
-    FlArena* state_arena; // Per-frame state: transient glyph layout AND span/segment bookkeeping
+    FlArena* arena;       // Painter's own arena, reset each frame; holds the element-local IR byte stream
+    FlArena* state_arena; // Per-frame state: transient glyph layout and span/segment bookkeeping
     FlFontCache* font_cache;
     float ui_scale; // Absolute; set by the app via ui_set_scale
     float text_scale;
@@ -86,7 +84,7 @@ void painter_scope_push(Painter* p, void** custom_slot) {
         // Zeroed effect: a scope starts with none, so an outer element's effect never reaches this one.
         p->scope_stack[p->scope_depth] = (PaintScope) { .custom_slot = custom_slot, .span = nullptr };
     }
-    p->scope_depth++; // count past the cap so pop stays balanced; over-cap scopes simply do not record
+    p->scope_depth++; // count past the cap so pop stays balanced; over-cap scopes do not record
 }
 
 void painter_scope_pop(Painter* p) {
@@ -102,7 +100,7 @@ u32 painter_scope_depth(const Painter* p) {
 // Effect state. It lives in the innermost scope's slot, so it dies when that element's scope pops (and with
 // every scope at begin_frame) and reaches no sibling, child, or later frame.
 
-// The innermost scope, or null when none is open or nesting is past the cap (such scopes do not record).
+// The innermost scope, or nullptr when none is open or nesting is past the cap (such scopes do not record).
 static const PaintScope* painter_top_scope(const Painter* p) {
     if (p->scope_depth == 0 || p->scope_depth > PAINTER_MAX_SCOPE_DEPTH) {
         return nullptr;
@@ -125,7 +123,7 @@ void painter_set_effect(Painter* p, FlEffect effect) {
     }
 }
 
-// The effect the next primitive carries, or null when there is none (the builders take nullptr for "no effect").
+// The effect the next primitive carries, or nullptr when there is none (the builders take nullptr for "no effect").
 static const FlEffect* painter_current_effect(const Painter* p) {
     const PaintScope* scope = painter_top_scope(p);
     if (scope == nullptr || scope->effect.kind == FlEffectKind_None) {
@@ -134,7 +132,7 @@ static const FlEffect* painter_current_effect(const Painter* p) {
     return &scope->effect;
 }
 
-// The innermost scope's span, lazily created and attached to its element's CUSTOM marker. Returns null when
+// The innermost scope's span, lazily created and attached to its element's CUSTOM marker. Returns nullptr when
 // there is no recordable scope (none open, or nesting past the cap), in which case the primitive no-ops.
 static FlPaintSpan* painter_active_span(Painter* p) {
     PaintScope* s = painter_top_scope_mut(p);
@@ -150,7 +148,7 @@ static FlPaintSpan* painter_active_span(Painter* p) {
     return s->span;
 }
 
-// Begin recording one primitive: returns the active span (else null → skip the primitive)
+// Begin recording one primitive: returns the active span (nullptr means skip the primitive)
 // and 8-aligns the arena so the upcoming record starts exactly at *out_start (the byte_size walk requires
 // record-aligned starts).
 static FlPaintSpan* painter_record_begin(Painter* p, void** out_start) {
@@ -167,7 +165,7 @@ static FlPaintSpan* painter_record_begin(Painter* p, void** out_start) {
 // record is contiguous.
 static void painter_record_end(Painter* p, FlPaintSpan* span, void* start) {
     // A record's actual allocation can be a few bytes short of its 8-rounded byte_size, so align to 8 here to
-    // span whole records - matching the byte_size walk the splice uses.
+    // span whole records, matching the byte_size walk the splice uses.
     fl_arena_align(p->arena, 8);
     u8* end = (u8*)fl_arena_current_pos(p->arena);
     u32 size = (u32)(end - (u8*)start);
@@ -201,7 +199,7 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
         return;
     }
 
-    // A font handle carries its AUTHORED size, so the type scale is multiplied in here to reach the size the
+    // A font handle carries its authored size, so the type scale is multiplied in here to reach the size the
     // glyphs must rasterize at.
     u16 font_size = (u16)max((float)font_cache_get_size(p->font_cache, font) * p->text_scale + 0.5f, 1.0f);
 
@@ -237,7 +235,7 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
         return;
     }
 
-    // Silent while the font is still loading/failed - the same metrics gate every measurement entry point
+    // Silent while the font is still loading or failed. This is the same metrics gate every measurement entry point
     // applies, so a frame never lands where measure reports real metrics but the draw is skipped.
     if (!font_cache_metrics_ready(p->font_cache, style.font_id)) {
         return;
@@ -267,8 +265,6 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
                       baseline_y, style.letter_spacing * p->text_scale);
     painter_record_end(p, span, start);
 }
-
-// Rectangle drawing
 
 // The one fill-rect record writer: logical-space geometry and radii are scaled to pixels here, so every rectangle
 // entry point (single or batched) emits the same bytes. The caller owns the span bracket.
@@ -407,8 +403,6 @@ void painter_vline(Painter* p, float x, float y, float length, FlColor color) {
         p, (FlRect) { .x = scale(p, x), .y = scale(p, y), .w = device_hairline(p->ui_scale), .h = scale(p, length) },
         color);
 }
-
-// Image drawing
 
 // A logical length scaled to pixels, or the fallback pixel length when it is not positive.
 static float painter_extent_or(const Painter* p, float length, float fallback_px) {
@@ -576,7 +570,7 @@ void painter_arc(Painter* p, FlVec2 center, float radius, float start_angle, flo
     if (span == nullptr) {
         return;
     }
-    // Angles are unitless (radians) - only the lengths scale.
+    // Angles are unitless (radians); only the lengths scale.
     const u32 flags = stroke.cap == FlStrokeCap_Round ? FL_IR_ARC_ROUND_CAPS : 0u;
     fl_ir_arc(p->arena, scale(p, center.x), scale(p, center.y), scale(p, radius), scale(p, stroke.width), start_angle,
               sweep, stroke.color, flags, painter_current_effect(p));

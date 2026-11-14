@@ -1,5 +1,3 @@
-// SDL clipboard backend.
-
 #include "../clipboard.h"
 
 #if BACKEND_USE_SDL

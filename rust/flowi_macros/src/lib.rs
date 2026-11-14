@@ -5,16 +5,16 @@
 //! Layout::configure / Layout::end trio covers what they do not take
 //! (Element-anchored floating, which needs a hashed parent_id).
 //!
-//! Container macros - [`layout`] (general, explicit direction), [`row`] / [`col`]
-//! (direction presets), [`scroll`] (a scroll area), [`floating`] (a floating
-//! element) - share one surface: an optional positional id (any flowi::LayoutId -
-//! a bare string, or a (name, seed) tuple to disambiguate repeated ids in a
-//! loop; a stable file:line:column id is synthesised when omitted), flat name: value
-//! fields in any order, and a trailing { } body block. Sizing for the width / height
+//! The container macros share one surface: [`layout`] (general, explicit direction),
+//! [`row`] / [`col`] (direction presets), [`scroll`] (a scroll area) and [`floating`]
+//! (a floating element). Each takes an optional positional id, flat name: value fields
+//! in any order, and a trailing { } body block. The id is any flowi::LayoutId: a bare
+//! string, or a (name, seed) tuple to disambiguate repeated ids in a loop. A stable
+//! file:line:column id is synthesised when it is omitted. Sizing for the width / height
 //! fields comes from the sub-macros [`fixed`] / [`grow`] / [`percent`] / [`fit`],
-//! which expand to a LayoutSizingAxis value; the remaining LayoutConfig
-//! fields have matching sub-macros - [`clip`] (clipping + manual scroll),
-//! [`border`] (color + uniform width), and [`align`] (child alignment).
+//! which expand to a LayoutSizingAxis value. The remaining LayoutConfig fields have
+//! matching sub-macros: [`clip`] (clipping + manual scroll), [`border`] (color +
+//! uniform width), and [`align`] (child alignment).
 //!
 //! The macros are used via the flowi re-exports (flowi::col! { ... }) and need
 //! nothing else in scope.
@@ -565,12 +565,12 @@ pub fn col(input: TokenStream) -> TokenStream {
 }
 
 /// A placed child: a layout container positioned at an explicit offset (`[x, y]`) in its
-/// parent's content coordinate space - it scrolls and clips with the parent, but does not advance
+/// parent's content coordinate space. It scrolls and clips with the parent, but does not advance
 /// the flex cursor or grow the parent's content extent, so flowed siblings lay out as if it were
 /// absent. Use it for coordinate-driven content (timeline clips, piano-roll notes, automation
 /// points) inside a scroll/clip viewport. Accepts the same fields as [`layout`] (including
 /// direction) plus offset (defaults to `[0, 0]`). The offset is in already-zoomed reference
-/// pixels - the app bakes content zoom into the coordinate.
+/// pixels: the app bakes content zoom into the coordinate.
 #[proc_macro]
 pub fn placed(input: TokenStream) -> TokenStream {
     let c = parse_macro_input!(input as Container);
@@ -630,9 +630,9 @@ pub fn scroll(input: TokenStream) -> TokenStream {
 }
 
 /// A context menu (the Menu::begin/body/Menu::end pair). Like [`floating`] it takes an
-/// optional positional id and flat fields, but - unlike the always-run container macros - its
-/// body runs only while the menu is open: it expands to an if Menu::begin(..) { body; Menu::end(); },
-/// the begin-returns-bool conditional. The id is the menu chain's stable identity (share it with the
+/// optional positional id and flat fields, but its body runs only while the menu is open: it
+/// expands to if Menu::begin(..) { body }, and a guard calls Menu::end() on every exit path.
+/// The id is the menu chain's stable identity (share it with the
 /// [`menu_region`] that opens it). Fields: min_width (logical px; 0.0 = default 180) and
 /// z_index (0 = default 1000).
 #[proc_macro]
@@ -660,7 +660,7 @@ pub fn menu(input: TokenStream) -> TokenStream {
 
 /// Emit one menu action item, expanding to [`menu_item_with`](../flowi/fn.menu_item_with.html) and returning
 /// its Signal (so if menu_item!("Cut").clicked { ... } reads inline). Takes a required positional label and
-/// flat fields - shortcut (&str, "" = none), close_policy (a MenuClosePolicy), and disabled (bool).
+/// flat fields: shortcut (&str, "" = none), close_policy (a MenuClosePolicy), and disabled (bool).
 /// Unlike the container macros it takes no body block.
 #[proc_macro]
 pub fn menu_item(input: TokenStream) -> TokenStream {
@@ -688,9 +688,9 @@ pub fn menu_item(input: TokenStream) -> TokenStream {
 }
 
 /// A right-click region (the Menu::region_begin/body/Menu::region_end pair): a right-click inside opens
-/// menu_id at the cursor. Takes two positional ids - region_id, menu_id - and a trailing { body } of the
+/// menu_id at the cursor. Takes two positional ids (region_id, menu_id) and a trailing { body } of the
 /// target content. Always runs its body (the region is always present), like [`scroll`]; the menu it opens is the
-/// one a [`menu`] with the same menu_id renders. The region's Signal is discarded here - call
+/// one a [`menu`] with the same menu_id renders. The region's Signal is discarded here; call
 /// [`Menu::region_begin`](../flowi/struct.Menu.html#method.region_begin) directly if you need it.
 #[proc_macro]
 pub fn menu_region(input: TokenStream) -> TokenStream {
@@ -744,8 +744,8 @@ impl Parse for MenuRegion {
 
 /// A checkable menu item ([`menu_check_with`](../flowi/fn.menu_check_with.html)) bound to a &mut bool,
 /// returning its Signal (so if menu_check!("Bold", &mut bold).clicked { ... } reads inline). Takes a
-/// required positional label and a &mut bound value, then flat fields - shortcut (&str), close_policy
-/// (a MenuClosePolicy), and disabled (bool) - the same set as [`menu_item`]. Takes no body block.
+/// required positional label and a &mut bound value, then the same flat fields as [`menu_item`]: shortcut
+/// (&str), close_policy (a MenuClosePolicy), and disabled (bool). Takes no body block.
 #[proc_macro]
 pub fn menu_check(input: TokenStream) -> TokenStream {
     let m = parse_macro_input!(input as MenuCheck);
@@ -781,8 +781,8 @@ pub fn menu_radio(input: TokenStream) -> TokenStream {
     .into()
 }
 
-/// A non-interactive separator rule ([`menu_separator`](../flowi/fn.menu_separator.html)). Takes no arguments,
-/// fields, or body.
+/// A non-interactive separator rule ([`Menu::separator`](../flowi/struct.Menu.html#method.separator)). Takes no
+/// arguments, fields, or body.
 #[proc_macro]
 pub fn menu_separator(input: TokenStream) -> TokenStream {
     let c = parse_macro_input!(input as Container);
@@ -797,8 +797,8 @@ pub fn menu_separator(input: TokenStream) -> TokenStream {
     quote! { ::flowi::Menu::separator() }.into()
 }
 
-/// A non-interactive section header ([`menu_header`](../flowi/fn.menu_header.html)). Takes a required positional
-/// label and nothing else.
+/// A non-interactive section header ([`Menu::header`](../flowi/struct.Menu.html#method.header)). Takes a required
+/// positional label and nothing else.
 #[proc_macro]
 pub fn menu_header(input: TokenStream) -> TokenStream {
     let c = parse_macro_input!(input as Container);
@@ -818,9 +818,9 @@ pub fn menu_header(input: TokenStream) -> TokenStream {
 }
 
 /// A submenu (the UiSubmenu::begin/body/UiSubmenu::end pair). Like [`menu`] its body runs only while
-/// the submenu is expanded: it expands to an if UiSubmenu::begin(..) { body; UiSubmenu::end(); }. Takes
-/// a required positional label (the parent row's text and identity) and flat fields - min_width (logical px;
-/// 0.0 = default 180) and disabled (bool) - plus the trailing { body } of child items.
+/// the submenu is expanded: it expands to if UiSubmenu::begin(..) { body }, and a guard calls UiSubmenu::end()
+/// on every exit path. Takes a required positional label (the parent row's text and identity), the flat fields
+/// min_width (logical px; 0.0 = default 180) and disabled (bool), and the trailing { body } of child items.
 #[proc_macro]
 pub fn submenu(input: TokenStream) -> TokenStream {
     expand_labeled_open_conditional(
@@ -833,8 +833,8 @@ pub fn submenu(input: TokenStream) -> TokenStream {
 }
 
 /// Shared expansion for the label-plus-min_width/disabled open-conditional menu macros ([`submenu`] /
-/// [`menubar_menu`]): `if <begin>(label, <Config> { min_width, disabled }) { let _g = <guard>::new(); body }` - the body
-/// running only while the nested level is open, closed by the guard on every exit path.
+/// [`menubar_menu`]): `if <begin>(label, <Config> { min_width, disabled }) { let _g = <guard>::new(); body }`. The body
+/// runs only while the nested level is open, and the guard closes it on every exit path.
 fn expand_labeled_open_conditional(
     input: TokenStream,
     macro_name: &str,
@@ -866,11 +866,11 @@ fn expand_labeled_open_conditional(
     .into()
 }
 
-/// The menu bar (the MenuBar::begin/body/MenuBar::end pair). Like [`scroll`] - and unlike [`menu`] - its
-/// body always runs: the strip is the persistent File/Edit/View surface, so it expands to a plain
+/// The menu bar (the MenuBar::begin/body/MenuBar::end pair). Like [`scroll`], and unlike [`menu`], its
+/// body always runs: the strip is the persistent File/Edit/View surface, so it expands to
 /// MenuBar::begin(..); body; MenuBar::end(); with the tops ([`menubar_menu!`]) emitted in the body every frame.
-/// Takes an optional positional id (the bar's stable identity) and a single flat field - z_index (0 =
-/// default 1000) - plus the trailing { body } of tops.
+/// Takes an optional positional id (the bar's stable identity), a single flat field z_index (0 =
+/// default 1000), and the trailing { body } of tops.
 #[proc_macro]
 pub fn menubar(input: TokenStream) -> TokenStream {
     let c = parse_macro_input!(input as Container);
@@ -893,10 +893,10 @@ pub fn menubar(input: TokenStream) -> TokenStream {
 }
 
 /// One top in the menu bar (the UiMenubarMenu::begin/body/UiMenubarMenu::end pair). Like [`submenu`] its body
-/// runs only while the dropdown is open (a click on the top opens it): it expands to an
-/// if UiMenubarMenu::begin(..) { body; UiMenubarMenu::end(); }. Takes a required positional label (the top's text
-/// and identity) and flat fields - min_width (logical px; 0.0 = default 180) and disabled (bool) - plus the
-/// trailing { body } of dropdown items.
+/// runs only while the dropdown is open (a click on the top opens it): it expands to
+/// if UiMenubarMenu::begin(..) { body }, and a guard calls UiMenubarMenu::end() on every exit path. Takes a
+/// required positional label (the top's text and identity), the flat fields min_width (logical px; 0.0 =
+/// default 180) and disabled (bool), and the trailing { body } of dropdown items.
 #[proc_macro]
 pub fn menubar_menu(input: TokenStream) -> TokenStream {
     expand_labeled_open_conditional(
@@ -1138,8 +1138,8 @@ impl Parse for ClipArgs {
     }
 }
 
-/// LayoutClip from bare-ident flags and an optional scroll_pos: - the macro
-/// form of the clip field. `clip!(horizontal, manual_scroll, scroll_pos: [x, 0.0])`.
+/// The macro form of the clip field: a LayoutClip from bare-ident flags and an optional
+/// scroll_pos: value. `clip!(horizontal, manual_scroll, scroll_pos: [x, 0.0])`.
 #[proc_macro]
 pub fn clip(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as ClipArgs);
@@ -1162,9 +1162,8 @@ pub fn clip(input: TokenStream) -> TokenStream {
     .into()
 }
 
-/// LayoutBorder from a positional color and a uniform width - the macro form of
-/// the border field. between_children defaults to 0
-/// and the stroke to solid.
+/// The macro form of the border field: a LayoutBorder from a positional color and a
+/// uniform width. between_children defaults to 0 and the stroke to solid.
 #[proc_macro]
 pub fn border(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as SizingArgs).0;
@@ -1230,8 +1229,8 @@ fn align_y(id: &Ident) -> syn::Result<TokenStream2> {
     }
 }
 
-/// LayoutChildAlignment from positional bare-ident variants - the macro form of
-/// the align field. align!(Center, Top): first arg is the x variant, second the y.
+/// The macro form of the align field: a LayoutChildAlignment from positional bare-ident
+/// variants. align!(Center, Top): first arg is the x variant, second the y.
 #[proc_macro]
 pub fn align(input: TokenStream) -> TokenStream {
     let ids = parse_macro_input!(input as AlignArgs).0;

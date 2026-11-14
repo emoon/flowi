@@ -126,15 +126,10 @@
 #include "fixtures/fonts/glyph_test_fonts.h"
 #include "render_seam.h"
 
-// Arena from fl_init, shared by all tests (set up once in main below).
-
-// vfs.read_through_generated_plugin - drives the api_gen-generated FlVfsPlugin driver vtable
-// (<flowi/vfs/vfs_plugin.h>) end-to-end through a hermetic in-memory driver, no disk I/O. The driver mirrors
-// LocalFS's handle semantics (stateless instance, self-describing handles), backed by one in-memory file.
-
+// The stub VFS driver is an in-memory FlVfsPlugin with one file and no disk I/O. It follows LocalFS's handle
+// semantics: a stateless instance and self-describing handles.
 #define STUB_VFS_FILE "hello.txt"
 
-// One open resource in the in-memory driver: either the mount-root directory or the single file.
 // Translates the IR records [start, start + bytes) with no glyph cache.
 static inline UiRenderCommandsArray sw_translate(FlArena* commands_arena, FlArena* state_arena, const void* start,
                                                  size_t bytes, u8 global_alpha) {
@@ -148,17 +143,17 @@ static inline UiRenderCommandsArray sw_translate(FlArena* commands_arena, FlAren
     });
 }
 
+// One open resource in the stub driver: the mount-root directory or the single file.
 typedef struct StubVfsHandle {
     bool is_dir;
     int64_t offset; // read cursor for the file
 } StubVfsHandle;
 
-// When set, get_size for the file reports one byte over the VFS read-all cap (512 MB), driving
-// read-all's over-cap hard-error branch. The check precedes the allocation, so no 512 MB buffer
-// is ever allocated.
+// One byte over the VFS read-all cap (512 MB). With s_stub_vfs_oversize set, get_size reports this for the file
+// and read-all fails on the cap check, which runs before the allocation.
 #define STUB_VFS_OVERSIZE ((int64_t)512 * 1024 * 1024 + 1)
 
-// render: shared fixture - software renderer + UI context + VFS + image system + font cache.
+// Shared render fixture: software renderer, UI context, VFS, image system and font cache.
 //
 // Created lazily by the first render_fixture_get() in a case (fl_vfs_init / ui_create / image_create_system), and
 // released by render_fixture_teardown. The runner releases it around every case, so a case always starts from a
@@ -172,13 +167,13 @@ typedef struct RenderFixture {
     void (*render)(void* user_data, FlSurface* surface, const FlRenderFrame* frame);
     u8 submitted_global_alpha;
     FlBackground submitted_background;
-    // The first border / text-run record of the last frame. The frame's IR arena is rewound once the frame is
-    // done, so this is the only view a case gets of what the layout -> Clay -> IR path carried.
+    // The first border and text-run records of the last frame, copied out because the frame's IR arena is rewound
+    // once the frame is done.
     bool border_found;
     FlCmdBorder submitted_border;
     bool text_run_found;
     FlCmdTextRun submitted_text_run;
-    FlGlyph text_run_glyphs[4]; // leading glyphs of that run: pen deltas are the only view of letter spacing
+    FlGlyph text_run_glyphs[4]; // leading glyphs of that run; their pen deltas show the letter spacing
     u32 text_run_glyph_count;   // how many of the above are populated (the run may carry more)
     bool owns_vfs;
     bool owns_image_system;
@@ -187,6 +182,7 @@ typedef struct RenderFixture {
 
 // Fixtures and helpers defined in unit_tests_common.c, used by more than one area's TU.
 
+// Arena from fl_init, shared by all tests. main sets it up once.
 extern FlArena* s_arena;
 #if defined(__linux__)
 u64 count_proc_self_maps(void);

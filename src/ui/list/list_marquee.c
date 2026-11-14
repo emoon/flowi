@@ -1,11 +1,11 @@
-// List marquee (rubber-band) selection - CONTEXT.md `## Lists`.
+// List marquee (rubber-band) selection (CONTEXT.md "Lists").
 //
 // A drag begun on empty list space (a gap between rows or below the content, i.e. a press no row consumed) sweeps
 // a selection rectangle and selects the rows it covers, emitting an endpoint-only SetRange like the click
 // gestures. The anchor is held in content space, so edge auto-scroll mutating the visible range mid-gesture does
 // not move it.
 //
-// The container is NOT registered as an interactive item: the empty-space test is "a press this frame that no row
+// The container is not registered as an interactive item: the empty-space test is "a press this frame that no row
 // consumed, inside the container's viewport rect". Coverage works in boundingBox/mouse pixel space and assumes
 // ui_scale == 1 (logical == physical); only the overlay's draw divides by scale.
 
@@ -18,7 +18,7 @@
 
 #define LIST_MARQUEE_FLOAT_SEED 0x4d515251 // 'MQRQ'
 #define LIST_MARQUEE_FILL_SEED 0x4d515200  // 'MQR\0'
-#define LIST_MARQUEE_FILL_ALPHA 64         // translucent wash so the rows show through
+#define LIST_MARQUEE_FILL_ALPHA 64         // translucent, so the rows show through
 
 // A marquee band in content-space Y.
 typedef struct Band {
@@ -34,7 +34,7 @@ typedef struct RowSpan {
 
 // Map the content-space band to model positions: a row at position p occupies [p*stride, p*stride + row_height];
 // it intersects [band_lo, band_hi] iff its bottom > band_lo and its top < band_hi. Solving for p gives a closed
-// form - pure arithmetic on content Y, never a per-item lookup, so off-screen rows resolve identically.
+// form on content Y with no per-item lookup, so off-screen rows resolve identically.
 static RowSpan covered_rows(const FlListContext* self, Band band) {
     f32 stride = list_row_stride(self);
     i64 count = (i64)self->ordered_count;
@@ -78,7 +78,7 @@ static void request_coverage(FlListContext* self, const ListState* st, Band band
     }
 }
 
-// Draw the marquee rectangle as a floating overlay (visual only - selection is resolved separately). The band is
+// Draw the marquee rectangle as a floating overlay (visual only; selection is resolved separately). The band is
 // in content space; the x extent runs from the anchor to the cursor.
 static void draw_band(FlListContext* self, const ListState* st, const ListViewport* vp, Band band) {
     f32 scroll = list_scroll_offset(self);
@@ -123,7 +123,7 @@ static bool is_empty_space_press(const FlListContext* self, const ListViewport* 
 }
 
 // Arm on an empty-space press: a left press this frame, inside the viewport, that no row consumed. (A press on a
-// row sets frame_row_pressed and runs the click gesture instead - the two are mutually exclusive.)
+// row sets frame_row_pressed and runs the click gesture instead, so the two never overlap.)
 static void arm_on_empty_press(FlListContext* self, ListState* st, const ListViewport* vp) {
     f32 mouse_x = self->ui_ctx->input_state.mouse.x;
     f32 mouse_y = self->ui_ctx->input_state.mouse.y;
@@ -138,8 +138,8 @@ static void arm_on_empty_press(FlListContext* self, ListState* st, const ListVie
     st->marquee_anchor_x = mouse_x;
 }
 
-// Latch live only once past the movement threshold - so an empty-space press-and-release stays a (no-op) click,
-// never a spurious one-pixel marquee.
+// Latch live only once past the movement threshold, so an empty-space press-and-release stays a (no-op) click
+// and does not start a one-pixel marquee.
 static void latch_past_threshold(const FlListContext* self, ListState* st) {
     if (list_pointer_past_drag_threshold(self)) {
         st->marquee_active = true;
@@ -170,7 +170,7 @@ void list_marquee_update(FlListContext* self, ListState* st) {
     }
 
     // The cursor's content-space Y is clamped to the viewport edges: a past-edge cursor pins the band edge at the
-    // viewport and extends the band only as fast as auto-scroll advances scroll - the band doesn't teleport ahead
+    // viewport and extends the band only as fast as auto-scroll advances scroll, so the band does not run ahead
     // of the rows it covers.
     f32 scroll = list_scroll_offset(self);
     f32 cur_content_y = list_clamped_content_y(self, &vp, scroll);

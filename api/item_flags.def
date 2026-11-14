@@ -1,5 +1,5 @@
-/// Per-element behavior opt-in flags - the bitmask ui_item_behavior(id, flags, cfg) takes to turn a laid-out
-/// area into an interactive widget (clickable, draggable, focusable, ...). Combine flags with bitwise OR
+/// Per-element behavior flags: the bitmask Item::behavior takes to turn a laid-out area into an
+/// interactive widget (clickable, draggable, focusable, ...). Combine flags with bitwise OR
 /// (ItemFlags::CLICKABLE | ItemFlags::DRAGGABLE).
 #[attributes(bitflags)]
 enum ItemFlags {

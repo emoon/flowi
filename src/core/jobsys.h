@@ -1,6 +1,6 @@
 #pragma once
 
-// Job system - internal include seam over the generated <flowi/core/jobs.h>.
+// Internal include for the job system, layered over the generated <flowi/core/jobs.h>.
 
 #include "types.h"
 #include <stdatomic.h>
@@ -14,14 +14,14 @@ typedef struct Jobs Jobs;
 
 extern _Atomic(Jobs*) g_global_job_system;
 
-// True once fl_jobs_create_default has installed the global job system, false before it and after teardown.
+// True once fl_jobs_create has installed the global job system, false before it and after teardown.
 bool jobs_global_exists(void);
 
-// Special job handle value indicating immediate completion (job executed synchronously)
-// Used when scheduling a job from a worker thread - job executes immediately and returns this sentinel
+// Handle returned when the job already ran. Scheduling from a worker thread runs the job
+// synchronously and returns this.
 #define JOB_HANDLE_IMMEDIATE_COMPLETE ((FlJobHandle)0xFFFFFFFFFFFFFFFFULL)
 
-// Internal job priority spelling (the generated FlJobPriority, named without the Fl prefix for internal call sites)
+// The generated FlJobPriority, named without the Fl prefix for internal call sites.
 
 typedef FlJobPriority JobPriority;
 

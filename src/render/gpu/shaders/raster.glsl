@@ -1,4 +1,4 @@
-// Pass 2: raster - one workgroup per tile, one thread per pixel, blending the tile's classified commands.
+// Pass 2, raster: one workgroup per tile, one thread per pixel, blending the tile's classified commands.
 //
 // The tile's classified index list is cooperatively staged through shared memory: thread i loads list entry i,
 // which covers the whole list since workgroup size equals list capacity. Only the indices are staged, so the
@@ -110,7 +110,7 @@ float diamond_dist(DrawCmd cmd, float2 p) {
            sign(ap.x * b.y + ap.y * b.x - b.x * b.y);
 }
 // Polyline stroke capsule: rect = (p0, p1), radius.x = half-width. The segment distance field minus the
-// half-width - round caps and joins fall out of the clamped projection (segment_dist).
+// half-width; round caps and joins fall out of the clamped projection (segment_dist).
 float poly_capsule_dist(DrawCmd cmd, float2 p) { return segment_dist(p, cmd.rect.xy, cmd.rect.zw) - cmd.radius.x; }
 #define TAU 6.28318530717959 // one full turn: the arc length a circle's ring dash pattern repeats over
 // Dashes: a border band and a circle's border ring can carry a repeating dash/gap pattern, two lengths packed
@@ -164,7 +164,7 @@ float ring_or_solid_dist(DrawCmd cmd, float d, float bw) {
     bool hollow = (cmd.color.x >> 24) == 0u && bw > 0.0;
     return hollow ? max(d, -(d + bw)) : d;
 }
-// The shape's outermost outline, dispatched by kind - what a drop shadow or glow is cast from.
+// The shape's outermost outline, dispatched by kind: what a drop shadow or glow is cast from.
 float silhouette_dist(DrawCmd cmd, float2 p) {
     if (cmd.kind == KIND_BORDER) { return max(border_outer_dist(cmd, p), -border_inner_dist(cmd, p)); }
     if (cmd.kind == KIND_ARC) { return arc_dist(cmd, p); }
@@ -172,7 +172,7 @@ float silhouette_dist(DrawCmd cmd, float2 p) {
     if (cmd.kind == KIND_DIAMOND) { return ring_or_solid_dist(cmd, diamond_dist(cmd, p), cmd.radius.x); }
     if (cmd.kind == KIND_POLYLINE) {
         // Only a stroke capsule casts an effect silhouette; a fill trapezoid casts none (a far distance,
-        // so zero effect coverage) - the stroke over the fill carries the polyline's shadow/glow.
+        // so zero effect coverage); the stroke over the fill carries the polyline's shadow/glow.
         return (cmd.flags & POLY_STROKE) != 0u ? poly_capsule_dist(cmd, p) : 1e9;
     }
     return rect_dist(cmd, p);
@@ -248,7 +248,7 @@ KERNEL(main) {
         if (cmd.kind <= KIND_IMAGE || cmd.kind == KIND_SLOT_IMAGE || cmd.kind == KIND_GLYPH ||
             cmd.kind == KIND_SVG || cmd.kind == KIND_SVG_COLOR) {
             float4 r = cmd.rect;
-            // Images (atlas and slot) and glyphs are sharp boxes (radius 0) - their radius words carry
+            // Images (atlas and slot) and glyphs are sharp boxes (radius 0); their radius words carry
             // the source texel rect instead (handled by rect_dist).
             float d = rect_dist(cmd, pc);
             float coverage = clamp(0.5 - d, 0.0, 1.0);
@@ -266,11 +266,11 @@ KERNEL(main) {
                 float4 s = float4(0.0);
                 if (cmd.kind == KIND_GLYPH) {
                     // R8 glyph coverage read as white x coverage (premultiplied), so the shared multiply
-                    // below colorizes it with the run's premultiplied tint - the alpha-coverage contract.
+                    // below colorizes it with the run's premultiplied tint (the alpha-coverage contract).
                     // The linear/nearest filter selection (image atlas and slot images) is per-backend.
                     s = float4(textureLod(glyph_atlas, tc / float(GLYPH_ATLAS_SIZE), 0.0).r);
                 } else if (cmd.kind == KIND_IMAGE) {
-                    // Image atlas (RGBA8): color texels, or an alpha-coverage source stored as white x alpha -
+                    // Image atlas (RGBA8): color texels, or an alpha-coverage source stored as white x alpha;
                     // both premultiplied, so the shared multiply below folds tint and coverage identically. GL
                     // binds two sampler objects to the atlas texture; Metal pairs the one texture argument with
                     // two function-local samplers.
@@ -294,7 +294,7 @@ KERNEL(main) {
                 }
                 else if (cmd.kind == KIND_SLOT_IMAGE) {
                     // Slot image (large statics / dynamic buffers, each on its own texture): cmd.aux is the slot
-                    // index - workgroup-uniform (the broadcast cmd fetch above), so this sampler-array index is
+                    // index, workgroup-uniform (the broadcast cmd fetch above), so this sampler-array index is
                     // dynamically uniform. The reciprocal texture extent normalizes the texel coordinate to
                     // [0,1]. GL binds the filter as the slot's sampler object; Metal selects between two
                     // function-local samplers by the slot's filter value.
@@ -341,7 +341,7 @@ KERNEL(main) {
             float intensity = 0.0;
             if ((cmd.flags & POLY_STROKE) != 0u) {
                 // Stroke capsule: the segment distance field minus the half-width, AA'd as clamp(0.5 - d).
-                // h is the projection along the segment - round caps/joins fall out, and the per-endpoint
+                // h is the projection along the segment: round caps/joins fall out, and the per-endpoint
                 // intensities lerp by it.
                 float d = poly_capsule_dist(cmd, pc);
                 cov = clamp(0.5 - d, 0.0, 1.0);
@@ -368,7 +368,7 @@ KERNEL(main) {
         } else {
             // Circle (rect = cx, cy, radius, border_width) / diamond (rect = cx, cy, rx, ry;
             // radius.x = border_width): the centered SDF (shared with the silhouette path) with the
-            // optional inward border ring composited as two coverages - outer minus inner is the ring,
+            // optional inward border ring composited as two coverages: outer minus inner is the ring,
             // AA'd at both edges. The translator guarantees border_width < the inradius, so the fill
             // region never degenerates.
             float d;
@@ -398,7 +398,7 @@ KERNEL(main) {
         // Effect under the shape (bits 8..9 of flags: 1 = drop shadow, 2 = glow). The shadow casts the
         // silhouette offset + blurred and blends below; the glow casts it centered + blurred and adds.
         // The shape's own src lands on top unchanged, so a fully covered interior pixel is identical with
-        // or without the effect - the effect never disturbs the primitive's edge AA.
+        // or without the effect; the effect never disturbs the primitive's edge AA.
         uint efk = (cmd.flags >> EFFECT_SHIFT) & EFFECT_MASK;
         if (efk != 0u) {
             float2 off = efk == EFFECT_SHADOW ? float2(uintBitsToFloat(cmd.effect.x), uintBitsToFloat(cmd.effect.y))

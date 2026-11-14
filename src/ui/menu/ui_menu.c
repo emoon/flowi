@@ -13,8 +13,6 @@
 #include "../ui_private.h"
 #include "../ui_tokens.h"
 
-// Defaults
-
 // Menu row height in logical px.
 #define UI_MENU_ITEM_HEIGHT 36.0f
 // Separator row height in logical px.
@@ -28,8 +26,6 @@
 // Highlight strength (0 resting, 1 selected) for a parent on the open path and for a disabled row under the pointer.
 #define UI_MENU_TRAIL_HIGHLIGHT 0.6f
 #define UI_MENU_DISABLED_HIGHLIGHT 0.25f
-
-// Internal helpers
 
 // Leading mark of a stateful row.
 typedef enum MenuMarker {
@@ -482,7 +478,7 @@ FlSignal ui_menu_radio_impl(FlString label, int* selected, int value, FlMenuItem
     return signal;
 }
 
-// Static (non-interactive) item kinds - separator, section header
+// Static (non-interactive) item kinds: separator and section header
 
 // Register a separator or header row. Returns its layout id.
 static FlLayoutId record_static_row(FlUiCtx* ctx, FlString name, f32 row_height) {

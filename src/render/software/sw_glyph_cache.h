@@ -7,7 +7,7 @@
 //
 // The software backend's private glyph cache: it takes the shared font layer's raster source (FreeType bytes,
 // a bitmap descriptor, or the built-in default font) and rasterizes glyphs to sized coverage bitmaps, with a
-// job-threaded per-size atlas. This is where FreeType's hinted grayscale/LCD rasterizer is called - never in
+// job-threaded per-size atlas. FreeType's hinted grayscale/LCD rasterizer is called here and never in
 // the shared ui/ font layer.
 
 struct FlArena;

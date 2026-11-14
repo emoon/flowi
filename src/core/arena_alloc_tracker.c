@@ -76,7 +76,7 @@ void arena_alloc_tracker_record(ArenaAllocTracker* tracker, const char* file, in
         }
     }
 
-    // Table full - silently drop (should not happen with 1024 slots in practice)
+    // The table is full, so the record is dropped.
     mutex_unlock(&tracker->mutex);
 }
 

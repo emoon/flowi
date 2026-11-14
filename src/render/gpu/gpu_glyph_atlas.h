@@ -1,6 +1,6 @@
 #pragma once
 
-// GPU backend: glyph-atlas bookkeeping - (font, size, glyph) -> R8 atlas cell over the skyline packer.
+// GPU backend: glyph-atlas bookkeeping: (font, size, glyph) -> R8 atlas cell over the skyline packer.
 //
 // Append-only like the packer underneath: a glyph is placed once per (font, quantized size, glyph id) and never
 // released. There is no per-glyph eviction; re-initializing this module regenerates the atlas wholesale.

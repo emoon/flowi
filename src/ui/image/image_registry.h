@@ -2,10 +2,10 @@
 
 // Core image readiness registry.
 //
-// A small, backend-agnostic map from image handle -> realized logical dimensions. It holds NO pixels - the
+// A small, backend-agnostic map from image handle -> realized logical dimensions. It holds no pixels. The
 // decoded/realized pixels live in the active backend (the SW TLSF pool, the GPU atlas/slots). Presence in
-// the registry IS readiness: an image is ready only once the active backend has reported it realized
-// (prepare_image returning true). Pending / error are NOT tracked here - they stay in the load/decode path
+// the registry is readiness: an image is ready only once the active backend has reported it realized
+// (prepare_image returning true). Pending and error are tracked in the load/decode path
 // (image.c reads the VFS status for the not-yet-realized case).
 //
 // mark_realized runs on the job-worker thread (SW) or the render thread (GPU); the readiness query runs on the
@@ -35,5 +35,5 @@ void image_registry_mark_realized(ImageHandle handle, int width, int height);
 void image_registry_remove(ImageHandle handle);
 
 /// Returns true iff the active backend has realized the handle; fills logical dimensions (out_width /
-/// out_height may be null). Safe to call on the main thread concurrently with backend acks.
+/// out_height may be nullptr). Safe to call on the main thread concurrently with backend acks.
 bool image_registry_is_ready(ImageHandle handle, int* out_width, int* out_height);

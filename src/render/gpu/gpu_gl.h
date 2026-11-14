@@ -70,6 +70,6 @@ typedef struct GpuGl {
 } GpuGl;
 
 // Resolve every entry via eglGetProcAddress. Requires a current GL context. Returns false (and logs) if any
-// function is missing - the backend must not be constructed then.
+// function is missing; the backend must not be constructed then.
 
 bool gpu_gl_load(GpuGl* gl);

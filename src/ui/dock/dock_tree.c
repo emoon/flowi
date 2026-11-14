@@ -1,15 +1,11 @@
-// Dock Tree - retained logical dock tree + pure operations (see dock_tree.h).
-//
-// Topology + ratios only; no pixel geometry. Every node lives in the tree's arena and is never individually
-// freed - collapsed/dissolved nodes simply become unreachable (the arena is torn down wholesale on destroy).
+// Every node lives in the tree's arena and is never freed on its own. Collapsed and dissolved nodes become
+// unreachable and go away when the arena is destroyed.
 
 #include "dock_tree.h"
 
 #include <core/arena.h>
 
 #include <string.h>
-
-// Small helpers
 
 static f32 clamp_ratio(f32 r) {
     if (r < FL_DOCK_MIN_RATIO) {
@@ -63,8 +59,7 @@ static u32 leaf_index_of(const FlDockNode* leaf, FlDockPanelId panel) {
     return UINT32_MAX;
 }
 
-// Remove the panel at idx from leaf, fixing the selected-tab index. Does NOT collapse an emptied leaf - that
-// is the caller's concern.
+// Remove the panel at idx from leaf, fixing the selected-tab index. The caller collapses an emptied leaf.
 static void leaf_remove_at(FlDockNode* leaf, u32 idx) {
     for (u32 i = idx; i + 1 < leaf->leaf.count; ++i) {
         leaf->leaf.panels[i] = leaf->leaf.panels[i + 1];
@@ -143,10 +138,9 @@ static FlDockNode* find_leaf_with_panel_rec(FlDockNode* node, FlDockPanelId pane
 
 // Collapse: an emptied non-root leaf dissolves its single-child split; the sibling absorbs the slot. The root is
 // exempt (it degrades to an empty leaf and stays). leaf must be empty.
-
 static void collapse_empty_leaf(FlDockTree* tree, FlDockNode* leaf) {
     if (leaf == tree->root) {
-        return; // root is the floor - stays an empty leaf
+        return; // the root is the floor and stays an empty leaf
     }
 
     FlDockNode* parent = leaf->parent; // a split with exactly two children, one of which is leaf
@@ -166,7 +160,7 @@ static void collapse_empty_leaf(FlDockTree* tree, FlDockNode* leaf) {
 
 // Detach panel from wherever it currently lives (a leaf or the floating set), collapsing an emptied non-root
 // leaf. Returns true if the panel was found and removed. Every op that re-places a panel detaches first, so a dock
-// of an already-present panel is a move, never a duplicate.
+// of a panel that is already present moves it.
 static bool detach_panel(FlDockTree* tree, FlDockPanelId panel) {
     u32 fidx = floating_index_of(tree, panel);
     if (fidx != UINT32_MAX) {
@@ -187,7 +181,6 @@ static bool detach_panel(FlDockTree* tree, FlDockPanelId panel) {
 
 // Split insertion: replace target (anywhere in the tree, including the root) with a new split whose other child
 // is a fresh leaf holding panel, placed on side.
-
 static void insert_split_at(FlDockTree* tree, FlDockNode* target, FlDockPanelId panel, FlDockSide side, f32 new_share) {
     FlDockNode* new_leaf = node_new_leaf(tree);
     dock_tree_leaf_append(tree, new_leaf, panel);
@@ -222,7 +215,7 @@ static void insert_split_at(FlDockTree* tree, FlDockNode* target, FlDockPanelId 
 // Operations
 
 // Dock an already-detached panel onto the root: into the root leaf if it is empty, else as a fresh split off the
-// root. The safety net for a dock whose target dissolved when the panel left it - the panel is re-homed, not lost.
+// root. Used when a dock's target dissolved as the panel left it, so the panel is not lost.
 static void rehome_to_root(FlDockTree* tree, FlDockPanelId panel) {
     if (tree->root->kind == FlDockNodeKind_Leaf && tree->root->leaf.count == 0) {
         dock_tree_leaf_append(tree, tree->root, panel);
@@ -240,7 +233,7 @@ static bool apply_tab(FlDockTree* tree, const FlDockRequest* req) {
 
     u32 existing = leaf_index_of(target, req->panel);
     if (existing != UINT32_MAX) {
-        target->leaf.selected = existing; // already here - re-select it
+        target->leaf.selected = existing; // already here, so re-select it
         return true;
     }
 
@@ -251,18 +244,18 @@ static bool apply_tab(FlDockTree* tree, const FlDockRequest* req) {
         target->leaf.selected = target->leaf.count - 1;
         return true;
     }
-    rehome_to_root(tree, req->panel); // target dissolved with the detach - never drop the panel
+    rehome_to_root(tree, req->panel); // the target dissolved with the detach
     return true;
 }
 
-// Shared body for dock-split (target = a node id) and dock-outer (target = the root). Splitting an EMPTY leaf
-// would create an empty non-root sibling, so it degenerates to dock-as-tab into that leaf - which is how the
+// Shared body for dock-split (target = a node id) and dock-outer (target = the root). Splitting an empty leaf
+// would create an empty non-root sibling, so it degenerates to dock-as-tab into that leaf, which is how the
 // first panel lands in a fresh tree.
 static bool apply_split_against(FlDockTree* tree, FlDockNode* target, FlDockPanelId panel, FlDockSide side,
                                 f32 new_share) {
     FlDockNodeId target_id = target->id;
 
-    // Splitting a leaf whose sole content already IS this panel is a no-op: detaching first would collapse the
+    // Splitting a leaf whose sole content already is this panel is a no-op: detaching first would collapse the
     // target out from under it.
     if (target->kind == FlDockNodeKind_Leaf && target->leaf.count == 1 && target->leaf.panels[0] == panel) {
         return true;
@@ -271,7 +264,7 @@ static bool apply_split_against(FlDockTree* tree, FlDockNode* target, FlDockPane
     detach_panel(tree, panel);
     target = find_node_rec(tree->root, target_id); // detach may have reshaped (or dissolved) the target
     if (target == nullptr) {
-        rehome_to_root(tree, panel); // intended target dissolved when the panel left - re-home, never drop it
+        rehome_to_root(tree, panel); // the intended target dissolved when the panel left
         return true;
     }
 
@@ -300,7 +293,7 @@ static bool apply_outer(FlDockTree* tree, const FlDockRequest* req) {
 static bool apply_undock(FlDockTree* tree, const FlDockRequest* req) {
     FlDockNode* leaf = find_leaf_with_panel_rec(tree->root, req->panel);
     if (leaf == nullptr) {
-        return false; // not docked (already floating, or absent) - nothing to undock
+        return false; // not docked (already floating, or absent)
     }
     detach_panel(tree, req->panel);
     dock_tree_floating_append(tree, req->panel);
@@ -333,12 +326,12 @@ static bool apply_reorder_tab(FlDockTree* tree, const FlDockRequest* req) {
         }
     }
     leaf->leaf.panels[to] = moved;
-    leaf->leaf.selected = leaf_index_of(leaf, selected_id); // selection follows the panel, not the slot
+    leaf->leaf.selected = leaf_index_of(leaf, selected_id); // selection follows the panel, not the slot index
     return true;
 }
 
 static bool apply_close(FlDockTree* tree, const FlDockRequest* req) {
-    return detach_panel(tree, req->panel); // collapses an emptied leaf; floating panels just vanish
+    return detach_panel(tree, req->panel); // collapses an emptied leaf; a floating panel is removed from the set
 }
 
 static bool apply_splitter_resize(FlDockTree* tree, const FlDockRequest* req) {
@@ -349,8 +342,6 @@ static bool apply_splitter_resize(FlDockTree* tree, const FlDockRequest* req) {
     node->split.ratio = clamp_ratio(req->ratio);
     return true;
 }
-
-// Public API
 
 FlDockTree* dock_tree_create(void) {
     FlArena* arena = arena_new();
@@ -363,7 +354,7 @@ FlDockTree* dock_tree_create(void) {
 
 void dock_tree_destroy(FlDockTree* tree) {
     if (tree != nullptr) {
-        fl_arena_destroy(tree->arena); // the tree handle itself lives in this arena
+        fl_arena_destroy(tree->arena); // the tree struct itself lives in this arena
     }
 }
 
@@ -386,7 +377,7 @@ static FlDockNode* clone_node_rec(FlArena* arena, const FlDockNode* src, FlDockN
     } else {
         node->leaf.count = src->leaf.count;
         node->leaf.selected = src->leaf.selected;
-        node->leaf.cap = src->leaf.count; // tighten to fit
+        node->leaf.cap = src->leaf.count;
         if (src->leaf.count > 0) {
             node->leaf.panels = arena_alloc_array(arena, FlDockPanelId, node->leaf.cap);
             memcpy(node->leaf.panels, src->leaf.panels, src->leaf.count * sizeof(FlDockPanelId));
@@ -402,7 +393,7 @@ FlDockTree* dock_tree_clone(const FlDockTree* src) {
     FlArena* arena = arena_new();
     FlDockTree* tree = arena_alloc_zero(arena, FlDockTree);
     tree->arena = arena;
-    tree->next_node_id = src->next_node_id; // preserve the allocator so cloned + future ids match the original
+    tree->next_node_id = src->next_node_id; // so ids minted after the clone match what the original would mint
     tree->root = clone_node_rec(arena, src->root, nullptr);
 
     if (src->floating_count > 0) {
@@ -414,8 +405,8 @@ FlDockTree* dock_tree_clone(const FlDockTree* src) {
     return tree;
 }
 
-// Builds whatever the spec describes, holes included; dock_tree_build validates the whole result afterward. A null
-// spec child yields a null node, which the invariant checker then rejects as a missing-child split.
+// Builds whatever the spec describes, holes included; dock_tree_build validates the whole result afterward. A nullptr
+// spec child yields a nullptr node, which the invariant checker then rejects as a missing-child split.
 static FlDockNode* build_spec_rec(FlDockTree* tree, const FlDockSpec* spec, FlDockNode* parent) {
     if (spec == nullptr) {
         return nullptr;
@@ -445,12 +436,12 @@ static FlDockNode* build_spec_rec(FlDockTree* tree, const FlDockSpec* spec, FlDo
 }
 
 FlDockTree* dock_tree_build(const FlDockSpec* spec) {
-    FlDockTree* tree = dock_tree_create(); // starts as the floor; a null spec keeps it
+    FlDockTree* tree = dock_tree_create(); // starts as the floor; a nullptr spec keeps it
     if (spec != nullptr) {
         tree->root = build_spec_rec(tree, spec, nullptr); // the original empty-leaf root leaks into the arena
     }
     if (!dock_tree_check_invariants(tree)) {
-        dock_tree_destroy(tree); // a malformed literal - never hand back a holed tree
+        dock_tree_destroy(tree); // a malformed literal
         return nullptr;
     }
     return tree;
@@ -530,8 +521,6 @@ u32 dock_tree_collect_panels(const FlDockTree* tree, FlDockPanelId* out, u32 max
     return written;
 }
 
-// Invariant checker - pure predicate, no asserts (safe in a tight fuzz loop).
-
 static bool check_node_rec(const FlDockTree* tree, const FlDockNode* node, const FlDockNode* expected_parent) {
     if (node == nullptr) {
         return false;
@@ -554,13 +543,13 @@ static bool check_node_rec(const FlDockTree* tree, const FlDockNode* node, const
         FlDockNode* a = node->split.child[0];
         FlDockNode* b = node->split.child[1];
         if (a == nullptr || b == nullptr || a == b) {
-            return false; // exactly two distinct children - no single-child splits
+            return false; // a split has exactly two distinct children
         }
         if (node->split.axis != FlDockAxis_X && node->split.axis != FlDockAxis_Y) {
             return false;
         }
         if (!(node->split.ratio >= FL_DOCK_MIN_RATIO && node->split.ratio <= 1.0f - FL_DOCK_MIN_RATIO)) {
-            return false; // ratio clamped inside (0,1) by the min-size floor
+            return false; // the ratio must sit inside the min-size floor
         }
         return check_node_rec(tree, a, node) && check_node_rec(tree, b, node);
     }

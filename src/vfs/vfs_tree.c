@@ -1,5 +1,4 @@
-// VFS Tree
-// The nodes met while resolving paths below a mount, and the archives they carry
+// The nodes met while resolving paths below a mount, and the archives they carry.
 
 #include <core/arena.h>
 #include <core/assert.h>

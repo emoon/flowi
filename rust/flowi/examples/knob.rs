@@ -1,7 +1,7 @@
-//! A reference knob, assembled from public primitives only - the generic [`Item::behavior`] Signal to detect
+//! A reference knob assembled from public primitives only: the generic [`Item::behavior`] Signal detects
 //! the grab, a hidden relative drag ([`UiInput::mouse_hidden_drag_begin`] / [`UiInput::mouse_drag_delta`] /
-//! [`UiInput::mouse_hidden_drag_end`]) for the unbounded scrub, and [`Painter::circle_bordered`] / [`Painter::arc`] for
-//! the body and indicator. It needs a display; run it and drag the knob up/down:
+//! [`UiInput::mouse_hidden_drag_end`]) gives the unbounded scrub, and [`Painter::circle_bordered`] / [`Painter::arc`]
+//! draw the body and indicator. It needs a display; run it and drag the knob up/down:
 //!
 //! ```text
 //! cargo run -p flowi --example knob
@@ -25,7 +25,7 @@ const ARC_SWEEP: f32 = 1.5 * PI;
 
 // Hidden-drag sensitivity: 1.0 reads the raw per-frame pixel delta as-is.
 const DRAG_SCALE: f32 = 1.0;
-// Value units per scaled pixel - the normalized 0..1 range covers a 200px drag.
+// Value units per scaled pixel: the normalized 0..1 range covers a 200px drag.
 const SENSITIVITY: f32 = 1.0 / 200.0;
 const FINE_FACTOR: f32 = 0.2;
 const DEFAULT_VALUE: f32 = 0.5;

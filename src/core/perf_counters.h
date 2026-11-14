@@ -5,10 +5,10 @@
 
 struct FlArena;
 
-// Performance counters - hardware performance monitoring
+// Hardware performance counters.
 //
-// Instructions retired is the only event here. Linux reads it through perf_event_open; no other
-// platform has a seam for it, so counters report unavailable there and every call below refuses.
+// Instructions retired is the only event. Linux reads it through perf_event_open; no other platform
+// implements it, so counters report unavailable there and every call below fails.
 
 typedef enum PerfCounterEvent {
     PERF_COUNTER_INSTRUCTIONS,
@@ -22,7 +22,7 @@ typedef struct PerfCounterSession PerfCounterSession;
 // Core API
 
 // Must succeed before anything else below does anything. False when no counter could be opened: no
-// PMU, no permission to read one, or a platform with no seam at all.
+// PMU, no permission to read one, or a platform with no implementation.
 bool perf_counters_init(void);
 
 // Returns the subsystem to its uninitialized state; a later init may probe again.
@@ -33,11 +33,11 @@ bool perf_counters_available(void);
 
 // Session
 //
-// A session owns one hardware counter. Null unless perf_counters_init() has succeeded.
+// A session owns one hardware counter. Create returns nullptr unless perf_counters_init() has succeeded.
 
 PerfCounterSession* perf_counter_session_create(struct FlArena* arena);
 
-// Closes the counter. Null-safe, and the arena still owns the session memory afterwards.
+// Closes the counter. Accepts nullptr. The arena still owns the session memory afterwards.
 void perf_counter_session_destroy(PerfCounterSession* session);
 
 // Opens the counter for event, replacing any counter the session already held.

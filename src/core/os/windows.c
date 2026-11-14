@@ -9,7 +9,7 @@
 #include <time.h>
 #include <windows.h>
 
-// OS Path conversion - Windows uses UTF-16 wide strings
+// Windows paths are UTF-16 wide strings.
 
 // Never returns nullptr; empty input and conversion failure both yield L"".
 static wchar_t* string_to_wide(struct FlArena* arena, FlString str) {
@@ -84,7 +84,7 @@ static void filestat_from_attributes(FileStat* result, DWORD file_attributes, DW
 // Returns INVALID_HANDLE_VALUE on failure.
 static HANDLE open_read_handle(OsPath os_path) {
     // FILE_SHARE_WRITE as well as FILE_SHARE_READ: a reader must tolerate a writer's access, or opening a file
-    // something else already has open for writing - a live log file, say - fails outright.
+    // something else already has open for writing (a live log file, say) fails.
     return CreateFileW(os_path_str(os_path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
                        FILE_ATTRIBUTE_NORMAL, nullptr);
 }
@@ -269,7 +269,7 @@ void stderr_write_os(FlString str) {
 
 i64 get_current_time_us_os(void) {
     // The Precise variant, not GetSystemTimeAsFileTime: the latter ticks at the ~15 ms scheduler interval, so
-    // callers that use the value to tell two events apart - arena identity in the watchdog - see them collide.
+    // callers that use the value to tell two events apart (arena identity in the watchdog) see them collide.
     FILETIME ft;
     GetSystemTimePreciseAsFileTime(&ft);
     return filetime_to_unix_us(ft);
@@ -657,7 +657,7 @@ FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
                                            sizeof(dir_data->utf8_filename), nullptr, nullptr);
         if (name_len <= 0) {
             // An entry with no representable name cannot be joined onto a path, so it must not be
-            // surfaced as valid - callers loop on is_valid and would build a path from nothing.
+            // returned as valid: callers loop on is_valid and would build a path from nothing.
             found = FindNextFileW(dir_data->find_handle, &dir_data->find_data);
             continue;
         }
@@ -732,7 +732,7 @@ u32 get_process_id_os(void) {
     return GetCurrentProcessId();
 }
 
-// Thread management - Windows implementation
+// Thread management
 
 typedef struct {
     HANDLE handle;
@@ -892,7 +892,7 @@ DiskSpaceInfo get_disk_space_os(FlString path) {
             break;
         }
 
-        // At drive root (e.g., "C:\") - ensure trailing backslash and try one more time
+        // At the drive root (e.g. "C:\"): keep the trailing backslash and try once more
         if (last_sep == path_copy + 2 && path_copy[1] == L':') {
             if (tried_drive_root) {
                 break; // Already tried drive root, give up

@@ -42,12 +42,12 @@ use crate::sys::FlError;
 
 use crate::sys::RawStr;
 
-/// The C FlVfsHandle - a recycled u32 ticket for one async operation. 0 is the
+/// The C FlVfsHandle: a recycled u32 ticket for one async operation. 0 is the
 /// invalid sentinel a failed launch returns; the surface maps it to [`None`].
 type FlVfsHandle = u32;
 const FL_VFS_HANDLE_INVALID: FlVfsHandle = 0;
 
-/// FlVfsOpenFlags_Read - the one open mode this surface needs, for the bounded
+/// FlVfsOpenFlags_Read, the one open mode this surface needs, for the bounded
 /// prefix read.
 const VFS_OPEN_READ: u32 = 1;
 

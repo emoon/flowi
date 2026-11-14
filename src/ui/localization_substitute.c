@@ -22,7 +22,7 @@ static FlStringBuilder append_arg(FlStringBuilder sb, FlFmtArg arg) {
     return sb;
 }
 
-// The readable argument a slot body names, or null when the body is not an index, points past the end of args, or
+// The readable argument a slot body names, or nullptr when the body is not an index, points past the end of args, or
 // names an argument with nothing readable in it.
 
 static const FlFmtArg* slot_argument(FlString body, FmtArgs args) {

@@ -1,6 +1,6 @@
 //! The List retains the id slice and type-ahead labels it is handed from `List::begin` until `List::end`. The
-//! caller's id vector is overwritten between the two calls here, and Ctrl+A - resolved against the id slice at
-//! `List::end` - must still select the original ids.
+//! caller's id vector is overwritten between the two calls here, and Ctrl+A, resolved against the id slice at
+//! `List::end`, must still select the original ids.
 
 use flowi::{
     col, grow, Application, Key, List, ListConfig, ListResult, SelectionRequest, SelectionSet,

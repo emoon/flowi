@@ -17,7 +17,7 @@ const CHILD_B: Color = rgb(40, 80, 220);
 const CHILD_C: Color = rgb(230, 200, 40);
 const CHILD_D: Color = rgb(200, 60, 200);
 
-// The root is a fixed 40x40 column at (0, 0) - four 10px-tall bands, no gap.
+// The root is a fixed 40x40 column at (0, 0): four 10px-tall bands, no gap.
 const ROOT: f32 = 40.0;
 const BAND: f32 = 10.0;
 

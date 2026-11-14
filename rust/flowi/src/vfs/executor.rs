@@ -64,7 +64,7 @@ fn waker_for(ready: &Arc<AtomicBool>) -> Waker {
 /// # Safety
 /// ptr must satisfy the shared vtable contract above.
 unsafe fn clone_waker(ptr: *const ()) -> RawWaker {
-    // SAFETY: the shared contract - ptr came from Arc::into_raw on an `Arc<AtomicBool>`. ManuallyDrop
+    // SAFETY: the shared contract: ptr came from Arc::into_raw on an `Arc<AtomicBool>`. ManuallyDrop
     // borrows it without releasing that strong count; the clone funds the new waker's own.
     let ready = ManuallyDrop::new(unsafe { Arc::from_raw(ptr as *const AtomicBool) });
     raw_waker(Arc::clone(&ready))
@@ -73,7 +73,7 @@ unsafe fn clone_waker(ptr: *const ()) -> RawWaker {
 /// # Safety
 /// ptr must satisfy the shared vtable contract above.
 unsafe fn wake(ptr: *const ()) {
-    // SAFETY: the shared contract - ptr came from Arc::into_raw on an `Arc<AtomicBool>`. This consumes
+    // SAFETY: the shared contract: ptr came from Arc::into_raw on an `Arc<AtomicBool>`. This consumes
     // the strong count the waker held, which wake is defined to do.
     let ready = unsafe { Arc::from_raw(ptr as *const AtomicBool) };
     ready.store(true, Ordering::Release);
@@ -82,7 +82,7 @@ unsafe fn wake(ptr: *const ()) {
 /// # Safety
 /// ptr must satisfy the shared vtable contract above.
 unsafe fn wake_by_ref(ptr: *const ()) {
-    // SAFETY: the shared contract - ptr came from Arc::into_raw on an `Arc<AtomicBool>`. ManuallyDrop
+    // SAFETY: the shared contract: ptr came from Arc::into_raw on an `Arc<AtomicBool>`. ManuallyDrop
     // borrows it without releasing the strong count, which is what distinguishes this from wake.
     let ready = ManuallyDrop::new(unsafe { Arc::from_raw(ptr as *const AtomicBool) });
     ready.store(true, Ordering::Release);
@@ -91,7 +91,7 @@ unsafe fn wake_by_ref(ptr: *const ()) {
 /// # Safety
 /// ptr must satisfy the shared vtable contract above.
 unsafe fn drop_waker(ptr: *const ()) {
-    // SAFETY: the shared contract - ptr came from Arc::into_raw on an `Arc<AtomicBool>`, and this is the
+    // SAFETY: the shared contract: ptr came from Arc::into_raw on an `Arc<AtomicBool>`, and this is the
     // one place that strong count is released.
     drop(unsafe { Arc::from_raw(ptr as *const AtomicBool) });
 }
@@ -125,7 +125,7 @@ impl LocalExecutor {
 
     /// Spawn future as a root task and return its owning [`Task`] handle.
     ///
-    /// The future must be 'static - it owns its captures and returns its output,
+    /// The future must be 'static: it owns its captures and returns its output,
     /// borrowing nothing external. The task is scheduled for its first poll on the next
     /// [`tick`](Self::tick). Read the output off the returned handle with
     /// [`Task::try_take`]; drop the handle to cancel the chain.
@@ -396,7 +396,7 @@ mod tests {
         assert!(op_closed(1), "completed leaf's ticket was closed");
     }
 
-    /// An immediately-ready leaf completes on the first tick - an already-ready await
+    /// An immediately-ready leaf completes on the first tick: an already-ready await
     /// does not suspend the task.
     #[test]
     fn immediately_ready_leaf_completes_in_one_tick() {
@@ -414,8 +414,8 @@ mod tests {
         }
     }
 
-    /// A genuinely sequential chain - step 2's operation is issued only after step 1
-    /// completes - runs straight through on the executor, threading step 1's value into
+    /// A sequential chain (step 2's operation is issued only after step 1
+    /// completes) runs straight through on the executor, threading step 1's value into
     /// step 2.
     #[test]
     fn sequential_chain_completes() {
@@ -489,7 +489,7 @@ mod tests {
         drop(task);
         assert!(op_closed(1), "leaf ticket closed without join-spin");
 
-        // The cancelled task self-woke before the drop, so it is still enqueued - the next
+        // The cancelled task self-woke before the drop, so it is still enqueued: the next
         // tick finds it emptied and skips it. The chain never completed.
         assert_eq!(exec.tick(), 0, "cancelled task is not polled");
         assert!(!completed.get(), "chain body past the await never ran");
@@ -551,7 +551,7 @@ mod tests {
         // can re-enter spawn.
         let exec = std::rc::Rc::new(LocalExecutor::new());
         let child_done = std::rc::Rc::new(std::cell::Cell::new(false));
-        // Park the child's Task handle here so it isn't dropped - and thereby cancelled -
+        // Park the child's Task handle here so it isn't dropped, and thereby cancelled,
         // when the parent future completes.
         let child_task: std::rc::Rc<RefCell<Option<Task<()>>>> =
             std::rc::Rc::new(RefCell::new(None));
@@ -591,8 +591,8 @@ mod tests {
     }
 
     /// A poll that crosses several already-ready awaits runs straight through them in a
-    /// single tick - a chain advances by whole ready-runs, and only a pending await costs
-    /// a frame. Complements the single-await ready case with a two-in-a-row run-through.
+    /// single tick: a chain advances by whole ready-runs, and only a pending await costs
+    /// a frame.
     #[test]
     fn ready_awaits_run_through_in_one_poll() {
         reset_fake(vec![op(0, b"a"), op(0, b"bb")]);
@@ -602,7 +602,7 @@ mod tests {
         let task = exec.spawn(async move {
             let a = mount.read("a.txt").expect("launch").await?;
             // Both leaves are immediately ready, so this second await resolves in the same
-            // poll as the first - no frame is spent between them.
+            // poll as the first, with no frame spent between them.
             let b = mount.read("b.txt").expect("launch").await?;
             Ok::<usize, FlError>(a.len() + b.len())
         });
@@ -615,9 +615,8 @@ mod tests {
         assert_eq!(task.try_take(), Some(Ok(b"a".len() + b"bb".len())));
     }
 
-    /// A future that returns Pending without waking is polled once and never again -
-    /// proof the executor is genuinely waker-driven, so a leaf that forgot to self-wake
-    /// would stall (and, conversely, self-waking is load-bearing).
+    /// A future that returns Pending without waking is polled once and never again.
+    /// The executor is waker-driven, so a leaf that forgot to self-wake would stall.
     #[test]
     fn pending_without_wake_is_not_repolled() {
         let polls = std::rc::Rc::new(std::cell::Cell::new(0));
@@ -639,7 +638,7 @@ mod tests {
         );
     }
 
-    /// A self-waking pending future is re-polled on every tick - the mechanism the
+    /// A self-waking pending future is re-polled on every tick, which the
     /// [`HandleFuture`] leaf relies on to make progress across frames.
     #[test]
     fn self_waking_task_is_repolled_each_tick() {
@@ -659,7 +658,7 @@ mod tests {
     }
 
     /// A future that counts its polls and stays Pending forever, optionally self-waking
-    /// each poll - the probe for the executor's waker discipline.
+    /// each poll.
     struct CountingPending {
         polls: std::rc::Rc<std::cell::Cell<u32>>,
         wake_each_poll: bool,
@@ -678,10 +677,10 @@ mod tests {
     }
 
     /// A wake delivered from another OS thread re-polls the task on the executor's own
-    /// thread - the runtime proof that the executor's [`Waker`] genuinely honours its
-    /// Send + Sync contract (its backing store is an `Arc<AtomicBool>`, safe to wake
-    /// cross-thread). The leaf never self-wakes, so the only thing that can re-poll it
-    /// is the worker thread's wake().
+    /// thread, which shows the executor's [`Waker`] honours its Send + Sync contract
+    /// (its backing store is an `Arc<AtomicBool>`, safe to wake cross-thread). The leaf
+    /// never self-wakes, so the only thing that can re-poll it is the worker thread's
+    /// wake().
     #[test]
     fn cross_thread_wake_repolls_task() {
         use std::sync::atomic::{AtomicBool, Ordering};
@@ -724,8 +723,8 @@ mod tests {
 
     /// A leaf that, on its first poll, moves a cloned [`Waker`] to a worker thread which
     /// wakes it after a beat, then completes on the wake-driven second poll. Holds the
-    /// worker's [`JoinHandle`]; it is never joined - dropping it detaches the
-    /// already-finished thread, which is fine for a throwaway test leaf.
+    /// worker's [`JoinHandle`]; it is never joined. Dropping it detaches the
+    /// thread, which is fine for a test leaf.
     struct CrossThreadWake {
         started: bool,
         flag: std::sync::Arc<std::sync::atomic::AtomicBool>,
@@ -739,7 +738,7 @@ mod tests {
             use std::sync::atomic::Ordering;
             if !self.started {
                 self.started = true;
-                // Waker: Send is what makes this move legal - the whole point under test.
+                // Waker: Send is what makes this move legal, and is what this test checks.
                 let waker = cx.waker().clone();
                 let flag = std::sync::Arc::clone(&self.flag);
                 self.worker = Some(std::thread::spawn(move || {

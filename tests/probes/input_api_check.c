@@ -27,5 +27,5 @@ _Static_assert(FlGamepadEvent_Disconnected == 4, "gamepad event-type discriminan
 _Static_assert(FlWindowEvent_Close == 4, "window event-type discriminants stable");
 _Static_assert(FlMouseButton_Count == 5, "mouse button discriminants stable");
 
-// Silence the unused-function warning under -Werror: take the address once. (TU links nothing.)
+// Take the address once so the unused-function warning stays quiet under -Werror.
 void* const input_api_check_ref = (void*)&input_api_check_arm_access;

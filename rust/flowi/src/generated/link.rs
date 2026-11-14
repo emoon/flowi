@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Link widget - clickable, underlined text for hyperlinks.
+/// Link widget: clickable, underlined text for hyperlinks.
 pub struct Link;
 
 impl Link {

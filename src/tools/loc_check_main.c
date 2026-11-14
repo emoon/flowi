@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
-// loc_check: reports drift between source code and the localization String Tables. It never writes a table - the
-// default table is the catalog, hand-maintained, with translator context in its JSON5 comments.
+// loc_check: reports drift between source code and the localization String Tables. It never writes a table: the
+// default table is maintained by hand and carries translator context in its JSON5 comments.
 
 static const char* k_usage
     = "usage: loc_check --manifest <path> [--source <dir-or-file>]...\n"

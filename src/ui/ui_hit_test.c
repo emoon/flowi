@@ -1,4 +1,4 @@
-// Hit testing - per-frame refresh of the interactive item registry from the resolved layout.
+// Hit testing: per-frame refresh of the interactive item registry from the resolved layout.
 //
 // Only ids already present in UiShared.item_state are touched (ui_item_behavior creates them), so text, images
 // and other non-interactive elements never enter hit testing. Clip rects are tracked through the render
@@ -52,9 +52,9 @@ bool ui_item_hit_contains(const ItemState* item, Vec2 point) {
 
 static void item_state_update(FlUiCtx* self, const Clay_RenderCommand* command, HitClip clip, const u64 pass,
                               const float dt) {
-    const f32 hover_rate = anim_exp_ease_out_rate(ANIM_SPEED_HOVER, dt); // ~150ms
-    const f32 press_rate = anim_exp_ease_out_rate(ANIM_SPEED_PRESS, dt); // ~100ms
-    const f32 focus_rate = anim_exp_ease_out_rate(ANIM_SPEED_FOCUS, dt); // ~200ms
+    const f32 hover_rate = anim_exp_ease_out_rate(ANIM_SPEED_HOVER, dt);
+    const f32 press_rate = anim_exp_ease_out_rate(ANIM_SPEED_PRESS, dt);
+    const f32 focus_rate = anim_exp_ease_out_rate(ANIM_SPEED_FOCUS, dt);
 
     // Only items explicitly created as interactive (e.g. by ui_item_behavior) have an entry; skipping the rest
     // keeps text, images and other non-interactive elements out of hit testing.

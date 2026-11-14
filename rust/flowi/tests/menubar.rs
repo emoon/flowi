@@ -22,7 +22,7 @@ const RAII_REGION_Y: i32 = 400;
 
 #[derive(Default)]
 struct BarProbe {
-    /// MenuBar::is_open snapshot taken AFTER the bar block each frame.
+    /// MenuBar::is_open snapshot taken after the bar block each frame.
     bar_open: bool,
     open_clicked: bool,
     /// The File top lays out at the strip's level (("File", 0)).

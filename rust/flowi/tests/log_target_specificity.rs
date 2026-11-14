@@ -1,6 +1,5 @@
 //! When two set_target_level floors both match a record's target, the more specific one
-//! wins - whichever order they were installed in - and re-setting a prefix replaces its
-//! level rather than leaving the old one behind.
+//! wins, whichever order they were installed in, and re-setting a prefix replaces its level.
 
 use flowi::set_target_level;
 

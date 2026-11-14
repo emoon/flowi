@@ -6,7 +6,7 @@
 #include <stdatomic.h>
 
 // A handle's realized form as the active backend reported it: logical dimensions only, no pixels. Presence in
-// the map is readiness - the entry exists only after a backend acked realization.
+// the map is readiness: the entry exists only after a backend acked realization.
 
 typedef struct ImageRealization {
     int width;

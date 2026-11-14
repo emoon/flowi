@@ -34,7 +34,7 @@ static void translate_background_image(GpuTranslate* tr, FlImageHandle handle, u
     gpu_translate_image(tr, &im);
 }
 
-// Clear (when opaque) then up to two background images, ahead of the IR - so background images claim sampler
+// Clear (when opaque) then up to two background images, ahead of the IR, so background images claim sampler
 // slots before any UI image. Background commands ignore the frame's global_alpha, so they emit at full opacity,
 // modulated only by the background's own alpha / crossfade weight.
 static void translate_background(GpuTranslate* tr) {

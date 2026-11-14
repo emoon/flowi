@@ -6,8 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// The focused-element query - the public read seam for the currently focused widget id, so callers never reach
-/// for the internal FlUiCtx just to read it.
+/// Query for the currently focused widget id.
 pub struct Focused;
 
 impl Focused {

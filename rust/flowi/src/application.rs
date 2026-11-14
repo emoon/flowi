@@ -53,7 +53,7 @@ pub struct Application {
 static NEXT_APPLICATION_ID: AtomicU64 = AtomicU64::new(1);
 
 /// How to bring an embedded [`Application`](Application::embedded) up. The render size is
-/// the only thing most embedding hosts set - flowi renders every frame at that size and the
+/// the only thing most embedding hosts set. flowi renders every frame at that size and the
 /// caller presents the result.
 #[derive(Copy, Clone, Debug)]
 pub struct EmbeddedSettings {
@@ -76,9 +76,8 @@ impl EmbeddedSettings {
     ///
     /// A zero width or height asks for a surfaceless application: flowi brings the
     /// resource tier, the VFS and the job system up but opens no render surface and no UI
-    /// context. Nothing can be drawn against one - [`tick_embedded`](Application::tick_embedded)
-    /// has no frame to advance - so it is only useful to a host that wants the tier without
-    /// the picture, and [`pixels`](Application::pixels) reports None there.
+    /// context. Nothing can be drawn against one: [`tick_embedded`](Application::tick_embedded)
+    /// has no frame to advance and [`pixels`](Application::pixels) reports None.
     pub fn new(width: u32, height: u32) -> EmbeddedSettings {
         EmbeddedSettings {
             render_width: width,
@@ -178,8 +177,8 @@ impl AppSettings {
 }
 
 /// Initial settings for a host-opened window ([`Application::open_window`]): a
-/// title plus the drawable size in physical pixels. The window is backend-placed -
-/// the app offsets secondary windows so they do not stack on the main one.
+/// title plus the drawable size in physical pixels. The backend places the window,
+/// and the app offsets secondary windows so they do not stack on the main one.
 pub struct WindowSettings {
     title: &'static str,
     width: u32,
@@ -223,7 +222,7 @@ struct FrameCtx<S, F> {
 /// borrowable for the call. fl_app hands back exactly the pointer it was registered with, and the context
 /// outlives the blocking fl_app_run / fl_app_tick call it was registered for.
 unsafe extern "C" fn tramp<S, F: FnMut(&mut S)>(ud: *mut c_void) {
-    // SAFETY: the caller's contract - ud is the live, uniquely-borrowable `FrameCtx<S, F>` this
+    // SAFETY: by the caller's contract, ud is the live, uniquely borrowable `FrameCtx<S, F>` this
     // instantiation was registered with.
     let ctx = unsafe { &mut *(ud as *mut FrameCtx<S, F>) };
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -304,7 +303,7 @@ impl Application {
     }
 
     /// The user's zoom preference, multiplied onto each window's monitor content scale to
-    /// give the absolute UI scale. 1.0 - the default - is DPI-correct. A headless application
+    /// give the absolute UI scale. The default, 1.0, is DPI-correct. A headless application
     /// has no monitor, so its content scale is 1.0 and this is its UI scale.
     ///
     /// No-op on an embedded application, which has no window and no scale policy of its own.
@@ -316,8 +315,8 @@ impl Application {
     }
 
     /// Create an application for a caller that owns its own display, input pump and
-    /// presentation - a kiosk shell, an audio plugin inside a host's window, a frontend
-    /// rendering to DRM. flowi owns everything below the surface: the render backend, the
+    /// presentation (a kiosk shell, an audio plugin inside a host's window, a frontend
+    /// rendering to DRM). flowi owns everything below the surface: the render backend, the
     /// resource tier, the VFS and image system, fonts, the surface and the UI context.
     ///
     /// The frame is the caller's to drive: [`tick_embedded`](Self::tick_embedded) once per
@@ -340,7 +339,7 @@ impl Application {
             render_height: settings.render_height as i32,
             mount_working_directory: settings.mount_working_directory,
         };
-        // SAFETY: the foundation arena outlives every Application - nothing in this crate
+        // SAFETY: the foundation arena outlives every Application: nothing in this crate
         // tears it down except the unsafe shutdown, whose contract forbids running it while an
         // Application is live. settings only has to outlive the call.
         let host = unsafe { sys::fl_host_create(arena.as_raw().cast(), &sys_settings) };
@@ -364,7 +363,7 @@ impl Application {
         })
     }
 
-    /// The process-wide foundation arena - where flowi's own long-lived allocations come
+    /// The process-wide foundation arena, where flowi's own long-lived allocations come
     /// from, and where an embedding host puts the ones that must outlive every frame.
     ///
     /// Lives exactly as long as the foundation does, which is at least as long as this
@@ -457,9 +456,9 @@ impl Application {
             y: sys::FL_APP_WINDOW_POS_DEFAULT,
         };
         // SAFETY: tramp_for selected the trampoline instantiation that matches `*ctx`, satisfying tramp's
-        // contract, and user_data addresses that box - pushed into self.window_ctxs just below, so the
-        // heap allocation outlives every callback C makes against this window. ws is read during the call
-        // and its title is 'static.
+        // contract, and user_data addresses that box, which is pushed into self.window_ctxs just below,
+        // so the heap allocation outlives every callback C makes against this window. ws is read during
+        // the call and its title is 'static.
         let window = unsafe { sys::fl_app_window_open(self.app(), &ws, tramp, user_data) };
         assert!(!window.is_null(), "fl_app_window_open failed");
         self.window_ctxs.push(ctx);
@@ -498,7 +497,7 @@ impl Application {
 
     /// Headless harness: inject a mouse-button press (down = true) or release (down = false). Only valid
     /// for a headless app. Like [`inject_mouse_move`](Self::inject_mouse_move), the event is applied on the next
-    /// tick and drives click detection a frame later - a press tick followed by a release tick over a hovered
+    /// tick and drives click detection a frame later: a press tick followed by a release tick over a hovered
     /// widget yields a Signal.clicked shortly after.
     pub fn inject_mouse_button(&mut self, button: MouseButton, down: bool) {
         // SAFETY: the app handle is live (borrowed here) and only scalars cross.
@@ -507,7 +506,7 @@ impl Application {
 
     /// Headless harness: inject a key press (down = true) or release (down = false). Only valid for a headless
     /// app. Like [`inject_mouse_button`](Self::inject_mouse_button), the event is applied
-    /// on the next [`tick`](Self::tick) and observed that frame by the [`UiInput::key_pressed`](crate::UiInput::key_pressed) queries - so a
+    /// on the next [`tick`](Self::tick) and observed that frame by the [`UiInput::key_pressed`](crate::UiInput::key_pressed) queries, so a
     /// press tick makes UiInput::key_pressed(key) read true on that tick, and UiInput::key_down(key) stays
     /// true until a release is injected.
     pub fn inject_key(&mut self, key: Key, down: bool) {
@@ -515,10 +514,10 @@ impl Application {
         unsafe { sys::fl_app_inject_key(self.app(), key, down) };
     }
 
-    /// Headless harness: inject a raw relative-motion delta - a hidden-drag scrub. Only valid for a headless app.
+    /// Headless harness: inject a raw relative-motion delta (a hidden-drag scrub). Only valid for a headless app.
     /// Like [`inject_mouse_move`](Self::inject_mouse_move), the delta is captured by the next [`tick`](Self::tick)'s
     /// input pump and read that frame (scaled by the [`UiInput::mouse_hidden_drag_begin`](crate::UiInput::mouse_hidden_drag_begin) sensitivity) via
-    /// [`UiInput::mouse_drag_delta`](crate::UiInput::mouse_drag_delta) - so begin the drag a tick before injecting deltas to scrub it.
+    /// [`UiInput::mouse_drag_delta`](crate::UiInput::mouse_drag_delta), so begin the drag a tick before injecting deltas to scrub it.
     pub fn inject_mouse_delta(&mut self, delta_x: f32, delta_y: f32) {
         // SAFETY: the app handle is live (borrowed here) and only scalars cross.
         unsafe { sys::fl_app_inject_mouse_delta(self.app(), delta_x, delta_y) };
@@ -526,7 +525,7 @@ impl Application {
 
     /// Headless harness: inject a mouse-wheel delta (x, y; positive y = scrolled up). Only valid for a
     /// headless app. Like [`inject_mouse_move`](Self::inject_mouse_move), the delta is captured by the next
-    /// [`tick`](Self::tick)'s input pump and read that frame via [`UiInput::mouse_wheel_delta`](crate::UiInput::mouse_wheel_delta) - so inject
+    /// [`tick`](Self::tick)'s input pump and read that frame via [`UiInput::mouse_wheel_delta`](crate::UiInput::mouse_wheel_delta), so inject
     /// the wheel a tick after the cursor is over the [`UiInput::scroll_target`](crate::UiInput::scroll_target) (the target must already be the hot
     /// element for the scoped read to return it).
     pub fn inject_wheel(&mut self, x: f32, y: f32) {
@@ -541,13 +540,14 @@ impl Application {
     /// [`UiInput::dropped_file`](crate::UiInput::dropped_file); it is gone again on the tick after.
     pub fn inject_drop_file(&mut self, path: &str, x: f32, y: f32) {
         // SAFETY: the app handle is live (borrowed here), and the borrowed path outlives the one call it
-        // crosses on - the headless backend copies the bytes into its own queue slot.
+        // crosses on: the headless backend copies the bytes into its own queue slot.
         unsafe { sys::fl_app_inject_drop_file(self.app(), sys::RawStr::borrow(path), x, y) };
     }
 
     /// Headless harness: feed every [`tick`](Self::tick) a fixed dt in seconds instead of the wall clock;
-    /// 0.0 or less restores real timing. Only valid for a headless app. Anything flowi eases over time - dock tweens, smooth scroll, toggle animations - then advances by frame count
-    /// rather than by how fast the harness runs.
+    /// 0.0 or less restores real timing. Only valid for a headless app. Anything flowi eases over time
+    /// (dock tweens, smooth scroll, toggle animations) then advances by frame count, whatever speed the
+    /// harness runs at.
     pub fn set_test_dt(&mut self, dt: f32) {
         // SAFETY: the app handle is live (borrowed here) and only scalars cross.
         unsafe { sys::fl_app_set_test_dt(self.app(), dt) };
@@ -573,7 +573,7 @@ impl Application {
     }
 
     /// Headless harness: read back the most recent warp-back target the core flushed to the input backend (set on
-    /// a [`UiInput::mouse_hidden_drag_end`](crate::UiInput::mouse_hidden_drag_end)) - the press point the cursor
+    /// a [`UiInput::mouse_hidden_drag_end`](crate::UiInput::mouse_hidden_drag_end)), the press point the cursor
     /// returns to when a hidden drag ends. Only valid for a headless app.
     #[inline]
     pub fn headless_last_warp(&self) -> Vec2 {
@@ -621,7 +621,7 @@ impl Application {
     }
 
     /// The pixels of the frame just rendered, borrowed from the render backend until the
-    /// next frame overwrites them - the zero-copy sibling of [`read_pixels`](Self::read_pixels),
+    /// next frame overwrites them. This is the zero-copy sibling of [`read_pixels`](Self::read_pixels),
     /// for an embedded application presenting every frame itself. [`None`] when the render
     /// backend cannot read back. Works in either mode.
     pub fn pixels(&self) -> Option<Pixels<'_>> {

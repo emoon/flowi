@@ -29,11 +29,11 @@ typedef struct FlFontMetrics {
 // Font loading and selection: load fonts (including default/fallback), set the active font or a
 // registered weight/style for rendering, and check or wait for their asynchronous loads to complete.
 // Load a TTF from path at default_size (unscaled px; 0 selects a built-in default).
-// Returns the font id (0 = invalid). Async - poll is_loaded for completion.
+// Returns the font id (0 = invalid). Async: poll is_loaded for completion.
 FL_API FlFontId fl_font_load(FlString path, uint16_t default_size);
 // Load a TTF from mount/relative_path at default_size (unscaled px; 0 selects a built-in
 // default). The mount-relative counterpart to load, for a host that serves fonts out of its own
-// data mount rather than the working directory. Returns the font id (0 = invalid). Async - poll
+// data mount rather than the working directory. Returns the font id (0 = invalid). Async: poll
 // is_loaded for completion.
 FL_API FlFontId fl_font_load_mount(FlVfsMount* mount, FlString relative_path, uint16_t default_size);
 // Load the built-in default font at default_size (unscaled px; 0 selects a built-in default).

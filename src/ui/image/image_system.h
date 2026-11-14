@@ -1,8 +1,8 @@
 #pragma once
 
-// Image System - Loading pipeline bound to a render backend
+// Image System: the loading pipeline bound to a render backend.
 //
-// Loading is always async - the VFS read and decode run in a job worker thread, never stalling the caller.
+// Loading is always async. The VFS read and decode run in a job worker thread and do not stall the caller.
 // Where the backend's prepare_image seam runs is the backend's choice (prepare_image_on_job): set (SW), it is
 // invoked in the job worker on decode-complete; unset (GL/D3D, thread-confined uploads), the decoded result is
 // queued and the seam is invoked from image_system_begin_frame on the main/render thread.
@@ -26,14 +26,14 @@ typedef struct FlImageLoadRequest {
     ImageThumbnailOptions thumbnail_options;
     void* user_data;
 
-    // Keep this image out of any shared texture atlas - it must get a whole texture of its own. Required for
-    // anything a mesh samples, whose UVs address the whole texture rather than an atlas sub-rect. Set at
-    // creation and never inferred from size; a backend without an atlas ignores it.
+    // Keep this image out of any shared texture atlas and give it a whole texture of its own. Required for
+    // anything a mesh samples, because mesh UVs address the whole texture. Set at creation and not inferred
+    // from size. A backend without an atlas ignores it.
     bool dedicated;
 } FlImageLoadRequest;
 
 // Create the image system, bound to the render backend that realizes decoded images. The decoded result is
-// valid only during the prepare_image callback - the backend must copy anything it keeps.
+// valid only during the prepare_image callback, so the backend must copy anything it keeps.
 struct FlRenderBackend;
 ImageSystem* image_system_create(FlArena* arena, const struct FlRenderBackend* backend);
 
@@ -45,7 +45,7 @@ void image_system_close(ImageSystem* sys);
 void image_system_destroy(ImageSystem* sys);
 
 // Release a freed image's backend realization (GPU atlas cell / slot texture) via the backend's release_image
-// seam. Null-guarded: no-op when no backend bound release_image (SW regenerates wholesale).
+// seam. No-op when no backend bound release_image (SW regenerates wholesale).
 void image_system_release_image(ImageSystem* sys, FlImageHandle handle);
 
 // Per-frame pump, called on the main/render thread.

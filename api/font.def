@@ -17,11 +17,11 @@ struct FontMetrics {
 #[frame_context]
 api Font {
     /// Load a TTF from path at default_size (unscaled px; 0 selects a built-in default).
-    /// Returns the font id (0 = invalid). Async - poll is_loaded for completion.
+    /// Returns the font id (0 = invalid). Async: poll is_loaded for completion.
     [borrowed] load(path: String, default_size: u16) -> FontId
     /// Load a TTF from mount/relative_path at default_size (unscaled px; 0 selects a built-in
     /// default). The mount-relative counterpart to load, for a host that serves fonts out of its own
-    /// data mount rather than the working directory. Returns the font id (0 = invalid). Async - poll
+    /// data mount rather than the working directory. Returns the font id (0 = invalid). Async: poll
     /// is_loaded for completion.
     [borrowed] load_mount(mount: *FlVfsMount, relative_path: String, default_size: u16) -> FontId
     /// Load the built-in default font at default_size (unscaled px; 0 selects a built-in default).

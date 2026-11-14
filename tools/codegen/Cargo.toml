@@ -1,6 +1,5 @@
-# flowi's codegen entry point. Dev-only: nothing flowi ships depends on it, and it is
-# deliberately its OWN workspace so api_gen's dependency tree never reaches the Cargo.lock
-# of the shipped flowi crate.
+# flowi's codegen entry point. Dev-only: nothing flowi ships depends on it. It is its own
+# workspace so api_gen's dependency tree never reaches the Cargo.lock of the shipped flowi crate.
 #
 # Run it with `cargo regen` (aliased in .cargo/config.toml).
 [package]

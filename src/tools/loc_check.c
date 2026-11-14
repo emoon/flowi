@@ -6,7 +6,7 @@
 #include <core/json.h>
 
 // A table after parsing: the strings object in file order for reporting, and the same entries by key for lookup.
-// strings is null when the file never got that far, which takes the table out of every cross-table check.
+// strings is nullptr when the file never got that far, which takes the table out of every cross-table check.
 typedef struct ParsedTable {
     FlJsonValue* strings;
     hashmap(FlString, FlJsonValue*) lookup;

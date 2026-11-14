@@ -1,5 +1,3 @@
-// Gamepad slot bookkeeping and SDL controller event translation (see sdl_gamepads.h).
-
 #include "sdl_gamepads.h"
 
 #if BACKEND_USE_SDL

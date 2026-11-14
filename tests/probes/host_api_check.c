@@ -1,5 +1,5 @@
-// Compile-only parity guard: the api_gen-generated public embedded-host surface (<flowi/app/host.h>). Nothing is
-// linked; every prototype must parse and match its expected signature here.
+// Compile-only parity guard: the api_gen-generated public embedded-host surface (<flowi/app/host.h>). Every
+// prototype must parse and match its expected signature here.
 
 #include <stdbool.h>
 #include <stdint.h>

@@ -13,43 +13,24 @@ extern "C" {
 // One bit per semantic slot of ThemeColors. OR these into a ThemeOverride.slots mask to select which slots
 // an override replaces; the bit order matches the field order in ThemeColors.
 typedef enum FlThemeSlot {
-    // interactive.base.
     FlThemeSlot_InteractiveBase = 1,
-    // interactive.hover.
     FlThemeSlot_InteractiveHover = 2,
-    // interactive.press.
     FlThemeSlot_InteractivePress = 4,
-    // interactive.focus.
     FlThemeSlot_InteractiveFocus = 8,
-    // interactive.disabled.
     FlThemeSlot_InteractiveDisabled = 16,
-    // surface.base.
     FlThemeSlot_SurfaceBase = 32,
-    // surface.elevated.
     FlThemeSlot_SurfaceElevated = 64,
-    // surface.overlay.
     FlThemeSlot_SurfaceOverlay = 128,
-    // surface.selected.
     FlThemeSlot_SurfaceSelected = 256,
-    // border.default_color.
     FlThemeSlot_BorderDefault = 512,
-    // border.focus.
     FlThemeSlot_BorderFocus = 1024,
-    // border.separator.
     FlThemeSlot_BorderSeparator = 2048,
-    // text.primary.
     FlThemeSlot_TextPrimary = 4096,
-    // text.secondary.
     FlThemeSlot_TextSecondary = 8192,
-    // text.accent.
     FlThemeSlot_TextAccent = 16384,
-    // feedback.success.
     FlThemeSlot_FeedbackSuccess = 32768,
-    // feedback.warning.
     FlThemeSlot_FeedbackWarning = 65536,
-    // feedback.error.
     FlThemeSlot_FeedbackError = 131072,
-    // feedback.info.
     FlThemeSlot_FeedbackInfo = 262144,
 } FlThemeSlot;
 
@@ -71,9 +52,9 @@ typedef struct FlThemeInteractive {
 typedef struct FlThemeSurface {
     // Main window/app background (darkest in the dark theme).
     FlColor base;
-    // Cards, buttons, inputs - sits above base (slightly lighter).
+    // Cards, buttons, inputs. Sits above base (slightly lighter).
     FlColor elevated;
-    // Modals, popups, dropdowns - darkened backdrop.
+    // Modals, popups, dropdowns: darkened backdrop.
     FlColor overlay;
     // Selected-item highlight (often the interactive accent).
     FlColor selected;
@@ -111,25 +92,20 @@ typedef struct FlThemeFeedback {
     FlColor info;
 } FlThemeFeedback;
 
-// The resolved theme palette read when laying out and painting widgets - interactive, surface, border,
+// The resolved theme palette read when laying out and painting widgets: interactive, surface, border,
 // text, and feedback color groups.
 typedef struct FlThemeColors {
-    // Interactive accent state colors.
     FlThemeInteractive interactive;
-    // Surface/background colors.
     FlThemeSurface surface;
-    // Border and divider colors.
     FlThemeBorder border;
-    // Typography colors.
     FlThemeText text;
-    // Status/feedback colors.
     FlThemeFeedback feedback;
 } FlThemeColors;
 
 // A sparse theme override: only the slots flagged in slots are read from colors; the rest are inherited from
 // the resolved parent theme at push time. Push it to retheme a subtree without touching the global theme.
 typedef struct FlThemeOverride {
-    // Bitwise-OR of ThemeSlot - which slots to replace.
+    // Bitwise OR of ThemeSlot: which slots to replace.
     uint32_t slots;
     // Slot values, read only where the matching slots bit is set.
     FlThemeColors colors;
@@ -146,9 +122,8 @@ FL_API void fl_theme_update(const FlThemeColors* colors);
 FL_API void fl_theme_push(FlThemeOverride theme_override);
 // Pop the most recently pushed override, restoring the parent theme.
 FL_API void fl_theme_pop(void);
-// Read the live resolved theme palette flowi is currently painting with - the innermost active push
-// override, or the base palette set by update. The read half of update/push/pop. The returned pointer has no safe Rust
-// wrapper.
+// Read the resolved theme palette flowi is currently painting with: the innermost active push
+// override, or the base palette set by update. The returned pointer has no safe Rust wrapper.
 FL_API const FlThemeColors* fl_theme_colors(void);
 
 

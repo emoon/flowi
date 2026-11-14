@@ -13,8 +13,7 @@ use crate::{ensure_fl_init, DropRelationship, ImageHandle, LayoutId, List, ListR
 /// for rows with custom content. Open the list with [`List::begin`] (returns the visible [`ListRange`] to emit), then for each index
 /// in start..end bracket the row's content between [`List::item_begin`] (passing the row's opaque u64 stable
 /// id; returns its interaction [`Signal`](crate::Signal)) and [`List::item_end`], and close
-/// with [`List::end`] (returns the [`ListResult`]). The List never interprets the stable id - it is
-/// pure identity.
+/// with [`List::end`] (returns the [`ListResult`]). The List never interprets the stable id.
 /// [`List::begin`] takes any [`LayoutId`] like [`Layout::start`](crate::Layout::start).
 impl List {
     /// Begin a virtualized list identified by id over the app's full ordered id slice ordered_ids,
@@ -98,14 +97,14 @@ impl List {
         result.drag_active.then(|| result.reorder())
     }
 
-    /// The declarative one-call List, for rows that are a label and an optional icon. Hand it the rows as [`ListItem`] descriptors ({ id, label, icon }) plus the
-    /// caller-owned set (None opts out of auto-apply/highlight); the List runs the whole interaction
-    /// internally - virtualization, the selection gesture machine, keyboard nav, marquee, drag-reorder, the
-    /// highlight/ghost/insertion-line drawing, and auto-applying selection - and draws each row's label + icon.
-    /// The caller reads only the policy outcomes off the [`ListResult`]: activated_id, context_menu_id
-    /// (see [`List::context_menu`]), and the reorder request (see [`List::reorder`]). No per-row loop, no
-    /// apply, no [`Signal`](crate::Signal) handling. opts carries the layout knobs plus the multi_select / reorderable
-    /// policy toggles; the scoped [`List::begin`] face stays for rows with custom content. Call inside a frame.
+    /// The declarative one-call List, for rows that are a label and an optional icon. Hand it the rows as
+    /// [`ListItem`] descriptors ({ id, label, icon }) plus the caller-owned set (None opts out of
+    /// auto-apply/highlight). The List runs the whole interaction internally (virtualization, the selection
+    /// gesture machine, keyboard nav, marquee, drag-reorder, the highlight/ghost/insertion-line drawing, and
+    /// auto-applying selection) and draws each row's label + icon. The caller reads only the policy outcomes
+    /// off the [`ListResult`]: activated_id, context_menu_id (see [`List::context_menu`]), and the reorder
+    /// request (see [`List::reorder`]). opts carries the layout knobs plus the multi_select / reorderable
+    /// policy toggles. Use the scoped [`List::begin`] for rows with custom content. Call inside a frame.
     ///
     /// # Panics
     /// Panics when called off the thread that owns the live [`Application`](crate::Application).
@@ -151,8 +150,8 @@ impl List {
     }
 
     /// The right-clicked row's stable id from a [`ListResult`], or None when no row was right-clicked this
-    /// frame - the declarative face's context-menu hook. The List opens no menu itself; the app opens its own at
-    /// the cursor for this id. Available on both faces (the scoped face populates it from a row's right-click too).
+    /// frame. The List opens no menu itself; the app opens its own at the cursor for this id. Available on
+    /// both faces (the scoped face populates it from a row's right-click too).
     pub fn context_menu(result: &ListResult) -> Option<u64> {
         (result.context_menu_id != 0).then_some(result.context_menu_id)
     }
@@ -332,7 +331,7 @@ fn frame_ids(ids: &[u64]) -> *const u64 {
 /// call; copied into the per-frame arena), and an optional leading icon (None renders label-only).
 #[derive(Copy, Clone, Debug)]
 pub struct ListItem<'a> {
-    /// Opaque stable id - never interpreted; the selection / activation / reorder key.
+    /// Opaque stable id, never interpreted. It is the selection, activation and reorder key.
     pub id: u64,
     /// Row text the List draws and uses for keyboard type-ahead.
     pub label: &'a str,
@@ -371,7 +370,7 @@ impl Default for ListOpts {
 }
 
 impl ListOpts {
-    /// Lower to the `#[repr(C)]` mirror the C ui_list consumes.
+    /// Lower to the `#[repr(C)]` mirror the C List consumes.
     fn to_sys(self) -> sys::ListOpts {
         sys::ListOpts {
             row_height: self.row_height,
@@ -384,7 +383,7 @@ impl ListOpts {
 }
 
 /// A drag-reorder request a [`List`] hands back. The List runs the
-/// gesture and draws the affordances; the app owns the model mutation - move every id in from_ids so it sits
+/// gesture and draws the affordances; the app owns the model mutation: move every id in from_ids so it sits
 /// rel the target id. Dragging any row of a multi-selection drags the whole selection (from_ids lists all
 /// of them); dragging an unselected row drags just it. Returned by [`List::reorder`] on the release frame; the
 /// same shape is returned by [`List::drag_state`] every in-flight frame as the live candidate.
@@ -400,7 +399,7 @@ pub struct Reorder {
 
 /// A single selection change a [`List`] emits per frame, applied to a [`SelectionSet`] with
 /// [`SelectionSet::apply`]. Ranges name their two endpoint stable ids (never the span), so
-/// they survive virtualization - [`SelectionSet::apply`] resolves them against the app's ordered id list.
+/// they survive virtualization. [`SelectionSet::apply`] resolves them against the app's ordered id list.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SelectionRequest {
     /// Empty the set.
@@ -445,7 +444,7 @@ impl SelectionRequest {
         }
     }
 
-    /// Lift a flat C mirror (as emitted by the List on its [`ListResult`]) into this ergonomic enum, dropping
+    /// Lift a flat C mirror (as emitted by the List on its [`ListResult`]) into this enum, dropping
     /// the fields each variant does not read.
     fn from_sys(r: sys::SelectionRequest) -> Self {
         use sys::SelectionRequestKind as K;
@@ -489,7 +488,7 @@ impl SelectionSet {
     pub fn apply(&mut self, requests: &[SelectionRequest], ordered_ids: &[u64]) {
         let lowered: Vec<sys::SelectionRequest> = requests.iter().map(|r| r.to_sys()).collect();
         // SAFETY: self.handle is the live handle this set owns, and both slices are passed as
-        // pointer/length pairs over storage that outlives the synchronous call - nothing escapes it.
+        // pointer/length pairs over storage that outlives the synchronous call, and nothing escapes it.
         unsafe {
             sys::fl_selection_set_apply(
                 self.handle,
@@ -513,8 +512,8 @@ impl SelectionSet {
         self.len() == 0
     }
 
-    /// Snapshot the selected ids into an owned Vec (order unspecified) - the allocating convenience over
-    /// [`copy_ids`](SelectionSet::copy_ids), which fills a caller's `&mut [u64]`.
+    /// Snapshot the selected ids into an owned Vec (order unspecified). This is the allocating convenience
+    /// over [`copy_ids`](SelectionSet::copy_ids), which fills a caller's `&mut [u64]`.
     pub fn ids(&self) -> Vec<u64> {
         let n = self.len();
         let mut out = vec![0u64; n];

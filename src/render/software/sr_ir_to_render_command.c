@@ -23,10 +23,9 @@
 #include <assert.h>
 #include <math.h>
 
-// Color helpers - the IR stores raw intent; folding global_alpha and premultiplying happens here.
+// Color helpers: the IR stores raw intent; folding global_alpha and premultiplying happens here.
 
 static inline u8 sr_fold_global_alpha(u8 a, u8 global_alpha) {
-    // Rounded: (a*ga+127)/255.
     return (global_alpha == 255) ? a : (u8)((a * global_alpha + 127) / 255);
 }
 
@@ -81,7 +80,6 @@ static bool image_src_rect(const FlCmdImage* im, const ImageData* src, FlRect* o
     return out->w > 0.0f && out->h > 0.0f;
 }
 
-// Clamp a corner radius to [0, max].
 static inline float sr_clamp_radius(float radius, float max_radius) {
     return fminf(fmaxf(radius, 0.0f), max_radius);
 }
@@ -90,7 +88,7 @@ static inline RenderCommand* sr_alloc_command(const SrIrRequest* req) {
     return arena_alloc_zero(req->commands_arena, RenderCommand);
 }
 
-// FillRect - solid (four equal corners) or gradient (four differing). Gradient setup is deferred to
+// FillRect: solid (four equal corners) or gradient (four differing). Gradient setup is deferred to
 // sr_command_setup; rounded corners are clamped and split here.
 
 static bool fill_corners_are_solid(const FlColor corner[4]) {
@@ -141,7 +139,7 @@ static void emit_fill_rect(const SrIrRequest* req, const FlCmdFillRect* fr) {
     sr_command_split_rounded(req->commands_arena, &cmd, corners);
 }
 
-// Border - per-side widths plus an outer corner radius, emitted as corner and edge quads.
+// Border: per-side widths plus an outer corner radius, emitted as corner and edge quads.
 
 // The color and mask shared by every quad of one border.
 typedef struct BorderStyle {
@@ -265,7 +263,7 @@ static void emit_border(const SrIrRequest* req, const FlCmdBorder* b) {
         &(BorderEdge) { .x0 = x + width - b->w_r, .y0 = y + r_tr, .x1 = x + width, .y1 = y + height - r_br });
 }
 
-// TextRun - re-resolve each pre-positioned glyph by id through the glyph cache and emit it.
+// TextRun: re-resolve each pre-positioned glyph by id through the glyph cache and emit it.
 
 static void emit_text_run(const SrIrRequest* req, const FlCmdTextRun* tr) {
     if (req->glyph_cache == nullptr) {
@@ -282,10 +280,10 @@ static void emit_text_run(const SrIrRequest* req, const FlCmdTextRun* tr) {
     }
 }
 
-// Image - color mode (static handle or dynamic RGBA buffer) and alpha-coverage mode (bitmap glyphs / alpha-only
+// Image: color mode (static handle or dynamic RGBA buffer) and alpha-coverage mode (bitmap glyphs / alpha-only
 // dynamic images). Source resolution and format conversion happen here, never in the IR.
 
-// A single-channel mask colorized by the tint - the grayscale RenderText path. The source is always a dynamic
+// A single-channel mask colorized by the tint, the grayscale RenderText path. The source is always a dynamic
 // neutral buffer.
 static void emit_alpha_coverage_image(const SrIrRequest* req, const FlCmdImage* im) {
     RenderCommand* cmd = sr_alloc_command(req);

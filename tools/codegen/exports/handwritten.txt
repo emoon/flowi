@@ -1,11 +1,11 @@
-# Public C symbols declared by flowi's HAND-WRITTEN public headers. The IDL only knows the
+# Public C symbols declared by flowi's hand-written public headers. The IDL only knows the
 # generated headers; names that don't fit the `fl_<api>_<method>` scheme live in hand-written
-# headers (include/flowi/ui/nav.h, core/assert.h, ui/feedback.h, ui/inspector.h, vfs/drivers.h) and would
-# otherwise be public-by-declaration but absent from the dynamic symbol table. api_gen merges
+# headers (include/flowi/ui/nav.h, core/assert.h, ui/feedback.h, ui/inspector.h, vfs/drivers.h). Without
+# this file they would be declared public but missing from the dynamic symbol table. api_gen merges
 # this file into flowi.version and flowi.def (see tools/codegen/src/lib.rs). One
 # symbol per line; `#` starts a comment; every entry must be a C identifier.
 #
-# core/assert.h - every FL_ASSERT* macro expands to a call to one of these, so a
+# core/assert.h: every FL_ASSERT* macro expands to a call to one of these, so a
 # consumer that includes the header and asserts cannot link without them.
 fl_assert_fatal_handler
 fl_assert_handler

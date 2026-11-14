@@ -121,7 +121,7 @@ static bool emit_color_svg(GpuTranslate* tr, const FlCmdImage* im) {
 static void emit_static_slot_image(GpuTranslate* tr, const FlCmdImage* im) {
     int index = tr->slots != nullptr ? gpu_image_slots_find_static(tr->slots, im->source.handle) : -1;
     if (index < 0 || !gpu_clip_visible(tr, gpu_aabb_from_rect(im->dst))) {
-        return; // never prepared (or released), or fully clipped - no slot claimed
+        return; // never prepared (or released), or fully clipped; no slot claimed
     }
     const GpuSlotImage* img = &tr->slots->images[index];
     emit_slot_image(tr, im, (SlotRef) { (u32)index, img->w, img->h });
@@ -149,8 +149,8 @@ static bool dynamic_source_usable(const GpuTranslate* tr, const FlCmdImage* im) 
     return src->dynamic.w != 0 && src->dynamic.h != 0;
 }
 
-// Touch marks the upload for this referencing frame - gated behind clip visibility so an invisible command
-// uploads nothing.
+// Touch marks the upload for this referencing frame, so it runs only after the clip-visibility test and an
+// invisible command uploads nothing.
 static void translate_dynamic_image(GpuTranslate* tr, const FlCmdImage* im) {
     if (!dynamic_source_usable(tr, im) || !gpu_clip_visible(tr, gpu_aabb_from_rect(im->dst))) {
         return;
@@ -159,7 +159,7 @@ static void translate_dynamic_image(GpuTranslate* tr, const FlCmdImage* im) {
     int index = gpu_image_slots_touch_dynamic(tr->slots, src->dynamic.pixels, src->dynamic.w, src->dynamic.h,
                                               src->dynamic.stride, im->mode == FlImageMode_AlphaCoverage);
     if (index < 0) {
-        return; // table full - diagnosed by the slots module
+        return; // table full; diagnosed by the slots module
     }
     emit_slot_image(tr, im, (SlotRef) { (u32)index, src->dynamic.w, src->dynamic.h });
 }

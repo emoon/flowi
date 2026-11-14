@@ -1,7 +1,7 @@
-// Selection - FlSelectionSet implementation (CONTEXT.md Selection Set / Selection Request).
+// FlSelectionSet implementation (CONTEXT.md Selection Set / Selection Request).
 //
-// Pure data structure + protocol: no List rendering or gesture code. The set is an arena-backed opaque handle
-// wrapping base's u64-keyed hashmap used as a set (the value slot is an unused dummy byte - identity only).
+// Data structure and protocol only, with no List rendering or gesture code. The set is an arena-backed opaque
+// handle wrapping the core u64-keyed hashmap used as a set (the value slot is an unused dummy byte).
 // apply folds a batch of requests in array order; ranges resolve their endpoints against the
 // caller-supplied ordered id list, so off-screen/virtualized rows resolve too.
 
@@ -20,8 +20,6 @@ struct FlSelectionSet {
     hashmap(u64, u8) map; // u64 stable id -> dummy byte; membership is "key present"
 };
 
-// Lifecycle
-
 FlSelectionSet* selection_set_create(u32 initial_capacity) {
     FlArena* arena = arena_new();
     FlSelectionSet* set = arena_alloc_zero(arena, FlSelectionSet);
@@ -36,8 +34,6 @@ void selection_set_destroy(FlSelectionSet* set) {
         fl_arena_destroy(set->arena);
     }
 }
-
-// Membership
 
 bool selection_set_contains(const FlSelectionSet* set, u64 id) {
     return hashmap_contains(&set->map, id);
@@ -61,8 +57,6 @@ void selection_set_set_all(FlSelectionSet* set, const u64* ids, u64 count) {
         hashmap_insert(&set->map, ids[i], (u8)1);
     }
 }
-
-// Apply
 
 // Linear search for id in the ordered model; ranges are rare (one per shift-select), so no auxiliary index.
 static bool selection_find_pos(const u64* ordered_ids, u64 id_count, u64 id, u64* out_pos) {
@@ -116,8 +110,6 @@ void selection_set_apply(FlSelectionSet* set, const FlSelectionRequest* reqs, u6
         }
     }
 }
-
-// Read-out
 
 u64 selection_set_len(const FlSelectionSet* set) {
     return hashmap_count(&set->map);

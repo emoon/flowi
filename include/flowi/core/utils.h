@@ -15,10 +15,8 @@
 
 #define sizeof_array(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-// Math utility macros
-//
-// These evaluate their arguments more than once, so pass side-effect-free expressions. Each keeps the
-// argument's own type.
+// min, max and clamp evaluate their arguments more than once, so pass side-effect-free expressions. Each
+// keeps the argument's own type.
 //
 // A function-like macro of the same name breaks <algorithm>'s std::min/std::max/std::clamp declarations,
 // so C++ consumers get the standard ones instead.

@@ -1,5 +1,4 @@
-/// Opaque caller-owned set of selected List stable ids. The host holds it solely behind a `*SelectionSet`.
-/// Created by create, destroyed by destroy.
+/// Opaque caller-owned set of selected List stable ids. Created by create, destroyed by destroy.
 #[attributes(Opaque)]
 struct SelectionSet {}
 

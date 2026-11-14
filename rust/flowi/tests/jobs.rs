@@ -244,7 +244,7 @@ fn worker_submitted_dependent_on_a_settled_dependency_runs() {
 const IMMEDIATE_COMPLETE: JobHandle = JobHandle(u64::MAX);
 
 /// Chaining off a handle a worker got from its own inline submission is ordinary, and the sentinel
-/// that handle carries means "already complete" - so the dependent must still run.
+/// that handle carries means "already complete", so the dependent must still run.
 #[test]
 fn worker_submitted_dependent_on_the_immediate_complete_sentinel_runs() {
     foundation();

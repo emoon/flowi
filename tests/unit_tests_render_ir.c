@@ -2,8 +2,8 @@
 
 #include "unit_tests_common.h"
 
-// render_ir: the styled text-run layout (fl_ir_text_layout at a fractional quarter-px key) agrees with
-// font_cache_measure_text - same quantizer, same per-glyph advances, same n−1 letter-spacing rule.
+// The styled text-run layout (fl_ir_text_layout at a fractional quarter-px key) agrees with
+// font_cache_measure_text: the same quantizer, the same per-glyph advances and the same n-1 letter-spacing rule.
 
 UTEST(render_ir, styled_text_layout_matches_measurement) {
     FlFontCache* cache = font_cache_new(s_arena);
@@ -34,7 +34,7 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     ASSERT_NEAR_MSG(glyphs[1].x - glyphs[0].x, adv + spacing, 0.0001f, "each pen step adds advance + spacing");
     ASSERT_NEAR_MSG(glyphs[2].x - glyphs[1].x, adv + spacing, 0.0001f, "each pen step adds advance + spacing");
 
-    // A dropped n−1 guard would offset the first pen while leaving the deltas/extent checks unchanged.
+    // Without the n-1 rule the first pen would move while the delta and extent checks above still pass.
     ASSERT_NEAR_MSG(glyphs[0].x, 10.0f, 0.0001f, "the first glyph has no leading spacing gap");
 
     FlTextMetrics m = font_cache_measure_text(
@@ -46,8 +46,7 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     font_cache_destroy(cache);
 }
 
-// The painter styled draw: positions scale with ui_scale while the type size and spacing do not - they
-// answer to text_scale instead, which this frame holds at 1.
+// Positions scale with ui_scale. The type size and spacing follow text_scale, which this frame holds at 1.
 UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     FlArena* arena = arena_new();
     FlFontCache* cache = font_cache_new(s_arena);
@@ -81,7 +80,7 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     ASSERT_NEAR_MSG(glyphs[1].x - glyphs[0].x, adv + 1.25f, 0.0001f,
                     "advance and spacing stay unscaled, matching measurement");
 
-    // font_size 0 falls back to the font's default size (loaded at 32 -> key 128).
+    // font_size 0 falls back to the font's default size (loaded at 32, so key 128).
     void* slot_default = nullptr;
     painter_scope_push(p, &slot_default);
     painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
@@ -101,12 +100,12 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     fl_arena_destroy(arena);
 }
 
-// render_ir: optional-tier emission and SW-backend skip (ui/render_ir_build.h, sr_ir_to_render_command.c).
-// The builders are verified through a full walk of the emitted byte stream. The painter case proves the
-// reference-space-to-pixel scaling happens at emit (unitless angles/intensity pass through). The SW case proves
-// the translator steps over every optional-tier record via byte_size.
+// Optional-tier emission and the SW backend's skip (ui/render_ir_build.h, sr_ir_to_render_command.c). The builder
+// case walks the whole emitted byte stream. The painter case checks that reference-space lengths are scaled to
+// pixels at emit while unitless angles and intensity pass through. The SW case checks that the translator steps
+// over every optional-tier record by byte_size.
 
-// Advance to the next record per the frozen walk contract.
+// Advances to the next record by its byte_size.
 static const FlCmdHeader* ir_next(const FlCmdHeader* h) {
     return (const FlCmdHeader*)((const u8*)h + h->byte_size);
 }
@@ -180,8 +179,8 @@ UTEST(render_ir, optional_tier_builders_round_trip) {
     fx = (const FlEffect*)(rbars + 2);
     ASSERT_TRUE_MSG(fx->kind == FlEffectKind_Glow, "effect follows the trailing bar array");
 
-    // The walk terminates a `p < end` loop: it reaches the stream end, overshooting only by the final
-    // record's 8-byte-stride rounding (the arena is not padded after the last record).
+    // The walk reaches the stream end and overshoots it only by the last record's rounding to the 8-byte stride,
+    // because the arena is not padded after the last record.
     h = ir_next(h);
     ASSERT_TRUE_MSG((const u8*)h >= end && (const u8*)h - end < 8, "walk lands on the stream end");
 
@@ -191,11 +190,11 @@ UTEST(render_ir, optional_tier_builders_round_trip) {
 UTEST(render_ir, painter_shapes_scale_at_emit) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
-    // ui_scale 2.0 makes scaled vs unscaled fields unambiguous. No font cache needed for shapes.
+    // ui_scale 2.0 separates scaled fields from unscaled ones. Shapes need no font cache.
     painter_begin_frame(
         p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 2.0f, .text_scale = 1.0f, .state_arena = arena });
 
-    // Open one painting scope (no Clay needed); the painter attaches the span to this local customData slot.
+    // One painting scope, without Clay. The painter attaches the span to this local customData slot.
     void* slot = nullptr;
     painter_scope_push(p, &slot);
 
@@ -218,7 +217,7 @@ UTEST(render_ir, painter_shapes_scale_at_emit) {
 
     painter_scope_pop(p);
 
-    // The scope's span is one coalesced segment (consecutive primitives, no nested child paint between them).
+    // The scope's span is one segment, because the primitives are consecutive with no child paint between them.
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
     ASSERT_TRUE_MSG(span != nullptr, "first paint attached a span to the scope's slot");
     ASSERT_TRUE_MSG(span->first == span->last && span->first != nullptr && span->first->next == nullptr,
@@ -258,14 +257,13 @@ UTEST(render_ir, painter_shapes_scale_at_emit) {
     const FlBar* rbars = (const FlBar*)(bar_set + 1);
     ASSERT_TRUE_MSG(rbars[1].x == 6.0f && rbars[1].w == 4.0f && rbars[1].h == -8.0f, "bars scale while copied");
 
-    // Same termination contract as above: overshoot only by the final record's stride rounding.
+    // As above, the overshoot is only the last record's stride rounding.
     h = ir_next(h);
     ASSERT_TRUE_MSG((const u8*)h >= end && (const u8*)h - end < 8, "painter stream walk lands on its end");
 }
 
-// The painter's effect is scoped state: every later primitive in the element it was set in carries it, a
-// zeroed effect clears it, and it reaches neither a nested child, nor a sibling once the scope pops, nor the
-// next frame.
+// The painter's effect is scoped state. Every later primitive in the element it was set in carries it, and a
+// zeroed effect clears it. It does not reach a nested child, a sibling after the scope pops, or the next frame.
 UTEST(render_ir, painter_effect_is_scoped_state) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
@@ -329,8 +327,8 @@ UTEST(render_ir, painter_effect_is_scoped_state) {
     ASSERT_TRUE_MSG((((const FlCmdHeader*)sibling->first->ir)->flags & FL_HAS_EFFECT) == 0,
                     "the effect is gone once the scope it was set in pops");
 
-    // Frame boundary: begin_frame drops every open scope, so an effect left set cannot reach the next frame.
-    // It also rewinds the IR arena, which invalidates every record read above.
+    // begin_frame drops every open scope, so an effect left set cannot reach the next frame. It also rewinds the
+    // IR arena, which invalidates every record read above.
     void* leaked_slot = nullptr;
     painter_scope_push(p, &leaked_slot);
     painter_set_effect(p, shadow);
@@ -350,8 +348,8 @@ UTEST(render_ir, painter_effect_is_scoped_state) {
     fl_arena_destroy(arena);
 }
 
-// painter_rect_styled reaches the whole fill-rect command at once: per-corner radii (scaled like every other
-// length) and four differing corner colors in TL, TR, BL, BR order. The narrower calls funnel through it.
+// painter_rect_styled sets every field of the fill-rect command: per-corner radii (scaled like every other
+// length) and four corner colors in TL, TR, BL, BR order. The narrower calls go through it.
 UTEST(render_ir, painter_rect_styled_emits_per_corner_radius_and_gradient) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
@@ -439,13 +437,13 @@ UTEST(render_ir, painter_image_sub_emits_source_rect_and_scaled_dst) {
     fl_arena_destroy(arena);
 }
 
-// painter_hline/painter_vline emit a CORE fill rect (FlCmd_FillRect - software-backend visible, not the
-// optional-tier polyline) tagged FL_SNAP_DEVICE_PX, with the long axis scaled and the thin axis a whole device
-// pixel (>= 1). The position snap itself happens later at the splice; here we pin the emit contract.
+// painter_hline and painter_vline emit a core fill rect (FlCmd_FillRect, which the software backend draws, unlike
+// the optional-tier polyline) tagged FL_SNAP_DEVICE_PX. The long axis is scaled and the thin axis is a whole
+// device pixel, at least 1. The position is snapped later, at the splice.
 UTEST(render_ir, painter_lines_emit_snapped_core_fill_rect) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
-    // ui_scale 1.25: the thin axis snaps to a single whole device pixel while the long axis scales fractionally.
+    // At ui_scale 1.25 the thin axis snaps to one whole device pixel while the long axis scales fractionally.
     painter_begin_frame(
         p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.25f, .text_scale = 1.0f, .state_arena = arena });
 
@@ -480,14 +478,13 @@ UTEST(render_ir, painter_lines_emit_snapped_core_fill_rect) {
     fl_arena_destroy(arena);
 }
 
-// The splice rounds a snap-tagged fill rect to the device-pixel grid AFTER folding in the element origin, so a
-// 1px line stays crisp when that origin carries a fractional scroll offset (scroll_offset is applied unsnapped as
-// the element's translation). A plain, untagged fill rect at the same fractional origin is left fractional - the
-// flag, not the splice, gates the snap.
+// The splice rounds a snap-tagged fill rect to the device-pixel grid after adding the element origin, so a 1px
+// line stays crisp when the origin carries a fractional scroll offset (scroll_offset is applied unsnapped as the
+// element's translation). An untagged fill rect at the same origin stays fractional.
 UTEST(render_ir, snapped_line_splice_rounds_at_fractional_origin) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
-    // ui_scale 1.0 so element-local == device space, isolating the origin snap from any emit-time scaling.
+    // At ui_scale 1.0 element-local space is device space, so only the origin snap is under test.
     painter_begin_frame(
         p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.0f, .text_scale = 1.0f, .state_arena = arena });
 
@@ -501,13 +498,13 @@ UTEST(render_ir, snapped_line_splice_rounds_at_fractional_origin) {
     void* plain_slot = nullptr;
     painter_scope_push(p, &plain_slot);
     painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 100.0f, .h = 1.0f },
-                 col); // element-local rect {0,0,100,1}, NOT tagged
+                 col); // element-local rect {0,0,100,1}, not tagged
     painter_scope_pop(p);
 
-    // A fractional element origin - exactly what a fractional scroll offset produces.
+    // A fractional element origin, as a fractional scroll offset produces.
     const Clay_BoundingBox bb = { 200.4f, 10.4f, 100.0f, 1.0f };
 
-    // Snapped line: origin folded in, then rounded to whole device pixels.
+    // Snapped line: the origin is added, then the rect is rounded to whole device pixels.
     FlArena* out_snapped = arena_new();
     fl_arena_align(out_snapped, 8);
     const FlCmdHeader* hs = (const FlCmdHeader*)fl_arena_current_pos(out_snapped);
@@ -520,7 +517,7 @@ UTEST(render_ir, snapped_line_splice_rounds_at_fractional_origin) {
     ASSERT_TRUE_MSG(fs->rect.x == 200.0f && fs->rect.y == 10.0f, "snapped to the device grid (round 200.4, 10.4)");
     ASSERT_TRUE_MSG(fs->rect.w == 100.0f && fs->rect.h == 1.0f, "snapped extent stays a 1px line");
 
-    // Plain rect: same fractional origin, left fractional (the flag decides, not the splice).
+    // Plain rect: same fractional origin, left fractional.
     FlArena* out_plain = arena_new();
     fl_arena_align(out_plain, 8);
     const FlCmdHeader* hp = (const FlCmdHeader*)fl_arena_current_pos(out_plain);
@@ -557,8 +554,8 @@ static const FlCmdTextRun* clay_text_run_at_spacing(FlArena* out, FlArena* scrat
     return h->kind == FlCmd_TextRun ? (const FlCmdTextRun*)(h + 1) : nullptr;
 }
 
-// Letter spacing must survive the Clay -> IR hop. Clay widens the text element whether or not the value is
-// forwarded, so only the emitted pen positions can tell a forwarded value from a dropped one.
+// Letter spacing survives the Clay -> IR hop. Clay widens the text element whether or not the value is forwarded,
+// so only the emitted pen positions show whether it was.
 UTEST(render_ir, clay_text_forwards_letter_spacing_to_the_pen) {
     FlFontCache* cache = font_cache_new(s_arena);
     FlFontId font = font_cache_load_font_memory(cache, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
@@ -582,14 +579,14 @@ UTEST(render_ir, clay_text_forwards_letter_spacing_to_the_pen) {
     const FlGlyph* pg = (const FlGlyph*)(packed + 1);
     const FlGlyph* sg = (const FlGlyph*)(spaced + 1);
 
-    // Stated against the unspaced run so no font metric is baked in: each interior pen step grows by exactly
-    // the spacing, and the run's drawn extent by n−1 of them.
+    // Compared against the unspaced run so no font metric is baked in: each interior pen step grows by exactly
+    // the spacing, and the run's drawn extent by n-1 of them.
     ASSERT_NEAR_MSG(pg[1].x - pg[0].x, adv, 0.0001f, "an unspaced run steps by the bare advance");
     ASSERT_NEAR_MSG(sg[1].x - sg[0].x, adv + 5.0f, 0.0001f, "the forwarded spacing lands on the first pen step");
     ASSERT_NEAR_MSG(sg[2].x - sg[1].x, adv + 5.0f, 0.0001f, "and on every later one");
     ASSERT_NEAR_MSG(sg[2].x - sg[0].x, (pg[2].x - pg[0].x) + 10.0f, 0.0001f, "n−1 gaps across a three-glyph run");
 
-    // No leading gap: both runs start at the element's left edge, so spacing never shifts the whole string.
+    // Both runs start at the element's left edge, so spacing does not shift the whole string.
     ASSERT_NEAR_MSG(pg[0].x, 10.0f, 0.0001f, "an unspaced run starts at the bounding box");
     ASSERT_NEAR_MSG(sg[0].x, 10.0f, 0.0001f, "and a spaced one starts in the same place");
 
@@ -599,9 +596,9 @@ UTEST(render_ir, clay_text_forwards_letter_spacing_to_the_pen) {
     font_cache_destroy(cache);
 }
 
-// A parent scope that paints, opens a child scope that paints, then paints again has a non-contiguous span: the
-// child's record sits between the parent's two records in the shared arena, so the parent's span is two
-// segments and the child's is one. Each scope gets its own CUSTOM span (one marker per scope).
+// A parent scope that paints, opens a child scope that paints, then paints again has a span in two segments,
+// because the child's record sits between the parent's two records in the shared arena. The child's span is one
+// segment. Each scope gets its own custom span.
 UTEST(render_ir, painter_span_nesting_splits_segments) {
     FlArena* arena = arena_new();
     Painter* p = painter_create(arena);
@@ -648,8 +645,8 @@ UTEST(render_ir, sw_backend_skips_optional_tier) {
     fl_arena_align(ir_arena, 8);
     const u8* start = (const u8*)fl_arena_current_pos(ir_arena);
 
-    // Two core-tier fill rects sandwiching all five optional-tier kinds (one with a trailing array + effect,
-    // the worst case for the byte_size step).
+    // Two core-tier fill rects around all five optional-tier kinds. One of those has a trailing array and an
+    // effect, the worst case for the byte_size step.
     FlColor c = { 255, 0, 0, 255 };
     FlColor corners[4] = { c, c, c, c };
     FlEffect glow = { .kind = FlEffectKind_Glow, .color = c, .blur = 4.0f };
@@ -680,8 +677,8 @@ static int sw_translate_range(FlArena* ir_arena, FlArena* commands_arena, FlAren
     return sw_translate(commands_arena, state_arena, start, bytes, 255).count;
 }
 
-// Per-primitive companion to sw_backend_skips_optional_tier: each kind is fed ALONE, so a primitive that gains
-// SW support flips exactly its own assertion instead of moving an aggregate count.
+// Like sw_backend_skips_optional_tier, but each kind is fed alone, so a primitive that gains SW support changes
+// only its own assertion.
 UTEST(render_ir, sw_backend_drops_each_optional_tier) {
     FlArena* ir_arena = arena_new();
     FlArena* commands_arena = arena_new();
@@ -727,8 +724,8 @@ UTEST(render_ir, sw_backend_drops_each_optional_tier) {
     fl_arena_destroy(state_arena);
 }
 
-// SW backend behavior is unchanged by an effect annotation: it never reads the effect, so a core fill rect
-// carrying a drop shadow translates to the same render command as the same rect without one.
+// The SW backend never reads the effect, so a core fill rect with a drop shadow translates to the same render
+// command as the same rect without one.
 
 UTEST(render_ir, sw_backend_ignores_effect_on_core_command) {
     FlArena* ir_arena = arena_new();
@@ -746,8 +743,8 @@ UTEST(render_ir, sw_backend_ignores_effect_on_core_command) {
     fl_ir_fill_rect(ir_arena, rect, (FlCornerRadius) { 0 }, corners, nullptr);
     size_t plain_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - plain_start);
 
-    // The same rect, but with a drop shadow appended at the record tail (the core builder has no effect
-    // parameter, so the record is assembled directly, as the painter's annotation path would).
+    // The same rect with a drop shadow appended at the record tail. The core builder has no effect parameter, so
+    // the record is assembled directly, as the painter's annotation path does.
     fl_arena_align(ir_arena, 8);
     const u8* fx_start = (const u8*)fl_arena_current_pos(ir_arena);
     FlCmdHeader* header = fl_ir_header(
@@ -779,16 +776,16 @@ UTEST(render_ir, sw_backend_ignores_effect_on_core_command) {
     fl_arena_destroy(state_arena);
 }
 
-// SW and GPU IR decoders must agree on the two bits of intent-decode math they both do: the global_alpha
-// fold (both round: (a*ga+127)/255) and the corner-radius clamp (both floor negatives to 0). A rect that trips
-// either divergence would render differently on the two backends.
+// The SW and GPU IR decoders share two pieces of decode math: the global_alpha fold, which both round as
+// (a*ga+127)/255, and the corner-radius clamp, which floors negatives to 0. A rect that hit a difference in either
+// would render differently on the two backends.
 
 UTEST(render_ir, sw_gpu_decode_agrees) {
     FlArena* ir_arena = arena_new();
     FlArena* commands_arena = arena_new();
     FlArena* state_arena = arena_new();
 
-    // --- global_alpha fold: a=200, ga=200 is a value where truncation (156) and rounding (157) differ. ---
+    // global_alpha fold: a=200, ga=200 is a value where truncation (156) and rounding (157) differ.
     FlColor c = { 10, 20, 30, 200 };
     FlColor solid[4] = { c, c, c, c };
     FlRect rect = { 0.0f, 0.0f, 100.0f, 100.0f };
@@ -815,9 +812,9 @@ UTEST(render_ir, sw_gpu_decode_agrees) {
     ASSERT_EQ_MSG(sw_alpha, 157, "SW must round the global_alpha fold, not truncate");
     ASSERT_EQ_MSG(gpu_alpha, sw_alpha, "SW and GPU must fold global_alpha identically");
 
-    // --- corner-radius clamp: a negative corner must decode as zero on both backends. (12,12,-3,0) trips the
-    // SW edge-path predicates (has_only_top_corners requires bl==0), so an unfloored negative would take a
-    // different split path than the same rect with the corner at 0. ---
+    // Corner-radius clamp: a negative corner decodes as zero on both backends. (12,12,-3,0) reaches the SW
+    // edge-path predicates (has_only_top_corners requires bl==0), so a negative that was not floored would take a
+    // different split path than the same rect with the corner at 0.
     FlColor opaque = { 255, 255, 255, 255 };
     FlColor op4[4] = { opaque, opaque, opaque, opaque };
     FlCornerRadius neg_r = { .tl = 12.0f, .tr = 12.0f, .bl = -3.0f, .br = 0.0f };
@@ -852,8 +849,8 @@ UTEST(render_ir, sw_gpu_decode_agrees) {
     fl_arena_destroy(state_arena);
 }
 
-// Dashing is GPU-tier: the software backend draws every border solid. FlCmdBorder carries 8 extra bytes for
-// the pattern, so a stale offset would have the SW decode read the stroke into a width or a color.
+// Dashing is GPU-tier, and the software backend draws every border solid. FlCmdBorder carries 8 extra bytes for
+// the pattern, so a stale offset would make the SW decode read the stroke as a width or a color.
 UTEST(render_ir, sw_backend_ignores_a_border_dash_pattern) {
     FlArena* ir_arena = arena_new();
     FlArena* commands_arena = arena_new();
@@ -885,9 +882,9 @@ UTEST(render_ir, sw_backend_ignores_a_border_dash_pattern) {
     fl_arena_destroy(state_arena);
 }
 
-// The dash pattern has no word of its own in the 80-byte draw command - it rides the free high bits of the
-// flags word (GPU_DRAW_DASH_* in gpu_ir_to_draw_cmd.h), pinned here at literal bit positions rather than
-// through the same helper that writes it.
+// The 80-byte draw command has no word for the dash pattern, so it goes in the free high bits of the flags word
+// (GPU_DRAW_DASH_* in gpu_ir_to_draw_cmd.h). The test checks literal bit positions and does not use the helper
+// that writes them.
 UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
     FlArena* ir_arena = arena_new();
     FlArena* commands_arena = arena_new();
@@ -944,7 +941,7 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
     ASSERT_EQ_MSG(gc.cmds[0].kind, (u32)GpuDraw_Rect, "a border consuming its rect still becomes a plain fill");
     ASSERT_EQ_MSG(gc.cmds[0].flags, 0u, "a degenerate border carries no dash into the fill it becomes");
 
-    // The same encoding on a circle's ring - and no pattern at all when the normalization leaves no ring.
+    // The same encoding on a circle's ring, and no pattern when the normalization leaves no ring.
     fl_arena_align(ir_arena, 8);
     const u8* ring = (const u8*)fl_arena_current_pos(ir_arena);
     fl_ir_circle_stroked(ir_arena, 20.0f, 20.0f, 10.0f, color, color, 2.0f, (FlStrokeStyle) { 3.0f, 2.0f }, nullptr);
@@ -964,9 +961,9 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
     fl_arena_destroy(commands_arena);
 }
 
-// The painter's own text draws are the second crossing from authored to physical, and they do not go through
-// Clay at all, so the label path above cannot cover them. ui_scale is held at 1 so a size that wrongly picked
-// up the coordinate scale instead of the type scale is still wrong, not accidentally right.
+// The painter's own text draws also convert authored sizes to physical ones, and they do not go through Clay, so
+// the label path above does not cover them. ui_scale is held at 1 so that a size taken from the coordinate scale
+// and not the type scale shows up as wrong.
 UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     FlArena* arena = arena_new();
     FlFontCache* cache = font_cache_new(s_arena);
@@ -977,7 +974,7 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     painter_begin_frame(
         p, (PainterFrame) { .font_cache = cache, .ui_scale = 1.0f, .text_scale = 2.0f, .state_arena = arena });
 
-    // painter_text: the authored 32px handle must rasterize at 64px.
+    // painter_text: the authored 32px handle rasterizes at 64px.
     void* slot_plain = nullptr;
     painter_scope_push(p, &slot_plain);
     painter_text(p, 0.0f, 0.0f, FL_S("A"), font, ui_color(255, 255, 255, 255));
@@ -1009,11 +1006,11 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     ASSERT_NEAR_MSG(glyphs[1].x - glyphs[0].x, adv + 2.5f, 0.0001f,
                     "the advance is taken at the scaled size and the authored spacing scales with it");
 
-    // ui_scale is 1 here, so the pen still starts at the authored origin: the type scale must not leak into
+    // ui_scale is 1 here, so the pen still starts at the authored origin. The type scale does not apply to
     // coordinates.
     ASSERT_NEAR_MSG(glyphs[0].x, 10.0f, 0.0001f, "text_scale does not move the pen origin");
 
-    // font_size 0 falls back to the font's authored load size, which scales the same way (32 -> 64).
+    // font_size 0 falls back to the font's authored load size, which scales the same way (32 to 64).
     void* slot_default = nullptr;
     painter_scope_push(p, &slot_default);
     painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
@@ -1028,10 +1025,10 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     font_cache_destroy(cache);
 }
 
-// painter_rects: one batched call must leave exactly the records a painter_rect loop leaves. The backends only
-// ever see the IR, so identical bytes at every stage below are identical output on every backend: the span
-// itself (UI scaling, effect), the spliced frame stream (Canvas z-order, clipping), and each backend's decode
-// of that stream (alpha compositing inputs).
+// One batched painter_rects call leaves exactly the records a painter_rect loop leaves. The backends only see
+// the IR, so identical bytes mean identical output on every backend. The cases compare the span (UI scaling,
+// effect), the spliced frame stream (Canvas z-order, clipping) and each backend's decode of that stream (alpha
+// compositing inputs).
 
 #define RECT_BATCH_COUNT 40
 
@@ -1066,7 +1063,7 @@ UTEST(render_ir, painter_rects_emit_the_scalar_record_stream) {
     const FlColor edge = { 1, 2, 3, 255 };
     const FlEffect shadow = { .kind = FlEffectKind_DropShadow, .color = { 0, 0, 0, 255 }, .off_y = 4.0f, .blur = 9.0f };
 
-    // A record before and after the batch: the batch must coalesce into the surrounding segment, as the loop does.
+    // A record before and after the batch: the batch joins the surrounding segment, as the loop does.
     void* scalar_slot = nullptr;
     painter_scope_push(p, &scalar_slot);
     painter_set_effect(p, shadow);
@@ -1183,7 +1180,7 @@ UTEST(render_ir, painter_rects_frame_stream_matches_scalar_loop) {
     ASSERT_TRUE_MSG(memcmp(batch_start, scalar_start, scalar_bytes) == 0,
                     "scissor, z-order and origin splicing give a byte-identical frame stream");
 
-    // Alpha compositing happens backend-side on the decoded commands: the decode must agree too.
+    // Alpha compositing happens in the backend on the decoded commands, so the decode has to agree too.
     FlArena* commands_arena = arena_new();
     FlArena* state_arena = arena_new();
     UiRenderCommandsArray sw_scalar = sw_translate(commands_arena, state_arena, scalar_start, scalar_bytes, 255);

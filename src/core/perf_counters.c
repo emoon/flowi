@@ -1,13 +1,11 @@
 #include "perf_counters.h"
 
-// Performance counters
-
 #if PLATFORM_LINUX
 #include "os/perf_counters_linux.inc"
 #else
 
-// Linux is the only platform with a performance-counter seam. Nothing initializes here, so no
-// session is ever handed out and the calls that take one have nothing but null to refuse.
+// Only Linux implements performance counters. Here init fails, no session is ever created, and
+// the calls that take one refuse nullptr.
 
 bool perf_counters_init(void) {
     return false;

@@ -1,9 +1,5 @@
 // Compile-only check for the neutral render-command IR and the FlRenderBackend interface.
 //
-// This translation unit includes both IR headers with ZERO consumers and is built (by CMakeLists.txt) with
-// only the base + ui-core include directories - no renderer/software or renderer/gpu on the include path and
-// nothing linked. If either header grows a dependency on a concrete backend, this stops compiling.
-//
 // Offsets reflect the natural-alignment LP64 layout the backends compile against.
 
 #include <stddef.h>
@@ -11,12 +7,10 @@
 #include <ui/render_backend.h>
 #include "render_ir.h"
 
-// The shared font layer is core-tier and must stay free of any concrete-backend dependency. Including it here -
-// where the build deliberately omits renderer/software from the include path - turns that rule into a compile gate.
+// The shared font layer is core-tier and must stay free of any concrete-backend dependency.
 #include "font_cache.h"
 
-// Lock the shared layer's metrics-only GlyphList shape (count doubles as the readiness flag; no glyph array). This
-// also keeps the include above load-bearing so the header-isolation compile gate cannot be silently dropped.
+// Pin the shared layer's metrics-only GlyphList shape (count doubles as the readiness flag; no glyph array).
 _Static_assert(sizeof(GlyphList) == 3 * sizeof(int), "GlyphList is metrics-only {count, ascender, descender}");
 
 _Static_assert(sizeof(FlRect) == 4 * sizeof(f32), "FlRect is exactly {x, y, w, h}");
@@ -25,7 +19,7 @@ _Static_assert(offsetof(FlRect, y) == sizeof(f32), "FlRect.y");
 _Static_assert(offsetof(FlRect, w) == 2 * sizeof(f32), "FlRect.w");
 _Static_assert(offsetof(FlRect, h) == 3 * sizeof(f32), "FlRect.h");
 
-// Command stream - fixed header, variable-length records.
+// Command stream: fixed header, variable-length records.
 
 _Static_assert(sizeof(FlCmdHeader) == 8, "FlCmdHeader is u16 kind + u16 flags + u32 byte_size");
 _Static_assert(offsetof(FlCmdHeader, kind) == 0, "FlCmdHeader.kind first");
@@ -44,7 +38,7 @@ _Static_assert(FlCmd_Circle == 8, "optional tier reserves five slots");
 _Static_assert(FlCmd_Diamond == 9, "optional tier reserves five slots");
 _Static_assert(FlCmd_Bar == 10, "optional tier reserves five slots");
 
-// FillRect - gradient folded in as four per-corner colors (solid = four equal corners).
+// FillRect: a gradient is four per-corner colors, and a solid fill is four equal corners.
 
 _Static_assert(sizeof(FlCmdFillRect) == 48, "FillRect is rect + radius + four corner colors only");
 _Static_assert(offsetof(FlCmdFillRect, rect) == 0, "FillRect.rect");
@@ -52,7 +46,7 @@ _Static_assert(offsetof(FlCmdFillRect, radius) == sizeof(FlRect), "FillRect.radi
 _Static_assert(offsetof(FlCmdFillRect, corner) == sizeof(FlRect) + sizeof(FlCornerRadius), "FillRect.corner");
 _Static_assert(sizeof(((FlCmdFillRect*)0)->corner) == 4 * sizeof(FlColor), "FillRect carries four corner colors");
 
-// Border - outer radius + per-side widths (backend derives the inner geometry; no pre-split inner_radius).
+// Border: outer radius and per-side widths. The backend derives the inner geometry, so there is no inner_radius.
 
 _Static_assert(sizeof(FlCmdBorder) == 60, "Border is rect + 4 widths + radius + color + stroke only");
 _Static_assert(offsetof(FlCmdBorder, rect) == 0, "Border.rect");
@@ -65,7 +59,7 @@ _Static_assert(offsetof(FlCmdBorder, color) == offsetof(FlCmdBorder, radius) + s
 _Static_assert(offsetof(FlCmdBorder, stroke) == offsetof(FlCmdBorder, color) + sizeof(FlColor),
                "Border.stroke (zeroed = solid)");
 
-// TextRun - FlFontId + pre-positioned opaque glyphs (never bitmaps); FlGlyph[glyph_count] trails inline.
+// TextRun: FlFontId and pre-positioned opaque glyphs (never bitmaps); FlGlyph[glyph_count] trails inline.
 
 _Static_assert(sizeof(FlGlyph) == sizeof(u32) + 2 * sizeof(f32), "FlGlyph is exactly {glyph_id, x, y}");
 _Static_assert(offsetof(FlGlyph, glyph_id) == 0, "FlGlyph.glyph_id first (opaque id)");
@@ -119,7 +113,7 @@ static void fl_ir_image_source_shapes(void) {
 
 _Static_assert(sizeof(FlCmdClipPush) == sizeof(FlRect), "clip push is rect-only");
 
-// Optional-tier payloads - intent only; a backend MAY ignore these kinds entirely (the SW backend does).
+// Optional-tier payloads. A backend may ignore these kinds entirely (the SW backend does).
 // Trailing arrays (FlPolyPoint, FlBar) follow their payload inline, like text-run glyphs.
 
 _Static_assert(sizeof(FlPolyPoint) == 12, "FlPolyPoint is exactly {x, y, intensity} at a fixed 12B stride");
@@ -178,8 +172,8 @@ _Static_assert(offsetof(FlCmdBarSet, baseline_y) == 0, "BarSet.baseline_y (share
 _Static_assert(offsetof(FlCmdBarSet, color) == sizeof(f32), "BarSet.color");
 _Static_assert(offsetof(FlCmdBarSet, bar_count) == 8, "BarSet.bar_count governs inline-array iteration");
 
-// Effect annotation - flag-gated, appended to a record after the payload and any inline trailing array;
-// drop-shadow and glow share one shape.
+// Effect annotation: flag-gated, appended to a record after the payload and any inline trailing array.
+// Drop-shadow and glow share one shape.
 
 _Static_assert(sizeof(FlEffect) == 20, "FlEffect is kind + color + off_x + off_y + blur only");
 _Static_assert(offsetof(FlEffect, kind) == 0, "FlEffect.kind (0 none, 1 shadow, 2 glow)");
@@ -192,12 +186,12 @@ _Static_assert(offsetof(FlEffect, blur) == 8 + 2 * sizeof(f32), "FlEffect.blur")
 // bounds-expansion path distinguishes drop-shadow (offset) from glow (centered). Pin them.
 _Static_assert(FlEffectKind_None == 0 && FlEffectKind_DropShadow == 1 && FlEffectKind_Glow == 2, "effect kind values");
 
-// Frame envelope - global_alpha is a frame parameter, never per-command; background travels as state.
+// Frame envelope: global_alpha is a frame parameter, never per-command; background travels as state.
 
 _Static_assert(offsetof(FlRenderFrame, global_alpha) > offsetof(FlRenderFrame, bytes), "global_alpha is frame-wide");
 _Static_assert(sizeof(((FlRenderFrame*)0)->background) == sizeof(FlBackground), "frame carries background state");
 
-// Backend interface - one object; presentation excluded; readback is nullable.
+// Backend interface: one object; presentation excluded; readback is nullable.
 
 _Static_assert(sizeof(FlRenderBackend) == 17 * sizeof(void*),
                "FlRenderBackend is user_data + 15 function pointers + capability flag");
@@ -210,14 +204,14 @@ static bool fl_ir_backend_shapes(void) {
     b.change_resolution = nullptr;
     b.render = nullptr;
     b.destroy = nullptr;
-    b.scale_changed = nullptr;  // scale-change atlas-regen seam - nullable (GPU regenerates atlases; SW is a no-op)
-    b.set_font_cache = nullptr; // font-cache host-swap seam - nullable (GPU leaves it unbound)
+    b.scale_changed = nullptr;  // scale-change atlas-regen seam, nullable (GPU regenerates atlases; SW is a no-op)
+    b.set_font_cache = nullptr; // font-cache host-swap seam, nullable (GPU leaves it unbound)
     b.prepare_image = nullptr;
     b.release_image = nullptr;
     b.prepare_glyph = nullptr;
-    b.prepare_vector = nullptr;     // vector preparation seam - nullable (only the GPU backend binds it)
-    b.read_pixels = nullptr;        // optional capability - nullable
-    b.prepare_image_on_job = false; // threading capability - unset means the begin-frame pump (GL/D3D)
+    b.prepare_vector = nullptr;     // vector preparation seam, nullable (only the GPU backend binds it)
+    b.read_pixels = nullptr;        // optional capability, nullable
+    b.prepare_image_on_job = false; // threading capability; unset means the begin-frame pump (GL/D3D)
 
     FlRenderFrame frame = { 0 };
     frame.commands = nullptr;
@@ -228,7 +222,7 @@ static bool fl_ir_backend_shapes(void) {
     return b.read_pixels == nullptr;
 }
 
-// Reference the helpers so -Wunused-function stays quiet without changing behavior.
+// Reference the helpers so -Wunused-function stays quiet.
 void fl_render_ir_compile_check(void);
 void fl_render_ir_compile_check(void) {
     fl_ir_image_source_shapes();

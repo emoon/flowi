@@ -92,7 +92,7 @@ static FlString manifest_table_path(Localization* self, FlArena* arena, FlString
     return string_empty();
 }
 
-// Start the worker-side read that parses and builds the table for tag. Returns null when the manifest does not
+// Start the worker-side read that parses and builds the table for tag. Returns nullptr when the manifest does not
 // list the tag or the read cannot start; the caller's current table stays in place either way.
 
 static StringTable* table_start(Localization* self, FlString tag) {
@@ -140,7 +140,7 @@ static TableStatus load_poll(FlVfsHandle* handle) {
     return ok ? TableStatus_Ready : TableStatus_Failed;
 }
 
-// Start the worker-side read of the manifest into an arena of its own. Null when the read cannot start.
+// Start the worker-side read of the manifest into an arena of its own. nullptr when the read cannot start.
 
 static Manifest* manifest_start(Localization* self) {
     FlArena* arena = arena_new();
@@ -169,7 +169,7 @@ static void retire_table(StringTable* table, const StringTable* keep_a, const St
 }
 
 // Make table the active language and retire the table it replaced, unless that is the default one, which stays
-// resident as the fallback layer. A null table is a failed load, which leaves the current language alone.
+// resident as the fallback layer. A nullptr table is a failed load, which leaves the current language alone.
 
 static void switch_to_table(Localization* self, StringTable* table, FlString tag) {
     if (table == nullptr) {
@@ -196,7 +196,7 @@ static FlString pending_tag_string(Localization* self) {
 }
 
 // Frame-boundary step for a manifest read: a no-op until the worker is done with it. The first one brings
-// localization up - a manifest that cannot be read or names no default disables it instead - and every later one
+// localization up (a manifest that cannot be read or names no default disables it instead) and every later one
 // is a hot-reload re-read, which swaps the language list in and keeps the last good one if it did not parse.
 
 static void manifest_poll(Localization* self) {
@@ -568,7 +568,7 @@ static bool first_warning_for(Localization* self, FlString sid, LocalizationWarn
     return true;
 }
 
-// Active table, then the default table. Null means neither carries the key, which is also what tells a caller the
+// Active table, then the default table. nullptr means neither carries the key, which is also what tells a caller the
 // text it goes on to use is the caller's own key rather than table memory. out_table names the table the entry
 // came from, whose language decides how its plural variants are selected.
 
@@ -622,7 +622,7 @@ static bool has_placeholder(FlString text) {
     return false;
 }
 
-// The entry for sid with the plural-without-count warning applied, or null when no table carries the key.
+// The entry for sid with the plural-without-count warning applied, or nullptr when no table carries the key.
 
 static TableEntry* lookup_without_count(Localization* self, FlString sid) {
     StringTable* table = nullptr;

@@ -13,8 +13,7 @@
 //! when the final application supplies its own global allocator.
 
 #![allow(non_camel_case_types)]
-// These bindings mirror the full C API surface; not every item is consumed from Rust, so the
-// unused ones are expected, not a defect.
+// These bindings mirror the full C API surface, and Rust does not use every item.
 #![allow(dead_code, unused_imports)]
 
 use std::os::raw::{c_char, c_int, c_void};
@@ -43,7 +42,7 @@ pub use marshal::{arena_alloc_array, arena_box, borrow_slice, borrow_slice_mut};
 mod raw_str;
 pub use raw_str::RawStr;
 
-/// The `arena_*` call API: the opaque [`Arena`] (an uninhabited enum, crossed only behind
+/// The `fl_arena_*` call API: the opaque [`Arena`] (an uninhabited enum, crossed only behind
 /// `*mut Arena`), the [`TempArena`] savepoint a temp/scratch scope restores from, the
 /// allocate/rewind/scratch entry points, and the process-wide `fl_init` / `fl_destroy`
 /// foundation lifecycle.
@@ -70,7 +69,7 @@ pub use foundation::math_data::*;
 /// The `fl_memory_tracker_*` call API: the POD MemoryStats snapshot (arena usage and the
 /// heap alloc/free balance) plus the init/destroy/dump_*/export_json_*/get_stats functions.
 pub use foundation::memory_tracker::*;
-/// The `path_*` manipulation functions, each taking the arena its result is allocated from.
+/// The `fl_path_*` manipulation functions, each taking the arena its result is allocated from.
 pub use foundation::path::*;
 /// The frame-profiler call API (`fl_perf_scope_*`): a host that owns the frame loop brackets
 /// it with frame_begin/frame_end and opens named scopes inside.
@@ -78,13 +77,12 @@ pub use foundation::perf_scope::*;
 /// The status vocabulary: the general-purpose Status code and [`FlError`], the shared error
 /// enum fallible calls return.
 pub use foundation::status::*;
-/// The `string_*` / `sb_*` call API: the StringBuilder, the parse-result PODs and
+/// The `fl_string_*` / `fl_sb_*` call API: the StringBuilder, the parse-result PODs and
 /// StringParseStatus, and the comparison, search and hashing (FNV-1a) functions over
 /// [`RawStr`].
 pub use foundation::string::*;
 
-
-/// The exported `vfs_*` service functions a directly linked consumer calls.
+/// The exported `fl_vfs_*` functions a directly linked consumer calls.
 pub use vfs_abi::vfs::{
     fl_vfs_close, fl_vfs_get_data, fl_vfs_get_file_list, fl_vfs_get_listing, fl_vfs_is_ready,
     fl_vfs_mount_close, fl_vfs_mount_get_info, fl_vfs_mount_get_status, fl_vfs_mount_is_ready,
@@ -124,7 +122,6 @@ extern "C" {
     /// fl_vfs_init. A no-op when it contains none.
     pub fn fl_vfs_register_builtin_drivers();
 }
-
 
 mod ergonomics;
 
@@ -342,7 +339,7 @@ impl Default for DropdownConfig {
     /// The `ui_dropdown` macro's defaults: cancel row shown and a 200 px minimum width; every
     /// other field zero.
     fn default() -> Self {
-        // SAFETY: as WidgetConfig above - all-zero is a valid bit pattern for this config.
+        // SAFETY: as WidgetConfig above: all-zero is a valid bit pattern for this config.
         let zero: DropdownConfig = unsafe { core::mem::zeroed() };
         DropdownConfig {
             show_cancel: true,
@@ -354,14 +351,14 @@ impl Default for DropdownConfig {
 
 impl Default for TabBarConfig {
     fn default() -> Self {
-        // SAFETY: as WidgetConfig above - all-zero is a valid bit pattern for this config.
+        // SAFETY: as WidgetConfig above: all-zero is a valid bit pattern for this config.
         unsafe { core::mem::zeroed() }
     }
 }
 
 impl Default for RadioConfig {
     fn default() -> Self {
-        // SAFETY: as WidgetConfig above - all-zero is a valid bit pattern for this config.
+        // SAFETY: as WidgetConfig above: all-zero is a valid bit pattern for this config.
         unsafe { core::mem::zeroed() }
     }
 }

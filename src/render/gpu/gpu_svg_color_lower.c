@@ -4,7 +4,7 @@
 #include "gpu_svg_atlas.h"
 #include <ui/vector_image.h>
 
-// Bake a shape's solid fill and opacity into one premultiplied RGBA8 word - R in the low byte (GLSL
+// Bake a shape's solid fill and opacity into one premultiplied RGBA8 word, R in the low byte (GLSL
 // unpackUnorm4x8 order), rounded to nearest. Frame global_alpha is not folded in.
 static u32 bake_premultiplied(FlColor fill, f32 opacity) {
     f32 o = opacity < 0.0f ? 0.0f : (opacity > 1.0f ? 1.0f : opacity);
@@ -30,7 +30,7 @@ u32 gpu_svg_color_lower(struct FlArena* scratch, const FlVectorImage* vector, f3
         u32 quad_count = 0;
         if (shape->segment_count > 0) {
             // Scale the shape's contours into raster pixel space, then lower the soup to quadratics through the
-            // shared glyph path. Each shape lowers independently so its quads are contiguous - the color shader
+            // shared glyph path. Each shape lowers independently so its quads are contiguous: the color shader
             // walks [quad_start, quad_start + quad_count) per shape.
             FlGlyphSegment* scaled = arena_alloc_array(scratch, FlGlyphSegment, shape->segment_count);
             for (u32 i = 0; i < shape->segment_count; i++) {

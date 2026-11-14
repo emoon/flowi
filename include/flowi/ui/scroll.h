@@ -21,15 +21,12 @@ typedef struct FlScrollAreaConfig {
     FlLayoutDirection direction;
     // Gap between child elements.
     uint16_t child_gap;
-    // Container padding.
     FlLayoutPadding padding;
     // Background color (default: transparent).
     FlColor background_color;
-    // Corner radius.
     FlCornerRadius corner_radius;
     // Show a scrollbar when content overflows.
     bool show_scrollbar;
-    // When to show the scrollbar.
     FlScrollbarDisplayMode scrollbar_mode;
     // Enable smooth scroll animation.
     bool smooth_scroll;

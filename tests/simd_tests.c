@@ -261,7 +261,7 @@ UTEST(i32x4, div_gradient_case) {
     int32_t result[4];
     i32x4_to_fixed_array(result_vec, result);
 
-    // Expected values: 32768 / (width-1) for fixed point step calculations
+    // 32768 / (width-1), as in fixed-point step calculations.
     const int32_t expected[4] = { 17, 30, 33, 66 };
     ASSERT_TRUE(i32_arrays_equal(expected, result, 4));
 }
@@ -310,8 +310,7 @@ UTEST(i16x8, lerp) {
     i16x8 start = i16x8_new(10, 20, 30, 40, 50, 60, 70, 80);
     i16x8 end = i16x8_new(20, 40, 60, 80, 100, 120, 140, 160);
 
-    // t values (fixed-point representation in range [0, 0x7FFF])
-    // Equivalent to 0.5 in fixed-point
+    // t is fixed point in [0, 0x7FFF], so 0x4000 is 0.5.
     i16x8 t = i16x8_new(0x4000, 0x4000, 0x4000, 0x4000, 0x4000, 0x4000, 0x4000, 0x4000);
 
     const int16_t expected[8] = { 15, 30, 45, 60, 75, 90, 105, 120 };
@@ -423,7 +422,7 @@ UTEST(generics, extract) {
     ASSERT_EQ(simd_extract(vec_i32, 1), 20);
 }
 
-#endif // __STDC_VERSION__ >= 201112L
+#endif // __STDC_VERSION__ >= 201112L && !COMPILER_MSVC
 
 UTEST(f32x4, shuffle_functions) {
     f32x4 vec = f32x4_new(1.0f, 2.0f, 3.0f, 4.0f);
@@ -440,7 +439,7 @@ UTEST(f32x4, shuffle_functions) {
     const float expected_2323[4] = { 3.0f, 4.0f, 3.0f, 4.0f };
     ASSERT_TRUE(f32_arrays_equal(expected_2323, result_2323_arr, 4, 1e-6f));
 
-    // Test cross-vector shuffle
+    // Indices 4 and up select from the second vector.
     f32x4 vec2 = f32x4_new(5.0f, 6.0f, 7.0f, 8.0f);
     f32x4 result_cross = f32x4_shuffle(vec, vec2, 0, 1, 4, 5);
     float result_cross_arr[4];
@@ -510,7 +509,7 @@ UTEST(i32x4, shift_right_comprehensive) {
     i32x4 vec = i32x4_new(256, 512, 1024, -1024);
     int32_t result[4];
 
-    // Test shift right by 0 - ARM NEON doesn't support 0, so test identity
+    // ARM NEON cannot shift right by 0, so that path checks the identity.
 #if CPU_ARM64
     i32x4 shift0 = vec;
     i32x4_to_fixed_array(shift0, result);
@@ -568,7 +567,7 @@ UTEST(i16x8, shift_right_comprehensive) {
     i16x8 vec = i16x8_new(256, 512, 1024, 2048, -256, -512, -1024, -2048);
     int16_t result[8];
 
-    // Test shift right by 0 - ARM NEON doesn't support 0, so test identity
+    // ARM NEON cannot shift right by 0, so that path checks the identity.
 #if CPU_ARM64
     i16x8 shift0 = vec;
     i16x8_to_fixed_array(shift0, result);
@@ -633,7 +632,7 @@ UTEST(u8x16, table_shuffle) {
 }
 
 UTEST(u8x16, write_mask) {
-    // Test rest_count = 5: 5 < i is true for i=6..15, false for i=0..5
+    // rest_count = 5: 5 < i is true for i=6..15, false for i=0..5
     u8x16 result5 = u8x16_write_mask(5);
     uint8_t result5_arr[16];
     u8x16_to_fixed_array(result5, result5_arr);
@@ -642,7 +641,7 @@ UTEST(u8x16, write_mask) {
         = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
     ASSERT_TRUE(u8_arrays_equal(expected5, result5_arr, 16));
 
-    // Test rest_count = 0: 0 < i is true for i=1..15, false for i=0
+    // rest_count = 0: 0 < i is true for i=1..15, false for i=0
     u8x16 result0 = u8x16_write_mask(0);
     uint8_t result0_arr[16];
     u8x16_to_fixed_array(result0, result0_arr);
@@ -731,8 +730,7 @@ UTEST(i16x8, lerp_diff) {
     // Delta (end - start) precomputed
     i16x8 delta = i16x8_new(10, 20, 30, 40, 50, 60, 70, 80);
 
-    // t values (fixed-point representation in range [0, 0x7FFF])
-    // Equivalent to 0.5 in fixed-point
+    // t is fixed point in [0, 0x7FFF], so 0x4000 is 0.5.
     i16x8 t = i16x8_new(0x4000, 0x4000, 0x4000, 0x4000, 0x4000, 0x4000, 0x4000, 0x4000);
 
     const int16_t expected[8] = { 15, 30, 45, 60, 75, 90, 105, 120 };
@@ -744,7 +742,7 @@ UTEST(i16x8, lerp_diff) {
     ASSERT_TRUE(i16_arrays_equal(expected, result, 8));
 }
 
-// Verify lerp produces correct results for actual color blending ranges (0-255 colors, 0-32767 alpha).
+// The lerp cases below use color-blending ranges: 0-255 colors, 0-32767 alpha.
 
 UTEST(i16x8, lerp_color_blend_full_alpha) {
     i16x8 start = i16x8_new(0, 0, 0, 0, 0, 0, 0, 0);
@@ -755,7 +753,7 @@ UTEST(i16x8, lerp_color_blend_full_alpha) {
     int16_t result[8];
     i16x8_to_fixed_array(result_vec, result);
 
-    // At t=0x7FFF (max), result should be very close to end (255)
+    // At t = 0x7FFF, the maximum, the result is within one of end (255).
     for_count(i, 8) {
         ASSERT_GE(result[i], 254);
         ASSERT_LE(result[i], 255);
@@ -1084,7 +1082,7 @@ UTEST(i16x8x2, to_u8x16_narrow_shr_zero_input) {
 }
 
 UTEST(i16x8x2, to_u8x16_narrow_shr_saturation_clamping) {
-    // Test saturation - values that would exceed u8 range should be clamped to 255
+    // Values above the u8 range saturate to 255.
     i16x8x2 input;
     input.v0 = i16x8_new(1000, 2000, 4000, 8000, 1000, 1200, 1500, 2000);
     input.v1 = i16x8_new(1200, 1600, 2048, 4096, 1800, 1400, 1000, 1100);
@@ -1154,7 +1152,7 @@ UTEST(u8x16_mul_widen, sequential_values) {
 }
 
 UTEST(u8x16_mul_widen, max_values) {
-    // Test with maximum u8 values: 255 * 255 = 65025 (fits in u16)
+    // 255 * 255 = 65025, which fits in u16.
     uint8_t a_data[16], b_data[16];
     for (int i = 0; i < 16; i++) {
         a_data[i] = 255;
@@ -1427,7 +1425,7 @@ UTEST(u16x8, shuffle_mask_pattern) {
     uint8_t mask_values[16];
     u8x16_to_fixed_array(shuffle_mask, mask_values);
 
-    // First 8 bytes should be the offsets, remaining should be 0
+    // The first 8 bytes are the offsets and the rest are 0.
     ASSERT_EQ(mask_values[0], 0);
     ASSERT_EQ(mask_values[1], 1);
     ASSERT_EQ(mask_values[2], 1);

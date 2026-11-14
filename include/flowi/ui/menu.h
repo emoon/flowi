@@ -38,43 +38,39 @@ typedef struct FlMenuConfig {
 typedef struct FlMenuItemConfig {
     // Close behaviour on activation (0 = the item kind's natural default).
     FlMenuClosePolicy close_policy;
-    // Optional shortcut text shown right-aligned (display only - no dispatch).
+    // Optional shortcut text shown right-aligned (display only, no dispatch).
     FlString shortcut;
     // Greyed out and non-interactive.
     bool disabled;
 } FlMenuItemConfig;
 
-// Configuration for a submenu parent. A submenu parent is a pure container - it never carries
-// a close policy or shortcut, only the child panel's min_width and a disabled (greyed,
-// non-opening) flag. A zeroed config uses the defaults (min_width 0 → 180, same as the root menu).
+// Configuration for a submenu parent. A zeroed config uses the defaults (min_width 0 → 180, same as
+// the root menu).
 typedef struct FlSubmenuConfig {
-    // Child panel width in logical px (0 = C default, 180 - same as the root menu).
+    // Child panel width in logical px (0 = C default, 180, same as the root menu).
     float min_width;
     // Greyed out and non-opening.
     bool disabled;
 } FlSubmenuConfig;
 
-// Configuration for a right-click menu region. A zeroed sizing means grow/grow - the region
-// covers its parent area.
+// Configuration for a right-click menu region.
 typedef struct FlMenuRegionConfig {
     // Region element sizing (zeroed = grow/grow, covering the parent area).
     FlLayoutSizing sizing;
 } FlMenuRegionConfig;
 
-// Configuration for the menu-bar strip - the persistent File/Edit/View surface. The bar carries
-// only the dropdowns' render order; the per-dropdown width lives on MenuBarMenuConfig. A zeroed
+// Configuration for the menu-bar strip: the persistent File/Edit/View surface. The bar carries
+// only the dropdowns' render order; the per-dropdown width is on MenuBarMenuConfig. A zeroed
 // config uses the default (z_index 0 → 1000, same as a context menu).
 typedef struct FlMenuBarConfig {
     // Dropdown render order; higher = on top (0 = C default, 1000, same as a context menu).
     int16_t z_index;
 } FlMenuBarConfig;
 
-// Configuration for one top-level entry in the menu bar. Like a submenu parent it is a pure
-// container - it never carries a close policy or shortcut, only the dropdown panel's min_width
-// and a disabled (greyed, non-opening) flag. A zeroed config uses the default
+// Configuration for one top-level entry in the menu bar. A zeroed config uses the default
 // (min_width 0 → 180, same as a context menu).
 typedef struct FlMenuBarMenuConfig {
-    // Dropdown panel width in logical px (0 = C default, 180 - same as a context menu).
+    // Dropdown panel width in logical px (0 = C default, 180, same as a context menu).
     float min_width;
     // Greyed-out top that never highlights, opens, or accepts a switch.
     bool disabled;

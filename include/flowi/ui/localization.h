@@ -57,7 +57,7 @@ FL_API void fl_localization_set_language(FlString tag);
 // Display text that carries runtime values: look the key up, then substitute the caller's arguments
 // into its indexed placeholders. The result is passed to any widget the way plain text is.
 // Look sid up in the active language and substitute the count arguments at args into its
-// indexed placeholders - {0} is the first argument, {1} the second, and a repeated index
+// indexed placeholders: {0} is the first argument, {1} the second, and a repeated index
 // substitutes at every occurrence. {{ and }} render as a literal brace; a placeholder with no
 // matching argument renders as itself and warns. Integers and floats format C-style (. decimal
 // point, no digit grouping) and string arguments substitute as-is. The result lives in the frame

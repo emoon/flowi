@@ -1,24 +1,23 @@
-// Standalone compile guard for the hand-written public block-scoped layout macros (<flowi/ui/layout_area.h>).
+// Compile guard for the hand-written public block-scoped layout macros (<flowi/ui/layout_area.h>).
 //
-// This TU links nothing. It proves at compile time that the header is self-contained valid C given only FlString,
-// and that FL_ID / FL_ID_INT and the layout, floating and scroll block macros expand to valid C against the public
-// types alone.
+// It proves at compile time that the header is self-contained valid C given only FlString, and that FL_ID /
+// FL_ID_INT and the layout, floating and scroll block macros expand to valid C against the public types alone.
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-// FlString - includer-provided base type api_gen does not author.
+// FlString is an includer-provided base type that api_gen does not author.
 #include <core/string.h>
 
 #include <flowi/ui/layout_area.h>
 
-// The internal sizing_* helper macros are not available in a no-internals TU, so spell the axes from public types.
+// The internal sizing_* helper macros are not included here, so spell the axes from public types.
 #define FL__CHECK_GROW ((FlLayoutSizingAxis) { .type = FlLayoutSizingType_Grow })
 #define FL__CHECK_FIXED(px) \
     ((FlLayoutSizingAxis) { .size = { .min_max = { (px), (px) } }, .type = FlLayoutSizingType_Fixed })
 
-// Never called: linking it would need a live Clay context. Compiling it is the whole point.
+// Never called, because running it would need a live Clay context. It only has to compile.
 static void fl_layout_area_api_check_compile_only(void) {
     FlLayoutId id = FL_ID("compile_check");
     FlLayoutId seeded = FL_ID_INT("compile_check", 7);
@@ -42,5 +41,5 @@ static void fl_layout_area_api_check_compile_only(void) {
                       .show_scrollbar = true) {}
 }
 
-// Reference it from a (still never-called) anchor so -Wunused-function stays quiet without changing the above.
+// Reference it from an anchor that is also never called, so -Wunused-function stays quiet.
 void (*fl_layout_area_api_check_anchor)(void) = fl_layout_area_api_check_compile_only;

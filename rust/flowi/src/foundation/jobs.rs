@@ -6,8 +6,8 @@
 //!
 //! A scheduled closure runs on a worker thread at an unknown later time, so it must
 //! be Send + 'static and may not borrow from the call site. A panic inside it is
-//! caught at the FFI boundary and logged at error level; the job fails to finish its
-//! work rather than aborting the process.
+//! caught at the FFI boundary and logged at error level; the job does not finish its
+//! work and the process keeps running.
 //!
 //! Only the main thread can block on a handle. [`Jobs::wait`] returns straight away
 //! everywhere else, so a job body that needs ordering expresses it with
@@ -21,18 +21,17 @@ use crate::sys;
 use std::os::raw::c_void;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-/// The scheduled-job handle, re-exported under its clean name. Query it with
+/// The scheduled-job handle. Query it with
 /// [`Jobs::is_finished`], block on it with [`Jobs::wait`], or pass it as a dependency
 /// to [`Jobs::add_after`]. [`JobHandle::INVALID`] (0) is the "none" sentinel.
 pub use sys::JobHandle;
 
-/// Job scheduling priority (Low / Normal / High), re-exported under its clean
-/// name. Higher-priority jobs are dequeued first; [`Jobs::add`] uses Normal.
+/// Job scheduling priority (Low / Normal / High). Higher-priority jobs are dequeued
+/// first; [`Jobs::add`] uses Normal.
 pub use sys::JobPriority;
 
 /// What [`Jobs::is_finished`] reports for a handle: NotFinished (running/pending),
-/// Finished (completed), or Invalid (unknown/expired handle). Re-exported under
-/// its clean name.
+/// Finished (completed), or Invalid (unknown/expired handle).
 pub use sys::JobsResult;
 
 /// The worker-thread context handed to a running job.
@@ -76,7 +75,7 @@ impl Jobs {
     /// Send + 'static. See the module docs for the panic contract.
     ///
     /// # Panics
-    /// Panics if the foundation is not up - see the module docs on lifecycle.
+    /// Panics if the foundation is not up; see the module docs on lifecycle.
     #[inline]
     pub fn add<F>(f: F) -> JobHandle
     where
@@ -89,7 +88,7 @@ impl Jobs {
     /// [`Jobs::add`] for the closure contract.
     ///
     /// # Panics
-    /// Panics if the foundation is not up - see the module docs on lifecycle.
+    /// Panics if the foundation is not up; see the module docs on lifecycle.
     pub fn add_with_priority<F>(f: F, priority: JobPriority) -> JobHandle
     where
         F: FnOnce(WorkerInfo) + Send + 'static,
@@ -106,12 +105,12 @@ impl Jobs {
     ///
     /// [`JobHandle::INVALID`], an expired handle, and one whose job has already
     /// finished all count as "no dependency", so f is simply scheduled. Called from
-    /// a job body against a dependency that is still running, f is deferred rather
-    /// than run inline - ordering holds on a worker too, but the returned handle is
-    /// then genuinely pending and only the main thread can wait it out.
+    /// a job body against a dependency that is still running, f is deferred, so
+    /// ordering holds on a worker too, but the returned handle is then pending and
+    /// only the main thread can wait on it.
     ///
     /// # Panics
-    /// Panics if the foundation is not up - see the module docs on lifecycle.
+    /// Panics if the foundation is not up; see the module docs on lifecycle.
     pub fn add_after<F>(f: F, dependency: JobHandle) -> JobHandle
     where
         F: FnOnce(WorkerInfo) + Send + 'static,
@@ -129,7 +128,7 @@ impl Jobs {
     /// and [`Jobs::add`] for the closure contract.
     ///
     /// # Panics
-    /// Panics if the foundation is not up - see the module docs on lifecycle.
+    /// Panics if the foundation is not up; see the module docs on lifecycle.
     pub fn add_with_priority_after<F>(
         f: F,
         priority: JobPriority,
@@ -151,7 +150,7 @@ impl Jobs {
         }
     }
 
-    /// Whether handle has finished - see [`JobsResult`]. An unknown/expired handle
+    /// Whether handle has finished; see [`JobsResult`]. An unknown/expired handle
     /// reports [`JobsResult::Invalid`].
     #[inline]
     pub fn is_finished(handle: JobHandle) -> JobsResult {
@@ -159,7 +158,7 @@ impl Jobs {
         unsafe { sys::fl_jobs_is_finished(handle) }
     }
 
-    /// Block the calling thread until handle completes - on the main thread only.
+    /// Block the calling thread until handle completes, on the main thread only.
     /// From a job body or any other thread this returns at once without waiting;
     /// poll [`Jobs::is_finished`] there, or chain the work with [`Jobs::add_after`].
     #[inline]
@@ -187,7 +186,7 @@ impl Jobs {
     /// The number of worker threads in the global job system.
     ///
     /// # Panics
-    /// Panics if the foundation is not up - see the module docs on lifecycle.
+    /// Panics if the foundation is not up; see the module docs on lifecycle.
     pub fn num_threads() -> i32 {
         assert!(crate::foundation::is_up(), "{FOUNDATION_DOWN}");
         // SAFETY: no arguments; reads a global the assert above established is live.
@@ -268,7 +267,6 @@ mod tests {
         );
     }
 
-    /// add_after runs its body only once the dependency has finished.
     #[test]
     fn a_dependent_job_runs_after_its_dependency() {
         foundation();

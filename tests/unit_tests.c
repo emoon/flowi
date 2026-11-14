@@ -1,18 +1,17 @@
-// Unit tests (utest.h runner) - the single CPU test executable. All CPU-side tests live in this
-// directory as UTEST cases, one unit_tests_<area>.c per area, sharing tests/unit_tests_common.h;
-// GPU tests live in gpu_smoke_test. Never add a new test executable.
+// The single CPU test executable, built on the utest.h runner. All CPU-side tests live in this directory as
+// UTEST cases, one unit_tests_<area>.c per area, sharing tests/unit_tests_common.h. GPU tests live in
+// gpu_smoke_test. Do not add another test executable.
 //
-// This TU carries only the runner plus the process-global lifecycle cases. The runner resets the process
-// singletons (render fixture, VFS, image system) before and after every case, so no case depends on its position
-// in the run.
+// This file holds the runner and the process-global lifecycle cases. The runner resets the process singletons
+// (render fixture, VFS, image system) before and after every case, so no case depends on its position in the run.
 //
 // DUMP_FRAMES=1 ./build/unit_tests dumps each rendered frame to frame_dump_<label>.ppm, so a deliberate
 // rendering change can be reviewed as an image.
 
 #include "unit_tests_common.h"
 
-// image_free must drive the backend's release_image seam so the GPU backend can reclaim the freed handle's
-// atlas cell / slot texture. Uses the global image system (image_create_system), which image_free reaches.
+// image_free calls the backend's release_image so the GPU backend can reclaim the freed handle's atlas cell or
+// slot texture. image_free reaches the global image system, so the cases create it with image_create_system.
 
 typedef struct ReleaseStats {
     int call_count;
@@ -40,23 +39,22 @@ UTEST(image_free, forwards_freed_handle_to_backend_release) {
     image_destroy_system();
 }
 
-// SW leaves release_image unbound; image_free must null-guard and not crash.
+// The software backend leaves release_image unbound.
 UTEST(image_free, unbound_release_seam_is_noop) {
     FlRenderBackend backend = { .user_data = nullptr, .release_image = nullptr };
     image_create_system(s_arena, &backend);
-    image_free((ImageHandle)101); // must not crash
+    image_free((ImageHandle)101);
     image_destroy_system();
 }
 
-// fl_app create/destroy/create - a sole-owner fl_app must reset the process-global singletons (VFS, image
-// system) on destroy so a second create in the same process re-initializes them instead of reusing pointers
-// into the destroyed app arena. Only a sole-owner fl_app exercises the owner-gated teardown path - after another
-// owner exists, fl_app's create calls are no-ops and destroy skips.
+// An fl_app that is the sole owner of the process-global singletons (VFS, image system) resets them on destroy,
+// so a second create in the same process initializes them again and does not reuse pointers into the destroyed
+// app arena. When another owner already exists, fl_app's create calls are no-ops and destroy skips the teardown.
 
 static void app_cycle_frame(void* user_data) {
     *(bool*)user_data = true;
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        // Empty full-window area: enough to drive the whole tick path.
+        // An empty full-window area is enough to drive the whole tick path.
     }
 }
 
@@ -70,8 +68,8 @@ UTEST(fl_app, create_destroy_create_reinitializes_global_singletons) {
         ASSERT_TRUE_MSG(frame_ran, "frame did not run in cycle");
         fl_app_destroy(app);
 
-        // Owner-gated teardown proof: destroy reset the globals, so a fresh init claims ownership (returns
-        // true). Release immediately so the next cycle's fl_app_create is again the sole owner.
+        // Init returns true only when it claims ownership, which shows that destroy reset the globals. Release
+        // them at once so the next cycle's fl_app_create is the sole owner again.
         ASSERT_TRUE_MSG(fl_vfs_init(s_arena), "fl_app_destroy left the VFS singleton initialized");
         vfs_destroy();
         FlRenderBackend dummy = { 0 };
@@ -112,7 +110,7 @@ static bool isolate_cases(void) {
 }
 
 int main(int argc, const char* const argv[]) {
-    s_arena = fl_init(1); // one job worker thread, distinct from the (main) test thread
+    s_arena = fl_init(1); // one job worker thread, separate from the main test thread
     if (!s_arena || !isolate_cases()) {
         return 1;
     }

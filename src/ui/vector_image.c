@@ -32,11 +32,11 @@ static bool svg_shape_has_stroke(const NSVGshape* shape) {
 }
 
 // A visible shape is supported only if it has a solid color fill and no stroke. A visible shape with no fill
-// and no stroke draws nothing and is simply skipped (not rejected).
+// and no stroke draws nothing and is skipped (not rejected).
 typedef enum SvgShapeVerdict {
-    SvgShape_Skip,        // contributes nothing - ignore
+    SvgShape_Skip,        // contributes nothing; ignore
     SvgShape_SolidFill,   // supported: solid color fill
-    SvgShape_Unsupported, // gradient or stroke - reject the image
+    SvgShape_Unsupported, // gradient or stroke; reject the image
 } SvgShapeVerdict;
 
 static SvgShapeVerdict svg_classify_shape(const NSVGshape* shape) {
@@ -52,7 +52,7 @@ static SvgShapeVerdict svg_classify_shape(const NSVGshape* shape) {
     if (shape->fill.type == NSVG_PAINT_COLOR) {
         return SvgShape_SolidFill;
     }
-    return SvgShape_Skip; // NSVG_PAINT_NONE / NSVG_PAINT_UNDEF - no fill
+    return SvgShape_Skip; // NSVG_PAINT_NONE / NSVG_PAINT_UNDEF: no fill
 }
 
 // Count the closed-contour segments a shape lowers to: one Cubic per bezier piece plus, per path, a closing

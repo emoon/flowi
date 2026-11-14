@@ -5,7 +5,7 @@
 // so the sequence lives in one backend-agnostic TU (gpu_orchestrator.c) compiled into both, calling
 // per-backend primitives through the GpuRenderOps table below.
 //
-// The seam is backend-internal - no GL or Metal type crosses it (GpuRenderOps is plain function pointers over
+// The seam is backend-internal: no GL or Metal type crosses it (GpuRenderOps is plain function pointers over
 // void* backend/surface handles). This header must stay GL-type-free: gpu_renderer_internal.h, which pulls in GL
 // types, cannot be included by the Metal build.
 
@@ -30,7 +30,7 @@ typedef struct GpuRenderOps {
     // entries) and releases the textures freed since the last render. GL also resets its per-frame counters.
     void (*frame_begin)(void* backend);
 
-    // Glyph realization (driven by the shared prepare_text_glyphs walk in gpu_orchestrator.c): the bound font
+    // Glyph realization (driven by the shared gpu_prepare_text_glyphs walk in gpu_orchestrator.c): the bound font
     // cache, and the seam that rasterizes one outline into the coverage atlas. get_font_cache returns nullptr when
     // no cache is bound (a host driving prepare_glyph itself), which short-circuits the walk.
     struct FlFontCache* (*get_font_cache)(void* backend);

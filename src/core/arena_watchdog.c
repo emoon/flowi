@@ -9,9 +9,7 @@
 #include "sprintf.h"
 #include <stdatomic.h>
 
-// Arena Growth Watchdog
-//
-// Uses mi_malloc for its own storage to avoid a circular dependency with arenas.
+// The watchdog uses mi_malloc for its own storage to avoid a circular dependency with arenas.
 
 #define WATCHDOG_RING_SIZE 8
 #define WATCHDOG_INITIAL_CAPACITY 64
@@ -154,7 +152,7 @@ static void cleanup_stale_entries(void) {
     while (i < s_watchdog.count) {
         if (!s_watchdog.entries[i].seen) {
             remove_entry(i);
-            // Don't increment i - swapped entry needs checking
+            // i stays put: the entry swapped into this slot still needs checking.
         } else {
             s_watchdog.entries[i].seen = false;
             i++;

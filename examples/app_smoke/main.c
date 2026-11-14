@@ -1,10 +1,7 @@
-// examples/app_smoke - the canonical direct-C usage of the fl_app runner.
+// Uses the fl_app runner directly from C. fl_app_create() starts the core services and opens an SDL window;
+// fl_app_run() blocks and calls the frame callback once per frame until the window is closed.
 //
-// A standalone SDL window driven entirely through the fl_app C ABI: fl_app_create() brings the core services
-// up and assembles the toolkit + window; fl_app_run() blocks, calling our frame callback once per frame until
-// the window is closed.
-//
-// Toolkit scaffolding, run manually - not a CI test. Built with FLOWI_BUILD_EXAMPLES.
+// Run by hand; it is not a CI test. Built with FLOWI_BUILD_EXAMPLES.
 
 #include "app/app.h"
 #include <core/core.h>
@@ -23,8 +20,8 @@ static void frame(void* user_data) {
 }
 
 int main(void) {
-    // renderer is left at its default (FlAppRenderer_Software). On a windowed macOS app fl_app_create promotes
-    // that default to FlAppRenderer_Metal; on Linux it stays the software windowed backend.
+    // .renderer is left at its default, FlAppRenderer_Software. On macOS fl_app_create promotes a windowed app
+    // to FlAppRenderer_Metal; on Linux the app stays on the software windowed backend.
     FlAppSettings settings = {
         .window_title = FL_S("fl_app smoke"),
         .width = 1280,

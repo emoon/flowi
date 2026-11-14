@@ -1,3 +1,3 @@
-/// Handle to an image.
+/// Handle to an image; 0 is invalid. Returned by Image::load and the `Image::create_*` calls.
 #[handle(u32, invalid = 0)]
 struct ImageHandle {}

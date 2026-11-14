@@ -1,6 +1,6 @@
-// Public UI feedback-event seam - flowi reports what happened in the interaction layer (focus moved between
-// widgets, a directional nav hit an edge, a widget was activated) through one app-installed hook, and the app
-// maps each event kind to whatever it wants.
+// UI feedback events: flowi reports what happened in the interaction layer (focus moved between widgets, a
+// directional nav hit an edge, a widget was activated) through one app-installed hook, and the app maps each
+// event kind to whatever it wants.
 //
 // The hook is null by default and fires only on discrete, human-driven interactions (never per frame).
 
@@ -8,11 +8,11 @@
 
 #include <flowi/ui/element_id.h>
 
-// What happened. The enum is open to growth without breaking the seam - apps filter by kind.
+// What happened. More kinds may be added, so filter by kind.
 typedef enum FlUiFeedbackKind {
     // Focus moved from one widget to another (arrow/D-pad spatial nav, or Tab order). from/to/dir set.
     FlUiFeedbackKind_NavMoved = 0,
-    // A directional nav was pressed but no candidate existed - an edge was hit, focus stayed put. from/dir set.
+    // A directional nav was pressed but no candidate existed: an edge was hit and focus stayed put. from/dir set.
     FlUiFeedbackKind_NavBlocked = 1,
     // The focused widget was activated (Enter/Space/Gamepad-A). to is the activated widget.
     FlUiFeedbackKind_Activated = 2,
@@ -27,7 +27,7 @@ typedef enum FlUiFeedbackDir {
     FlUiFeedbackDir_Right = 4,
 } FlUiFeedbackDir;
 
-// One semantic UI feedback event. Borrowed for the duration of the callback only - copy out anything you keep.
+// One semantic UI feedback event. Borrowed for the duration of the callback only: copy out anything you keep.
 typedef struct FlUiFeedbackEvent {
     FlUiFeedbackKind kind;
     FlElementId from;    // NavMoved/NavBlocked: previously focused widget (0 if none). Unused otherwise.

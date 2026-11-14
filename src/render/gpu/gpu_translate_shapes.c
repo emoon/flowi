@@ -136,7 +136,7 @@ void gpu_translate_diamond(GpuTranslate* tr, const void* payload) {
              });
 }
 
-// One bar: a solid rect off the shared baseline - a positive height extends up from the baseline, a negative one
+// One bar: a solid rect off the shared baseline: a positive height extends up from the baseline, a negative one
 // down. Degenerate bars drop.
 static void emit_bar(GpuTranslate* tr, const FlCmdBarSet* bs, const FlBar* bar) {
     if (bar->w <= 0.0f || bar->h == 0.0f) {
@@ -213,7 +213,7 @@ static void fill_pass(GpuTranslate* tr, const FlCmdPolyline* pl, const PolyPaint
     }
 }
 
-// One stroke capsule per edge; a CLOSED polyline also strokes the last->first edge.
+// One stroke capsule per edge; a closed polyline also strokes the last->first edge.
 static void stroke_pass(GpuTranslate* tr, const FlCmdPolyline* pl, const PolyPaint* paint) {
     const FlPolyPoint* pts = (const FlPolyPoint*)(pl + 1);
     bool closed = (pl->flags & FlPolylineFlags_closed) != 0;
@@ -223,7 +223,7 @@ static void stroke_pass(GpuTranslate* tr, const FlCmdPolyline* pl, const PolyPai
     }
 }
 
-// Polyline: expand to one segment command per edge. A FILLED polyline emits its fill-to-baseline trapezoids
+// Polyline: expand to one segment command per edge. A filled polyline emits its fill-to-baseline trapezoids
 // first, then the stroke capsules, so the fill blends behind the stroke. Each stroke segment is a capsule
 // with round caps/joins (the SDF's end discs); per-endpoint intensities lerp along it to modulate stroke
 // alpha.

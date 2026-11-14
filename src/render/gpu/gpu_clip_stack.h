@@ -1,8 +1,8 @@
 #pragma once
 
-// GPU backend: the clip stack walked over the single translation pass. Each level holds the effective clip - the
-// running intersection down the stack, rooted at the full target - so the current clip is always the top and a
-// pop is just a depth decrement. Unbalanced push/pop is clamped and diagnosed once per frame, never UB.
+// GPU backend: the clip stack walked over the single translation pass. Each level holds the effective clip (the
+// running intersection down the stack, rooted at the full target), so the current clip is always the top and a
+// pop is a depth decrement. Unbalanced push/pop is clamped and diagnosed once per frame.
 
 #include "gpu_ir_to_draw_cmd.h"
 #include <ui/render_ir.h>

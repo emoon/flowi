@@ -4,7 +4,7 @@ use std::os::raw::c_char;
 
 use super::{fl_arena_alloc_raw, Arena};
 
-/// Mirror of FlString - a non-owning counted view of bytes crossing the C ABI:
+/// Mirror of FlString, a non-owning counted view of bytes crossing the C ABI:
 ///
 /// ```c
 /// typedef struct FlString {
@@ -120,7 +120,7 @@ impl RawStr {
         if self.data.is_null() || self.is_empty() {
             return String::new();
         }
-        // SAFETY: host contract above - data points at len() initialised bytes for the
+        // SAFETY: by the host contract above, data points at len() initialised bytes for the
         // duration of this call.
         let bytes = unsafe { core::slice::from_raw_parts(self.data as *const u8, self.len()) };
         String::from_utf8_lossy(bytes).into_owned()
@@ -134,13 +134,13 @@ impl RawStr {
     /// # Safety
     /// data..data + length must be initialised and stay valid and unmodified for the whole
     /// of 'a. The caller picks 'a, so it must be tied to something that actually owns the
-    /// bytes (the mount, the arena) - never left to be inferred.
+    /// bytes (the mount, the arena) and not left to inference.
     pub unsafe fn as_str<'a>(&self) -> &'a str {
         if self.data.is_null() || self.is_empty() {
             return "";
         }
-        // SAFETY: the caller's contract - data..data + length is initialised and stays valid and unmodified
-        // for the whole of 'a; the null/zero cases returned above.
+        // SAFETY: by the caller's contract, data..data + length is initialised and stays valid and
+        // unmodified for the whole of 'a; the null/zero cases returned above.
         let bytes = unsafe { core::slice::from_raw_parts(self.data as *const u8, self.len()) };
         core::str::from_utf8(bytes).unwrap_or("")
     }
@@ -178,7 +178,7 @@ impl RawStr {
         }
         // SAFETY: arena is live for the call (the caller's contract), so the allocation returns
         // s.len() + 1 writable, uniquely-owned bytes; s is a live &str that cannot overlap them, and
-        // the terminator is written at the last of the requested bytes - in bounds.
+        // the terminator is written at the last of the requested bytes, which is in bounds.
         unsafe {
             let buf = fl_arena_alloc_raw(arena, (s.len() + 1) as u64, 1) as *mut u8;
             core::ptr::copy_nonoverlapping(s.as_ptr(), buf, s.len());

@@ -33,7 +33,7 @@ typedef enum FlOverflow {
 
 // Per-call styled-text configuration: font, size, color, spacing, vertical alignment, and wrap
 // control. A zero field means "use the fallback" (font_id = 0 → active font, font_size = 0 →
-// font default size); color has no fallback - a zeroed color is transparent, so set it explicitly.
+// font default size); color has no fallback: a zeroed color is transparent, so set it explicitly.
 typedef struct FlTextConfig {
     // Font to use (0 = active font).
     uint32_t font_id;

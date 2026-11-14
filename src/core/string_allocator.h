@@ -6,9 +6,7 @@
 #include "os/os.h"
 #include "types.h"
 
-// FlString Allocator with Free List Support
-//
-// Arena-backed, with a free list per power-of-2 size class.
+// FlString allocator: arena-backed, with a free list per power-of-2 size class.
 
 #define STRING_ALLOCATOR_NUM_BUCKETS 16
 #define STRING_ALLOCATOR_MIN_SIZE_LOG2 3 // 8 bytes minimum
@@ -21,12 +19,8 @@ typedef struct StringAllocator {
     Mutex lock; // Thread-safety for free list operations
 } StringAllocator;
 
-// Core API
-
 StringAllocator* string_allocator_new(FlArena* arena);
 FlString string_allocator_alloc(StringAllocator* self, u64 size);
 void string_allocator_free(StringAllocator* self, FlString str);
-
-// Helper functions
 
 FlString string_allocator_copy(StringAllocator* self, FlString src);

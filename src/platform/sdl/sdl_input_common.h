@@ -25,7 +25,7 @@ typedef struct SdlInputCommon {
 // brought up the SDL event + game-controller subsystems.
 void sdl_input_common_init(SdlInputCommon* self);
 
-// Multi-window pump: drain the shared SDL queue ONCE and demux each window-addressed event to its window's context
+// Multi-window pump: drain the shared SDL queue once and demux each window-addressed event to its window's context
 // by SDL windowID, window_ids[i] pairing with contexts[i]. Non-window-addressed events (SDL_QUIT, gamepad) and any
 // id with no live match route to the main window (contexts[0]); callers always pass the main window as index 0.
 void sdl_input_common_pump_multi(SdlInputCommon* self, const u32* window_ids, FlUiCtx** contexts, int count);
@@ -34,7 +34,7 @@ void sdl_input_common_pump_multi(SdlInputCommon* self, const u32* window_ids, Fl
 void sdl_input_common_set_cursor(SdlInputCommon* self, FlCursor cursor);
 void sdl_input_common_set_cursor_visible(bool visible);
 void sdl_input_common_set_relative_mouse_mode(SdlInputCommon* self, bool enabled);
-// Warp the OS cursor to (x, y) in the given window's coordinates; a null window targets the mouse-focus window.
+// Warp the OS cursor to (x, y) in the given window's coordinates; a nullptr window targets the mouse-focus window.
 void sdl_input_common_warp_mouse(SDL_Window* window, float x, float y);
 
 // Close gamepad handles and free the cached cursors.

@@ -184,7 +184,7 @@ void add_file_change(FileWatcherState* watcher, FlString path, FlString old_path
 
     u64 timestamp = get_current_time_us_os();
 
-    // This function is called from platform threads: dispatch queue on macOS, etc.
+    // Called from platform threads, e.g. the dispatch queue on macOS.
     mutex_lock(&watcher->changes_lock);
 
     // Try to coalesce with recent changes to the same path

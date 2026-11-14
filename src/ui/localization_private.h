@@ -11,8 +11,8 @@
 
 // Types and helpers shared by the localization sources. localization.h stays the interface the rest of the UI sees.
 
-// One key's text. variants is null for a plain string and otherwise points at LocalizationPlural_Count entries,
-// of which only other is guaranteed to be set. text is the plain string, or the other variant - what a
+// One key's text. variants is nullptr for a plain string and otherwise points at LocalizationPlural_Count entries,
+// of which only other is guaranteed to be set. text is the plain string, or the other variant, which is what a
 // lookup with no count in hand resolves to either way.
 typedef struct TableEntry {
     FlString text;
@@ -51,8 +51,8 @@ typedef struct FmtArgs {
     u64 count;
 } FmtArgs;
 
-// Single pass over text into arena: `{<index>}` becomes the argument at that index, and anything else - a named
-// slot, an index past the end of args, an unterminated slot - is copied through as written so the gap is visible
+// Single pass over text into arena: `{<index>}` becomes the argument at that index, and anything else (a named
+// slot, an index past the end of args, an unterminated slot) is copied through as written so the gap is visible
 // on screen. out_unmatched reports whether any slot found no argument.
 FlString localization_substitute(FlArena* arena, FlString text, FmtArgs args, bool* out_unmatched);
 

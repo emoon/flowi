@@ -3,7 +3,7 @@
 
 use super::*;
 
-/// The bytes of a completed file read - an owned copy, valid after the handle is dropped.
+/// The bytes of a completed file read: an owned copy, valid after the handle is dropped.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VfsData {
     bytes: Vec<u8>,
@@ -54,7 +54,7 @@ impl Payload for VfsData {
     }
 }
 
-/// One entry of a completed listing, as owned values - the storage [`FileList`] keeps.
+/// One entry of a completed listing, as owned values, the storage [`FileList`] keeps.
 /// The borrowing view over it is [`Entry`].
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub(super) struct OwnedEntry {
@@ -99,7 +99,7 @@ pub struct Entry<'a> {
 }
 
 impl<'a> Entry<'a> {
-    /// The entry's name - not a full path.
+    /// The entry's name (not a full path).
     #[inline]
     pub fn name(&self) -> &'a str {
         &self.raw.name

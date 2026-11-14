@@ -1,4 +1,4 @@
-//! SelectionSet is the opaque, RAII handle over `selection_set_*`. It is self-contained - backed
+//! SelectionSet is the opaque, RAII handle over `selection_set_*`. It is self-contained: backed
 //! by its own arena, it needs no live Application and no frame.
 
 use flowi::{SelectionRequest, SelectionSet};
@@ -31,7 +31,7 @@ fn membership_and_set_all_round_trip() {
 #[test]
 fn apply_requests_without_enumeration() {
     let mut sel = SelectionSet::new();
-    // SetOne / ClearAll never need the ordered list; sequence is semantics (ClearAll then SetOne nets to {7}).
+    // SetOne / ClearAll never need the ordered list. Requests apply in order: ClearAll then SetOne nets to {7}.
     sel.apply(
         &[
             SelectionRequest::SetOne(5, true),

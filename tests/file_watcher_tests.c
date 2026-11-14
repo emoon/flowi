@@ -127,7 +127,7 @@ UTEST(file_watcher, public_api_reports_a_created_file_once) {
 
     ASSERT_TRUE(create_test_file(test_file, "test content"));
 
-    // Poll until the change is detected (up to 2s, handles slow ARM CI hardware)
+    // Poll for up to 2s, which is long enough for slow ARM CI hardware.
     bool pending = false;
     for (int i = 0; i < 200 && !pending; i++) {
         pending = fl_file_watcher_has_changes(handle);
@@ -206,7 +206,7 @@ UTEST(file_watcher, detect_file_creation) {
     FlString test_file_path = build_temp_path_fw(arena, "file_watcher_test_creation/test_file.txt");
     const char* test_file = fl_string_to_cstr(arena, test_file_path);
 
-    // Clean up any leftover files from previous failed runs
+    // Remove leftovers from an earlier failed run.
     cleanup_path(test_file);
     cleanup_path(test_dir);
 
@@ -220,7 +220,7 @@ UTEST(file_watcher, detect_file_creation) {
 
     ASSERT_TRUE(create_test_file(test_file, "test content"));
 
-    // Poll until the change is detected (up to 2s, handles slow ARM CI hardware)
+    // Poll for up to 2s, which is long enough for slow ARM CI hardware.
     ASSERT_TRUE(wait_for_file_watcher_changes(handle, 200, 10000));
 
     FileChangeIterator changes = file_watcher_get_changes(handle, arena);
@@ -568,7 +568,7 @@ UTEST(file_watcher, buffer_overflow_handling) {
 
     create_temp_directory(test_dir);
 
-    // Use very small buffer to trigger overflow
+    // A max_changes of 2 overflows once the third file lands.
     FlFileWatcherConfig config
         = { .recursive = false, .watch_files = true, .watch_directories = false, .max_changes = 2 };
 
@@ -618,7 +618,7 @@ UTEST(file_watcher, invalid_handle_operations) {
     ASSERT_EQ(changes.count, 0U);
     ASSERT_FALSE(changes.has_overflow);
 
-    // These should not crash
+    // These must not crash.
     file_watcher_clear_changes(invalid_handle);
     file_watcher_stop(invalid_handle);
 
@@ -674,7 +674,7 @@ UTEST(file_watcher, config_variations) {
         .recursive = false,
         .watch_files = true,
         .watch_directories = true,
-        .max_changes = 0 // Should use default
+        .max_changes = 0 // 0 selects the default
     };
 
     FlFileWatcherHandle handle3 = file_watcher_start(string_from_cstr(test_dir), default_buffer);
@@ -754,8 +754,8 @@ UTEST(file_watcher, recursive_watch_at_capacity_starts) {
     ASSERT_NE(handle, FL_FILE_WATCHER_INVALID);
     ASSERT_TRUE(file_watcher_is_active(handle));
 
-    // A tree that fits is watched for real, not merely accepted: a change in the last subdirectory
-    // still has a mapped descriptor behind it.
+    // A tree that fits is watched in full: a change in the last subdirectory still has a mapped
+    // descriptor behind it.
     file_watcher_clear_changes(handle);
 
     FlString last_dir = fl_path_join(arena, root, fl_sprintf_arena(arena, "sub_%u", subdir_count - 1));
@@ -958,7 +958,7 @@ static void* fw_concurrent_worker(void* user) {
     FlFileWatcherConfig config
         = { .recursive = false, .watch_files = true, .watch_directories = false, .max_changes = 16 };
 
-    // Every worker is inside the registry at the same time, not one after another.
+    // Wait for every worker, so they all enter the registry at the same time.
     atomic_fetch_add(&s_fw_concurrent_ready, 1);
     while (atomic_load(&s_fw_concurrent_ready) < FW_CONCURRENT_THREADS) {
         sleep_us(100);

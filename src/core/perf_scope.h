@@ -1,6 +1,6 @@
 #pragma once
 
-// Always-on frame profiler - internal include seam over the generated <flowi/core/perf_scope.h>.
+// Always-on frame profiler. Internal include layered over the generated <flowi/core/perf_scope.h>.
 //
 // Scope trees are recorded per thread in thread-local storage. The main thread prints its tree
 // automatically when the frame exceeds the budget below.
@@ -45,8 +45,7 @@ typedef struct PerfScopeGuard {
     u32 stack_index;
 } PerfScopeGuard;
 
-// Internal accessor - returns the calling thread's profiler state.
-
+// Returns the calling thread's profiler state.
 DLL_EXPORT PerfScopeThreadState* perf_scope_get_thread_state(void);
 
 static inline void perf_scope_guard_cleanup(PerfScopeGuard* guard) {

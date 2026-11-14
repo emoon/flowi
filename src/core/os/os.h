@@ -110,7 +110,7 @@ static inline u64 monotonic_ticks_to_ns(u64 ticks, u64 ticks_per_second) {
     return seconds * 1000000000ULL + (remainder * 1000000000ULL) / ticks_per_second;
 }
 
-// Note: Actual precision depends on OS scheduler (typically 1-15ms on most systems)
+// Actual precision depends on the OS scheduler, typically 1-15ms.
 void sleep_us(u64 microseconds);
 void sleep_ms(u64 milliseconds);
 
@@ -206,7 +206,7 @@ typedef struct DiskSpaceInfo {
     bool is_valid;
 } DiskSpaceInfo;
 
-// The path can be a file or directory - the filesystem it resides on is queried
+// path can be a file or a directory; the filesystem it is on is queried.
 DiskSpaceInfo get_disk_space_os(FlString path);
 
 #if !PLATFORM_WINDOWS
@@ -215,10 +215,10 @@ DiskSpaceInfo get_disk_space_os(FlString path);
 void os_disk_space_test_force_statvfs_failure(bool enable);
 #endif
 
-// Environment variables (cross-platform)
+// Environment variables.
 //
-// WARNING: These functions are NOT thread-safe when used concurrently.
-// Set environment variables before spawning threads that may read them.
+// These functions are not thread-safe. Set environment variables before starting threads that may
+// read them.
 
 // Returns pointer to value (do not modify), or nullptr if not found
 const char* getenv_os(const char* name);

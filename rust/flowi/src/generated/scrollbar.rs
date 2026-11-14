@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Scrollbar widget - a standalone draggable track bound to a normalized scroll position.
+/// Scrollbar widget: a standalone draggable track bound to a normalized scroll position.
 pub struct Scrollbar;
 
 impl Scrollbar {

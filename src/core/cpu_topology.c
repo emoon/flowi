@@ -137,7 +137,7 @@ CpuTopology cpu_query_topology(FlArena* arena) {
 
         for_count(i, online_count) {
             if (result.cpus[i].max_freq_khz <= 0) {
-                // No frequency info - leave as Unknown
+                // No frequency info: the core stays Unknown.
                 continue;
             }
 
@@ -171,7 +171,7 @@ CpuTopology cpu_query_topology(FlArena* arena) {
 
 #else // PLATFORM_WINDOWS || PLATFORM_MACOS
 
-// Windows and macOS stubs - all cores reported as Unknown
+// Windows and macOS report every core as Unknown.
 
 CpuTopology cpu_query_topology(FlArena* arena) {
     ensure_log_channel();

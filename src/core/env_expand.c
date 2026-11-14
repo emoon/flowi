@@ -9,8 +9,6 @@ static inline bool is_var_char(char c) {
     return isalnum((unsigned char)c) || c == '_';
 }
 
-// Supports ${VAR} and $VAR syntax
-
 FlString expand_env_vars(FlArena* arena, FlString input) {
     if (fl_string_find_char(input, '$') == -1) {
         return input;
@@ -53,7 +51,7 @@ FlString expand_env_vars(FlArena* arena, FlString input) {
                 var_end++;
             }
 
-            // No closing brace - keep original text
+            // No closing brace: keep the original text.
             if (var_end >= input.length) {
                 sb = fl_sb_append_string(sb, fl_string_substr(input, (u64)dollar_pos, input.length - dollar_pos));
                 break;
@@ -67,8 +65,8 @@ FlString expand_env_vars(FlArena* arena, FlString input) {
         FlString var_name = fl_string_substr(input, var_start, var_end - var_start);
 
         if (var_name.length > 0) {
-            // The conflict-aware variant guarantees a scratch arena disjoint from the caller's
-            // arena, which backs the string builder - otherwise this scope's rewind would free
+            // The conflict-aware variant returns a scratch arena disjoint from the caller's
+            // arena, which backs the string builder. Otherwise this scope's rewind would free
             // bytes sb appended inside it.
             arena_scratch_auto_conflict(temp, arena);
             const char* var_name_cstr = fl_string_to_cstr(temp.arena, var_name);
@@ -77,7 +75,7 @@ FlString expand_env_vars(FlArena* arena, FlString input) {
             if (var_value != nullptr) {
                 sb = fl_sb_append_cstr(sb, var_value);
             } else {
-                // Variable not found - keep original ${VAR} or $VAR in output
+                // Variable not found: keep the original ${VAR} or $VAR.
                 if (has_braces) {
                     sb = fl_sb_append_string(sb, fl_string_substr(input, (u64)dollar_pos, var_end - dollar_pos + 1));
                 } else {
@@ -85,7 +83,7 @@ FlString expand_env_vars(FlArena* arena, FlString input) {
                 }
             }
         } else {
-            // Empty variable name (like ${} or $) - keep original
+            // Empty variable name (${} or a bare $): keep the original.
             if (has_braces) {
                 sb = fl_sb_append_cstr(sb, "${}");
             } else {

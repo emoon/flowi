@@ -11,11 +11,10 @@
 extern "C" {
 #endif
 
-// VFS operation status - hierarchical error codes drivers return. Drivers set
+// VFS operation status: hierarchical error codes drivers return. Drivers set
 // the most specific code possible. Codes are grouped in hundreds (file/IO/
 // permission/resource/archive/network/HTTP/generic).
 typedef enum FlVfsStatus {
-    // Success.
     FlVfsStatus_Success = 0,
     // File or path not found.
     FlVfsStatus_FileNotFound = 100,
@@ -27,31 +26,21 @@ typedef enum FlVfsStatus {
     FlVfsStatus_NotADirectory = 103,
     // Expected a file, found a directory.
     FlVfsStatus_IsADirectory = 104,
-    // Read failed.
     FlVfsStatus_ReadError = 200,
-    // Write failed.
     FlVfsStatus_WriteError = 201,
-    // Seek failed.
     FlVfsStatus_SeekError = 202,
     // End of file.
     FlVfsStatus_Eof = 203,
     // Destination buffer too small.
     FlVfsStatus_BufferTooSmall = 204,
-    // Access denied.
     FlVfsStatus_AccessDenied = 300,
-    // Permission denied.
     FlVfsStatus_PermissionDenied = 301,
-    // Out of memory.
     FlVfsStatus_OutOfMemory = 400,
-    // Too many open files.
     FlVfsStatus_TooManyOpenFiles = 401,
-    // Resource busy.
     FlVfsStatus_ResourceBusy = 402,
-    // Disk full.
     FlVfsStatus_DiskFull = 403,
     // Generic archive error.
     FlVfsStatus_ArchiveError = 500,
-    // Archive is corrupt.
     FlVfsStatus_ArchiveCorrupt = 501,
     // Archive format unsupported.
     FlVfsStatus_ArchiveUnsupported = 502,
@@ -59,27 +48,23 @@ typedef enum FlVfsStatus {
     FlVfsStatus_ArchivePasswordRequired = 503,
     // Generic network error.
     FlVfsStatus_NetworkError = 600,
-    // Network timed out.
     FlVfsStatus_NetworkTimeout = 601,
-    // Network unavailable.
     FlVfsStatus_NetworkUnavailable = 602,
     // DNS resolution failed.
     FlVfsStatus_NetworkDns = 603,
-    // Connection refused.
     FlVfsStatus_NetworkConnectionRefused = 604,
     // SSL/TLS error.
     FlVfsStatus_NetworkSsl = 605,
-    // HTTP 400 - bad request (base of the 700-799 HTTP range).
+    // HTTP 400, bad request (base of the 700-799 HTTP range).
     FlVfsStatus_NetworkBadRequest = 700,
-    // HTTP 401 - unauthorized.
+    // HTTP 401, unauthorized.
     FlVfsStatus_NetworkUnauthorized = 701,
-    // HTTP 403 - forbidden.
+    // HTTP 403, forbidden.
     FlVfsStatus_NetworkForbidden = 703,
-    // HTTP 404 - not found.
+    // HTTP 404, not found.
     FlVfsStatus_NetworkNotFound = 704,
-    // HTTP 5xx - server error.
+    // HTTP 5xx, server error.
     FlVfsStatus_NetworkServerError = 750,
-    // Generic error.
     FlVfsStatus_GenericError = 900,
     // Operation not implemented by this driver.
     FlVfsStatus_NotImplemented = 901,
@@ -89,7 +74,7 @@ typedef enum FlVfsStatus {
     FlVfsStatus_OperationCanceled = 903,
 } FlVfsStatus;
 
-// Driver capability flags - the feature bitmask get_capabilities() returns. VFS
+// Driver capability flags: the feature bitmask get_capabilities() returns. VFS
 // core uses these to decide which operations are available. Power-of-two flags,
 // OR-combined.
 typedef enum FlVfsDriverCapabilities {
@@ -109,7 +94,7 @@ typedef enum FlVfsDriverCapabilities {
     FlVfsDriverCapabilities_Network = 512,
 } FlVfsDriverCapabilities;
 
-// File open flags - the mode bitmask open() takes. Power-of-two flags,
+// File open flags: the mode bitmask open() takes. Power-of-two flags,
 // OR-combined.
 typedef enum FlVfsOpenFlags {
     // Open for reading.
@@ -134,39 +119,35 @@ typedef struct FlVfsDriverError {
 // Plugin creation result. Check error.vfs_status == FlVfsStatus_Success before
 // using instance. Shared across plugin types (VFS, UI, etc.).
 typedef struct FlPluginCreateResult {
-    // Plugin instance handle, or nullptr on error.
+    // Plugin instance handle, or null on error.
     void* instance;
-    // Error details.
     FlVfsDriverError error;
 } FlPluginCreateResult;
 
-// Open result - a driver handle or nullptr on error.
+// Result of a driver's open().
 typedef struct FlVfsOpenResult {
-    // Driver-specific handle, or nullptr on error.
+    // Driver-specific handle, or null on error.
     void* handle;
     // true if the handle is a directory/archive (can be listed).
     bool is_directory;
-    // Error details.
     FlVfsDriverError error;
 } FlVfsOpenResult;
 
-// Read result - bytes read, or -1 on error.
+// Result of a driver's read().
 typedef struct FlVfsReadResult {
     // Number of bytes read, or -1 on error.
     int64_t bytes_read;
-    // Error details.
     FlVfsDriverError error;
 } FlVfsReadResult;
 
-// Size result - file size in bytes, or -1 on error.
+// Result of a driver's get_size().
 typedef struct FlVfsSizeResult {
     // File size in bytes, or -1 on error.
     int64_t size;
-    // Error details.
     FlVfsDriverError error;
 } FlVfsSizeResult;
 
-// A single file/directory entry - used in directory listings and metadata
+// A single file or directory entry, used in directory listings and metadata
 // queries.
 typedef struct FlVfsEntry {
     // Entry name (not a full path).
@@ -182,38 +163,36 @@ typedef struct FlVfsEntry {
 } FlVfsEntry;
 
 // Mount-level options controlling behavior for all files accessed through a
-// mount. Passed by value into a driver's open; VFS core supplies it, not user
-// code. The real C type is single-sourced here - `<flowi/vfs/vfs_types.h>` only
-// forward-declares it (like FlVfsEntry).
+// mount. The caller passes them to fl_vfs_mount_with_options, and VFS core hands
+// them by value to the driver's open.
 typedef struct FlVfsMountOptions {
     // If set, caching plugins write here instead of the default cache. The
     // filename is derived from the URL; the directory must exist.
     FlString cache_dir;
-    // If true, validate cached files against the server (ETag) before use - for
+    // If true, validate cached files against the server (ETag) before use, for
     // mutable remote files. Default (false) uses the cache without validation.
     bool cache_validation;
 } FlVfsMountOptions;
 
-// VFS Driver Plugin interface - the set of operations a driver implements to
+// VFS driver plugin interface: the set of operations a driver implements to
 // provide filesystem access for local files, archives, network filesystems, and
 // virtual filesystems.
 typedef struct FlVfsPlugin {
     // Should be set to FL_VFS_PLUGIN_API_VERSION.
     uint64_t api_version;
-    // Name of the plugin.
     FlString plugin_name;
-    // Plugin metadata (version, author, ...). Optional; nullptr if none.
+    // Plugin metadata (version, author, ...). Optional; null if none.
     FlVfsPluginInfo* plugin_info;
     // Create a driver instance.
     FlPluginCreateResult (*create)(void);
     // Destroy a driver instance from create().
     void (*destroy)(void* driver_instance);
-    // Fast path-type check (no I/O) - used for driver selection.
+    // Fast path-type check (no I/O), used for driver selection.
     bool (*supports_path)(FlString path);
     // Check whether this driver can actually open the path (may do I/O).
     bool (*can_open)(FlString path);
     // Open a file or directory (relative to parent_handle, or absolute when it is
-    // nullptr). mount_options is supplied by VFS core, not user code.
+    // null). mount_options is supplied by VFS core.
     FlVfsOpenResult (*open)(void* driver_instance, void* parent_handle, FlString path, uint32_t flags, FlVfsMountOptions mount_options);
     // Whether an opened handle is a directory/archive.
     bool (*is_directory)(void* driver_instance, void* handle);
@@ -233,12 +212,12 @@ typedef struct FlVfsPlugin {
     FlVfsDriverCapabilities (*get_capabilities)(void);
     // Open an archive from a memory buffer (FlVfsDriverCapabilities_Memory). On
     // success the driver takes ownership of data; on failure the caller retains
-    // it. nullptr if unsupported.
+    // it. null if unsupported.
     FlVfsOpenResult (*open_memory)(void* driver_instance, const uint8_t* data, uint64_t size, FlString original_path);
     // Get an OS filesystem path for a resource (FlVfsDriverCapabilities_DirectPath),
-    // allocated from arena. Empty string if unavailable. nullptr if unsupported.
+    // allocated from arena. Empty string if unavailable. null if unsupported.
     FlString (*get_file_path)(void* driver_instance, void* handle, FlString relative_path, FlArena* arena);
-    // Whether a path is cached and fresh (FlVfsDriverCapabilities_Cache). nullptr
+    // Whether a path is cached and fresh (FlVfsDriverCapabilities_Cache). null
     // if unsupported.
     bool (*is_cached)(void* driver_instance, FlString path);
 } FlVfsPlugin;

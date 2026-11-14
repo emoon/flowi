@@ -80,7 +80,7 @@ pub struct JsonObjectElement {
     pub name: *mut crate::sys::RawStr,
     /// the value of this element.
     pub value: *mut crate::sys::JsonValue,
-    /// the next object element (can be nullptr if the last element in the object).
+    /// the next object element (null for the last element in the object).
     pub next: *mut crate::sys::JsonObjectElement,
 }
 
@@ -113,7 +113,7 @@ const _: () = {
 pub struct JsonArrayElement {
     /// the value of this element.
     pub value: *mut crate::sys::JsonValue,
-    /// the next array element (can be nullptr if the last element in the array).
+    /// the next array element (null for the last element in the array).
     pub next: *mut crate::sys::JsonArrayElement,
 }
 
@@ -146,7 +146,7 @@ pub struct JsonValue {
     /// a pointer to either a FlString, FlJsonNumber, FlJsonObject, or FlJsonArray.
     /// Should be cast to the appropriate struct type based on the value's type.
     pub payload: *mut core::ffi::c_void,
-    /// the JsonType. If type is True/False/Null, payload is nullptr.
+    /// the JsonType. If type is True/False/Null, payload is null.
     pub r#type: crate::sys::JsonType,
 }
 
@@ -184,13 +184,13 @@ const _: () = {
 extern "C" {
     /// Parse src as strict JSON (flags_bitset 0) or JSON5 (flags_bitset 1), with an optional result out-param.
     pub fn fl_json_parse_with_flags(arena: *mut crate::sys::Arena, src: crate::sys::RawStr, flags_bitset: usize, result: *mut crate::sys::JsonParseResult) -> *mut crate::sys::JsonValue;
-    /// Write value out as a pretty UTF-8 JSON string (indent/newline may be nullptr), allocated from arena.
+    /// Write value out as a pretty UTF-8 JSON string (indent/newline may be null), allocated from arena.
     pub fn fl_json_write_pretty(arena: *mut crate::sys::Arena, value: *const crate::sys::JsonValue, indent: *const core::ffi::c_char, newline: *const core::ffi::c_char) -> crate::sys::RawStr;
     /// Reinterpret a value as a string. Returns empty if not a string.
     pub fn fl_json_value_as_string(value: *mut crate::sys::JsonValue) -> crate::sys::RawStr;
-    /// Reinterpret a value as an object. Returns nullptr if not an object.
+    /// Reinterpret a value as an object. Returns null if not an object.
     pub fn fl_json_value_as_object(value: *mut crate::sys::JsonValue) -> *mut crate::sys::JsonObject;
-    /// Find a property in an object by key. Returns nullptr if absent.
+    /// Find a property in an object by key. Returns null if absent.
     pub fn fl_json_find_property(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> *mut crate::sys::JsonValue;
     /// Extract a string-typed property by key (empty if absent / wrong type).
     pub fn fl_json_get_string_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> crate::sys::RawStr;
@@ -198,9 +198,9 @@ extern "C" {
     pub fn fl_json_get_u32_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> u32;
     /// Extract an f64-typed property by key (0.0 if absent / wrong type).
     pub fn fl_json_get_f64_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> f64;
-    /// Extract an object-typed property by key (nullptr if absent / wrong type).
+    /// Extract an object-typed property by key (null if absent / wrong type).
     pub fn fl_json_get_object_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> *mut crate::sys::JsonValue;
-    /// Extract an array-typed property by key (nullptr if absent / wrong type).
+    /// Extract an array-typed property by key (null if absent / wrong type).
     pub fn fl_json_get_array_prop(object: *const crate::sys::JsonValue, key: crate::sys::RawStr) -> *mut crate::sys::JsonArray;
     /// Human-readable description of a parse error code.
     pub fn fl_json_get_error_description(error: crate::sys::JsonParseError) -> crate::sys::RawStr;

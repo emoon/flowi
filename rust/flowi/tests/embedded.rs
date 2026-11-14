@@ -1,4 +1,4 @@
-//! An embedded host renders, reads back and pushes input with no unsafe code and no flowi_sys import.
+//! An embedded host renders, reads back and pushes input through the safe public API alone.
 
 #![forbid(unsafe_code)]
 

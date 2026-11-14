@@ -2,10 +2,10 @@
 // construction modes (FlWindowBackendMode). Window lifecycle, the event pump (demuxed per window by SDL windowID
 // via the shared sdl_input_common module), cursor mechanics and per-window drawable size + content scale are
 // shared by every mode; construction, teardown and presentation live in the mode's own file:
-//   GL mode - sdl_window_gl.c: SDL-GL windows carrying a single shared GL context + the fullscreen-quad
-//                   compositor. Requires the GPU build (FL_WINDOW_HAVE_GPU).
-//   Metal mode - sdl_window_metal.c: SDL-Metal windows carrying a CAMetalLayer.
-//   Software mode - sdl_window_software.c: plain SDL_Renderer windows (no GL context).
+//   GL mode, sdl_window_gl.c: SDL-GL windows carrying a single shared GL context + the fullscreen-quad
+//     compositor. Requires the GPU build (FL_WINDOW_HAVE_GPU).
+//   Metal mode, sdl_window_metal.c: SDL-Metal windows carrying a CAMetalLayer.
+//   Software mode, sdl_window_software.c: plain SDL_Renderer windows (no GL context).
 
 #include "../window_backend.h"
 
@@ -43,8 +43,6 @@ static const SdlWindowMode* sdl_window_mode_for(FlWindowBackendMode mode) {
 #endif
     }
 }
-
-// Window lifecycle
 
 bool sdl_create_base_window(FlWindow* window, const SdlWindowParams* params, u32 mode_flags, const char* mode_label) {
     const u32 resizable_flag = params->resizable ? SDL_WINDOW_RESIZABLE : 0;
@@ -105,7 +103,7 @@ static void sdl_destroy_window(void* ud, FlWindow* window) {
     window->window = nullptr;
 }
 
-// Event pump - build the parallel windowID array the shared pump demuxes against (windows[i] -> contexts[i])
+// Event pump: build the parallel windowID array the shared pump demuxes against (windows[i] -> contexts[i])
 
 static void sdl_pump_events(void* ud, FlWindow** windows, FlUiCtx** contexts, int count) {
     SdlWindowContext* self = (SdlWindowContext*)ud;
@@ -118,8 +116,6 @@ static void sdl_pump_events(void* ud, FlWindow** windows, FlUiCtx** contexts, in
     }
     sdl_input_common_pump_multi(&self->input, window_ids, contexts, count);
 }
-
-// Drawable size + content scale
 
 static void sdl_drawable_size(void* ud, FlWindow* window, int* width, int* height) {
     SdlWindowContext* self = (SdlWindowContext*)ud;
@@ -181,7 +177,7 @@ static float sdl_content_scale(void* ud, FlWindow* window) {
     return display_scale > 0.0f ? display_scale : ratio;
 }
 
-// Cursor + hidden-drag mechanics - delegated to the shared SDL input state
+// Cursor + hidden-drag mechanics are delegated to the shared SDL input state
 
 static void sdl_set_cursor(void* ud, FlWindow* window, FlCursor cursor) {
     UNUSED(window);
@@ -211,8 +207,6 @@ static void sdl_window_destroy(void* ud) {
     sdl_input_common_destroy(&self->input);
     // SDL subsystems are left up (no SDL_Quit).
 }
-
-// Factory
 
 FlWindowBackend sdl_window_backend_create(struct FlArena* arena, FlWindowBackendMode mode) {
     // A mode this build lacks returns a zeroed backend.

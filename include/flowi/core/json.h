@@ -75,7 +75,7 @@ typedef struct FlJsonObjectElement {
     FlString* name;
     // the value of this element.
     FlJsonValue* value;
-    // the next object element (can be nullptr if the last element in the object).
+    // the next object element (null for the last element in the object).
     FlJsonObjectElement* next;
 } FlJsonObjectElement;
 
@@ -91,7 +91,7 @@ typedef struct FlJsonObject {
 typedef struct FlJsonArrayElement {
     // the value of this element.
     FlJsonValue* value;
-    // the next array element (can be nullptr if the last element in the array).
+    // the next array element (null for the last element in the array).
     FlJsonArrayElement* next;
 } FlJsonArrayElement;
 
@@ -108,7 +108,7 @@ typedef struct FlJsonValue {
     // a pointer to either a FlString, FlJsonNumber, FlJsonObject, or FlJsonArray.
     // Should be cast to the appropriate struct type based on the value's type.
     void* payload;
-    // the JsonType. If type is True/False/Null, payload is nullptr.
+    // the JsonType. If type is True/False/Null, payload is null.
     FlJsonType type;
 } FlJsonValue;
 
@@ -128,13 +128,13 @@ typedef struct FlJsonParseResult {
 // FlJsonValue, navigate and type-extract from it, then write it back out.
 // Parse src as strict JSON (flags_bitset 0) or JSON5 (flags_bitset 1), with an optional result out-param.
 FL_API FlJsonValue* fl_json_parse_with_flags(FlArena* arena, FlString src, size_t flags_bitset, FlJsonParseResult* result);
-// Write value out as a pretty UTF-8 JSON string (indent/newline may be nullptr), allocated from arena.
+// Write value out as a pretty UTF-8 JSON string (indent/newline may be null), allocated from arena.
 FL_API FlString fl_json_write_pretty(FlArena* arena, const FlJsonValue* value, const char* indent, const char* newline);
 // Reinterpret a value as a string. Returns empty if not a string.
 FL_API FlString fl_json_value_as_string(FlJsonValue* value);
-// Reinterpret a value as an object. Returns nullptr if not an object.
+// Reinterpret a value as an object. Returns null if not an object.
 FL_API FlJsonObject* fl_json_value_as_object(FlJsonValue* value);
-// Find a property in an object by key. Returns nullptr if absent.
+// Find a property in an object by key. Returns null if absent.
 FL_API FlJsonValue* fl_json_find_property(const FlJsonValue* object, FlString key);
 // Extract a string-typed property by key (empty if absent / wrong type).
 FL_API FlString fl_json_get_string_prop(const FlJsonValue* object, FlString key);
@@ -142,9 +142,9 @@ FL_API FlString fl_json_get_string_prop(const FlJsonValue* object, FlString key)
 FL_API uint32_t fl_json_get_u32_prop(const FlJsonValue* object, FlString key);
 // Extract an f64-typed property by key (0.0 if absent / wrong type).
 FL_API double fl_json_get_f64_prop(const FlJsonValue* object, FlString key);
-// Extract an object-typed property by key (nullptr if absent / wrong type).
+// Extract an object-typed property by key (null if absent / wrong type).
 FL_API FlJsonValue* fl_json_get_object_prop(const FlJsonValue* object, FlString key);
-// Extract an array-typed property by key (nullptr if absent / wrong type).
+// Extract an array-typed property by key (null if absent / wrong type).
 FL_API FlJsonArray* fl_json_get_array_prop(const FlJsonValue* object, FlString key);
 // Human-readable description of a parse error code.
 FL_API FlString fl_json_get_error_description(FlJsonParseError error);

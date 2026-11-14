@@ -1,12 +1,9 @@
-// Tests for the always-on lightweight frame profiler.
-
 #include "utest/utest.h"
 #include <core/core.h>
 #include <core/os/os.h>
 #include <core/perf_scope.h>
 
-// Burn enough time to be measurable on platforms with coarse timer resolution (macOS, arm64 Linux).
-
+// Burns enough time to measure on platforms with a coarse timer (macOS, arm64 Linux).
 static void burn_measurable_time(void) {
     sleep_ms(1);
 }
@@ -114,7 +111,7 @@ static void helper_with_early_return(bool should_return) {
     perf_scope("helper");
     burn_measurable_time();
     if (should_return) {
-        return; // Cleanup via __attribute__((cleanup))
+        return; // the cleanup attribute ends the scope
     }
     volatile int x = 0;
     (void)x;

@@ -6,15 +6,12 @@ on:
   pull_request:
 
 jobs:
-  # Full C build + the headless test suite on both Linux and macOS. unit_tests
-  # (pure-CPU) runs on both. gpu_smoke_test runs on both, exercising each
-  # platform's GPU backend: on ubuntu-latest the mesa packages provide EGL with
-  # the surfaceless platform + the llvmpipe software rasterizer, so the GL
-  # compute backend runs headlessly (LIBGL_ALWAYS_SOFTWARE=1 forces llvmpipe and
-  # its golden/pixel assertions fail the job on any mismatch); on macos-latest
-  # the Metal backend's Surface Binding is a system MTLDevice the runner
-  # provides, so the clear-screen case + headless em_app path exercise the first
-  # Metal-emitted pixel end-to-end.
+  # Full C build and the headless tests on Linux and macOS. gpu_smoke_test
+  # covers each platform's GPU backend. On ubuntu-latest the mesa packages
+  # provide surfaceless EGL and the llvmpipe software rasterizer, and
+  # LIBGL_ALWAYS_SOFTWARE=1 forces llvmpipe, so the GL compute backend runs
+  # headless. On macos-latest the Metal backend uses the runner's system
+  # MTLDevice.
   c-build:
     strategy:
       fail-fast: false
@@ -52,8 +49,8 @@ jobs:
             readelf -d ./build/libflowi.so | grep NEEDED
             exit 1
           fi
-      # Warnings are expected here and do not fail the job; only errors set a
-      # non-zero exit.
+      # loc_check exits non-zero only on errors, so its warnings do not fail
+      # the job.
       - name: Run loc_check over the example String Tables
         run: ./build/loc_check --manifest examples/data/localization/manifest.json --source examples
       - name: Run unit_tests
@@ -64,10 +61,8 @@ jobs:
       - name: Run gpu_smoke_test (macOS / Metal)
         if: runner.os == 'macOS'
         run: ./build/gpu_smoke_test
-      # Exercise the C consumer's headless opt-out independently of Cargo. The
-      # default build above proves the windowed artifact; this isolated configure
-      # proves an explicit headless build remains SDL-free and keeps the same
-      # curated public surface.
+      # A separate configure with FLOWI_SDL_BACKEND=OFF. The headless library
+      # must not depend on SDL and must export the same curated list.
       - name: Configure headless CMake opt-out
         if: runner.os == 'Linux'
         run: cmake -S . -B build-headless -G Ninja -DFLOWI_SDL_BACKEND=OFF
@@ -96,17 +91,11 @@ jobs:
         if: runner.os == 'Linux'
         run: ./build-release/unit_tests
 
-  # macOS software-embed guard. flowi's software-only library set (the path
-  # downstream software-only hosts like replay_backend depend on) must keep
-  # building and passing on macOS so a Linux-ism can't silently rot it. The job
-  # is software-only: FLOWI_SDL_BACKEND is explicitly OFF so no SDL host is
-  # built, and EGL is absent on macOS so the GPU backend and gpu_smoke_test
-  # self-skip in CMake. All deps (freetype2, clay, etc.) are vendored under
-  # external/, so no brew packages beyond the build tools are needed.
-  #
-  # Building the unit_tests target pulls core, ui, render, platform, app and vfs
-  # transitively and never builds gpu_smoke_test (which isn't even configured
-  # without EGL); the negative assertion pins that gpu_smoke_test stayed unbuilt.
+  # Build on macOS without an SDL host, which is what software-only embedders
+  # link. FLOWI_SDL_BACKEND is OFF and only the unit_tests target is built; it
+  # pulls in core, ui, render, platform, app and vfs but not gpu_smoke_test.
+  # The dependencies are vendored under external/, so brew installs only the
+  # build tools.
   macos:
     runs-on: macos-latest
     steps:
@@ -122,10 +111,10 @@ jobs:
       - name: Run unit_tests
         run: ./build/unit_tests
 
-  # Windows shared-library ABI guard. The generated module-definition
-  # file must drive both flowi.dll's export table and flowi.lib, which the
-  # public-only probes exercised by unit_tests consume. This job stays headless;
-  # GPU coverage remains the Linux llvmpipe job above.
+  # Windows shared-library build. The generated module-definition file drives
+  # both flowi.dll's export table and flowi.lib, and the public-only probes in
+  # unit_tests link against flowi.lib. The job is headless; GPU coverage is the
+  # Linux llvmpipe run in c-build.
   windows:
     runs-on: windows-latest
     steps:
@@ -150,10 +139,10 @@ jobs:
           $env:PATH = "$(Resolve-Path ./build/Debug);$env:PATH"
           ./build/Debug/unit_tests.exe
 
-  # Rust bindings: build + the golden and panic-abort tests. The cmake crate builds
-  # the C shared library. The default is windowed (libflowi.so links
-  # libSDL2), but the tests still run headless (they never SDL_Init(VIDEO)), so no
-  # Xvfb is needed; libsdl2-dev is required so the default .so links libSDL2.
+  # Rust bindings: build, then the golden and panic-abort tests. The cmake crate
+  # builds the C shared library. The default build is windowed, so libsdl2-dev
+  # is needed to link libflowi.so, but the tests never call SDL_Init(VIDEO) and
+  # need no Xvfb.
   rust:
     runs-on: ubuntu-latest
     steps:
@@ -172,15 +161,14 @@ jobs:
         run: cargo test --manifest-path rust/Cargo.toml --no-fail-fast
       - name: Test with the global allocator installed
         run: cargo test --manifest-path rust/Cargo.toml -p flowi --features allocation-probe
-      # The lint set is `[workspace.lints]` in rust/Cargo.toml, so a developer
-      # running plain `cargo clippy` sees exactly what this enforces; all this
-      # adds is turning the warnings into a failure.
+      # The lint set is `[workspace.lints]` in rust/Cargo.toml, so plain
+      # `cargo clippy` reports the same lints. This step turns the warnings
+      # into errors.
       - name: Clippy
         run: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
-      # one crate build serves both a host application and a plugin — there
-      # is no plugin-dispatch cargo feature. Guard the structural claim so a
-      # re-introduced `plugin` feature (a `feature = "plugin"` cfg, or the old
-      # CARGO_FEATURE_PLUGIN build.rs gate) fails CI instead of relying on review.
+      # One crate build serves both a host application and a plugin, and there
+      # is no `plugin` cargo feature. Fail if a `feature = "plugin"` cfg or a
+      # CARGO_FEATURE_PLUGIN reference appears.
       - name: No plugin cargo feature (one crate serves host + plugins)
         run: |
           if grep -rIn --include='*.toml' --include='*.rs' -e 'feature *= *"plugin"' -e 'CARGO_FEATURE_PLUGIN' rust/; then
@@ -188,11 +176,11 @@ jobs:
           else
             echo "OK: no plugin cargo feature"
           fi
-      # the default shipped libflowi.so is windowed — it bundles the SDL
-      # software host and must carry libSDL2 as DT_NEEDED. Build the default (windowed)
-      # flowi in an isolated target dir and assert both the link and that the curated
-      # export surface is unchanged (SDL symbols stay hidden by the version script's
-      # `local: *`). Opening a real window needs a display, so CI proves it *links*.
+      # The default libflowi.so is windowed: it bundles the SDL software host
+      # and must carry libSDL2 as DT_NEEDED. Build it in its own target dir and
+      # check the link and the export list (the version script's `local: *`
+      # hides the SDL symbols). Opening a window needs a display, so this only
+      # checks that it links.
       - name: Windowed default links libSDL2, exports unchanged
         run: |
           cargo build --manifest-path rust/Cargo.toml -p flowi --target-dir /tmp/flowi-windowed
@@ -204,9 +192,8 @@ jobs:
             echo "FAIL: windowed libflowi.so does not link libSDL2"; readelf -d "$so" | grep NEEDED; exit 1
           fi
           bash tools/scripts/check_exports.sh "$so" src/exports/flowi.version
-      # headless opt-out: `--no-default-features` drops the `windowed` feature
-      # and restores the SDL-free libflowi.so. Prove it builds+tests with no
-      # consumer source changes AND that the .so carries no libSDL2 dependency.
+      # `--no-default-features` drops the `windowed` feature. The tests must
+      # pass unchanged and libflowi.so must not depend on libSDL2.
       - name: Headless (--no-default-features) is SDL-free
         run: |
           cargo test --manifest-path rust/Cargo.toml -p flowi --no-default-features --target-dir /tmp/flowi-headless
@@ -217,10 +204,9 @@ jobs:
           else
             echo "OK: no libSDL2 dependency"
           fi
-      # api_gen output is committed and must match the IDL. The check regenerates into
-      # a temp dir and compares, so it never mutates the tree and it names the file that
-      # drifted - catching a hand-edited mirror or a stale checkout. The generator itself
-      # lives in emoon/api-gen and is tested there; tools/codegen/Cargo.lock pins the exact
-      # commit that produced the committed output.
+      # api_gen output is committed and must match the IDL. The check regenerates
+      # into a temp dir and compares, so it leaves the tree alone and names the
+      # file that differs. The generator lives in emoon/api-gen, and
+      # tools/codegen/Cargo.lock pins the commit that produced the committed output.
       - name: Codegen matches the IDL
         run: cargo regen-check

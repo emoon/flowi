@@ -13,7 +13,6 @@ extern "C" {
 
 // Kinds of file system change, reported as a bitmask in FlFileChange::change_types.
 typedef enum FlFileChangeType {
-    // No change.
     FlFileChangeType_None = 0,
     // File or directory was created.
     FlFileChangeType_Created = 1,
@@ -59,9 +58,9 @@ typedef struct FlFileChange {
 // A batch of pending changes taken from a watcher: a counted array allocated in the caller's arena.
 // Valid until that arena is reset.
 typedef struct FlFileChanges {
-    // The changes (nullptr when count is 0).
+    // The changes (null when count is 0).
     const FlFileChange* changes;
-    // Number of changes in changes.
+    // Number of entries in changes.
     uint32_t count;
     // True when the watcher dropped changes because its buffer filled between polls.
     bool has_overflow;
@@ -70,7 +69,7 @@ typedef struct FlFileChanges {
 // Platform-independent file system monitoring for a host that reloads content when it changes on disk.
 //
 // Start a watcher on a directory, poll has_changes each frame, and take the pending batch into a
-// scratch arena when there is something to look at. Taking a batch clears it - each change is reported
+// scratch arena when there is something to look at. Taking a batch clears it, so each change is reported
 // once.
 // Start watching path. Returns a watcher handle, or 0 when the path cannot be watched or
 // config is null.

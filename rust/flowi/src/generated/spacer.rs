@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Spacer widgets - fixed empty gaps, useful for list-clipper padding and virtualization spacers.
+/// Spacer widgets: fixed empty gaps, useful for list-clipper padding and virtualization spacers.
 pub struct Spacer;
 
 impl Spacer {

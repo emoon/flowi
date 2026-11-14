@@ -1,12 +1,11 @@
 #pragma once
 
-// Dock Splitter - the draggable divider between a split node's two children (CONTEXT.md "Dock Tree / Dock Node").
-// A thin handle on the seam that, when dragged, mutates the split's single ratio scalar through the
-// splitter-resize request op - never a direct geometry write, since Clay owns every rect. A min-size floor
-// (FL_DOCK_MIN_RATIO, enforced by the op) keeps either child from collapsing.
+// Dock Splitter: the draggable divider between a split node's two children (CONTEXT.md "Dock Tree / Dock Node").
+// Dragging it changes the split's ratio through the splitter-resize request op. It writes no geometry, because Clay
+// owns every rect. The op enforces FL_DOCK_MIN_RATIO, which keeps either child from collapsing.
 //
-// Two seams, behaviour then draw, so the new ratio takes effect the same frame:
-//   - dock_splitter_handle_drag: applies the splitter-resize op. Call BEFORE reading the ratio to emit the
+// Two calls, behaviour then draw, so the new ratio takes effect the same frame:
+//   - dock_splitter_handle_drag: applies the splitter-resize op. Call before reading the ratio to emit the
 //     children.
 //   - dock_splitter_emit: draws the divider element. Call between the two child emits so it sits on the boundary.
 // Both derive the divider's element id from the split node id, so the behaviour and draw address one element.
@@ -17,7 +16,7 @@
 extern "C" {
 #endif
 
-// Thickness (logical px) of the divider strip that fills a split's seam - also its grab area.
+// Thickness (logical px) of the divider strip that fills a split's seam, which is also its grab area.
 #define FL_DOCK_DIVIDER_THICKNESS 6.0f
 
 // A split spans extent_px along its axis and the divider is dragged to cursor_rel_px (the cursor's offset from

@@ -9,15 +9,11 @@
 
 struct FlArena;
 
-// File watcher foundational types
-
-// File watcher handle - opaque
+// Opaque watcher handle.
 typedef uint32_t FlFileWatcherHandle;
 #define FL_FILE_WATCHER_INVALID ((FlFileWatcherHandle)0)
 
-// File Watcher API - Iterator-based file system change detection
-//
-// Designed for debug purposes and single-threaded operation on the main thread.
+// Iterator-based file system change detection, meant for debugging and for use from the main thread.
 
 // Internal types (not in public API)
 
@@ -36,7 +32,7 @@ typedef void (*FileChangeCallback)(const FileChange* change, void* user_data);
 typedef u32 FileWatcherCallbackHandle;
 #define FILE_WATCHER_CALLBACK_INVALID ((FileWatcherCallbackHandle)0)
 
-// Registry lifecycle - called by fl_init / fl_destroy, never by a watcher caller
+// Registry lifecycle. Called by fl_init and fl_destroy, never by a watcher caller.
 
 // Brings the process-wide watcher registry up. Runs before any thread can start a watch, so the
 // registry lock exists by the time two mounts race for it.
@@ -65,7 +61,7 @@ void file_watcher_unregister_callback(FlFileWatcherHandle handle, FileWatcherCal
 
 // Change Detection
 
-// Get iterator for pending changes - allocates change data in provided arena
+// Returns an iterator over the pending changes and clears them. The change data is copied into arena.
 FileChangeIterator file_watcher_get_changes(FlFileWatcherHandle handle, struct FlArena* arena);
 
 // Check if there are pending changes without allocating

@@ -1,7 +1,5 @@
 #pragma once
 
-// flowi default theme constants - internal
-//
 // The hand-written default-theme color constants: the fallback palette used when no theme.json loads. Colors are
 // { r, g, b, a } (FlColor, math_data).
 

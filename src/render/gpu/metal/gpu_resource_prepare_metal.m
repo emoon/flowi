@@ -112,7 +112,7 @@ bool metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const
         metal_texture_upload(self->slot_tex_pool[tex - 1], 0, 0, w, h, (u32)decoded->stride, alpha_only ? 1u : 4u,
                              decoded->pixels);
         if (gpu_image_slots_register_static(&self->cpu.image_slots, (FlImageHandle)request_id, w, h, tex) < 0) {
-            // Table full or the handle is already registered - gpu_image_slots_register_static logged the reason.
+            // Table full or the handle is already registered; gpu_image_slots_register_static logged the reason.
             METAL_RELEASE(self->slot_tex_pool[tex - 1]);
             return false;
         }
@@ -173,7 +173,7 @@ static void metal_raster_svg_cell(void* backend, const GpuSvgEntry* entry, const
                                                   .size = { entry->cell.w, entry->cell.h },
                                               });
     if (rastered) {
-        self->cpu.svg_raster_count++; // a cell was actually rasterized (a step crossing, or a compaction re-raster)
+        self->cpu.svg_raster_count++; // a cell was rasterized (a step crossing, or a compaction re-raster)
     }
     fl_arena_rewind(self->frame_arena);
 }

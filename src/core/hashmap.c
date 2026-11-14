@@ -68,7 +68,7 @@ static void string_key_copy(HashMapBase* self, void* dest_key, const void* src_k
 static HashMapNodeBase* hashmap_allocate_node(HashMapBase* self) {
     HashMapNodeBase* node;
     if (self->free_nodes.first != nullptr) {
-        // Reuse from free list - node will be reinitialized by caller, no need to zero
+        // A node from the free list is reinitialized by the caller, so it is not zeroed.
         node = self->free_nodes.first;
         sll_queue_pop(self->free_nodes.first, self->free_nodes.last);
     } else {

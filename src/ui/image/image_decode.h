@@ -1,6 +1,6 @@
 #pragma once
 
-// Image Decode - Pure decode and common processing
+// Image Decode: decoding and the processing every backend shares.
 //
 // Synchronous, backend-agnostic image decoding: no storage, no VFS async, no renderer-specific transforms.
 // The output is RGBA interleaved (or Alpha-only for grayscale), ready for backend-specific processing
@@ -9,7 +9,7 @@
 #include <core/arena.h>
 #include <core/core.h>
 
-// Decode result - temporary, allocated from provided arena
+// Decode result. Temporary, allocated from the arena passed to image_decode.
 
 typedef struct FlImageDecodeResult {
     u8* pixels; // RGBA interleaved, or Alpha-only (1 channel)
@@ -23,8 +23,6 @@ typedef struct FlImageDecodeResult {
     // image_thumbnail_compose() to run the finishing pass. SVG and waveform decodes leave it false.
     bool needs_thumbnail_compose;
 } FlImageDecodeResult;
-
-// Decode options
 
 typedef enum ImageDecodeResizeFilter {
     ImageDecodeResizeFilter_Default = 0,
@@ -56,7 +54,7 @@ typedef struct ImageThumbnailOptions {
     ImageDecodeBackgroundMode background_mode;
     bool detect_black_border; // Detect and remove black borders (before resize)
 
-    // Tint color (used when background_mode == Tint) - caller fills from the active theme
+    // Tint color, used when background_mode == Tint. The caller fills it from the active theme.
     u8 tint_r, tint_g, tint_b;
 
     // Vertical fade gradient: fades from original image (top) to target color (bottom)
@@ -64,8 +62,6 @@ typedef struct ImageThumbnailOptions {
     f32 fade_start; // Where fade starts (0.0 = top, 1.0 = bottom)
     u8 fade_r, fade_g, fade_b;
 } ImageThumbnailOptions;
-
-// Decode API
 
 // Decode an image from a memory buffer (synchronous). Allocates result and pixels from arena; returns nullptr on
 // failure. Detects SVG vs raster and decodes via nanosvg or stb_image:
@@ -95,8 +91,6 @@ bool image_checked_pixel_size(int width, int height, size_t bytes_per_pixel, siz
 
 // Row stride in bytes for width pixels at bytes_per_pixel. Returns false when it does not fit the i32 stride fields.
 bool image_checked_stride(int width, size_t bytes_per_pixel, int* out_stride);
-
-// Premultiply
 
 // round(c * a / 255) for 8-bit inputs, as (t + (t >> 8)) >> 8 with t = c * a + 128.
 static inline u8 image_premul_channel(int c, int a) {

@@ -115,9 +115,7 @@ const _: () = {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct LayoutSizing {
-    /// Horizontal sizing.
     pub width: crate::sys::LayoutSizingAxis,
-    /// Vertical sizing.
     pub height: crate::sys::LayoutSizingAxis,
 }
 
@@ -211,9 +209,7 @@ const _: () = {
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct LayoutBorder {
-    /// Border color.
     pub color: crate::sys::Color,
-    /// Per-edge border widths.
     pub width: crate::sys::BorderWidthConfig,
     /// Dash pattern, one for the whole border (zeroed = solid). The between-children divider is
     /// always solid.
@@ -230,7 +226,7 @@ const _: () = {
 
 /// Explicit content-space placement for a child. When enabled, the child is positioned at
 /// offset in its parent's content coordinate space (the same space the clip scroll offset
-/// lives in) - scrolling and clipping with the container - instead of by flex flow. A placed
+/// lives in) instead of by flex flow, so it scrolls and clips with the container. A placed
 /// child neither advances the flex cursor nor contributes to the parent's content extent, so
 /// flowed siblings lay out as if it were absent. The offset is in already-zoomed reference pixels.
 #[repr(C)]
@@ -238,7 +234,7 @@ const _: () = {
 pub struct LayoutPlaced {
     /// Content-space offset in reference pixels from the parent's origin.
     pub offset: crate::sys::Vec2,
-    /// Position by offset in content space instead of flex flow (default false → flex flow).
+    /// Position by offset in content space instead of flex flow (default false: flex flow).
     pub enabled: bool,
 }
 
@@ -276,25 +272,19 @@ const _: () = {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct LayoutConfig {
-    /// Width/height sizing.
     pub sizing: crate::sys::LayoutSizing,
-    /// Inner padding.
     pub padding: crate::sys::LayoutPadding,
     /// Gap between adjacent children, in reference pixels.
     pub child_gap: u16,
-    /// Per-corner radius.
     pub radius: crate::sys::CornerRadius,
-    /// Alignment of children on both axes.
     pub child_alignment: crate::sys::LayoutChildAlignment,
     /// Row or column.
     pub direction: crate::sys::LayoutDirection,
     /// Background color.
     pub color: crate::sys::Color,
-    /// Clipping / scroll.
     pub clip: crate::sys::LayoutClip,
-    /// Border color and widths.
     pub border: crate::sys::LayoutBorder,
-    /// Explicit content-space placement (default disabled → normal flex flow).
+    /// Explicit content-space placement (default disabled: normal flex flow).
     pub placed: crate::sys::LayoutPlaced,
 }
 

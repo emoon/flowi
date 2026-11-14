@@ -148,7 +148,7 @@ UTEST(vfs_libarchive, files_named_zip_that_are_not_archives_end_in_a_mount_error
 }
 
 UTEST(vfs_libarchive, listing_a_directory_that_is_not_in_the_zip_gives_an_empty_listing) {
-    // An archive has no directory to be missing from: a path that names nothing lists as no entries, not as an error.
+    // In an archive a path that names nothing lists as no entries. It is not an error.
     ASSERT_TRUE(vfs_test_begin());
 
     FlVfsMount* mount = mount_fixture("test_zipfs_valid.zip");
@@ -218,7 +218,6 @@ UTEST(vfs_libarchive, a_zip_shows_its_directories_and_lists_into_them) {
 #define MANY_ENTRIES 300
 
 UTEST(vfs_libarchive, a_zip_with_more_than_256_entries_in_one_directory_lists_every_one) {
-    // The archive driver used to cap its duplicate-tracking set at 256 and drop the rest without a word.
     ASSERT_TRUE(vfs_test_begin());
 
     FlArena* arena = arena_new();

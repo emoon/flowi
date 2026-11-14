@@ -1,4 +1,4 @@
-/// Switch widget - a boolean toggle drawn as a pill track with a sliding knob. Same role as a checkbox.
+/// Switch widget: a boolean toggle drawn as a pill track with a sliding knob. Same role as a checkbox.
 #[frame_context]
 api Switch {
     /// Emit a switch labelled label bound to `*value`; activation toggles the bool. config selects label

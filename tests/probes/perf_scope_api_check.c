@@ -1,11 +1,10 @@
 // Compile-only parity guard: the api_gen-generated public per-frame-profiler surface (<flowi/core/perf_scope.h>).
 //
-// This TU links nothing. It proves at compile time that the generated header is self-contained valid C against only
-// the standard headers below, and that every fl_perf_scope_* prototype keeps its exact signature.
+// It proves at compile time that the generated header is self-contained valid C against only the standard headers
+// below, and that every fl_perf_scope_* prototype keeps its exact signature.
 //
-// The thread-local profiler buffers, the PerfScopeGuard cleanup struct, perf_scope_get_thread_state and the
-// PERF_SCOPE_* constants stay internal (src/core/perf_scope.h), so there is no generated struct layout to
-// guard here.
+// The thread-local profiler buffers, perf_scope_get_thread_state and the PERF_SCOPE_* constants stay internal
+// (src/core/perf_scope.h), so there is no generated struct layout to guard here.
 
 #include <stdbool.h>
 #include <stddef.h>

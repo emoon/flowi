@@ -31,7 +31,7 @@ static bool prepare_large_image(GpuShared* self, FlImageHandle handle, const FlI
                           alpha_only ? GL_RED : GL_RGBA, decoded->pixels);
 
     if (gpu_image_slots_register_static(&self->cpu.image_slots, handle, w, h, (u32)tex) < 0) {
-        glDeleteTextures(1, &tex); // table full or duplicate - register logged the reason
+        glDeleteTextures(1, &tex); // table full or duplicate; register logged the reason
         return false;
     }
     return true;

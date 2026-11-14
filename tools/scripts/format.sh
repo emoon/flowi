@@ -1,41 +1,33 @@
 #!/bin/bash
 
-# Run clang-format across flowi's owned C sources.
+# Runs clang-format over flowi's own C sources.
 #
 # Excluded:
 #   - build dirs (build*/, cmake-build-*/) and the Rust target/ tree
-#   - the whole external/ tree (clay, freetype2, nanosvg, utest and the
-#     third-party deps fzy, mimalloc, stb, xxhash). flowi's own absorbed
-#     foundation now lives in-repo under src and IS formatted
-#     like the rest of flowi.
-#   - any */generated/* dir AND the api_gen C output tree include/flowi/:
-#     api_gen emits those byte-for-byte with no formatter post-pass, and
-#     `cargo regen-check` is a CI gate, so reformatting them would break it. (The public C tree has no /generated/ segment, so
-#     it needs its own exclusion.)
-#   - src/render/gpu/gpu_metal_internal.h: an Objective-C header (it
-#     #imports Metal and names id<MTLDevice>). clang-format detects it as ObjC,
-#     .clang-format only declares Language: Cpp, and the config lookup then
-#     fails with "Unsuitable" — which, under set -e, aborted this whole script
-#     partway through. The backend's .m files are already out of the glob
-#     below, so the Metal sources stay unformatted as a set.
-#   - the GPU compute-shader source tree src/render/gpu/shaders/: it holds
-#     embedded shader source — the .glsl bodies and the per-backend compat .h
-#     vocabulary headers — which is spliced into shaders verbatim, not
-#     compiled as C. clang-format would reflow the vocabulary #defines, so the
-#     whole dir stays out (the .glsl files dodge the C glob already; the .h does
-#     not).
+#   - the whole external/ tree
+#   - any */generated/* dir and the api_gen C output in include/flowi/. api_gen
+#     emits both without a formatter pass and CI's `cargo regen-check` compares
+#     them byte for byte. include/flowi/ has no /generated/ segment, so it has
+#     its own exclusion.
+#   - src/render/gpu/gpu_metal_internal.h, an Objective-C header. clang-format
+#     detects it as ObjC, .clang-format only declares Language: Cpp, and the
+#     config lookup fails with "Unsuitable", which aborts this script under
+#     set -e. The backend's .m files are outside the glob below, so none of
+#     the Metal sources are formatted.
+#   - src/render/gpu/shaders/. The .glsl bodies and the per-backend compat
+#     headers are spliced into shaders verbatim and are not compiled as C, and
+#     clang-format would reflow the #defines in the headers.
 #
 # Modes: all (default) | staged | changed.
 
 set -e
 
-# Run from the repo root regardless of where the script is invoked from, so the
-# find/git paths below resolve consistently (this script lives in tools/scripts/).
+# Run from the repo root so the find and git paths below resolve.
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 MODE="${1:-all}"
 
-# Shared exclusion filter for the git-driven modes (staged/changed).
+# Exclusion filter for the staged and changed modes.
 filter_paths() {
     grep -E '\.(c|cpp|h|hpp)$' \
         | grep -v '/gpu_metal_internal\.h$' \
@@ -60,10 +52,7 @@ format_files() {
 case "$MODE" in
     all)
         echo "Formatting all files..."
-        # Prune the excluded directories so find never DESCENDS into them — not
-        # just filters their files out of the result. This matters for external/:
-        # traversing + reformatting third-party trees churns foreign code and
-        # breaks the generated-tree byte-identical CI gate.
+        # Prune the excluded directories so find does not descend into them.
         mapfile -t files < <(find . \
             -type d \( \
                    -path "./build*" \

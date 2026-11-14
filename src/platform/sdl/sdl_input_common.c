@@ -1,5 +1,3 @@
-// Shared SDL event translation + input-device state (see sdl_input_common.h).
-
 #include "sdl_input_common.h"
 
 #if BACKEND_USE_SDL
@@ -234,7 +232,6 @@ static bool translate_mouse_family(SdlInputCommon* self, FlUiCtx* ctx, const SDL
     return false;
 }
 
-// Translate a single SDL event and push the resulting Fl event(s) onto ctx.
 static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event* e, u64 timestamp) {
     if (translate_window_family(ctx, e, timestamp)) {
         return;
@@ -266,7 +263,6 @@ static FlUiCtx* route_context(const SDL_Event* e, const u32* window_ids, FlUiCtx
 void sdl_input_common_init(SdlInputCommon* self) {
     memory_zero(self, sizeof(SdlInputCommon));
 
-    // Enable drop-file events.
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 
     sdl_gamepads_init(&self->gamepads);
@@ -313,7 +309,7 @@ void sdl_input_common_set_relative_mouse_mode(SdlInputCommon* self, bool enabled
 }
 
 void sdl_input_common_warp_mouse(SDL_Window* window, float x, float y) {
-    // x, y are drawable pixels; a null window targets the mouse-focus window.
+    // x, y are drawable pixels; a nullptr window targets the mouse-focus window.
     const float scale = sdl_window_pixel_scale(window);
     SDL_WarpMouseInWindow(window, (int)(x / scale), (int)(y / scale));
 }
