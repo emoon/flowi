@@ -182,6 +182,9 @@ typedef struct FlCmdPolyline {
 // Arc / ring / circle-sector - knob indicators, modulation rings. One shape: outer radius plus inward
 // thickness; thickness >= radius reaches the center and makes a filled sector. Angles follow the knob
 // convention: zero at 12 o'clock, positive sweep clockwise.
+// FlCmdArc.flags bit: round end caps. Without it the ends are butt-cut.
+#define FL_IR_ARC_ROUND_CAPS 1u
+
 typedef struct FlCmdArc {
     f32 cx;
     f32 cy;
@@ -190,7 +193,7 @@ typedef struct FlCmdArc {
     f32 start_angle; // radians, 0 = 12 o'clock
     f32 sweep;       // radians, positive = clockwise
     FlColor color;
-    u32 flags; // FlArcFlags
+    u32 flags; // FL_IR_ARC_ROUND_CAPS or 0
 } FlCmdArc;
 
 // Circle - modulation points, automation nodes. Filled, with an optional border ring. A hollow ring alone is

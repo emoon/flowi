@@ -327,6 +327,42 @@ void painter_rect_rounded(Painter* p, FlRect rect, float radius, FlColor color) 
         (FlRectConfig) { .radius = { radius, radius, radius, radius }, .corner = { color, color, color, color } });
 }
 
+// A dash pattern is a pair of lengths along the stroke, so it scales like the geometry.
+static FlStrokeStyle painter_scale_dash(const Painter* p, FlStrokeStyle dash) {
+    return (FlStrokeStyle) { .dash_len = scale(p, dash.dash_len), .gap_len = scale(p, dash.gap_len) };
+}
+
+void painter_rect_stroke(Painter* p, FlRect rect, float radius, FlStroke stroke) {
+    if (p == nullptr) {
+        return;
+    }
+    // The band cannot be wider than half the rect; past that the outline is the filled rect. Clamping here
+    // keeps every backend inside the rect, whatever it does with an over-wide band itself.
+    const float width = min(stroke.width, min(rect.w, rect.h) * 0.5f);
+    if (!(width > 0.0f)) {
+        return; // also rejects an empty or negative rect, and a NaN width
+    }
+    void* start;
+    FlPaintSpan* span = painter_record_begin(p, &start);
+    if (span == nullptr) {
+        return;
+    }
+    const float r = scale(p, radius);
+    const float w = scale(p, width);
+    const FlCmdBorder band = {
+        .rect = { .x = scale(p, rect.x), .y = scale(p, rect.y), .w = scale(p, rect.w), .h = scale(p, rect.h) },
+        .w_l = w,
+        .w_r = w,
+        .w_t = w,
+        .w_b = w,
+        .radius = { .tl = r, .tr = r, .bl = r, .br = r },
+        .color = stroke.color,
+        .stroke = painter_scale_dash(p, stroke.dash),
+    };
+    fl_ir_border_cmd(p->arena, &band, painter_current_effect(p));
+    painter_record_end(p, span, start);
+}
+
 void painter_gradient_rect(Painter* p, FlRect rect, FlCornerColors colors) {
     // The IR's gradient is a fill rect with per-corner colors, ordered TL, TR, BL, BR.
     painter_rect_styled(
@@ -509,7 +545,7 @@ void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, Fl
         return;
     }
 
-    FlPolyPoint* dst = fl_ir_polyline(p->arena, style.color, style.fill_color, scale(p, style.width),
+    FlPolyPoint* dst = fl_ir_polyline(p->arena, style.stroke.color, style.fill_color, scale(p, style.stroke.width),
                                       scale(p, style.baseline_y), style.flags, point_count, painter_current_effect(p));
     for (u32 i = 0; i < point_count; i++) {
         dst[i].x = scale(p, points[i].x);
@@ -519,7 +555,19 @@ void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, Fl
     painter_record_end(p, span, start);
 }
 
-void painter_arc(Painter* p, FlArcShape arc) {
+void painter_line(Painter* p, FlVec2 a, FlVec2 b, FlStroke stroke) {
+    if (a.x == b.x && a.y == b.y) {
+        // A zero-length segment has no direction for the backend to stroke, so draw what its two round caps
+        // add up to: a dot of the stroke width.
+        painter_circle(p, a, stroke.width * 0.5f, stroke.color);
+        return;
+    }
+    const FlPolyPoint points[2]
+        = { { .x = a.x, .y = a.y, .intensity = 1.0f }, { .x = b.x, .y = b.y, .intensity = 1.0f } };
+    painter_polyline(p, points, 2, (FlPolylineStyle) { .stroke = stroke });
+}
+
+void painter_arc(Painter* p, FlVec2 center, float radius, float start_angle, float sweep, FlStroke stroke) {
     if (p == nullptr) {
         return;
     }
@@ -529,12 +577,17 @@ void painter_arc(Painter* p, FlArcShape arc) {
         return;
     }
     // Angles are unitless (radians) - only the lengths scale.
-    fl_ir_arc(p->arena, scale(p, arc.cx), scale(p, arc.cy), scale(p, arc.radius), scale(p, arc.thickness),
-              arc.start_angle, arc.sweep, arc.color, arc.flags, painter_current_effect(p));
+    const u32 flags = stroke.cap == FlStrokeCap_Round ? FL_IR_ARC_ROUND_CAPS : 0u;
+    fl_ir_arc(p->arena, scale(p, center.x), scale(p, center.y), scale(p, radius), scale(p, stroke.width), start_angle,
+              sweep, stroke.color, flags, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
-void painter_circle_stroked(Painter* p, FlCircleShape circle, FlStrokeStyle stroke) {
+// The fill an outline-only shape carries: fully transparent, so only the ring is drawn. The GPU backend also
+// reads a transparent fill as "hollow" when it casts the shape's shadow or glow.
+static const FlColor k_no_fill = { 0 };
+
+void painter_circle_bordered(Painter* p, FlVec2 center, float radius, FlColor color, FlStroke border) {
     if (p == nullptr) {
         return;
     }
@@ -543,19 +596,20 @@ void painter_circle_stroked(Painter* p, FlCircleShape circle, FlStrokeStyle stro
     if (span == nullptr) {
         return;
     }
-    // The dash pattern is a pair of lengths along the ring, so it scales like the geometry.
-    stroke.dash_len = scale(p, stroke.dash_len);
-    stroke.gap_len = scale(p, stroke.gap_len);
-    fl_ir_circle_stroked(p->arena, scale(p, circle.cx), scale(p, circle.cy), scale(p, circle.radius), circle.color,
-                         circle.border_color, scale(p, circle.border_width), stroke, painter_current_effect(p));
+    fl_ir_circle_stroked(p->arena, scale(p, center.x), scale(p, center.y), scale(p, radius), color, border.color,
+                         scale(p, border.width), painter_scale_dash(p, border.dash), painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
-void painter_circle(Painter* p, FlCircleShape circle) {
-    painter_circle_stroked(p, circle, (FlStrokeStyle) { 0 });
+void painter_circle(Painter* p, FlVec2 center, float radius, FlColor color) {
+    painter_circle_bordered(p, center, radius, color, (FlStroke) { 0 });
 }
 
-void painter_diamond(Painter* p, FlDiamondShape diamond) {
+void painter_circle_stroke(Painter* p, FlVec2 center, float radius, FlStroke stroke) {
+    painter_circle_bordered(p, center, radius, k_no_fill, stroke);
+}
+
+void painter_diamond_bordered(Painter* p, FlVec2 center, FlVec2 half_extent, FlColor color, FlStroke border) {
     if (p == nullptr) {
         return;
     }
@@ -564,9 +618,17 @@ void painter_diamond(Painter* p, FlDiamondShape diamond) {
     if (span == nullptr) {
         return;
     }
-    fl_ir_diamond(p->arena, scale(p, diamond.cx), scale(p, diamond.cy), scale(p, diamond.rx), scale(p, diamond.ry),
-                  diamond.color, diamond.border_color, scale(p, diamond.border_width), painter_current_effect(p));
+    fl_ir_diamond(p->arena, scale(p, center.x), scale(p, center.y), scale(p, half_extent.x), scale(p, half_extent.y),
+                  color, border.color, scale(p, border.width), painter_current_effect(p));
     painter_record_end(p, span, start);
+}
+
+void painter_diamond(Painter* p, FlVec2 center, FlVec2 half_extent, FlColor color) {
+    painter_diamond_bordered(p, center, half_extent, color, (FlStroke) { 0 });
+}
+
+void painter_diamond_stroke(Painter* p, FlVec2 center, FlVec2 half_extent, FlStroke stroke) {
+    painter_diamond_bordered(p, center, half_extent, k_no_fill, stroke);
 }
 
 void painter_bars(Painter* p, float baseline_y, const FlBar* bars, u32 bar_count, FlColor color) {

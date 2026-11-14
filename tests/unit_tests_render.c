@@ -8170,12 +8170,7 @@ UTEST(render, canvas_paint_z_clip_and_one_span) {
                 // Many primitives in one scope - these must collapse to a single CUSTOM span.
                 painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 200.0f }, canvas_col);
                 painter_rect(p, (FlRect) { .x = 4.0f, .y = 4.0f, .w = 8.0f, .h = 8.0f }, canvas_col);
-                painter_circle(p, (FlCircleShape) { .cx = 100.0f,
-                                                    .cy = 100.0f,
-                                                    .radius = 6.0f,
-                                                    .color = canvas_col,
-                                                    .border_color = ui_color(0, 0, 0, 0),
-                                                    .border_width = 0.0f });
+                painter_circle(p, (FlVec2) { .x = 100.0f, .y = 100.0f }, 6.0f, canvas_col);
                 painter_rect(p, (FlRect) { .x = 20.0f, .y = 20.0f, .w = 6.0f, .h = 6.0f }, canvas_col);
 
                 // Child element, laid out at the canvas origin - must draw OVER the paint.
@@ -8786,12 +8781,7 @@ UTEST(render, canvas_command_accounting) {
             Painter* p = ui_get_painter();
             painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 100.0f, .h = 100.0f }, paint_col);
             painter_rect(p, (FlRect) { .x = 2.0f, .y = 2.0f, .w = 4.0f, .h = 4.0f }, paint_col);
-            painter_circle(p, (FlCircleShape) { .cx = 50.0f,
-                                                .cy = 50.0f,
-                                                .radius = 6.0f,
-                                                .color = paint_col,
-                                                .border_color = ui_color(0, 0, 0, 0),
-                                                .border_width = 0.0f });
+            painter_circle(p, (FlVec2) { .x = 50.0f, .y = 50.0f }, 6.0f, paint_col);
             painter_rect(p, (FlRect) { .x = 8.0f, .y = 8.0f, .w = 4.0f, .h = 4.0f }, paint_col);
         }
     }
