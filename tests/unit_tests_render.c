@@ -3350,6 +3350,7 @@ static void scroll_nested_setup(FlUiCtx* ctx, f32 header_h) {
 
     // Start both areas unscrolled.
     for_each_hashmap(&ctx->shared->scroll_states, id, state) {
+        (void)id;
         state->scroll_offset = (FlVec2) { 0 };
         state->scroll_target = (FlVec2) { 0 };
     }
