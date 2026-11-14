@@ -279,9 +279,7 @@ void dock_workspace_end(FlDockWorkspace* ws) {
 bool dock_workspace_declare(FlDockWorkspace* ws, FlDockPanelId id, FlString title) {
     DockPanel* rec = dock_panels_get(&ws->panels, id);
     rec->last_declared = ws->frame;
-    if (!fl_string_equals(rec->title, title)) { // copy only on change
-        rec->title = fl_string_copy(ws->arena, title);
-    }
+    dock_panels_set_title(&ws->panels, rec, title);
     return dock_workspace_panel_should_emit(ws, id);
 }
 
@@ -558,8 +556,7 @@ static bool body_overflows_tile(FlScrollContainerExtent extent) {
 // A body larger than its tile is clipped, and the overflow is logged once per panel. Reads the previous frame's
 // extent.
 static void report_overflow_once(FlDockWorkspace* ws, FlDockPanelId id) {
-    DockPanel* rec = dock_panels_find(&ws->panels, id);
-    FL_ASSERT(rec != nullptr); // the declare this call sits behind added it
+    DockPanel* rec = dock_panels_get(&ws->panels, id); // the declare this call sits behind added it
     if (rec->overflow_logs > 0) {
         return;
     }

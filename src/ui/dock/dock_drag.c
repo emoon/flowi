@@ -36,7 +36,7 @@ static i32 nearest_leaf(const FlDockDropNode* nodes, u32 count, FlVec2 cursor) {
 // The tab-into region: the leaf's tab header, or a box of the tile's middle covering FL_DOCK_TAB_CENTER_FRAC of it
 // on each axis. Writes the insertion slot along the strip; a centre drop names the end of the strip.
 static bool tab_target(FlDockRect leaf, FlVec2 cursor, u32* out_index) {
-    if (cursor.y >= leaf.y && cursor.y <= leaf.y + DOCK_TAB_HEIGHT) {
+    if (cursor.y >= leaf.y && cursor.y < leaf.y + DOCK_TAB_HEIGHT) {
         f32 x = cursor.x - leaf.x;
         *out_index = x <= 0.0f ? 0 : (u32)(x / DOCK_TAB_MIN_WIDTH);
         return true;

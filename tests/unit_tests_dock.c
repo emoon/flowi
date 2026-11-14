@@ -832,8 +832,8 @@ UTEST(dock_drag, hit_test_resolution_matrix) {
     // The tab-into band is the header the leaf draws, to its last pixel.
     z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, DOCK_TAB_HEIGHT - 1.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "the bottom of the header still tabs in");
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, DOCK_TAB_HEIGHT + 1.0f }, &req);
-    ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Top, "one px past the header it splits again");
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, DOCK_TAB_HEIGHT }, &req);
+    ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Top, "the first row of the content area splits again");
 
     z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 300.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "the middle of the tile tabs in");

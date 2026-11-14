@@ -57,10 +57,10 @@ void dock_promote_panel(FlDockPanelId panel);
 // source tree may be mutated here even though that source is about to emit. No-op without a shared tier.
 void dock_shared_flush_promotes(void);
 
-// The host calls this when a promoted window closes (user / window-manager / injected close): demote every panel
-// the window holds back into its source workspace by stable id, then dissolve the second workspace and drop its
-// registry entry. A panel promoted onward out of this window now demotes into this window's source. host_window is the opaque handle open_promoted_window
-// returned. No-op if the handle is unknown.
+// The host calls this when a promoted window closes (user / window-manager / injected close): demote every panel the
+// window holds back into its source workspace by stable id, then dissolve the second workspace and drop its registry
+// entry. A panel promoted onward out of this window now demotes into this window's source. host_window is the opaque
+// handle open_promoted_window returned. No-op if the handle is unknown.
 void fl_dock_notify_window_closed(void* host_window);
 
 #ifdef __cplusplus

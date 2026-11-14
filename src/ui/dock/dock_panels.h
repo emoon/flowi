@@ -29,10 +29,13 @@ typedef struct DockPanels {
 } DockPanels;
 
 // The record for id, or nullptr for a panel never seen.
-DockPanel* dock_panels_find(const DockPanels* panels, FlDockPanelId id);
+const DockPanel* dock_panels_find(const DockPanels* panels, FlDockPanelId id);
 
 // The record for id, added on first sight as a visible, untitled, general panel.
 DockPanel* dock_panels_get(DockPanels* panels, FlDockPanelId id);
+
+// Set panel's tab label. The text is copied, and only when it differs from the label already held.
+void dock_panels_set_title(DockPanels* panels, DockPanel* panel, FlString title);
 
 // True unless the app hid id. A panel never seen is visible.
 bool dock_panels_visible(const DockPanels* panels, FlDockPanelId id);
