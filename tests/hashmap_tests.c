@@ -386,7 +386,7 @@ UTEST(hashmap, string_keys_collision_handling) {
 
     FlString keys[] = { FL_S("a"),   FL_S("aa"),         FL_S("aaa"),        FL_S("b"),       FL_S("bb"),
                         FL_S("bbb"), FL_S("collision1"), FL_S("collision2"), FL_S("test123"), FL_S("test456") };
-    int num_keys = sizeof(keys) / sizeof(keys[0]);
+    int num_keys = sizeof_array(keys);
 
     for (int i = 0; i < num_keys; i++) {
         hashmap_string_insert(&map, keys[i], i * 10);

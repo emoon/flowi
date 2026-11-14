@@ -32,7 +32,7 @@ static const UiScalePreset UI_SCALE_PRESETS[] = {
 };
 // clang-format on
 
-#define UI_SCALE_PRESETS_COUNT (sizeof(UI_SCALE_PRESETS) / sizeof(UI_SCALE_PRESETS[0]))
+#define UI_SCALE_PRESETS_COUNT sizeof_array(UI_SCALE_PRESETS)
 
 // Reference resolution (all UI code assumes this resolution)
 #define UI_REFERENCE_HEIGHT 1080.0f
