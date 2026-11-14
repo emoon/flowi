@@ -203,7 +203,10 @@ int main(int argc, char** argv) {
         return 2;
     }
 
-    const LocCheckResult result = loc_check_run(arena, sources.items, sources.count, tables, table_count);
+    const LocCheckResult result = loc_check_run(arena, &(LocCheckInput) { .sources = sources.items,
+                                                                          .source_count = sources.count,
+                                                                          .tables = tables,
+                                                                          .table_count = table_count });
     const FlString report = loc_check_format_report(arena, &result, tables, table_count);
     printf("%.*s", (int)report.length, report.data);
 
