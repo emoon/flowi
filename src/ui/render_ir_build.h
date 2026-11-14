@@ -35,7 +35,7 @@ static inline FlCmdHeader* fl_ir_header(FlArena* arena, FlCmdKind kind, u32 tota
 }
 
 // Append the optional effect annotation to the record being built (after the payload and any inline trailing
-// array) and mark the header. NULL means no effect. The caller's total_bytes must already include the effect.
+// array) and mark the header. nullptr means no effect. The caller's total_bytes must already include the effect.
 
 static inline u32 fl_ir_effect_bytes(const FlEffect* effect) {
     return effect != nullptr ? (u32)sizeof(FlEffect) : 0u;
@@ -51,7 +51,7 @@ static inline void fl_ir_append_effect(FlArena* arena, FlCmdHeader* header, cons
 }
 
 // Fill rect with optional per-corner radii and per-corner colors (a solid fill is four equal corner colors;
-// a gradient is four differing ones - there is no separate gradient command). NULL effect = none.
+// a gradient is four differing ones - there is no separate gradient command). nullptr effect = none.
 
 static inline void fl_ir_fill_rect(FlArena* arena, FlRect rect, FlCornerRadius radius, const FlColor corners[4],
                                    const FlEffect* effect) {
@@ -88,7 +88,7 @@ static inline void fl_ir_fill_rect_snapped(FlArena* arena, FlRect rect, FlColor 
 // variant additionally dashes the band; the plain one is that with a zeroed (solid) pattern.
 
 // The border record writer the two wrappers below share; it is also what a caller with an effect uses, since
-// the record is the payload plus an optional trailing effect. NULL effect = none.
+// the record is the payload plus an optional trailing effect. nullptr effect = none.
 static inline void fl_ir_border_cmd(FlArena* arena, const FlCmdBorder* border, const FlEffect* effect) {
     u32 content = (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdBorder)) + fl_ir_effect_bytes(effect);
     FlCmdHeader* header = fl_ir_header(arena, FlCmd_Border, content);
@@ -110,7 +110,7 @@ static inline void fl_ir_border(FlArena* arena, FlRect rect, f32 w_l, f32 w_r, f
     fl_ir_border_stroked(arena, rect, w_l, w_r, w_t, w_b, radius, color, (FlStrokeStyle) { 0 });
 }
 
-// One image primitive (static handle or dynamic neutral buffer; color or alpha-coverage mode). NULL effect = none.
+// One image primitive (static handle or dynamic neutral buffer; color or alpha-coverage mode). nullptr effect = none.
 
 static inline void fl_ir_image(FlArena* arena, FlImageSource source, FlImageMode mode, FlRect dst, FlRect src,
                                FlColor tint, FlImageFilter filter, const FlEffect* effect) {
@@ -156,7 +156,7 @@ static inline void fl_ir_clip_pop(FlArena* arena) {
     fl_ir_header(arena, FlCmd_ClipPop, (u32)sizeof(FlCmdHeader));
 }
 
-// Optional-tier builders. All five take an optional effect (NULL = none), appended after the payload and any
+// Optional-tier builders. All five take an optional effect (nullptr = none), appended after the payload and any
 // inline trailing array. The variable-length builders (polyline, bars) reserve the trailing array inside the
 // record and return it; the caller MUST fill every reserved entry.
 

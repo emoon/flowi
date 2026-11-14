@@ -33,7 +33,7 @@ typedef struct GpuImageAtlas {
 void gpu_image_atlas_init(GpuImageAtlas* atlas, struct FlArena* arena);
 
 // Place a w x h image for handle: claim the first released cell it fits in, else skyline-insert. Returns
-// NULL (nothing placed) when the image exceeds GPU_IMAGE_ATLAS_MAX_DIM, the entry table or atlas is full, or
+// nullptr (nothing placed) when the image exceeds GPU_IMAGE_ATLAS_MAX_DIM, the entry table or atlas is full, or
 // the handle is already placed. The returned entry is valid until the next place/release call.
 const GpuImageAtlasEntry* gpu_image_atlas_place(GpuImageAtlas* atlas, FlImageHandle handle, u32 w, u32 h);
 
@@ -41,7 +41,7 @@ const GpuImageAtlasEntry* gpu_image_atlas_place(GpuImageAtlas* atlas, FlImageHan
 // joins the reuse list. A handle that was never placed is a no-op.
 void gpu_image_atlas_release(GpuImageAtlas* atlas, FlImageHandle handle);
 
-// Resolve a handle to its placement. Returns NULL when the handle has none (never prepared, too large, or
+// Resolve a handle to its placement. Returns nullptr when the handle has none (never prepared, too large, or
 // released). Valid until the next place/release call.
 const GpuImageAtlasEntry* gpu_image_atlas_find(const GpuImageAtlas* atlas, FlImageHandle handle);
 

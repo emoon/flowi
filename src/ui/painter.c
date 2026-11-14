@@ -125,7 +125,7 @@ void painter_set_effect(Painter* p, FlEffect effect) {
     }
 }
 
-// The effect the next primitive carries, or null when there is none (the builders take NULL for "no effect").
+// The effect the next primitive carries, or null when there is none (the builders take nullptr for "no effect").
 static const FlEffect* painter_current_effect(const Painter* p) {
     const PaintScope* scope = painter_top_scope(p);
     if (scope == nullptr || scope->effect.kind == FlEffectKind_None) {

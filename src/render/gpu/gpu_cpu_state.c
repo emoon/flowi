@@ -41,5 +41,5 @@ u32 gpu_debug_dynamic_upload_count(void* renderer_user_data) {
 
 bool gpu_debug_image_in_atlas(void* renderer_user_data, FlImageHandle handle) {
     GpuCpuState* cpu = renderer_user_data;
-    return gpu_image_atlas_find(&cpu->image_atlas, handle) != NULL;
+    return gpu_image_atlas_find(&cpu->image_atlas, handle) != nullptr;
 }

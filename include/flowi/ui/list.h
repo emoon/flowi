@@ -40,7 +40,7 @@ typedef struct FlListConfig {
     float row_height;
     // Gap between rows in logical pixels (0 -> default 8).
     float gap;
-    // Optional labels parallel to the begin id slice (count entries) for keyboard type-ahead; NULL disables it.
+    // Optional labels parallel to the begin id slice (count entries) for keyboard type-ahead; null disables it.
     const FlString* labels;
     // Drag-reorder visuals: false (default) draws the built-in ghost + insertion line; true suppresses them
     // so the caller overrides the look from the live `drag_*` fields on `ListResult`. Gates only the drawing.
@@ -84,7 +84,7 @@ typedef struct FlListResult {
     // app opens its own context menu at the cursor.
     uint64_t context_menu_id;
     // The Selection Requests the List emitted this frame; always populated, even when the List auto-applied
-    // them into a non-NULL set. Valid for this frame only. Read request_count entries; NULL when none.
+    // them into a non-null set. Valid for this frame only. Read request_count entries; null when none.
     const FlSelectionRequest* requests;
     // Number of entries in requests (0 = no selection change this frame).
     uint32_t request_count;
@@ -99,7 +99,7 @@ typedef struct FlListResult {
     // COMMITTED request the app applies. Never true in the same frame as drag_active.
     bool reorder_emitted;
     // The dragged stable ids (`const uint64_t*`): the whole selection when the pressed row was selected, else
-    // just the pressed row. NULL / 0 entries when no drag is active or emitting.
+    // just the pressed row. null / 0 entries when no drag is active or emitting.
     const uint64_t* drag_from_ids;
     // The stable id the drop is positioned relative to (candidate while dragging, committed on release).
     uint64_t drag_target_id;

@@ -5,7 +5,7 @@
 // shifts by its offset and dilates by its blur, a glow stays centered and just dilates. The union with the
 // unshifted shape keeps the primitive's own tiles.
 static GpuAabb effect_expand_bounds(GpuAabb b, const FlEffect* e) {
-    if (e == NULL || e->kind == FlEffectKind_None) {
+    if (e == nullptr || e->kind == FlEffectKind_None) {
         return b;
     }
     f32 blur = fmaxf(e->blur, 0.0f);

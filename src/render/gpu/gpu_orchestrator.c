@@ -15,7 +15,7 @@
 
 static void gpu_prepare_text_glyphs(const GpuRenderOps* ops, void* backend, const struct FlRenderFrame* frame) {
     struct FlFontCache* font_cache = ops->get_font_cache(backend);
-    if (font_cache == NULL || frame == NULL) {
+    if (font_cache == nullptr || frame == nullptr) {
         return;
     }
 

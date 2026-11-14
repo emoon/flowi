@@ -42,7 +42,7 @@ static void translate_background(GpuTranslate* tr) {
     u8 saved_alpha = tr->global_alpha;
     const FlEffect* saved_effect = tr->effect;
     tr->global_alpha = 255; // the frame's global_alpha fades only the UI over the background
-    tr->effect = NULL;      // background commands carry no effect annotation
+    tr->effect = nullptr;   // background commands carry no effect annotation
 
     // Clear: a fullscreen rect in the clear color. A zero alpha leaves the target transparent.
     if (bg->clear.a > 0) {
@@ -98,11 +98,11 @@ static void translate_record(void* user, const FlCmdHeader* header) {
     const FlEffect* effect = gpu_record_effect(header);
     tr->effect = effect;
     u32 record_start = tr->n;
-    if (header->kind < sizeof_array(k_translators) && k_translators[header->kind] != NULL) {
+    if (header->kind < sizeof_array(k_translators) && k_translators[header->kind] != nullptr) {
         k_translators[header->kind](tr, header + 1);
     }
     // Stamp the effect onto every command this record committed.
-    if (effect != NULL) {
+    if (effect != nullptr) {
         for (u32 i = record_start; i < tr->n; i++) {
             gpu_pack_effect(&tr->out->cmds[i], effect, tr->global_alpha);
         }
@@ -111,7 +111,7 @@ static void translate_record(void* user, const FlCmdHeader* header) {
 
 // One walk over the IR stream, filling the pre-sized draw list; the background emits ahead of the IR.
 static void translate_stream(GpuTranslate* tr, const void* ir_commands, size_t ir_bytes) {
-    if (tr->background != NULL) {
+    if (tr->background != nullptr) {
         translate_background(tr);
     }
     gpu_ir_walk(ir_commands, ir_bytes, translate_record, tr);
@@ -144,7 +144,7 @@ GpuDrawList gpu_ir_to_draw_cmds(FlArena* arena, const GpuIrInput* in) {
     // One translation pass into arrays pre-sized by a record-count pre-scan, filling [0, list.count) and
     // leaving any slack the loose bound allocated untouched (the consumer reads only list.count /
     // list.clip_count).
-    GpuDrawBound bound = prescan_draw_bound(in->commands, in->bytes, in->background != NULL);
+    GpuDrawBound bound = prescan_draw_bound(in->commands, in->bytes, in->background != nullptr);
 
     GpuDrawList list = {
         .cmds = arena_alloc_array(arena, GpuDrawCmd, bound.cmd_max),
@@ -164,7 +164,7 @@ GpuDrawList gpu_ir_to_draw_cmds(FlArena* arena, const GpuIrInput* in) {
                         .global_alpha = in->global_alpha,
                         .background = in->background };
     gpu_clip_stack_init(&tr.stack, in->target_width, in->target_height);
-    if (in->slots != NULL) {
+    if (in->slots != nullptr) {
         gpu_image_slots_frame_reset(in->slots);
     }
     translate_stream(&tr, in->commands, in->bytes);

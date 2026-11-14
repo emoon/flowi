@@ -5,7 +5,7 @@
 // list_selection.* - the List's built-in multi-selection gesture machine: plain click replaces, ctrl/⌘-click
 // toggles, shift-click ranges from the anchor, Ctrl+A selects all. The List runs the gestures internally and
 // auto-applies the emitted Selection Requests into the caller-owned FlSelectionSet (forwarding the FULL ordered
-// id slice so ranges/SetAll resolve across rows virtualized away); a NULL set applies nothing but still exposes
+// id slice so ranges/SetAll resolve across rows virtualized away); a nullptr set applies nothing but still exposes
 // the requests on the result. These cases drive the render fixture directly, shortcut hover by stamping a row's
 // ItemState hot, and inject a fast tap via mouse_pressed/_released_this_frame plus modifiers / FlKey_A.
 
@@ -29,7 +29,7 @@ static void sel_only_hot(FlUiCtx* ctx, FlLayoutId list_id, u32 count, int hot_po
 
 // Emit one frame of the selection test list (cursor parked off-list; hover comes from the stamped hot). Injects
 // modifiers (FlKeyModifier_*), the Ctrl+A key_a edge, and - when click - a same-frame press+release fast tap.
-// out_signals, if non-NULL, captures each visible row's Signal at absolute index i (size it >= count).
+// out_signals, if non-null, captures each visible row's Signal at absolute index i (size it >= count).
 static FlListResult sel_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* set, const u64* ids, u32 count,
                               f32 viewport_h, u32 modifiers, bool key_a, bool click, FlSignal* out_signals) {
     ctx->input_state.mouse.x = -100.0f;
@@ -274,7 +274,7 @@ UTEST(list_selection, ctrl_a_selects_full_slice_and_requires_focus) {
     selection_set_destroy(set);
 }
 
-// A NULL set opts out of auto-apply and highlight: the gesture still emits its requests on the result (so the app
+// A nullptr set opts out of auto-apply and highlight: the gesture still emits its requests on the result (so the app
 // can drive its own model), but nothing is applied and the row's Signal.selected stays false.
 UTEST(list_selection, null_set_emits_requests_without_applying) {
     FlUiCtx* ctx = render_fixture_get();
@@ -292,11 +292,11 @@ UTEST(list_selection, null_set_emits_requests_without_applying) {
     sel_only_hot(ctx, list, count, 0);
     FlListResult r = sel_frame(ctx, list, nullptr, ids, count, 240.0f, FlKeyModifier_None, false, true, signals);
 
-    ASSERT_EQ_MSG(2u, r.request_count, "NULL set still exposes the emitted requests");
+    ASSERT_EQ_MSG(2u, r.request_count, "nullptr set still exposes the emitted requests");
     ASSERT_EQ_MSG((int)FlSelectionRequestKind_ClearAll, (int)r.requests[0].kind, "first request is ClearAll");
     ASSERT_EQ_MSG((int)FlSelectionRequestKind_SetOne, (int)r.requests[1].kind, "second request is SetOne");
     ASSERT_EQ_MSG((u64)1, r.requests[1].id, "SetOne names the clicked id");
-    ASSERT_FALSE_MSG(signals[0].selected, "with a NULL set the clicked row's Signal.selected stays false");
+    ASSERT_FALSE_MSG(signals[0].selected, "with a nullptr set the clicked row's Signal.selected stays false");
 }
 
 // Signal.selected mirrors set membership for each visible row, resolved purely by id - so the app can style its
@@ -385,8 +385,8 @@ typedef struct KbInput {
 } KbInput;
 
 // Emit one List frame with keyboard input injected and the cursor parked off-list (so no hover competes with the
-// keyboard focus). Returns the List result; out_nav, if non-NULL, captures the nav_frame AFTER ui_list_end so a
-// test can assert the List consumed the directions it handled. labels may be NULL (type-ahead disabled).
+// keyboard focus). Returns the List result; out_nav, if non-null, captures the nav_frame AFTER ui_list_end so a
+// test can assert the List consumed the directions it handled. labels may be nullptr (type-ahead disabled).
 static FlListResult kb_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* set, const u64* ids,
                              const FlString* labels, u32 count, f32 viewport_h, KbInput in, FlNavFrame* out_nav) {
     ctx->input_state.mouse.x = -100.0f;
@@ -637,9 +637,9 @@ UTEST(list_keyboard, type_ahead_matches_multibyte_prefix) {
 }
 
 // One frame for the focus-request cases: optionally call ui_list_request_focus(list, seed) just before the list
-// begins (mirroring a dropdown's open-edge call), then emit the list over a NULL set. Cursor parked off-list and
+// begins (mirroring a dropdown's open-edge call), then emit the list over a nullptr set. Cursor parked off-list and
 // no clicks, so only the seed / injected keys drive focus. Captures the post-frame global focus ring id into
-// *out_global if non-NULL.
+// *out_global if non-null.
 static FlListResult focusreq_frame(FlUiCtx* ctx, FlLayoutId list_id, const u64* ids, u32 count, f32 vp, bool request,
                                    u64 seed, KbInput in, u32* out_global) {
     ctx->input_state.mouse.x = -100.0f;
@@ -689,7 +689,7 @@ static FlListResult focusreq_frame(FlUiCtx* ctx, FlLayoutId list_id, const u64* 
 }
 
 // Fixture prologue for the focus-request cases: size the surface and run two idle (no-request) frames so the
-// container height and the visible rows' ItemStates exist, exactly like sel_setup but over a NULL set.
+// container height and the visible rows' ItemStates exist, exactly like sel_setup but over a nullptr set.
 static void focusreq_setup(FlUiCtx* ctx, FlLayoutId list_id, const u64* ids, u32 count, f32 vp) {
     ctx->layout_width = 320.0f;
     ctx->layout_height = 256.0f;
@@ -801,7 +801,7 @@ UTEST(list_focus_request, seed_validated_with_first_row_fallback) {
 // Lays list_id out as a 100-row List in a fixed 120px viewport at the window origin. row_height 24 + gap 12 ->
 // 36px stride, so the gap region after row 0 is screen y [24, 36] - empty space a press can land in. modifiers
 // (FlKeyModifier_*) feeds ui_keyboard_modifiers; it - and nav_down, for the focus-retention case - is stamped
-// AFTER ui_input_update so the input layer can't clear it. out_result, if non-NULL, captures the List
+// AFTER ui_input_update so the input layer can't clear it. out_result, if non-null, captures the List
 // result so has_focus-gated outcomes (the roving cursor on result.focused_id) are observable.
 static FlListRange marquee_frame_ex(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* set, const u64* ids, u32 count,
                                     u32 modifiers, float mx, float my, bool held, bool pressed, bool released,
@@ -1292,8 +1292,8 @@ UTEST(list_declarative, policy_outcomes) {
     ASSERT_FALSE_MSG(nr_drop.reorder_emitted, "reorderable=false: releasing emits no reorder request");
 
     // ---------------------------------------------------------------------------------------------------------------
-    // (6) Empty / NULL edges: count==0 and items==NULL both render a clean empty list (no crash, zero result). The
-    // NULL-items case feeds a non-zero count to prove ui_list ignores the count without its backing array.
+    // (6) Empty / nullptr edges: count==0 and items==nullptr both render a clean empty list (no crash, zero result).
+    // The null-items case feeds a non-zero count to prove ui_list ignores the count without its backing array.
     FlListResult empty = decl_frame_ex(ctx, ID("decl_empty"), items, 0, nullptr, -100.0f, -100.0f, false, false, false,
                                        false, false, FlKeyModifier_None, no_reorder);
     ASSERT_EQ_MSG((u64)0, empty.activated_id, "empty list: nothing activated");
@@ -1301,7 +1301,8 @@ UTEST(list_declarative, policy_outcomes) {
     ASSERT_FALSE_MSG(empty.reorder_emitted, "empty list: no reorder");
     FlListResult null_items = decl_frame_ex(ctx, ID("decl_null"), nullptr, count, nullptr, -100.0f, -100.0f, false,
                                             false, false, false, false, FlKeyModifier_None, no_reorder);
-    ASSERT_EQ_MSG((u64)0, null_items.activated_id, "NULL items with a non-zero count is treated as empty (no crash)");
+    ASSERT_EQ_MSG((u64)0, null_items.activated_id,
+                  "nullptr items with a non-zero count is treated as empty (no crash)");
 
     selection_set_destroy(set);
     fl_app_destroy(app);

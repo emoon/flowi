@@ -79,7 +79,7 @@ void gpu_image_slots_release_static(GpuImageSlots* slots, FlImageHandle handle) 
 }
 
 int gpu_image_slots_touch_dynamic(GpuImageSlots* slots, const void* pixels, u32 w, u32 h, u32 stride, bool alpha_only) {
-    GpuSlotImage* img = NULL;
+    GpuSlotImage* img = nullptr;
     u32 index = 0;
     for (u32 i = 0; i < slots->image_count; i++) {
         if (slots->images[i].is_dynamic && slots->images[i].pixels == pixels) {
@@ -88,7 +88,7 @@ int gpu_image_slots_touch_dynamic(GpuImageSlots* slots, const void* pixels, u32 
             break;
         }
     }
-    if (img == NULL) {
+    if (img == nullptr) {
         if (slots->image_count >= GPU_IMAGE_SLOT_TABLE_CAP) {
             if (!slots->table_full_diagnosed) {
                 log_error("gpu backend: image-slot table full (%d) - dynamic image dropped", GPU_IMAGE_SLOT_TABLE_CAP);

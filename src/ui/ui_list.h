@@ -20,9 +20,9 @@ FlListContext* ui_list_create(FlArena* arena);
 // Begin a virtualized list over the app's full ordered id slice (ordered_ids, count entries). count is
 // both the virtualization total and the model length forwarded to selection_set_apply. set is the
 // caller-owned selection storage the List auto-applies emitted requests into and resolves the highlight from;
-// pass NULL to opt out of auto-apply/highlight (the app then owns them via result.requests). ordered_ids is
-// borrowed for the whole begin->end scope and is required when set is non-NULL (may be NULL when set is
-// NULL). Returns the visible index range to emit.
+// pass nullptr to opt out of auto-apply/highlight (the app then owns them via result.requests). ordered_ids is
+// borrowed for the whole begin->end scope and is required when set is non-null (may be nullptr when set is
+// nullptr). Returns the visible index range to emit.
 FlListRange ui_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config);
 
 // Begin one row carrying the opaque stable_id; returns its interaction signal (computed from the previous

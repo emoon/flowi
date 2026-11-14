@@ -41,13 +41,13 @@ static const char* k_fragment_shader
 
 static GLuint compile_shader(const SdlCompositorGl* gl, GLenum stage, const char* src) {
     GLuint shader = gl->CreateShader(stage);
-    gl->ShaderSource(shader, 1, &src, NULL);
+    gl->ShaderSource(shader, 1, &src, nullptr);
     gl->CompileShader(shader);
     GLint ok = 0;
     gl->GetShaderiv(shader, GL_COMPILE_STATUS, &ok);
     if (!ok) {
         char info[1024];
-        gl->GetShaderInfoLog(shader, sizeof(info), NULL, info);
+        gl->GetShaderInfoLog(shader, sizeof(info), nullptr, info);
         log_error("fl_app window: compositor shader compile failed: %s", info);
         gl->DeleteShader(shader);
         return 0;
@@ -78,7 +78,7 @@ GLuint sdl_build_compositor_program(const SdlCompositorGl* gl) {
     gl->GetProgramiv(prog, GL_LINK_STATUS, &ok);
     if (!ok) {
         char info[1024];
-        gl->GetProgramInfoLog(prog, sizeof(info), NULL, info);
+        gl->GetProgramInfoLog(prog, sizeof(info), nullptr, info);
         log_error("fl_app window: compositor program link failed: %s", info);
         gl->DeleteProgram(prog);
         return 0;

@@ -133,5 +133,5 @@ static inline bool vfs_is_pending(VfsOpStatus status) {
 // Driver Registration (for extending VFS)
 //
 // Hand a constructed driver to the VFS. Call after fl_vfs_init(). The plugin pointer must outlive the VFS.
-// instance: Optional driver instance handle passed to every driver op (NULL for stateless drivers)
+// instance: Optional driver instance handle passed to every driver op (nullptr for stateless drivers)
 void vfs_register_driver(const FlVfsPlugin* plugin, void* instance);

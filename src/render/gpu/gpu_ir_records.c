@@ -59,18 +59,18 @@ void gpu_ir_walk(const void* ir_commands, size_t ir_bytes, GpuRecordFn fn, void*
 // byte_size, which is rounded up to the 8-byte record stride and so can leave trailing padding past the effect.
 const FlEffect* gpu_record_effect(const FlCmdHeader* header) {
     if ((header->flags & FL_HAS_EFFECT) == 0) {
-        return NULL;
+        return nullptr;
     }
     const RecordLayout* layout = layout_of(header->kind);
     if (layout->payload_size == 0) {
         log_warning("gpu translate: dropping the effect on command kind %u - no payload size for it",
                     (unsigned)header->kind);
-        return NULL;
+        return nullptr;
     }
     const u8* payload = (const u8*)(header + 1);
     size_t size = layout->payload_size + (size_t)element_count(layout, payload) * layout->elem_size;
     const FlEffect* e = (const FlEffect*)(payload + size);
-    return e->kind != FlEffectKind_None ? e : NULL;
+    return e->kind != FlEffectKind_None ? e : nullptr;
 }
 
 u32 gpu_record_cmd_bound(const FlCmdHeader* header) {

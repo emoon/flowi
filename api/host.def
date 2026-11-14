@@ -33,7 +33,7 @@ struct Host {}
 api Host {
     /// Bring up the embedded tier on arena and open its window at the settings' render size: render
     /// backend, shared resource tier, VFS, image system, font cache, render surface and UI context.
-    /// Returns NULL on failure, having logged the reason.
+    /// Returns null on failure, having logged the reason.
     [manual] create(arena: *FlArena, settings: *const HostSettings) -> *Host
     /// Tear the host down and release everything it owns, its window included. No-op on a null handle.
     [manual] destroy(host: *Host)

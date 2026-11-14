@@ -21,8 +21,8 @@ typedef struct MetalCellDispatch {
     id<MTLTexture> target;                // the atlas cell the dispatch image-stores into
     const f32* curves;                    // the lowered quadratics: 3 float2 per quad, padded-cell-local
     u32 quad_count;
-    // The color program's per-shape records (quad range, premultiplied color, fill rule), NULL for the coverage
-    // program. NULL also selects the coverage binding set below.
+    // The color program's per-shape records (quad range, premultiplied color, fill rule), nullptr for the coverage
+    // program. nullptr also selects the coverage binding set below.
     const GpuColorShape* shapes;
     u32 shape_count;
     u32 origin[2]; // the padded cell's texel position in the atlas
@@ -41,7 +41,7 @@ static bool metal_dispatch_cell(MetalShared* self, const MetalCellDispatch* d) {
             return false;
         }
         id<MTLBuffer> shape_buf = nil;
-        if (d->shapes != NULL) {
+        if (d->shapes != nullptr) {
             // Taken before the encoder opens so a failure leaves nothing half-encoded.
             shape_buf = metal_upload_ssbo(self->device, d->shapes, (NSUInteger)d->shape_count * sizeof(GpuColorShape),
                                           sizeof(GpuColorShape)); // +1 owned

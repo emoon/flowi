@@ -50,7 +50,7 @@ UTEST(selection, copy_ids_snapshot) {
     }
     EXPECT_EQ((int)sum, 10);
     EXPECT_EQ((int)selection_set_copy_ids(s, out, 2), 2);
-    EXPECT_EQ((int)selection_set_copy_ids(s, NULL, 0), 0); // size-first / no-buffer path
+    EXPECT_EQ((int)selection_set_copy_ids(s, nullptr, 0), 0); // size-first / no-buffer path
     selection_set_destroy(s);
 }
 
@@ -61,7 +61,7 @@ UTEST(selection, apply_set_one_no_enumeration_needed) {
         { .kind = FlSelectionRequestKind_SetOne, .id = 6, .selected = true },
         { .kind = FlSelectionRequestKind_SetOne, .id = 5, .selected = false },
     };
-    selection_set_apply(s, reqs, 3, NULL, 0); // SetOne/ClearAll never need the ordered list
+    selection_set_apply(s, reqs, 3, nullptr, 0); // SetOne/ClearAll never need the ordered list
     EXPECT_FALSE(selection_set_contains(s, 5));
     EXPECT_TRUE(selection_set_contains(s, 6));
     EXPECT_EQ((int)selection_set_len(s), 1);
@@ -76,7 +76,7 @@ UTEST(selection, apply_sequence_is_semantics) {
         { .kind = FlSelectionRequestKind_ClearAll },
         { .kind = FlSelectionRequestKind_SetOne, .id = 7, .selected = true },
     };
-    selection_set_apply(s, reqs, 2, NULL, 0);
+    selection_set_apply(s, reqs, 2, nullptr, 0);
     EXPECT_EQ((int)selection_set_len(s), 1);
     EXPECT_TRUE(selection_set_contains(s, 7));
     selection_set_destroy(s);
@@ -541,7 +541,7 @@ UTEST(input, new_context_gamepads_start_at_default_dead_zone) {
 
 UTEST(text_buffer, empty_filter_permits_control_whitespace) {
     // With no allow-list the control-whitespace trio is permitted.
-    FlString no_filter = (FlString) { .data = NULL, .length = 0 };
+    FlString no_filter = (FlString) { .data = nullptr, .length = 0 };
     EXPECT_TRUE(text_buffer_filter_char('\n', no_filter));
     EXPECT_TRUE(text_buffer_filter_char('\r', no_filter));
     EXPECT_TRUE(text_buffer_filter_char('\t', no_filter));
@@ -591,7 +591,7 @@ UTEST(text_buffer, grow_doubles_with_floor_and_preserves) {
 
 // slider_format: ui_slider_format_value (ui/ui.c) - the seam that turns a slider's value + printf format into its
 // display string. The int path must apply the format to an integer, so a %d-style format never reaches a float
-// formatter. NULL falls back to a bare integer, not "5.00".
+// formatter. nullptr falls back to a bare integer, not "5.00".
 
 UTEST(slider_format, int_arbitrary_formats) {
     FlString a = ui_slider_format_value(s_arena, "%d", 5.0f, true);

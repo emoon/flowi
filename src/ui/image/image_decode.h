@@ -67,7 +67,7 @@ typedef struct ImageThumbnailOptions {
 
 // Decode API
 
-// Decode an image from a memory buffer (synchronous). Allocates result and pixels from arena; returns NULL on
+// Decode an image from a memory buffer (synchronous). Allocates result and pixels from arena; returns nullptr on
 // failure. Detects SVG vs raster and decodes via nanosvg or stb_image:
 // - SVG/waveform: rasterizes at target size, premultiplies, detects grayscale (final)
 // - Raster: returns the raw decoded pixels (not premultiplied, not resized) with needs_thumbnail_compose set

@@ -4,7 +4,7 @@
 // / item_end for each visible row, then end.
 extern "C" {
     /// Begin a virtualized list identified by id over the app's full ordered id slice (ordered_ids of
-    /// count entries), applying selection into set (NULL opts out), with layout config. Returns the
+    /// count entries), applying selection into set (null opts out), with layout config. Returns the
     /// visible index range to emit; pair with end.
     pub fn fl_list_begin(id: crate::sys::LayoutId, ordered_ids: *const u64, count: u32, set: *mut crate::sys::SelectionSet, config: crate::sys::ListConfig) -> crate::sys::ListRange;
     /// Begin one row carrying the opaque stable_id; returns its interaction Signal (hover /

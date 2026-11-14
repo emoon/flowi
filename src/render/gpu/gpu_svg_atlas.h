@@ -75,7 +75,7 @@ void gpu_svg_atlas_init(GpuSvgAtlas* atlas, struct FlArena* arena, GpuSvgTexelFo
 // cls, authored fill mono_color (the monochrome draw default; ignored for multi-color), and retained geometry
 // source vector. If the handle's current live cell already matches size, that cell is returned unchanged and the
 // recorded classification, color, and geometry stand. Otherwise a new cell is appended and any prior live cell for
-// the handle is orphaned. Returns NULL when the entry table is full or the packer refuses. The returned entry is
+// the handle is orphaned. Returns nullptr when the entry table is full or the packer refuses. The returned entry is
 // valid until the next place call.
 const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle, u16 size, u32 w, u32 h,
                                        FlVectorClass cls, FlColor mono_color, const FlVectorImage* vector);
@@ -86,6 +86,6 @@ const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle,
 // re-raster every surviving cell from its retained geometry afterward. After this returns every entry is live.
 void gpu_svg_atlas_compact(GpuSvgAtlas* atlas);
 
-// Resolve a handle to its single current live cell. Returns NULL when nothing live was prepared for it.
+// Resolve a handle to its single current live cell. Returns nullptr when nothing live was prepared for it.
 // Valid until the next place call.
 const GpuSvgEntry* gpu_svg_atlas_find(const GpuSvgAtlas* atlas, FlImageHandle handle);

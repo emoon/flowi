@@ -367,7 +367,7 @@ typedef struct UiShared {
 
     // App UI feedback hook. One app-wide hook the interaction layer calls on discrete, human-driven
     // events (focus moved, nav edge hit, widget activated) so the app can attach sound/haptics/a11y/telemetry.
-    // NULL by default: no event is emitted until an app installs one via fl_ui_set_feedback_hook.
+    // nullptr by default: no event is emitted until an app installs one via fl_ui_set_feedback_hook.
     FlUiFeedbackCallback feedback_hook;
     void* feedback_user_data;
 
@@ -669,8 +669,8 @@ void ui_frame_end_and_update_input(FlUiCtx* ctx, double dt);
 // ui_item_behavior - the flag-composed widget-behavior primitive - is declared in ui.h.
 
 // Format a slider's display value into arena. Int sliders apply the format to the rounded integer value (so
-// arbitrary int formats like "%3d" or "%d ms" are well-defined and a NULL format falls back to "%d"); float
-// sliders apply it to the float value (NULL falls back to "%.2f").
+// arbitrary int formats like "%3d" or "%d ms" are well-defined and a nullptr format falls back to "%d"); float
+// sliders apply it to the float value (nullptr falls back to "%.2f").
 FlString ui_slider_format_value(FlArena* arena, const char* format, float value, bool is_int);
 
 // ui_layout_id_to_clay_id - resolve a LayoutId to its u32 element id - is declared in ui.h.

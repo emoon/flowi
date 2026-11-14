@@ -33,7 +33,7 @@ bool gpu_prepare_image_place_atlas(GpuImageAtlas* atlas, FlImageLoadRequestId re
     u32 w = (u32)decoded->width;
     u32 h = (u32)decoded->height;
     const GpuImageAtlasEntry* entry = gpu_image_atlas_place(atlas, (FlImageHandle)request_id, w, h);
-    if (entry == NULL) {
+    if (entry == nullptr) {
         return false; // gpu_image_atlas_place logged the reason
     }
 
@@ -76,10 +76,10 @@ GpuGlyphCell gpu_prepare_glyph_cell(const FlGlyphOutline* outline) {
 
 bool gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, FlArena* arena, FlFontId font, u16 size, u32 glyph_id,
                              const FlGlyphOutline* outline, GpuGlyphRaster* out) {
-    if (outline == NULL) {
+    if (outline == nullptr) {
         return false;
     }
-    if (gpu_glyph_atlas_find(atlas, font, size, glyph_id) != NULL) {
+    if (gpu_glyph_atlas_find(atlas, font, size, glyph_id) != nullptr) {
         return false;
     }
 
@@ -89,7 +89,7 @@ bool gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, FlArena* arena, FlFontId font
     if (cell.empty) {
         return false;
     }
-    if (entry == NULL) {
+    if (entry == nullptr) {
         // The repack is deferred to the end of render().
         gpu_glyph_atlas_on_overflow(atlas);
         return false;
@@ -122,7 +122,7 @@ bool gpu_prepare_svg_fit(const FlVectorImage* vector, u16 size, GpuSvgCellFit* o
 
 bool gpu_prepare_svg_cell_geometry(FlArena* arena, const GpuSvgEntry* entry, const FlVectorImage* vector, bool color,
                                    GpuSvgCellGeometry* out) {
-    if (vector == NULL || vector->shape_count == 0) {
+    if (vector == nullptr || vector->shape_count == 0) {
         return false;
     }
     GpuSvgCellFit fit;
@@ -181,7 +181,7 @@ bool gpu_prepare_svg_cell_geometry(FlArena* arena, const GpuSvgEntry* entry, con
 void gpu_prepare_vector_into(void* backend, GpuSvgAtlas* atlas, FlImageHandle handle, u16 size,
                              const FlVectorImage* vector, bool color, GpuRasterCellFn raster_cell, u32* compact_count) {
     const GpuSvgEntry* live = gpu_svg_atlas_find(atlas, handle);
-    if (live != NULL && live->size == size) {
+    if (live != nullptr && live->size == size) {
         return; // already rasterized at this size - no re-dispatch
     }
 
@@ -192,7 +192,7 @@ void gpu_prepare_vector_into(void* backend, GpuSvgAtlas* atlas, FlImageHandle ha
 
     const GpuSvgEntry* entry
         = gpu_svg_atlas_place(atlas, handle, size, fit.pw, fit.ph, vector->classification, vector->mono_color, vector);
-    if (entry == NULL) {
+    if (entry == nullptr) {
         // Atlas full: compact wholesale - reclaim the orphaned cells by repacking only the live ones - then
         // re-raster every survivor into its new position from its retained geometry (the texels still sit at the
         // pre-compaction positions) before retrying.
@@ -204,7 +204,7 @@ void gpu_prepare_vector_into(void* backend, GpuSvgAtlas* atlas, FlImageHandle ha
         }
         entry = gpu_svg_atlas_place(atlas, handle, size, fit.pw, fit.ph, vector->classification, vector->mono_color,
                                     vector);
-        if (entry == NULL) {
+        if (entry == nullptr) {
             return;
         }
     }
@@ -214,7 +214,7 @@ void gpu_prepare_vector_into(void* backend, GpuSvgAtlas* atlas, FlImageHandle ha
 
 void gpu_prepare_vector(void* backend, GpuSvgAtlas* mono_atlas, GpuSvgAtlas* color_atlas, FlImageHandle handle,
                         u16 size, const FlVectorImage* vector, GpuRasterCellFn raster_cell, u32* compact_count) {
-    if (vector == NULL || vector->shape_count == 0) {
+    if (vector == nullptr || vector->shape_count == 0) {
         return;
     }
     bool color = vector->classification != FlVectorClass_Monochrome;

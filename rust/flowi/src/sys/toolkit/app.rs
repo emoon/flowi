@@ -36,7 +36,7 @@ const _: () = {
 // The app runner: create it, drive it one frame at a time with tick or block in run until quit, and emit
 // UI inside the supplied AppFrameFn. The `inject_*` / `headless_*` calls form the headless-test harness.
 extern "C" {
-    /// Create an fl_app from settings. Returns NULL on failure (e.g. GPU requested on a build without it).
+    /// Create an fl_app from settings. Returns null on failure (e.g. GPU requested on a build without it).
     pub fn fl_app_create(settings: *const crate::sys::AppSettings) -> *mut crate::sys::App;
     /// Tear the app down and free it. No-op on a null handle.
     pub fn fl_app_destroy(app: *mut crate::sys::App);

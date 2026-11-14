@@ -14,7 +14,7 @@ static bool sdl_software_create_window(SdlWindowContext* self, FlWindow* window,
     }
     // The streaming texture is created on the first present_software.
     window->renderer = SDL_CreateRenderer(window->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (window->renderer == NULL) {
+    if (window->renderer == nullptr) {
         log_error("fl_app window: SDL_CreateRenderer failed: %s", SDL_GetError());
         SDL_DestroyWindow(window->window);
         return false;
@@ -24,15 +24,15 @@ static bool sdl_software_create_window(SdlWindowContext* self, FlWindow* window,
 
 static void sdl_software_destroy_window(SdlWindowContext* self, FlWindow* window) {
     UNUSED(self);
-    if (window->renderer == NULL) {
+    if (window->renderer == nullptr) {
         return;
     }
-    if (window->ui_texture != NULL) {
+    if (window->ui_texture != nullptr) {
         SDL_DestroyTexture(window->ui_texture);
-        window->ui_texture = NULL;
+        window->ui_texture = nullptr;
     }
     SDL_DestroyRenderer(window->renderer);
-    window->renderer = NULL;
+    window->renderer = nullptr;
 }
 
 static void sdl_software_pixel_size(FlWindow* window, int* px_w, int* px_h) {
@@ -40,7 +40,7 @@ static void sdl_software_pixel_size(FlWindow* window, int* px_w, int* px_h) {
 }
 
 static bool sdl_software_texture_matches(const FlWindow* window, u32 tex_width, u32 tex_height) {
-    if (window->ui_texture == NULL) {
+    if (window->ui_texture == nullptr) {
         return false;
     }
     return (u32)window->tex_w == tex_width && (u32)window->tex_h == tex_height;
@@ -51,13 +51,13 @@ static bool sdl_software_ensure_texture(FlWindow* window, u32 tex_width, u32 tex
     if (sdl_software_texture_matches(window, tex_width, tex_height)) {
         return true;
     }
-    if (window->ui_texture != NULL) {
+    if (window->ui_texture != nullptr) {
         SDL_DestroyTexture(window->ui_texture);
-        window->ui_texture = NULL;
+        window->ui_texture = nullptr;
     }
     window->ui_texture = SDL_CreateTexture(window->renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING,
                                            (int)tex_width, (int)tex_height);
-    if (window->ui_texture == NULL) {
+    if (window->ui_texture == nullptr) {
         log_error("fl_app window: streaming texture creation failed (%ux%u): %s", tex_width, tex_height,
                   SDL_GetError());
         window->tex_w = 0;
@@ -72,10 +72,10 @@ static bool sdl_software_ensure_texture(FlWindow* window, u32 tex_width, u32 tex
 
 static void sdl_present_software(void* ud, FlWindow* window, const FlRgb24Frame* frame) {
     UNUSED(ud);
-    if (window == NULL || window->renderer == NULL) {
+    if (window == nullptr || window->renderer == nullptr) {
         return;
     }
-    if (frame->pixels == NULL) {
+    if (frame->pixels == nullptr) {
         return;
     }
     if (frame->width == 0 || frame->height == 0) {
@@ -84,10 +84,10 @@ static void sdl_present_software(void* ud, FlWindow* window, const FlRgb24Frame*
     if (!sdl_software_ensure_texture(window, frame->width, frame->height)) {
         return;
     }
-    SDL_UpdateTexture(window->ui_texture, NULL, frame->pixels, (int)frame->stride);
+    SDL_UpdateTexture(window->ui_texture, nullptr, frame->pixels, (int)frame->stride);
     SDL_SetRenderDrawColor(window->renderer, 0, 0, 0, 255);
     SDL_RenderClear(window->renderer);
-    SDL_RenderCopy(window->renderer, window->ui_texture, NULL, NULL);
+    SDL_RenderCopy(window->renderer, window->ui_texture, nullptr, nullptr);
     SDL_RenderPresent(window->renderer);
 }
 

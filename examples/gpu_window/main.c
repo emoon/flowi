@@ -101,13 +101,13 @@ static const char* k_fragment_shader = "#version 430 core\n"
 
 static GLuint compile(const CompositorGl* gl, GLenum stage, const char* src) {
     GLuint shader = gl->CreateShader(stage);
-    gl->ShaderSource(shader, 1, &src, NULL);
+    gl->ShaderSource(shader, 1, &src, nullptr);
     gl->CompileShader(shader);
     GLint ok = 0;
     gl->GetShaderiv(shader, GL_COMPILE_STATUS, &ok);
     if (!ok) {
         char info[1024];
-        gl->GetShaderInfoLog(shader, sizeof(info), NULL, info);
+        gl->GetShaderInfoLog(shader, sizeof(info), nullptr, info);
         log_error("compositor shader compile failed: %s", info);
         gl->DeleteShader(shader);
         return 0;
@@ -131,7 +131,7 @@ static GLuint build_compositor_program(const CompositorGl* gl) {
     gl->GetProgramiv(prog, GL_LINK_STATUS, &ok);
     if (!ok) {
         char info[1024];
-        gl->GetProgramInfoLog(prog, sizeof(info), NULL, info);
+        gl->GetProgramInfoLog(prog, sizeof(info), nullptr, info);
         log_error("compositor program link failed: %s", info);
         return 0;
     }
@@ -216,14 +216,14 @@ static void vw_border(FlArena* a, View v, FlRect r, f32 wl, f32 wr, f32 wt, f32 
     fl_ir_border(a, v_rect(v, r), v_len(v, wl), v_len(v, wr), v_len(v, wt), v_len(v, wb), v_radius(v, cr), col);
 }
 static void vw_circle(FlArena* a, View v, f32 cx, f32 cy, f32 radius, FlColor col, FlColor bcol, f32 bw) {
-    fl_ir_circle(a, v_x(v, cx), v_y(v, cy), v_len(v, radius), col, bcol, v_len(v, bw), NULL);
+    fl_ir_circle(a, v_x(v, cx), v_y(v, cy), v_len(v, radius), col, bcol, v_len(v, bw), nullptr);
 }
 static void vw_diamond(FlArena* a, View v, f32 cx, f32 cy, f32 rx, f32 ry, FlColor col, FlColor bcol, f32 bw) {
-    fl_ir_diamond(a, v_x(v, cx), v_y(v, cy), v_len(v, rx), v_len(v, ry), col, bcol, v_len(v, bw), NULL);
+    fl_ir_diamond(a, v_x(v, cx), v_y(v, cy), v_len(v, rx), v_len(v, ry), col, bcol, v_len(v, bw), nullptr);
 }
 static void vw_arc(FlArena* a, View v, f32 cx, f32 cy, f32 radius, f32 thick, f32 start, f32 sweep, FlColor col,
                    u32 flags) {
-    fl_ir_arc(a, v_x(v, cx), v_y(v, cy), v_len(v, radius), v_len(v, thick), start, sweep, col, flags, NULL);
+    fl_ir_arc(a, v_x(v, cx), v_y(v, cy), v_len(v, radius), v_len(v, thick), start, sweep, col, flags, nullptr);
 }
 static void vw_image(FlArena* a, View v, FlImageSource src, FlImageMode mode, FlRect dst, FlRect src_rect, FlColor tint,
                      FlImageFilter filter) {
@@ -273,7 +273,7 @@ static void draw_text(FlArena* arena, FlArena* scratch, FlRenderBackend* backend
     // packer, dropping glyphs.
     f32 margin = size_world;
 
-    if (backend->prepare_glyph != NULL) {
+    if (backend->prepare_glyph != nullptr) {
         f32 world_x = x;
         Utf8Iter it = utf8_iter(text);
         while (!utf8_iter_done(&it)) {
@@ -325,7 +325,7 @@ static void draw_text(FlArena* arena, FlArena* scratch, FlRenderBackend* backend
 
 // A parsed SVG icon bound to the backend handle its prepared atlas cell is keyed under.
 typedef struct SvgIcon {
-    const FlVectorImage* image; // resolution-independent contours (NULL if parse failed)
+    const FlVectorImage* image; // resolution-independent contours (nullptr if parse failed)
     FlImageHandle handle;
 } SvgIcon;
 
@@ -333,13 +333,13 @@ typedef struct SvgIcon {
 // shared vector layer's contours into its zoom-regenerated SVG atlas keyed by (handle, quantized size), so
 // exactly like glyphs this re-prepares every frame at the size the physical (zoomed) dst needs:
 // svg_raster_size_for_dst quantizes, and prepare_vector short-circuits unless a quantized step is crossed.
-// Monochrome icons resolve to tintable coverage; multi-color ones to baked RGBA, tint ignored. A NULL image
+// Monochrome icons resolve to tintable coverage; multi-color ones to baked RGBA, tint ignored. A nullptr image
 // (parse failure) no-ops.
 static void draw_svg(FlArena* arena, FlRenderBackend* backend, View v, SvgIcon icon, FlRect dst_world, FlColor tint) {
-    if (icon.image == NULL) {
+    if (icon.image == nullptr) {
         return;
     }
-    if (backend->prepare_vector != NULL) {
+    if (backend->prepare_vector != nullptr) {
         u16 size = svg_raster_size_for_dst(v_len(v, dst_world.w), v_len(v, dst_world.h), icon.image->classification);
         backend->prepare_vector(backend->user_data, icon.handle, size, icon.image);
     }
@@ -429,14 +429,14 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
         f32 x0 = c.x + 14;
         f32 span = CELL_W - 28.0f;
         f32 mid = c.y + 50;
-        FlPolyPoint* stroke = fl_ir_polyline(arena, k_accent, k_accent, v_len(v, 2.5f), v_y(v, mid), 0, N, NULL);
+        FlPolyPoint* stroke = fl_ir_polyline(arena, k_accent, k_accent, v_len(v, 2.5f), v_y(v, mid), 0, N, nullptr);
         for (int i = 0; i < N; i++) {
             f32 t = (f32)i / (f32)(N - 1);
             stroke[i] = (FlPolyPoint) { v_x(v, x0 + t * span), v_y(v, mid - 22.0f * sinf(t * 6.2831853f)), 1.0f };
         }
         f32 base = c.y + 124;
         FlPolyPoint* fill
-            = fl_ir_polyline(arena, k_green, k_green, v_len(v, 1.5f), v_y(v, base), FlPolylineFlags_filled, N, NULL);
+            = fl_ir_polyline(arena, k_green, k_green, v_len(v, 1.5f), v_y(v, base), FlPolylineFlags_filled, N, nullptr);
         for (int i = 0; i < N; i++) {
             f32 t = (f32)i / (f32)(N - 1);
             fill[i]
@@ -452,7 +452,7 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
         f32 bw = 12.0f;
         f32 gap = 4.0f;
         f32 x0 = c.x + 16;
-        FlBar* bars = fl_ir_bars(arena, v_y(v, base), k_accent, N, NULL);
+        FlBar* bars = fl_ir_bars(arena, v_y(v, base), k_accent, N, nullptr);
         for (int i = 0; i < N; i++) {
             f32 t = (f32)i / (f32)(N - 1);
             f32 h = 20.0f + 70.0f * (0.5f + 0.5f * sinf(t * 7.0f));
@@ -519,7 +519,7 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
 // handle as the request id and reference it as a kind-0 source.
 
 static void prepare_demo_image(FlRenderBackend* backend, FlArena* scratch, FlImageHandle handle) {
-    if (backend->prepare_image == NULL) {
+    if (backend->prepare_image == nullptr) {
         return;
     }
     enum { W = 32, H = 32 };
@@ -548,7 +548,7 @@ static void prepare_demo_image(FlRenderBackend* backend, FlArena* scratch, FlIma
 
 int main(void) {
     FlArena* arena = fl_init(1);
-    if (arena == NULL) {
+    if (arena == nullptr) {
         log_error("fl_init failed");
         return 1;
     }
@@ -570,13 +570,13 @@ int main(void) {
     int height = 800;
     SDL_Window* window = SDL_CreateWindow("flowi — GPU backend", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width,
                                           height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    if (window == NULL) {
+    if (window == nullptr) {
         log_error("SDL_CreateWindow failed: %s", SDL_GetError());
         return 1;
     }
 
     SDL_GLContext gl_ctx = SDL_GL_CreateContext(window);
-    if (gl_ctx == NULL) {
+    if (gl_ctx == nullptr) {
         log_error("SDL_GL_CreateContext failed: %s", SDL_GetError());
         return 1;
     }
@@ -595,7 +595,7 @@ int main(void) {
 
     // Construct the GPU backend against the now-current context.
     FlRenderBackend backend = create_gpu_renderer(arena);
-    if (backend.render == NULL) {
+    if (backend.render == nullptr) {
         log_error("create_gpu_renderer failed — context below GL 4.3 or shader compile error");
         return 1;
     }
@@ -610,7 +610,7 @@ int main(void) {
     // outline/advance lookups key on.
     FlFontId font
         = font_cache_load_font_memory(font_cache, k_roboto_regular_ttf, (i64)sizeof(k_roboto_regular_ttf), 16);
-    if (backend.set_font_cache != NULL) {
+    if (backend.set_font_cache != nullptr) {
         backend.set_font_cache(backend.user_data, font_cache);
     }
 

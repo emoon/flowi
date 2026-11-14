@@ -51,8 +51,9 @@ static void emit_slot_image(GpuTranslate* tr, const FlCmdImage* im, SlotRef imag
 }
 
 static bool emit_atlas_image(GpuTranslate* tr, const FlCmdImage* im) {
-    const GpuImageAtlasEntry* entry = tr->atlas != NULL ? gpu_image_atlas_find(tr->atlas, im->source.handle) : NULL;
-    if (entry == NULL) {
+    const GpuImageAtlasEntry* entry
+        = tr->atlas != nullptr ? gpu_image_atlas_find(tr->atlas, im->source.handle) : nullptr;
+    if (entry == nullptr) {
         return false;
     }
     f32 src[4];
@@ -99,8 +100,8 @@ static void emit_svg_cell(GpuTranslate* tr, const FlCmdImage* im, SvgRoute route
 }
 
 static bool emit_mono_svg(GpuTranslate* tr, const FlCmdImage* im) {
-    const GpuSvgEntry* svg = tr->svg != NULL ? gpu_svg_atlas_find(tr->svg, im->source.handle) : NULL;
-    if (svg == NULL) {
+    const GpuSvgEntry* svg = tr->svg != nullptr ? gpu_svg_atlas_find(tr->svg, im->source.handle) : nullptr;
+    if (svg == nullptr) {
         return false;
     }
     // Default tint is the icon's authored fill; a non-identity record tint overrides it.
@@ -109,8 +110,8 @@ static bool emit_mono_svg(GpuTranslate* tr, const FlCmdImage* im) {
 }
 
 static bool emit_color_svg(GpuTranslate* tr, const FlCmdImage* im) {
-    const GpuSvgEntry* svg = tr->svg_color != NULL ? gpu_svg_atlas_find(tr->svg_color, im->source.handle) : NULL;
-    if (svg == NULL) {
+    const GpuSvgEntry* svg = tr->svg_color != nullptr ? gpu_svg_atlas_find(tr->svg_color, im->source.handle) : nullptr;
+    if (svg == nullptr) {
         return false;
     }
     emit_svg_cell(tr, im, (SvgRoute) { svg, GpuDraw_SvgColor, im->tint });
@@ -118,7 +119,7 @@ static bool emit_color_svg(GpuTranslate* tr, const FlCmdImage* im) {
 }
 
 static void emit_static_slot_image(GpuTranslate* tr, const FlCmdImage* im) {
-    int index = tr->slots != NULL ? gpu_image_slots_find_static(tr->slots, im->source.handle) : -1;
+    int index = tr->slots != nullptr ? gpu_image_slots_find_static(tr->slots, im->source.handle) : -1;
     if (index < 0 || !gpu_clip_visible(tr, gpu_aabb_from_rect(im->dst))) {
         return; // never prepared (or released), or fully clipped - no slot claimed
     }
@@ -142,7 +143,7 @@ static void translate_static_image(GpuTranslate* tr, const FlCmdImage* im) {
 
 static bool dynamic_source_usable(const GpuTranslate* tr, const FlCmdImage* im) {
     const FlImageSource* src = &im->source;
-    if (tr->slots == NULL || src->dynamic.pixels == NULL) {
+    if (tr->slots == nullptr || src->dynamic.pixels == nullptr) {
         return false;
     }
     return src->dynamic.w != 0 && src->dynamic.h != 0;
@@ -186,7 +187,7 @@ void gpu_translate_image(GpuTranslate* tr, const void* payload) {
 // shader's linear sample.
 static void emit_glyph(GpuTranslate* tr, const FlCmdTextRun* run, const FlGlyph* glyph, u32 tint) {
     const GpuGlyphEntry* e = gpu_glyph_atlas_find(tr->glyphs, run->font, run->size, glyph->glyph_id);
-    if (e == NULL) {
+    if (e == nullptr) {
         return;
     }
     if (e->cell.w == 0 || e->cell.h == 0) {
@@ -212,7 +213,7 @@ static void emit_glyph(GpuTranslate* tr, const FlCmdTextRun* run, const FlGlyph*
 // font, run size, glyph id).
 void gpu_translate_text_run(GpuTranslate* tr, const void* payload) {
     const FlCmdTextRun* run = payload;
-    if (tr->glyphs == NULL) {
+    if (tr->glyphs == nullptr) {
         return;
     }
     const FlGlyph* glyphs = (const FlGlyph*)(run + 1);

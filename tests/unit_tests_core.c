@@ -495,7 +495,7 @@ UTEST(pool_allocator, sub_pointer_item_size_clamped) {
     void* items[COUNT];
     for (int i = 0; i < COUNT; ++i) {
         items[i] = pool_alloc_raw(&pool);
-        ASSERT_TRUE(items[i] != NULL);
+        ASSERT_TRUE(items[i] != nullptr);
         ASSERT_EQ((uintptr_t)items[i] % _Alignof(void*), (uintptr_t)0);
         for (int j = 0; j < i; ++j) {
             ASSERT_NE(items[i], items[j]);
@@ -508,7 +508,7 @@ UTEST(pool_allocator, sub_pointer_item_size_clamped) {
 
     for (int i = 0; i < COUNT; ++i) {
         char* p = (char*)pool_alloc_raw(&pool);
-        ASSERT_TRUE(p != NULL);
+        ASSERT_TRUE(p != nullptr);
         ASSERT_EQ((uintptr_t)p % _Alignof(void*), (uintptr_t)0);
         for (u64 b = 0; b < pool.item_size; ++b) {
             ASSERT_EQ(p[b], 0);
@@ -527,17 +527,17 @@ UTEST(pool_allocator, sub_pointer_item_size_clamped) {
     fl_arena_destroy(arena);
 }
 
-// tlsf: a realloc grow to a size the allocator can never satisfy must return NULL and leave the original
+// tlsf: a realloc grow to a size the allocator can never satisfy must return nullptr and leave the original
 // allocation (size, contents, pool integrity) untouched.
 
 UTEST(tlsf, realloc_oversize_fails_without_corruption) {
     static _Alignas(16) unsigned char mem[64 * 1024];
     tlsf_t tlsf = tlsf_create_with_pool(mem, sizeof(mem));
-    ASSERT_TRUE(tlsf != NULL);
+    ASSERT_TRUE(tlsf != nullptr);
 
     enum { ALLOC_SIZE = 256 };
     unsigned char* p = (unsigned char*)tlsf_malloc(tlsf, ALLOC_SIZE);
-    ASSERT_TRUE(p != NULL);
+    ASSERT_TRUE(p != nullptr);
     memset(p, 0xAB, ALLOC_SIZE);
     const size_t block = tlsf_block_size(p);
 
@@ -545,7 +545,7 @@ UTEST(tlsf, realloc_oversize_fails_without_corruption) {
     // internal align-up wraps: both must fail without touching the block.
     const size_t oversize[] = { tlsf_block_size_max(), tlsf_block_size_max() + 1, SIZE_MAX - 1, SIZE_MAX };
     for (size_t i = 0; i < sizeof_array(oversize); ++i) {
-        ASSERT_TRUE(tlsf_realloc(tlsf, p, oversize[i]) == NULL);
+        ASSERT_TRUE(tlsf_realloc(tlsf, p, oversize[i]) == nullptr);
         ASSERT_EQ(tlsf_block_size(p), block);
         for (int b = 0; b < ALLOC_SIZE; ++b) {
             ASSERT_EQ(p[b], 0xAB);
@@ -555,7 +555,7 @@ UTEST(tlsf, realloc_oversize_fails_without_corruption) {
     }
 
     void* q = tlsf_malloc(tlsf, 512);
-    ASSERT_TRUE(q != NULL);
+    ASSERT_TRUE(q != nullptr);
     tlsf_free(tlsf, q);
     tlsf_free(tlsf, p);
     ASSERT_EQ(tlsf_check(tlsf), 0);
@@ -572,7 +572,7 @@ UTEST(heap, alloc_aligned_size_not_multiple_of_alignment) {
         const u64 alignment = alignments[i];
         const u64 size = alignment + 1; // deliberately not a multiple of alignment
         void* p = fl_heap_alloc_aligned(alignment, size);
-        ASSERT_TRUE(p != NULL);
+        ASSERT_TRUE(p != nullptr);
         ASSERT_EQ((uintptr_t)p % alignment, (uintptr_t)0);
         memset(p, 0xCD, size); // the full requested range must be writable
         fl_heap_free_aligned(p);
@@ -664,7 +664,7 @@ UTEST(sprintf, snprintf_positive_count_still_truncates_and_terminates) {
 // A null-data FlString formatted via %S falls back to the literal "null", whatever length it carries.
 UTEST(sprintf, format_S_null_data_ignores_stale_length) {
     char buf[32];
-    FlString bogus = (FlString) { .data = NULL, .length = 100 };
+    FlString bogus = (FlString) { .data = nullptr, .length = 100 };
 
     const int len = stbsp_snprintf(buf, sizeof buf, "%S", bogus);
 
@@ -821,7 +821,7 @@ UTEST(env_expand, output_on_scratch_arena_survives_temp_rewind) {
     EXPECT_TRUE(fl_string_equals(kept, FL_S("${FLOWI_TEST_EXPAND_MISSING}/tail")));
 }
 
-// fl_hash_sha1: NULL data with zero length is the empty message and must produce the well-known SHA1("") digest,
+// fl_hash_sha1: nullptr data with zero length is the empty message and must produce the well-known SHA1("") digest,
 // never leave the output buffer untouched (callers would read uninitialized memory).
 
 UTEST(hash, sha1_null_empty_input_is_empty_string_digest) {
@@ -831,10 +831,10 @@ UTEST(hash, sha1_null_empty_input_is_empty_string_digest) {
 
     u8 digest[20];
     memset(digest, 0xab, sizeof(digest)); // poison so an untouched buffer fails deterministically
-    fl_hash_sha1(NULL, 0, digest);
+    fl_hash_sha1(nullptr, 0, digest);
     EXPECT_EQ(memcmp(digest, empty_digest, sizeof(digest)), 0);
 
-    // Non-NULL empty input agrees.
+    // Non-null empty input agrees.
     u8 digest2[20];
     memset(digest2, 0xcd, sizeof(digest2));
     fl_hash_sha1((const u8*)"", 0, digest2);
@@ -842,7 +842,7 @@ UTEST(hash, sha1_null_empty_input_is_empty_string_digest) {
 
     char hex[41];
     memset(hex, 0xef, sizeof(hex));
-    hash_sha1_hex(NULL, 0, hex);
+    hash_sha1_hex(nullptr, 0, hex);
     EXPECT_STREQ(hex, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
 }
 
@@ -925,8 +925,8 @@ UTEST(hash, crc32_chunked_matches_reference) {
     }
 
     // Empty input is zlib's initial CRC (0); update over zero bytes leaves the running CRC unchanged.
-    EXPECT_EQ(fl_hash_crc32(NULL, 0), 0u);
-    EXPECT_EQ(hash_crc32_update(whole, NULL, 0), whole);
+    EXPECT_EQ(fl_hash_crc32(nullptr, 0), 0u);
+    EXPECT_EQ(hash_crc32_update(whole, nullptr, 0), whole);
 }
 
 // cpu_topology: cpu_online_from_sysfs (core/cpu_topology.c) - the decision seam behind is_cpu_online. A missing

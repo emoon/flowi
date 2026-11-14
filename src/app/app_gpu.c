@@ -17,7 +17,7 @@
 // owned inside the render backend itself (gpu_metal.m), so the headless bootstrap has nothing of its own to
 // hold and just constructs the backend.
 
-// No context to own on Metal. A one-field placeholder so the headless caller's success check (a non-NULL
+// No context to own on Metal. A one-field placeholder so the headless caller's success check (a non-null
 // handle) works uniformly across both platforms.
 struct FlAppGpu {
     int unused;
@@ -28,14 +28,14 @@ FlAppGpu* fl_app_gpu_create_headless(struct FlArena* arena, FlRenderBackend* out
 
     FlAppGpu* gpu = arena_alloc_zero(arena, FlAppGpu);
     if (!fl_app_gpu_create_backend(arena, out_backend)) {
-        return NULL;
+        return nullptr;
     }
     return gpu;
 }
 
 bool fl_app_gpu_create_backend(struct FlArena* arena, FlRenderBackend* out_backend) {
     *out_backend = create_gpu_renderer(arena);
-    if (out_backend->render == NULL) {
+    if (out_backend->render == nullptr) {
         log_error("fl_app gpu: create_gpu_renderer failed — no MTLDevice or command-queue creation error");
         return false;
     }
@@ -83,19 +83,19 @@ static bool create_surfaceless_gl43(EGLDisplay* out_dpy, EGLContext* out_ctx) {
     *out_ctx = EGL_NO_CONTEXT;
 
     const char* client_exts = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
-    if (client_exts == NULL || strstr(client_exts, "EGL_MESA_platform_surfaceless") == NULL) {
+    if (client_exts == nullptr || strstr(client_exts, "EGL_MESA_platform_surfaceless") == nullptr) {
         log_error("fl_app gpu: EGL_MESA_platform_surfaceless not available");
         return false;
     }
 
     PFNEGLGETPLATFORMDISPLAYEXTPROC get_platform_display
         = (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
-    if (get_platform_display == NULL) {
+    if (get_platform_display == nullptr) {
         log_error("fl_app gpu: eglGetPlatformDisplayEXT not exported by the EGL driver");
         return false;
     }
-    EGLDisplay dpy = get_platform_display(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, NULL);
-    if (dpy == EGL_NO_DISPLAY || !eglInitialize(dpy, NULL, NULL)) {
+    EGLDisplay dpy = get_platform_display(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, nullptr);
+    if (dpy == EGL_NO_DISPLAY || !eglInitialize(dpy, nullptr, nullptr)) {
         log_error("fl_app gpu: no surfaceless EGL display");
         return false;
     }
@@ -110,7 +110,7 @@ static bool create_surfaceless_gl43(EGLDisplay* out_dpy, EGLContext* out_ctx) {
         EGL_CONTEXT_MAJOR_VERSION,           4,        EGL_CONTEXT_MINOR_VERSION, 3, EGL_CONTEXT_OPENGL_PROFILE_MASK,
         EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT, EGL_NONE,
     };
-    EGLContext context = eglCreateContext(dpy, num_configs > 0 ? config : NULL, EGL_NO_CONTEXT, context_attrs);
+    EGLContext context = eglCreateContext(dpy, num_configs > 0 ? config : nullptr, EGL_NO_CONTEXT, context_attrs);
     if (context == EGL_NO_CONTEXT || !eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, context)) {
         log_error("fl_app gpu: failed to create/current a GL 4.3 core context");
         eglTerminate(dpy);
@@ -130,20 +130,20 @@ FlAppGpu* fl_app_gpu_create_headless(struct FlArena* arena, FlRenderBackend* out
     gpu->egl_ctx = EGL_NO_CONTEXT;
 
     if (!create_surfaceless_gl43(&gpu->egl_dpy, &gpu->egl_ctx)) {
-        return NULL;
+        return nullptr;
     }
 
     // The context is now current.
     if (!fl_app_gpu_create_backend(arena, out_backend)) {
         fl_app_gpu_destroy(gpu);
-        return NULL;
+        return nullptr;
     }
     return gpu;
 }
 
 bool fl_app_gpu_create_backend(struct FlArena* arena, FlRenderBackend* out_backend) {
     *out_backend = create_gpu_renderer(arena);
-    if (out_backend->render == NULL) {
+    if (out_backend->render == nullptr) {
         log_error("fl_app gpu: create_gpu_renderer failed — GL below 4.3 or shader compile error");
         return false;
     }
@@ -165,7 +165,7 @@ bool fl_app_gpu_surface_texture(FlSurface* surface, u32* texture, u32* width, u3
 }
 
 void fl_app_gpu_destroy(FlAppGpu* gpu) {
-    if (gpu == NULL) {
+    if (gpu == nullptr) {
         return;
     }
 

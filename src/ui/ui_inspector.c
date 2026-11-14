@@ -58,7 +58,7 @@ static int32_t inspector_appendf(char* buf, int32_t buf_size, int32_t off, const
     if (buf && off < buf_size) {
         written = vsnprintf(buf + off, (size_t)(buf_size - off), fmt, ap);
     } else {
-        written = vsnprintf(NULL, 0, fmt, ap);
+        written = vsnprintf(nullptr, 0, fmt, ap);
     }
     va_end(ap);
     if (written < 0) {
@@ -241,7 +241,7 @@ bool fl_inspector_hit_test_id(uint32_t element_id, FlInspectorHit* out) {
 }
 
 bool fl_inspector_hit_test_name(FlString name, FlInspectorHit* out) {
-    if (!out || name.data == NULL || name.length == 0) {
+    if (!out || name.data == nullptr || name.length == 0) {
         return false;
     }
 
@@ -251,7 +251,7 @@ bool fl_inspector_hit_test_name(FlString name, FlInspectorHit* out) {
         if (!ui_get_render_command(i, &cmd) || !inspector_is_element(cmd.type)) {
             continue;
         }
-        if (cmd.name.data != NULL && cmd.name.length == name.length
+        if (cmd.name.data != nullptr && cmd.name.length == name.length
             && memcmp(cmd.name.data, name.data, (size_t)name.length) == 0) {
             inspector_fill_hit(out, &cmd);
             return true;

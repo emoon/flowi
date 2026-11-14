@@ -122,15 +122,15 @@ FlVfsOpenResult stub_vfs_open(void* instance, void* parent_handle, FlString path
     (void)flags;
     (void)mount_options;
 
-    // parent_handle == NULL is the mount-root open: hand back the root directory. When the
+    // parent_handle == nullptr is the mount-root open: hand back the root directory. When the
     // open-as-file toggle is set, a parent-less probe of the file yields a file handle instead,
     // so a test can drive the resolver's file-read branch.
     //
     // Only the /stub* sources the cases mount are claimed: driver resolution tries registered drivers before
     // the built-in LocalFS fallback, so a broader claim here would shadow it for every path.
-    if (parent_handle == NULL) {
+    if (parent_handle == nullptr) {
         if (!stub_vfs_is_stub_root(path) && !stub_vfs_is_file(path)) {
-            return (FlVfsOpenResult) { .handle = NULL, .error = stub_vfs_not_found() };
+            return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
         }
         if (s_stub_vfs_open_as_file && stub_vfs_is_file(path)) {
             StubVfsHandle* h = stub_vfs_alloc(false);
@@ -147,7 +147,7 @@ FlVfsOpenResult stub_vfs_open(void* instance, void* parent_handle, FlString path
         return (
             FlVfsOpenResult) { .handle = h, .is_directory = false, .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
     }
-    return (FlVfsOpenResult) { .handle = NULL, .error = stub_vfs_not_found() };
+    return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
 }
 
 bool stub_vfs_is_directory(void* instance, void* handle) {
@@ -252,9 +252,9 @@ FlVfsDriverCapabilities stub_vfs_get_capabilities(void) {
 FlVfsPlugin s_stub_vfs_plugin = {
     .api_version = FL_VFS_PLUGIN_API_VERSION,
     .plugin_name = FL_S_("StubFS"),
-    .plugin_info = NULL,
-    .create = NULL,
-    .destroy = NULL,
+    .plugin_info = nullptr,
+    .create = nullptr,
+    .destroy = nullptr,
     .supports_path = stub_vfs_supports_path,
     .can_open = stub_vfs_can_open,
     .open = stub_vfs_open,
@@ -264,9 +264,9 @@ FlVfsPlugin s_stub_vfs_plugin = {
     .list_directory = stub_vfs_list_directory,
     .close = stub_vfs_close,
     .get_capabilities = stub_vfs_get_capabilities,
-    .open_memory = NULL,
-    .get_file_path = NULL,
-    .is_cached = NULL,
+    .open_memory = nullptr,
+    .get_file_path = nullptr,
+    .is_cached = nullptr,
 };
 
 RenderFixture s_render;

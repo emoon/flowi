@@ -10,7 +10,7 @@ typedef void (*GpuRecordFn)(void* user, const FlCmdHeader* header);
 // Call fn for each record of an IR byte stream, stopping at a zero-size record.
 void gpu_ir_walk(const void* ir_commands, size_t ir_bytes, GpuRecordFn fn, void* user);
 
-// Locate a record's effect annotation, or NULL when it carries none. A kind-0 (none) effect reports no effect; a
+// Locate a record's effect annotation, or nullptr when it carries none. A kind-0 (none) effect reports no effect; a
 // kind whose payload size is not known here also reports none, but warns rather than dropping it silently.
 const FlEffect* gpu_record_effect(const FlCmdHeader* header);
 
