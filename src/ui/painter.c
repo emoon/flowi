@@ -223,8 +223,8 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
     painter_record_end(p, span, start);
 }
 
-// Styled text: the fractional-size (quarter-px quantized) painter draw. Shares the size quantizer, per-glyph
-// advances, and the n−1 letter-spacing rule with font_cache_measure_text, so a measured run matches what gets
+// Styled text: the fractional-size (quarter-px quantized) painter draw. Shares the size quantizer, glyph
+// positions, and the n−1 letter-spacing rule with font_cache_measure_text, so a measured run matches what gets
 // drawn. Positions carry ui_scale (chrome); the size and spacing carry text_scale (type).
 
 void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color) {

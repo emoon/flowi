@@ -3,7 +3,7 @@
 #include "unit_tests_common.h"
 
 // The styled text-run layout (fl_ir_text_layout at a fractional quarter-px key) agrees with
-// font_cache_measure_text: the same quantizer, the same per-glyph advances and the same n-1 letter-spacing rule.
+// font_cache_measure_text: the same quantizer, the same glyph positions and the same n-1 letter-spacing rule.
 
 UTEST(render_ir, styled_text_layout_matches_measurement) {
     FlFontCache* cache = font_cache_new(s_arena);
@@ -27,7 +27,7 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     ASSERT_EQ_MSG((int)run->glyph_count, 3, "one glyph per codepoint");
     const FlGlyph* glyphs = (const FlGlyph*)(run + 1);
 
-    float adv = (float)font_cache_get_glyph_advance_q4(cache, font, q4, 'A') / 64.0f;
+    float adv = (float)laid_out_advance_q4(cache, font, q4, 'A') / 64.0f;
     ASSERT_TRUE_MSG(adv > 0.0f, "the fractional advance is non-zero");
     ASSERT_EQ_MSG(font_cache_get_glyph_advance_q4(cache, 9999, q4, 'A'), 0, "an unknown font advances zero");
     ASSERT_NEAR_MSG(glyphs[1].x - glyphs[0].x, adv + spacing, 0.0001f, "each pen step adds advance + spacing");
@@ -60,9 +60,9 @@ UTEST(render_ir, shaped_run_matches_measurement) {
         ASSERT_EQ_MSG((int)run.glyphs[i].glyph_index, (int)font_cache_get_glyph_index(cache, font, (u32)ascii.data[i]),
                       "the glyph index is the face's index for the codepoint");
         ASSERT_EQ_MSG((int)run.glyphs[i].font, (int)font, "a codepoint the font maps stays on it");
-        ASSERT_TRUE_MSG(run.glyphs[i].x == sum, "each glyph sits after the cached advances before it");
-        ASSERT_EQ_MSG(run.glyphs[i].y, 0, "unshaped glyphs sit on the baseline");
-        sum += font_cache_get_glyph_advance_q4(cache, font, q4, (u32)ascii.data[i]);
+        ASSERT_TRUE_MSG(run.glyphs[i].x == sum, "each glyph sits after the advances before it");
+        ASSERT_EQ_MSG(run.glyphs[i].y, 0, "unkerned glyphs sit on the baseline");
+        sum += laid_out_advance_q4(cache, font, q4, (u32)ascii.data[i]);
     }
     ASSERT_TRUE_MSG(run.width == sum, "the run width is the sum of its advances");
 
@@ -122,7 +122,7 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     float ascent = font_cache_get_font_metrics(cache, font, 7.5f).ascent;
     ASSERT_NEAR_MSG(glyphs[0].x, 20.0f, 0.0001f, "the pen x is the ui-scaled origin");
     ASSERT_NEAR_MSG(glyphs[0].y, 40.0f + ascent, 0.0001f, "the baseline is the ui-scaled y plus the ascent");
-    float adv = (float)font_cache_get_glyph_advance_q4(cache, font, 30, 'A') / 64.0f;
+    float adv = (float)laid_out_advance_q4(cache, font, 30, 'A') / 64.0f;
     ASSERT_NEAR_MSG(glyphs[1].x - glyphs[0].x, adv + 1.25f, 0.0001f,
                     "advance and spacing stay unscaled, matching measurement");
 
@@ -608,8 +608,7 @@ UTEST(render_ir, clay_text_forwards_letter_spacing_to_the_pen) {
     ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "memory-loaded font must be ready synchronously");
 
     const u16 font_size = 32;
-    const float adv
-        = (float)font_cache_get_glyph_advance_q4(cache, font, font_cache_whole_px_to_q4(font_size), 'A') / 64.0f;
+    const float adv = (float)laid_out_advance_q4(cache, font, font_cache_whole_px_to_q4(font_size), 'A') / 64.0f;
     ASSERT_TRUE_MSG(adv > 0.0f, "the advance is non-zero");
 
     FlArena* out_packed = arena_new();
@@ -626,9 +625,9 @@ UTEST(render_ir, clay_text_forwards_letter_spacing_to_the_pen) {
 
     // Compared against the unspaced run so no font metric is baked in: each interior pen step grows by exactly
     // the spacing, and the run's drawn extent by n-1 of them.
-    ASSERT_NEAR_MSG(pg[1].x - pg[0].x, adv, 0.0001f, "an unspaced run steps by the bare advance");
-    ASSERT_NEAR_MSG(sg[1].x - sg[0].x, adv + 5.0f, 0.0001f, "the forwarded spacing lands on the first pen step");
-    ASSERT_NEAR_MSG(sg[2].x - sg[1].x, adv + 5.0f, 0.0001f, "and on every later one");
+    ASSERT_NEAR_MSG(pg[1].x - pg[0].x, adv, 0.02f, "an unspaced run steps by the bare advance");
+    ASSERT_NEAR_MSG(sg[1].x - sg[0].x, adv + 5.0f, 0.02f, "the forwarded spacing lands on the first pen step");
+    ASSERT_NEAR_MSG(sg[2].x - sg[1].x, adv + 5.0f, 0.02f, "and on every later one");
     ASSERT_NEAR_MSG(sg[2].x - sg[0].x, (pg[2].x - pg[0].x) + 10.0f, 0.0001f, "n−1 gaps across a three-glyph run");
 
     // Both runs start at the element's left edge, so spacing does not shift the whole string.

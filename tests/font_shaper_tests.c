@@ -7,6 +7,7 @@
 #include <string.h>
 #include <ui/font_shaper.h>
 
+#include "fixtures/fonts/damaged_font.h"
 #include "fixtures/fonts/glyph_test_fonts.h"
 
 UTEST(font_shaper, creates_a_font_from_font_bytes) {
@@ -24,22 +25,6 @@ UTEST(font_shaper, rejects_bytes_that_are_not_a_font) {
     ASSERT_TRUE(font_shaper_font_new(arena, garbage, 0) == nullptr);
     ASSERT_TRUE(font_shaper_font_new(arena, garbage, (i64)INT_MAX + 1) == nullptr);
     fl_arena_destroy(arena);
-}
-
-static u32 read_be32(const u8* bytes) {
-    return ((u32)bytes[0] << 24) | ((u32)bytes[1] << 16) | ((u32)bytes[2] << 8) | bytes[3];
-}
-
-static void damage_table_tail(u8* font, const char* tag) {
-    const u32 table_count = ((u32)font[4] << 8) | font[5];
-    for_count(i, table_count) {
-        const u8* record = font + 12 + i * 16;
-        if (memcmp(record, tag, 4) == 0) {
-            const u32 offset = read_be32(record + 8);
-            const u32 length = read_be32(record + 12);
-            memset(font + offset + length / 2, 0xFF, length - length / 2);
-        }
-    }
 }
 
 UTEST(font_shaper, rejects_a_font_with_damaged_shaping_tables) {

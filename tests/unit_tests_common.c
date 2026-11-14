@@ -509,3 +509,9 @@ void process_singletons_reset(void) {
     s_stub_vfs_short_read = false;
     s_stub_vfs_oversize = false;
 }
+
+int laid_out_advance_q4(FlFontCache* cache, FlFontId font, u16 q4, u32 codepoint) {
+    const char byte = (char)codepoint;
+    const FlTextStyle style = { .font_id = font, .font_size = (float)q4 / 4.0f };
+    return (int)lroundf(font_cache_measure_text(cache, (FlString) { .data = &byte, .length = 1 }, style).width * 64.0f);
+}

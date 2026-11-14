@@ -3,7 +3,6 @@
 #include <core/core.h>
 #include <core/os/os.h>
 #include <core/string.h>
-#include <core/utf8.h>
 #include <ui/font_cache.h>
 #include <ui/render_ir_build.h>
 
@@ -35,6 +34,12 @@ static u32 collect_run_glyphs(const void* start, const void* end, FlGlyph* out) 
 }
 
 static bool layout_follows_the_pen(const PenLayout* layout, FlString text) {
+    i32 shaped_x[128];
+    const FlShapedRun shaped = font_cache_shape_run(layout->cache, layout->font, layout->q4, text);
+    for_count(i, shaped.count) {
+        shaped_x[i] = shaped.glyphs[i].x;
+    }
+
     FlArena* ir = arena_new();
     void* start = fl_arena_current_pos(ir);
     fl_ir_text_layout(ir, layout->cache, layout->font, layout->q4, layout->scale, (FlColor) { 255, 255, 255, 255 },
@@ -42,19 +47,13 @@ static bool layout_follows_the_pen(const PenLayout* layout, FlString text) {
     FlGlyph glyphs[128];
     const u32 count = collect_run_glyphs(start, fl_arena_current_pos(ir), glyphs);
 
-    bool same = true;
-    i64 pen = 0;
-    u32 index = 0;
-    Utf8Iter it = utf8_iter(text);
-    while (!utf8_iter_done(&it)) {
-        const u32 codepoint = utf8_iter_next(&it);
-        const float x = layout->origin_x + layout->scale * ((float)pen / 64.0f + (float)index * layout->spacing);
-        same &= index < count && glyphs[index].x == x && glyphs[index].y == 20.25f;
-        pen += font_cache_get_glyph_advance_q4(layout->cache, layout->font, layout->q4, codepoint);
-        index++;
+    bool same = count == shaped.count;
+    for_count(i, count) {
+        const float pen = (float)shaped_x[i] / 64.0f + (float)i * layout->spacing;
+        same &= glyphs[i].x == layout->origin_x + layout->scale * pen && glyphs[i].y == 20.25f;
     }
     fl_arena_destroy(ir);
-    return same && index == count;
+    return same;
 }
 
 static bool layouts_follow_the_pen(FlFontCache* cache, FlFontId font, FlString text) {
@@ -80,7 +79,7 @@ static bool layouts_follow_the_pen(FlFontCache* cache, FlFontId font, FlString t
     return same;
 }
 
-UTEST(text_layout, positions_follow_the_summed_advances) {
+UTEST(text_layout, positions_follow_the_shaped_run) {
     FileMmap roboto_file = file_mmap_open_os(FL_S(FLOWI_TEST_DATA_DIR "/Roboto-Regular.ttf"));
     ASSERT_TRUE(roboto_file.data != nullptr);
 
@@ -104,7 +103,7 @@ UTEST(text_layout, positions_follow_the_summed_advances) {
         ASSERT_TRUE_MSG(fonts[f] != FONT_ID_INVALID, "the test font must load");
         for_count(t, sizeof_array(texts)) {
             ASSERT_TRUE_MSG(layouts_follow_the_pen(cache, fonts[f], texts[t]),
-                            "each glyph sits at the pen the summed advances and spacing give");
+                            "each glyph sits at its shaped position plus the spacing");
         }
     }
 

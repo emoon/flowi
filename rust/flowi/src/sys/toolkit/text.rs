@@ -26,7 +26,7 @@ const _: () = {
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TextMetrics {
-    /// Summed glyph advances plus letter spacing (n−1 gaps).
+    /// Laid-out width of the text plus letter spacing (n−1 gaps).
     pub width: f32,
     /// Line height at this size.
     pub height: f32,
@@ -54,7 +54,7 @@ extern "C" {
     /// Emit a configurable layout-participating text element: config carries font, size, color, spacing,
     /// vertical alignment, and wrap control.
     pub fn fl_text_styled(text: crate::sys::RawStr, config: crate::sys::TextConfig);
-    /// Measure a single-line string without drawing it: summed glyph advances plus letter spacing
+    /// Measure a single-line string without drawing it: its laid-out width plus letter spacing
     /// (n−1 gaps), and the line's vertical metrics at the styled size. Uses the same styling inputs
     /// as the painter styled draw, so a measured run matches what gets drawn. An unloaded font
     /// measures as all zeroes; missing glyphs measure via the fallback face, same as rendering.

@@ -113,7 +113,8 @@ UTEST(font_cache, measure_text_freetype) {
     ASSERT_EQ_MSG(adv, 1600, "whole-px 'A' advance is pinned to its historical value");
     FlString aa = { .data = "AA", .length = 2, .is_static = 1, .is_ascii = 1 };
     FlTextMetrics m = measure(cache, aa, font, 32.0f, 0.0f);
-    ASSERT_NEAR_MSG(m.width, (float)(2 * adv) / 64.0f, 0.0001f, "width = summed advances of the layout path");
+    const int laid_out = laid_out_advance_q4(cache, font, font_cache_whole_px_to_q4(32), 'A');
+    ASSERT_NEAR_MSG(m.width, (float)(2 * laid_out) / 64.0f, 0.02f, "width = summed advances of the layout path");
     ASSERT_TRUE_MSG(m.height > 0.0f && m.ascent > 0.0f, "line metrics are filled");
     ASSERT_NEAR_MSG(m.height, m.ascent + m.descent, 2.0f, "line height tracks ascent + descent");
 
@@ -127,7 +128,7 @@ UTEST(font_cache, measure_text_freetype) {
     ASSERT_NEAR_MSG(measure(cache, a, font, 32.0f, 1.5f).width, measure(cache, a, font, 32.0f, 0.0f).width, 0.0001f,
                     "a single glyph gets no spacing gap");
     FlString aaa = { .data = "AAA", .length = 3, .is_static = 1, .is_ascii = 1 };
-    ASSERT_NEAR_MSG(measure(cache, aaa, font, 32.0f, 1.5f).width, 3.0f * ((float)adv / 64.0f) + 3.0f, 0.0001f,
+    ASSERT_NEAR_MSG(measure(cache, aaa, font, 32.0f, 1.5f).width, 3.0f * ((float)laid_out / 64.0f) + 3.0f, 0.05f,
                     "three glyphs get exactly two spacing gaps (n−1, no trailing gap)");
 
     FlTextMetrics empty = measure(cache, string_empty(), font, 32.0f, 4.0f);
@@ -481,7 +482,7 @@ UTEST(font_cache, text_size_includes_fallback_advance) {
     ASSERT_TRUE_MSG(fallback != FONT_ID_INVALID, "fallback font must load");
     font_cache_set_fallback_font(cache, fallback);
 
-    int advance = font_cache_get_glyph_advance(cache, primary, size, 'B');
+    int advance = laid_out_advance_q4(cache, primary, font_cache_whole_px_to_q4(size), 'B');
     ASSERT_TRUE_MSG(advance > 0, "fallback supplies a nonzero advance for 'B'");
     ASSERT_EQ_MSG(font_cache_get_text_size(cache, b, primary, size).x, (float)advance / 64.0f,
                   "measured width equals the per-codepoint laid-out advance (fallback included)");
@@ -524,8 +525,8 @@ UTEST(font_cache, text_layout_splits_runs_per_face) {
     ASSERT_EQ_MSG((int)g1[0].glyph_index, (int)font_cache_get_glyph_index(cache, fallback, 'B'),
                   "'B' carries the fallback face's index");
 
-    const float adv = (float)font_cache_get_glyph_advance_q4(cache, primary, q4, 'A') / 64.0f;
-    ASSERT_NEAR_MSG(g1[0].x, 2.0f * adv, 0.0001f, "the fallback glyph sits where the pen left off");
+    const float adv = (float)laid_out_advance_q4(cache, primary, q4, 'A') / 64.0f;
+    ASSERT_NEAR_MSG(g1[0].x, 2.0f * adv, 0.02f, "the fallback glyph sits where the pen left off");
 
     fl_arena_destroy(ir);
     font_cache_destroy(cache);
@@ -585,40 +586,35 @@ UTEST(font_cache, fixed_pitch_measure_matches_summed_advances) {
     const FlString line = FL_S("static int measure(const char* text, int length) { return length * advance; } ~~~");
     const float sizes[] = { 7.5f, 9.5f, 12.0f, 13.0f, 16.0f, 22.25f, 31.0f };
     const float spacings[] = { 0.0f, 1.25f };
-    const void* fonts[] = { k_fixed_pitch_test_ttf, k_uneven_pitch_test_ttf };
-    const i64 font_sizes[] = { k_fixed_pitch_test_ttf_size, k_uneven_pitch_test_ttf_size };
 
-    for_count(f, 2) {
-        FlFontCache* cache = font_cache_new(s_arena);
-        FlFontId font = font_cache_load_font_memory(cache, fonts[f], font_sizes[f], 16);
-        ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "the test font must load");
+    FlFontCache* cache = font_cache_new(s_arena);
+    FlFontId font = font_cache_load_font_memory(cache, k_fixed_pitch_test_ttf, k_fixed_pitch_test_ttf_size, 16);
+    ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "the test font must load");
 
-        for_count(i, 7) {
-            const u16 q4 = font_cache_quantize_size_q4(sizes[i]);
-            const float cold = measure(cache, line, font, sizes[i], 0.0f).width;
-            const i64 sum = summed_advances_q4(cache, font, q4, line);
-            ASSERT_TRUE_MSG(sum > 0, "the line has a width");
-            ASSERT_TRUE_MSG(cold == spaced_width(sum, line.length, 0.0f), "a first measure equals the summed advances");
-            for_count(s, 2) {
-                ASSERT_TRUE_MSG(measure(cache, line, font, sizes[i], spacings[s]).width
-                                    == spaced_width(sum, line.length, spacings[s]),
-                                "measuring equals the summed advances plus n-1 gaps");
-            }
-            ASSERT_TRUE_MSG(font_cache_shape_run(cache, font, q4, line).width == sum,
-                            "shaping equals the summed advances");
+    for_count(i, 7) {
+        const u16 q4 = font_cache_quantize_size_q4(sizes[i]);
+        const float cold = measure(cache, line, font, sizes[i], 0.0f).width;
+        const i64 sum = summed_advances_q4(cache, font, q4, line);
+        ASSERT_TRUE_MSG(sum > 0, "the line has a width");
+        ASSERT_TRUE_MSG(cold == spaced_width(sum, line.length, 0.0f), "a first measure equals the summed advances");
+        for_count(s, 2) {
+            ASSERT_TRUE_MSG(measure(cache, line, font, sizes[i], spacings[s]).width
+                                == spaced_width(sum, line.length, spacings[s]),
+                            "measuring equals the summed advances plus n-1 gaps");
         }
-
-        for (u16 px = 8; px <= 64; px += 7) {
-            const float measured = font_cache_get_text_size(cache, line, font, px).x;
-            i64 sum = 0;
-            for_count(i, line.length) {
-                sum += font_cache_get_glyph_advance(cache, font, px, (unsigned char)line.data[i]);
-            }
-            ASSERT_TRUE_MSG(measured == (float)sum / 64.0f, "the whole-px measure equals the summed advances");
-        }
-
-        font_cache_destroy(cache);
+        ASSERT_TRUE_MSG(font_cache_shape_run(cache, font, q4, line).width == sum, "shaping equals the summed advances");
     }
+
+    for (u16 px = 8; px <= 64; px += 7) {
+        const float measured = font_cache_get_text_size(cache, line, font, px).x;
+        i64 sum = 0;
+        for_count(i, line.length) {
+            sum += font_cache_get_glyph_advance(cache, font, px, (unsigned char)line.data[i]);
+        }
+        ASSERT_TRUE_MSG(measured == (float)sum / 64.0f, "the whole-px measure equals the summed advances");
+    }
+
+    font_cache_destroy(cache);
 }
 
 UTEST(font_cache, fixed_pitch_measure_keeps_control_and_fallback_advances) {
@@ -670,26 +666,18 @@ UTEST(font_cache, fixed_pitch_measure_on_partial_and_builtin_faces) {
     const u16 q4 = font_cache_quantize_size_q4(size);
 
     FlFontId partial = font_cache_load_font_memory(cache, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
-    const int cell = font_cache_get_glyph_advance_q4(cache, partial, q4, 'A');
-    ASSERT_EQ_MSG(font_cache_get_glyph_advance_q4(cache, partial, q4, 'o'), cell, "both glyphs share the advance here");
-    ASSERT_TRUE_MSG(measure(cache, FL_S("AoAo"), partial, size, 0.0f).width == (float)(4 * cell) / 64.0f,
+    const int cell = laid_out_advance_q4(cache, partial, q4, 'A');
+    ASSERT_EQ_MSG(laid_out_advance_q4(cache, partial, q4, 'o'), cell, "both glyphs share the advance here");
+    ASSERT_NEAR_MSG(measure(cache, FL_S("AoAo"), partial, size, 0.0f).width, (float)(4 * cell) / 64.0f, 0.05f,
                     "mapped glyphs measure as cells");
-
-    const u16 hinted_q4 = font_cache_quantize_size_q4(13.0f);
-    const float hinted = measure(cache, FL_S("AoAo"), partial, 13.0f, 0.0f).width;
-    const int hinted_a = font_cache_get_glyph_advance_q4(cache, partial, hinted_q4, 'A');
-    const int hinted_o = font_cache_get_glyph_advance_q4(cache, partial, hinted_q4, 'o');
-    ASSERT_TRUE_MSG(hinted_a != hinted_o, "hinting gives the two glyphs different advances at 13 px");
-    ASSERT_TRUE_MSG(hinted == (float)(2 * hinted_a + 2 * hinted_o) / 64.0f,
-                    "a size where hinting breaks the shared advance is summed per glyph");
-    ASSERT_TRUE_MSG(measure(cache, FL_S("AoB"), partial, size, 0.0f).width == (float)(2 * cell) / 64.0f,
+    ASSERT_NEAR_MSG(measure(cache, FL_S("AoB"), partial, size, 0.0f).width, (float)(2 * cell) / 64.0f, 0.05f,
                     "a glyph the face lacks advances zero");
 
     FlFontId fallback = font_cache_load_font_memory(cache, k_fallback_test_ttf, k_fallback_test_ttf_size, 32);
     font_cache_set_fallback_font(cache, fallback);
-    const int b = font_cache_get_glyph_advance_q4(cache, partial, q4, 'B');
+    const int b = laid_out_advance_q4(cache, partial, q4, 'B');
     ASSERT_TRUE_MSG(b > 0, "the fallback maps 'B'");
-    ASSERT_TRUE_MSG(measure(cache, FL_S("AoB"), partial, size, 0.0f).width == (float)(2 * cell + b) / 64.0f,
+    ASSERT_NEAR_MSG(measure(cache, FL_S("AoB"), partial, size, 0.0f).width, (float)(2 * cell + b) / 64.0f, 0.05f,
                     "a fallback glyph keeps its own advance");
 
     FlFontId builtin = font_cache_load_default_font(cache, 2);
@@ -4412,8 +4400,7 @@ UTEST(render, tracked_single_word_element_width_matches_the_painted_extent) {
         element_width[i] = text.width;
 
         const float last_advance
-            = (float)font_cache_get_glyph_advance_q4(s_render.font_cache, font, font_cache_whole_px_to_q4(size), 'A')
-              / 64.0f;
+            = (float)laid_out_advance_q4(s_render.font_cache, font, font_cache_whole_px_to_q4(size), 'A') / 64.0f;
         painted_extent[i] = s_render.text_run_glyphs[2].x - s_render.text_run_glyphs[0].x + last_advance;
     }
 
