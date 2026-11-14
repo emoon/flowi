@@ -321,8 +321,7 @@ static void draw_cell_chrome(FlArena* arena, FlArena* scratch, FlFontCache* fc, 
     draw_text(arena, scratch, fc, font, v, LABEL_SIZE, k_dim, label, cell.x + 12.0f, cell.y + cell.h - 12.0f);
 }
 
-static const void* begin_scene(FlArena* arena, FlFontCache* fc) {
-    font_cache_update(fc);
+static const void* begin_scene(FlArena* arena) {
     fl_arena_rewind(arena);
     fl_arena_align(arena, 8);
     return fl_arena_current_pos(arena);
@@ -332,7 +331,7 @@ static const void* begin_scene(FlArena* arena, FlFontCache* fc) {
 static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backend, FlFontCache* fc, FlFontId font,
                         FlImageHandle image, SvgIcon svg_mono, SvgIcon svg_color, View v, const void** out_commands,
                         size_t* out_bytes, int width, int height) {
-    const void* start = begin_scene(arena, fc);
+    const void* start = begin_scene(arena);
 
     // Full-window background, emitted in screen space (not view-transformed) so it fills the window while the
     // gallery pans and zooms over it.

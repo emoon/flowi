@@ -369,7 +369,7 @@ void font_cache_destroy(FlFontCache* self) {
     self->face_count = 0;
 }
 
-static void pump_font_loads(FlFontCache* self) {
+void font_cache_update(FlFontCache* self) {
     for_count(i, self->face_count) {
         FontFace* face = &self->faces[i];
 
@@ -391,17 +391,13 @@ static void pump_font_loads(FlFontCache* self) {
     }
 }
 
-void font_cache_update(FlFontCache* self) {
-    pump_font_loads(self);
-}
-
 StatsRegistry* font_cache_stats(FlFontCache* self) {
     return self->stats;
 }
 
 void font_cache_wait_loaded(FlFontCache* self, FlFontId id) {
     while (font_cache_get_font_status(self, id) == FontStatus_Loading) {
-        pump_font_loads(self);
+        font_cache_update(self);
         sleep_us(500);
     }
 }
@@ -422,7 +418,7 @@ bool font_cache_ensure_all_loaded(FlFontCache* self) {
         if (!any_loading) {
             break;
         }
-        pump_font_loads(self);
+        font_cache_update(self);
         sleep_us(500);
     }
 
@@ -747,25 +743,18 @@ static FontFace* run_fallback(const AdvanceRun* run) {
     return is_ready(fallback) && fallback != run->face ? fallback : nullptr;
 }
 
-static bool fallback_can_shape(const AdvanceRun* run) {
+static bool kb_request(const AdvanceRun* run, FontShaperRun* out) {
+    const FontFace* face = run->face;
     const FontFace* fallback = run_fallback(run);
-    return fallback == nullptr || fallback->shaper_font != nullptr;
-}
-
-static bool is_shaped_size(const AdvanceRun* run) {
-    return is_proportional(run->face) && run->q4 != 0;
-}
-
-static bool is_kb_run(const AdvanceRun* run) {
-    return is_shaped_size(run) && fallback_can_shape(run);
-}
-
-static FontShaperFace kb_fallback_face(const AdvanceRun* run) {
-    const FontFace* fallback = run_fallback(run);
-    if (fallback == nullptr) {
-        return (FontShaperFace) { 0 };
+    if (!is_proportional(face) || run->q4 == 0) {
+        return false;
     }
-    return (FontShaperFace) { .font = fallback->shaper_font, .id = fallback->id };
+    *out = (FontShaperRun) { .primary = { .font = face->shaper_font, .id = face->id }, .size_q4 = run->q4 };
+    if (fallback == nullptr) {
+        return true;
+    }
+    out->fallback = (FontShaperFace) { .font = fallback->shaper_font, .id = fallback->id };
+    return fallback->shaper_font != nullptr;
 }
 
 static FlShapedRun shape_run_into(const AdvanceRun* run, FlString text, FlArena* arena) {
@@ -786,15 +775,11 @@ static FlShapedRun shape_uncached(const AdvanceRun* run, const FontShaperRun* re
 }
 
 static bool kb_shape_run(const AdvanceRun* run, FlString text, FlShapedRun* out) {
-    if (!is_kb_run(run) || text.data == nullptr) {
+    ShapedRunCache* shaped_runs = run->cache->shaped_runs;
+    FontShaperRun request;
+    if (text.data == nullptr || !kb_request(run, &request)) {
         return false;
     }
-    ShapedRunCache* shaped_runs = run->cache->shaped_runs;
-    const FontShaperRun request = {
-        .primary = { .font = run->face->shaper_font, .id = run->face->id },
-        .fallback = kb_fallback_face(run),
-        .size_q4 = run->q4,
-    };
     if (!shaped_run_cache_find(shaped_runs, &request, text, out)) {
         *out = shaped_run_cache_store(shaped_runs, &request, text, shape_uncached(run, &request, text));
     }
