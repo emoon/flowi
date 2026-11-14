@@ -1,4 +1,5 @@
 #include "font_cache.h"
+#include "font_shaper.h"
 #include <core/arena.h>
 #include <core/hashmap.h>
 #include <core/log.h>
@@ -36,6 +37,7 @@ typedef struct FontFace {
     FT_Face metrics_face; // Main thread only, for text measurement
     u8* font_data;        // Font file data, kept so the SW backend can create raster faces
     i64 font_data_size;
+    FontShaperFont* shaper_font;
 
     // Default source
     u16 default_scale;
@@ -176,6 +178,11 @@ static bool face_init_freetype_from_bytes(FlFontCache* cache, FontFace* face, Fo
         log_error("Failed to create metrics face: %s", FT_Error_String(error));
         face->status = FontStatus_Failed;
         return false;
+    }
+
+    face->shaper_font = font_shaper_font_new(face->arena, face->font_data, face->font_data_size);
+    if (face->shaper_font == nullptr) {
+        log_warning("kb could not load font %u, its text is laid out unshaped", face->id);
     }
 
     hashmap_new(&face->glyph_cache, face->arena, 256);

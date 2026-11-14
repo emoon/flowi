@@ -60,3 +60,13 @@ UTEST(kb_text_shape, kerned_pair_is_narrower_than_its_glyphs_alone) {
     ASSERT_GT(pair.advance, 0);
     ASSERT_LT(pair.advance, first.advance + second.advance);
 }
+
+UTEST(kb_text_shape, loads_a_font_with_a_null_allocator) {
+    kbts_font font = kbts_FontFromMemory((void*)k_glyph_test_ttf, (int)k_glyph_test_ttf_size, 0, nullptr, nullptr);
+    const bool valid = kbts_FontIsValid(&font);
+    const bool has_blob = font.Blob != nullptr;
+    kbts_FreeFont(&font);
+
+    ASSERT_TRUE(valid);
+    ASSERT_TRUE(has_blob);
+}
