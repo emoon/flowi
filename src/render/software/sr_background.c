@@ -68,11 +68,11 @@ static ALWAYS_INLINE void store_chunk(i16* tile_row, int k, Chunk16 c) {
     i16x8_store_unaligned(c.b.v1, dst + 8, B_PLANE_START_OFFSET);
 }
 
-static ALWAYS_INLINE void store_chunk_interleaved(u8* out_row, int k, Chunk16 c) {
-    u8x16 r = i16x8x2_pack_to_u8x16_narrow_shr(c.r, 7);
-    u8x16 g = i16x8x2_pack_to_u8x16_narrow_shr(c.g, 7);
-    u8x16 b = i16x8x2_pack_to_u8x16_narrow_shr(c.b, 7);
-    u8x16_store_interleaved_3(out_row, r, g, b, k * 48);
+static ALWAYS_INLINE u8x16 lerp_pack_channel(u8x16 from, u8x16 to, i16x8 t) {
+    const i16x8x2 a = u8x16_unpack_to_i16x8_wide_shl(from, 7);
+    const i16x8x2 b = u8x16_unpack_to_i16x8_wide_shl(to, 7);
+    const i16x8x2 blended = { i16x8_lerp(a.v0, b.v0, t), i16x8_lerp(a.v1, b.v1, t) };
+    return i16x8x2_pack_to_u8x16_narrow_shr(blended, 7);
 }
 
 // Convert a 0-255 factor to the Q15 lerp factor.
@@ -94,13 +94,14 @@ static ALWAYS_INLINE Chunk16 load_chunk(const u8* row, int k, CopyMode mode) {
 // The image is pre-scaled to screen size, so no bounds checking is needed. Reads interleaved RGB or RGBA and
 // converts to planar Q7. mode is a constant at every call site so each variant compiles to its own loop.
 static ALWAYS_INLINE void copy_image_to_tile(i16* tile_buffer, const SrBackground* bg, TileRect rect, CopyMode mode) {
-    const ImageData* image = bg->image;
+    const u8* src = bg->image->data;
+    const int stride = bg->image->stride;
     const bool needs_blend = mode == CopyMode_RgbBlend || mode == CopyMode_RgbaBlend;
     const i16x8 alpha_vec = lerp_factor(bg->alpha);
     const Chunk16 clear = splat_chunk(bg->clear_r, bg->clear_g, bg->clear_b);
 
     for (int j = 0; j < rect.height; j++) {
-        const u8* row = image->data + (rect.y0 + j) * image->stride + rect.x0 * bytes_per_pixel(mode);
+        const u8* row = src + (rect.y0 + j) * stride + rect.x0 * bytes_per_pixel(mode);
         i16* tile_row = tile_buffer + j * TILE_STRIDE;
 
         for (int k = 0; k < (TILE_WIDTH >> 4); k++) {
@@ -130,13 +131,15 @@ static void copy_background_to_tile(i16* tile_buffer, const SrBackground* bg, Ti
 
 // result = prev * (1-t) + curr * t, with t=0 meaning full prev and t=255 full curr. Both images are screen-sized RGB.
 static void crossfade_backgrounds_to_tile(i16* tile_buffer, const SrBackground* bg, TileRect rect) {
-    const ImageData* prev = bg->prev_image;
-    const ImageData* curr = bg->image;
+    const u8* prev_src = bg->prev_image->data;
+    const u8* curr_src = bg->image->data;
+    const int prev_stride = bg->prev_image->stride;
+    const int curr_stride = bg->image->stride;
     const i16x8 t_vec = lerp_factor(bg->crossfade_t);
 
     for (int j = 0; j < rect.height; j++) {
-        const u8* prev_row = prev->data + (rect.y0 + j) * prev->stride + rect.x0 * 3;
-        const u8* curr_row = curr->data + (rect.y0 + j) * curr->stride + rect.x0 * 3;
+        const u8* prev_row = prev_src + (rect.y0 + j) * prev_stride + rect.x0 * 3;
+        const u8* curr_row = curr_src + (rect.y0 + j) * curr_stride + rect.x0 * 3;
         i16* tile_row = tile_buffer + j * TILE_STRIDE;
 
         for (int k = 0; k < (TILE_WIDTH >> 4); k++) {
@@ -163,14 +166,16 @@ static void clear_tile_buffer(i16* tile_buffer, const SrBackground* bg) {
 // Scalar tail for the rightmost width & 15 columns crossfade_direct_to_output skips; same widen<<7 / Q15
 // lerp / narrow>>7 math.
 static NO_INLINE void crossfade_tail_to_output(u8* output, int output_pitch, const SrBackground* bg, TileRect rect) {
-    const ImageData* prev = bg->prev_image;
-    const ImageData* curr = bg->image;
+    const u8* prev_src = bg->prev_image->data;
+    const u8* curr_src = bg->image->data;
+    const int prev_stride = bg->prev_image->stride;
+    const int curr_stride = bg->image->stride;
     const int t_q15 = ((int)bg->crossfade_t << 7) + (bg->crossfade_t >> 1);
     const int first_tail = rect.width & ~15; // == (width >> 4) * 16
 
     for (int j = 0; j < rect.height; j++) {
-        const u8* prev_row = prev->data + (rect.y0 + j) * prev->stride + rect.x0 * 3;
-        const u8* curr_row = curr->data + (rect.y0 + j) * curr->stride + rect.x0 * 3;
+        const u8* prev_row = prev_src + (rect.y0 + j) * prev_stride + rect.x0 * 3;
+        const u8* curr_row = curr_src + (rect.y0 + j) * curr_stride + rect.x0 * 3;
         u8* out_row = output + (rect.y0 + j) * output_pitch + rect.x0 * 3;
         for (int k = first_tail * 3; k < rect.width * 3; k++) {
             const int start16 = (int)prev_row[k] << 7;
@@ -183,18 +188,22 @@ static NO_INLINE void crossfade_tail_to_output(u8* output, int output_pitch, con
 
 // Keeps widening, lerping and narrowing in registers instead of going through the planar tile buffer.
 static void crossfade_direct_to_output(u8* output, int output_pitch, const SrBackground* bg, TileRect rect) {
-    const ImageData* prev = bg->prev_image;
-    const ImageData* curr = bg->image;
+    const u8* prev_src = bg->prev_image->data;
+    const u8* curr_src = bg->image->data;
+    const int prev_stride = bg->prev_image->stride;
+    const int curr_stride = bg->image->stride;
     const i16x8 t_vec = lerp_factor(bg->crossfade_t);
 
     for (int j = 0; j < rect.height; j++) {
-        const u8* prev_row = prev->data + (rect.y0 + j) * prev->stride + rect.x0 * 3;
-        const u8* curr_row = curr->data + (rect.y0 + j) * curr->stride + rect.x0 * 3;
+        const u8* prev_row = prev_src + (rect.y0 + j) * prev_stride + rect.x0 * 3;
+        const u8* curr_row = curr_src + (rect.y0 + j) * curr_stride + rect.x0 * 3;
         u8* out_row = output + (rect.y0 + j) * output_pitch + rect.x0 * 3;
 
         for (int k = 0; k < (rect.width >> 4); k++) {
-            Chunk16 blended = lerp_chunks(load_rgb_chunk(prev_row, k), load_rgb_chunk(curr_row, k), t_vec);
-            store_chunk_interleaved(out_row, k, blended);
+            const u8x16_rgb_result p = u8x16_load_deinterleaved_3(prev_row, k * 48);
+            const u8x16_rgb_result c = u8x16_load_deinterleaved_3(curr_row, k * 48);
+            u8x16_store_interleaved_3(out_row, lerp_pack_channel(p.r, c.r, t_vec), lerp_pack_channel(p.g, c.g, t_vec),
+                                      lerp_pack_channel(p.b, c.b, t_vec), k * 48);
         }
     }
 
@@ -205,10 +214,12 @@ static void crossfade_direct_to_output(u8* output, int output_pitch, const SrBac
 }
 
 static void copy_background_direct_to_output(u8* output, int output_pitch, const ImageData* image, TileRect rect) {
+    const u8* src = image->data;
+    const int stride = image->stride;
     const int row_bytes = rect.width * 3;
 
     for (int j = 0; j < rect.height; j++) {
-        const u8* src_row = image->data + (rect.y0 + j) * image->stride + rect.x0 * 3;
+        const u8* src_row = src + (rect.y0 + j) * stride + rect.x0 * 3;
         u8* out_row = output + (rect.y0 + j) * output_pitch + rect.x0 * 3;
         memcpy(out_row, src_row, row_bytes);
     }
