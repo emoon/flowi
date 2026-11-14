@@ -76,6 +76,30 @@ static bool tree_dock_panel_at_root(FlDockTree* tree, FlDockPanelId panel) {
     return dock_tree_apply(tree, &req);
 }
 
+// End the gesture and leave the panel in a leaf; if its origin leaf is gone it is docked at the floor, so nothing is
+// left in the floating set once the gesture is over.
+static void dock_gesture_finish(FlDockWorkspace* ws, bool cancel) {
+    FlDockPanelId dropped = ws->drag.panel;
+    if (cancel) {
+        dock_drag_cancel(&ws->drag, ws->tree);
+    } else {
+        dock_drag_end(&ws->drag, ws->tree);
+    }
+    if (dock_tree_panel_is_floating(ws->tree, dropped)) {
+        tree_dock_panel_at_root(ws->tree, dropped);
+    }
+}
+
+// Cancel a drag in flight, as Escape does. The button is usually still down, and the tab strip would report the
+// same grab again on the next frame, so the grab stays blocked until the button comes up.
+static void cancel_drag(FlDockWorkspace* ws) {
+    if (!dock_drag_active(&ws->drag)) {
+        return;
+    }
+    dock_gesture_finish(ws, /*cancel=*/true);
+    ws->grab_blocked = true;
+}
+
 // True when tree is a fresh empty floor (single empty root leaf, no floating panels). A promote target must have
 // this shape, so the promoted panel becomes the root.
 static bool tree_is_empty_floor(const FlDockTree* tree) {
@@ -403,20 +427,6 @@ static bool drag_past_arm_threshold(void) {
     return travelled_sqr > FL_DOCK_DRAG_THRESHOLD * FL_DOCK_DRAG_THRESHOLD;
 }
 
-// End the gesture and leave the panel in a leaf; if its origin leaf is gone it is docked at the floor, so nothing is
-// left in the floating set once the gesture is over.
-static void dock_gesture_finish(FlDockWorkspace* ws, bool cancel) {
-    FlDockPanelId dropped = ws->drag.panel;
-    if (cancel) {
-        dock_drag_cancel(&ws->drag, ws->tree);
-    } else {
-        dock_drag_end(&ws->drag, ws->tree);
-    }
-    if (dock_tree_panel_is_floating(ws->tree, dropped)) {
-        tree_dock_panel_at_root(ws->tree, dropped);
-    }
-}
-
 static bool point_in_box(Clay_BoundingBox box, f32 x, f32 y) {
     return x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
 }
@@ -476,8 +486,7 @@ static void end_drag_gesture(FlDockWorkspace* ws, bool held) {
         return;
     }
     if (ui_key_pressed(FlKey_Escape)) {
-        dock_gesture_finish(ws, /*cancel=*/true);
-        ws->grab_blocked = true;
+        cancel_drag(ws);
     } else if (!held) {
         dock_gesture_finish(ws, /*cancel=*/false);
     }
