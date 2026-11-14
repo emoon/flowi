@@ -4181,7 +4181,12 @@ static void dropdown_frame(void* user_data) {
         .search_state = st->searchable ? &st->search : nullptr,
     };
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        ui_dropdown_impl(FL_S("Pick"), &st->is_open, st->options, st->option_count, &st->choice, cfg);
+        ui_dropdown_impl(&(UiDropdownRequest) { .label = FL_S("Pick"),
+                                                .is_open = &st->is_open,
+                                                .options = st->options,
+                                                .option_count = st->option_count,
+                                                .selected_index = &st->choice,
+                                                .cfg = cfg });
     }
 }
 
