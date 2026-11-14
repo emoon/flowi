@@ -1,6 +1,5 @@
 #include "sw_glyph_cache.h"
 #include <core/arena.h>
-#include <core/hashmap.h>
 #include <core/jobsys.h>
 #include <core/log.h>
 #include <ui/font_cache.h>
@@ -11,17 +10,12 @@
 #define MAX_SW_FACES 128
 #define MAX_ATLASES_PER_FACE 16
 
-// Hashmap for on-demand non-ASCII glyph caching
-
-typedef hashmap(u32, Glyph*) GlyphHashMap;
-
-// SwAtlas: per-size realized coverage glyphs (ASCII 0-127 pre-rasterized, codepoints >= 128 on demand).
+// SwAtlas: per-size realized coverage glyphs (ASCII 0-127 pre-rasterized, every other glyph on demand).
 
 typedef struct SwAtlas {
     FlArena* arena; // Memory for glyph bitmaps
-    Glyph* glyphs;  // Rasterized glyphs at this size (ASCII 0-127)
-    int glyph_count;
-    GlyphHashMap unicode_glyphs; // On-demand glyphs for codepoints >= 128
+    Glyph** glyphs; // Realized glyphs at this size by glyph index (nullptr = not rasterized yet)
+    u32 glyph_count;
     u16 size;
     int line_height; // Line height in 26.6 format at this size
     _Atomic FontStatus status;
@@ -39,7 +33,7 @@ typedef struct SwFace {
     // FreeType source
     const u8* font_data; // Owned by the shared layer; valid for its lifetime
     i64 font_data_size;
-    FT_Face on_demand_face; // SW-owned face for main-thread non-ASCII rasterization
+    FT_Face on_demand_face; // SW-owned face for main-thread on-demand rasterization
 
     // Default source
     u16 default_scale;
@@ -52,15 +46,12 @@ struct SwGlyphCache {
     FlArena* arena;      // Owns face/atlas allocations
     FlFontCache* shared; // Shared font layer (raster sources + metrics)
     FontRenderMode render_mode;
-    // Render-thread only: backs the on-demand and fallback faces and face creation in sw_face_get. Atlas jobs
+    // Render-thread only: backs the on-demand faces and face creation in sw_face_get. Atlas jobs
     // create their own FT_Library (see atlas_rasterize_job); one FT_Library is not safe for concurrent use.
     FT_Library library;
 
     SwFace faces[MAX_SW_FACES];
     int face_count;
-
-    bool fallback_resolved; // True once we attempted to resolve the fallback face
-    FT_Face fallback_face;  // SW-owned face for fallback on-demand rasterization (nullptr if none)
 };
 
 // Forward declarations for the built-in default (MICROKNIGHT 8x8) font data, defined at the bottom of this file.
@@ -124,10 +115,6 @@ void sw_glyph_cache_destroy(SwGlyphCache* self) {
         }
     }
 
-    if (self->fallback_face) {
-        FT_Done_Face(self->fallback_face);
-        self->fallback_face = nullptr;
-    }
     if (self->library) {
         FT_Done_FreeType(self->library);
         self->library = nullptr;
@@ -151,8 +138,9 @@ static void rasterize_and_update_glyph_table(FT_Face ft_face, SwAtlas* atlas, u1
     }
 
     int ascii_count = 128;
-    atlas->glyphs = arena_alloc_array_zero(atlas->arena, Glyph, ascii_count);
-    atlas->glyph_count = ascii_count;
+    Glyph* ascii_glyphs = arena_alloc_array_zero(atlas->arena, Glyph, ascii_count);
+    atlas->glyphs = arena_alloc_array_zero(atlas->arena, Glyph*, ft_face->num_glyphs);
+    atlas->glyph_count = (u32)ft_face->num_glyphs;
 
     FT_Set_Pixel_Sizes(ft_face, font_size, font_size);
 
@@ -162,7 +150,7 @@ static void rasterize_and_update_glyph_table(FT_Face ft_face, SwAtlas* atlas, u1
             continue; // Character not available in font
         }
 
-        Glyph* glyph = &atlas->glyphs[char_code];
+        Glyph* glyph = &ascii_glyphs[char_code];
 
         FT_Error load_error = FT_Load_Glyph(ft_face, glyph_index, load_flags);
         if (load_error != 0) {
@@ -176,6 +164,7 @@ static void rasterize_and_update_glyph_table(FT_Face ft_face, SwAtlas* atlas, u1
         }
 
         FT_Bitmap* bitmap = &slot->bitmap;
+        atlas->glyphs[glyph_index] = glyph;
 
         glyph->advance_x = slot->advance.x;
         glyph->bearing_x = slot->bitmap_left * 64;
@@ -298,11 +287,11 @@ static void build_default_atlas(SwFace* face) {
     atlas->line_height = 8 * scale * 64; // Convert to 26.6 format
     atlas->status = FontStatus_Ready;
     atlas->job_handle = 0;
-    hashmap_new(&atlas->unicode_glyphs, atlas->arena, 16);
 
     int ascii_count = 128;
-    atlas->glyphs = arena_alloc_array_zero(atlas->arena, Glyph, ascii_count);
-    atlas->glyph_count = ascii_count;
+    Glyph* ascii_glyphs = arena_alloc_array_zero(atlas->arena, Glyph, ascii_count);
+    atlas->glyphs = arena_alloc_array_zero(atlas->arena, Glyph*, ascii_count);
+    atlas->glyph_count = (u32)ascii_count;
 
     // Unpack the 1-bit font bitmap to a full 128x128 byte array.
     u8* unpacked_bitmap = arena_alloc_array(atlas->arena, u8, 128 * 128);
@@ -315,7 +304,8 @@ static void build_default_atlas(SwFace* face) {
     }
 
     for_count(char_code, ascii_count) {
-        Glyph* glyph = &atlas->glyphs[char_code];
+        Glyph* glyph = &ascii_glyphs[char_code];
+        atlas->glyphs[char_code] = glyph;
 
         // Out-of-range characters use '?' at layout index 31 (63 - 32).
         int layout_index = char_code - 32;
@@ -407,24 +397,16 @@ static SwFace* sw_face_get(SwGlyphCache* self, FlFontId font_id) {
     return face;
 }
 
-// Lazily resolve the SW-owned fallback face from the shared layer's fallback raster source.
-
-static FT_Face sw_fallback_face(SwGlyphCache* self) {
-    if (self->fallback_resolved) {
-        return self->fallback_face;
-    }
-
-    FlFontRasterSource src;
-    if (font_cache_get_fallback_raster_source(self->shared, &src) && src.kind == FlFontRasterKind_FreeType) {
-        self->fallback_face = make_ft_face(self->library, src.font_data, src.font_data_size, "fallback");
-        self->fallback_resolved = true;
-    }
-    // fallback_resolved stays false until the fallback is loaded, so this retries.
-
-    return self->fallback_face;
+static void init_on_demand_atlas(SwAtlas* atlas, FT_Face ft_face) {
+    FT_Set_Pixel_Sizes(ft_face, 0, atlas->size);
+    atlas->line_height = ft_face->size->metrics.height;
+    atlas->glyphs = arena_alloc_array_zero(atlas->arena, Glyph*, ft_face->num_glyphs);
+    atlas->glyph_count = (u32)ft_face->num_glyphs;
+    atlas->status = FontStatus_Ready;
 }
 
-// Create a new FreeType atlas at the requested size for an already-resolved face (async job).
+// Create a new FreeType atlas at the requested size for an already-resolved face (async job, except for the
+// fallback face, whose atlas is ready at once and rasterizes every glyph on demand).
 
 static SwAtlas* create_atlas_at_size(SwGlyphCache* self, SwFace* face, u16 size) {
     int atlas_index = atomic_fetch_add_explicit(&face->atlas_count, 1, memory_order_acq_rel);
@@ -437,8 +419,13 @@ static SwAtlas* create_atlas_at_size(SwGlyphCache* self, SwFace* face, u16 size)
     SwAtlas* atlas = &face->atlases[atlas_index];
     atlas->arena = arena_new();
     atlas->size = size;
+
+    if (face->on_demand_face != nullptr && font_cache_is_fallback_font(self->shared, face->id)) {
+        init_on_demand_atlas(atlas, face->on_demand_face);
+        return atlas;
+    }
+
     atlas->status = FontStatus_Loading;
-    hashmap_new(&atlas->unicode_glyphs, atlas->arena, 16);
 
     AtlasRasterizeContext* ctx = jobs_context_alloc(AtlasRasterizeContext);
     ctx->face = face;
@@ -471,14 +458,9 @@ static SwAtlas* get_or_create_atlas(SwGlyphCache* self, SwFace* face, u16 size) 
     return create_atlas_at_size(self, face, size);
 }
 
-// Rasterize a single glyph from a specific FreeType face (on-demand path for codepoints >= 128).
+// Rasterize a single glyph from a FreeType face (on-demand path for glyphs the atlas job did not rasterize).
 
-static Glyph* rasterize_glyph_from_face(SwGlyphCache* self, SwAtlas* atlas, FT_Face ft_face, u32 codepoint) {
-    FT_UInt glyph_index = FT_Get_Char_Index(ft_face, codepoint);
-    if (glyph_index == 0) {
-        return nullptr; // Glyph not available in this font
-    }
-
+static Glyph* rasterize_glyph_from_face(SwGlyphCache* self, SwAtlas* atlas, FT_Face ft_face, u32 glyph_index) {
     FT_Set_Pixel_Sizes(ft_face, 0, atlas->size);
 
     FT_Int32 load_flags = FT_LOAD_RENDER;
@@ -549,28 +531,7 @@ static Glyph* rasterize_glyph_from_face(SwGlyphCache* self, SwAtlas* atlas, FT_F
     return glyph;
 }
 
-// Rasterize a single glyph on demand for non-ASCII codepoints, falling back to the shared fallback font.
-
-static Glyph* rasterize_glyph_on_demand(SwGlyphCache* self, SwFace* face, SwAtlas* atlas, u32 codepoint) {
-    if (face->on_demand_face != nullptr) {
-        Glyph* glyph = rasterize_glyph_from_face(self, atlas, face->on_demand_face, codepoint);
-        if (glyph != nullptr) {
-            return glyph;
-        }
-    }
-
-    FT_Face fallback = sw_fallback_face(self);
-    if (fallback != nullptr) {
-        Glyph* glyph = rasterize_glyph_from_face(self, atlas, fallback, codepoint);
-        if (glyph != nullptr) {
-            return glyph;
-        }
-    }
-
-    return nullptr;
-}
-
-const Glyph* sw_glyph_cache_get(SwGlyphCache* self, FlFontId font_id, u16 font_size, u32 codepoint) {
+const Glyph* sw_glyph_cache_get(SwGlyphCache* self, FlFontId font_id, u16 font_size, u32 glyph_index) {
     SwFace* face = sw_face_get(self, font_id);
     if (face == nullptr) {
         return nullptr;
@@ -581,31 +542,17 @@ const Glyph* sw_glyph_cache_get(SwGlyphCache* self, FlFontId font_id, u16 font_s
         return nullptr;
     }
 
-    // ASCII fast path: use the pre-rasterized glyphs.
-    if (codepoint < (u32)atlas->glyph_count) {
-        const Glyph* glyph = &atlas->glyphs[codepoint];
-        if (glyph->advance_x != 0 || glyph->width != 0) {
-            return glyph;
-        }
-    }
-
-    // Bitmap / default fonts have no on-demand rasterization path.
-    if (face->kind != FlFontRasterKind_FreeType) {
+    if (glyph_index == 0 || glyph_index >= atlas->glyph_count) {
         return nullptr;
     }
 
-    // Non-ASCII: check the cache first.
-    Glyph** cached = hashmap_get(&atlas->unicode_glyphs, codepoint);
-    if (cached != nullptr) {
-        return *cached;
+    Glyph* glyph = atlas->glyphs[glyph_index];
+    if (glyph == nullptr && face->on_demand_face != nullptr) {
+        glyph = rasterize_glyph_from_face(self, atlas, face->on_demand_face, glyph_index);
+        atlas->glyphs[glyph_index] = glyph;
     }
 
-    Glyph* new_glyph = rasterize_glyph_on_demand(self, face, atlas, codepoint);
-    if (new_glyph != nullptr) {
-        hashmap_insert(&atlas->unicode_glyphs, codepoint, new_glyph);
-    }
-
-    return new_glyph;
+    return glyph;
 }
 
 // Default fallback font data (MICROKNIGHT 8x8 bitmap font)

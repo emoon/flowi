@@ -48,10 +48,10 @@ typedef struct SwGlyphCache SwGlyphCache;
 SwGlyphCache* sw_glyph_cache_new(struct FlArena* arena, struct FlFontCache* shared, FontRenderMode render_mode);
 void sw_glyph_cache_destroy(SwGlyphCache* self);
 
-// Resolve a (font, size, codepoint) to a realized coverage glyph, rasterizing/caching on demand. font_size is
-// the exact whole-px raster size. Returns nullptr if the font is unknown, not ready, or the glyph is
-// unavailable.
+// Resolve a (font, size, glyph index) to a realized coverage glyph, rasterizing/caching on demand. font_size is
+// the exact whole-px raster size and glyph_index is an index in that font. Returns nullptr if the font is
+// unknown, not ready, or the glyph is unavailable (index 0 included).
 //
 // Main thread only: on-demand rasterization and lazy face creation use the cache's own FreeType library,
 // which has no internal locking.
-const Glyph* sw_glyph_cache_get(SwGlyphCache* self, FlFontId font_id, u16 font_size, u32 codepoint);
+const Glyph* sw_glyph_cache_get(SwGlyphCache* self, FlFontId font_id, u16 font_size, u32 glyph_index);

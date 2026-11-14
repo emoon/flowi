@@ -327,6 +327,29 @@ UTEST(sw_glyph_cache, default_font_bearing_y_scales) {
     font_cache_destroy(shared);
 }
 
+static FlFontId load_roboto(FlFontCache* cache, FlVfsMount** out_mount, u16 size) {
+    fl_vfs_init(s_arena);
+    FlVfsMountResult mount = vfs_mount(FL_S(FLOWI_TEST_DATA_DIR));
+    if (mount.status != FlVfsMountErrorStatus_Success) {
+        return FONT_ID_INVALID;
+    }
+    vfs_wait_all();
+    *out_mount = mount.mount;
+    FlFontId font = font_cache_load_font(cache, mount.mount, FL_S("Roboto-Regular.ttf"), size);
+    font_cache_wait_loaded(cache, font);
+    return font;
+}
+
+static const Glyph* wait_for_glyph(SwGlyphCache* sw, FlFontId font, u16 size, u32 glyph_index) {
+    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    const Glyph* glyph = sw_glyph_cache_get(sw, font, size, glyph_index);
+    while (glyph == nullptr && get_monotonic_time_ns_os() < deadline_ns) {
+        sleep_us(200);
+        glyph = sw_glyph_cache_get(sw, font, size, glyph_index);
+    }
+    return glyph;
+}
+
 // Each atlas job owns a temporary FT_Library, so the cache's shared library is used only on the main thread. The
 // case runs concurrent atlas jobs against the main-thread on-demand path. It is deterministic as it stands, and
 // it detects a data race only under the manual TSAN build, which CI does not run.
@@ -337,17 +360,20 @@ UTEST(sw_glyph_cache, concurrent_atlas_jobs_and_on_demand) {
     const u16 sizes[] = { 12, 16, 24, 32 };
     const int size_count = (int)sizeof_array(sizes);
 
-    FlFontId font = font_cache_load_font_memory(shared, k_glyph_test_ttf, k_glyph_test_ttf_size, sizes[0]);
-    ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "memory-loaded FreeType font must be ready synchronously");
+    FlVfsMount* mount = nullptr;
+    FlFontId font = load_roboto(shared, &mount, sizes[0]);
+    ASSERT_EQ_MSG((int)font_cache_get_font_status(shared, font), (int)FontStatus_Ready, "Roboto must load");
+    const u32 index_a = font_cache_get_glyph_index(shared, font, 'A');
+    const u32 index_eacute = font_cache_get_glyph_index(shared, font, 0x00E9);
+    ASSERT_TRUE_MSG(index_a != 0 && index_eacute != 0, "Roboto maps 'A' and e-acute");
 
     // The first get for each size enqueues that size's atlas rasterization job.
     for (int i = 0; i < size_count; i++) {
-        sw_glyph_cache_get(sw, font, sizes[i], 'A');
+        sw_glyph_cache_get(sw, font, sizes[i], index_a);
     }
 
-    // Poll until every size's 'A' is realized. As each atlas turns Ready, call the main-thread on-demand path
-    // with a non-ASCII codepoint so it overlaps the jobs still running. The on-demand result is not checked,
-    // because the embedded test font maps no non-ASCII codepoint.
+    // Poll until every size's 'A' is realized. As each atlas turns Ready, rasterize a glyph outside ASCII on the
+    // main thread so it overlaps the jobs still running.
     const Glyph* glyphs[4] = { 0 };
     u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
     bool all_ready = false;
@@ -357,11 +383,12 @@ UTEST(sw_glyph_cache, concurrent_atlas_jobs_and_on_demand) {
             if (glyphs[i] != nullptr) {
                 continue;
             }
-            glyphs[i] = sw_glyph_cache_get(sw, font, sizes[i], 'A');
+            glyphs[i] = sw_glyph_cache_get(sw, font, sizes[i], index_a);
             if (glyphs[i] == nullptr) {
                 all_ready = false;
             } else {
-                (void)sw_glyph_cache_get(sw, font, sizes[i], 0x00E9);
+                ASSERT_TRUE_MSG(sw_glyph_cache_get(sw, font, sizes[i], index_eacute) != nullptr,
+                                "a glyph outside ASCII rasterizes on demand once the atlas is ready");
             }
         }
         ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns,
@@ -375,6 +402,60 @@ UTEST(sw_glyph_cache, concurrent_atlas_jobs_and_on_demand) {
         ASSERT_TRUE_MSG(glyphs[i] != nullptr, "'A' must realize at every requested size");
         ASSERT_TRUE_MSG(glyphs[i]->advance_x != 0, "realized 'A' carries a nonzero advance at every size");
     }
+
+    sw_glyph_cache_destroy(sw);
+    font_cache_destroy(shared);
+    fl_vfs_mount_close(mount);
+}
+
+UTEST(sw_glyph_cache, glyphs_are_keyed_by_glyph_index) {
+    FlFontCache* shared = font_cache_new(s_arena);
+    SwGlyphCache* sw = sw_glyph_cache_new(s_arena, shared, FontRenderMode_Grayscale);
+    const u16 size = 24;
+
+    FlVfsMount* mount = nullptr;
+    FlFontId font = load_roboto(shared, &mount, size);
+    ASSERT_EQ_MSG((int)font_cache_get_font_status(shared, font), (int)FontStatus_Ready, "Roboto must load");
+    const u32 index_a = font_cache_get_glyph_index(shared, font, 'A');
+    const u32 index_i = font_cache_get_glyph_index(shared, font, 'i');
+    const u32 index_eacute = font_cache_get_glyph_index(shared, font, 0x00E9);
+    ASSERT_TRUE_MSG(index_a != 'A', "the glyph index of 'A' differs from its codepoint in Roboto");
+
+    const Glyph* a = wait_for_glyph(sw, font, size, index_a);
+    ASSERT_TRUE_MSG(a != nullptr, "'A' is realized by its glyph index");
+    const Glyph* i = sw_glyph_cache_get(sw, font, size, index_i);
+    ASSERT_TRUE_MSG(i != nullptr, "'i' is pre-rasterized with the rest of ASCII");
+    ASSERT_TRUE_MSG(a->advance_x > i->advance_x, "each index returns its own glyph: 'A' is wider than 'i'");
+
+    const Glyph* eacute = sw_glyph_cache_get(sw, font, size, index_eacute);
+    ASSERT_TRUE_MSG(eacute != nullptr, "an index outside ASCII rasterizes on demand");
+    ASSERT_TRUE_MSG(eacute->advance_x > 0 && eacute->bitmap_data_r != nullptr, "and carries coverage");
+    ASSERT_TRUE_MSG(sw_glyph_cache_get(sw, font, size, index_eacute) == eacute, "the on-demand glyph is cached");
+
+    ASSERT_TRUE_MSG(sw_glyph_cache_get(sw, font, size, 0) == nullptr, "index 0 (no face maps it) draws nothing");
+    ASSERT_TRUE_MSG(sw_glyph_cache_get(sw, font, size, 1000000) == nullptr, "an index past the face is refused");
+
+    sw_glyph_cache_destroy(sw);
+    font_cache_destroy(shared);
+    fl_vfs_mount_close(mount);
+}
+
+UTEST(sw_glyph_cache, fallback_face_glyph_is_ready_on_first_get) {
+    FlFontCache* shared = font_cache_new(s_arena);
+    SwGlyphCache* sw = sw_glyph_cache_new(s_arena, shared, FontRenderMode_Grayscale);
+    const u16 size = 32;
+
+    FlFontId primary = font_cache_load_font_memory(shared, k_glyph_test_ttf, k_glyph_test_ttf_size, size);
+    FlFontId fallback = font_cache_load_font_memory(shared, k_fallback_test_ttf, k_fallback_test_ttf_size, size);
+    ASSERT_TRUE_MSG(primary != FONT_ID_INVALID && fallback != FONT_ID_INVALID, "both test fonts must load");
+    font_cache_set_fallback_font(shared, fallback);
+
+    FontGlyphRef b = font_cache_resolve_glyph(shared, primary, 'B');
+    ASSERT_EQ_MSG((int)b.font, (int)fallback, "'B' resolves to the fallback face");
+
+    const Glyph* glyph = sw_glyph_cache_get(sw, b.font, size, b.glyph_index);
+    ASSERT_TRUE_MSG(glyph != nullptr, "the fallback face realizes 'B' by its own index without waiting for a job");
+    ASSERT_TRUE_MSG(glyph->advance_x > 0 && glyph->bitmap_data_r != nullptr, "and it carries coverage");
 
     sw_glyph_cache_destroy(sw);
     font_cache_destroy(shared);
