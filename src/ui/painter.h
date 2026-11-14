@@ -72,22 +72,14 @@ void painter_set_effect(Painter* p, FlEffect effect);
 
 // Text drawing
 
-// One run of text: top-left at (x, y) in logical space, drawn in color.
-typedef struct PainterTextRun {
-    float x;
-    float y;
-    FlString text;
-    FlColor color;
-} PainterTextRun;
-
-// Draw run with its top-left at (run.x, run.y), in the font's authored size.
-void painter_text(Painter* p, PainterTextRun run, FlFontId font);
+// Draw text with its top-left at (x, y), in the font's authored size.
+void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, FlColor color);
 
 // Draw single-line styled text: style carries the font (already resolved - no 0-means-active here), a
 // fractional pixel size (0 = the font's default size), and letter spacing (n−1 gaps, no trailing gap).
 // Sizes quantize to quarter-px steps, the same quantizer font_cache_measure_text uses, so a measured run
 // matches what gets drawn.
-void painter_text_styled(Painter* p, PainterTextRun run, FlTextStyle style);
+void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color);
 
 // Rectangle drawing
 
@@ -114,19 +106,11 @@ void painter_gradient_rect(Painter* p, FlRect rect, FlCornerColors colors);
 // (FlCmd_FillRect), not the optional-tier polyline. (x, y) and length are element-local logical (authoring)
 // space; the position snap happens at the splice, once the element origin is folded in.
 
-// A hairline starting at (x, y) and running length along its axis.
-typedef struct PainterRule {
-    float x;
-    float y;
-    float length;
-    FlColor color;
-} PainterRule;
+// Horizontal hairline running +length along x from (x, y).
+void painter_hline(Painter* p, float x, float y, float length, FlColor color);
 
-// Horizontal hairline running +rule.length along x from (rule.x, rule.y).
-void painter_hline(Painter* p, PainterRule rule);
-
-// Vertical hairline running +rule.length along y from (rule.x, rule.y).
-void painter_vline(Painter* p, PainterRule rule);
+// Vertical hairline running +length along y from (x, y).
+void painter_vline(Painter* p, float x, float y, float length, FlColor color);
 
 // Image drawing
 
@@ -147,17 +131,6 @@ void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColo
 // These emit optional-tier render commands: a backend MAY ignore them without breaking correctness, layout,
 // or hit-testing (the software backend currently does). Coordinates, radii, and widths are logical
 // (authoring) space, scaled at emit like everything else.
-
-// One polyline: the vertices and how to stroke/fill them.
-typedef struct PainterPolyline {
-    const FlPolyPoint* points;
-    u32 point_count;
-    float width;
-    FlColor color;
-    u32 flags;
-    FlColor fill_color;
-    float baseline_y;
-} PainterPolyline;
 
 // Draw a polyline.
 // points: vertices in logical (authoring) space; each point's intensity modulates the stroke alpha (1.0 = plain),
@@ -185,4 +158,4 @@ void painter_diamond(Painter* p, FlDiamondShape diamond);
 
 // Draw a batched row of bars off a shared baseline. Bar x/w/h are logical (authoring) space; a negative h
 // draws downward from the baseline.
-void painter_bars(Painter* p, PainterBars row);
+void painter_bars(Painter* p, float baseline_y, const FlBar* bars, u32 bar_count, FlColor color);

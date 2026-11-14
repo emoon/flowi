@@ -216,8 +216,8 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
         return;
     }
 
-    float cursor_x = scale(p, run.x);
-    float baseline_y = scale(p, run.y) + (float)glyph_list.ascender / 64.0f;
+    float cursor_x = scale(p, x);
+    float baseline_y = scale(p, y) + (float)glyph_list.ascender / 64.0f;
 
     // 1:1 scale: the painter draws at the reference-scaled size directly, no separate display zoom.
     fl_ir_text_layout(p->arena, p->state_arena, p->font_cache, font, font_cache_whole_px_to_q4(font_size), 1.0f, color,
@@ -259,8 +259,8 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
 
     // Top-left anchored like painter_text: the baseline sits one ascent below y, at the styled size.
     FlFontMetrics vm = font_cache_get_font_metrics(p->font_cache, style.font_id, size_px);
-    float cursor_x = scale(p, run.x);
-    float baseline_y = scale(p, run.y) + vm.ascent;
+    float cursor_x = scale(p, x);
+    float baseline_y = scale(p, y) + vm.ascent;
 
     // Letter spacing is authored px; it scales with text_scale.
     fl_ir_text_layout(p->arena, p->state_arena, p->font_cache, style.font_id, size_q4, 1.0f, color, text, cursor_x,
@@ -582,11 +582,11 @@ void painter_bars(Painter* p, float baseline_y, const FlBar* bars, u32 bar_count
         return;
     }
 
-    FlBar* dst = fl_ir_bars(p->arena, scale(p, row.baseline_y), row.color, row.bar_count, painter_current_effect(p));
-    for (u32 i = 0; i < row.bar_count; i++) {
-        dst[i].x = scale(p, row.bars[i].x);
-        dst[i].w = scale(p, row.bars[i].w);
-        dst[i].h = scale(p, row.bars[i].h);
+    FlBar* dst = fl_ir_bars(p->arena, scale(p, baseline_y), color, bar_count, painter_current_effect(p));
+    for (u32 i = 0; i < bar_count; i++) {
+        dst[i].x = scale(p, bars[i].x);
+        dst[i].w = scale(p, bars[i].w);
+        dst[i].h = scale(p, bars[i].h);
     }
     painter_record_end(p, span, start);
 }

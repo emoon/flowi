@@ -61,9 +61,7 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     const FlTextStyle style = { .font_id = font, .font_size = 7.5f, .letter_spacing = 1.25f };
     void* slot = nullptr;
     painter_scope_push(p, &slot);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 10.0f, .y = 20.0f, .text = FL_S("AA"), .color = ui_color(255, 255, 255, 255) },
-        style);
+    painter_text_styled(p, 10.0f, 20.0f, FL_S("AA"), style, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -86,9 +84,7 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
     // font_size 0 falls back to the font's default size (loaded at 32 -> key 128).
     void* slot_default = nullptr;
     painter_scope_push(p, &slot_default);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
-        (FlTextStyle) { .font_id = font });
+    painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
     const FlPaintSpan* span_default = (const FlPaintSpan*)slot_default;
     ASSERT_TRUE_MSG(span_default != nullptr && span_default->first != nullptr, "size 0 still draws");
@@ -97,9 +93,7 @@ UTEST(render_ir, painter_text_styled_emits_quarter_px_run) {
 
     void* slot_unknown = nullptr;
     painter_scope_push(p, &slot_unknown);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
-        (FlTextStyle) { .font_id = 9999 });
+    painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = 9999 }, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
     ASSERT_TRUE_MSG(slot_unknown == nullptr, "an unknown font attaches no paint span");
 
@@ -235,7 +229,7 @@ UTEST(render_ir, painter_shapes_scale_at_emit) {
                                           .border_color = border,
                                           .border_width = 0.0f });
     FlBar in_bars[2] = { { 0.0f, 2.0f, 10.0f }, { 3.0f, 2.0f, -4.0f } };
-    painter_bars(p, (PainterBars) { .baseline_y = 100.0f, .bars = in_bars, .bar_count = 2, .color = color });
+    painter_bars(p, 100.0f, in_bars, 2, color);
 
     painter_scope_pop(p);
 
@@ -475,8 +469,8 @@ UTEST(render_ir, painter_lines_emit_snapped_core_fill_rect) {
     void* slot = nullptr;
     painter_scope_push(p, &slot);
     FlColor col = { 200, 100, 50, 255 };
-    painter_hline(p, (PainterRule) { .x = 4.0f, .y = 10.0f, .length = 100.0f, .color = col });
-    painter_vline(p, (PainterRule) { .x = 20.0f, .y = 5.0f, .length = 80.0f, .color = col });
+    painter_hline(p, 4.0f, 10.0f, 100.0f, col);
+    painter_vline(p, 20.0f, 5.0f, 80.0f, col);
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -518,9 +512,7 @@ UTEST(render_ir, snapped_line_splice_rounds_at_fractional_origin) {
 
     void* snapped_slot = nullptr;
     painter_scope_push(p, &snapped_slot);
-    painter_hline(
-        p, (PainterRule) {
-               .x = 0.0f, .y = 0.0f, .length = 100.0f, .color = col }); // element-local rect {0,0,100,1}, snap-tagged
+    painter_hline(p, 0.0f, 0.0f, 100.0f, col); // element-local rect {0,0,100,1}, snap-tagged
     painter_scope_pop(p);
 
     void* plain_slot = nullptr;
@@ -1012,8 +1004,7 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     // painter_text: the authored 32px handle must rasterize at 64px.
     void* slot_plain = nullptr;
     painter_scope_push(p, &slot_plain);
-    painter_text(p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
-                 font);
+    painter_text(p, 0.0f, 0.0f, FL_S("A"), font, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
     const FlPaintSpan* span_plain = (const FlPaintSpan*)slot_plain;
     ASSERT_TRUE_MSG(span_plain != nullptr && span_plain->first != nullptr, "painter_text attached a paint span");
@@ -1027,9 +1018,7 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     const FlTextStyle style = { .font_id = font, .font_size = 7.5f, .letter_spacing = 1.25f };
     void* slot = nullptr;
     painter_scope_push(p, &slot);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 10.0f, .y = 20.0f, .text = FL_S("AA"), .color = ui_color(255, 255, 255, 255) },
-        style);
+    painter_text_styled(p, 10.0f, 20.0f, FL_S("AA"), style, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
 
     const FlPaintSpan* span = (const FlPaintSpan*)slot;
@@ -1051,9 +1040,7 @@ UTEST(render_ir, painter_text_size_and_spacing_follow_text_scale) {
     // font_size 0 falls back to the font's authored load size, which scales the same way (32 -> 64).
     void* slot_default = nullptr;
     painter_scope_push(p, &slot_default);
-    painter_text_styled(
-        p, (PainterTextRun) { .x = 0.0f, .y = 0.0f, .text = FL_S("A"), .color = ui_color(255, 255, 255, 255) },
-        (FlTextStyle) { .font_id = font });
+    painter_text_styled(p, 0.0f, 0.0f, FL_S("A"), (FlTextStyle) { .font_id = font }, ui_color(255, 255, 255, 255));
     painter_scope_pop(p);
     const FlPaintSpan* span_default = (const FlPaintSpan*)slot_default;
     ASSERT_TRUE_MSG(span_default != nullptr && span_default->first != nullptr, "size 0 still draws");

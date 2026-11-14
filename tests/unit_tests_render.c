@@ -9112,8 +9112,7 @@ UTEST(render, snapped_line_crisp_at_fractional_dpi) {
         // Canvas at the device origin (0,0). A hairline at local y=9 lands at device y = 9 * 1.25 = 11.25, which
         // snaps to row 11; local x 0..100 covers device x 0..125, so x=50 is mid-line.
         ui_layout_area_id(ID("canvas"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_hline(ui_get_painter(),
-                          (PainterRule) { .x = 0.0f, .y = 9.0f, .length = 100.0f, .color = line_col });
+            painter_hline(ui_get_painter(), 0.0f, 9.0f, 100.0f, line_col);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -9145,8 +9144,7 @@ UTEST(render, snapped_line_crisp_at_fractional_scroll) {
         // 0..100 with the 200 x offset covers device x 200..300, so x=250 is mid-line.
         ui_floating_area_id(ID("scrolled_canvas"), .attach_to = FlFloatingAttachTo_Root, .offset = { 200.0f, 10.4f },
                             .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_hline(ui_get_painter(),
-                          (PainterRule) { .x = 0.0f, .y = 0.0f, .length = 100.0f, .color = line_col });
+            painter_hline(ui_get_painter(), 0.0f, 0.0f, 100.0f, line_col);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
