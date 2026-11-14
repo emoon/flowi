@@ -107,8 +107,12 @@ static bool tree_is_empty_floor(const FlDockTree* tree) {
     return tree->root->kind == FlDockNodeKind_Leaf && tree->root->leaf.count == 0 && tree->floating_count == 0;
 }
 
+static bool distinct_workspaces(const FlDockWorkspace* a, const FlDockWorkspace* b) {
+    return a != nullptr && b != nullptr && a != b;
+}
+
 bool dock_workspace_promote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPanelId panel) {
-    if (src == nullptr || dst == nullptr || src == dst) {
+    if (!distinct_workspaces(src, dst)) {
         return false;
     }
     if (!dock_tree_has_panel(src->tree, panel) || !tree_is_empty_floor(dst->tree)) {
@@ -127,7 +131,7 @@ bool dock_workspace_promote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPa
 }
 
 bool dock_workspace_demote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPanelId panel) {
-    if (src == nullptr || dst == nullptr || src == dst) {
+    if (!distinct_workspaces(src, dst)) {
         return false;
     }
     if (!dock_tree_has_panel(dst->tree, panel)) {
@@ -200,22 +204,56 @@ bool dock_workspace_save(FlDockWorkspace* ws, FlString settings_dir) {
     return file_write_os(path, (const u8*)json.data, (i64)json.length) >= 0;
 }
 
+static FlJsonValue* read_layout_blob(FlArena* arena, FlString path) {
+    i64 size = file_get_size_os(path);
+    if (size <= 0) {
+        return nullptr; // no saved layout
+    }
+    u8* buffer = arena_alloc_array(arena, u8, (u64)size + 1);
+    i64 read = file_read_os(buffer, path, size);
+    if (read <= 0) {
+        return nullptr;
+    }
+    return fl_json_parse_with_flags(arena, string_from_cstr_len((const char*)buffer, (u64)read),
+                                    FlJsonParseFlags_AllowJson5, nullptr);
+}
+
+// Reconcile against this single-window session: this workspace is the only live host, so a saved layout from a
+// multi-window session folds its other workspaces into ours. If the saved id does not match ours, the first saved
+// workspace is adopted as the root.
+static u64 live_workspace_id(const FlDockPersistLoad* load, u64 own_id) {
+    for (u32 i = 0; i < load->count; ++i) {
+        if (load->workspaces[i].id == own_id) {
+            return own_id;
+        }
+    }
+    return load->workspaces[0].id;
+}
+
+static void adopt_persisted_workspace(FlDockWorkspace* ws, FlDockPersistWorkspace* chosen) {
+    ws->id = chosen->id;
+    ws->family_filter = chosen->family_filter;
+    ws->host_width = chosen->host_width;
+    ws->host_height = chosen->host_height;
+    dock_workspace_set_tree(ws, chosen->tree); // adopts ownership, destroys the previous tree
+    chosen->tree = nullptr;
+}
+
+// Reconcile against one live id leaves exactly one survivor. Any other tree is destroyed so it cannot leak.
+static void destroy_extra_trees(FlDockPersistLoad* load) {
+    for (u32 i = 1; i < load->count; ++i) {
+        if (load->workspaces[i].tree != nullptr) {
+            dock_tree_destroy(load->workspaces[i].tree);
+        }
+    }
+}
+
 bool dock_workspace_load(FlDockWorkspace* ws, FlString settings_dir, const FlDockPanelId* known_panels,
                          u32 known_count) {
     arena_scratch_auto(temp);
 
     FlString path = fl_path_join(temp.arena, settings_dir, DOCK_LAYOUT_FILE);
-    i64 size = file_get_size_os(path);
-    if (size <= 0) {
-        return false; // no saved layout
-    }
-    u8* buffer = arena_alloc_array(temp.arena, u8, (u64)size + 1);
-    i64 read = file_read_os(buffer, path, size);
-    if (read <= 0) {
-        return false;
-    }
-    FlJsonValue* blob = fl_json_parse_with_flags(temp.arena, string_from_cstr_len((const char*)buffer, (u64)read),
-                                                 FlJsonParseFlags_AllowJson5, nullptr);
+    FlJsonValue* blob = read_layout_blob(temp.arena, path);
     if (blob == nullptr) {
         return false;
     }
@@ -225,39 +263,14 @@ bool dock_workspace_load(FlDockWorkspace* ws, FlString settings_dir, const FlDoc
         return false; // bad version or empty
     }
 
-    // Reconcile against this single-window session: this workspace is the only live host, so a saved layout from a
-    // multi-window session folds its other workspaces into ours. If the saved id does not match ours, the first
-    // saved workspace is adopted as the root.
-    u64 live_id = ws->id;
-    bool matches = false;
-    for (u32 i = 0; i < load.count; ++i) {
-        if (load.workspaces[i].id == ws->id) {
-            matches = true;
-            break;
-        }
-    }
-    if (!matches) {
-        live_id = load.workspaces[0].id;
-    }
+    u64 live_id = live_workspace_id(&load, ws->id);
     dock_persist_reconcile(&load, &live_id, 1, known_panels, known_count);
-
     if (load.count == 0) {
         return false;
     }
-    FlDockPersistWorkspace* chosen = &load.workspaces[0];
-    ws->id = chosen->id;
-    ws->family_filter = chosen->family_filter;
-    ws->host_width = chosen->host_width;
-    ws->host_height = chosen->host_height;
-    dock_workspace_set_tree(ws, chosen->tree); // adopts ownership, destroys the previous tree
-    chosen->tree = nullptr;
 
-    // Reconcile against one live id leaves exactly one survivor. Any other tree is destroyed so it cannot leak.
-    for (u32 i = 1; i < load.count; ++i) {
-        if (load.workspaces[i].tree != nullptr) {
-            dock_tree_destroy(load.workspaces[i].tree);
-        }
-    }
+    adopt_persisted_workspace(ws, &load.workspaces[0]);
+    destroy_extra_trees(&load);
     return true;
 }
 
@@ -268,14 +281,17 @@ void dock_workspace_begin(FlDockWorkspace* ws) {
     ws->frame++; // records not stamped with this generation read as not declared
 }
 
+static bool active_panel_is_stale(const FlDockWorkspace* ws) {
+    FlDockPanelId active = ws->active_panel;
+    bool in_flight = dock_workspace_panel_visible(ws, active) && dock_tree_panel_is_floating(ws->tree, active);
+    bool emitting = dock_workspace_panel_should_emit(ws, active) || in_flight;
+    return !emitting || dock_workspace_panel_reserved(ws, active);
+}
+
 void dock_workspace_end(FlDockWorkspace* ws) {
     // The active id must name a panel that emits or is held in a drag. A hidden, closed, reserved or background-tab
     // panel drops it. Reservation is decided only once this frame's declarations are all in, so the check runs here.
-    bool in_flight
-        = dock_workspace_panel_visible(ws, ws->active_panel) && dock_tree_panel_is_floating(ws->tree, ws->active_panel);
-    if (ws->active_panel != 0
-        && ((!dock_workspace_panel_should_emit(ws, ws->active_panel) && !in_flight)
-            || dock_workspace_panel_reserved(ws, ws->active_panel))) {
+    if (ws->active_panel != 0 && active_panel_is_stale(ws)) {
         dock_workspace_set_active_panel(ws, 0);
     }
 
@@ -438,6 +454,10 @@ static void dock_gesture_finish(FlDockWorkspace* ws, bool cancel) {
     }
 }
 
+static bool point_in_box(Clay_BoundingBox box, f32 x, f32 y) {
+    return x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
+}
+
 // The leaf whose tile contains x,y, or nullptr. Clay's boxes are physical px and so is the raw pointer, so this
 // needs no scale conversion. The boxes are the previous frame's.
 static const FlDockNode* leaf_at_point(const FlDockNode* node, f32 x, f32 y) {
@@ -452,15 +472,17 @@ static const FlDockNode* leaf_at_point(const FlDockNode* node, f32 x, f32 y) {
     if (!data.found) {
         return nullptr;
     }
-    Clay_BoundingBox box = data.boundingBox;
-    bool inside = x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
-    return inside ? node : nullptr;
+    return point_in_box(data.boundingBox, x, y) ? node : nullptr;
+}
+
+static bool press_can_activate(const FlUiCtx* self) {
+    return self != nullptr && self->modal_scope_id == 0 && ui_mouse_pressed(FlMouseButton_Left);
 }
 
 // A press inside a tile activates that tile's shown panel. A modal blocks it; a popup does not.
 static void activate_panel_under_press(FlDockWorkspace* ws) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr || self->modal_scope_id != 0 || !ui_mouse_pressed(FlMouseButton_Left)) {
+    if (!press_can_activate(self)) {
         return;
     }
     const FlDockNode* leaf = leaf_at_point(ws->tree->root, self->input_state.mouse.x, self->input_state.mouse.y);
@@ -473,37 +495,45 @@ static void activate_panel_under_press(FlDockWorkspace* ws) {
     }
 }
 
+// Start: a tab the previous frame's header reported as pulled out becomes an undock-and-drag, so
+// dock_drag_begin_undock snapshots the geometry that walk produced. The undock arms only past the travel threshold
+// and only while the button is still down.
+static void begin_pending_undock(FlDockWorkspace* ws, FlDockPanelId grab, bool held) {
+    bool armed = grab != 0 && held && !ws->grab_blocked && !dock_drag_active(&ws->drag);
+    if (armed && drag_past_arm_threshold()) {
+        FlDockFamilyGate gate = { dock_workspace_panel_family(ws, grab), ws->family_filter };
+        dock_drag_begin_undock(&ws->drag, ws->tree, grab, gate);
+    }
+}
+
+// End: the dragged tab is gone from its strip by now, so the button state ends the gesture, since there is no
+// per-item signal left. Escape cancels, and so does a release outside the workspace, which resolves to no zone.
+static void end_drag_gesture(FlDockWorkspace* ws, bool held) {
+    if (!dock_drag_active(&ws->drag)) {
+        return;
+    }
+    if (ui_key_pressed(FlKey_Escape)) {
+        dock_gesture_finish(ws, /*cancel=*/true);
+        ws->grab_blocked = true;
+    } else if (!held) {
+        dock_gesture_finish(ws, /*cancel=*/false);
+    }
+}
+
 void dock_workspace_emit(FlDockWorkspace* ws) {
     if (g_ui_ctx == nullptr) {
         return; // the walk emits Clay elements, which need a live context
     }
 
     // Structural gestures touch the tree only here, before this frame's walk.
-    //
-    // Start: a tab the previous frame's header reported as pulled out becomes an undock-and-drag, so
-    // dock_drag_begin_undock snapshots the geometry that walk produced. The undock arms only past the travel
-    // threshold and only while the button is still down.
     FlDockPanelId grab = ws->pending_grab;
     ws->pending_grab = 0;
     bool held = ui_mouse_down(FlMouseButton_Left);
     if (!held) {
         ws->grab_blocked = false;
     }
-    if (grab != 0 && !ws->grab_blocked && !dock_drag_active(&ws->drag) && held && drag_past_arm_threshold()) {
-        FlDockFamilyGate gate = { dock_workspace_panel_family(ws, grab), ws->family_filter };
-        dock_drag_begin_undock(&ws->drag, ws->tree, grab, gate);
-    }
-
-    // End: the dragged tab is gone from its strip by now, so the button state ends the gesture, since there is no
-    // per-item signal left. Escape cancels, and so does a release outside the workspace, which resolves to no zone.
-    if (dock_drag_active(&ws->drag)) {
-        if (ui_key_pressed(FlKey_Escape)) {
-            dock_gesture_finish(ws, /*cancel=*/true);
-            ws->grab_blocked = true;
-        } else if (!held) {
-            dock_gesture_finish(ws, /*cancel=*/false);
-        }
-    }
+    begin_pending_undock(ws, grab, held);
+    end_drag_gesture(ws, held);
 
     if (dock_drag_active(&ws->drag)) {
         // The drag layer tiles in place of the plain walk: the reserved-slot preview over the resolved target.
@@ -554,6 +584,12 @@ static FlLayoutId panel_clip_layout_id(FlDockPanelId id) {
     return (FlLayoutId) { .name = FL_S("fl_dock_panel_clip"), .id = (u32)id };
 }
 
+// Half a physical pixel of slack, so a body that exactly fills the tile does not count as overflow.
+static bool body_overflows_tile(FlScrollContainerExtent extent) {
+    return extent.content_extent.x > extent.viewport_size.x + 0.5f
+           || extent.content_extent.y > extent.viewport_size.y + 0.5f;
+}
+
 // A body larger than its tile is clipped, and the overflow is logged once per panel. Reads the previous frame's
 // extent.
 static void report_overflow_once(FlDockWorkspace* ws, FlDockPanelId id) {
@@ -563,10 +599,7 @@ static void report_overflow_once(FlDockWorkspace* ws, FlDockPanelId id) {
         return;
     }
     FlScrollContainerExtent extent = ui_get_scroll_container_extent(ui_layout_id_to_clay_id(panel_clip_layout_id(id)));
-    // Half a physical pixel of slack, so a body that exactly fills the tile does not count as overflow.
-    if (!extent.found
-        || (extent.content_extent.x <= extent.viewport_size.x + 0.5f
-            && extent.content_extent.y <= extent.viewport_size.y + 0.5f)) {
+    if (!extent.found || !body_overflows_tile(extent)) {
         return;
     }
     rec->overflow_logs++;
