@@ -307,10 +307,7 @@ void font_cache_destroy(FlFontCache* self) {
         self->library = nullptr;
     }
     mutex_destroy(&self->ft_lock);
-    if (self->arena) {
-        fl_arena_destroy(self->arena);
-        self->arena = nullptr;
-    }
+    fl_arena_destroy(self->arena);
     fl_arena_destroy(self->shape_arena);
 
     self->face_count = 0;
@@ -615,14 +612,12 @@ static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph
     return out;
 }
 
-// The drawing route. It always decodes UTF-8 and ends at a NUL, as drawing did before the seam; measuring trusts
-// is_ascii and counts through a NUL.
+// The drawing route. It always decodes UTF-8, as drawing did before the seam; measuring trusts is_ascii.
 FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text) {
     if (text.data == nullptr) {
         return (FlShapedRun) { 0 };
     }
     text.is_ascii = 0;
-    text.length = strnlen(text.data, text.length);
 
     fl_arena_rewind(self->shape_arena);
     FlShapedGlyph* glyphs = arena_alloc_array(self->shape_arena, FlShapedGlyph, text.length);

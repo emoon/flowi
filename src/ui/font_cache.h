@@ -119,8 +119,8 @@ typedef struct FlShapedRun {
     i64 width; // sum of the advances, without letter spacing
 } FlShapedRun;
 
-// Shape one line for drawing at a quarter-px size key. The text is decoded as UTF-8 whatever is_ascii says, and a
-// NUL ends the run. An unknown or unready font still yields its glyphs, with zero advances. Main thread only.
+// Shape one line for drawing at a quarter-px size key. The text is decoded as UTF-8 whatever is_ascii says. An
+// unknown or unready font still yields its glyphs, with zero advances. Main thread only.
 FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text);
 
 // String-independent vertical metrics at a fractional size (quarter-pixel quantized), for stable
