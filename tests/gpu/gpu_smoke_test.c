@@ -955,7 +955,7 @@ static int run_shape_translator_tests(void) {
 
     // Round caps widen the AABB by the cap discs (centerline radius 40, cap radius 10).
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, FlArcFlags_round_caps, NULL);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, FL_IR_ARC_ROUND_CAPS, NULL);
     list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
     CHECK(list.cmds[0].flags == GPU_DRAW_ARC_ROUND_CAPS, "arc: round caps map to the flag");
     CHECK(near_f32(list.aabbs[0].x0, 90.0f, 1e-3f) && near_f32(list.aabbs[0].y1, 110.0f, 1e-3f),
@@ -5497,7 +5497,7 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // --- The same knob with round caps --------------------------------------------------------------------
     // The cap disc (radius 6) covers ~4px past the end angle; ~10px past stays clear.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, FlArcFlags_round_caps, NULL);
+    fl_ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, FL_IR_ARC_ROUND_CAPS, NULL);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the round-cap frame");
     CHECK(pixel_color(pixel_at_knob_angle(&buf, kcx, kcy, kend + kdelta, 54.0f), green, 2.0f),
@@ -6105,12 +6105,11 @@ static void fl_app_gpu_frame(void* user_data) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         Painter* p = ui_get_painter();
         painter_rect(p, (FlRect) { .x = 20.0f, .y = 20.0f, .w = 100.0f, .h = 100.0f }, ui_color(40, 60, 200, 255));
-        painter_circle(p, (FlCircleShape) { .cx = 180.0f,
-                                            .cy = 180.0f,
-                                            .radius = 50.0f,
-                                            .color = ui_color(230, 80, 60, 255),
-                                            .border_color = ui_color(0, 0, 0, 0),
-                                            .border_width = 0.0f });
+        painter_circle(p, (FlVec2) { .x = 180.0f, .y = 180.0f }, 50.0f, ui_color(230, 80, 60, 255));
+        // Two green outlines in the free corners; the readback counts their pixels to tell hollow from filled.
+        FlStroke outline = { .width = 6.0f, .color = ui_color(40, 220, 60, 255) };
+        painter_circle_stroke(p, (FlVec2) { .x = 190.0f, .y = 60.0f }, 40.0f, outline);
+        painter_rect_stroke(p, (FlRect) { .x = 20.0f, .y = 150.0f, .w = 80.0f, .h = 80.0f }, 0.0f, outline);
     }
 }
 
@@ -6298,6 +6297,7 @@ static int run_em_app_gpu_path_test(void) {
     // on every channel, so it fakes neither fill.
     bool saw_rect = false;   // blue-dominant
     bool saw_circle = false; // red-dominant
+    u32 outline_px = 0;      // green-dominant
     for (u32 y = 0; y < rb.height; ++y) {
         const u8* row = (const u8*)rb.pixels + (size_t)y * rb.stride;
         for (u32 x = 0; x < rb.width; ++x) {
@@ -6311,11 +6311,18 @@ static int run_em_app_gpu_path_test(void) {
             if (px[0] > 150 && px[0] > px[1] && px[0] > px[2]) {
                 saw_circle = true;
             }
+            if (px[1] > 150 && px[1] > px[0] && px[1] > px[2]) {
+                outline_px++;
+            }
         }
     }
     CHECK(saw_rect, "fl_app GPU path: the rect renders (a blue-dominant covered pixel)");
     CHECK(saw_circle, "fl_app GPU path: the circle renders on GPU through fl_app (a red-dominant covered pixel)");
-    printf("gpu_smoke_test: fl_app GPU path (rect + circle) PASS\n");
+    // A 6px ring of radius 40 covers about 1400 px and a 6px band around an 80px square about 1800; filled,
+    // the two shapes would cover over 11000.
+    CHECK(outline_px > 2400 && outline_px < 4000,
+          "fl_app GPU path: circle_stroke and rect_stroke draw the outline only, with a hollow interior");
+    printf("gpu_smoke_test: fl_app GPU path (rect + circle + outlines) PASS\n");
 
     fl_app_destroy(app);
     return 0;

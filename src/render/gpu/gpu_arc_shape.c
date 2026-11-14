@@ -26,7 +26,7 @@ bool gpu_arc_shape(const FlCmdArc* arc, GpuArcShape* s) {
         .inner = fmaxf(arc->radius - arc->thickness, 0.0f),
         .start = start,
         .sweep = sweep,
-        .round_caps = (arc->flags & FlArcFlags_round_caps) != 0,
+        .round_caps = (arc->flags & FL_IR_ARC_ROUND_CAPS) != 0,
         .full = sweep >= GPU_TAU,
     };
     return true;

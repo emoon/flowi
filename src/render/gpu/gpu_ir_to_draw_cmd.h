@@ -41,7 +41,7 @@ enum {
 
 // GpuDraw_Arc flag bits in GpuDrawCmd.flags.
 enum {
-    GPU_DRAW_ARC_ROUND_CAPS = 1u << 0, // round end caps (IR FlArcFlags_round_caps); default is butt
+    GPU_DRAW_ARC_ROUND_CAPS = 1u << 0, // round end caps (IR FL_IR_ARC_ROUND_CAPS); default is butt
     GPU_DRAW_ARC_FULL = 1u << 1,       // sweep covers the full circle: the shader skips the wedge cut
 };
 

@@ -48,6 +48,22 @@ impl Painter {
         unsafe { crate::sys::fl_painter_rect_rounded(x, y, w, h, radius, color) }
     }
 
+    /// Draw the outline of a rectangle: top-left (x, y), size (w, h), in logical space. The stroke lies
+    /// inside the rectangle and can be dashed. The current effect does not apply to it.
+    #[inline]
+    pub fn rect_stroke(x: f32, y: f32, w: f32, h: f32, stroke: crate::sys::Stroke) {
+        let _frame = crate::frame_thread::frame_thread_guard("Painter::rect_stroke");
+        unsafe { crate::sys::fl_painter_rect_stroke(x, y, w, h, stroke) }
+    }
+
+    /// Draw the outline of a rounded rectangle; radius is the outer corner radius. Otherwise as
+    /// Painter::rect_stroke.
+    #[inline]
+    pub fn rect_rounded_stroke(x: f32, y: f32, w: f32, h: f32, radius: f32, stroke: crate::sys::Stroke) {
+        let _frame = crate::frame_thread::frame_thread_guard("Painter::rect_rounded_stroke");
+        unsafe { crate::sys::fl_painter_rect_rounded_stroke(x, y, w, h, radius, stroke) }
+    }
+
     /// Draw a filled rectangle with a four-corner color gradient (bilinear): top-left (x, y), size (w, h),
     /// in logical space.
     #[inline]
@@ -82,6 +98,14 @@ impl Painter {
         unsafe { crate::sys::fl_painter_vline(x, y, length, color) }
     }
 
+    /// Draw a straight line from (x0, y0) to (x1, y1), centered on the two points, with round caps. For a
+    /// crisp 1px horizontal or vertical rule use hline or vline instead.
+    #[inline]
+    pub fn line(x0: f32, y0: f32, x1: f32, y1: f32, stroke: crate::sys::Stroke) {
+        let _frame = crate::frame_thread::frame_thread_guard("Painter::line");
+        unsafe { crate::sys::fl_painter_line(x0, y0, x1, y1, stroke) }
+    }
+
     /// Draw text with font (FontId::INVALID = active font) in color, top-left at (x, y).
     #[inline]
     pub fn text(x: f32, y: f32, text: impl AsRef<str>, font: crate::sys::FontId, color: crate::sys::Color) {
@@ -110,41 +134,63 @@ impl Painter {
         unsafe { crate::sys::fl_painter_image(x, y, w, h, image, color) }
     }
 
-    /// Draw a filled circle with an optional border ring: center, radius and colors come from circle.
+    /// Draw a filled circle: center (cx, cy) and radius, in logical space.
     #[inline]
-    pub fn circle(circle: crate::sys::CircleShape) {
+    pub fn circle(cx: f32, cy: f32, radius: f32, color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::circle");
-        unsafe { crate::sys::fl_painter_circle(circle) }
+        unsafe { crate::sys::fl_painter_circle(cx, cy, radius, color) }
     }
 
-    /// Draw a filled circle like Painter::circle, with the border ring dashed by stroke (a zeroed stroke
-    /// draws the same solid ring). The dash period is rescaled slightly so a whole number of
-    /// dashes closes the ring - no stub where the pattern wraps.
+    /// Draw the outline of a circle. The stroke lies inside radius and can be dashed; the dash period is
+    /// rescaled slightly so a whole number of dashes closes the ring, with no stub where the pattern wraps.
     #[inline]
-    pub fn circle_stroked(circle: crate::sys::CircleShape, stroke: crate::sys::StrokeStyle) {
-        let _frame = crate::frame_thread::frame_thread_guard("Painter::circle_stroked");
-        unsafe { crate::sys::fl_painter_circle_stroked(circle, stroke) }
+    pub fn circle_stroke(cx: f32, cy: f32, radius: f32, stroke: crate::sys::Stroke) {
+        let _frame = crate::frame_thread::frame_thread_guard("Painter::circle_stroke");
+        unsafe { crate::sys::fl_painter_circle_stroke(cx, cy, radius, stroke) }
     }
 
-    /// Draw a filled diamond with an optional border ring: center, half-extents and colors come from
-    /// diamond.
+    /// Draw a filled circle and its outline as one shape. Prefer this to a circle call followed by a
+    /// circle_stroke call: the two are antialiased together, so no fill color shows at the outer edge.
     #[inline]
-    pub fn diamond(diamond: crate::sys::DiamondShape) {
+    pub fn circle_bordered(cx: f32, cy: f32, radius: f32, color: crate::sys::Color, border: crate::sys::Stroke) {
+        let _frame = crate::frame_thread::frame_thread_guard("Painter::circle_bordered");
+        unsafe { crate::sys::fl_painter_circle_bordered(cx, cy, radius, color, border) }
+    }
+
+    /// Draw a filled diamond: center (cx, cy), horizontal half-extent rx and vertical half-extent ry.
+    #[inline]
+    pub fn diamond(cx: f32, cy: f32, rx: f32, ry: f32, color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::diamond");
-        unsafe { crate::sys::fl_painter_diamond(diamond) }
+        unsafe { crate::sys::fl_painter_diamond(cx, cy, rx, ry, color) }
     }
 
-    /// Draw a stroked arc, ring or circle sector. Angles are radians: 0 is 12 o'clock and a positive
-    /// sweep runs clockwise.
+    /// Draw the outline of a diamond. The stroke lies inside the diamond and is always solid.
     #[inline]
-    pub fn arc(arc: crate::sys::ArcShape) {
+    pub fn diamond_stroke(cx: f32, cy: f32, rx: f32, ry: f32, stroke: crate::sys::Stroke) {
+        let _frame = crate::frame_thread::frame_thread_guard("Painter::diamond_stroke");
+        unsafe { crate::sys::fl_painter_diamond_stroke(cx, cy, rx, ry, stroke) }
+    }
+
+    /// Draw a filled diamond and its outline as one shape, antialiased together like
+    /// Painter::circle_bordered.
+    #[inline]
+    pub fn diamond_bordered(cx: f32, cy: f32, rx: f32, ry: f32, color: crate::sys::Color, border: crate::sys::Stroke) {
+        let _frame = crate::frame_thread::frame_thread_guard("Painter::diamond_bordered");
+        unsafe { crate::sys::fl_painter_diamond_bordered(cx, cy, rx, ry, color, border) }
+    }
+
+    /// Draw a stroked arc or ring around (cx, cy). Angles are radians: 0 is 12 o'clock and a positive
+    /// sweep runs clockwise. The stroke grows inward from radius, so a stroke width of radius or more
+    /// gives a filled sector. stroke.cap picks butt or round ends.
+    #[inline]
+    pub fn arc(cx: f32, cy: f32, radius: f32, start_angle: f32, sweep: f32, stroke: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::arc");
-        unsafe { crate::sys::fl_painter_arc(arc) }
+        unsafe { crate::sys::fl_painter_arc(cx, cy, radius, start_angle, sweep, stroke) }
     }
 
     /// Draw a polyline. points are
     /// vertices in logical (authoring) space; each vertex's intensity modulates stroke alpha (lerped along
-    /// segments) and scales fill alpha. style carries the stroke width and color and the optional fill.
+    /// segments) and scales fill alpha. style carries the stroke and the optional fill.
     #[inline]
     pub fn polyline(points: &[crate::sys::PolyPoint], style: crate::sys::PolylineStyle) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::polyline");

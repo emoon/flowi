@@ -29,6 +29,17 @@ static void call_shape_api_check_compile_only(FlColor color, FlLayoutId id, FlJo
     fl_painter_rect(0, 0, 1, 1, color);
     fl_painter_rect_rounded(0, 0, 1, 1, 2, color);
     fl_painter_hline(0, 0, 4, color);
+    const FlStroke stroke = { .width = 1, .color = color };
+    fl_painter_rect_stroke(0, 0, 1, 1, stroke);
+    fl_painter_rect_rounded_stroke(0, 0, 1, 1, 2, stroke);
+    fl_painter_line(0, 0, 1, 1, stroke);
+    fl_painter_circle(0, 0, 1, color);
+    fl_painter_circle_stroke(0, 0, 1, stroke);
+    fl_painter_circle_bordered(0, 0, 1, color, stroke);
+    fl_painter_diamond(0, 0, 1, 1, color);
+    fl_painter_diamond_stroke(0, 0, 1, 1, stroke);
+    fl_painter_diamond_bordered(0, 0, 1, 1, color, stroke);
+    fl_painter_arc(0, 0, 1, 0, 1, stroke);
     fl_input_mouse_position(id);
     fl_input_get_element_state(id);
     fl_input_get_element_state_by_id(element);

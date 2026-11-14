@@ -418,7 +418,7 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
         draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("arc / ring / sector"));
         f32 cy = c.y + 58;
         vw_arc(arena, v, c.x + 50, cy, 34, 7, 0.0f, 6.2831853f, k_accent, 0);                // full ring
-        vw_arc(arena, v, c.x + 125, cy, 34, 16, 0.2f, 4.2f, k_green, FlArcFlags_round_caps); // capped sweep
+        vw_arc(arena, v, c.x + 125, cy, 34, 16, 0.2f, 4.2f, k_green, FL_IR_ARC_ROUND_CAPS);  // capped sweep
         vw_arc(arena, v, c.x + 200, cy, 34, 40, 0.0f, 2.3f, k_warn, 0);                      // filled sector
     }
 

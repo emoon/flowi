@@ -6,8 +6,8 @@
 //! link-and-run only; the software backend does not draw the GPU-tier ones.
 
 use flowi::{
-    grow, layout, Application, ArcFlags, ArcShape, CircleShape, Color, CornerColors, CornerRadius,
-    DiamondShape, FontId, Painter, RectConfig, TextStyle,
+    grow, layout, Application, Color, CornerColors, CornerRadius, FontId, Painter, RectConfig, Stroke,
+    StrokeCap, TextStyle,
 };
 
 // Default clear color (theme surface.base).
@@ -56,20 +56,19 @@ fn painter_bindings_round_trip() {
                 });
 
                 // Link-and-run only, kept clear of the asserted pixels above in the bottom band (y >= 44).
-                Painter::circle(CircleShape { cx: 40.0, cy: 50.0, radius: 6.0, color: c, border_color: none, border_width: 0.0 });
+                let stroke = Stroke::new(2.0, c);
+                Painter::circle(40.0, 50.0, 6.0, c);
+                Painter::circle_stroke(40.0, 50.0, 6.0, stroke.with_dash(2.0, 1.0));
+                Painter::circle_bordered(40.0, 50.0, 6.0, c, stroke);
+                Painter::rect_stroke(4.0, 44.0, 16.0, 16.0, stroke);
+                Painter::rect_rounded_stroke(4.0, 44.0, 16.0, 16.0, 4.0, stroke);
+                Painter::line(4.0, 44.0, 20.0, 60.0, stroke);
                 Painter::rect_rounded(4.0, 44.0, 16.0, 16.0, 4.0, c);
                 Painter::gradient_rect(24.0, 44.0, 16.0, 16.0, CornerColors { top_left: c, top_right: none, bottom_left: none, bottom_right: c });
-                Painter::diamond(DiamondShape { cx: 44.0, cy: 50.0, rx: 6.0, ry: 8.0, color: c, border_color: none, border_width: 0.0 });
-                Painter::arc(ArcShape {
-                    cx: 44.0,
-                    cy: 44.0,
-                    radius: 6.0,
-                    thickness: 2.0,
-                    start_angle: 0.0,
-                    sweep: std::f32::consts::PI,
-                    color: c,
-                    flags: ArcFlags::ROUND_CAPS,
-                });
+                Painter::diamond(44.0, 50.0, 6.0, 8.0, c);
+                Painter::diamond_stroke(44.0, 50.0, 6.0, 8.0, stroke);
+                Painter::diamond_bordered(44.0, 50.0, 6.0, 8.0, c, stroke);
+                Painter::arc(44.0, 44.0, 6.0, 0.0, std::f32::consts::PI, stroke.with_cap(StrokeCap::Round));
                 // Font 0 is the active font. The built-in font paints its cells above the pen baseline, so
                 // anchor both runs deep in the unasserted bottom band.
                 Painter::text(4.0, 60.0, "au", FontId(0), c);
