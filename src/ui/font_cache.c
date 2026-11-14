@@ -647,9 +647,9 @@ static void shape_codepoint(const AdvanceRun* run, u32 codepoint, FlShapedGlyph*
     const CachedGlyph glyph = run_glyph(run, codepoint);
     if (glyphs != nullptr) {
         glyphs[out->count] = (FlShapedGlyph) {
-            .advance = glyph.advance,
             .font = glyph.fallback ? run->cache->fallback_face->id : run->font,
             .glyph_index = glyph.glyph_index,
+            .x = (i32)out->width,
         };
     }
     out->count++;

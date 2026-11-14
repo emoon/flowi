@@ -60,9 +60,9 @@ UTEST(render_ir, shaped_run_matches_measurement) {
         ASSERT_EQ_MSG((int)run.glyphs[i].glyph_index, (int)font_cache_get_glyph_index(cache, font, (u32)ascii.data[i]),
                       "the glyph index is the face's index for the codepoint");
         ASSERT_EQ_MSG((int)run.glyphs[i].font, (int)font, "a codepoint the font maps stays on it");
-        ASSERT_EQ_MSG(run.glyphs[i].advance, font_cache_get_glyph_advance_q4(cache, font, q4, (u32)ascii.data[i]),
-                      "each glyph carries the cached advance");
-        sum += run.glyphs[i].advance;
+        ASSERT_TRUE_MSG(run.glyphs[i].x == sum, "each glyph sits after the cached advances before it");
+        ASSERT_EQ_MSG(run.glyphs[i].y, 0, "unshaped glyphs sit on the baseline");
+        sum += font_cache_get_glyph_advance_q4(cache, font, q4, (u32)ascii.data[i]);
     }
     ASSERT_TRUE_MSG(run.width == sum, "the run width is the sum of its advances");
 

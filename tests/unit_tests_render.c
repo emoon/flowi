@@ -542,7 +542,8 @@ UTEST(font_cache, default_font_shapes_to_codepoints) {
     ASSERT_EQ_MSG((int)run.count, 1, "one glyph");
     ASSERT_EQ_MSG((int)run.glyphs[0].font, (int)builtin, "the built-in font draws its own ASCII");
     ASSERT_EQ_MSG((int)run.glyphs[0].glyph_index, (int)'B', "its glyph index is the codepoint");
-    ASSERT_EQ_MSG(run.glyphs[0].advance, 16 * 64, "one 8 px cell at scale 2");
+    ASSERT_EQ_MSG(run.glyphs[0].x, 0, "the first glyph starts the run");
+    ASSERT_TRUE_MSG(run.width == 16 * 64, "one 8 px cell at scale 2");
 
     font_cache_destroy(cache);
 }
