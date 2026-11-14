@@ -50,16 +50,16 @@ void fl_dock_register_host(FlDockHost host);
 // Request promoting panel (in the current window's workspace) into its own OS window. Deferred: enqueued now and
 // applied at the next dock_shared_flush_promotes safe point (never mid-walk), which creates a second workspace,
 // moves the panel's subtree into it (dock_workspace_promote), then asks the host to open a window hosting it. No-op
-// if no host is registered, if the panel is absent, or if the registry is full.
+// if no host is registered, if the panel is not docked (absent, or mid-drag), or if the registry is full.
 void dock_promote_panel(FlDockPanelId panel);
 
 // Drain the deferred promote queue. Called from dock_workspace_begin, the docking safe point outside any walk, so a
 // source tree may be mutated here even though that source is about to emit. No-op without a shared tier.
 void dock_shared_flush_promotes(void);
 
-// The host calls this when a promoted window closes (user / window-manager / injected close): demote the panel back
-// into its source workspace by stable id (degrading to the floor/root rule if the old leaf is gone), then dissolve
-// the second workspace and drop its registry entry. host_window is the opaque handle open_promoted_window
+// The host calls this when a promoted window closes (user / window-manager / injected close): demote every panel
+// the window holds back into its source workspace by stable id, then dissolve the second workspace and drop its
+// registry entry. A panel promoted onward out of this window now demotes into this window's source. host_window is the opaque handle open_promoted_window
 // returned. No-op if the handle is unknown.
 void fl_dock_notify_window_closed(void* host_window);
 

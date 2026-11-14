@@ -115,7 +115,8 @@ bool dock_workspace_promote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPa
     if (!distinct_workspaces(src, dst)) {
         return false;
     }
-    if (!dock_tree_has_panel(src->tree, panel) || !tree_is_empty_floor(dst->tree)) {
+    // Only a docked panel moves. One in flight belongs to its drag, whose drop would dock it a second time.
+    if (dock_tree_find_leaf_with_panel(src->tree, panel) == nullptr || !tree_is_empty_floor(dst->tree)) {
         return false;
     }
 

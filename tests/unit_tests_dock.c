@@ -1924,6 +1924,81 @@ UTEST(dock_workspace, promote_failure_paths_via_host) {
     ASSERT_EQ_MSG((int)dock_tree_collect_panels(src->tree, nullptr, 0), 2, "conservation holds across a failed open");
 }
 
+// A panel a drag has in flight belongs to that gesture. Promoting it would leave the drop to dock a second copy.
+UTEST(dock_workspace, a_dragged_panel_is_not_promoted) {
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+    DOCK_STUB_HOST(scope, fixture, dock_split(FlDockAxis_X, 0.5f, dock_leaf(101), dock_leaf(102)));
+    FlDockWorkspace* src = scope.tree.ws;
+
+    dock_drag_begin_undock(&src->drag, src->tree, 101, (FlDockFamilyGate) { 0 });
+    dock_promote_panel(101);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    bool still_in_flight = dock_tree_panel_is_floating(src->tree, 101);
+    dock_drag_discard(&src->drag); // the scope restores the tree, so the gesture only has to let go
+
+    ASSERT_EQ_MSG(s_stub_host.open_calls, 0, "no window opens for a panel that is mid-drag");
+    ASSERT_TRUE_MSG(still_in_flight, "the drag keeps the panel");
+    ASSERT_EQ_MSG((int)dock_tree_collect_panels(src->tree, nullptr, 0), 2, "and the workspace still holds both");
+}
+
+// Closing a promoted window brings back everything docked in it, not only the panel it was opened for.
+UTEST(dock_workspace, closing_a_promoted_window_returns_every_panel_it_holds) {
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+    DOCK_STUB_HOST(scope, fixture, dock_split(FlDockAxis_X, 0.5f, dock_leaf(101), dock_leaf(102)));
+    FlDockWorkspace* src = scope.tree.ws;
+
+    dock_promote_panel(101);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    ASSERT_EQ(s_stub_host.open_calls, 1);
+    FlDockWorkspace* promoted = s_stub_host.last_ws;
+    FlDockRequest tab = { .kind = FlDockRequest_Tab, .panel = 103, .target_node = promoted->tree->root->id };
+    ASSERT_TRUE(dock_tree_apply(promoted->tree, &tab));
+
+    fl_dock_notify_window_closed(&s_stub_host_handle);
+    ASSERT_TRUE(dock_tree_find_leaf_with_panel(src->tree, 101) != nullptr);
+    ASSERT_TRUE_MSG(dock_tree_find_leaf_with_panel(src->tree, 103) != nullptr,
+                    "a panel docked into the promoted window comes back with it");
+    ASSERT_EQ((int)dock_tree_collect_panels(src->tree, nullptr, 0), 3);
+}
+
+// A panel promoted out of a promoted window outlives the window it came from: when that one closes first, the
+// panel's way home is the closed window's own source.
+UTEST(dock_workspace, a_nested_promotion_survives_its_parent_window_closing) {
+    static int second_handle;
+    FlUiCtx* fixture = render_fixture_get();
+    ASSERT_TRUE_MSG(fixture != nullptr, "render fixture creation failed");
+    DOCK_STUB_HOST(scope, fixture, dock_split(FlDockAxis_X, 0.5f, dock_leaf(101), dock_leaf(102)));
+    FlDockWorkspace* src = scope.tree.ws;
+
+    dock_promote_panel(101);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    ASSERT_EQ(s_stub_host.open_calls, 1);
+    FlDockWorkspace* first = s_stub_host.last_ws;
+    FlDockRequest tab = { .kind = FlDockRequest_Tab, .panel = 103, .target_node = first->tree->root->id };
+    ASSERT_TRUE(dock_tree_apply(first->tree, &tab));
+
+    // Promote 103 out of the first promoted window, as that window's own frame would.
+    s_stub_host.handle = &second_handle;
+    ui_ctx_set_dock_workspace(fixture, first);
+    dock_promote_panel(103);
+    ui_ctx_set_dock_workspace(fixture, src);
+    dock_workspace_begin(src);
+    dock_workspace_end(src);
+    ASSERT_EQ(s_stub_host.open_calls, 2);
+
+    fl_dock_notify_window_closed(&s_stub_host_handle); // the first window, the one 103 was promoted from
+    ASSERT_TRUE(dock_tree_find_leaf_with_panel(src->tree, 101) != nullptr);
+    fl_dock_notify_window_closed(&second_handle);
+    ASSERT_TRUE_MSG(dock_tree_find_leaf_with_panel(src->tree, 103) != nullptr,
+                    "103 comes home to the workspace its parent window came from");
+    ASSERT_EQ((int)dock_tree_collect_panels(src->tree, nullptr, 0), 3);
+}
+
 // The same through the real headless fl_app and window backend. The default dock host registered by fl_app_create
 // opens a real headless window for the promoted subtree, and an injected window close demotes it back.
 typedef struct DockPromoteE2E {

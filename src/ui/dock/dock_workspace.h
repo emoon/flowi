@@ -89,8 +89,8 @@ void dock_workspace_set_tree(FlDockWorkspace* ws, FlDockTree* tree);
 // Move panel out of src and re-host it as the sole tab of dst's root leaf. dst must be an empty floor (a
 // freshly created second workspace) so the promoted panel becomes its root. The panel's dock-family tag travels
 // with it. Both trees stay invariant-clean and the panel id is conserved across the pair (it leaves src's universe
-// and enters dst's). Returns false with no change if panel is absent from src,
-// dst is not an empty floor, or src == dst.
+// and enters dst's). Returns false with no change if panel is not docked in src (absent, or in flight on
+// a drag), dst is not an empty floor, or src == dst.
 bool dock_workspace_promote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPanelId panel);
 
 // The inverse of dock_workspace_promote: move panel out of dst and re-dock it into src, rebinding by its
