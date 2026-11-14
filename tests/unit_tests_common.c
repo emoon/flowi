@@ -485,7 +485,15 @@ void vfs_test_register_driver(const FlVfsPlugin* plugin) {
     vfs_register_driver(plugin, nullptr);
 }
 
+// Cases that provoke failures on purpose log thousands of expected errors, which bury a real failure in the
+// output. Only fatal messages are shown unless FLOWI_TEST_LOGS is set. A case that reads its own messages back
+// from the log file lowers the level itself, and the reset before the next case restores it.
+static LogLevel test_log_level(void) {
+    return getenv_os("FLOWI_TEST_LOGS") != nullptr ? LogLevel_Trace : LogLevel_Fatal;
+}
+
 void process_singletons_reset(void) {
+    fl_log_set_level(test_log_level());
     app_identity_reset();
     fl_log_file_shutdown();
     atomic_store(&s_stub_vfs_read_release, true);
