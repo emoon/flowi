@@ -212,13 +212,37 @@ static FlDockTree* build_tree(const FlJsonValue* wsj) {
     return tree;
 }
 
+// A blob this build can read. A version mismatch fails here (bad-version-to-default).
+static bool blob_is_current(const FlJsonValue* blob) {
+    return blob != nullptr && blob->type == FlJsonType_Object
+           && fl_json_get_u32_prop(blob, FL_S("version")) == FL_DOCK_PERSIST_VERSION;
+}
+
+// Read one saved workspace into out. False when its tree is malformed, and out is then left alone.
+static bool workspace_from_json(const FlJsonValue* wsj, FlDockPersistWorkspace* out) {
+    FlDockTree* tree = build_tree(wsj);
+    if (tree == nullptr) {
+        return false;
+    }
+    FlString id_str = fl_json_get_string_prop(wsj, FL_S("id"));
+    out->id = str_to_u64(id_str.data, id_str.length, nullptr);
+    out->family_filter = fl_json_get_u32_prop(wsj, FL_S("family"));
+    out->host_width = (f32)fl_json_get_f64_prop(wsj, FL_S("host_w"));
+    out->host_height = (f32)fl_json_get_f64_prop(wsj, FL_S("host_h"));
+    out->tree = tree;
+    return true;
+}
+
+static void destroy_trees(const FlDockPersistWorkspace* list, u32 count) {
+    for_count(i, count) {
+        dock_tree_destroy(list[i].tree);
+    }
+}
+
 FlDockPersistLoad dock_persist_from_json(const FlJsonValue* blob, FlArena* arena) {
     FlDockPersistLoad out = { .ok = false, .workspaces = nullptr, .count = 0 };
-    if (blob == nullptr || blob->type != FlJsonType_Object) {
+    if (!blob_is_current(blob)) {
         return out;
-    }
-    if (fl_json_get_u32_prop(blob, FL_S("version")) != FL_DOCK_PERSIST_VERSION) {
-        return out; // bad-version-to-default
     }
 
     FlJsonArray* arr = fl_json_get_array_prop(blob, FL_S("workspaces"));
@@ -231,21 +255,10 @@ FlDockPersistLoad dock_persist_from_json(const FlJsonValue* blob, FlArena* arena
     FlDockPersistWorkspace* list = arena_alloc_array(arena, FlDockPersistWorkspace, count);
     u32 i = 0;
     for (FlJsonArrayElement* e = arr->start; e != nullptr && i < count; e = e->next, ++i) {
-        const FlJsonValue* wsj = e->value;
-        FlDockTree* tree = build_tree(wsj);
-        if (tree == nullptr) {
-            // Malformed tree: release everything built so far.
-            for_count(j, i) {
-                dock_tree_destroy(list[j].tree);
-            }
+        if (!workspace_from_json(e->value, &list[i])) {
+            destroy_trees(list, i); // release everything built so far
             return out;
         }
-        FlString id_str = fl_json_get_string_prop(wsj, FL_S("id"));
-        list[i].id = str_to_u64(id_str.data, id_str.length, nullptr);
-        list[i].family_filter = fl_json_get_u32_prop(wsj, FL_S("family"));
-        list[i].host_width = (f32)fl_json_get_f64_prop(wsj, FL_S("host_w"));
-        list[i].host_height = (f32)fl_json_get_f64_prop(wsj, FL_S("host_h"));
-        list[i].tree = tree;
     }
 
     out.ok = true;
@@ -341,29 +354,25 @@ static void reparent_workspace(FlDockTree* src, FlDockTree* target) {
     }
 }
 
-void dock_persist_reconcile(FlDockPersistLoad* load, const u64* live_ws_ids, u32 live_count,
-                            const FlDockPanelId* declared, u32 declared_count) {
-    if (load == nullptr || !load->ok || load->count == 0) {
-        return;
-    }
-
-    // The surviving root workspace: the first live one, or index 0 defensively if none matched.
-    u32 target_idx = 0;
-    bool found = false;
+// The surviving root workspace: the first live one, or index 0 defensively if none matched.
+static u32 surviving_root_index(const FlDockPersistLoad* load, const u64* live_ws_ids, u32 live_count) {
     for_count(i, load->count) {
         if (id_in(live_ws_ids, live_count, load->workspaces[i].id)) {
-            target_idx = i;
-            found = true;
-            break;
+            return i;
         }
     }
+    return 0;
+}
+
+// dangling-workspace-reparent: fold every non-live workspace into the surviving root, then compact it out.
+// Returns the surviving root's tree.
+static FlDockTree* fold_dangling_workspaces(FlDockPersistLoad* load, const u64* live_ws_ids, u32 live_count) {
+    u32 target_idx = surviving_root_index(load, live_ws_ids, live_count);
     FlDockTree* target = load->workspaces[target_idx].tree;
 
-    // dangling-workspace-reparent: fold every non-live workspace into the target, then compact it out.
     u32 kept = 0;
     for_count(i, load->count) {
-        bool live = (i == target_idx) || (found && id_in(live_ws_ids, live_count, load->workspaces[i].id));
-        if (live) {
+        if (i == target_idx || id_in(live_ws_ids, live_count, load->workspaces[i].id)) {
             load->workspaces[kept++] = load->workspaces[i];
             continue;
         }
@@ -371,28 +380,80 @@ void dock_persist_reconcile(FlDockPersistLoad* load, const u64* live_ws_ids, u32
         dock_tree_destroy(load->workspaces[i].tree);
     }
     load->count = kept;
+    return target;
+}
 
-    // stale-panel-prune: a saved id the roster does not name is closed. An empty roster prunes nothing.
-    if (declared_count > 0) {
-        for_count(i, load->count) {
-            prune_undeclared(load->workspaces[i].tree, declared, declared_count);
-        }
+// stale-panel-prune: a saved id the roster does not name is closed. An empty roster prunes nothing.
+static void prune_stale_panels(FlDockPersistLoad* load, const FlDockPanelId* declared, u32 declared_count) {
+    if (declared_count == 0) {
+        return;
     }
+    for_count(i, load->count) {
+        prune_undeclared(load->workspaces[i].tree, declared, declared_count);
+    }
+}
 
-    // unknown-panel-to-default: a panel declared this session but absent everywhere lands loose in the target.
+// unknown-panel-to-default: a panel declared this session but absent everywhere lands loose in the target.
+static void park_unknown_panels(FlDockPersistLoad* load, FlDockTree* target, const FlDockPanelId* declared,
+                                u32 declared_count) {
     for_count(i, declared_count) {
         if (!panel_in_any(load, declared[i])) {
             dock_tree_floating_append(target, declared[i]);
         }
     }
+}
 
-    // floating-drains-on-load: dock every floating panel at its tree root.
+// floating-drains-on-load: dock every floating panel at its tree root.
+static void drain_all_floating(FlDockPersistLoad* load) {
     for_count(i, load->count) {
         drain_floating(load->workspaces[i].tree);
     }
 }
 
+static bool has_workspaces(const FlDockPersistLoad* load) {
+    return load != nullptr && load->ok && load->count > 0;
+}
+
+void dock_persist_reconcile(FlDockPersistLoad* load, const u64* live_ws_ids, u32 live_count,
+                            const FlDockPanelId* declared, u32 declared_count) {
+    if (!has_workspaces(load)) {
+        return;
+    }
+    FlDockTree* target = fold_dangling_workspaces(load, live_ws_ids, live_count);
+    prune_stale_panels(load, declared, declared_count);
+    park_unknown_panels(load, target, declared, declared_count);
+    drain_all_floating(load);
+}
+
 // Structural equality
+
+static bool ids_equal(const FlDockPanelId* a, const FlDockPanelId* b, u32 count) {
+    for_count(i, count) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool nodes_equal(const FlDockNode* a, const FlDockNode* b);
+
+static bool splits_equal(const FlDockNode* a, const FlDockNode* b) {
+    if (a->split.axis != b->split.axis) {
+        return false;
+    }
+    if (fabsf(a->split.ratio - b->split.ratio) > 1e-4f) {
+        return false;
+    }
+    return nodes_equal(a->split.child[0], b->split.child[0]) && nodes_equal(a->split.child[1], b->split.child[1]);
+}
+
+static bool leaves_equal(const FlDockNode* a, const FlDockNode* b) {
+    if (a->leaf.count != b->leaf.count || a->leaf.selected != b->leaf.selected) {
+        return false;
+    }
+    return ids_equal(a->leaf.panels, b->leaf.panels, a->leaf.count);
+}
 
 static bool nodes_equal(const FlDockNode* a, const FlDockNode* b) {
     if (a == nullptr || b == nullptr) {
@@ -401,24 +462,7 @@ static bool nodes_equal(const FlDockNode* a, const FlDockNode* b) {
     if (a->kind != b->kind) {
         return false;
     }
-    if (a->kind == FlDockNodeKind_Split) {
-        if (a->split.axis != b->split.axis) {
-            return false;
-        }
-        if (fabsf(a->split.ratio - b->split.ratio) > 1e-4f) {
-            return false;
-        }
-        return nodes_equal(a->split.child[0], b->split.child[0]) && nodes_equal(a->split.child[1], b->split.child[1]);
-    }
-    if (a->leaf.count != b->leaf.count || a->leaf.selected != b->leaf.selected) {
-        return false;
-    }
-    for_count(i, a->leaf.count) {
-        if (a->leaf.panels[i] != b->leaf.panels[i]) {
-            return false;
-        }
-    }
-    return true;
+    return a->kind == FlDockNodeKind_Split ? splits_equal(a, b) : leaves_equal(a, b);
 }
 
 bool dock_persist_tree_equal(const FlDockTree* a, const FlDockTree* b) {
@@ -428,10 +472,5 @@ bool dock_persist_tree_equal(const FlDockTree* a, const FlDockTree* b) {
     if (a->floating_count != b->floating_count) {
         return false;
     }
-    for_count(i, a->floating_count) {
-        if (a->floating[i] != b->floating[i]) {
-            return false;
-        }
-    }
-    return nodes_equal(a->root, b->root);
+    return ids_equal(a->floating, b->floating, a->floating_count) && nodes_equal(a->root, b->root);
 }
