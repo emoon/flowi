@@ -25,9 +25,8 @@
 extern "C" {
 #endif
 
-// Resolution geometry (logical px, except the fraction). The tab-into region is
-// the strip plus a centred box covering FL_DOCK_TAB_CENTER_FRAC of the tile on each axis.
-#define FL_DOCK_TAB_STRIP 26.0f
+// Resolution geometry (logical px, except the fraction). The tab-into region is the leaf's tab header
+// (DOCK_TAB_HEIGHT, dock_layout.h) plus a centred box covering FL_DOCK_TAB_CENTER_FRAC of the tile on each axis.
 #define FL_DOCK_TAB_CENTER_FRAC 0.40f
 #define FL_DOCK_OUTER_BAND 24.0f
 

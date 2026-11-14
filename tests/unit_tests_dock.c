@@ -794,7 +794,7 @@ UTEST(dock_layout, a_collapse_hands_the_survivor_the_merged_rect) {
 // which takes node rects and a cursor and returns a drop zone and a request, with no Clay and no state.
 
 // A single leaf filling the 800x600 workspace. It has both is_leaf and is_root, so the tab region, the outer band
-// and the split quadrants are all offered over the one rect. Its strip is y 0..26, its centre box is x 240..560
+// and the split quadrants are all offered over the one rect. Its strip is the header, y 0..DOCK_TAB_HEIGHT, its centre box is x 240..560
 // by y 180..420, and the diagonals cross at (400, 300).
 static const FlDockDropNode k_one_leaf_ws[] = {
     { .node = 7, .rect = { 0.0f, 0.0f, 800.0f, 600.0f }, .is_leaf = true, .is_root = true },
@@ -829,8 +829,11 @@ UTEST(dock_drag, hit_test_resolution_matrix) {
     ASSERT_EQ((int)req.kind, (int)FlDockRequest_Tab);
     ASSERT_EQ((int)req.target_node, 7);
 
-    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 27.0f }, &req);
-    ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Top, "one px past the 26px strip it splits again");
+    // The tab-into band is the header the leaf draws, to its last pixel.
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, DOCK_TAB_HEIGHT - 1.0f }, &req);
+    ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "the bottom of the header still tabs in");
+    z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, DOCK_TAB_HEIGHT + 1.0f }, &req);
+    ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Top, "one px past the header it splits again");
 
     z = hit_test_drop_zones(k_one_leaf_ws, 1, (FlVec2) { 400.0f, 300.0f }, &req);
     ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_Center, "the middle of the tile tabs in");
