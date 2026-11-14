@@ -1,5 +1,6 @@
 #include "font_cache.h"
 #include "font_shaper.h"
+#include "shaped_run_cache.h"
 #include <core/arena.h>
 #include <core/hashmap.h>
 #include <core/log.h>
@@ -18,6 +19,7 @@
 #define MAX_FONT_FACES 128
 #define PRINTABLE_FIRST 0x20
 #define PRINTABLE_COUNT 95
+#define SHAPED_RUN_POOL_BYTES MB(4)
 
 typedef struct CachedGlyph {
     int advance;
@@ -69,7 +71,8 @@ struct FlFontCache {
     int face_count;
     FlFontId next_id;
     FlArena* shape_arena;
-    FontShaper* shaper;
+    StatsRegistry* stats;
+    ShapedRunCache* shaped_runs;
 };
 
 FlFontCache* font_cache_new(FlArena* arena) {
@@ -77,7 +80,9 @@ FlFontCache* font_cache_new(FlArena* arena) {
     cache->next_id = 1;
     cache->arena = arena_new();
     cache->shape_arena = arena_new();
-    cache->shaper = font_shaper_new(cache->arena);
+    cache->stats = stats_create(cache->arena);
+    cache->shaped_runs = shaped_run_cache_new(
+        cache->arena, (ShapedRunCacheConfig) { .pool_bytes = SHAPED_RUN_POOL_BYTES, .stats = cache->stats });
     mutex_init(&cache->ft_lock);
     FT_Init_FreeType(&cache->library);
     return cache;
@@ -307,6 +312,7 @@ void font_cache_set_fallback_font(FlFontCache* self, FlFontId font_id) {
     FontFace* face = find_face_by_id(self, font_id);
     if (face != nullptr) {
         self->fallback_face = face;
+        shaped_run_cache_clear(self->shaped_runs);
         // Cached glyphs depend on the fallback face.
         for_count(i, self->face_count) {
             self->faces[i].ascii_glyphs_size = 0;
@@ -353,7 +359,8 @@ void font_cache_destroy(FlFontCache* self) {
         self->library = nullptr;
     }
     mutex_destroy(&self->ft_lock);
-    font_shaper_destroy(self->shaper);
+    shaped_run_cache_destroy(self->shaped_runs);
+    stats_destroy(self->stats);
     fl_arena_destroy(self->arena);
     fl_arena_destroy(self->shape_arena);
 
@@ -384,6 +391,11 @@ static void pump_font_loads(FlFontCache* self) {
 
 void font_cache_update(FlFontCache* self) {
     pump_font_loads(self);
+    shaped_run_cache_next_frame(self->shaped_runs);
+}
+
+StatsRegistry* font_cache_stats(FlFontCache* self) {
+    return self->stats;
 }
 
 void font_cache_wait_loaded(FlFontCache* self, FlFontId id) {
@@ -765,12 +777,7 @@ static bool kb_shape_run(const AdvanceRun* run, FlString text, FlArena* glyph_ar
         .size_q4 = run->q4,
         .glyph_arena = glyph_arena,
     };
-    FontUnitRun units;
-    if (!font_shaper_shape(run->cache->shaper, &request, text, &units)) {
-        return false;
-    }
-    font_shaper_place(&units, &request, out);
-    return true;
+    return shaped_run_cache_get(run->cache->shaped_runs, &request, text, out);
 }
 
 static FlShapedRun measure_run(const AdvanceRun* run, FlString text) {
