@@ -46,8 +46,6 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     font_cache_destroy(cache);
 }
 
-// Shaping and measuring agree on the width and the advances.
-
 UTEST(render_ir, shaped_run_matches_measurement) {
     FlFontCache* cache = font_cache_new(s_arena);
     FlFontId font = font_cache_load_font_memory(cache, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
@@ -71,13 +69,11 @@ UTEST(render_ir, shaped_run_matches_measurement) {
     FlTextMetrics m = font_cache_measure_text(cache, ascii, (FlTextStyle) { .font_id = font, .font_size = font_size });
     ASSERT_NEAR_MSG((float)run.width / 64.0f, m.width, 0.0001f, "shaping and measuring agree on the width");
 
-    // U+00E9: two bytes, one glyph.
     FlString accented = { .data = "A\xC3\xA9", .length = 3, .is_static = 1 };
     FlShapedRun wide = font_cache_shape_run(cache, font, q4, accented);
     ASSERT_EQ_MSG((int)wide.count, 2, "glyphs are counted per codepoint, not per byte");
     ASSERT_EQ_MSG((int)wide.glyphs[1].glyph_id, 0xE9, "a multi-byte sequence decodes to one glyph");
 
-    // FL_S flags every literal as ASCII, so a flagged UTF-8 literal must still decode.
     FlString mislabelled = { .data = "A\xC3\xA9", .length = 3, .is_static = 1, .is_ascii = 1 };
     ASSERT_EQ_MSG((int)font_cache_shape_run(cache, font, q4, mislabelled).count, 2, "drawing ignores is_ascii");
 
