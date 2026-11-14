@@ -311,10 +311,7 @@ void font_cache_destroy(FlFontCache* self) {
         fl_arena_destroy(self->arena);
         self->arena = nullptr;
     }
-    if (self->shape_arena) {
-        fl_arena_destroy(self->shape_arena);
-        self->shape_arena = nullptr;
-    }
+    fl_arena_destroy(self->shape_arena);
 
     self->face_count = 0;
 }
