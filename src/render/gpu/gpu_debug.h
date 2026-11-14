@@ -85,7 +85,7 @@ typedef struct GpuGlyphAtlasReadback {
 
 bool gpu_debug_read_glyph_atlas(void* renderer_user_data, struct FlArena* arena, GpuGlyphAtlasReadback* out);
 
-// The CPU-side placement for a prepared glyph (NULL when nothing was prepared for the key). Valid until the
+// The CPU-side placement for a prepared glyph (nullptr when nothing was prepared for the key). Valid until the
 // next prepare_glyph call.
 const GpuGlyphEntry* gpu_debug_find_glyph(void* renderer_user_data, FlFontId font, u16 size, u32 glyph_id);
 
@@ -100,7 +100,7 @@ typedef struct GpuSvgAtlasReadback {
 
 bool gpu_debug_read_svg_atlas(void* renderer_user_data, struct FlArena* arena, GpuSvgAtlasReadback* out);
 
-// The CPU-side placement for a prepared vector icon (NULL when nothing was prepared for the handle). Valid
+// The CPU-side placement for a prepared vector icon (nullptr when nothing was prepared for the handle). Valid
 // until the next prepare_vector call.
 const GpuSvgEntry* gpu_debug_find_svg(void* renderer_user_data, FlImageHandle handle);
 
@@ -151,7 +151,7 @@ typedef struct GpuColorSvgAtlasReadback {
 
 bool gpu_debug_read_color_svg_atlas(void* renderer_user_data, struct FlArena* arena, GpuColorSvgAtlasReadback* out);
 
-// The CPU-side placement for a prepared multi-color icon (NULL when nothing was prepared for the handle).
+// The CPU-side placement for a prepared multi-color icon (nullptr when nothing was prepared for the handle).
 // Valid until the next prepare_vector call.
 const GpuSvgEntry* gpu_debug_find_color_svg(void* renderer_user_data, FlImageHandle handle);
 

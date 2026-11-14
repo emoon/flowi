@@ -16,7 +16,7 @@
 
 #define SDL_WINDOW_PUMP_MAX 32 // upper bound on live windows the per-pump windowID array holds
 
-// The mode's table, or NULL (logged) when this build lacks it.
+// The mode's table, or nullptr (logged) when this build lacks it.
 static const SdlWindowMode* sdl_window_mode_for(FlWindowBackendMode mode) {
     switch (mode) {
         case FlWindowBackendMode_Software:
@@ -24,14 +24,14 @@ static const SdlWindowMode* sdl_window_mode_for(FlWindowBackendMode mode) {
             return &k_sdl_window_mode_software;
 #else
             log_error("SDL window backend: software mode is not built for this platform");
-            return NULL;
+            return nullptr;
 #endif
         case FlWindowBackendMode_Metal:
 #if FL_WINDOW_HAVE_METAL
             return &k_sdl_window_mode_metal;
 #else
             log_error("SDL window backend: Metal mode requires the Metal build (APPLE)");
-            return NULL;
+            return nullptr;
 #endif
         case FlWindowBackendMode_Gl:
         default:
@@ -39,7 +39,7 @@ static const SdlWindowMode* sdl_window_mode_for(FlWindowBackendMode mode) {
             return &k_sdl_window_mode_gl;
 #else
             log_error("SDL window backend: GL mode requires the GPU build");
-            return NULL;
+            return nullptr;
 #endif
     }
 }
@@ -50,7 +50,7 @@ bool sdl_create_base_window(FlWindow* window, const SdlWindowParams* params, u32
     const u32 resizable_flag = params->resizable ? SDL_WINDOW_RESIZABLE : 0;
     window->window = SDL_CreateWindow(params->title, params->pos_x, params->pos_y, params->width, params->height,
                                       mode_flags | params->fullscreen_flag | resizable_flag | SDL_WINDOW_ALLOW_HIGHDPI);
-    if (window->window == NULL) {
+    if (window->window == nullptr) {
         log_error("fl_app window: SDL_CreateWindow (%s) failed: %s", mode_label, SDL_GetError());
         return false;
     }
@@ -70,7 +70,7 @@ static SdlWindowParams sdl_window_params(SdlWindowContext* self, const FlWindowC
         .pos_y = (int)SDL_WINDOWPOS_CENTERED,
         .resizable = true,
     };
-    if (config == NULL) {
+    if (config == nullptr) {
         return params;
     }
     if (config->title.data) {
@@ -90,19 +90,19 @@ static FlWindow* sdl_create_window(void* ud, const FlWindowConfig* config) {
     const SdlWindowParams params = sdl_window_params(self, config);
     FlWindow* window = arena_alloc_zero(self->arena, FlWindow);
     if (!self->ops->create_window(self, window, &params)) {
-        return NULL;
+        return nullptr;
     }
     return window;
 }
 
 static void sdl_destroy_window(void* ud, FlWindow* window) {
     SdlWindowContext* self = (SdlWindowContext*)ud;
-    if (window == NULL || window->window == NULL) {
+    if (window == nullptr || window->window == nullptr) {
         return;
     }
     self->ops->destroy_window(self, window);
     SDL_DestroyWindow(window->window);
-    window->window = NULL;
+    window->window = nullptr;
 }
 
 // Event pump - build the parallel windowID array the shared pump demuxes against (windows[i] -> contexts[i])
@@ -123,7 +123,7 @@ static void sdl_pump_events(void* ud, FlWindow** windows, FlUiCtx** contexts, in
 
 static void sdl_drawable_size(void* ud, FlWindow* window, int* width, int* height) {
     SdlWindowContext* self = (SdlWindowContext*)ud;
-    if (window == NULL || window->window == NULL) {
+    if (window == nullptr || window->window == nullptr) {
         return;
     }
     int draw_w = 0, draw_h = 0;
@@ -140,7 +140,7 @@ static void sdl_drawable_size(void* ud, FlWindow* window, int* width, int* heigh
 // DPI is unavailable.
 static float sdl_display_index_content_scale(int display_index) {
     const char* driver = SDL_GetCurrentVideoDriver();
-    if (driver == NULL || SDL_strcmp(driver, "wayland") != 0) {
+    if (driver == nullptr || SDL_strcmp(driver, "wayland") != 0) {
         return 0.0f;
     }
     float ddpi = 0.0f, hdpi = 0.0f, vdpi = 0.0f;
@@ -162,7 +162,7 @@ static float sdl_primary_display_content_scale(void* ud) {
 
 static float sdl_content_scale(void* ud, FlWindow* window) {
     SdlWindowContext* self = (SdlWindowContext*)ud;
-    if (window == NULL || window->window == NULL) {
+    if (window == nullptr || window->window == nullptr) {
         return 1.0f;
     }
     // Content scale = backbuffer (pixel) size / logical window size.
@@ -203,7 +203,7 @@ static void sdl_set_relative_mouse_mode(void* ud, FlWindow* window, bool enabled
 
 static void sdl_warp_mouse(void* ud, FlWindow* window, float x, float y) {
     UNUSED(ud);
-    sdl_input_common_warp_mouse(window ? window->window : NULL, x, y);
+    sdl_input_common_warp_mouse(window ? window->window : nullptr, x, y);
 }
 
 static void sdl_window_destroy(void* ud) {
@@ -217,7 +217,7 @@ static void sdl_window_destroy(void* ud) {
 FlWindowBackend sdl_window_backend_create(struct FlArena* arena, FlWindowBackendMode mode) {
     // A mode this build lacks returns a zeroed backend.
     const SdlWindowMode* mode_ops = sdl_window_mode_for(mode);
-    if (mode_ops == NULL) {
+    if (mode_ops == nullptr) {
         return (FlWindowBackend) { 0 };
     }
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {

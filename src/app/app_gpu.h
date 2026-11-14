@@ -19,7 +19,7 @@ struct FlArena;
 typedef struct FlAppGpu FlAppGpu;
 
 // Bring up a headless EGL surfaceless GL 4.3 core context and construct the GPU render backend against it into
-// *out_backend. Returns NULL (and leaves *out_backend zeroed) on any failure: EGL unavailable, no GL 4.3, or a
+// *out_backend. Returns nullptr (and leaves *out_backend zeroed) on any failure: EGL unavailable, no GL 4.3, or a
 // shader compile error. The handle owns the context.
 FlAppGpu* fl_app_gpu_create_headless(struct FlArena* arena, FlRenderBackend* out_backend);
 

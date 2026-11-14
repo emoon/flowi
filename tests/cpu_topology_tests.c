@@ -223,7 +223,7 @@ UTEST(cpu_topology, set_affinity_current_thread) {
     cpus.ids = &topo.cpus[0].cpu_id;
     cpus.count = 1;
 
-    bool result = fl_cpu_set_thread_affinity(NULL, cpus);
+    bool result = fl_cpu_set_thread_affinity(nullptr, cpus);
     ASSERT_AFFINITY_APPLIED(result);
 
     fl_arena_destroy(arena);
@@ -231,9 +231,9 @@ UTEST(cpu_topology, set_affinity_current_thread) {
 
 // An empty list asks for no constraint, which the supported path applies by doing nothing.
 UTEST(cpu_topology, set_affinity_empty_list) {
-    CpuIdList empty_cpus = { .ids = NULL, .count = 0 };
+    CpuIdList empty_cpus = { .ids = nullptr, .count = 0 };
 
-    bool result = fl_cpu_set_thread_affinity(NULL, empty_cpus);
+    bool result = fl_cpu_set_thread_affinity(nullptr, empty_cpus);
     ASSERT_AFFINITY_APPLIED(result);
 }
 
@@ -246,7 +246,7 @@ UTEST(cpu_topology, set_affinity_multiple_cpus) {
         int cpu_ids[2] = { topo.cpus[0].cpu_id, topo.cpus[1].cpu_id };
         CpuIdList cpus = { .ids = cpu_ids, .count = 2 };
 
-        bool result = fl_cpu_set_thread_affinity(NULL, cpus);
+        bool result = fl_cpu_set_thread_affinity(nullptr, cpus);
         ASSERT_AFFINITY_APPLIED(result);
     }
 
@@ -263,11 +263,11 @@ UTEST(cpu_topology, set_affinity_rejects_an_out_of_range_cpu_id) {
 
     int out_of_range = 1 << 20;
     CpuIdList only_bogus = { .ids = &out_of_range, .count = 1 };
-    ASSERT_FALSE(fl_cpu_set_thread_affinity(NULL, only_bogus));
+    ASSERT_FALSE(fl_cpu_set_thread_affinity(nullptr, only_bogus));
 
     int mixed[2] = { topo.cpus[0].cpu_id, out_of_range };
     CpuIdList partly_bogus = { .ids = mixed, .count = 2 };
-    ASSERT_FALSE(fl_cpu_set_thread_affinity(NULL, partly_bogus));
+    ASSERT_FALSE(fl_cpu_set_thread_affinity(nullptr, partly_bogus));
 
     fl_arena_destroy(arena);
 }
@@ -281,13 +281,13 @@ UTEST(cpu_topology, integration_query_and_pin) {
     CpuIdList perf_cpus = fl_cpu_query_by_type(CoreType_Performance, arena);
 
     if (perf_cpus.count > 0) {
-        bool result = fl_cpu_set_thread_affinity(NULL, perf_cpus);
+        bool result = fl_cpu_set_thread_affinity(nullptr, perf_cpus);
         ASSERT_AFFINITY_APPLIED(result);
     }
 
     CpuIdList eff_cpus = fl_cpu_query_by_type(CoreType_Efficiency, arena);
     if (eff_cpus.count > 0) {
-        bool result = fl_cpu_set_thread_affinity(NULL, eff_cpus);
+        bool result = fl_cpu_set_thread_affinity(nullptr, eff_cpus);
         ASSERT_AFFINITY_APPLIED(result);
     }
 

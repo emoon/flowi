@@ -25,8 +25,8 @@ typedef struct GpuTranslate {
     const struct GpuSvgAtlas* svg_color; // multi-color RGBA8 SVG atlas
     struct GpuImageSlots* slots;
     u8 global_alpha;
-    const FlEffect* effect;         // the current record's effect (NULL = none), set around each record's dispatch
-    const FlBackground* background; // the frame's background state, emitted ahead of the IR (NULL = none)
+    const FlEffect* effect;         // the current record's effect (nullptr = none), set around each record's dispatch
+    const FlBackground* background; // the frame's background state, emitted ahead of the IR (nullptr = none)
 } GpuTranslate;
 
 // The survival gate every kind funnels through: a command whose clip-intersected bounds are empty is dropped

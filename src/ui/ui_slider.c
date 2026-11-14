@@ -230,7 +230,7 @@ static FlSignal slider_impl(FlString label, float* value, float min, float max, 
 
 FlString ui_slider_format_value(FlArena* arena, const char* format, float value, bool is_int) {
     if (is_int) {
-        // Apply the format to the rounded integer; a NULL format falls back to a bare integer.
+        // Apply the format to the rounded integer; a nullptr format falls back to a bare integer.
         return fl_sprintf_arena(arena, format ? format : "%d", (int)roundf(value));
     }
     return fl_sprintf_arena(arena, format ? format : "%.2f", value);

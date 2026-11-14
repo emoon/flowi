@@ -41,7 +41,7 @@ typedef struct FlWindowSettings {
 
 // The app runner: create it, drive it one frame at a time with tick or block in run until quit, and emit
 // UI inside the supplied AppFrameFn. The `inject_*` / `headless_*` calls form the headless-test harness.
-// Create an fl_app from settings. Returns NULL on failure (e.g. GPU requested on a build without it).
+// Create an fl_app from settings. Returns null on failure (e.g. GPU requested on a build without it).
 FL_API FlApp* fl_app_create(const FlAppSettings* settings);
 // Tear the app down and free it. No-op on a null handle.
 FL_API void fl_app_destroy(FlApp* app);

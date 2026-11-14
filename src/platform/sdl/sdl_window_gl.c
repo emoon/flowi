@@ -10,7 +10,7 @@
 // The shared context and compositor are built with the first window.
 static bool sdl_gl_create_shared_state(SdlWindowContext* self, SDL_Window* window) {
     self->gl_ctx = SDL_GL_CreateContext(window);
-    if (self->gl_ctx == NULL) {
+    if (self->gl_ctx == nullptr) {
         log_error("fl_app window: SDL_GL_CreateContext failed: %s", SDL_GetError());
         return false;
     }
@@ -20,13 +20,13 @@ static bool sdl_gl_create_shared_state(SdlWindowContext* self, SDL_Window* windo
     }
     if (!sdl_compositor_gl_load(&self->gl)) {
         SDL_GL_DeleteContext(self->gl_ctx);
-        self->gl_ctx = NULL;
+        self->gl_ctx = nullptr;
         return false;
     }
     self->program = sdl_build_compositor_program(&self->gl);
     if (self->program == 0) {
         SDL_GL_DeleteContext(self->gl_ctx);
-        self->gl_ctx = NULL;
+        self->gl_ctx = nullptr;
         return false;
     }
     self->gl.GenVertexArrays(1, &self->vao); // core profile needs a bound VAO to draw, even with no attributes
@@ -70,12 +70,12 @@ static void sdl_gl_destroy_window(SdlWindowContext* self, FlWindow* window) {
         self->program = 0;
     }
     SDL_GL_DeleteContext(self->gl_ctx);
-    self->gl_ctx = NULL;
+    self->gl_ctx = nullptr;
     self->gl_ready = false;
 }
 
 static bool sdl_gl_window_usable(const SdlWindowContext* self, const FlWindow* window) {
-    return window != NULL && window->window != NULL && self->gl_ready;
+    return window != nullptr && window->window != nullptr && self->gl_ready;
 }
 
 // Bind the shared GL context against a window's drawable without compositing or swapping.

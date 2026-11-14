@@ -55,7 +55,7 @@ void selection_set_set_all(FlSelectionSet* set, const u64* ids, u64 count);
 // Folds req_count requests into the set, in array order (sequence is semantics: ClearAll then SetOne(x) nets to
 // {x}). ordered_ids (id_count entries) is the app's FULL ordered model - the enumeration used to resolve a
 // span: SetRange flips the inclusive run between its two endpoint ids, and SetAll(true) selects all of them. It
-// may be NULL/0 when no SetRange/SetAll(true) request is present. Endpoints are located by searching this slice
+// may be nullptr/0 when no SetRange/SetAll(true) request is present. Endpoints are located by searching this slice
 // (order-agnostic); if an endpoint id is absent the range applies to nothing (debug-assert).
 
 void selection_set_apply(FlSelectionSet* set, const FlSelectionRequest* reqs, u64 req_count, const u64* ordered_ids,
@@ -67,7 +67,7 @@ void selection_set_apply(FlSelectionSet* set, const FlSelectionRequest* reqs, u6
 u64 selection_set_len(const FlSelectionSet* set);
 
 // Snapshot the selected ids into out (capacity cap). Returns the number written (min of len and cap); pass a
-// NULL/0 buffer to size first via len. Order is unspecified (set has no inherent order).
+// nullptr/0 buffer to size first via len. Order is unspecified (set has no inherent order).
 u64 selection_set_copy_ids(const FlSelectionSet* set, u64* out, u64 cap);
 
 #ifdef __cplusplus

@@ -17,7 +17,7 @@ typedef struct FlArena FlArena;
 // can fill a DynamicImage directly instead.
 // Allocate a width x height dynamic image with a zeroed, tightly packed RGBA8 buffer from arena. The image
 // and its buffer live until the arena is rewound or destroyed, so keep the arena alive for as long as the
-// image is drawn. Returns NULL for a non-positive dimension, a size that overflows, or a null arena.
+// image is drawn. Returns null for a non-positive dimension, a size that overflows, or a null arena.
 FL_API FlDynamicImage* fl_dynamic_image_create(int32_t width, int32_t height, FlArena* arena);
 // Like create, but the buffer is single-channel alpha (is_alpha_only is set): a monochrome mask the widget
 // colorizes with the color in its opts.

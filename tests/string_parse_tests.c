@@ -235,7 +235,7 @@ UTEST(string_parse, parse_empty_string) {
 }
 
 UTEST(string_parse, parse_null_data) {
-    FlString null_str = { .data = NULL, .length = 5 };
+    FlString null_str = { .data = nullptr, .length = 5 };
     StringParseResultU64 result = fl_string_parse_u64(null_str);
     ASSERT_STATUS_EQ(result.status, StringParseStatus_Empty);
     ASSERT_EQ(result.value, 0ULL);

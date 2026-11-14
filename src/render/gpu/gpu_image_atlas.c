@@ -17,7 +17,7 @@ static GpuImageAtlasEntry* find_entry(GpuImageAtlas* atlas, FlImageHandle handle
             return &atlas->entries[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 const GpuImageAtlasEntry* gpu_image_atlas_find(const GpuImageAtlas* atlas, FlImageHandle handle) {
@@ -26,15 +26,15 @@ const GpuImageAtlasEntry* gpu_image_atlas_find(const GpuImageAtlas* atlas, FlIma
 
 const GpuImageAtlasEntry* gpu_image_atlas_place(GpuImageAtlas* atlas, FlImageHandle handle, u32 w, u32 h) {
     if (w == 0 || h == 0 || w > GPU_IMAGE_ATLAS_MAX_DIM || h > GPU_IMAGE_ATLAS_MAX_DIM) {
-        return NULL;
+        return nullptr;
     }
     if (atlas->entry_count >= GPU_IMAGE_ATLAS_MAX_ENTRIES) {
         log_error("gpu backend: image atlas entry table full (%d)", GPU_IMAGE_ATLAS_MAX_ENTRIES);
-        return NULL;
+        return nullptr;
     }
-    if (find_entry(atlas, handle) != NULL) {
+    if (find_entry(atlas, handle) != nullptr) {
         log_error("gpu backend: image handle %u placed twice", (unsigned)handle);
-        return NULL;
+        return nullptr;
     }
 
     // First released cell the image fits in wins; else extend the skyline.
@@ -53,7 +53,7 @@ const GpuImageAtlasEntry* gpu_image_atlas_place(GpuImageAtlas* atlas, FlImageHan
         cell.h = h;
         if (!gpu_atlas_pack_insert(&atlas->pack, w, h, &cell.x, &cell.y)) {
             log_error("gpu backend: image atlas full, %ux%u image dropped", w, h);
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -64,7 +64,7 @@ const GpuImageAtlasEntry* gpu_image_atlas_place(GpuImageAtlas* atlas, FlImageHan
 
 void gpu_image_atlas_release(GpuImageAtlas* atlas, FlImageHandle handle) {
     GpuImageAtlasEntry* entry = find_entry(atlas, handle);
-    if (entry == NULL) {
+    if (entry == nullptr) {
         return;
     }
     if (atlas->free_count < GPU_IMAGE_ATLAS_MAX_ENTRIES) {

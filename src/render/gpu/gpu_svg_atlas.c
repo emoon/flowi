@@ -50,7 +50,7 @@ u16 svg_raster_size_for_dst(f32 dst_w, f32 dst_h, FlVectorClass cls) {
 }
 
 void gpu_svg_atlas_init(GpuSvgAtlas* atlas, struct FlArena* arena, GpuSvgTexelFormat format) {
-    if (atlas->entries == NULL) {
+    if (atlas->entries == nullptr) {
         atlas->entries = arena_alloc_array(arena, GpuSvgEntry, GPU_SVG_ATLAS_MAX_ENTRIES);
     }
     atlas->entry_count = 0;
@@ -68,7 +68,7 @@ static GpuSvgEntry* find_live_entry(GpuSvgAtlas* atlas, FlImageHandle handle) {
             return e;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 const GpuSvgEntry* gpu_svg_atlas_find(const GpuSvgAtlas* atlas, FlImageHandle handle) {
@@ -78,24 +78,24 @@ const GpuSvgEntry* gpu_svg_atlas_find(const GpuSvgAtlas* atlas, FlImageHandle ha
 const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle, u16 size, u32 w, u32 h,
                                        FlVectorClass cls, FlColor mono_color, const FlVectorImage* vector) {
     GpuSvgEntry* live = find_live_entry(atlas, handle);
-    if (live != NULL && live->size == size) {
+    if (live != nullptr && live->size == size) {
         return live; // already current at this size - idempotent, no new placement
     }
 
     if (atlas->entry_count >= GPU_SVG_ATLAS_MAX_ENTRIES) {
         log_error("gpu backend: svg atlas entry table full (%d)", GPU_SVG_ATLAS_MAX_ENTRIES);
-        return NULL;
+        return nullptr;
     }
 
     GpuAtlasCell cell = { 0, 0, w, h };
     if (w > 0 && h > 0 && !gpu_atlas_pack_insert(&atlas->pack, w, h, &cell.x, &cell.y)) {
         // Pure rejecter: the backend answers a full atlas by compacting and retrying.
-        return NULL;
+        return nullptr;
     }
 
     // Orphan the handle's previous cell only after the new one is secured, so a failed placement leaves the
     // existing live cell intact.
-    if (live != NULL) {
+    if (live != nullptr) {
         live->live = false;
     }
 

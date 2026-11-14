@@ -31,7 +31,7 @@ typedef struct GpuRenderOps {
     void (*frame_begin)(void* backend);
 
     // Glyph realization (driven by the shared prepare_text_glyphs walk in gpu_orchestrator.c): the bound font
-    // cache, and the seam that rasterizes one outline into the coverage atlas. get_font_cache returns NULL when
+    // cache, and the seam that rasterizes one outline into the coverage atlas. get_font_cache returns nullptr when
     // no cache is bound (a host driving prepare_glyph itself), which short-circuits the walk.
     struct FlFontCache* (*get_font_cache)(void* backend);
     void (*prepare_glyph)(void* backend, FlFontId font, u16 size, u32 glyph_id, const struct FlGlyphOutline* outline);

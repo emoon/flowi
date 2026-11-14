@@ -86,7 +86,7 @@ typedef struct GpuShared {
     GLint max_texture_size;
 
     // The shared font layer (bound via set_font_cache). render() pulls each text run's glyph outlines from it to
-    // realize them into the atlas below. NULL when a host drives prepare_glyph itself.
+    // realize them into the atlas below. nullptr when a host drives prepare_glyph itself.
     struct FlFontCache* font_cache;
 
     // Glyph atlas: CPU bookkeeping (key -> cell + metrics) + the R8 texture the glyph-raster

@@ -41,7 +41,7 @@ pub enum Host {}
 extern "C" {
     /// Bring up the embedded tier on arena and open its window at the settings' render size: render
     /// backend, shared resource tier, VFS, image system, font cache, render surface and UI context.
-    /// Returns NULL on failure, having logged the reason.
+    /// Returns null on failure, having logged the reason.
     pub fn fl_host_create(arena: *mut FlArena, settings: *const crate::sys::HostSettings) -> *mut crate::sys::Host;
     /// Tear the host down and release everything it owns, its window included. No-op on a null handle.
     pub fn fl_host_destroy(host: *mut crate::sys::Host);

@@ -82,8 +82,8 @@ UTEST(vfs, destroy_closes_leaked_handles_across_cycles) {
         uint8_t read_buffer[sizeof(k_stub_vfs_data)] = { 0 };
         FlVfsHandle read = fl_vfs_read(file, read_buffer, sizeof(read_buffer));
         ASSERT_NE(read, FL_VFS_HANDLE_INVALID);
-        FlVfsHandle read_all = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
-                                                                  FL_VFS_HANDLE_INVALID);
+        FlVfsHandle read_all = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr,
+                                                                  nullptr, FL_VFS_HANDLE_INVALID);
         ASSERT_NE(read_all, FL_VFS_HANDLE_INVALID);
         FlVfsDirHandle list = fl_vfs_get_listing(mount.mount, FL_S(""), 0);
         ASSERT_NE(list, FL_VFS_DIR_HANDLE_INVALID);
@@ -127,18 +127,18 @@ UTEST(vfs, builtin_localfs_reads_real_file) {
 
     FlVfsMountResult mount = vfs_mount(dir_path);
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "LocalFS should mount a real directory");
-    ASSERT_TRUE(mount.mount != NULL);
+    ASSERT_TRUE(mount.mount != nullptr);
     vfs_wait_all();
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
-    FlVfsHandle read
-        = fl_vfs_mount_read_all_with_options(mount.mount, FL_S("hello.bin"), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle read = fl_vfs_mount_read_all_with_options(mount.mount, FL_S("hello.bin"), nullptr, nullptr, nullptr,
+                                                          FL_VFS_HANDLE_INVALID);
     ASSERT_NE(read, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(read);
     FlVfsData data = fl_vfs_get_data(read);
     ASSERT_TRUE_MSG(data.success, "read_all through built-in LocalFS should succeed");
     ASSERT_EQ((int)sizeof(payload), (int)data.size);
-    ASSERT_TRUE(data.data != NULL);
+    ASSERT_TRUE(data.data != nullptr);
     ASSERT_EQ(memcmp(data.data, payload, sizeof(payload)), 0);
 
     FlVfsDirHandle list = fl_vfs_get_listing(mount.mount, FL_S(""), 0);
@@ -160,13 +160,13 @@ UTEST(vfs, builtin_localfs_reads_real_file) {
     // instead of loading them into RAM.
     const FlVfsPlugin* driver = localfs_plugin();
     ASSERT_TRUE((driver->get_capabilities() & FlVfsDriverCapabilities_DirectPath) != 0);
-    ASSERT_TRUE(driver->get_file_path != NULL);
-    FlVfsOpenResult opened = driver->open(NULL, NULL, file_path, FlVfsOpenFlags_Read, (FlVfsMountOptions) { 0 });
+    ASSERT_TRUE(driver->get_file_path != nullptr);
+    FlVfsOpenResult opened = driver->open(nullptr, nullptr, file_path, FlVfsOpenFlags_Read, (FlVfsMountOptions) { 0 });
     ASSERT_EQ(opened.error.vfs_status, FlVfsStatus_Success);
-    ASSERT_TRUE(opened.handle != NULL);
-    FlString direct = driver->get_file_path(NULL, opened.handle, FL_S(""), arena);
+    ASSERT_TRUE(opened.handle != nullptr);
+    FlString direct = driver->get_file_path(nullptr, opened.handle, FL_S(""), arena);
     ASSERT_TRUE_MSG(fl_string_equals(direct, file_path), "get_file_path must return the file's real OS path");
-    driver->close(NULL, opened.handle);
+    driver->close(nullptr, opened.handle);
 
     fl_vfs_close(list);
     fl_vfs_close(read);
@@ -190,32 +190,32 @@ UTEST(vfs, builtin_localfs_read_resolves_relative_path) {
 
     const FlVfsPlugin* driver = localfs_plugin();
 
-    FlVfsOpenResult dir = driver->open(NULL, NULL, dir_path, 0, (FlVfsMountOptions) { 0 });
+    FlVfsOpenResult dir = driver->open(nullptr, nullptr, dir_path, 0, (FlVfsMountOptions) { 0 });
     ASSERT_EQ(dir.error.vfs_status, FlVfsStatus_Success);
     ASSERT_TRUE(dir.is_directory);
 
-    FlVfsSizeResult sized = driver->get_size(NULL, dir.handle, FL_S("child.bin"));
+    FlVfsSizeResult sized = driver->get_size(nullptr, dir.handle, FL_S("child.bin"));
     ASSERT_EQ((int)sizeof(payload), (int)sized.size);
 
     uint8_t got[sizeof(payload)];
     memset(got, 0, sizeof(got));
-    FlVfsReadResult read = driver->read(NULL, dir.handle, FL_S("child.bin"), got, sized.size);
+    FlVfsReadResult read = driver->read(nullptr, dir.handle, FL_S("child.bin"), got, sized.size);
     ASSERT_EQ(read.error.vfs_status, FlVfsStatus_Success);
     ASSERT_EQ((int)sizeof(payload), (int)read.bytes_read);
     ASSERT_EQ(memcmp(got, payload, sizeof(payload)), 0);
 
     // Reading the directory itself still fails rather than returning container bytes.
-    FlVfsReadResult dir_read = driver->read(NULL, dir.handle, FL_S(""), got, 1);
+    FlVfsReadResult dir_read = driver->read(nullptr, dir.handle, FL_S(""), got, 1);
     ASSERT_EQ((int)-1, (int)dir_read.bytes_read);
 
     // A file handle plus a child path resolves the path; it must not silently fall back to the handle's bytes.
-    FlVfsOpenResult file = driver->open(NULL, NULL, file_path, FlVfsOpenFlags_Read, (FlVfsMountOptions) { 0 });
+    FlVfsOpenResult file = driver->open(nullptr, nullptr, file_path, FlVfsOpenFlags_Read, (FlVfsMountOptions) { 0 });
     ASSERT_EQ(file.error.vfs_status, FlVfsStatus_Success);
-    FlVfsReadResult missing = driver->read(NULL, file.handle, FL_S("no_such.bin"), got, 1);
+    FlVfsReadResult missing = driver->read(nullptr, file.handle, FL_S("no_such.bin"), got, 1);
     ASSERT_EQ((int)-1, (int)missing.bytes_read);
-    driver->close(NULL, file.handle);
+    driver->close(nullptr, file.handle);
 
-    driver->close(NULL, dir.handle);
+    driver->close(nullptr, dir.handle);
     scratch_dir_destroy(&scratch);
 }
 
@@ -225,32 +225,32 @@ UTEST(vfs, read_through_generated_plugin) {
 
     FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    ASSERT_TRUE(mount.mount != NULL);
+    ASSERT_TRUE(mount.mount != nullptr);
     vfs_wait_all(); // drain the async mount before reading
     ASSERT_TRUE(fl_vfs_mount_is_ready(mount.mount));
 
-    FlVfsHandle handle
-        = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
+                                                            FL_VFS_HANDLE_INVALID);
     ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(handle);
 
     FlVfsData data = fl_vfs_get_data(handle);
     ASSERT_TRUE_MSG(data.success, "read through generated FlVfsPlugin should succeed");
     ASSERT_EQ((size_t)data.size, sizeof(k_stub_vfs_data));
-    ASSERT_TRUE(data.data != NULL);
+    ASSERT_TRUE(data.data != nullptr);
     ASSERT_EQ(memcmp(data.data, k_stub_vfs_data, sizeof(k_stub_vfs_data)), 0);
 
     StubVfsHandle root = { .is_dir = true, .offset = 0 };
     FlVfsOpenResult ok
-        = s_stub_vfs_plugin.open(NULL, &root, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read, (FlVfsMountOptions) { 0 });
+        = s_stub_vfs_plugin.open(nullptr, &root, FL_S(STUB_VFS_FILE), FlVfsOpenFlags_Read, (FlVfsMountOptions) { 0 });
     ASSERT_EQ(ok.error.vfs_status, FlVfsStatus_Success);
-    ASSERT_TRUE(ok.handle != NULL);
-    s_stub_vfs_plugin.close(NULL, ok.handle);
+    ASSERT_TRUE(ok.handle != nullptr);
+    s_stub_vfs_plugin.close(nullptr, ok.handle);
 
     FlVfsOpenResult miss
-        = s_stub_vfs_plugin.open(NULL, &root, FL_S("nope.txt"), FlVfsOpenFlags_Read, (FlVfsMountOptions) { 0 });
+        = s_stub_vfs_plugin.open(nullptr, &root, FL_S("nope.txt"), FlVfsOpenFlags_Read, (FlVfsMountOptions) { 0 });
     ASSERT_EQ(miss.error.vfs_status, FlVfsStatus_FileNotFound);
-    ASSERT_TRUE(miss.handle == NULL);
+    ASSERT_TRUE(miss.handle == nullptr);
 
     fl_vfs_mount_close(mount.mount);
 }
@@ -285,11 +285,11 @@ UTEST(vfs, resolve_short_read_closes_plugin_handle) {
 
     VfsPluginEntry memory_entry = { .plugin = &s_memory_only_plugin };
     VfsState state = { .plugin_first = &memory_entry, .plugin_last = &memory_entry };
-    VfsPluginEntry root_entry = { .plugin = &s_stub_vfs_plugin, .plugin_instance = NULL };
+    VfsPluginEntry root_entry = { .plugin = &s_stub_vfs_plugin, .plugin_instance = nullptr };
 
     // Root directory handle the resolver owns while walking the path (mirrors a mounted root).
-    FlVfsOpenResult root = stub_vfs_open(NULL, NULL, FL_S("/"), 0, (FlVfsMountOptions) { 0 });
-    ASSERT_TRUE(root.handle != NULL);
+    FlVfsOpenResult root = stub_vfs_open(nullptr, nullptr, FL_S("/"), 0, (FlVfsMountOptions) { 0 });
+    ASSERT_TRUE(root.handle != nullptr);
     ASSERT_TRUE(root.is_directory);
 
     PathComponents comp = path_components(s_arena, FL_S(STUB_VFS_FILE));
@@ -362,7 +362,7 @@ static FlVfsOpenResult nest_open(void* instance, void* parent_handle, FlString p
         return (
             FlVfsOpenResult) { .handle = h, .is_directory = false, .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
     }
-    return (FlVfsOpenResult) { .handle = NULL, .error = stub_vfs_not_found() };
+    return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
 }
 
 static bool nest_is_directory(void* instance, void* handle) {
@@ -423,14 +423,14 @@ UTEST(vfs, resolve_nested_archives_close_intermediate_handles) {
     const LeakWatch leaks = leak_watch_begin(&s_nest_alloc_count, &s_nest_close_count);
 
     // State carrying the nested-archive stub so find_plugin_for_memory can mount each layer as we descend.
-    VfsPluginEntry entry = { .plugin = &s_nest_vfs_plugin, .plugin_instance = NULL };
+    VfsPluginEntry entry = { .plugin = &s_nest_vfs_plugin, .plugin_instance = nullptr };
     VfsState state = { 0 };
     state.plugin_first = &entry;
     state.plugin_last = &entry;
 
-    VfsPluginEntry root_entry = { .plugin = &s_nest_vfs_plugin, .plugin_instance = NULL };
+    VfsPluginEntry root_entry = { .plugin = &s_nest_vfs_plugin, .plugin_instance = nullptr };
     NestHandle* root = nest_alloc(true); // root directory the resolver walks from, and takes ownership of
-    ASSERT_TRUE(root != NULL);
+    ASSERT_TRUE(root != nullptr);
 
     // "l0/l1" descends through two archive layers, so the resolver must close the intermediate archive1
     // handle when it moves to archive2.
@@ -439,14 +439,14 @@ UTEST(vfs, resolve_nested_archives_close_intermediate_handles) {
     FinalDriver result = vfs_resolve_from_root(&state, &root_entry, root, &comp, 0, s_arena);
 
     ASSERT_EQ_MSG(result.error, VfsResolveError_None, "nested-archive path must resolve");
-    ASSERT_TRUE(result.handle != NULL);
+    ASSERT_TRUE(result.handle != nullptr);
     // By serial, not by address: the resolver closes the root, and the allocator is free to hand its address
     // straight back for the innermost archive's handle.
     ASSERT_NE_MSG(((NestHandle*)result.handle)->serial, root_serial,
                   "resolved handle is the innermost archive, not the root");
 
     // The resolver consumed the root; only the final resolved handle is left for the caller to close.
-    nest_close(NULL, result.handle);
+    nest_close(nullptr, result.handle);
 
     ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 5, "root + two probed files + two mounted archive layers");
     ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
@@ -494,7 +494,7 @@ static FlVfsOpenResult pfx_open(void* instance, void* parent_handle, FlString pa
     const bool is_file = nest_name_eq(path, "l0") || nest_name_eq(path, "l1") || nest_name_eq(path, "plain");
 
     if (!is_dir && !is_file) {
-        return (FlVfsOpenResult) { .handle = NULL, .error = stub_vfs_not_found() };
+        return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
     }
 
     PfxHandle* h = pfx_alloc(is_dir);
@@ -531,7 +531,7 @@ static FlVfsOpenResult pfx_open_memory(void* instance, const uint8_t* data, uint
 
     // A rejecting plugin must leave the buffer alone; the resolver frees it.
     if (!s_pfx_memory_mountable) {
-        return (FlVfsOpenResult) { .handle = NULL, .error = stub_vfs_not_found() };
+        return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
     }
 
     mi_free((void*)data); // takes ownership, mirroring a real archive plugin
@@ -562,7 +562,7 @@ static FlVfsPlugin s_pfx_vfs_plugin = {
 
 // Resolves path through the full mount entry point with only the prefix stub registered.
 static FinalDriver pfx_mount(VfsState* state, VfsPluginEntry* entry, FlString path) {
-    *entry = (VfsPluginEntry) { .plugin = &s_pfx_vfs_plugin, .plugin_instance = NULL };
+    *entry = (VfsPluginEntry) { .plugin = &s_pfx_vfs_plugin, .plugin_instance = nullptr };
     *state = (VfsState) { 0 };
     state->plugin_first = entry;
     state->plugin_last = entry;
@@ -579,11 +579,11 @@ UTEST(vfs, mount_path_directory_exit_closes_container) {
     FinalDriver result = pfx_mount(&state, &entry, FL_S("root/dir"));
 
     ASSERT_EQ_MSG(result.error, VfsResolveError_None, "directory at the end of the path must resolve");
-    ASSERT_TRUE(result.handle != NULL);
+    ASSERT_TRUE(result.handle != nullptr);
     // The container was closed before we got here; the returned handle must still be usable.
-    ASSERT_TRUE(pfx_is_directory(NULL, result.handle));
+    ASSERT_TRUE(pfx_is_directory(nullptr, result.handle));
 
-    pfx_close(NULL, result.handle);
+    pfx_close(nullptr, result.handle);
 
     ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 2, "root container + resolved directory");
     ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
@@ -600,7 +600,7 @@ UTEST(vfs, mount_path_not_mountable_exit_closes_container) {
     FinalDriver result = pfx_mount(&state, &entry, FL_S("root/plain"));
 
     ASSERT_EQ_MSG(result.error, VfsResolveError_NotMountable, "a non-archive file must not be mountable");
-    ASSERT_TRUE(result.handle == NULL);
+    ASSERT_TRUE(result.handle == nullptr);
 
     ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 2, "root container + probed file");
     ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
@@ -618,7 +618,7 @@ UTEST(vfs, mount_path_missing_remainder_closes_container) {
     FinalDriver result = pfx_mount(&state, &entry, FL_S("root/nope"));
 
     ASSERT_EQ_MSG(result.error, VfsResolveError_FileNotFound, "an unresolvable remainder must be FileNotFound");
-    ASSERT_TRUE(result.handle == NULL);
+    ASSERT_TRUE(result.handle == nullptr);
 
     ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 1, "only the root container was ever opened");
     ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
@@ -636,10 +636,10 @@ UTEST(vfs, mount_path_nested_archives_close_root_and_containers) {
     FinalDriver result = pfx_mount(&state, &entry, FL_S("root/l0/l1"));
 
     ASSERT_EQ_MSG(result.error, VfsResolveError_None, "nested-archive path must resolve");
-    ASSERT_TRUE(result.handle != NULL);
-    ASSERT_TRUE(pfx_is_directory(NULL, result.handle));
+    ASSERT_TRUE(result.handle != nullptr);
+    ASSERT_TRUE(pfx_is_directory(nullptr, result.handle));
 
-    pfx_close(NULL, result.handle);
+    pfx_close(nullptr, result.handle);
 
     ASSERT_EQ_MSG(leak_watch_allocated(&leaks), 5, "root + two probed files + two mounted archive layers");
     ASSERT_EQ_MSG(leak_watch_closed(&leaks), leak_watch_allocated(&leaks),
@@ -658,15 +658,15 @@ UTEST(vfs, close_during_pending_read_no_deadlock) {
     vfs_wait_all(); // drain the async mount before reading
 
     for (int i = 0; i < 64; ++i) {
-        FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
-                                                                FL_VFS_HANDLE_INVALID);
+        FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr,
+                                                                nullptr, FL_VFS_HANDLE_INVALID);
         ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
         fl_vfs_close(handle); // close with the read job still pending - must not deadlock
     }
 
     // Sanity: a normal read still round-trips after all that churn.
-    FlVfsHandle handle
-        = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
+                                                            FL_VFS_HANDLE_INVALID);
     ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(handle);
     FlVfsData data = fl_vfs_get_data(handle);
@@ -692,8 +692,8 @@ UTEST(vfs, mount_close_drains_inflight_and_reaps_handles) {
 
         // Neither waited nor closed: still in-flight and still leaked when the mount closes.
         for (int j = 0; j < 4; ++j) {
-            FlVfsHandle h = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
-                                                               FL_VFS_HANDLE_INVALID);
+            FlVfsHandle h = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr,
+                                                               nullptr, FL_VFS_HANDLE_INVALID);
             ASSERT_NE(h, FL_VFS_HANDLE_INVALID);
         }
 
@@ -704,8 +704,8 @@ UTEST(vfs, mount_close_drains_inflight_and_reaps_handles) {
     FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
     ASSERT_EQ(mount.status, FlVfsMountErrorStatus_Success);
     vfs_wait_all();
-    FlVfsHandle handle
-        = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
+                                                            FL_VFS_HANDLE_INVALID);
     ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(handle);
     FlVfsData data = fl_vfs_get_data(handle);
@@ -738,7 +738,7 @@ static void* vfs_churn_thread(void* user_data) {
     // Overlapping paths: every thread reads the same file, so all threads hit the same driver handle
     unsigned iter = 0;
     while (!atomic_load(&ctx->stop)) {
-        FlVfsHandle h = fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
+        FlVfsHandle h = fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
                                                            FL_VFS_HANDLE_INVALID);
         if (h == FL_VFS_HANDLE_INVALID) {
             continue;
@@ -777,7 +777,7 @@ static void* vfs_closer_thread(void* user_data) {
             }
         }
         // Also churn its own handle: close with the read job possibly still pending
-        FlVfsHandle h = fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
+        FlVfsHandle h = fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
                                                            FL_VFS_HANDLE_INVALID);
         if (h != FL_VFS_HANDLE_INVALID) {
             fl_vfs_close(h);
@@ -817,7 +817,7 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
         }
         ASSERT_TRUE(fl_vfs_mount_is_ready(second.mount));
         for (int j = 0; j < 4; j++) {
-            (void)fl_vfs_mount_read_all_with_options(second.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
+            (void)fl_vfs_mount_read_all_with_options(second.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
                                                      FL_VFS_HANDLE_INVALID);
         }
         const int cycles_at_close = atomic_load(&ctx.cycles);
@@ -845,8 +845,8 @@ UTEST(vfs, handle_lifetime_multithreaded_churn) {
     ASSERT_GT(atomic_load(&ctx.cycles), 0); // The churn actually ran
 
     // The VFS survived: a normal read still round-trips
-    FlVfsHandle h
-        = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle h = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
+                                                       FL_VFS_HANDLE_INVALID);
     ASSERT_NE(h, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(h);
     FlVfsData data = fl_vfs_get_data(h);
@@ -870,8 +870,8 @@ typedef struct VfsWaitAllChurnCtx {
 static void* vfs_wait_all_handle_churn_thread(void* user_data) {
     VfsWaitAllChurnCtx* ctx = user_data;
     while (!atomic_load(&ctx->stop)) {
-        FlVfsHandle handle = fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
-                                                                FL_VFS_HANDLE_INVALID);
+        FlVfsHandle handle = fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), nullptr, nullptr,
+                                                                nullptr, FL_VFS_HANDLE_INVALID);
         if (handle != FL_VFS_HANDLE_INVALID) {
             fl_vfs_wait(handle);
             fl_vfs_close(handle);
@@ -990,8 +990,8 @@ UTEST(vfs, read_all_over_cap_reports_error_and_closes_handle) {
     const LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
 
     s_stub_vfs_oversize = true;
-    FlVfsHandle handle
-        = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
+                                                            FL_VFS_HANDLE_INVALID);
     ASSERT_NE(handle, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(handle);
     s_stub_vfs_oversize = false;
@@ -1021,7 +1021,8 @@ static FlVfsSizeResult maybe_failing_size(void* instance, void* handle, FlString
 }
 
 static VfsOpStatus read_all_status(FlVfsMount* mount, FlString path) {
-    FlVfsHandle handle = fl_vfs_mount_read_all_with_options(mount, path, NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle handle
+        = fl_vfs_mount_read_all_with_options(mount, path, nullptr, nullptr, nullptr, FL_VFS_HANDLE_INVALID);
     if (handle == FL_VFS_HANDLE_INVALID) {
         return VFS_STATE_SUCCESS;
     }
@@ -1104,10 +1105,10 @@ UTEST(vfs, resolve_over_cap_file_fails_without_reading_it) {
 
     VfsPluginEntry memory_entry = { .plugin = &s_memory_only_plugin };
     VfsState state = { .plugin_first = &memory_entry, .plugin_last = &memory_entry };
-    VfsPluginEntry root_entry = { .plugin = &s_stub_vfs_plugin, .plugin_instance = NULL };
+    VfsPluginEntry root_entry = { .plugin = &s_stub_vfs_plugin, .plugin_instance = nullptr };
 
-    FlVfsOpenResult root = stub_vfs_open(NULL, NULL, FL_S("/"), 0, (FlVfsMountOptions) { 0 });
-    ASSERT_TRUE(root.handle != NULL);
+    FlVfsOpenResult root = stub_vfs_open(nullptr, nullptr, FL_S("/"), 0, (FlVfsMountOptions) { 0 });
+    ASSERT_TRUE(root.handle != nullptr);
 
     PathComponents comp = path_components(s_arena, FL_S(STUB_VFS_FILE));
     FinalDriver result = vfs_resolve_from_root(&state, &root_entry, root.handle, &comp, 0, s_arena);
@@ -1128,10 +1129,10 @@ UTEST(vfs, resolve_without_a_memory_driver_does_not_read_the_file) {
     const LeakWatch leaks = leak_watch_begin(&s_stub_vfs_alloc_count, &s_stub_vfs_close_count);
 
     VfsState state = { 0 };
-    VfsPluginEntry root_entry = { .plugin = &s_stub_vfs_plugin, .plugin_instance = NULL };
+    VfsPluginEntry root_entry = { .plugin = &s_stub_vfs_plugin, .plugin_instance = nullptr };
 
-    FlVfsOpenResult root = stub_vfs_open(NULL, NULL, FL_S("/"), 0, (FlVfsMountOptions) { 0 });
-    ASSERT_TRUE(root.handle != NULL);
+    FlVfsOpenResult root = stub_vfs_open(nullptr, nullptr, FL_S("/"), 0, (FlVfsMountOptions) { 0 });
+    ASSERT_TRUE(root.handle != nullptr);
 
     PathComponents comp = path_components(s_arena, FL_S(STUB_VFS_FILE));
     FinalDriver result = vfs_resolve_from_root(&state, &root_entry, root.handle, &comp, 0, s_arena);
@@ -1203,7 +1204,7 @@ UTEST(vfs, failed_listings_carry_an_error_message_until_closed) {
     ASSERT_TRUE(vfs_test_begin());
     static FlVfsPlugin no_list;
     no_list = s_stub_vfs_plugin;
-    no_list.list_directory = NULL;
+    no_list.list_directory = nullptr;
     vfs_test_register_driver(&no_list);
 
     FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
@@ -1446,7 +1447,7 @@ UTEST(vfs, worker_read_against_a_pending_mount_is_deferred_and_still_runs_after_
     atomic_init(&ctx.ticket_released_before_callback, false);
 
     FlVfsHandle parker = vfs_mount_read_all_prepare(ready_mount.mount, FL_S(STUB_VFS_FILE), vfs_pending_mount_callback,
-                                                    &ctx, NULL, FL_VFS_HANDLE_INVALID);
+                                                    &ctx, nullptr, FL_VFS_HANDLE_INVALID);
     ASSERT_NE(parker, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(parker);
 
@@ -1551,7 +1552,7 @@ UTEST(vfs, chained_read_from_worker_refuses_unfinished_open) {
     atomic_init(&ctx.chain_done, false);
 
     FlVfsHandle reader = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), vfs_worker_chain_callback, &ctx,
-                                                    NULL, FL_VFS_HANDLE_INVALID);
+                                                    nullptr, FL_VFS_HANDLE_INVALID);
     ASSERT_NE(reader, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(reader);
 
@@ -1611,7 +1612,7 @@ static FlVfsData vfs_park_callback(void* data, i64 size, void* user_data) {
 static bool vfs_park_worker(VfsParkCtx* ctx, FlVfsMount* mount, FlVfsHandle* parker, FlString path) {
     atomic_init(&ctx->in_callback, false);
     atomic_init(&ctx->release, false);
-    *parker = vfs_mount_read_all_prepare(mount, path, vfs_park_callback, ctx, NULL, FL_VFS_HANDLE_INVALID);
+    *parker = vfs_mount_read_all_prepare(mount, path, vfs_park_callback, ctx, nullptr, FL_VFS_HANDLE_INVALID);
     if (*parker == FL_VFS_HANDLE_INVALID) {
         return false;
     }
@@ -1685,7 +1686,7 @@ UTEST(vfs, close_racing_a_chained_read_defers_instead_of_freeing_the_file_handle
     atomic_init(&ctx.chain_done, false);
 
     FlVfsHandle parker = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), vfs_chain_race_callback, &ctx,
-                                                    NULL, FL_VFS_HANDLE_INVALID);
+                                                    nullptr, FL_VFS_HANDLE_INVALID);
     ASSERT_NE(parker, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(parker);
 
@@ -1827,7 +1828,7 @@ UTEST(vfs, mount_close_waits_out_a_dispatch_that_has_not_recorded_its_job) {
     atomic_init(&ctx.release_parker, false);
 
     FlVfsHandle parker = vfs_mount_read_all_prepare(host.mount, FL_S(STUB_VFS_FILE), vfs_dispatch_race_callback, &ctx,
-                                                    NULL, FL_VFS_HANDLE_INVALID);
+                                                    nullptr, FL_VFS_HANDLE_INVALID);
     ASSERT_NE(parker, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(parker);
 
@@ -2039,7 +2040,7 @@ UTEST(vfs, close_of_a_queued_file_handle_returns_and_its_chained_read_still_comp
     fl_vfs_close(read);
 
     vfs_wait_all(); // the chain has run, so the file is gone
-    FlVfsHandle reused = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, file);
+    FlVfsHandle reused = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr, file);
     ASSERT_EQ_MSG(reused, file, "a closed file id must be reusable");
     fl_vfs_close(reused);
 
@@ -2071,10 +2072,12 @@ UTEST(vfs, a_closed_id_stays_reserved_until_its_old_op_has_run) {
     FlVfsHandle id
         = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), vfs_count_callback, &first,
                                              vfs_count_release, FL_VFS_HANDLE_INVALID); // queued behind parker
-    FlVfsHandle refused_open = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, id);
+    FlVfsHandle refused_open
+        = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr, id);
     fl_vfs_close(id);
     ASSERT_FALSE_MSG(fl_vfs_is_ready(id), "a closed id must read as absent at once");
-    FlVfsHandle refused_retiring = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, id);
+    FlVfsHandle refused_retiring
+        = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr, id);
 
     atomic_store(&park.release, true);
     fl_vfs_wait(parker);
@@ -2311,8 +2314,8 @@ static FlVfsData vfs_worker_mount_close_callback(void* data, i64 size, void* use
     fl_vfs_mount_close(ctx->mount);
     // The reader's own job still holds the mount, so its root handle is the one thing left open.
     atomic_store(&ctx->open_handles_after_close, leak_watch_allocated(&ctx->leaks) - leak_watch_closed(&ctx->leaks));
-    atomic_store(&ctx->late, fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL,
-                                                                FL_VFS_HANDLE_INVALID));
+    atomic_store(&ctx->late, fl_vfs_mount_read_all_with_options(ctx->mount, FL_S(STUB_VFS_FILE), nullptr, nullptr,
+                                                                nullptr, FL_VFS_HANDLE_INVALID));
     atomic_store(&ctx->closed_mount, true);
 
     return (FlVfsData) { .data = data, .size = size, .success = true };
@@ -2334,7 +2337,7 @@ UTEST(vfs, mount_close_from_a_worker_refuses_new_ops_and_frees_on_the_last_refer
     atomic_init(&ctx.closed_mount, false);
     atomic_init(&ctx.open_handles_after_close, -1);
     FlVfsHandle reader = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), vfs_worker_mount_close_callback,
-                                                    &ctx, NULL, FL_VFS_HANDLE_INVALID);
+                                                    &ctx, nullptr, FL_VFS_HANDLE_INVALID);
     ASSERT_NE(reader, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(reader);
 
@@ -2396,7 +2399,7 @@ UTEST(vfs, wait_all_covers_the_ops_of_a_mount_closed_from_a_worker) {
     atomic_init(&ctx.closed_mount, false);
     atomic_init(&ctx.release, false);
     FlVfsHandle closer = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), vfs_listed_close_callback, &ctx,
-                                                    NULL, FL_VFS_HANDLE_INVALID);
+                                                    nullptr, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(closer);
     bool parked = vfs_await_flag(&ctx.in_callback);
 
@@ -2465,7 +2468,7 @@ UTEST(vfs, dispatching_an_op_twice_runs_it_once) {
     atomic_init(&ctx.read, FL_VFS_HANDLE_INVALID);
     atomic_init(&ctx.done, false);
     FlVfsHandle reader = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), vfs_inline_read_callback, &ctx,
-                                                    NULL, FL_VFS_HANDLE_INVALID);
+                                                    nullptr, FL_VFS_HANDLE_INVALID);
     vfs_dispatch(reader);
     bool ran = vfs_await_flag(&ctx.done);
     FlVfsHandle read = atomic_load(&ctx.read);
@@ -2560,10 +2563,10 @@ UTEST(vfs, a_release_hook_may_call_back_into_the_vfs) {
     // On the closer's thread: a finished op released by its own close.
     static VfsReentrantCtx on_close;
     memset(&on_close, 0, sizeof(on_close));
-    FlVfsHandle other_close
-        = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle other_close = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
+                                                         FL_VFS_HANDLE_INVALID);
     atomic_init(&on_close.other, other_close);
-    FlVfsHandle finished = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, &on_close,
+    FlVfsHandle finished = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, &on_close,
                                                               vfs_reentrant_release, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(finished);
     fl_vfs_close(finished);
@@ -2577,10 +2580,10 @@ UTEST(vfs, a_release_hook_may_call_back_into_the_vfs) {
     bool parked = vfs_park_worker(&park, mount.mount, &parker, FL_S(STUB_VFS_FILE));
     static VfsReentrantCtx on_worker;
     memset(&on_worker, 0, sizeof(on_worker));
-    FlVfsHandle other_worker
-        = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle other_worker = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
+                                                          FL_VFS_HANDLE_INVALID);
     atomic_init(&on_worker.other, other_worker);
-    FlVfsHandle queued = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), NULL, &on_worker,
+    FlVfsHandle queued = fl_vfs_mount_read_all_with_options(mount.mount, FL_S(STUB_VFS_FILE), nullptr, &on_worker,
                                                             vfs_reentrant_release, FL_VFS_HANDLE_INVALID);
     fl_vfs_close(queued);
     atomic_store(&park.release, true);
@@ -2671,8 +2674,8 @@ UTEST(vfs, mount_of_a_missing_source_reports_error_and_its_ops_fail) {
     ASSERT_EQ((int)fl_vfs_mount_get_status(mount.mount), (int)FlVfsMountStatus_Error);
     ASSERT_FALSE(fl_vfs_mount_is_ready(mount.mount));
 
-    FlVfsHandle read
-        = fl_vfs_mount_read_all_with_options(mount.mount, FL_S("x.bin"), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+    FlVfsHandle read = fl_vfs_mount_read_all_with_options(mount.mount, FL_S("x.bin"), nullptr, nullptr, nullptr,
+                                                          FL_VFS_HANDLE_INVALID);
     ASSERT_NE(read, FL_VFS_HANDLE_INVALID);
     fl_vfs_wait(read);
     ASSERT_FALSE(fl_vfs_get_data(read).success);
@@ -2727,7 +2730,7 @@ static FlVfsOpenResult arcname_open(void* instance, void* parent_handle, FlStrin
     (void)path;
     (void)flags;
     (void)mount_options;
-    return (FlVfsOpenResult) { .handle = NULL, .error = stub_vfs_not_found() };
+    return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
 }
 
 static void arcname_close(void* instance, void* handle) {
@@ -2832,9 +2835,9 @@ static void serial_leave(void) {
 
 static FlVfsOpenResult serial_open(void* instance, void* parent_handle, FlString path, uint32_t flags,
                                    FlVfsMountOptions mount_options) {
-    if (parent_handle == NULL) {
+    if (parent_handle == nullptr) {
         if (!fl_string_equals(path, FL_S("serial"))) {
-            return (FlVfsOpenResult) { .handle = NULL, .error = stub_vfs_not_found() };
+            return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
         }
         StubVfsHandle* root = stub_vfs_alloc(true);
         return (FlVfsOpenResult) { .handle = root, .is_directory = true, .error = stub_vfs_ok() };
@@ -2929,8 +2932,8 @@ UTEST(vfs, operations_on_one_mount_never_overlap_inside_its_driver) {
 
     // Prepared but not dispatched: nothing runs until the threads below execute them.
     for (int i = 0; i < THREADS * READS_PER_THREAD; i++) {
-        reads[i]
-            = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), NULL, NULL, NULL, FL_VFS_HANDLE_INVALID);
+        reads[i] = vfs_mount_read_all_prepare(mount.mount, FL_S(STUB_VFS_FILE), nullptr, nullptr, nullptr,
+                                              FL_VFS_HANDLE_INVALID);
         ASSERT_NE(reads[i], FL_VFS_HANDLE_INVALID);
         SerialRunCtx* owner = &ctx[i % THREADS];
         owner->reads[owner->read_count++] = vfs_op_acquire(reads[i]);
@@ -2988,11 +2991,11 @@ static _Atomic bool s_gate_release;
 
 static FlVfsOpenResult gated_open(void* instance, void* parent_handle, FlString path, uint32_t flags,
                                   FlVfsMountOptions mount_options) {
-    if (parent_handle != NULL) {
+    if (parent_handle != nullptr) {
         return stub_vfs_open(instance, parent_handle, path, flags, mount_options);
     }
     if (!fl_string_equals(path, FL_S("gated"))) {
-        return (FlVfsOpenResult) { .handle = NULL, .error = stub_vfs_not_found() };
+        return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
     }
 
     atomic_store(&s_gate_entered, true);
@@ -3378,7 +3381,7 @@ UTEST(vfs_libarchive, concurrent_reads_through_one_archive_mount_return_the_righ
     ASSERT_EQ(file_write_os(zip_path, zip->bytes, (i64)zip->size), (i64)zip->size);
 
     FlVfsMount* archive = vfs_mount(zip_path).mount;
-    ASSERT_TRUE(archive != NULL);
+    ASSERT_TRUE(archive != nullptr);
     vfs_wait_all();
     ASSERT_TRUE_MSG(fl_vfs_mount_is_ready(archive), "the archive must mount by its own path");
 
@@ -3395,7 +3398,7 @@ UTEST(vfs_libarchive, concurrent_reads_through_one_archive_mount_return_the_righ
 
     // The directory holding the archive reads through it too, as a plain path.
     FlVfsMount* directory = vfs_mount(dir).mount;
-    ASSERT_TRUE(directory != NULL);
+    ASSERT_TRUE(directory != nullptr);
     vfs_wait_all();
     FlVfsHandle through = vfs_mount_read_all(directory, FL_S("stress.zip/file1.txt"));
     fl_vfs_wait(through);

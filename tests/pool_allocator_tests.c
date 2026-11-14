@@ -20,7 +20,7 @@ UTEST(pool_allocator, basic_allocation) {
     pool_new(&pool, arena);
 
     TestItem* item = pool_alloc(&pool);
-    ASSERT_NE(item, NULL);
+    ASSERT_NE(item, nullptr);
     ASSERT_EQ(item->value, 0);
     ASSERT_EQ(item->data, 0.0f);
 
@@ -37,9 +37,9 @@ UTEST(pool_allocator, multiple_allocations) {
     TestItem* item2 = pool_alloc(&pool);
     TestItem* item3 = pool_alloc(&pool);
 
-    ASSERT_NE(item1, NULL);
-    ASSERT_NE(item2, NULL);
-    ASSERT_NE(item3, NULL);
+    ASSERT_NE(item1, nullptr);
+    ASSERT_NE(item2, nullptr);
+    ASSERT_NE(item3, nullptr);
     ASSERT_NE(item1, item2);
     ASSERT_NE(item2, item3);
     ASSERT_NE(item1, item3);
@@ -141,8 +141,8 @@ UTEST(pool_allocator, different_types) {
     TestItem* test_item = pool_alloc(&test_pool);
     SmallItem* small_item = pool_alloc(&small_pool);
 
-    ASSERT_NE(test_item, NULL);
-    ASSERT_NE(small_item, NULL);
+    ASSERT_NE(test_item, nullptr);
+    ASSERT_NE(small_item, nullptr);
 
     test_item->value = 500;
     test_item->data = 3.14f;

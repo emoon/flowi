@@ -42,7 +42,7 @@ typedef struct FlHost FlHost;
 // host actually brought up.
 // Bring up the embedded tier on arena and open its window at the settings' render size: render
 // backend, shared resource tier, VFS, image system, font cache, render surface and UI context.
-// Returns NULL on failure, having logged the reason.
+// Returns null on failure, having logged the reason.
 FL_API FlHost* fl_host_create(FlArena* arena, const FlHostSettings* settings);
 // Tear the host down and release everything it owns, its window included. No-op on a null handle.
 FL_API void fl_host_destroy(FlHost* host);

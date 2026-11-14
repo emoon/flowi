@@ -90,7 +90,7 @@ static int sha1digest(uint8_t* digest, char* hexdigest, const uint8_t* data, siz
         return -1;
     }
 
-    // NULL data with zero length is the empty message.
+    // nullptr data with zero length is the empty message.
     FL_VALIDATE_RET(data != nullptr || databytes == 0, -1);
 
     // Pre-processing of data tail (includes padding to fill out 512-bit chunk):

@@ -3,7 +3,7 @@
 #include <core/log.h>
 
 void gpu_glyph_atlas_init(GpuGlyphAtlas* atlas, struct FlArena* arena) {
-    if (atlas->entries == NULL) {
+    if (atlas->entries == nullptr) {
         atlas->entries = arena_alloc_array(arena, GpuGlyphEntry, GPU_GLYPH_ATLAS_MAX_ENTRIES);
     }
     atlas->entry_count = 0;
@@ -28,7 +28,7 @@ static GpuGlyphEntry* find_entry(GpuGlyphAtlas* atlas, FlFontId font, u16 size, 
             return e;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 const GpuGlyphEntry* gpu_glyph_atlas_find(const GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id) {
@@ -39,17 +39,17 @@ const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, 
                                            f32 left, f32 top, f32 advance) {
     if (atlas->entry_count >= GPU_GLYPH_ATLAS_MAX_ENTRIES) {
         log_error("gpu backend: glyph atlas entry table full (%d)", GPU_GLYPH_ATLAS_MAX_ENTRIES);
-        return NULL;
+        return nullptr;
     }
-    if (find_entry(atlas, font, size, glyph_id) != NULL) {
+    if (find_entry(atlas, font, size, glyph_id) != nullptr) {
         log_error("gpu backend: glyph (font %u, size %u, glyph %u) placed twice", (unsigned)font, (unsigned)size,
                   (unsigned)glyph_id);
-        return NULL;
+        return nullptr;
     }
 
     GpuAtlasCell cell = { 0, 0, w, h };
     if (w > 0 && h > 0 && !gpu_atlas_pack_insert(&atlas->pack, w, h, &cell.x, &cell.y)) {
-        return NULL;
+        return nullptr;
     }
 
     GpuGlyphEntry* entry = &atlas->entries[atlas->entry_count++];

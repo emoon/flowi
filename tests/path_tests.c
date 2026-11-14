@@ -80,7 +80,7 @@ UTEST(path, split_empty) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     StringArray result = path_split(arena, (FlString) { 0 });
     ASSERT_EQ(0, result.count);
-    ASSERT_EQ(NULL, result.items);
+    ASSERT_EQ(nullptr, result.items);
     fl_arena_destroy(arena);
 }
 
@@ -656,16 +656,16 @@ UTEST(path_utils, normalize_empty_path) {
     FlString input = FL_S("");
     FlString result = fl_path_normalize(arena, input);
     ASSERT_EQ(0UL, (u64)result.length);
-    ASSERT_TRUE(result.data == NULL);
+    ASSERT_TRUE(result.data == nullptr);
     fl_arena_destroy(arena);
 }
 
 UTEST(path_utils, normalize_null_path) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    FlString input = { .data = NULL, .length = 0 };
+    FlString input = { .data = nullptr, .length = 0 };
     FlString result = fl_path_normalize(arena, input);
     ASSERT_EQ(0UL, (u64)result.length);
-    ASSERT_TRUE(result.data == NULL);
+    ASSERT_TRUE(result.data == nullptr);
     fl_arena_destroy(arena);
 }
 
@@ -691,7 +691,7 @@ UTEST(path_utils, split_empty_path) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     StringArray result = path_split(arena, FL_S(""));
     ASSERT_EQ(0, result.count);
-    ASSERT_TRUE(result.items == NULL);
+    ASSERT_TRUE(result.items == nullptr);
     fl_arena_destroy(arena);
 }
 
@@ -753,7 +753,7 @@ UTEST(path_utils, get_extension_no_extension) {
     FlString path = FL_S("file");
     FlString result = fl_path_get_extension(path);
     ASSERT_EQ(0UL, (u64)result.length);
-    ASSERT_TRUE(result.data == NULL);
+    ASSERT_TRUE(result.data == nullptr);
 }
 
 UTEST(path_utils, get_extension_with_dot) {
@@ -767,14 +767,14 @@ UTEST(path_utils, get_extension_empty_path) {
     FlString path = FL_S("");
     FlString result = fl_path_get_extension(path);
     ASSERT_EQ(0UL, (u64)result.length);
-    ASSERT_TRUE(result.data == NULL);
+    ASSERT_TRUE(result.data == nullptr);
 }
 
 UTEST(path_utils, get_filename_empty_path) {
     FlString path = FL_S("");
     FlString result = fl_path_get_filename(path);
     ASSERT_EQ(0UL, (u64)result.length);
-    ASSERT_TRUE(result.data == NULL);
+    ASSERT_TRUE(result.data == nullptr);
 }
 
 UTEST(path_utils, get_filename_with_separator) {
@@ -788,7 +788,7 @@ UTEST(path_utils, get_filename_ends_with_separator) {
     FlString path = FL_S("/path/to/");
     FlString result = fl_path_get_filename(path);
     ASSERT_EQ(0UL, (u64)result.length);
-    ASSERT_TRUE(result.data == NULL);
+    ASSERT_TRUE(result.data == nullptr);
 }
 
 UTEST(path_utils, get_directory_empty_path) {
@@ -796,7 +796,7 @@ UTEST(path_utils, get_directory_empty_path) {
     FlString path = FL_S("");
     FlString result = fl_path_get_directory(arena, path);
     ASSERT_EQ(0UL, (u64)result.length);
-    ASSERT_TRUE(result.data == NULL);
+    ASSERT_TRUE(result.data == nullptr);
     fl_arena_destroy(arena);
 }
 
@@ -805,7 +805,7 @@ UTEST(path_utils, get_directory_single_segment) {
     FlString path = FL_S("file.txt");
     FlString result = fl_path_get_directory(arena, path);
     ASSERT_EQ(0UL, (u64)result.length);
-    ASSERT_TRUE(result.data == NULL);
+    ASSERT_TRUE(result.data == nullptr);
     fl_arena_destroy(arena);
 }
 
@@ -955,7 +955,7 @@ UTEST(path_utils, get_parent_no_parent) {
     FlString path = FL_S("file.txt");
     FlString result = fl_path_get_parent(arena, path);
     ASSERT_EQ(0UL, (u64)result.length);
-    ASSERT_TRUE(result.data == NULL);
+    ASSERT_TRUE(result.data == nullptr);
     fl_arena_destroy(arena);
 }
 
@@ -1019,7 +1019,7 @@ UTEST(path, get_current_directory_not_null) {
     FlString result = path_get_current_directory(arena);
 
     if (result.length > 0) {
-        ASSERT_TRUE(result.data != NULL);
+        ASSERT_TRUE(result.data != nullptr);
     }
 
     fl_arena_destroy(arena);

@@ -2,7 +2,7 @@
 // widgets, a directional nav hit an edge, a widget was activated) through one app-installed hook, and the app
 // maps each event kind to whatever it wants.
 //
-// The hook is NULL by default and fires only on discrete, human-driven interactions (never per frame).
+// The hook is null by default and fires only on discrete, human-driven interactions (never per frame).
 
 #pragma once
 
@@ -39,6 +39,6 @@ typedef struct FlUiFeedbackEvent {
 // fl_ui_set_feedback_hook.
 typedef void (*FlUiFeedbackCallback)(const FlUiFeedbackEvent* event, void* user_data);
 
-// Install (or clear, with cb == NULL) the app's UI feedback hook. App-wide: one hook shared across all windows.
-// NULL by default; no event is emitted until a hook is installed.
+// Install (or clear, with a null cb) the app's UI feedback hook. App-wide: one hook shared across all windows.
+// Null by default; no event is emitted until a hook is installed.
 void fl_ui_set_feedback_hook(FlUiFeedbackCallback cb, void* user_data);

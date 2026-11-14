@@ -432,7 +432,7 @@ same target's backing **IOSurface** as an opaque `void*` for an *out-of-process*
 sample cross-process; the primary MTLTexture accessor coexists per-surface with the same
 linear-premultiplied contract (ADR-0055 IOSurface amendment). The first IOSurface call on a
 surface rebuilds its target, so it invalidates any MTLTexture handle fetched earlier — fetch
-the IOSurface first. It returns NULL if the IOSurface-backed allocation fails; the surface
+the IOSurface first. It returns null if the IOSurface-backed allocation fails; the surface
 keeps rendering and the host falls back to the primary accessor.
 The **host owns the compositor** (clear, display plane with dest rect + per-plane alpha, UI
 over it) and any composited [[#Pixel Readback]]; the backend never draws the display plane.
@@ -806,7 +806,7 @@ directional nav **hit an edge**, a widget was **activated** — emitted through 
 (`fl_ui_set_feedback_hook`). flowi reports the event; the **app owns the effect**, mapping each
 `FlUiFeedbackKind` to a UI sound, haptic/rumble, screen-reader announcement, or telemetry ping. flowi
 stays ignorant of all of them — naming it
-"feedback" rather than "sound" keeps haptics/a11y open. The hook is NULL by default and fires only on
+"feedback" rather than "sound" keeps haptics/a11y open. The hook is null by default and fires only on
 discrete, human-driven interactions (never per frame): zero cost until an app opts in. Events come off
 the existing nav ([[#Action]]) and activation paths (ADR-0056).
 _Avoid_: a "sound event" / a `play_*` vocabulary inside flowi — that re-imports the audio ownership the
@@ -979,7 +979,7 @@ The unit the [[#List]] hands back to describe a selection *change* — never the
 [[#Item Id]]s**, not by enumerating the span, so a range survives virtualization and tree
 collapse: the app — which alone owns the full ordered model — walks from `from_id` to `to_id`
 and flips those items, including rows scrolled off-screen the List never saw. The List
-auto-applies requests into the caller-owned `FlSelectionSet` it was handed (pass a NULL set to
+auto-applies requests into the caller-owned `FlSelectionSet` it was handed (pass a null set to
 opt out and apply them yourself, e.g. for undo-coalescing or exotic storage); the result's
 `requests` array is populated either way. See ADR-0028.
 _Avoid_: returning the resolved set from the List (that moves storage into the framework and
