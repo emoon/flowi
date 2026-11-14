@@ -361,9 +361,17 @@ FlDockPanelId dock_workspace_leaf_shown_panel(const FlDockWorkspace* ws, const F
     return first_shown;
 }
 
+// A layout id is a name plus a 32-bit seed, and a panel id is 64 bits. The high half is spread over the seed by an
+// odd multiply, which is a bijection, so two panels that share their low half never share an element. An id that
+// fits in 32 bits seeds as itself.
+static FlLayoutId panel_layout_id(FlString name, FlDockPanelId panel) {
+    u32 high = (u32)(panel >> 32);
+    return (FlLayoutId) { .name = name, .id = (i32)((u32)panel ^ (high * 0x9e3779b1u)) };
+}
+
 // The fill element inside the drag overlay, the box that holds the dragged panel's title.
 static FlLayoutId drag_overlay_fill_layout_id(FlDockPanelId panel) {
-    return (FlLayoutId) { .name = FL_S("fl_dock_drag_overlay_fill"), .id = (u32)panel };
+    return panel_layout_id(FL_S("fl_dock_drag_overlay_fill"), panel);
 }
 
 // Overlay geometry in logical px. The pointer sits just inside the top-left, so the panel hangs off the cursor the
@@ -395,7 +403,7 @@ static void emit_drag_overlay(FlDockWorkspace* ws) {
     // Over a resolved target the overlay attaches to the gap leaf's element; untargeted it hangs off the cursor.
     const bool on_gap = ws->drag.gap_leaf != 0;
 
-    fl_floating_start((FlLayoutId) { .name = FL_S("fl_dock_drag_overlay"), .id = (u32)ws->drag.panel });
+    fl_floating_start(panel_layout_id(FL_S("fl_dock_drag_overlay"), ws->drag.panel));
     fl_floating_configure(on_gap ? (FlFloatingConfig) {
         .attach_to = FlFloatingAttachTo_Element,
         .parent_id = dock_layout_node_element_id(ws->drag.gap_leaf),
@@ -581,7 +589,7 @@ FlDockWorkspace* dock_workspace_current(void) {
 // The clip container a panel's body lives in. Its viewport is the tile and its content is whatever the body
 // laid out at.
 static FlLayoutId panel_clip_layout_id(FlDockPanelId id) {
-    return (FlLayoutId) { .name = FL_S("fl_dock_panel_clip"), .id = (u32)id };
+    return panel_layout_id(FL_S("fl_dock_panel_clip"), id);
 }
 
 // Half a physical pixel of slack, so a body that exactly fills the tile does not count as overflow.
@@ -638,7 +646,7 @@ bool dock_panel_scope_begin(FlDockPanelId id, FlString title) {
     report_overflow_once(ws, id);
 
     ws->open_panels++; // dock_workspace_end asserts this is back to 0
-    fl_floating_start((FlLayoutId) { .name = FL_S("fl_dock_panel"), .id = (u32)id });
+    fl_floating_start(panel_layout_id(FL_S("fl_dock_panel"), id));
     fl_floating_configure((FlFloatingConfig) {
         .attach_to = FlFloatingAttachTo_Element,
         .parent_id = parent,

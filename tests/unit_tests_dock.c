@@ -2219,6 +2219,40 @@ UTEST(dock_workspace, panel_content_lands_in_its_tile) {
     ASSERT_LT_MSG(left.boundingBox.x, right.boundingBox.x, "the two panels must not share an origin");
 }
 
+// Two panel ids that share their low 32 bits. Each body still gets an element of its own and lands in its own tile.
+#define DOCK_WIDE_ID_LOW 100ull
+#define DOCK_WIDE_ID_HIGH ((1ull << 32) | DOCK_WIDE_ID_LOW)
+
+static void dock_wide_id_panel(FlDockPanelId id, u32 marker) {
+    dock_panel(id, FL_S("wide")) {
+        ui_layout_area_id(((FlLayoutId) { .name = FL_S("wide_marker"), .id = marker }),
+                          .sizing = { .width = sizing_grow(), .height = sizing_grow() },
+                          .color = ui_color(40, 40, 40, 255)) {}
+    }
+}
+
+static void dock_wide_id_frame(void* user_data) {
+    FlDockWorkspace* ws = dock_fixture_emit(
+        (DockFixture*)user_data, dock_split(FlDockAxis_X, 0.5f, dock_leaf(DOCK_WIDE_ID_LOW), dock_leaf(DOCK_WIDE_ID_HIGH)));
+    dock_wide_id_panel(DOCK_WIDE_ID_LOW, 1);
+    dock_wide_id_panel(DOCK_WIDE_ID_HIGH, 2);
+    dock_workspace_end(ws);
+}
+
+UTEST(dock_workspace, panel_ids_sharing_their_low_32_bits_get_separate_tiles) {
+    DOCK_APP(app, "dockwideid", 600, 400);
+    DockFixture st = { 0 };
+    DOCK_RUN_FRAMES(app, st, st, dock_wide_id_frame, 2);
+
+    Clay_ElementData left = dock_layout_element((FlLayoutId) { .name = FL_S("wide_marker"), .id = 1 });
+    Clay_ElementData right = dock_layout_element((FlLayoutId) { .name = FL_S("wide_marker"), .id = 2 });
+    ASSERT_TRUE_MSG(left.found && right.found, "both panels must lay out");
+    ASSERT_NEAR_MSG(left.boundingBox.width, 300.0f, 8.0f, "the low id's body fills its own half");
+    ASSERT_NEAR_MSG(right.boundingBox.width, 300.0f, 8.0f, "and so does the high id's, less the divider");
+    ASSERT_LE_MSG(left.boundingBox.x + left.boundingBox.width, right.boundingBox.x + 1.0f,
+                  "the two bodies must not overlap");
+}
+
 // An overlay opened from a panel body draws past the panel's tile, up to the window. Both attach modes are
 // covered: root-attached (a dialog or context menu) and element-attached (anchored to a widget in the body).
 #define DOCK_SEAM_OVERLAY_W 250.0f
