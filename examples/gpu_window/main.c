@@ -305,9 +305,12 @@ static void draw_text(FlArena* arena, FlArena* scratch, FlRenderBackend* backend
         FlRect pen = { world_x, baseline_y, 0.0f, 0.0f };
         if (view_visible(v, pen, margin)) {
             FlGlyph* eg = arena_alloc(scratch, FlGlyph);
-            eg->glyph_id = codepoint;
-            eg->x = v_x(v, world_x);
-            eg->y = v_y(v, baseline_y);
+            *eg = (FlGlyph) {
+                .glyph_id = codepoint,
+                .x = v_x(v, world_x),
+                .y = v_y(v, baseline_y),
+                .glyph_index = font_cache_get_glyph_index(fc, font, codepoint),
+            };
             count++;
         }
         world_x += (f32)font_cache_get_glyph_advance(fc, font, metrics, codepoint) / 64.0f;
@@ -409,9 +412,9 @@ static void build_scene(FlArena* arena, FlArena* scratch, FlRenderBackend* backe
         FlRect c = cell_rect(1, 1);
         draw_cell_chrome(arena, scratch, backend, fc, font, v, c, FL_S("arc / ring / sector"));
         f32 cy = c.y + 58;
-        vw_arc(arena, v, c.x + 50, cy, 34, 7, 0.0f, 6.2831853f, k_accent, 0);                // full ring
-        vw_arc(arena, v, c.x + 125, cy, 34, 16, 0.2f, 4.2f, k_green, FL_IR_ARC_ROUND_CAPS);  // capped sweep
-        vw_arc(arena, v, c.x + 200, cy, 34, 40, 0.0f, 2.3f, k_warn, 0);                      // filled sector
+        vw_arc(arena, v, c.x + 50, cy, 34, 7, 0.0f, 6.2831853f, k_accent, 0);               // full ring
+        vw_arc(arena, v, c.x + 125, cy, 34, 16, 0.2f, 4.2f, k_green, FL_IR_ARC_ROUND_CAPS); // capped sweep
+        vw_arc(arena, v, c.x + 200, cy, 34, 40, 0.0f, 2.3f, k_warn, 0);                     // filled sector
     }
 
     {

@@ -208,8 +208,8 @@ static void clay_text_to_ir(FlArena* arena, FlArena* scratch, FlFontCache* font_
     // 1:1 scale: layout already sizes glyphs at the resolved font size; there is no separate display zoom here.
     // Letter spacing is applied between glyphs (n−1 gaps), the same rule font_cache_measure_text and the painter
     // follow.
-    fl_ir_text_layout(arena, scratch, font_cache, text_data->fontId, font_cache_whole_px_to_q4(text_data->fontSize),
-                      1.0f, to_em_color(text_data->textColor), (FlString) { .data = text, .length = length }, bb.x,
+    fl_ir_text_layout(arena, font_cache, text_data->fontId, font_cache_whole_px_to_q4(text_data->fontSize), 1.0f,
+                      to_em_color(text_data->textColor), (FlString) { .data = text, .length = length }, bb.x,
                       baseline_y, (float)text_data->letterSpacing);
 }
 

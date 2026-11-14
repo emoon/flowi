@@ -218,8 +218,8 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
     float baseline_y = scale(p, y) + (float)glyph_list.ascender / 64.0f;
 
     // 1:1 scale: the painter draws at the reference-scaled size directly, no separate display zoom.
-    fl_ir_text_layout(p->arena, p->state_arena, p->font_cache, font, font_cache_whole_px_to_q4(font_size), 1.0f, color,
-                      text, cursor_x, baseline_y, 0.0f);
+    fl_ir_text_layout(p->arena, p->font_cache, font, font_cache_whole_px_to_q4(font_size), 1.0f, color, text, cursor_x,
+                      baseline_y, 0.0f);
     painter_record_end(p, span, start);
 }
 
@@ -261,8 +261,8 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
     float baseline_y = scale(p, y) + vm.ascent;
 
     // Letter spacing is authored px; it scales with text_scale.
-    fl_ir_text_layout(p->arena, p->state_arena, p->font_cache, style.font_id, size_q4, 1.0f, color, text, cursor_x,
-                      baseline_y, style.letter_spacing * p->text_scale);
+    fl_ir_text_layout(p->arena, p->font_cache, style.font_id, size_q4, 1.0f, color, text, cursor_x, baseline_y,
+                      style.letter_spacing * p->text_scale);
     painter_record_end(p, span, start);
 }
 

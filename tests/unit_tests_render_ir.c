@@ -19,7 +19,7 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     FlArena* scratch = arena_new();
     void* start = fl_arena_current_pos(ir);
     FlString aaa = { .data = "AAA", .length = 3, .is_static = 1, .is_ascii = 1 };
-    fl_ir_text_layout(ir, scratch, cache, font, q4, 1.0f, (FlColor) { 255, 255, 255, 255 }, aaa, 10.0f, 20.0f, spacing);
+    fl_ir_text_layout(ir, cache, font, q4, 1.0f, (FlColor) { 255, 255, 255, 255 }, aaa, 10.0f, 20.0f, spacing);
 
     const FlCmdHeader* h = (const FlCmdHeader*)start;
     ASSERT_EQ_MSG((int)h->kind, (int)FlCmd_TextRun, "the layout emits one text run");
@@ -62,6 +62,9 @@ UTEST(render_ir, shaped_run_matches_measurement) {
     i64 sum = 0;
     for_count(i, run.count) {
         ASSERT_EQ_MSG((int)run.glyphs[i].glyph_id, (int)ascii.data[i], "the glyph id is the codepoint");
+        ASSERT_EQ_MSG((int)run.glyphs[i].glyph_index, (int)font_cache_get_glyph_index(cache, font, (u32)ascii.data[i]),
+                      "the glyph index is the face's index for the codepoint");
+        ASSERT_EQ_MSG((int)run.glyphs[i].font, (int)font, "a codepoint the font maps stays on it");
         ASSERT_EQ_MSG(run.glyphs[i].advance, font_cache_get_glyph_advance_q4(cache, font, q4, (u32)ascii.data[i]),
                       "each glyph carries the cached advance");
         sum += run.glyphs[i].advance;
@@ -84,6 +87,7 @@ UTEST(render_ir, shaped_run_matches_measurement) {
     FlShapedRun unknown = font_cache_shape_run(cache, 9999, q4, ascii);
     ASSERT_EQ_MSG((int)unknown.count, 3, "an unknown font still yields its glyphs");
     ASSERT_TRUE_MSG(unknown.width == 0, "an unknown font advances zero");
+    ASSERT_EQ_MSG((int)unknown.glyphs[0].font, 9999, "an unknown font keeps the id it was asked for");
 
     FlShapedRun empty = font_cache_shape_run(cache, font, q4, (FlString) { 0 });
     ASSERT_EQ_MSG((int)empty.count, 0, "an empty string shapes to nothing");

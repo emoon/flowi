@@ -91,12 +91,17 @@ typedef struct FlCmdBorder {
     FlStrokeStyle stroke; // dash pattern for the band (zeroed = solid)
 } FlCmdBorder;
 
-// One pre-positioned glyph. Shaping and layout happen in the shared font layer, never in a backend; glyph_id
-// is opaque to the backend. (x, y) is the pen position at the glyph's baseline.
+// One pre-positioned glyph. Shaping and layout happen in the shared font layer, never in a backend. (x, y) is the
+// pen position at the glyph's baseline.
+//
+// glyph_index is the glyph's index in the run's font (the codepoint for the built-in bitmap font). A run holds
+// glyphs of one face only, so text that needs the fallback face is split into several runs. glyph_id is the
+// codepoint the glyph came from and is what the backends still key on; it goes away once both read glyph_index.
 typedef struct FlGlyph {
     u32 glyph_id;
     f32 x;
     f32 y;
+    u32 glyph_index;
 } FlGlyph;
 
 // A run of glyphs in one font/size/color. The FlGlyph[glyph_count] array follows this struct inline in the
