@@ -517,7 +517,7 @@ static int run_translator_tests(void) {
                     (FlColor[4]) { red, red, red, red }, nullptr);
     fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 50, 50 }, (FlCornerRadius) { 0 }, (FlColor[4]) { red, red, red, blue },
                     nullptr);
-    emit_solid_rect(ir_arena, 0.0f, 0.0f, 0.0f, 50.0f, red);                       // empty: w == 0
+    emit_solid_rect(ir_arena, 0.0f, 0.0f, 0.0f, 50.0f, red);                          // empty: w == 0
     FlPolyPoint* pts = fl_ir_polyline(ir_arena, red, red, 1.0f, 0.0f, 0, 1, nullptr); // one point: no segment
     pts[0] = (FlPolyPoint) { 0.0f, 0.0f, 1.0f };
     fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 50, 50 });
@@ -5855,7 +5855,7 @@ static int run_painter_rects_pixel_test(FlRenderBackend* backend, FlArena* ir_ar
         };
 
         void* start = ir_rewind_begin(ir_arena);
-        fl_clay_to_render_ir(ir_arena, scratch, nullptr, cmds, 4);
+        fl_clay_to_render_ir(ir_arena, nullptr, cmds, 4);
         FlRenderFrame frame = test_frame();
         ir_frame_render(backend, surface, &frame, ir_arena, start);
 
@@ -6297,8 +6297,8 @@ static int run_em_app_gpu_path_test(void) {
     // Scan the readback for the two distinct fills, robust to ui_scale and exact coordinates. Fills are stored
     // premultiplied, so a fully-covered interior pixel is its own color; the dark theme clear is far below 150
     // on every channel, so it fakes neither fill.
-    bool saw_rect = false;   // blue-dominant
-    bool saw_circle = false; // red-dominant
+    bool saw_rect = false;     // blue-dominant
+    bool saw_circle = false;   // red-dominant
     u32 outline_px[2] = { 0 }; // green-dominant, by half: [0] left (rect outline), [1] right (circle outline)
     for (u32 y = 0; y < rb.height; ++y) {
         const u8* row = (const u8*)rb.pixels + (size_t)y * rb.stride;

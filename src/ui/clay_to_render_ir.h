@@ -9,8 +9,7 @@ struct FlArena;
 struct FlFontCache;
 struct Clay_RenderCommand;
 
-// Append IR records for the given Clay commands to arena. scratch holds transient glyph layout for text
-// runs; font_cache resolves glyph metrics/advances for text positioning.
+// Append IR records for the given Clay commands to arena. font_cache shapes the text runs.
 
-void fl_clay_to_render_ir(struct FlArena* arena, struct FlArena* scratch, struct FlFontCache* font_cache,
+void fl_clay_to_render_ir(struct FlArena* arena, struct FlFontCache* font_cache,
                           struct Clay_RenderCommand* clay_commands, int clay_count);

@@ -170,7 +170,7 @@ static void clay_custom_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     }
 }
 
-static void clay_text_to_ir(FlArena* arena, FlArena* scratch, FlFontCache* font_cache, const Clay_RenderCommand* cmd) {
+static void clay_text_to_ir(FlArena* arena, FlFontCache* font_cache, const Clay_RenderCommand* cmd) {
     const Clay_TextRenderData* text_data = &cmd->renderData.text;
     const Clay_BoundingBox bb = cmd->boundingBox;
 
@@ -213,8 +213,7 @@ static void clay_text_to_ir(FlArena* arena, FlArena* scratch, FlFontCache* font_
                       baseline_y, (float)text_data->letterSpacing);
 }
 
-void fl_clay_to_render_ir(FlArena* arena, FlArena* scratch, FlFontCache* font_cache, Clay_RenderCommand* clay_commands,
-                          int clay_count) {
+void fl_clay_to_render_ir(FlArena* arena, FlFontCache* font_cache, Clay_RenderCommand* clay_commands, int clay_count) {
     perf_scope_function();
 
     for_count(i, clay_count) {
@@ -227,7 +226,7 @@ void fl_clay_to_render_ir(FlArena* arena, FlArena* scratch, FlFontCache* font_ca
                 clay_image_to_ir(arena, cmd);
                 break;
             case CLAY_RENDER_COMMAND_TYPE_TEXT:
-                clay_text_to_ir(arena, scratch, font_cache, cmd);
+                clay_text_to_ir(arena, font_cache, cmd);
                 break;
             case CLAY_RENDER_COMMAND_TYPE_BORDER:
                 clay_border_to_ir(arena, cmd);

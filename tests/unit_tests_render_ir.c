@@ -16,7 +16,6 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     ASSERT_EQ_MSG((int)q4, 30, "7.5px resolves exactly in quarter-px steps");
 
     FlArena* ir = arena_new();
-    FlArena* scratch = arena_new();
     void* start = fl_arena_current_pos(ir);
     FlString aaa = { .data = "AAA", .length = 3, .is_static = 1, .is_ascii = 1 };
     fl_ir_text_layout(ir, cache, font, q4, 1.0f, (FlColor) { 255, 255, 255, 255 }, aaa, 10.0f, 20.0f, spacing);
@@ -41,7 +40,6 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
         cache, aaa, (FlTextStyle) { .font_id = font, .font_size = font_size, .letter_spacing = spacing });
     ASSERT_NEAR_MSG((glyphs[2].x + adv) - glyphs[0].x, m.width, 0.0001f, "draw and measure agree on the width");
 
-    fl_arena_destroy(scratch);
     fl_arena_destroy(ir);
     font_cache_destroy(cache);
 }
@@ -560,7 +558,7 @@ UTEST(render_ir, snapped_line_splice_rounds_at_fractional_origin) {
     Clay_RenderCommand snapped_cmd = { .commandType = CLAY_RENDER_COMMAND_TYPE_CUSTOM,
                                        .boundingBox = bb,
                                        .renderData = { .custom = { .customData = snapped_slot } } };
-    fl_clay_to_render_ir(out_snapped, arena, nullptr, &snapped_cmd, 1);
+    fl_clay_to_render_ir(out_snapped, nullptr, &snapped_cmd, 1);
     ASSERT_TRUE_MSG(hs->kind == FlCmd_FillRect, "snapped line splices to a fill rect");
     const FlCmdFillRect* fs = (const FlCmdFillRect*)(hs + 1);
     ASSERT_TRUE_MSG(fs->rect.x == 200.0f && fs->rect.y == 10.0f, "snapped to the device grid (round 200.4, 10.4)");
@@ -573,7 +571,7 @@ UTEST(render_ir, snapped_line_splice_rounds_at_fractional_origin) {
     Clay_RenderCommand plain_cmd = { .commandType = CLAY_RENDER_COMMAND_TYPE_CUSTOM,
                                      .boundingBox = bb,
                                      .renderData = { .custom = { .customData = plain_slot } } };
-    fl_clay_to_render_ir(out_plain, arena, nullptr, &plain_cmd, 1);
+    fl_clay_to_render_ir(out_plain, nullptr, &plain_cmd, 1);
     const FlCmdFillRect* fp = (const FlCmdFillRect*)(hp + 1);
     ASSERT_TRUE_MSG(fp->rect.x == 200.4f && fp->rect.y == 10.4f, "an untagged rect keeps its fractional origin");
 
@@ -584,8 +582,8 @@ UTEST(render_ir, snapped_line_splice_rounds_at_fractional_origin) {
 
 // Returns nullptr if the hop emitted something other than a text run. Whole-px font size, so the size key
 // needs no quantizer.
-static const FlCmdTextRun* clay_text_run_at_spacing(FlArena* out, FlArena* scratch, FlFontCache* cache, FlFontId font,
-                                                    u16 font_size, u16 spacing) {
+static const FlCmdTextRun* clay_text_run_at_spacing(FlArena* out, FlFontCache* cache, FlFontId font, u16 font_size,
+                                                    u16 spacing) {
     static const char k_text[] = "AAA";
     fl_arena_align(out, 8);
     const FlCmdHeader* h = (const FlCmdHeader*)fl_arena_current_pos(out);
@@ -599,7 +597,7 @@ static const FlCmdTextRun* clay_text_run_at_spacing(FlArena* out, FlArena* scrat
                                   .letterSpacing = spacing,
                                   .verticalAlignment = CLAY_TEXT_VALIGN_TOP } },
     };
-    fl_clay_to_render_ir(out, scratch, cache, &cmd, 1);
+    fl_clay_to_render_ir(out, cache, &cmd, 1);
     return h->kind == FlCmd_TextRun ? (const FlCmdTextRun*)(h + 1) : nullptr;
 }
 
@@ -615,12 +613,11 @@ UTEST(render_ir, clay_text_forwards_letter_spacing_to_the_pen) {
         = (float)font_cache_get_glyph_advance_q4(cache, font, font_cache_whole_px_to_q4(font_size), 'A') / 64.0f;
     ASSERT_TRUE_MSG(adv > 0.0f, "the advance is non-zero");
 
-    FlArena* scratch = arena_new();
     FlArena* out_packed = arena_new();
     FlArena* out_spaced = arena_new();
 
-    const FlCmdTextRun* packed = clay_text_run_at_spacing(out_packed, scratch, cache, font, font_size, 0);
-    const FlCmdTextRun* spaced = clay_text_run_at_spacing(out_spaced, scratch, cache, font, font_size, 5);
+    const FlCmdTextRun* packed = clay_text_run_at_spacing(out_packed, cache, font, font_size, 0);
+    const FlCmdTextRun* spaced = clay_text_run_at_spacing(out_spaced, cache, font, font_size, 5);
     ASSERT_TRUE_MSG(packed != nullptr && spaced != nullptr, "each command emits one text run");
     ASSERT_EQ_MSG((int)packed->glyph_count, 3, "one glyph per codepoint");
     ASSERT_EQ_MSG((int)spaced->glyph_count, 3, "one glyph per codepoint");
@@ -641,7 +638,6 @@ UTEST(render_ir, clay_text_forwards_letter_spacing_to_the_pen) {
 
     fl_arena_destroy(out_spaced);
     fl_arena_destroy(out_packed);
-    fl_arena_destroy(scratch);
     font_cache_destroy(cache);
 }
 
@@ -1217,11 +1213,11 @@ UTEST(render_ir, painter_rects_frame_stream_matches_scalar_loop) {
     FlArena* out = arena_new();
     fl_arena_align(out, 8);
     const u8* scalar_start = (const u8*)fl_arena_current_pos(out);
-    fl_clay_to_render_ir(out, arena, nullptr, scalar_cmds, 4);
+    fl_clay_to_render_ir(out, nullptr, scalar_cmds, 4);
     size_t scalar_bytes = (size_t)((const u8*)fl_arena_current_pos(out) - scalar_start);
     fl_arena_align(out, 8);
     const u8* batch_start = (const u8*)fl_arena_current_pos(out);
-    fl_clay_to_render_ir(out, arena, nullptr, batch_cmds, 4);
+    fl_clay_to_render_ir(out, nullptr, batch_cmds, 4);
     size_t batch_bytes = (size_t)((const u8*)fl_arena_current_pos(out) - batch_start);
 
     ASSERT_TRUE_MSG(scalar_bytes > 0, "the scalar frame produced IR");
