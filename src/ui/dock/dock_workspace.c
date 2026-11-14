@@ -29,36 +29,11 @@
 // The settings-store file the layout blob lives in, alongside settings' own <module>.json files.
 #define DOCK_LAYOUT_FILE FL_S("dock_layout.json")
 
-static DeclRecord* decl_find(const FlDockWorkspace* ws, FlDockPanelId id) {
-    for (u32 i = 0; i < ws->decl_count; ++i) {
-        if (ws->decls[i].id == id) {
-            return &ws->decls[i];
-        }
-    }
-    return nullptr;
-}
-
-static DeclRecord* decl_get_or_add(FlDockWorkspace* ws, FlDockPanelId id) {
-    DeclRecord* existing = decl_find(ws, id);
-    if (existing != nullptr) {
-        return existing;
-    }
-    ws->decls = (DeclRecord*)dock_arena_array_reserve(ws->arena, ws->decls, ws->decl_count, &ws->decl_cap,
-                                                      sizeof(DeclRecord), ws->decl_count + 1);
-    DeclRecord* rec = &ws->decls[ws->decl_count++];
-    rec->id = id;
-    rec->last_declared = 0;
-    rec->family = 0;
-    rec->title = string_empty();
-    rec->hidden = false;
-    rec->overflow_logs = 0;
-    return rec;
-}
-
 FlDockWorkspace* dock_workspace_create(void) {
     FlArena* arena = arena_new();
     FlDockWorkspace* ws = arena_alloc_zero(arena, FlDockWorkspace);
     ws->arena = arena;
+    ws->panels.arena = arena;
     ws->tree = dock_tree_create();
     ws->frame = 1;
     return ws;
@@ -101,6 +76,30 @@ static bool tree_dock_panel_at_root(FlDockTree* tree, FlDockPanelId panel) {
     return dock_tree_apply(tree, &req);
 }
 
+// End the gesture and leave the panel in a leaf; if its origin leaf is gone it is docked at the floor, so nothing is
+// left in the floating set once the gesture is over.
+static void dock_gesture_finish(FlDockWorkspace* ws, bool cancel) {
+    FlDockPanelId dropped = ws->drag.panel;
+    if (cancel) {
+        dock_drag_cancel(&ws->drag, ws->tree);
+    } else {
+        dock_drag_end(&ws->drag, ws->tree);
+    }
+    if (dock_tree_panel_is_floating(ws->tree, dropped)) {
+        tree_dock_panel_at_root(ws->tree, dropped);
+    }
+}
+
+// Cancel a drag in flight, as Escape does. The button is usually still down, and the tab strip would report the
+// same grab again on the next frame, so the grab stays blocked until the button comes up.
+static void cancel_drag(FlDockWorkspace* ws) {
+    if (!dock_drag_active(&ws->drag)) {
+        return;
+    }
+    dock_gesture_finish(ws, /*cancel=*/true);
+    ws->grab_blocked = true;
+}
+
 // True when tree is a fresh empty floor (single empty root leaf, no floating panels). A promote target must have
 // this shape, so the promoted panel becomes the root.
 static bool tree_is_empty_floor(const FlDockTree* tree) {
@@ -115,7 +114,8 @@ bool dock_workspace_promote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPa
     if (!distinct_workspaces(src, dst)) {
         return false;
     }
-    if (!dock_tree_has_panel(src->tree, panel) || !tree_is_empty_floor(dst->tree)) {
+    // Only a docked panel moves. One in flight belongs to its drag, whose drop would dock it a second time.
+    if (dock_tree_find_leaf_with_panel(src->tree, panel) == nullptr || !tree_is_empty_floor(dst->tree)) {
         return false;
     }
 
@@ -140,6 +140,7 @@ bool dock_workspace_demote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPan
 
     u32 family = dock_workspace_panel_family(dst, panel);
 
+    cancel_drag(src); // its preview was copied from the tree this is about to change
     tree_extract_panel(dst->tree, panel);
     bool docked = tree_dock_panel_at_root(src->tree, panel);
     FL_ASSERT_FATAL(docked); // a root leaf accepts a tab and a root split accepts an outer dock
@@ -149,16 +150,16 @@ bool dock_workspace_demote(FlDockWorkspace* src, FlDockWorkspace* dst, FlDockPan
 }
 
 void dock_workspace_set_panel_family(FlDockWorkspace* ws, FlDockPanelId id, u32 family) {
-    decl_get_or_add(ws, id)->family = family;
+    dock_panels_get(&ws->panels, id)->family = family;
 }
 
 u32 dock_workspace_panel_family(const FlDockWorkspace* ws, FlDockPanelId id) {
-    const DeclRecord* rec = decl_find(ws, id);
+    const DockPanel* rec = dock_panels_find(&ws->panels, id);
     return rec != nullptr ? rec->family : 0; // an untagged or never-declared panel is general
 }
 
 void dock_workspace_set_panel_visible(FlDockWorkspace* ws, FlDockPanelId id, bool visible) {
-    decl_get_or_add(ws, id)->hidden = !visible;
+    dock_panels_get(&ws->panels, id)->hidden = !visible;
     // Showing a closed panel (one absent from the tree) seats it on the floor.
     if (visible && !dock_tree_has_panel(ws->tree, id)) {
         tree_dock_panel_at_root(ws->tree, id);
@@ -166,8 +167,7 @@ void dock_workspace_set_panel_visible(FlDockWorkspace* ws, FlDockPanelId id, boo
 }
 
 bool dock_workspace_panel_visible(const FlDockWorkspace* ws, FlDockPanelId id) {
-    const DeclRecord* rec = decl_find(ws, id);
-    return rec == nullptr || !rec->hidden; // a panel the app never hid is shown
+    return dock_panels_visible(&ws->panels, id);
 }
 
 void dock_workspace_set_active_panel(FlDockWorkspace* ws, FlDockPanelId id) {
@@ -222,7 +222,7 @@ static FlJsonValue* read_layout_blob(FlArena* arena, FlString path) {
 // multi-window session folds its other workspaces into ours. If the saved id does not match ours, the first saved
 // workspace is adopted as the root.
 static u64 live_workspace_id(const FlDockPersistLoad* load, u64 own_id) {
-    for (u32 i = 0; i < load->count; ++i) {
+    for_count(i, load->count) {
         if (load->workspaces[i].id == own_id) {
             return own_id;
         }
@@ -302,17 +302,14 @@ void dock_workspace_end(FlDockWorkspace* ws) {
 }
 
 bool dock_workspace_declare(FlDockWorkspace* ws, FlDockPanelId id, FlString title) {
-    DeclRecord* rec = decl_get_or_add(ws, id);
+    DockPanel* rec = dock_panels_get(&ws->panels, id);
     rec->last_declared = ws->frame;
-    if (!fl_string_equals(rec->title, title)) { // copy only on change
-        rec->title = fl_string_copy(ws->arena, title);
-    }
+    dock_panels_set_title(&ws->panels, rec, title);
     return dock_workspace_panel_should_emit(ws, id);
 }
 
 FlString dock_workspace_panel_title(const FlDockWorkspace* ws, FlDockPanelId id) {
-    const DeclRecord* rec = decl_find(ws, id);
-    return rec != nullptr ? rec->title : string_empty();
+    return dock_panels_title(&ws->panels, id);
 }
 
 FlDockNodeId dock_workspace_panel_leaf(const FlDockWorkspace* ws, FlDockPanelId id) {
@@ -321,7 +318,7 @@ FlDockNodeId dock_workspace_panel_leaf(const FlDockWorkspace* ws, FlDockPanelId 
 }
 
 bool dock_workspace_panel_declared(const FlDockWorkspace* ws, FlDockPanelId id) {
-    const DeclRecord* rec = decl_find(ws, id);
+    const DockPanel* rec = dock_panels_find(&ws->panels, id);
     return rec != nullptr && rec->last_declared == ws->frame;
 }
 
@@ -336,34 +333,25 @@ bool dock_workspace_panel_should_emit(const FlDockWorkspace* ws, FlDockPanelId i
     }
     // A floating panel has no leaf: the drag overlay draws its title and its body draws nowhere.
     FlDockNode* leaf = dock_tree_find_leaf_with_panel(ws->tree, id);
-    return leaf != nullptr && dock_workspace_leaf_shown_panel(ws, leaf) == id;
+    return leaf != nullptr && dock_panels_shown_in_leaf(&ws->panels, leaf) == id;
 }
 
 u32 dock_workspace_panel_overflow_logs(const FlDockWorkspace* ws, FlDockPanelId id) {
-    const DeclRecord* rec = decl_find(ws, id);
+    const DockPanel* rec = dock_panels_find(&ws->panels, id);
     return rec != nullptr ? rec->overflow_logs : 0;
 }
 
-FlDockPanelId dock_workspace_leaf_shown_panel(const FlDockWorkspace* ws, const FlDockNode* leaf) {
-    FlDockPanelId first_shown = 0;
-    for_count(i, leaf->leaf.count) {
-        FlDockPanelId panel = leaf->leaf.panels[i];
-        if (!dock_workspace_panel_visible(ws, panel)) {
-            continue;
-        }
-        if (i == leaf->leaf.selected) {
-            return panel;
-        }
-        if (first_shown == 0) {
-            first_shown = panel;
-        }
-    }
-    return first_shown;
+// A layout id is a name plus a 32-bit seed, and a panel id is 64 bits. The high half is spread over the seed by an
+// odd multiply, which is a bijection, so two panels that share their low half never share an element. An id that
+// fits in 32 bits seeds as itself.
+static FlLayoutId panel_layout_id(FlString name, FlDockPanelId panel) {
+    u32 high = (u32)(panel >> 32);
+    return (FlLayoutId) { .name = name, .id = (i32)((u32)panel ^ (high * 0x9e3779b1u)) };
 }
 
 // The fill element inside the drag overlay, the box that holds the dragged panel's title.
 static FlLayoutId drag_overlay_fill_layout_id(FlDockPanelId panel) {
-    return (FlLayoutId) { .name = FL_S("fl_dock_drag_overlay_fill"), .id = (u32)panel };
+    return panel_layout_id(FL_S("fl_dock_drag_overlay_fill"), panel);
 }
 
 // Overlay geometry in logical px. The pointer sits just inside the top-left, so the panel hangs off the cursor the
@@ -395,7 +383,7 @@ static void emit_drag_overlay(FlDockWorkspace* ws) {
     // Over a resolved target the overlay attaches to the gap leaf's element; untargeted it hangs off the cursor.
     const bool on_gap = ws->drag.gap_leaf != 0;
 
-    fl_floating_start((FlLayoutId) { .name = FL_S("fl_dock_drag_overlay"), .id = (u32)ws->drag.panel });
+    fl_floating_start(panel_layout_id(FL_S("fl_dock_drag_overlay"), ws->drag.panel));
     fl_floating_configure(on_gap ? (FlFloatingConfig) {
         .attach_to = FlFloatingAttachTo_Element,
         .parent_id = dock_layout_node_element_id(ws->drag.gap_leaf),
@@ -440,20 +428,6 @@ static bool drag_past_arm_threshold(void) {
     return travelled_sqr > FL_DOCK_DRAG_THRESHOLD * FL_DOCK_DRAG_THRESHOLD;
 }
 
-// End the gesture and leave the panel in a leaf; if its origin leaf is gone it is docked at the floor, so nothing is
-// left in the floating set once the gesture is over.
-static void dock_gesture_finish(FlDockWorkspace* ws, bool cancel) {
-    FlDockPanelId dropped = ws->drag.panel;
-    if (cancel) {
-        dock_drag_cancel(&ws->drag, ws->tree);
-    } else {
-        dock_drag_end(&ws->drag, ws->tree);
-    }
-    if (dock_tree_panel_is_floating(ws->tree, dropped)) {
-        tree_dock_panel_at_root(ws->tree, dropped);
-    }
-}
-
 static bool point_in_box(Clay_BoundingBox box, f32 x, f32 y) {
     return x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
 }
@@ -489,7 +463,7 @@ static void activate_panel_under_press(FlDockWorkspace* ws) {
     if (leaf == nullptr) {
         return;
     }
-    FlDockPanelId panel = dock_workspace_leaf_shown_panel(ws, leaf);
+    FlDockPanelId panel = dock_panels_shown_in_leaf(&ws->panels, leaf);
     if (panel != 0) {
         dock_workspace_set_active_panel(ws, panel);
     }
@@ -513,8 +487,7 @@ static void end_drag_gesture(FlDockWorkspace* ws, bool held) {
         return;
     }
     if (ui_key_pressed(FlKey_Escape)) {
-        dock_gesture_finish(ws, /*cancel=*/true);
-        ws->grab_blocked = true;
+        cancel_drag(ws);
     } else if (!held) {
         dock_gesture_finish(ws, /*cancel=*/false);
     }
@@ -537,9 +510,9 @@ void dock_workspace_emit(FlDockWorkspace* ws) {
 
     if (dock_drag_active(&ws->drag)) {
         // The drag layer tiles in place of the plain walk: the reserved-slot preview over the resolved target.
-        dock_drag_emit(&ws->drag, ws->tree);
+        dock_drag_emit(&ws->drag, ws->tree, &ws->panels);
     } else {
-        dock_layout_emit(ws->tree, &ws->pending_grab);
+        dock_layout_emit(ws->tree, &ws->panels, 0, &ws->pending_grab);
     }
     // This runs after the walk because a press on a background tab re-selects it there, so the shown panel read
     // here is the one the press just chose.
@@ -581,7 +554,7 @@ FlDockWorkspace* dock_workspace_current(void) {
 // The clip container a panel's body lives in. Its viewport is the tile and its content is whatever the body
 // laid out at.
 static FlLayoutId panel_clip_layout_id(FlDockPanelId id) {
-    return (FlLayoutId) { .name = FL_S("fl_dock_panel_clip"), .id = (u32)id };
+    return panel_layout_id(FL_S("fl_dock_panel_clip"), id);
 }
 
 // Half a physical pixel of slack, so a body that exactly fills the tile does not count as overflow.
@@ -593,8 +566,7 @@ static bool body_overflows_tile(FlScrollContainerExtent extent) {
 // A body larger than its tile is clipped, and the overflow is logged once per panel. Reads the previous frame's
 // extent.
 static void report_overflow_once(FlDockWorkspace* ws, FlDockPanelId id) {
-    DeclRecord* rec = decl_find(ws, id);
-    FL_ASSERT(rec != nullptr); // the declare this call sits behind added it
+    DockPanel* rec = dock_panels_get(&ws->panels, id); // the declare this call sits behind added it
     if (rec->overflow_logs > 0) {
         return;
     }
@@ -638,7 +610,7 @@ bool dock_panel_scope_begin(FlDockPanelId id, FlString title) {
     report_overflow_once(ws, id);
 
     ws->open_panels++; // dock_workspace_end asserts this is back to 0
-    fl_floating_start((FlLayoutId) { .name = FL_S("fl_dock_panel"), .id = (u32)id });
+    fl_floating_start(panel_layout_id(FL_S("fl_dock_panel"), id));
     fl_floating_configure((FlFloatingConfig) {
         .attach_to = FlFloatingAttachTo_Element,
         .parent_id = parent,

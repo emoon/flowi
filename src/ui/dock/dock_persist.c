@@ -28,7 +28,7 @@ static u32 write_u64_digits(char* dst, u64 v) {
         tmp[n++] = (char)('0' + (v % 10));
         v /= 10;
     }
-    for (u32 i = 0; i < n; ++i) {
+    for_count(i, n) {
         dst[i] = tmp[n - 1 - i];
     }
     return n;
@@ -83,7 +83,7 @@ static FlString id_list_to_str(FlArena* arena, const FlDockPanelId* ids, u32 cou
     // Worst case 20 digits + 1 separator per id.
     char* buf = arena_alloc_array(arena, char, count * 21);
     u32 n = 0;
-    for (u32 i = 0; i < count; ++i) {
+    for_count(i, count) {
         if (i > 0) {
             buf[n++] = ' ';
         }
@@ -130,7 +130,7 @@ FlJsonValue* dock_persist_to_json(const FlDockPersistWorkspace* workspaces, u32 
     json_build_set_int(arena, root, FL_S("version"), (i64)FL_DOCK_PERSIST_VERSION);
 
     FlJsonValue* arr = json_build_array(arena);
-    for (u32 i = 0; i < count; ++i) {
+    for_count(i, count) {
         json_build_array_push(arena, arr, workspace_to_json(&workspaces[i], arena));
     }
     json_build_set_value(arena, root, FL_S("workspaces"), arr);
@@ -235,7 +235,7 @@ FlDockPersistLoad dock_persist_from_json(const FlJsonValue* blob, FlArena* arena
         FlDockTree* tree = build_tree(wsj);
         if (tree == nullptr) {
             // Malformed tree: release everything built so far.
-            for (u32 j = 0; j < i; ++j) {
+            for_count(j, i) {
                 dock_tree_destroy(list[j].tree);
             }
             return out;
@@ -257,7 +257,7 @@ FlDockPersistLoad dock_persist_from_json(const FlJsonValue* blob, FlArena* arena
 // Reconcile (the rebind-on-load rules)
 
 static bool id_in(const u64* ids, u32 count, u64 id) {
-    for (u32 i = 0; i < count; ++i) {
+    for_count(i, count) {
         if (ids[i] == id) {
             return true;
         }
@@ -266,7 +266,7 @@ static bool id_in(const u64* ids, u32 count, u64 id) {
 }
 
 static bool panel_in_any(const FlDockPersistLoad* load, FlDockPanelId p) {
-    for (u32 i = 0; i < load->count; ++i) {
+    for_count(i, load->count) {
         if (dock_tree_has_panel(load->workspaces[i].tree, p)) {
             return true;
         }
@@ -321,7 +321,7 @@ static void reparent_docked_rec(const FlDockNode* node, FlDockTree* target) {
         return;
     }
     if (node->kind == FlDockNodeKind_Leaf) {
-        for (u32 i = 0; i < node->leaf.count; ++i) {
+        for_count(i, node->leaf.count) {
             if (!dock_tree_has_panel(target, node->leaf.panels[i])) {
                 reparent_to_root(target, node->leaf.panels[i]);
             }
@@ -334,7 +334,7 @@ static void reparent_docked_rec(const FlDockNode* node, FlDockTree* target) {
 
 static void reparent_workspace(FlDockTree* src, FlDockTree* target) {
     reparent_docked_rec(src->root, target);
-    for (u32 i = 0; i < src->floating_count; ++i) {
+    for_count(i, src->floating_count) {
         if (!dock_tree_has_panel(target, src->floating[i])) {
             dock_tree_floating_append(target, src->floating[i]);
         }
@@ -350,7 +350,7 @@ void dock_persist_reconcile(FlDockPersistLoad* load, const u64* live_ws_ids, u32
     // The surviving root workspace: the first live one, or index 0 defensively if none matched.
     u32 target_idx = 0;
     bool found = false;
-    for (u32 i = 0; i < load->count; ++i) {
+    for_count(i, load->count) {
         if (id_in(live_ws_ids, live_count, load->workspaces[i].id)) {
             target_idx = i;
             found = true;
@@ -361,7 +361,7 @@ void dock_persist_reconcile(FlDockPersistLoad* load, const u64* live_ws_ids, u32
 
     // dangling-workspace-reparent: fold every non-live workspace into the target, then compact it out.
     u32 kept = 0;
-    for (u32 i = 0; i < load->count; ++i) {
+    for_count(i, load->count) {
         bool live = (i == target_idx) || (found && id_in(live_ws_ids, live_count, load->workspaces[i].id));
         if (live) {
             load->workspaces[kept++] = load->workspaces[i];
@@ -413,7 +413,7 @@ static bool nodes_equal(const FlDockNode* a, const FlDockNode* b) {
     if (a->leaf.count != b->leaf.count || a->leaf.selected != b->leaf.selected) {
         return false;
     }
-    for (u32 i = 0; i < a->leaf.count; ++i) {
+    for_count(i, a->leaf.count) {
         if (a->leaf.panels[i] != b->leaf.panels[i]) {
             return false;
         }
@@ -428,7 +428,7 @@ bool dock_persist_tree_equal(const FlDockTree* a, const FlDockTree* b) {
     if (a->floating_count != b->floating_count) {
         return false;
     }
-    for (u32 i = 0; i < a->floating_count; ++i) {
+    for_count(i, a->floating_count) {
         if (a->floating[i] != b->floating[i]) {
             return false;
         }

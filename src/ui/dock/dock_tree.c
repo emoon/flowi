@@ -51,7 +51,7 @@ void dock_tree_leaf_append(FlDockTree* tree, FlDockNode* leaf, FlDockPanelId pan
 }
 
 static u32 leaf_index_of(const FlDockNode* leaf, FlDockPanelId panel) {
-    for (u32 i = 0; i < leaf->leaf.count; ++i) {
+    for_count(i, leaf->leaf.count) {
         if (leaf->leaf.panels[i] == panel) {
             return i;
         }
@@ -83,7 +83,7 @@ static void floating_reserve(FlDockTree* tree, u32 need) {
 }
 
 static u32 floating_index_of(const FlDockTree* tree, FlDockPanelId panel) {
-    for (u32 i = 0; i < tree->floating_count; ++i) {
+    for_count(i, tree->floating_count) {
         if (tree->floating[i] == panel) {
             return i;
         }
@@ -343,13 +343,17 @@ static bool apply_splitter_resize(FlDockTree* tree, const FlDockRequest* req) {
     return true;
 }
 
-FlDockTree* dock_tree_create(void) {
+FlDockTree* dock_tree_create_from(FlDockNodeId first_node_id) {
     FlArena* arena = arena_new();
     FlDockTree* tree = arena_alloc_zero(arena, FlDockTree);
     tree->arena = arena;
-    tree->next_node_id = 1; // 0 is reserved as "no node"
+    tree->next_node_id = first_node_id;
     tree->root = node_new_leaf(tree);
     return tree;
+}
+
+FlDockTree* dock_tree_create(void) {
+    return dock_tree_create_from(1); // 0 is reserved as "no node"
 }
 
 void dock_tree_destroy(FlDockTree* tree) {
@@ -426,7 +430,7 @@ static FlDockNode* build_spec_rec(FlDockTree* tree, const FlDockSpec* spec, FlDo
 
     FlDockNode* leaf = node_new_leaf(tree);
     leaf->parent = parent;
-    for (u32 i = 0; i < spec->panel_count; ++i) {
+    for_count(i, spec->panel_count) {
         dock_tree_leaf_append(tree, leaf, spec->panels[i]);
     }
     if (spec->panel_count > 0) {
@@ -494,7 +498,7 @@ static u32 collect_rec(const FlDockNode* node, FlDockPanelId* out, u32 max, u32 
         return written;
     }
     if (node->kind == FlDockNodeKind_Leaf) {
-        for (u32 i = 0; i < node->leaf.count; ++i) {
+        for_count(i, node->leaf.count) {
             if (out != nullptr && written < max) {
                 out[written] = node->leaf.panels[i];
             }
@@ -512,7 +516,7 @@ u32 dock_tree_collect_panels(const FlDockTree* tree, FlDockPanelId* out, u32 max
         return 0;
     }
     u32 written = collect_rec(tree->root, out, max, 0);
-    for (u32 i = 0; i < tree->floating_count; ++i) {
+    for_count(i, tree->floating_count) {
         if (out != nullptr && written < max) {
             out[written] = tree->floating[i];
         }

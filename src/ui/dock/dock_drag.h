@@ -25,9 +25,8 @@
 extern "C" {
 #endif
 
-// Resolution geometry (logical px, except the fraction). The tab-into region is
-// the strip plus a centred box covering FL_DOCK_TAB_CENTER_FRAC of the tile on each axis.
-#define FL_DOCK_TAB_STRIP 26.0f
+// Resolution geometry (logical px, except the fraction). The tab-into region is the leaf's tab header
+// (DOCK_TAB_HEIGHT, dock_layout.h) plus a centred box covering FL_DOCK_TAB_CENTER_FRAC of the tile on each axis.
 #define FL_DOCK_TAB_CENTER_FRAC 0.40f
 #define FL_DOCK_OUTER_BAND 24.0f
 
@@ -135,8 +134,9 @@ typedef struct FlDockDrag {
 
 // Begin the "drag a tab out of its leaf" gesture: first undock panel into the internal-floating set, then arm the
 // drag so the now-floating panel can be re-docked through the same overlay. The undock mutates committed at the
-// safe input-handling point, before any per-frame emit walk. Undocking a panel that is not currently docked is a
-// no-op on the tree; the drag is armed regardless so the grab still tracks the panel. Call from a UI frame.
+// safe input-handling point, before any per-frame emit walk. A panel already in the floating set is dragged as it
+// is. A panel the tree does not hold arms nothing: a drop would dock a copy of a panel that lives in another
+// workspace. Call from a UI frame.
 void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanelId panel, FlDockFamilyGate gate);
 
 // Resolve cursor (logical px) against the drag's hit-test buffer and latch the result into `drag->zone` /
@@ -165,8 +165,9 @@ void dock_drag_discard(FlDockDrag* drag);
 
 // Per-frame drive while a drag is active: refresh the hit-test buffer from the layout the previous frame computed,
 // resolve the cursor against it, bring the retained preview onto the resolved target, and emit it. committed is
-// cloned once for the preview and never mutated. Call inside a UI frame. No-op if not active.
-void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed);
+// cloned once for the preview and never mutated. panels supplies the tabs' titles and visibility. Call inside a UI
+// frame. No-op if not active.
+void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed, const DockPanels* panels);
 
 #ifdef __cplusplus
 }

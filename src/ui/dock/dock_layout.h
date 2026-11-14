@@ -9,6 +9,7 @@
 // the UI frame (between ui_update_begin and ui_update_end); call dock_layout_read_rects once that frame's
 // layout has been computed (after ui_update_end).
 
+#include "dock_panels.h"
 #include "dock_tree.h"
 
 #ifdef __cplusplus
@@ -80,11 +81,14 @@ u32 dock_layout_content_element_id(FlDockNodeId node);
 // The tree is non-const: a divider drag applies the splitter-resize op and a tab click the dock-as-tab (re-select)
 // op, both through dock_tree_apply. Those are the only tree writes.
 //
+// panels supplies each tab's title and whether its panel is hidden. untabbed names one panel whose tab is left out
+// of its leaf's header (0 for none): the panel a drag is holding in a slot it opened.
+//
 // out_grab (optional) reports the pull-out gesture: when a tab is dragged out of its header, the panel id is
 // written there and nothing is mutated. Detaching a panel is structural (a leaf can collapse), so it must not
 // happen mid-walk. The caller starts the drag at its own safe point. Written only when a grab is seen; the caller
 // clears it. Pass nullptr to emit without the gesture, which is what a preview walk does.
-void dock_layout_emit(FlDockTree* tree, FlDockPanelId* out_grab);
+void dock_layout_emit(FlDockTree* tree, const DockPanels* panels, FlDockPanelId untabbed, FlDockPanelId* out_grab);
 
 // After the layout pass, read every node's computed rect back by id into out, allocating the map from arena.
 // Only meaningful once the frame's layout has been computed (see the one-frame ordering note above). A nullptr/empty

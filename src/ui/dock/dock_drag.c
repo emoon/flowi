@@ -20,7 +20,7 @@ static f32 rect_dist_sq(FlDockRect r, FlVec2 p) {
 static i32 nearest_leaf(const FlDockDropNode* nodes, u32 count, FlVec2 cursor) {
     i32 best = -1;
     f32 best_dist = 0.0f;
-    for (u32 i = 0; i < count; ++i) {
+    for_count(i, count) {
         if (!nodes[i].is_leaf) {
             continue;
         }
@@ -33,10 +33,10 @@ static i32 nearest_leaf(const FlDockDropNode* nodes, u32 count, FlVec2 cursor) {
     return best;
 }
 
-// The tab-into region: the leaf's tab strip, or a box of the tile's middle covering FL_DOCK_TAB_CENTER_FRAC of it
+// The tab-into region: the leaf's tab header, or a box of the tile's middle covering FL_DOCK_TAB_CENTER_FRAC of it
 // on each axis. Writes the insertion slot along the strip; a centre drop names the end of the strip.
 static bool tab_target(FlDockRect leaf, FlVec2 cursor, u32* out_index) {
-    if (cursor.y >= leaf.y && cursor.y <= leaf.y + FL_DOCK_TAB_STRIP) {
+    if (cursor.y >= leaf.y && cursor.y < leaf.y + DOCK_TAB_HEIGHT) {
         f32 x = cursor.x - leaf.x;
         *out_index = x <= 0.0f ? 0 : (u32)(x / DOCK_TAB_MIN_WIDTH);
         return true;
@@ -67,7 +67,7 @@ static bool outer_band_side(FlDockRect ws, FlVec2 cursor, FlDockSide* out_side) 
     FlDockSide side = FlDockSide_Left;
     f32 candidates[] = { (ws.x + ws.width) - cursor.x, cursor.y - ws.y, (ws.y + ws.height) - cursor.y };
     FlDockSide sides[] = { FlDockSide_Right, FlDockSide_Top, FlDockSide_Bottom };
-    for (u32 i = 0; i < sizeof_array(candidates); ++i) {
+    for_count(i, sizeof_array(candidates)) {
         if (candidates[i] < depth) {
             depth = candidates[i];
             side = sides[i];
@@ -107,7 +107,7 @@ static FlDockDropZone outer_zone(FlDockSide side) {
 }
 
 static i32 root_index(const FlDockDropNode* nodes, u32 count) {
-    for (u32 i = 0; i < count; ++i) {
+    for_count(i, count) {
         if (nodes[i].is_root) {
             return (i32)i;
         }
@@ -271,7 +271,7 @@ static void refresh_base(FlDockDrag* drag, const FlDockTree* live) {
 }
 
 static const FlDockRect* base_rect_of(const FlDockDrag* drag, FlDockNodeId node) {
-    for (u32 i = 0; i < drag->base_count; ++i) {
+    for_count(i, drag->base_count) {
         if (drag->base[i].node == node) {
             return &drag->base[i].rect;
         }
@@ -281,6 +281,9 @@ static const FlDockRect* base_rect_of(const FlDockDrag* drag, FlDockNodeId node)
 
 void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanelId panel, FlDockFamilyGate gate) {
     if (drag == nullptr || committed == nullptr) {
+        return;
+    }
+    if (!dock_tree_has_panel(committed, panel)) {
         return;
     }
     // Read the origin leaf before the undock dissolves it: it is the seat a drop over no zone returns to.
@@ -435,7 +438,7 @@ static void retarget_preview(FlDockDrag* drag, FlDockTree* committed, FlDockDrop
     open_gap(drag, zone);
 }
 
-void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
+void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed, const DockPanels* panels) {
     if (!dock_drag_active(drag) || committed == nullptr) {
         return;
     }
@@ -444,7 +447,7 @@ void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
         drag->settle_frames--;
         drag->zone = FlDockDropZone_None;
         drag->request = (FlDockRequest) { 0 };
-        dock_layout_emit(committed, nullptr);
+        dock_layout_emit(committed, panels, 0, nullptr);
         return;
     }
 
@@ -460,11 +463,9 @@ void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
     FlDockDropZone zone = dock_drag_resolve(drag, cursor);
     retarget_preview(drag, committed, zone);
 
-    // No grab is taken from a drag walk, because one is already in flight. The gap needs no cover of its own: the
-    // drag overlay attaches to that same leaf and its fill and focus border already mark the slot.
-    if (drag->preview != nullptr) {
-        dock_layout_emit(drag->preview, nullptr);
-    } else {
-        dock_layout_emit(committed, nullptr);
-    }
+    // No grab is taken from a drag walk, because one is already in flight. A slot the drag opened stays empty: the
+    // overlay attached to that leaf is the one thing drawing the dragged panel, so its tab is left out there. A
+    // tab-into gap keeps the tab, which is its preview.
+    FlDockTree* shown = drag->preview != nullptr ? drag->preview : committed;
+    dock_layout_emit(shown, panels, drag->gap_is_new ? drag->panel : 0, nullptr);
 }
