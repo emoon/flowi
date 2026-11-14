@@ -139,8 +139,8 @@ FlSignal ui_link_impl(FlString text, FlLinkConfig cfg) {
 
     // Brighten on hover, but not while focused (the focused text is already white).
     if (item && item->state.hot_t > 0.0f && item->state.focused_t < 0.5f) {
-        FlColor hover_color = { (u8)min_i32_impl(link_color.r + 40, 255), (u8)min_i32_impl(link_color.g + 40, 255),
-                                (u8)min_i32_impl(link_color.b + 40, 255), link_color.a };
+        FlColor hover_color = { (u8)min(link_color.r + 40, 255), (u8)min(link_color.g + 40, 255),
+                                (u8)min(link_color.b + 40, 255), link_color.a };
         link_color = ui_color_lerp(link_color, hover_color, item->state.hot_t);
     }
 
@@ -152,7 +152,7 @@ FlSignal ui_link_impl(FlString text, FlLinkConfig cfg) {
     // The underline fades in with hover/focus and is invisible at rest.
     FlColor underline_color = link_color;
     if (item) {
-        float interact_t = max_f32_impl(item->state.focused_t, item->state.hot_t);
+        float interact_t = max(item->state.focused_t, item->state.hot_t);
         underline_color.a = (u8)(link_color.a * interact_t);
     } else {
         underline_color.a = 0;

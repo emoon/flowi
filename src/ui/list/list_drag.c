@@ -79,7 +79,7 @@ static const u64* collect_from_ids(FlListContext* self, u64 press_id, u32* out_c
 // centre of the gap before row ins), clamped to the viewport.
 static void draw_insertion(FlListContext* self, const ListViewport* vp, f32 scroll, u32 ins) {
     f32 line_content_y = (f32)ins * list_row_stride(self) - self->current_gap * 0.5f; // middle of the preceding gap
-    f32 screen_y = clamp_f32_impl(vp->top + (line_content_y - scroll), vp->top, vp->bottom);
+    f32 screen_y = clamp(vp->top + (line_content_y - scroll), vp->top, vp->bottom);
 
     list_draw_overlay(self, &(ListOverlay) {
                                 .float_seed = LIST_DRAG_LINE_FLOAT_SEED,

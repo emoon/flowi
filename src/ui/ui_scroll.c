@@ -152,14 +152,14 @@ static void handle_mouse_wheel(ScrollAreaState* state, FlVec2 max_scroll, f32 sc
         state->scroll_target.x += scroll_delta.x;
         state->scroll_target.y += scroll_delta.y;
 
-        state->scroll_target.x = clamp_f32_impl(state->scroll_target.x, 0.0f, max_scroll.x);
-        state->scroll_target.y = clamp_f32_impl(state->scroll_target.y, 0.0f, max_scroll.y);
+        state->scroll_target.x = clamp(state->scroll_target.x, 0.0f, max_scroll.x);
+        state->scroll_target.y = clamp(state->scroll_target.y, 0.0f, max_scroll.y);
     } else {
         state->scroll_offset.x += scroll_delta.x;
         state->scroll_offset.y += scroll_delta.y;
 
-        state->scroll_offset.x = clamp_f32_impl(state->scroll_offset.x, 0.0f, max_scroll.x);
-        state->scroll_offset.y = clamp_f32_impl(state->scroll_offset.y, 0.0f, max_scroll.y);
+        state->scroll_offset.x = clamp(state->scroll_offset.x, 0.0f, max_scroll.x);
+        state->scroll_offset.y = clamp(state->scroll_offset.y, 0.0f, max_scroll.y);
 
         state->scroll_target = state->scroll_offset;
     }
@@ -210,7 +210,7 @@ static bool scrollbar_grabbed(FlSignal signal) {
 // Thumb position in [0, 1] that centers the thumb on the mouse. usable_track is 0 when the thumb fills the track.
 static f32 scrollbar_normalized_at_mouse(f32 mouse_pos, f32 track_start, f32 thumb_size, f32 usable_track) {
     f32 relative_pos = mouse_pos - track_start - (thumb_size / 2.0f);
-    return usable_track > 0.0f ? clamp_f32_impl(relative_pos / usable_track, 0.0f, 1.0f) : 0.0f;
+    return usable_track > 0.0f ? clamp(relative_pos / usable_track, 0.0f, 1.0f) : 0.0f;
 }
 
 // Sizing from an extent across the track and one along it.
@@ -250,7 +250,7 @@ FlSignal ui_scrollbar_impl(float* value, FlScrollbarConfig cfg) {
     f32 viewport_ratio = positive_or(cfg.viewport_ratio, 0.2f);
     bool is_vertical = (cfg.orientation == FlScrollbarOrientation_Vertical);
 
-    *value = clamp_f32_impl(*value, cfg.min, cfg.max);
+    *value = clamp(*value, cfg.min, cfg.max);
 
     FlLayoutId scrollbar_id = scrollbar_layout_id(&cfg, value);
     FlSignal signal = ui_item_behavior(scrollbar_id, scrollbar_item_flags(&cfg), cfg.widget);
@@ -261,7 +261,7 @@ FlSignal ui_scrollbar_impl(float* value, FlScrollbarConfig cfg) {
     }
 
     f32 track_length = scrollbar_track_length(item, is_vertical);
-    f32 thumb_size = max_f32_impl(min_thumb_size, track_length * viewport_ratio);
+    f32 thumb_size = max(min_thumb_size, track_length * viewport_ratio);
     f32 usable_track = track_length - thumb_size;
 
     // Current normalized position [0, 1]
@@ -272,14 +272,14 @@ FlSignal ui_scrollbar_impl(float* value, FlScrollbarConfig cfg) {
         FlVec2 mouse = { ctx->input_state.mouse.x, ctx->input_state.mouse.y };
         normalized = scrollbar_normalized_at_mouse(vec2_along(mouse, is_vertical),
                                                    vec2_along(item->state.pos, is_vertical), thumb_size, usable_track);
-        *value = clamp_f32_impl(cfg.min + normalized * range, cfg.min, cfg.max);
+        *value = clamp(cfg.min + normalized * range, cfg.min, cfg.max);
     }
 
     f32 thumb_offset = normalized * usable_track;
     ScrollbarThumb thumb = {
-        .offset = max_f32_impl(0.0f, thumb_offset),
+        .offset = max(0.0f, thumb_offset),
         .size = thumb_size,
-        .space_after = max_f32_impl(0.0f, usable_track - thumb_offset),
+        .space_after = max(0.0f, usable_track - thumb_offset),
         .color = ui_apply_state_color(ui_get_theme_colors(ctx)->text.secondary, item),
     };
     scrollbar_emit(scrollbar_id, is_vertical, scrollbar_width, thumb);
@@ -611,7 +611,7 @@ static void scroll_to_widget_internal(u32 widget_clay_id, FlScrollToOptions opts
     f32 new_scroll_y = scroll_target_for_align(opts.align, margin, geometry);
 
     f32 max_scroll_y = scroll->content_size.y - viewport_size.y;
-    new_scroll_y = clamp_f32_impl(new_scroll_y, 0.0f, max_f32_impl(0.0f, max_scroll_y));
+    new_scroll_y = clamp(new_scroll_y, 0.0f, max(0.0f, max_scroll_y));
 
     scroll->scroll_target.y = new_scroll_y;
     if (opts.immediate) {

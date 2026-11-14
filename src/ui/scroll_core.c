@@ -6,18 +6,18 @@
 #define SCROLL_SNAP_EPSILON 0.5f // Snap offset to target once within this many pixels
 
 f32 scroll_smooth_step(f32 offset, f32 target, f32 max, f32 speed, f32 dt) {
-    f32 lerp_factor = clamp_f32_impl(speed * dt, 0.0f, 1.0f);
+    f32 lerp_factor = clamp(speed * dt, 0.0f, 1.0f);
     f32 diff = target - offset;
     if (abs_f32(diff) > SCROLL_SNAP_EPSILON) {
         offset += diff * lerp_factor;
     } else {
         offset = target;
     }
-    return clamp_f32_impl(offset, 0.0f, max);
+    return clamp(offset, 0.0f, max);
 }
 
 f32 scroll_max(f32 content, f32 viewport) {
-    return max_f32_impl(0.0f, content - viewport);
+    return max(0.0f, content - viewport);
 }
 
 void scroll_visible_range(f32 scroll_offset, f32 viewport, f32 item_stride, u32 total_count, u32 buffer, u32* out_start,
