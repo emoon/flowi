@@ -187,17 +187,19 @@ static bool tile_has_visual_commands(const Tile* tile, const RenderCommand* comm
 #define MAX_SCISSOR_STACK_DEPTH 16
 
 // Nested clipping regions in tile-relative coordinates; the bottom entry is the whole tile.
+// The rects live in the caller's array, so the counters stay in registers and nothing is cleared per tile.
 typedef struct ScissorStack {
-    f32x4 rects[MAX_SCISSOR_STACK_DEPTH];
+    f32x4* rects;
     int depth;
     // Pushes dropped at capacity; each is matched against a later pop before the real stack unwinds.
     int ignored_pushes;
 } ScissorStack;
 
-static ScissorStack scissor_stack_new(void) {
-    ScissorStack stack = { .depth = 1 };
-    stack.rects[0] = f32x4_new(0.0f, 0.0f, (f32)TILE_WIDTH, (f32)TILE_HEIGHT);
-    return stack;
+static void scissor_stack_init(ScissorStack* stack, f32x4 rects[MAX_SCISSOR_STACK_DEPTH]) {
+    rects[0] = f32x4_new(0.0f, 0.0f, (f32)TILE_WIDTH, (f32)TILE_HEIGHT);
+    stack->rects = rects;
+    stack->depth = 1;
+    stack->ignored_pushes = 0;
 }
 
 static f32x4 scissor_stack_top(const ScissorStack* stack) {
@@ -231,7 +233,9 @@ static void render_tile_commands(RenderData* self, const Tile* tile, f32x4 tile_
     const TileInfo tile_info = {
         .offsets = f32x4_shuffle(tile_aabb, tile_aabb, 0, 1, 0, 1),
     };
-    ScissorStack scissor = scissor_stack_new();
+    f32x4 scissor_rects[MAX_SCISSOR_STACK_DEPTH];
+    ScissorStack scissor;
+    scissor_stack_init(&scissor, scissor_rects);
 
     for (int t = 0, id_count = tile->render_ids_count; t < id_count; t++) {
         const RenderCommand* render_command = &self->render_commands[tile->render_ids[t]];
@@ -284,8 +288,11 @@ static void append_render_id(Tile* tile, int command_index) {
 
 // Clip commands affect the entire screen, so they go to every tile
 static void bin_clip_to_all_tiles(SwSurface* surface, int command_index) {
-    for (int t = 0; t < surface->tiles_info_count; t++) {
-        append_render_id(&surface->tiles_info[t], command_index);
+    // Locals, because the stores in append_render_id would otherwise force a reload of both every iteration.
+    Tile* tiles = surface->tiles_info;
+    const int tile_count = surface->tiles_info_count;
+    for (int t = 0; t < tile_count; t++) {
+        append_render_id(&tiles[t], command_index);
     }
 }
 
@@ -293,10 +300,11 @@ static void bin_to_covered_tiles(SwSurface* surface, const RenderCommand* cmd, i
     const int cols = surface->tile_cols;
     const i32x4 max_tiles = i32x4_new(cols - 1, surface->tile_rows - 1, cols - 1, surface->tile_rows - 1);
     const TileRange range = tile_range_from_aabb(cmd->aabb, max_tiles);
+    Tile* tiles = surface->tiles_info;
 
     for (int ty = range.ty0; ty <= range.ty1; ty++) {
         for (int tx = range.tx0; tx <= range.tx1; tx++) {
-            append_render_id(&surface->tiles_info[ty * cols + tx], command_index);
+            append_render_id(&tiles[ty * cols + tx], command_index);
         }
     }
 }
