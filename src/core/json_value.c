@@ -136,7 +136,6 @@ static const FlString k_error_descriptions[] = {
 };
 
 FlString fl_json_get_error_description(FlJsonParseError error) {
-    const bool known = (u32)error < sizeof(k_error_descriptions) / sizeof(k_error_descriptions[0])
-                       && k_error_descriptions[error].data;
+    const bool known = (u32)error < sizeof_array(k_error_descriptions) && k_error_descriptions[error].data;
     return known ? k_error_descriptions[error] : S("Unknown JSON parse error");
 }

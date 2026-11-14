@@ -499,7 +499,7 @@ UTEST(utf8, encode_decode_roundtrip) {
         0x1F600, // 😀
         0x10FFFF // Max Unicode
     };
-    int num_tests = sizeof(test_codepoints) / sizeof(test_codepoints[0]);
+    int num_tests = sizeof_array(test_codepoints);
 
     char buf[4];
     for (int i = 0; i < num_tests; i++) {

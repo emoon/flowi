@@ -44,7 +44,7 @@ static PluralRules plural_rules_for_tag(FlString tag) {
     const i64 dash = fl_string_find_char(tag, '-');
     const FlString primary = dash < 0 ? tag : fl_string_substr(tag, 0, (u64)dash);
 
-    for (u32 i = 0; i < sizeof(languages) / sizeof(languages[0]); i++) {
+    for (u32 i = 0; i < sizeof_array(languages); i++) {
         if (tag_is_one_of(primary, languages[i].tags)) {
             return languages[i].rules;
         }

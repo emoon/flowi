@@ -963,7 +963,7 @@ UTEST(dock_drag, hit_test_family_filter) {
 
     // REJECT: a workspace filtering for FAMILY_EFFECT rejects a FAMILY_OTHER panel - no zone resolves anywhere, and
     // out_req stays zeroed (indistinguishable from leaving the workspace, so the view never previews).
-    for (u32 i = 0; i < sizeof(probes) / sizeof(probes[0]); ++i) {
+    for (u32 i = 0; i < sizeof_array(probes); ++i) {
         FlDockDropZone z = hit_test_drop_zones(k_one_leaf_ws, 1, probes[i], FAMILY_OTHER, FAMILY_EFFECT, &req);
         ASSERT_EQ_MSG((int)z, (int)FlDockDropZone_None, "a rejected family must offer no zone");
         ASSERT_EQ((int)req.kind, 0);

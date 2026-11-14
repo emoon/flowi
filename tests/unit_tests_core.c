@@ -544,7 +544,7 @@ UTEST(tlsf, realloc_oversize_fails_without_corruption) {
     // Beyond the maximum representable block size, and near SIZE_MAX where the
     // internal align-up wraps: both must fail without touching the block.
     const size_t oversize[] = { tlsf_block_size_max(), tlsf_block_size_max() + 1, SIZE_MAX - 1, SIZE_MAX };
-    for (size_t i = 0; i < sizeof(oversize) / sizeof(oversize[0]); ++i) {
+    for (size_t i = 0; i < sizeof_array(oversize); ++i) {
         ASSERT_TRUE(tlsf_realloc(tlsf, p, oversize[i]) == NULL);
         ASSERT_EQ(tlsf_block_size(p), block);
         for (int b = 0; b < ALLOC_SIZE; ++b) {
@@ -568,7 +568,7 @@ UTEST(tlsf, realloc_oversize_fails_without_corruption) {
 
 UTEST(heap, alloc_aligned_size_not_multiple_of_alignment) {
     const u64 alignments[] = { 8, 16, 32, 64, 128, 256 };
-    for (u64 i = 0; i < sizeof(alignments) / sizeof(alignments[0]); ++i) {
+    for (u64 i = 0; i < sizeof_array(alignments); ++i) {
         const u64 alignment = alignments[i];
         const u64 size = alignment + 1; // deliberately not a multiple of alignment
         void* p = fl_heap_alloc_aligned(alignment, size);
@@ -709,7 +709,7 @@ UTEST(sprintf, unknown_vector_format_at_callback_boundary) {
 
 UTEST(string, parse_u64_rejects_signed_input) {
     static const char* rejected[] = { "-5", "-0", "+5", " -5", "\t-9223372036854775808", "-18446744073709551615" };
-    for (size_t i = 0; i < sizeof(rejected) / sizeof(rejected[0]); ++i) {
+    for (size_t i = 0; i < sizeof_array(rejected); ++i) {
         StringParseResultU64 r = fl_string_parse_u64(string_from_cstr(rejected[i]));
         EXPECT_EQ_MSG((int)r.status, (int)StringParseStatus_InvalidFormat, rejected[i]);
         EXPECT_EQ(r.value, (u64)0);
@@ -981,7 +981,7 @@ UTEST(os_sleep, sleep_ms_split_separates_whole_seconds) {
         { 0, 0, 0 },          { 1, 0, 1000000 },      { 999, 0, 999000000 },  { 1000, 1, 0 },
         { 1001, 1, 1000000 }, { 2500, 2, 500000000 }, { 86400000, 86400, 0 },
     };
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    for (size_t i = 0; i < sizeof_array(cases); i++) {
         u64 seconds = 99;
         u32 nanoseconds = 99;
         sleep_ms_split(cases[i].milliseconds, &seconds, &nanoseconds);

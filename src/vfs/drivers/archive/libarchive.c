@@ -79,11 +79,10 @@ static const FlString k_single_file_suffixes[]
 // archive_read_support_format_raw()
 
 static bool is_single_file_compression(FlString path) {
-    if (path_has_any_suffix(path, k_tarball_suffixes, sizeof(k_tarball_suffixes) / sizeof(k_tarball_suffixes[0]))) {
+    if (path_has_any_suffix(path, k_tarball_suffixes, sizeof_array(k_tarball_suffixes))) {
         return false;
     }
-    return path_has_any_suffix(path, k_single_file_suffixes,
-                               sizeof(k_single_file_suffixes) / sizeof(k_single_file_suffixes[0]));
+    return path_has_any_suffix(path, k_single_file_suffixes, sizeof_array(k_single_file_suffixes));
 }
 
 // The filename without its compression extension ("MOD.song.gz" -> "MOD.song")
@@ -95,7 +94,7 @@ static FlString get_decompressed_filename(FlString path, FlArena* arena) {
     }
 
     FlString comp_exts[] = { FL_S(".gz"), FL_S(".bz2"), FL_S(".xz"), FL_S(".lz"), FL_S(".lzma"), FL_S(".zst") };
-    for_count(i, sizeof(comp_exts) / sizeof(comp_exts[0])) {
+    for_count(i, sizeof_array(comp_exts)) {
         FlString ext = comp_exts[i];
         if (filename.length > ext.length) {
             FlString suffix = fl_string_substr(filename, filename.length - ext.length, ext.length);
@@ -115,8 +114,8 @@ static bool is_archive_file(FlString path) {
     static const FlString k_archive_suffixes[]
         = { FL_S_("zip"), FL_S_("tar"), FL_S_("7z"), FL_S_("rar"), FL_S_("cab"), FL_S_("iso"), FL_S_("cpio") };
 
-    return path_has_any_suffix(path, k_archive_suffixes, sizeof(k_archive_suffixes) / sizeof(k_archive_suffixes[0]))
-           || path_has_any_suffix(path, k_tarball_suffixes, sizeof(k_tarball_suffixes) / sizeof(k_tarball_suffixes[0]));
+    return path_has_any_suffix(path, k_archive_suffixes, sizeof_array(k_archive_suffixes))
+           || path_has_any_suffix(path, k_tarball_suffixes, sizeof_array(k_tarball_suffixes));
 }
 
 // Enables the formats and filters the handle's archive is read with
