@@ -70,6 +70,30 @@ static void source_list_add(SourceList* self, FlString path) {
     self->items[self->count++] = (LocCheckSource) { .path = path, .text = text };
 }
 
+static bool is_source_file(FlString path) {
+    return fl_path_has_extension(path, FL_S("c")) || fl_path_has_extension(path, FL_S("rs"));
+}
+
+// Hidden entries are build and VCS scaffolding, never checked-in source worth scanning.
+static bool is_hidden(FlString name) {
+    return name.length == 0 || name.data[0] == '.';
+}
+
+static void collect_sources(SourceList* self, FlString path);
+
+static void collect_entry(SourceList* self, FlString directory, FileStat entry) {
+    if (is_hidden(entry.name)) {
+        return;
+    }
+
+    const FlString child = fl_path_join(self->arena, directory, entry.name);
+    if (entry.is_directory) {
+        collect_sources(self, child);
+    } else if (is_source_file(child)) {
+        source_list_add(self, child);
+    }
+}
+
 // Collect the .c and .rs files under path, recursing into subdirectories. A plain file is taken as-is whatever its
 // extension, so a single file can be pointed at directly.
 
@@ -86,30 +110,17 @@ static void collect_sources(SourceList* self, FlString path) {
 
     for (FileStat entry = dir_read_next_os(self->arena, &dir); entry.is_valid;
          entry = dir_read_next_os(self->arena, &dir)) {
-        // Hidden entries are build and VCS scaffolding, never checked-in source worth scanning.
-        if (entry.name.length == 0 || entry.name.data[0] == '.') {
-            continue;
-        }
-
-        const FlString child = fl_path_join(self->arena, path, entry.name);
-        if (entry.is_directory) {
-            collect_sources(self, child);
-        } else if (fl_path_has_extension(child, FL_S("c")) || fl_path_has_extension(child, FL_S("rs"))) {
-            source_list_add(self, child);
-        }
+        collect_entry(self, path, entry);
     }
 
     dir_close_os(&dir);
 }
 
-// Read the manifest and turn its language list into tables, the default language first. Returns 0 when the manifest
-// itself is unusable.
-
-static u32 load_tables(FlArena* arena, FlString manifest_path, LocCheckTable** out_tables) {
+static bool read_manifest(FlArena* arena, FlString manifest_path, FlString* default_tag, FlJsonArray** languages) {
     const FlString manifest = read_file(arena, manifest_path);
     if (string_is_empty(manifest)) {
         fprintf(stderr, "loc_check: cannot read manifest %.*s\n", (int)manifest_path.length, manifest_path.data);
-        return 0;
+        return false;
     }
 
     FlJsonParseResult result = { 0 };
@@ -118,72 +129,110 @@ static u32 load_tables(FlArena* arena, FlString manifest_path, LocCheckTable** o
         const FlString error = fl_json_get_error_description(result.error);
         fprintf(stderr, "loc_check: manifest %.*s failed to parse: %.*s\n", (int)manifest_path.length,
                 manifest_path.data, (int)error.length, error.data);
-        return 0;
+        return false;
     }
 
-    const FlString default_tag = fl_json_get_string_prop(root, FL_S("default"));
-    FlJsonArray* languages = fl_json_get_array_prop(root, FL_S("languages"));
-    if (string_is_empty(default_tag) || languages == nullptr) {
+    *default_tag = fl_json_get_string_prop(root, FL_S("default"));
+    *languages = fl_json_get_array_prop(root, FL_S("languages"));
+    if (string_is_empty(*default_tag) || *languages == nullptr) {
         fprintf(stderr, "loc_check: manifest %.*s needs a \"default\" tag and a \"languages\" array\n",
                 (int)manifest_path.length, manifest_path.data);
-        return 0;
+        return false;
     }
+    return true;
+}
 
+static u32 count_languages(FlJsonArray* languages) {
     u32 count = 0;
     for_each_json_array_item(languages, entry, index) {
         (void)entry;
         (void)index;
         count++;
     }
+    return count;
+}
 
-    const FlString directory = fl_path_get_directory(arena, manifest_path);
-    LocCheckTable* tables = arena_alloc_array_zero(arena, LocCheckTable, count);
-    u32 next = 1;
+typedef struct TableSet {
+    LocCheckTable* tables;
+    u32 count;
+    u32 next;
+    FlString default_tag;
+    FlString directory;
+} TableSet;
+
+// The default language has to be tables[0]: every cross-table check reads it from there.
+static bool add_table(FlArena* arena, TableSet* self, FlJsonValue* entry) {
+    const FlString tag = fl_json_get_string_prop(entry, FL_S("tag"));
+    const FlString file = fl_json_get_string_prop(entry, FL_S("file"));
+    if (string_is_empty(tag) || string_is_empty(file)) {
+        fprintf(stderr, "loc_check: manifest entry needs both a \"tag\" and a \"file\"\n");
+        return false;
+    }
+
+    const bool is_default = fl_string_equals_nocase(tag, self->default_tag);
+    if (!is_default && self->next == self->count) {
+        fprintf(stderr, "loc_check: manifest names \"%.*s\" as the default but lists no such language\n",
+                (int)self->default_tag.length, self->default_tag.data);
+        return false;
+    }
+
+    const FlString path = fl_path_join(arena, self->directory, file);
+    self->tables[is_default ? 0 : self->next++]
+        = (LocCheckTable) { .tag = tag, .path = path, .json = read_file(arena, path) };
+    return true;
+}
+
+// Read the manifest and turn its language list into tables, the default language first. Returns 0 when the manifest
+// itself is unusable.
+
+static u32 load_tables(FlArena* arena, FlString manifest_path, LocCheckTable** out_tables) {
+    FlString default_tag = string_empty();
+    FlJsonArray* languages = nullptr;
+    if (!read_manifest(arena, manifest_path, &default_tag, &languages)) {
+        return 0;
+    }
+
+    const u32 count = count_languages(languages);
+    TableSet set = { .tables = arena_alloc_array_zero(arena, LocCheckTable, count),
+                     .count = count,
+                     .next = 1,
+                     .default_tag = default_tag,
+                     .directory = fl_path_get_directory(arena, manifest_path) };
 
     for_each_json_array_item(languages, entry, index) {
         (void)index;
-        const FlString tag = fl_json_get_string_prop(entry, FL_S("tag"));
-        const FlString file = fl_json_get_string_prop(entry, FL_S("file"));
-        if (string_is_empty(tag) || string_is_empty(file)) {
-            fprintf(stderr, "loc_check: manifest entry needs both a \"tag\" and a \"file\"\n");
+        if (!add_table(arena, &set, entry)) {
             return 0;
         }
-
-        // The default language has to be tables[0]: every cross-table check reads it from there.
-        const bool is_default = fl_string_equals_nocase(tag, default_tag);
-        if (!is_default && next == count) {
-            fprintf(stderr, "loc_check: manifest names \"%.*s\" as the default but lists no such language\n",
-                    (int)default_tag.length, default_tag.data);
-            return 0;
-        }
-
-        const FlString path = fl_path_join(arena, directory, file);
-        tables[is_default ? 0 : next++] = (LocCheckTable) { .tag = tag, .path = path, .json = read_file(arena, path) };
     }
 
-    if (next != count) {
+    if (set.next != count) {
         fprintf(stderr, "loc_check: manifest lists \"%.*s\" more than once\n", (int)default_tag.length,
                 default_tag.data);
         return 0;
     }
 
-    *out_tables = tables;
+    *out_tables = set.tables;
     return count;
 }
 
-int main(int argc, char** argv) {
-    FlArena* arena = fl_init(0);
+static bool is_flag(const char* arg, const char* name) {
+    return strcmp(arg, name) == 0;
+}
 
-    FlString manifest_path = string_empty();
-    SourceList sources = { .arena = arena };
+static bool is_help_flag(const char* arg) {
+    return is_flag(arg, "-h") || is_flag(arg, "--help");
+}
 
+// Returns the exit status to stop with, or -1 to carry on and run the check.
+static int parse_args(int argc, char** argv, FlString* manifest_path, SourceList* sources) {
     for (int i = 1; i < argc; i++) {
         const bool has_value = i + 1 < argc;
-        if (strcmp(argv[i], "--manifest") == 0 && has_value) {
-            manifest_path = string_from_cstr(argv[++i]);
-        } else if (strcmp(argv[i], "--source") == 0 && has_value) {
-            collect_sources(&sources, string_from_cstr(argv[++i]));
-        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+        if (has_value && is_flag(argv[i], "--manifest")) {
+            *manifest_path = string_from_cstr(argv[++i]);
+        } else if (has_value && is_flag(argv[i], "--source")) {
+            collect_sources(sources, string_from_cstr(argv[++i]));
+        } else if (is_help_flag(argv[i])) {
             printf("%s", k_usage);
             return 0;
         } else {
@@ -192,9 +241,22 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (string_is_empty(manifest_path)) {
+    if (string_is_empty(*manifest_path)) {
         fprintf(stderr, "%s", k_usage);
         return 2;
+    }
+    return -1;
+}
+
+int main(int argc, char** argv) {
+    FlArena* arena = fl_init(0);
+
+    FlString manifest_path = string_empty();
+    SourceList sources = { .arena = arena };
+
+    const int exit_status = parse_args(argc, argv, &manifest_path, &sources);
+    if (exit_status >= 0) {
+        return exit_status;
     }
 
     LocCheckTable* tables = nullptr;
