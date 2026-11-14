@@ -1,24 +1,26 @@
 #include "scroll_core.h"
 #include <core/math.h>
 
+#include <math.h>
+
 #define SCROLL_SNAP_EPSILON 0.5f // Snap offset to target once within this many pixels
 
-f32 scroll_smooth_step(f32 offset, f32 target, f32 max, f32 speed, f32 dt) {
+f64 scroll_smooth_step(f64 offset, f64 target, f64 max, f32 speed, f32 dt) {
     f32 lerp_factor = clamp(speed * dt, 0.0f, 1.0f);
-    f32 diff = target - offset;
-    if (abs_f32(diff) > SCROLL_SNAP_EPSILON) {
+    f64 diff = target - offset;
+    if (fabs(diff) > SCROLL_SNAP_EPSILON) {
         offset += diff * lerp_factor;
     } else {
         offset = target;
     }
-    return clamp(offset, 0.0f, max);
+    return clamp(offset, 0.0, max);
 }
 
-f32 scroll_max(f32 content, f32 viewport) {
-    return max(0.0f, content - viewport);
+f64 scroll_max(f64 content, f64 viewport) {
+    return max(0.0, content - viewport);
 }
 
-void scroll_visible_range(f32 scroll_offset, f32 viewport, f32 item_stride, u32 total_count, u32 buffer, u32* out_start,
+void scroll_visible_range(f64 scroll_offset, f32 viewport, f32 item_stride, u32 total_count, u32 buffer, u32* out_start,
                           u32* out_end) {
     if (item_stride <= 0.0f) {
         *out_start = 0;
@@ -26,16 +28,12 @@ void scroll_visible_range(f32 scroll_offset, f32 viewport, f32 item_stride, u32 
         return;
     }
 
-    i32 first = (i32)(scroll_offset / item_stride) - (i32)buffer;
-    if (first < 0) {
-        first = 0;
-    }
+    i64 total = (i64)total_count;
+    i64 first = (i64)(scroll_offset / item_stride) - (i64)buffer;
+    i64 last = (i64)((scroll_offset + viewport) / item_stride) + 1 + (i64)buffer;
 
-    i32 visible_count = (i32)(viewport / item_stride) + 1 + (i32)buffer * 2;
-    i32 last = first + visible_count;
-    if (last > (i32)total_count) {
-        last = (i32)total_count;
-    }
+    first = clamp(first, 0, total);
+    last = clamp(last, first, total);
 
     *out_start = (u32)first;
     *out_end = (u32)last;

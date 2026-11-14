@@ -40,6 +40,7 @@
 #include "image/image_registry.h"
 #include "input_actions.h"
 #include "layout.h"
+#include "scroll_core.h"
 #include "list_uniform.h"
 #include "localization.h"
 #include "pixel_snap.h"
@@ -901,27 +902,13 @@ FlListClipper fl_list_clipper_create(int32_t total_items, float item_height, flo
 
     clipper.items_height = (float)total_items * item_height;
 
-    // A non-positive item height has no valid row window: the divides below would produce inf/NaN, and
-    // converting those to int is undefined. Report an empty window instead.
-    if (item_height <= 0.0f) {
-        return clipper;
-    }
+    u32 total = total_items > 0 ? (u32)total_items : 0;
+    u32 first = 0;
+    u32 last = 0;
+    scroll_visible_range(scroll_offset_y, viewport_height, item_height, total, 0, &first, &last);
 
-    // scroll_offset_y is positive when scrolled down.
-    int first = (int)(scroll_offset_y / item_height);
-    int last = (int)((scroll_offset_y + viewport_height) / item_height) + 1;
-
-    if (first < 0)
-        first = 0;
-    if (first > total_items)
-        first = total_items;
-    if (last < first)
-        last = first;
-    if (last > total_items)
-        last = total_items;
-
-    clipper.display_start = first;
-    clipper.display_end = last;
+    clipper.display_start = (int32_t)first;
+    clipper.display_end = (int32_t)last;
 
     return clipper;
 }

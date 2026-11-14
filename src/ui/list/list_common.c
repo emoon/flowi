@@ -34,20 +34,18 @@ void list_push_request(FlListContext* self, FlSelectionRequest req) {
 }
 
 bool list_has_rows(const FlListContext* self) {
-    return self->ordered_ids != nullptr && self->ordered_count > 0;
+    return list_rows_have_ids(&self->rows);
 }
 
-// A linear scan. The cursor/anchor mapping runs at most once per nav keystroke, not once per row.
+u64 list_row_id(const FlListContext* self, u32 row) {
+    return self->rows.id_at(&self->rows, row);
+}
+
 i32 list_index_of_id(const FlListContext* self, u64 id) {
-    if (id == 0 || self->ordered_ids == nullptr) {
+    if (id == 0) {
         return -1;
     }
-    for (u32 i = 0; i < self->ordered_count; i++) {
-        if (self->ordered_ids[i] == id) {
-            return (i32)i;
-        }
-    }
-    return -1;
+    return list_rows_row_of(&self->rows, id);
 }
 
 // Clay owns the container rect independent of the interaction item registry, so the container need not be a
@@ -74,13 +72,13 @@ f32 list_row_stride(const FlListContext* self) {
     return self->current_row_height + self->current_gap;
 }
 
-f32 list_scroll_offset(const FlListContext* self) {
+f64 list_scroll_offset(const FlListContext* self) {
     return list_uniform_scroll_offset(self->ui_ctx->list_uniform_ctx, self->current_id.name);
 }
 
-f32 list_clamped_content_y(const FlListContext* self, const ListViewport* vp, f32 scroll) {
+f64 list_clamped_content_y(const FlListContext* self, const ListViewport* vp, f64 scroll) {
     f32 mouse_y = self->ui_ctx->input_state.mouse.y;
-    return (clamp(mouse_y, vp->top, vp->bottom) - vp->top) + scroll;
+    return (f64)(clamp(mouse_y, vp->top, vp->bottom) - vp->top) + scroll;
 }
 
 bool list_pointer_past_drag_threshold(const FlListContext* self) {
@@ -110,7 +108,7 @@ void list_edge_autoscroll(FlListContext* self, const ListViewport* vp) {
     f32 mag = fminf(fabsf(overshoot), LIST_AUTOSCROLL_MAX_OVERSHOOT);
     f32 step = dir * (LIST_AUTOSCROLL_BASE_SPEED + mag * LIST_AUTOSCROLL_GAIN) * ui->delta_time;
     list_uniform_nudge_scroll(ui->list_uniform_ctx, self->current_id.name, step, list_row_stride(self),
-                              self->ordered_count);
+                              self->rows.count);
 }
 
 // A floating element is authored in logical pixels, so position and size are divided by ui_scale here.

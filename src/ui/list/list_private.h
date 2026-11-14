@@ -4,6 +4,7 @@
 // helpers the keyboard, marquee and drag gestures all use. Nothing outside src/ui/ui_list.c and src/ui/list/
 // includes this.
 
+#include "../list_rows.h"
 #include "../ui_list.h"
 #include "../type_ahead.h"
 #include "../ui_private.h"
@@ -41,7 +42,7 @@ typedef struct ListState {
     bool marquee_pressed;         // a left press landed on empty list space; tracking toward the threshold
     bool marquee_active;          // threshold crossed; the marquee is live (selecting + drawn)
     bool marquee_additive;        // ctrl/⌘ held at gesture start: union with the existing selection
-    f32 marquee_anchor_content_y; // anchor Y in content space (survives scroll)
+    f64 marquee_anchor_content_y; // anchor Y in content space (survives scroll)
     f32 marquee_anchor_x;         // anchor X in window space (drawing only; coverage is Y-only for full-width rows)
 
     // Drag-reorder gesture (CONTEXT.md Drop Relationship). Armed by a press that landed on a row, latched live
@@ -62,9 +63,7 @@ struct FlListContext {
     // Current list being emitted (set in begin)
     FlLayoutId current_id;      // Identifies the list container; row ids derive from its name
     u32 current_clay_id;        // ui_layout_id_to_clay_id(current_id), the key into list_states
-    const u64* ordered_ids;     // App's full ordered model, borrowed for this begin->end scope (may be nullptr)
-    u32 ordered_count;          // Length of ordered_ids and the virtualization total
-    const FlString* labels;     // Optional per-row labels for type-ahead (length ordered_count); may be nullptr
+    ListRows rows;              // The list's rows, borrowed for this begin->end scope
     FlSelectionSet* set;        // Caller-owned selection storage (nullptr = opt out of auto-apply/highlight)
     u32 emit_pos;               // Auto-tracked emission position of the next row (absolute index)
     f32 current_row_height;     // Resolved row height this frame (marquee maps content Y -> row index with this)
@@ -134,10 +133,12 @@ ListState* list_state_get(FlListContext* self, u32 clay_id);
 // Append one Selection Request to this frame's array (capacity-guarded, see LIST_MAX_REQUESTS_PER_FRAME).
 void list_push_request(FlListContext* self, FlSelectionRequest req);
 
-// Position of stable id id in the ordered slice, or -1 if absent (or id == 0, the "none" sentinel).
+// Row of stable id id, or -1 if absent (or id == 0, the "none" sentinel).
 i32 list_index_of_id(const FlListContext* self, u64 id);
 
-// The list has a model to act on: a non-empty ordered id slice.
+u64 list_row_id(const FlListContext* self, u32 row);
+
+// The list has a model to act on: at least one row with an id.
 bool list_has_rows(const FlListContext* self);
 
 // The list container's viewport rect from the previous frame's resolved layout; false when the container has not
@@ -148,13 +149,13 @@ bool list_viewport_contains(const ListViewport* vp, f32 x, f32 y);
 
 // Content-space Y of the cursor, clamped to the viewport edges so a past-edge cursor pins at the edge and moves
 // only as fast as auto-scroll advances the scroll offset.
-f32 list_clamped_content_y(const FlListContext* self, const ListViewport* vp, f32 scroll);
+f64 list_clamped_content_y(const FlListContext* self, const ListViewport* vp, f64 scroll);
 
 // Distance between the tops of two adjacent rows.
 f32 list_row_stride(const FlListContext* self);
 
 // Current scroll offset of this list's container.
-f32 list_scroll_offset(const FlListContext* self);
+f64 list_scroll_offset(const FlListContext* self);
 
 // The held left button has moved farther than the click-vs-drag threshold (the FlItem_DragThreshold substrate).
 bool list_pointer_past_drag_threshold(const FlListContext* self);

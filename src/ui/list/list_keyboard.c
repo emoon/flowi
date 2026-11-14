@@ -6,13 +6,22 @@
 
 // The row type-ahead should jump to, or -1 when there is nothing to jump to. cur is the current cursor index (-1 if
 // unset); the matcher owns the cycle-vs-narrow and idle-reset behavior (see type_ahead.h).
+static FlString row_label(const void* source, u32 row) {
+    const ListRows* rows = source;
+    return rows->label_at(rows, row);
+}
+
 static i32 typeahead_target(FlListContext* self, ListState* st, i32 cur) {
-    if (self->labels == nullptr) {
+    if (self->rows.label_at == nullptr) {
         return -1;
     }
     FlString typed = self->ui_ctx->text_input_this_frame;
     f64 now = self->ui_ctx->input_state.time;
-    return type_ahead_match(&st->type_ahead, self->labels, self->ordered_count, cur, typed, now, TYPE_AHEAD_CAP);
+    if (!type_ahead_feed(&st->type_ahead, typed, now, TYPE_AHEAD_CAP)) {
+        return -1;
+    }
+    TypeAheadLabels labels = { .source = &self->rows, .label_at = row_label, .count = self->rows.count };
+    return type_ahead_find(&st->type_ahead, labels, cur);
 }
 
 // Step the cursor one row in dir (+1 down, -1 up). From an unset cursor it lands on the first row going down and
@@ -31,7 +40,7 @@ static i32 step_cursor(i32 cur, i32 dir, i32 count, bool* hit_edge) {
 // Shift extends the selection with; type-ahead is not one of them.
 static i32 resolve_target(FlListContext* self, ListState* st, i32 cur, bool* directional) {
     FlNavFrame nav = fl_get_nav_frame();
-    i32 count = (i32)self->ordered_count;
+    i32 count = (i32)self->rows.count;
     *directional = true;
     if (nav.nav_down) {
         fl_consume_nav_down(); // this list owns Down while focused, so it must not also spatial-nav away
@@ -68,7 +77,7 @@ static bool activation_pressed(void) {
 static void extend_selection(FlListContext* self, ListState* st, i32 cur, u64 new_id) {
     u64 anchor = st->anchor_id;
     if (list_index_of_id(self, anchor) < 0) {
-        anchor = (cur >= 0) ? self->ordered_ids[cur] : new_id;
+        anchor = (cur >= 0) ? list_row_id(self, (u32)cur) : new_id;
         st->anchor_id = anchor;
     }
     list_push_request(self, (FlSelectionRequest) { .kind = FlSelectionRequestKind_ClearAll });
@@ -107,7 +116,7 @@ typedef struct CursorMove {
 // A plain move leaves the selection untouched (cursor is distinct from selection) and the anchor follows the cursor
 // so a later Shift+arrow extends from where the cursor came to rest.
 static void commit_move(FlListContext* self, ListState* st, CursorMove move) {
-    u64 new_id = self->ordered_ids[move.target];
+    u64 new_id = list_row_id(self, (u32)move.target);
     if (move.extend) {
         extend_selection(self, st, move.cur, new_id);
     } else {
@@ -119,7 +128,7 @@ static void commit_move(FlListContext* self, ListState* st, CursorMove move) {
 // Enter / Space activate the cursor row (committed id on the result), independent of any move this frame.
 static void activate_row(FlListContext* self, i32 target) {
     if (activation_pressed() && target >= 0) {
-        self->activated_id = self->ordered_ids[target];
+        self->activated_id = list_row_id(self, (u32)target);
     }
 }
 

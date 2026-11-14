@@ -7488,6 +7488,14 @@ UTEST(render, public_read_getters) {
     ASSERT_EQ_MSG(clip.display_end, 16, "clipper display_end must be 16 for the known viewport");
     ASSERT_TRUE_MSG(clip.items_height == 2000.0f, "clipper items_height must be total_items * item_height");
 
+    FlListClipper partial = fl_list_clipper_create(100, 20.0f, 30.0f, 15.0f);
+    ASSERT_EQ_MSG(partial.display_start, 1, "a viewport straddling two rows must start at the first of them");
+    ASSERT_EQ_MSG(partial.display_end, 3, "a viewport straddling two rows must include the second");
+
+    FlListClipper past_end = fl_list_clipper_create(100, 20.0f, 5000.0f, 100.0f);
+    ASSERT_EQ_MSG(past_end.display_start, 100, "scrolled past the end, the window must be empty at the end");
+    ASSERT_EQ_MSG(past_end.display_end, 100, "scrolled past the end, the window must be empty at the end");
+
     // A zero item height (a row not yet measured on the first frame) would divide to inf, and converting that to
     // int is undefined behaviour. The window comes back empty.
     FlListClipper degenerate = fl_list_clipper_create(100, 0.0f, 200.0f, 100.0f);

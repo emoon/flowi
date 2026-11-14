@@ -43,8 +43,7 @@
 // The arguments of the begin core: the scoped face's begin call plus the declarative face's policy toggles.
 typedef struct ListBeginArgs {
     FlLayoutId id;
-    const u64* ordered_ids;
-    u32 count;
+    ListRows rows;
     FlSelectionSet* set;
     FlListConfig config;
     bool single_select;
@@ -115,7 +114,7 @@ static void list_resolve_focus_seed(FlListContext* self, ListState* st) {
 
     st->focus_seed_pending = false;
     if (list_index_of_id(self, st->focus_cursor_id) < 0) {
-        st->focus_cursor_id = list_has_rows(self) ? self->ordered_ids[0] : 0;
+        st->focus_cursor_id = list_has_rows(self) ? list_row_id(self, 0) : 0;
     }
 }
 
@@ -128,9 +127,7 @@ static void list_reset_frame(FlListContext* self, const ListBeginArgs* args) {
     self->context_menu_id = 0;
     self->current_id = args->id;
     self->current_clay_id = ui_layout_id_to_clay_id(args->id);
-    self->ordered_ids = args->ordered_ids;
-    self->ordered_count = args->count;
-    self->labels = args->config.labels;
+    self->rows = args->rows;
     self->set = args->set;
     self->activated_id = 0;
     self->focused_id = 0;
@@ -168,8 +165,8 @@ static void list_expose_cursor(FlListContext* self, const ListState* st, bool ha
 static FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
     // The slice is the model the List forwards to selection_set_apply; it must be present whenever the List is
     // the one applying (non-null set). A no-selection caller (nullptr set) need not owe the slice.
-    FL_ASSERT_DEBUG((args.set == nullptr || args.ordered_ids != nullptr)
-                    && "ui_list_begin: ordered_ids required when set is non-null");
+    FL_ASSERT_DEBUG((args.set == nullptr || args.rows.count == 0 || args.rows.id_at != nullptr)
+                    && "ui_list_begin: row ids required when set is non-null");
 
     list_reset_frame(self, &args);
 
@@ -191,7 +188,7 @@ static FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
 
     // list_uniform provides the scroll engine and uniform-height layout container; the ordered-id count is the
     // virtualization total.
-    FlListUniformRange r = list_uniform_begin(self->ui_ctx->list_uniform_ctx, args.id.name, args.count,
+    FlListUniformRange r = list_uniform_begin(self->ui_ctx->list_uniform_ctx, args.id.name, args.rows.count,
                                               (FlListUniformOpts) {
                                                   .height_hint = row_height,
                                                   .gap = gap,
@@ -400,7 +397,7 @@ static FlListResult list_end_impl(FlListContext* self) {
     // slice so SetRange / SetAll resolve across rows virtualized away. A nullptr set applies nothing; the app
     // owns apply/highlight via result.requests.
     if (self->set != nullptr && self->req_count > 0) {
-        selection_set_apply(self->set, self->requests, self->req_count, self->ordered_ids, self->ordered_count);
+        selection_set_apply_rows(self->set, self->requests, self->req_count, &self->rows);
     }
 
     list_update_focus_from_press(self, st);
@@ -422,9 +419,8 @@ static FlListResult list_end_impl(FlListContext* self) {
     };
 }
 
-// Declarative face (CONTEXT.md `## Lists`). One call runs the whole list on the shared core (begin/item/end): it
-// splits the array-of-descriptors into the parallel (id, label) slices the core's begin consumes and loops the
-// visible window emitting an icon + label per row.
+// Declarative face (CONTEXT.md `## Lists`). One call runs the whole list on the shared core (begin/item/end): the
+// core reads ids and labels straight from the descriptors, and the visible window emits an icon + label per row.
 
 // The row's leading icon: a fixed square sized to the row so the icon scales uniformly; ui_image_impl draws nothing
 // for a not-ready / invalid handle, so a still-loading icon just leaves the box empty (no layout jump).
@@ -462,34 +458,18 @@ static void list_decl_row_content(const FlListItem* it, f32 row_height) {
 FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelectionSet* set, FlListOpts opts) {
     FlListContext* self = ui_get_ctx()->ui_list_ctx;
     // A nullptr item array is treated as empty regardless of count, because the loop below dereferences items[i] and
-    // a non-zero count with nullptr items would fault. n is the effective length forwarded to the core; the begin
-    // call and the row loop both key off it, not the raw count.
-    u32 n = (items != nullptr) ? count : 0;
-
-    // Fold the descriptors into the two parallel slices the shared core takes, allocated in the frame arena: the
-    // ordered stable ids (also the virtualization total) and the type-ahead labels.
-    u64* ids = nullptr;
-    FlString* labels = nullptr;
-    if (n > 0) {
-        ids = arena_alloc_array(self->ui_ctx->render_frame_allocator, u64, n);
-        labels = arena_alloc_array(self->ui_ctx->render_frame_allocator, FlString, n);
-        for (u32 i = 0; i < n; i++) {
-            ids[i] = items[i].id;
-            labels[i] = items[i].label;
-        }
-    }
+    // a non-zero count with nullptr items would fault.
+    ListRows rows = list_rows_from_items(items, count);
 
     // multi_select / reorderable are positive-sense opts; the core takes the inverted policy toggles.
     FlListRange r = list_begin_impl(self,
                                     (ListBeginArgs) {
                                         .id = id,
-                                        .ordered_ids = ids,
-                                        .count = n,
+                                        .rows = rows,
                                         .set = set,
                                         .config = {
                                             .row_height = opts.row_height,
                                             .gap = opts.gap,
-                                            .labels = labels,
                                             .suppress_drag_visuals = opts.suppress_drag_visuals,
                                         },
                                         .single_select = !opts.multi_select,
@@ -510,8 +490,7 @@ FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelect
 FlListRange ui_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config) {
     return list_begin_impl(ui_get_ctx()->ui_list_ctx, (ListBeginArgs) {
                                                           .id = id,
-                                                          .ordered_ids = ordered_ids,
-                                                          .count = count,
+                                                          .rows = list_rows_from_ids(ordered_ids, config.labels, count),
                                                           .set = set,
                                                           .config = config,
                                                       });

@@ -22,8 +22,8 @@
 
 // A marquee band in content-space Y.
 typedef struct Band {
-    f32 lo;
-    f32 hi;
+    f64 lo;
+    f64 hi;
 } Band;
 
 // The span of model positions a marquee band covers; empty when lo > hi.
@@ -36,10 +36,10 @@ typedef struct RowSpan {
 // it intersects [band_lo, band_hi] iff its bottom > band_lo and its top < band_hi. Solving for p gives a closed
 // form on content Y with no per-item lookup, so off-screen rows resolve identically.
 static RowSpan covered_rows(const FlListContext* self, Band band) {
-    f32 stride = list_row_stride(self);
-    i64 count = (i64)self->ordered_count;
-    i64 lo = (i64)ceilf((band.lo - self->current_row_height) / stride); // first row whose bottom > band_lo
-    i64 hi = (i64)ceilf(band.hi / stride) - 1;                          // last row whose top < band_hi
+    f64 stride = list_row_stride(self);
+    i64 count = (i64)self->rows.count;
+    i64 lo = (i64)ceil((band.lo - (f64)self->current_row_height) / stride); // first row whose bottom > band_lo
+    i64 hi = (i64)ceil(band.hi / stride) - 1;                               // last row whose top < band_hi
     if (lo < 0) {
         lo = 0;
     }
@@ -71,8 +71,8 @@ static void request_coverage(FlListContext* self, const ListState* st, Band band
     if (covers_rows) {
         list_push_request(self, (FlSelectionRequest) {
                                     .kind = FlSelectionRequestKind_SetRange,
-                                    .id = self->ordered_ids[span.lo],
-                                    .to_id = self->ordered_ids[span.hi],
+                                    .id = list_row_id(self, (u32)span.lo),
+                                    .to_id = list_row_id(self, (u32)span.hi),
                                     .selected = true,
                                 });
     }
@@ -81,10 +81,10 @@ static void request_coverage(FlListContext* self, const ListState* st, Band band
 // Draw the marquee rectangle as a floating overlay (visual only; selection is resolved separately). The band is
 // in content space; the x extent runs from the anchor to the cursor.
 static void draw_band(FlListContext* self, const ListState* st, const ListViewport* vp, Band band) {
-    f32 scroll = list_scroll_offset(self);
+    f64 scroll = list_scroll_offset(self);
     f32 mouse_x = self->ui_ctx->input_state.mouse.x;
-    f32 screen_top = clamp(vp->top + (band.lo - scroll), vp->top, vp->bottom);
-    f32 screen_bottom = clamp(vp->top + (band.hi - scroll), vp->top, vp->bottom);
+    f32 screen_top = clamp(vp->top + (f32)(band.lo - scroll), vp->top, vp->bottom);
+    f32 screen_bottom = clamp(vp->top + (f32)(band.hi - scroll), vp->top, vp->bottom);
     f32 x0 = clamp(fminf(st->marquee_anchor_x, mouse_x), vp->left, vp->right);
     f32 x1 = clamp(fmaxf(st->marquee_anchor_x, mouse_x), vp->left, vp->right);
 
@@ -134,7 +134,7 @@ static void arm_on_empty_press(FlListContext* self, ListState* st, const ListVie
     st->marquee_pressed = true;
     st->marquee_active = false;
     st->marquee_additive = (ui_keyboard_modifiers() & FlKeyModifier_Control) != 0;
-    st->marquee_anchor_content_y = (mouse_y - vp->top) + list_scroll_offset(self); // press point in content space
+    st->marquee_anchor_content_y = (f64)(mouse_y - vp->top) + list_scroll_offset(self); // press point in content space
     st->marquee_anchor_x = mouse_x;
 }
 
@@ -172,10 +172,10 @@ void list_marquee_update(FlListContext* self, ListState* st) {
     // The cursor's content-space Y is clamped to the viewport edges: a past-edge cursor pins the band edge at the
     // viewport and extends the band only as fast as auto-scroll advances scroll, so the band does not run ahead
     // of the rows it covers.
-    f32 scroll = list_scroll_offset(self);
-    f32 cur_content_y = list_clamped_content_y(self, &vp, scroll);
-    Band band = { .lo = fminf(st->marquee_anchor_content_y, cur_content_y),
-                  .hi = fmaxf(st->marquee_anchor_content_y, cur_content_y) };
+    f64 scroll = list_scroll_offset(self);
+    f64 cur_content_y = list_clamped_content_y(self, &vp, scroll);
+    Band band = { .lo = fmin(st->marquee_anchor_content_y, cur_content_y),
+                  .hi = fmax(st->marquee_anchor_content_y, cur_content_y) };
 
     request_coverage(self, st, band);
     list_edge_autoscroll(self, &vp);
