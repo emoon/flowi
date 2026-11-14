@@ -47,7 +47,6 @@ typedef struct FontFace {
     hashmap(u64, CachedGlyph) glyph_cache;
 
     bool fixed_pitch;
-    u64 fixed_cells[4];
     hashmap(u64, int) fixed_advances;
 } FontFace;
 
@@ -123,8 +122,8 @@ typedef struct FontBytes {
     i64 size;
 } FontBytes;
 
-static bool is_fixed_cell(const FontFace* face, u8 byte) {
-    return (face->fixed_cells[byte >> 6] >> (byte & 63)) & 1;
+static bool is_printable_ascii(u8 byte) {
+    return byte >= PRINTABLE_FIRST && byte < PRINTABLE_FIRST + PRINTABLE_COUNT;
 }
 
 static FT_Fixed unscaled_advance(FT_Face face, u32 codepoint) {
@@ -137,22 +136,12 @@ static FT_Fixed unscaled_advance(FT_Face face, u32 codepoint) {
 }
 
 static void detect_fixed_pitch(FontFace* face) {
-    FT_Fixed shared = -1;
+    const FT_Fixed shared = unscaled_advance(face->metrics_face, PRINTABLE_FIRST);
+    bool fixed = shared >= 0;
     for_count(i, PRINTABLE_COUNT) {
-        const u32 codepoint = PRINTABLE_FIRST + i;
-        const FT_Fixed advance = unscaled_advance(face->metrics_face, codepoint);
-        if (advance < 0) {
-            continue;
-        }
-        if (shared < 0) {
-            shared = advance;
-        }
-        if (advance != shared) {
-            return;
-        }
-        face->fixed_cells[codepoint >> 6] |= 1ull << (codepoint & 63);
+        fixed &= unscaled_advance(face->metrics_face, PRINTABLE_FIRST + i) == shared;
     }
-    face->fixed_pitch = shared >= 0;
+    face->fixed_pitch = fixed;
 }
 
 // Copy the font file bytes into the face arena and stand up the main-thread metrics face. The bytes are
@@ -292,8 +281,6 @@ FlFontId font_cache_load_default_font(FlFontCache* self, u16 scale) {
     face->arena = arena_new();
     face->default_scale = scale;
     face->fixed_pitch = true;
-    face->fixed_cells[0] = ~0ull;
-    face->fixed_cells[1] = ~0ull;
 
     return face->id;
 }
@@ -681,16 +668,9 @@ static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph
 }
 
 static int shared_cell_advance(const AdvanceRun* run) {
-    int shared = -1;
-    for_count(i, 128) {
-        if (!is_fixed_cell(run->face, (u8)i)) {
-            continue;
-        }
-        const int advance = run_glyph(run, (u32)i).advance;
-        if (shared < 0) {
-            shared = advance;
-        }
-        if (advance != shared) {
+    const int shared = run_glyph(run, PRINTABLE_FIRST).advance;
+    for_count(i, PRINTABLE_COUNT) {
+        if (run_glyph(run, PRINTABLE_FIRST + i).advance != shared) {
             return -1;
         }
     }
@@ -715,17 +695,17 @@ static bool is_fixed_face_text(const FontFace* face, FlString text) {
     return face->fixed_pitch && text.is_ascii && text.data != nullptr;
 }
 
-static bool all_fixed_cells(const FontFace* face, FlString text) {
-    bool fixed = true;
+static bool all_printable_ascii(FlString text) {
+    bool printable = true;
     for_count(i, text.length) {
-        fixed &= is_fixed_cell(face, (u8)text.data[i]);
+        printable &= is_printable_ascii((u8)text.data[i]);
     }
-    return fixed;
+    return printable;
 }
 
 static FlShapedRun measure_run(const AdvanceRun* run, FlString text) {
     const int advance = is_fixed_face_text(run->face, text) ? fixed_cell_advance(run) : -1;
-    if (advance < 0 || !all_fixed_cells(run->face, text)) {
+    if (advance < 0 || !all_printable_ascii(text)) {
         return shape_run(run, text, nullptr);
     }
     return (FlShapedRun) { .count = (u32)text.length, .width = (i64)text.length * advance };
