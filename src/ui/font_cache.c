@@ -479,7 +479,7 @@ static CachedGlyph* ascii_glyph_slot(const AdvanceRun* run, u32 codepoint) {
     }
     if (run->may_claim_row && face->ascii_glyphs_size != run->q4) {
         face->ascii_glyphs_size = run->q4;
-        for (int i = 0; i < 128; i++) {
+        for_count(i, 128) {
             face->ascii_glyphs[i].advance = -1;
         }
     }
@@ -653,7 +653,6 @@ static void shape_codepoint(const AdvanceRun* run, u32 codepoint, FlShapedGlyph*
     const CachedGlyph glyph = run_glyph(run, codepoint);
     if (glyphs != nullptr) {
         glyphs[out->count] = (FlShapedGlyph) {
-            .glyph_id = codepoint,
             .advance = glyph.advance,
             .font = glyph.fallback ? run->cache->fallback_face->id : run->font,
             .glyph_index = glyph.glyph_index,
@@ -669,7 +668,7 @@ static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph
         return out;
     }
     if (text.is_ascii) {
-        for (size_t j = 0; j < text.length; j++) {
+        for_count(j, text.length) {
             shape_codepoint(run, (unsigned char)text.data[j], glyphs, &out);
         }
         return out;
