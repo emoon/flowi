@@ -56,12 +56,15 @@ struct FlFontCache {
     FontFace* fallback_face;
     int face_count;
     FlFontId next_id;
+    // Backs the run from font_cache_shape_run. Rewound on the next call.
+    FlArena* shape_arena;
 };
 
 FlFontCache* font_cache_new(FlArena* arena) {
     FlFontCache* cache = arena_alloc_zero(arena, FlFontCache);
     cache->next_id = 1;
     cache->arena = arena_new();
+    cache->shape_arena = arena_new();
     mutex_init(&cache->ft_lock);
     FT_Init_FreeType(&cache->library);
     return cache;
@@ -304,10 +307,8 @@ void font_cache_destroy(FlFontCache* self) {
         self->library = nullptr;
     }
     mutex_destroy(&self->ft_lock);
-    if (self->arena) {
-        fl_arena_destroy(self->arena);
-        self->arena = nullptr;
-    }
+    fl_arena_destroy(self->arena);
+    fl_arena_destroy(self->shape_arena);
 
     self->face_count = 0;
 }
@@ -460,6 +461,9 @@ static int freetype_advance(const AdvanceRun* run, u32 codepoint) {
 }
 
 static int glyph_advance(const AdvanceRun* run, u32 codepoint) {
+    if (run->face == nullptr) {
+        return 0;
+    }
     switch (run->face->kind) {
         case FlFontRasterKind_FreeType:
             return freetype_advance(run, codepoint);
@@ -578,30 +582,46 @@ static FlFontMetrics face_vmetrics(FlFontCache* self, FontFace* face, u16 q4) {
     return out;
 }
 
-// Advance sum (26.6) and glyph count over one line, via the shared per-glyph cache.
-typedef struct AdvanceSum {
-    i64 sum;
-    i64 glyphs;
-} AdvanceSum;
+// glyphs is nullptr when only measuring.
+static void shape_codepoint(const AdvanceRun* run, u32 codepoint, FlShapedGlyph* glyphs, FlShapedRun* out) {
+    const int advance = glyph_advance(run, codepoint);
+    if (glyphs != nullptr) {
+        glyphs[out->count] = (FlShapedGlyph) { .glyph_id = codepoint, .advance = advance };
+    }
+    out->count++;
+    out->width += advance;
+}
 
-static AdvanceSum sum_advances(const AdvanceRun* run, FlString text) {
-    AdvanceSum out = { 0 };
+// glyphs has room for one entry per byte of text, or is nullptr to get only count and width.
+static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph* glyphs) {
+    FlShapedRun out = { .glyphs = glyphs };
     if (text.data == nullptr) {
         return out;
     }
     if (text.is_ascii) {
         for (size_t j = 0; j < text.length; j++) {
-            out.sum += glyph_advance(run, (unsigned char)text.data[j]);
+            shape_codepoint(run, (unsigned char)text.data[j], glyphs, &out);
         }
-        out.glyphs = (i64)text.length;
         return out;
     }
     Utf8Iter it = utf8_iter(text);
     while (!utf8_iter_done(&it)) {
-        out.sum += glyph_advance(run, utf8_iter_next(&it));
-        out.glyphs++;
+        shape_codepoint(run, utf8_iter_next(&it), glyphs, &out);
     }
     return out;
+}
+
+// Drawing decodes UTF-8 even when is_ascii is set.
+FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text) {
+    if (text.data == nullptr) {
+        return (FlShapedRun) { 0 };
+    }
+    text.is_ascii = 0;
+
+    fl_arena_rewind(self->shape_arena);
+    FlShapedGlyph* glyphs = arena_alloc_array(self->shape_arena, FlShapedGlyph, text.length);
+    AdvanceRun run = { .cache = self, .face = find_face_by_id(self, font_id), .q4 = size_q4, .may_claim_row = false };
+    return shape_run(&run, text, glyphs);
 }
 
 Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id, u16 font_size) {
@@ -616,7 +636,7 @@ Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id
 
     u16 q4 = font_cache_whole_px_to_q4(font_size);
     AdvanceRun run = { .cache = self, .face = face, .q4 = q4, .may_claim_row = true };
-    float width = (float)sum_advances(&run, text).sum / 64.0f;
+    float width = (float)shape_run(&run, text, nullptr).width / 64.0f;
     return (Vec2) { width, face_vmetrics(self, face, q4).line_height };
 }
 
@@ -638,10 +658,10 @@ FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextSt
     }
 
     AdvanceRun run = { .cache = self, .face = face, .q4 = q4, .may_claim_row = false };
-    AdvanceSum advances = sum_advances(&run, text);
-    out.width = (float)advances.sum / 64.0f;
-    if (advances.glyphs > 1) {
-        out.width += style.letter_spacing * (float)(advances.glyphs - 1);
+    FlShapedRun shaped = shape_run(&run, text, nullptr);
+    out.width = (float)shaped.width / 64.0f;
+    if (shaped.count > 1) {
+        out.width += style.letter_spacing * (float)(shaped.count - 1);
     }
 
     FlFontMetrics vm = face_vmetrics(self, face, q4);
