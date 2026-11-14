@@ -68,18 +68,20 @@ typedef struct FlDockDropNode {
     bool is_root;
 } FlDockDropNode;
 
+// The dock-family gate captured at drag begin: the dragged panel's tag (0 = general) and the workspace's
+// accepted-family filter (0 = accept any). dock_drag_resolve enforces it.
+typedef struct FlDockFamilyGate {
+    u32 panel_family;
+    u32 accept_filter;
+} FlDockFamilyGate;
+
 // Decide which drop zone cursor falls in over the laid-out nodes. Resolution is nearest leaf, not containing
 // leaf, so a cursor in a splitter gutter still has an answer; only a cursor outside the root rect returns None.
 // Precedence: the nearest leaf's tab region beats the workspace outer band, which beats that leaf's split quadrants.
 // Returns the zone and, when not None, writes the request that zone raises into out_req: kind + target_node +
 // side (+ to_index for a tab), with panel left 0 for the caller to fill. out_req is always cleared first, so
-// a None return leaves it zeroed.
-//
-// The dock-family gate is enforced here at drop-resolution: accept_filter is the workspace's accepted-family
-// filter (0 = accept any) and panel_family the dragged panel's tag (0 = general). When the filter rejects the
-// family, no zone is offered, so an incompatible panel never highlights a target and never previews.
-FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec2 cursor, u32 panel_family,
-                                   u32 accept_filter, FlDockRequest* out_req);
+// a None return leaves it zeroed. The dock-family gate is not applied here; dock_drag_resolve applies it.
+FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec2 cursor, FlDockRequest* out_req);
 
 // Drag controller. Holds the in-flight drag: the dragged panel, the geometry the hit-test resolves against, the
 // retained preview tree that carries the gap, and the last resolved zone/request.
@@ -97,9 +99,9 @@ FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec
 typedef struct FlDockDrag {
     bool active;
     FlDockPanelId panel;
-    // Dock-family gate captured at drag begin (both 0 = the accept-anywhere default).
-    u32 panel_family;
-    u32 accept_filter;
+    // When the filter rejects the panel's family, no zone is offered, so an incompatible panel never highlights a
+    // target and never previews. Zero-initialised is the accept-anywhere default.
+    FlDockFamilyGate gate;
     // Hit-test candidates, refilled every dock_drag_emit from the layout the previous frame computed. The gap leaf
     // is never a candidate; the pre-gap footprint is substituted for the node the gap split off.
     FlDockDropNode base[FL_DOCK_DRAG_MAX_NODES];
@@ -135,8 +137,7 @@ typedef struct FlDockDrag {
 // drag so the now-floating panel can be re-docked through the same overlay. The undock mutates committed at the
 // safe input-handling point, before any per-frame emit walk. Undocking a panel that is not currently docked is a
 // no-op on the tree; the drag is armed regardless so the grab still tracks the panel. Call from a UI frame.
-void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanelId panel, u32 panel_family,
-                            u32 accept_filter);
+void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanelId panel, FlDockFamilyGate gate);
 
 // Resolve cursor (logical px) against the drag's hit-test buffer and latch the result into `drag->zone` /
 // `drag->request` (with panel filled in). Applies the sticky-gap rule and then the switch hysteresis: a held

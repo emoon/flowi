@@ -490,7 +490,8 @@ void dock_workspace_emit(FlDockWorkspace* ws) {
         ws->grab_blocked = false;
     }
     if (grab != 0 && !ws->grab_blocked && !dock_drag_active(&ws->drag) && held && drag_past_arm_threshold()) {
-        dock_drag_begin_undock(&ws->drag, ws->tree, grab, dock_workspace_panel_family(ws, grab), ws->family_filter);
+        FlDockFamilyGate gate = { dock_workspace_panel_family(ws, grab), ws->family_filter };
+        dock_drag_begin_undock(&ws->drag, ws->tree, grab, gate);
     }
 
     // End: the dragged tab is gone from its strip by now, so the button state ends the gesture, since there is no

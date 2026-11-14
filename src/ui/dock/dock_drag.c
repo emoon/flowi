@@ -80,16 +80,29 @@ static bool outer_band_side(FlDockRect ws, FlVec2 cursor, FlDockSide* out_side) 
     return true;
 }
 
-static FlDockDropZone zone_for_side(FlDockSide side, bool outer) {
+static FlDockDropZone split_zone(FlDockSide side) {
     switch (side) {
         case FlDockSide_Left:
-            return outer ? FlDockDropZone_OuterLeft : FlDockDropZone_Left;
+            return FlDockDropZone_Left;
         case FlDockSide_Right:
-            return outer ? FlDockDropZone_OuterRight : FlDockDropZone_Right;
+            return FlDockDropZone_Right;
         case FlDockSide_Top:
-            return outer ? FlDockDropZone_OuterTop : FlDockDropZone_Top;
+            return FlDockDropZone_Top;
         default:
-            return outer ? FlDockDropZone_OuterBottom : FlDockDropZone_Bottom;
+            return FlDockDropZone_Bottom;
+    }
+}
+
+static FlDockDropZone outer_zone(FlDockSide side) {
+    switch (side) {
+        case FlDockSide_Left:
+            return FlDockDropZone_OuterLeft;
+        case FlDockSide_Right:
+            return FlDockDropZone_OuterRight;
+        case FlDockSide_Top:
+            return FlDockDropZone_OuterTop;
+        default:
+            return FlDockDropZone_OuterBottom;
     }
 }
 
@@ -103,18 +116,12 @@ static i32 root_index(const FlDockDropNode* nodes, u32 count) {
 }
 
 // The dock-family gate: a general (untagged) panel is family 0, so it docks anywhere unfiltered.
-static bool family_accepted(u32 panel_family, u32 accept_filter) {
-    return accept_filter == 0 || panel_family == accept_filter;
+static bool family_accepted(const FlDockFamilyGate* gate) {
+    return gate->accept_filter == 0 || gate->panel_family == gate->accept_filter;
 }
 
-FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec2 cursor, u32 panel_family,
-                                   u32 accept_filter, FlDockRequest* out_req) {
+FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec2 cursor, FlDockRequest* out_req) {
     *out_req = (FlDockRequest) { 0 };
-
-    // A panel the workspace rejects gets no zone, so it has no highlight, preview or commit.
-    if (!family_accepted(panel_family, accept_filter)) {
-        return FlDockDropZone_None;
-    }
 
     i32 root = root_index(nodes, count);
     if (root >= 0 && !point_in_rect(nodes[root].rect, cursor)) {
@@ -141,46 +148,59 @@ FlDockDropZone hit_test_drop_zones(const FlDockDropNode* nodes, u32 count, FlVec
         out_req->kind = FlDockRequest_Outer;
         out_req->side = side;
         out_req->ratio = FL_DOCK_GAP_RATIO;
-        return zone_for_side(side, true);
+        return outer_zone(side);
     }
 
     out_req->kind = FlDockRequest_Split;
     out_req->side = diagonal_side(tile, cursor);
     out_req->target_node = nodes[leaf].node;
     out_req->ratio = FL_DOCK_GAP_RATIO;
-    return zone_for_side(out_req->side, false);
+    return split_zone(out_req->side);
 }
 
 // Sticky gap: from inside the slot the layout has opened, the cursor may push the gap around the node it opened in
 // (the side still resolves) but may not hand it to another node or another kind of dock. Only a gap that opened
 // space sticks; a tab-into displaces nothing.
+static bool has_standing_gap(const FlDockDrag* drag) {
+    return drag->zone != FlDockDropZone_None && drag->has_gap_rect && drag->gap_is_new;
+}
+
 static bool gap_holds_target(const FlDockDrag* drag, FlVec2 cursor, const FlDockRequest* fresh) {
-    if (drag->zone == FlDockDropZone_None || !drag->has_gap_rect || !drag->gap_is_new) {
-        return false;
-    }
-    if (!point_in_rect(drag->gap_rect, cursor)) {
+    if (!has_standing_gap(drag) || !point_in_rect(drag->gap_rect, cursor)) {
         return false;
     }
     return fresh->kind != drag->request.kind || fresh->target_node != drag->request.target_node;
 }
 
+static bool within_hysteresis(const FlDockDrag* drag, FlVec2 cursor) {
+    f32 dx = cursor.x - drag->hyst_anchor.x;
+    f32 dy = cursor.y - drag->hyst_anchor.y;
+    return dx * dx + dy * dy < FL_DOCK_DRAG_HYSTERESIS * FL_DOCK_DRAG_HYSTERESIS;
+}
+
+// A tab region hit never waits out the hysteresis, so tab-into stays in reach.
+static bool switch_is_held(const FlDockDrag* drag, FlVec2 cursor, FlDockDropZone zone, const FlDockRequest* req) {
+    if (drag->zone == FlDockDropZone_None || zone == FlDockDropZone_Center) {
+        return false;
+    }
+    bool agrees = zone == drag->zone && req->target_node == drag->request.target_node;
+    return !agrees && within_hysteresis(drag, cursor);
+}
+
 FlDockDropZone dock_drag_resolve(FlDockDrag* drag, FlVec2 cursor) {
-    FlDockRequest req;
-    FlDockDropZone zone
-        = hit_test_drop_zones(drag->base, drag->base_count, cursor, drag->panel_family, drag->accept_filter, &req);
+    FlDockRequest req = { 0 };
+    FlDockDropZone zone = FlDockDropZone_None;
+    // A panel the workspace rejects gets no zone, so it has no highlight, preview or commit.
+    if (family_accepted(&drag->gate)) {
+        zone = hit_test_drop_zones(drag->base, drag->base_count, cursor, &req);
+    }
     req.panel = drag->panel;
 
     if (gap_holds_target(drag, cursor, &req)) {
         return drag->zone;
     }
-
-    bool agrees = zone == drag->zone && req.target_node == drag->request.target_node;
-    if (!agrees && drag->zone != FlDockDropZone_None && zone != FlDockDropZone_Center) {
-        f32 dx = cursor.x - drag->hyst_anchor.x;
-        f32 dy = cursor.y - drag->hyst_anchor.y;
-        if (dx * dx + dy * dy < FL_DOCK_DRAG_HYSTERESIS * FL_DOCK_DRAG_HYSTERESIS) {
-            return drag->zone; // still within the switch hysteresis of where the disagreement started
-        }
+    if (switch_is_held(drag, cursor, zone, &req)) {
+        return drag->zone; // still within the switch hysteresis of where the disagreement started
     }
     drag->hyst_anchor = cursor;
     drag->zone = zone;
@@ -234,11 +254,18 @@ static void fill_base_rec(FlDockDrag* drag, const FlDockNode* node, bool is_root
     }
 }
 
+static bool layout_readable(const FlDockTree* live) {
+    if (live == nullptr) {
+        return false;
+    }
+    return live->root != nullptr && Clay_GetCurrentContext() != nullptr;
+}
+
 // Without a live Clay layout context (a headless test) the buffer is left empty.
 static void refresh_base(FlDockDrag* drag, const FlDockTree* live) {
     drag->base_count = 0;
     drag->has_gap_rect = false;
-    if (live != nullptr && live->root != nullptr && Clay_GetCurrentContext() != nullptr) {
+    if (layout_readable(live)) {
         fill_base_rec(drag, live->root, true, drag_inv_scale());
     }
 }
@@ -252,8 +279,7 @@ static const FlDockRect* base_rect_of(const FlDockDrag* drag, FlDockNodeId node)
     return nullptr;
 }
 
-void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanelId panel, u32 panel_family,
-                            u32 accept_filter) {
+void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanelId panel, FlDockFamilyGate gate) {
     if (drag == nullptr || committed == nullptr) {
         return;
     }
@@ -267,8 +293,7 @@ void dock_drag_begin_undock(FlDockDrag* drag, FlDockTree* committed, FlDockPanel
     *drag = (FlDockDrag) {
         .active = true,
         .panel = panel,
-        .panel_family = panel_family,
-        .accept_filter = accept_filter,
+        .gate = gate,
         // One settle frame lets dock_drag_emit lay the post-detach tiles out before the hit-test buffer is read.
         .settle_frames = 1,
         .zone = FlDockDropZone_None,
@@ -289,24 +314,37 @@ void dock_drag_discard(FlDockDrag* drag) {
     }
 }
 
+static bool commit_drop(FlDockDrag* drag, FlDockTree* committed) {
+    if (!dock_tree_apply(committed, &drag->request)) {
+        return false;
+    }
+    if (drag->request.kind == FlDockRequest_Tab) {
+        // dock-as-tab lands the panel at the end of the strip; the resolved insertion slot is the reorder that
+        // walks it back to where the cursor was along the strip.
+        FlDockRequest place
+            = { .kind = FlDockRequest_ReorderTab, .panel = drag->panel, .to_index = drag->request.to_index };
+        dock_tree_apply(committed, &place);
+    }
+    return true;
+}
+
+// Released over no zone, on a panel this drag undocked: put it back in the seat it was pulled from.
+static bool return_home(FlDockDrag* drag, FlDockTree* committed) {
+    if (drag->origin_leaf == 0) {
+        return false;
+    }
+    FlDockRequest home = { .kind = FlDockRequest_Tab, .panel = drag->panel, .target_node = drag->origin_leaf };
+    return dock_tree_apply(committed, &home);
+}
+
 bool dock_drag_end(FlDockDrag* drag, FlDockTree* committed) {
     if (drag == nullptr) {
         return false;
     }
     bool committed_change = false;
-    if (drag->active && committed != nullptr && drag->zone != FlDockDropZone_None) {
-        committed_change = dock_tree_apply(committed, &drag->request);
-        if (committed_change && drag->request.kind == FlDockRequest_Tab) {
-            // dock-as-tab lands the panel at the end of the strip; the resolved insertion slot is the reorder that
-            // walks it back to where the cursor was along the strip.
-            FlDockRequest place
-                = { .kind = FlDockRequest_ReorderTab, .panel = drag->panel, .to_index = drag->request.to_index };
-            dock_tree_apply(committed, &place);
-        }
-    } else if (drag->active && committed != nullptr && drag->origin_leaf != 0) {
-        // Released over no zone, on a panel this drag undocked: put it back in the seat it was pulled from.
-        FlDockRequest home = { .kind = FlDockRequest_Tab, .panel = drag->panel, .target_node = drag->origin_leaf };
-        committed_change = dock_tree_apply(committed, &home);
+    if (drag->active && committed != nullptr) {
+        committed_change
+            = drag->zone != FlDockDropZone_None ? commit_drop(drag, committed) : return_home(drag, committed);
     }
     drag_reset(drag);
     return committed_change;
@@ -338,25 +376,24 @@ static void close_gap(FlDockDrag* drag) {
     drag->has_pre_gap = false;
 }
 
-// Bring the retained preview onto zone. The tree is cloned once, at the first resolved zone, and mutated in place
-// from there: a re-target is an undock followed by the new request, so the old gap closes while the new one opens.
-static void retarget_preview(FlDockDrag* drag, FlDockTree* committed, FlDockDropZone zone) {
-    if (zone == FlDockDropZone_None) {
-        if (drag->preview != nullptr && drag->applied_zone != FlDockDropZone_None) {
-            close_gap(drag);
-        }
+static const FlDockNode* sibling_of(const FlDockNode* node) {
+    const FlDockNode* parent = node->parent;
+    return parent->split.child[0] == node ? parent->split.child[1] : parent->split.child[0];
+}
+
+// Freeze the gap's new sibling's pre-gap rect so the hit-test keeps the boundary that resolved this zone.
+static void freeze_pre_gap(FlDockDrag* drag, const FlDockNode* gap) {
+    const FlDockNode* sibling = sibling_of(gap);
+    const FlDockRect* rect = base_rect_of(drag, sibling->id);
+    if (rect == nullptr) {
         return;
     }
-    if (drag->preview != nullptr && drag->applied_zone == zone && request_same_target(&drag->applied, &drag->request)) {
-        return;
-    }
+    drag->pre_gap_node = sibling->id;
+    drag->pre_gap = *rect;
+    drag->has_pre_gap = true;
+}
 
-    if (drag->preview == nullptr) {
-        drag->preview = dock_tree_clone(committed);
-    } else if (drag->applied_zone != FlDockDropZone_None) {
-        close_gap(drag);
-    }
-
+static void open_gap(FlDockDrag* drag, FlDockDropZone zone) {
     dock_tree_apply(drag->preview, &drag->request);
     drag->applied = drag->request;
     drag->applied_zone = zone;
@@ -364,18 +401,38 @@ static void retarget_preview(FlDockDrag* drag, FlDockTree* committed, FlDockDrop
     FlDockNode* gap = dock_tree_find_leaf_with_panel(drag->preview, drag->panel);
     drag->gap_leaf = gap != nullptr ? gap->id : 0;
     drag->gap_is_new = gap != nullptr && drag->request.kind != FlDockRequest_Tab;
-
-    // Freeze the gap's new sibling's pre-gap rect so the hit-test keeps the boundary that resolved this zone.
     if (drag->gap_is_new && gap->parent != nullptr) {
-        const FlDockNode* p = gap->parent;
-        const FlDockNode* sibling = p->split.child[0] == gap ? p->split.child[1] : p->split.child[0];
-        const FlDockRect* rect = base_rect_of(drag, sibling->id);
-        if (rect != nullptr) {
-            drag->pre_gap_node = sibling->id;
-            drag->pre_gap = *rect;
-            drag->has_pre_gap = true;
-        }
+        freeze_pre_gap(drag, gap);
     }
+}
+
+static void release_gap(FlDockDrag* drag) {
+    if (drag->preview != nullptr && drag->applied_zone != FlDockDropZone_None) {
+        close_gap(drag);
+    }
+}
+
+static bool preview_stands_on(const FlDockDrag* drag, FlDockDropZone zone) {
+    return drag->preview != nullptr && drag->applied_zone == zone
+           && request_same_target(&drag->applied, &drag->request);
+}
+
+// Bring the retained preview onto zone. The tree is cloned once, at the first resolved zone, and mutated in place
+// from there: a re-target is an undock followed by the new request, so the old gap closes while the new one opens.
+static void retarget_preview(FlDockDrag* drag, FlDockTree* committed, FlDockDropZone zone) {
+    if (zone == FlDockDropZone_None) {
+        release_gap(drag);
+        return;
+    }
+    if (preview_stands_on(drag, zone)) {
+        return;
+    }
+    if (drag->preview == nullptr) {
+        drag->preview = dock_tree_clone(committed);
+    } else {
+        release_gap(drag);
+    }
+    open_gap(drag, zone);
 }
 
 void dock_drag_emit(FlDockDrag* drag, FlDockTree* committed) {
