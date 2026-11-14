@@ -56,7 +56,7 @@ struct FlFontCache {
     FontFace* fallback_face;
     int face_count;
     FlFontId next_id;
-    // Holds the run font_cache_shape_run hands out; rewound by the next call. Main thread only.
+    // Backs the run from font_cache_shape_run. Rewound on the next call.
     FlArena* shape_arena;
 };
 
@@ -582,7 +582,7 @@ static FlFontMetrics face_vmetrics(FlFontCache* self, FontFace* face, u16 q4) {
     return out;
 }
 
-// Add one codepoint to a run. glyphs is nullptr when the caller only measures.
+// glyphs is nullptr when only measuring.
 static void shape_codepoint(const AdvanceRun* run, u32 codepoint, FlShapedGlyph* glyphs, FlShapedRun* out) {
     const int advance = glyph_advance(run, codepoint);
     if (glyphs != nullptr) {
@@ -592,8 +592,7 @@ static void shape_codepoint(const AdvanceRun* run, u32 codepoint, FlShapedGlyph*
     out->width += advance;
 }
 
-// The single place a string becomes glyphs and advances. glyphs needs room for one entry per byte of text, or is
-// nullptr to get only the count and width.
+// glyphs has room for one entry per byte of text, or is nullptr to get only count and width.
 static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph* glyphs) {
     FlShapedRun out = { .glyphs = glyphs };
     if (text.data == nullptr) {
@@ -612,7 +611,7 @@ static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph
     return out;
 }
 
-// The drawing route. It always decodes UTF-8, as drawing did before the seam; measuring trusts is_ascii.
+// Drawing decodes UTF-8 even when is_ascii is set.
 FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text) {
     if (text.data == nullptr) {
         return (FlShapedRun) { 0 };

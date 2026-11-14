@@ -241,17 +241,11 @@ static inline FlBar* fl_ir_bars(FlArena* arena, f32 baseline_y, FlColor color, u
     return bars;
 }
 
-// Lay a UTF-8 string out into a positioned FlCmd_TextRun and append it. Glyph ids are codepoints (the backend
-// re-resolves and rasterizes each); the shared font layer shapes the run and this only places the pen. cursor_x is the
-// pen x of the first glyph; baseline_y is the text baseline. The transient FlGlyph array is built in scratch, which
-// must be a different arena than arena (the latter holds the contiguous IR byte stream).
-
-// size_q4 is the raster (preparation/atlas) size as a quarter-px key (font_cache_whole_px_to_q4 /
-// font_cache_quantize_size_q4); scale scales the run to its display size (see FlCmdTextRun). Advances are
-// taken at size_q4 and scaled by scale so the pen tracks the display size, matching the scaled glyph
-// quads the backend emits. Pass scale == 1.0f for 1:1 (no zoom) text. letter_spacing adds extra px
-// between glyphs only (n−1 gaps, no trailing gap), the same rule font_cache_measure_text applies, so a
-// measured run matches the drawn one.
+// Lay out a UTF-8 string as one FlCmd_TextRun. cursor_x is the pen x of the first glyph and baseline_y the text
+// baseline. scratch holds the transient glyph array and must not be arena.
+//
+// size_q4 is the raster size key and scale the display zoom (1.0f for none). letter_spacing is extra px between
+// glyphs, with no trailing gap, as in font_cache_measure_text.
 static inline void fl_ir_text_layout(FlArena* arena, FlArena* scratch, FlFontCache* font_cache, FlFontId font,
                                      u16 size_q4, f32 scale, FlColor color, FlString text, float cursor_x,
                                      float baseline_y, float letter_spacing) {
