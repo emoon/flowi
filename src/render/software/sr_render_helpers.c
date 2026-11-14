@@ -10,7 +10,7 @@ float sr_emit_glyph(FlArena* arena, const Glyph* glyph, float cursor_x, float ba
         return cursor_x;
     }
 
-    float glyph_x = floorf(cursor_x) + ((float)glyph->bearing_x / 64.0f);
+    float glyph_x = floorf(cursor_x + 0.5f) + ((float)glyph->bearing_x / 64.0f);
     float glyph_y = baseline_y - (float)glyph->bearing_y;
     float glyph_x1 = glyph_x + (float)glyph->pixel_width;
     float glyph_y1 = glyph_y + (float)glyph->height;
