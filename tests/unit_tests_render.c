@@ -573,7 +573,7 @@ UTEST(font_cache, fixed_pitch_is_detected_from_advances) {
 
     ASSERT_TRUE_MSG(font_cache_is_fixed_pitch(cache, mono), "every printable ASCII glyph shares one advance");
     ASSERT_TRUE_MSG(!font_cache_is_fixed_pitch(cache, uneven), "one narrower glyph makes the face proportional");
-    ASSERT_TRUE_MSG(font_cache_is_fixed_pitch(cache, partial), "only the glyphs a face maps are compared");
+    ASSERT_TRUE_MSG(!font_cache_is_fixed_pitch(cache, partial), "a face that lacks printable ASCII is not fixed pitch");
     ASSERT_TRUE_MSG(font_cache_is_fixed_pitch(cache, builtin), "the built-in font is fixed pitch");
     ASSERT_TRUE_MSG(!font_cache_is_fixed_pitch(cache, 9999), "an unknown font is not fixed pitch");
 
