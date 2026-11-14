@@ -47,7 +47,7 @@ pub struct ListConfig {
     pub row_height: f32,
     /// Gap between rows in logical pixels (0 -> default 8).
     pub gap: f32,
-    /// Optional labels parallel to the begin id slice (count entries) for keyboard type-ahead; NULL disables it.
+    /// Optional labels parallel to the begin id slice (count entries) for keyboard type-ahead; null disables it.
     pub labels: *const crate::sys::RawStr,
     /// Drag-reorder visuals: false (default) draws the built-in ghost + insertion line; true suppresses them
     /// so the caller overrides the look from the live `drag_*` fields on `ListResult`. Gates only the drawing.
@@ -124,7 +124,7 @@ pub struct ListResult {
     /// app opens its own context menu at the cursor.
     pub context_menu_id: u64,
     /// The Selection Requests the List emitted this frame; always populated, even when the List auto-applied
-    /// them into a non-NULL set. Valid for this frame only. Read request_count entries; NULL when none.
+    /// them into a non-null set. Valid for this frame only. Read request_count entries; null when none.
     pub requests: *const crate::sys::SelectionRequest,
     /// Number of entries in requests (0 = no selection change this frame).
     pub request_count: u32,
@@ -139,7 +139,7 @@ pub struct ListResult {
     /// COMMITTED request the app applies. Never true in the same frame as drag_active.
     pub reorder_emitted: bool,
     /// The dragged stable ids (`const uint64_t*`): the whole selection when the pressed row was selected, else
-    /// just the pressed row. NULL / 0 entries when no drag is active or emitting.
+    /// just the pressed row. null / 0 entries when no drag is active or emitting.
     pub drag_from_ids: *const u64,
     /// The stable id the drop is positioned relative to (candidate while dragging, committed on release).
     pub drag_target_id: u64,

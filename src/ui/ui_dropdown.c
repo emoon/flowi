@@ -248,7 +248,7 @@ static u64 dropdown_draw_list(const Dropdown* d, const DropdownSearch* search, c
         dropdown_focus_list_on_open(d, opened_this_frame);
         dropdown_hand_off_search_to_list(search, rows, d->list_id);
 
-        // An empty (all-filtered-out) list feeds NULL ids to the core, which forbids a non-NULL set, so the set is
+        // An empty (all-filtered-out) list feeds nullptr ids to the core, which forbids a non-null set, so the set is
         // dropped on that path.
         FlSelectionSet* list_set = rows->count > 0 ? highlight : nullptr;
         FlListResult lr = ui_list(d->list_id, rows->items, (u32)rows->count, list_set,

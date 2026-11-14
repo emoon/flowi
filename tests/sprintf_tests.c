@@ -313,11 +313,11 @@ UTEST(sprintf_std, float_formats) {
     ASSERT_TRUE(strncmp(result.data, "3.14159", 7) == 0);
 
     result = fl_sprintf_arena(arena, "%e %E", 1234.5, 1234.5);
-    ASSERT_TRUE(strstr(result.data, "1.2345") != NULL);
-    ASSERT_TRUE(strstr(result.data, "e+03") != NULL || strstr(result.data, "E+03") != NULL);
+    ASSERT_TRUE(strstr(result.data, "1.2345") != nullptr);
+    ASSERT_TRUE(strstr(result.data, "e+03") != nullptr || strstr(result.data, "E+03") != nullptr);
 
     result = fl_sprintf_arena(arena, "%g %G", 0.00012345, 123450000.0);
-    ASSERT_TRUE(strstr(result.data, "0.00012345") != NULL);
+    ASSERT_TRUE(strstr(result.data, "0.00012345") != nullptr);
 
     result = fl_sprintf_arena(arena, "%.2f %.4f", 3.14159, 3.14159);
     ASSERT_STREQ(result.data, "3.14 3.1416");
@@ -346,7 +346,7 @@ UTEST(sprintf_std, string_formats) {
     result = fl_sprintf_arena(arena, "%10.3s", "hello");
     ASSERT_STREQ(result.data, "       hel");
 
-    result = fl_sprintf_arena(arena, "%s", (char*)NULL);
+    result = fl_sprintf_arena(arena, "%s", (char*)nullptr);
     ASSERT_STREQ(result.data, "null");
 
     fl_arena_destroy(arena);
@@ -368,13 +368,13 @@ UTEST(sprintf_std, pointer_format) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     void* ptr = (void*)0x12345678;
-    void* null_ptr = NULL;
+    void* null_ptr = nullptr;
 
     FlString result = fl_sprintf_arena(arena, "%p", ptr);
-    ASSERT_TRUE(strstr(result.data, "12345678") != NULL || strstr(result.data, "0x12345678") != NULL);
+    ASSERT_TRUE(strstr(result.data, "12345678") != nullptr || strstr(result.data, "0x12345678") != nullptr);
 
     result = fl_sprintf_arena(arena, "%p", null_ptr);
-    ASSERT_TRUE(strstr(result.data, "0") != NULL || strstr(result.data, "(nil)") != NULL);
+    ASSERT_TRUE(strstr(result.data, "0") != nullptr || strstr(result.data, "(nil)") != nullptr);
 
     fl_arena_destroy(arena);
 }
@@ -448,10 +448,10 @@ UTEST(sprintf_combined, string_with_all_types) {
 
     FlString result = fl_sprintf_arena(arena, "str:%S int:%d float:%.1f char:%c", test_str, 42, 3.14, 'X');
 
-    ASSERT_TRUE(strstr(result.data, "TestString") != NULL);
-    ASSERT_TRUE(strstr(result.data, "42") != NULL);
-    ASSERT_TRUE(strstr(result.data, "3.1") != NULL);
-    ASSERT_TRUE(strstr(result.data, "X") != NULL);
+    ASSERT_TRUE(strstr(result.data, "TestString") != nullptr);
+    ASSERT_TRUE(strstr(result.data, "42") != nullptr);
+    ASSERT_TRUE(strstr(result.data, "3.1") != nullptr);
+    ASSERT_TRUE(strstr(result.data, "X") != nullptr);
 
     fl_arena_destroy(arena);
 }

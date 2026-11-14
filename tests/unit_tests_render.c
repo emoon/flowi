@@ -709,7 +709,7 @@ UTEST(vector_image, sw_path_decodes_what_gpu_rejects) {
     // A gradient SVG the GPU vector path rejects still decodes to RGBA via the shared CPU path (decode_svg).
     ImageDecodeOptions opts = { 0 };
     FlImageDecodeResult* result = image_decode(s_arena, k_svg_gradient, sizeof(k_svg_gradient) - 1, &opts);
-    ASSERT_TRUE_MSG(result != NULL, "SW decode_svg still rasterizes a gradient SVG");
+    ASSERT_TRUE_MSG(result != nullptr, "SW decode_svg still rasterizes a gradient SVG");
     ASSERT_EQ_MSG((int)result->channels, 4, "SW path produces RGBA");
     ASSERT_TRUE_MSG(result->width > 0 && result->height > 0, "SW path produces non-empty pixels");
 }
@@ -832,8 +832,8 @@ UTEST(vector_image, atlas_one_live_cell_per_handle) {
 
     const FlColor mono = { 255, 128, 0, 255 };
     const FlImageHandle h = 7;
-    const GpuSvgEntry* a = gpu_svg_atlas_place(&atlas, h, 32, 20, 24, FlVectorClass_Monochrome, mono, NULL);
-    ASSERT_TRUE_MSG(a != NULL, "an icon places");
+    const GpuSvgEntry* a = gpu_svg_atlas_place(&atlas, h, 32, 20, 24, FlVectorClass_Monochrome, mono, nullptr);
+    ASSERT_TRUE_MSG(a != nullptr, "an icon places");
     ASSERT_EQ_MSG((int)a->size, 32, "cell keyed at the requested size");
     ASSERT_TRUE_MSG(a->live, "the placed cell is live");
     ASSERT_EQ_MSG((int)a->cls, (int)FlVectorClass_Monochrome, "the cell records the classification");
@@ -842,19 +842,19 @@ UTEST(vector_image, atlas_one_live_cell_per_handle) {
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, h) == a, "the handle resolves to its live cell");
 
     u32 count_before = atlas.entry_count;
-    const GpuSvgEntry* a2 = gpu_svg_atlas_place(&atlas, h, 32, 20, 24, FlVectorClass_Monochrome, mono, NULL);
+    const GpuSvgEntry* a2 = gpu_svg_atlas_place(&atlas, h, 32, 20, 24, FlVectorClass_Monochrome, mono, nullptr);
     ASSERT_TRUE_MSG(a2 == a, "re-placing at the same size returns the same cell (idempotent)");
     ASSERT_EQ_MSG((int)atlas.entry_count, (int)count_before, "no new entry on an idempotent re-place");
 
-    const GpuSvgEntry* b = gpu_svg_atlas_place(&atlas, h, 64, 40, 48, FlVectorClass_Monochrome, mono, NULL);
-    ASSERT_TRUE_MSG(b != NULL && b != a, "a size-step change appends a new cell");
+    const GpuSvgEntry* b = gpu_svg_atlas_place(&atlas, h, 64, 40, 48, FlVectorClass_Monochrome, mono, nullptr);
+    ASSERT_TRUE_MSG(b != nullptr && b != a, "a size-step change appends a new cell");
     ASSERT_EQ_MSG((int)atlas.entry_count, (int)count_before + 1, "the new size adds exactly one entry");
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, h) == b, "the handle now resolves to the new cell");
     ASSERT_FALSE_MSG(a->live, "the prior cell is orphaned");
 
     const FlImageHandle g = 9;
-    const GpuSvgEntry* c = gpu_svg_atlas_place(&atlas, g, 32, 16, 16, FlVectorClass_Monochrome, mono, NULL);
-    ASSERT_TRUE_MSG(c != NULL && gpu_svg_atlas_find(&atlas, g) == c, "a second handle places independently");
+    const GpuSvgEntry* c = gpu_svg_atlas_place(&atlas, g, 32, 16, 16, FlVectorClass_Monochrome, mono, nullptr);
+    ASSERT_TRUE_MSG(c != nullptr && gpu_svg_atlas_find(&atlas, g) == c, "a second handle places independently");
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, h) == b, "the first handle is unaffected by the second");
 }
 
@@ -944,10 +944,10 @@ UTEST(gpu_prepare_core, svg_cell_geometry_rejects_a_cell_with_nothing_to_raster)
     gpu_svg_atlas_init(&atlas, s_arena, GpuSvgTexel_R8);
     const GpuSvgEntry* entry
         = gpu_svg_atlas_place(&atlas, 1, 32, fit.pw, fit.ph, img.classification, img.mono_color, &img);
-    ASSERT_TRUE_MSG(entry != NULL, "the cell places");
+    ASSERT_TRUE_MSG(entry != nullptr, "the cell places");
 
     GpuSvgCellGeometry geom = { 0 };
-    ASSERT_FALSE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, NULL, false, &geom),
+    ASSERT_FALSE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, nullptr, false, &geom),
                      "a cell with no retained geometry lowers to nothing");
 
     FlVectorImage contourless = img;
@@ -996,11 +996,11 @@ UTEST(gpu_prepare_core, svg_cell_geometry_lowers_mono_contours_into_the_padded_c
     gpu_svg_atlas_init(&atlas, s_arena, GpuSvgTexel_R8);
     const GpuSvgEntry* entry
         = gpu_svg_atlas_place(&atlas, 1, 100, fit.pw, fit.ph, img.classification, img.mono_color, &img);
-    ASSERT_TRUE_MSG(entry != NULL, "the cell places");
+    ASSERT_TRUE_MSG(entry != nullptr, "the cell places");
 
     GpuSvgCellGeometry geom = { 0 };
     ASSERT_TRUE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, &img, false, &geom), "the mono cell lowers");
-    ASSERT_TRUE_MSG(geom.shapes == NULL && geom.shape_count == 0,
+    ASSERT_TRUE_MSG(geom.shapes == nullptr && geom.shape_count == 0,
                     "the mono path lowers one undifferentiated soup — nothing per-shape to say");
 
     u32 total_segments = 0;
@@ -1036,7 +1036,7 @@ UTEST(gpu_prepare_core, svg_cell_geometry_scales_mono_contours_by_the_fit) {
     gpu_svg_atlas_init(&atlas, s_arena, GpuSvgTexel_R8);
     const GpuSvgEntry* entry
         = gpu_svg_atlas_place(&atlas, 1, 50, fit.pw, fit.ph, img.classification, img.mono_color, &img);
-    ASSERT_TRUE_MSG(entry != NULL, "the cell places");
+    ASSERT_TRUE_MSG(entry != nullptr, "the cell places");
 
     GpuSvgCellGeometry geom = { 0 };
     ASSERT_TRUE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, &img, false, &geom), "the mono cell lowers");
@@ -1064,7 +1064,7 @@ UTEST(gpu_prepare_core, svg_cell_geometry_keeps_shapes_distinct_on_the_color_pat
     gpu_svg_atlas_init(&atlas, s_arena, GpuSvgTexel_Rgba8);
     const GpuSvgEntry* entry
         = gpu_svg_atlas_place(&atlas, 3, 64, fit.pw, fit.ph, img.classification, img.mono_color, &img);
-    ASSERT_TRUE_MSG(entry != NULL, "the cell places");
+    ASSERT_TRUE_MSG(entry != nullptr, "the cell places");
 
     GpuSvgCellGeometry geom = { 0 };
     ASSERT_TRUE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, &img, true, &geom), "the color cell lowers");
@@ -1098,7 +1098,7 @@ UTEST(gpu_prepare_core, vector_into_rasters_once_per_size_step) {
 
     gpu_prepare_vector_into(&fake, &atlas, 1, 32, &img, false, fake_raster_cell, &compact_count);
     ASSERT_EQ_MSG((int)fake.raster_calls, 1, "a fresh icon rasters once");
-    ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 1) != NULL, "and it is placed live");
+    ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 1) != nullptr, "and it is placed live");
 
     gpu_prepare_vector_into(&fake, &atlas, 1, 32, &img, false, fake_raster_cell, &compact_count);
     ASSERT_EQ_MSG((int)fake.raster_calls, 1, "re-preparing at the same size does not re-dispatch");
@@ -1113,7 +1113,7 @@ UTEST(gpu_prepare_core, vector_into_rasters_once_per_size_step) {
     no_extent.height = 0.0f;
     gpu_prepare_vector_into(&fake, &atlas, 2, 32, &no_extent, false, fake_raster_cell, &compact_count);
     ASSERT_EQ_MSG((int)fake.raster_calls, 2, "a zero-extent document neither places nor rasters");
-    ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 2) == NULL, "and nothing is live for it");
+    ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 2) == nullptr, "and nothing is live for it");
 }
 
 UTEST(gpu_prepare_core, vector_into_compacts_and_re_rasters_survivors_when_the_atlas_fills) {
@@ -1139,7 +1139,7 @@ UTEST(gpu_prepare_core, vector_into_compacts_and_re_rasters_survivors_when_the_a
     ASSERT_TRUE_MSG(steps > 1, "it took several size steps to fill the atlas");
     ASSERT_TRUE_MSG(fake.raster_calls > steps,
                     "the compacting step rastered the surviving cell on top of the newly placed one");
-    ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 1) != NULL, "the retry placed the icon after the compaction");
+    ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 1) != nullptr, "the retry placed the icon after the compaction");
 
     // The entry table collapsed from steps cells to the one survivor, and the retried placement then appended
     // the new cell, orphaning that survivor in turn - one live cell per handle.
@@ -1153,7 +1153,7 @@ UTEST(gpu_prepare_core, vector_into_compacts_and_re_rasters_survivors_when_the_a
 
 UTEST(gpu_prepare_core, vector_into_drops_an_icon_too_big_for_even_a_fresh_atlas) {
     // The other side of the compaction retry: an icon whose cell cannot fit the atlas at ANY packing still fails
-    // the retried placement. It must be dropped - not rastered against a NULL entry, and not retried forever.
+    // the retried placement. It must be dropped - not rastered against a nullptr entry, and not retried forever.
     FlVectorImage img = { 0 };
     ASSERT_TRUE_MSG(vector_image_parse((const u8*)k_svg_mono, sizeof(k_svg_mono) - 1, s_arena, &img), "parses");
 
@@ -1174,7 +1174,7 @@ UTEST(gpu_prepare_core, vector_into_drops_an_icon_too_big_for_even_a_fresh_atlas
 
     ASSERT_EQ_MSG((int)fake.raster_calls, 0, "an unplaceable icon is never rastered");
     ASSERT_EQ_MSG((int)compact_count, 1, "the atlas was compacted once in the attempt to make room");
-    ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 1) == NULL, "and the icon is dropped, not left half-placed");
+    ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 1) == nullptr, "and the icon is dropped, not left half-placed");
 }
 
 // An overflow part-way through a frame's prepare pass must not wipe the atlas inline - glyphs already
@@ -1188,13 +1188,13 @@ UTEST(gpu_glyph_atlas, earlier_glyph_survives_same_frame_overflow) {
     const u16 size = 16;
 
     const GpuGlyphEntry* early = gpu_glyph_atlas_place(&atlas, font, size, 'A', 8, 8, 0.0f, 0.0f, 8.0f);
-    ASSERT_TRUE_MSG(early != NULL, "the early glyph places into the fresh atlas");
+    ASSERT_TRUE_MSG(early != nullptr, "the early glyph places into the fresh atlas");
 
     // Keep placing oversized cells until the skyline packer refuses.
     bool overflowed = false;
     for (u32 i = 0; i < GPU_GLYPH_ATLAS_MAX_ENTRIES && !overflowed; i++) {
         const GpuGlyphEntry* e = gpu_glyph_atlas_place(&atlas, font, size, 1000 + i, 256, 256, 0.0f, 0.0f, 0.0f);
-        if (e == NULL) {
+        if (e == nullptr) {
             gpu_glyph_atlas_on_overflow(&atlas); // the production overflow response prepare_glyph runs
             overflowed = true;
         }
@@ -1202,21 +1202,21 @@ UTEST(gpu_glyph_atlas, earlier_glyph_survives_same_frame_overflow) {
     ASSERT_TRUE_MSG(overflowed, "the oversized cells exhaust the atlas");
     ASSERT_TRUE_MSG(atlas.needs_wipe, "overflow flags the deferred wipe");
 
-    ASSERT_TRUE_MSG(gpu_glyph_atlas_find(&atlas, font, size, 'A') != NULL,
+    ASSERT_TRUE_MSG(gpu_glyph_atlas_find(&atlas, font, size, 'A') != nullptr,
                     "the early glyph survives a same-frame overflow");
 
     // End of render(): honor the deferred wipe.
     gpu_glyph_atlas_wipe_if_needed(&atlas, s_arena);
     ASSERT_FALSE_MSG(atlas.needs_wipe, "honoring the wipe clears the flag");
-    ASSERT_TRUE_MSG(gpu_glyph_atlas_find(&atlas, font, size, 'A') == NULL,
+    ASSERT_TRUE_MSG(gpu_glyph_atlas_find(&atlas, font, size, 'A') == nullptr,
                     "after the frame-boundary wipe the atlas is empty");
 
     // A frame with no overflow flags nothing: the honor call is then a no-op and must not wipe a populated atlas.
     const GpuGlyphEntry* fresh = gpu_glyph_atlas_place(&atlas, font, size, 'B', 8, 8, 0.0f, 0.0f, 8.0f);
-    ASSERT_TRUE_MSG(fresh != NULL, "a glyph places into the wiped atlas");
+    ASSERT_TRUE_MSG(fresh != nullptr, "a glyph places into the wiped atlas");
     ASSERT_FALSE_MSG(atlas.needs_wipe, "a normal placement does not flag a wipe");
     gpu_glyph_atlas_wipe_if_needed(&atlas, s_arena);
-    ASSERT_TRUE_MSG(gpu_glyph_atlas_find(&atlas, font, size, 'B') != NULL,
+    ASSERT_TRUE_MSG(gpu_glyph_atlas_find(&atlas, font, size, 'B') != nullptr,
                     "an unflagged honor call is a no-op and keeps the live set intact");
 }
 
@@ -1237,7 +1237,7 @@ typedef enum {
 } OrchOpId;
 
 typedef struct OrchProbe {
-    struct FlFontCache* font_cache; // handed back by get_font_cache (NULL exercises the walk short-circuit)
+    struct FlFontCache* font_cache; // handed back by get_font_cache (nullptr exercises the walk short-circuit)
     GpuDrawList translate_result;   // what translate returns (its .count must reach classify as cmd_count)
 
     OrchOpId ops_seen[16];
@@ -1355,14 +1355,14 @@ UTEST(gpu_orchestrator, canonical_sequence_and_null_font_cache_short_circuit) {
     FlArena* frame_arena = arena_new();
 
     OrchProbe probe = { 0 };
-    probe.font_cache = NULL; // no cache -> the walk must not realize any glyph
+    probe.font_cache = nullptr; // no cache -> the walk must not realize any glyph
     probe.translate_result = (GpuDrawList) { .count = 7, .clip_count = 1 };
 
     u8 buf[256];
     const u32 codepoints[] = { 'A', 'o' };
     FlRenderFrame frame = orch_make_text_frame(buf, 1, 32, codepoints, 2);
 
-    gpu_orchestrate_frame(&k_orch_probe_ops, &probe, NULL, &frame, 128, 64, &glyph_atlas, frame_arena, s_arena);
+    gpu_orchestrate_frame(&k_orch_probe_ops, &probe, nullptr, &frame, 128, 64, &glyph_atlas, frame_arena, s_arena);
 
     static const OrchOpId expected[] = { ORCH_FRAME_BEGIN, ORCH_TRANSLATE, ORCH_BEGIN_ENCODER, ORCH_UPLOAD_INPUTS,
                                          ORCH_CLASSIFY,    ORCH_BARRIER,   ORCH_RASTER,        ORCH_END_ENCODER };
@@ -1371,7 +1371,7 @@ UTEST(gpu_orchestrator, canonical_sequence_and_null_font_cache_short_circuit) {
         ASSERT_EQ_MSG((int)probe.ops_seen[i], (int)expected[i], "ops run in the canonical order");
     }
     ASSERT_EQ_MSG((int)probe.classify_cmd_count, 7, "translate's list.count reaches classify as cmd_count");
-    ASSERT_EQ_MSG((int)probe.glyph_count, 0, "a NULL font cache short-circuits the glyph walk");
+    ASSERT_EQ_MSG((int)probe.glyph_count, 0, "a nullptr font cache short-circuits the glyph walk");
 
     fl_arena_destroy(frame_arena);
 }
@@ -1395,7 +1395,7 @@ UTEST(gpu_orchestrator, text_run_realizes_each_glyph_through_op) {
     const u32 codepoints[] = { 'A', 'o' };
     FlRenderFrame frame = orch_make_text_frame(buf, font, size_q4, codepoints, 2);
 
-    gpu_orchestrate_frame(&k_orch_probe_ops, &probe, NULL, &frame, 128, 64, &glyph_atlas, frame_arena, s_arena);
+    gpu_orchestrate_frame(&k_orch_probe_ops, &probe, nullptr, &frame, 128, 64, &glyph_atlas, frame_arena, s_arena);
 
     ASSERT_EQ_MSG((int)probe.glyph_count, 2, "both mapped glyphs realize through the prepare_glyph op");
     ASSERT_EQ_MSG((int)probe.glyphs[0].glyph_id, (int)'A', "first glyph keeps its codepoint key");
@@ -1497,16 +1497,16 @@ UTEST(vector_image, atlas_format_agnostic) {
 
     const FlColor color = { 10, 20, 30, 255 };
     const FlImageHandle h = 3;
-    const GpuSvgEntry* a8 = gpu_svg_atlas_place(&r8, h, 32, 20, 24, FlVectorClass_MultiColor, color, NULL);
-    const GpuSvgEntry* ar = gpu_svg_atlas_place(&rgba, h, 32, 20, 24, FlVectorClass_MultiColor, color, NULL);
-    ASSERT_TRUE_MSG(a8 != NULL && ar != NULL, "both formats place the cell");
+    const GpuSvgEntry* a8 = gpu_svg_atlas_place(&r8, h, 32, 20, 24, FlVectorClass_MultiColor, color, nullptr);
+    const GpuSvgEntry* ar = gpu_svg_atlas_place(&rgba, h, 32, 20, 24, FlVectorClass_MultiColor, color, nullptr);
+    ASSERT_TRUE_MSG(a8 != nullptr && ar != nullptr, "both formats place the cell");
     ASSERT_TRUE_MSG(a8->cell.x == ar->cell.x && a8->cell.y == ar->cell.y && a8->cell.w == ar->cell.w
                         && a8->cell.h == ar->cell.h,
                     "cell geometry is identical across formats (the packer is format-blind)");
 
-    const GpuSvgEntry* b8 = gpu_svg_atlas_place(&r8, h, 64, 40, 48, FlVectorClass_MultiColor, color, NULL);
-    const GpuSvgEntry* br = gpu_svg_atlas_place(&rgba, h, 64, 40, 48, FlVectorClass_MultiColor, color, NULL);
-    ASSERT_TRUE_MSG(b8 != NULL && br != NULL, "a step change appends a new cell in both");
+    const GpuSvgEntry* b8 = gpu_svg_atlas_place(&r8, h, 64, 40, 48, FlVectorClass_MultiColor, color, nullptr);
+    const GpuSvgEntry* br = gpu_svg_atlas_place(&rgba, h, 64, 40, 48, FlVectorClass_MultiColor, color, nullptr);
+    ASSERT_TRUE_MSG(b8 != nullptr && br != nullptr, "a step change appends a new cell in both");
     ASSERT_FALSE_MSG(a8->live, "the R8 prior cell orphans");
     ASSERT_FALSE_MSG(ar->live, "the RGBA8 prior cell orphans identically");
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&r8, h) == b8 && gpu_svg_atlas_find(&rgba, h) == br,
@@ -1545,7 +1545,7 @@ static CompactObs run_compaction_sequence(GpuSvgAtlas* atlas, const FlVectorImag
     // Re-key A across distinct big sizes; each step orphans A's prior cell (several fit before the packer fills).
     for (u16 s = 1; s <= 256; s++) {
         const GpuSvgEntry* e = gpu_svg_atlas_place(atlas, A, s, 360, 360, FlVectorClass_Monochrome, mono, geomA);
-        if (e == NULL) {
+        if (e == nullptr) {
             obs.overflowed = true; // the failing placement leaves the prior live cell intact
             break;
         }
@@ -1569,15 +1569,15 @@ static CompactObs run_compaction_sequence(GpuSvgAtlas* atlas, const FlVectorImag
     }
     const GpuSvgEntry* la = gpu_svg_atlas_find(atlas, A);
     const GpuSvgEntry* lb = gpu_svg_atlas_find(atlas, B);
-    obs.a_resolved = la != NULL;
-    obs.a_size_after = la != NULL ? la->size : 0;
-    obs.b_resolved = lb != NULL;
-    obs.b_size_after = lb != NULL ? lb->size : 0;
-    obs.geometry_kept = la != NULL && lb != NULL && la->vector == geomA && lb->vector == geomB;
+    obs.a_resolved = la != nullptr;
+    obs.a_size_after = la != nullptr ? la->size : 0;
+    obs.b_resolved = lb != nullptr;
+    obs.b_size_after = lb != nullptr ? lb->size : 0;
+    obs.geometry_kept = la != nullptr && lb != nullptr && la->vector == geomA && lb->vector == geomB;
 
     // Space reclaimed: a fresh big placement the overflowed atlas refused now succeeds.
     const GpuSvgEntry* refit = gpu_svg_atlas_place(atlas, 3, 7, 360, 360, FlVectorClass_Monochrome, mono, geomA);
-    obs.refit = refit != NULL;
+    obs.refit = refit != nullptr;
     return obs;
 }
 
@@ -3005,13 +3005,13 @@ UTEST(render, icon_registry) {
     vfs_test_register_driver(&s_stub_vfs_plugin); // a mount source for fl_icon_load
     FlVfsMountResult mount = vfs_mount(FL_S("/stub"));
     ASSERT_EQ_MSG(mount.status, FlVfsMountErrorStatus_Success, "stub mount should succeed");
-    ASSERT_TRUE(mount.mount != NULL);
+    ASSERT_TRUE(mount.mount != nullptr);
     vfs_wait_all();
 
     // Null-mount guard is a no-op: nothing loads.
-    fl_icon_load(NULL);
+    fl_icon_load(nullptr);
     ASSERT_EQ_MSG(fl_icon_get(FlIcon_Checkmark), (FlImageHandle)FL_IMAGE_HANDLE_INVALID,
-                  "fl_icon_load(NULL) must not load anything");
+                  "fl_icon_load(nullptr) must not load anything");
 
     fl_icon_load(mount.mount);
     // Fetching all three slots guards against a wrong path/index in ICON_TABLE at any one of them.
@@ -4320,15 +4320,15 @@ UTEST(render, public_mounted_image_load_and_status) {
     ASSERT_EQ_MSG(fl_image_status(FL_IMAGE_HANDLE_INVALID), FlImageStatus_Error, "invalid handle should report error");
     ASSERT_EQ_MSG(fl_image_status(UINT32_MAX - 1), FlImageStatus_Error,
                   "an arbitrary absent handle should report error, not pending");
-    ASSERT_EQ_MSG(fl_image_load_mount(NULL, FL_S(STUB_VFS_FILE), (FlImageLoadOptions) { 0 }), FL_IMAGE_HANDLE_INVALID,
-                  "null mount should fail synchronously");
+    ASSERT_EQ_MSG(fl_image_load_mount(nullptr, FL_S(STUB_VFS_FILE), (FlImageLoadOptions) { 0 }),
+                  FL_IMAGE_HANDLE_INVALID, "null mount should fail synchronously");
 
     image_free((ImageHandle)direct);
     image_free((ImageHandle)composed);
     image_free((ImageHandle)failed);
     fl_vfs_mount_close(first_mount.mount);
     fl_vfs_mount_close(second_mount.mount);
-    s_stub_vfs_override_data = NULL;
+    s_stub_vfs_override_data = nullptr;
     s_stub_vfs_override_size = 0;
 }
 
@@ -9183,7 +9183,7 @@ static FlListRange list_render_frame(FlUiCtx* ctx, u32 total, FlColor row_color,
     ui_update_begin(ctx);
     // Fixed-size viewport so the list's grow container measures deterministically after frame 1.
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-        // NULL set → no selection (this case exercises virtualization only); ordered_ids is unused on that path.
+        // nullptr set → no selection (this case exercises virtualization only); ordered_ids is unused on that path.
         range
             = ui_list_begin(ID("vlist"), nullptr, total, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = range.start; i < range.end; i++) {
@@ -9936,7 +9936,7 @@ UTEST(image_load, free_then_reload_returns_a_working_handle) {
 
     image_free((ImageHandle)second);
     fl_vfs_mount_close(mount.mount);
-    s_stub_vfs_override_data = NULL;
+    s_stub_vfs_override_data = nullptr;
     s_stub_vfs_override_size = 0;
 }
 
@@ -9973,7 +9973,7 @@ UTEST(image_load, mounts_of_one_source_do_not_share_dedup_entries) {
     image_free((ImageHandle)from_b);
     fl_vfs_mount_close(a.mount);
     fl_vfs_mount_close(b.mount);
-    s_stub_vfs_override_data = NULL;
+    s_stub_vfs_override_data = nullptr;
     s_stub_vfs_override_size = 0;
 }
 
@@ -9981,7 +9981,7 @@ UTEST(image_load, remount_of_a_closed_source_does_not_return_a_stale_failed_entr
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
     vfs_test_register_driver(&s_stub_vfs_plugin);
-    s_stub_vfs_override_data = NULL; // the stub's text payload: not a decodable image
+    s_stub_vfs_override_data = nullptr; // the stub's text payload: not a decodable image
 
     FlVfsMountResult first = vfs_mount(FL_S("/stub-image-remount"));
     ASSERT_EQ(first.status, FlVfsMountErrorStatus_Success);
@@ -10007,7 +10007,7 @@ UTEST(image_load, remount_of_a_closed_source_does_not_return_a_stale_failed_entr
     image_free((ImageHandle)failed);
     image_free((ImageHandle)loaded);
     fl_vfs_mount_close(second.mount);
-    s_stub_vfs_override_data = NULL;
+    s_stub_vfs_override_data = nullptr;
     s_stub_vfs_override_size = 0;
 }
 

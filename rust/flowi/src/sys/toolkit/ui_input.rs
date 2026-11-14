@@ -97,7 +97,7 @@ extern "C" {
     /// 0..1 for the triggers, as the backend reported it with no dead zone applied. 0 when the slot is empty.
     pub fn fl_input_gamepad_axis(slot: u32, axis: crate::sys::GamepadAxis) -> f32;
     /// Declarative List one-call face. Hand it an array of item descriptors (`count` ListItem
-    /// entries) and the caller-owned selection set (NULL opts out), and it runs the whole list internally
+    /// entries) and the caller-owned selection set (null opts out), and it runs the whole list internally
     /// (virtualization, selection gestures, keyboard nav, marquee, drag-reorder, auto-apply) while drawing each
     /// row's label + icon. opts is ListOpts (layout knobs + multi_select / reorderable). Returns the ListResult; the caller reads only the policy outcomes (activated_id,
     /// context_menu_id, the reorder request). The scoped UiList face stays for rows with custom content.

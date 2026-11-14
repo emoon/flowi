@@ -21,7 +21,7 @@ struct FlRenderFrame;
 
 // Drop one +1-owned Objective-C resource and clear its field, so a second teardown pass cannot double-release and
 // "is this live?" is a nil check. release on nil is a no-op, so no guard is needed. The CoreFoundation form is not
-// symmetric - CFRelease(NULL) is undefined.
+// symmetric - CFRelease(nullptr) is undefined.
 
 #define METAL_RELEASE(obj) \
     do {                   \
@@ -114,7 +114,7 @@ typedef struct MetalSurface {
     //
     // If an IOSurface-backed allocation fails, setup_resolution falls back to a private-storage target and clears
     // want_iosurface again. iosurface_failed records that refusal for the surface's life, so the accessor reports a
-    // NULL handle instead of re-latching and tearing down the working private target on every call.
+    // nullptr handle instead of re-latching and tearing down the working private target on every call.
     bool want_iosurface;
     bool iosurface_failed;
     IOSurfaceRef iosurface;

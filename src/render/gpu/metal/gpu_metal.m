@@ -16,13 +16,13 @@
 #include <string.h> // memcpy (the per-frame SSBO uploads)
 
 // The CoreFoundation half of the METAL_RELEASE teardown idiom: drop a +1-owned CFTypeRef and clear its field.
-// CFRelease(NULL) is undefined where release on nil is a no-op, so this form keeps a guard.
+// CFRelease(nullptr) is undefined where release on nil is a no-op, so this form keeps a guard.
 
 #define METAL_CF_RELEASE(ref) \
     do {                      \
-        if ((ref) != NULL) {  \
+        if ((ref) != nullptr) {  \
             CFRelease((ref)); \
-            (ref) = NULL;     \
+            (ref) = nullptr;     \
         }                     \
     } while (0)
 
@@ -70,9 +70,9 @@ static bool metal_make_textures(id<MTLDevice> device, const MetalTextureSpec* sp
 // IOSurface-backed offscreen target for the cross-process accessor: one RGBA8 IOSurface at w x h wrapped in an
 // id<MTLTexture> with the same ShaderWrite|ShaderRead usage the private target carries. An IOSurface-backed texture
 // cannot use private storage - it is Shared on unified-memory devices and Managed on discrete ones. Both the
-// IOSurface (+1) and the texture (+1) are owned by the caller. Returns nil on failure, *out_surface left NULL.
+// IOSurface (+1) and the texture (+1) are owned by the caller. Returns nil on failure, *out_surface left nullptr.
 static id<MTLTexture> metal_make_iosurface_texture(id<MTLDevice> device, u32 w, u32 h, IOSurfaceRef* out_surface) {
-    *out_surface = NULL;
+    *out_surface = nullptr;
     // RGBA8 (four bytes/element), matching the target's MTLPixelFormatRGBA8Unorm so a consumer opening the IOSurface
     // as its own MTLTexture reads the same channel order. IOSurface picks the bytes-per-row itself.
     NSDictionary* props = @{
@@ -82,7 +82,7 @@ static id<MTLTexture> metal_make_iosurface_texture(id<MTLDevice> device, u32 w, 
         (id)kIOSurfacePixelFormat : @((unsigned)'RGBA'),
     };
     IOSurfaceRef surf = IOSurfaceCreate((CFDictionaryRef)props); // +1 (owned)
-    if (surf == NULL) {
+    if (surf == nullptr) {
         return nil;
     }
     MTLTextureDescriptor* desc =
@@ -163,7 +163,7 @@ void metal_texture_upload(id<MTLTexture> tex, u32 x, u32 y, u32 w, u32 h, u32 st
 // texture and free its slot. The only drain site, called at frame begin after begin_frame queues this frame's
 // evictions. Teardown does not drain - destroy releases the whole pool wholesale.
 static void metal_slot_drain_dead(MetalShared* self) {
-    const u32* dead = NULL;
+    const u32* dead = nullptr;
     u32 count = gpu_image_slots_take_dead(&self->cpu.image_slots, &dead);
     for (u32 i = 0; i < count; i++) {
         u32 tex = dead[i];
@@ -249,7 +249,7 @@ static FlSurface* metal_create_surface(void* user_data, int width, int height) {
 static void metal_destroy_surface(void* user_data, FlSurface* surface_handle) {
     (void)user_data;
     MetalSurface* surface = (MetalSurface*)surface_handle;
-    if (surface == NULL) {
+    if (surface == nullptr) {
         return;
     }
     METAL_RELEASE(surface->target);
@@ -305,14 +305,14 @@ static struct FlFontCache* metal_op_get_font_cache(void* backend) {
 }
 
 // Translate the neutral IR into the shared draw-command / AABB / clip arrays. The frame envelope's background
-// state translates to clear + fullscreen image commands at the front of the stream. NULL/empty-frame safe. Slot
+// state translates to clear + fullscreen image commands at the front of the stream. nullptr/empty-frame safe. Slot
 // overflow is logged once per frame and the dropped commands do not render.
 static GpuDrawList metal_op_translate(void* backend, const struct FlRenderFrame* frame, u32 screen_w, u32 screen_h) {
     MetalShared* self = backend;
-    const void* ir = frame != NULL ? frame->commands : NULL;
-    size_t ir_bytes = frame != NULL ? frame->bytes : 0;
-    u8 global_alpha = frame != NULL ? frame->global_alpha : 255;
-    const struct FlBackground* background = frame != NULL ? &frame->background : NULL;
+    const void* ir = frame != nullptr ? frame->commands : nullptr;
+    size_t ir_bytes = frame != nullptr ? frame->bytes : 0;
+    u8 global_alpha = frame != nullptr ? frame->global_alpha : 255;
+    const struct FlBackground* background = frame != nullptr ? &frame->background : nullptr;
     GpuDrawList list =
         gpu_ir_to_draw_cmds(self->frame_arena,
                             &(GpuIrInput) {
@@ -509,7 +509,7 @@ static const GpuRenderOps metal_render_ops = {
 
 // Render one frame: the two-dispatch all-compute pipeline, driven by the shared orchestrator through the Metal
 // ops above. The @autoreleasepool wraps the whole orchestrate call, so the command buffer and encoder the ops
-// create are drained here. A NULL or empty frame still runs both passes: classification zeroes every tile count
+// create are drained here. A nullptr or empty frame still runs both passes: classification zeroes every tile count
 // and raster clears the target to transparent.
 static void metal_render(void* user_data, FlSurface* surface_handle, const FlRenderFrame* frame) {
     @autoreleasepool {
@@ -536,9 +536,9 @@ static void metal_destroy(void* user_data) {
         METAL_RELEASE(self->slot_tex_pool[i]);
     }
     METAL_RELEASE(self->slot_placeholder_tex);
-    if (self->frame_arena != NULL) {
+    if (self->frame_arena != nullptr) {
         fl_arena_destroy(self->frame_arena);
-        self->frame_arena = NULL;
+        self->frame_arena = nullptr;
     }
     METAL_RELEASE(self->queue);
     METAL_RELEASE(self->device);
@@ -598,7 +598,7 @@ static id<MTLComputePipelineState> metal_build_pipeline(id<MTLDevice> device, in
 
 // Create the backend: bring up the system MTLDevice, a command queue, and the compute pipelines compiled from the
 // shared MSL sources. A missing device or queue, or a shader compile failure, returns a zeroed FlRenderBackend
-// (render == NULL), which the host must gate on before injecting.
+// (render == nullptr), which the host must gate on before injecting.
 
 FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     MetalShared* self = arena_alloc_zero(arena, MetalShared);
@@ -709,7 +709,7 @@ GpuSurfaceTexture gpu_renderer_surface_texture(FlSurface* surface_handle) {
 // handle stays valid until the next change_resolution.
 //
 // If the upgrade fails, metal_setup_resolution has already restored a private-storage target and set
-// iosurface_failed; the handle comes back NULL and the surface keeps rendering, same-process from then on.
+// iosurface_failed; the handle comes back nullptr and the surface keeps rendering, same-process from then on.
 
 GpuSurfaceIOSurface gpu_renderer_surface_iosurface(FlSurface* surface_handle) {
     MetalSurface* surface = (MetalSurface*)surface_handle;

@@ -17,7 +17,7 @@
 
 struct FlArena;
 
-// Returns a zeroed FlRenderBackend (render == NULL) when the current context is below the 4.3 floor or shader
+// Returns a zeroed FlRenderBackend (render == nullptr) when the current context is below the 4.3 floor or shader
 // compilation fails; the host must check before injecting.
 
 FlRenderBackend create_gpu_renderer(struct FlArena* arena);
@@ -59,8 +59,8 @@ GpuSurfaceTexture gpu_renderer_surface_texture(FlSurface* surface);
 // the IOSurface before caching one. Backend-owned and valid until the next change_resolution for this surface; the
 // host never retains or releases it.
 //
-// The handle crosses as an opaque void* carrying the retained IOSurfaceRef, for the consumer to cast back. It is NULL
-// when the IOSurface-backed allocation fails: the surface keeps a working private-storage target and renders
+// The handle crosses as an opaque void* carrying the retained IOSurfaceRef, for the consumer to cast back. It is
+// nullptr when the IOSurface-backed allocation fails: the surface keeps a working private-storage target and renders
 // normally, but cannot be shared cross-process, and the host falls back to the primary accessor.
 
 typedef struct GpuSurfaceIOSurface {

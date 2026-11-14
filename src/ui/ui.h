@@ -342,7 +342,7 @@ struct Painter;
 struct Painter* ui_get_painter(void);
 
 // Register the process-wide default filesystem mount that fl_font_load / fl_image_load resolve against. The
-// runner calls this once after creating the mount; pass NULL to clear it.
+// runner calls this once after creating the mount; pass nullptr to clear it.
 void ui_set_asset_mount(FlVfsMount* mount);
 
 // Background Image API

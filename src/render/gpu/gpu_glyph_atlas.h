@@ -44,12 +44,12 @@ typedef struct GpuGlyphAtlas {
 void gpu_glyph_atlas_init(GpuGlyphAtlas* atlas, struct FlArena* arena);
 
 // Place a glyph whose padded raster extent is w x h texels; 0 x 0 registers a metrics-only entry (an empty
-// glyph occupies no atlas space). Returns NULL when the key is already placed, the entry table is full, or
+// glyph occupies no atlas space). Returns nullptr when the key is already placed, the entry table is full, or
 // the packer refuses (the atlas is full). The returned entry is valid until the next place call.
 const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id, u32 w, u32 h,
                                            f32 left, f32 top, f32 advance);
 
-// Resolve a key to its placement. Returns NULL when nothing was prepared for it. Valid until the next place
+// Resolve a key to its placement. Returns nullptr when nothing was prepared for it. Valid until the next place
 // call.
 const GpuGlyphEntry* gpu_glyph_atlas_find(const GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_id);
 

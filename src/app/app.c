@@ -296,7 +296,7 @@ FlApp* fl_app_create(const FlAppSettings* settings) {
         if (app->headless) {
             // fl_app_gpu owns the EGL surfaceless context and builds the backend against it.
             app->gpu = fl_app_gpu_create_headless(arena, &app->gpu_backend);
-            FL_APP_FAIL(app, !app->gpu || app->gpu_backend.render == NULL,
+            FL_APP_FAIL(app, !app->gpu || app->gpu_backend.render == nullptr,
                         "fl_app: GPU renderer initialization failed");
             app->adopted_gpu_backend = true;
         } else {
@@ -626,7 +626,7 @@ static void fl_app_window_present(FlApp* app, FlAppWindow* win) {
     // Windowed GPU: resolve the surface texture and let the backend composite it over the window + present.
     if (app->window_backend.present) {
         FlSurfaceHandle tex = { 0 };
-        if (fl_app_gpu_surface_texture(win->surface, &tex, NULL, NULL)) {
+        if (fl_app_gpu_surface_texture(win->surface, &tex, nullptr, nullptr)) {
             app->window_backend.present(app->window_backend.user_data, win->os_window, tex);
         }
         return;

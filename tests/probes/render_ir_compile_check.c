@@ -105,7 +105,7 @@ static void fl_ir_image_source_shapes(void) {
     s.kind = FlImageKind_Static;
     s.handle = (FlImageHandle)0;
     s.kind = FlImageKind_Dynamic;
-    s.dynamic.pixels = NULL;
+    s.dynamic.pixels = nullptr;
     s.dynamic.w = s.dynamic.h = s.dynamic.stride = 0;
     (void)s;
 
@@ -204,28 +204,28 @@ _Static_assert(sizeof(FlRenderBackend) == 17 * sizeof(void*),
 
 static bool fl_ir_backend_shapes(void) {
     FlRenderBackend b = { 0 };
-    b.user_data = NULL;
-    b.create_surface = NULL;
-    b.destroy_surface = NULL;
-    b.change_resolution = NULL;
-    b.render = NULL;
-    b.destroy = NULL;
-    b.scale_changed = NULL;  // scale-change atlas-regen seam - nullable (GPU regenerates atlases; SW is a no-op)
-    b.set_font_cache = NULL; // font-cache host-swap seam - nullable (GPU leaves it unbound)
-    b.prepare_image = NULL;
-    b.release_image = NULL;
-    b.prepare_glyph = NULL;
-    b.prepare_vector = NULL;        // vector preparation seam - nullable (only the GPU backend binds it)
-    b.read_pixels = NULL;           // optional capability - nullable
+    b.user_data = nullptr;
+    b.create_surface = nullptr;
+    b.destroy_surface = nullptr;
+    b.change_resolution = nullptr;
+    b.render = nullptr;
+    b.destroy = nullptr;
+    b.scale_changed = nullptr;  // scale-change atlas-regen seam - nullable (GPU regenerates atlases; SW is a no-op)
+    b.set_font_cache = nullptr; // font-cache host-swap seam - nullable (GPU leaves it unbound)
+    b.prepare_image = nullptr;
+    b.release_image = nullptr;
+    b.prepare_glyph = nullptr;
+    b.prepare_vector = nullptr;     // vector preparation seam - nullable (only the GPU backend binds it)
+    b.read_pixels = nullptr;        // optional capability - nullable
     b.prepare_image_on_job = false; // threading capability - unset means the begin-frame pump (GL/D3D)
 
     FlRenderFrame frame = { 0 };
-    frame.commands = NULL;
+    frame.commands = nullptr;
     frame.bytes = 0;
     frame.global_alpha = 255;
     frame.background.crossfade_t = 0.0f;
     (void)frame;
-    return b.read_pixels == NULL;
+    return b.read_pixels == nullptr;
 }
 
 // Reference the helpers so -Wunused-function stays quiet without changing behavior.

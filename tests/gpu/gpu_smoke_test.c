@@ -168,7 +168,7 @@ static int check_aa_ramp_line(const FlPixelReadback* buf, int x0, int y0, int dx
 // Emit a polyline into the IR arena from an array of points (no scaling - these are already pixel coords).
 static void emit_polyline(FlArena* arena, const FlPolyPoint* points, u32 count, FlColor color, FlColor fill_color,
                           f32 width, f32 baseline_y, u32 flags) {
-    FlPolyPoint* dst = fl_ir_polyline(arena, color, fill_color, width, baseline_y, flags, count, NULL);
+    FlPolyPoint* dst = fl_ir_polyline(arena, color, fill_color, width, baseline_y, flags, count, nullptr);
     for (u32 i = 0; i < count; i++) {
         dst[i] = points[i];
     }
@@ -259,30 +259,30 @@ static int run_packer_tests(void) {
     gpu_image_atlas_init(&atlas, arena);
     const GpuImageAtlasEntry* a = gpu_image_atlas_place(&atlas, 1, 64, 48);
     const GpuImageAtlasEntry* b = gpu_image_atlas_place(&atlas, 2, 200, 16);
-    CHECK(a != NULL && b != NULL, "atlas: two small images place");
+    CHECK(a != nullptr && b != nullptr, "atlas: two small images place");
     CHECK(a->img_w == 64 && a->img_h == 48, "atlas: the entry keeps the image extent");
     CHECK(!cells_overlap(a->cell, b->cell), "atlas: two images pack into disjoint cells");
     CHECK(a->cell.x + a->cell.w <= GPU_IMAGE_ATLAS_SIZE && a->cell.y + a->cell.h <= GPU_IMAGE_ATLAS_SIZE,
           "atlas: cells stay inside the texture");
     CHECK(gpu_image_atlas_find(&atlas, 1) == a && gpu_image_atlas_find(&atlas, 2) == b,
           "atlas: handles resolve to their entries");
-    CHECK(gpu_image_atlas_find(&atlas, 99) == NULL, "atlas: an unknown handle does not resolve");
-    CHECK(gpu_image_atlas_place(&atlas, 3, GPU_IMAGE_ATLAS_MAX_DIM + 1, 8) == NULL,
+    CHECK(gpu_image_atlas_find(&atlas, 99) == nullptr, "atlas: an unknown handle does not resolve");
+    CHECK(gpu_image_atlas_place(&atlas, 3, GPU_IMAGE_ATLAS_MAX_DIM + 1, 8) == nullptr,
           "atlas: images past the per-image cap are rejected (the next slice's path)");
-    CHECK(gpu_image_atlas_place(&atlas, 1, 8, 8) == NULL, "atlas: a handle cannot be placed twice");
+    CHECK(gpu_image_atlas_place(&atlas, 1, 8, 8) == nullptr, "atlas: a handle cannot be placed twice");
 
     GpuAtlasCell freed = a->cell;
     gpu_image_atlas_release(&atlas, 1);
-    CHECK(gpu_image_atlas_find(&atlas, 1) == NULL, "atlas release: the handle stops resolving");
+    CHECK(gpu_image_atlas_find(&atlas, 1) == nullptr, "atlas release: the handle stops resolving");
     gpu_image_atlas_release(&atlas, 1); // releasing again is a no-op
     const GpuImageAtlasEntry* c = gpu_image_atlas_place(&atlas, 4, 32, 32);
-    CHECK(c != NULL && c->cell.x == freed.x && c->cell.y == freed.y,
+    CHECK(c != nullptr && c->cell.x == freed.x && c->cell.y == freed.y,
           "atlas release: the freed cell is reused by the next fitting placement");
     CHECK(c->cell.w == freed.w && c->cell.h == freed.h && c->img_w == 32 && c->img_h == 32,
           "atlas release: a reused cell keeps its full extent; the entry keeps the image extent");
     gpu_image_atlas_release(&atlas, 4);
     const GpuImageAtlasEntry* d = gpu_image_atlas_place(&atlas, 5, 64, 48);
-    CHECK(d != NULL && d->cell.x == freed.x && d->cell.y == freed.y,
+    CHECK(d != nullptr && d->cell.x == freed.x && d->cell.y == freed.y,
           "atlas release: releasing a reused cell returns its full extent to the pool");
 
     fl_arena_destroy(arena);
@@ -299,33 +299,33 @@ static int run_glyph_atlas_tests(void) {
     gpu_glyph_atlas_init(&atlas, arena);
 
     const GpuGlyphEntry* a = gpu_glyph_atlas_place(&atlas, 1, 32, 7, 20, 24, -1.0f, 23.0f, 25.5f);
-    CHECK(a != NULL, "glyph atlas: a glyph places");
+    CHECK(a != nullptr, "glyph atlas: a glyph places");
     CHECK(a->cell.w == 20 && a->cell.h == 24, "glyph atlas: the cell keeps the padded extent");
     CHECK(a->cell.x + a->cell.w <= GPU_GLYPH_ATLAS_SIZE && a->cell.y + a->cell.h <= GPU_GLYPH_ATLAS_SIZE,
           "glyph atlas: cells stay inside the texture");
     CHECK(a->left == -1.0f && a->top == 23.0f && a->advance == 25.5f, "glyph atlas: metrics land verbatim");
 
     CHECK(gpu_glyph_atlas_find(&atlas, 1, 32, 7) == a, "glyph atlas: the key resolves to its entry");
-    CHECK(gpu_glyph_atlas_find(&atlas, 1, 32, 8) == NULL, "glyph atlas: unknown glyph ids do not resolve");
-    CHECK(gpu_glyph_atlas_find(&atlas, 1, 34, 7) == NULL, "glyph atlas: the size is part of the key");
-    CHECK(gpu_glyph_atlas_find(&atlas, 2, 32, 7) == NULL, "glyph atlas: the font is part of the key");
-    CHECK(gpu_glyph_atlas_place(&atlas, 1, 32, 7, 20, 24, 0.0f, 0.0f, 0.0f) == NULL,
+    CHECK(gpu_glyph_atlas_find(&atlas, 1, 32, 8) == nullptr, "glyph atlas: unknown glyph ids do not resolve");
+    CHECK(gpu_glyph_atlas_find(&atlas, 1, 34, 7) == nullptr, "glyph atlas: the size is part of the key");
+    CHECK(gpu_glyph_atlas_find(&atlas, 2, 32, 7) == nullptr, "glyph atlas: the font is part of the key");
+    CHECK(gpu_glyph_atlas_place(&atlas, 1, 32, 7, 20, 24, 0.0f, 0.0f, 0.0f) == nullptr,
           "glyph atlas: a key cannot be placed twice");
 
     const GpuGlyphEntry* b = gpu_glyph_atlas_place(&atlas, 1, 32, 8, 12, 30, 0.0f, 30.0f, 13.0f);
-    CHECK(b != NULL, "glyph atlas: a second glyph places");
+    CHECK(b != nullptr, "glyph atlas: a second glyph places");
     CHECK(!cells_overlap(a->cell, b->cell), "glyph atlas: two glyphs pack into disjoint cells");
 
     const GpuGlyphEntry* space = gpu_glyph_atlas_place(&atlas, 1, 32, 9, 0, 0, 0.0f, 0.0f, 8.0f);
-    CHECK(space != NULL && space->cell.w == 0 && space->cell.h == 0,
+    CHECK(space != nullptr && space->cell.w == 0 && space->cell.h == 0,
           "glyph atlas: empty glyphs take a metrics-only entry");
     CHECK(gpu_glyph_atlas_find(&atlas, 1, 32, 9) == space && space->advance == 8.0f,
           "glyph atlas: metrics-only entries resolve with their advance");
 
     gpu_glyph_atlas_init(&atlas, arena);
-    CHECK(gpu_glyph_atlas_find(&atlas, 1, 32, 7) == NULL, "glyph atlas: re-init forgets placements");
+    CHECK(gpu_glyph_atlas_find(&atlas, 1, 32, 7) == nullptr, "glyph atlas: re-init forgets placements");
     const GpuGlyphEntry* c = gpu_glyph_atlas_place(&atlas, 9, 16, 1, 8, 8, 0.0f, 8.0f, 8.0f);
-    CHECK(c != NULL && c->cell.x == 0 && c->cell.y == 0, "glyph atlas: re-init packs from the origin again");
+    CHECK(c != nullptr && c->cell.x == 0 && c->cell.y == 0, "glyph atlas: re-init packs from the origin again");
 
     fl_arena_destroy(arena);
     printf("gpu_smoke_test: glyph-atlas unit tests PASS\n");
@@ -435,7 +435,7 @@ static void* malformed_translate_thread(void* user_data) {
                                                                     .target_width = TR_TARGET,
                                                                     .target_height = TR_TARGET });
     atomic_store(&job->done, true);
-    return NULL;
+    return nullptr;
 }
 
 static int run_translator_tests(void) {
@@ -450,7 +450,7 @@ static int run_translator_tests(void) {
 
     void* start = ir_begin(ir_arena);
     emit_solid_rect(ir_arena, 10.0f, 20.0f, 30.0f, 40.0f, red);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "translate: one solid rect should produce one command");
     CHECK(list.cmds[0].kind == GpuDraw_Rect, "translate: kind should be Rect");
     CHECK(list.cmds[0].rect[0] == 10.0f && list.cmds[0].rect[1] == 20.0f && list.cmds[0].rect[2] == 30.0f
@@ -466,14 +466,14 @@ static int run_translator_tests(void) {
               && list.aabbs[0].y1 == 60.0f,
           "translate: AABB should be rect min/max");
 
-    list = translate(out_arena, ir_arena, start, 128, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 128, nullptr, nullptr);
     CHECK((list.cmds[0].color[0] >> 24) == 128u, "translate: global_alpha 128 over a=255 should fold to 128");
     CHECK((list.cmds[0].color[0] & 0x00FFFFFFu) == (200u | (40u << 8) | (50u << 16)),
           "translate: global_alpha must not touch RGB");
 
     start = ir_rewind_begin(ir_arena);
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 8.0f, 8.0f, blue); // a = 128
-    list = translate(out_arena, ir_arena, start, 128, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 128, nullptr, nullptr);
     CHECK((list.cmds[0].color[0] >> 24) == 64u, "translate: global_alpha 128 over a=128 should round to 64");
 
     start = ir_rewind_begin(ir_arena);
@@ -481,7 +481,7 @@ static int run_translator_tests(void) {
                     (FlColor[4]) { red, red, red, red }, nullptr);
     fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 40, 20 }, (FlCornerRadius) { 30.0f, 5.0f, -3.0f, 10.0f },
                     (FlColor[4]) { red, red, red, red }, nullptr);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "translate: rounded rects should translate");
     CHECK(list.cmds[0].radius[0] == 3.0f && list.cmds[0].radius[1] == 5.0f && list.cmds[0].radius[2] == 7.0f
               && list.cmds[0].radius[3] == 9.0f,
@@ -500,14 +500,14 @@ static int run_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 50, 50 }, (FlCornerRadius) { 0 }, (FlColor[4]) { tl, tr, bl, br },
                     nullptr);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "translate: a gradient (distinct corner colors) should translate");
     CHECK(list.cmds[0].color[0] == (10u | (20u << 8) | (30u << 16) | (255u << 24))
               && list.cmds[0].color[1] == (40u | (50u << 8) | (60u << 16) | (128u << 24))
               && list.cmds[0].color[2] == (70u | (80u << 8) | (90u << 16) | (64u << 24))
               && list.cmds[0].color[3] == (100u | (110u << 8) | (120u << 16)),
           "translate: corner colors should pack per corner in TL TR BL BR order");
-    list = translate(out_arena, ir_arena, start, 128, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 128, nullptr, nullptr);
     CHECK((list.cmds[0].color[0] >> 24) == 128u && (list.cmds[0].color[1] >> 24) == 64u
               && (list.cmds[0].color[2] >> 24) == 32u && (list.cmds[0].color[3] >> 24) == 0u,
           "translate: global_alpha should fold into every corner's alpha");
@@ -518,12 +518,12 @@ static int run_translator_tests(void) {
     fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 50, 50 }, (FlCornerRadius) { 0 }, (FlColor[4]) { red, red, red, blue },
                     nullptr);
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 0.0f, 50.0f, red);                       // empty: w == 0
-    FlPolyPoint* pts = fl_ir_polyline(ir_arena, red, red, 1.0f, 0.0f, 0, 1, NULL); // one point: no segment
+    FlPolyPoint* pts = fl_ir_polyline(ir_arena, red, red, 1.0f, 0.0f, 0, 1, nullptr); // one point: no segment
     pts[0] = (FlPolyPoint) { 0.0f, 0.0f, 1.0f };
     fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 50, 50 });
     fl_ir_clip_pop(ir_arena);
     emit_solid_rect(ir_arena, 1.0f, 2.0f, 3.0f, 4.0f, red);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 3, "translate: empty/non-rect records should be skipped; rounded and gradient kept");
     CHECK(list.cmds[0].radius[0] == 4.0f, "translate: the first surviving command should be the rounded rect");
     CHECK(list.cmds[1].color[3] != list.cmds[1].color[0],
@@ -548,7 +548,7 @@ static int run_translator_tests(void) {
     fl_ir_clip_push(ir_arena, (FlRect) { 100, 100, 200, 200 }); // A re-pushed
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 400.0f, 400.0f, red); // index 4: dedups with A's entry
     fl_ir_clip_pop(ir_arena);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 5, "clip: every partially visible command translates");
     CHECK(list.clip_count == 3, "clip: dedup keeps one entry per distinct effective rect");
     CHECK(list.cmds[0].clip == 1 && list.clips[1].x0 == 100.0f && list.clips[1].y0 == 100.0f
@@ -577,7 +577,7 @@ static int run_translator_tests(void) {
     fl_ir_clip_pop(ir_arena);
     fl_ir_clip_pop(ir_arena);
     emit_solid_rect(ir_arena, (f32)TR_TARGET + 10.0f, 0.0f, 20.0f, 20.0f, red); // off-target: dropped
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "clip: fully clipped-out and off-target commands never translate");
     CHECK(list.aabbs[0].x0 == 40.0f && list.aabbs[0].y0 == 40.0f && list.aabbs[0].x1 == 50.0f
               && list.aabbs[0].y1 == 50.0f,
@@ -588,7 +588,7 @@ static int run_translator_tests(void) {
     emit_solid_rect(ir_arena, 10.0f, 10.0f, 20.0f, 20.0f, red);
     fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 30, 30 }); // never popped
     emit_solid_rect(ir_arena, 10.0f, 10.0f, 40.0f, 40.0f, red);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "clip: an unbalanced stream still translates");
     CHECK(list.cmds[0].clip == 0, "clip: a pop on an empty stack is ignored");
     CHECK(list.cmds[1].clip == 1 && list.aabbs[1].x1 == 30.0f && list.aabbs[1].y1 == 30.0f,
@@ -603,7 +603,7 @@ static int run_translator_tests(void) {
         fl_ir_clip_pop(ir_arena);
     }
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 100.0f, 100.0f, red);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "clip: a stack deeper than capacity still translates");
     CHECK(list.aabbs[0].x0 == 31.0f && list.aabbs[0].y0 == 31.0f,
           "clip: pushes past capacity are ignored, keeping the deepest tracked intersection");
@@ -614,7 +614,7 @@ static int run_translator_tests(void) {
     GpuImageAtlas atlas;
     gpu_image_atlas_init(&atlas, out_arena);
     const GpuImageAtlasEntry* img_a = gpu_image_atlas_place(&atlas, 7, 8, 8);
-    CHECK(img_a != NULL, "image translate: test placement must succeed");
+    CHECK(img_a != nullptr, "image translate: test placement must succeed");
     const f32 ax = (f32)img_a->cell.x;
     const f32 ay = (f32)img_a->cell.y;
     const FlImageSource src_a = { .kind = FlImageKind_Static, .handle = 7 };
@@ -628,11 +628,11 @@ static int run_translator_tests(void) {
                 FlImageFilter_Linear, nullptr); // overhanging src
     fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Dynamic }, FlImageMode_Color, (FlRect) { 70, 20, 8, 8 },
                 (FlRect) { 0 }, white, FlImageFilter_Linear,
-                nullptr); // dynamic source: skipped without slot bookkeeping (slots == NULL here)
+                nullptr); // dynamic source: skipped without slot bookkeeping (slots == nullptr here)
     fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = 99 }, FlImageMode_Color,
                 (FlRect) { 90, 20, 8, 8 }, (FlRect) { 0 }, white, FlImageFilter_Linear,
                 nullptr); // unresolved handle: skipped
-    list = translate(out_arena, ir_arena, start, 255, &atlas, NULL);
+    list = translate(out_arena, ir_arena, start, 255, &atlas, nullptr);
     CHECK(list.count == 3, "image translate: resolved static images translate; dynamic and unknown are skipped");
     CHECK(list.cmds[0].kind == GpuDraw_Image, "image translate: kind is Image");
     CHECK(list.cmds[0].rect[0] == 10.0f && list.cmds[0].rect[2] == 8.0f, "image translate: dst passes through");
@@ -652,10 +652,10 @@ static int run_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     fl_ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 10, 20, 8, 8 }, (FlRect) { 0 },
                 (FlColor) { 200, 100, 50, 128 }, FlImageFilter_Linear, nullptr);
-    list = translate(out_arena, ir_arena, start, 255, &atlas, NULL);
+    list = translate(out_arena, ir_arena, start, 255, &atlas, nullptr);
     CHECK(list.cmds[0].color[0] == (100u | (50u << 8) | (25u << 16) | (128u << 24)),
           "image translate: the tint packs premultiplied (rgb * a, round-to-nearest)");
-    list = translate(out_arena, ir_arena, start, 128, &atlas, NULL);
+    list = translate(out_arena, ir_arena, start, 128, &atlas, nullptr);
     CHECK((list.cmds[0].color[0] >> 24) == 64u && (list.cmds[0].color[0] & 0xFFu) == 50u,
           "image translate: global_alpha folds into the premultiplied tint");
 
@@ -666,13 +666,13 @@ static int run_translator_tests(void) {
     fl_ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 100, 20, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr); // fully clipped out
     fl_ir_clip_pop(ir_arena);
-    list = translate(out_arena, ir_arena, start, 255, &atlas, NULL);
+    list = translate(out_arena, ir_arena, start, 255, &atlas, nullptr);
     CHECK(list.count == 1, "image translate: a fully clipped image never translates");
     CHECK(list.aabbs[0].x1 == 14.0f && list.aabbs[0].y1 == 24.0f,
           "image translate: the image AABB pre-intersects with its clip");
     CHECK(list.cmds[0].clip == 1, "image translate: the image carries its clip index");
     gpu_image_atlas_release(&atlas, 7);
-    list = translate(out_arena, ir_arena, start, 255, &atlas, NULL);
+    list = translate(out_arena, ir_arena, start, 255, &atlas, nullptr);
     CHECK(list.count == 0, "image translate: a released handle stops translating");
 
     start = ir_rewind_begin(ir_arena);
@@ -693,7 +693,7 @@ static int run_translator_tests(void) {
         expected[i][3] = h;
         emit_solid_rect(ir_arena, x, y, w, h, (FlColor) { (u8)rng, (u8)(rng >> 8), (u8)(rng >> 16), 255 });
     }
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == SWEEP_COUNT, "translate sweep: every solid rect should translate");
     for (u32 i = 0; i < SWEEP_COUNT; i++) {
         CHECK(list.cmds[i].rect[0] == expected[i][0] && list.cmds[i].rect[1] == expected[i][1]
@@ -749,7 +749,7 @@ static int run_effect_translator_tests(void) {
 
     void* start = ir_begin(ir_arena);
     emit_solid_rect(ir_arena, 100.0f, 100.0f, 40.0f, 40.0f, red);
-    GpuDrawList list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    GpuDrawList list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "effect: a plain rect translates");
     CHECK(effect_kind_of(&list.cmds[0]) == 0, "effect: a rect with no effect carries no effect kind");
     CHECK(list.cmds[0].effect[0] == 0 && list.cmds[0].effect[1] == 0 && list.cmds[0].effect[2] == 0
@@ -764,7 +764,7 @@ static int run_effect_translator_tests(void) {
     FlEffect shadow
         = { .kind = FlEffectKind_DropShadow, .color = shadow_color, .off_x = 20.0f, .off_y = 10.0f, .blur = 5.0f };
     emit_rect_effect(ir_arena, 100.0f, 100.0f, 40.0f, 40.0f, red, &shadow);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "shadow: the shadowed rect translates");
     CHECK(effect_kind_of(&list.cmds[0]) == 1, "shadow: the flags carry effect kind 1 (drop shadow)");
     CHECK(bits_f32(list.cmds[0].effect[0]) == 20.0f && bits_f32(list.cmds[0].effect[1]) == 10.0f
@@ -780,7 +780,7 @@ static int run_effect_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     FlEffect glow = { .kind = FlEffectKind_Glow, .color = shadow_color, .off_x = 20.0f, .off_y = 10.0f, .blur = 8.0f };
     emit_rect_effect(ir_arena, 100.0f, 100.0f, 40.0f, 40.0f, red, &glow);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(effect_kind_of(&list.cmds[0]) == 2, "glow: the flags carry effect kind 2 (glow)");
     CHECK(list.aabbs[0].x0 == 92.0f && list.aabbs[0].y0 == 92.0f && list.aabbs[0].x1 == 148.0f
               && list.aabbs[0].y1 == 148.0f,
@@ -790,7 +790,7 @@ static int run_effect_translator_tests(void) {
     FlEffect none
         = { .kind = FlEffectKind_None, .color = { 1, 2, 3, 4 }, .off_x = 50.0f, .off_y = 50.0f, .blur = 9.0f };
     emit_rect_effect(ir_arena, 100.0f, 100.0f, 40.0f, 40.0f, red, &none);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(effect_kind_of(&list.cmds[0]) == 0 && list.cmds[0].effect[3] == 0,
           "effect: a kind-0 (none) effect is ignored even with the flag set");
     CHECK(list.aabbs[0].x1 == 140.0f && list.aabbs[0].y1 == 140.0f, "effect: a kind-0 (none) effect expands nothing");
@@ -799,7 +799,7 @@ static int run_effect_translator_tests(void) {
     FlEffect sharp
         = { .kind = FlEffectKind_DropShadow, .color = { 0, 0, 0, 255 }, .off_x = 6.0f, .off_y = -4.0f, .blur = -5.0f };
     emit_rect_effect(ir_arena, 100.0f, 100.0f, 40.0f, 40.0f, red, &sharp);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(bits_f32(list.cmds[0].effect[2]) == 0.0f, "shadow: a negative blur clamps to zero in the words");
     // reach = [106,96,146,136]; union with [100,100,140,140] = [100,96,146,140].
     CHECK(list.aabbs[0].x0 == 100.0f && list.aabbs[0].y0 == 96.0f && list.aabbs[0].x1 == 146.0f
@@ -808,7 +808,7 @@ static int run_effect_translator_tests(void) {
 
     start = ir_rewind_begin(ir_arena);
     emit_rect_effect(ir_arena, 100.0f, 100.0f, 40.0f, 40.0f, red, &shadow);
-    list = translate(out_arena, ir_arena, start, 128, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 128, nullptr, nullptr);
     CHECK((list.cmds[0].effect[3] >> 24) == ((255u * 128u + 127u) / 255u),
           "shadow: global_alpha folds into the effect color's alpha");
 
@@ -818,7 +818,7 @@ static int run_effect_translator_tests(void) {
         = { .kind = FlEffectKind_DropShadow, .color = { 0, 0, 0, 255 }, .off_x = 80.0f, .off_y = 0.0f, .blur = 4.0f };
     emit_rect_effect(ir_arena, 130.0f, 120.0f, 20.0f, 20.0f, red, &reach); // body [130,120,150,140], left of clip
     fl_ir_clip_pop(ir_arena);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "shadow: a body outside the clip still survives when its shadow reaches in");
     // union(body, reach) = union([130,120,150,140], [206,116,234,144]) = [130,116,234,144];
     // intersect clip [200,100,300,200] = [200,116,234,144].
@@ -833,7 +833,7 @@ static int run_effect_translator_tests(void) {
     bars[0] = (FlBar) { 10.0f, 8.0f, 20.0f };
     bars[1] = (FlBar) { 40.0f, 8.0f, 30.0f };
     bars[2] = (FlBar) { 70.0f, 8.0f, 40.0f };
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 3, "bar glow: every bar of the set translates");
     for (u32 i = 0; i < 3; i++) {
         CHECK(effect_kind_of(&list.cmds[i]) == 2 && list.cmds[i].effect[3] == packed_rgba(bar_color, 255),
@@ -854,7 +854,7 @@ static int run_effect_translator_tests(void) {
     FlEffect diamond_fx
         = { .kind = FlEffectKind_DropShadow, .color = fx_color, .off_x = 5.0f, .off_y = 5.0f, .blur = 1.0f };
     fl_ir_diamond(ir_arena, 200.0f, 200.0f, 15.0f, 15.0f, red, red, 0.0f, &diamond_fx);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 3, "effect kinds: arc, circle, and diamond each translate");
     CHECK(effect_kind_of(&list.cmds[0]) == 1 && list.cmds[0].effect[3] == fx_packed,
           "effect kinds: an arc's effect is located past its payload and stamped");
@@ -878,7 +878,7 @@ static int run_effect_translator_tests(void) {
     bd->w_b = 4.0f;
     bd->color = red;
     fl_ir_append_effect(ir_arena, bheader, &border_fx);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1 && list.cmds[0].kind == GpuDraw_Border, "effect kinds: the border translates");
     CHECK(effect_kind_of(&list.cmds[0]) == 1 && list.cmds[0].effect[3] == fx_packed,
           "effect kinds: a border's effect is located past its payload and stamped");
@@ -896,7 +896,7 @@ static int run_effect_translator_tests(void) {
     im->dst = (FlRect) { 100, 100, 16, 16 };
     im->tint = white;
     fl_ir_append_effect(ir_arena, iheader, &image_fx);
-    list = translate(out_arena, ir_arena, start, 255, &fx_atlas, NULL);
+    list = translate(out_arena, ir_arena, start, 255, &fx_atlas, nullptr);
     CHECK(list.count == 1 && list.cmds[0].kind == GpuDraw_Image, "effect kinds: the atlas image translates");
     CHECK(effect_kind_of(&list.cmds[0]) == 2 && list.cmds[0].effect[3] == fx_packed,
           "effect kinds: an image's effect is located past its payload and stamped");
@@ -923,8 +923,8 @@ static int run_shape_translator_tests(void) {
     // A quarter ring from 12 to 3 o'clock. The encoding carries center + outer/inner radius and the wedge
     // frame - bisector cos/sin and half-aperture sin/cos, all four 1/sqrt(2) for this quarter.
     void* start = ir_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, NULL);
-    GpuDrawList list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
+    GpuDrawList list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "arc: one record translates to one command");
     CHECK(list.cmds[0].kind == GpuDraw_Arc, "arc: kind is Arc");
     CHECK(list.cmds[0].flags == 0, "arc: butt caps and a partial sweep carry no flags");
@@ -940,13 +940,13 @@ static int run_shape_translator_tests(void) {
               && near_f32(list.aabbs[0].x1, 150.0f, 1e-3f) && near_f32(list.aabbs[0].y1, 100.0f, 1e-3f),
           "arc: the AABB bounds the swept quadrant, not the full circle");
 
-    list = translate(out_arena, ir_arena, start, 128, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 128, nullptr, nullptr);
     CHECK((list.cmds[0].color[0] >> 24) == 128u, "arc: global_alpha folds into the packed color");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, NULL);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.25f * TAU, -0.25f * TAU, red, 0, NULL);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.25f * TAU, -0.25f * TAU, red, 0, nullptr);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "arc: both sweep directions translate");
     CHECK(memcmp(&list.cmds[0], &list.cmds[1], sizeof(GpuDrawCmd)) == 0,
           "arc: a negative sweep encodes exactly like its positive-clockwise equivalent");
@@ -955,8 +955,8 @@ static int run_shape_translator_tests(void) {
 
     // Round caps widen the AABB by the cap discs (centerline radius 40, cap radius 10).
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, FL_IR_ARC_ROUND_CAPS, NULL);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, FL_IR_ARC_ROUND_CAPS, nullptr);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.cmds[0].flags == GPU_DRAW_ARC_ROUND_CAPS, "arc: round caps map to the flag");
     CHECK(near_f32(list.aabbs[0].x0, 90.0f, 1e-3f) && near_f32(list.aabbs[0].y1, 110.0f, 1e-3f),
           "arc: round caps widen the AABB by the cap discs at both ends");
@@ -964,42 +964,42 @@ static int run_shape_translator_tests(void) {
           "arc: the outer cardinal extremes still bound the capped sector");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 8.0f, 1.0f, TAU + 1.0f, red, 0, NULL);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 8.0f, 1.0f, TAU + 1.0f, red, 0, nullptr);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.cmds[0].flags == GPU_DRAW_ARC_FULL, "arc: a sweep past a full turn sets the FULL flag");
     CHECK(list.aabbs[0].x0 == 50.0f && list.aabbs[0].y0 == 50.0f && list.aabbs[0].x1 == 150.0f
               && list.aabbs[0].y1 == 150.0f,
           "arc: a full ring bounds the whole circle");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 80.0f, 0.0f, 0.25f * TAU, red, 0, NULL);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 80.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.cmds[0].rect[3] == 0.0f, "arc: thickness past the radius clamps the inner radius to 0");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 0.0f, 8.0f, 0.0f, 1.0f, red, 0, NULL);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 0.0f, 0.0f, 1.0f, red, 0, NULL);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 8.0f, 0.0f, 0.0f, red, 0, NULL);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 0.0f, 8.0f, 0.0f, 1.0f, red, 0, nullptr);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 0.0f, 0.0f, 1.0f, red, 0, nullptr);
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 8.0f, 0.0f, 0.0f, red, 0, nullptr);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 0, "arc: zero radius, thickness, or sweep drops the record");
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 60, 60 });
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, NULL);        // top-right quadrant
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.75f * TAU, 0.25f * TAU, red, 0, NULL); // 9-to-12
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);        // top-right quadrant
+    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.75f * TAU, 0.25f * TAU, red, 0, nullptr); // 9-to-12
     fl_ir_clip_pop(ir_arena);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "arc: a sector wholly outside the clip drops even though its circle overlaps");
     CHECK(near_f32(list.aabbs[0].x0, 50.0f, 1e-3f) && near_f32(list.aabbs[0].y0, 50.0f, 1e-3f)
               && near_f32(list.aabbs[0].x1, 60.0f, 1e-3f) && near_f32(list.aabbs[0].y1, 60.0f, 1e-3f),
           "arc: the surviving sector's AABB clamps to the clip");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, 3.0f, NULL);
-    fl_ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, -5.0f, NULL); // negative width clamps to 0
-    fl_ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, 10.0f, NULL); // border consumes the disc
-    fl_ir_circle(ir_arena, 40.0f, 60.0f, 0.0f, red, green, 0.0f, NULL);   // degenerate: dropped
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    fl_ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, 3.0f, nullptr);
+    fl_ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, -5.0f, nullptr); // negative width clamps to 0
+    fl_ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, 10.0f, nullptr); // border consumes the disc
+    fl_ir_circle(ir_arena, 40.0f, 60.0f, 0.0f, red, green, 0.0f, nullptr);   // degenerate: dropped
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 3, "circle: a zero radius drops the record");
     CHECK(list.cmds[0].kind == GpuDraw_Circle, "circle: kind is Circle");
     CHECK(list.cmds[0].rect[0] == 40.0f && list.cmds[0].rect[1] == 60.0f && list.cmds[0].rect[2] == 10.0f
@@ -1016,10 +1016,10 @@ static int run_shape_translator_tests(void) {
 
     // Diamond border normalization is against the inradius (rx*ry/len = 4.8 here).
     start = ir_rewind_begin(ir_arena);
-    fl_ir_diamond(ir_arena, 40.0f, 60.0f, 8.0f, 6.0f, red, green, 2.0f, NULL);
-    fl_ir_diamond(ir_arena, 40.0f, 60.0f, 8.0f, 6.0f, red, green, 5.0f, NULL); // past the inradius
-    fl_ir_diamond(ir_arena, 40.0f, 60.0f, 0.0f, 6.0f, red, green, 0.0f, NULL); // degenerate: dropped
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    fl_ir_diamond(ir_arena, 40.0f, 60.0f, 8.0f, 6.0f, red, green, 2.0f, nullptr);
+    fl_ir_diamond(ir_arena, 40.0f, 60.0f, 8.0f, 6.0f, red, green, 5.0f, nullptr); // past the inradius
+    fl_ir_diamond(ir_arena, 40.0f, 60.0f, 0.0f, 6.0f, red, green, 0.0f, nullptr); // degenerate: dropped
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "diamond: a zero half-extent drops the record");
     CHECK(list.cmds[0].kind == GpuDraw_Diamond, "diamond: kind is Diamond");
     CHECK(list.cmds[0].rect[0] == 40.0f && list.cmds[0].rect[1] == 60.0f && list.cmds[0].rect[2] == 8.0f
@@ -1036,13 +1036,13 @@ static int run_shape_translator_tests(void) {
 
     // Each bar expands to one solid rect command off the shared baseline at y = 100.
     start = ir_rewind_begin(ir_arena);
-    FlBar* bars = fl_ir_bars(ir_arena, 100.0f, red, 5, NULL);
+    FlBar* bars = fl_ir_bars(ir_arena, 100.0f, red, 5, nullptr);
     bars[0] = (FlBar) { 10.0f, 5.0f, 20.0f };  // up: y 80..100
     bars[1] = (FlBar) { 20.0f, 5.0f, -15.0f }; // down: y 100..115
     bars[2] = (FlBar) { 30.0f, 0.0f, 10.0f };  // zero width: dropped
     bars[3] = (FlBar) { 40.0f, 5.0f, 0.0f };   // zero height: dropped
     bars[4] = (FlBar) { 50.0f, 5.0f, 30.0f };  // up: y 70..100
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 3, "bars: degenerate bars drop bar-by-bar, the rest expand");
     const f32 expected_bars[3][4] = { { 10, 80, 5, 20 }, { 20, 100, 5, 15 }, { 50, 70, 5, 30 } };
     for (int b = 0; b < 3; b++) {
@@ -1062,12 +1062,12 @@ static int run_shape_translator_tests(void) {
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 18, 200 });
-    bars = fl_ir_bars(ir_arena, 100.0f, red, 3, NULL);
+    bars = fl_ir_bars(ir_arena, 100.0f, red, 3, nullptr);
     bars[0] = (FlBar) { 10.0f, 5.0f, 20.0f };  // wholly inside
     bars[1] = (FlBar) { 15.0f, 10.0f, 20.0f }; // straddles the clip edge at x = 18
     bars[2] = (FlBar) { 30.0f, 5.0f, 20.0f };  // wholly outside: dropped
     fl_ir_clip_pop(ir_arena);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "bars: a bar wholly outside the clip drops; the rest survive");
     CHECK(list.aabbs[1].x1 == 18.0f, "bars: a straddling bar's AABB clamps to the clip");
     CHECK(list.cmds[1].clip == 1, "bars: every bar carries the set's clip index");
@@ -1089,11 +1089,11 @@ static int run_polyline_translator_tests(void) {
     const u32 packed_green = packed_rgba(green, 255);
 
     void* start = ir_begin(ir_arena);
-    FlPolyPoint* pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 3, NULL);
+    FlPolyPoint* pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 3, nullptr);
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 30.0f, 20.0f, 0.5f };
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 0.25f };
-    GpuDrawList list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    GpuDrawList list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "polyline: a 3-point open stroke expands to two segments");
     CHECK(list.cmds[0].kind == GpuDraw_Polyline && (list.cmds[0].flags & GPU_DRAW_POLY_STROKE) != 0,
           "polyline: a stroke segment is a GpuDraw_Polyline with the stroke flag set");
@@ -1114,11 +1114,11 @@ static int run_polyline_translator_tests(void) {
     // FILLED: 3 points -> 2 fill trapezoids (first, behind the stroke) + 2 stroke capsules.
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 100.0f, FlPolylineFlags_filled, 3, NULL);
+    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 100.0f, FlPolylineFlags_filled, 3, nullptr);
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 30.0f, 20.0f, 1.0f };
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 1.0f };
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 4, "polyline filled: a 3-point fill expands to two trapezoids and two strokes");
     CHECK((list.cmds[0].flags & GPU_DRAW_POLY_STROKE) == 0 && (list.cmds[1].flags & GPU_DRAW_POLY_STROKE) == 0,
           "polyline filled: the fill trapezoids come first, behind the stroke");
@@ -1134,11 +1134,11 @@ static int run_polyline_translator_tests(void) {
 
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, FlPolylineFlags_closed, 3, NULL);
+    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, FlPolylineFlags_closed, 3, nullptr);
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 30.0f, 20.0f, 1.0f };
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 1.0f };
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 3, "polyline closed: the closing edge adds a third segment");
     CHECK(list.cmds[2].rect[0] == 50.0f && list.cmds[2].rect[1] == 10.0f && list.cmds[2].rect[2] == 10.0f
               && list.cmds[2].rect[3] == 10.0f,
@@ -1146,36 +1146,36 @@ static int run_polyline_translator_tests(void) {
 
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 1, NULL); // one point: no segment
+    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 1, nullptr); // one point: no segment
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
-    pts = fl_ir_polyline(ir_arena, red, green, 0.0f, 0.0f, 0, 3, NULL); // width 0, not filled: nothing
+    pts = fl_ir_polyline(ir_arena, red, green, 0.0f, 0.0f, 0, 3, nullptr); // width 0, not filled: nothing
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 30.0f, 20.0f, 1.0f };
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 1.0f };
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 3, NULL); // a zero-length middle segment drops
+    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 3, nullptr); // a zero-length middle segment drops
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f }; // coincident with pts[0]
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 1.0f };
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "polyline degenerate: only the one non-zero-length segment of the third polyline survives");
     CHECK(list.cmds[0].rect[0] == 10.0f && list.cmds[0].rect[2] == 50.0f,
           "polyline degenerate: the surviving segment skips the coincident pair");
 
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 100.0f, FlPolylineFlags_filled, 2, NULL);
+    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 100.0f, FlPolylineFlags_filled, 2, nullptr);
     pts[0] = (FlPolyPoint) { 20.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 20.0f, 40.0f, 1.0f }; // vertical
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1 && (list.cmds[0].flags & GPU_DRAW_POLY_STROKE) != 0,
           "polyline filled: a vertical edge has a stroke but no fill trapezoid");
 
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 0.0f, 100.0f, FlPolylineFlags_filled, 2, NULL);
+    pts = fl_ir_polyline(ir_arena, red, green, 0.0f, 100.0f, FlPolylineFlags_filled, 2, nullptr);
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 50.0f, 20.0f, 1.0f };
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1 && (list.cmds[0].flags & GPU_DRAW_POLY_STROKE) == 0 && list.cmds[0].color[0] == packed_green,
           "polyline filled: a zero-width polyline keeps its fill trapezoid and emits no stroke");
 
@@ -1197,7 +1197,7 @@ static int run_border_translator_tests(void) {
 
     void* start = ir_begin(ir_arena);
     fl_ir_border(ir_arena, (FlRect) { 10, 20, 60, 40 }, 1.5f, 2.0f, 3.0f, 4.25f, (FlCornerRadius) { 5, 6, 7, 8 }, red);
-    GpuDrawList list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    GpuDrawList list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "border: one record translates to one command");
     CHECK(list.cmds[0].kind == GpuDraw_Border, "border: kind is Border");
     CHECK(list.cmds[0].rect[0] == 10.0f && list.cmds[0].rect[1] == 20.0f && list.cmds[0].rect[2] == 60.0f
@@ -1214,12 +1214,12 @@ static int run_border_translator_tests(void) {
               && list.aabbs[0].y1 == 60.0f,
           "border: the AABB is the outer rect");
 
-    list = translate(out_arena, ir_arena, start, 128, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 128, nullptr, nullptr);
     CHECK((list.cmds[0].color[0] >> 24) == 128u, "border: global_alpha folds into the packed color");
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_border(ir_arena, (FlRect) { 0, 0, 40, 20 }, 2, 2, 2, 2, (FlCornerRadius) { 30.0f, 5.0f, -3.0f, 10.0f }, red);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.cmds[0].radius[0] == 10.0f && list.cmds[0].radius[1] == 5.0f && list.cmds[0].radius[2] == 0.0f
               && list.cmds[0].radius[3] == 10.0f,
           "border: outer radii clamp like the fill path (oversized to half the smaller dimension, negative to 0)");
@@ -1229,7 +1229,7 @@ static int run_border_translator_tests(void) {
     fl_ir_border(ir_arena, (FlRect) { 0, 0, 50, 50 }, 0, 0, 0, 0, (FlCornerRadius) { 4, 4, 4, 4 }, red);
     fl_ir_border(ir_arena, (FlRect) { 0, 0, 50, 50 }, -1.0f, -1.0f, -1.0f, -1.0f, (FlCornerRadius) { 0 }, red);
     fl_ir_border(ir_arena, (FlRect) { 0, 0, 0, 50 }, 2, 2, 2, 2, (FlCornerRadius) { 0 }, red);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "border: all-zero/negative widths and empty rects drop");
     CHECK(bits_f32(list.cmds[0].color[1]) == 0.0f && bits_f32(list.cmds[0].color[2]) == 2.0f,
           "border: a negative width clamps to 0 without disturbing the others");
@@ -1238,7 +1238,7 @@ static int run_border_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     fl_ir_border(ir_arena, (FlRect) { 0, 0, 40, 40 }, 20.0f, 20.0f, 1.0f, 1.0f, (FlCornerRadius) { 4, 4, 4, 4 }, green);
     fl_ir_border(ir_arena, (FlRect) { 0, 0, 40, 40 }, 1.0f, 1.0f, 0.0f, 50.0f, (FlCornerRadius) { 0 }, green);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "border: borders consuming the rect still translate");
     for (int i = 0; i < 2; i++) {
         CHECK(list.cmds[i].kind == GpuDraw_Rect, "border: a border consuming the rect normalizes to a plain fill");
@@ -1254,7 +1254,7 @@ static int run_border_translator_tests(void) {
     fl_ir_border(ir_arena, (FlRect) { 10, 10, 40, 40 }, 2, 2, 2, 2, (FlCornerRadius) { 0 }, red); // straddles
     fl_ir_border(ir_arena, (FlRect) { 60, 10, 40, 40 }, 2, 2, 2, 2, (FlCornerRadius) { 0 }, red); // outside
     fl_ir_clip_pop(ir_arena);
-    list = translate(out_arena, ir_arena, start, 255, NULL, NULL);
+    list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "border: a border wholly outside the clip drops");
     CHECK(list.aabbs[0].x1 == 30.0f, "border: a straddling border's AABB clamps to the clip");
     CHECK(list.cmds[0].clip == 1, "border: the border carries its clip index");
@@ -1377,7 +1377,7 @@ static int run_slot_translator_tests(void) {
 
     GpuImageAtlas atlas;
     gpu_image_atlas_init(&atlas, out_arena);
-    CHECK(gpu_image_atlas_place(&atlas, 3, 8, 8) != NULL, "slot translate: atlas placement must succeed");
+    CHECK(gpu_image_atlas_place(&atlas, 3, 8, 8) != nullptr, "slot translate: atlas placement must succeed");
 
     GpuImageSlots slots;
     gpu_image_slots_init(&slots, out_arena);
@@ -1436,7 +1436,7 @@ static int run_slot_translator_tests(void) {
                 FlImageFilter_Linear, nullptr);
     fl_ir_image(ir_arena, src_dyn, FlImageMode_Color, (FlRect) { 20, 0, 4, 4 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
-    list = translate(out_arena, ir_arena, start, 255, &atlas, NULL);
+    list = translate(out_arena, ir_arena, start, 255, &atlas, nullptr);
     CHECK(list.count == 0, "slot translate: without slot bookkeeping, slot-tier records skip");
 
     start = ir_rewind_begin(ir_arena);
@@ -1618,7 +1618,7 @@ static int run_text_translator_tests(void) {
     const GpuGlyphEntry* g_a = gpu_glyph_atlas_place(&glyphs, font, size, 'A', 10, 14, -1.0f, 12.0f, 11.0f);
     const GpuGlyphEntry* g_b = gpu_glyph_atlas_place(&glyphs, font, size, 'b', 8, 16, 0.0f, 14.0f, 9.0f);
     gpu_glyph_atlas_place(&glyphs, font, size, ' ', 0, 0, 0.0f, 0.0f, 6.0f); // empty (metrics-only) glyph
-    CHECK(g_a != NULL && g_b != NULL, "text translate: the setup glyphs place");
+    CHECK(g_a != nullptr && g_b != nullptr, "text translate: the setup glyphs place");
 
     const FlColor run_color = { 220, 210, 40, 255 };
     FlGlyph run[4] = {
@@ -1694,7 +1694,7 @@ static int run_text_translator_tests(void) {
                                                           .global_alpha = 255,
                                                           .target_width = TR_TARGET,
                                                           .target_height = TR_TARGET });
-    CHECK(list.count == 0, "text translate: a NULL glyph atlas emits no text commands");
+    CHECK(list.count == 0, "text translate: a nullptr glyph atlas emits no text commands");
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_clip_push(ir_arena, (FlRect) { 0.0f, 0.0f, 4.0f, 4.0f }); // a tiny box far from the glyphs at ~(100, 200)
@@ -1812,8 +1812,9 @@ static int run_svg_translator_tests(void) {
     const FlImageHandle handle = 77;
     const FlColor authored = { 50, 150, 200, 255 };
     // A 34 x 26 padded cell: a 32 x 24 content block plus the 1-texel ring (the aspect-fit of a 40x30 icon at 32).
-    const GpuSvgEntry* cell = gpu_svg_atlas_place(&svg, handle, 32, 34, 26, FlVectorClass_Monochrome, authored, NULL);
-    CHECK(cell != NULL, "svg translate: the setup icon places into the atlas");
+    const GpuSvgEntry* cell
+        = gpu_svg_atlas_place(&svg, handle, 32, 34, 26, FlVectorClass_Monochrome, authored, nullptr);
+    CHECK(cell != nullptr, "svg translate: the setup icon places into the atlas");
 
     // The authored fill is opaque, so the premultiply leaves rgb intact and equals the straight pack.
     const FlRect dst = { 100.0f, 120.0f, 32.0f, 24.0f };
@@ -1878,7 +1879,7 @@ static int run_svg_translator_tests(void) {
                                                           .global_alpha = 255,
                                                           .target_width = TR_TARGET,
                                                           .target_height = TR_TARGET });
-    CHECK(list.count == 0, "svg translate: a NULL SVG atlas emits no command for a vector-only handle");
+    CHECK(list.count == 0, "svg translate: a nullptr SVG atlas emits no command for a vector-only handle");
 
     // Multi-color path: a handle living in the RGBA8 color atlas emits GpuDraw_SvgColor sampling the baked
     // premultiplied cell, modulated by a white tint. The colors are baked, so a record tint is ignored.
@@ -1886,8 +1887,8 @@ static int run_svg_translator_tests(void) {
     gpu_svg_atlas_init(&svg_color, out_arena, GpuSvgTexel_Rgba8);
     const FlImageHandle color_handle = 91;
     const GpuSvgEntry* color_cell
-        = gpu_svg_atlas_place(&svg_color, color_handle, 32, 34, 26, FlVectorClass_MultiColor, (FlColor) { 0 }, NULL);
-    CHECK(color_cell != NULL, "svg color translate: the icon places into the RGBA8 atlas");
+        = gpu_svg_atlas_place(&svg_color, color_handle, 32, 34, 26, FlVectorClass_MultiColor, (FlColor) { 0 }, nullptr);
+    CHECK(color_cell != nullptr, "svg color translate: the icon places into the RGBA8 atlas");
 
     start = ir_rewind_begin(ir_arena);
     fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = color_handle }, FlImageMode_Color,
@@ -1935,19 +1936,19 @@ static int run_svg_translator_tests(void) {
 
 static EGLDisplay create_surfaceless_gl43_context(void) {
     const char* client_exts = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
-    if (client_exts == NULL || strstr(client_exts, "EGL_MESA_platform_surfaceless") == NULL) {
+    if (client_exts == nullptr || strstr(client_exts, "EGL_MESA_platform_surfaceless") == nullptr) {
         fprintf(stderr, "gpu_smoke_test: EGL_MESA_platform_surfaceless not available\n");
         return EGL_NO_DISPLAY;
     }
 
     PFNEGLGETPLATFORMDISPLAYEXTPROC get_platform_display
         = (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
-    if (get_platform_display == NULL) {
+    if (get_platform_display == nullptr) {
         fprintf(stderr, "gpu_smoke_test: eglGetPlatformDisplayEXT not exported by the EGL driver\n");
         return EGL_NO_DISPLAY;
     }
-    EGLDisplay dpy = get_platform_display(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, NULL);
-    if (dpy == EGL_NO_DISPLAY || !eglInitialize(dpy, NULL, NULL)) {
+    EGLDisplay dpy = get_platform_display(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, nullptr);
+    if (dpy == EGL_NO_DISPLAY || !eglInitialize(dpy, nullptr, nullptr)) {
         fprintf(stderr, "gpu_smoke_test: no surfaceless EGL display\n");
         return EGL_NO_DISPLAY;
     }
@@ -1962,7 +1963,7 @@ static EGLDisplay create_surfaceless_gl43_context(void) {
         EGL_CONTEXT_MAJOR_VERSION,           4,        EGL_CONTEXT_MINOR_VERSION, 3, EGL_CONTEXT_OPENGL_PROFILE_MASK,
         EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT, EGL_NONE,
     };
-    EGLContext context = eglCreateContext(dpy, num_configs > 0 ? config : NULL, EGL_NO_CONTEXT, context_attrs);
+    EGLContext context = eglCreateContext(dpy, num_configs > 0 ? config : nullptr, EGL_NO_CONTEXT, context_attrs);
     if (context == EGL_NO_CONTEXT || !eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, context)) {
         fprintf(stderr, "gpu_smoke_test: failed to create/current a GL 4.3 core context\n");
         eglTerminate(dpy);
@@ -2956,7 +2957,7 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
     CHECK(!backend->prepare_image_on_job,
           "image: the GPU backend must defer prepare_image to the render thread (thread-confined GL uploads)");
-    CHECK(backend->prepare_image != NULL && backend->release_image != NULL,
+    CHECK(backend->prepare_image != nullptr && backend->release_image != nullptr,
           "image: the backend must expose the prepare and release seams");
 
     FlArena* scratch = arena_new();
@@ -3770,7 +3771,7 @@ static int run_classification_tests(FlRenderBackend* backend, FlArena* ir_arena)
     // hold nothing. A 12-to-3 quarter ring at center (64, 64), radius 40: its sector AABB spans pixels
     // x 64..104, y 24..64 - a handful of tiles in the top-right quadrant, against ~100 for the full circle.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 64.0f, 64.0f, 40.0f, 8.0f, 0.0f, 0.25f * TAU, red, 0, NULL);
+    fl_ir_arc(ir_arena, 64.0f, 64.0f, 40.0f, 8.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     fl_arena_rewind(debug_arena);
     CHECK(gpu_debug_read_tile_classification(backend->user_data, surface, debug_arena, &cls),
@@ -3898,7 +3899,7 @@ static bool viewport3d_render_and_read(FlRenderBackend* backend, FlSurface* surf
 }
 
 static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
-    CHECK(backend->mesh_create != NULL && backend->mesh_destroy != NULL && backend->viewport3d_submit != NULL,
+    CHECK(backend->mesh_create != nullptr && backend->mesh_destroy != nullptr && backend->viewport3d_submit != nullptr,
           "viewport3d: the GL backend must bind the whole 3D seam");
 
     const int surface_w = 128;
@@ -4360,13 +4361,13 @@ static u8 svg_texel(const GpuSvgAtlasReadback* atlas, u32 x, u32 y) {
 // outlive any single test. A stack-local FlVectorImage img would dangle even with its contours in an arena;
 // the Part G tests share this one persistent parse instead. All of them use the same k_svg_icon.
 static const FlVectorImage* svg_test_icon(void) {
-    static FlVectorImage* icon = NULL;
-    if (icon == NULL) {
+    static FlVectorImage* icon = nullptr;
+    if (icon == nullptr) {
         FlArena* a = arena_new(); // process-lifetime: the parse must outlive every test that retains it
         icon = arena_alloc_array(a, FlVectorImage, 1);
         bool ok = vector_image_parse((const u8*)k_svg_icon, sizeof(k_svg_icon) - 1, a, icon);
         if (!ok || icon->classification != FlVectorClass_Monochrome) {
-            return NULL; // the caller CHECKs this - a parse regression fails the test rather than crashing
+            return nullptr; // the caller CHECKs this - a parse regression fails the test rather than crashing
         }
     }
     return icon;
@@ -4375,11 +4376,11 @@ static const FlVectorImage* svg_test_icon(void) {
 static int run_svg_raster_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
     void* ud = backend->user_data;
-    CHECK(backend->prepare_vector != NULL, "svg raster: the GPU backend must expose prepare_vector");
+    CHECK(backend->prepare_vector != nullptr, "svg raster: the GPU backend must expose prepare_vector");
 
     FlArena* arena = arena_new();
     const FlVectorImage* img = svg_test_icon();
-    CHECK(img != NULL, "svg raster: the monochrome icon parses");
+    CHECK(img != nullptr, "svg raster: the monochrome icon parses");
     CHECK(img->classification == FlVectorClass_Monochrome, "svg raster: a single fill classifies monochrome");
 
     const u16 size = 32;              // svg_quantize_size(32) == 32 here, so the cell raster size matches
@@ -4388,7 +4389,7 @@ static int run_svg_raster_tests(FlRenderBackend* backend, FlArena* ir_arena) {
 
     // --- Atlas readback: 40x30 at size 32 -> scale 0.8 -> a 32 x 24 content block plus a 1-texel padding ring.
     const GpuSvgEntry* e = gpu_debug_find_svg(ud, handle);
-    CHECK(e != NULL, "svg raster: the prepared icon resolves to a cell");
+    CHECK(e != nullptr, "svg raster: the prepared icon resolves to a cell");
     CHECK(e->cls == FlVectorClass_Monochrome, "svg raster: the cell records the monochrome classification");
     CHECK(e->mono_color.r == 50 && e->mono_color.g == 150 && e->mono_color.b == 200 && e->mono_color.a == 255,
           "svg raster: the cell carries the icon's authored fill color");
@@ -4475,7 +4476,7 @@ static const FlVectorImage* color_test_icon(const char* svg, int len) {
     FlArena* a = arena_new(); // process-lifetime: never freed, so the retained contours never dangle
     FlVectorImage* icon = arena_alloc_array(a, FlVectorImage, 1);
     if (!vector_image_parse((const u8*)svg, (size_t)len, a, icon)) {
-        return NULL;
+        return nullptr;
     }
     return icon;
 }
@@ -4491,20 +4492,20 @@ static const u8* color_cell_texel(const GpuColorSvgAtlasReadback* a, const GpuSv
 static int run_svg_color_raster_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
     void* ud = backend->user_data;
-    CHECK(backend->prepare_vector != NULL, "svg color: the GPU backend must expose prepare_vector");
+    CHECK(backend->prepare_vector != nullptr, "svg color: the GPU backend must expose prepare_vector");
 
     FlArena* arena = arena_new();
     const u16 size = 32;  // svg_quantize_size(32) == 32 here, so the cell raster size matches (a 40x30 -> 32x24)
     const f32 tol = 4.0f; // premultiply rounding slack
 
     const FlVectorImage* order = color_test_icon(k_svg_color_order, (int)sizeof(k_svg_color_order) - 1);
-    CHECK(order != NULL && order->classification == FlVectorClass_MultiColor,
+    CHECK(order != nullptr && order->classification == FlVectorClass_MultiColor,
           "svg color: the two-fill icon parses multi-color");
     const FlVectorImage* donut = color_test_icon(k_svg_color_evenodd, (int)sizeof(k_svg_color_evenodd) - 1);
-    CHECK(donut != NULL && donut->classification == FlVectorClass_MultiColor,
+    CHECK(donut != nullptr && donut->classification == FlVectorClass_MultiColor,
           "svg color: the even-odd donut + second color parses multi-color");
     const FlVectorImage* faded = color_test_icon(k_svg_color_opacity_icon, (int)sizeof(k_svg_color_opacity_icon) - 1);
-    CHECK(faded != NULL && faded->classification == FlVectorClass_MultiColor,
+    CHECK(faded != nullptr && faded->classification == FlVectorClass_MultiColor,
           "svg color: the opacity icon parses multi-color");
 
     // Fresh handles past the monochrome section's, so they fall through to the color SVG atlas.
@@ -4518,7 +4519,7 @@ static int run_svg_color_raster_tests(FlRenderBackend* backend, FlArena* ir_aren
     const GpuSvgEntry* eo = gpu_debug_find_color_svg(ud, h_order);
     const GpuSvgEntry* ed = gpu_debug_find_color_svg(ud, h_donut);
     const GpuSvgEntry* ef = gpu_debug_find_color_svg(ud, h_faded);
-    CHECK(eo != NULL && ed != NULL && ef != NULL, "svg color: each prepared icon resolves to an RGBA8 cell");
+    CHECK(eo != nullptr && ed != nullptr && ef != nullptr, "svg color: each prepared icon resolves to an RGBA8 cell");
     CHECK(eo->cls == FlVectorClass_MultiColor, "svg color: the cell records the multi-color classification");
     CHECK(eo->cell.w == 32 + 2 * GPU_SVG_ATLAS_PAD && eo->cell.h == 24 + 2 * GPU_SVG_ATLAS_PAD,
           "svg color: the cell is the aspect-fit content extent plus the padding ring");
@@ -4579,7 +4580,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlArena* arena = arena_new();
 
     const FlVectorImage* img = svg_test_icon();
-    CHECK(img != NULL, "svg zoom: the monochrome icon parses");
+    CHECK(img != nullptr, "svg zoom: the monochrome icon parses");
 
     const FlImageHandle A = 556; // fresh handles -> fall through to the SVG atlas, distinct from Part G's 555
     const FlImageHandle B = 557;
@@ -4613,7 +4614,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
             CHECK(count == prev_count, "svg zoom: zooming within a step does not re-raster (count stays flat)");
         }
         const GpuSvgEntry* live = gpu_debug_find_svg(ud, A);
-        CHECK(live != NULL && live->size == q, "svg zoom: the handle resolves to its current quantized cell");
+        CHECK(live != nullptr && live->size == q, "svg zoom: the handle resolves to its current quantized cell");
         prev_count = count;
     }
 
@@ -4621,7 +4622,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     backend->prepare_vector(ud, A, 32, img);
     backend->prepare_vector(ud, B, 32, img);
     const GpuSvgEntry* b_before = gpu_debug_find_svg(ud, B);
-    CHECK(b_before != NULL, "svg zoom: the sibling icon places");
+    CHECK(b_before != nullptr, "svg zoom: the sibling icon places");
     GpuAtlasCell b_cell = b_before->cell;
 
     GpuSvgAtlasReadback atlas0;
@@ -4661,7 +4662,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     for (u32 i = 0; i < 2; i++) {
         backend->prepare_vector(ud, A, steps[i], img);
         const GpuSvgEntry* e = gpu_debug_find_svg(ud, A);
-        CHECK(e != NULL && e->size == steps[i], "svg zoom: the cell is live at the step");
+        CHECK(e != nullptr && e->size == steps[i], "svg zoom: the cell is live at the step");
         int cw = (int)e->cell.w - 2 * GPU_SVG_ATLAS_PAD;
         int ch = (int)e->cell.h - 2 * GPU_SVG_ATLAS_PAD;
         void* start = ir_rewind_begin(ir_arena);
@@ -4710,7 +4711,7 @@ static int run_svg_compaction_tests(FlRenderBackend* backend, FlArena* ir_arena)
     void* ud = backend->user_data;
 
     const FlVectorImage* img = svg_test_icon();
-    CHECK(img != NULL, "svg compaction: the monochrome icon parses");
+    CHECK(img != nullptr, "svg compaction: the monochrome icon parses");
 
     const FlImageHandle A = 560; // re-keyed across big steps to force overflow
     const FlImageHandle B = 561; // a small sibling that must survive compaction
@@ -4721,7 +4722,7 @@ static int run_svg_compaction_tests(FlRenderBackend* backend, FlArena* ir_arena)
     // The sibling is never re-keyed, so it stays live across every overflow.
     backend->prepare_vector(ud, B, 32, img);
     const GpuSvgEntry* b0 = gpu_debug_find_svg(ud, B);
-    CHECK(b0 != NULL && b0->size == 32, "svg compaction: the sibling places live at its step");
+    CHECK(b0 != nullptr && b0->size == 32, "svg compaction: the sibling places live at its step");
 
     // Re-key A between two large steps; each call orphans A's prior big cell. The orphans pile up in the
     // append-only atlas until a placement fails and the backend compacts. The steps are sized to the 4096^2 R8
@@ -4739,10 +4740,10 @@ static int run_svg_compaction_tests(FlRenderBackend* backend, FlArena* ir_arena)
           "svg compaction: a single overflow triggers exactly one compaction");
 
     const GpuSvgEntry* a_live = gpu_debug_find_svg(ud, A);
-    CHECK(a_live != NULL, "svg compaction: the re-keyed icon resolves to a live cell after compaction");
+    CHECK(a_live != nullptr, "svg compaction: the re-keyed icon resolves to a live cell after compaction");
 
     const GpuSvgEntry* b_live = gpu_debug_find_svg(ud, B);
-    CHECK(b_live != NULL && b_live->size == 32, "svg compaction: the sibling is retained at its current size");
+    CHECK(b_live != nullptr && b_live->size == 32, "svg compaction: the sibling is retained at its current size");
 
     const int bcw = (int)b_live->cell.w - 2 * GPU_SVG_ATLAS_PAD;
     const int bch = (int)b_live->cell.h - 2 * GPU_SVG_ATLAS_PAD;
@@ -4779,7 +4780,7 @@ static int run_svg_large_raster_tests(FlRenderBackend* backend, FlArena* ir_aren
     FlArena* arena = arena_new();
 
     const FlVectorImage* img = svg_test_icon(); // 40x30 monochrome solid fill
-    CHECK(img != NULL, "svg large: the monochrome icon parses");
+    CHECK(img != nullptr, "svg large: the monochrome icon parses");
 
     // An 800x600 physical dst: 800 is the larger side, so it snaps up to ladder step 1024.
     const u16 q = svg_raster_size_for_dst(800.0f, 600.0f, FlVectorClass_Monochrome);
@@ -4791,7 +4792,7 @@ static int run_svg_large_raster_tests(FlRenderBackend* backend, FlArena* ir_aren
     // The cell rasters at the quantized size: 40x30 fit to a 1024 larger side -> 1024 x 768 content plus the
     // padding ring.
     const GpuSvgEntry* e = gpu_debug_find_svg(ud, handle);
-    CHECK(e != NULL, "svg large: the >512px icon resolves to a cell");
+    CHECK(e != nullptr, "svg large: the >512px icon resolves to a cell");
     CHECK(e->size == 1024, "svg large: the cell records the >512 quantized raster size");
     const u32 content_w = e->cell.w - 2 * GPU_SVG_ATLAS_PAD;
     const u32 content_h = e->cell.h - 2 * GPU_SVG_ATLAS_PAD;
@@ -4854,7 +4855,7 @@ static int run_glyph_font_checks(FlRenderBackend* backend, FlFontCache* fc, FlAr
           "glyph raster: the empty .notdef outline must load");
     backend->prepare_glyph(backend->user_data, font, size, 0, &outline);
     const GpuGlyphEntry* notdef = gpu_debug_find_glyph(backend->user_data, font, size, 0);
-    CHECK(notdef != NULL && notdef->cell.w == 0 && notdef->cell.h == 0,
+    CHECK(notdef != nullptr && notdef->cell.w == 0 && notdef->cell.h == 0,
           "glyph raster: an empty glyph takes a metrics-only entry");
     CHECK(notdef->advance > 10.0f, "glyph raster: the metrics-only entry still carries its advance");
 
@@ -4863,7 +4864,7 @@ static int run_glyph_font_checks(FlRenderBackend* backend, FlFontCache* fc, FlAr
 
     // --- 'A', the solid square: design 0.6 x 0.7 em -> roughly 19 x 22 px at 32 px (hinting may nudge it).
     const GpuGlyphEntry* a = gpu_debug_find_glyph(backend->user_data, font, size, glyph_a);
-    CHECK(a != NULL, "glyph raster: the square's entry must resolve");
+    CHECK(a != nullptr, "glyph raster: the square's entry must resolve");
     CHECK(a->cell.w >= 12 && a->cell.w <= 32 && a->cell.h >= 14 && a->cell.h <= 36,
           "glyph raster: the square's cell extent lands near its design size");
     CHECK(a->advance > 20.0f && a->advance < 30.0f, "glyph raster: the entry carries the advance");
@@ -4897,13 +4898,13 @@ static int run_glyph_font_checks(FlRenderBackend* backend, FlFontCache* fc, FlAr
           "glyph raster: 'A' outline must re-load");
     backend->prepare_glyph(backend->user_data, font, size, glyph_a, &outline);
     a = gpu_debug_find_glyph(backend->user_data, font, size, glyph_a);
-    CHECK(a != NULL && a->cell.x == cell_before.x && a->cell.y == cell_before.y,
+    CHECK(a != nullptr && a->cell.x == cell_before.x && a->cell.y == cell_before.y,
           "glyph raster: re-preparing a glyph keeps its cell");
 
     // --- 'o', the ring: outer r 0.28 em, counter r 0.14 em. At mid-height the band spans the leftmost
     // quarter of the glyph width, so mid-ring sits an eighth in from the left bbox edge.
     const GpuGlyphEntry* o = gpu_debug_find_glyph(backend->user_data, font, size, glyph_o);
-    CHECK(o != NULL && o->cell.w >= 12 && o->cell.h >= 12, "glyph raster: the ring's entry must resolve");
+    CHECK(o != nullptr && o->cell.w >= 12 && o->cell.h >= 12, "glyph raster: the ring's entry must resolve");
     u32 ox = o->cell.x + o->cell.w / 2;
     u32 oy = o->cell.y + o->cell.h / 2;
     CHECK(glyph_texel(&atlas, ox, oy) <= GLYPH_ZERO,
@@ -4933,7 +4934,7 @@ static int run_glyph_raster_tests(FlRenderBackend* backend) {
     FlArena* arena = arena_new();
     FlFontCache* fc = font_cache_new(arena);
 
-    CHECK(backend->prepare_glyph != NULL, "glyph raster: the GPU backend must expose prepare_glyph");
+    CHECK(backend->prepare_glyph != nullptr, "glyph raster: the GPU backend must expose prepare_glyph");
 
     FlFontId ttf = font_cache_load_font_memory(fc, k_glyph_test_ttf, k_glyph_test_ttf_size, 32);
     FlFontId cff = font_cache_load_font_memory(fc, k_glyph_test_cff, k_glyph_test_cff_size, 32);
@@ -4948,7 +4949,7 @@ static int run_glyph_raster_tests(FlRenderBackend* backend) {
         = gpu_debug_find_glyph(backend->user_data, ttf, 32 * 4, font_cache_get_glyph_index(fc, ttf, 'A'));
     const GpuGlyphEntry* eb
         = gpu_debug_find_glyph(backend->user_data, cff, 32 * 4, font_cache_get_glyph_index(fc, cff, 'A'));
-    CHECK(ea != NULL && eb != NULL && !cells_overlap(ea->cell, eb->cell),
+    CHECK(ea != nullptr && eb != nullptr && !cells_overlap(ea->cell, eb->cell),
           "glyph raster: both fonts pack into one atlas in disjoint cells");
 
     font_cache_destroy(fc);
@@ -4980,7 +4981,7 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
           "text pixels: the square glyph's outline loads");
     backend->prepare_glyph(ud, font, size, cp, &outline);
     const GpuGlyphEntry* e = gpu_debug_find_glyph(ud, font, size, cp);
-    CHECK(e != NULL && e->cell.w > 0 && e->cell.h > 0, "text pixels: the glyph prepared into a real cell");
+    CHECK(e != nullptr && e->cell.w > 0 && e->cell.h > 0, "text pixels: the glyph prepared into a real cell");
 
     // Two copies of the square in one run, far enough apart to leave a transparent gap between the cells.
     const FlColor text_col = { 230, 80, 200, 255 }; // a vivid tint, clearly not white - proves colorization
@@ -5039,7 +5040,7 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // Keyed by the RUN's font even though the outline came from the fallback face - the key the translator uses.
     // An unresolved fallback would prepare the primary's empty .notdef instead: an entry with no cell.
     const GpuGlyphEntry* fe = gpu_debug_find_glyph(ud, font, size, 'B');
-    CHECK(fe != NULL && fe->cell.w > 0 && fe->cell.h > 0,
+    CHECK(fe != nullptr && fe->cell.w > 0 && fe->cell.h > 0,
           "text pixels: a fallback-only codepoint prepares a real cell (not the primary's empty .notdef)");
 
     CHECK(render_seam_read_pixels(backend, surface, &buf), "text pixels: fallback readback");
@@ -5048,7 +5049,7 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
                       (FlColor) { 230, 80, 200, 255 }, 3.0f),
           "text pixels: the fallback glyph paints its square in the run's color");
 
-    backend->set_font_cache(ud, NULL); // the cache is about to die; the pointer lives on the backend
+    backend->set_font_cache(ud, nullptr); // the cache is about to die; the pointer lives on the backend
     font_cache_destroy(fc);
     fl_arena_destroy(arena);
     printf("gpu_smoke_test: text pixel tests PASS\n");
@@ -5076,36 +5077,36 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(font_cache_get_glyph_outline(fc, font, 32 * 4, idx, arena, &o32), "text atlas: the size-32 outline loads");
     backend->prepare_glyph(ud, font, 32 * 4, 'A', &o32);
     const GpuGlyphEntry* before = gpu_debug_find_glyph(ud, font, 32 * 4, 'A');
-    CHECK(before != NULL, "text atlas: the glyph prepares at the create resolution");
+    CHECK(before != nullptr, "text atlas: the glyph prepares at the create resolution");
     u32 before_w = before->cell.w;
     u32 before_h = before->cell.h;
 
     // Resizing the window only rebuilds the framebuffer; the atlas is untouched because the UI scale is an
     // absolute value the core hands in, not a function of height.
     render_seam_change_resolution(backend, surface, 2560, 1080);
-    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != NULL,
+    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != nullptr,
           "text atlas: a width-only resize keeps the glyphs (no scale change)");
     render_seam_change_resolution(backend, surface, 2560, 720);
-    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != NULL,
+    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != nullptr,
           "text atlas: a height resize alone no longer regenerates (scale, not window size, is the trigger)");
 
     // --- Wholesale regeneration on a UI-scale change, via the scale_changed seam ---
-    CHECK(backend->scale_changed != NULL, "text atlas: the GPU backend exposes the scale_changed seam");
+    CHECK(backend->scale_changed != nullptr, "text atlas: the GPU backend exposes the scale_changed seam");
 
     // An unchanged scale is a no-op (guarded on last_ui_scale, which the create set to the 1.0 default).
     backend->scale_changed(ud, 1.0f);
-    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != NULL,
+    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') != nullptr,
           "text atlas: scale_changed at the same scale is a no-op (glyphs survive)");
 
     backend->scale_changed(ud, 2.0f);
-    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') == NULL,
+    CHECK(gpu_debug_find_glyph(ud, font, 32 * 4, 'A') == nullptr,
           "text atlas: a UI-scale change forgets every glyph (wholesale regen)");
 
     FlGlyphOutline o48;
     CHECK(font_cache_get_glyph_outline(fc, font, 48 * 4, idx, arena, &o48), "text atlas: the size-48 outline loads");
     backend->prepare_glyph(ud, font, 48 * 4, 'A', &o48);
     const GpuGlyphEntry* after = gpu_debug_find_glyph(ud, font, 48 * 4, 'A');
-    CHECK(after != NULL && after->cell.x == 0 && after->cell.y == 0,
+    CHECK(after != nullptr && after->cell.x == 0 && after->cell.y == 0,
           "text atlas: the new-size glyph repacks from the origin");
     CHECK(after->cell.w > before_w && after->cell.h > before_h,
           "text atlas: the glyph re-rasterizes larger at the new size (crisp, not upscaled)");
@@ -5120,34 +5121,34 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlGlyphOutline big;
     CHECK(font_cache_get_glyph_outline(fc, font, big_size, idx, arena, &big), "text atlas: the large outline loads");
     backend->prepare_glyph(ud, font, big_size, 5000, &big);
-    CHECK(gpu_debug_find_glyph(ud, font, big_size, 5000) != NULL, "text atlas: the stress sentinel places");
+    CHECK(gpu_debug_find_glyph(ud, font, big_size, 5000) != nullptr, "text atlas: the stress sentinel places");
     bool overflowed = false;
     for (u32 i = 0; i < GPU_GLYPH_ATLAS_MAX_ENTRIES; i++) {
         backend->prepare_glyph(ud, font, big_size, 6000 + i, &big);
         // A rejected placement (atlas full) is absent and flags the deferred wipe.
-        if (gpu_debug_find_glyph(ud, font, big_size, 6000 + i) == NULL) {
+        if (gpu_debug_find_glyph(ud, font, big_size, 6000 + i) == nullptr) {
             overflowed = true;
             break;
         }
     }
     CHECK(overflowed, "text atlas: enough big glyphs overflow the atlas");
-    CHECK(gpu_debug_find_glyph(ud, font, big_size, 5000) != NULL,
+    CHECK(gpu_debug_find_glyph(ud, font, big_size, 5000) != nullptr,
           "text atlas: the overflow defers the wipe (the sentinel is still resident before the frame boundary)");
 
     // An empty frame is enough; the wipe runs at render()'s tail regardless of content.
     void* ovf_start = ir_rewind_begin(ir_arena);
     FlRenderFrame ovf_frame = test_frame();
     ir_frame_render(backend, surface, &ovf_frame, ir_arena, ovf_start);
-    CHECK(gpu_debug_find_glyph(ud, font, big_size, 5000) == NULL,
+    CHECK(gpu_debug_find_glyph(ud, font, big_size, 5000) == nullptr,
           "text atlas: a full atlas repacks wholesale at the frame boundary (the sentinel is forgotten)");
 
     backend->prepare_glyph(ud, font, big_size, 7777, &big);
-    CHECK(gpu_debug_find_glyph(ud, font, big_size, 7777) != NULL,
+    CHECK(gpu_debug_find_glyph(ud, font, big_size, 7777) != nullptr,
           "text atlas: the backend keeps placing glyphs after a wholesale repack");
 
     backend->prepare_glyph(ud, font, 32 * 4, 'A', &o32);
     const GpuGlyphEntry* e = gpu_debug_find_glyph(ud, font, 32 * 4, 'A');
-    CHECK(e != NULL && e->cell.w > 0, "text atlas: the closing glyph prepares");
+    CHECK(e != nullptr && e->cell.w > 0, "text atlas: the closing glyph prepares");
     FlGlyph one = { 'A', 300.0f, 300.0f };
     void* start = ir_rewind_begin(ir_arena);
     fl_ir_text_run(ir_arena, font, 32 * 4, 1.0f, white, &one, 1);
@@ -5464,7 +5465,7 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     const f32 kend = 0.375f * tau;
     const f32 kdelta = 4.0f / 54.0f; // ~4px of arc length on the centerline
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, 0, NULL);
+    fl_ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, 0, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the knob arc frame");
 
@@ -5497,7 +5498,7 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // --- The same knob with round caps --------------------------------------------------------------------
     // The cap disc (radius 6) covers ~4px past the end angle; ~10px past stays clear.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, FL_IR_ARC_ROUND_CAPS, NULL);
+    fl_ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, FL_IR_ARC_ROUND_CAPS, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the round-cap frame");
     CHECK(pixel_color(pixel_at_knob_angle(&buf, kcx, kcy, kend + kdelta, 54.0f), green, 2.0f),
@@ -5508,8 +5509,8 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // --- Filled sector and full ring ----------------------------------------------------------------------
     // Thickness reaching the center makes a pie wedge; a full-turn sweep is a seamless ring.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 300.5f, 100.5f, 40.0f, 40.0f, 0.0f, 0.25f * tau, red, 0, NULL);
-    fl_ir_arc(ir_arena, 500.5f, 100.5f, 40.0f, 8.0f, 0.0f, tau, blue, 0, NULL);
+    fl_ir_arc(ir_arena, 300.5f, 100.5f, 40.0f, 40.0f, 0.0f, 0.25f * tau, red, 0, nullptr);
+    fl_ir_arc(ir_arena, 500.5f, 100.5f, 40.0f, 8.0f, 0.0f, tau, blue, 0, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the sector/ring frame");
 
@@ -5549,15 +5550,15 @@ static int run_circle_diamond_pixel_tests(FlRenderBackend* backend, FlArena* ir_
 
     // --- Circles and diamond (modulation points / automation nodes), plus a clip cut ----------------------
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_circle(ir_arena, 200.5f, 300.5f, 30.0f, red, green, 6.0f, NULL); // bordered: fill inside r = 24
-    fl_ir_circle(ir_arena, 300.5f, 300.5f, 20.0f, red, green, 0.0f, NULL); // borderless: green never shows
+    fl_ir_circle(ir_arena, 200.5f, 300.5f, 30.0f, red, green, 6.0f, nullptr); // bordered: fill inside r = 24
+    fl_ir_circle(ir_arena, 300.5f, 300.5f, 20.0f, red, green, 0.0f, nullptr); // borderless: green never shows
     // Dashed ring, 6 on 6 off around the ring centerline at radius 18 (circumference 113.10). Nine periods
     // fit closest, so the rescale lands the pattern at 12.57 with a 6.28 dash - putting the top of the ring
     // a quarter period into a dash and the bottom a quarter period into a gap.
-    fl_ir_circle_stroked(ir_arena, 700.5f, 300.5f, 20.0f, red, green, 4.0f, (FlStrokeStyle) { 6.0f, 6.0f }, NULL);
-    fl_ir_diamond(ir_arena, 400.5f, 300.5f, 30.0f, 20.0f, red, green, 4.0f, NULL);
+    fl_ir_circle_stroked(ir_arena, 700.5f, 300.5f, 20.0f, red, green, 4.0f, (FlStrokeStyle) { 6.0f, 6.0f }, nullptr);
+    fl_ir_diamond(ir_arena, 400.5f, 300.5f, 30.0f, 20.0f, red, green, 4.0f, nullptr);
     fl_ir_clip_push(ir_arena, (FlRect) { 600.0f, 280.0f, 21.0f, 41.0f }); // cuts at x = 621
-    fl_ir_circle(ir_arena, 620.5f, 300.5f, 15.0f, red, red, 0.0f, NULL);
+    fl_ir_circle(ir_arena, 620.5f, 300.5f, 15.0f, red, red, 0.0f, nullptr);
     fl_ir_clip_pop(ir_arena);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the circle/diamond frame");
@@ -5620,7 +5621,7 @@ static int run_bar_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // --- Meter bars ----------------------------------------------------------------------------------------
     // One bar-set record off a baseline at y = 400: two upward bars, a gap, and a negative bar hanging below.
     void* start = ir_rewind_begin(ir_arena);
-    FlBar* bars = fl_ir_bars(ir_arena, 400.0f, green, 3, NULL);
+    FlBar* bars = fl_ir_bars(ir_arena, 400.0f, green, 3, nullptr);
     bars[0] = (FlBar) { 50.0f, 6.0f, 30.0f };
     bars[1] = (FlBar) { 60.0f, 6.0f, 60.0f };
     bars[2] = (FlBar) { 70.0f, 6.0f, -20.0f };
@@ -6422,7 +6423,7 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
 
     // Unbind the font cache before destroying it (the pointer lives on the backend) and restore the create scale
     // for the tests that follow.
-    backend->set_font_cache(ud, NULL);
+    backend->set_font_cache(ud, nullptr);
     backend->scale_changed(ud, 1.0f);
     backend->destroy_surface(ud, surface);
     font_cache_destroy(fc);
@@ -6447,13 +6448,13 @@ static int run_partial_compile_failure_test(void) {
     FlRenderBackend failed = create_gpu_renderer(fail_arena);
     gpu_shaders_test_force_color_svg_failure(false);
 
-    CHECK(failed.render == NULL, "partial compile failure: create_gpu_renderer returns the zeroed backend");
+    CHECK(failed.render == nullptr, "partial compile failure: create_gpu_renderer returns the zeroed backend");
     CHECK(shared->classify_prog != 0 && shared->raster_prog != 0 && shared->glyph_prog != 0,
           "partial compile failure: the other three programs compiled (the failure really was partial)");
     CHECK(shared->color_svg_prog == 0, "partial compile failure: the color svg program failed to compile");
 
     PFNGLISPROGRAMPROC is_program = (PFNGLISPROGRAMPROC)eglGetProcAddress("glIsProgram");
-    CHECK(is_program != NULL, "partial compile failure: glIsProgram resolves");
+    CHECK(is_program != nullptr, "partial compile failure: glIsProgram resolves");
     CHECK(!is_program(shared->classify_prog) && !is_program(shared->raster_prog) && !is_program(shared->glyph_prog),
           "partial compile failure: the compiled programs were deleted (no GL program leak)");
 
@@ -6483,7 +6484,7 @@ static int run_iosurface_surface_test(FlRenderBackend* backend, FlArena* ir_aren
     // Latch the surface into IOSurface mode up front (the host's setup step), then render - a first accessor call
     // rebuilds the target, so anything drawn before it would be discarded.
     GpuSurfaceIOSurface io = gpu_renderer_surface_iosurface(surface);
-    CHECK(io.handle != NULL, "iosurface: the surface exposes a backend-owned IOSurface backing");
+    CHECK(io.handle != nullptr, "iosurface: the surface exposes a backend-owned IOSurface backing");
     CHECK(io.width == w && io.height == h, "iosurface: the handle carries the surface dims");
 
     GpuSurfaceTexture tex = gpu_renderer_surface_texture(surface);
@@ -6530,7 +6531,7 @@ static int run_iosurface_surface_test(FlRenderBackend* backend, FlArena* ir_aren
     const int h2 = 48;
     render_seam_change_resolution(backend, surface, w2, h2);
     GpuSurfaceIOSurface io2 = gpu_renderer_surface_iosurface(surface);
-    CHECK(io2.handle != NULL, "iosurface: the handle survives change_resolution (still IOSurface-backed)");
+    CHECK(io2.handle != nullptr, "iosurface: the handle survives change_resolution (still IOSurface-backed)");
     CHECK(io2.width == w2 && io2.height == h2, "iosurface: the re-fetched handle reports the resized dims");
 
     render_seam_render(backend, surface, &frame);
@@ -6578,7 +6579,7 @@ static int run_iosurface_churn_leak_test(FlRenderBackend* backend, FlArena* ir_a
     for (int i = 0; i < 32; ++i) {
         FlSurface* s = backend->create_surface(backend->user_data, 64, 64);
         GpuSurfaceIOSurface io = gpu_renderer_surface_iosurface(s);
-        CHECK(io.handle != NULL, "iosurface churn: each fresh latched surface exposes an IOSurface backing");
+        CHECK(io.handle != nullptr, "iosurface churn: each fresh latched surface exposes an IOSurface backing");
         render_seam_render(backend, s, &frame);
         u8 probe[64 * 64 * 4];
         CHECK(gpu_test_iosurface_readback(io.handle, 64, 64, probe),
@@ -6596,7 +6597,7 @@ static int run_iosurface_churn_leak_test(FlRenderBackend* backend, FlArena* ir_a
         const int rh = 48 + (i % 3) * 16;
         render_seam_change_resolution(backend, rs, rw, rh);
         GpuSurfaceIOSurface io = gpu_renderer_surface_iosurface(rs);
-        CHECK(io.handle != NULL && io.width == rw && io.height == rh,
+        CHECK(io.handle != nullptr && io.width == rw && io.height == rh,
               "iosurface churn: a resized latched surface re-exposes a valid handle at the new dims");
         render_seam_render(backend, rs, &frame);
         u8* probe = arena_alloc_array(ir_arena, u8, (size_t)rw * (size_t)rh * 4u);
@@ -6610,7 +6611,7 @@ static int run_iosurface_churn_leak_test(FlRenderBackend* backend, FlArena* ir_a
     // only this test's retain remains.
     FlSurface* os = backend->create_surface(backend->user_data, 64, 64);
     GpuSurfaceIOSurface oio = gpu_renderer_surface_iosurface(os);
-    CHECK(oio.handle != NULL, "iosurface churn: ownership-check surface exposes a handle");
+    CHECK(oio.handle != nullptr, "iosurface churn: ownership-check surface exposes a handle");
     gpu_test_cf_retain(oio.handle); // the test's independent +1
     backend->destroy_surface(backend->user_data, os);
     CHECK(gpu_test_cf_retain_count(oio.handle) == 1,

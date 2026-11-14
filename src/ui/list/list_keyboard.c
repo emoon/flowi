@@ -81,7 +81,7 @@ static void extend_selection(FlListContext* self, ListState* st, i32 cur, u64 ne
 }
 
 // Ctrl+A - select all, resolved against the full ordered slice (covers rows virtualized away). It does not move
-// the cursor; emitted regardless of set, only auto-apply is gated on set != NULL (see list_end_impl). A
+// the cursor; emitted regardless of set, only auto-apply is gated on set != nullptr (see list_end_impl). A
 // single-selection list has no "select all", so it is suppressed there.
 static bool handle_select_all(FlListContext* self, bool ctrl) {
     bool pressed = ctrl && ui_key_pressed(FlKey_A);

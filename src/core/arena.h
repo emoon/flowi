@@ -59,7 +59,7 @@ typedef struct ArenaSettings {
 
 /// FlArena functions
 
-// Arena allocations never return NULL - the arena traps/aborts on OOM.
+// Arena allocations never return nullptr - the arena traps/aborts on OOM.
 #if COMPILER_GCC || COMPILER_CLANG
 #define ARENA_RETURNS_NONNULL __attribute__((returns_nonnull))
 #else

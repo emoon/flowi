@@ -76,7 +76,7 @@ static void deinterleave_image(InternalImageData* image_data, FlArena* arena) {
     u8* r_buffer = new_data;
     u8* g_buffer = r_buffer + pixel_count;
     u8* b_buffer = g_buffer + pixel_count;
-    u8* a_buffer = (source_channels == 4) ? b_buffer + pixel_count : NULL;
+    u8* a_buffer = (source_channels == 4) ? b_buffer + pixel_count : nullptr;
 
     sr_deinterleave_pixels(image_data->data, r_buffer, g_buffer, b_buffer, a_buffer, pixel_count, source_channels,
                            source_channels == 4);

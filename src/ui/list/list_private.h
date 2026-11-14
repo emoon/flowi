@@ -62,10 +62,10 @@ struct FlListContext {
     // Current list being emitted (set in begin)
     FlLayoutId current_id;      // Identifies the list container; row ids derive from its name
     u32 current_clay_id;        // ui_layout_id_to_clay_id(current_id) - key into list_states
-    const u64* ordered_ids;     // App's full ordered model, borrowed for this begin->end scope (may be NULL)
+    const u64* ordered_ids;     // App's full ordered model, borrowed for this begin->end scope (may be nullptr)
     u32 ordered_count;          // Length of ordered_ids and the virtualization total
-    const FlString* labels;     // Optional per-row labels for type-ahead (length ordered_count); may be NULL
-    FlSelectionSet* set;        // Caller-owned selection storage (NULL = opt out of auto-apply/highlight)
+    const FlString* labels;     // Optional per-row labels for type-ahead (length ordered_count); may be nullptr
+    FlSelectionSet* set;        // Caller-owned selection storage (nullptr = opt out of auto-apply/highlight)
     u32 emit_pos;               // Auto-tracked emission position of the next row (absolute index)
     f32 current_row_height;     // Resolved row height this frame (marquee maps content Y -> row index with this)
     f32 current_gap;            // Resolved inter-row gap this frame

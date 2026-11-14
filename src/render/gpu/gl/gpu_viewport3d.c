@@ -304,7 +304,7 @@ bool gpu_viewport3d_create(GpuShared* self) {
     gl->GetProgramiv(prog, GL_LINK_STATUS, &ok);
     if (!ok) {
         char info[2048];
-        gl->GetProgramInfoLog(prog, sizeof(info), NULL, info);
+        gl->GetProgramInfoLog(prog, sizeof(info), nullptr, info);
         log_error("gpu backend: mesh shader link failed: %s", info);
         gl->DeleteProgram(prog);
         return false;

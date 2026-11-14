@@ -29,10 +29,10 @@ static bool check_memory_pattern(void* ptr, u64 size, u8 pattern) {
 
 UTEST(arena, new_and_destroy) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
-    ASSERT_NE(arena, NULL);
+    ASSERT_NE(arena, nullptr);
 
     void* ptr = fl_arena_alloc_raw(arena, 64, 8);
-    ASSERT_NE(ptr, NULL);
+    ASSERT_NE(ptr, nullptr);
 
     fl_arena_destroy(arena);
 }
@@ -41,7 +41,7 @@ UTEST(arena, alloc_raw_basic) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
     void* ptr = fl_arena_alloc_raw(arena, 1024, 16);
-    ASSERT_NE(ptr, NULL);
+    ASSERT_NE(ptr, nullptr);
     ASSERT_TRUE(arena_ptr_is_aligned(ptr, 16));
 
     fill_memory_pattern(ptr, 1024, 0xAB);
@@ -72,7 +72,7 @@ UTEST(arena, alloc_array) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
     u32* array = arena_alloc_array(arena, u32, 100);
-    ASSERT_NE(array, NULL);
+    ASSERT_NE(array, nullptr);
     ASSERT_TRUE(arena_ptr_is_aligned(array, _Alignof(u32)));
 
     for (u64 i = 0; i < 100; i++) {
@@ -107,7 +107,7 @@ UTEST(arena, array_macros_evaluate_count_once) {
 
     u64 evaluations = 0;
     u64* array = arena_alloc_array(arena, u64, (evaluations++, 4));
-    ASSERT_NE(array, NULL);
+    ASSERT_NE(array, nullptr);
     ASSERT_EQ(evaluations, (u64)1);
 
     fl_arena_destroy(arena);
@@ -117,14 +117,14 @@ UTEST(arena, typed_allocation_macros) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
     u64* single = arena_alloc(arena, u64);
-    ASSERT_NE(single, NULL);
+    ASSERT_NE(single, nullptr);
     ASSERT_TRUE(arena_ptr_is_aligned(single, _Alignof(u64)));
 
     *single = 0xDEADBEEFCAFEBABE;
     ASSERT_EQ(*single, 0xDEADBEEFCAFEBABE);
 
     f32* floats = arena_alloc_array(arena, f32, 50);
-    ASSERT_NE(floats, NULL);
+    ASSERT_NE(floats, nullptr);
     ASSERT_TRUE(arena_ptr_is_aligned(floats, _Alignof(f32)));
 
     for (u64 i = 0; i < 50; i++) {
@@ -186,7 +186,7 @@ UTEST(arena, multiple_allocations) {
 
     for (int i = 0; i < 10; i++) {
         ptrs[i] = fl_arena_alloc_raw(arena, 256, 8);
-        ASSERT_NE(ptrs[i], NULL);
+        ASSERT_NE(ptrs[i], nullptr);
 
         fill_memory_pattern(ptrs[i], 256, (u8)(i + 1));
     }
@@ -202,17 +202,17 @@ UTEST(arena, rewind) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
     void* ptr1 = fl_arena_alloc_raw(arena, 1024, 8);
-    ASSERT_NE(ptr1, NULL);
+    ASSERT_NE(ptr1, nullptr);
     fill_memory_pattern(ptr1, 1024, 0xCC);
 
     void* ptr2 = fl_arena_alloc_raw(arena, 512, 8);
-    ASSERT_NE(ptr2, NULL);
+    ASSERT_NE(ptr2, nullptr);
     fill_memory_pattern(ptr2, 512, 0xDD);
 
     fl_arena_rewind(arena);
 
     void* ptr3 = fl_arena_alloc_raw(arena, 2048, 8);
-    ASSERT_NE(ptr3, NULL);
+    ASSERT_NE(ptr3, nullptr);
 
     // In debug mode ptr3 may differ from ptr1 due to memory protection swapping
     fill_memory_pattern(ptr3, 2048, 0xEE);
@@ -229,7 +229,7 @@ UTEST(arena, large_allocation) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
     void* large_ptr = fl_arena_alloc_raw(arena, MB(8), 64);
-    ASSERT_NE(large_ptr, NULL);
+    ASSERT_NE(large_ptr, nullptr);
     ASSERT_TRUE(arena_ptr_is_aligned(large_ptr, 64));
 
     u8* bytes = (u8*)large_ptr;
@@ -250,11 +250,11 @@ UTEST(arena, many_small_allocations) {
     const int num_allocs = 1000;
     // MSVC doesn't support VLAs - use heap allocation
     void** ptrs = (void**)malloc(num_allocs * sizeof(void*));
-    ASSERT_NE(ptrs, NULL);
+    ASSERT_NE(ptrs, nullptr);
 
     for (int i = 0; i < num_allocs; i++) {
         ptrs[i] = fl_arena_alloc_raw(arena, 64, 8);
-        ASSERT_NE(ptrs[i], NULL);
+        ASSERT_NE(ptrs[i], nullptr);
 
         *(u32*)ptrs[i] = (u32)i;
     }
@@ -276,13 +276,13 @@ UTEST(arena, stress_alloc_rewind_cycle) {
 
     for (int cycle = 0; cycle < 100; cycle++) {
         void* ptr1 = fl_arena_alloc_raw(arena, 1024, 8);
-        ASSERT_NE(ptr1, NULL);
+        ASSERT_NE(ptr1, nullptr);
 
         void* ptr2 = fl_arena_alloc_raw(arena, 2048, 16);
-        ASSERT_NE(ptr2, NULL);
+        ASSERT_NE(ptr2, nullptr);
 
         void* ptr3 = fl_arena_alloc_raw(arena, 512, 32);
-        ASSERT_NE(ptr3, NULL);
+        ASSERT_NE(ptr3, nullptr);
 
         fill_memory_pattern(ptr1, 1024, 0x11);
         fill_memory_pattern(ptr2, 2048, 0x22);
@@ -332,7 +332,7 @@ UTEST(arena, compacting) {
 
     const u64 max_size = 100;
     int* array = arena_alloc_array(arena, int, max_size);
-    ASSERT_NE(array, NULL);
+    ASSERT_NE(array, nullptr);
 
     u64 pos_after_alloc = arena->pos;
     ASSERT_EQ(pos_after_alloc - initial_pos, max_size * sizeof(int));
@@ -353,7 +353,7 @@ UTEST(arena, compacting) {
     }
 
     double* next_alloc = arena_alloc(arena, double);
-    ASSERT_NE(next_alloc, NULL);
+    ASSERT_NE(next_alloc, nullptr);
     *next_alloc = 3.14159;
     ASSERT_EQ(*next_alloc, 3.14159);
 
@@ -364,7 +364,7 @@ UTEST(arena, zero_size_allocation) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
     void* ptr = fl_arena_alloc_raw(arena, 0, 8);
-    ASSERT_NE(ptr, NULL);
+    ASSERT_NE(ptr, nullptr);
 
     fl_arena_destroy(arena);
 }
@@ -385,10 +385,10 @@ UTEST(arena, page_boundary_allocations) {
     FlArena* arena = arena_new(.reserved_size = GB(2));
 
     void* ptr1 = fl_arena_alloc_raw(arena, KB(4), 8);
-    ASSERT_NE(ptr1, NULL);
+    ASSERT_NE(ptr1, nullptr);
 
     void* ptr2 = fl_arena_alloc_raw(arena, KB(4), 8);
-    ASSERT_NE(ptr2, NULL);
+    ASSERT_NE(ptr2, nullptr);
 
     fill_memory_pattern(ptr1, KB(4), 0xAA);
     fill_memory_pattern(ptr2, KB(4), 0xBB);
@@ -410,7 +410,7 @@ UTEST(arena, memory_size_macros) {
     FlArena* arena2 = arena_new(.reserved_size = GB(2));
 
     void* ptr = fl_arena_alloc_raw(arena2, KB(512), 8);
-    ASSERT_NE(ptr, NULL);
+    ASSERT_NE(ptr, nullptr);
 
     fl_arena_destroy(arena2);
 }
@@ -448,7 +448,7 @@ static void* thread_alloc_test(void* arg) {
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 static void* thread_large_alloc_test(void* arg) {
@@ -475,7 +475,7 @@ static void* thread_large_alloc_test(void* arg) {
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 UTEST(arena, thread_safe_allocation) {
@@ -486,9 +486,9 @@ UTEST(arena, thread_safe_allocation) {
 
     // MSVC doesn't support VLAs - use heap allocation
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
-    ASSERT_NE(threads, NULL);
+    ASSERT_NE(threads, nullptr);
     ThreadTestData* thread_data = (ThreadTestData*)malloc(num_threads * sizeof(ThreadTestData));
-    ASSERT_NE(thread_data, NULL);
+    ASSERT_NE(thread_data, nullptr);
 
     for (int i = 0; i < num_threads; i++) {
         thread_data[i].arena_mt = arena_mt;
@@ -524,9 +524,9 @@ UTEST(arena, arena_mt_growth) {
 
     // MSVC doesn't support VLAs - use heap allocation
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
-    ASSERT_NE(threads, NULL);
+    ASSERT_NE(threads, nullptr);
     ThreadTestData* thread_data = (ThreadTestData*)malloc(num_threads * sizeof(ThreadTestData));
-    ASSERT_NE(thread_data, NULL);
+    ASSERT_NE(thread_data, nullptr);
 
     for (int i = 0; i < num_threads; i++) {
         thread_data[i].arena_mt = arena_mt;
@@ -599,7 +599,7 @@ static void* high_contention_alloc_test(void* arg) {
     }
 
     atomic_fetch_add(&data->completion_count, 1);
-    return NULL;
+    return nullptr;
 }
 
 static void* rapid_small_alloc_test(void* arg) {
@@ -626,7 +626,7 @@ static void* rapid_small_alloc_test(void* arg) {
     }
 
     atomic_fetch_add(&data->completion_count, 1);
-    return NULL;
+    return nullptr;
 }
 
 static void* mixed_size_contention_test(void* arg) {
@@ -667,7 +667,7 @@ static void* mixed_size_contention_test(void* arg) {
     }
 
     atomic_fetch_add(&data->completion_count, 1);
-    return NULL;
+    return nullptr;
 }
 
 UTEST(arena, high_contention_lock_free) {
@@ -678,10 +678,10 @@ UTEST(arena, high_contention_lock_free) {
 
     // MSVC doesn't support VLAs - use heap allocation
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
-    ASSERT_NE(threads, NULL);
+    ASSERT_NE(threads, nullptr);
     HighContentionTestData* thread_data
         = (HighContentionTestData*)calloc((size_t)num_threads, sizeof(HighContentionTestData));
-    ASSERT_NE(thread_data, NULL);
+    ASSERT_NE(thread_data, nullptr);
 
     for (int i = 0; i < num_threads; i++) {
         thread_data[i].arena_mt = arena_mt;
@@ -728,10 +728,10 @@ UTEST(arena, rapid_small_allocations) {
 
     // MSVC doesn't support VLAs - use heap allocation
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
-    ASSERT_NE(threads, NULL);
+    ASSERT_NE(threads, nullptr);
     HighContentionTestData* thread_data
         = (HighContentionTestData*)calloc((size_t)num_threads, sizeof(HighContentionTestData));
-    ASSERT_NE(thread_data, NULL);
+    ASSERT_NE(thread_data, nullptr);
 
     for (int i = 0; i < num_threads; i++) {
         thread_data[i].arena_mt = arena_mt;
@@ -774,10 +774,10 @@ UTEST(arena, mixed_size_high_contention) {
 
     // MSVC doesn't support VLAs - use heap allocation
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
-    ASSERT_NE(threads, NULL);
+    ASSERT_NE(threads, nullptr);
     HighContentionTestData* thread_data
         = (HighContentionTestData*)calloc((size_t)num_threads, sizeof(HighContentionTestData));
-    ASSERT_NE(thread_data, NULL);
+    ASSERT_NE(thread_data, nullptr);
 
     for (int i = 0; i < num_threads; i++) {
         thread_data[i].arena_mt = arena_mt;
@@ -823,10 +823,10 @@ UTEST(arena, stress_lock_free_rounds) {
 
         // MSVC doesn't support VLAs - use heap allocation
         Thread* threads = (Thread*)malloc(threads_per_round * sizeof(Thread));
-        ASSERT_NE(threads, NULL);
+        ASSERT_NE(threads, nullptr);
         HighContentionTestData* thread_data
             = (HighContentionTestData*)malloc(threads_per_round * sizeof(HighContentionTestData));
-        ASSERT_NE(thread_data, NULL);
+        ASSERT_NE(thread_data, nullptr);
 
         for (int i = 0; i < threads_per_round; i++) {
             thread_data[i].arena_mt = arena_mt;

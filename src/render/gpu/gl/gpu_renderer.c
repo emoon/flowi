@@ -19,14 +19,14 @@
 
 GLuint gpu_compile_shader(const GpuGl* gl, GLenum stage, const char* const* sources, int count, const char* name) {
     GLuint shader = gl->CreateShader(stage);
-    gl->ShaderSource(shader, count, sources, NULL);
+    gl->ShaderSource(shader, count, sources, nullptr);
     gl->CompileShader(shader);
 
     GLint ok = 0;
     gl->GetShaderiv(shader, GL_COMPILE_STATUS, &ok);
     if (!ok) {
         char log[2048];
-        gl->GetShaderInfoLog(shader, sizeof(log), NULL, log);
+        gl->GetShaderInfoLog(shader, sizeof(log), nullptr, log);
         log_error("gpu backend: %s compile failed: %s", name, log);
         gl->DeleteShader(shader);
         return 0;
@@ -49,7 +49,7 @@ static GLuint compile_program(const GpuGl* gl, const char* const* sources, int c
     gl->GetProgramiv(prog, GL_LINK_STATUS, &ok);
     if (!ok) {
         char log[2048];
-        gl->GetProgramInfoLog(prog, sizeof(log), NULL, log);
+        gl->GetProgramInfoLog(prog, sizeof(log), nullptr, log);
         log_error("gpu backend: %s link failed: %s", name, log);
         gl->DeleteProgram(prog);
         return 0;
@@ -108,7 +108,7 @@ static void setup_resolution(GpuShared* self, GpuSurface* surface, int width, in
     size_t tile_list_bytes
         = (size_t)surface->tile_cols * (size_t)surface->tile_rows * GPU_TILE_STRIDE_U32 * sizeof(u32);
     gl->BindBuffer(GL_SHADER_STORAGE_BUFFER, surface->tile_ssbo);
-    gl->BufferData(GL_SHADER_STORAGE_BUFFER, (GLsizeiptr)tile_list_bytes, NULL, GL_DYNAMIC_COPY);
+    gl->BufferData(GL_SHADER_STORAGE_BUFFER, (GLsizeiptr)tile_list_bytes, nullptr, GL_DYNAMIC_COPY);
 
     fl_arena_temp_end(
         surface->readback_reset); // rewind to just past the struct; keeps the GpuSurface, drops the old buffer

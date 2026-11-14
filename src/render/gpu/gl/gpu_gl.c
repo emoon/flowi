@@ -6,7 +6,7 @@ bool gpu_gl_load(GpuGl* gl) {
     bool ok = true;
 #define GPU_GL_LOAD(type, name, sym)                         \
     gl->name = (type)eglGetProcAddress(sym);                 \
-    if (gl->name == NULL) {                                  \
+    if (gl->name == nullptr) {                               \
         log_error("gpu backend: failed to resolve %s", sym); \
         ok = false;                                          \
     }

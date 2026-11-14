@@ -2,7 +2,7 @@
 #include <core/arena.h>
 
 void gpu_atlas_pack_init(GpuAtlasPack* pack, FlArena* arena, u32 width, u32 height) {
-    if (pack->nodes == NULL || pack->width != width) {
+    if (pack->nodes == nullptr || pack->width != width) {
         pack->nodes = arena_alloc_array(arena, GpuAtlasPackNode, width + 1);
     }
     pack->width = width;

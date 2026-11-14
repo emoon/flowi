@@ -24,26 +24,26 @@ UTEST_F_TEARDOWN(error_report_fixture) {
 UTEST_F(error_report_fixture, basic_error_formatting) {
     FlString error = error_message_format_no_log("Test error: %d", 42);
 
-    ASSERT_TRUE(error.data != NULL);
+    ASSERT_TRUE(error.data != nullptr);
     ASSERT_GT((u64)error.length, 0);
-    ASSERT_TRUE(strstr(error.data, "Test error: 42") != NULL);
+    ASSERT_TRUE(strstr(error.data, "Test error: 42") != nullptr);
 }
 
 UTEST_F(error_report_fixture, error_with_logging) {
     FlString error
         = error_message_format(utest_fixture->test_channel, LogLevel_Error, "File not found: %s", "test.txt");
 
-    ASSERT_TRUE(error.data != NULL);
+    ASSERT_TRUE(error.data != nullptr);
     ASSERT_GT((u64)error.length, 0);
-    ASSERT_TRUE(strstr(error.data, "File not found: test.txt") != NULL);
+    ASSERT_TRUE(strstr(error.data, "File not found: test.txt") != nullptr);
 }
 
 UTEST_F(error_report_fixture, error_without_logging) {
     FlString error = error_message_format(LOG_CHANNEL_INVALID, LogLevel_Error, "Silent error: %d", 123);
 
-    ASSERT_TRUE(error.data != NULL);
+    ASSERT_TRUE(error.data != nullptr);
     ASSERT_GT((u64)error.length, 0);
-    ASSERT_TRUE(strstr(error.data, "Silent error: 123") != NULL);
+    ASSERT_TRUE(strstr(error.data, "Silent error: 123") != nullptr);
 }
 
 UTEST_F(error_report_fixture, cleanup_resets_arena) {
@@ -51,14 +51,14 @@ UTEST_F(error_report_fixture, cleanup_resets_arena) {
     FlString error2 = error_message_format_no_log("Error 2");
     FlString error3 = error_message_format_no_log("Error 3");
 
-    ASSERT_TRUE(error1.data != NULL);
-    ASSERT_TRUE(error2.data != NULL);
-    ASSERT_TRUE(error3.data != NULL);
+    ASSERT_TRUE(error1.data != nullptr);
+    ASSERT_TRUE(error2.data != nullptr);
+    ASSERT_TRUE(error3.data != nullptr);
 
     error_report_cleanup();
 
     FlString error4 = error_message_format_no_log("Error 4");
-    ASSERT_TRUE(error4.data != NULL);
+    ASSERT_TRUE(error4.data != nullptr);
 
     // error1/2/3 dangle after the cleanup above; only error4 is still valid here.
     ASSERT_GT((u64)error4.length, 0);
@@ -69,7 +69,7 @@ UTEST_F(error_report_fixture, many_allocations) {
 
     for (int i = 0; i < num_allocations; i++) {
         FlString error = error_message_format_no_log("Error number %d with some extra text", i);
-        ASSERT_TRUE(error.data != NULL);
+        ASSERT_TRUE(error.data != nullptr);
         ASSERT_GT((u64)error.length, 0);
 
         // Periodically cleanup to avoid running out of arena space
@@ -81,7 +81,7 @@ UTEST_F(error_report_fixture, many_allocations) {
     error_report_cleanup();
 
     FlString final_error = error_message_format_no_log("Final error");
-    ASSERT_TRUE(final_error.data != NULL);
+    ASSERT_TRUE(final_error.data != nullptr);
     ASSERT_GT((u64)final_error.length, 0);
 }
 
@@ -98,12 +98,12 @@ static void* thread_test_worker(void* arg) {
     for (int i = 0; i < data->num_iterations; i++) {
         FlString error = error_message_format_no_log("Thread %d iteration %d", data->thread_id, i);
 
-        if (error.data != NULL && error.length > 0) {
+        if (error.data != nullptr && error.length > 0) {
             atomic_fetch_add(&data->success_count, 1);
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 UTEST_F(error_report_fixture, thread_safety) {
@@ -139,16 +139,16 @@ UTEST_F(error_report_fixture, thread_safety) {
 
 UTEST_F(error_report_fixture, convenience_macros) {
     FlString error = error_message_error(utest_fixture->test_channel, "Error message");
-    ASSERT_TRUE(error.data != NULL);
-    ASSERT_TRUE(strstr(error.data, "Error message") != NULL);
+    ASSERT_TRUE(error.data != nullptr);
+    ASSERT_TRUE(strstr(error.data, "Error message") != nullptr);
 
     FlString warning = error_message_warning(utest_fixture->test_channel, "Warning message");
-    ASSERT_TRUE(warning.data != NULL);
-    ASSERT_TRUE(strstr(warning.data, "Warning message") != NULL);
+    ASSERT_TRUE(warning.data != nullptr);
+    ASSERT_TRUE(strstr(warning.data, "Warning message") != nullptr);
 
     FlString info = error_message_info(utest_fixture->test_channel, "Info message");
-    ASSERT_TRUE(info.data != NULL);
-    ASSERT_TRUE(strstr(info.data, "Info message") != NULL);
+    ASSERT_TRUE(info.data != nullptr);
+    ASSERT_TRUE(strstr(info.data, "Info message") != nullptr);
 }
 
 UTEST_F(error_report_fixture, custom_format_specifiers) {
@@ -157,9 +157,9 @@ UTEST_F(error_report_fixture, custom_format_specifiers) {
 
     FlString error = error_message_format_no_log("Failed to load %S from %S", name, path);
 
-    ASSERT_TRUE(error.data != NULL);
+    ASSERT_TRUE(error.data != nullptr);
     ASSERT_GT((u64)error.length, 0);
-    ASSERT_TRUE(strstr(error.data, "Failed to load example from /path/to/file.txt") != NULL);
+    ASSERT_TRUE(strstr(error.data, "Failed to load example from /path/to/file.txt") != nullptr);
 }
 
 UTEST_F(error_report_fixture, multiple_rpstring_format) {
@@ -169,10 +169,10 @@ UTEST_F(error_report_fixture, multiple_rpstring_format) {
 
     FlString error = error_message_format_no_log("Strings: %S, %S, %S", str1, str2, str3);
 
-    ASSERT_TRUE(error.data != NULL);
-    ASSERT_TRUE(strstr(error.data, "first") != NULL);
-    ASSERT_TRUE(strstr(error.data, "second") != NULL);
-    ASSERT_TRUE(strstr(error.data, "third") != NULL);
+    ASSERT_TRUE(error.data != nullptr);
+    ASSERT_TRUE(strstr(error.data, "first") != nullptr);
+    ASSERT_TRUE(strstr(error.data, "second") != nullptr);
+    ASSERT_TRUE(strstr(error.data, "third") != nullptr);
 }
 
 UTEST_F(error_report_fixture, mixed_format_specifiers) {
@@ -182,16 +182,16 @@ UTEST_F(error_report_fixture, mixed_format_specifiers) {
 
     FlString error = error_message_format_no_log("Parse error in %S at line %d: %s", filename, line, reason);
 
-    ASSERT_TRUE(error.data != NULL);
-    ASSERT_TRUE(strstr(error.data, "config.json") != NULL);
-    ASSERT_TRUE(strstr(error.data, "42") != NULL);
-    ASSERT_TRUE(strstr(error.data, "syntax error") != NULL);
+    ASSERT_TRUE(error.data != nullptr);
+    ASSERT_TRUE(strstr(error.data, "config.json") != nullptr);
+    ASSERT_TRUE(strstr(error.data, "42") != nullptr);
+    ASSERT_TRUE(strstr(error.data, "syntax error") != nullptr);
 }
 
 UTEST_F(error_report_fixture, empty_format_string) {
     FlString error = error_message_format_no_log("");
 
-    ASSERT_TRUE(error.data != NULL);
+    ASSERT_TRUE(error.data != nullptr);
     ASSERT_EQ((u64)error.length, 0);
 }
 
@@ -202,7 +202,7 @@ UTEST_F(error_report_fixture, long_error_message) {
 
     FlString error = error_message_format_no_log("%s", long_text);
 
-    ASSERT_TRUE(error.data != NULL);
+    ASSERT_TRUE(error.data != nullptr);
     ASSERT_EQ((size_t)error.length, strlen(long_text));
     ASSERT_EQ(memcmp(error.data, long_text, error.length), 0);
 }
@@ -225,12 +225,12 @@ static FlString test_vformat_no_log_wrapper(const char* fmt, ...) {
 
 UTEST_F(error_report_fixture, vformat_variants) {
     FlString error1 = test_vformat_wrapper(utest_fixture->test_channel, LogLevel_Error, "Error: %d", 123);
-    ASSERT_TRUE(error1.data != NULL);
-    ASSERT_TRUE(strstr(error1.data, "Error: 123") != NULL);
+    ASSERT_TRUE(error1.data != nullptr);
+    ASSERT_TRUE(strstr(error1.data, "Error: 123") != nullptr);
 
     FlString error2 = test_vformat_no_log_wrapper("Message: %s", "test");
-    ASSERT_TRUE(error2.data != NULL);
-    ASSERT_TRUE(strstr(error2.data, "Message: test") != NULL);
+    ASSERT_TRUE(error2.data != nullptr);
+    ASSERT_TRUE(strstr(error2.data, "Message: test") != nullptr);
 }
 
 UTEST_F(error_report_fixture, consecutive_allocations) {
@@ -239,14 +239,14 @@ UTEST_F(error_report_fixture, consecutive_allocations) {
 
     for (int i = 0; i < TEST_ERROR_COUNT; i++) {
         errors[i] = error_message_format_no_log("Error %d", i);
-        ASSERT_TRUE(errors[i].data != NULL);
+        ASSERT_TRUE(errors[i].data != nullptr);
         ASSERT_GT((u64)errors[i].length, 0);
     }
 
     for (int i = 0; i < TEST_ERROR_COUNT; i++) {
         char expected[32];
         snprintf(expected, sizeof(expected), "Error %d", i);
-        ASSERT_TRUE(strstr(errors[i].data, expected) != NULL);
+        ASSERT_TRUE(strstr(errors[i].data, expected) != nullptr);
     }
 #undef TEST_ERROR_COUNT
 }

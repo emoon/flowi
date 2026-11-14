@@ -23,23 +23,23 @@ UTEST(hashmap, int_to_int) {
     hashmap_insert(&map, 99, 300);
 
     int* val = hashmap_get(&map, 42);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 100);
 
     val = hashmap_get(&map, 7);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 200);
 
     val = hashmap_get(&map, 99);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 300);
 
     val = hashmap_get(&map, 123);
-    ASSERT_EQ(val, NULL);
+    ASSERT_EQ(val, nullptr);
 
     hashmap_insert(&map, 42, 999);
     val = hashmap_get(&map, 42);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 999);
 
     ASSERT_EQ(hashmap_count(&map), 3UL);
@@ -72,7 +72,7 @@ UTEST(hashmap, int_to_struct) {
     hashmap_insert(&map, 3, s3);
 
     HashmapTestStruct* val = hashmap_get(&map, 2);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(val->data, 200);
 
     int count = 0;
@@ -105,13 +105,13 @@ UTEST(hashmap, pointer_keys) {
     hashmap_insert(&map, ptr3, 333);
 
     int* val = hashmap_get(&map, ptr2);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 222);
 
     int obj4 = 0;
     void* ptr4 = &obj4;
     val = hashmap_get(&map, ptr4);
-    ASSERT_EQ(val, NULL);
+    ASSERT_EQ(val, nullptr);
 
     fl_arena_destroy(arena);
 }
@@ -132,13 +132,13 @@ UTEST(hashmap, clear_and_reuse) {
     ASSERT_EQ(hashmap_count(&map), 0UL);
 
     for (u64 i = 0; i < 10; i++) {
-        ASSERT_EQ(hashmap_get(&map, i), NULL);
+        ASSERT_EQ(hashmap_get(&map, i), nullptr);
     }
 
     // Should be able to insert again (tests free list)
     hashmap_insert(&map, (u64)42, (u64)4200);
     u64* val = hashmap_get(&map, (u64)42);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 4200UL);
     ASSERT_EQ(hashmap_count(&map), 1UL);
 
@@ -161,7 +161,7 @@ UTEST(hashmap, collision_handling) {
 
     for (int i = 0; i < KEY_COUNT; i++) {
         int* val = hashmap_get(&map, i);
-        ASSERT_NE(val, NULL);
+        ASSERT_NE(val, nullptr);
         ASSERT_EQ(*val, i * 100);
     }
 
@@ -173,9 +173,9 @@ UTEST(hashmap, collision_handling) {
     for (int i = 0; i < KEY_COUNT; i++) {
         int* val = hashmap_get(&map, i);
         if (i % 2 == 0) {
-            ASSERT_EQ(val, NULL);
+            ASSERT_EQ(val, nullptr);
         } else {
-            ASSERT_NE(val, NULL);
+            ASSERT_NE(val, nullptr);
             ASSERT_EQ(*val, i * 100);
         }
     }
@@ -197,7 +197,7 @@ UTEST(hashmap, large_data) {
 
     for (int i = 0; i < 20; i++) {
         LargeStruct* val = hashmap_get(&map, i);
-        ASSERT_NE(val, NULL);
+        ASSERT_NE(val, nullptr);
         ASSERT_EQ((int)val->data[0], 'A' + i);
     }
 
@@ -221,15 +221,15 @@ UTEST(hashmap, string_keys_basic) {
     hashmap_string_insert(&map, key3, 300);
 
     int* val = hashmap_string_get(&map, key1);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 100);
 
     val = hashmap_string_get(&map, key2);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 200);
 
     val = hashmap_string_get(&map, key3);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 300);
 
     ASSERT_EQ(hashmap_count(&map), 3UL);
@@ -257,7 +257,7 @@ UTEST(hashmap, string_keys_same_content_different_memory) {
     hashmap_string_insert(&map, key1, 42);
 
     int* val = hashmap_string_get(&map, key2);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 42);
 
     ASSERT_TRUE(hashmap_string_contains(&map, key1));
@@ -278,7 +278,7 @@ UTEST(hashmap, string_keys_empty_strings) {
     hashmap_string_insert(&map, empty1, 999);
 
     int* val = hashmap_string_get(&map, empty2);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 999);
 
     ASSERT_TRUE(hashmap_string_contains(&map, empty1));
@@ -297,12 +297,12 @@ UTEST(hashmap, string_keys_update_value) {
 
     hashmap_string_insert(&map, key, 100);
     int* val = hashmap_string_get(&map, key);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 100);
 
     hashmap_string_insert(&map, key, 200);
     val = hashmap_string_get(&map, key);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 200);
 
     ASSERT_EQ(hashmap_count(&map), 1UL);
@@ -394,7 +394,7 @@ UTEST(hashmap, string_keys_collision_handling) {
 
     for (int i = 0; i < num_keys; i++) {
         int* val = hashmap_string_get(&map, keys[i]);
-        ASSERT_NE(val, NULL);
+        ASSERT_NE(val, nullptr);
         ASSERT_EQ(*val, i * 10);
         ASSERT_TRUE(hashmap_string_contains(&map, keys[i]));
     }
@@ -421,7 +421,7 @@ UTEST(hashmap, string_keys_clear_and_reuse) {
     ASSERT_EQ(hashmap_count(&map), 0UL);
 
     for (int i = 0; i < 5; i++) {
-        ASSERT_EQ(hashmap_string_get(&map, keys[i]), NULL);
+        ASSERT_EQ(hashmap_string_get(&map, keys[i]), nullptr);
         ASSERT_FALSE(hashmap_string_contains(&map, keys[i]));
     }
 
@@ -429,7 +429,7 @@ UTEST(hashmap, string_keys_clear_and_reuse) {
     FlString new_key = FL_S("newkey");
     hashmap_string_insert(&map, new_key, 9999);
     int* val = hashmap_string_get(&map, new_key);
-    ASSERT_NE(val, NULL);
+    ASSERT_NE(val, nullptr);
     ASSERT_EQ(*val, 9999);
     ASSERT_EQ(hashmap_count(&map), 1UL);
 

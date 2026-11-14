@@ -171,9 +171,9 @@ static void list_expose_cursor(FlListContext* self, const ListState* st, bool ha
 // always-multi-select, always-reorderable behavior; ui_list forwards the FlListOpts choices.
 static FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
     // The slice is the model the List forwards to selection_set_apply; it must be present whenever the List is
-    // the one applying (non-NULL set). A no-selection caller (NULL set) need not owe the slice.
+    // the one applying (non-null set). A no-selection caller (nullptr set) need not owe the slice.
     FL_ASSERT_DEBUG((args.set == nullptr || args.ordered_ids != nullptr)
-                    && "ui_list_begin: ordered_ids required when set is non-NULL");
+                    && "ui_list_begin: ordered_ids required when set is non-null");
 
     list_reset_frame(self, &args);
 
@@ -330,7 +330,7 @@ static FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id) {
     FlLayoutId item_id = { .name = self->current_id.name, .id = (i32)(self->emit_pos + 1) };
 
     // Selected-ness is resolved purely by id membership in the caller's set (CONTEXT Selection Set), so a row
-    // selected while off-screen highlights correctly once scrolled back into view. A NULL set is never selected -
+    // selected while off-screen highlights correctly once scrolled back into view. A nullptr set is never selected -
     // the app owns its own highlight on that path.
     bool selected = (self->set != nullptr) && selection_set_contains(self->set, stable_id);
 
@@ -401,7 +401,7 @@ static FlListResult list_end_impl(FlListContext* self) {
     }
 
     // Auto-apply (the default): fold the emitted requests into the caller's set, forwarding the FULL ordered
-    // slice so SetRange / SetAll resolve across rows virtualized away. A NULL set applies nothing - the app
+    // slice so SetRange / SetAll resolve across rows virtualized away. A nullptr set applies nothing - the app
     // owns apply/highlight via result.requests.
     if (self->set != nullptr && self->req_count > 0) {
         selection_set_apply(self->set, self->requests, self->req_count, self->ordered_ids, self->ordered_count);
@@ -465,8 +465,8 @@ static void list_decl_row_content(const FlListItem* it, f32 row_height) {
 
 FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelectionSet* set, FlListOpts opts) {
     FlListContext* self = ui_get_ctx()->ui_list_ctx;
-    // A NULL item array is treated as empty regardless of count - never trust a count without the backing
-    // array (the loop below dereferences items[i], so a non-zero count with NULL items would fault). n is the
+    // A nullptr item array is treated as empty regardless of count - never trust a count without the backing
+    // array (the loop below dereferences items[i], so a non-zero count with nullptr items would fault). n is the
     // effective length forwarded to the core; the begin call and the row loop both key off it, not the raw count.
     u32 n = (items != nullptr) ? count : 0;
 

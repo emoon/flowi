@@ -12,10 +12,10 @@ UTEST(cleanup, arena_scratch_auto_basic) {
 
     {
         arena_scratch_auto(temp);
-        ASSERT_TRUE(temp.arena != NULL);
+        ASSERT_TRUE(temp.arena != nullptr);
 
         char* buffer = arena_alloc_array(temp.arena, char, 1024);
-        ASSERT_TRUE(buffer != NULL);
+        ASSERT_TRUE(buffer != nullptr);
 
         ASSERT_GT(temp.arena->pos, start_pos);
     }
@@ -28,7 +28,7 @@ UTEST(cleanup, arena_scratch_auto_basic) {
 static u64 scratch_auto_early_return_helper(void) {
     arena_scratch_auto(temp);
     int* data = arena_alloc_array(temp.arena, int, 100);
-    if (data != NULL) {
+    if (data != nullptr) {
         return temp.arena->pos;
     }
     return 0;
@@ -46,7 +46,7 @@ UTEST(cleanup, arena_scratch_auto_early_return) {
     {
         arena_scratch_auto(temp);
         int* data = arena_alloc_array(temp.arena, int, 100);
-        ASSERT_TRUE(data != NULL);
+        ASSERT_TRUE(data != nullptr);
     }
 
     ASSERT_EQ(scratch_arena->pos, start_pos);
@@ -59,13 +59,13 @@ UTEST(cleanup, arena_scratch_auto_nested) {
     {
         arena_scratch_auto(outer);
         char* outer_buffer = arena_alloc_array(outer.arena, char, 512);
-        ASSERT_TRUE(outer_buffer != NULL);
+        ASSERT_TRUE(outer_buffer != nullptr);
         u64 outer_pos = outer.arena->pos;
 
         {
             arena_scratch_auto(inner);
             char* inner_buffer = arena_alloc_array(inner.arena, char, 256);
-            ASSERT_TRUE(inner_buffer != NULL);
+            ASSERT_TRUE(inner_buffer != nullptr);
 
             ASSERT_GT(inner.arena->pos, outer_pos);
         }
@@ -83,7 +83,7 @@ UTEST(cleanup, arena_scratch_auto_multiple_goto_paths) {
     {
         arena_scratch_auto(temp);
         int* data = arena_alloc_array(temp.arena, int, 50);
-        ASSERT_TRUE(data != NULL);
+        ASSERT_TRUE(data != nullptr);
         goto path1_exit;
     }
 path1_exit:
@@ -92,7 +92,7 @@ path1_exit:
     {
         arena_scratch_auto(temp);
         int* data = arena_alloc_array(temp.arena, int, 50);
-        ASSERT_TRUE(data != NULL);
+        ASSERT_TRUE(data != nullptr);
         goto path2_exit;
     }
 path2_exit:
@@ -101,7 +101,7 @@ path2_exit:
     {
         arena_scratch_auto(temp);
         int* data = arena_alloc_array(temp.arena, int, 50);
-        ASSERT_TRUE(data != NULL);
+        ASSERT_TRUE(data != nullptr);
     }
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }
@@ -116,7 +116,7 @@ UTEST(cleanup, arena_temp_auto_basic) {
         ASSERT_EQ(temp.pos, start_pos);
 
         int* numbers = arena_alloc_array(test_arena, int, 10);
-        ASSERT_TRUE(numbers != NULL);
+        ASSERT_TRUE(numbers != nullptr);
         for (int i = 0; i < 10; i++) {
             numbers[i] = i;
         }
@@ -137,7 +137,7 @@ UTEST(cleanup, arena_temp_auto_always_cleans) {
         arena_temp_auto(temp, test_arena);
 
         int* numbers = arena_alloc_array(test_arena, int, 10);
-        ASSERT_TRUE(numbers != NULL);
+        ASSERT_TRUE(numbers != nullptr);
     }
 
     ASSERT_EQ(test_arena->pos, start_pos);
@@ -145,7 +145,7 @@ UTEST(cleanup, arena_temp_auto_always_cleans) {
     // If you want to KEEP allocations, don't use temp scope - just allocate directly
     {
         int* numbers = arena_alloc_array(test_arena, int, 10);
-        ASSERT_TRUE(numbers != NULL);
+        ASSERT_TRUE(numbers != nullptr);
     }
 
     ASSERT_GT(test_arena->pos, start_pos);
@@ -160,7 +160,7 @@ UTEST(cleanup, arena_scratch_auto_loop_control) {
     for (int i = 0; i < 10; i++) {
         arena_scratch_auto(temp);
         char* buffer = arena_alloc_array(temp.arena, char, 100);
-        ASSERT_TRUE(buffer != NULL);
+        ASSERT_TRUE(buffer != nullptr);
 
         if (i == 5) {
             break;
@@ -172,7 +172,7 @@ UTEST(cleanup, arena_scratch_auto_loop_control) {
     for (int i = 0; i < 10; i++) {
         arena_scratch_auto(temp);
         char* buffer = arena_alloc_array(temp.arena, char, 100);
-        ASSERT_TRUE(buffer != NULL);
+        ASSERT_TRUE(buffer != nullptr);
 
         if (i % 2 == 0) {
             continue;
@@ -191,7 +191,7 @@ UTEST(cleanup, arena_scratch_auto_goto) {
     {
         arena_scratch_auto(temp);
         char* buffer = arena_alloc_array(temp.arena, char, 200);
-        ASSERT_TRUE(buffer != NULL);
+        ASSERT_TRUE(buffer != nullptr);
 
         error = true;
         if (error) {
@@ -213,21 +213,21 @@ UTEST(cleanup, arena_temp_auto_multiple_scopes) {
     {
         arena_temp_auto(temp1, test_arena);
         int* data1 = arena_alloc_array(test_arena, int, 10);
-        ASSERT_TRUE(data1 != NULL);
+        ASSERT_TRUE(data1 != nullptr);
     }
     ASSERT_EQ(test_arena->pos, start_pos);
 
     {
         arena_temp_auto(temp2, test_arena);
         int* data2 = arena_alloc_array(test_arena, int, 20);
-        ASSERT_TRUE(data2 != NULL);
+        ASSERT_TRUE(data2 != nullptr);
     }
     ASSERT_EQ(test_arena->pos, start_pos);
 
     {
         arena_temp_auto(temp3, test_arena);
         int* data3 = arena_alloc_array(test_arena, int, 30);
-        ASSERT_TRUE(data3 != NULL);
+        ASSERT_TRUE(data3 != nullptr);
     }
     ASSERT_EQ(test_arena->pos, start_pos);
 
@@ -241,7 +241,7 @@ UTEST(cleanup, arena_scratch_manual_and_auto_separate) {
     {
         FlTempArena manual_temp = fl_arena_scratch_begin();
         char* buffer1 = arena_alloc_array(manual_temp.arena, char, 100);
-        ASSERT_TRUE(buffer1 != NULL);
+        ASSERT_TRUE(buffer1 != nullptr);
         fl_arena_scratch_end(manual_temp);
     }
     ASSERT_EQ(scratch_arena->pos, start_pos);
@@ -249,14 +249,14 @@ UTEST(cleanup, arena_scratch_manual_and_auto_separate) {
     {
         arena_scratch_auto(auto_temp);
         char* buffer2 = arena_alloc_array(auto_temp.arena, char, 100);
-        ASSERT_TRUE(buffer2 != NULL);
+        ASSERT_TRUE(buffer2 != nullptr);
     }
     ASSERT_EQ(scratch_arena->pos, start_pos);
 
     {
         FlTempArena manual_temp2 = fl_arena_scratch_begin();
         char* buffer3 = arena_alloc_array(manual_temp2.arena, char, 100);
-        ASSERT_TRUE(buffer3 != NULL);
+        ASSERT_TRUE(buffer3 != nullptr);
         fl_arena_scratch_end(manual_temp2);
     }
     ASSERT_EQ(scratch_arena->pos, start_pos);
@@ -269,7 +269,7 @@ UTEST(cleanup, arena_scratch_auto_complex_control_flow) {
     {
         arena_scratch_auto(temp);
         char* buffer = arena_alloc_array(temp.arena, char, 500);
-        ASSERT_TRUE(buffer != NULL);
+        ASSERT_TRUE(buffer != nullptr);
 
         int mode = 1;
         switch (mode) {
@@ -285,7 +285,7 @@ switch_exit:
     {
         arena_scratch_auto(temp);
         char* buffer = arena_alloc_array(temp.arena, char, 500);
-        ASSERT_TRUE(buffer != NULL);
+        ASSERT_TRUE(buffer != nullptr);
 
         for (int i = 0; i < 10; i++) {
             if (i == 5) {
@@ -298,7 +298,7 @@ switch_exit:
     {
         arena_scratch_auto(temp);
         char* buffer = arena_alloc_array(temp.arena, char, 500);
-        ASSERT_TRUE(buffer != NULL);
+        ASSERT_TRUE(buffer != nullptr);
 
         if (true) {
             goto nested_exit;
@@ -316,7 +316,7 @@ UTEST(cleanup, arena_scratch_auto_large_allocation) {
         arena_scratch_auto(temp);
 
         char* large_buffer = arena_alloc_array(temp.arena, char, 1024 * 1024);
-        ASSERT_TRUE(large_buffer != NULL);
+        ASSERT_TRUE(large_buffer != nullptr);
 
         // Fill with data to ensure it's committed
         for (int i = 0; i < 1024; i++) {

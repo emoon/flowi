@@ -78,7 +78,7 @@ static bool sdl_metal_create_window(SdlWindowContext* self, FlWindow* window, co
         return false;
     }
     window->metal_view = SDL_Metal_CreateView(window->window);
-    if (window->metal_view == NULL) {
+    if (window->metal_view == nullptr) {
         log_error("fl_app window: SDL_Metal_CreateView failed: %s", SDL_GetError());
         SDL_DestroyWindow(window->window);
         return false;
@@ -87,7 +87,7 @@ static bool sdl_metal_create_window(SdlWindowContext* self, FlWindow* window, co
     if (window->metal_layer == nil) {
         log_error("fl_app window: SDL_Metal_GetLayer returned no CAMetalLayer");
         SDL_Metal_DestroyView(window->metal_view);
-        window->metal_view = NULL;
+        window->metal_view = nullptr;
         SDL_DestroyWindow(window->window);
         return false;
     }
@@ -107,11 +107,11 @@ static void sdl_metal_release_shared_state(SdlWindowContext* self) {
 
 // The Surface Texture is render-backend-owned; the shared compositor state is released with the last Metal window.
 static void sdl_metal_destroy_window(SdlWindowContext* self, FlWindow* window) {
-    if (window->metal_view == NULL) {
+    if (window->metal_view == nullptr) {
         return;
     }
     SDL_Metal_DestroyView(window->metal_view);
-    window->metal_view = NULL;
+    window->metal_view = nullptr;
     window->metal_layer = nil;
     self->metal_window_count--;
     if (self->metal_window_count <= 0 && self->metal_ready) {
@@ -179,7 +179,7 @@ static void sdl_present_metal(void* ud, FlWindow* window, FlSurfaceHandle surfac
     SdlWindowContext* self = (SdlWindowContext*)ud;
     // A null texture leaves the window untouched.
     id<MTLTexture> ui_tex = (id<MTLTexture>)surface_texture;
-    if (window == NULL || window->metal_layer == nil) {
+    if (window == nullptr || window->metal_layer == nil) {
         return;
     }
     if (ui_tex == nil) {

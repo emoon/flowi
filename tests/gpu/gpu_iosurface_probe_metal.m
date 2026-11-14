@@ -20,7 +20,7 @@
 bool gpu_test_iosurface_readback(void* iosurface, int width, int height, u8* out_rgba) {
     @autoreleasepool {
         IOSurfaceRef surf = (IOSurfaceRef)iosurface;
-        if (surf == NULL || width <= 0 || height <= 0 || out_rgba == NULL) {
+        if (surf == nullptr || width <= 0 || height <= 0 || out_rgba == nullptr) {
             return false;
         }
 
@@ -93,17 +93,17 @@ bool gpu_test_iosurface_readback(void* iosurface, int width, int height, u8* out
 // into gpu_smoke_test.c. gpu_test_cf_retain holds an independent reference across a surface destroy; the retain count
 // afterwards then reveals whether the backend dropped exactly its own references (no leak, no double-free).
 void gpu_test_cf_retain(void* obj) {
-    if (obj != NULL) {
+    if (obj != nullptr) {
         CFRetain((CFTypeRef)obj);
     }
 }
 
 long gpu_test_cf_retain_count(void* obj) {
-    return obj != NULL ? (long)CFGetRetainCount((CFTypeRef)obj) : 0;
+    return obj != nullptr ? (long)CFGetRetainCount((CFTypeRef)obj) : 0;
 }
 
 void gpu_test_cf_release(void* obj) {
-    if (obj != NULL) {
+    if (obj != nullptr) {
         CFRelease((CFTypeRef)obj);
     }
 }
