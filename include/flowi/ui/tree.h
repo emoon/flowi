@@ -82,8 +82,8 @@ typedef struct FlTreeResult {
 // A tree view over rows you own.
 //
 // Each frame, call `fl_tree_begin` with the visible rows. For each row in the range it returns, call
-// `fl_tree_item_begin`, draw the row, and call `fl_tree_item_end`. Then call `fl_tree_end`. If
-// `FlTreeResult.toggled_id` is not 0, expand or collapse that row in your own data.
+// `fl_tree_item_begin`, draw the row, and call `fl_tree_item_end`. Then call `fl_tree_end`. If the
+// `FlTreeResult` reports a toggled row, expand or collapse that row in your own data.
 //
 // For a tree too large to list row by row, start with `fl_tree_begin_virtual` and use `fl_tree_row_at` and
 // `fl_tree_item_begin_virtual` for the rows.
@@ -120,7 +120,8 @@ FL_API FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, con
 // Returns which child a row of a virtual tree is, so you know what to draw.
 //
 // It works from `fl_tree_begin_virtual` until another tree begins or the frame ends. After `fl_tree_end`, pass
-// it `FlTreeResult.toggled_row` to find the node to expand or collapse.
+// it the row number of the toggled row in the `FlTreeResult`, not the row's id, to find the node to expand
+// or collapse.
 FL_API FlTreeVirtualRow fl_tree_row_at(uint32_t row);
 // Starts a row of a virtual tree, like `fl_tree_item_begin`.
 //

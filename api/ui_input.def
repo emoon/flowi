@@ -99,7 +99,7 @@ api Input {
     ///
     /// `items` holds the `count` rows in display order. Selection goes into `set`; if `set` is null, no row is
     /// highlighted. To draw the rows yourself, use `List::begin`.
-    [manual] list(id: LayoutId, items: *const ListItem, count: u32, set: *SelectionSet, opts: ListOpts) -> ListResult
+    [manual] [rust_doc(List::show)] list(id: LayoutId, items: *const ListItem, count: u32, set: *SelectionSet, opts: ListOpts) -> ListResult
     /// True when the semantic navigation-down action was pressed this frame, independent of whether it came
     /// from an arrow key, D-pad, or analog stick binding.
     [manual] nav_down_pressed() -> bool

@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "api_gen"
 version = "0.1.0"
-source = "git+https://github.com/emoon/api-gen?rev=b21ed8e2e3f2a78269ddcce4c7b209e763b3590e#b21ed8e2e3f2a78269ddcce4c7b209e763b3590e"
+source = "git+https://github.com/emoon/api-gen?rev=4e7e01d783e653065523bedd9729e46e2dd5d707#4e7e01d783e653065523bedd9729e46e2dd5d707"
 dependencies = [
  "heck",
  "pest",
