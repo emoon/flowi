@@ -27,6 +27,30 @@ typedef struct FlTreeRow {
     bool expanded;
 } FlTreeRow;
 
+// One expanded node of a virtual tree. The app passes only the expanded nodes, in display order: a node comes
+// before the nodes expanded below it, and expanded siblings are in child order. The children of the tree's
+// root level and of each expanded node are numbered from 0.
+typedef struct FlTreeExpanded {
+    // Index in the slice of the expanded node this node is a child of, or -1 for a node at the root level.
+    int32_t parent;
+    // Which child of its parent this node is.
+    uint32_t child_index;
+    // How many children this node shows.
+    uint32_t child_count;
+} FlTreeExpanded;
+
+// Where one row of a virtual tree sits, from Tree::row_at.
+typedef struct FlTreeVirtualRow {
+    // Index of the expanded node this row is a child of, or -1 for a row at the root level.
+    int32_t parent;
+    // Which child of its parent this row is.
+    uint32_t child_index;
+    // Nesting level, 0 for a root row.
+    uint16_t depth;
+    // Index of this row's own entry in the expanded slice, or -1 when the row is not expanded.
+    int32_t node;
+} FlTreeVirtualRow;
+
 // Configuration for a Tree, consumed by Tree::begin.
 typedef struct FlTreeConfig {
     // Row layout, type-ahead labels and scrollbar, as for a List. labels runs parallel to the row slice.

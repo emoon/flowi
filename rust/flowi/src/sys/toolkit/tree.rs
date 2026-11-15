@@ -24,6 +24,51 @@ const _: () = {
     assert!(core::mem::offset_of!(TreeRow, expanded) == 11, "TreeRow.expanded offset drift");
 };
 
+/// One expanded node of a virtual tree. The app passes only the expanded nodes, in display order: a node comes
+/// before the nodes expanded below it, and expanded siblings are in child order. The children of the tree's
+/// root level and of each expanded node are numbered from 0.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct TreeExpanded {
+    /// Index in the slice of the expanded node this node is a child of, or -1 for a node at the root level.
+    pub parent: i32,
+    /// Which child of its parent this node is.
+    pub child_index: u32,
+    /// How many children this node shows.
+    pub child_count: u32,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<TreeExpanded>() == 12, "TreeExpanded size drift");
+    assert!(core::mem::align_of::<TreeExpanded>() == 4, "TreeExpanded align drift");
+    assert!(core::mem::offset_of!(TreeExpanded, parent) == 0, "TreeExpanded.parent offset drift");
+    assert!(core::mem::offset_of!(TreeExpanded, child_index) == 4, "TreeExpanded.child_index offset drift");
+    assert!(core::mem::offset_of!(TreeExpanded, child_count) == 8, "TreeExpanded.child_count offset drift");
+};
+
+/// Where one row of a virtual tree sits, from Tree::row_at.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct TreeVirtualRow {
+    /// Index of the expanded node this row is a child of, or -1 for a row at the root level.
+    pub parent: i32,
+    /// Which child of its parent this row is.
+    pub child_index: u32,
+    /// Nesting level, 0 for a root row.
+    pub depth: u16,
+    /// Index of this row's own entry in the expanded slice, or -1 when the row is not expanded.
+    pub node: i32,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<TreeVirtualRow>() == 16, "TreeVirtualRow size drift");
+    assert!(core::mem::align_of::<TreeVirtualRow>() == 4, "TreeVirtualRow align drift");
+    assert!(core::mem::offset_of!(TreeVirtualRow, parent) == 0, "TreeVirtualRow.parent offset drift");
+    assert!(core::mem::offset_of!(TreeVirtualRow, child_index) == 4, "TreeVirtualRow.child_index offset drift");
+    assert!(core::mem::offset_of!(TreeVirtualRow, depth) == 8, "TreeVirtualRow.depth offset drift");
+    assert!(core::mem::offset_of!(TreeVirtualRow, node) == 12, "TreeVirtualRow.node offset drift");
+};
+
 /// Configuration for a Tree, consumed by Tree::begin.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
