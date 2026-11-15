@@ -20,7 +20,7 @@ const _: () = {
 
 /// Why a parse failed, stored in `JsonParseResult.error`.
 ///
-/// `Json::get_error_description` returns a readable message for each value.
+/// `fl_json_get_error_description` returns a readable message for each value.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum JsonParseError {
@@ -142,11 +142,10 @@ const _: () = {
 
 /// A JSON value.
 ///
-/// `Json::parse_with_flags` returns the root value. Read `JsonValue.type` to see what it holds.
+/// `fl_json_parse_with_flags` returns the root value. Read `JsonValue.type` to see what it holds.
 #[repr(C)]
 pub struct JsonValue {
-    /// A pointer to a flowi string (not a C string), a `JsonNumber`, `JsonObject` or `JsonArray`, as
-    /// `JsonValue.type` says.
+    /// A pointer to a flowi `String`, a `JsonNumber`, `JsonObject` or `JsonArray`, as `JsonValue.type` says.
     ///
     /// It is null for `JsonType::True`, `JsonType::False` and `JsonType::Null`.
     pub payload: *mut core::ffi::c_void,
@@ -163,7 +162,7 @@ const _: () = {
 
 /// Where and why a parse failed.
 ///
-/// `Json::parse_with_flags` fills it in when it returns null.
+/// `fl_json_parse_with_flags` fills it in when it returns null.
 #[repr(C)]
 pub struct JsonParseResult {
     /// The reason the parse failed.
@@ -187,8 +186,8 @@ const _: () = {
 
 // A JSON parser that builds a tree of values in an arena.
 //
-// Parse text with `Json::parse_with_flags`, read the tree with the `Json::get_string_prop` calls or by following
-// `JsonValue.payload`, and write it out again with `Json::write_pretty`.
+// Parse text with `fl_json_parse_with_flags`, read the tree with the `fl_json_get_string_prop` calls or by following
+// `JsonValue.payload`, and write it out again with `fl_json_write_pretty`.
 extern "C" {
     /// Parses `src` and returns the root value, or null if it is not valid.
     ///

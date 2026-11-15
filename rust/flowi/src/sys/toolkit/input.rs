@@ -284,7 +284,7 @@ const _: () = {
     assert!(core::mem::offset_of!(WindowDropData, y) == 20, "WindowDropData.y offset drift");
 };
 
-/// A keyboard event for `Input::push_key_event`.
+/// A keyboard event for `fl_input_push_key_event`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct KeyEvent {
@@ -305,7 +305,7 @@ const _: () = {
     assert!(core::mem::offset_of!(KeyEvent, timestamp) == 16, "KeyEvent.timestamp offset drift");
 };
 
-/// A text input event for `Input::push_text_input_event`, holding the composed characters.
+/// A text input event for `fl_input_push_text_input_event`, holding the composed characters.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TextInputEvent {
@@ -334,7 +334,7 @@ const _: () = {
     assert!(core::mem::align_of::<MouseEventPayload>() == 4, "MouseEventPayload align drift");
 };
 
-/// A mouse event for `Input::push_mouse_event`.
+/// A mouse event for `fl_input_push_mouse_event`.
 ///
 /// `type` says which payload is set: `move` for `MouseEventType::Move`, `button` for `MouseEventType::Button_Down`
 /// and `MouseEventType::Button_Up`, `wheel` for `MouseEventType::Wheel` and `relative` for
@@ -367,7 +367,7 @@ const _: () = {
     assert!(core::mem::align_of::<GamepadEventPayload>() == 4, "GamepadEventPayload align drift");
 };
 
-/// A gamepad event for `Input::push_gamepad_event`.
+/// A gamepad event for `fl_input_push_gamepad_event`.
 ///
 /// `gamepad_id` is the device. `type` says which payload is set: `button` for the two button types and `axis` for
 /// `GamepadEventType::Axis_Motion`. `GamepadEventType::Connected` and `GamepadEventType::Disconnected` have no
@@ -402,7 +402,7 @@ const _: () = {
     assert!(core::mem::align_of::<WindowEventPayload>() == 8, "WindowEventPayload align drift");
 };
 
-/// A window event for `Input::push_window_event`.
+/// A window event for `fl_input_push_window_event`.
 ///
 /// `type` says which payload is set: `resize` for `WindowEventType::Resize` and `drop` for
 /// `WindowEventType::Drop_File`. The other types have no payload.

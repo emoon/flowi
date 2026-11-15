@@ -3,8 +3,8 @@
 // Functions for working with file paths held in strings.
 //
 // Paths are UTF-8 strings that use forward slashes. A backslash is also read as a separator, and
-// `Path::fl_path_normalize` turns it into a forward slash. Calls that make a new path allocate it from the
-// `arena` you pass, so there is nothing to free. `Path::fl_path_get_extension` and `Path::fl_path_get_filename`
+// `fl_path_normalize` turns it into a forward slash. Calls that make a new path allocate it from the
+// `arena` you pass, so there is nothing to free. `fl_path_get_extension` and `fl_path_get_filename`
 // return a view into the path you pass and take no arena.
 extern "C" {
     /// Returns `path` with backslashes turned into forward slashes and repeated separators collapsed to one.
@@ -13,7 +13,7 @@ extern "C" {
     pub fn fl_path_normalize(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
     /// Returns `path` with its "." and ".." components resolved.
     ///
-    /// Backslashes and repeated separators are treated as in `Path::fl_path_normalize`, and a trailing separator is
+    /// Backslashes and repeated separators are treated as in `fl_path_normalize`, and a trailing separator is
     /// dropped. Only a path that starts with "/" counts as absolute here.
     ///
     /// A ".." that has nothing before it to remove is kept in a relative path and dropped in an absolute one. A path

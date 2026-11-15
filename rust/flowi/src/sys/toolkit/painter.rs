@@ -67,7 +67,7 @@ pub struct Stroke {
     pub dash: crate::sys::StrokeStyle,
     /// How the ends of an arc are finished.
     ///
-    /// Only `Painter::arc` reads it. `Painter::line` and `Painter::polyline` always use round caps and joins.
+    /// Only `fl_painter_arc` reads it. `fl_painter_line` and `fl_painter_polyline` always use round caps and joins.
     pub cap: crate::sys::StrokeCap,
 }
 
@@ -102,7 +102,7 @@ const _: () = {
     assert!(core::mem::offset_of!(PolyPoint, intensity) == 8, "PolyPoint.intensity offset drift");
 };
 
-/// One bar of a `Painter::bars` row.
+/// One bar of a `fl_painter_bars` row.
 ///
 /// The bar spans from the baseline of the row to `h`. Every bar has its own width.
 #[repr(C)]
@@ -124,7 +124,7 @@ const _: () = {
     assert!(core::mem::offset_of!(Bar, h) == 8, "Bar.h offset drift");
 };
 
-/// A shadow or glow that `Painter::set_effect` attaches to later draws.
+/// A shadow or glow that `fl_painter_set_effect` attaches to later draws.
 ///
 /// An effect only changes how a draw looks. It never changes geometry or hit-testing. Only the GPU backend draws
 /// it, and text is never drawn with an effect. A zeroed effect has the kind `EffectKind::None`.
@@ -155,7 +155,7 @@ const _: () = {
 
 /// The fill of a rectangle: a radius and a color for each corner.
 ///
-/// This is passed to `Painter::rect_styled`. Four equal corner colors give a solid fill. Different colors are
+/// This is passed to `fl_painter_rect_styled`. Four equal corner colors give a solid fill. Different colors are
 /// interpolated across the rectangle.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -173,7 +173,7 @@ const _: () = {
     assert!(core::mem::offset_of!(RectConfig, corner) == 16, "RectConfig.corner offset drift");
 };
 
-/// One solid rectangle of a `Painter::rects` batch.
+/// One solid rectangle of a `fl_painter_rects` batch.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ColoredRect {
@@ -201,7 +201,7 @@ const _: () = {
 
 /// The corner colors of a gradient rectangle.
 ///
-/// This is passed to `Painter::gradient_rect`. The colors are interpolated across the rectangle.
+/// This is passed to `fl_painter_gradient_rect`. The colors are interpolated across the rectangle.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct CornerColors {
@@ -226,7 +226,7 @@ const _: () = {
 
 /// How a polyline is stroked and filled.
 ///
-/// This is passed to `Painter::polyline`.
+/// This is passed to `fl_painter_polyline`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct PolylineStyle {
@@ -253,7 +253,7 @@ const _: () = {
 
 /// A part of an image drawn into a destination rectangle.
 ///
-/// This is passed to `Painter::image_sub`.
+/// This is passed to `fl_painter_image_sub`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ImageSub {
@@ -273,7 +273,7 @@ pub struct ImageSub {
     pub sw: f32,
     /// The height of the source, in image pixels.
     pub sh: f32,
-    /// The image to draw, from `Image::load`.
+    /// The image to draw, from `fl_image_load`.
     pub image: crate::sys::ImageHandle,
     /// The tint, multiplied with the image. Pass white (255, 255, 255, 255) for no tint.
     pub color: crate::sys::Color,
@@ -311,7 +311,7 @@ extern "C" {
     pub fn fl_painter_rect(x: f32, y: f32, w: f32, h: f32, color: crate::sys::Color);
     /// Draws a batch of filled rectangles in one call.
     ///
-    /// The result is the same as calling `Painter::rect` for each entry in order, so later entries paint over
+    /// The result is the same as calling `fl_painter_rect` for each entry in order, so later entries paint over
     /// earlier ones. An empty batch draws nothing.
     pub fn fl_painter_rects(rects: *const crate::sys::ColoredRect, rects_size: u32);
     /// Draws a filled rectangle with rounded corners of the same `radius`.
@@ -322,13 +322,13 @@ extern "C" {
     pub fn fl_painter_rect_stroke(x: f32, y: f32, w: f32, h: f32, stroke: crate::sys::Stroke);
     /// Draws the outline of a rectangle with rounded corners.
     ///
-    /// `radius` is the outer radius of the corners. It works like `Painter::rect_stroke` otherwise.
+    /// `radius` is the outer radius of the corners. It works like `fl_painter_rect_stroke` otherwise.
     pub fn fl_painter_rect_rounded_stroke(x: f32, y: f32, w: f32, h: f32, radius: f32, stroke: crate::sys::Stroke);
     /// Draws a filled rectangle with a different color in each corner.
     pub fn fl_painter_gradient_rect(x: f32, y: f32, w: f32, h: f32, colors: crate::sys::CornerColors);
     /// Draws a filled rectangle with a radius and a color for each corner.
     ///
-    /// Use it for a rounded rectangle with a gradient, which `Painter::rect_rounded` and `Painter::gradient_rect`
+    /// Use it for a rounded rectangle with a gradient, which `fl_painter_rect_rounded` and `fl_painter_gradient_rect`
     /// cannot draw. A radius larger than half the shorter side is clamped to it, which gives a pill.
     pub fn fl_painter_rect_styled(x: f32, y: f32, w: f32, h: f32, config: crate::sys::RectConfig);
     /// Draws a horizontal line of `length` that is one logical pixel thick.
@@ -344,8 +344,8 @@ extern "C" {
     /// Draws a straight line from (`x0`, `y0`) to (`x1`, `y1`).
     ///
     /// The line is centered on the two points and has round caps that reach half the stroke width past each
-    /// end. Equal points draw a dot as wide as the stroke. For a sharp one pixel line, use `Painter::hline` or
-    /// `Painter::vline`.
+    /// end. Equal points draw a dot as wide as the stroke. For a sharp one pixel line, use `fl_painter_hline` or
+    /// `fl_painter_vline`.
     pub fn fl_painter_line(x0: f32, y0: f32, x1: f32, y1: f32, stroke: crate::sys::Stroke);
     /// Draws `text` with its top-left corner at (`x`, `y`).
     ///
@@ -353,12 +353,12 @@ extern "C" {
     pub fn fl_painter_text(x: f32, y: f32, text: crate::sys::RawStr, font: crate::sys::FontId, color: crate::sys::Color);
     /// Draws a single line of `text` in the given style, with its top-left corner at (`x`, `y`).
     ///
-    /// Sizes are rounded to quarter pixels in the same way as in `Text::measure`, so a measured run matches the
+    /// Sizes are rounded to quarter pixels in the same way as in `fl_text_measure`, so a measured run matches the
     /// drawn one.
     pub fn fl_painter_text_styled(x: f32, y: f32, text: crate::sys::RawStr, style: crate::sys::TextStyle, color: crate::sys::Color);
     /// Draws an image into the rectangle at (`x`, `y`) and returns true if it was drawn.
     ///
-    /// `image` is the handle from `Image::load`. `color` is multiplied with the image, so pass white
+    /// `image` is the handle from `fl_image_load`. `color` is multiplied with the image, so pass white
     /// (255, 255, 255, 255) for no tint. A `w` or `h` of 0 or less uses the width or height of the image. It
     /// returns false and draws nothing until the image is ready.
     pub fn fl_painter_image(x: f32, y: f32, w: f32, h: f32, image: crate::sys::ImageHandle, color: crate::sys::Color) -> bool;
@@ -371,7 +371,7 @@ extern "C" {
     pub fn fl_painter_circle_stroke(cx: f32, cy: f32, radius: f32, stroke: crate::sys::Stroke);
     /// Draws a filled circle with an outline.
     ///
-    /// Use it instead of `Painter::circle` followed by `Painter::circle_stroke`. The two are drawn as one
+    /// Use it instead of `fl_painter_circle` followed by `fl_painter_circle_stroke`. The two are drawn as one
     /// shape, so no fill color shows at the outer edge.
     pub fn fl_painter_circle_bordered(cx: f32, cy: f32, radius: f32, color: crate::sys::Color, border: crate::sys::Stroke);
     /// Draws a filled diamond with the half-width `rx` and the half-height `ry`.
@@ -380,7 +380,7 @@ extern "C" {
     ///
     /// The stroke lies inside the diamond and is always solid.
     pub fn fl_painter_diamond_stroke(cx: f32, cy: f32, rx: f32, ry: f32, stroke: crate::sys::Stroke);
-    /// Draws a filled diamond with an outline, as one shape like `Painter::circle_bordered`.
+    /// Draws a filled diamond with an outline, as one shape like `fl_painter_circle_bordered`.
     pub fn fl_painter_diamond_bordered(cx: f32, cy: f32, rx: f32, ry: f32, color: crate::sys::Color, border: crate::sys::Stroke);
     /// Draws an arc, or a full ring, around (`cx`, `cy`).
     ///

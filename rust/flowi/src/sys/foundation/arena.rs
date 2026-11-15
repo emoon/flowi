@@ -8,7 +8,7 @@ pub enum Arena {}
 
 /// A saved position in an arena.
 ///
-/// Ending the scope with `Arena::fl_arena_temp_end` or `Arena::fl_arena_scratch_end` frees everything allocated
+/// Ending the scope with `fl_arena_temp_end` or `fl_arena_scratch_end` frees everything allocated
 /// from the arena after the position was saved.
 #[repr(C)]
 pub struct TempArena {
@@ -29,18 +29,18 @@ const _: () = {
 //
 // An arena reserves address space up front and commits memory as it is used. Allocations that run past the
 // reserved size stop the program. For short lived memory, use a scratch arena scope: call
-// `Arena::fl_arena_scratch_begin`, allocate, and call `Arena::fl_arena_scratch_end` with the scope it returned.
+// `fl_arena_scratch_begin`, allocate, and call `fl_arena_scratch_end` with the scope it returned.
 extern "C" {
     /// Starts flowi's core services and returns the main arena.
     ///
     /// `job_threads` is the number of job threads to start. Calling it again returns the same arena and leaves the
-    /// running services alone. `App::create` calls it for you, so call it yourself only to choose `job_threads`
+    /// running services alone. Creating an app calls it for you, so call it yourself only to choose `job_threads`
     /// or to get the arena before you create an app.
     pub fn fl_init(job_threads: i32) -> *mut crate::sys::Arena;
     /// Stops flowi's core services and releases the main arena and the scratch arenas of the calling thread.
     ///
-    /// Every flowi object must be destroyed first. The arena returned by `Arena::fl_init` is invalid afterwards.
-    /// Does nothing if the services are not running, and `Arena::fl_init` starts them again.
+    /// Every flowi object must be destroyed first. The arena returned by `fl_init` is invalid afterwards.
+    /// Does nothing if the services are not running, and `fl_init` starts them again.
     pub fn fl_destroy();
     /// Reserves a new arena of `reserved_size` bytes of address space and returns it.
     ///
@@ -72,22 +72,22 @@ extern "C" {
     pub fn fl_arena_current_pos(arena: *mut crate::sys::Arena) -> *mut core::ffi::c_void;
     /// Returns the address the next allocation of `alignment` would get, without allocating.
     pub fn fl_arena_aligned_pos(arena: *mut crate::sys::Arena, alignment: u64) -> *mut core::ffi::c_void;
-    /// Starts a scope that frees what you allocate from `arena` until `Arena::fl_arena_temp_end`.
+    /// Starts a scope that frees what you allocate from `arena` until `fl_arena_temp_end`.
     pub fn fl_arena_temp_begin(arena: *mut crate::sys::Arena) -> crate::sys::TempArena;
-    /// Ends the scope started with `Arena::fl_arena_temp_begin` and frees what was allocated in it.
+    /// Ends the scope started with `fl_arena_temp_begin` and frees what was allocated in it.
     pub fn fl_arena_temp_end(temp: crate::sys::TempArena);
     /// Starts a scope on a scratch arena of the calling thread.
     ///
-    /// End it with `Arena::fl_arena_scratch_end`.
+    /// End it with `fl_arena_scratch_end`.
     pub fn fl_arena_scratch_begin() -> crate::sys::TempArena;
     /// Starts a scope on a scratch arena of the calling thread that is not `conflict_arena`.
     ///
     /// Use it when you already allocate from a scratch arena and need a second one. End it with
-    /// `Arena::fl_arena_scratch_end`.
+    /// `fl_arena_scratch_end`.
     pub fn fl_arena_scratch_begin_conflict(conflict_arena: *const crate::sys::Arena) -> crate::sys::TempArena;
     /// Ends a scratch scope and frees what was allocated in it.
     ///
-    /// The scope is one started with `Arena::fl_arena_scratch_begin` or `Arena::fl_arena_scratch_begin_conflict`.
+    /// The scope is one started with `fl_arena_scratch_begin` or `fl_arena_scratch_begin_conflict`.
     pub fn fl_arena_scratch_end(temp: crate::sys::TempArena);
     /// Gives back the last `bytes_to_release` bytes allocated from `arena`.
     ///

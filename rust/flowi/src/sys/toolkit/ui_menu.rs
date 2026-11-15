@@ -2,12 +2,12 @@
 
 // Context menus that open at a point on the screen, usually on a right-click.
 //
-// Open a menu with `Menu::open`, or put a right-click region around the area that should open it. Each frame, call
-// `Menu::begin_impl`. It returns true only while the menu is open. If it did, add items and call `Menu::end`.
+// Open a menu with `fl_menu_open`, or put a right-click region around the area that should open it. Each frame, call
+// `fl_menu_begin_impl`. It returns true only while the menu is open. If it did, add items and call `fl_menu_end`.
 extern "C" {
     /// Starts the menu `menu_id` and returns true if it is open.
     ///
-    /// Call `Menu::end` only if this returned true. A click outside the menu closes it. Escape closes the innermost
+    /// Call `fl_menu_end` only if this returned true. A click outside the menu closes it. Escape closes the innermost
     /// open submenu, or the menu if no submenu is open.
     pub fn fl_menu_begin_impl(menu_id: crate::sys::LayoutId, config: crate::sys::MenuConfig) -> bool;
     /// Ends the menu panel.
@@ -38,9 +38,9 @@ extern "C" {
     /// Starts a region that opens the menu `menu_id` at the cursor when the user right-clicks inside it.
     ///
     /// Returns the `Signal` of the region. Draw the area that should open the menu inside the region, and call
-    /// `Menu::region_end` after it.
+    /// `fl_menu_region_end` after it.
     pub fn fl_menu_region_begin_impl(region_id: crate::sys::LayoutId, menu_id: crate::sys::LayoutId, config: crate::sys::MenuRegionConfig) -> crate::sys::Signal;
-    /// Ends the region started with `Menu::region_begin_impl`.
+    /// Ends the region started with `fl_menu_region_begin_impl`.
     pub fn fl_menu_region_end();
     /// Opens the menu `menu_id` at `point`, a position on the screen.
     ///
@@ -56,12 +56,12 @@ extern "C" {
 
 // A submenu inside a menu.
 //
-// A submenu is a row in its parent menu. When the row is expanded, the items you add before `Submenu::end` appear
+// A submenu is a row in its parent menu. When the row is expanded, the items you add before `fl_submenu_end` appear
 // in a panel beside it.
 extern "C" {
     /// Adds a submenu row labelled `label` and returns true if the submenu is expanded.
     ///
-    /// Call `Submenu::end` only if this returned true.
+    /// Call `fl_submenu_end` only if this returned true.
     pub fn fl_submenu_begin_impl(label: crate::sys::RawStr, config: crate::sys::SubmenuConfig) -> bool;
     /// Ends the submenu panel.
     pub fn fl_submenu_end();
@@ -69,12 +69,12 @@ extern "C" {
 
 // A horizontal menu bar.
 //
-// Each frame, call `Menubar::begin_impl`, then `MenubarMenu::begin_impl` for each top-level menu. Finish with
-// `Menubar::end`.
+// Each frame, call `fl_menubar_begin_impl`, then `fl_menubar_menu_begin_impl` for each top-level menu. Finish with
+// `fl_menubar_end`.
 extern "C" {
     /// Starts the menu bar `bar_id` and handles its input, such as clicks and the arrow keys.
     ///
-    /// Always call `Menubar::end` after it.
+    /// Always call `fl_menubar_end` after it.
     pub fn fl_menubar_begin_impl(bar_id: crate::sys::LayoutId, config: crate::sys::MenuBarConfig);
     /// Ends the menu bar.
     pub fn fl_menubar_end();
@@ -88,7 +88,7 @@ extern "C" {
 extern "C" {
     /// Adds an entry labelled `label` to the menu bar and returns true if its dropdown is open.
     ///
-    /// Add the items of the dropdown after it and call `MenubarMenu::end`, but only if this returned true.
+    /// Add the items of the dropdown after it and call `fl_menubar_menu_end`, but only if this returned true.
     pub fn fl_menubar_menu_begin_impl(label: crate::sys::RawStr, config: crate::sys::MenuBarMenuConfig) -> bool;
     /// Ends the dropdown.
     pub fn fl_menubar_menu_end();

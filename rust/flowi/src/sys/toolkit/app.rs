@@ -2,19 +2,19 @@
 
 /// Draws one frame of a window.
 ///
-/// Emit the UI of the window inside this call. Strings made with `Frame::str` are valid until it returns.
+/// Emit the UI of the window inside this call. Strings made with `fl_frame_str` are valid until it returns.
 /// `user_data` is the pointer you passed along with the callback.
 pub type AppFrameFn = Option<unsafe extern "C" fn(user_data: *mut core::ffi::c_void)>;
 
 /// An app that owns its window and its frame loop.
 ///
-/// Returned by `App::create` and freed with `App::destroy`.
+/// Returned by `fl_app_create` and freed with `fl_app_destroy`.
 pub enum App {}
 
-/// A window opened with `App::window_open`.
+/// A window opened with `fl_app_window_open`.
 pub enum AppWindow {}
 
-/// The settings for `App::window_open`.
+/// The settings for `fl_app_window_open`.
 #[repr(C)]
 pub struct WindowSettings {
     /// The title of the window.
@@ -41,8 +41,8 @@ const _: () = {
 
 // An app that opens a window and runs the frame loop for it.
 //
-// Create it with `App::create`, then either call `App::tick` once per frame or call `App::run` to block until the
-// main window closes. Emit the UI inside the `AppFrameFn` you pass. Call `App::destroy` when you are done.
+// Create it with `fl_app_create`, then either call `fl_app_tick` once per frame or call `fl_app_run` to block until the
+// main window closes. Emit the UI inside the `AppFrameFn` you pass. Call `fl_app_destroy` when you are done.
 //
 // The `inject` and `headless` calls drive and read back an app created with `AppSettings.headless`, for tests.
 extern "C" {
@@ -56,19 +56,19 @@ extern "C" {
     pub fn fl_app_destroy(app: *mut crate::sys::App);
     /// Runs one frame and returns false once the main window has been closed.
     ///
-    /// Pumps input, calls `frame` for the main window and presents. Windows opened with `App::window_open` run in
+    /// Pumps input, calls `frame` for the main window and presents. Windows opened with `fl_app_window_open` run in
     /// the same call, each with the callback it was opened with.
     pub fn fl_app_tick(app: *mut crate::sys::App, user_data: *mut core::ffi::c_void, frame: crate::sys::AppFrameFn) -> bool;
-    /// Calls `App::tick` in a loop until it returns false.
+    /// Calls `fl_app_tick` in a loop until it returns false.
     pub fn fl_app_run(app: *mut crate::sys::App, user_data: *mut core::ffi::c_void, frame: crate::sys::AppFrameFn);
     /// Opens another window and returns it, or null if it could not be opened.
     ///
-    /// `frame` is called for this window on every `App::tick`. If you call this inside a frame callback, the window
+    /// `frame` is called for this window on every `fl_app_tick`. If you call this inside a frame callback, the window
     /// opens at the start of the next tick. If it cannot be opened then, it never appears.
     pub fn fl_app_window_open(app: *mut crate::sys::App, settings: *const crate::sys::WindowSettings, frame: crate::sys::AppFrameFn, user_data: *mut core::ffi::c_void) -> *mut crate::sys::AppWindow;
-    /// Closes a window opened with `App::window_open`.
+    /// Closes a window opened with `fl_app_window_open`.
     ///
-    /// The window closes at the start of the next `App::tick`, so you can call this inside a frame callback. It does
+    /// The window closes at the start of the next `fl_app_tick`, so you can call this inside a frame callback. It does
     /// nothing for the main window. That one closes when the user closes it.
     pub fn fl_app_window_close(app: *mut crate::sys::App, window: *mut crate::sys::AppWindow);
     /// Sets the UI zoom, a multiplier on top of the monitor's content scale (default 1.0).
@@ -78,31 +78,31 @@ extern "C" {
     pub fn fl_app_set_ui_zoom(app: *mut crate::sys::App, zoom: f32);
     /// Moves the injected mouse cursor to (`x`, `y`) in window pixels.
     ///
-    /// The next `App::tick` picks it up, and it becomes the hit-test position of the frame after that.
+    /// The next `fl_app_tick` picks it up, and it becomes the hit-test position of the frame after that.
     ///
     /// This call is for headless apps only.
     pub fn fl_app_inject_mouse_move(app: *mut crate::sys::App, x: i32, y: i32);
     /// Presses (`down` is true) or releases a mouse button.
     ///
-    /// The next `App::tick` picks it up, and a click is detected one frame later.
+    /// The next `fl_app_tick` picks it up, and a click is detected one frame later.
     ///
     /// This call is for headless apps only.
     pub fn fl_app_inject_mouse_button(app: *mut crate::sys::App, button: crate::sys::MouseButton, down: bool);
     /// Injects a relative mouse motion, like the one a hidden drag produces.
     ///
-    /// The next `App::tick` picks it up.
+    /// The next `fl_app_tick` picks it up.
     ///
     /// This call is for headless apps only.
     pub fn fl_app_inject_mouse_delta(app: *mut crate::sys::App, delta_x: f32, delta_y: f32);
     /// Injects a mouse wheel delta (a positive `y` scrolls up).
     ///
-    /// The next `App::tick` picks it up.
+    /// The next `fl_app_tick` picks it up.
     ///
     /// This call is for headless apps only.
     pub fn fl_app_inject_wheel(app: *mut crate::sys::App, x: f32, y: f32);
     /// Presses (`down` is true) or releases a key.
     ///
-    /// The next `App::tick` picks it up.
+    /// The next `fl_app_tick` picks it up.
     ///
     /// This call is for headless apps only.
     pub fn fl_app_inject_key(app: *mut crate::sys::App, key: crate::sys::Key, down: bool);
@@ -112,23 +112,23 @@ extern "C" {
     pub fn fl_app_inject_text(app: *mut crate::sys::App, text: crate::sys::RawStr);
     /// Injects a request to close the main window.
     ///
-    /// The next `App::tick` returns false.
+    /// The next `fl_app_tick` returns false.
     ///
     /// This call is for headless apps only.
     pub fn fl_app_inject_window_close(app: *mut crate::sys::App);
     /// Injects a file dropped on the window at (`x`, `y`) in window pixels.
     ///
-    /// The next `App::tick` picks it up.
+    /// The next `fl_app_tick` picks it up.
     ///
     /// This call is for headless apps only.
     pub fn fl_app_inject_drop_file(app: *mut crate::sys::App, path: crate::sys::RawStr, x: f32, y: f32);
-    /// Returns the cursor shape that the last `App::tick` asked the input backend for.
+    /// Returns the cursor shape that the last `fl_app_tick` asked the input backend for.
     ///
     /// A shape that does not exist reads back as `CursorShape::Arrow`.
     ///
     /// This call is for headless apps only.
     pub fn fl_app_headless_cursor_shape(app: *mut crate::sys::App) -> crate::sys::CursorShape;
-    /// Returns true if the last `App::tick` left the input backend in relative mouse mode.
+    /// Returns true if the last `fl_app_tick` left the input backend in relative mouse mode.
     ///
     /// It is on for as long as a hidden drag lasts.
     ///
@@ -140,7 +140,7 @@ extern "C" {
     ///
     /// This call is for headless apps only.
     pub fn fl_app_headless_last_warp(app: *mut crate::sys::App) -> crate::sys::Vec2;
-    /// Makes every `App::tick` advance time by `dt` seconds instead of by the clock.
+    /// Makes every `fl_app_tick` advance time by `dt` seconds instead of by the clock.
     ///
     /// Pass 0 or less to go back to the clock.
     ///

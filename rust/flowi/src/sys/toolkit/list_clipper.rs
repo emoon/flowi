@@ -2,7 +2,7 @@
 
 /// The rows of a uniform-height list that are visible.
 ///
-/// This is returned by `ListClipper::create`. Draw the rows from `display_start` up to, and not including,
+/// This is returned by `fl_list_clipper_create`. Draw the rows from `display_start` up to, and not including,
 /// `display_end`. The other fields hold the values it was built from.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]

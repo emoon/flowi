@@ -3,7 +3,7 @@
 bitflags::bitflags! {
     /// The behaviors an element can have, as a bitmask.
     ///
-    /// Pass it to `Item::behavior` to turn a laid-out element into an interactive one. Combine values with bitwise OR.
+    /// Pass it to `fl_item_behavior` to turn a laid-out element into an interactive one. Combine values with bitwise OR.
     #[repr(transparent)]
     #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
     pub struct ItemFlags: u32 {

@@ -34,7 +34,7 @@ const _: () = {
     assert!(core::mem::align_of::<Overflow>() == 4, "Overflow align drift");
 };
 
-/// The options for `Text::styled`.
+/// The options for `fl_text_styled`.
 ///
 /// A zero font or size uses the fallback named on the field. The color has no fallback: a zeroed color is
 /// transparent, so set it.

@@ -35,7 +35,7 @@ const _: () = {
 
 /// One value to put into a placeholder of a localized string.
 ///
-/// This is passed to `Localize::fmt` and `Localize::plural`. A string value is only borrowed for the duration of
+/// This is passed to `fl_localize_fmt` and `fl_localize_plural`. A string value is only borrowed for the duration of
 /// the call.
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -55,8 +55,8 @@ const _: () = {
 
 // Language loading and the choice of the active language.
 //
-// Call `Localization::init` once at startup. After that, any widget text that starts with `SID_` is looked up in
-// the active language and drawn translated, with no change to the widget calls. Use `Localization::set_language`
+// Call `fl_localization_init` once at startup. After that, any widget text that starts with `SID_` is looked up in
+// the active language and drawn translated, with no change to the widget calls. Use `fl_localization_set_language`
 // to switch language.
 extern "C" {
     /// Loads the language manifest at `manifest_path` inside `mount`, and the language it names as its default.
@@ -96,7 +96,7 @@ extern "C" {
     /// of the active language. A language without built-in rules always uses the `other` form and logs a warning
     /// once. A key that is a plain string rather than a set of forms is used as it is.
     ///
-    /// Placeholders and the lifetime of the result work as they do for `Localize::fmt`.
+    /// Placeholders and the lifetime of the result work as they do for `fl_localize_fmt`.
     pub fn fl_localize_plural(sid: crate::sys::RawStr, count: i64, args: *const crate::sys::FmtArg, arg_count: u32) -> crate::sys::RawStr;
 }
 

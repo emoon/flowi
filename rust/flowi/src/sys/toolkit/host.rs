@@ -2,7 +2,7 @@
 
 pub enum FlArena {}
 
-/// The settings for `Host::create`.
+/// The settings for `fl_host_create`.
 #[repr(C)]
 pub struct HostSettings {
     /// The render width in pixels (above 0). The host opens its window at this size and renders every frame into it.
@@ -11,8 +11,8 @@ pub struct HostSettings {
     pub render_height: i32,
     /// Whether the working directory of the process is mounted as the default asset mount.
     ///
-    /// Paths given to `Font::load` and `Image::load` are then looked up against it. Leave it false if you mount your
-    /// own data directory and load through `Font::load_mount`.
+    /// Paths given to `fl_font_load` and `fl_image_load` are then looked up against it. Leave it false if you mount your
+    /// own data directory and load through `fl_font_load_mount`.
     pub mount_working_directory: bool,
 }
 
@@ -26,18 +26,18 @@ const _: () = {
 
 /// A flowi host that you drive yourself.
 ///
-/// Returned by `Host::create` and freed with `Host::destroy`.
+/// Returned by `fl_host_create` and freed with `fl_host_destroy`.
 pub enum Host {}
 
 // A flowi host for a program that owns its own display, input and presentation.
 //
-// Use it instead of `App` when flowi should not open the window. `Host::create` brings up the renderer, the
-// resource systems and a UI context. Call `Host::frame_update` once per frame and emit the UI between two calls.
-// Then call `Host::read_pixels` to get the result. Call `Host::destroy` when you are done.
+// Use it instead of `App` when flowi should not open the window. `fl_host_create` brings up the renderer, the
+// resource systems and a UI context. Call `fl_host_frame_update` once per frame and emit the UI between two calls.
+// Then call `fl_host_read_pixels` to get the result. Call `fl_host_destroy` when you are done.
 extern "C" {
     /// Creates a host that allocates from `arena` and returns it, or null if it could not be created.
     ///
-    /// The reason is logged. The host never frees `arena`, so keep it alive until after `Host::destroy`.
+    /// The reason is logged. The host never frees `arena`, so keep it alive until after `fl_host_destroy`.
     pub fn fl_host_create(arena: *mut FlArena, settings: *const crate::sys::HostSettings) -> *mut crate::sys::Host;
     /// Destroys the host and releases everything it owns, its window included.
     ///

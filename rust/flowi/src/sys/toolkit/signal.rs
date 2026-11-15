@@ -2,7 +2,7 @@
 
 /// What the user did to a widget this frame.
 ///
-/// Every interactive widget returns it, and so does `Item::behavior`. `clicked` is the one most callers read. A field
+/// Every interactive widget returns it, and so does `fl_item_behavior`. `clicked` is the one most callers read. A field
 /// that needs a behavior the widget did not ask for, such as `double_clicked`, stays false.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -27,7 +27,7 @@ pub struct Signal {
     pub released: bool,
     /// Whether the widget is being dragged. It needs `ItemFlags::draggable`.
     pub dragging: bool,
-    /// Whether the row is in the selection of its list. Only `List::item_begin` sets it.
+    /// Whether the row is in the selection of its list. Only `fl_list_item_begin` sets it.
     pub selected: bool,
     /// The mouse position relative to the widget, in physical pixels.
     pub mouse_pos: crate::sys::Vec2,

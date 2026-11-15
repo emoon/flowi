@@ -17,7 +17,7 @@ const _: () = {
     assert!(core::mem::align_of::<DropRelationship>() == 4, "DropRelationship align drift");
 };
 
-/// A row of an `Input::list`.
+/// A row of an `fl_input_list`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ListItem {
@@ -37,7 +37,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ListItem, icon) == 24, "ListItem.icon offset drift");
 };
 
-/// Options for `List::begin`.
+/// Options for `fl_list_begin`.
 ///
 /// A field left at zero uses its default.
 #[repr(C)]
@@ -65,7 +65,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ListConfig, scrollbar_mode) == 20, "ListConfig.scrollbar_mode offset drift");
 };
 
-/// Options for `Input::list`.
+/// Options for `fl_input_list`.
 ///
 /// A field left at zero uses its default.
 #[repr(C)]
@@ -98,7 +98,7 @@ const _: () = {
 
 /// The rows to draw this frame.
 ///
-/// This is returned by `List::begin`. Draw the rows from `start` up to, and not including, `end`.
+/// This is returned by `fl_list_begin`. Draw the rows from `start` up to, and not including, `end`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ListRange {
@@ -106,7 +106,7 @@ pub struct ListRange {
     pub start: u32,
     /// The index after the last row to draw (exclusive).
     pub end: u32,
-    /// The number of rows passed to `List::begin`.
+    /// The number of rows passed to `fl_list_begin`.
     pub total: u32,
 }
 
@@ -120,7 +120,7 @@ const _: () = {
 
 /// The outcome of a list for one frame.
 ///
-/// This is returned by `List::end` and `Input::list`. The ids are the ones you passed in, and 0 means no row.
+/// This is returned by `fl_list_end` and `fl_input_list`. The ids are the ones you passed in, and 0 means no row.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ListResult {

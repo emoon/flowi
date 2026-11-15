@@ -2,7 +2,7 @@
 
 /// A copy of the rendered frame, for smoke tests and screenshots.
 ///
-/// This is filled by `App::read_pixels` and `Host::read_pixels`. Rows are tightly packed, so `stride` is
+/// This is filled by `fl_app_read_pixels` and `fl_host_read_pixels`. Rows are tightly packed, so `stride` is
 /// `width` times the number of channels and there is no padding between rows.
 #[repr(C)]
 pub struct PixelReadback {

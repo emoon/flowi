@@ -2,11 +2,11 @@
 
 // A scrolling list where you draw each row.
 //
-// Each frame, call `List::begin` with the ids of all rows. For each index in the range it returns, call
-// `List::item_begin`, draw the row, and call `List::item_end`. Then call `List::end` and act on the result.
+// Each frame, call `fl_list_begin` with the ids of all rows. For each index in the range it returns, call
+// `fl_list_item_begin`, draw the row, and call `fl_list_item_end`. Then call `fl_list_end` and act on the result.
 //
 // The list fills the layout area it is in. It handles selection, the keyboard and row dragging; you keep the
-// rows and reorder them after a drop. For plain label rows, see `Input::list`.
+// rows and reorder them after a drop. For plain label rows, see `fl_input_list`.
 extern "C" {
     /// Starts a list and returns the range of rows to draw.
     ///
@@ -17,9 +17,9 @@ extern "C" {
     pub fn fl_list_begin(id: crate::sys::LayoutId, ordered_ids: *const u64, count: u32, set: *mut crate::sys::SelectionSet, config: crate::sys::ListConfig) -> crate::sys::ListRange;
     /// Starts the row with the given id and returns the `Signal` for it.
     ///
-    /// Everything you draw before `List::item_end` is the row's content.
+    /// Everything you draw before `fl_list_item_end` is the row's content.
     pub fn fl_list_item_begin(stable_id: u64) -> crate::sys::Signal;
-    /// Ends the row started with `List::item_begin`.
+    /// Ends the row started with `fl_list_item_begin`.
     pub fn fl_list_item_end();
     /// Ends the list and returns the result for this frame.
     pub fn fl_list_end() -> crate::sys::ListResult;

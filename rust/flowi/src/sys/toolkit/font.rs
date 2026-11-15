@@ -4,7 +4,7 @@ pub enum FlVfsMount {}
 
 /// The vertical metrics of a font at one size, in logical pixels.
 ///
-/// This is returned by `Font::metrics`. It does not depend on any text, so it is stable for centering text that
+/// This is returned by `fl_font_metrics`. It does not depend on any text, so it is stable for centering text that
 /// changes, such as a counter.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -27,21 +27,21 @@ const _: () = {
 
 // Loading and choosing fonts.
 //
-// Fonts load in the background. Call `Font::load` or `Font::load_default` for each font, then
-// `Font::ensure_loaded` once before the first frame, or poll `Font::is_loaded`. Use `Font::set` or
-// `Font::style_set` to choose which font text uses when it asks for font 0.
+// Fonts load in the background. Call `fl_font_load` or `fl_font_load_default` for each font, then
+// `fl_font_ensure_loaded` once before the first frame, or poll `fl_font_is_loaded`. Use `fl_font_set` or
+// `fl_font_style_set` to choose which font text uses when it asks for font 0.
 extern "C" {
     /// Starts loading the font file at `path` and returns its id, or 0 if the load cannot start.
     ///
     /// The path is resolved in the host's asset mount, and the call returns 0 if the host has none. Use
-    /// `Font::load_mount` to load from a mount of your own.
+    /// `fl_font_load_mount` to load from a mount of your own.
     ///
     /// `default_size` is the font's default size in unscaled pixels (0 uses 28, and values below 8 become 8).
     pub fn fl_font_load(path: crate::sys::RawStr, default_size: u16) -> crate::sys::FontId;
     /// Starts loading the font file at `relative_path` inside `mount` and returns its id, or 0 if the load cannot
     /// start.
     ///
-    /// `default_size` works as it does for `Font::load`.
+    /// `default_size` works as it does for `fl_font_load`.
     pub fn fl_font_load_mount(mount: *mut FlVfsMount, relative_path: crate::sys::RawStr, default_size: u16) -> crate::sys::FontId;
     /// Loads the built-in font and returns its id, or 0 if the call fails.
     ///
@@ -57,7 +57,7 @@ extern "C" {
     pub fn fl_font_set(font: crate::sys::FontId);
     /// Sets `font` as the font for `style`.
     ///
-    /// Choose it with `Font::style_set`.
+    /// Choose it with `fl_font_style_set`.
     pub fn fl_font_style_register(font: crate::sys::FontId, style: crate::sys::FontStyle);
     /// Makes the font registered for `style` the active font.
     pub fn fl_font_style_set(style: crate::sys::FontStyle);

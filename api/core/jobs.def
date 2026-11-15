@@ -61,7 +61,7 @@ api Jobs {
     ///
     /// Called from a worker thread, the job runs at once on that worker, and the returned handle already reports
     /// `JobsResult::Finished`.
-    [manual] [rust_doc(Jobs::add)] add_job(func: JobsFunc, user_data: *void) -> JobHandle
+    [manual] add_job(func: JobsFunc, user_data: *void) -> JobHandle
     /// Schedules a job that runs after `dependency` completes and returns its handle.
     ///
     /// A `dependency` of 0, a handle that has expired and a handle for a job that has finished all count as
@@ -69,7 +69,7 @@ api Jobs {
     ///
     /// Called from a worker thread against a job that has not finished, the job waits for it, so the returned handle
     /// is pending.
-    [manual] [rust_doc(Jobs::add_after)] add_job_with_dependency(func: JobsFunc, user_data: *void, dependency: JobHandle) -> JobHandle
+    [manual] add_job_with_dependency(func: JobsFunc, user_data: *void, dependency: JobHandle) -> JobHandle
     /// Returns a `JobsResult` that says if the job for `handle` has finished.
     ///
     /// Once a finished job's handle has been reused for a new job, it reports `JobsResult::Invalid`.

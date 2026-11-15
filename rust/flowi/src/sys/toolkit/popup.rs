@@ -4,7 +4,7 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum PopupAnchor {
-    /// Below the element given to `Popup::begin` as `anchor_id`.
+    /// Below the element given to `fl_popup_begin` as `anchor_id`.
     Element = 0,
     /// At `PopupConfig.point`.
     Point = 1,
@@ -17,7 +17,7 @@ const _: () = {
 
 /// How a dialog was dismissed.
 ///
-/// This is returned by `Popup::message_box`. It holds a value for one frame only, on the frame the dialog closes.
+/// This is returned by `fl_popup_message_box`. It holds a value for one frame only, on the frame the dialog closes.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DialogResult {
@@ -36,7 +36,7 @@ const _: () = {
 
 /// The settings for a popup scope.
 ///
-/// Pass it to `Popup::begin`. A zeroed config anchors to the element with no offset, draws at z-index 0, lets
+/// Pass it to `fl_popup_begin`. A zeroed config anchors to the element with no offset, draws at z-index 0, lets
 /// pointer input through and never closes by itself.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -70,7 +70,7 @@ const _: () = {
 
 /// The settings for a tooltip.
 ///
-/// Pass it to `Popup::tooltip`. Each field falls back to its default when left at 0.
+/// Pass it to `fl_popup_tooltip`. Each field falls back to its default when left at 0.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TooltipConfig {
@@ -92,7 +92,7 @@ const _: () = {
 
 /// The settings for a message box.
 ///
-/// Pass it to `Popup::message_box`. Each field falls back to its default when left empty or 0.
+/// Pass it to `fl_popup_message_box`. Each field falls back to its default when left empty or 0.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct MessageBoxConfig {
@@ -117,15 +117,15 @@ const _: () = {
 
 // Popups, tooltips and message boxes, drawn above the main UI.
 //
-// Draw the content of a popup between `Popup::begin` and `Popup::end`. `Popup::tooltip` and `Popup::message_box`
+// Draw the content of a popup between `fl_popup_begin` and `fl_popup_end`. `fl_popup_tooltip` and `fl_popup_message_box`
 // are single calls.
 extern "C" {
     /// Starts a popup scope anchored to `anchor_id`.
     ///
-    /// Everything you draw until `Popup::end` is part of the popup. In Rust the call returns a guard that ends the
+    /// Everything you draw until `fl_popup_end` is part of the popup. In Rust the call returns a guard that ends the
     /// scope when it drops.
     pub fn fl_popup_begin(anchor_id: crate::sys::LayoutId, config: crate::sys::PopupConfig);
-    /// Ends the popup scope started with `Popup::begin`.
+    /// Ends the popup scope started with `fl_popup_begin`.
     pub fn fl_popup_end();
     /// Shows `text` in a tooltip when the pointer rests on the anchor.
     ///

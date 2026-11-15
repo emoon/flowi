@@ -107,8 +107,7 @@ typedef struct FlJsonArray {
 //
 // `fl_json_parse_with_flags` returns the root value. Read `FlJsonValue.type` to see what it holds.
 typedef struct FlJsonValue {
-    // A pointer to a flowi string (not a C string), a `FlJsonNumber`, `FlJsonObject` or `FlJsonArray`, as
-    // `FlJsonValue.type` says.
+    // A pointer to a flowi `FlString`, a `FlJsonNumber`, `FlJsonObject` or `FlJsonArray`, as `FlJsonValue.type` says.
     //
     // It is null for `FlJsonType_True`, `FlJsonType_False` and `FlJsonType_Null`.
     void* payload;

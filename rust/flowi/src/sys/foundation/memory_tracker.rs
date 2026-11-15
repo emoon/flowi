@@ -2,7 +2,7 @@
 
 /// A snapshot of memory use: the live arenas and the mimalloc allocation balance.
 ///
-/// `MemoryTracker::get_stats` fills it in. The mimalloc fields are 0 in a build that does not use mimalloc.
+/// `fl_memory_tracker_get_stats` fills it in. The mimalloc fields are 0 in a build that does not use mimalloc.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct MemoryStats {
@@ -43,9 +43,9 @@ const _: () = {
 
 // Memory use reports for finding leaks.
 //
-// Call `MemoryTracker::init` early in startup and `MemoryTracker::destroy` at shutdown. In between, read the numbers
-// with `MemoryTracker::get_stats`, or get a report of every live arena from `MemoryTracker::dump_string` or
-// `MemoryTracker::export_json_string`.
+// Call `fl_memory_tracker_init` early in startup and `fl_memory_tracker_destroy` at shutdown. In between, read the numbers
+// with `fl_memory_tracker_get_stats`, or get a report of every live arena from `fl_memory_tracker_dump_string` or
+// `fl_memory_tracker_export_json_string`.
 extern "C" {
     /// Starts tracking arenas.
     ///
@@ -59,7 +59,7 @@ extern "C" {
     ///
     /// Returns an empty string if `arena` is null.
     pub fn fl_memory_tracker_dump_string(arena: *mut crate::sys::Arena) -> crate::sys::RawStr;
-    /// Writes the text report from `MemoryTracker::dump_string` to `filepath`, replacing the file.
+    /// Writes the text report from `fl_memory_tracker_dump_string` to `filepath`, replacing the file.
     ///
     /// Returns true if it succeeded. An empty `filepath` fails.
     pub fn fl_memory_tracker_dump_to_file(filepath: crate::sys::RawStr) -> bool;
@@ -67,7 +67,7 @@ extern "C" {
     ///
     /// Returns an empty string if `arena` is null.
     pub fn fl_memory_tracker_export_json_string(arena: *mut crate::sys::Arena) -> crate::sys::RawStr;
-    /// Writes the JSON report from `MemoryTracker::export_json_string` to `filepath`, replacing the file.
+    /// Writes the JSON report from `fl_memory_tracker_export_json_string` to `filepath`, replacing the file.
     ///
     /// Returns true if it succeeded. An empty `filepath` fails.
     pub fn fl_memory_tracker_export_json_to_file(filepath: crate::sys::RawStr) -> bool;

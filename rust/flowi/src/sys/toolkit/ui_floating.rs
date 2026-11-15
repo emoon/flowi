@@ -2,15 +2,15 @@
 
 // An element that floats above the layout, such as a modal dialog, popup or tooltip.
 //
-// Call `Floating::start`, then `Floating::configure`. Draw the contents, then close it with `Layout::end`.
+// Call `fl_floating_start`, then `fl_floating_configure`. Draw the contents, then close it with `fl_layout_end`.
 extern "C" {
     /// Opens a floating element with the given id.
     ///
-    /// Each id must be unique within a frame. Close the element with `Layout::end`.
+    /// Each id must be unique within a frame. Close the element with `fl_layout_end`.
     pub fn fl_floating_start(id: crate::sys::LayoutId);
     /// Applies `config` to the floating element opened last.
     ///
-    /// Call this once, right after `Floating::start`.
+    /// Call this once, right after `fl_floating_start`.
     pub fn fl_floating_configure(config: crate::sys::FloatingConfig);
 }
 

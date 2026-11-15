@@ -25,7 +25,7 @@ const _: () = {
 /// One change to the selection, reported by a list.
 ///
 /// A list reports the changes made this frame, not the selection itself. Apply them to a `SelectionSet` with
-/// `SelectionSet::apply`, or to a selection you keep yourself.
+/// `fl_selection_set_apply`, or to a selection you keep yourself.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct SelectionRequest {

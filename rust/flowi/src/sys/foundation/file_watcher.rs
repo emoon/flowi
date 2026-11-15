@@ -27,7 +27,7 @@ const _: () = {
 
 pub enum FlArena {}
 
-/// What a watcher reports, passed to `FileWatcher::start`.
+/// What a watcher reports, passed to `fl_file_watcher_start`.
 #[repr(C)]
 pub struct FileWatcherConfig {
     /// Whether to watch subdirectories too.
@@ -36,7 +36,7 @@ pub struct FileWatcherConfig {
     pub watch_files: bool,
     /// Whether to report changes to directories.
     pub watch_directories: bool,
-    /// The most changes to keep between calls to `FileWatcher::take_changes` (0 uses 1000).
+    /// The most changes to keep between calls to `fl_file_watcher_take_changes` (0 uses 1000).
     pub max_changes: u32,
 }
 
@@ -51,7 +51,7 @@ const _: () = {
 
 /// One file system change.
 ///
-/// The paths belong to the arena passed to `FileWatcher::take_changes` and stay valid until you reset it.
+/// The paths belong to the arena passed to `fl_file_watcher_take_changes` and stay valid until you reset it.
 #[repr(C)]
 pub struct FileChange {
     /// The full path of the changed file or directory.
@@ -76,9 +76,9 @@ const _: () = {
     assert!(core::mem::offset_of!(FileChange, is_directory) == 48, "FileChange.is_directory offset drift");
 };
 
-/// The changes `FileWatcher::take_changes` took from a watcher.
+/// The changes `fl_file_watcher_take_changes` took from a watcher.
 ///
-/// The array is allocated in the arena you passed to `FileWatcher::take_changes` and stays valid until you reset it.
+/// The array is allocated in the arena you passed to `fl_file_watcher_take_changes` and stays valid until you reset it.
 #[repr(C)]
 pub struct FileChanges {
     /// The changes, or null if there are none.
@@ -99,9 +99,9 @@ const _: () = {
 
 // A watcher that reports file system changes under a path.
 //
-// Call `FileWatcher::start` on a file or directory and poll `FileWatcher::has_changes` each frame. When it returns
-// true, call `FileWatcher::take_changes` to get the pending changes. Taking them clears them, so each change is
-// reported once. Call `FileWatcher::stop` when you are done.
+// Call `fl_file_watcher_start` on a file or directory and poll `fl_file_watcher_has_changes` each frame. When it returns
+// true, call `fl_file_watcher_take_changes` to get the pending changes. Taking them clears them, so each change is
+// reported once. Call `fl_file_watcher_stop` when you are done.
 extern "C" {
     /// Starts watching `path` and returns a watcher handle.
     ///

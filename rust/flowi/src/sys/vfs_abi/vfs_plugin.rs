@@ -235,7 +235,7 @@ const _: () = {
 
 /// The options of a mount, which apply to every file read through it.
 ///
-/// Pass them to `Vfs::fl_vfs_mount_with_options`. The VFS hands them to the driver's `open` function.
+/// Pass them to `fl_vfs_mount_with_options`. The VFS hands them to the driver's `open` function.
 #[repr(C)]
 pub struct VfsMountOptions {
     /// The directory where caching plugins write their cache (empty uses the default cache).

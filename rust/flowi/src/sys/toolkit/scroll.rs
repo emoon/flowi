@@ -2,7 +2,7 @@
 
 /// The settings of a scroll area.
 ///
-/// Pass it to `Scroll::area_begin`.
+/// Pass it to `fl_scroll_area_begin`.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ScrollAreaConfig {

@@ -2,7 +2,7 @@
 
 /// How far an image load has got.
 ///
-/// This is returned by `Image::status`.
+/// This is returned by `fl_image_status`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ImageStatus {
@@ -112,7 +112,7 @@ const _: () = {
 
 pub enum FlVfsMount {}
 
-/// Options for drawing an image with `Image::new` or `DynamicImage::new`.
+/// Options for drawing an image with `fl_image` or `fl_dynamic_image`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ImageOpts {
@@ -129,7 +129,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ImageOpts, fill_container) == 4, "ImageOpts.fill_container offset drift");
 };
 
-/// Options for `Image::load_mount`.
+/// Options for `fl_image_load_mount`.
 #[repr(C)]
 pub struct ImageLoadOptions {
     /// The width to resize to, in logical pixels (0 for no resize).
@@ -211,13 +211,13 @@ const _: () = {
 
 /// The size and load state of an image.
 ///
-/// `data` is only meaningful once `Image::status` reports `ImageStatus::Ready`.
+/// `data` is only meaningful once `fl_image_status` reports `ImageStatus::Ready`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ImageResult {
     /// The size of the image.
     pub data: crate::sys::ImageData,
-    /// The raw status of the load. Use `Image::status` for the interpreted state.
+    /// The raw status of the load. Use `fl_image_status` for the interpreted state.
     pub status: u32,
 }
 
@@ -230,8 +230,8 @@ const _: () = {
 
 /// An image whose pixels you write each frame.
 ///
-/// Create it with `DynamicImage::create` or `DynamicImage::create_alpha`, or fill in the fields yourself, and draw
-/// it with `DynamicImage::new`.
+/// Create it with `fl_dynamic_image_create` or `fl_dynamic_image_create_alpha`, or fill in the fields yourself, and draw
+/// it with `fl_dynamic_image`.
 #[repr(C)]
 pub struct DynamicImage {
     /// The pixels. You write to this buffer and keep it alive for as long as the image is drawn.
@@ -258,8 +258,8 @@ const _: () = {
 
 // Image loading and drawing.
 //
-// Call `Image::load` or `Image::load_mount` to start a load and keep the returned handle. Poll it with
-// `Image::status` or `Image::is_ready`, and draw it each frame with `Image::new`.
+// Call `fl_image_load` or `fl_image_load_mount` to start a load and keep the returned handle. Poll it with
+// `fl_image_status` or `fl_image_is_ready`, and draw it each frame with `fl_image`.
 extern "C" {
     /// Draws an image as a layout widget.
     ///
@@ -277,12 +277,12 @@ extern "C" {
     /// copied, so you can free them after the call. The handle is 0 if `pixels` is null, `format` is not one of
     /// those or the image could not be created.
     pub fn fl_image_create_from_pixels(pixels: *const core::ffi::c_void, width: i32, height: i32, format: crate::sys::ImageFormat) -> crate::sys::ImageHandle;
-    /// Creates an image like `Image::create_from_pixels`, with a texture of its own.
+    /// Creates an image like `fl_image_create_from_pixels`, with a texture of its own.
     ///
     /// Use it for anything a mesh samples, because mesh UVs address the whole texture. The image can not be moved
     /// into the shared atlas later.
     pub fn fl_image_create_dedicated(pixels: *const core::ffi::c_void, width: i32, height: i32, format: crate::sys::ImageFormat) -> crate::sys::ImageHandle;
-    /// Replaces the pixels of an image made by `Image::create_from_pixels` or `Image::create_dedicated`.
+    /// Replaces the pixels of an image made by `fl_image_create_from_pixels` or `fl_image_create_dedicated`.
     ///
     /// `handle` stays valid and keeps the size and format it was created with. `pixels` is copied. Returns false
     /// if `pixels` is null or `handle` was not created from pixels. It also returns false if the new pixels could
