@@ -10,7 +10,9 @@
 extern "C" {
 #endif
 
-// A progress bar. Call it inside a frame callback.
+// A progress bar.
+//
+// Call it inside a frame callback.
 // Draws a progress bar filled to `fraction`.
 //
 // `fraction` runs from 0 to 1 and values outside that range are clamped. The bar fills the available width

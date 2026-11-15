@@ -12,7 +12,9 @@
 extern "C" {
 #endif
 
-// A small toggle tag with a softer look than a pill. Call it inside a frame callback.
+// A small toggle tag with a softer look than a pill.
+//
+// Call it inside a frame callback.
 // Draws a chip with a label and returns its `FlSignal`.
 //
 // A click flips `selected`, and `FlSignal.clicked` is set on the frame it flips. A selected chip has a

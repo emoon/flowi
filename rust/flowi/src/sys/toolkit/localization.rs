@@ -53,7 +53,7 @@ const _: () = {
     assert!(core::mem::offset_of!(FmtArg, kind) == 16, "FmtArg.kind offset drift");
 };
 
-// Loads languages and chooses the active one.
+// Language loading and the choice of the active language.
 //
 // Call `Localization::init` once at startup. After that, any widget text that starts with `SID_` is looked up in
 // the active language and drawn translated, with no change to the widget calls. Use `Localization::set_language`

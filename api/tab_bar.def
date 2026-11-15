@@ -1,4 +1,6 @@
-/// A row or column of tabs for choosing one of several labels. Call it inside a frame callback.
+/// A row or column of tabs for choosing one of several labels.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api TabBar {
     /// Draws one tab per label and returns whether the selection changed this frame.

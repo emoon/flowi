@@ -12,7 +12,9 @@
 extern "C" {
 #endif
 
-// A button that opens a popup list to pick one of several options. Call it inside a frame callback.
+// A button that opens a popup list to pick one of several options.
+//
+// Call it inside a frame callback.
 // Draws a dropdown and writes the picked option to `selected_index`.
 //
 // The button shows the label and the selected option. You own `is_open`: it is set to true when the user opens

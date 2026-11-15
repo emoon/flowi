@@ -203,7 +203,9 @@ extern "C" {
     pub fn fl_string_substr(str: crate::sys::RawStr, start: u64, length: u64) -> crate::sys::RawStr;
     /// Starts a string at the current end of `arena`.
     pub fn fl_sb_create(arena: *mut crate::sys::Arena) -> crate::sys::StringBuilder;
-    /// Appends a C string. A null `str` appends nothing.
+    /// Appends a C string.
+    ///
+    /// A null `str` appends nothing.
     pub fn fl_sb_append_cstr(sb: crate::sys::StringBuilder, str: *const core::ffi::c_char) -> crate::sys::StringBuilder;
     /// Appends a string.
     pub fn fl_sb_append_string(sb: crate::sys::StringBuilder, str: crate::sys::RawStr) -> crate::sys::StringBuilder;

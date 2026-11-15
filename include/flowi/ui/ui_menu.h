@@ -41,9 +41,13 @@ FL_API FlSignal fl_menu_check_impl(FlString label, bool* checked, FlMenuItemConf
 // The bullet shows while `selected` equals `value`. Activating the item sets `selected` to `value`. By default
 // it does not close the menu.
 FL_API FlSignal fl_menu_radio_impl(FlString label, int32_t* selected, int32_t value, FlMenuItemConfig config);
-// Adds a separator line. It cannot be activated.
+// Adds a separator line.
+//
+// It cannot be activated.
 FL_API void fl_menu_separator(void);
-// Adds a caption that names a group of items. It cannot be activated.
+// Adds a caption that names a group of items.
+//
+// It cannot be activated.
 FL_API void fl_menu_header(FlString label);
 // Starts a region that opens the menu `menu_id` at the cursor when the user right-clicks inside it.
 //
@@ -56,7 +60,9 @@ FL_API void fl_menu_region_end(void);
 //
 // The point is read once, so the menu stays there. It does nothing if the menu is already open.
 FL_API void fl_menu_open(FlLayoutId menu_id, FlVec2 point);
-// Closes the menu `menu_id`. It does nothing if the menu is not open.
+// Closes the menu `menu_id`.
+//
+// It does nothing if the menu is not open.
 FL_API void fl_menu_close(FlLayoutId menu_id);
 // Returns whether the menu `menu_id` is open.
 FL_API bool fl_menu_is_open(FlLayoutId menu_id);

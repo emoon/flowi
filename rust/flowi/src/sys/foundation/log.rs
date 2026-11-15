@@ -40,7 +40,9 @@ extern "C" {
     ///
     /// A new channel starts at the level set by `Log::set_level`, or `LogLevel::Trace` if it was never called.
     pub fn fl_log_channel_set_level(id: u32, level: crate::sys::LogLevel);
-    /// Turns channel `id` on or off. Messages to a disabled channel are dropped.
+    /// Turns channel `id` on or off.
+    ///
+    /// Messages to a disabled channel are dropped.
     pub fn fl_log_channel_enable(id: u32, enabled: bool);
     /// Logs `message` on channel `id` as it is, without printf formatting.
     ///
@@ -59,7 +61,9 @@ extern "C" {
     ///
     /// The path stays readable after `Log::file_shutdown`.
     pub fn fl_log_file_get_path() -> crate::sys::RawStr;
-    /// Flushes log output. Messages are written as they are logged, so this currently does nothing.
+    /// Flushes log output.
+    ///
+    /// Messages are written as they are logged, so this currently does nothing.
     pub fn fl_log_flush();
     /// Sets the lowest level that every channel logs, including channels registered later.
     ///

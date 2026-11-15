@@ -2,7 +2,9 @@
 
 extern opaque FlArena
 
-/// A kind of file system change. `FileChange.change_types` combines them as a bitmask.
+/// A kind of file system change.
+///
+/// `FileChange.change_types` combines them as a bitmask.
 #[attributes(bitflags)]
 enum FileChangeType {
     None = 0,
@@ -69,7 +71,9 @@ api FileWatcher {
     /// Returns 0 if `config` is null, `path` does not exist, the platform cannot watch it or too many watchers
     /// are running.
     [manual] start(path: String, config: *const FileWatcherConfig) -> u32
-    /// Stops the watcher and releases its resources. Passing 0 does nothing.
+    /// Stops the watcher and releases its resources.
+    ///
+    /// Passing 0 does nothing.
     [manual] stop(handle: u32)
     /// Returns whether the watcher is still running.
     [manual] is_active(handle: u32) -> bool

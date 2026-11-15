@@ -76,51 +76,75 @@ extern "C" {
     /// 1.0 matches the monitor. 1.25 makes the whole UI 25% bigger. `zoom` must be above 0. It applies to every
     /// window at once.
     pub fn fl_app_set_ui_zoom(app: *mut crate::sys::App, zoom: f32);
-    /// Moves the injected mouse cursor to (`x`, `y`) in window pixels. Headless only.
+    /// Moves the injected mouse cursor to (`x`, `y`) in window pixels.
     ///
     /// The next `App::tick` picks it up, and it becomes the hit-test position of the frame after that.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_inject_mouse_move(app: *mut crate::sys::App, x: i32, y: i32);
-    /// Presses (`down` is true) or releases a mouse button. Headless only.
+    /// Presses (`down` is true) or releases a mouse button.
     ///
     /// The next `App::tick` picks it up, and a click is detected one frame later.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_inject_mouse_button(app: *mut crate::sys::App, button: crate::sys::MouseButton, down: bool);
-    /// Injects a relative mouse motion, like the one a hidden drag produces. Headless only.
+    /// Injects a relative mouse motion, like the one a hidden drag produces.
     ///
     /// The next `App::tick` picks it up.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_inject_mouse_delta(app: *mut crate::sys::App, delta_x: f32, delta_y: f32);
-    /// Injects a mouse wheel delta (a positive `y` scrolls up). Headless only.
+    /// Injects a mouse wheel delta (a positive `y` scrolls up).
     ///
     /// The next `App::tick` picks it up.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_inject_wheel(app: *mut crate::sys::App, x: f32, y: f32);
-    /// Presses (`down` is true) or releases a key. Headless only.
+    /// Presses (`down` is true) or releases a key.
     ///
     /// The next `App::tick` picks it up.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_inject_key(app: *mut crate::sys::App, key: crate::sys::Key, down: bool);
-    /// Injects typed text. Headless only.
+    /// Injects typed text.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_inject_text(app: *mut crate::sys::App, text: crate::sys::RawStr);
-    /// Injects a request to close the main window. Headless only.
+    /// Injects a request to close the main window.
     ///
     /// The next `App::tick` returns false.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_inject_window_close(app: *mut crate::sys::App);
-    /// Injects a file dropped on the window at (`x`, `y`) in window pixels. Headless only.
+    /// Injects a file dropped on the window at (`x`, `y`) in window pixels.
     ///
     /// The next `App::tick` picks it up.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_inject_drop_file(app: *mut crate::sys::App, path: crate::sys::RawStr, x: f32, y: f32);
-    /// Returns the cursor shape that the last `App::tick` asked the input backend for. Headless only.
+    /// Returns the cursor shape that the last `App::tick` asked the input backend for.
     ///
     /// A shape that does not exist reads back as `CursorShape::Arrow`.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_headless_cursor_shape(app: *mut crate::sys::App) -> crate::sys::CursorShape;
-    /// Returns whether the last `App::tick` left the input backend in relative mouse mode. Headless only.
+    /// Returns whether the last `App::tick` left the input backend in relative mouse mode.
     ///
     /// It is on for as long as a hidden drag lasts.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_headless_relative_mouse_mode(app: *mut crate::sys::App) -> bool;
-    /// Returns the last position the cursor was warped back to, in window pixels. Headless only.
+    /// Returns the last position the cursor was warped back to, in window pixels.
     ///
     /// A hidden drag sets it when it ends.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_headless_last_warp(app: *mut crate::sys::App) -> crate::sys::Vec2;
-    /// Makes every `App::tick` advance time by `dt` seconds instead of by the clock. Headless only.
+    /// Makes every `App::tick` advance time by `dt` seconds instead of by the clock.
     ///
     /// Pass 0 or less to go back to the clock.
+    ///
+    /// This call is for headless apps only.
     pub fn fl_app_set_test_dt(app: *mut crate::sys::App, dt: f32);
     /// Fills `out` with the pixels of the main window's last rendered frame and returns true.
     ///

@@ -6,7 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Clickable text for hyperlinks. Call it inside a frame callback.
+/// Clickable text for hyperlinks.
+///
+/// Call it inside a frame callback.
 pub struct Link;
 
 impl Link {

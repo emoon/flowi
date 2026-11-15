@@ -6,7 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// An on/off toggle drawn as a sliding knob, with the same role as a checkbox. Call it inside a frame callback.
+/// An on/off toggle drawn as a sliding knob, with the same role as a checkbox.
+///
+/// Call it inside a frame callback.
 pub struct Switch;
 
 impl Switch {

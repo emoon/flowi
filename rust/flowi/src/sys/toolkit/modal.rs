@@ -17,7 +17,9 @@ extern "C" {
     /// It also does what `Modal::begin_frame` does. Use the same `scope_id` for both. A `scope_id` of 0 does
     /// nothing.
     pub fn fl_modal_begin(scope_id: u32);
-    /// Ends the modal content. The modal stays open until `Modal::close`.
+    /// Ends the modal content.
+    ///
+    /// The modal stays open until `Modal::close`.
     pub fn fl_modal_end();
     /// Closes the modal and gives focus back to the widget that had it before the modal opened.
     pub fn fl_modal_close();

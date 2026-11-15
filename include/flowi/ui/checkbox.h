@@ -12,7 +12,9 @@
 extern "C" {
 #endif
 
-// A checkbox. Call it inside a frame callback.
+// A checkbox.
+//
+// Call it inside a frame callback.
 // Draws a checkbox with a label and returns its `FlSignal`.
 //
 // A click or key activation flips `checked`. `FlSignal.clicked` is set on the frame it flips. Clicking the

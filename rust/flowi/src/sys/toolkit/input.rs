@@ -82,7 +82,9 @@ const _: () = {
     assert!(core::mem::align_of::<KeyEventType>() == 4, "KeyEventType align drift");
 };
 
-/// What a `MouseEvent` reports. It also tells which payload of the event is set.
+/// What a `MouseEvent` reports.
+///
+/// It also tells which payload of the event is set.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum MouseEventType {
@@ -101,7 +103,9 @@ const _: () = {
     assert!(core::mem::align_of::<MouseEventType>() == 4, "MouseEventType align drift");
 };
 
-/// What a `GamepadEvent` reports. It also tells which payload of the event is set.
+/// What a `GamepadEvent` reports.
+///
+/// It also tells which payload of the event is set.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum GamepadEventType {
@@ -117,7 +121,9 @@ const _: () = {
     assert!(core::mem::align_of::<GamepadEventType>() == 4, "GamepadEventType align drift");
 };
 
-/// What a `WindowEvent` reports. It also tells which payload of the event is set.
+/// What a `WindowEvent` reports.
+///
+/// It also tells which payload of the event is set.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum WindowEventType {

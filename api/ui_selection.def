@@ -4,7 +4,7 @@
 #[attributes(Opaque)]
 struct SelectionSet {}
 
-/// Stores the ids of the selected rows.
+/// A set that holds the ids of the selected rows.
 ///
 /// Pass a set to `List::begin` and the list updates it. Check a row with `SelectionSet::contains` and read the
 /// whole selection with `SelectionSet::copy_ids`.
@@ -13,7 +13,9 @@ api SelectionSet {
     ///
     /// `initial_capacity` is the number of ids to make room for. 0 uses a default.
     [manual] create(initial_capacity: u32) -> *SelectionSet
-    /// Destroys the set. Does nothing for a null set.
+    /// Destroys the set.
+    ///
+    /// Does nothing for a null set.
     [drop] destroy(set: *SelectionSet)
     /// Returns whether `id` is selected.
     [const] contains(set: *SelectionSet, id: u64) -> bool

@@ -81,51 +81,75 @@ FL_API void fl_app_window_close(FlApp* app, FlAppWindow* window);
 // 1.0 matches the monitor. 1.25 makes the whole UI 25% bigger. `zoom` must be above 0. It applies to every
 // window at once.
 FL_API void fl_app_set_ui_zoom(FlApp* app, float zoom);
-// Moves the injected mouse cursor to (`x`, `y`) in window pixels. Headless only.
+// Moves the injected mouse cursor to (`x`, `y`) in window pixels.
 //
 // The next `fl_app_tick` picks it up, and it becomes the hit-test position of the frame after that.
+//
+// This call is for headless apps only.
 FL_API void fl_app_inject_mouse_move(FlApp* app, int32_t x, int32_t y);
-// Presses (`down` is true) or releases a mouse button. Headless only.
+// Presses (`down` is true) or releases a mouse button.
 //
 // The next `fl_app_tick` picks it up, and a click is detected one frame later.
+//
+// This call is for headless apps only.
 FL_API void fl_app_inject_mouse_button(FlApp* app, FlMouseButton button, bool down);
-// Injects a relative mouse motion, like the one a hidden drag produces. Headless only.
+// Injects a relative mouse motion, like the one a hidden drag produces.
 //
 // The next `fl_app_tick` picks it up.
+//
+// This call is for headless apps only.
 FL_API void fl_app_inject_mouse_delta(FlApp* app, float delta_x, float delta_y);
-// Injects a mouse wheel delta (a positive `y` scrolls up). Headless only.
+// Injects a mouse wheel delta (a positive `y` scrolls up).
 //
 // The next `fl_app_tick` picks it up.
+//
+// This call is for headless apps only.
 FL_API void fl_app_inject_wheel(FlApp* app, float x, float y);
-// Presses (`down` is true) or releases a key. Headless only.
+// Presses (`down` is true) or releases a key.
 //
 // The next `fl_app_tick` picks it up.
+//
+// This call is for headless apps only.
 FL_API void fl_app_inject_key(FlApp* app, FlKey key, bool down);
-// Injects typed text. Headless only.
+// Injects typed text.
+//
+// This call is for headless apps only.
 FL_API void fl_app_inject_text(FlApp* app, FlString text);
-// Injects a request to close the main window. Headless only.
+// Injects a request to close the main window.
 //
 // The next `fl_app_tick` returns false.
+//
+// This call is for headless apps only.
 FL_API void fl_app_inject_window_close(FlApp* app);
-// Injects a file dropped on the window at (`x`, `y`) in window pixels. Headless only.
+// Injects a file dropped on the window at (`x`, `y`) in window pixels.
 //
 // The next `fl_app_tick` picks it up.
+//
+// This call is for headless apps only.
 FL_API void fl_app_inject_drop_file(FlApp* app, FlString path, float x, float y);
-// Returns the cursor shape that the last `fl_app_tick` asked the input backend for. Headless only.
+// Returns the cursor shape that the last `fl_app_tick` asked the input backend for.
 //
 // A shape that does not exist reads back as `FlCursorShape_Arrow`.
+//
+// This call is for headless apps only.
 FL_API FlCursorShape fl_app_headless_cursor_shape(FlApp* app);
-// Returns whether the last `fl_app_tick` left the input backend in relative mouse mode. Headless only.
+// Returns whether the last `fl_app_tick` left the input backend in relative mouse mode.
 //
 // It is on for as long as a hidden drag lasts.
+//
+// This call is for headless apps only.
 FL_API bool fl_app_headless_relative_mouse_mode(FlApp* app);
-// Returns the last position the cursor was warped back to, in window pixels. Headless only.
+// Returns the last position the cursor was warped back to, in window pixels.
 //
 // A hidden drag sets it when it ends.
+//
+// This call is for headless apps only.
 FL_API FlVec2 fl_app_headless_last_warp(FlApp* app);
-// Makes every `fl_app_tick` advance time by `dt` seconds instead of by the clock. Headless only.
+// Makes every `fl_app_tick` advance time by `dt` seconds instead of by the clock.
 //
 // Pass 0 or less to go back to the clock.
+//
+// This call is for headless apps only.
 FL_API void fl_app_set_test_dt(FlApp* app, float dt);
 // Fills `out` with the pixels of the main window's last rendered frame and returns true.
 //

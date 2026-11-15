@@ -22,7 +22,9 @@ typedef enum FlJobsResult {
     FlJobsResult_Invalid = 2,
 } FlJobsResult;
 
-// The priority of a job. Workers take higher-priority jobs first.
+// The priority of a job.
+//
+// Workers take higher-priority jobs first.
 typedef enum FlJobPriority {
     // Background and prefetch work.
     FlJobPriority_Low = 0,

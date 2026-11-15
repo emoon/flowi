@@ -1,4 +1,6 @@
-/// A handle to a loaded font. 0 is invalid. Where a font is used to draw or measure text, 0 means the active font.
+/// A handle to a loaded font.
+///
+/// 0 is invalid. Where a font is used to draw or measure text, 0 means the active font.
 ///
 /// This is returned by `Font::load` and taken by `Font::set`, `Font::is_loaded` and `Painter::text`.
 #[handle(u32, invalid = 0)]

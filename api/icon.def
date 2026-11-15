@@ -19,6 +19,8 @@ extern opaque FlVfsMount
 api Icon {
     /// Returns the image handle of `icon`, or an invalid handle if `icon` is out of range.
     get(icon: Icon) -> ImageHandle
-    /// Starts loading the built-in icons from `mount`. Does nothing if `mount` is null.
+    /// Starts loading the built-in icons from `mount`.
+    ///
+    /// Does nothing if `mount` is null.
     load(mount: *FlVfsMount)
 }

@@ -6,7 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// A button that opens a popup list to pick one of several options. Call it inside a frame callback.
+/// A button that opens a popup list to pick one of several options.
+///
+/// Call it inside a frame callback.
 pub struct Dropdown;
 
 impl Dropdown {

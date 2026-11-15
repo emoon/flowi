@@ -7,9 +7,13 @@
 /// frame on the main thread takes longer than 17 ms, `PerfScope::frame_end` logs a warning with the time of every
 /// scope.
 api PerfScope {
-    /// Marks the calling thread as the main thread. Call it once at startup.
+    /// Marks the calling thread as the main thread.
+    ///
+    /// Call it once at startup.
     [manual] init()
-    /// Clears the profiler state of the calling thread. Call it at application shutdown.
+    /// Clears the profiler state of the calling thread.
+    ///
+    /// Call it at application shutdown.
     [manual] destroy()
     /// Starts a timing scope called `name` and returns its index.
     ///
@@ -23,6 +27,8 @@ api PerfScope {
     [manual] end(stack_index: u32)
     /// Starts a frame by clearing the scopes the calling thread recorded.
     [manual] frame_begin()
-    /// Ends a frame. On the main thread, it logs the scopes if the first scope took longer than 17 ms.
+    /// Ends a frame.
+    ///
+    /// On the main thread, it logs the scopes if the first scope took longer than 17 ms.
     [manual] frame_end()
 }

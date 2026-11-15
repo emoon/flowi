@@ -142,13 +142,17 @@ api String {
 
     /// Starts a string at the current end of `arena`.
     fl_sb_create(arena: *Arena) -> StringBuilder
-    /// Appends a C string. A null `str` appends nothing.
+    /// Appends a C string.
+    ///
+    /// A null `str` appends nothing.
     fl_sb_append_cstr(sb: StringBuilder, str: *const char) -> StringBuilder
     /// Appends a string.
     fl_sb_append_string(sb: StringBuilder, str: String) -> StringBuilder
     /// Appends one character.
     fl_sb_append_char(sb: StringBuilder, c: char) -> StringBuilder
-    /// Appends text formatted like `printf`. `%S` formats a string.
+    /// Appends text formatted like `printf`.
+    ///
+    /// `%S` formats a string.
     fl_sb_appendf(sb: StringBuilder, format: *const char, ...) -> StringBuilder
     /// Discards everything appended so far.
     fl_sb_clear(sb: StringBuilder) -> StringBuilder

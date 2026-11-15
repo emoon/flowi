@@ -35,7 +35,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ListClipper, viewport_height) == 24, "ListClipper.viewport_height offset drift");
 };
 
-// Works out which rows of a long list of equal height are visible.
+// A calculation of the visible rows in a long list whose rows have the same height.
 extern "C" {
     /// Returns the rows that are visible in the viewport.
     ///

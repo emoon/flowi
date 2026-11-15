@@ -30,7 +30,7 @@ typedef struct FlListClipper {
     float viewport_height;
 } FlListClipper;
 
-// Works out which rows of a long list of equal height are visible.
+// A calculation of the visible rows in a long list whose rows have the same height.
 // Returns the rows that are visible in the viewport.
 //
 // The list has `total_items` rows of `item_height` each. `scroll_offset_y` is how far the list is scrolled and

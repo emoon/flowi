@@ -16,7 +16,7 @@ extern "C" {
 // You own the set. Pass it to `fl_list_begin` and the list updates it.
 typedef struct FlSelectionSet FlSelectionSet;
 
-// Stores the ids of the selected rows.
+// A set that holds the ids of the selected rows.
 //
 // Pass a set to `fl_list_begin` and the list updates it. Check a row with `fl_selection_set_contains` and read the
 // whole selection with `fl_selection_set_copy_ids`.
@@ -24,7 +24,9 @@ typedef struct FlSelectionSet FlSelectionSet;
 //
 // `initial_capacity` is the number of ids to make room for. 0 uses a default.
 FL_API FlSelectionSet* fl_selection_set_create(uint32_t initial_capacity);
-// Destroys the set. Does nothing for a null set.
+// Destroys the set.
+//
+// Does nothing for a null set.
 FL_API void fl_selection_set_destroy(FlSelectionSet* set);
 // Returns whether `id` is selected.
 FL_API bool fl_selection_set_contains(FlSelectionSet* set, uint64_t id);

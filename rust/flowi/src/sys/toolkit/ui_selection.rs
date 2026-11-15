@@ -5,7 +5,7 @@
 /// You own the set. Pass it to `List::begin` and the list updates it.
 pub enum SelectionSet {}
 
-// Stores the ids of the selected rows.
+// A set that holds the ids of the selected rows.
 //
 // Pass a set to `List::begin` and the list updates it. Check a row with `SelectionSet::contains` and read the
 // whole selection with `SelectionSet::copy_ids`.
@@ -14,7 +14,9 @@ extern "C" {
     ///
     /// `initial_capacity` is the number of ids to make room for. 0 uses a default.
     pub fn fl_selection_set_create(initial_capacity: u32) -> *mut crate::sys::SelectionSet;
-    /// Destroys the set. Does nothing for a null set.
+    /// Destroys the set.
+    ///
+    /// Does nothing for a null set.
     pub fn fl_selection_set_destroy(set: *mut crate::sys::SelectionSet);
     /// Returns whether `id` is selected.
     pub fn fl_selection_set_contains(set: *mut crate::sys::SelectionSet, id: u64) -> bool;

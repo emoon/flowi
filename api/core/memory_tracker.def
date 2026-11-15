@@ -32,9 +32,13 @@ struct MemoryStats {
 /// with `MemoryTracker::get_stats`, or get a report of every live arena from `MemoryTracker::dump_string` or
 /// `MemoryTracker::export_json_string`.
 api MemoryTracker {
-    /// Starts tracking arenas. Call it early in application startup.
+    /// Starts tracking arenas.
+    ///
+    /// Call it early in application startup.
     [manual] init()
-    /// Stops tracking arenas. Call it at application shutdown.
+    /// Stops tracking arenas.
+    ///
+    /// Call it at application shutdown.
     [manual] destroy()
     /// Returns a text report of memory use, allocated from `arena`.
     ///

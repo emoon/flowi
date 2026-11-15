@@ -9,10 +9,16 @@
 extern "C" {
 #endif
 
-// Fixed empty gaps in a layout. Call these inside a frame callback.
-// Adds an empty gap of `height` logical pixels. It fills the available width.
+// Fixed empty gaps in a layout.
+//
+// Call these inside a frame callback.
+// Adds an empty gap of `height` logical pixels.
+//
+// It fills the available width.
 FL_API void fl_spacer(float height);
-// Adds an empty gap of `width` logical pixels. It fills the available height.
+// Adds an empty gap of `width` logical pixels.
+//
+// It fills the available height.
 FL_API void fl_spacer_h(float width);
 
 

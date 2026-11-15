@@ -1,4 +1,6 @@
-/// A small toggle tag with a softer look than a pill. Call it inside a frame callback.
+/// A small toggle tag with a softer look than a pill.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api Chip {
     /// Draws a chip with a label and returns its `Signal`.

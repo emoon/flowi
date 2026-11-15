@@ -64,14 +64,18 @@ impl Menu {
         unsafe { crate::sys::fl_menu_radio_impl({ let s = label; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, selected as *mut i32, value, config.to_sys()) }
     }
 
-    /// Adds a separator line. It cannot be activated.
+    /// Adds a separator line.
+    ///
+    /// It cannot be activated.
     #[inline]
     pub fn separator() {
         let _frame = crate::frame_thread::frame_thread_guard("Menu::separator");
         unsafe { crate::sys::fl_menu_separator() }
     }
 
-    /// Adds a caption that names a group of items. It cannot be activated.
+    /// Adds a caption that names a group of items.
+    ///
+    /// It cannot be activated.
     #[inline]
     pub fn header(label: impl AsRef<str>) {
         let label = label.as_ref();
@@ -96,7 +100,9 @@ impl Menu {
         unsafe { crate::sys::fl_menu_open(menu_id.into_sys(), point) }
     }
 
-    /// Closes the menu `menu_id`. It does nothing if the menu is not open.
+    /// Closes the menu `menu_id`.
+    ///
+    /// It does nothing if the menu is not open.
     #[inline]
     pub fn close(menu_id: impl Into<crate::LayoutId>) {
         let menu_id: crate::LayoutId = menu_id.into();

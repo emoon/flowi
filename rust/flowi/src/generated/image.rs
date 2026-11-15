@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Loads images and draws them.
+/// Image loading and drawing.
 ///
 /// Call `Image::load` or `Image::load_mount` to start a load and keep the returned handle. Poll it with
 /// `Image::status` or `Image::is_ready`, and draw it each frame with `Image::new`.

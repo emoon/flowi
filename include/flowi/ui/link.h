@@ -11,7 +11,9 @@
 extern "C" {
 #endif
 
-// Clickable text for hyperlinks. Call it inside a frame callback.
+// Clickable text for hyperlinks.
+//
+// Call it inside a frame callback.
 // Draws a link and returns its `FlSignal`.
 //
 // The text does not wrap. It gets an underline while hovered or focused. Read `FlSignal.clicked` to follow

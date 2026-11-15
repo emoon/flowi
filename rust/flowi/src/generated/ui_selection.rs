@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Stores the ids of the selected rows.
+/// A set that holds the ids of the selected rows.
 ///
 /// Pass a set to `List::begin` and the list updates it. Check a row with `SelectionSet::contains` and read the
 /// whole selection with `SelectionSet::copy_ids`.

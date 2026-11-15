@@ -1,4 +1,4 @@
-/// Makes an area you laid out respond to the mouse, keyboard and gamepad.
+/// Mouse, keyboard and gamepad interaction for an area you laid out.
 #[frame_context]
 api Item {
     /// Makes the laid out area `id` interactive and returns its `Signal`.

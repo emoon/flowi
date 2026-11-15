@@ -38,7 +38,7 @@ typedef struct FlFmtArg {
     FlFmtArgKind kind;
 } FlFmtArg;
 
-// Loads languages and chooses the active one.
+// Language loading and the choice of the active language.
 //
 // Call `fl_localization_init` once at startup. After that, any widget text that starts with `SID_` is looked up in
 // the active language and drawn translated, with no change to the widget calls. Use `fl_localization_set_language`

@@ -161,7 +161,7 @@ const _: () = {
     assert!(core::mem::offset_of!(ThemeColors, feedback) == 60, "ThemeColors.feedback offset drift");
 };
 
-/// Replaces some colors of the current theme.
+/// A replacement for some colors of the current theme.
 ///
 /// Pass it to `Theme::push`. Colors that are not flagged in `ThemeOverride.slots` keep the value they have in the
 /// theme at the time of the push.

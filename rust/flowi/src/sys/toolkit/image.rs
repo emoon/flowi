@@ -256,7 +256,7 @@ const _: () = {
     assert!(core::mem::offset_of!(DynamicImage, is_alpha_only) == 20, "DynamicImage.is_alpha_only offset drift");
 };
 
-// Loads images and draws them.
+// Image loading and drawing.
 //
 // Call `Image::load` or `Image::load_mount` to start a load and keep the returned handle. Poll it with
 // `Image::status` or `Image::is_ready`, and draw it each frame with `Image::new`.

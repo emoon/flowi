@@ -28,7 +28,9 @@ typedef struct FlVfsMount FlVfsMount;
 // Load the icons first, then get the image handle of each icon you want to draw.
 // Returns the image handle of `icon`, or an invalid handle if `icon` is out of range.
 FL_API FlImageHandle fl_icon_get(FlIcon icon);
-// Starts loading the built-in icons from `mount`. Does nothing if `mount` is null.
+// Starts loading the built-in icons from `mount`.
+//
+// Does nothing if `mount` is null.
 FL_API void fl_icon_load(FlVfsMount* mount);
 
 

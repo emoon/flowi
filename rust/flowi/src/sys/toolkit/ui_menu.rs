@@ -27,9 +27,13 @@ extern "C" {
     /// The bullet shows while `selected` equals `value`. Activating the item sets `selected` to `value`. By default
     /// it does not close the menu.
     pub fn fl_menu_radio_impl(label: crate::sys::RawStr, selected: *mut i32, value: i32, config: crate::sys::MenuItemConfig) -> crate::sys::Signal;
-    /// Adds a separator line. It cannot be activated.
+    /// Adds a separator line.
+    ///
+    /// It cannot be activated.
     pub fn fl_menu_separator();
-    /// Adds a caption that names a group of items. It cannot be activated.
+    /// Adds a caption that names a group of items.
+    ///
+    /// It cannot be activated.
     pub fn fl_menu_header(label: crate::sys::RawStr);
     /// Starts a region that opens the menu `menu_id` at the cursor when the user right-clicks inside it.
     ///
@@ -42,7 +46,9 @@ extern "C" {
     ///
     /// The point is read once, so the menu stays there. It does nothing if the menu is already open.
     pub fn fl_menu_open(menu_id: crate::sys::LayoutId, point: crate::sys::Vec2);
-    /// Closes the menu `menu_id`. It does nothing if the menu is not open.
+    /// Closes the menu `menu_id`.
+    ///
+    /// It does nothing if the menu is not open.
     pub fn fl_menu_close(menu_id: crate::sys::LayoutId);
     /// Returns whether the menu `menu_id` is open.
     pub fn fl_menu_is_open(menu_id: crate::sys::LayoutId) -> bool;

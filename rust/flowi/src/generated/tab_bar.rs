@@ -6,7 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// A row or column of tabs for choosing one of several labels. Call it inside a frame callback.
+/// A row or column of tabs for choosing one of several labels.
+///
+/// Call it inside a frame callback.
 pub struct TabBar;
 
 impl TabBar {

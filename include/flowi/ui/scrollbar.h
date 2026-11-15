@@ -11,7 +11,9 @@
 extern "C" {
 #endif
 
-// A standalone scrollbar. Call it inside a frame callback.
+// A standalone scrollbar.
+//
+// Call it inside a frame callback.
 // Draws a scrollbar and returns its `FlSignal`.
 //
 // `value` is the scroll position. It is clamped to `FlScrollbarConfig.min` and `FlScrollbarConfig.max`, so set

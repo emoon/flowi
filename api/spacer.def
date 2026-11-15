@@ -1,8 +1,14 @@
-/// Fixed empty gaps in a layout. Call these inside a frame callback.
+/// Fixed empty gaps in a layout.
+///
+/// Call these inside a frame callback.
 #[frame_context]
 api Spacer {
-    /// Adds an empty gap of `height` logical pixels. It fills the available width.
+    /// Adds an empty gap of `height` logical pixels.
+    ///
+    /// It fills the available width.
     new(height: f32)
-    /// Adds an empty gap of `width` logical pixels. It fills the available height.
+    /// Adds an empty gap of `width` logical pixels.
+    ///
+    /// It fills the available height.
     h(width: f32)
 }

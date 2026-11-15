@@ -12,7 +12,9 @@
 extern "C" {
 #endif
 
-// An on/off toggle drawn as a sliding knob, with the same role as a checkbox. Call it inside a frame callback.
+// An on/off toggle drawn as a sliding knob, with the same role as a checkbox.
+//
+// Call it inside a frame callback.
 // Draws a switch with a label and returns its `FlSignal`.
 //
 // A click or key activation flips `value`. `FlSignal.clicked` is set on the frame it flips. `value` must not

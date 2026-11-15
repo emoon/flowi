@@ -12,7 +12,9 @@
 extern "C" {
 #endif
 
-// A group of radio buttons where exactly one option is selected. Call it inside a frame callback.
+// A group of radio buttons where exactly one option is selected.
+//
+// Call it inside a frame callback.
 // Draws one radio button per option and returns a `FlSignal` for the group.
 //
 // `selected_index` is the index into `options`. It is reset to 0 if it is out of range, and it is

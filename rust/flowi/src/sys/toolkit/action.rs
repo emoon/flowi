@@ -40,7 +40,8 @@ pub enum Action {
     Scroll_Up = 12,
     /// Scroll down with the mouse wheel.
     Scroll_Down = 13,
-    /// Increment the focused value. By default this is the Right arrow or the Equal key, which is the plus key on most layouts.
+    /// Increment the focused value. By default this is the Right arrow or the Equal key, which is the plus key on
+    /// most layouts.
     Increment = 14,
     /// Decrement the focused value. By default this is the Left arrow or the minus key.
     Decrement = 15,

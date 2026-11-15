@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-// Opens and closes layout containers, the boxes that place their children.
+// Layout containers, the boxes that place their children.
 //
 // Call `fl_layout_start` or `fl_layout_start_auto`, then `fl_layout_configure` to set the container up. Draw the children,
 // then call `fl_layout_end`. Containers nest, and each `fl_layout_end` closes the one opened last.

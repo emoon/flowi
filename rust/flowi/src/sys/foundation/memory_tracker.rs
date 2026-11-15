@@ -47,9 +47,13 @@ const _: () = {
 // with `MemoryTracker::get_stats`, or get a report of every live arena from `MemoryTracker::dump_string` or
 // `MemoryTracker::export_json_string`.
 extern "C" {
-    /// Starts tracking arenas. Call it early in application startup.
+    /// Starts tracking arenas.
+    ///
+    /// Call it early in application startup.
     pub fn fl_memory_tracker_init();
-    /// Stops tracking arenas. Call it at application shutdown.
+    /// Stops tracking arenas.
+    ///
+    /// Call it at application shutdown.
     pub fn fl_memory_tracker_destroy();
     /// Returns a text report of memory use, allocated from `arena`.
     ///

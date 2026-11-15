@@ -6,7 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// A small toggle tag with a softer look than a pill. Call it inside a frame callback.
+/// A small toggle tag with a softer look than a pill.
+///
+/// Call it inside a frame callback.
 pub struct Chip;
 
 impl Chip {

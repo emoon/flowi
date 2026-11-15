@@ -12,7 +12,9 @@
 extern "C" {
 #endif
 
-// A pill-shaped toggle button, for example a category filter. Call it inside a frame callback.
+// A pill-shaped toggle button, for example a category filter.
+//
+// Call it inside a frame callback.
 // Draws a pill with a label and returns its `FlSignal`.
 //
 // A click flips `selected`, and `FlSignal.clicked` is set on the frame it flips. A selected pill is filled and

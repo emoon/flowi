@@ -55,7 +55,9 @@ enum KeyEventType {
     Repeat,
 }
 
-/// What a `MouseEvent` reports. It also tells which payload of the event is set.
+/// What a `MouseEvent` reports.
+///
+/// It also tells which payload of the event is set.
 #[enumerators(MouseEvent)]
 enum MouseEventType {
     Move = 0,
@@ -68,7 +70,9 @@ enum MouseEventType {
     Relative_Motion,
 }
 
-/// What a `GamepadEvent` reports. It also tells which payload of the event is set.
+/// What a `GamepadEvent` reports.
+///
+/// It also tells which payload of the event is set.
 #[enumerators(GamepadEvent)]
 enum GamepadEventType {
     Button_Down = 0,
@@ -78,7 +82,9 @@ enum GamepadEventType {
     Disconnected,
 }
 
-/// What a `WindowEvent` reports. It also tells which payload of the event is set.
+/// What a `WindowEvent` reports.
+///
+/// It also tells which payload of the event is set.
 #[enumerators(WindowEvent)]
 enum WindowEventType {
     None = 0,

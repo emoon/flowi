@@ -42,9 +42,13 @@ typedef struct FlMemoryStats {
 // Call `fl_memory_tracker_init` early in startup and `fl_memory_tracker_destroy` at shutdown. In between, read the numbers
 // with `fl_memory_tracker_get_stats`, or get a report of every live arena from `fl_memory_tracker_dump_string` or
 // `fl_memory_tracker_export_json_string`.
-// Starts tracking arenas. Call it early in application startup.
+// Starts tracking arenas.
+//
+// Call it early in application startup.
 FL_API void fl_memory_tracker_init(void);
-// Stops tracking arenas. Call it at application shutdown.
+// Stops tracking arenas.
+//
+// Call it at application shutdown.
 FL_API void fl_memory_tracker_destroy(void);
 // Returns a text report of memory use, allocated from `arena`.
 //

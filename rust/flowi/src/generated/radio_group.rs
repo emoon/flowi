@@ -6,7 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// A group of radio buttons where exactly one option is selected. Call it inside a frame callback.
+/// A group of radio buttons where exactly one option is selected.
+///
+/// Call it inside a frame callback.
 pub struct RadioGroup;
 
 impl RadioGroup {

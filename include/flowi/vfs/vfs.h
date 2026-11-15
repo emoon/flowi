@@ -164,7 +164,9 @@ FL_API uint32_t fl_vfs_read(uint32_t file_handle, void* buffer, int64_t size);
 //
 // The listing is always one level deep. `depth` is ignored. Get the result with `fl_vfs_get_file_list`.
 FL_API uint32_t fl_vfs_get_listing(FlVfsMount* mount, FlString relative_path, int32_t depth);
-// Returns whether the operation has finished. It is false for a handle that is not open.
+// Returns whether the operation has finished.
+//
+// It is false for a handle that is not open.
 FL_API bool fl_vfs_is_ready(uint32_t handle);
 // Blocks the main thread until the operation has finished.
 //

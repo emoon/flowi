@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-// Makes an area you laid out respond to the mouse, keyboard and gamepad.
+// Mouse, keyboard and gamepad interaction for an area you laid out.
 // Makes the laid out area `id` interactive and returns its `FlSignal`.
 //
 // `flags` picks what it reacts to, for example `FlItemFlags_clickable` and `FlItemFlags_draggable` together.

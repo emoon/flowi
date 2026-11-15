@@ -1,4 +1,6 @@
-/// A standalone scrollbar. Call it inside a frame callback.
+/// A standalone scrollbar.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api Scrollbar {
     /// Draws a scrollbar and returns its `Signal`.

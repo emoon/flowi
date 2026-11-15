@@ -14,7 +14,9 @@ extern "C" {
     /// `capacity` is the initial size of the text buffer in bytes. Small values are raised to a minimum, and the
     /// buffer grows when you set longer text.
     pub fn fl_text_input_create(capacity: u32) -> *mut crate::sys::TextInputState;
-    /// Frees a text field and its text. Does nothing if `state` is null.
+    /// Frees a text field and its text.
+    ///
+    /// Does nothing if `state` is null.
     pub fn fl_text_input_destroy(state: *mut crate::sys::TextInputState);
     /// Replaces the text with a copy of `text` and moves the cursor to the end.
     pub fn fl_text_input_set_text(state: *mut crate::sys::TextInputState, text: crate::sys::RawStr);
@@ -25,12 +27,12 @@ extern "C" {
     pub fn fl_text_input_get_text(state: *mut crate::sys::TextInputState) -> crate::sys::RawStr;
     /// Removes all text and moves the cursor to the start.
     pub fn fl_text_input_clear(state: *mut crate::sys::TextInputState);
-    /// Shows the text field with default options and returns its signal.
+    /// Shows the text field with default options and returns its `Signal`.
     ///
     /// `Signal.text_changed`, `Signal.submitted` (Enter) and `Signal.cancelled` (Escape or gamepad B) are true only
     /// on the frame they happen. Call this inside a frame callback.
     pub fn fl_text_input_show(label: crate::sys::RawStr, state: *mut crate::sys::TextInputState) -> crate::sys::Signal;
-    /// Shows the text field with the options in `config` and returns its signal.
+    /// Shows the text field with the options in `config` and returns its `Signal`.
     ///
     /// The signal is the same as the one from the call without a `config`. A zeroed `config` gives the default
     /// behavior.

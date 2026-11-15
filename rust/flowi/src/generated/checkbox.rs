@@ -6,7 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// A checkbox. Call it inside a frame callback.
+/// A checkbox.
+///
+/// Call it inside a frame callback.
 pub struct Checkbox;
 
 impl Checkbox {

@@ -15,9 +15,13 @@ extern "C" {
 // to time in `fl_perf_scope_begin` and `fl_perf_scope_end`, and call `fl_perf_scope_frame_end`. When the first scope of a
 // frame on the main thread takes longer than 17 ms, `fl_perf_scope_frame_end` logs a warning with the time of every
 // scope.
-// Marks the calling thread as the main thread. Call it once at startup.
+// Marks the calling thread as the main thread.
+//
+// Call it once at startup.
 FL_API void fl_perf_scope_init(void);
-// Clears the profiler state of the calling thread. Call it at application shutdown.
+// Clears the profiler state of the calling thread.
+//
+// Call it at application shutdown.
 FL_API void fl_perf_scope_destroy(void);
 // Starts a timing scope called `name` and returns its index.
 //
@@ -31,7 +35,9 @@ FL_API uint32_t fl_perf_scope_begin(const char* name);
 FL_API void fl_perf_scope_end(uint32_t stack_index);
 // Starts a frame by clearing the scopes the calling thread recorded.
 FL_API void fl_perf_scope_frame_begin(void);
-// Ends a frame. On the main thread, it logs the scopes if the first scope took longer than 17 ms.
+// Ends a frame.
+//
+// On the main thread, it logs the scopes if the first scope took longer than 17 ms.
 FL_API void fl_perf_scope_frame_end(void);
 
 

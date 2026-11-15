@@ -66,7 +66,9 @@ typedef enum FlKeyEventType {
     FlKeyEvent_Repeat = 2,
 } FlKeyEventType;
 
-// What a `FlMouseEvent` reports. It also tells which payload of the event is set.
+// What a `FlMouseEvent` reports.
+//
+// It also tells which payload of the event is set.
 typedef enum FlMouseEventType {
     FlMouseEvent_Move = 0,
     FlMouseEvent_Button_Down = 1,
@@ -78,7 +80,9 @@ typedef enum FlMouseEventType {
     FlMouseEvent_Relative_Motion = 6,
 } FlMouseEventType;
 
-// What a `FlGamepadEvent` reports. It also tells which payload of the event is set.
+// What a `FlGamepadEvent` reports.
+//
+// It also tells which payload of the event is set.
 typedef enum FlGamepadEventType {
     FlGamepadEvent_Button_Down = 0,
     FlGamepadEvent_Button_Up = 1,
@@ -87,7 +91,9 @@ typedef enum FlGamepadEventType {
     FlGamepadEvent_Disconnected = 4,
 } FlGamepadEventType;
 
-// What a `FlWindowEvent` reports. It also tells which payload of the event is set.
+// What a `FlWindowEvent` reports.
+//
+// It also tells which payload of the event is set.
 typedef enum FlWindowEventType {
     FlWindowEvent_None = 0,
     FlWindowEvent_Focus_Gained = 1,

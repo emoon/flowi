@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Works out which rows of a long list of equal height are visible.
+/// A calculation of the visible rows in a long list whose rows have the same height.
 pub struct ListClipper;
 
 impl ListClipper {

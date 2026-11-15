@@ -34,7 +34,9 @@ typedef enum __attribute__((__packed__)) FlLayoutAlignmentY {
     FlLayoutAlignmentY_Center = 2,
 } FlLayoutAlignmentY;
 
-// How an axis is sized. It selects which member of `FlLayoutSizingAxis.size` is used.
+// How an axis is sized.
+//
+// It selects which member of `FlLayoutSizingAxis.size` is used.
 typedef enum __attribute__((__packed__)) FlLayoutSizingType {
     // Fits the content, within `FlLayoutSizingMinMax.min` and `FlLayoutSizingMinMax.max`.
     FlLayoutSizingType_Fit = 0,

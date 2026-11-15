@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Makes an area you laid out respond to the mouse, keyboard and gamepad.
+/// Mouse, keyboard and gamepad interaction for an area you laid out.
 pub struct Item;
 
 impl Item {

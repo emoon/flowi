@@ -17,7 +17,9 @@ const _: () = {
     assert!(core::mem::align_of::<JobsResult>() == 4, "JobsResult align drift");
 };
 
-/// The priority of a job. Workers take higher-priority jobs first.
+/// The priority of a job.
+///
+/// Workers take higher-priority jobs first.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum JobPriority {

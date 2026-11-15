@@ -211,7 +211,9 @@ extern "C" {
     ///
     /// The listing is always one level deep. `depth` is ignored. Get the result with `Vfs::fl_vfs_get_file_list`.
     pub fn fl_vfs_get_listing(mount: *mut FlVfsMount, relative_path: crate::sys::RawStr, depth: i32) -> u32;
-    /// Returns whether the operation has finished. It is false for a handle that is not open.
+    /// Returns whether the operation has finished.
+    ///
+    /// It is false for a handle that is not open.
     pub fn fl_vfs_is_ready(handle: u32) -> bool;
     /// Blocks the main thread until the operation has finished.
     ///

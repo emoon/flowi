@@ -151,13 +151,17 @@ FL_API void fl_string_free(FlString str);
 FL_API FlString fl_string_substr(FlString str, uint64_t start, uint64_t length);
 // Starts a string at the current end of `arena`.
 FL_API FlStringBuilder fl_sb_create(FlArena* arena);
-// Appends a C string. A null `str` appends nothing.
+// Appends a C string.
+//
+// A null `str` appends nothing.
 FL_API FlStringBuilder fl_sb_append_cstr(FlStringBuilder sb, const char* str);
 // Appends a string.
 FL_API FlStringBuilder fl_sb_append_string(FlStringBuilder sb, FlString str);
 // Appends one character.
 FL_API FlStringBuilder fl_sb_append_char(FlStringBuilder sb, char c);
-// Appends text formatted like `printf`. `%S` formats a string.
+// Appends text formatted like `printf`.
+//
+// `%S` formats a string.
 FL_API FlStringBuilder fl_sb_appendf(FlStringBuilder sb, const char* format, ...);
 // Discards everything appended so far.
 FL_API FlStringBuilder fl_sb_clear(FlStringBuilder sb);

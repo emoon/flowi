@@ -25,7 +25,9 @@ FL_API void fl_modal_begin_frame(uint32_t scope_id);
 // It also does what `fl_modal_begin_frame` does. Use the same `scope_id` for both. A `scope_id` of 0 does
 // nothing.
 FL_API void fl_modal_begin(uint32_t scope_id);
-// Ends the modal content. The modal stays open until `fl_modal_close`.
+// Ends the modal content.
+//
+// The modal stays open until `fl_modal_close`.
 FL_API void fl_modal_end(void);
 // Closes the modal and gives focus back to the widget that had it before the modal opened.
 FL_API void fl_modal_close(void);

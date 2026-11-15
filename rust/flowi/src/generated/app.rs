@@ -26,49 +26,61 @@ impl Drop for App {
 }
 
 impl App {
-    /// Moves the injected mouse cursor to (`x`, `y`) in window pixels. Headless only.
+    /// Moves the injected mouse cursor to (`x`, `y`) in window pixels.
     ///
     /// The next `App::tick` picks it up, and it becomes the hit-test position of the frame after that.
+    ///
+    /// This call is for headless apps only.
     #[inline]
     pub fn inject_mouse_move(&mut self, x: i32, y: i32) {
         unsafe { crate::sys::fl_app_inject_mouse_move(self.handle, x, y) }
     }
 
-    /// Injects a relative mouse motion, like the one a hidden drag produces. Headless only.
+    /// Injects a relative mouse motion, like the one a hidden drag produces.
     ///
     /// The next `App::tick` picks it up.
+    ///
+    /// This call is for headless apps only.
     #[inline]
     pub fn inject_mouse_delta(&mut self, delta_x: f32, delta_y: f32) {
         unsafe { crate::sys::fl_app_inject_mouse_delta(self.handle, delta_x, delta_y) }
     }
 
-    /// Injects a mouse wheel delta (a positive `y` scrolls up). Headless only.
+    /// Injects a mouse wheel delta (a positive `y` scrolls up).
     ///
     /// The next `App::tick` picks it up.
+    ///
+    /// This call is for headless apps only.
     #[inline]
     pub fn inject_wheel(&mut self, x: f32, y: f32) {
         unsafe { crate::sys::fl_app_inject_wheel(self.handle, x, y) }
     }
 
-    /// Presses (`down` is true) or releases a key. Headless only.
+    /// Presses (`down` is true) or releases a key.
     ///
     /// The next `App::tick` picks it up.
+    ///
+    /// This call is for headless apps only.
     #[inline]
     pub fn inject_key(&mut self, key: crate::sys::Key, down: bool) {
         unsafe { crate::sys::fl_app_inject_key(self.handle, key, down) }
     }
 
-    /// Returns whether the last `App::tick` left the input backend in relative mouse mode. Headless only.
+    /// Returns whether the last `App::tick` left the input backend in relative mouse mode.
     ///
     /// It is on for as long as a hidden drag lasts.
+    ///
+    /// This call is for headless apps only.
     #[inline]
     pub fn headless_relative_mouse_mode(&self) -> bool {
         unsafe { crate::sys::fl_app_headless_relative_mouse_mode(self.handle) }
     }
 
-    /// Returns the last position the cursor was warped back to, in window pixels. Headless only.
+    /// Returns the last position the cursor was warped back to, in window pixels.
     ///
     /// A hidden drag sets it when it ends.
+    ///
+    /// This call is for headless apps only.
     #[inline]
     pub fn headless_last_warp(&self) -> crate::sys::Vec2 {
         unsafe { crate::sys::fl_app_headless_last_warp(self.handle) }

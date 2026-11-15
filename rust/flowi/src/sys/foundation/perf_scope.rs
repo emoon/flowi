@@ -7,9 +7,13 @@
 // frame on the main thread takes longer than 17 ms, `PerfScope::frame_end` logs a warning with the time of every
 // scope.
 extern "C" {
-    /// Marks the calling thread as the main thread. Call it once at startup.
+    /// Marks the calling thread as the main thread.
+    ///
+    /// Call it once at startup.
     pub fn fl_perf_scope_init();
-    /// Clears the profiler state of the calling thread. Call it at application shutdown.
+    /// Clears the profiler state of the calling thread.
+    ///
+    /// Call it at application shutdown.
     pub fn fl_perf_scope_destroy();
     /// Starts a timing scope called `name` and returns its index.
     ///
@@ -23,7 +27,9 @@ extern "C" {
     pub fn fl_perf_scope_end(stack_index: u32);
     /// Starts a frame by clearing the scopes the calling thread recorded.
     pub fn fl_perf_scope_frame_begin();
-    /// Ends a frame. On the main thread, it logs the scopes if the first scope took longer than 17 ms.
+    /// Ends a frame.
+    ///
+    /// On the main thread, it logs the scopes if the first scope took longer than 17 ms.
     pub fn fl_perf_scope_frame_end();
 }
 

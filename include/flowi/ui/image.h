@@ -166,7 +166,7 @@ typedef struct FlDynamicImage {
     bool is_alpha_only;
 } FlDynamicImage;
 
-// Loads images and draws them.
+// Image loading and drawing.
 //
 // Call `fl_image_load` or `fl_image_load_mount` to start a load and keep the returned handle. Poll it with
 // `fl_image_status` or `fl_image_is_ready`, and draw it each frame with `fl_image`.

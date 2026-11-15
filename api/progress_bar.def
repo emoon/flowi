@@ -1,4 +1,6 @@
-/// A progress bar. Call it inside a frame callback.
+/// A progress bar.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api ProgressBar {
     /// Draws a progress bar filled to `fraction`.

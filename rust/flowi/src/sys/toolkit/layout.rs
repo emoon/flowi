@@ -43,7 +43,9 @@ const _: () = {
     assert!(core::mem::align_of::<LayoutAlignmentY>() == 1, "LayoutAlignmentY align drift");
 };
 
-/// How an axis is sized. It selects which member of `LayoutSizingAxis.size` is used.
+/// How an axis is sized.
+///
+/// It selects which member of `LayoutSizingAxis.size` is used.
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LayoutSizingType {

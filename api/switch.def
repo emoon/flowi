@@ -1,4 +1,6 @@
-/// An on/off toggle drawn as a sliding knob, with the same role as a checkbox. Call it inside a frame callback.
+/// An on/off toggle drawn as a sliding knob, with the same role as a checkbox.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api Switch {
     /// Draws a switch with a label and returns its `Signal`.

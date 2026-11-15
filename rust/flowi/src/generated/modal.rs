@@ -35,7 +35,9 @@ impl Modal {
         unsafe { crate::sys::fl_modal_begin(scope_id) }
     }
 
-    /// Ends the modal content. The modal stays open until `Modal::close`.
+    /// Ends the modal content.
+    ///
+    /// The modal stays open until `Modal::close`.
     #[inline]
     pub fn end() {
         let _frame = crate::frame_thread::frame_thread_guard("Modal::end");

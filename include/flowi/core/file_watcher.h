@@ -11,7 +11,9 @@
 extern "C" {
 #endif
 
-// A kind of file system change. `FlFileChange.change_types` combines them as a bitmask.
+// A kind of file system change.
+//
+// `FlFileChange.change_types` combines them as a bitmask.
 typedef enum FlFileChangeType {
     FlFileChangeType_None = 0,
     // The file or directory was created.
@@ -78,7 +80,9 @@ typedef struct FlFileChanges {
 // Returns 0 if `config` is null, `path` does not exist, the platform cannot watch it or too many watchers
 // are running.
 FL_API uint32_t fl_file_watcher_start(FlString path, const FlFileWatcherConfig* config);
-// Stops the watcher and releases its resources. Passing 0 does nothing.
+// Stops the watcher and releases its resources.
+//
+// Passing 0 does nothing.
 FL_API void fl_file_watcher_stop(uint32_t handle);
 // Returns whether the watcher is still running.
 FL_API bool fl_file_watcher_is_active(uint32_t handle);

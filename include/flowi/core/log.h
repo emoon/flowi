@@ -43,7 +43,9 @@ FL_API uint32_t fl_log_register_channel(FlString name);
 //
 // A new channel starts at the level set by `fl_log_set_level`, or `FlLogLevel_Trace` if it was never called.
 FL_API void fl_log_channel_set_level(uint32_t id, FlLogLevel level);
-// Turns channel `id` on or off. Messages to a disabled channel are dropped.
+// Turns channel `id` on or off.
+//
+// Messages to a disabled channel are dropped.
 FL_API void fl_log_channel_enable(uint32_t id, bool enabled);
 // Logs `message` on channel `id` as it is, without printf formatting.
 //
@@ -62,7 +64,9 @@ FL_API void fl_log_file_shutdown(void);
 //
 // The path stays readable after `fl_log_file_shutdown`.
 FL_API FlString fl_log_file_get_path(void);
-// Flushes log output. Messages are written as they are logged, so this currently does nothing.
+// Flushes log output.
+//
+// Messages are written as they are logged, so this currently does nothing.
 FL_API void fl_log_flush(void);
 // Sets the lowest level that every channel logs, including channels registered later.
 //

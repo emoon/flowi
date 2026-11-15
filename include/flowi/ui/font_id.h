@@ -8,7 +8,9 @@
 extern "C" {
 #endif
 
-// A handle to a loaded font. 0 is invalid. Where a font is used to draw or measure text, 0 means the active font.
+// A handle to a loaded font.
+//
+// 0 is invalid. Where a font is used to draw or measure text, 0 means the active font.
 //
 // This is returned by `fl_font_load` and taken by `fl_font_set`, `fl_font_is_loaded` and `fl_painter_text`.
 typedef uint32_t FlFontId;

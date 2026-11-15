@@ -1,4 +1,6 @@
-/// Clickable text for hyperlinks. Call it inside a frame callback.
+/// Clickable text for hyperlinks.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api Link {
     /// Draws a link and returns its `Signal`.

@@ -6,11 +6,15 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Fixed empty gaps in a layout. Call these inside a frame callback.
+/// Fixed empty gaps in a layout.
+///
+/// Call these inside a frame callback.
 pub struct Spacer;
 
 impl Spacer {
-    /// Adds an empty gap of `height` logical pixels. It fills the available width.
+    /// Adds an empty gap of `height` logical pixels.
+    ///
+    /// It fills the available width.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(height: f32) {
@@ -18,7 +22,9 @@ impl Spacer {
         unsafe { crate::sys::fl_spacer(height) }
     }
 
-    /// Adds an empty gap of `width` logical pixels. It fills the available height.
+    /// Adds an empty gap of `width` logical pixels.
+    ///
+    /// It fills the available height.
     #[inline]
     pub fn h(width: f32) {
         let _frame = crate::frame_thread::frame_thread_guard("Spacer::h");

@@ -1,4 +1,6 @@
-/// A group of radio buttons where exactly one option is selected. Call it inside a frame callback.
+/// A group of radio buttons where exactly one option is selected.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api RadioGroup {
     /// Draws one radio button per option and returns a `Signal` for the group.

@@ -1,4 +1,6 @@
-/// A button that opens a popup list to pick one of several options. Call it inside a frame callback.
+/// A button that opens a popup list to pick one of several options.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api Dropdown {
     /// Draws a dropdown and writes the picked option to `selected_index`.

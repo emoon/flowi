@@ -11,7 +11,9 @@ api TextInput {
     /// `capacity` is the initial size of the text buffer in bytes. Small values are raised to a minimum, and the
     /// buffer grows when you set longer text.
     [manual] create(capacity: u32) -> *TextInputState
-    /// Frees a text field and its text. Does nothing if `state` is null.
+    /// Frees a text field and its text.
+    ///
+    /// Does nothing if `state` is null.
     [drop] destroy(state: *TextInputState)
     /// Replaces the text with a copy of `text` and moves the cursor to the end.
     [borrowed] set_text(state: *TextInputState, text: String)
@@ -22,12 +24,12 @@ api TextInput {
     [const] [rename(text)] get_text(state: *TextInputState) -> String
     /// Removes all text and moves the cursor to the start.
     clear(state: *TextInputState)
-    /// Shows the text field with default options and returns its signal.
+    /// Shows the text field with default options and returns its `Signal`.
     ///
     /// `Signal.text_changed`, `Signal.submitted` (Enter) and `Signal.cancelled` (Escape or gamepad B) are true only
     /// on the frame they happen. Call this inside a frame callback.
     [manual] [rename(show_default)] show(label: String, state: *TextInputState) -> Signal
-    /// Shows the text field with the options in `config` and returns its signal.
+    /// Shows the text field with the options in `config` and returns its `Signal`.
     ///
     /// The signal is the same as the one from the call without a `config`. A zeroed `config` gives the default
     /// behavior.

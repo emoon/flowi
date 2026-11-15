@@ -24,7 +24,9 @@ extern "C" {
 // `capacity` is the initial size of the text buffer in bytes. Small values are raised to a minimum, and the
 // buffer grows when you set longer text.
 FL_API FlTextInputState* fl_text_input_create(uint32_t capacity);
-// Frees a text field and its text. Does nothing if `state` is null.
+// Frees a text field and its text.
+//
+// Does nothing if `state` is null.
 FL_API void fl_text_input_destroy(FlTextInputState* state);
 // Replaces the text with a copy of `text` and moves the cursor to the end.
 FL_API void fl_text_input_set_text(FlTextInputState* state, FlString text);
@@ -35,12 +37,12 @@ FL_API void fl_text_input_set_text(FlTextInputState* state, FlString text);
 FL_API FlString fl_text_input_get_text(FlTextInputState* state);
 // Removes all text and moves the cursor to the start.
 FL_API void fl_text_input_clear(FlTextInputState* state);
-// Shows the text field with default options and returns its signal.
+// Shows the text field with default options and returns its `FlSignal`.
 //
 // `FlSignal.text_changed`, `FlSignal.submitted` (Enter) and `FlSignal.cancelled` (Escape or gamepad B) are true only
 // on the frame they happen. Call this inside a frame callback.
 FL_API FlSignal fl_text_input_show(FlString label, FlTextInputState* state);
-// Shows the text field with the options in `config` and returns its signal.
+// Shows the text field with the options in `config` and returns its `FlSignal`.
 //
 // The signal is the same as the one from the call without a `config`. A zeroed `config` gives the default
 // behavior.

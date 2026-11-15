@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Opens and closes layout containers, the boxes that place their children.
+/// Layout containers, the boxes that place their children.
 ///
 /// Call `Layout::start` or `Layout::start_auto`, then `Layout::configure` to set the container up. Draw the children,
 /// then call `Layout::end`. Containers nest, and each `Layout::end` closes the one opened last.

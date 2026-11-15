@@ -27,7 +27,9 @@ pub enum FlVfsMount {}
 extern "C" {
     /// Returns the image handle of `icon`, or an invalid handle if `icon` is out of range.
     pub fn fl_icon_get(icon: crate::sys::Icon) -> crate::sys::ImageHandle;
-    /// Starts loading the built-in icons from `mount`. Does nothing if `mount` is null.
+    /// Starts loading the built-in icons from `mount`.
+    ///
+    /// Does nothing if `mount` is null.
     pub fn fl_icon_load(mount: *mut FlVfsMount);
 }
 

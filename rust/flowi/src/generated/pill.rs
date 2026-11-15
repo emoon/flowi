@@ -6,7 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// A pill-shaped toggle button, for example a category filter. Call it inside a frame callback.
+/// A pill-shaped toggle button, for example a category filter.
+///
+/// Call it inside a frame callback.
 pub struct Pill;
 
 impl Pill {

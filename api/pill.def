@@ -1,4 +1,6 @@
-/// A pill-shaped toggle button, for example a category filter. Call it inside a frame callback.
+/// A pill-shaped toggle button, for example a category filter.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api Pill {
     /// Draws a pill with a label and returns its `Signal`.

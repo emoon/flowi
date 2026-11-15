@@ -10,7 +10,9 @@ enum JobsResult {
     Invalid = 2,
 }
 
-/// The priority of a job. Workers take higher-priority jobs first.
+/// The priority of a job.
+///
+/// Workers take higher-priority jobs first.
 enum JobPriority {
     /// Background and prefetch work.
     Low = 0,

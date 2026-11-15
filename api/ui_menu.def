@@ -26,9 +26,13 @@ api Menu {
     /// The bullet shows while `selected` equals `value`. Activating the item sets `selected` to `value`. By default
     /// it does not close the menu.
     radio_impl(label: String, selected: *i32, value: i32, config: MenuItemConfig) -> Signal
-    /// Adds a separator line. It cannot be activated.
+    /// Adds a separator line.
+    ///
+    /// It cannot be activated.
     separator()
-    /// Adds a caption that names a group of items. It cannot be activated.
+    /// Adds a caption that names a group of items.
+    ///
+    /// It cannot be activated.
     header(label: String)
     /// Starts a region that opens the menu `menu_id` at the cursor when the user right-clicks inside it.
     ///
@@ -41,7 +45,9 @@ api Menu {
     ///
     /// The point is read once, so the menu stays there. It does nothing if the menu is already open.
     open(menu_id: LayoutId, point: Vec2)
-    /// Closes the menu `menu_id`. It does nothing if the menu is not open.
+    /// Closes the menu `menu_id`.
+    ///
+    /// It does nothing if the menu is not open.
     close(menu_id: LayoutId)
     /// Returns whether the menu `menu_id` is open.
     is_open(menu_id: LayoutId) -> bool

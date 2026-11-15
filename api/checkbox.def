@@ -1,4 +1,6 @@
-/// A checkbox. Call it inside a frame callback.
+/// A checkbox.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api Checkbox {
     /// Draws a checkbox with a label and returns its `Signal`.

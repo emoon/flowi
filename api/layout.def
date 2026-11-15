@@ -23,7 +23,9 @@ enum LayoutAlignmentY {
     Center = 2,
 }
 
-/// How an axis is sized. It selects which member of `LayoutSizingAxis.size` is used.
+/// How an axis is sized.
+///
+/// It selects which member of `LayoutSizingAxis.size` is used.
 #[attributes(packed)]
 enum LayoutSizingType {
     /// Fits the content, within `LayoutSizingMinMax.min` and `LayoutSizingMinMax.max`.

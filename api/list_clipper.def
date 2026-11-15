@@ -20,7 +20,7 @@ struct ListClipper {
     viewport_height: f32,
 }
 
-/// Works out which rows of a long list of equal height are visible.
+/// A calculation of the visible rows in a long list whose rows have the same height.
 api ListClipper {
     /// Returns the rows that are visible in the viewport.
     ///

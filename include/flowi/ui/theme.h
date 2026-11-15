@@ -104,7 +104,7 @@ typedef struct FlThemeColors {
     FlThemeFeedback feedback;
 } FlThemeColors;
 
-// Replaces some colors of the current theme.
+// A replacement for some colors of the current theme.
 //
 // Pass it to `fl_theme_push`. Colors that are not flagged in `FlThemeOverride.slots` keep the value they have in the
 // theme at the time of the push.

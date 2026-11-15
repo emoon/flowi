@@ -6,7 +6,7 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Loads languages and chooses the active one.
+/// Language loading and the choice of the active language.
 ///
 /// Call `Localization::init` once at startup. After that, any widget text that starts with `SID_` is looked up in
 /// the active language and drawn translated, with no change to the widget calls. Use `Localization::set_language`
