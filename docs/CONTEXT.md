@@ -838,6 +838,14 @@ component).
 _Avoid_: "scroll amount" / "scroll position" for this value — it is a per-frame delta, never a
 position.
 
+**Wheel Scope**:
+The region of a container that scrolls for the user, such as a scroll area or a [[#List]]. Scopes
+nest, and each frame's [[#Wheel Delta]] scrolls one of them: the innermost scope under the pointer
+that takes the wheel. A List whose rows all fit does not take it, so the wheel goes to the scroll
+area around it. A scroll area always takes it. This is separate from a [[#Scroll Target]], which is how an app reads the wheel over its
+own element. See ADR-0078.
+_Avoid_: a container deciding from its own hover alone that the wheel is its to use.
+
 **Mouse Button State**:
 A mouse button's interaction over a single frame, read as three independent channels — *pressed*
 (the edge where it went down this frame), *held* (the level: currently down), and *released* (the
@@ -1019,6 +1027,36 @@ _Avoid_: conflating the cursor with the selection (arrowing must not re-select i
 single-select list, or a dropdown would commit-and-close on every arrow press) or with the
 anchor (the shift-range pivot stays put while the cursor roves). _Avoid_: setting the List's
 focus flag without claiming the global ring — the next frame's global-focus check blurs it back.
+
+**Tree**:
+A [[#List]] whose rows are indented by depth and carry an expand arrow. It is a third face of the
+List, so selection, keyboard navigation, the marquee and scrolling are the List's. The Tree adds the
+indent, the arrow, and Left and Right to expand, collapse and move between parent and child. It does
+not remember which rows are expanded: it reports the row the user toggled and the app passes the new
+rows next frame. Rows cannot be dragged. See ADR-0077.
+_Avoid_: a Tree that stores the expanded set, or a tree widget with its own selection code.
+
+**Row Source**:
+What the [[#List]] reads its rows through: a count, the id of a row, the row of an id, and a label
+(`ListRows`). An id slice, the declarative items, the rows of a [[#Tree]] and a bare count are each
+a Row Source, so the List's selection and keyboard code is the same for all of them. A source may
+have no labels (type-ahead is then off) or no ids.
+_Avoid_: reading the id slice directly inside the List.
+
+**Virtual Source**:
+A [[#Row Source]] that holds no per-row data, only a count. A row is identified by its row number,
+so the [[#Item Id]] the List sees is the row number plus one. The virtual [[#Tree]] uses it: the app
+passes the [[#Expanded Node]]s and the Tree works out each row from them. Row numbers move when a
+node above expands or collapses, and the Tree moves the cursor, the anchor and the selection with
+them.
+_Avoid_: treating a Virtual Source row number as a stable id across an insert or a re-sort.
+
+**Expanded Node**:
+An entry the app passes to the virtual [[#Tree]] for each node that is open: its parent entry, which
+child of the parent it is, and how many children it has (`TreeExpanded`). Only expanded nodes are
+passed, in the order they appear on screen, so the cost follows what is open and not the size of
+the tree.
+_Avoid_: passing a node that is not expanded, or a node before its parent.
 
 **Drop Relationship**:
 Where a [[#List]] drag-reorder lands, expressed relative to a target [[#Item Id]] rather than

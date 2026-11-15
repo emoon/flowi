@@ -78,3 +78,5 @@ One line per ADR: number, title and status. Decisions are never renumbered; a su
 - [0074](0074-vfs-immutable-mounts-and-refcounted-ops.md) VFS: one lock per mount, single-handle tree nodes, refcounted operations — Accepted
 - [0075](0075-clay-is-vendored-with-documented-local-patches.md) Clay is vendored with documented local patches — Accepted
 - [0076](0076-one-rust-crate-with-a-private-raw-binding-layer.md) One Rust crate with a private raw-binding layer — Accepted (supersedes the crate split in ADR-0031 and ADR-0033)
+- [0077](0077-tree-is-a-face-over-the-list-app-owns-expanded-state.md) The Tree is a face over the List, and the app owns the expanded state — Accepted
+- [0078](0078-wheel-scopes-route-the-wheel-to-the-innermost-scrolling-container.md) Wheel scopes route the wheel to the innermost scrolling container — Accepted
