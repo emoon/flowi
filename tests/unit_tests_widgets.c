@@ -1701,6 +1701,42 @@ UTEST(ui_slider, equal_min_and_max_keeps_finite_geometry) {
     ASSERT_NEAR_MSG((double)value, 3.0, 1e-4, "the value stays at the only value in range");
 }
 
+// One frame of an integer slider with the cursor over its row and the wheel turned by wheel_y.
+static void slider_int_wheel_frame(FlUiCtx* ctx, FlString label, int* value, float wheel_y) {
+    const ItemState* row
+        = hashmap_get(&ctx->shared->item_state, ui_layout_id_to_clay_id((FlLayoutId) { .name = label, .id = 0 }));
+    if (row != nullptr) {
+        ui_input_set_mouse_position(ctx, row->state.pos.x + 50.0f, row->state.pos.y + row->state.size.y / 2.0f);
+    }
+    ui_input_update(ctx, 1.0f / 60.0f);
+    ctx->input_state.mouse.wheel_x_cached = 0.0f;
+    ctx->input_state.mouse.wheel_y_cached = wheel_y;
+
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
+        ui_slider_int(label, value, 0, 10, .step = 0.0f);
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+}
+
+// The default step is 1% of the range, which is 0.1 on a 0..10 slider and rounds back to the same integer. An
+// integer slider takes steps of at least 1, so the wheel moves it.
+UTEST(ui_slider, int_slider_with_a_small_range_still_moves) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    ctx->layout_width = 1920.0f;
+    ctx->layout_height = 1080.0f;
+    ui_set_scale(1.0f, 1.0f);
+
+    int value = 5;
+    const FlString label = FL_S("slider_int_small_range");
+    for_count(i, 3) {
+        slider_int_wheel_frame(ctx, label, &value, 0.0f);
+    }
+    slider_int_wheel_frame(ctx, label, &value, 1.0f);
+    ASSERT_EQ_MSG(value, 6, "one wheel step moves the integer slider by one");
+}
+
 // FlTabBarConfig's item and strip fields set the tab geometry, and a zeroed config leaves the strip at its
 // built-in geometry (the dock leaf header passes a zeroed one). The case checks the debug render-command
 // snapshot, so the numbers in the assertions are the geometry.
