@@ -579,6 +579,7 @@ typedef struct FlUiCtx {
     FlListUniformContext* list_uniform_ctx; // created in ui_create
 
     FlListContext* ui_list_ctx; // created in ui_create
+    struct FlTreeContext* ui_tree_ctx;
 
 #ifdef FLOWI_UI_INSPECTOR
     // This window's last-frame render commands, captured at ui_update_end for test introspection

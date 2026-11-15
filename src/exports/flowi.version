@@ -402,6 +402,10 @@ FLOWI_1.0 {
     fl_theme_pop;
     fl_theme_push;
     fl_theme_update;
+    fl_tree_begin;
+    fl_tree_end;
+    fl_tree_item_begin;
+    fl_tree_item_end;
     fl_ui_set_feedback_hook;
     fl_vfs_close;
     fl_vfs_get_data;

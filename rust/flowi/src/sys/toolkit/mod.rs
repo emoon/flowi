@@ -64,6 +64,7 @@ pub mod text_config;
 pub mod text_input;
 pub mod text_input_state;
 pub mod theme;
+pub mod tree;
 pub mod ui_floating;
 pub mod ui_input;
 pub mod ui_layout;

@@ -40,16 +40,6 @@
 #define LIST_DECL_ICON_GAP 8      // gap between the leading icon and the label (logical px)
 #define LIST_DECL_ICON_INSET 4.0f // shrink the icon square this much from the row height, top and bottom
 
-// The arguments of the begin core: the scoped face's begin call plus the declarative face's policy toggles.
-typedef struct ListBeginArgs {
-    FlLayoutId id;
-    ListRows rows;
-    FlSelectionSet* set;
-    FlListConfig config;
-    bool single_select;
-    bool disable_reorder;
-} ListBeginArgs;
-
 FlListContext* ui_list_create(FlArena* arena) {
     FlListContext* ctx = arena_alloc_zero(arena, FlListContext);
     ctx->arena = arena;
@@ -124,6 +114,7 @@ static void list_resolve_focus_seed(FlListContext* self, ListState* st) {
 static void list_reset_frame(FlListContext* self, const ListBeginArgs* args) {
     self->single_select = args->single_select;
     self->disable_reorder = args->disable_reorder;
+    self->key_hook = args->key_hook;
     self->context_menu_id = 0;
     self->current_id = args->id;
     self->current_clay_id = ui_layout_id_to_clay_id(args->id);
@@ -162,7 +153,7 @@ static void list_expose_cursor(FlListContext* self, const ListState* st, bool ha
 
 // Begin core, with the declarative face's policy toggles threaded in. The scoped face leaves them off for its
 // always-multi-select, always-reorderable behavior; ui_list forwards the FlListOpts choices.
-static FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
+FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
     // The slice is the model the List forwards to selection_set_apply; it must be present whenever the List is
     // the one applying (non-null set). A no-selection caller (nullptr set) need not owe the slice.
     FL_ASSERT_DEBUG((args.set == nullptr || args.rows.count == 0 || args.rows.id_at != nullptr)
@@ -244,6 +235,12 @@ static void list_arm_drag(FlListContext* self, u64 stable_id) {
     st->drag_press_id = stable_id;
 }
 
+void list_claim_press(FlListContext* self) {
+    self->frame_row_pressed = true; // a press landed on this list this frame (focus tracking)
+    // Pressing a row takes focus into the global ring so keyboard nav engages and other widgets blur.
+    self->ui_ctx->focused_id = self->current_clay_id;
+}
+
 // Fold the row's interaction into the per-frame result. The result is keyed on the app-supplied stable id, never
 // on dense position (CONTEXT Item Id). activated_id is the committed row (double-click / keyboard activate);
 // focused_id tracks the row under the cursor.
@@ -260,9 +257,7 @@ static void list_record_signal(FlListContext* self, u64 stable_id, FlSignal sign
         self->context_menu_id = stable_id;
     }
     if (signal.pressed) {
-        self->frame_row_pressed = true; // a press landed on this list this frame (focus tracking)
-        // Pressing a row takes focus into the global ring so keyboard nav engages and other widgets blur.
-        self->ui_ctx->focused_id = self->current_clay_id;
+        list_claim_press(self);
         list_arm_drag(self, stable_id);
     }
 }
@@ -309,7 +304,8 @@ static void list_apply_click(FlListContext* self, u64 stable_id, bool selected) 
     bool ctrl = !self->single_select && (mods & FlKeyModifier_Control) != 0;
     bool shift = !self->single_select && (mods & FlKeyModifier_Shift) != 0;
 
-    if (shift && st->anchor_id != 0) {
+    bool anchor_in_rows = list_index_of_id(self, st->anchor_id) >= 0;
+    if (shift && anchor_in_rows) {
         list_click_range(self, st, stable_id);
     } else if (ctrl) {
         list_click_toggle(self, st, stable_id, selected);
@@ -320,7 +316,7 @@ static void list_apply_click(FlListContext* self, u64 stable_id, bool selected) 
     st->focus_cursor_id = stable_id; // and lands the keyboard cursor on the clicked row
 }
 
-static FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id) {
+FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id) {
     FlLayoutId item_id = { .name = self->current_id.name, .id = (i32)(self->emit_pos + 1) };
 
     // Selected-ness is resolved purely by id membership in the caller's set (CONTEXT Selection Set), so a row
@@ -345,7 +341,7 @@ static FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id) {
     return signal;
 }
 
-static void list_item_end_impl(FlListContext* self) {
+void list_item_end_impl(FlListContext* self) {
     (void)self;
     fl_layout_end(); // close the row wrapper opened in list_item_begin_impl
 }
@@ -376,7 +372,7 @@ static void list_update_focus_from_press(FlListContext* self, ListState* st) {
     st->has_focus = self->frame_row_pressed || list_empty_space_press_focuses(self);
 }
 
-static FlListResult list_end_impl(FlListContext* self) {
+FlListResult list_end_impl(FlListContext* self) {
     list_uniform_end(self->ui_ctx->list_uniform_ctx);
 
     ListState* st = list_state_get(self, self->current_clay_id);

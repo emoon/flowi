@@ -35,6 +35,13 @@ static i32 step_cursor(i32 cur, i32 dir, i32 count, bool* hit_edge) {
     return *hit_edge ? cur : next;
 }
 
+static i32 hook_target(const FlListContext* self, i32 cur) {
+    if (self->key_hook.target_row == nullptr) {
+        return cur;
+    }
+    return self->key_hook.target_row(self->key_hook.user, cur);
+}
+
 // Resolve the row the cursor moves to this frame from the nav keys (cur when nothing moves it). Consumes the nav
 // directions it acts on so they do not also drive global focus navigation. *directional is set for the keys that
 // Shift extends the selection with; type-ahead is not one of them.
@@ -64,6 +71,10 @@ static i32 resolve_target(FlListContext* self, ListState* st, i32 cur, bool* dir
     }
 
     *directional = false;
+    i32 hooked = hook_target(self, cur);
+    if (hooked != cur) {
+        return hooked;
+    }
     i32 ta = typeahead_target(self, st, cur);
     return (ta >= 0) ? ta : cur;
 }

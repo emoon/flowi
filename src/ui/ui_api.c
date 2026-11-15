@@ -43,6 +43,7 @@
 #include "painter.h"
 #include <ui/render_backend.h>
 #include "ui_list.h"
+#include "ui_tree.h"
 #include "menu/ui_menu.h"
 #include "ui_message_box.h"
 #include "ui_popup.h"
@@ -539,6 +540,23 @@ FlListResult fl_list_end(void) {
 
 void fl_list_request_focus(FlLayoutId id, uint64_t cursor_id) {
     ui_list_request_focus(id, cursor_id);
+}
+
+FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set,
+                          FlTreeConfig config) {
+    return ui_tree_begin(id, rows, count, set, config);
+}
+
+FlSignal fl_tree_item_begin(uint32_t row) {
+    return ui_tree_item_begin(row);
+}
+
+void fl_tree_item_end(void) {
+    ui_tree_item_end();
+}
+
+FlTreeResult fl_tree_end(void) {
+    return ui_tree_end();
 }
 
 // ListUniform (list_uniform.def). The uniform list keeps its state on the UI context, so these thread

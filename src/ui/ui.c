@@ -53,6 +53,7 @@
 #include "render_ir.h"
 #include "ui_hit_test.h"
 #include "ui_list.h"
+#include "ui_tree.h"
 #include "menu/ui_menu.h"
 #include "ui_navigation.h"
 #include "ui_popup.h"
@@ -237,6 +238,7 @@ FlUiCtx* ui_create(FlArena* arena, UiShared* shared) {
     ctx->list_uniform_ctx = list_uniform_create(arena);
 
     ctx->ui_list_ctx = ui_list_create(arena);
+    ctx->ui_tree_ctx = ui_tree_create(arena);
 
     return ctx;
 }
