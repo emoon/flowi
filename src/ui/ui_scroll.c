@@ -177,10 +177,10 @@ static f32 scrollbar_normalized_at_mouse(f32 mouse_pos, f32 track_start, f32 gra
     return clamp(relative_pos / usable_track, 0.0f, 1.0f);
 }
 
-static f32 scrollbar_grab_offset(f32 mouse_pos, f32 thumb_start, f32 thumb_size) {
-    f32 offset = mouse_pos - thumb_start;
-    bool on_thumb = offset >= 0.0f && offset <= thumb_size;
-    return on_thumb ? offset : thumb_size / 2.0f;
+static f32 scrollbar_grab_fraction(f32 mouse_pos, f32 thumb_start, f32 thumb_size) {
+    f32 fraction = (mouse_pos - thumb_start) / thumb_size;
+    bool on_thumb = fraction >= 0.0f && fraction <= 1.0f;
+    return on_thumb ? fraction : 0.5f;
 }
 
 // Sizing from an extent across the track and one along it.
@@ -255,11 +255,12 @@ static FlSignal scrollbar_on_track(float* value, FlScrollbarConfig cfg, Scrollba
 
     if (signal.pressed) {
         f32 thumb_start = track_start + normalized * usable_track;
-        item->scrollbar_grab_offset = scrollbar_grab_offset(mouse_pos, thumb_start, thumb_size);
+        item->drag_grab_fraction = scrollbar_grab_fraction(mouse_pos, thumb_start, thumb_size);
     }
 
     if (scrollbar_grabbed(signal) && usable_track > 0.0f) {
-        normalized = scrollbar_normalized_at_mouse(mouse_pos, track_start, item->scrollbar_grab_offset, usable_track);
+        f32 grab_fraction = signal.activated ? 0.5f : item->drag_grab_fraction;
+        normalized = scrollbar_normalized_at_mouse(mouse_pos, track_start, grab_fraction * thumb_size, usable_track);
         *value = clamp(cfg.min + normalized * range, cfg.min, cfg.max);
     }
 

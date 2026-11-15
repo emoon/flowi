@@ -195,7 +195,7 @@ typedef struct ItemState {
     // Slider/Drag specific
     Vec2 drag_start_mouse;
     bool is_dragging;
-    f32 scrollbar_grab_offset;
+    f32 drag_grab_fraction;
 
     // Double-click tracking (valid if FlItemFlags_double_click flag set)
     u32 click_count;

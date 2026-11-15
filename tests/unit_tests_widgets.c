@@ -1750,6 +1750,15 @@ UTEST(ui_slider, int_slider_with_a_small_range_still_moves) {
     ASSERT_EQ_MSG(value, 6, "one wheel step moves the integer slider by one");
 }
 
+static FlUiCtx* scrollbar_test_ctx(void) {
+    FlUiCtx* ctx = ui_get_ctx();
+    ctx->ui_scale = 1.0f;
+    ctx->layout_width = 400.0f;
+    ctx->layout_height = 400.0f;
+    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
+    return ctx;
+}
+
 static void scrollbar_click_frame(FlUiCtx* ctx, float* value, float mx, float my, bool held, bool pressed,
                                   bool released) {
     FlInputState* in = &ctx->input_state;
@@ -1770,11 +1779,7 @@ UTEST(ui_scrollbar, grabbing_a_thumb_that_fills_the_track_keeps_the_value) {
     FlAppSettings settings = { .window_title = FL_S("scrollbar_short"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
-    ctx->ui_scale = 1.0f;
-    ctx->layout_width = 400.0f;
-    ctx->layout_height = 400.0f;
-    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
+    FlUiCtx* ctx = scrollbar_test_ctx();
 
     float value = 50.0f;
     for_count(i, 2) {
@@ -1807,14 +1812,6 @@ static void scrollbar_drag_frame(float* value, float my, bool held, bool pressed
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-static void scrollbar_test_ctx(void) {
-    FlUiCtx* ctx = ui_get_ctx();
-    ctx->ui_scale = 1.0f;
-    ctx->layout_width = 400.0f;
-    ctx->layout_height = 400.0f;
-    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
-}
-
 UTEST(ui_scrollbar, a_press_on_the_thumb_keeps_the_grabbed_point_under_the_mouse) {
     FlAppSettings settings = { .window_title = FL_S("scrollbar_grab"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
@@ -1827,7 +1824,7 @@ UTEST(ui_scrollbar, a_press_on_the_thumb_keeps_the_grabbed_point_under_the_mouse
     }
     scrollbar_drag_frame(&value, 45.0f, true, true);
     scrollbar_drag_frame(&value, 45.0f, true, false);
-    EXPECT_NEAR_MSG((double)value, 50.0, 1e-3, "a press 5 px below the thumb's top edge does not move the value");
+    EXPECT_NEAR_MSG((double)value, 50.0, 1e-3, "a press 15 px below the thumb's top edge does not move the value");
 
     scrollbar_drag_frame(&value, 53.0f, true, false);
     EXPECT_NEAR_MSG((double)value, 50.0 + 800.0 / 60.0, 1e-3, "8 px of drag on a 60 px usable track");
