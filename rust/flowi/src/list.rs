@@ -37,10 +37,7 @@ impl List {
         set: Option<&mut SelectionSet>,
         config: ListConfig<'_>,
     ) -> ListRange {
-        let set_ptr = match set {
-            Some(s) => s.handle,
-            None => ptr::null_mut(),
-        };
+        let set_ptr = set_handle(set);
         let count = u32::try_from(ordered_ids.len()).expect("a List holds at most u32::MAX ids");
         let id: LayoutId = id.into();
         let _frame = frame_thread_guard("List::begin");
@@ -49,7 +46,7 @@ impl List {
         } else {
             ptr::null()
         };
-        // SAFETY: frame_ids copies ordered_ids into the frame arena, which outlives the List's begin..end
+        // SAFETY: frame_copy copies ordered_ids into the frame arena, which outlives the List's begin..end
         // scope, so the pointer the List retains until List::end never reaches the caller's slice; set_ptr is
         // either null or the handle of the &mut SelectionSet borrowed here, which the List may mutate for the
         // duration of the call and no longer. config.to_sys carries only frame-arena pointers, and _frame
@@ -57,7 +54,7 @@ impl List {
         unsafe {
             sys::fl_list_begin(
                 id.into_sys(),
-                frame_ids(ordered_ids),
+                frame_copy(ordered_ids),
                 count,
                 set_ptr,
                 config.to_sys(labels),
@@ -114,10 +111,7 @@ impl List {
         set: Option<&mut SelectionSet>,
         opts: ListOpts,
     ) -> ListResult {
-        let set_ptr = match set {
-            Some(s) => s.handle,
-            None => ptr::null_mut(),
-        };
+        let set_ptr = set_handle(set);
         let id: LayoutId = id.into();
         let _frame = frame_thread_guard("List::show");
         let sys_items: Vec<sys::ListItem> = items
@@ -191,7 +185,7 @@ impl Default for ListConfig<'_> {
 impl ListConfig<'_> {
     /// Lower to the `#[repr(C)]` mirror the C List consumes, with labels the frame-arena array already
     /// built from [`ListConfig::labels`] (null for none).
-    fn to_sys(self, labels: *const sys::RawStr) -> sys::ListConfig {
+    pub(crate) fn to_sys(self, labels: *const sys::RawStr) -> sys::ListConfig {
         sys::ListConfig {
             row_height: self.row_height,
             gap: self.gap,
@@ -223,7 +217,7 @@ pub struct ListResult {
 
 impl ListResult {
     /// Copy a C result and the frame storage it points at into an owned value.
-    fn from_sys(raw: sys::ListResult) -> Self {
+    pub(crate) fn from_sys(raw: sys::ListResult) -> Self {
         let requests = if raw.requests.is_null() || raw.request_count == 0 {
             Vec::new()
         } else {
@@ -293,7 +287,7 @@ impl ListResult {
 
 /// Copy labels into the frame arena as an FlString array and return it; null when labels is empty or too
 /// long to count in a u32. Must run inside a frame.
-fn frame_labels(labels: &[&str]) -> *const sys::RawStr {
+pub(crate) fn frame_labels(labels: &[&str]) -> *const sys::RawStr {
     let Ok(count) = u32::try_from(labels.len()) else {
         return ptr::null();
     };
@@ -309,24 +303,33 @@ fn frame_labels(labels: &[&str]) -> *const sys::RawStr {
     }
 }
 
-/// Copy ids into the frame arena and return the copy; an empty slice yields its own dangling pointer, which a
-/// zero count never reads. Must run inside a frame.
-fn frame_ids(ids: &[u64]) -> *const u64 {
-    const _: () = assert!(
-        std::mem::size_of::<sys::RawStr>() >= 2 * std::mem::size_of::<u64>()
-            && std::mem::align_of::<sys::RawStr>() >= std::mem::align_of::<u64>()
-    );
-    if ids.is_empty() {
-        return ids.as_ptr();
+/// Copy items into the frame arena and return the copy; an empty slice yields its own dangling pointer, which
+/// a zero count never reads. Must run inside a frame.
+pub(crate) fn frame_copy<T: Copy>(items: &[T]) -> *const T {
+    const {
+        assert!(std::mem::align_of::<T>() <= std::mem::align_of::<sys::RawStr>());
     }
-    let slots = u32::try_from(ids.len().div_ceil(2)).expect("a List holds at most u32::MAX ids");
-    // SAFETY: fl_frame_str_array returns slots * 16 bytes of frame-arena storage aligned for an FlString
-    // (8 bytes), which holds ids.len() u64s; the copy fills the first ids.len() of them. The storage stays
-    // valid until the frame ends. It asserts an active frame, which List::begin runs in.
+    if items.is_empty() {
+        return items.as_ptr();
+    }
+    let slot = std::mem::size_of::<sys::RawStr>();
+    let slots = u32::try_from(std::mem::size_of_val(items).div_ceil(slot))
+        .expect("a frame copy holds at most u32::MAX slots");
+    // SAFETY: fl_frame_str_array returns slots FlString-sized slots of frame-arena storage aligned for an
+    // FlString, which the assertion above makes enough for a T; the slot count covers the bytes of items, and
+    // the copy fills the first items.len() values. The storage stays valid until the frame ends. It asserts
+    // an active frame, which the callers run in.
     unsafe {
-        let dst = sys::fl_frame_str_array(slots) as *mut u64;
-        ptr::copy_nonoverlapping(ids.as_ptr(), dst, ids.len());
+        let dst = sys::fl_frame_str_array(slots) as *mut T;
+        ptr::copy_nonoverlapping(items.as_ptr(), dst, items.len());
         dst
+    }
+}
+
+pub(crate) fn set_handle(set: Option<&mut SelectionSet>) -> *mut sys::SelectionSet {
+    match set {
+        Some(s) => s.handle,
+        None => ptr::null_mut(),
     }
 }
 
