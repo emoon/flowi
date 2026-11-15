@@ -96,12 +96,14 @@ extern "C" {
     /// The current normalized value of axis on the pad in player slot (0-based): -1..1 for the sticks,
     /// 0..1 for the triggers, as the backend reported it with no dead zone applied. 0 when the slot is empty.
     pub fn fl_input_gamepad_axis(slot: u32, axis: crate::sys::GamepadAxis) -> f32;
-    /// One-call declarative List. Hand it an array of item descriptors (`count` ListItem entries) and the
-    /// caller-owned selection set (null opts out), and it runs the whole list internally (virtualization,
-    /// selection gestures, keyboard nav, marquee, drag-reorder, auto-apply) while drawing each row's label
-    /// and icon. opts is ListOpts (layout knobs plus multi_select / reorderable). Returns the ListResult;
-    /// the caller reads the policy outcomes (activated_id, context_menu_id, the reorder request). Use
-    /// List::begin for rows with custom content.
+    /// Show a scrolling list of label rows in one call. items holds the count rows in the order they are
+    /// shown (see ListItem). Selection goes into set; pass null if you keep the selection yourself and want to
+    /// read the changes from ListResult.requests. opts sets the row size and whether the user can select
+    /// several rows or drag rows to reorder them (see ListOpts).
+    ///
+    /// The list draws every row's icon and label and handles the mouse and keyboard. Read the result to find
+    /// out what to do: activated_id is a row to open, context_menu_id is a row to show your menu for, and
+    /// reorder_emitted is a drop to apply to your own data. To draw the rows yourself, use List::begin.
     pub fn fl_input_list(id: crate::sys::LayoutId, items: *const crate::sys::ListItem, count: u32, set: *mut crate::sys::SelectionSet, opts: crate::sys::ListOpts) -> crate::sys::ListResult;
     /// True when the semantic navigation-down action was pressed this frame, independent of whether it came
     /// from an arrow key, D-pad, or analog stick binding.
