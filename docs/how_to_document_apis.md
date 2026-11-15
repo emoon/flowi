@@ -83,6 +83,10 @@ to repeat it.
 ## Wording
 
 - Put identifiers in backticks: `set`, `ListResult.requests`, `List::begin`.
+- Refer to other items by their names in the `.def`: `List::begin` for a function, `ListResult` for a type and
+  `ListResult.requests` for a field. Do not write the C name (`fl_list_begin`) or a Rust-only name. The same
+  text goes to both languages.
+- Write "null" for a pointer that may be left out. A Rust caller passes `None`.
 - Use the names the API uses. If the field is `expanded`, write expanded and collapsed.
 - Use "you" for advice to the caller: "If you keep the selection yourself, ...".
 - Say each fact once, on the item where the caller needs it.
