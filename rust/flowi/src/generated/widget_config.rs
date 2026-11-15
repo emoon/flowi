@@ -19,7 +19,9 @@
 pub struct WidgetConfig<'a> {
     /// The id to use instead of the one the widget would otherwise get (empty uses the normal id).
     pub id_override: &'a str,
-    /// The widget's color. When set, it is used instead of the theme color. A link and a tab bar ignore it.
+    /// The widget's color. When set, it is used instead of the theme color.
+    ///
+    /// Not every widget reads it. A link and a tab bar, for example, take only `WidgetConfig.text_color`.
     pub color: crate::sys::Color,
     /// The widget's text color.
     pub text_color: crate::sys::Color,

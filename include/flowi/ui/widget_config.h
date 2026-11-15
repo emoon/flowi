@@ -63,7 +63,9 @@ typedef enum FlFocusable {
 typedef struct FlWidgetConfig {
     // The id to use instead of the one the widget would otherwise get (empty uses the normal id).
     FlString id_override;
-    // The widget's color. When set, it is used instead of the theme color. A link and a tab bar ignore it.
+    // The widget's color. When set, it is used instead of the theme color.
+    //
+    // Not every widget reads it. A link and a tab bar, for example, take only `FlWidgetConfig.text_color`.
     FlColor color;
     // The widget's text color.
     FlColor text_color;
