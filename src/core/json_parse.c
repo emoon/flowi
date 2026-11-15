@@ -611,9 +611,6 @@ FlJsonValue* fl_json_parse_with_flags(FlArena* arena, FlString src, size_t flags
     if (result) {
         *result = (FlJsonParseResult) { 0 };
     }
-    if (!src.data) {
-        return nullptr;
-    }
     JsonParser parser = {
         .arena = arena,
         .src = src.data,

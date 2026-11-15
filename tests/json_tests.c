@@ -466,3 +466,14 @@ UTEST(json_writer, writes_builder_trees) {
 
     fl_arena_destroy(arena);
 }
+
+UTEST(json_parser, null_data_reports_the_error_of_empty_text) {
+    FlArena* arena = arena_new(.reserved_size = MB(64));
+
+    const FlJsonParseResult empty = parse_error(arena, FL_S(""), FlJsonParseFlags_Default);
+    const FlJsonParseResult null_data = parse_error(arena, (FlString) { 0 }, FlJsonParseFlags_Default);
+    ASSERT_NE((int)null_data.error, (int)FlJsonParseError_None);
+    ASSERT_EQ((int)null_data.error, (int)empty.error);
+
+    fl_arena_destroy(arena);
+}
