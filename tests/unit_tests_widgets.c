@@ -1791,6 +1791,65 @@ UTEST(ui_scrollbar, grabbing_a_thumb_that_fills_the_track_keeps_the_value) {
     fl_app_destroy(app);
 }
 
+static void scrollbar_drag_frame(float* value, float my, bool held, bool pressed) {
+    FlUiCtx* ctx = ui_get_ctx();
+    FlInputState* in = &ctx->input_state;
+    ui_input_set_mouse_position(ctx, 4.0f, my);
+    in->mouse.buttons[FlMouseButton_Left] = held;
+    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed;
+    in->mouse.buttons_released[FlMouseButton_Left] = false;
+    ui_input_update(ctx, 1.0f / 60.0f);
+
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { sizing_fixed(100.0f), sizing_fixed(100.0f) }) {
+        ui_scrollbar(value, .min = 0.0f, .max = 100.0f, .viewport_ratio = 0.2f);
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+}
+
+static void scrollbar_test_ctx(void) {
+    FlUiCtx* ctx = ui_get_ctx();
+    ctx->ui_scale = 1.0f;
+    ctx->layout_width = 400.0f;
+    ctx->layout_height = 400.0f;
+    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
+}
+
+UTEST(ui_scrollbar, a_press_on_the_thumb_keeps_the_grabbed_point_under_the_mouse) {
+    FlAppSettings settings = { .window_title = FL_S("scrollbar_grab"), .width = 400, .height = 400, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+    scrollbar_test_ctx();
+
+    float value = 50.0f;
+    for_count(i, 3) {
+        scrollbar_drag_frame(&value, 45.0f, false, false);
+    }
+    scrollbar_drag_frame(&value, 45.0f, true, true);
+    scrollbar_drag_frame(&value, 45.0f, true, false);
+    EXPECT_NEAR_MSG((double)value, 50.0, 1e-3, "a press 5 px below the thumb's top edge does not move the value");
+
+    scrollbar_drag_frame(&value, 53.0f, true, false);
+    EXPECT_NEAR_MSG((double)value, 50.0 + 800.0 / 60.0, 1e-3, "8 px of drag on a 60 px usable track");
+    fl_app_destroy(app);
+}
+
+UTEST(ui_scrollbar, a_press_on_the_track_centres_the_thumb_on_the_mouse) {
+    FlAppSettings settings = { .window_title = FL_S("scrollbar_track"), .width = 400, .height = 400, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+    scrollbar_test_ctx();
+
+    float value = 0.0f;
+    for_count(i, 3) {
+        scrollbar_drag_frame(&value, 70.0f, false, false);
+    }
+    scrollbar_drag_frame(&value, 70.0f, true, true);
+    scrollbar_drag_frame(&value, 70.0f, true, false);
+    EXPECT_NEAR_MSG((double)value, 5000.0 / 60.0, 1e-3, "the thumb's centre lands on the mouse");
+    fl_app_destroy(app);
+}
+
 // FlTabBarConfig's item and strip fields set the tab geometry, and a zeroed config leaves the strip at its
 // built-in geometry (the dock leaf header passes a zeroed one). The case checks the debug render-command
 // snapshot, so the numbers in the assertions are the geometry.
