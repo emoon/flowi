@@ -26,7 +26,8 @@ impl Tree {
     /// The indent and the arrow are drawn for you, and what you draw before `Tree::item_end` goes to the right
     /// of them. A press on the arrow is not a click on the row.
     ///
-    /// A `row` at or past the row count starts no row and returns an empty `Signal`.
+    /// `row` must be below the row count. A row past it asserts in a Debug build. In a Release build it starts
+    /// no row and returns an empty `Signal`.
     #[inline]
     pub fn item_begin(row: u32) -> crate::sys::Signal {
         let _frame = crate::frame_thread::frame_thread_guard("Tree::item_begin");
@@ -46,8 +47,8 @@ impl Tree {
 
     /// Starts a row of a virtual tree, like `Tree::item_begin`.
     ///
-    /// Pass true for `has_children` to give the row an arrow. An expanded row always has one. A `row` at or
-    /// past the row count starts no row and returns an empty `Signal`.
+    /// Pass true for `has_children` to give the row an arrow. An expanded row always has one. `row` has
+    /// the same limit as for `Tree::item_begin`.
     #[inline]
     pub fn item_begin_virtual(row: u32, has_children: bool) -> crate::sys::Signal {
         let _frame = crate::frame_thread::frame_thread_guard("Tree::item_begin_virtual");

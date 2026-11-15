@@ -325,36 +325,45 @@ UTEST(tree, a_row_past_the_count_starts_no_row) {
     const u32 bad_row = sizeof_array(s_open_rows) + 1000000;
     FlSelectionSet* set = selection_set_create(0);
 
+    bool bad_signal_empty = true;
     FlTreeResult plain = { 0 };
     FlTreeResult flat = { 0 };
     for_count(i, 3) {
-        ui_input_set_mouse_position(ctx, TREE_BODY_X, 12.0f);
+        ui_input_set_mouse_position(ctx, TREE_BODY_X, tree_row_y(1));
         ctx->input_state.mouse.buttons[FlMouseButton_Left] = i == 1;
         ctx->input_state.mouse.buttons_pressed[FlMouseButton_Left] = i == 1;
         ctx->input_state.mouse.buttons_released[FlMouseButton_Left] = i == 2;
         ui_input_update(ctx, 1.0f / 60.0f);
         ui_update_begin(ctx);
         ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(200) }, .direction = FlLayoutDirection_TopToBottom) {
-            fl_tree_begin(ID("tree_bad_row"), s_open_rows, sizeof_array(s_open_rows), set,
-                          (FlTreeConfig) { .list = { .row_height = 24.0f } });
-            fl_tree_item_begin(bad_row);
-            ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
+            FlListRange range = fl_tree_begin(ID("tree_bad_row"), s_open_rows, sizeof_array(s_open_rows), set,
+                                              (FlTreeConfig) { .list = { .row_height = 24.0f, .gap = 2.0f } });
+            for (u32 row = range.start; row < range.end; row++) {
+                fl_tree_item_begin(row);
+                ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
+                fl_tree_item_end();
+            }
+            FlSignal bad = fl_tree_item_begin(bad_row);
             fl_tree_item_end();
+            bad_signal_empty &= !bad.hovered && !bad.clicked && !bad.pressed;
             plain = fl_tree_end();
         }
         ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(200) }, .direction = FlLayoutDirection_TopToBottom) {
             fl_tree_begin_virtual(ID("tree_bad_virtual_row"), 4, nullptr, 0, nullptr,
                                   (FlTreeConfig) { .list = { .row_height = 24.0f } });
-            fl_tree_item_begin_virtual(bad_row, true);
+            FlSignal bad = fl_tree_item_begin_virtual(bad_row, true);
             fl_tree_item_end();
+            bad_signal_empty &= !bad.hovered && !bad.clicked && !bad.pressed;
             flat = fl_tree_end();
         }
         ui_update_end(ctx, 1.0f / 60.0f);
     }
     ctx->input_state.mouse.buttons_released[FlMouseButton_Left] = false;
+    ASSERT_TRUE_MSG(bad_signal_empty, "a row that does not exist reports no input");
     ASSERT_EQ_MSG((u64)0, plain.toggled_id, "a row that does not exist toggles nothing");
     ASSERT_EQ_MSG((u64)0, flat.toggled_id, "a virtual row that does not exist toggles nothing");
-    ASSERT_EQ_MSG((u64)0, selection_set_len(set), "a click where the row would be selects nothing");
+    ASSERT_EQ_MSG((u64)1, selection_set_len(set), "the click selects one row");
+    ASSERT_TRUE_MSG(selection_set_contains(set, s_open_rows[1].id), "the rows before the bad one still work");
     selection_set_destroy(set);
 }
 #endif

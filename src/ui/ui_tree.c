@@ -199,6 +199,7 @@ static void tree_reset_frame(FlTreeContext* self, f32 indent) {
     self->toggled_id = 0;
     self->toggled_row = 0;
     self->toggle_expanded = false;
+    self->row_skipped = false;
 }
 
 FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set,
