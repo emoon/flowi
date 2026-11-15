@@ -1,6 +1,7 @@
 // UI widget, input and selection tests
 
 #include "unit_tests_common.h"
+#include <math.h>
 
 // FlSelectionSet membership and applying Selection Requests.
 
@@ -1669,6 +1670,35 @@ UTEST(ui_slider, hit_math_follows_thumb_size) {
     ASSERT_TRUE_MSG(got_skin != got_default, "a smaller thumb maps the same click to a different value");
 
     fl_app_destroy(app);
+}
+
+// A slider whose min equals its max has no range to travel, so its fill, thumb and track keep finite sizes.
+UTEST(ui_slider, equal_min_and_max_keeps_finite_geometry) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+
+    ctx->layout_width = 1920.0f;
+    ctx->layout_height = 1080.0f;
+    ui_set_scale(1.0f, 1.0f);
+
+    if (ctx->shared->renderer.render != slider_rects_capture) {
+        s_slider_rects_next = ctx->shared->renderer.render;
+        ctx->shared->renderer.render = slider_rects_capture;
+    }
+
+    float value = 3.0f;
+    for_count(pass, 2) {
+        ui_update_begin(ctx);
+        ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
+            ui_slider_float(FL_S("slider_flat_range"), &value, 3.0f, 3.0f);
+        }
+        ui_update_end(ctx, 1.0f / 60.0f);
+    }
+
+    ASSERT_EQ_MSG(s_slider_rects.count, 4, "a slider draws the row, the filled bar, the thumb, the unfilled bar");
+    ASSERT_TRUE_MSG(isfinite(s_slider_rects.rect[1].w), "the filled bar has a finite width");
+    ASSERT_TRUE_MSG(isfinite(s_slider_rects.rect[3].w), "the unfilled bar has a finite width");
+    ASSERT_NEAR_MSG((double)value, 3.0, 1e-4, "the value stays at the only value in range");
 }
 
 // FlTabBarConfig's item and strip fields set the tab geometry, and a zeroed config leaves the strip at its

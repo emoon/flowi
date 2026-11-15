@@ -54,6 +54,9 @@ typedef struct SliderGeometry {
 
 static SliderModel slider_model_new(float value, float min, float max, FlSliderConfig cfg) {
     SliderModel m = { .value = clamp(value, min, max), .min = min, .max = max, .logarithmic = cfg.logarithmic };
+    if (!(max > min)) {
+        return m;
+    }
 
     if (m.logarithmic) {
         m.normalized = slider_value_to_log_normalized(m.value, min, max);
