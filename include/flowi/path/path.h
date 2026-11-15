@@ -19,7 +19,8 @@ extern "C" {
 // return a view into the path you pass and take no arena.
 // Returns `path` with backslashes turned into forward slashes and repeated separators collapsed to one.
 //
-// A trailing separator is removed, except on the root and on an http or https URL.
+// A trailing separator is removed, except on a root ("/" or a drive root such as "C:/") and on an http or https
+// URL.
 FL_API FlString fl_path_normalize(FlArena* arena, FlString path);
 // Returns `path` with its "." and ".." components resolved.
 //
@@ -47,13 +48,15 @@ FL_API FlString fl_path_get_extension(FlString path);
 FL_API FlString fl_path_get_filename(FlString path);
 // Returns the part of `path` before the last separator.
 //
-// The result is "/" if the only separator is the first character, and empty if there is no separator.
+// A root keeps its separator: the result is "/" for "/file" and "C:/" for "C:/file". The result is empty if
+// there is no separator.
 FL_API FlString fl_path_get_directory(FlArena* arena, FlString path);
 // Returns the file name in `path` without its extension.
 FL_API FlString fl_path_get_basename(FlArena* arena, FlString path);
 // Returns the directory that contains `path`, or an empty string if there is none.
 //
-// A trailing separator on `path` is ignored.
+// A trailing separator on `path` is ignored. A root ("/" or a drive root such as "C:/") has no parent, and a
+// path directly under a root gives that root.
 FL_API FlString fl_path_get_parent(FlArena* arena, FlString path);
 // Returns true if `path` is absolute.
 //
@@ -76,7 +79,7 @@ FL_API bool fl_path_equals(FlString path1, FlString path2);
 FL_API FlString fl_path_make_absolute(FlArena* arena, FlString base, FlString path);
 // Returns `path` without its trailing separator.
 //
-// Only one separator is removed. A path that is only a separator is kept as it is.
+// Only one separator is removed. A root ("/" or a drive root such as "C:/") is kept as it is.
 FL_API FlString fl_path_remove_trailing_separator(FlArena* arena, FlString path);
 // Returns `path` with a trailing separator, adding one if it has none.
 //

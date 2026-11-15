@@ -9,7 +9,8 @@
 extern "C" {
     /// Returns `path` with backslashes turned into forward slashes and repeated separators collapsed to one.
     ///
-    /// A trailing separator is removed, except on the root and on an http or https URL.
+    /// A trailing separator is removed, except on a root ("/" or a drive root such as "C:/") and on an http or https
+    /// URL.
     pub fn fl_path_normalize(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
     /// Returns `path` with its "." and ".." components resolved.
     ///
@@ -37,13 +38,15 @@ extern "C" {
     pub fn fl_path_get_filename(path: crate::sys::RawStr) -> crate::sys::RawStr;
     /// Returns the part of `path` before the last separator.
     ///
-    /// The result is "/" if the only separator is the first character, and empty if there is no separator.
+    /// A root keeps its separator: the result is "/" for "/file" and "C:/" for "C:/file". The result is empty if
+    /// there is no separator.
     pub fn fl_path_get_directory(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
     /// Returns the file name in `path` without its extension.
     pub fn fl_path_get_basename(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
     /// Returns the directory that contains `path`, or an empty string if there is none.
     ///
-    /// A trailing separator on `path` is ignored.
+    /// A trailing separator on `path` is ignored. A root ("/" or a drive root such as "C:/") has no parent, and a
+    /// path directly under a root gives that root.
     pub fn fl_path_get_parent(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
     /// Returns true if `path` is absolute.
     ///
@@ -66,7 +69,7 @@ extern "C" {
     pub fn fl_path_make_absolute(arena: *mut crate::sys::Arena, base: crate::sys::RawStr, path: crate::sys::RawStr) -> crate::sys::RawStr;
     /// Returns `path` without its trailing separator.
     ///
-    /// Only one separator is removed. A path that is only a separator is kept as it is.
+    /// Only one separator is removed. A root ("/" or a drive root such as "C:/") is kept as it is.
     pub fn fl_path_remove_trailing_separator(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
     /// Returns `path` with a trailing separator, adding one if it has none.
     ///

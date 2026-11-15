@@ -10,7 +10,8 @@
 api Path {
     /// Returns `path` with backslashes turned into forward slashes and repeated separators collapsed to one.
     ///
-    /// A trailing separator is removed, except on the root and on an http or https URL.
+    /// A trailing separator is removed, except on a root ("/" or a drive root such as "C:/") and on an http or https
+    /// URL.
     fl_path_normalize(arena: *Arena, path: String) -> String
     /// Returns `path` with its "." and ".." components resolved.
     ///
@@ -40,13 +41,15 @@ api Path {
     fl_path_get_filename(path: String) -> String
     /// Returns the part of `path` before the last separator.
     ///
-    /// The result is "/" if the only separator is the first character, and empty if there is no separator.
+    /// A root keeps its separator: the result is "/" for "/file" and "C:/" for "C:/file". The result is empty if
+    /// there is no separator.
     fl_path_get_directory(arena: *Arena, path: String) -> String
     /// Returns the file name in `path` without its extension.
     fl_path_get_basename(arena: *Arena, path: String) -> String
     /// Returns the directory that contains `path`, or an empty string if there is none.
     ///
-    /// A trailing separator on `path` is ignored.
+    /// A trailing separator on `path` is ignored. A root ("/" or a drive root such as "C:/") has no parent, and a
+    /// path directly under a root gives that root.
     fl_path_get_parent(arena: *Arena, path: String) -> String
 
     /// Returns true if `path` is absolute.
@@ -71,7 +74,7 @@ api Path {
     fl_path_make_absolute(arena: *Arena, base: String, path: String) -> String
     /// Returns `path` without its trailing separator.
     ///
-    /// Only one separator is removed. A path that is only a separator is kept as it is.
+    /// Only one separator is removed. A root ("/" or a drive root such as "C:/") is kept as it is.
     fl_path_remove_trailing_separator(arena: *Arena, path: String) -> String
     /// Returns `path` with a trailing separator, adding one if it has none.
     ///
