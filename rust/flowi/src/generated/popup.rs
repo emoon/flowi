@@ -209,10 +209,10 @@ impl Drop for PopupScope {
 pub struct Popup;
 
 impl Popup {
-    /// Starts a popup scope anchored to `anchor_id` and returns its guard.
+    /// Starts a popup scope anchored to `anchor_id`.
     ///
-    /// Everything you draw until the scope ends is part of the popup. The scope ends when the guard drops. To end
-    /// it earlier, pass the guard to `Popup::end`.
+    /// Everything you draw until `Popup::end` is part of the popup. In Rust the call returns a guard, and the scope
+    /// ends when the guard drops or when you pass it to `Popup::end`.
     #[inline]
     pub fn begin(anchor_id: impl Into<crate::LayoutId>, config: crate::generated::popup::PopupConfig) -> PopupScope {
         let anchor_id: crate::LayoutId = anchor_id.into();
@@ -221,7 +221,7 @@ impl Popup {
         PopupScope { _priv: () }
     }
 
-    /// Ends the popup scope and consumes its guard.
+    /// Ends the popup scope started with `Popup::begin`.
     #[inline]
     pub fn end(scope: PopupScope) {
         drop(scope);

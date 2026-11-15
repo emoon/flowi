@@ -92,8 +92,8 @@ to repeat it.
   for a type, `ListResult.requests` for a field and `DropRelationship::Before` for an enum value. Do not write
   the C name or a Rust-only name. api_gen turns the reference into `fl_list_begin`, `FlListResult` and so on
   in the C headers. For Rust it leaves the reference as written, unless the function has `[rust_doc]`.
-- If the Rust call for a `[manual]` function has another name, add `[rust_doc(List::show)]` to the function
-  with the Rust name. The Rust docs then show that name where a comment refers to the function.
+- If the Rust call has another name, as for some `[manual]` functions and for every `_impl` function, add
+  `[rust_doc(List::show)]` to the function with the Rust name. The Rust docs then show that name where a comment refers to the function.
 - Write the full `List::begin` even inside the `List` block. A bare `begin` is not translated.
 - Keep a reference on one line of the comment.
 - api_gen stops with an error if a reference names a function, field or enum value that its type or `api` block
