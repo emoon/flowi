@@ -133,6 +133,17 @@ static i32 key_target_row(i32 cursor_row) {
     return cursor_row;
 }
 
+static FlListRange tree_list_begin(FlTreeContext* self, ListBeginArgs args) {
+    args.disable_reorder = true;
+    args.key_target_row = key_target_row;
+    FlListRange range = list_begin_impl(self->list, args);
+    if (self->list->has_kb_focus && self->count > 0) {
+        fl_consume_nav_left();
+        fl_consume_nav_right();
+    }
+    return range;
+}
+
 static void draw_arrow(bool expanded, f32 width, f32 height) {
     FlColor color = fl_theme_colors()->text.secondary;
     f32 left = floorf(width * 0.5f) - (expanded ? TREE_ARROW_LENGTH : TREE_ARROW_STEPS * 0.5f);
@@ -208,14 +219,12 @@ FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, 
     self->count = rows != nullptr ? count : 0;
     tree_reset_frame(self, config.indent);
 
-    return list_begin_impl(self->list, (ListBeginArgs) {
-                                           .id = id,
-                                           .rows = list_rows_from_tree(rows, config.list.labels, count),
-                                           .set = set,
-                                           .config = config.list,
-                                           .disable_reorder = true,
-                                           .key_target_row = key_target_row,
-                                       });
+    return tree_list_begin(self, (ListBeginArgs) {
+                                     .id = id,
+                                     .rows = list_rows_from_tree(rows, config.list.labels, count),
+                                     .set = set,
+                                     .config = config.list,
+                                 });
 }
 
 static TreeVirtualState* virtual_state_get(FlTreeContext* self, u32 clay_id) {
@@ -310,14 +319,12 @@ FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTr
     tree_reset_frame(self, config.indent);
     follow_row_change(self, ui_layout_id_to_clay_id(id), set);
 
-    return list_begin_impl(self->list, (ListBeginArgs) {
-                                           .id = id,
-                                           .rows = list_rows_from_count(self->count),
-                                           .set = set,
-                                           .config = config.list,
-                                           .disable_reorder = true,
-                                           .key_target_row = key_target_row,
-                                       });
+    return tree_list_begin(self, (ListBeginArgs) {
+                                     .id = id,
+                                     .rows = list_rows_from_count(self->count),
+                                     .set = set,
+                                     .config = config.list,
+                                 });
 }
 
 FlTreeVirtualRow fl_tree_row_at(uint32_t row) {

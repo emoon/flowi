@@ -25,11 +25,14 @@ ScrollRange scroll_visible_range(f64 scroll_offset, f32 viewport, f32 item_strid
         return (ScrollRange) { 0 };
     }
 
-    i64 total = (i64)total_count;
-    i64 first = (i64)(scroll_offset / item_stride) - (i64)buffer;
-    i64 last = (i64)((scroll_offset + viewport) / item_stride) + 1 + (i64)buffer;
+    f64 total = (f64)total_count;
+    f64 first = trunc(scroll_offset / item_stride) - (f64)buffer;
+    f64 last = trunc((scroll_offset + viewport) / item_stride) + 1.0 + (f64)buffer;
+    if (isnan(first) || isnan(last)) {
+        return (ScrollRange) { 0 };
+    }
 
-    first = clamp(first, 0, total);
+    first = clamp(first, 0.0, total);
     last = clamp(last, first, total);
 
     return (ScrollRange) { .start = (u32)first, .end = (u32)last };

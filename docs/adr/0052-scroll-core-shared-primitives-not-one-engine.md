@@ -87,3 +87,12 @@ is unfinished.
 - Latent, out of scope: `scroll_visible_range`'s viewport-relative count can miss a straddle row
   when the offset is unaligned — masked today only because the widgets pass `buffer=2`. The
   `FlListClipper` divergence above is the same math weakness seen without the buffer cushion.
+
+## Amendment (2026-11-15): `FlListClipper` calls `scroll_visible_range`
+
+`scroll_visible_range` now counts the last row from the absolute `(offset + viewport) / stride + 1`,
+the form the clipper used, and clamps the range to `[0, total]`. With `offset=19, vp=2, stride=20`
+it returns 2 rows, so the straddling row is kept. The two no longer diverge, and
+`fl_list_clipper_create` calls `scroll_visible_range` with `buffer = 0`. The clipper is still a
+public type with its own struct. The "left standalone" bullet, the rejected option about merging
+it, and the latent straddle-row note above describe the code before this change.

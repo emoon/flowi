@@ -313,8 +313,7 @@ static ImageData* resolve_static_image(const SrIrRequest* req, const FlCmdImage*
     }
     // RGBA keeps its alpha plane for blending; XRGB drops the unused X byte.
     bool keep_alpha = (src->format == FlImageFormat_RGBA);
-    ImageData* converted = sr_convert_to_planar(src, keep_alpha, req->state_arena);
-    return converted != nullptr ? converted : src;
+    return sr_convert_to_planar(src, keep_alpha, req->state_arena);
 }
 
 // Dynamic neutral RGBA buffer: deinterleave to 3-plane RGB.
