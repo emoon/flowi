@@ -242,46 +242,45 @@ UTEST(scroll_math, smooth_step_is_frame_rate_independent) {
 }
 
 UTEST(scroll_math, visible_range_virtualization_window) {
-    u32 start = 0, end = 0;
     f32 stride = 50.0f; // item height + gap
     f32 viewport = 500.0f;
     u32 buffer = 2;
     u32 total = 100;
 
     // Scrolled to the top: the buffer cannot push the window below 0.
-    scroll_visible_range(0.0f, viewport, stride, total, buffer, &start, &end);
-    EXPECT_EQ(start, 0u);
+    ScrollRange r = scroll_visible_range(0.0f, viewport, stride, total, buffer);
+    EXPECT_EQ(r.start, 0u);
     // floor(500/50) + 1 + 2 = 13: the row at the viewport's bottom edge plus the trailing buffer.
-    EXPECT_EQ(end, 13u);
+    EXPECT_EQ(r.end, 13u);
 
     // Scrolled into the middle: first visible = floor(1000/50) - 2 = 18.
-    scroll_visible_range(1000.0f, viewport, stride, total, buffer, &start, &end);
-    EXPECT_EQ(start, 18u);
-    EXPECT_EQ(end, 33u);
+    r = scroll_visible_range(1000.0f, viewport, stride, total, buffer);
+    EXPECT_EQ(r.start, 18u);
+    EXPECT_EQ(r.end, 33u);
 
-    scroll_visible_range(4800.0f, viewport, stride, total, buffer, &start, &end);
-    EXPECT_EQ(end, total);
-    EXPECT_LE(start, end);
+    r = scroll_visible_range(4800.0f, viewport, stride, total, buffer);
+    EXPECT_EQ(r.end, total);
+    EXPECT_LE(r.start, r.end);
 
-    scroll_visible_range(75.0f, 30.0f, stride, total, 0, &start, &end);
-    EXPECT_EQ(start, 1u);
-    EXPECT_EQ(end, 3u);
+    r = scroll_visible_range(75.0f, 30.0f, stride, total, 0);
+    EXPECT_EQ(r.start, 1u);
+    EXPECT_EQ(r.end, 3u);
 
-    scroll_visible_range(-2000.0f, viewport, stride, total, 0, &start, &end);
-    EXPECT_EQ(start, 0u);
-    EXPECT_EQ(end, 0u);
-    scroll_visible_range(9000.0f, viewport, stride, total, 0, &start, &end);
-    EXPECT_EQ(start, total);
-    EXPECT_EQ(end, total);
+    r = scroll_visible_range(-2000.0f, viewport, stride, total, 0);
+    EXPECT_EQ(r.start, 0u);
+    EXPECT_EQ(r.end, 0u);
+    r = scroll_visible_range(9000.0f, viewport, stride, total, 0);
+    EXPECT_EQ(r.start, total);
+    EXPECT_EQ(r.end, total);
 
     // A zero stride gives an empty window and does not divide by zero.
-    scroll_visible_range(100.0f, viewport, 0.0f, total, buffer, &start, &end);
-    EXPECT_EQ(start, 0u);
-    EXPECT_EQ(end, 0u);
+    r = scroll_visible_range(100.0f, viewport, 0.0f, total, buffer);
+    EXPECT_EQ(r.start, 0u);
+    EXPECT_EQ(r.end, 0u);
 
-    scroll_visible_range(0.0f, viewport, stride, 0, buffer, &start, &end);
-    EXPECT_EQ(start, 0u);
-    EXPECT_EQ(end, 0u);
+    r = scroll_visible_range(0.0f, viewport, stride, 0, buffer);
+    EXPECT_EQ(r.start, 0u);
+    EXPECT_EQ(r.end, 0u);
 }
 
 // ui_action_repeated (ui/input_actions.c) reads only the keyboard state and delta_time, so a zeroed FlUiCtx is
@@ -5187,8 +5186,8 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     u32 live_fmt_len = 0;
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-        live_range = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100,
-                                           (FlListUniformOpts) { .height_hint = 24.0f });
+        live_range
+            = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100, (FlListUniformOpts) { .height_hint = 24.0f });
         for (u32 i = live_range.start; i < live_range.end; i++) {
             fl_list_uniform_item_begin(i);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
@@ -5223,8 +5222,8 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
 
     // begin and end have to return early as a pair. Each opens or closes a layout element, so a guard on only one
     // of them would leave the layout stack unbalanced.
-    FlListUniformRange range = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100,
-                                                     (FlListUniformOpts) { .height_hint = 24.0f });
+    FlListUniformRange range
+        = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100, (FlListUniformOpts) { .height_hint = 24.0f });
     ASSERT_TRUE_MSG(range.start == 0 && range.end == 0 && range.total == 0,
                     "no context yields an empty visible window");
     fl_list_uniform_item_begin(0);
