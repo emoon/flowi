@@ -164,6 +164,7 @@ FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, 
                                            .rows = list_rows_from_tree(rows, config.list.labels, count),
                                            .set = set,
                                            .config = config.list,
+                                           .disable_reorder = true,
                                            .key_target_row = key_target_row,
                                        });
 }

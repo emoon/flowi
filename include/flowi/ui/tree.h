@@ -37,7 +37,7 @@ typedef struct FlTreeConfig {
 
 // The per-frame result a Tree hands back from Tree::end.
 typedef struct FlTreeResult {
-    // Selection, activation, focus and drag results, as for a List.
+    // Selection, activation and focus results, as for a List.
     FlListResult list;
     // Stable id of the row whose arrow was pressed or whose expansion a key changed this frame, or 0. The
     // Tree keeps no expansion state: the app updates its model and passes the new rows next frame.
@@ -53,6 +53,8 @@ typedef struct FlTreeResult {
 // Selection, type-ahead, Up, Down, Home, End, Enter and Space work as in a List. Right expands a collapsed row
 // and moves to the first child of an expanded one; Left collapses an expanded row and moves to the parent
 // otherwise. Selected rows stay selected while a collapsed parent hides them.
+//
+// Rows cannot be dragged to reorder yet, so the drag fields of the result stay empty.
 // Begin a tree identified by id over the visible rows (rows of count entries), applying selection into
 // set (null opts out), with config. Returns the row range to emit; pair with end.
 FL_API FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set, FlTreeConfig config);

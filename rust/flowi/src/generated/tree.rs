@@ -13,6 +13,8 @@
 /// Selection, type-ahead, Up, Down, Home, End, Enter and Space work as in a List. Right expands a collapsed row
 /// and moves to the first child of an expanded one; Left collapses an expanded row and moves to the parent
 /// otherwise. Selected rows stay selected while a collapsed parent hides them.
+///
+/// Rows cannot be dragged to reorder yet, so the drag fields of the result stay empty.
 pub struct Tree;
 
 impl Tree {

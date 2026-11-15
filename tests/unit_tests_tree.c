@@ -345,3 +345,25 @@ UTEST(tree, shift_click_after_the_anchor_was_hidden_selects_the_row) {
 
     selection_set_destroy(set);
 }
+
+UTEST(tree, dragging_a_row_does_not_reorder) {
+    FlUiCtx* ctx = tree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("tree_no_reorder");
+    FlSelectionSet* set = selection_set_create(0);
+    const TreeModel model = { s_open_rows, sizeof_array(s_open_rows), set };
+
+    for_count(i, 3) {
+        tree_frame(ctx, tree, model, (TreeInput) { .mx = TREE_BODY_X, .my = tree_row_y(0) });
+    }
+    tree_frame(ctx, tree, model, (TreeInput) { .mx = TREE_BODY_X, .my = tree_row_y(0), .pressed = true });
+    FlTreeResult mid
+        = tree_frame(ctx, tree, model, (TreeInput) { .mx = TREE_BODY_X, .my = tree_row_y(4), .held = true });
+    ASSERT_FALSE_MSG(mid.list.drag_active, "moving a pressed row does not begin a reorder drag");
+
+    FlTreeResult drop
+        = tree_frame(ctx, tree, model, (TreeInput) { .mx = TREE_BODY_X, .my = tree_row_y(4), .released = true });
+    ASSERT_FALSE_MSG(drop.list.reorder_emitted, "releasing over another row emits no reorder request");
+
+    selection_set_destroy(set);
+}
