@@ -593,7 +593,7 @@ FlSignal ui_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlM
         = ui_item_behavior(region_id, FlItemFlags_clickable | FlItemFlags_right_click, (FlWidgetConfig) { 0 });
 
     FlVec2 mouse = { ctx->input_state.mouse.x, ctx->input_state.mouse.y };
-    if (ctx->input_state.mouse.buttons[FlMouseButton_Right] && region_contains(region_id, mouse)) {
+    if (ctx->mouse_buttons_pressed_this_frame[FlMouseButton_Right] && region_contains(region_id, mouse)) {
         ui_menu_open_impl(menu_id, mouse);
     }
 

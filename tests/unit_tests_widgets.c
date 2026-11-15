@@ -2366,6 +2366,35 @@ UTEST(ui_menu, confirm_on_a_hovered_disabled_row_is_ignored) {
     fl_app_destroy(app);
 }
 
+// The region opens the menu on the right-button press, not while the button is held: dismissing the menu with the
+// button still down leaves it closed.
+UTEST(ui_menu, region_opens_on_the_press_not_while_held) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+
+    FlAppSettings settings = { .window_title = FL_S("menu_held"), .width = 800, .height = 600, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    MenuTestState st = { 0 };
+    fl_app_tick(app, &st, menu_frame);
+    fl_app_inject_mouse_move(app, 120, 120);
+    fl_app_tick(app, &st, menu_frame);
+    fl_app_tick(app, &st, menu_frame);
+    fl_app_inject_mouse_button(app, FlMouseButton_Right, true);
+    fl_app_tick(app, &st, menu_frame);
+    ASSERT_TRUE_MSG(st.menu_open, "the right-button press opened the menu");
+
+    menu_key_tap(app, &st, FlKey_Escape);
+    ASSERT_FALSE_MSG(st.menu_open, "ESC dismisses the menu while the right button is still down");
+
+    fl_app_tick(app, &st, menu_frame);
+    fl_app_tick(app, &st, menu_frame);
+    ASSERT_FALSE_MSG(st.menu_open, "holding the right button must not reopen the dismissed menu");
+
+    fl_app_inject_mouse_button(app, FlMouseButton_Right, false);
+    fl_app_destroy(app);
+}
+
 // The keyboard also drives the per-level highlight, and the most recent input (keyboard or hover) owns it.
 // Gamepad A and B share CONFIRM and CANCEL with Enter and ESC, so these paths cover the pad actions too. Headless
 // has no pad injection.
