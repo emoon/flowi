@@ -179,6 +179,63 @@ static void list_section(GalleryState* s) {
     }
 }
 
+static u32 decl_index_of(const GalleryState* s, u64 id) {
+    for_count(i, GALLERY_DECL_ROWS) {
+        if (s->decl_items[i].id == id) {
+            return i;
+        }
+    }
+    return GALLERY_DECL_ROWS;
+}
+
+static void decl_swap_items(GalleryState* s, u64 from_id, u64 to_id) {
+    u32 from = decl_index_of(s, from_id);
+    u32 to = decl_index_of(s, to_id);
+    if (from < GALLERY_DECL_ROWS && to < GALLERY_DECL_ROWS) {
+        FlListItem moved = s->decl_items[from];
+        s->decl_items[from] = s->decl_items[to];
+        s->decl_items[to] = moved;
+    }
+}
+
+static void decl_list_section(GalleryState* s) {
+    char buf[64];
+    section {
+        section_header(FL_S("List (declarative ui_list — one call, label/icon rows)"));
+        // One ui_list call over an array of {id, label, icon} descriptors and the caller-owned set
+        // runs the interaction and renders each row. The app reads the outcomes from the result.
+        if (s->decl_selection == nullptr) {
+            s->decl_selection = selection_set_create(16);
+        }
+        ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(150) },
+                       .direction = LayoutDirection_TopToBottom) {
+            FlListResult dr
+                = ui_list(ID("gallery_decl_list"), s->decl_items, GALLERY_DECL_ROWS, s->decl_selection,
+                          (FlListOpts) { .row_height = 26.0f, .gap = 4.0f, .multi_select = true, .reorderable = true });
+            if (dr.activated_id != 0) {
+                s->decl_activated = dr.activated_id;
+            }
+            if (dr.context_menu_id != 0) {
+                s->decl_menu = dr.context_menu_id; // a real app opens its own context menu at the cursor
+            }
+            // ui_list describes the drop and the app applies it. Here it swaps the two endpoints'
+            // descriptors, which is enough to see the move.
+            if (dr.reorder_emitted && dr.drag_from_count > 0) {
+                decl_swap_items(s, dr.drag_from_ids[0], dr.drag_target_id);
+            }
+        }
+        snprintf(buf, sizeof(buf), "%llu selected (last open id %llu, last menu id %llu)",
+                 (unsigned long long)selection_set_len(s->decl_selection), (unsigned long long)s->decl_activated,
+                 (unsigned long long)s->decl_menu);
+        ui_text(fl_frame_str(buf, strlen(buf)));
+    }
+}
+
+static void collection_sections(GalleryState* s) {
+    list_section(s);
+    decl_list_section(s);
+}
+
 static void frame(void* user_data) {
     GalleryState* s = (GalleryState*)user_data;
 
@@ -366,51 +423,7 @@ static void frame(void* user_data) {
                     }
                 }
 
-                list_section(s);
-
-                section {
-                    section_header(FL_S("List (declarative ui_list — one call, label/icon rows)"));
-                    // One ui_list call over an array of {id, label, icon} descriptors and the caller-owned set
-                    // runs the interaction and renders each row. The app reads the outcomes from the result.
-                    if (s->decl_selection == nullptr) {
-                        s->decl_selection = selection_set_create(16);
-                    }
-                    ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(150) },
-                                   .direction = LayoutDirection_TopToBottom) {
-                        FlListResult dr = ui_list(
-                            ID("gallery_decl_list"), s->decl_items, GALLERY_DECL_ROWS, s->decl_selection,
-                            (FlListOpts) {
-                                .row_height = 26.0f, .gap = 4.0f, .multi_select = true, .reorderable = true });
-                        if (dr.activated_id != 0) {
-                            s->decl_activated = dr.activated_id;
-                        }
-                        if (dr.context_menu_id != 0) {
-                            s->decl_menu = dr.context_menu_id; // a real app opens its own context menu at the cursor
-                        }
-                        // ui_list describes the drop and the app applies it. Here it swaps the two endpoints'
-                        // descriptors, which is enough to see the move.
-                        if (dr.reorder_emitted && dr.drag_from_count > 0) {
-                            u32 from = GALLERY_DECL_ROWS, to = GALLERY_DECL_ROWS;
-                            for (u32 i = 0; i < GALLERY_DECL_ROWS; i++) {
-                                if (s->decl_items[i].id == dr.drag_from_ids[0]) {
-                                    from = i;
-                                }
-                                if (s->decl_items[i].id == dr.drag_target_id) {
-                                    to = i;
-                                }
-                            }
-                            if (from < GALLERY_DECL_ROWS && to < GALLERY_DECL_ROWS) {
-                                FlListItem moved = s->decl_items[from];
-                                s->decl_items[from] = s->decl_items[to];
-                                s->decl_items[to] = moved;
-                            }
-                        }
-                    }
-                    snprintf(buf, sizeof(buf), "%llu selected (last open id %llu, last menu id %llu)",
-                             (unsigned long long)selection_set_len(s->decl_selection),
-                             (unsigned long long)s->decl_activated, (unsigned long long)s->decl_menu);
-                    ui_text(fl_frame_str(buf, strlen(buf)));
-                }
+                collection_sections(s);
             }
         }
     }
