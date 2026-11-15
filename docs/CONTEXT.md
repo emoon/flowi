@@ -950,7 +950,7 @@ rather than new substrate. It reuses `list_uniform`'s uniform-height virtualizat
 a third scroll engine; variable-height rows and group headers are not supported. Reorder is
 **intra-list only** (cross-list and OS-shell drag-out are not built). Exposed with **two faces**: a *declarative* face (`ui_list` — data-described
 `ListItem` label/icon rows, everything internal, selection auto-applied) for the common case, and a
-*scoped* face (`ui_list_begin`/`ui_list_item_begin`/`ui_list_item_end`/`ui_list_end`) for rows with custom caller-emitted content.
+*scoped* face (`fl_list_begin`/`fl_list_item_begin`/`fl_list_item_end`/`fl_list_end`) for rows with custom caller-emitted content.
 Distinct from a [[#Menu]] (a transient command picker that is *built, not virtualized*) and
 from the bare `list_uniform`/`content_view` virtualizers, which deal only in dense indices and
 carry no selection model.

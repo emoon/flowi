@@ -56,7 +56,7 @@ dropdown has no input and focus starts in the List.
   allocates a heap arena, so the create/destroy must be **paired every open frame** or it leaks an
   arena per frame.
 - The reuse forces **one additive List change**: an opt-in focus-request (landed as
-  `ui_list_request_focus`, ADR-0050) that sets the List's `has_focus` and
+  `fl_list_request_focus`, ADR-0050) that sets the List's `has_focus` and
   seeds the focus cursor. Today `has_focus` is set only by a row click or Tab+nav-key, so a
   freshly-opened popup otherwise has dead arrow-keys and no Enter-to-commit. It is **opt-in**
   because a *searchable* dropdown must start focus in the search input, not the list. The List's

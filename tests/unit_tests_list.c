@@ -46,16 +46,16 @@ static FlListResult sel_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* 
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(viewport_h) },
                    .direction = FlLayoutDirection_TopToBottom) {
-        FlListRange r = ui_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
+        FlListRange r = fl_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = r.start; i < r.end; i++) {
-            FlSignal sig = ui_list_item_begin((u64)(i + 1));
+            FlSignal sig = fl_list_item_begin((u64)(i + 1));
             if (out_signals != nullptr) {
                 out_signals[i] = sig;
             }
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-            ui_list_item_end();
+            fl_list_item_end();
         }
-        result = ui_list_end();
+        result = fl_list_end();
     }
     ui_update_end(ctx, 1.0f / 60.0f);
     return result;
@@ -78,13 +78,13 @@ static FlListRange sel_setup(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* s
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(viewport_h) },
                    .direction = FlLayoutDirection_TopToBottom) {
-        range = ui_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
+        range = fl_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = range.start; i < range.end; i++) {
-            ui_list_item_begin((u64)(i + 1));
+            fl_list_item_begin((u64)(i + 1));
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-            ui_list_item_end();
+            fl_list_item_end();
         }
-        ui_list_end();
+        fl_list_end();
     }
     ui_update_end(ctx, 1.0f / 60.0f);
     return range;
@@ -381,7 +381,7 @@ typedef struct KbInput {
 } KbInput;
 
 // Emits one List frame with keyboard input injected and the cursor parked off the list, so no hover competes with
-// the keyboard focus. out_nav, if non-null, receives the nav_frame after ui_list_end, so a test can check that
+// the keyboard focus. out_nav, if non-null, receives the nav_frame after fl_list_end, so a test can check that
 // the List consumed the directions it handled. A nullptr labels disables type-ahead.
 static FlListResult kb_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* set, const u64* ids,
                              const FlString* labels, u32 count, f32 viewport_h, KbInput in, FlNavFrame* out_nav) {
@@ -407,14 +407,14 @@ static FlListResult kb_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet* s
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(viewport_h) },
                    .direction = FlLayoutDirection_TopToBottom) {
-        FlListRange r = ui_list_begin(list_id, ids, count, set,
+        FlListRange r = fl_list_begin(list_id, ids, count, set,
                                       (FlListConfig) { .row_height = 24.0f, .gap = 4.0f, .labels = labels });
         for (u32 i = r.start; i < r.end; i++) {
-            ui_list_item_begin(ids[i]);
+            fl_list_item_begin(ids[i]);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-            ui_list_item_end();
+            fl_list_item_end();
         }
-        result = ui_list_end();
+        result = fl_list_end();
     }
     if (out_nav != nullptr) {
         *out_nav = fl_get_nav_frame(); // a direction the List consumed reads back false
@@ -631,7 +631,7 @@ UTEST(list_keyboard, type_ahead_matches_multibyte_prefix) {
     selection_set_destroy(set);
 }
 
-// One frame for the focus-request cases. When request is set it calls ui_list_request_focus(list, seed) just
+// One frame for the focus-request cases. When request is set it calls fl_list_request_focus(list, seed) just
 // before the list begins, as a dropdown does when it opens, then emits the list over a nullptr set. The cursor is
 // parked off the list and there are no clicks, so only the seed and the injected keys drive focus. *out_global,
 // if non-null, receives the global focus ring id after the frame.
@@ -657,16 +657,16 @@ static FlListResult focusreq_frame(FlUiCtx* ctx, FlLayoutId list_id, const u64* 
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(vp) }, .direction = FlLayoutDirection_TopToBottom) {
         if (request) {
-            ui_list_request_focus(list_id, seed);
+            fl_list_request_focus(list_id, seed);
         }
         FlListRange r
-            = ui_list_begin(list_id, ids, count, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
+            = fl_list_begin(list_id, ids, count, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = r.start; i < r.end; i++) {
-            ui_list_item_begin(ids[i]);
+            fl_list_item_begin(ids[i]);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-            ui_list_item_end();
+            fl_list_item_end();
         }
-        result = ui_list_end();
+        result = fl_list_end();
     }
     if (out_global != nullptr) {
         *out_global = ctx->focused_id;
@@ -694,7 +694,7 @@ static void focusreq_setup(FlUiCtx* ctx, FlLayoutId list_id, const u64* ids, u32
     focusreq_frame(ctx, list_id, ids, count, vp, false, 0, (KbInput) { 0 }, nullptr);
 }
 
-// ui_list_request_focus gives the list keyboard focus, claims the global focus ring and puts the cursor on the
+// fl_list_request_focus gives the list keyboard focus, claims the global focus ring and puts the cursor on the
 // given row, so arrow keys navigate at once and the focus ring shows on that row. A list that is never asked
 // stays unfocused.
 UTEST(list_focus_request, seeds_cursor_engages_focus_and_claims_ring) {
@@ -813,13 +813,13 @@ static FlListRange marquee_frame_ex(FlUiCtx* ctx, FlLayoutId list_id, FlSelectio
     ui_update_begin(ctx);
     ui_layout_area_id(ID("marquee_root"), .sizing = { sizing_fixed(300), sizing_fixed(120) },
                       .direction = LayoutDirection_TopToBottom) {
-        range = ui_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 12.0f });
+        range = fl_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 12.0f });
         for (u32 i = range.start; i < range.end; i++) {
-            ui_list_item_begin(ids[i]);
+            fl_list_item_begin(ids[i]);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-            ui_list_item_end();
+            fl_list_item_end();
         }
-        FlListResult result = ui_list_end();
+        FlListResult result = fl_list_end();
         if (out_result != nullptr) {
             *out_result = result;
         }
@@ -1018,13 +1018,13 @@ static FlListResult drag_frame(FlUiCtx* ctx, FlLayoutId list_id, FlSelectionSet*
     ui_layout_area_id(ID("drag_root"), .sizing = { sizing_fixed(300), sizing_fixed(120) },
                       .direction = LayoutDirection_TopToBottom) {
         FlListRange range
-            = ui_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 12.0f });
+            = fl_list_begin(list_id, ids, count, set, (FlListConfig) { .row_height = 24.0f, .gap = 12.0f });
         for (u32 i = range.start; i < range.end; i++) {
-            ui_list_item_begin(ids[i]);
+            fl_list_item_begin(ids[i]);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-            ui_list_item_end();
+            fl_list_item_end();
         }
-        lr = ui_list_end();
+        lr = fl_list_end();
     }
     ui_update_end(ctx, 1.0f / 60.0f);
     return lr;

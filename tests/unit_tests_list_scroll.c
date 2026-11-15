@@ -4,13 +4,13 @@ static FlListRange huge_frame(FlUiCtx* ctx, FlLayoutId list_id, u32 total) {
     FlListRange range = { 0 };
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-        range = ui_list_begin(list_id, nullptr, total, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 2.0f });
+        range = fl_list_begin(list_id, nullptr, total, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 2.0f });
         for (u32 i = range.start; i < range.end; i++) {
-            ui_list_item_begin((u64)i + 1);
+            fl_list_item_begin((u64)i + 1);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-            ui_list_item_end();
+            fl_list_item_end();
         }
-        ui_list_end();
+        fl_list_end();
     }
     ui_update_end(ctx, 1.0f / 60.0f);
     return range;
@@ -96,15 +96,15 @@ static void wheel_list_frame(FlUiCtx* ctx, FlLayoutId list_id, WheelListInput in
                       .direction = FlLayoutDirection_TopToBottom) {
         ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(60) }) {}
         ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(100) }, .direction = FlLayoutDirection_TopToBottom) {
-            FlListRange range = ui_list_begin(
+            FlListRange range = fl_list_begin(
                 list_id, ids, rows, in.set,
                 (FlListConfig) { .row_height = 24.0f, .gap = 2.0f, .scrollbar_mode = in.scrollbar_mode });
             for (u32 i = range.start; i < range.end; i++) {
-                ui_list_item_begin(ids[i]);
+                fl_list_item_begin(ids[i]);
                 ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-                ui_list_item_end();
+                fl_list_item_end();
             }
-            ui_list_end();
+            fl_list_end();
         }
         ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(400) }) {}
     }

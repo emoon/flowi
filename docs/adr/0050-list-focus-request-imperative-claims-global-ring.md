@@ -4,8 +4,8 @@ ADR-0049 forced "one additive List change": an opt-in way for a freshly-appeared
 List-backed [[Dropdown]]) to start keyboard focus in the list, since today `has_focus` is set
 only by a row click or a Tab-arrival and `fl_set_focus()` writes only the global `focused_id`
 (never engaging the List's keyboard handling). That ADR left the *shape* of the seam an open
-fork (`FlListOpts.focus_on_appear` *or* `ui_list_request_focus`). We resolve it as an
-**imperative free function** — `void ui_list_request_focus(FlLayoutId id, u64 cursor_id)` — that
+fork (`FlListOpts.focus_on_appear` *or* `fl_list_request_focus`). We resolve it as an
+**imperative free function** — `void fl_list_request_focus(FlLayoutId id, u64 cursor_id)` — that
 the caller invokes on the open edge, **not** a config field. It does two load-bearing things
 together: it engages the List's own keyboard focus (`has_focus`) **and** claims the global
 keyboard focus ring (`ui_ctx->focused_id = clay_id`). The [[List]]'s selection/activation
