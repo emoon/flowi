@@ -122,8 +122,8 @@ const _: () = {
     assert!(core::mem::offset_of!(ListRange, total) == 8, "ListRange.total offset drift");
 };
 
-/// What happened in the list this frame. List::end and Input::list return it, and TreeResult holds one. Every
-/// id here is one of the ids you passed in, and 0 means "no row".
+/// What happened in the list this frame. List::end and Input::list return it. Every id here is one of the ids
+/// you passed in, and 0 means "no row".
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ListResult {

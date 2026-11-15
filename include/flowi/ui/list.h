@@ -83,8 +83,8 @@ typedef struct FlListRange {
     uint32_t total;
 } FlListRange;
 
-// What happened in the list this frame. List::end and Input::list return it, and TreeResult holds one. Every
-// id here is one of the ids you passed in, and 0 means "no row".
+// What happened in the list this frame. List::end and Input::list return it. Every id here is one of the ids
+// you passed in, and 0 means "no row".
 typedef struct FlListResult {
     // The row the user picked this frame with a double-click, Enter or Space, or 0. Open or run the item here.
     uint64_t activated_id;
