@@ -1254,3 +1254,15 @@ UTEST(render_ir, painter_rects_frame_stream_matches_scalar_loop) {
     fl_arena_destroy(out);
     fl_arena_destroy(arena);
 }
+
+UTEST(render_ir, software_translation_stops_at_a_zero_size_record) {
+    FlArena* commands = arena_new();
+    FlArena* state = arena_new();
+    const FlCmdHeader unsized[2] = { { .kind = 0xFFFF, .byte_size = 0 }, { .kind = FlCmd_ClipPop, .byte_size = 8 } };
+
+    const UiRenderCommandsArray result = sw_translate(commands, state, unsized, sizeof(unsized), 255);
+    ASSERT_EQ_MSG((int)result.count, 0, "a record without a size ends the walk, as it does for the GPU backend");
+
+    fl_arena_destroy(state);
+    fl_arena_destroy(commands);
+}

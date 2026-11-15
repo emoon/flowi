@@ -444,6 +444,9 @@ UiRenderCommandsArray sr_ir_to_render_commands(const SrIrRequest* req) {
     const u8* end = p + req->ir_bytes;
     while (p < end) {
         const FlCmdHeader* header = (const FlCmdHeader*)p;
+        if (header->byte_size == 0) {
+            break;
+        }
         emit_ir_command(req, header);
         p += header->byte_size;
     }
