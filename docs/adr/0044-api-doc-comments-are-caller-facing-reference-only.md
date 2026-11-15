@@ -20,10 +20,12 @@ consuming the API who never sees the IDL.** Concretely:
 - **Content.** What the function does, its parameters, its return, and how it pairs with
   its siblings. Type names are named plainly (`Signal`, `ListResult`); `(*.def)`/`(*.h)`
   source-file pointers are not — the `.def` layout is an internal implementation detail.
-- **Altitude.** The `api`-block comment is a one-or-two-line summary of what the scope *is*
-  and how its calls are used together (e.g. the `begin → item → end` pairing). It never
-  restates individual function signatures. Each function comment documents only that
-  function.
+- **Altitude.** The `api`-block comment says what the scope *is* in one summary line. A
+  short paragraph after it gives the order of the calls once (e.g. the `begin → item → end`
+  pairing), so the function comments do not repeat it. It never restates individual function
+  signatures. Each function comment documents only that function.
+  `docs/how_to_document_apis.md` is the style guide for the wording and shape of every
+  comment.
 - **No motivation in any code comment.** Rationale, design notes, and "why it's built this
   way" do not belong in `///` *or* `//` — they live in an ADR (a decision) or CONTEXT.md (a
   term). Nothing is demoted to `//` to "keep it nearby"; if it is worth keeping it goes to
