@@ -171,10 +171,16 @@ static bool scrollbar_grabbed(FlSignal signal) {
     return signal.dragging || (signal.clicked && signal.hovered);
 }
 
-// Thumb position in [0, 1] that centers the thumb on the mouse. usable_track must be positive.
-static f32 scrollbar_normalized_at_mouse(f32 mouse_pos, f32 track_start, f32 thumb_size, f32 usable_track) {
-    f32 relative_pos = mouse_pos - track_start - (thumb_size / 2.0f);
+// Thumb position in [0, 1] that puts the thumb's grabbed point on the mouse. usable_track must be positive.
+static f32 scrollbar_normalized_at_mouse(f32 mouse_pos, f32 track_start, f32 grab_offset, f32 usable_track) {
+    f32 relative_pos = mouse_pos - track_start - grab_offset;
     return clamp(relative_pos / usable_track, 0.0f, 1.0f);
+}
+
+static f32 scrollbar_grab_fraction(f32 mouse_pos, f32 thumb_start, f32 thumb_size) {
+    f32 fraction = (mouse_pos - thumb_start) / thumb_size;
+    bool on_thumb = fraction >= 0.0f && fraction <= 1.0f;
+    return on_thumb ? fraction : 0.5f;
 }
 
 // Sizing from an extent across the track and one along it.
@@ -242,12 +248,19 @@ static FlSignal scrollbar_on_track(float* value, FlScrollbarConfig cfg, Scrollba
     f32 range = cfg.max - cfg.min;
     f32 normalized = range > 0.0f ? (*value - cfg.min) / range : 0.0f;
 
+    f32 scale = ui_scale_or_one(ctx->ui_scale);
+    FlVec2 mouse = { ctx->input_state.mouse.x / scale, ctx->input_state.mouse.y / scale };
+    f32 mouse_pos = vec2_along(mouse, is_vertical);
+    f32 track_start = vec2_along(item->state.pos, is_vertical) / scale + (f32)track.end_pad;
+
+    if (signal.pressed) {
+        f32 thumb_start = track_start + normalized * usable_track;
+        item->drag_grab_fraction = scrollbar_grab_fraction(mouse_pos, thumb_start, thumb_size);
+    }
+
     if (scrollbar_grabbed(signal) && usable_track > 0.0f) {
-        f32 scale = ui_scale_or_one(ctx->ui_scale);
-        FlVec2 mouse = { ctx->input_state.mouse.x / scale, ctx->input_state.mouse.y / scale };
-        normalized = scrollbar_normalized_at_mouse(
-            vec2_along(mouse, is_vertical), vec2_along(item->state.pos, is_vertical) / scale + (f32)track.end_pad,
-            thumb_size, usable_track);
+        f32 grab_fraction = signal.activated ? 0.5f : item->drag_grab_fraction;
+        normalized = scrollbar_normalized_at_mouse(mouse_pos, track_start, grab_fraction * thumb_size, usable_track);
         *value = clamp(cfg.min + normalized * range, cfg.min, cfg.max);
     }
 
