@@ -8,8 +8,8 @@
 
 /// A scrolling list where you draw each row.
 ///
-/// Each frame, call `begin` with the ids of all rows. For each index in the range it returns, call
-/// `item_begin`, draw the row, and call `item_end`. Then call `end` and act on the result.
+/// Each frame, call `List::begin` with the ids of all rows. For each index in the range it returns, call
+/// `List::item_begin`, draw the row, and call `List::item_end`. Then call `List::end` and act on the result.
 ///
 /// The list fills the layout area it is in. It handles selection, the keyboard and row dragging; you keep the
 /// rows and reorder them after a drop. For plain label rows, see `Input::list`.
@@ -18,14 +18,14 @@ pub struct List;
 impl List {
     /// Starts the row with the given id and returns the `Signal` for it.
     ///
-    /// Everything you draw before `item_end` is the row's content.
+    /// Everything you draw before `List::item_end` is the row's content.
     #[inline]
     pub fn item_begin(stable_id: u64) -> crate::sys::Signal {
         let _frame = crate::frame_thread::frame_thread_guard("List::item_begin");
         unsafe { crate::sys::fl_list_item_begin(stable_id) }
     }
 
-    /// Ends the row started with `item_begin`.
+    /// Ends the row started with `List::item_begin`.
     #[inline]
     pub fn item_end() {
         let _frame = crate::frame_thread::frame_thread_guard("List::item_end");

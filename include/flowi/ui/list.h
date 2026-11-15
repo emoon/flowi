@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-// The side of `ListResult.drag_target_id` that dragged rows land on.
+// The side of `FlListResult.drag_target_id` that dragged rows land on.
 typedef enum FlDropRelationship {
     // Before the target row.
     FlDropRelationship_Before = 0,
@@ -23,7 +23,7 @@ typedef enum FlDropRelationship {
     FlDropRelationship_Into = 2,
 } FlDropRelationship;
 
-// A row of an `Input::list`.
+// A row of an `fl_input_list`.
 typedef struct FlListItem {
     // The id of the row (unique, never 0).
     uint64_t id;
@@ -33,7 +33,7 @@ typedef struct FlListItem {
     FlImageHandle icon;
 } FlListItem;
 
-// Options for `List::begin`.
+// Options for `fl_list_begin`.
 //
 // A field left at zero uses its default.
 typedef struct FlListConfig {
@@ -43,13 +43,13 @@ typedef struct FlListConfig {
     float gap;
     // The labels matched by type-ahead, one per id in the same order (null turns type-ahead off).
     const FlString* labels;
-    // Whether you draw the row drag yourself, from the drag fields of `ListResult`.
+    // Whether you draw the row drag yourself, from the drag fields of `FlListResult`.
     bool suppress_drag_visuals;
-    // When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
+    // When the scrollbar is shown (`FlScrollbarDisplayMode_Never` by default). The mouse wheel always scrolls.
     FlScrollbarDisplayMode scrollbar_mode;
 } FlListConfig;
 
-// Options for `Input::list`.
+// Options for `fl_input_list`.
 //
 // A field left at zero uses its default.
 typedef struct FlListOpts {
@@ -59,29 +59,29 @@ typedef struct FlListOpts {
     float gap;
     // Whether the user can select several rows. When false, a click selects one row and unselects the rest.
     bool multi_select;
-    // Whether the user can drag rows to a new position. See `ListResult.reorder_emitted`.
+    // Whether the user can drag rows to a new position. See `FlListResult.reorder_emitted`.
     bool reorderable;
-    // Whether you draw the row drag yourself, from the drag fields of `ListResult`.
+    // Whether you draw the row drag yourself, from the drag fields of `FlListResult`.
     bool suppress_drag_visuals;
-    // When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
+    // When the scrollbar is shown (`FlScrollbarDisplayMode_Never` by default). The mouse wheel always scrolls.
     FlScrollbarDisplayMode scrollbar_mode;
 } FlListOpts;
 
 // The rows to draw this frame.
 //
-// This is returned by `List::begin`. Draw the rows from `start` up to, and not including, `end`.
+// This is returned by `fl_list_begin`. Draw the rows from `start` up to, and not including, `end`.
 typedef struct FlListRange {
     // The index of the first row to draw (inclusive).
     uint32_t start;
     // The index after the last row to draw (exclusive).
     uint32_t end;
-    // The number of rows passed to `begin`.
+    // The number of rows passed to `fl_list_begin`.
     uint32_t total;
 } FlListRange;
 
 // The outcome of a list for one frame.
 //
-// This is returned by `List::end` and `Input::list`. The ids are the ones you passed in, and 0 means no row.
+// This is returned by `fl_list_end` and `fl_input_list`. The ids are the ones you passed in, and 0 means no row.
 typedef struct FlListResult {
     // The row the user activated with a double-click, Enter or Space.
     uint64_t activated_id;

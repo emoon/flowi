@@ -96,7 +96,8 @@ directly.
 Public doc comments (`///` in a `.def`) are caller-facing reference only.
 [How to document the API](how_to_document_apis.md) describes how to write them.
 api_gen rejects issue refs, `ADR` refs and `(*.def)`/`(*.h)` source pointers
-outright (ADR-0044).
+outright (ADR-0044), and a backticked reference such as `List::begin` to a
+function, field or enum value that does not exist.
 
 ## Comments
 
