@@ -73,10 +73,14 @@ typedef struct FlWidgetConfig {
     FlWidgetVariant variant;
     // The size of the widget (`FlWidgetSize_Default` by default). Only the plain text button uses it.
     FlWidgetSize size;
+    // The extra padding around the widget's children, in pixels. No widget reads it yet.
+    uint16_t child_padding;
     // Whether the widget can be focused with the keyboard (`FlFocusable_Default` by default).
     FlFocusable focusable;
     // Whether the widget takes focus the first time it appears. Only a focusable widget can take it.
     bool auto_focus;
+    // The widget's position in the tab order. No widget reads it yet.
+    int32_t tab_index;
     // Theme changes that apply to this widget only (null for none).
     //
     // Other widgets keep the theme they had. A scoped override around the widget still applies, and the

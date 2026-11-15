@@ -42,6 +42,7 @@ pub mod list_uniform;
 pub mod localization;
 pub mod menu;
 pub mod modal;
+pub mod nav_edge;
 pub mod painter;
 pub mod pill;
 pub mod pixel_readback;

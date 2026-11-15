@@ -590,6 +590,7 @@ mod public_surface_guard {
         crate::MouseMoveData = crate::sys::MouseMoveData,
         crate::MouseRelativeData = crate::sys::MouseRelativeData,
         crate::MouseWheelData = crate::sys::MouseWheelData,
+        crate::NavEdge = crate::sys::NavEdge,
         crate::NavFrame = crate::sys::NavFrame,
         crate::Overflow = crate::sys::Overflow,
         crate::PolyPoint = crate::sys::PolyPoint,
@@ -787,6 +788,10 @@ pub use crate::sys::Action;
 
 /// This frame's navigation snapshot, returned by [`nav_frame`].
 pub use crate::sys::NavFrame;
+
+/// The navigation-boundary bitmask a UI plugin's update returns: which nav edges the plugin reports having
+/// reached, plus OVERRIDE for explicit edge control.
+pub use crate::sys::NavEdge;
 
 /// Vertical alignment of a text run within its line box, the typed view of TextConfig.valign.
 /// Set [`TextConfig::valign`]; it defaults to [`TextVAlign::Center`].

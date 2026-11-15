@@ -153,6 +153,7 @@ static DropdownTrigger dropdown_draw_trigger(FlString label, const Dropdown* d) 
         .text_color = cfg->widget.text_color,
         .focusable = cfg->widget.focusable,
         .auto_focus = cfg->widget.auto_focus,
+        .tab_index = cfg->widget.tab_index,
         .variant = variant,
     };
     UiWidgetState w = ui_widget_prepare(label, button_cfg, STANDARD_WIDGET_FLAGS, variant, /*animate_text=*/false);

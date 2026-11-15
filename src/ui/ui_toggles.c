@@ -202,6 +202,7 @@ FlSignal ui_radio_group_impl(FlString* options, int option_count, int* selected_
         FlLayoutId opt_id = { .name = FL_S("radio"), .id = ui_item_id_seed(instance_id, (u32)i) };
         FlWidgetConfig opt_cfg = {
             .focusable = cfg.widget.focusable,
+            .tab_index = cfg.widget.tab_index + i,
         };
         FlSignal signal = ui_item_behavior(opt_id, STANDARD_WIDGET_FLAGS, opt_cfg);
         if ((signal.clicked || signal.activated) && *selected_index != i) {

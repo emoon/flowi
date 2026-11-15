@@ -1,0 +1,18 @@
+/// The edges a UI plugin reports it has reached, as a bitmask.
+///
+/// Combine values with bitwise OR. `NavEdge::Override` says the plugin reports the edges itself.
+#[attributes(bitflags)]
+enum NavEdge {
+    /// No edge is reported, and the host works the edges out itself.
+    None = 0,
+    /// The left edge is reached.
+    Left = 1,
+    /// The right edge is reached.
+    Right = 2,
+    /// The top edge is reached.
+    Up = 4,
+    /// The bottom edge is reached.
+    Down = 8,
+    /// The plugin reports the edges itself, with the other flags.
+    Override = 16,
+}

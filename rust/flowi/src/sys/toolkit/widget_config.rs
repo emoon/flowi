@@ -89,10 +89,14 @@ pub struct WidgetConfig {
     pub variant: crate::sys::WidgetVariant,
     /// The size of the widget (`WidgetSize::Default` by default). Only the plain text button uses it.
     pub size: crate::sys::WidgetSize,
+    /// The extra padding around the widget's children, in pixels. No widget reads it yet.
+    pub child_padding: u16,
     /// Whether the widget can be focused with the keyboard (`Focusable::Default` by default).
     pub focusable: crate::sys::Focusable,
     /// Whether the widget takes focus the first time it appears. Only a focusable widget can take it.
     pub auto_focus: bool,
+    /// The widget's position in the tab order. No widget reads it yet.
+    pub tab_index: i32,
     /// Theme changes that apply to this widget only (null for none).
     ///
     /// Other widgets keep the theme they had. A scoped override around the widget still applies, and the
@@ -101,16 +105,18 @@ pub struct WidgetConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<WidgetConfig>() == 48, "WidgetConfig size drift");
+    assert!(core::mem::size_of::<WidgetConfig>() == 56, "WidgetConfig size drift");
     assert!(core::mem::align_of::<WidgetConfig>() == 8, "WidgetConfig align drift");
     assert!(core::mem::offset_of!(WidgetConfig, id_override) == 0, "WidgetConfig.id_override offset drift");
     assert!(core::mem::offset_of!(WidgetConfig, color) == 16, "WidgetConfig.color offset drift");
     assert!(core::mem::offset_of!(WidgetConfig, text_color) == 20, "WidgetConfig.text_color offset drift");
     assert!(core::mem::offset_of!(WidgetConfig, variant) == 24, "WidgetConfig.variant offset drift");
     assert!(core::mem::offset_of!(WidgetConfig, size) == 28, "WidgetConfig.size offset drift");
-    assert!(core::mem::offset_of!(WidgetConfig, focusable) == 32, "WidgetConfig.focusable offset drift");
-    assert!(core::mem::offset_of!(WidgetConfig, auto_focus) == 36, "WidgetConfig.auto_focus offset drift");
-    assert!(core::mem::offset_of!(WidgetConfig, theme_override) == 40, "WidgetConfig.theme_override offset drift");
+    assert!(core::mem::offset_of!(WidgetConfig, child_padding) == 32, "WidgetConfig.child_padding offset drift");
+    assert!(core::mem::offset_of!(WidgetConfig, focusable) == 36, "WidgetConfig.focusable offset drift");
+    assert!(core::mem::offset_of!(WidgetConfig, auto_focus) == 40, "WidgetConfig.auto_focus offset drift");
+    assert!(core::mem::offset_of!(WidgetConfig, tab_index) == 44, "WidgetConfig.tab_index offset drift");
+    assert!(core::mem::offset_of!(WidgetConfig, theme_override) == 48, "WidgetConfig.theme_override offset drift");
 };
 
 /// Settings for a slider.
@@ -141,7 +147,7 @@ pub struct SliderConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<SliderConfig>() == 72, "SliderConfig size drift");
+    assert!(core::mem::size_of::<SliderConfig>() == 80, "SliderConfig size drift");
     assert!(core::mem::align_of::<SliderConfig>() == 8, "SliderConfig align drift");
     assert!(core::mem::offset_of!(SliderConfig, format) == 0, "SliderConfig.format offset drift");
     assert!(core::mem::offset_of!(SliderConfig, step) == 8, "SliderConfig.step offset drift");
@@ -162,7 +168,7 @@ pub struct CheckboxConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<CheckboxConfig>() == 56, "CheckboxConfig size drift");
+    assert!(core::mem::size_of::<CheckboxConfig>() == 64, "CheckboxConfig size drift");
     assert!(core::mem::align_of::<CheckboxConfig>() == 8, "CheckboxConfig align drift");
     assert!(core::mem::offset_of!(CheckboxConfig, label_on_left) == 0, "CheckboxConfig.label_on_left offset drift");
     assert!(core::mem::offset_of!(CheckboxConfig, widget) == 8, "CheckboxConfig.widget offset drift");
@@ -187,7 +193,7 @@ pub struct SwitchConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<SwitchConfig>() == 64, "SwitchConfig size drift");
+    assert!(core::mem::size_of::<SwitchConfig>() == 72, "SwitchConfig size drift");
     assert!(core::mem::align_of::<SwitchConfig>() == 8, "SwitchConfig align drift");
     assert!(core::mem::offset_of!(SwitchConfig, label_on_left) == 0, "SwitchConfig.label_on_left offset drift");
     assert!(core::mem::offset_of!(SwitchConfig, track_width) == 4, "SwitchConfig.track_width offset drift");
@@ -204,7 +210,7 @@ pub struct RadioConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<RadioConfig>() == 48, "RadioConfig size drift");
+    assert!(core::mem::size_of::<RadioConfig>() == 56, "RadioConfig size drift");
     assert!(core::mem::align_of::<RadioConfig>() == 8, "RadioConfig align drift");
     assert!(core::mem::offset_of!(RadioConfig, widget) == 0, "RadioConfig.widget offset drift");
 };
@@ -219,7 +225,7 @@ pub struct ProgressConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<ProgressConfig>() == 48, "ProgressConfig size drift");
+    assert!(core::mem::size_of::<ProgressConfig>() == 56, "ProgressConfig size drift");
     assert!(core::mem::align_of::<ProgressConfig>() == 8, "ProgressConfig align drift");
     assert!(core::mem::offset_of!(ProgressConfig, widget) == 0, "ProgressConfig.widget offset drift");
 };
@@ -257,7 +263,7 @@ pub struct DropdownConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<DropdownConfig>() == 112, "DropdownConfig size drift");
+    assert!(core::mem::size_of::<DropdownConfig>() == 120, "DropdownConfig size drift");
     assert!(core::mem::align_of::<DropdownConfig>() == 8, "DropdownConfig align drift");
     assert!(core::mem::offset_of!(DropdownConfig, show_cancel) == 0, "DropdownConfig.show_cancel offset drift");
     assert!(core::mem::offset_of!(DropdownConfig, cancel_label) == 8, "DropdownConfig.cancel_label offset drift");
@@ -304,7 +310,7 @@ pub struct TabBarConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<TabBarConfig>() == 80, "TabBarConfig size drift");
+    assert!(core::mem::size_of::<TabBarConfig>() == 88, "TabBarConfig size drift");
     assert!(core::mem::align_of::<TabBarConfig>() == 8, "TabBarConfig align drift");
     assert!(core::mem::offset_of!(TabBarConfig, vertical) == 0, "TabBarConfig.vertical offset drift");
     assert!(core::mem::offset_of!(TabBarConfig, item_padding_h) == 4, "TabBarConfig.item_padding_h offset drift");
@@ -328,7 +334,7 @@ pub struct LinkConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<LinkConfig>() == 56, "LinkConfig size drift");
+    assert!(core::mem::size_of::<LinkConfig>() == 64, "LinkConfig size drift");
     assert!(core::mem::align_of::<LinkConfig>() == 8, "LinkConfig align drift");
     assert!(core::mem::offset_of!(LinkConfig, font_size) == 0, "LinkConfig.font_size offset drift");
     assert!(core::mem::offset_of!(LinkConfig, widget) == 8, "LinkConfig.widget offset drift");
@@ -354,7 +360,7 @@ pub struct ScrollbarConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<ScrollbarConfig>() == 72, "ScrollbarConfig size drift");
+    assert!(core::mem::size_of::<ScrollbarConfig>() == 80, "ScrollbarConfig size drift");
     assert!(core::mem::align_of::<ScrollbarConfig>() == 8, "ScrollbarConfig align drift");
     assert!(core::mem::offset_of!(ScrollbarConfig, orientation) == 0, "ScrollbarConfig.orientation offset drift");
     assert!(core::mem::offset_of!(ScrollbarConfig, min) == 4, "ScrollbarConfig.min offset drift");
@@ -385,7 +391,7 @@ pub struct TextInputConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<TextInputConfig>() == 104, "TextInputConfig size drift");
+    assert!(core::mem::size_of::<TextInputConfig>() == 112, "TextInputConfig size drift");
     assert!(core::mem::align_of::<TextInputConfig>() == 8, "TextInputConfig align drift");
     assert!(core::mem::offset_of!(TextInputConfig, max_length) == 0, "TextInputConfig.max_length offset drift");
     assert!(core::mem::offset_of!(TextInputConfig, allowed_chars) == 8, "TextInputConfig.allowed_chars offset drift");
