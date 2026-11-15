@@ -6,19 +6,19 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Virtualized list of uniform-height rows carrying caller-emitted content. Every row is the same height, so the
-/// visible window is arithmetic and only the rows on screen lay out. Call begin, then item_begin / item_end
-/// for each index in the returned range, then end.
+/// A scrolling list of same-height rows, addressed by index.
 ///
-/// Rows are addressed by dense index and the caller owns everything inside them; the List is the richer
-/// surface that keys on stable ids and runs the selection gestures itself.
+/// Each frame, call `ListUniform::begin` with the number of rows. For each index in the range it returns, call
+/// `ListUniform::item_begin`, draw the row, and call `ListUniform::item_end`. Then call `ListUniform::end`.
 ///
-/// Scroll offset and the measured container height are stored under the id passed to begin.
+/// Only the rows on screen are drawn. This list only scrolls: for selection, keyboard navigation and row
+/// dragging, use `List::begin`.
 pub struct ListUniform;
 
 impl ListUniform {
-    /// Begin a virtualized list of total_count uniform-height rows, identified by id and laid out per opts.
-    /// Returns the visible index range to emit; pair with end.
+    /// Starts a list of `total_count` rows and returns the range of rows to draw.
+    ///
+    /// The scroll position is kept under `id`, so use the same `id` every frame.
     #[inline]
     pub fn begin(id: impl AsRef<str>, total_count: u32, opts: crate::sys::ListUniformOpts) -> crate::sys::ListUniformRange {
         let id = id.as_ref();
@@ -26,21 +26,21 @@ impl ListUniform {
         unsafe { crate::sys::fl_list_uniform_begin({ let s = id; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, total_count, opts) }
     }
 
-    /// Begin the row at index index. Pair with item_end.
+    /// Starts the row at `index`.
     #[inline]
     pub fn item_begin(index: u32) {
         let _frame = crate::frame_thread::frame_thread_guard("ListUniform::item_begin");
         unsafe { crate::sys::fl_list_uniform_item_begin(index) }
     }
 
-    /// End the current row.
+    /// Ends the row started with `ListUniform::item_begin`.
     #[inline]
     pub fn item_end() {
         let _frame = crate::frame_thread::frame_thread_guard("ListUniform::item_end");
         unsafe { crate::sys::fl_list_uniform_item_end() }
     }
 
-    /// End the list.
+    /// Ends the list.
     #[inline]
     pub fn end() {
         let _frame = crate::frame_thread::frame_thread_guard("ListUniform::end");

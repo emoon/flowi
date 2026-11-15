@@ -125,7 +125,7 @@ impl Painter {
     }
 
     /// Draw image image into the rect at top-left (x, y), size (w, h). image is the
-    /// `ImageHandle` from Image::load. color multiplicatively tints the image; pass white
+    /// `ImageHandle` from `Image::load`. color multiplicatively tints the image; pass white
     /// (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
     #[inline]
     pub fn image(x: f32, y: f32, w: f32, h: f32, image: crate::sys::ImageHandle, color: crate::sys::Color) -> bool {
