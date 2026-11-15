@@ -24,6 +24,8 @@ ListRows list_rows_from_items(const FlListItem* items, u32 count);
 
 ListRows list_rows_from_tree(const FlTreeRow* tree_rows, const FlString* labels, u32 count);
 
+ListRows list_rows_from_count(u32 count);
+
 bool list_rows_have_ids(const ListRows* rows);
 
 i32 list_rows_row_of(const ListRows* rows, u64 id);

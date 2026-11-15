@@ -1,58 +1,108 @@
-/// One visible row of a tree. The app passes the visible rows in display order every frame: a collapsed
-/// row's descendants are left out.
+/// One row of a tree as it appears on screen. Pass every visible row, top to bottom, each frame, and leave out
+/// the rows under a collapsed row.
 #[attributes(Copy)]
 struct TreeRow {
-    /// Opaque stable id: the selection/result key.
+    /// Your id for the row. Selection and the result use it.
     id: u64,
-    /// Nesting level, 0 for a root row. A row's children follow it with a larger depth.
+    /// How deep the row is nested: 0 for a top-level row, 1 for its children, and so on.
     depth: u16,
-    /// The row gets an expand arrow.
+    /// Set this to give the row an expand arrow.
     has_children: bool,
-    /// The row's children are shown, so they follow it in the slice.
+    /// Set this when the row is expanded. Its children are then the next rows in the slice.
     expanded: bool,
 }
 
-/// Configuration for a Tree, consumed by Tree::begin.
+/// One expanded node of a virtual tree. Pass only the expanded nodes, in the order they appear on screen, so a
+/// node always comes after its parent. Children are numbered from 0 under their parent.
+#[attributes(Copy)]
+struct TreeExpanded {
+    /// Index of the parent's entry in this slice, or -1 when the node is a top-level row.
+    parent: i32,
+    /// Which child of the parent this node is.
+    child_index: u32,
+    /// How many children the node has.
+    child_count: u32,
+}
+
+/// What Tree::row_at tells you about a row of a virtual tree, so you know what to draw.
+#[attributes(Copy)]
+struct TreeVirtualRow {
+    /// Index of the parent's entry in your expanded slice, or -1 for a top-level row.
+    parent: i32,
+    /// Which child of the parent this row is.
+    child_index: u32,
+    /// How deep the row is nested, 0 for a top-level row.
+    depth: u16,
+    /// Index of the row's own entry in your expanded slice if it is expanded, or -1 if it is not.
+    node: i32,
+}
+
+/// Options for a Tree.
 #[attributes(Copy)]
 struct TreeConfig {
-    /// Row layout, type-ahead labels and scrollbar, as for a List. labels runs parallel to the row slice.
+    /// Row height, gap, scrollbar and type-ahead labels, the same as for a List. labels has one entry per row.
     list: ListConfig,
-    /// Width of one nesting level in logical pixels, also the width of the arrow slot (0 -> default 16).
+    /// How far each nesting level is indented, in logical pixels. The arrow is this wide too. 0 uses 16.
     indent: f32,
 }
 
-/// The per-frame result a Tree hands back from Tree::end.
+/// What Tree::end returns.
 #[attributes(Copy)]
 struct TreeResult {
-    /// Selection, activation and focus results, as for a List.
+    /// Selection, activation and focus, the same as for a List.
     list: ListResult,
-    /// Stable id of the row whose arrow was pressed or whose expansion a key changed this frame, or 0. The
-    /// Tree keeps no expansion state: the app updates its model and passes the new rows next frame.
+    /// Id of the row the user asked to expand or collapse this frame, or 0. The Tree does not remember which
+    /// rows are expanded: change your own data and pass the new rows next frame.
     toggled_id: u64,
-    /// The state toggled_id should take: true to expand, false to collapse.
+    /// true when the row should expand, false when it should collapse.
     toggle_expanded: bool,
+    /// Row number of that row this frame. Only read it when toggled_id is not 0.
+    toggled_row: u32,
 }
 
-/// Virtualized tree over the List: rows indent by depth and rows with children get an expand arrow. The app
-/// owns the hierarchy and the expansion state and passes the visible rows each frame. Call begin, then
-/// item_begin / item_end for each row in the returned range, then end.
+/// A tree view. You keep the tree and which rows are expanded. The Tree draws the indent and the arrows and
+/// handles the mouse and keyboard.
 ///
-/// Selection, type-ahead, Up, Down, Home, End, Enter and Space work as in a List. Right expands a collapsed row
-/// and moves to the first child of an expanded one; Left collapses an expanded row and moves to the parent
-/// otherwise. Selected rows stay selected while a collapsed parent hides them.
+/// Each frame, call begin with the visible rows. For every row in the range it returns, call item_begin, draw
+/// the row's content, and call item_end. Then call end. If the result has a toggled_id, expand or collapse that
+/// row in your data.
 ///
-/// Rows cannot be dragged to reorder yet, so the drag fields of the result stay empty.
+/// Selection, type-ahead, Up, Down, Home, End, Enter and Space work as in a List. Right expands a row, or moves
+/// to its first child if it is already expanded. Left collapses a row, or moves to its parent if it is already
+/// collapsed. Rows stay selected while a collapsed parent hides them.
+///
+/// Rows cannot be dragged yet, so the drag fields of the result stay empty.
 #[frame_context]
 api Tree {
-    /// Begin a tree identified by id over the visible rows (rows of count entries), applying selection into
-    /// set (null opts out), with config. Returns the row range to emit; pair with end.
+    /// Start a tree. rows holds the count visible rows. Selection goes into set; pass null if you handle
+    /// selection yourself. Emit the rows in the returned range, then call end.
     [manual] begin(id: LayoutId, rows: *const TreeRow, count: u32, set: *SelectionSet, config: TreeConfig) -> ListRange
-    /// Begin the row at index row of the slice passed to begin. Draws the indent and the expand arrow, then
-    /// leaves a left-to-right container open for the row's content. Returns the row's interaction Signal; a
-    /// press on the arrow toggles the row and is not part of it. Pair with item_end.
+    /// Start one row. row is its index in the slice you passed to begin. The indent and the arrow are drawn for
+    /// you, and what you draw before item_end goes to the right of them. The returned Signal is for the row
+    /// itself: a press on the arrow is not a click on the row.
     item_begin(row: u32) -> Signal
-    /// End the current row.
+    /// Start a tree that can hold millions of rows without you building a row list. root_count is the number
+    /// of top-level rows and expanded holds the count nodes that are expanded (see TreeExpanded). For each row
+    /// in the returned range, call row_at to find out which child it is, then item_begin_virtual and item_end.
+    /// Finish with end.
+    ///
+    /// Rows have no ids of their own here. A row's id is its row number plus one, in set and in the result.
+    /// Expanding or collapsing a row moves the rows below it. When you apply a toggle on the next frame, the
+    /// Tree moves the cursor and the selection in set along with those rows, and unselects the rows a collapse
+    /// hid. If the number of rows changes for any other reason, the selection is cleared. If you pass null for
+    /// set and keep your own selection, you have to do the same yourself.
+    ///
+    /// The Tree does not know which rows have children until you emit them, so Right can ask you to expand a
+    /// row that has none. Ignore that request. Type-ahead does not work here and config.list.labels is not
+    /// read. A tree can show 2^31 - 1 rows nested 65535 levels deep; nodes beyond that are left out.
+    [manual] begin_virtual(id: LayoutId, root_count: u32, expanded: *const TreeExpanded, count: u32, set: *SelectionSet, config: TreeConfig) -> ListRange
+    /// Find out which child a row of a virtual tree is, so you know what to draw. Call it between
+    /// begin_virtual and end.
+    row_at(row: u32) -> TreeVirtualRow
+    /// Start one row of a virtual tree, like item_begin. Pass true for has_children to give the row an arrow.
+    item_begin_virtual(row: u32, has_children: bool) -> Signal
+    /// Finish the row started with item_begin or item_begin_virtual.
     item_end()
-    /// End the tree. Returns the per-frame TreeResult.
+    /// Finish the tree and get this frame's result.
     [manual] end() -> TreeResult
 }
