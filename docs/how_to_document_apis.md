@@ -86,7 +86,7 @@ to repeat it.
 - Refer to other items by their names in the `.def`, in backticks: `List::begin` for a function, `ListResult`
   for a type, `ListResult.requests` for a field and `DropRelationship::Before` for an enum value. Do not write
   the C name or a Rust-only name. api_gen turns the reference into `fl_list_begin`, `FlListResult` and so on
-  in the C headers, and leaves it as written for Rust.
+  in the C headers. For Rust it leaves the reference as written, unless the function has `[rust_doc]`.
 - If the Rust call for a `[manual]` function has another name, add `[rust_doc(List::show)]` to the function
   with the Rust name. The Rust docs then show that name where a comment refers to the function.
 - Write the full `List::begin` even inside the `List` block. A bare `begin` is not translated.
@@ -97,7 +97,8 @@ to repeat it.
   mean something else.
 - Write "null" for a pointer that may be left out. A Rust caller passes `None`.
 - Do not build a sentence on how C represents a value, such as "if `TreeResult.toggled_id` is not 0", when
-  Rust has another type for it. Say what the value means: "if the result reports a toggled row".
+  Rust has another type for it. Say what the value means: "if the `TreeResult` reports a toggled row". The
+  comment on the field itself can still say how to read it.
 - Use the names the API uses. If the field is `expanded`, write expanded and collapsed.
 - Use "you" for advice to the caller: "If you keep the selection yourself, ...".
 - Say each fact once, on the item where the caller needs it.

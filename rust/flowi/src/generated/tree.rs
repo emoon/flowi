@@ -10,7 +10,7 @@
 ///
 /// Each frame, call `Tree::begin` with the visible rows. For each row in the range it returns, call
 /// `Tree::item_begin`, draw the row, and call `Tree::item_end`. Then call `Tree::end`. If the
-/// result reports a toggled row, expand or collapse that row in your own data.
+/// `TreeResult` reports a toggled row, expand or collapse that row in your own data.
 ///
 /// For a tree too large to list row by row, start with `Tree::begin_virtual` and use `Tree::row_at` and
 /// `Tree::item_begin_virtual` for the rows.
@@ -34,7 +34,8 @@ impl Tree {
     /// Returns which child a row of a virtual tree is, so you know what to draw.
     ///
     /// It works from `Tree::begin_virtual` until another tree begins or the frame ends. After `Tree::end`, pass
-    /// it the row number of the toggled row to find the node to expand or collapse.
+    /// it the row number of the toggled row in the `TreeResult`, not the row's id, to find the node to expand
+    /// or collapse.
     #[inline]
     pub fn row_at(row: u32) -> crate::sys::TreeVirtualRow {
         let _frame = crate::frame_thread::frame_thread_guard("Tree::row_at");
