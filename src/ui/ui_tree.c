@@ -7,6 +7,7 @@
 #include "painter.h"
 #include "tree_flat.h"
 #include "ui.h"
+#include "ui_widget_internal.h"
 
 #include <math.h>
 
@@ -158,7 +159,7 @@ static void arrow_slot(FlTreeContext* self, u32 row, bool expanded) {
     fl_layout_start(arrow_id);
     fl_layout_configure((FlLayoutConfig) {
         .sizing = { sizing_fixed(self->indent), sizing_fixed(height) },
-        .clip = { .horizontal = true, .vertical = true },
+        .color = UI_HIT_TEST_FILL(1),
     });
     FlSignal signal = fl_item_behavior(arrow_id, FlItemFlags_clickable);
     if (signal.pressed) {
@@ -183,7 +184,7 @@ static FlSignal row_begin(FlTreeContext* self, u32 row, FlTreeRow r) {
     FlSignal signal = list_item_begin_impl(self->list, r.id);
     fl_layout_start_auto();
     fl_layout_configure((FlLayoutConfig) {
-        .sizing = { sizing_grow(), sizing_fit() },
+        .sizing = { sizing_grow(), sizing_fixed(self->list->current_row_height) },
         .direction = LayoutDirection_LeftToRight,
         .child_alignment = { .y = LayoutAlignmentY_Center },
     });

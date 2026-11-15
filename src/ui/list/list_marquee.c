@@ -39,8 +39,8 @@ typedef struct RowSpan {
 static RowSpan covered_rows(const FlListContext* self, Band band) {
     f64 stride = list_row_stride(self);
     i64 count = (i64)self->rows.count;
-    i64 lo = (i64)ceil((band.lo - (f64)self->current_row_height) / stride); // first row whose bottom > band_lo
-    i64 hi = (i64)ceil(band.hi / stride) - 1;                               // last row whose top < band_hi
+    i64 lo = (i64)ceil((band.lo - (f64)self->current_row_px) / stride); // first row whose bottom > band_lo
+    i64 hi = (i64)ceil(band.hi / stride) - 1;                           // last row whose top < band_hi
     if (lo < 0) {
         lo = 0;
     }

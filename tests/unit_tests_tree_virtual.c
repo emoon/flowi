@@ -26,6 +26,7 @@ typedef struct VTreeFrame {
     FlListRange range;
     FlTreeVirtualRow first;
     FlTreeVirtualRow last;
+    FlTreeVirtualRow toggled;
 } VTreeFrame;
 
 static const FlTreeExpanded s_vtree_first_open[] = {
@@ -68,6 +69,9 @@ static VTreeFrame vtree_frame(FlUiCtx* ctx, FlLayoutId tree_id, VTreeModel model
                                             (FlTreeConfig) { .list = { .row_height = 24.0f, .gap = 2.0f } });
         vtree_emit_rows(&frame);
         frame.result = fl_tree_end();
+        if (frame.result.toggled_id != 0) {
+            frame.toggled = fl_tree_row_at(frame.result.toggled_row);
+        }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 
@@ -313,4 +317,49 @@ UTEST(tree_virtual, a_focus_request_names_a_row_of_the_new_frame) {
     fl_list_request_focus(tree, 3);
     VTreeFrame frame = vtree_frame(ctx, tree, open, (VTreeInput) { .at = s_vtree_away });
     ASSERT_EQ_MSG((u64)3, frame.result.list.focused_id, "the requested row is not moved or dropped with the old rows");
+}
+
+static void vtree_dense_frame(FlUiCtx* ctx, FlLayoutId tree_id) {
+    ui_input_set_mouse_position(ctx, s_vtree_away.x, s_vtree_away.y);
+    ui_input_update(ctx, 1.0f / 60.0f);
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(200) }, .direction = FlLayoutDirection_TopToBottom) {
+        FlListRange range = fl_tree_begin_virtual(tree_id, 4, s_vtree_big, sizeof_array(s_vtree_big), nullptr,
+                                                  (FlTreeConfig) { .list = { .row_height = 6.0f, .gap = 2.0f } });
+        for (u32 row = range.start; row < range.end; row++) {
+            fl_tree_item_begin_virtual(row, true);
+            fl_tree_item_end();
+        }
+        fl_tree_end();
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+}
+
+UTEST(tree_virtual, jumping_far_every_frame_keeps_working) {
+    FlUiCtx* ctx = vtree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("vtree_jumps");
+
+    for_count(i, 200) {
+        vtree_dense_frame(ctx, tree);
+        list_uniform_nudge_scroll(ctx->list_uniform_ctx, tree.name, 4000.0f, 8.0f, VTREE_BIG_COUNT);
+    }
+    const f64 offset = list_uniform_scroll_offset(ctx->list_uniform_ctx, tree.name);
+    ASSERT_TRUE_MSG(offset > 700000.0, "the tree scrolled through fresh rows on every frame");
+}
+
+UTEST(tree_virtual, row_at_names_the_toggled_row_after_end) {
+    FlUiCtx* ctx = vtree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("vtree_row_after_end");
+    const VTreeModel open = { 4, s_vtree_first_open, sizeof_array(s_vtree_first_open), nullptr };
+
+    for_count(i, 3) {
+        vtree_frame(ctx, tree, open, (VTreeInput) { .at = vtree_arrow(4, 0) });
+    }
+    VTreeFrame frame = vtree_frame(ctx, tree, open, (VTreeInput) { .at = vtree_arrow(4, 0), .pressed = true });
+    ASSERT_EQ_MSG(4u, frame.result.toggled_row, "the arrow of the fifth row was pressed");
+    ASSERT_EQ_MSG(-1, frame.toggled.parent, "the row is a top-level row");
+    ASSERT_EQ_MSG(1u, frame.toggled.child_index, "it is the second top-level row, below the three children");
+    ASSERT_EQ_MSG(-1, frame.toggled.node, "it is not expanded");
 }

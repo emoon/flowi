@@ -12,6 +12,7 @@
 
 typedef struct FlArena FlArena;
 typedef struct FlListUniformContext FlListUniformContext;
+typedef struct FlUiCtx FlUiCtx;
 
 // arena backs internal state allocations.
 FlListUniformContext* list_uniform_create(FlArena* arena);
@@ -28,6 +29,9 @@ void list_uniform_end(FlListUniformContext* self);
 
 // Current smoothed scroll offset (pixels from the top of the content) for list id.
 f64 list_uniform_scroll_offset(FlListUniformContext* self, FlString id);
+
+f32 list_uniform_row_px(const FlUiCtx* ctx, f32 row_height);
+f32 list_uniform_gap_px(const FlUiCtx* ctx, f32 gap);
 
 // Nudge list id's smooth-scroll target (and offset, so the move is immediate and sticky) by delta_px, clamped
 // to [0, max] for a uniform list of total_count rows spaced item_stride px apart. Positive scrolls toward the

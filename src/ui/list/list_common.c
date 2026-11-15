@@ -69,7 +69,7 @@ bool list_viewport_contains(const ListViewport* vp, f32 x, f32 y) {
 }
 
 f32 list_row_stride(const FlListContext* self) {
-    return self->current_row_height + self->current_gap;
+    return self->current_row_px + self->current_gap_px;
 }
 
 f64 list_scroll_offset(const FlListContext* self) {

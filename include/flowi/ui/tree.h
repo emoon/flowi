@@ -119,7 +119,8 @@ FL_API FlSignal fl_tree_item_begin(uint32_t row);
 FL_API FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTreeExpanded* expanded, uint32_t count, FlSelectionSet* set, FlTreeConfig config);
 // Returns which child a row of a virtual tree is, so you know what to draw.
 //
-// Call this between `fl_tree_begin_virtual` and `fl_tree_end`.
+// It works from `fl_tree_begin_virtual` until another tree begins or the frame ends. After `fl_tree_end`, pass
+// it `FlTreeResult.toggled_row` to find the node to expand or collapse.
 FL_API FlTreeVirtualRow fl_tree_row_at(uint32_t row);
 // Starts a row of a virtual tree, like `fl_tree_item_begin`.
 //

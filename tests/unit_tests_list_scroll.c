@@ -111,16 +111,20 @@ static void wheel_list_frame(FlUiCtx* ctx, FlLayoutId list_id, WheelListInput in
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-static FlUiCtx* wheel_list_fixture(void) {
+static FlUiCtx* wheel_list_fixture_scaled(f32 scale) {
     FlUiCtx* ctx = render_fixture_get();
     if (ctx == nullptr) {
         return nullptr;
     }
-    ctx->layout_width = 320.0f;
-    ctx->layout_height = 256.0f;
-    ui_set_scale(1.0f, 1.0f);
-    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 320.0f, .height = 256.0f });
+    ctx->layout_width = 320.0f * scale;
+    ctx->layout_height = 256.0f * scale;
+    ui_set_scale(scale, scale);
+    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = ctx->layout_width, .height = ctx->layout_height });
     return ctx;
+}
+
+static FlUiCtx* wheel_list_fixture(void) {
+    return wheel_list_fixture_scaled(1.0f);
 }
 
 UTEST(list_scroll, wheel_goes_to_the_list_under_the_cursor) {
@@ -199,4 +203,105 @@ UTEST(list_scroll, scrollbar_drag_scrolls_without_selecting) {
 
     wheel_list_frame(ctx, list, (WheelListInput) { .mx = bar_x, .my = 158.0f, .scrollbar_mode = mode, .set = set });
     selection_set_destroy(set);
+}
+
+static f32 list_row_y(FlLayoutId list, u32 row) {
+    const FlLayoutId row_id = { .name = list.name, .id = (i32)row + 1 };
+    const Clay_ElementData box = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(row_id) });
+    const Clay_ElementData view = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(list) });
+    return box.boundingBox.y - view.boundingBox.y;
+}
+
+static f64 wheel_scaled_list(FlLayoutId list, f32 scale, u32 rows, f32 wheel_y) {
+    FlUiCtx* ctx = wheel_list_fixture_scaled(scale);
+    if (ctx == nullptr) {
+        return -1.0;
+    }
+    const WheelListInput idle = { .mx = 150.0f, .my = 130.0f, .rows = rows };
+    WheelListInput wheel = idle;
+    wheel.wheel_y = wheel_y;
+    for_count(i, 3) {
+        wheel_list_frame(ctx, list, idle);
+    }
+    wheel_list_frame(ctx, list, wheel);
+    for_count(i, 120) {
+        wheel_list_frame(ctx, list, idle);
+    }
+    wheel_list_fixture();
+    return list_uniform_scroll_offset(ctx->list_uniform_ctx, list.name);
+}
+
+UTEST(list_scroll, a_scaled_list_that_overflows_its_viewport_scrolls) {
+    const f64 offset = wheel_scaled_list(ID("scaled_short_list"), 1.5f, 5, -2.0f);
+    ASSERT_TRUE_MSG(offset > 1.0, "five 26 px rows overflow a 100 px viewport at any scale");
+}
+
+UTEST(list_scroll, scaled_rows_sit_where_the_scroll_offset_says) {
+    const FlLayoutId list = ID("scaled_long_list");
+    const f64 offset = wheel_scaled_list(list, 1.5f, WHEEL_LIST_ROWS, -4.0f);
+    ASSERT_TRUE_MSG(offset > 1.0, "the wheel scrolled the list");
+    ASSERT_NEAR_MSG(4.0f * 39.0f - (f32)offset, list_row_y(list, 4), 0.01f,
+                    "row 4 is four 39 px strides down, less the offset");
+}
+
+UTEST(list_scroll, rows_at_a_fractional_scale_sit_where_the_scroll_offset_says) {
+    const FlLayoutId list = ID("fraction_long_list");
+    const f64 offset = wheel_scaled_list(list, 1.3f, WHEEL_LIST_ROWS, -8.0f);
+    ASSERT_TRUE_MSG(offset > 1.0, "the wheel scrolled the list");
+    ASSERT_NEAR_MSG(9.0f * 34.2f - (f32)offset, list_row_y(list, 9), 0.01f,
+                    "a 24 px row is 31.2 px at 1.3 and its 2 px gap snaps to 3 px");
+}
+
+UTEST(list_scroll, a_scaled_scrollbar_stays_inside_its_list) {
+    FlUiCtx* ctx = wheel_list_fixture_scaled(1.5f);
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId list = ID("scaled_bar_list");
+    const WheelListInput idle = { .mx = 150.0f, .my = 130.0f, .scrollbar_mode = FlScrollbarDisplayMode_Always };
+    for_count(i, 4) {
+        wheel_list_frame(ctx, list, idle);
+    }
+    const u32 owner = ui_layout_id_to_clay_id(list);
+    const FlLayoutId bar_id = { .name = fl_sprintf_arena(ctx->render_frame_allocator, "_sb_%u", owner) };
+    const Clay_BoundingBox bar
+        = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(bar_id) }).boundingBox;
+    const Clay_BoundingBox view = Clay_GetElementData((Clay_ElementId) { .id = owner }).boundingBox;
+    wheel_list_fixture();
+
+    ASSERT_TRUE_MSG(bar.height > 0.0f, "the scrollbar is laid out");
+    ASSERT_TRUE_MSG(bar.y >= view.y, "the scrollbar starts inside the list");
+    ASSERT_TRUE_MSG(bar.y + bar.height <= view.y + view.height + 0.5f, "the scrollbar ends inside the list");
+    ASSERT_TRUE_MSG(bar.x + bar.width <= view.x + view.width + 0.5f, "the scrollbar is inside the right edge");
+}
+
+static u64 selected_after_drag_at(FlLayoutId list, f32 x) {
+    FlUiCtx* ctx = wheel_list_fixture();
+    if (ctx == nullptr) {
+        return UINT64_MAX;
+    }
+    FlSelectionSet* set = selection_set_create(0);
+    WheelListInput in = { .mx = x, .my = 70.0f, .scrollbar_mode = FlScrollbarDisplayMode_Always, .set = set };
+    for_count(i, 4) {
+        wheel_list_frame(ctx, list, in);
+    }
+    in.held = true;
+    in.pressed = true;
+    wheel_list_frame(ctx, list, in);
+    in.pressed = false;
+    in.my = 140.0f;
+    for_count(i, 4) {
+        wheel_list_frame(ctx, list, in);
+    }
+    in.held = false;
+    ctx->input_state.mouse.buttons_released[FlMouseButton_Left] = true;
+    wheel_list_frame(ctx, list, in);
+    ctx->input_state.mouse.buttons_released[FlMouseButton_Left] = false;
+    wheel_list_frame(ctx, list, in);
+    const u64 selected = selection_set_len(set);
+    selection_set_destroy(set);
+    return selected;
+}
+
+UTEST(list_scroll, a_drag_beside_the_thumb_does_not_start_a_marquee) {
+    ASSERT_EQ_MSG((u64)0, selected_after_drag_at(ID("bar_strip_right"), 299.0f), "right of the thumb");
+    ASSERT_EQ_MSG((u64)0, selected_after_drag_at(ID("bar_strip_left"), 286.0f), "left of the thumb");
 }

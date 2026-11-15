@@ -110,7 +110,8 @@ api Tree {
     [manual] begin_virtual(id: LayoutId, root_count: u32, expanded: *const TreeExpanded, count: u32, set: *SelectionSet, config: TreeConfig) -> ListRange
     /// Returns which child a row of a virtual tree is, so you know what to draw.
     ///
-    /// Call this between `Tree::begin_virtual` and `Tree::end`.
+    /// It works from `Tree::begin_virtual` until another tree begins or the frame ends. After `Tree::end`, pass
+    /// it `TreeResult.toggled_row` to find the node to expand or collapse.
     row_at(row: u32) -> TreeVirtualRow
     /// Starts a row of a virtual tree, like `Tree::item_begin`.
     ///
