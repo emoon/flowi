@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "app/app.h"
+#include "gallery_tree.h"
 #include <flowi/ui/font.h>
 #include <core/core.h>
 #include <core/log.h>
@@ -27,6 +28,7 @@
 
 #define GALLERY_LIST_ROWS 500
 #define GALLERY_DECL_ROWS 12
+#define GALLERY_LIST_ROW_HEIGHT 26.0f
 typedef struct GalleryState {
     int clicks;
     bool checkbox;
@@ -52,6 +54,8 @@ typedef struct GalleryState {
     u64 decl_activated;
     u64 decl_menu;
     bool feedback_installed; // installed on the first frame, once the UI context exists
+    GalleryTree tree;
+    GalleryVirtualTree virtual_tree;
 } GalleryState;
 
 static void section_header(FlString title) {
@@ -330,9 +334,10 @@ static void list_row(GalleryState* s, u64 id) {
     if (fl_list_item_begin(id).clicked) {
         s->list_activated = id;
     }
-    ui_layout_area(.sizing = { .width = sizing_grow() }, .padding = padding_all(6), .radius = corner_radius(4)) {
+    ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(GALLERY_LIST_ROW_HEIGHT) },
+                   .padding = { 6, 6, 0, 0 }, .child_alignment = { .y = LayoutAlignmentY_Center }) {
         snprintf(buf, sizeof(buf), "Item %llu", (unsigned long long)id);
-        text_from(buf);
+        ui_text_styled(fl_frame_str(buf, strlen(buf)), .color = fl_theme_colors()->text.primary);
     }
     fl_list_item_end();
 }
@@ -359,7 +364,8 @@ static void list_section(GalleryState* s) {
         ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(180) },
                        .direction = LayoutDirection_TopToBottom) {
             FlListRange r = fl_list_begin(ID("gallery_list"), s->list_ids, GALLERY_LIST_ROWS, s->list_selection,
-                                          .row_height = 26.0f, .gap = 4.0f, .labels = s->list_labels);
+                                          .row_height = GALLERY_LIST_ROW_HEIGHT, .gap = 4.0f, .labels = s->list_labels,
+                                          .scrollbar_mode = FlScrollbarDisplayMode_Auto);
             for (u32 i = r.start; i < r.end; i++) {
                 // Reorder mutates the order, so read the stable id from the slice, not from i.
                 list_row(s, s->list_ids[i]);
@@ -414,9 +420,10 @@ static void decl_list_section(GalleryState* s) {
         section_header(FL_S("List (declarative ui_list — one call, label/icon rows)"));
         ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(150) },
                        .direction = LayoutDirection_TopToBottom) {
-            FlListResult dr
-                = ui_list(ID("gallery_decl_list"), s->decl_items, GALLERY_DECL_ROWS, s->decl_selection,
-                          (FlListOpts) { .row_height = 26.0f, .gap = 4.0f, .multi_select = true, .reorderable = true });
+            FlListResult dr = ui_list(
+                ID("gallery_decl_list"), s->decl_items, GALLERY_DECL_ROWS, s->decl_selection,
+                (FlListOpts) {
+                    .row_height = GALLERY_LIST_ROW_HEIGHT, .gap = 4.0f, .multi_select = true, .reorderable = true });
             decl_apply_result(s, &dr);
         }
         snprintf(buf, sizeof(buf), "%llu selected (last open id %llu, last menu id %llu)",
@@ -426,9 +433,21 @@ static void decl_list_section(GalleryState* s) {
     }
 }
 
+static void tree_sections(GalleryState* s) {
+    section {
+        section_header(FL_S("Tree (rows from the app, type-ahead, Left/Right)"));
+        gallery_tree_show(&s->tree);
+    }
+    section {
+        section_header(FL_S("Tree (virtual, one group with 1,000,000 items)"));
+        gallery_virtual_tree_show(&s->virtual_tree);
+    }
+}
+
 static void collection_sections(GalleryState* s) {
     list_section(s);
     decl_list_section(s);
+    tree_sections(s);
 }
 
 static void widget_sections(GalleryState* s) {
@@ -516,6 +535,8 @@ static void state_init(GalleryState* state) {
     state->count = 3;
     state->list_selection = selection_set_create(64);
     state->decl_selection = selection_set_create(16);
+    gallery_tree_init(&state->tree);
+    gallery_virtual_tree_init(&state->virtual_tree);
     // The parallel labels back keyboard type-ahead, including rows virtualized out of view.
     for_count(i, GALLERY_LIST_ROWS) {
         state->list_ids[i] = (u64)(i + 1);
@@ -533,6 +554,8 @@ static void state_init(GalleryState* state) {
 static void state_destroy(GalleryState* state) {
     selection_set_destroy(state->list_selection);
     selection_set_destroy(state->decl_selection);
+    gallery_tree_destroy(&state->tree);
+    gallery_virtual_tree_destroy(&state->virtual_tree);
 }
 
 static const char* renderer_name(FlAppRenderer renderer) {
