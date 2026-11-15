@@ -6,13 +6,14 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Switch widget: a boolean toggle drawn as a pill track with a sliding knob. Same role as a checkbox.
+/// An on/off toggle drawn as a sliding knob, with the same role as a checkbox. Call it inside a frame callback.
 pub struct Switch;
 
 impl Switch {
-    /// Emit a switch labelled label bound to `*value`; activation toggles the bool. config selects label
-    /// side, colors, and id overrides. Returns its interaction Signal (.clicked the frame it toggles).
-    /// Call inside a frame callback.
+    /// Draws a switch with a label and returns its `Signal`.
+    ///
+    /// A click or key activation flips `value`. `Signal.clicked` is set on the frame it flips. `value` must not
+    /// be null.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(label: impl AsRef<str>, value: &mut bool, config: crate::generated::widget_config::SwitchConfig<'_>) -> crate::sys::Signal {

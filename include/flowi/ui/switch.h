@@ -12,10 +12,11 @@
 extern "C" {
 #endif
 
-// Switch widget: a boolean toggle drawn as a pill track with a sliding knob. Same role as a checkbox.
-// Emit a switch labelled label bound to `*value`; activation toggles the bool. config selects label
-// side, colors, and id overrides. Returns its interaction Signal (.clicked the frame it toggles).
-// Call inside a frame callback.
+// An on/off toggle drawn as a sliding knob, with the same role as a checkbox. Call it inside a frame callback.
+// Draws a switch with a label and returns its `FlSignal`.
+//
+// A click or key activation flips `value`. `FlSignal.clicked` is set on the frame it flips. `value` must not
+// be null.
 FL_API FlSignal fl_switch_impl(FlString label, bool* value, FlSwitchConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

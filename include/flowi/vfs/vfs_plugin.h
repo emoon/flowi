@@ -11,9 +11,10 @@
 extern "C" {
 #endif
 
-// VFS operation status: hierarchical error codes drivers return. Drivers set
-// the most specific code possible. Codes are grouped in hundreds (file/IO/
-// permission/resource/archive/network/HTTP/generic).
+// The status codes a driver returns.
+//
+// Drivers use the most specific code they can. The codes are grouped in hundreds: file, IO, permission, resource,
+// archive, network, HTTP and generic.
 typedef enum FlVfsStatus {
     FlVfsStatus_Success = 0,
     // File or path not found.
@@ -74,9 +75,10 @@ typedef enum FlVfsStatus {
     FlVfsStatus_OperationCanceled = 903,
 } FlVfsStatus;
 
-// Driver capability flags: the feature bitmask get_capabilities() returns. VFS
-// core uses these to decide which operations are available. Power-of-two flags,
-// OR-combined.
+// The features a driver supports, combined with OR.
+//
+// A driver returns them from its `get_capabilities` function. The VFS uses them to decide which operations a
+// driver can handle.
 typedef enum FlVfsDriverCapabilities {
     // Can read files.
     FlVfsDriverCapabilities_Read = 1,
@@ -86,7 +88,7 @@ typedef enum FlVfsDriverCapabilities {
     FlVfsDriverCapabilities_Memory = 16,
     // Can provide OS file paths (optimization).
     FlVfsDriverCapabilities_DirectPath = 32,
-    // Has caching support.
+    // Supports caching.
     FlVfsDriverCapabilities_Cache = 64,
     // Is an archive format.
     FlVfsDriverCapabilities_Archive = 256,
@@ -94,8 +96,7 @@ typedef enum FlVfsDriverCapabilities {
     FlVfsDriverCapabilities_Network = 512,
 } FlVfsDriverCapabilities;
 
-// File open flags: the mode bitmask open() takes. Power-of-two flags,
-// OR-combined.
+// The flags passed to a driver's `open` function, combined with OR.
 typedef enum FlVfsOpenFlags {
     // Open for reading.
     FlVfsOpenFlags_Read = 1,
@@ -105,120 +106,137 @@ typedef struct FlVfsPluginInfo FlVfsPluginInfo;
 
 typedef struct FlArena FlArena;
 
-// Driver error detail. Always check vfs_status first; native_error carries
-// the underlying errno / HTTP status / driver code for additional context.
+// The error a driver returns with a result.
+//
+// Check `FlVfsDriverError.vfs_status` first. `FlVfsDriverError.native_error` adds the underlying code.
 typedef struct FlVfsDriverError {
-    // VFS-level error code (always set).
+    // The VFS error code (always set).
     FlVfsStatus vfs_status;
-    // Native error code (errno, HTTP status, etc.) or 0.
+    // The native error code, such as an errno or an HTTP status (0 if none).
     int32_t native_error;
-    // Driver-specific additional data (optional).
+    // Extra data specific to the driver (optional).
     uint64_t additional_data;
 } FlVfsDriverError;
 
-// Plugin creation result. Check error.vfs_status == FlVfsStatus_Success before
-// using instance. Shared across plugin types (VFS, UI, etc.).
+// The outcome of a plugin's `create` function.
+//
+// Use `FlPluginCreateResult.instance` only if `FlPluginCreateResult.error` has the status `FlVfsStatus_Success`.
 typedef struct FlPluginCreateResult {
-    // Plugin instance handle, or null on error.
+    // The plugin instance, or null on error.
     void* instance;
+    // The error, or `FlVfsStatus_Success`.
     FlVfsDriverError error;
 } FlPluginCreateResult;
 
-// Result of a driver's open().
+// The outcome of a driver's `open` function.
 typedef struct FlVfsOpenResult {
-    // Driver-specific handle, or null on error.
+    // The driver's handle, or null on error.
     void* handle;
-    // true if the handle is a directory/archive (can be listed).
+    // Whether the handle is a directory or an archive, which can be listed.
     bool is_directory;
+    // The error, or `FlVfsStatus_Success`.
     FlVfsDriverError error;
 } FlVfsOpenResult;
 
-// Result of a driver's read().
+// The outcome of a driver's `read` function.
 typedef struct FlVfsReadResult {
-    // Number of bytes read, or -1 on error.
+    // The number of bytes read, or -1 on error.
     int64_t bytes_read;
+    // The error, or `FlVfsStatus_Success`.
     FlVfsDriverError error;
 } FlVfsReadResult;
 
-// Result of a driver's get_size().
+// The outcome of a driver's `get_size` function.
 typedef struct FlVfsSizeResult {
-    // File size in bytes, or -1 on error.
+    // The size in bytes, or -1 on error.
     int64_t size;
+    // The error, or `FlVfsStatus_Success`.
     FlVfsDriverError error;
 } FlVfsSizeResult;
 
-// A single file or directory entry, used in directory listings and metadata
-// queries.
+// A file or directory in a listing.
 typedef struct FlVfsEntry {
-    // Entry name (not a full path).
+    // The name of the entry, not a full path.
     FlString name;
-    // File size in bytes (0 for directories).
+    // The size in bytes (0 for a directory).
     int64_t size;
-    // Platform-specific attributes.
+    // The attributes of the entry, which depend on the platform.
     uint32_t attributes;
-    // true if the entry is a directory.
+    // Whether the entry is a directory.
     bool is_directory;
-    // true if the entry can be opened as an archive (e.g. a .zip file).
+    // Whether the entry can be opened as an archive, such as a zip file.
     bool is_archive;
 } FlVfsEntry;
 
-// Mount-level options controlling behavior for all files accessed through a
-// mount. The caller passes them to fl_vfs_mount_with_options, and VFS core hands
-// them by value to the driver's open.
+// The options of a mount, which apply to every file read through it.
+//
+// Pass them to `fl_vfs_mount_with_options`. The VFS hands them to the driver's `open` function.
 typedef struct FlVfsMountOptions {
-    // If set, caching plugins write here instead of the default cache. The
-    // filename is derived from the URL; the directory must exist.
+    // The directory where caching plugins write their cache (empty uses the default cache).
+    //
+    // The file name comes from the URL. The directory must exist.
     FlString cache_dir;
-    // If true, validate cached files against the server (ETag) before use, for
-    // mutable remote files. Default (false) uses the cache without validation.
+    // Whether to check cached files against the server (ETag) before use. This is for remote files that can
+    // change. When false, the cache is used without a check.
     bool cache_validation;
 } FlVfsMountOptions;
 
-// VFS driver plugin interface: the set of operations a driver implements to
-// provide filesystem access for local files, archives, network filesystems, and
-// virtual filesystems.
+// A driver that gives the VFS access to local files, archives, network filesystems or virtual filesystems.
+//
+// Report what the driver supports from `get_capabilities`. `open_memory`, `get_file_path` and `is_cached` are
+// null if the driver does not support them.
 typedef struct FlVfsPlugin {
-    // Should be set to FL_VFS_PLUGIN_API_VERSION.
+    // The plugin API version the driver was built for.
     uint64_t api_version;
+    // The name of the plugin.
     FlString plugin_name;
-    // Plugin metadata (version, author, ...). Optional; null if none.
+    // Metadata about the plugin, such as version and author (null if none).
     FlVfsPluginInfo* plugin_info;
-    // Create a driver instance.
+    // Creates a driver instance.
     FlPluginCreateResult (*create)(void);
-    // Destroy a driver instance from create().
+    // Destroys an instance made by `create`.
     void (*destroy)(void* driver_instance);
-    // Fast path-type check (no I/O), used for driver selection.
+    // Returns whether the path looks like one this driver handles, without doing any I/O.
+    //
+    // The VFS uses it to pick a driver.
     bool (*supports_path)(FlString path);
-    // Check whether this driver can actually open the path (may do I/O).
+    // Returns whether the driver can open the path. This may do I/O.
     bool (*can_open)(FlString path);
-    // Open a file or directory (relative to parent_handle, or absolute when it is
-    // null). mount_options is supplied by VFS core.
+    // Opens a file or directory and returns the result.
+    //
+    // The path is relative to `parent_handle`, or absolute if `parent_handle` is null. The VFS supplies
+    // `mount_options`.
     FlVfsOpenResult (*open)(void* driver_instance, void* parent_handle, FlString path, uint32_t flags, FlVfsMountOptions mount_options);
-    // Whether an opened handle is a directory/archive.
+    // Returns whether an open handle is a directory or an archive.
     bool (*is_directory)(void* driver_instance, void* handle);
-    // Read file contents into the caller-owned buffer. A non-empty relative_path
-    // names a file below handle and is read from its start; an empty one reads
-    // the file handle was opened on, continuing from its current offset.
+    // Reads file contents into `buffer`, which the caller owns.
+    //
+    // A non-empty `relative_path` names a file below `handle`, and it is read from its start. An empty one reads
+    // the file `handle` was opened on, from its current offset.
     FlVfsReadResult (*read)(void* driver_instance, void* handle, FlString relative_path, uint8_t* buffer, int64_t size);
-    // Get a file's size. relative_path resolves against handle as it does for
-    // read(). Returns -1 for a directory or a path that does not exist.
+    // Returns the size of a file.
+    //
+    // `relative_path` is resolved against `handle` as for `read`. The size is -1 for a directory or a
+    // path that does not exist.
     FlVfsSizeResult (*get_size)(void* driver_instance, void* handle, FlString relative_path);
-    // List directory contents, invoking callback once per entry discovered;
-    // listing stops when the callback returns false.
+    // Lists a directory by calling `callback` for each entry.
+    //
+    // The listing stops when the callback returns false.
     void (*list_directory)(void* driver_instance, void* handle, FlString relative_path, FlVfsListingCallback callback, void* user_data);
-    // Close a handle and free its resources.
+    // Closes a handle and frees its resources.
     void (*close)(void* driver_instance, void* handle);
-    // Driver capability flags.
+    // Returns the features the driver supports.
     FlVfsDriverCapabilities (*get_capabilities)(void);
-    // Open an archive from a memory buffer (FlVfsDriverCapabilities_Memory). On
-    // success the driver takes ownership of data; on failure the caller retains
-    // it. null if unsupported.
+    // Opens an archive from a memory buffer. This needs `FlVfsDriverCapabilities_Memory` (null if unsupported).
+    //
+    // On success the driver owns `data`. On failure the caller keeps it.
     FlVfsOpenResult (*open_memory)(void* driver_instance, const uint8_t* data, uint64_t size, FlString original_path);
-    // Get an OS filesystem path for a resource (FlVfsDriverCapabilities_DirectPath),
-    // allocated from arena. Empty string if unavailable. null if unsupported.
+    // Returns an operating system path for a resource, allocated from `arena`. This needs
+    // `FlVfsDriverCapabilities_DirectPath` (null if unsupported).
+    //
+    // The string is empty if no path is available.
     FlString (*get_file_path)(void* driver_instance, void* handle, FlString relative_path, FlArena* arena);
-    // Whether a path is cached and fresh (FlVfsDriverCapabilities_Cache). null
-    // if unsupported.
+    // Returns whether a path is cached and fresh. This needs `FlVfsDriverCapabilities_Cache` (null if unsupported).
     bool (*is_cached)(void* driver_instance, FlString path);
 } FlVfsPlugin;
 

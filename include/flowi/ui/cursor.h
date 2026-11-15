@@ -9,47 +9,53 @@
 extern "C" {
 #endif
 
-// The mouse pointer's system shape. Arrow is the default and the per-frame fallback when
-// nothing requests a shape.
+// The shape of the mouse pointer.
+//
+// `FlCursorShape_Arrow` is the default. It is used on a frame where nothing requests a shape.
 typedef enum FlCursorShape {
-    // Default arrow pointer.
+    // The default arrow pointer.
     FlCursorShape_Arrow = 0,
-    // Pointing hand (links, draggable affordances).
+    // A pointing hand.
     FlCursorShape_Hand = 1,
-    // Horizontal resize (left/right).
+    // A horizontal resize pointer (left and right).
     FlCursorShape_ResizeH = 2,
-    // Vertical resize (up/down).
+    // A vertical resize pointer (up and down).
     FlCursorShape_ResizeV = 3,
-    // Top-left/bottom-right diagonal resize ("\").
+    // A diagonal resize pointer from top left to bottom right.
     FlCursorShape_ResizeDiagonal1 = 4,
-    // Top-right/bottom-left diagonal resize ("/").
+    // A diagonal resize pointer from top right to bottom left.
     FlCursorShape_ResizeDiagonal2 = 5,
-    // I-beam text caret.
+    // An I-beam for text.
     FlCursorShape_Text = 6,
+    // A crosshair.
     FlCursorShape_Crosshair = 7,
-    // Not-allowed / blocked.
+    // A pointer that shows the action is not allowed.
     FlCursorShape_NotAllowed = 8,
-    // Number of cursor shapes; not a real shape.
+    // The number of shapes, not a shape.
     FlCursorShape_Count = 9,
 } FlCursorShape;
 
-// The cursor value fl_cursor_set takes, carrying a system CursorShape.
+// A cursor request for `fl_cursor_set`.
 typedef struct FlCursor {
     // The requested system shape.
     FlCursorShape shape;
 } FlCursor;
 
-// Cursor shape and visibility requests. Pair set/get_requested for the shape and
-// set_visible/get_visible for visibility.
-// Request a pointer shape for this frame: per-frame, last-writer-wins, reset to the arrow at frame start.
-// A widget wanting a non-arrow cursor re-requests it every active frame; with no request the cursor falls
-// back to the arrow.
+// The pointer shape and whether the pointer is visible.
+//
+// The shape is a request for one frame. A widget that wants a pointer other than the arrow calls `fl_cursor_set`
+// on every frame it is active. The visibility stays as you set it until you change it.
+// Requests the pointer shape for this frame.
+//
+// If several requests are made in a frame, the last one wins. With no request the pointer is the arrow.
 FL_API void fl_cursor_set(FlCursor cursor);
-// The cursor resolved for this frame: the last set request, or the arrow if none.
+// Returns the pointer requested so far this frame, or the arrow if there is none.
 FL_API FlCursor fl_cursor_get_requested(void);
-// Toggle cursor visibility. Unlike the shape request this is a sticky toggle (not reset per frame).
+// Shows or hides the pointer.
+//
+// Unlike the shape, this is not reset every frame.
 FL_API void fl_cursor_set_visible(bool visible);
-// The current cursor-visibility request (sticky).
+// Returns whether the pointer is visible.
 FL_API bool fl_cursor_get_visible(void);
 
 

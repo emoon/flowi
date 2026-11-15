@@ -1,27 +1,31 @@
-/// Handle to a retained mesh. Backend-shared: one mesh draws from any viewport.
+/// A handle to a mesh created by `Mesh::create` or `Mesh::create_lines`.
+///
+/// A mesh belongs to the render backend, so you can draw it in any viewport.
 #[handle(u32, invalid = 0)]
 struct MeshHandle {}
 
-/// One mesh vertex, in the single fixed vertex format the 3D API accepts: position, texture
-/// coordinate, and a vertex color that multiplies whatever the draw samples.
+/// A vertex of a mesh.
+///
+/// Every mesh uses this one vertex format.
 #[attributes(Copy)]
 struct MeshVertex {
-    /// x position in model space
+    /// The x position, in model space.
     x: f32,
-    /// y position in model space
+    /// The y position, in model space.
     y: f32,
-    /// z position in model space
+    /// The z position, in model space.
     z: f32,
-    /// u texture coordinate, addressing the whole texture (a mesh texture is never atlased)
+    /// The u texture coordinate. It addresses the whole texture.
     u: f32,
-    /// v texture coordinate
+    /// The v texture coordinate.
     v: f32,
-    /// per-vertex color, multiplied with the sampled texel
+    /// The vertex color. It is multiplied with the texel sampled from the texture.
     color: Color,
 }
 
-/// How a mesh's indices are grouped into primitives. Fixed at creation: a mesh is triangles or lines for
-/// its whole life, because the index array only means one of the two.
+/// How the indices of a mesh are grouped into primitives.
+///
+/// A mesh keeps its topology for its whole life.
 enum MeshTopology {
     /// Three indices per triangle.
     Triangles = 0,
@@ -29,52 +33,72 @@ enum MeshTopology {
     Lines = 1,
 }
 
-/// Retained geometry, created once and drawn from any Viewport3d. Vertices use the one fixed format
-/// (MeshVertex); indices are 16-bit and address vertices. Triangles and lines are the same resource with
-/// different index grouping: create makes one of the first, create_lines one of the second.
+/// Geometry that you create once and draw many times.
+///
+/// Create a mesh from `MeshVertex` values and 16-bit indices. Use `Mesh::create` for triangles and
+/// `Mesh::create_lines` for line segments. Draw it with `Viewport3d::draw_mesh` or `Viewport3d::draw_lines`, and
+/// call `Mesh::destroy` when you no longer need it.
 #[frame_context]
 api Mesh {
-    /// Create a triangle mesh from vertices and 16-bit indices (three per triangle). The caller may free both
-    /// arrays after this returns. Returns MeshHandle::INVALID when the active backend has no 3D
-    /// support or the geometry is malformed.
+    /// Creates a triangle mesh and returns its handle.
+    ///
+    /// `indices` holds three indices per triangle, each the position of a vertex in `vertices`. Both arrays are
+    /// copied, so you can free them after the call.
+    ///
+    /// It returns the invalid handle (0) if either array is empty, if the number of indices is not a multiple of
+    /// three, if the render backend has no 3D support, or if the backend cannot hold another mesh.
     create(vertices: [*const MeshVertex], indices: [*const u16]) -> MeshHandle
-    /// Create a line mesh (wireframes, voxel boxes, gizmos, camera paths) from vertices and 16-bit
-    /// indices (two per segment). Lines are drawn with Viewport3d::draw_lines, take their color from the
-    /// vertices, and are never textured. Same lifetime and sharing rules as create.
+    /// Creates a line mesh and returns its handle.
+    ///
+    /// `indices` holds two indices per line segment. Lines take their color from the vertices and are never
+    /// textured. Draw them with `Viewport3d::draw_lines`.
+    ///
+    /// It returns the invalid handle (0) if either array is empty, if the number of indices is odd, if the render
+    /// backend has no 3D support, or if the backend cannot hold another mesh.
     create_lines(vertices: [*const MeshVertex], indices: [*const u16]) -> MeshHandle
-    /// Destroy a mesh and release its backend buffers. The handle is invalid afterwards: drawing it renders
-    /// nothing until a later create reuses its slot and hands the same value back out, at which point the
-    /// stale handle draws the new mesh. Drop your copies when you destroy one.
+    /// Destroys a mesh and frees its buffers.
+    ///
+    /// Do not use the handle afterwards. A later `Mesh::create` can hand out the same value for a new mesh, and a
+    /// stale copy of the handle then draws that mesh.
     destroy(mesh: MeshHandle)
 }
 
-/// A 3D scene rendered into a regular layout element: a view-projection matrix plus depth-tested
-/// triangle draws, rasterized by the render backend into the element's own color+depth target, which
-/// the UI then samples as an ordinary image.
+/// A 3D scene that is drawn into a layout element.
 ///
-/// Bracket a frame's draws with begin/end. begin returns the element's size in device pixels so
-/// the caller can build its projection matrix; that size is the previous frame's, because layout runs
-/// after the frame callback, so it is zero on an element's first frame and one frame stale across a
-/// resize. flowi does no lighting, materials or cameras: the shading is fixed and unlit, and camera
-/// math, picking and gizmos live in the caller. A backend without a 3D path draws a placeholder.
+/// Each frame, call `Viewport3d::begin` with the id of the element. Use the size it returns to build a
+/// view-projection matrix, and pass the matrix to `Viewport3d::set_view_projection`. Then call
+/// `Viewport3d::draw_mesh` and `Viewport3d::draw_lines` for each mesh, and finish with `Viewport3d::end`.
+///
+/// Flowi has no cameras, lights or materials. Shading is fixed and unlit, and you do the camera math, the picking
+/// and the gizmos yourself. If the render backend has no 3D support, the element shows a flat placeholder.
 #[frame_context]
 api Viewport3d {
-    /// Declare the 3D viewport element id and open its draw list. Returns the element's device-pixel
-    /// size from the previous frame ((0, 0) on its first). Call inside a frame callback and pair with end.
+    /// Starts the viewport for an element and returns the size to render at, in device pixels.
+    ///
+    /// The size is the one the element was laid out at on the previous frame. It is (0, 0) on the first frame and
+    /// one frame behind after a resize. The size is also (0, 0) if another `Viewport3d::begin` is still open, or
+    /// if the app already has 8 live viewports. Call `Viewport3d::end` when you have made your draws.
     [borrowed] begin(id: LayoutId) -> Vec2
-    /// Set the view-projection matrix applied to every following draw in this viewport: 16 floats,
-    /// column-major, the same convention `gl_Position = matrix * vec4(pos, 1.0)` implies.
+    /// Sets the view-projection matrix for the draws that follow in this viewport.
+    ///
+    /// `matrix` holds 16 floats in column-major order, so a vertex position `pos` is placed at
+    /// `matrix * vec4(pos, 1.0)`. Without a call, the matrix is the identity. Anything but 16 floats is ignored and
+    /// logs an error.
     set_view_projection(matrix: [*const f32])
-    /// Draw a triangle mesh with depth testing, modulating its vertex colors by texture sampled with
-    /// filter. Pass ImageFilter::Nearest to see a lightmap's individual texels rather than a smoothed
-    /// blend. Pass ImageHandle::INVALID to draw with vertex colors alone. Draws render in submission order
-    /// with no sorting; a textured draw needs a dedicated image (Image::create_dedicated), because mesh UVs
-    /// address the whole texture.
+    /// Draws a triangle mesh with depth testing.
+    ///
+    /// The vertex colors are multiplied with the texels of `texture`, sampled with `filter`. Pass the invalid
+    /// handle (0) to draw with the vertex colors only. A texture must come from
+    /// `Image::create_dedicated`, because the texture coordinates address the whole texture.
+    ///
+    /// Draws are rendered in the order you make them, and a viewport takes at most 256 per frame. The rest are
+    /// dropped and an error is logged.
     draw_mesh(mesh: MeshHandle, texture: ImageHandle, filter: ImageFilter)
-    /// Draw a line mesh (Mesh::create_lines) in its vertex colors, untextured. depth_test false makes an
-    /// annotation stay visible through the geometry it annotates; true lets the scene occlude it. Lines are
-    /// one pixel wide and draw in submission order like every other draw.
+    /// Draws a line mesh in its vertex colors, one pixel wide.
+    ///
+    /// With `depth_test` false, the lines stay visible through the geometry. With true, the scene can hide them.
+    /// The draw counts toward the same per-frame limit as `Viewport3d::draw_mesh`.
     draw_lines(mesh: MeshHandle, depth_test: bool)
-    /// Close the draw list opened by begin and submit it to the backend.
+    /// Ends the viewport started by `Viewport3d::begin` and sends its draws to the render backend.
     end()
 }

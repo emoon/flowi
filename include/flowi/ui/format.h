@@ -9,10 +9,11 @@
 extern "C" {
 #endif
 
-// Per-frame string formatting. The returned String is owned by the frame allocator and
-// valid only for the current frame.
-// Format fmt (printf-style, plus %S for an FlString) into a frame-allocated string. The result lives
-// until the end of the frame. Copy it into durable storage if it must outlive the frame.
+// String formatting into the frame's memory.
+// Formats `fmt` into a string that is valid until the end of the frame.
+//
+// `fmt` is a printf format that also accepts `%S` for a string argument. Copy the result if you need it
+// after the frame. It is empty when there is no UI.
 FL_API FlString fl_format_frame_string(const char* fmt, ...);
 
 

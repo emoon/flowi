@@ -12,67 +12,69 @@
 extern "C" {
 #endif
 
-// Layout direction for a container's children.
+// The direction a container lays out its children in.
 typedef enum __attribute__((__packed__)) FlLayoutDirection {
-    // Lay children out left-to-right (a row).
+    // Left to right, as a row.
     FlLayoutDirection_LeftToRight = 0,
-    // Lay children out top-to-bottom (a column).
+    // Top to bottom, as a column.
     FlLayoutDirection_TopToBottom = 1,
 } FlLayoutDirection;
 
-// Horizontal alignment of children within a container.
+// How a container aligns its children horizontally.
 typedef enum __attribute__((__packed__)) FlLayoutAlignmentX {
     FlLayoutAlignmentX_Left = 0,
     FlLayoutAlignmentX_Right = 1,
     FlLayoutAlignmentX_Center = 2,
 } FlLayoutAlignmentX;
 
-// Vertical alignment of children within a container.
+// How a container aligns its children vertically.
 typedef enum __attribute__((__packed__)) FlLayoutAlignmentY {
     FlLayoutAlignmentY_Top = 0,
     FlLayoutAlignmentY_Bottom = 1,
     FlLayoutAlignmentY_Center = 2,
 } FlLayoutAlignmentY;
 
-// How an axis is sized. Selects which arm of LayoutSizingAxis.size is live.
+// How an axis is sized. It selects which member of `FlLayoutSizingAxis.size` is used.
 typedef enum __attribute__((__packed__)) FlLayoutSizingType {
-    // Size to fit content, clamped to `[min, max]`.
+    // Fits the content, within `FlLayoutSizingMinMax.min` and `FlLayoutSizingMinMax.max`.
     FlLayoutSizingType_Fit = 0,
-    // Grow to fill available space, clamped to `[min, max]`.
+    // Grows to fill the available space, within `FlLayoutSizingMinMax.min` and `FlLayoutSizingMinMax.max`.
     FlLayoutSizingType_Grow = 1,
-    // A percentage of the parent's size (percent arm).
+    // A fraction of the parent's size, set with `percent`.
     FlLayoutSizingType_Percent = 2,
-    // A fixed size in reference pixels (min_max arm, min == max).
+    // A fixed size. Set `FlLayoutSizingMinMax.min` and `FlLayoutSizingMinMax.max` to the same value.
     FlLayoutSizingType_Fixed = 3,
 } FlLayoutSizingType;
 
-// Min/max bound for a sized axis.
+// The lower and upper bound of a sized axis.
 typedef struct FlLayoutSizingMinMax {
-    // Lower bound in reference pixels.
+    // The lower bound, in logical pixels.
     float min;
-    // Upper bound in reference pixels.
+    // The upper bound, in logical pixels.
     float max;
 } FlLayoutSizingMinMax;
 
-// Sizing for a single axis: the live arm of size is selected by type.
+// The sizing of one axis.
 typedef struct FlLayoutSizingAxis {
-    // The live arm is selected by type: min_max for Fit/Grow/Fixed, percent
-    // for Percent (a fraction of the parent's size, 0.0..=1.0).
+    // The size, read according to `type`.
+    //
+    // `min_max` is used by `FlLayoutSizingType_Fit`, `FlLayoutSizingType_Grow` and `FlLayoutSizingType_Fixed`.
+    // `percent` is used by `FlLayoutSizingType_Percent` and is a fraction of the parent's size from 0.0 to 1.0.
     union {
         FlLayoutSizingMinMax min_max;
         float percent;
     } size;
-    // Which arm of size is live, and how the axis is computed.
+    // How the axis is sized, and so which member of `size` is used.
     FlLayoutSizingType type;
 } FlLayoutSizingAxis;
 
-// Width and height sizing for a container.
+// The width and height sizing of a container.
 typedef struct FlLayoutSizing {
     FlLayoutSizingAxis width;
     FlLayoutSizingAxis height;
 } FlLayoutSizing;
 
-// Per-edge padding inside a container, in reference pixels.
+// The space between a container's edges and its children, in logical pixels.
 typedef struct FlLayoutPadding {
     uint16_t left;
     uint16_t right;
@@ -80,90 +82,100 @@ typedef struct FlLayoutPadding {
     uint16_t bottom;
 } FlLayoutPadding;
 
-// Alignment of children on both axes.
+// How a container aligns its children on both axes.
 typedef struct FlLayoutChildAlignment {
     FlLayoutAlignmentX x;
     FlLayoutAlignmentY y;
 } FlLayoutChildAlignment;
 
-// Clipping / scroll configuration for a container.
+// Whether a container clips its content, and how the content is scrolled.
 typedef struct FlLayoutClip {
-    // Clip overflow on the horizontal axis.
+    // Whether content that overflows horizontally is clipped.
     bool horizontal;
-    // Clip overflow on the vertical axis.
+    // Whether content that overflows vertically is clipped.
     bool vertical;
-    // Caller owns scroll_pos; use it directly instead of automatic scrolling.
+    // Whether you set the scroll position yourself in `scroll_pos`.
+    //
+    // If false, the position the layout keeps from the previous frame is used.
     bool manual_scroll;
-    // Current scroll offset in reference pixels.
+    // The offset applied to the children, in screen pixels. It is used when `manual_scroll` is true.
+    //
+    // Negative values move the content up and to the left. The UI scale does not change this value.
     FlVec2 scroll_pos;
 } FlLayoutClip;
 
-// Per-edge border widths plus a between-children divider width.
+// The widths of a container's border, in logical pixels.
 typedef struct FlBorderWidthConfig {
     uint16_t left;
     uint16_t right;
     uint16_t top;
     uint16_t bottom;
-    // Width of the divider drawn between adjacent children.
+    // The width of the divider drawn between adjacent children.
     uint16_t between_children;
 } FlBorderWidthConfig;
 
-// Border color, widths, and dash pattern for a container.
+// The color, widths and dash pattern of a container's border.
+//
+// The border is drawn only if at least one width is more than 0.
 typedef struct FlLayoutBorder {
     FlColor color;
     FlBorderWidthConfig width;
-    // Dash pattern, one for the whole border (zeroed = solid). The between-children divider is
-    // always solid.
+    // The dash pattern of the border (all zero draws it solid).
+    //
+    // The divider between children is always solid.
     FlStrokeStyle stroke;
 } FlLayoutBorder;
 
-// Explicit content-space placement for a child. When enabled, the child is positioned at
-// offset in its parent's content coordinate space (the same space the clip scroll offset
-// lives in) instead of by flex flow, so it scrolls and clips with the container. A placed
-// child neither advances the flex cursor nor contributes to the parent's content extent, so
-// flowed siblings lay out as if it were absent. The offset is in already-zoomed reference pixels.
+// A child that is placed at a fixed offset instead of flowing with its siblings.
+//
+// The child is positioned from its parent's origin, so it scrolls and clips with the parent. It takes no space in
+// the flow, and its siblings are laid out as if it were not there.
 typedef struct FlLayoutPlaced {
-    // Content-space offset in reference pixels from the parent's origin.
+    // The offset from the parent's origin, in logical pixels.
     FlVec2 offset;
-    // Position by offset in content space instead of flex flow (default false: flex flow).
+    // Whether the child is placed by `offset` instead of by the flow (false by default).
     bool enabled;
 } FlLayoutPlaced;
 
-// Per-corner radius in reference pixels.
+// The radius of each corner, in logical pixels.
 typedef struct FlCornerRadius {
-    // top-left (0 = square corner)
+    // The top left corner (0 is square).
     float tl;
-    // top-right
+    // The top right corner.
     float tr;
-    // bottom-left
+    // The bottom left corner.
     float bl;
-    // bottom-right
+    // The bottom right corner.
     float br;
 } FlCornerRadius;
 
-// Full configuration for one layout container, consumed by fl_layout_configure.
+// The settings of one layout container.
+//
+// Pass it to `fl_layout_configure`.
 typedef struct FlLayoutConfig {
     FlLayoutSizing sizing;
     FlLayoutPadding padding;
-    // Gap between adjacent children, in reference pixels.
+    // The space between adjacent children, in logical pixels.
     uint16_t child_gap;
     FlCornerRadius radius;
     FlLayoutChildAlignment child_alignment;
-    // Row or column.
+    // Whether children are laid out in a row or a column.
     FlLayoutDirection direction;
-    // Background color.
+    // The background color.
     FlColor color;
     FlLayoutClip clip;
     FlLayoutBorder border;
-    // Explicit content-space placement (default disabled: normal flex flow).
+    // Places the container at a fixed offset instead of in the flow (off by default).
     FlLayoutPlaced placed;
 } FlLayoutConfig;
 
-// Identifier for a layout container: a name string plus an integer id seed.
+// The identity of a layout container: a name and a seed.
+//
+// Two containers in the same frame must not have the same name and seed.
 typedef struct FlLayoutId {
-    // Container name; hashed (with id as seed) into the internal id.
+    // The name of the container. Together with `id`, it makes the container's identity.
     FlString name;
-    // Hash seed. 0 derives the id purely from name.
+    // A number mixed into the identity, to tell apart containers that share a name (0 uses the name alone).
     int32_t id;
 } FlLayoutId;
 

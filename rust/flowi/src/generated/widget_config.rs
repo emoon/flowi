@@ -6,7 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Shared per-widget configuration for id, colors, sizing, focus, tab order, and per-widget theme override.
+/// Settings shared by every widget.
+///
+/// Each widget config holds one of these as its `widget` field.
 ///
 /// The safe twin of [`crate::sys::WidgetConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -15,28 +17,28 @@
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct WidgetConfig<'a> {
-    /// Optional id override (FlString); empty means use the widget's normal id source.
+    /// The id to use instead of the one the widget would otherwise get (empty uses the normal id).
     pub id_override: &'a str,
-    /// Explicit widget color; when set by callers it bypasses themed color resolution.
+    /// The widget's color. When set, it is used instead of the theme color.
     pub color: crate::sys::Color,
-    /// Explicit widget text color.
+    /// The widget's text color.
     pub text_color: crate::sys::Color,
-    /// Visual style for widget chrome (0 = solid).
+    /// The look of the widget's background and border (`WidgetVariant::Solid` by default). Only buttons use it.
     pub variant: crate::sys::WidgetVariant,
-    /// Widget size token (0 = widget default).
+    /// The size of the widget (`WidgetSize::Default` by default). Only the plain text button uses it.
     pub size: crate::sys::WidgetSize,
-    /// Extra child padding in pixels.
+    /// The extra padding around the widget's children, in pixels. No widget reads it yet.
     pub child_padding: u16,
-    /// Whether the widget joins the keyboard focus order (0 = the widget family's normal behaviour).
+    /// Whether the widget can be focused with the keyboard (`Focusable::Default` by default).
     pub focusable: crate::sys::Focusable,
-    /// Request focus automatically when the widget appears.
+    /// Whether the widget takes focus the first time it appears. Only a focusable widget can take it.
     pub auto_focus: bool,
-    /// Explicit tab order index.
+    /// The widget's position in the tab order. No widget reads it yet.
     pub tab_index: i32,
-    /// Optional per-widget state-slot theme override; null means none. This is a sparse FlThemeOverride
-    /// layered over the resolved theme for this widget only: siblings are unaffected, and it composes with
-    /// scoped subtree overrides with widget-level slots winning. The explicit per-object color field still
-    /// bypasses the theme entirely.
+    /// Theme changes that apply to this widget only (null for none).
+    ///
+    /// Other widgets keep the theme they had. A scoped override around the widget still applies, and the
+    /// slots set here win over it. `color` is still used instead of the theme.
     pub theme_override: Option<&'a crate::sys::ThemeOverride>,
 }
 
@@ -91,7 +93,7 @@ impl WidgetConfig<'_> {
     }
 }
 
-/// Checkbox configuration for label placement and shared widget settings.
+/// Settings for a checkbox.
 ///
 /// The safe twin of [`crate::sys::CheckboxConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -100,9 +102,9 @@ impl WidgetConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct CheckboxConfig<'a> {
-    /// Label position: false = right side, true = left side.
+    /// Whether the label is on the left of the box instead of the right.
     pub label_on_left: bool,
-    /// Shared widget config (color, focusability, theme override, and id).
+    /// The settings shared by every widget.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
 
@@ -136,9 +138,10 @@ impl CheckboxConfig<'_> {
     }
 }
 
-/// Switch configuration for track geometry, label placement, and shared widget settings. A switch drives
-/// a bool like a checkbox but renders as a pill track with a sliding knob. The knob is not sized
-/// directly: it is the circle that fits the track height inside knob_inset on every side.
+/// Settings for a switch.
+///
+/// A switch sets a bool like a checkbox does, but it is drawn as a pill-shaped track with a sliding knob. The
+/// knob is as large as fits inside the track height, less `knob_inset` on each side.
 ///
 /// The safe twin of [`crate::sys::SwitchConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -147,16 +150,15 @@ impl CheckboxConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct SwitchConfig<'a> {
-    /// Label position: false = right side, true = left side.
+    /// Whether the label is on the left of the switch instead of the right.
     pub label_on_left: bool,
-    /// Track width in pixels (0 = twice track_height).
+    /// The width of the track, in pixels (0 uses twice `track_height`).
     pub track_width: f32,
-    /// Track height in pixels (0 = 24). Also the switch's row height.
+    /// The height of the track, in pixels (0 uses 24). This is also the height of the switch.
     pub track_height: f32,
-    /// Gap between the knob and each track edge in pixels (0 = 2); the knob is
-    /// `track_height - 2 * knob_inset` across.
+    /// The gap between the knob and the track edge, in pixels (0 uses 2).
     pub knob_inset: f32,
-    /// Shared widget config (color, focusability, theme override, and id).
+    /// The settings shared by every widget.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
 
@@ -196,7 +198,7 @@ impl SwitchConfig<'_> {
     }
 }
 
-/// Radio group configuration for exclusive single-choice selection.
+/// Settings for a radio group.
 ///
 /// The safe twin of [`crate::sys::RadioConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -205,7 +207,7 @@ impl SwitchConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct RadioConfig<'a> {
-    /// Shared widget config (color, focusability, theme override, and id).
+    /// The settings shared by every widget.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
 
@@ -233,8 +235,9 @@ impl RadioConfig<'_> {
     }
 }
 
-/// Progress bar configuration for a determinate progress track. The fraction is passed as a direct
-/// argument, not stored here.
+/// Settings for a progress bar.
+///
+/// The fraction to show is passed to the call, not set here.
 ///
 /// The safe twin of [`crate::sys::ProgressConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -243,7 +246,7 @@ impl RadioConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct ProgressConfig<'a> {
-    /// Shared widget config (color overrides the fill, theme override retints slots, and id is available).
+    /// The settings shared by every widget. `WidgetConfig.color` sets the fill color.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
 
@@ -271,8 +274,7 @@ impl ProgressConfig<'_> {
     }
 }
 
-/// Dropdown configuration for cancel affordance, sizing, trigger geometry, search, and shared widget
-/// settings.
+/// Settings for a dropdown.
 ///
 /// The safe twin of [`crate::sys::DropdownConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -281,29 +283,32 @@ impl ProgressConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct DropdownConfig<'a> {
-    /// Show cancel button (default: true, for single-button gamepads).
+    /// Whether the popup has a cancel button (true by default).
     pub show_cancel: bool,
-    /// Cancel button text (default: "Cancel").
+    /// The text of the cancel button (empty uses "Cancel").
     pub cancel_label: &'a str,
-    /// Minimum dropdown width in pixels (default: 200).
+    /// The minimum width of the popup, in pixels (200 by default).
     pub min_width: f32,
-    /// Horizontal padding inside the trigger button, in pixels (0 = 16). The trigger grows to its row
-    /// either way, so this only insets its contents.
+    /// The horizontal padding inside the trigger button, in pixels (0 uses 16).
     pub padding_h: f32,
-    /// Vertical padding inside the trigger button, in pixels (0 = 8). Setting it switches the trigger off
-    /// its fixed 60px height onto padding-driven sizing, which is what a compact pill needs.
+    /// The vertical padding inside the trigger button, in pixels (0 uses 8).
+    ///
+    /// Setting it makes the trigger as tall as its padding and content need, instead of a fixed height. Use it
+    /// for a compact trigger.
     pub padding_v: f32,
-    /// Corner radius of the trigger button, in pixels (0 = 8). The open popup keeps its own.
+    /// The corner radius of the trigger button, in pixels (0 uses 8).
     pub corner_radius: f32,
-    /// Type to filter options while the popup is open.
+    /// Whether the user can type to filter the options while the popup is open.
+    ///
+    /// This needs `search_state`.
     pub searchable: bool,
-    /// Buffer for search text; required when searchable is true. Opaque state the callee owns and
-    /// mutates; null disables search regardless of searchable. Reachable only from C: the Rust
-    /// binding has no safe wrapper for the opaque FlTextInputState.
+    /// The state of the search text box. Without it, the dropdown is not searchable.
+    ///
+    /// The dropdown reads and changes this state. It is not available from Rust, which has no safe way to make one.
     pub search_state: *mut crate::sys::TextInputState,
-    /// Max option rows the open popup shows before it scrolls (0 = default ~10); the List virtualizes the rest.
+    /// The most option rows the popup shows before it scrolls (0 uses about 10).
     pub max_visible_rows: i32,
-    /// Shared widget config (color, focusability, theme override, and id).
+    /// The settings shared by every widget.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
 
@@ -358,7 +363,7 @@ impl DropdownConfig<'_> {
     }
 }
 
-/// Tab bar configuration for orientation, tab and strip geometry, label text, and shared widget settings.
+/// Settings for a tab bar.
 ///
 /// The safe twin of [`crate::sys::TabBarConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -367,29 +372,32 @@ impl DropdownConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct TabBarConfig<'a> {
-    /// false = horizontal tabs (the C zero default), true = vertical sidebar style.
+    /// Whether the tabs are stacked vertically as a sidebar instead of laid out in a row.
     pub vertical: bool,
-    /// Horizontal padding inside a tab, in pixels (0 = 16). Either padding set switches the tab off its
-    /// fixed 60px height onto padding-driven sizing, which is what a compact segmented control needs.
+    /// The horizontal padding inside a tab, in pixels (0 uses 16).
+    ///
+    /// Setting this or `item_padding_v` makes each tab as tall as its padding and label need, instead of a fixed
+    /// height. Use it for a compact segmented control.
     pub item_padding_h: f32,
-    /// Vertical padding inside a tab, in pixels (0 = 8). See item_padding_h for the sizing switch.
+    /// The vertical padding inside a tab, in pixels (0 uses 8).
     pub item_padding_v: f32,
-    /// Corner radius of a tab, in pixels (0 = 8).
+    /// The corner radius of a tab, in pixels (0 uses 8).
     pub item_radius: f32,
-    /// Padding between the strip's edge and its tabs, in pixels (0 = none). Set either this or
-    /// container_radius and the strip paints as a surface-colored pill behind the tabs; leave both zero
-    /// and it stays a bare layout row.
+    /// The padding between the edge of the tab strip and its tabs, in pixels (0 for none).
+    ///
+    /// Setting this or `container_radius` draws the strip as a pill-shaped surface behind the tabs.
     pub container_padding: f32,
-    /// Corner radius of that pill, in pixels (0 = square corners).
+    /// The corner radius of the strip's pill, in pixels (0 for square corners).
     pub container_radius: f32,
-    /// Gap between adjacent tabs, in pixels (0 = 4). A negative value gives a flush strip with no gap
-    /// (a segmented control), since 0 stands for the default.
+    /// The gap between tabs, in pixels (0 uses 4).
+    ///
+    /// A negative value removes the gap, which gives a segmented control.
     pub child_gap: f32,
-    /// Label pixel size (0 = the font's default size).
+    /// The size of the label text, in pixels (0 uses the font's default size).
     pub font_size: u16,
-    /// Extra spacing between label glyphs, in px (0 = none).
+    /// The extra space between label characters, in pixels (0 for none).
     pub letter_spacing: u16,
-    /// Shared widget config (color, focusability, theme override, and id).
+    /// The settings shared by every widget.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
 
@@ -439,7 +447,7 @@ impl TabBarConfig<'_> {
     }
 }
 
-/// Link configuration for font-size override and shared widget settings.
+/// Settings for a link.
 ///
 /// The safe twin of [`crate::sys::LinkConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -448,9 +456,9 @@ impl TabBarConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct LinkConfig<'a> {
-    /// Font size override (0 = default).
+    /// The size of the text, in pixels (0 uses the default size).
     pub font_size: u16,
-    /// Shared widget config (color, focusability, theme override, and id).
+    /// The settings shared by every widget.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
 
@@ -484,7 +492,7 @@ impl LinkConfig<'_> {
     }
 }
 
-/// Scrollbar configuration for orientation, range, thumb sizing, width, and shared widget settings.
+/// Settings for a scrollbar.
 ///
 /// The safe twin of [`crate::sys::ScrollbarConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -493,19 +501,19 @@ impl LinkConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct ScrollbarConfig<'a> {
-    /// Vertical or horizontal orientation (0 = vertical).
+    /// The direction the scrollbar runs in (`ScrollbarOrientation::Vertical` by default).
     pub orientation: crate::sys::ScrollbarOrientation,
-    /// Minimum scroll position (usually 0).
+    /// The lowest scroll position, usually 0.
     pub min: f32,
-    /// Maximum scroll position (content size - viewport size).
+    /// The highest scroll position, usually the content size minus the viewport size.
     pub max: f32,
-    /// Viewport/content ratio for thumb size (0-1, default: 0.2).
+    /// The share of the content that is visible, from 0 to 1, which sets the size of the thumb (0.2 by default).
     pub viewport_ratio: f32,
-    /// Scrollbar width (default: small spacing token, 8 px).
+    /// The width of the scrollbar, in pixels (0 uses 8).
     pub width: f32,
-    /// Minimum thumb size in pixels (default: 32).
+    /// The smallest size of the thumb, in pixels (0 uses 40).
     pub min_thumb_size: f32,
-    /// Shared widget config (color, focusability, theme override, and id).
+    /// The settings shared by every widget.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
 
@@ -549,8 +557,7 @@ impl ScrollbarConfig<'_> {
     }
 }
 
-/// Text input configuration for length, accepted characters, password display, placeholder, width, character
-/// count, and shared widget settings.
+/// Settings for a text input.
 ///
 /// The safe twin of [`crate::sys::TextInputConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -559,21 +566,19 @@ impl ScrollbarConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct TextInputConfig<'a> {
-    /// Character limit (0 = unlimited).
+    /// The most characters the input accepts (0 for no limit).
     pub max_length: u32,
-    /// Allowed character set (FlString); empty means all printable characters. Read per keypress while
-    /// the field has focus, so it need only live for the frame. The on-screen keyboard copies the bytes
-    /// into its own arena.
+    /// The characters the input accepts (empty accepts all printable characters).
     pub allowed_chars: &'a str,
-    /// Show bullets instead of text.
+    /// Whether the input shows bullets instead of the text.
     pub password_mode: bool,
-    /// Text shown when empty, dimmed.
+    /// The dimmed text shown while the input is empty.
     pub placeholder: &'a str,
-    /// Minimum width in pixels (default: 200.0).
+    /// The minimum width of the input, in pixels (200 by default).
     pub min_width: f32,
-    /// Show a character counter such as "15/100".
+    /// Whether the input shows a character count, such as "15/100". It needs `max_length`.
     pub show_character_count: bool,
-    /// Shared widget config (color, focusability, theme override, and id).
+    /// The settings shared by every widget.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
 

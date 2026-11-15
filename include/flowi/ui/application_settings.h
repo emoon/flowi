@@ -10,33 +10,36 @@
 extern "C" {
 #endif
 
-// Which render backend an application uses. Software is the default and always available; Gpu requires the
-// EGL/GL build and fails app creation with a log on a build without it. On Apple platforms a windowed host
-// that leaves Software selected is promoted to Metal.
+// The render backend an app draws with.
+//
+// On Apple platforms a windowed app that asks for `FlAppRenderer_Software` gets `FlAppRenderer_Metal` instead.
 typedef enum FlAppRenderer {
-    // The software renderer's offscreen RGB24 buffer.
+    // The software renderer. This is the default.
     FlAppRenderer_Software = 0,
-    // The GPU compute backend: headless EGL-surfaceless or a windowed SDL-GL surface.
+    // The GPU backend. `fl_app_create` fails and logs the reason on a build without GPU support.
     FlAppRenderer_Gpu = 1,
-    // The Metal compute backend: headless MTLDevice or a windowed CAMetalLayer.
+    // The Metal GPU backend.
     FlAppRenderer_Metal = 2,
 } FlAppRenderer;
 
-// Settings for creating an application, passed to fl_app_create.
+// The settings for `fl_app_create`.
 typedef struct FlAppSettings {
+    // The title of the main window.
     FlString window_title;
-    // Window width in logical (authoring) pixels; the window is created at this times the display content scale.
+    // The width of the main window, in logical pixels (above 0). The window is created at this width times the
+    // display content scale.
     int32_t width;
-    // Window height in logical (authoring) pixels; the window is created at this times the display content scale.
+    // The height of the main window, in logical pixels (above 0). The window is created at this height times the
+    // display content scale.
     int32_t height;
-    // Offscreen mode: headless display+input backends, no window.
+    // Whether the app runs offscreen, with no window. Input then comes from the `FlApp` inject calls.
     bool headless;
-    // Render backend; Software by default.
+    // The render backend (`FlAppRenderer_Software` is the default).
     FlAppRenderer renderer;
-    // Open the main window fullscreen on its display at the desktop resolution; width and height
-    // are the size it restores to. Ignored when headless.
+    // Whether the main window opens fullscreen. `width` and `height` are the size it returns to. Ignored when
+    // `headless` is true.
     bool fullscreen;
-    // When true, the window cannot be resized by the user; default false.
+    // Whether the user is blocked from resizing the window.
     bool fixed_size;
 } FlAppSettings;
 

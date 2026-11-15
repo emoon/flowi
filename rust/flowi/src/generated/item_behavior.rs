@@ -6,14 +6,15 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Adds interaction (click, double-click, right-click, drag) to a laid-out element, returning a Signal.
+/// Makes an area you laid out respond to the mouse, keyboard and gamepad.
 pub struct Item;
 
 impl Item {
-    /// Turn the laid-out element id into an interactive element with the behaviors selected by flags
-    /// (ItemFlags::CLICKABLE | ItemFlags::DRAGGABLE | ItemFlags::DOUBLE_CLICK | ItemFlags::RIGHT_CLICK) and
-    /// return its interaction Signal. Call inside a frame callback, after the element is laid out under id;
-    /// read signal.clicked / double_clicked / right_clicked / dragging / drag_delta to react.
+    /// Makes the laid out area `id` interactive and returns its `Signal`.
+    ///
+    /// `flags` picks what it reacts to, for example `ItemFlags::clickable` and `ItemFlags::draggable` together.
+    /// `id` is the id you lay the area out under. Read the fields of the `Signal` that match the flags, such as
+    /// `Signal.clicked` or `Signal.drag_delta`.
     #[inline]
     pub fn behavior(id: impl Into<crate::LayoutId>, flags: crate::sys::ItemFlags) -> crate::sys::Signal {
         let id: crate::LayoutId = id.into();

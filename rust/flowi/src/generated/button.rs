@@ -6,12 +6,13 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Button widgets. Call inside a frame callback and read the returned Signal (Signal.clicked for a
-/// click) to react to interaction. config selects variant, colors, id override, and focus behavior.
+/// Push buttons.
+///
+/// Call these inside a frame callback. Read `Signal.clicked` on the returned `Signal` to react to a click.
 pub struct Button;
 
 impl Button {
-    /// Emit a default-styled button labelled label and return its interaction Signal.
+    /// Draws a button with a text label and returns its `Signal`.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(label: impl AsRef<str>, config: crate::generated::widget_config::WidgetConfig<'_>) -> crate::sys::Signal {
@@ -20,7 +21,10 @@ impl Button {
         unsafe { crate::sys::fl_button_impl({ let s = label; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, config.to_sys()) }
     }
 
-    /// Emit a button showing image next to label and return its interaction Signal.
+    /// Draws a button with an image to the left of the label and returns its `Signal`.
+    ///
+    /// The button has a fixed size of 400 by 100 logical pixels. It uses `WidgetVariant::Ghost` when
+    /// `WidgetConfig.variant` is left at its default.
     #[inline]
     pub fn image(label: impl AsRef<str>, image: crate::sys::ImageHandle, config: crate::generated::widget_config::WidgetConfig<'_>) -> crate::sys::Signal {
         let label = label.as_ref();

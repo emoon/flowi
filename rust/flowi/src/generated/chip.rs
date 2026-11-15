@@ -6,13 +6,14 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Chip widget: a small tag/badge toggle with a soft variant for a subtler look than a pill.
+/// A small toggle tag with a softer look than a pill. Call it inside a frame callback.
 pub struct Chip;
 
 impl Chip {
-    /// Emit a chip labelled label bound to `*selected`; activation toggles the bool. config selects
-    /// colors and id overrides. Returns its interaction Signal (.clicked the frame it toggles). Call
-    /// inside a frame callback.
+    /// Draws a chip with a label and returns its `Signal`.
+    ///
+    /// A click flips `selected`, and `Signal.clicked` is set on the frame it flips. A selected chip has a
+    /// stronger tint. If `selected` is null, nothing is drawn and the returned `Signal` is empty.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(label: impl AsRef<str>, selected: &mut bool, config: crate::generated::widget_config::WidgetConfig<'_>) -> crate::sys::Signal {

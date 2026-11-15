@@ -6,7 +6,10 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Popup scope configuration for positioning, z-order, input capture, and dismissal.
+/// The settings for a popup scope.
+///
+/// Pass it to `Popup::begin`. A zeroed config anchors to the element with no offset, draws at z-index 0, lets
+/// pointer input through and never closes by itself.
 ///
 /// The safe twin of [`crate::sys::PopupConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -15,17 +18,19 @@
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct PopupConfig {
-    /// Position offset from anchor (default: {0, 0}).
+    /// The offset from the anchor, in logical pixels.
     pub offset: crate::sys::Vec2,
-    /// Render order (default: 100, higher = on top).
+    /// The render order. Higher draws on top. It is used as given, so 0 is not replaced by a default.
     pub z_index: i16,
-    /// Block input to widgets behind the popup (default: true).
+    /// Whether the popup captures pointer input, so the widgets behind it do not receive it.
     pub capture_input: bool,
-    /// Auto-close on ESC/B/click-outside (default: true).
+    /// Whether the popup closes on the cancel action (Escape or the gamepad B button) or a click outside it.
+    ///
+    /// It is read when the popup opens. The click that opened the popup does not close it.
     pub auto_close: bool,
-    /// Positioning mode (default: element).
+    /// How the popup is positioned.
     pub anchor: crate::sys::PopupAnchor,
-    /// Absolute screen anchor point, used when anchor == Point.
+    /// The screen position to anchor to. It is used when `anchor` is `PopupAnchor::Point`.
     pub point: crate::sys::Vec2,
 }
 
@@ -67,7 +72,9 @@ impl PopupConfig {
     }
 }
 
-/// Tooltip configuration for hover-dwell timing, placement, and z-order.
+/// The settings for a tooltip.
+///
+/// Pass it to `Popup::tooltip`. Each field falls back to its default when left at 0.
 ///
 /// The safe twin of [`crate::sys::TooltipConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -76,11 +83,11 @@ impl PopupConfig {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct TooltipConfig {
-    /// Hover-dwell seconds before reveal (default: 0.5).
+    /// The time in seconds the pointer must rest on the anchor before the tooltip shows (0 uses 0.5).
     pub delay: f32,
-    /// Position offset from the anchor's bottom-left (default: {0, 4}).
+    /// The offset from the anchor's bottom-left corner, in logical pixels (0, 0 uses 0, 4).
     pub offset: crate::sys::Vec2,
-    /// Render order; higher = on top (default: 1000, above popups).
+    /// The render order. Higher draws on top (0 uses 1000, above popups).
     pub z_index: i16,
 }
 
@@ -116,7 +123,9 @@ impl TooltipConfig {
     }
 }
 
-/// Message-box / confirm-dialog configuration.
+/// The settings for a message box.
+///
+/// Pass it to `Popup::message_box`. Each field falls back to its default when left empty or 0.
 ///
 /// The safe twin of [`crate::sys::MessageBoxConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -125,13 +134,13 @@ impl TooltipConfig {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct MessageBoxConfig<'a> {
-    /// Confirm (OK) button text (default: "OK").
+    /// The text of the confirm button (empty uses "OK").
     pub confirm_label: &'a str,
-    /// Cancel button text; empty means single-button alert with no Cancel.
+    /// The text of the cancel button. If it is empty, the box has only the confirm button.
     pub cancel_label: &'a str,
-    /// Panel width in logical px (default: 400).
+    /// The width of the panel, in logical pixels (0 uses 400).
     pub width: f32,
-    /// Render order; higher = on top (default: 1000, above popups).
+    /// The render order. Higher draws on top (0 uses 1000, above popups).
     pub z_index: i16,
 }
 
@@ -193,14 +202,17 @@ impl Drop for PopupScope {
     }
 }
 
-/// Popups, tooltips, and message boxes, rendered after the main UI. begin/end bracket a popup scope;
-/// tooltip and message_box are standalone calls.
+/// Popups, tooltips and message boxes, drawn above the main UI.
+///
+/// Draw the content of a popup between `Popup::begin` and `Popup::end`. `Popup::tooltip` and `Popup::message_box`
+/// are single calls.
 pub struct Popup;
 
 impl Popup {
-    /// Begin a popup scope anchored to anchor_id with config; content declared within the scope is rendered
-    /// after the main UI. The scope closes when the returned guard drops, or explicitly by passing that guard to
-    /// end, which consumes it, so it cannot close twice.
+    /// Starts a popup scope anchored to `anchor_id` and returns its guard.
+    ///
+    /// Everything you draw until the scope ends is part of the popup. The scope ends when the guard drops. To end
+    /// it earlier, pass the guard to `Popup::end`.
     #[inline]
     pub fn begin(anchor_id: impl Into<crate::LayoutId>, config: crate::generated::popup::PopupConfig) -> PopupScope {
         let anchor_id: crate::LayoutId = anchor_id.into();
@@ -209,14 +221,16 @@ impl Popup {
         PopupScope { _priv: () }
     }
 
-    /// End the popup scope opened by begin, consuming its guard so the scope closes exactly once.
+    /// Ends the popup scope and consumes its guard.
     #[inline]
     pub fn end(scope: PopupScope) {
         drop(scope);
     }
 
-    /// Emit a hover-dwell tooltip anchored to anchor_id showing text, positioned and timed by config. Call
-    /// after the anchor widget has been emitted.
+    /// Shows `text` in a tooltip when the pointer rests on the anchor.
+    ///
+    /// Call it after you have drawn the element with `anchor_id`. See `TooltipConfig.delay` for the time before it
+    /// shows.
     #[inline]
     pub fn tooltip(anchor_id: impl Into<crate::LayoutId>, text: impl AsRef<str>, config: crate::generated::popup::TooltipConfig) {
         let anchor_id: crate::LayoutId = anchor_id.into();
@@ -225,9 +239,13 @@ impl Popup {
         unsafe { crate::sys::fl_popup_tooltip(anchor_id.into_sys(), { let s = text; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, config.to_sys()) }
     }
 
-    /// Drive the modal confirm/alert dialog titled title with message, gated by the caller-owned open flag
-    /// (call it unconditionally every frame: it early-returns None while `!*open`). Returns the one-shot
-    /// DialogResult on dismissal and clears `*open`.
+    /// Shows a modal message box and returns how the user dismissed it.
+    ///
+    /// `open` decides whether the box is shown. Call this every frame: while `open` is false it draws
+    /// nothing and returns `DialogResult::None`. When the user dismisses the box, `open` is set to false and the
+    /// result is returned for that frame.
+    ///
+    /// Escape cancels the box, also when there is no cancel button.
     #[inline]
     pub fn message_box(title: impl AsRef<str>, message: impl AsRef<str>, open: &mut bool, config: crate::generated::popup::MessageBoxConfig<'_>) -> crate::sys::DialogResult {
         let title = title.as_ref();

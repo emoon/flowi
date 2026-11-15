@@ -6,12 +6,15 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Floating elements: start opens one, configure applies its FloatingConfig, and it is
-/// closed with UiLayout::end.
+/// An element that floats above the layout, such as a modal dialog, popup or tooltip.
+///
+/// Call `Floating::start`, then `Floating::configure`. Draw the contents, then close it with `Layout::end`.
 pub struct Floating;
 
 impl Floating {
-    /// Open a floating element identified by id. Closed with UiLayout::end.
+    /// Opens a floating element with the given id.
+    ///
+    /// Each id must be unique within a frame. Close the element with `Layout::end`.
     #[inline]
     pub fn start(id: impl Into<crate::LayoutId>) {
         let id: crate::LayoutId = id.into();
@@ -19,7 +22,9 @@ impl Floating {
         unsafe { crate::sys::fl_floating_start(id.into_sys()) }
     }
 
-    /// Apply config to the currently-open floating element.
+    /// Applies `config` to the floating element opened last.
+    ///
+    /// Call this once, right after `Floating::start`.
     #[inline]
     pub fn configure(config: crate::sys::FloatingConfig) {
         let _frame = crate::frame_thread::frame_thread_guard("Floating::configure");

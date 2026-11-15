@@ -6,19 +6,25 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Set and override the active UI theme: update replaces the base palette, while push/pop layer a
-/// sparse override onto a subtree.
+/// The colors used to paint widgets.
+///
+/// Call `Theme::update` to set the base palette. Between `Theme::push` and the matching `Theme::pop`, widgets use
+/// the pushed override instead.
 pub struct Theme;
 
 impl Theme {
-    /// Push a sparse override onto the active theme, retheming the subtree until the matching pop.
+    /// Replaces some colors of the current theme until the matching `Theme::pop`.
+    ///
+    /// Overrides nest, up to 16 at a time. An inner push builds on the theme the outer push produced.
     #[inline]
     pub fn push(theme_override: crate::sys::ThemeOverride) {
         let _frame = crate::frame_thread::frame_thread_guard("Theme::push");
         unsafe { crate::sys::fl_theme_push(theme_override) }
     }
 
-    /// Pop the most recently pushed override, restoring the parent theme.
+    /// Ends the most recent `Theme::push` and restores the theme from before it.
+    ///
+    /// Call it once for every push.
     #[inline]
     pub fn pop() {
         let _frame = crate::frame_thread::frame_thread_guard("Theme::pop");

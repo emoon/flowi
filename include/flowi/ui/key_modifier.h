@@ -6,19 +6,23 @@
 extern "C" {
 #endif
 
-// Keyboard modifier flags: the bitmask reported alongside key/text input (Shift, Control, Alt, ...).
+// Modifier keys held at the same time, as a bit mask.
+//
+// `fl_input_keyboard_modifiers` returns it, and `FlKeyEvent.modifiers` carries it.
 typedef enum FlKeyModifier {
     // No modifiers held.
     FlKeyModifier_None = 0,
+    // Shift.
     FlKeyModifier_Shift = 1,
+    // Control.
     FlKeyModifier_Control = 2,
     // Alt / Option.
     FlKeyModifier_Alt = 4,
     // Super / Command / Windows.
     FlKeyModifier_Super = 8,
-    // Caps Lock active.
+    // Caps Lock is on.
     FlKeyModifier_Caps_Lock = 16,
-    // Num Lock active.
+    // Num Lock is on.
     FlKeyModifier_Num_Lock = 32,
 } FlKeyModifier;
 

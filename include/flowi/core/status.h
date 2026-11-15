@@ -6,11 +6,11 @@
 extern "C" {
 #endif
 
-// General-purpose status code, for subsystems that don't warrant their own status enum
-// (arenas, memory, strings, the job system, settings, plugin loading). Success is always 0,
-// so if (status) tests for failure. Errors are grouped in ranges of 100 per category, with
-// gaps left for growth inside each. Subsystems with many specific failure modes define their
-// own enum instead (VfsStatus for file operations, StringParseStatus for parsing).
+// A general status code for calls that report success or why they failed.
+//
+// `FlStatus_Success` is 0 and every error is not, so a nonzero value is a failure. Errors are grouped by category
+// in ranges of 100. Parts of the API with many failure modes have their own enum, such as `VfsStatus` for file
+// operations and `FlStringParseStatus` for parsing.
 typedef enum FlStatus {
     // The operation succeeded.
     FlStatus_Success = 0,

@@ -1,11 +1,11 @@
-/// A semantic UI action: the logical verb a widget responds to, independent of the physical input
-/// that triggers it. The app binds keys and gamepad buttons to actions; those bindings are not part
-/// of this API. The discriminant order is a stable plugin ABI.
+/// What the user wants to do, independent of the key or gamepad button that triggers it.
 ///
-/// The text-editing, drag and scroll members are for internal use. No public query function consumes
-/// them.
+/// By default, Enter and Space give `Action::Confirm`, Escape gives `Action::Cancel` and the arrow keys give the
+/// navigation actions. The gamepad has its own default buttons.
+///
+/// `Action::Count` is the number of actions, not an action.
 enum Action {
-    /// No action / unset.
+    /// No action.
     None = 0,
 
     // Navigation
@@ -17,53 +17,67 @@ enum Action {
     Nav_Left,
     /// Move focus right.
     Nav_Right,
-    /// Move focus to the next item (Tab forward).
+    /// Move focus to the next item. By default this is Tab.
     Nav_Next,
-    /// Move focus to the previous item (Shift+Tab backward).
+    /// Move focus to the previous item. By default this is Shift+Tab.
     Nav_Prev,
 
     // Confirmation / Cancel
-    /// Activate the focused item (Enter, Space, Gamepad A, Left Click).
+    /// Activate the focused item. By default this is Enter or Space.
     Confirm,
-    /// Dismiss / go back (ESC, Gamepad B).
+    /// Dismiss or go back. By default this is Escape.
     Cancel,
-    /// Open the system menu (Start button, ESC).
+    /// Open the system menu. By default this is Escape.
     Menu,
 
     // Interaction
-    /// Begin a drag (left mouse button down). Internal-use.
+    /// Begin a drag.
     Drag_Start,
-    /// End a drag (left mouse button up). Internal-use.
+    /// End a drag.
     Drag_End,
-    /// Scroll up (mouse wheel up). Internal-use.
+    /// Scroll up with the mouse wheel.
     Scroll_Up,
-    /// Scroll down (mouse wheel down). Internal-use.
+    /// Scroll down with the mouse wheel.
     Scroll_Down,
 
     // Widget-specific
-    /// Increment the focused value (Arrow right, +).
+    /// Increment the focused value. By default this is the Right arrow or the plus key.
     Increment,
-    /// Decrement the focused value (Arrow left, -).
+    /// Decrement the focused value. By default this is the Left arrow or the minus key.
     Decrement,
-    /// Toggle the focused item (Space for checkboxes).
+    /// Toggle the focused item. By default this is Space.
     Toggle,
 
     // Text editing (internal-use)
+    /// Delete the character before the cursor.
     Text_Backspace,
+    /// Delete the character after the cursor.
     Text_Delete,
+    /// Move the cursor to the start of the text.
     Text_Home,
+    /// Move the cursor to the end of the text.
     Text_End,
+    /// Move the cursor one character left.
     Text_Move_Left,
+    /// Move the cursor one character right.
     Text_Move_Right,
+    /// Move the cursor one word left.
     Text_Move_Word_Left,
+    /// Move the cursor one word right.
     Text_Move_Word_Right,
+    /// Select all text.
     Text_Select_All,
+    /// Copy the selected text.
     Text_Copy,
+    /// Cut the selected text.
     Text_Cut,
+    /// Paste text at the cursor.
     Text_Paste,
+    /// Undo the last edit.
     Text_Undo,
+    /// Redo the last undone edit.
     Text_Redo,
 
-    /// Size sentinel: number of actions, not an action itself.
+    /// The number of actions, not an action.
     Count,
 }

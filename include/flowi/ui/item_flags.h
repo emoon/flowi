@@ -6,29 +6,31 @@
 extern "C" {
 #endif
 
-// Per-element behavior flags: the bitmask Item::behavior takes to turn a laid-out area into an
-// interactive widget (clickable, draggable, focusable, ...). Combine flags with bitwise OR
-// (ItemFlags::CLICKABLE | ItemFlags::DRAGGABLE).
+// The behaviors an element can have, as a bitmask.
+//
+// Pass it to `fl_item_behavior` to turn a laid-out element into an interactive one. Combine values with bitwise OR.
 typedef enum FlItemFlags {
-    // Responds to clicks.
+    // The element can be clicked.
     FlItemFlags_clickable = 1,
-    // Can be dragged (sliders, scrollbars, windows).
+    // The element can be dragged.
     FlItemFlags_draggable = 2,
-    // Can receive keyboard/gamepad focus.
+    // The element can take keyboard and gamepad focus.
     FlItemFlags_focusable = 4,
-    // Track double-click events.
+    // The element reports double clicks in `FlSignal.double_clicked`. It needs `FlItemFlags_clickable` as well.
     FlItemFlags_double_click = 8,
-    // Track right-click events.
+    // The element reports right clicks in `FlSignal.right_clicked`. It needs `FlItemFlags_clickable` or
+    // `FlItemFlags_draggable` as well.
     FlItemFlags_right_click = 16,
-    // Animate hot_t on hover.
+    // The element animates `FlElementState.hot_t` while it is hovered.
     FlItemFlags_hot_animation = 32,
-    // Animate active_t when pressed.
+    // The element animates `FlElementState.active_t` while it is pressed.
     FlItemFlags_active_animation = 64,
-    // Animate focused_t when focused.
+    // The element animates `FlElementState.focused_t` while it has focus.
     FlItemFlags_focus_animation = 128,
-    // Responds to the mouse wheel (scroll target).
+    // The element reports the mouse wheel in `FlSignal.wheel_delta` while it is hovered. It needs `FlItemFlags_clickable`
+    // or `FlItemFlags_draggable` as well, which is what makes it hovered.
     FlItemFlags_scroll_target = 256,
-    // Request focus automatically when the element first appears (requires focusable).
+    // The element takes focus once, when it first appears. It needs `FlItemFlags_focusable` as well.
     FlItemFlags_auto_focus = 512,
 } FlItemFlags;
 

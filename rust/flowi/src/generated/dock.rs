@@ -6,34 +6,45 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Declare and lay out Detachable Panels on the current docking workspace. Bracket each frame's
-/// panel calls with workspace_begin/workspace_end, and use add_panel/dock_outer to author a layout.
+/// Panels that the user can dock, tab, split and drag out of the window.
+///
+/// Each frame, call `Dock::workspace_begin`, then `Dock::workspace_emit` to lay out the tiles. Declare every panel
+/// with `Dock::panel`. If it returns true, draw the panel content and call `Dock::panel_end`. Then call
+/// `Dock::workspace_end`. A panel is identified by a `u64` id that you choose.
+///
+/// `Dock::add_panel`, `Dock::dock_outer` and `Dock::dock_outer_share` build the first layout. The calls act on the
+/// workspace of the current window.
 pub struct Dock;
 
 impl Dock {
-    /// Open this frame's panel-declaration window on the current workspace. Bracket each frame's panel calls
-    /// with workspace_begin/workspace_end: panels not re-declared this frame fall back to reserved.
+    /// Starts the frame's panel declarations on the current workspace.
+    ///
+    /// Panels that you do not declare again before `Dock::workspace_end` are reserved: they keep their slot in
+    /// the layout but draw nothing.
     #[inline]
     pub fn workspace_begin() {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::workspace_begin");
         unsafe { crate::sys::fl_dock_workspace_begin() }
     }
 
-    /// Close the declaration window opened by workspace_begin.
+    /// Ends the panel declarations started by `Dock::workspace_begin`.
+    ///
+    /// If the active panel is hidden, reserved or a background tab by now, there is no active panel afterwards.
     #[inline]
     pub fn workspace_end() {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::workspace_end");
         unsafe { crate::sys::fl_dock_workspace_end() }
     }
 
-    /// Declare Detachable Panel id on the current workspace under title and return whether its content
-    /// should emit now: true iff id is the selected tab of the leaf holding it. A panel mid-drag is floating and
-    /// does not emit: the drag overlay draws its title, and its body draws nowhere until the drop. On true it
-    /// also opens the panel's content element inside that tile, so the body's widgets land where the dock put
-    /// the panel; the caller MUST close it with panel_end. Rust spells the pair
-    /// `dock_panel!(id, title, { /* emit */ })`. Call between workspace_begin/workspace_end.
+    /// Declares a panel and returns whether to draw its content now.
     ///
-    /// title is the tab's label, copied into the panel's record. Empty renders a blank tab.
+    /// `title` is the label of the panel's tab (an empty string gives a blank tab). The call returns true when the
+    /// panel is the selected tab of the tile that holds it. It returns false for a hidden panel and for a panel
+    /// that is being dragged.
+    ///
+    /// When it returns true, draw the content of the panel and then call `Dock::panel_end`. The content fills the
+    /// tile and is clipped to it. Call `Dock::workspace_emit` first, or the call logs an error and returns false.
+    /// In Rust, the `dock_panel!` macro makes both calls.
     #[inline]
     pub fn panel(id: u64, title: impl AsRef<str>) -> bool {
         let title = title.as_ref();
@@ -41,150 +52,171 @@ impl Dock {
         unsafe { crate::sys::fl_dock_panel(id, crate::sys::RawStr::borrow(title)) }
     }
 
-    /// Close the content element opened by a panel call that returned true. Never call it after a panel that
-    /// returned false: that closes an element this panel does not own.
+    /// Ends the content of a panel started by `Dock::panel`.
+    ///
+    /// Only call it if `Dock::panel` returned true.
     #[inline]
     pub fn panel_end() {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_end");
         unsafe { crate::sys::fl_dock_panel_end() }
     }
 
-    /// Default-layout builder: dock panel as a tab of the current workspace's root leaf (a no-op move if the
-    /// root is a split). Call repeatedly to author an initial tab group; pair with dock_outer for splits.
+    /// Docks a panel as a tab of the root tile, the first layout step.
+    ///
+    /// Call it repeatedly to build a tab group. It does nothing if the root of the workspace is already split. Use
+    /// `Dock::dock_outer` to add a region next to the existing ones.
     #[inline]
     pub fn add_panel(panel: u64) {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::add_panel");
         unsafe { crate::sys::fl_dock_add_panel(panel) }
     }
 
-    /// Default-layout builder: dock panel as a new region on the root's outer side. On an empty
-    /// workspace the first call simply lands the panel in the floor.
+    /// Docks a panel as a new region on one edge of the workspace.
+    ///
+    /// On an empty workspace, the first call just places the panel.
     #[inline]
     pub fn dock_outer(panel: u64, side: crate::sys::DockSide) {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::dock_outer");
         unsafe { crate::sys::fl_dock_dock_outer(panel, side) }
     }
 
-    /// Default-layout builder: dock_outer, with the new region taking share of the root's extent along
-    /// side's axis (0.25 is a quarter of the width for Left/Right). Clamped to the dock's minimum sizes;
-    /// share <= 0 takes the default half.
+    /// Docks a panel on one edge of the workspace and sets how much of the workspace it takes.
+    ///
+    /// `share` is a fraction of the workspace along the axis of `side`, so 0.25 with `DockSide::Left` is a quarter
+    /// of the width. It is limited so that both regions keep their minimum size. A `share` of 0 or less takes half.
     #[inline]
     pub fn dock_outer_share(panel: u64, side: crate::sys::DockSide, share: f32) {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::dock_outer_share");
         unsafe { crate::sys::fl_dock_dock_outer_share(panel, side, share) }
     }
 
-    /// Emit the current workspace's tile geometry for this frame. Call inside a UI frame.
+    /// Lays out the tiles of the current workspace for this frame.
+    ///
+    /// Call it after `Dock::workspace_begin` and before the first `Dock::panel`, inside the UI frame.
     #[inline]
     pub fn workspace_emit() {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::workspace_emit");
         unsafe { crate::sys::fl_dock_workspace_emit() }
     }
 
-    /// Request promoting panel (in the current window's workspace) into its own OS window. Deferred
-    /// and applied at the next safe point; a no-op when no dock host is registered or the panel is absent.
+    /// Asks for a panel of the current workspace to move to a new OS window.
+    ///
+    /// The move happens at the start of a later frame. Nothing happens if the panel is not in the workspace or the
+    /// app has no dock host.
     #[inline]
     pub fn promote_panel(panel: u64) {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::promote_panel");
         unsafe { crate::sys::fl_dock_promote_panel(panel) }
     }
 
-    /// True if id's content should emit this frame on the current workspace: the tab the leaf holding it shows
-    /// as selected. Always false for a hidden panel and for a panel mid-drag.
+    /// Returns whether `Dock::panel` would return true for this panel on the current workspace.
+    ///
+    /// It is false for a hidden panel and for a panel that is being dragged.
     #[inline]
     pub fn panel_should_emit(id: u64) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_should_emit");
         unsafe { crate::sys::fl_dock_panel_should_emit(id) }
     }
 
-    /// Show or hide Detachable Panel id on the current workspace. A hidden panel keeps its slot and its tab
-    /// index but renders no tab and emits no content; a leaf whose panels are all hidden gives its space to its
-    /// neighbour. Declare the panel every frame either way: hiding never turns it reserved. Not persisted: the
-    /// app re-asserts visibility each session, like the title.
+    /// Shows or hides a panel of the current workspace.
+    ///
+    /// A hidden panel keeps its place in the layout but has no tab and draws no content. A tile whose panels are
+    /// all hidden gives its space to its neighbour. Keep declaring a hidden panel with `Dock::panel`, or it is
+    /// reserved. A panel that is not in the layout is docked at the root when you show it.
+    ///
+    /// The setting is not saved with the layout. Set it again each session.
     #[inline]
     pub fn set_panel_visible(id: u64, visible: bool) {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::set_panel_visible");
         unsafe { crate::sys::fl_dock_set_panel_visible(id, visible) }
     }
 
-    /// Read back whether Detachable Panel id is shown on the current workspace. True for a panel the app has
-    /// never hidden, including one the workspace has never seen.
+    /// Returns whether a panel is shown on the current workspace.
+    ///
+    /// It is true for a panel that was never hidden, also one that the workspace has not seen.
     #[inline]
     pub fn panel_visible(id: u64) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_visible");
         unsafe { crate::sys::fl_dock_panel_visible(id) }
     }
 
-    /// The id of the leaf node currently holding id on the current workspace, or 0 if id is floating/absent.
+    /// Returns the id of the tile that holds a panel on the current workspace, or 0 if there is none.
+    ///
+    /// A panel that is being dragged, or one that is not in the layout, has no tile.
     #[inline]
     pub fn panel_leaf(id: u64) -> u32 {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_leaf");
         unsafe { crate::sys::fl_dock_panel_leaf(id) }
     }
 
-    /// True if id has a slot in the current workspace's tree but was NOT declared this frame, so its slot is
-    /// reserved pending a future declaration.
+    /// Returns whether a panel has a place in the layout but was not declared this frame.
     #[inline]
     pub fn panel_reserved(id: u64) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_reserved");
         unsafe { crate::sys::fl_dock_panel_reserved(id) }
     }
 
-    /// The room, in logical px, the dock has given Detachable Panel id: the inner size of its tile, below the
-    /// leaf's tab header. This is the size a panel sizes its content against; a panel's own elements report the
-    /// size they LAID OUT at, which a body larger than its tile grows past (flowi clips the overflow).
+    /// Returns the size of the content area of a panel, in logical pixels.
     ///
-    /// {0, 0} means DO NOT ACT ON THIS, and is the answer for a panel that is absent, not laid out yet, hidden,
-    /// mid-drag, a background tab in its leaf, or starved (squeezed below the dock's minimum content size by
-    /// a window too small for its layout). Reports the previous frame's layout, like every other geometry
-    /// read-back.
+    /// This is the room inside the tile, below the tab header. Size the content from it. A body larger than the
+    /// tile is clipped.
+    ///
+    /// The result is (0, 0) when the panel has no usable area: it is absent, not laid out yet, hidden, being
+    /// dragged, a background tab, or squeezed below the minimum size. Do not use the size then. It comes from the
+    /// previous frame's layout.
     #[inline]
     pub fn panel_size(id: u64) -> crate::sys::Vec2 {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_size");
         unsafe { crate::sys::fl_dock_panel_size(id) }
     }
 
-    /// Set Detachable Panel id's dock-family tag on the current workspace (0 = general). The tag gates which
-    /// workspaces accept the panel via their family filter.
+    /// Sets the dock family of a panel on the current workspace (0 is the general family).
+    ///
+    /// A workspace with a family filter only lets the user drag in panels of that family. See
+    /// `Dock::set_family_filter`.
     #[inline]
     pub fn set_panel_family(id: u64, family: u32) {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::set_panel_family");
         unsafe { crate::sys::fl_dock_set_panel_family(id, family) }
     }
 
-    /// Read back Detachable Panel id's dock-family tag on the current workspace (0 = general / untagged).
+    /// Returns the dock family of a panel on the current workspace (0 if it has none).
     #[inline]
     pub fn panel_family(id: u64) -> u32 {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_family");
         unsafe { crate::sys::fl_dock_panel_family(id) }
     }
 
-    /// The Detachable Panel a press last made active on the current workspace, or 0 when none is. A press
-    /// inside a tile sets it, hover never does, and it falls back to 0 as soon as that panel stops emitting.
-    /// Not persisted: it starts at 0 each session.
+    /// Returns the id of the active panel on the current workspace, or 0 if there is none.
+    ///
+    /// A press inside a panel makes it active. Hovering does not. It becomes 0 when the panel stops drawing. The
+    /// value is not saved with the layout, so it starts at 0 each session.
     #[inline]
     pub fn active_panel() -> u64 {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::active_panel");
         unsafe { crate::sys::fl_dock_active_panel() }
     }
 
-    /// Make Detachable Panel id the active one on the current workspace; 0 clears it. Any change of active
-    /// panel blurs the keyboard focus ring, so a widget in the newly active panel has to claim it back.
+    /// Makes a panel the active one on the current workspace, or clears it with 0.
+    ///
+    /// Changing the active panel clears the keyboard focus. A widget in the new active panel has to ask for it
+    /// again.
     #[inline]
     pub fn set_active_panel(id: u64) {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::set_active_panel");
         unsafe { crate::sys::fl_dock_set_active_panel(id) }
     }
 
-    /// Set the current workspace's accepted-dock-family filter (0 = accept any). When non-zero, only a dragged
-    /// panel whose family equals the filter can dock here.
+    /// Sets which dock family the current workspace accepts (0 accepts any).
+    ///
+    /// A non-zero filter only lets a dragged panel dock here if its family is the same.
     #[inline]
     pub fn set_family_filter(family: u32) {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::set_family_filter");
         unsafe { crate::sys::fl_dock_set_family_filter(family) }
     }
 
-    /// Read back the current workspace's accepted-dock-family filter (0 = accept any).
+    /// Returns which dock family the current workspace accepts (0 accepts any).
     #[inline]
     pub fn family_filter() -> u32 {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::family_filter");

@@ -11,10 +11,14 @@
 extern "C" {
 #endif
 
-// Scrollbar widget: a standalone draggable track bound to a normalized scroll position.
-// Emit a scrollbar bound to `*value` (normalized [0,1]); dragging the thumb writes the new position
-// back. config selects orientation, sizing, and colors. Returns its interaction Signal. Call inside
-// a frame callback.
+// A standalone scrollbar. Call it inside a frame callback.
+// Draws a scrollbar and returns its `FlSignal`.
+//
+// `value` is the scroll position. It is clamped to `FlScrollbarConfig.min` and `FlScrollbarConfig.max`, so set
+// both, and it is written back when the user drags the thumb. If `value` is null, nothing is drawn.
+//
+// The thumb is `FlScrollbarConfig.viewport_ratio` of the track length, but never smaller than
+// `FlScrollbarConfig.min_thumb_size`.
 FL_API FlSignal fl_scrollbar_impl(float* value, FlScrollbarConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

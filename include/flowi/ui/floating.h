@@ -10,27 +10,29 @@
 extern "C" {
 #endif
 
-// Where a floating element attaches.
+// What a floating element attaches to.
 typedef enum FlFloatingAttachTo {
-    // Floating disabled: the element lays out inline.
+    // Nothing. The element is not floating and is laid out in the flow.
     FlFloatingAttachTo_None = 0,
-    // Attach to the parent element.
+    // The parent of the element.
     FlFloatingAttachTo_Parent = 1,
-    // Attach to the element with parent_id.
+    // The element with the id in `FlFloatingConfig.parent_id`.
     FlFloatingAttachTo_Element = 2,
-    // Attach to the layout root (absolute positioning).
+    // The layout root, which positions the element in absolute coordinates.
     FlFloatingAttachTo_Root = 3,
 } FlFloatingAttachTo;
 
-// How a floating element handles pointer events.
+// Whether a floating element takes the pointer events that land on it.
 typedef enum FlFloatingPointerCapture {
-    // Capture pointer events (modal default).
+    // The element takes the events, and elements under it do not see them.
     FlFloatingPointerCapture_Capture = 0,
-    // Pass pointer events through to elements underneath.
+    // The events pass through to the elements under it.
     FlFloatingPointerCapture_Passthrough = 1,
 } FlFloatingPointerCapture;
 
-// Anchor point on a parent or on the floating element itself.
+// A point on the edge or in the middle of a rectangle.
+//
+// It is used for the point on a floating element and for the point on its parent that the two are joined at.
 typedef enum FlFloatingAttachPoint {
     FlFloatingAttachPoint_LeftTop = 0,
     FlFloatingAttachPoint_LeftCenter = 1,
@@ -43,22 +45,26 @@ typedef enum FlFloatingAttachPoint {
     FlFloatingAttachPoint_RightBottom = 8,
 } FlFloatingAttachPoint;
 
-// Configuration for a floating element such as a modal dialog, popup, or tooltip.
+// The settings of a floating element such as a modal dialog, popup or tooltip.
+//
+// Pass it to `fl_floating_configure`.
 typedef struct FlFloatingConfig {
-    // Where to attach (default: None disables floating).
+    // What the element attaches to (`FlFloatingAttachTo_None` by default, which turns floating off).
     FlFloatingAttachTo attach_to;
+    // Whether the element takes the pointer events that land on it (`FlFloatingPointerCapture_Capture` by default).
     FlFloatingPointerCapture pointer_capture;
-    // Layer order; higher draws on top.
+    // The layer of the element. A higher value is drawn on top.
     int16_t z_index;
-    // Position offset from the resolved attach point.
+    // The distance from the attach point to the element, in logical pixels.
     FlVec2 offset;
-    // Anchor point on this element.
+    // The point on this element that is joined to the point on the parent.
     FlFloatingAttachPoint element_attach;
-    // Anchor point on the parent.
+    // The point on the parent that the element is joined to.
     FlFloatingAttachPoint parent_attach;
-    // Parent element id (for Element attach).
+    // The id of the element to attach to, as `fl_input_hashed_id` returns it. It is used when `attach_to` is
+    // `FlFloatingAttachTo_Element`.
     uint32_t parent_id;
-    // Sizing behaviour (default: Fit).
+    // The size of the element (fits the content by default).
     FlLayoutSizing sizing;
 } FlFloatingConfig;
 

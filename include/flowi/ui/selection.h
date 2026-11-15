@@ -9,30 +9,34 @@
 extern "C" {
 #endif
 
-// The kind of a SelectionRequest: the tag set on each per-frame selection change.
+// What a `FlSelectionRequest` asks for.
+//
+// The kind decides which of the other fields of the request are read.
 typedef enum FlSelectionRequestKind {
-    // Empty the set. selected / id / to_id unused.
+    // Deselect every row. No other field is read.
     FlSelectionRequestKind_ClearAll = 0,
-    // Select (selected = true) or deselect (false) every item, resolved from the ordered id list passed to
-    // apply. id / to_id unused.
+    // Select every row, or deselect every row, depending on `FlSelectionRequest.selected`. No row id is read.
     FlSelectionRequestKind_SetAll = 1,
-    // Select/deselect the single item named by id. to_id unused.
+    // Select or deselect the row `FlSelectionRequest.id`.
     FlSelectionRequestKind_SetOne = 2,
-    // Select/deselect the inclusive span between endpoint ids id and to_id (order-agnostic), resolved
-    // against the ordered id list passed to apply.
+    // Select or deselect all rows from `FlSelectionRequest.id` to `FlSelectionRequest.to_id`, both included. The two
+    // ids can come in either order.
     FlSelectionRequestKind_SetRange = 3,
 } FlSelectionRequestKind;
 
-// One selection change a List emits per frame. The List emits changes, never the resolved set. kind
-// selects which fields are read; a range is given by its two endpoint item ids (id .. to_id).
+// One change to the selection, reported by a list.
+//
+// A list reports the changes made this frame, not the selection itself. Apply them to a `FlSelectionSet` with
+// `fl_selection_set_apply`, or to a selection you keep yourself.
 typedef struct FlSelectionRequest {
-    // Which variant this is; selects which fields below are read.
+    // What the request asks for.
     FlSelectionRequestKind kind;
-    // Add (true) or remove (false) the targeted item(s). Ignored by ClearAll.
+    // Whether to select the rows (true) or deselect them (false). `FlSelectionRequestKind_ClearAll` ignores it.
     bool selected;
-    // SetOne: the target item. SetRange: the "from" endpoint. Unused by ClearAll / SetAll.
+    // The row to change for `FlSelectionRequestKind_SetOne`, or the first row of the span for
+    // `FlSelectionRequestKind_SetRange`.
     uint64_t id;
-    // SetRange: the "to" endpoint. Unused by the other variants.
+    // The last row of the span for `FlSelectionRequestKind_SetRange`.
     uint64_t to_id;
 } FlSelectionRequest;
 

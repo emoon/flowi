@@ -1,13 +1,13 @@
-/// Layout direction for a container's children.
+/// The direction a container lays out its children in.
 #[attributes(packed)]
 enum LayoutDirection {
-    /// Lay children out left-to-right (a row).
+    /// Left to right, as a row.
     LeftToRight = 0,
-    /// Lay children out top-to-bottom (a column).
+    /// Top to bottom, as a column.
     TopToBottom = 1,
 }
 
-/// Horizontal alignment of children within a container.
+/// How a container aligns its children horizontally.
 #[attributes(packed)]
 enum LayoutAlignmentX {
     Left = 0,
@@ -15,7 +15,7 @@ enum LayoutAlignmentX {
     Center = 2,
 }
 
-/// Vertical alignment of children within a container.
+/// How a container aligns its children vertically.
 #[attributes(packed)]
 enum LayoutAlignmentY {
     Top = 0,
@@ -23,49 +23,51 @@ enum LayoutAlignmentY {
     Center = 2,
 }
 
-/// How an axis is sized. Selects which arm of LayoutSizingAxis.size is live.
+/// How an axis is sized. It selects which member of `LayoutSizingAxis.size` is used.
 #[attributes(packed)]
 enum LayoutSizingType {
-    /// Size to fit content, clamped to `[min, max]`.
+    /// Fits the content, within `LayoutSizingMinMax.min` and `LayoutSizingMinMax.max`.
     Fit = 0,
-    /// Grow to fill available space, clamped to `[min, max]`.
+    /// Grows to fill the available space, within `LayoutSizingMinMax.min` and `LayoutSizingMinMax.max`.
     Grow = 1,
-    /// A percentage of the parent's size (percent arm).
+    /// A fraction of the parent's size, set with `percent`.
     Percent = 2,
-    /// A fixed size in reference pixels (min_max arm, min == max).
+    /// A fixed size. Set `LayoutSizingMinMax.min` and `LayoutSizingMinMax.max` to the same value.
     Fixed = 3,
 }
 
-/// Min/max bound for a sized axis.
+/// The lower and upper bound of a sized axis.
 #[attributes(Copy)]
 struct LayoutSizingMinMax {
-    /// Lower bound in reference pixels.
+    /// The lower bound, in logical pixels.
     min: f32,
-    /// Upper bound in reference pixels.
+    /// The upper bound, in logical pixels.
     max: f32,
 }
 
-/// Sizing for a single axis: the live arm of size is selected by type.
+/// The sizing of one axis.
 #[attributes(Copy)]
 struct LayoutSizingAxis {
-    /// The live arm is selected by type: min_max for Fit/Grow/Fixed, percent
-    /// for Percent (a fraction of the parent's size, 0.0..=1.0).
+    /// The size, read according to `type`.
+    ///
+    /// `min_max` is used by `LayoutSizingType::Fit`, `LayoutSizingType::Grow` and `LayoutSizingType::Fixed`.
+    /// `percent` is used by `LayoutSizingType::Percent` and is a fraction of the parent's size from 0.0 to 1.0.
     size: union {
         min_max: LayoutSizingMinMax,
         percent: f32
     },
-    /// Which arm of size is live, and how the axis is computed.
+    /// How the axis is sized, and so which member of `size` is used.
     type: LayoutSizingType,
 }
 
-/// Width and height sizing for a container.
+/// The width and height sizing of a container.
 #[attributes(Copy)]
 struct LayoutSizing {
     width: LayoutSizingAxis,
     height: LayoutSizingAxis,
 }
 
-/// Per-edge padding inside a container, in reference pixels.
+/// The space between a container's edges and its children, in logical pixels.
 #[attributes(Copy)]
 struct LayoutPadding {
     left: u16,
@@ -74,96 +76,106 @@ struct LayoutPadding {
     bottom: u16,
 }
 
-/// Alignment of children on both axes.
+/// How a container aligns its children on both axes.
 #[attributes(Copy)]
 struct LayoutChildAlignment {
     x: LayoutAlignmentX,
     y: LayoutAlignmentY,
 }
 
-/// Clipping / scroll configuration for a container.
+/// Whether a container clips its content, and how the content is scrolled.
 #[attributes(Copy)]
 struct LayoutClip {
-    /// Clip overflow on the horizontal axis.
+    /// Whether content that overflows horizontally is clipped.
     horizontal: bool,
-    /// Clip overflow on the vertical axis.
+    /// Whether content that overflows vertically is clipped.
     vertical: bool,
-    /// Caller owns scroll_pos; use it directly instead of automatic scrolling.
+    /// Whether you set the scroll position yourself in `scroll_pos`.
+    ///
+    /// If false, the position the layout keeps from the previous frame is used.
     manual_scroll: bool,
-    /// Current scroll offset in reference pixels.
+    /// The offset applied to the children, in screen pixels. It is used when `manual_scroll` is true.
+    ///
+    /// Negative values move the content up and to the left. The UI scale does not change this value.
     scroll_pos: Vec2,
 }
 
-/// Per-edge border widths plus a between-children divider width.
+/// The widths of a container's border, in logical pixels.
 #[attributes(Copy)]
 struct BorderWidthConfig {
     left: u16,
     right: u16,
     top: u16,
     bottom: u16,
-    /// Width of the divider drawn between adjacent children.
+    /// The width of the divider drawn between adjacent children.
     between_children: u16,
 }
 
-/// Border color, widths, and dash pattern for a container.
+/// The color, widths and dash pattern of a container's border.
+///
+/// The border is drawn only if at least one width is more than 0.
 #[attributes(Copy)]
 struct LayoutBorder {
     color: Color,
     width: BorderWidthConfig,
-    /// Dash pattern, one for the whole border (zeroed = solid). The between-children divider is
-    /// always solid.
+    /// The dash pattern of the border (all zero draws it solid).
+    ///
+    /// The divider between children is always solid.
     stroke: StrokeStyle,
 }
 
-/// Explicit content-space placement for a child. When enabled, the child is positioned at
-/// offset in its parent's content coordinate space (the same space the clip scroll offset
-/// lives in) instead of by flex flow, so it scrolls and clips with the container. A placed
-/// child neither advances the flex cursor nor contributes to the parent's content extent, so
-/// flowed siblings lay out as if it were absent. The offset is in already-zoomed reference pixels.
+/// A child that is placed at a fixed offset instead of flowing with its siblings.
+///
+/// The child is positioned from its parent's origin, so it scrolls and clips with the parent. It takes no space in
+/// the flow, and its siblings are laid out as if it were not there.
 #[attributes(Copy)]
 struct LayoutPlaced {
-    /// Content-space offset in reference pixels from the parent's origin.
+    /// The offset from the parent's origin, in logical pixels.
     offset: Vec2,
-    /// Position by offset in content space instead of flex flow (default false: flex flow).
+    /// Whether the child is placed by `offset` instead of by the flow (false by default).
     enabled: bool,
 }
 
-/// Per-corner radius in reference pixels.
+/// The radius of each corner, in logical pixels.
 #[attributes(Copy)]
 struct CornerRadius {
-    /// top-left (0 = square corner)
+    /// The top left corner (0 is square).
     tl: f32,
-    /// top-right
+    /// The top right corner.
     tr: f32,
-    /// bottom-left
+    /// The bottom left corner.
     bl: f32,
-    /// bottom-right
+    /// The bottom right corner.
     br: f32,
 }
 
-/// Full configuration for one layout container, consumed by fl_layout_configure.
+/// The settings of one layout container.
+///
+/// Pass it to `Layout::configure`.
 #[attributes(Copy)]
 struct LayoutConfig {
     sizing: LayoutSizing,
     padding: LayoutPadding,
-    /// Gap between adjacent children, in reference pixels.
+    /// The space between adjacent children, in logical pixels.
     child_gap: u16,
     radius: CornerRadius,
     child_alignment: LayoutChildAlignment,
-    /// Row or column.
+    /// Whether children are laid out in a row or a column.
     direction: LayoutDirection,
-    /// Background color.
+    /// The background color.
     color: Color,
     clip: LayoutClip,
     border: LayoutBorder,
-    /// Explicit content-space placement (default disabled: normal flex flow).
+    /// Places the container at a fixed offset instead of in the flow (off by default).
     placed: LayoutPlaced,
 }
 
-/// Identifier for a layout container: a name string plus an integer id seed.
+/// The identity of a layout container: a name and a seed.
+///
+/// Two containers in the same frame must not have the same name and seed.
 struct LayoutId {
-    /// Container name; hashed (with id as seed) into the internal id.
+    /// The name of the container. Together with `id`, it makes the container's identity.
     name: String,
-    /// Hash seed. 0 derives the id purely from name.
+    /// A number mixed into the identity, to tell apart containers that share a name (0 uses the name alone).
     id: i32,
 }

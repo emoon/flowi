@@ -9,30 +9,34 @@
 extern "C" {
 #endif
 
-// Helper for rendering long uniform-height lists: the caller advances it each frame and emits only the rows
-// in `[display_start, display_end)`. The leading three fields are the caller-facing outputs; the rest is
-// internal cursor state the clipper maintains across frames.
+// The rows of a uniform-height list that are visible.
+//
+// This is returned by `fl_list_clipper_create`. Draw the rows from `display_start` up to, and not including,
+// `display_end`. The other fields hold the values it was built from.
 typedef struct FlListClipper {
-    // First visible item index.
+    // The index of the first visible row (inclusive).
     int32_t display_start;
-    // Last visible item index (exclusive).
+    // The index after the last visible row (exclusive).
     int32_t display_end;
-    // Total height of all items.
+    // The height of all rows together, in the units you passed in (`total_items` times `item_height`).
     float items_height;
-    // Total number of items (internal).
+    // The total number of rows.
     int32_t items_count;
-    // Per-item height (internal).
+    // The height of one row.
     float item_height;
-    // Current vertical scroll offset (internal).
+    // The vertical scroll offset.
     float scroll_offset_y;
-    // Viewport height (internal).
+    // The height of the viewport.
     float viewport_height;
 } FlListClipper;
 
-// Build a list clipper for one frame.
-// Compute the visible row window for a uniform-height list: total_items rows of item_height, scrolled
-// by scroll_offset_y inside a viewport_height viewport. The returned clipper's display_start/
-// display_end bound the rows to emit.
+// Works out which rows of a long list of equal height are visible.
+// Returns the rows that are visible in the viewport.
+//
+// The list has `total_items` rows of `item_height` each. `scroll_offset_y` is how far the list is scrolled and
+// `viewport_height` is the height of the area it is drawn in. All four use the same unit.
+//
+// The range is empty if `item_height` is not more than 0.
 FL_API FlListClipper fl_list_clipper_create(int32_t total_items, float item_height, float scroll_offset_y, float viewport_height);
 
 

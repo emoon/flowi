@@ -6,13 +6,13 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// The built-in toolkit icon registry: load the standard chrome icon set from a VFS mount, then fetch a
-/// realized image handle per Icon.
+/// The built-in icons, which you load once from a VFS mount.
+///
+/// Load the icons first, then get the image handle of each icon you want to draw.
 pub struct Icon;
 
 impl Icon {
-    /// Get the image handle for a standard toolkit icon (the FL_IMAGE_HANDLE_INVALID sentinel if not
-    /// loaded or icon is out of range).
+    /// Returns the image handle of `icon`, or an invalid handle if `icon` is out of range.
     #[inline]
     pub fn get(icon: crate::sys::Icon) -> crate::sys::ImageHandle {
         let _frame = crate::frame_thread::frame_thread_guard("Icon::get");

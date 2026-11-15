@@ -12,9 +12,13 @@
 extern "C" {
 #endif
 
-// Tab bar widget: horizontal or vertical tab navigation across a set of labels.
-// Emit a tab bar over tabs; clicking a tab writes its index to `*selected_index`. config selects
-// vertical mode and colors. Returns true the frame the selection changes. Call inside a frame callback.
+// A row or column of tabs for choosing one of several labels. Call it inside a frame callback.
+// Draws one tab per label and returns whether the selection changed this frame.
+//
+// `selected_index` is the index into `tabs`. It is reset to 0 if it is out of range, and it is updated when
+// the user picks another tab. Set `FlTabBarConfig.vertical` for a column.
+//
+// If `tabs` is empty or `selected_index` is null, nothing is drawn and the result is false.
 FL_API bool fl_tab_bar_impl(const FlString* tabs, uint32_t tabs_size, int32_t* selected_index, FlTabBarConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

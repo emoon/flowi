@@ -11,47 +11,70 @@
 extern "C" {
 #endif
 
-// Severity of a log message, ordered low to high.
+// How severe a log message is, from least to most severe.
 typedef enum FlLogLevel {
-    // Most verbose: fine-grained tracing.
+    // Fine-grained tracing.
     FlLogLevel_Trace = 0,
     // Debugging detail.
     FlLogLevel_Debug = 1,
-    // Informational progress.
+    // Progress information.
     FlLogLevel_Info = 2,
-    // Recoverable problem / something unexpected.
+    // A recoverable problem or something unexpected.
     FlLogLevel_Warning = 3,
-    // Error: an operation failed.
+    // An operation failed.
     FlLogLevel_Error = 4,
-    // Fatal: unrecoverable.
+    // An unrecoverable failure.
     FlLogLevel_Fatal = 5,
 } FlLogLevel;
 
-// Channel-based logging. Register named channels, gate each by level, then emit
-// messages that carry a source file/line and a LogLevel.
-// Register a logging channel named name; returns its id.
+// Logging to named channels, with a minimum level for each.
+//
+// Register a channel with `fl_log_register_channel` and pass its id to `fl_log_c_message_formatted` or
+// `fl_log_c_message`. Messages go to stderr and to the log file if `fl_log_file_init` has opened one. `fl_log_message`
+// logs on a channel named CORE instead.
+// Registers a channel called `name` and returns its id.
+//
+// Registering a name that already exists returns the id of that channel. There is room for 32 channels,
+// including the CORE channel `fl_log_message` uses. When they are all taken it returns `u32::MAX`, even for a
+// name that exists. That is not a registered channel, so messages logged to it appear under a channel named
+// DEFAULT. `name` must stay valid for the rest of the program.
 FL_API uint32_t fl_log_register_channel(FlString name);
-// Set the minimum level a channel emits.
+// Sets the lowest level that channel `id` logs.
+//
+// A new channel starts at the level set by `fl_log_set_level`, or `FlLogLevel_Trace` if it was never called.
 FL_API void fl_log_channel_set_level(uint32_t id, FlLogLevel level);
-// Enable or disable a channel entirely.
+// Turns channel `id` on or off. Messages to a disabled channel are dropped.
 FL_API void fl_log_channel_enable(uint32_t id, bool enabled);
-// Log a pre-formatted FlString on a channel (skips printf formatting).
+// Logs `message` on channel `id` as it is, without printf formatting.
+//
+// `file` and `line` name the source location shown with the message. `file` may be null.
 FL_API void fl_log_c_message_formatted(uint32_t id, FlLogLevel level, const char* file, int32_t line, FlString message);
-// Globally toggle whether the source file:line is shown in output.
+// Sets whether messages show their source file and line.
 FL_API void fl_log_set_show_location(bool show);
-// Initialize file logging under base_dir (empty -> default dir). Returns true on success.
+// Opens the log file under `base_dir` and returns whether it succeeded.
+//
+// An empty `base_dir` uses the application's data directory in the home directory. A log file from an earlier
+// run is renamed with the suffix `.old`, replacing the previous `.old` file.
 FL_API bool fl_log_file_init(FlString base_dir);
-// Shut file logging down, flushing and closing the log file.
+// Closes the log file.
 FL_API void fl_log_file_shutdown(void);
-// Path of the active log file (empty if file logging is off).
+// Returns the path of the log file, or an empty string if `fl_log_file_init` has not opened one.
+//
+// The path stays readable after `fl_log_file_shutdown`.
 FL_API FlString fl_log_file_get_path(void);
-// Flush buffered log output.
+// Flushes log output. Messages are written as they are logged, so this currently does nothing.
 FL_API void fl_log_flush(void);
-// Set the global (channel-less) minimum log level.
+// Sets the lowest level that every channel logs, including channels registered later.
+//
+// This replaces the level of each channel set with `fl_log_channel_set_level`.
 FL_API void fl_log_set_level(FlLogLevel level);
-// printf-style channel log capturing a source file/line.
+// Logs a printf-style message on channel `id`.
+//
+// `file` and `line` name the source location shown with the message. `file` may be null.
 FL_API void fl_log_c_message(uint32_t id, FlLogLevel level, const char* file, int32_t line, const char* format, ...);
-// printf-style channel-less log.
+// Logs a printf-style message on a channel named CORE.
+//
+// `file` and `line` name the source location shown with the message. `file` may be null.
 FL_API void fl_log_message(FlLogLevel level, const char* file, int32_t line, const char* format, ...);
 
 

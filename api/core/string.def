@@ -1,154 +1,209 @@
 #[module(string)]
 
-/// Outcome of a `string_parse_*` call: Success, or why the parse failed.
+/// Why a `String::fl_string_parse_u64` style call succeeded or failed.
 enum StringParseStatus {
-    /// Parse succeeded; the result's value is set.
+    /// The string was parsed and the result holds its value.
     Success = 0,
-    /// The string holds characters the requested format does not accept.
+    /// The string holds characters the requested format does not accept, or is too long to be a number.
     InvalidFormat = 1,
     /// The value is too large for the target type.
     Overflow = 2,
-    /// The value is too small for the target type (signed integers only).
+    /// The value is too small for the target type.
     Underflow = 3,
-    /// The string is empty or only whitespace.
+    /// The string has no characters.
     Empty = 4,
-    /// Hex parsing expected a leading "0x" / "0X" prefix.
+    /// A hex string has digits missing after its "0x" or "0X" prefix.
     InvalidHexPrefix = 5,
 }
 
-/// Result of parsing an unsigned 64-bit integer: the value plus the parse status.
+/// The result of parsing an unsigned 64-bit integer.
+///
+/// `value` is 0 unless `status` is `StringParseStatus::Success`.
 struct StringParseResultU64 {
+    /// The parsed value.
     value: u64,
+    /// Whether the parse worked, and why not if it did not.
     status: StringParseStatus,
 }
 
-/// Result of parsing an unsigned 32-bit integer: the value plus the parse status.
+/// The result of parsing an unsigned 32-bit integer.
+///
+/// `value` is 0 unless `status` is `StringParseStatus::Success`.
 struct StringParseResultU32 {
+    /// The parsed value.
     value: u32,
+    /// Whether the parse worked, and why not if it did not.
     status: StringParseStatus,
 }
 
-/// Result of parsing a signed 64-bit integer: the value plus the parse status.
+/// The result of parsing a signed 64-bit integer.
+///
+/// `value` is 0 unless `status` is `StringParseStatus::Success`.
 struct StringParseResultI64 {
+    /// The parsed value.
     value: i64,
+    /// Whether the parse worked, and why not if it did not.
     status: StringParseStatus,
 }
 
-/// Result of parsing a signed 32-bit integer: the value plus the parse status.
+/// The result of parsing a signed 32-bit integer.
+///
+/// `value` is 0 unless `status` is `StringParseStatus::Success`.
 struct StringParseResultI32 {
+    /// The parsed value.
     value: i32,
+    /// Whether the parse worked, and why not if it did not.
     status: StringParseStatus,
 }
 
-/// Result of parsing a 64-bit float: the value plus the parse status.
+/// The result of parsing a 64-bit float.
+///
+/// `value` is 0 unless `status` is `StringParseStatus::Success`.
 struct StringParseResultF64 {
+    /// The parsed value.
     value: f64,
+    /// Whether the parse worked, and why not if it did not.
     status: StringParseStatus,
 }
 
-/// Result of parsing a 32-bit float: the value plus the parse status.
+/// The result of parsing a 32-bit float.
+///
+/// `value` is 0 unless `status` is `StringParseStatus::Success`.
 struct StringParseResultF32 {
+    /// The parsed value.
     value: f32,
+    /// Whether the parse worked, and why not if it did not.
     status: StringParseStatus,
 }
 
-/// A string being built in place at the end of an arena. Passed by value: every `sb_*` function takes
-/// one and returns the updated one.
+/// A string being built in place at the end of an arena.
+///
+/// Every `String::fl_sb_append_string` style call takes the builder by value and returns the updated one, so keep
+/// the returned builder.
 struct StringBuilder {
     /// The arena the string grows in.
     arena: *Arena,
-    /// Byte offset in the arena where the string starts.
+    /// The byte offset in the arena where the string starts.
     start_pos: u64,
 }
 
-/// FlString manipulation (`fl_string_*`), the arena string builder (`fl_sb_*`) and the arena-allocating
-/// sprintf (`fl_sprintf_*`). FlString itself, its inline helpers and the S() literal macros come from
-/// `<flowi/core/string.h>`.
+/// String functions, a string builder that grows inside an arena, and `printf` formatting into an arena.
+///
+/// To build a string piece by piece, call `String::fl_sb_create`, append with the `String::fl_sb_append_string`
+/// family, and read the result with `String::fl_sb_to_string`. Do not allocate anything else from the arena until
+/// you are done, because the builder relies on its text being the last thing in the arena.
 #[attributes(service)]
 api String {
-    /// Copy str into arena as a null-terminated C string (for an external C API that needs one).
+    /// Copies `str` into `arena` as a C string ending in a zero byte, for a C API that needs one.
     fl_string_to_cstr(arena: *Arena, str: String) -> *const char
-    /// Copy str into a caller-owned dest buffer of buffer_len bytes, null-terminated (truncating).
+    /// Copies `str` into `dest`, which holds `buffer_len` bytes, and ends it with a zero byte.
+    ///
+    /// A string that does not fit is cut short. Nothing is written if `buffer_len` is 0.
     fl_string_to_cstr_buffer(dest: *char, buffer_len: u64, str: String)
-    /// Whether str starts with needle.
+    /// Returns whether `str` starts with `needle`.
     fl_string_begins_with(str: String, needle: String) -> bool
-    /// Whether str ends with needle.
+    /// Returns whether `str` ends with `needle`.
     fl_string_ends_with(str: String, needle: String) -> bool
-    /// Whether a and b hold the same bytes.
+    /// Returns whether `a` and `b` hold the same bytes.
     fl_string_equals(a: String, b: String) -> bool
-    /// Whether a and b hold the same bytes, ignoring ASCII case.
+    /// Returns whether `a` and `b` hold the same bytes, ignoring ASCII case.
     fl_string_equals_nocase(a: String, b: String) -> bool
-    /// Byte-compare at most max_len bytes of a and b (memcmp ordering).
+    /// Compares at most `max_len` bytes of `a` and `b`.
+    ///
+    /// Returns a negative number, 0 or a positive number as `a` sorts before, equal to or after `b`. Only the
+    /// first `max_len` bytes are compared when both strings are longer than that. Otherwise a string that is a
+    /// prefix of the other sorts first.
     fl_string_compare_n(a: String, b: String, max_len: u64) -> i32
-    /// Compare a and b in natural order (embedded digit runs compare numerically).
+    /// Compares `a` and `b` in natural order, ignoring ASCII case.
+    ///
+    /// A run of digits compares as a number, so "file2" sorts before "file10". Returns a negative number, 0 or a
+    /// positive number as `a` sorts before, equal to or after `b`.
     fl_string_compare_natural(a: String, b: String) -> i32
-    /// Concatenate s0 and s1 into a fresh string allocated from arena.
+    /// Joins `s0` and `s1` into a new string allocated from `arena`.
     fl_string_concat(arena: *Arena, s0: String, s1: String) -> String
-    /// Copy str into arena.
+    /// Copies `str` into `arena`.
+    ///
+    /// A static string is returned as it is, without a copy.
     fl_string_copy(arena: *Arena, str: String) -> String
-    /// Copy str onto the heap (malloc); release it with fl_string_free.
+    /// Copies `str` onto the heap.
+    ///
+    /// Release the copy with `String::fl_string_free`. A static string is returned as it is, without a copy.
     fl_string_copy_malloc(str: String) -> String
-    /// Copy str into arena, lowercasing ASCII characters.
+    /// Copies `str` into `arena`, turning ASCII upper case letters into lower case.
     fl_string_to_lower(arena: *Arena, str: String) -> String
-    /// Free a string allocated by fl_string_copy_malloc (a no-op for a static/arena one).
+    /// Releases a string made by `String::fl_string_copy_malloc`.
+    ///
+    /// Does nothing for a static or an empty string.
     fl_string_free(str: String)
-    /// A view of length bytes of str starting at start (clamped to the end of str).
+    /// Returns a view of `length` bytes of `str` starting at `start`, without copying.
+    ///
+    /// The view is cut short at the end of `str`. It is empty if `start` is past the end.
     fl_string_substr(str: String, start: u64, length: u64) -> String
 
-    /// Start building a string at the current end of arena.
+    /// Starts a string at the current end of `arena`.
     fl_sb_create(arena: *Arena) -> StringBuilder
-    /// Append a null-terminated C string.
+    /// Appends a C string. A null `str` appends nothing.
     fl_sb_append_cstr(sb: StringBuilder, str: *const char) -> StringBuilder
-    /// Append an FlString.
+    /// Appends a string.
     fl_sb_append_string(sb: StringBuilder, str: String) -> StringBuilder
-    /// Append a single character.
+    /// Appends one character.
     fl_sb_append_char(sb: StringBuilder, c: char) -> StringBuilder
-    /// Append printf-formatted text (%S formats an FlString).
+    /// Appends text formatted like `printf`. `%S` formats a string.
     fl_sb_appendf(sb: StringBuilder, format: *const char, ...) -> StringBuilder
-    /// Discard everything appended so far, rewinding to the builder's start position.
+    /// Discards everything appended so far.
     fl_sb_clear(sb: StringBuilder) -> StringBuilder
-    /// The built bytes as an FlString (no copy; they live in the builder's arena).
+    /// Returns the text built so far, without copying it.
+    ///
+    /// The string lives in the arena of the builder. It is only valid until you call `String::fl_sb_clear` or
+    /// rewind the arena.
     fl_sb_to_string(sb: StringBuilder) -> String
-    /// The built bytes as a null-terminated C string in the builder's arena.
+    /// Ends the text built so far with a zero byte and returns it as a C string.
+    ///
+    /// The C string lives in the arena of the builder. Each call adds one byte to the arena.
     fl_sb_to_cstr(sb: StringBuilder) -> *const char
-    /// Byte length of what has been appended so far.
+    /// Returns the number of bytes appended so far.
     fl_sb_length(sb: StringBuilder) -> u64
 
-    /// Parse a decimal unsigned 64-bit integer.
+    /// Parses a decimal unsigned 64-bit integer.
+    ///
+    /// A sign is not accepted. Leading whitespace is skipped.
     fl_string_parse_u64(str: String) -> StringParseResultU64
-    /// Parse a decimal signed 64-bit integer.
+    /// Parses a decimal signed 64-bit integer.
     fl_string_parse_i64(str: String) -> StringParseResultI64
-    /// Parse a decimal unsigned 32-bit integer.
+    /// Parses a decimal unsigned 32-bit integer.
     fl_string_parse_u32(str: String) -> StringParseResultU32
-    /// Parse a decimal signed 32-bit integer.
+    /// Parses a decimal signed 32-bit integer.
     fl_string_parse_i32(str: String) -> StringParseResultI32
-    /// Parse a 64-bit float.
+    /// Parses a 64-bit float.
     fl_string_parse_f64(str: String) -> StringParseResultF64
-    /// Parse a 32-bit float.
+    /// Parses a 32-bit float.
     fl_string_parse_f32(str: String) -> StringParseResultF32
-    /// Parse a hexadecimal unsigned 64-bit integer (requires a "0x" / "0X" prefix).
+    /// Parses a hexadecimal unsigned 64-bit integer, with or without a "0x" or "0X" prefix.
     fl_string_parse_hex_u64(str: String) -> StringParseResultU64
-    /// Parse a hexadecimal unsigned 32-bit integer (requires a "0x" / "0X" prefix).
+    /// Parses a hexadecimal unsigned 32-bit integer, with or without a "0x" or "0X" prefix.
     fl_string_parse_hex_u32(str: String) -> StringParseResultU32
-    /// Parse an unsigned 64-bit integer, hex when "0x"-prefixed and decimal otherwise.
+    /// Parses an unsigned 64-bit integer as hexadecimal if it starts with "0x" or "0X", and as decimal otherwise.
     fl_string_parse_number_u64(str: String) -> StringParseResultU64
-    /// Parse an unsigned 32-bit integer, hex when "0x"-prefixed and decimal otherwise.
+    /// Parses an unsigned 32-bit integer as hexadecimal if it starts with "0x" or "0X", and as decimal otherwise.
     fl_string_parse_number_u32(str: String) -> StringParseResultU32
 
-    /// Index of the first c in str, or -1 if absent.
+    /// Returns the index of the first `c` in `str`, or -1 if there is none.
     fl_string_find_char(str: String, c: char) -> i64
-    /// Index of the first needle in str, or -1 if absent.
+    /// Returns the index of the first `needle` in `str`, or -1 if there is none.
+    ///
+    /// An empty `needle` is found at index 0.
     fl_string_find_substr(str: String, needle: String) -> i64
-    /// Index of the first c in str at or after offset, or -1 if absent.
+    /// Returns the index of the first `c` in `str` at or after `offset`, or -1 if there is none.
     fl_string_find_char_from(str: String, c: char, offset: u64) -> i64
-    /// Whether str contains needle.
+    /// Returns whether `str` contains `needle`.
     fl_string_contains(str: String, needle: String) -> bool
-    /// Whether str contains needle, ignoring ASCII case.
+    /// Returns whether `str` contains `needle`, ignoring ASCII case.
     fl_string_contains_nocase(str: String, needle: String) -> bool
-    /// FNV-1a hash of the string's bytes.
+    /// Returns the FNV-1a hash of the bytes of `str`.
     fl_string_hash_fnv1a(str: String) -> u64
 
-    /// printf-format into a fresh string allocated from arena (%S formats an FlString, and the
-    /// %v4f / %v4i / ... specifiers format SIMD vectors).
+    /// Formats text like `printf` into a new string allocated from `arena`.
+    ///
+    /// `%S` formats a string. The `%v4f` and `%v4i` style specifiers format SIMD vectors.
     fl_sprintf_arena(arena: *Arena, format: *const char, ...) -> String
 }

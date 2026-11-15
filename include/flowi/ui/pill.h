@@ -12,10 +12,12 @@
 extern "C" {
 #endif
 
-// Pill widget: a pill-shaped toggle button for category filters (solid when selected, ghost when not).
-// Emit a pill labelled label bound to `*selected`; activation toggles the bool. config selects
-// colors and id overrides. Returns its interaction Signal (.clicked the frame it toggles). Call
-// inside a frame callback.
+// A pill-shaped toggle button, for example a category filter. Call it inside a frame callback.
+// Draws a pill with a label and returns its `FlSignal`.
+//
+// A click flips `selected`, and `FlSignal.clicked` is set on the frame it flips. A selected pill is filled and
+// an unselected one is transparent until hovered. If `selected` is null, nothing is drawn and the returned
+// `FlSignal` is empty.
 FL_API FlSignal fl_pill_impl(FlString label, bool* selected, FlWidgetConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

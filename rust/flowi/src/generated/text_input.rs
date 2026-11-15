@@ -6,8 +6,11 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// An editable text field (inline rename, search box, any editable value). Construct with new /
-/// with_capacity, mutate with set_text / clear, read with text, and emit the widget each frame with show.
+/// A single-line text field, such as a search box or an inline rename.
+///
+/// Create the field once and keep it across frames. Each frame, show it and act on the signal it returns. Use
+/// `TextInput::set_text` and `TextInput::clear` to change the text from code, and read the text back when you
+/// need it.
 pub struct TextInput {
     pub(crate) handle: *mut crate::sys::TextInputState,
 }
@@ -22,21 +25,23 @@ impl Drop for TextInput {
 }
 
 impl TextInput {
-    /// Replace the handle's text with text (copied into the handle's buffer).
+    /// Replaces the text with a copy of `text` and moves the cursor to the end.
     #[inline]
     pub fn set_text(&mut self, text: impl AsRef<str>) {
         let text = text.as_ref();
         unsafe { crate::sys::fl_text_input_set_text(self.handle, crate::sys::RawStr::borrow(text)) }
     }
 
-    /// Read the handle's current text. The returned string points into the handle's buffer and is valid until
-    /// the next mutation or destroy.
+    /// Returns the current text.
+    ///
+    /// The string points into the field's buffer. It stays valid until the text next changes, from code or from the
+    /// user typing, or until you free the field.
     #[inline]
     pub fn text(&self) -> String {
         unsafe { let ret = crate::sys::fl_text_input_get_text(self.handle); ret.into_string() }
     }
 
-    /// Clear the handle's text and reset its cursor/selection.
+    /// Removes all text and moves the cursor to the start.
     #[inline]
     pub fn clear(&mut self) {
         unsafe { crate::sys::fl_text_input_clear(self.handle) }

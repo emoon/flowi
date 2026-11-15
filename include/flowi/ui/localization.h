@@ -11,66 +11,74 @@
 extern "C" {
 #endif
 
-// Which arm of FmtArg.value carries the argument.
+// Which field of `FlFmtArg.value` holds the argument.
 typedef enum __attribute__((__packed__)) FlFmtArgKind {
-    // value.int_value is live.
+    // `FlFmtArg.value` holds an integer in `int_value`.
     FlFmtArgKind_Int = 0,
-    // value.float_value is live.
+    // `FlFmtArg.value` holds a float in `float_value`.
     FlFmtArgKind_Float = 1,
-    // value.string_value is live.
+    // `FlFmtArg.value` holds a string in `string_value`.
     FlFmtArgKind_Str = 2,
 } FlFmtArgKind;
 
 typedef struct FlVfsMount FlVfsMount;
 
-// One argument for an indexed placeholder. The string arm is borrowed for the duration of the call
-// that reads it.
+// One value to put into a placeholder of a localized string.
+//
+// This is passed to `fl_localize_fmt` and `fl_localize_plural`. A string value is only borrowed for the duration of
+// the call.
 typedef struct FlFmtArg {
-    // The live arm is selected by kind.
+    // The value. `FlFmtArg.kind` says which field is set.
     union {
         int64_t int_value;
         double float_value;
         FlString string_value;
     } value;
-    // Which arm of value is live.
+    // Which field of `FlFmtArg.value` is set.
     FlFmtArgKind kind;
 } FlFmtArg;
 
-// Localized display text. Point flowi at a language manifest once at startup; from then on any
-// widget text that starts with SID_ is looked up in the loaded language's string table and
-// rendered translated, with no change to the widget calls themselves.
-// Point flowi at the language manifest at manifest_path inside mount and load the language
-// the manifest names as its default. Table paths in the manifest resolve relative to the
-// manifest's own directory. A SID_ key with no entry in the table renders as the key itself;
-// a manifest that cannot be read or parsed leaves every SID_ rendering as itself.
-// hot_reload watches the manifest's directory: an edit to the manifest re-reads the language
-// list and an edit to a loaded table's file reloads that table, both at a frame boundary.
+// Loads languages and chooses the active one.
+//
+// Call `fl_localization_init` once at startup. After that, any widget text that starts with `SID_` is looked up in
+// the active language and drawn translated, with no change to the widget calls. Use `fl_localization_set_language`
+// to switch language.
+// Loads the language manifest at `manifest_path` inside `mount`, and the language it names as its default.
+//
+// Table paths in the manifest are relative to the manifest's own directory. A `SID_` key that has no entry is
+// drawn as the key. If the manifest cannot be read or parsed, every `SID_` key is drawn as itself.
+//
+// With `hot_reload`, edits to the manifest or to a loaded table are picked up at the start of a frame.
 FL_API void fl_localization_init(FlVfsMount* mount, FlString manifest_path, bool hot_reload);
-// Make tag the active language. The tag is matched case-insensitively against the manifest's
-// language list and takes effect at the next frame boundary, so a frame never mixes languages.
-// Keys the new language does not carry fall back to the default language, then to the key
-// itself. A tag the manifest does not list, or whose table cannot be read, warns and leaves the
-// current language active. Called before the first frame this selects the initial language;
-// setting the tag that is already active reloads its table.
+// Makes `tag` the active language.
+//
+// The tag is matched against the manifest's languages without regard to case, and the change takes effect at
+// the start of the next frame. Keys the new language lacks fall back to the default language, then to the key
+// itself. If the manifest does not list the tag, or its table cannot be read, a warning is logged and the
+// current language stays.
+//
+// Called before the first frame, it chooses the starting language. Setting the language that is already
+// active reloads its table.
 FL_API void fl_localization_set_language(FlString tag);
 
-// Display text that carries runtime values: look the key up, then substitute the caller's arguments
-// into its indexed placeholders. The result is passed to any widget the way plain text is.
-// Look sid up in the active language and substitute the count arguments at args into its
-// indexed placeholders: {0} is the first argument, {1} the second, and a repeated index
-// substitutes at every occurrence. {{ and }} render as a literal brace; a placeholder with no
-// matching argument renders as itself and warns. Integers and floats format C-style (. decimal
-// point, no digit grouping) and string arguments substitute as-is. The result lives in the frame
-// arena and is valid for the frame it was produced in; table text with no placeholders is
-// returned without a copy.
+// Localized text with values filled in.
+//
+// Each call returns a string that you pass to any widget the way plain text is.
+// Looks up `sid` in the active language and puts the `count` values at `args` into its placeholders.
+//
+// `{0}` is the first value, `{1}` the second, and an index used twice is filled in at both places. Write `{{`
+// and `}}` for a literal brace. A placeholder with no matching value is drawn as written, and a warning is
+// logged. Integers and floats are written with a `.` decimal point and no digit grouping.
+//
+// The result is valid for the current frame. Text without placeholders is returned without a copy.
 FL_API FlString fl_localize_fmt(FlString sid, const FlFmtArg* args, uint32_t count);
-// Look sid up in the active language, pick the plural variant count selects under the active
-// language's rules, and substitute into it. count is itself the {0} argument and the
-// arg_count arguments at args follow it as {1} onwards. Selection uses built-in rules keyed
-// by the language tag's primary subtag; a language with no built-in rules always selects other
-// and warns once. A key carrying a variant the language never selects, and a key that is a plain
-// string rather than a variant object, both resolve to the text that is there. Placeholder,
-// number-formatting and lifetime rules are the same as fmt.
+// Looks up `sid`, picks the plural form that `count` selects, and fills in its placeholders.
+//
+// `count` is `{0}`, and the `arg_count` values at `args` are `{1}` onwards. The form is chosen by the rules
+// of the active language. A language without built-in rules always uses the `other` form and logs a warning
+// once. A key that is a plain string rather than a set of forms is used as it is.
+//
+// Placeholders and the lifetime of the result work as they do for `fl_localize_fmt`.
 FL_API FlString fl_localize_plural(FlString sid, int64_t count, const FlFmtArg* args, uint32_t arg_count);
 
 

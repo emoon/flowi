@@ -1,16 +1,22 @@
 #[module(core)]
-/// 2D vector in logical-pixel space.
+/// A 2D point or size, in logical pixels.
 #[attributes(Copy)]
 struct Vec2 {
+    /// The horizontal value.
     x: f32,
+    /// The vertical value.
     y: f32,
 }
 
-/// RGBA color, 8 bits per channel.
+/// An RGBA color with 8 bits per channel.
 #[attributes(Copy)]
 struct Color {
+    /// The red channel (0 to 255).
     r: u8,
+    /// The green channel (0 to 255).
     g: u8,
+    /// The blue channel (0 to 255).
     b: u8,
+    /// The alpha channel (0 is transparent and 255 is opaque).
     a: u8,
 }

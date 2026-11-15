@@ -12,25 +12,30 @@
 extern "C" {
 #endif
 
-// Configuration for a scroll area: a clipping container with managed scroll
-// state, consumed by fl_scroll_area_begin.
+// The settings of a scroll area.
+//
+// Pass it to `fl_scroll_area_begin`.
 typedef struct FlScrollAreaConfig {
-    // Container sizing (default: grow/grow).
+    // The size of the area.
     FlLayoutSizing sizing;
-    // Layout direction (default: TopToBottom).
+    // The direction the children are laid out in, and the only direction the area scrolls in.
     FlLayoutDirection direction;
-    // Gap between child elements.
+    // The space between adjacent children, in logical pixels.
     uint16_t child_gap;
     FlLayoutPadding padding;
-    // Background color (default: transparent).
+    // The background color.
     FlColor background_color;
     FlCornerRadius corner_radius;
-    // Show a scrollbar when content overflows.
+    // Whether the area has a vertical scrollbar. It is drawn only when the content is taller than the area.
+    //
+    // Space for it is added to the right padding. If `scrollbar_mode` is `FlScrollbarDisplayMode_Never`, it is
+    // treated as `FlScrollbarDisplayMode_Always`.
     bool show_scrollbar;
+    // When the scrollbar is shown. It is used when `show_scrollbar` is true.
     FlScrollbarDisplayMode scrollbar_mode;
-    // Enable smooth scroll animation.
+    // Whether the scroll position moves smoothly towards its target instead of jumping.
     bool smooth_scroll;
-    // Pixels per mouse-wheel tick.
+    // How far one mouse wheel step scrolls, in pixels (0 uses 30).
     float scroll_speed;
 } FlScrollAreaConfig;
 

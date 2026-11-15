@@ -6,12 +6,16 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Build and nest layout containers. Use start/end to open and close a container,
-/// with configure applying a LayoutConfig to the currently-open one.
+/// Opens and closes layout containers, the boxes that place their children.
+///
+/// Call `Layout::start` or `Layout::start_auto`, then `Layout::configure` to set the container up. Draw the children,
+/// then call `Layout::end`. Containers nest, and each `Layout::end` closes the one opened last.
 pub struct Layout;
 
 impl Layout {
-    /// Open a layout container identified by id. Must be paired with end.
+    /// Opens a container with the given id.
+    ///
+    /// Each id must be unique within a frame. Close the container with `Layout::end`.
     #[inline]
     pub fn start(id: impl Into<crate::LayoutId>) {
         let id: crate::LayoutId = id.into();
@@ -19,21 +23,28 @@ impl Layout {
         unsafe { crate::sys::fl_layout_start(id.into_sys()) }
     }
 
-    /// Open a no-id layout container (auto-assigned id). Must be paired with end.
+    /// Opens a container without an id, for one you never need to look up again.
+    ///
+    /// Close the container with `Layout::end`.
     #[inline]
     pub fn start_auto() {
         let _frame = crate::frame_thread::frame_thread_guard("Layout::start_auto");
         unsafe { crate::sys::fl_layout_start_auto() }
     }
 
-    /// Apply config to the currently-open container.
+    /// Applies `config` to the container opened last.
+    ///
+    /// Call this once, right after `Layout::start` or `Layout::start_auto`.
     #[inline]
     pub fn configure(config: crate::sys::LayoutConfig) {
         let _frame = crate::frame_thread::frame_thread_guard("Layout::configure");
         unsafe { crate::sys::fl_layout_configure(config) }
     }
 
-    /// Close the most recently opened container.
+    /// Closes the container opened last.
+    ///
+    /// This also closes a floating element opened with `Floating::start`. A scroll area is closed with
+    /// `Scroll::area_end`.
     #[inline]
     pub fn end() {
         let _frame = crate::frame_thread::frame_thread_guard("Layout::end");

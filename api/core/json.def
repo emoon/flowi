@@ -1,7 +1,6 @@
 #[module(core)]
 
-/// The various types JSON values can be. Used to identify what a value is
-/// (JsonValue.type).
+/// The kind of a `JsonValue`, stored in `JsonValue.type`.
 enum JsonType {
     String = 0,
     Number = 1,
@@ -12,123 +11,140 @@ enum JsonType {
     Null = 6,
 }
 
-/// Result of a JSON parse: the error code (FlJsonParseResult.error) and the
-/// value returned by fl_json_get_error_description.
+/// Why a parse failed, stored in `JsonParseResult.error`.
+///
+/// `Json::get_error_description` returns a readable message for each value.
 enum JsonParseError {
-    /// no error occurred (huzzah!).
+    /// No error.
     None = 0,
-    /// expected either a comma or a closing '}' or ']' to close an object or array.
+    /// Expected a comma, or a closing `}` or `]` to end an object or array.
     ExpectedCommaOrClosingBracket = 1,
-    /// colon separating name/value pair was missing.
+    /// A colon between a name and its value is missing.
     ExpectedColon = 2,
-    /// expected string to begin with '"'.
+    /// A string did not start with `"`.
     ExpectedOpeningQuote = 3,
-    /// invalid escaped sequence in string.
+    /// A string holds an invalid escape sequence.
     InvalidStringEscapeSequence = 4,
-    /// invalid number format.
+    /// A number is malformed.
     InvalidNumberFormat = 5,
-    /// invalid value.
+    /// A value is invalid.
     InvalidValue = 6,
-    /// reached end of buffer before object/array was complete.
+    /// The input ended before an object or array was complete.
     PrematureEndOfBuffer = 7,
-    /// string was malformed.
+    /// A string is malformed.
     InvalidString = 8,
-    /// a size_t is not large enough to record the allocation.
+    /// An allocation size did not fit in a usize.
     AllocatorFailed = 9,
-    /// the JSON input had unexpected trailing characters.
+    /// The input has extra characters after the value.
     UnexpectedTrailingCharacters = 10,
-    /// catch-all error for everything else that exploded (real bad chi!).
+    /// Any other error.
     Unknown = 11,
-    /// input was nested deeper than the parser's depth limit.
+    /// The input is nested deeper than the parser allows.
     TooDeep = 12,
 }
 
-/// A JSON number value.
+/// A JSON number, kept as the text it was written with.
 struct JsonNumber {
-    /// ASCII string containing representation of the number.
+    /// The number as ASCII text.
     number: *const char,
-    /// the size (in bytes) of the number.
+    /// The length of `number` in bytes.
     number_size: usize,
 }
 
-/// An element of a JSON object.
+/// One name and value in a `JsonObject`.
 struct JsonObjectElement {
-    /// the name of this element.
+    /// The name of the element.
     name: *String,
-    /// the value of this element.
+    /// The value of the element.
     value: *JsonValue,
-    /// the next object element (null for the last element in the object).
+    /// The next element, or null for the last one.
     next: *JsonObjectElement,
 }
 
-/// A JSON object value.
+/// A JSON object, held as a linked list of elements.
 struct JsonObject {
-    /// a linked list of the elements in the object.
+    /// The first element, or null if the object is empty.
     start: *JsonObjectElement,
-    /// the number of elements in the object.
+    /// The number of elements.
     length: usize,
 }
 
-/// An element of a JSON array.
+/// One value in a `JsonArray`.
 struct JsonArrayElement {
-    /// the value of this element.
+    /// The value of the element.
     value: *JsonValue,
-    /// the next array element (null for the last element in the array).
+    /// The next element, or null for the last one.
     next: *JsonArrayElement,
 }
 
-/// A JSON array value.
+/// A JSON array, held as a linked list of elements.
 struct JsonArray {
-    /// a linked list of the elements in the array.
+    /// The first element, or null if the array is empty.
     start: *JsonArrayElement,
-    /// the number of elements in the array.
+    /// The number of elements.
     length: usize,
 }
 
 /// A JSON value.
+///
+/// `Json::parse_with_flags` returns the root value. Read `JsonValue.type` to see what it holds.
 struct JsonValue {
-    /// a pointer to either a FlString, FlJsonNumber, FlJsonObject, or FlJsonArray.
-    /// Should be cast to the appropriate struct type based on the value's type.
+    /// A pointer to a `String`, `JsonNumber`, `JsonObject` or `JsonArray`, as `JsonValue.type` says.
+    ///
+    /// It is null for `JsonType::True`, `JsonType::False` and `JsonType::Null`.
     payload: *void,
-    /// the JsonType. If type is True/False/Null, payload is null.
+    /// The kind of the value.
     type: JsonType,
 }
 
-/// A JSON parse result.
+/// Where and why a parse failed.
+///
+/// `Json::parse_with_flags` fills it in when it returns null.
 struct JsonParseResult {
-    /// the error code (one of FlJsonParseError).
+    /// The reason the parse failed.
     error: JsonParseError,
-    /// the character offset for the error in the JSON input.
+    /// The byte offset of the error in the input, counting from 0.
     error_offset: usize,
-    /// the line number for the error in the JSON input.
+    /// The line of the error, counting from 1.
     error_line_no: usize,
-    /// the row number for the error in the JSON input.
+    /// The column of the error on its line, counting bytes from 1.
     error_row_no: usize,
 }
 
-/// The `fl_json_*` arena-backed JSON parser / DOM. Parse a buffer into a tree of
-/// FlJsonValue, navigate and type-extract from it, then write it back out.
+/// A JSON parser that builds a tree of values in an arena.
+///
+/// Parse text with `Json::parse_with_flags`, read the tree with the `Json::get_string_prop` calls or by following
+/// `JsonValue.payload`, and write it out again with `Json::write_pretty`.
 api Json {
-    /// Parse src as strict JSON (flags_bitset 0) or JSON5 (flags_bitset 1), with an optional result out-param.
+    /// Parses `src` and returns the root value, or null if it is not valid.
+    ///
+    /// `flags_bitset` 0 parses strict JSON and 1 also accepts JSON5. The tree is allocated from `arena`. If
+    /// `result` is not null it receives the error when the parse fails. On failure the parse leaves nothing in `arena`.
     [manual] parse_with_flags(arena: *Arena, src: String, flags_bitset: usize, result: *JsonParseResult) -> *JsonValue
-    /// Write value out as a pretty UTF-8 JSON string (indent/newline may be null), allocated from arena.
+    /// Writes `value` as indented JSON text allocated from `arena`.
+    ///
+    /// `indent` and `newline` may be null, which uses two spaces and `\n`. Returns an empty string if `value` is null
+    /// or cannot be written.
     [manual] write_pretty(arena: *Arena, value: *const JsonValue, indent: *const char, newline: *const char) -> String
-    /// Reinterpret a value as a string. Returns empty if not a string.
+    /// Returns the text of a string value, or an empty string if `value` is not a string.
     [manual] value_as_string(value: *JsonValue) -> String
-    /// Reinterpret a value as an object. Returns null if not an object.
+    /// Returns the object in `value`, or null if `value` is not an object.
     [manual] value_as_object(value: *JsonValue) -> *JsonObject
-    /// Find a property in an object by key. Returns null if absent.
+    /// Finds the property `key` in an object and returns its value, or null if there is none.
+    ///
+    /// Also returns null if `object` is not an object.
     [manual] find_property(object: *const JsonValue, key: String) -> *JsonValue
-    /// Extract a string-typed property by key (empty if absent / wrong type).
+    /// Returns the string property `key`, or an empty string if it is missing or not a string.
     [manual] get_string_prop(object: *const JsonValue, key: String) -> String
-    /// Extract a u32-typed property by key (0 if absent / wrong type).
+    /// Returns the number property `key` as a `u32`, or 0 if it is missing, is not a number or is not a whole number
+    /// that fits.
     [manual] get_u32_prop(object: *const JsonValue, key: String) -> u32
-    /// Extract an f64-typed property by key (0.0 if absent / wrong type).
+    /// Returns the number property `key` as an `f64`, or 0.0 if it is missing, not a number or cannot be read.
     [manual] get_f64_prop(object: *const JsonValue, key: String) -> f64
-    /// Extract an object-typed property by key (null if absent / wrong type).
+    /// Returns the object property `key`, or null if it is missing or not an object.
     [manual] get_object_prop(object: *const JsonValue, key: String) -> *JsonValue
-    /// Extract an array-typed property by key (null if absent / wrong type).
+    /// Returns the array property `key`, or null if it is missing or not an array.
     [manual] get_array_prop(object: *const JsonValue, key: String) -> *JsonArray
-    /// Human-readable description of a parse error code.
+    /// Returns a readable message for `error`.
     [manual] get_error_description(error: JsonParseError) -> String
 }

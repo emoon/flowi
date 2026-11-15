@@ -11,9 +11,11 @@
 extern "C" {
 #endif
 
-// Link widget: clickable, underlined text for hyperlinks.
-// Emit link text (link-colored, underlined). config selects font size and colors. Returns its
-// interaction Signal (.clicked the frame it activates). Call inside a frame callback.
+// Clickable text for hyperlinks. Call it inside a frame callback.
+// Draws a link and returns its `FlSignal`.
+//
+// The text does not wrap. It gets an underline while hovered or focused. Read `FlSignal.clicked` to follow
+// the link.
 FL_API FlSignal fl_link_impl(FlString text, FlLinkConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

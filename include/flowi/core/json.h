@@ -12,8 +12,7 @@
 extern "C" {
 #endif
 
-// The various types JSON values can be. Used to identify what a value is
-// (JsonValue.type).
+// The kind of a `FlJsonValue`, stored in `FlJsonValue.type`.
 typedef enum FlJsonType {
     FlJsonType_String = 0,
     FlJsonType_Number = 1,
@@ -24,34 +23,35 @@ typedef enum FlJsonType {
     FlJsonType_Null = 6,
 } FlJsonType;
 
-// Result of a JSON parse: the error code (FlJsonParseResult.error) and the
-// value returned by fl_json_get_error_description.
+// Why a parse failed, stored in `FlJsonParseResult.error`.
+//
+// `fl_json_get_error_description` returns a readable message for each value.
 typedef enum FlJsonParseError {
-    // no error occurred (huzzah!).
+    // No error.
     FlJsonParseError_None = 0,
-    // expected either a comma or a closing '}' or ']' to close an object or array.
+    // Expected a comma, or a closing `}` or `]` to end an object or array.
     FlJsonParseError_ExpectedCommaOrClosingBracket = 1,
-    // colon separating name/value pair was missing.
+    // A colon between a name and its value is missing.
     FlJsonParseError_ExpectedColon = 2,
-    // expected string to begin with '"'.
+    // A string did not start with `"`.
     FlJsonParseError_ExpectedOpeningQuote = 3,
-    // invalid escaped sequence in string.
+    // A string holds an invalid escape sequence.
     FlJsonParseError_InvalidStringEscapeSequence = 4,
-    // invalid number format.
+    // A number is malformed.
     FlJsonParseError_InvalidNumberFormat = 5,
-    // invalid value.
+    // A value is invalid.
     FlJsonParseError_InvalidValue = 6,
-    // reached end of buffer before object/array was complete.
+    // The input ended before an object or array was complete.
     FlJsonParseError_PrematureEndOfBuffer = 7,
-    // string was malformed.
+    // A string is malformed.
     FlJsonParseError_InvalidString = 8,
-    // a size_t is not large enough to record the allocation.
+    // An allocation size did not fit in a usize.
     FlJsonParseError_AllocatorFailed = 9,
-    // the JSON input had unexpected trailing characters.
+    // The input has extra characters after the value.
     FlJsonParseError_UnexpectedTrailingCharacters = 10,
-    // catch-all error for everything else that exploded (real bad chi!).
+    // Any other error.
     FlJsonParseError_Unknown = 11,
-    // input was nested deeper than the parser's depth limit.
+    // The input is nested deeper than the parser allows.
     FlJsonParseError_TooDeep = 12,
 } FlJsonParseError;
 
@@ -61,92 +61,108 @@ typedef struct FlJsonArrayElement FlJsonArrayElement;
 
 typedef struct FlJsonValue FlJsonValue;
 
-// A JSON number value.
+// A JSON number, kept as the text it was written with.
 typedef struct FlJsonNumber {
-    // ASCII string containing representation of the number.
+    // The number as ASCII text.
     const char* number;
-    // the size (in bytes) of the number.
+    // The length of `number` in bytes.
     size_t number_size;
 } FlJsonNumber;
 
-// An element of a JSON object.
+// One name and value in a `FlJsonObject`.
 typedef struct FlJsonObjectElement {
-    // the name of this element.
+    // The name of the element.
     FlString* name;
-    // the value of this element.
+    // The value of the element.
     FlJsonValue* value;
-    // the next object element (null for the last element in the object).
+    // The next element, or null for the last one.
     FlJsonObjectElement* next;
 } FlJsonObjectElement;
 
-// A JSON object value.
+// A JSON object, held as a linked list of elements.
 typedef struct FlJsonObject {
-    // a linked list of the elements in the object.
+    // The first element, or null if the object is empty.
     FlJsonObjectElement* start;
-    // the number of elements in the object.
+    // The number of elements.
     size_t length;
 } FlJsonObject;
 
-// An element of a JSON array.
+// One value in a `FlJsonArray`.
 typedef struct FlJsonArrayElement {
-    // the value of this element.
+    // The value of the element.
     FlJsonValue* value;
-    // the next array element (null for the last element in the array).
+    // The next element, or null for the last one.
     FlJsonArrayElement* next;
 } FlJsonArrayElement;
 
-// A JSON array value.
+// A JSON array, held as a linked list of elements.
 typedef struct FlJsonArray {
-    // a linked list of the elements in the array.
+    // The first element, or null if the array is empty.
     FlJsonArrayElement* start;
-    // the number of elements in the array.
+    // The number of elements.
     size_t length;
 } FlJsonArray;
 
 // A JSON value.
+//
+// `fl_json_parse_with_flags` returns the root value. Read `FlJsonValue.type` to see what it holds.
 typedef struct FlJsonValue {
-    // a pointer to either a FlString, FlJsonNumber, FlJsonObject, or FlJsonArray.
-    // Should be cast to the appropriate struct type based on the value's type.
+    // A pointer to a `String`, `FlJsonNumber`, `FlJsonObject` or `FlJsonArray`, as `FlJsonValue.type` says.
+    //
+    // It is null for `FlJsonType_True`, `FlJsonType_False` and `FlJsonType_Null`.
     void* payload;
-    // the JsonType. If type is True/False/Null, payload is null.
+    // The kind of the value.
     FlJsonType type;
 } FlJsonValue;
 
-// A JSON parse result.
+// Where and why a parse failed.
+//
+// `fl_json_parse_with_flags` fills it in when it returns null.
 typedef struct FlJsonParseResult {
-    // the error code (one of FlJsonParseError).
+    // The reason the parse failed.
     FlJsonParseError error;
-    // the character offset for the error in the JSON input.
+    // The byte offset of the error in the input, counting from 0.
     size_t error_offset;
-    // the line number for the error in the JSON input.
+    // The line of the error, counting from 1.
     size_t error_line_no;
-    // the row number for the error in the JSON input.
+    // The column of the error on its line, counting bytes from 1.
     size_t error_row_no;
 } FlJsonParseResult;
 
-// The `fl_json_*` arena-backed JSON parser / DOM. Parse a buffer into a tree of
-// FlJsonValue, navigate and type-extract from it, then write it back out.
-// Parse src as strict JSON (flags_bitset 0) or JSON5 (flags_bitset 1), with an optional result out-param.
+// A JSON parser that builds a tree of values in an arena.
+//
+// Parse text with `fl_json_parse_with_flags`, read the tree with the `fl_json_get_string_prop` calls or by following
+// `FlJsonValue.payload`, and write it out again with `fl_json_write_pretty`.
+// Parses `src` and returns the root value, or null if it is not valid.
+//
+// `flags_bitset` 0 parses strict JSON and 1 also accepts JSON5. The tree is allocated from `arena`. If
+// `result` is not null it receives the error when the parse fails. On failure the parse leaves nothing in `arena`.
 FL_API FlJsonValue* fl_json_parse_with_flags(FlArena* arena, FlString src, size_t flags_bitset, FlJsonParseResult* result);
-// Write value out as a pretty UTF-8 JSON string (indent/newline may be null), allocated from arena.
+// Writes `value` as indented JSON text allocated from `arena`.
+//
+// `indent` and `newline` may be null, which uses two spaces and `\n`. Returns an empty string if `value` is null
+// or cannot be written.
 FL_API FlString fl_json_write_pretty(FlArena* arena, const FlJsonValue* value, const char* indent, const char* newline);
-// Reinterpret a value as a string. Returns empty if not a string.
+// Returns the text of a string value, or an empty string if `value` is not a string.
 FL_API FlString fl_json_value_as_string(FlJsonValue* value);
-// Reinterpret a value as an object. Returns null if not an object.
+// Returns the object in `value`, or null if `value` is not an object.
 FL_API FlJsonObject* fl_json_value_as_object(FlJsonValue* value);
-// Find a property in an object by key. Returns null if absent.
+// Finds the property `key` in an object and returns its value, or null if there is none.
+//
+// Also returns null if `object` is not an object.
 FL_API FlJsonValue* fl_json_find_property(const FlJsonValue* object, FlString key);
-// Extract a string-typed property by key (empty if absent / wrong type).
+// Returns the string property `key`, or an empty string if it is missing or not a string.
 FL_API FlString fl_json_get_string_prop(const FlJsonValue* object, FlString key);
-// Extract a u32-typed property by key (0 if absent / wrong type).
+// Returns the number property `key` as a `u32`, or 0 if it is missing, is not a number or is not a whole number
+// that fits.
 FL_API uint32_t fl_json_get_u32_prop(const FlJsonValue* object, FlString key);
-// Extract an f64-typed property by key (0.0 if absent / wrong type).
+// Returns the number property `key` as an `f64`, or 0.0 if it is missing, not a number or cannot be read.
 FL_API double fl_json_get_f64_prop(const FlJsonValue* object, FlString key);
-// Extract an object-typed property by key (null if absent / wrong type).
+// Returns the object property `key`, or null if it is missing or not an object.
 FL_API FlJsonValue* fl_json_get_object_prop(const FlJsonValue* object, FlString key);
-// Extract an array-typed property by key (null if absent / wrong type).
+// Returns the array property `key`, or null if it is missing or not an array.
 FL_API FlJsonArray* fl_json_get_array_prop(const FlJsonValue* object, FlString key);
-// Human-readable description of a parse error code.
+// Returns a readable message for `error`.
 FL_API FlString fl_json_get_error_description(FlJsonParseError error);
 
 

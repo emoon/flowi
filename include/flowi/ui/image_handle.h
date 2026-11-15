@@ -8,7 +8,9 @@
 extern "C" {
 #endif
 
-// Handle to an image; 0 is invalid. Returned by Image::load and the `Image::create_*` calls.
+// A handle to an image, where 0 is not valid.
+//
+// It is returned by `fl_image_load`, `fl_image_load_mount`, `fl_image_create_from_pixels` and `fl_image_create_dedicated`.
 typedef uint32_t FlImageHandle;
 #define FL_IMAGE_HANDLE_INVALID 0
 

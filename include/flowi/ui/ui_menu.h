@@ -15,39 +15,50 @@
 extern "C" {
 #endif
 
-// Context menus: build a menu from a begin/item/end group, add right-click regions, and
-// drive it imperatively with open/close/is_open.
-// Begin the menu menu_id with config; returns true (opening the floating panel and
-// driving ESC / click-outside dismissal) only while the menu is open. Pair with
-// end only when it returned true.
+// Context menus that open at a point on the screen, usually on a right-click.
+//
+// Open a menu with `fl_menu_open`, or put a right-click region around the area that should open it. Each frame, call
+// `fl_menu_begin`. It returns true only while the menu is open. If it did, add items and call `fl_menu_end`.
+// Starts the menu `menu_id` and returns whether it is open.
+//
+// Call `fl_menu_end` only if this returned true. A click outside the menu closes it. Escape closes the innermost
+// open submenu, or the menu if no submenu is open.
 FL_API bool fl_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig config);
-// End the menu panel opened by begin_impl.
+// Ends the menu panel.
 FL_API void fl_menu_end(void);
-// Emit one action item labelled label with config; returns its interaction signal
-// (.clicked true the frame it activates).
+// Adds an action item and returns its `FlSignal`.
+//
+// `FlSignal.clicked` is true on the frame the item is activated. Activating it closes the menu unless
+// `FlMenuItemConfig.close_policy` says otherwise.
 FL_API FlSignal fl_menu_item_impl(FlString label, FlMenuItemConfig config);
-// Emit a checkable item labelled label bound to `*checked`: toggles it on activation and shows a check
-// marker while it is true. Keep-open by default. Returns the row's signal (.clicked the frame it toggles).
+// Adds an item with a check mark and returns its `FlSignal`.
+//
+// The check mark shows while `checked` is true. Activating the item flips `checked`. By default it does not
+// close the menu.
 FL_API FlSignal fl_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig config);
-// Emit a radio item labelled label bound to `*selected`: activation sets `*selected = value`; the bullet
-// shows while `*selected == value`. Keep-open by default. Returns the row's signal.
+// Adds a radio item and returns its `FlSignal`.
+//
+// The bullet shows while `selected` equals `value`. Activating the item sets `selected` to `value`. By default
+// it does not close the menu.
 FL_API FlSignal fl_menu_radio_impl(FlString label, int32_t* selected, int32_t value, FlMenuItemConfig config);
-// Emit a non-interactive separator rule. Occupies a row but is skipped by navigation and never
-// activates; a click on it stays inside the menu (it is part of the surface, not click-outside).
+// Adds a separator line. It cannot be activated.
 FL_API void fl_menu_separator(void);
-// Emit a non-interactive section-header caption label (dimmed, left-aligned). Like a separator it
-// occupies a row, is skipped by navigation, and never activates.
+// Adds a caption that names a group of items. It cannot be activated.
 FL_API void fl_menu_header(FlString label);
-// Begin a right-click region region_id that opens menu_id at the cursor on a
-// right-click inside. Returns the region's signal. Pair with region_end.
+// Starts a region that opens the menu `menu_id` at the cursor when the user right-clicks inside it.
+//
+// Returns the `FlSignal` of the region. Draw the area that should open the menu inside the region, and call
+// `fl_menu_region_end` after it.
 FL_API FlSignal fl_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlMenuRegionConfig config);
-// End the right-click region opened by region_begin_impl.
+// Ends the region started with `fl_menu_region_begin`.
 FL_API void fl_menu_region_end(void);
-// Open the menu chain menu_id at the absolute screen point (captured once).
+// Opens the menu `menu_id` at `point`, a position on the screen.
+//
+// The point is read once, so the menu stays there. It does nothing if the menu is already open.
 FL_API void fl_menu_open(FlLayoutId menu_id, FlVec2 point);
-// Close the menu chain menu_id (no-op if it is not the open chain).
+// Closes the menu `menu_id`. It does nothing if the menu is not open.
 FL_API void fl_menu_close(FlLayoutId menu_id);
-// True while the menu chain menu_id is open.
+// Returns whether the menu `menu_id` is open.
 FL_API bool fl_menu_is_open(FlLayoutId menu_id);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.
@@ -65,38 +76,44 @@ FL_API bool fl_menu_is_open(FlLayoutId menu_id);
 // Designated-initializer convenience macro - routes directly to the fl_* body.
 #define fl_menu_region_begin(region_id, menu_id, ...) fl_menu_region_begin_impl(region_id, menu_id, (FlMenuRegionConfig) { __VA_ARGS__ })
 
-// Nested submenus: a begin/end group whose parent row, when expanded, hosts the nested menu items.
-// Begin a submenu parent labelled label with config; emits the parent row and returns true ONLY while
-// this submenu is expanded, opening the nested panel beside the parent. Pair with end only when it
-// returned true.
+// A submenu inside a menu.
+//
+// A submenu is a row in its parent menu. When the row is expanded, the items you add before `fl_submenu_end` appear
+// in a panel beside it.
+// Adds a submenu row labelled `label` and returns whether the submenu is expanded.
+//
+// Call `fl_submenu_end` only if this returned true.
 FL_API bool fl_submenu_begin_impl(FlString label, FlSubmenuConfig config);
-// End the submenu panel opened by begin_impl.
+// Ends the submenu panel.
 FL_API void fl_submenu_end(void);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.
 #define fl_submenu_begin(label, ...) fl_submenu_begin_impl(label, (FlSubmenuConfig) { __VA_ARGS__ })
 
-// Horizontal menu bar: a begin/end group hosting top-level entries, with is_open to query
-// whether the bar owns the open menu chain.
-// Begin the bar strip bar_id with config and run its per-frame input (click-open, hover-switch-while-open,
-// Left/Right/Down/ESC). Always opens the strip. Pair unconditionally with end.
+// A horizontal menu bar.
+//
+// Each frame, call `fl_menubar_begin`, then `fl_menubar_menu_begin` for each top-level menu. Finish with
+// `fl_menubar_end`.
+// Starts the menu bar `bar_id` and handles its input, such as clicks and the arrow keys.
+//
+// Always call `fl_menubar_end` after it.
 FL_API void fl_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig config);
-// End the bar strip opened by begin_impl.
+// Ends the menu bar.
 FL_API void fl_menubar_end(void);
-// True while the bar bar_id owns the open chain (a dropdown is open, or the bar is keyboard-focused after an
-// ESC collapsed the dropdown back to the strip).
+// Returns whether the menu bar `bar_id` has a dropdown open.
+//
+// It also returns true after Escape closed a dropdown and the keyboard focus stayed on the bar.
 FL_API bool fl_menubar_is_open(FlLayoutId bar_id);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.
 #define fl_menubar_begin(bar_id, ...) fl_menubar_begin_impl(bar_id, (FlMenuBarConfig) { __VA_ARGS__ })
 
-// Menu-bar top entries: a begin/end group whose top button, when its dropdown is open, hosts the
-// dropdown's menu items.
-// Begin a top labelled label with config; emits the top button and returns true ONLY while this top's
-// dropdown is open, opening the dropdown panel anchored under the button. Pair with end only when it
-// returned true.
+// An entry in a menu bar, with a dropdown of items.
+// Adds an entry labelled `label` to the menu bar and returns whether its dropdown is open.
+//
+// Add the items of the dropdown after it and call `fl_menubar_menu_end`, but only if this returned true.
 FL_API bool fl_menubar_menu_begin_impl(FlString label, FlMenuBarMenuConfig config);
-// End the dropdown panel opened by begin_impl.
+// Ends the dropdown.
 FL_API void fl_menubar_menu_end(void);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

@@ -9,8 +9,8 @@
 extern "C" {
 #endif
 
-// Query for the currently focused widget id.
-// The id of the widget that currently holds focus this frame, or 0 when nothing is focused.
+// The widget that holds keyboard focus.
+// Returns the id of the widget that holds focus this frame, or 0 when nothing is focused.
 FL_API uint32_t fl_focused_id(void);
 
 

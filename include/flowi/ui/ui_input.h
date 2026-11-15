@@ -20,129 +20,147 @@
 extern "C" {
 #endif
 
-// Global per-frame input and element-state queries for the current frame, plus the one-call List.
-// Call these inside a frame to read pointer, mouse, keyboard, scroll, and drag state.
-// Mark the layout area (or widget) identified by id a Scroll Target for this frame: it opts into
-// consume-takes-all mouse-wheel routing over its own rect. Call once per frame inside the area's layout
-// scope. Pair with mouse_wheel_delta to read the wheel over the same id.
+// Per-frame input state and element queries, plus the one-call list.
+//
+// Call these inside a frame to read the mouse, keyboard, gamepad, wheel and file drops. The key and mouse button
+// queries are global. They do not depend on focus or on what is under the cursor.
+// Makes the layout area `id` a scroll target for this frame.
+//
+// Call it once per frame, inside the layout scope of the area. Read the wheel over the area with
+// `fl_input_mouse_wheel_delta`.
 FL_API void fl_input_scroll_target(FlLayoutId id);
-// Read this frame's wheel delta scoped to a Scroll Target. Returns the per-frame delta only when id is
-// the hot Scroll Target, and {0, 0} otherwise. There is no absolute wheel value; any cumulative offset
-// is the caller's to accumulate.
+// Returns this frame's mouse wheel delta if `id` is the hot scroll target, and {0, 0} otherwise.
+//
+// Only the topmost hot scroll target gets the delta, so an area behind another one reads {0, 0}. The value is
+// a per-frame delta. If you want an offset, add the deltas up yourself.
 FL_API FlVec2 fl_input_mouse_wheel_delta(FlLayoutId id);
-// Read this frame's raw wheel delta, global and unrouted: every reader sees the same value regardless
-// of what is under the cursor. The escape hatch for a caller that does its own scroll bookkeeping over
-// an area with no Scroll Target; everything else wants the routed mouse_wheel_delta.
+// Returns this frame's mouse wheel delta, whatever is under the cursor.
+//
+// Every caller sees the same value. To read the wheel over one area, use `fl_input_mouse_wheel_delta`.
 FL_API FlVec2 fl_input_mouse_wheel(void);
-// Read the KeyModifier flags held this frame. Used to disambiguate same-axis
-// gestures (plain-wheel scroll vs Ctrl/⌘+wheel zoom).
+// Returns the modifier keys held this frame.
 FL_API FlKeyModifier fl_input_keyboard_modifiers(void);
-// Pointer position relative to the element id, in element-local logical (authoring) coordinates:
-// (mouse - origin) / ui_scale, the unscaled space the Painter draws in. Use it for hit-testing and
-// timeline math; FlSignal.mouse_pos is in physical pixels. Returns {0, 0} when the element has no
-// resolved rect this frame.
+// Returns the mouse position relative to the element `id`, in logical pixels.
+//
+// This is the space the painter draws in. It is {0, 0} if the element was not laid out this frame. The
+// `FlSignal.mouse_pos` field is in physical pixels instead.
 FL_API FlVec2 fl_input_mouse_position(FlLayoutId id);
-// True if button was just pressed this frame (the down edge). Global and unrouted: every reader sees the
-// same state regardless of what is under the cursor (buttons are never zeroed mid-frame, unlike the wheel).
+// Returns whether `button` went down this frame.
 FL_API bool fl_input_mouse_pressed(FlMouseButton button);
-// True while button is currently held down (the level). Pair with mouse_position to follow an
-// app-owned drag latch.
+// Returns whether `button` is held down.
 FL_API bool fl_input_mouse_down(FlMouseButton button);
-// True if button was just released this frame (the up edge).
+// Returns whether `button` was released this frame.
 FL_API bool fl_input_mouse_released(FlMouseButton button);
-// True if key was just pressed this frame (the down edge). Global and unrouted, like the mouse-button
-// queries: every reader sees the same key state regardless of focus, and the app decides what each key means.
+// Returns whether `key` went down this frame.
+//
+// The result does not depend on focus, so a text field that is being edited still sees its keys here. Use
+// `fl_input_text_input_active` to leave those keys alone.
 FL_API bool fl_input_key_pressed(FlKey key);
-// True while key is currently held down (the level).
+// Returns whether `key` is held down.
 FL_API bool fl_input_key_down(FlKey key);
-// True if key was just released this frame (the up edge).
+// Returns whether `key` was released this frame.
 FL_API bool fl_input_key_released(FlKey key);
-// True when a text input had keyboard focus in the frame that ended last, so it read the editing keys
-// (characters, Backspace, Delete, the arrows). Lets an app that maps keys to its own actions leave
-// those keys to the field while it is being edited.
+// Returns whether a text input had keyboard focus in the previous frame.
+//
+// If you map keys to your own actions, skip the editing keys while this is true. Those are the characters,
+// Backspace, Delete and the arrows.
 FL_API bool fl_input_text_input_active(void);
-// Read the element id's interaction-and-geometry state for this frame. Returns the full ElementState
-// (rect, found/visible, hot/focused/active + their animation interpolators); found = false
-// with a zero rect when id was not laid out. The rect is physical px; divide it by get_scale to
-// report logical px.
+// Returns the state of the element `id` for this frame.
+//
+// If the element was not laid out, `FlElementState.found` is false. In C the rect is in physical pixels, so
+// divide it by `fl_input_get_scale` to get logical pixels. The Rust binding already does that.
 FL_API FlElementState fl_input_get_element_state(FlLayoutId id);
-// Read an element's interaction-and-geometry state by its already-hashed ElementId: the same read as
-// get_element_state, keyed by the hashed id. This is the form a caller polling from outside a frame
-// uses: a LayoutId copies its name into the frame arena, which only exists inside a frame, while an
-// ElementId is a plain hash that carries across.
+// Returns the state of an element from its hashed id.
+//
+// This is the same as `fl_input_get_element_state`. Use it to read a state outside of a frame, where a
+// `FlLayoutId` cannot be built.
 FL_API FlElementState fl_input_get_element_state_by_id(FlElementId id);
-// Read the absolute UI scale (logical→physical multiplier). Use it to normalize get_element_state's
-// physical-px rect to logical px.
+// Returns the UI scale, the factor from logical to physical pixels.
 FL_API float fl_input_get_scale(void);
-// The single topmost-hovered element across the whole frame. Returns the winning ElementId, or the
-// 0/INVALID sentinel when nothing is hovered. The pull complement for a consumer that handles input
-// in a pass separate from declaration; the inline alternative is to read hovered/pressed from each
-// element's own Signal.
+// Returns the id of the topmost hovered element, or 0 if nothing is hovered.
+//
+// To find your own object from the result, hash the ids of your objects and keep a map from the hashed id to
+// the object.
 FL_API FlElementId fl_input_hot_id(void);
-// Resolve a LayoutId (name + seed) to the opaque ElementId the core keys its state under. The hash is
-// one-way, so an app hashes its own candidate ids and builds an `{ElementId -> object}` map to map
-// hot_id back to its object.
+// Returns the hashed id of a `FlLayoutId`, the one used for `FlElementState` and `fl_input_hot_id`.
 FL_API FlElementId fl_input_hashed_id(FlLayoutId id);
-// Begin a hidden relative drag. Enters relative/unbounded mouse mode (the platform hides the OS cursor) and
-// remembers the current mouse position as the press point; scale is the sensitivity factor the per-frame
-// raw delta is multiplied by. The app owns the latch (press→begin).
+// Starts a drag that hides the cursor and is not stopped by the screen edge.
+//
+// Read the motion with `fl_input_mouse_drag_delta`, which is multiplied by `scale`. Call
+// `fl_input_mouse_hidden_drag_end` when the drag is over. The cursor then goes back to where the drag began.
 FL_API void fl_input_mouse_hidden_drag_begin(float scale);
-// End a hidden relative drag. Exits relative mode and warps the OS cursor back to the press point recorded
-// by begin (the platform shows the cursor again).
+// Ends a drag started by `fl_input_mouse_hidden_drag_begin`.
+//
+// The cursor is shown again at the position where the drag began.
 FL_API void fl_input_mouse_hidden_drag_end(void);
-// This frame's raw relative-motion delta multiplied by the scale passed to begin. {0, 0} when no hidden
-// drag is active. The unbounded scrub value: it never clamps at the screen edge, unlike a position-derived
-// delta.
+// Returns this frame's mouse motion during a hidden drag, multiplied by the `scale` of the drag.
+//
+// The value is {0, 0} when no hidden drag is active. It does not stop at the screen edge. For a drag that
+// does, use `fl_input_mouse_delta`.
 FL_API FlVec2 fl_input_mouse_drag_delta(void);
-// This frame's position-derived pointer delta, in window pixels. The bounded companion to
-// mouse_drag_delta: it stops accumulating at the screen edge, which is what a cursor-follows-pointer
-// consumer (a software cursor, a hover readout) wants.
+// Returns this frame's change in mouse position, in window pixels.
+//
+// It stops at the screen edge. For a drag that does not, use `fl_input_mouse_drag_delta`.
 FL_API FlVec2 fl_input_mouse_delta(void);
-// True when a gamepad is connected in player slot (0-based). Out-of-range slots read as disconnected.
+// Returns whether a gamepad is connected in player `slot`.
+//
+// A `slot` that is out of range reads as not connected.
 FL_API bool fl_input_gamepad_connected(uint32_t slot);
-// True while button is held on the pad in player slot (0-based). False when the slot is empty, so a
-// caller polling every slot never sees stale buttons from an unplugged pad.
+// Returns whether `button` is held on the gamepad in player `slot`.
+//
+// It is false if the slot has no gamepad.
 FL_API bool fl_input_gamepad_button_down(uint32_t slot, FlGamepadButton button);
-// True if button was just pressed this frame on the pad in player slot (0-based), the down edge. False
-// when the slot is empty.
+// Returns whether `button` went down this frame on the gamepad in player `slot`.
+//
+// It is false if the slot has no gamepad.
 FL_API bool fl_input_gamepad_button_pressed(uint32_t slot, FlGamepadButton button);
-// True if button was just released this frame on the pad in player slot (0-based), the up edge. False
-// when the slot is empty.
+// Returns whether `button` was released this frame on the gamepad in player `slot`.
+//
+// It is false if the slot has no gamepad.
 FL_API bool fl_input_gamepad_button_released(uint32_t slot, FlGamepadButton button);
-// Seconds button has been held on the pad in player slot (0-based), counting the frame it went down.
-// 0 when the button is up or the slot is empty.
+// Returns how many seconds `button` has been held on the gamepad in player `slot`.
+//
+// It is 0 if the button is up or the slot has no gamepad.
 FL_API float fl_input_gamepad_button_hold_duration(uint32_t slot, FlGamepadButton button);
-// The current normalized value of axis on the pad in player slot (0-based): -1..1 for the sticks,
-// 0..1 for the triggers, as the backend reported it with no dead zone applied. 0 when the slot is empty.
+// Returns the value of `axis` on the gamepad in player `slot`, as the gamepad reports it.
+//
+// It is 0 if the slot has no gamepad.
 FL_API float fl_input_gamepad_axis(uint32_t slot, FlGamepadAxis axis);
 // Shows a scrolling list of label rows.
 //
 // `items` holds the `count` rows in display order. Selection goes into `set`; if `set` is null, no row is
 // highlighted. To draw the rows yourself, use `fl_list_begin`.
 FL_API FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t count, FlSelectionSet* set, FlListOpts opts);
-// True when the semantic navigation-down action was pressed this frame, independent of whether it came
-// from an arrow key, D-pad, or analog stick binding.
+// Returns whether the navigation down action was pressed this frame.
+//
+// It is the same for an arrow key, the D-pad or the analog stick.
 FL_API bool fl_input_nav_down_pressed(void);
-// How many files the OS dropped onto the window this frame. Zero on every frame without a drop;
-// a multi-file drop counts each file once, in the order the platform delivered them.
+// Returns how many files were dropped onto the window this frame.
+//
+// The count is 0 on a frame without a drop. Use `fl_input_dropped_file` and `fl_input_dropped_file_position` to
+// read each file.
 FL_API uint32_t fl_input_dropped_file_count(void);
-// Read the path of the frame's dropped file at index, counted by dropped_file_count. The string
-// lives in the frame arena, so copy it to keep it past this frame. An out-of-range index reads
-// as empty.
+// Returns the path of the dropped file at `index`.
+//
+// The string is only valid for this frame, so copy it to keep it. An `index` that is out of range gives an
+// empty string.
 FL_API FlString fl_input_dropped_file(uint32_t index);
-// Where the cursor was, in window pixels, when the frame's dropped file at index was released.
-// An out-of-range index reads as {0, 0}.
+// Returns where the cursor was when the dropped file at `index` was released, in window pixels.
+//
+// An `index` that is out of range gives {0, 0}.
 FL_API FlVec2 fl_input_dropped_file_position(uint32_t index);
-// Push one decoded OS keyboard event in. An application that pumps its own OS events delivers input
-// through these; they land in the same frame state the queries above read.
+// Pushes a keyboard event into the UI.
+//
+// Use the push functions if your application reads the events from the OS itself. The events are read by the
+// queries above. Events pushed when there is no UI context are dropped.
 FL_API void fl_input_push_key_event(FlKeyEvent event);
-// Push a text-input (composed character) event.
+// Pushes a text input event into the UI.
 FL_API void fl_input_push_text_input_event(FlTextInputEvent event);
-// Push a mouse event (move / button / wheel / relative motion).
+// Pushes a mouse event into the UI.
 FL_API void fl_input_push_mouse_event(FlMouseEvent event);
-// Push a gamepad event (button / axis / connect / disconnect).
+// Pushes a gamepad event into the UI.
 FL_API void fl_input_push_gamepad_event(FlGamepadEvent event);
-// Push a window event (focus / resize / close).
+// Pushes a window event into the UI.
 FL_API void fl_input_push_window_event(FlWindowEvent event);
 
 

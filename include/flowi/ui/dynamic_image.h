@@ -12,18 +12,25 @@ extern "C" {
 
 typedef struct FlArena FlArena;
 
-// Dynamic image widget: draws a per-frame caller-updated image buffer described by DynamicImage. create and
-// create_alpha allocate the image and its pixel buffer from a caller arena; a caller that owns its own buffer
-// can fill a DynamicImage directly instead.
-// Allocate a width x height dynamic image with a zeroed, tightly packed RGBA8 buffer from arena. The image
-// and its buffer live until the arena is rewound or destroyed, so keep the arena alive for as long as the
-// image is drawn. Returns null for a non-positive dimension, a size that overflows, or a null arena.
+// A widget that draws an image whose pixels you rewrite each frame.
+//
+// Create the image with `fl_dynamic_image_create` or `fl_dynamic_image_create_alpha`, write its pixels each frame, and
+// draw it with `fl_dynamic_image`. If you own the pixel buffer, you can fill in a `FlDynamicImage` yourself
+// instead.
+// Creates an RGBA image of `width` by `height` pixels in `arena` and returns it.
+//
+// The rows are tightly packed, 4 bytes per pixel. The image and its pixels live until `arena` is rewound or
+// destroyed, so keep it alive for as long as the image is drawn. Returns null if `width` or `height` is not
+// positive, the size is too large, or `arena` is null.
 FL_API FlDynamicImage* fl_dynamic_image_create(int32_t width, int32_t height, FlArena* arena);
-// Like create, but the buffer is single-channel alpha (is_alpha_only is set): a monochrome mask the widget
-// colorizes with the color in its opts.
+// Creates an image like `fl_dynamic_image_create`, with one alpha byte per pixel instead of RGBA.
+//
+// The rows are tightly packed, 1 byte per pixel.
 FL_API FlDynamicImage* fl_dynamic_image_create_alpha(int32_t width, int32_t height, FlArena* arena);
-// Draw the dynamic image image whose buffer the caller refreshes each frame. opts tints and selects
-// fill-container scaling. Call inside a frame callback.
+// Draws an image whose pixels you refresh each frame.
+//
+// Call it inside a frame callback. The pixels are read when the frame is drawn, after the callback returns, so
+// the image shows what the buffer holds then. Nothing is drawn if `image` is null.
 FL_API void fl_dynamic_image(FlDynamicImage* image, FlImageOpts opts);
 
 

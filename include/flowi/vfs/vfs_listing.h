@@ -10,10 +10,10 @@ extern "C" {
 
 typedef struct FlVfsEntry FlVfsEntry;
 
-// Directory-listing callback, invoked once per entry during a directory
-// listing. user_data is the caller's opaque pointer passed to the listing
-// call; entry is valid only for the duration of the callback. Returns true to
-// continue listing, false to stop.
+// Called once for each entry of a directory listing.
+//
+// `user_data` is the pointer passed to the listing call. `entry` is valid only during the callback. Return true to
+// keep listing and false to stop.
 typedef bool (*FlVfsListingCallback)(void* user_data, const FlVfsEntry* entry);
 
 

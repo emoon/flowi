@@ -6,8 +6,12 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// The app runner: create it, drive it one frame at a time with tick or block in run until quit, and emit
-/// UI inside the supplied AppFrameFn. The `inject_*` / `headless_*` calls form the headless-test harness.
+/// An app that opens a window and runs the frame loop for it.
+///
+/// Create it with `App::create`, then either call `App::tick` once per frame or call `App::run` to block until the
+/// main window closes. Emit the UI inside the `AppFrameFn` you pass. Call `App::destroy` when you are done.
+///
+/// The `inject` and `headless` calls drive and read back an app created with `AppSettings.headless`, for tests.
 pub struct App {
     pub(crate) handle: *mut crate::sys::App,
 }
@@ -22,43 +26,49 @@ impl Drop for App {
 }
 
 impl App {
-    /// Headless harness: move the injected mouse cursor to (x, y) in window pixels. Captured by the next
-    /// tick's input pump and applied that tick, so it becomes the following frame's hit-test position.
+    /// Moves the injected mouse cursor to (`x`, `y`) in window pixels. Headless only.
+    ///
+    /// The next `App::tick` picks it up, and it becomes the hit-test position of the frame after that.
     #[inline]
     pub fn inject_mouse_move(&mut self, x: i32, y: i32) {
         unsafe { crate::sys::fl_app_inject_mouse_move(self.handle, x, y) }
     }
 
-    /// Headless harness: inject a raw relative-motion delta, as a hidden drag produces. The drag-delta query
-    /// reads it, scaled, that frame.
+    /// Injects a relative mouse motion, like the one a hidden drag produces. Headless only.
+    ///
+    /// The next `App::tick` picks it up.
     #[inline]
     pub fn inject_mouse_delta(&mut self, delta_x: f32, delta_y: f32) {
         unsafe { crate::sys::fl_app_inject_mouse_delta(self.handle, delta_x, delta_y) }
     }
 
-    /// Headless harness: inject a mouse-wheel delta. x/y are the per-frame wheel deltas (positive y =
-    /// scrolled up). Cached for that frame's scoped wheel-delta read, observed on the following tick.
+    /// Injects a mouse wheel delta (a positive `y` scrolls up). Headless only.
+    ///
+    /// The next `App::tick` picks it up.
     #[inline]
     pub fn inject_wheel(&mut self, x: f32, y: f32) {
         unsafe { crate::sys::fl_app_inject_wheel(self.handle, x, y) }
     }
 
-    /// Headless harness: inject a key transition. key is an FlKey; down is press vs. release. Observed by
-    /// the next tick's key queries.
+    /// Presses (`down` is true) or releases a key. Headless only.
+    ///
+    /// The next `App::tick` picks it up.
     #[inline]
     pub fn inject_key(&mut self, key: crate::sys::Key, down: bool) {
         unsafe { crate::sys::fl_app_inject_key(self.handle, key, down) }
     }
 
-    /// Headless harness: read back the sticky relative-mouse-mode toggle the core flushed to the input backend
-    /// on the last tick (on for the whole of a hidden drag).
+    /// Returns whether the last `App::tick` left the input backend in relative mouse mode. Headless only.
+    ///
+    /// It is on for as long as a hidden drag lasts.
     #[inline]
     pub fn headless_relative_mouse_mode(&self) -> bool {
         unsafe { crate::sys::fl_app_headless_relative_mouse_mode(self.handle) }
     }
 
-    /// Headless harness: read back the most recent warp-back target the core flushed to the input backend on
-    /// the last tick (set on a drag end).
+    /// Returns the last position the cursor was warped back to, in window pixels. Headless only.
+    ///
+    /// A hidden drag sets it when it ends.
     #[inline]
     pub fn headless_last_warp(&self) -> crate::sys::Vec2 {
         unsafe { crate::sys::fl_app_headless_last_warp(self.handle) }

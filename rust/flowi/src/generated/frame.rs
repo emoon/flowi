@@ -6,28 +6,33 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Controls properties captured in the active UI frame envelope. Frame opacity affects UI content only;
-/// full-screen background composition remains unaffected.
+/// Per-frame helpers: frame-lifetime strings, the frame opacity, the frame time and the screen size.
+///
+/// Call these from inside a frame, for example in an `AppFrameFn`.
 pub struct Frame;
 
 impl Frame {
-    /// Set frame-wide UI opacity (0 = transparent, 255 = opaque; default 255). Persists until changed.
+    /// Sets the opacity of the whole UI, from 0 (transparent) to 255 (opaque, the default).
+    ///
+    /// It stays until you change it. The background is not affected.
     #[inline]
     pub fn set_alpha(alpha: u8) {
         let _frame = crate::frame_thread::frame_thread_guard("Frame::set_alpha");
         unsafe { crate::sys::fl_frame_set_alpha(alpha) }
     }
 
-    /// Seconds elapsed since the previous frame. The frame-rate-independent step an animation or smooth-scroll
-    /// integrator multiplies into its per-second rate.
+    /// Returns the seconds since the previous frame.
+    ///
+    /// Multiply it into a per-second rate to animate independently of the frame rate.
     #[inline]
     pub fn delta_time() -> f32 {
         let _frame = crate::frame_thread::frame_thread_guard("Frame::delta_time");
         unsafe { crate::sys::fl_frame_delta_time() }
     }
 
-    /// Size of the drawable screen this frame, in logical pixels. The viewport a full-screen layout sizes itself
-    /// against, and the extent a virtualizing container measures its visible window from.
+    /// Returns the size of the drawable screen in logical pixels.
+    ///
+    /// Use it to size a full-screen layout.
     #[inline]
     pub fn screen_size() -> crate::sys::Vec2 {
         let _frame = crate::frame_thread::frame_thread_guard("Frame::screen_size");

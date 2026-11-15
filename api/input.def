@@ -1,7 +1,8 @@
 #[module(platform)]
 
-/// A mouse button. The discriminant carried on a mouse button event; Count is
-/// the array-size sentinel (not a button).
+/// A mouse button.
+///
+/// `MouseButton::Count` is the number of buttons, not a button.
 enum MouseButton {
     Left = 0,
     Right,
@@ -11,8 +12,9 @@ enum MouseButton {
     Count,
 }
 
-/// A gamepad button. The discriminant carried on a gamepad button event; Count
-/// is the array-size sentinel (not a button).
+/// A gamepad button.
+///
+/// `GamepadButton::Count` is the number of buttons, not a button.
 enum GamepadButton {
     A = 0,
     B,
@@ -32,8 +34,9 @@ enum GamepadButton {
     Count,
 }
 
-/// A gamepad analog axis. The discriminant carried on an axis-motion event;
-/// Count is the array-size sentinel (not an axis).
+/// A gamepad analog axis.
+///
+/// `GamepadAxis::Count` is the number of axes, not an axis.
 enum GamepadAxis {
     Left_X = 0,
     Left_Y,
@@ -44,8 +47,7 @@ enum GamepadAxis {
     Count,
 }
 
-/// What a KeyEvent represents. Constants spell `FlKeyEvent_*` while the type is
-/// FlKeyEventType.
+/// What a `KeyEvent` reports.
 #[enumerators(KeyEvent)]
 enum KeyEventType {
     Down = 0,
@@ -53,8 +55,7 @@ enum KeyEventType {
     Repeat,
 }
 
-/// What a MouseEvent represents (which union arm is live). Constants spell
-/// `FlMouseEvent_*` while the type is FlMouseEventType.
+/// What a `MouseEvent` reports. It also tells which payload of the event is set.
 #[enumerators(MouseEvent)]
 enum MouseEventType {
     Move = 0,
@@ -63,13 +64,11 @@ enum MouseEventType {
     Wheel,
     Enter,
     Leave,
-    /// Raw relative motion delivered while the mouse is in relative/unbounded mode
-    /// (a hidden drag). Carries a raw delta and no absolute position.
+    /// Raw motion during a hidden drag. It has a delta and no position.
     Relative_Motion,
 }
 
-/// What a GamepadEvent represents (which union arm is live). Constants spell
-/// `FlGamepadEvent_*` while the type is FlGamepadEventType.
+/// What a `GamepadEvent` reports. It also tells which payload of the event is set.
 #[enumerators(GamepadEvent)]
 enum GamepadEventType {
     Button_Down = 0,
@@ -79,8 +78,7 @@ enum GamepadEventType {
     Disconnected,
 }
 
-/// What a WindowEvent represents. Constants spell `FlWindowEvent_*` while the
-/// type is FlWindowEventType.
+/// What a `WindowEvent` reports. It also tells which payload of the event is set.
 #[enumerators(WindowEvent)]
 enum WindowEventType {
     None = 0,
@@ -88,13 +86,13 @@ enum WindowEventType {
     Focus_Lost,
     Resize,
     Close,
-    /// One file dropped onto the window from the OS. A multi-file drop delivers one
-    /// event per file.
+    /// A file was dropped onto the window. A drop of several files gives one event per file.
     Drop_File,
 }
 
-/// Absolute-motion arm of MouseEvent: the cursor position plus the
-/// position-derived delta since the previous move, in window pixels.
+/// The payload of a `MouseEvent` of type `MouseEventType::Move`.
+///
+/// It holds the cursor position and the change since the previous move, in window pixels.
 #[attributes(Copy)]
 struct MouseMoveData {
     x: f32,
@@ -103,8 +101,10 @@ struct MouseMoveData {
     delta_y: f32,
 }
 
-/// Button-transition arm of MouseEvent: which button, where, and the
-/// running click count (for double-click detection).
+/// The payload of a `MouseEvent` of type `MouseEventType::Button_Down` or `MouseEventType::Button_Up`.
+///
+/// It holds the button, the cursor position in window pixels and the click count, which you can use to detect a
+/// double-click.
 #[attributes(Copy)]
 struct MouseButtonData {
     button: MouseButton,
@@ -113,44 +113,51 @@ struct MouseButtonData {
     click_count: u32,
 }
 
-/// Wheel arm of MouseEvent: the per-event wheel delta (positive y =
-/// scrolled up).
+/// The payload of a `MouseEvent` of type `MouseEventType::Wheel`.
+///
+/// It holds the wheel delta of the event. A positive y means scrolled up.
 #[attributes(Copy)]
 struct MouseWheelData {
     x: f32,
     y: f32,
 }
 
-/// Relative-motion arm of MouseEvent: the raw hidden-drag delta, carried
-/// with no absolute position.
+/// The payload of a `MouseEvent` of type `MouseEventType::Relative_Motion`.
+///
+/// It holds the raw motion of a hidden drag.
 #[attributes(Copy)]
 struct MouseRelativeData {
     delta_x: f32,
     delta_y: f32,
 }
 
-/// Button-transition arm of GamepadEvent.
+/// The payload of a `GamepadEvent` of type `GamepadEventType::Button_Down` or `GamepadEventType::Button_Up`.
 #[attributes(Copy)]
 struct GamepadButtonData {
     button: GamepadButton,
 }
 
-/// Axis-motion arm of GamepadEvent: which axis and its normalized value.
+/// The payload of a `GamepadEvent` of type `GamepadEventType::Axis_Motion`.
+///
+/// It holds the axis and its new value.
 #[attributes(Copy)]
 struct GamepadAxisData {
     axis: GamepadAxis,
     value: f32,
 }
 
-/// Resize arm of WindowEvent: the new window size in pixels.
+/// The payload of a `WindowEvent` of type `WindowEventType::Resize`.
+///
+/// It holds the new window size in pixels.
 #[attributes(Copy)]
 struct WindowResizeData {
     width: u32,
     height: u32,
 }
 
-/// Drop arm of WindowEvent: the dropped file's OS path, and the cursor position in
-/// window pixels at the moment it was released.
+/// The payload of a `WindowEvent` of type `WindowEventType::Drop_File`.
+///
+/// It holds the path of the dropped file and the cursor position in window pixels where it was released.
 #[attributes(Copy)]
 struct WindowDropData {
     path: String,
@@ -158,7 +165,7 @@ struct WindowDropData {
     y: f32,
 }
 
-/// A keyboard event pushed from the platform into the UI context.
+/// A keyboard event for `Input::push_key_event`.
 #[attributes(Copy)]
 struct KeyEvent {
     type: KeyEventType,
@@ -168,16 +175,18 @@ struct KeyEvent {
     timestamp: u64,
 }
 
-/// A text-input (composed character) event. text is a per-frame FlString.
+/// A text input event for `Input::push_text_input_event`, holding the composed characters.
 #[attributes(Copy)]
 struct TextInputEvent {
     text: String,
     timestamp: u64,
 }
 
-/// A mouse event. type selects the live arm of the anonymous union (move for
-/// Move, button for Button_Down/Button_Up, wheel for Wheel,
-/// relative for Relative_Motion; Enter/Leave carry no payload).
+/// A mouse event for `Input::push_mouse_event`.
+///
+/// `type` says which payload is set: `move` for `MouseEventType::Move`, `button` for `MouseEventType::Button_Down`
+/// and `MouseEventType::Button_Up`, `wheel` for `MouseEventType::Wheel` and `relative` for
+/// `MouseEventType::Relative_Motion`. `MouseEventType::Enter` and `MouseEventType::Leave` have no payload.
 #[attributes(Copy)]
 struct MouseEvent {
     type: MouseEventType,
@@ -190,9 +199,11 @@ struct MouseEvent {
     timestamp: u64,
 }
 
-/// A gamepad event. type selects the live arm of the anonymous union (button
-/// for the button transitions, axis for Axis_Motion; connect/disconnect carry
-/// no payload). gamepad_id names the device.
+/// A gamepad event for `Input::push_gamepad_event`.
+///
+/// `gamepad_id` is the device. `type` says which payload is set: `button` for the two button types and `axis` for
+/// `GamepadEventType::Axis_Motion`. `GamepadEventType::Connected` and `GamepadEventType::Disconnected` have no
+/// payload.
 #[attributes(Copy)]
 struct GamepadEvent {
     type: GamepadEventType,
@@ -204,8 +215,10 @@ struct GamepadEvent {
     timestamp: u64,
 }
 
-/// A window event. type selects the live arm of the anonymous union (resize
-/// for Resize, drop for Drop_File; the focus/close types carry no payload).
+/// A window event for `Input::push_window_event`.
+///
+/// `type` says which payload is set: `resize` for `WindowEventType::Resize` and `drop` for
+/// `WindowEventType::Drop_File`. The other types have no payload.
 #[attributes(Copy)]
 struct WindowEvent {
     type: WindowEventType,

@@ -6,14 +6,14 @@
 extern "C" {
 #endif
 
-// A semantic UI action: the logical verb a widget responds to, independent of the physical input
-// that triggers it. The app binds keys and gamepad buttons to actions; those bindings are not part
-// of this API. The discriminant order is a stable plugin ABI.
+// What the user wants to do, independent of the key or gamepad button that triggers it.
 //
-// The text-editing, drag and scroll members are for internal use. No public query function consumes
-// them.
+// By default, Enter and Space give `FlAction_Confirm`, Escape gives `FlAction_Cancel` and the arrow keys give the
+// navigation actions. The gamepad has its own default buttons.
+//
+// `FlAction_Count` is the number of actions, not an action.
 typedef enum FlAction {
-    // No action / unset.
+    // No action.
     FlAction_None = 0,
     // Move focus up.
     FlAction_Nav_Up = 1,
@@ -23,45 +23,59 @@ typedef enum FlAction {
     FlAction_Nav_Left = 3,
     // Move focus right.
     FlAction_Nav_Right = 4,
-    // Move focus to the next item (Tab forward).
+    // Move focus to the next item. By default this is Tab.
     FlAction_Nav_Next = 5,
-    // Move focus to the previous item (Shift+Tab backward).
+    // Move focus to the previous item. By default this is Shift+Tab.
     FlAction_Nav_Prev = 6,
-    // Activate the focused item (Enter, Space, Gamepad A, Left Click).
+    // Activate the focused item. By default this is Enter or Space.
     FlAction_Confirm = 7,
-    // Dismiss / go back (ESC, Gamepad B).
+    // Dismiss or go back. By default this is Escape.
     FlAction_Cancel = 8,
-    // Open the system menu (Start button, ESC).
+    // Open the system menu. By default this is Escape.
     FlAction_Menu = 9,
-    // Begin a drag (left mouse button down). Internal-use.
+    // Begin a drag.
     FlAction_Drag_Start = 10,
-    // End a drag (left mouse button up). Internal-use.
+    // End a drag.
     FlAction_Drag_End = 11,
-    // Scroll up (mouse wheel up). Internal-use.
+    // Scroll up with the mouse wheel.
     FlAction_Scroll_Up = 12,
-    // Scroll down (mouse wheel down). Internal-use.
+    // Scroll down with the mouse wheel.
     FlAction_Scroll_Down = 13,
-    // Increment the focused value (Arrow right, +).
+    // Increment the focused value. By default this is the Right arrow or the plus key.
     FlAction_Increment = 14,
-    // Decrement the focused value (Arrow left, -).
+    // Decrement the focused value. By default this is the Left arrow or the minus key.
     FlAction_Decrement = 15,
-    // Toggle the focused item (Space for checkboxes).
+    // Toggle the focused item. By default this is Space.
     FlAction_Toggle = 16,
+    // Delete the character before the cursor.
     FlAction_Text_Backspace = 17,
+    // Delete the character after the cursor.
     FlAction_Text_Delete = 18,
+    // Move the cursor to the start of the text.
     FlAction_Text_Home = 19,
+    // Move the cursor to the end of the text.
     FlAction_Text_End = 20,
+    // Move the cursor one character left.
     FlAction_Text_Move_Left = 21,
+    // Move the cursor one character right.
     FlAction_Text_Move_Right = 22,
+    // Move the cursor one word left.
     FlAction_Text_Move_Word_Left = 23,
+    // Move the cursor one word right.
     FlAction_Text_Move_Word_Right = 24,
+    // Select all text.
     FlAction_Text_Select_All = 25,
+    // Copy the selected text.
     FlAction_Text_Copy = 26,
+    // Cut the selected text.
     FlAction_Text_Cut = 27,
+    // Paste text at the cursor.
     FlAction_Text_Paste = 28,
+    // Undo the last edit.
     FlAction_Text_Undo = 29,
+    // Redo the last undone edit.
     FlAction_Text_Redo = 30,
-    // Size sentinel: number of actions, not an action itself.
+    // The number of actions, not an action.
     FlAction_Count = 31,
 } FlAction;
 

@@ -6,21 +6,21 @@
 extern "C" {
 #endif
 
-// Navigation edges a UI plugin reports reaching: a bitmask returned from a plugin's update telling the
-// host which navigation boundaries were hit (so it can show/hide chrome such as a side panel). With None
-// the host auto-detects edges by watching focus changes; Override lets the plugin drive edges explicitly.
+// The edges a UI plugin reports it has reached, as a bitmask.
+//
+// Combine values with bitwise OR. `FlNavEdge_Override` says the plugin reports the edges itself.
 typedef enum FlNavEdge {
-    // Default: use automatic boundary detection.
+    // No edge is reported, and the host works the edges out itself.
     FlNavEdge_None = 0,
-    // Left edge reached (can't navigate further left).
+    // The left edge is reached.
     FlNavEdge_Left = 1,
-    // Right edge reached (can't navigate further right).
+    // The right edge is reached.
     FlNavEdge_Right = 2,
-    // Top edge reached (can't navigate further up).
+    // The top edge is reached.
     FlNavEdge_Up = 4,
-    // Bottom edge reached (can't navigate further down).
+    // The bottom edge is reached.
     FlNavEdge_Down = 8,
-    // Plugin is handling navigation explicitly (use the edge flags above).
+    // The plugin reports the edges itself, with the other flags.
     FlNavEdge_Override = 16,
 } FlNavEdge;
 

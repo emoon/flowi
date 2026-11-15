@@ -6,13 +6,20 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Font loading and selection: load fonts (including default/fallback), set the active font or a
-/// registered weight/style for rendering, and check or wait for their asynchronous loads to complete.
+/// Loading and choosing fonts.
+///
+/// Fonts load in the background. Call `Font::load` or `Font::load_default` for each font, then
+/// `Font::ensure_loaded` once before the first frame, or poll `Font::is_loaded`. Use `Font::set` or
+/// `Font::style_set` to choose which font text uses when it asks for font 0.
 pub struct Font;
 
 impl Font {
-    /// Load a TTF from path at default_size (unscaled px; 0 selects a built-in default).
-    /// Returns the font id (0 = invalid). Async: poll is_loaded for completion.
+    /// Starts loading the font file at `path` and returns its id, or 0 if the load cannot start.
+    ///
+    /// The path is resolved in the host's asset mount, and the call returns 0 if the host has none. Use
+    /// `Font::load_mount` to load from a mount of your own.
+    ///
+    /// `default_size` is the font's default size in unscaled pixels (0 uses 28, and values below 8 become 8).
     #[inline]
     pub fn load(path: impl AsRef<str>, default_size: u16) -> crate::sys::FontId {
         let path = path.as_ref();
@@ -20,54 +27,60 @@ impl Font {
         unsafe { crate::sys::fl_font_load(crate::sys::RawStr::borrow(path), default_size) }
     }
 
-    /// Load the built-in default font at default_size (unscaled px; 0 selects a built-in default).
-    /// Returns the font id (0 = invalid).
+    /// Loads the built-in font and returns its id, or 0 if the call fails.
+    ///
+    /// The font is ready at once. `default_size` multiplies the font's 8 pixel base size (0 uses 28, and values
+    /// below 8 become 8).
     #[inline]
     pub fn load_default(default_size: u16) -> crate::sys::FontId {
         let _frame = crate::frame_thread::frame_thread_guard("Font::load_default");
         unsafe { crate::sys::fl_font_load_default(default_size) }
     }
 
-    /// Make font the active font for text that uses font 0.
+    /// Makes `font` the active font, used by text that asks for font 0.
     #[inline]
     pub fn set(font: crate::sys::FontId) {
         let _frame = crate::frame_thread::frame_thread_guard("Font::set");
         unsafe { crate::sys::fl_font_set(font) }
     }
 
-    /// Register font as the font used for the given weight/style slot.
+    /// Sets `font` as the font for `style`.
+    ///
+    /// Choose it with `Font::style_set`.
     #[inline]
     pub fn style_register(font: crate::sys::FontId, style: crate::sys::FontStyle) {
         let _frame = crate::frame_thread::frame_thread_guard("Font::style_register");
         unsafe { crate::sys::fl_font_style_register(font, style) }
     }
 
-    /// Make the font registered for style the active font for text that uses font 0.
+    /// Makes the font registered for `style` the active font.
     #[inline]
     pub fn style_set(style: crate::sys::FontStyle) {
         let _frame = crate::frame_thread::frame_thread_guard("Font::style_set");
         unsafe { crate::sys::fl_font_style_set(style) }
     }
 
-    /// True once font's async load has completed and it is ready to render.
+    /// Returns whether `font` has finished loading and is ready to draw.
     #[inline]
     pub fn is_loaded(font: crate::sys::FontId) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Font::is_loaded");
         unsafe { crate::sys::fl_font_is_loaded(font) }
     }
 
-    /// Block until every kicked-off font has finished loading (metrics ready or failed), pumping I/O
-    /// meanwhile. Returns false if any font failed. Other async loads (images) keep streaming. Call once
-    /// after kicking off font loads in setup, before the first rendered frame.
+    /// Waits until every font that was started has finished loading.
+    ///
+    /// Returns false if any font failed to load. Call it once after starting your fonts in setup, before the first
+    /// frame is drawn.
     #[inline]
     pub fn ensure_loaded() -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Font::ensure_loaded");
         unsafe { crate::sys::fl_font_ensure_loaded() }
     }
 
-    /// Vertical metrics of font at size px (fractional allowed; 0 = the font's default size,
-    /// font 0 = the active font). String-independent, for stable vertical centering of dynamic
-    /// readouts. An unloaded font reports all zeroes.
+    /// Returns the vertical metrics of `font` at `size` pixels.
+    ///
+    /// Fractions are allowed. A `size` of 0 uses the font's default size, and font 0 is the active font. A font that
+    /// is not loaded gives all zeroes.
     #[inline]
     pub fn metrics(font: crate::sys::FontId, size: f32) -> crate::sys::FontMetrics {
         let _frame = crate::frame_thread::frame_thread_guard("Font::metrics");

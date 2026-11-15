@@ -1,8 +1,8 @@
-/// A keyboard key: the discriminant the Input::key_pressed / key_down / key_released
-/// queries take. Key queries are global and not bound to any widget: the app reads the key
-/// state and decides what it means.
+/// A keyboard key.
+///
+/// This is the key that `Input::key_pressed`, `Input::key_down` and `Input::key_released` take.
 enum Key {
-    /// No key / unknown key.
+    /// No key, or a key that is not listed.
     Unknown = 0,
 
     A,
@@ -58,7 +58,7 @@ enum Key {
     Right_Bracket,
     Grave_Accent,
 
-    /// First control/function key.
+    /// The first of the control and function keys, which start at 256.
     Escape = 256,
     Enter,
     Tab,
@@ -132,6 +132,6 @@ enum Key {
     Right_Super,
     Menu,
 
-    /// Size sentinel: number of keys, not a key itself.
+    /// The number of keys, not a key.
     Count,
 }

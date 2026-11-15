@@ -17,82 +17,119 @@
 extern "C" {
 #endif
 
-// Per-frame host callback. The host emits its UI inside this call, and the per-frame fl_frame_str arena
-// is valid for its duration. user_data is the opaque pointer the host passed to fl_app_tick / fl_app_run.
+// Draws one frame of a window.
+//
+// Emit the UI of the window inside this call. Strings made with `fl_frame_str` are valid until it returns.
+// `user_data` is the pointer you passed along with the callback.
 typedef void (*FlAppFrameFn)(void* user_data);
 
-// Opaque handle for the app runner that owns the window, the per-frame update loop, and presentation.
-// Created by fl_app_create, destroyed by fl_app_destroy.
+// An app that owns its window and its frame loop.
+//
+// Returned by `fl_app_create` and freed with `fl_app_destroy`.
 typedef struct FlApp FlApp;
 
-// Opaque handle for one window owned by an App.
+// A window opened with `fl_app_window_open`.
 typedef struct FlAppWindow FlAppWindow;
 
-// Initial settings for a host-opened window.
+// The settings for `fl_app_window_open`.
 typedef struct FlWindowSettings {
+    // The title of the window.
     FlString title;
+    // The initial width of the window (above 0).
     int32_t width;
+    // The initial height of the window (above 0).
     int32_t height;
+    // The x position of the window's top-left corner (the lowest `i32` value lets the backend choose).
     int32_t x;
+    // The y position of the window's top-left corner (the lowest `i32` value lets the backend choose).
     int32_t y;
 } FlWindowSettings;
 
-// The app runner: create it, drive it one frame at a time with tick or block in run until quit, and emit
-// UI inside the supplied AppFrameFn. The `inject_*` / `headless_*` calls form the headless-test harness.
-// Create an fl_app from settings. Returns null on failure (e.g. GPU requested on a build without it).
+// An app that opens a window and runs the frame loop for it.
+//
+// Create it with `fl_app_create`, then either call `fl_app_tick` once per frame or call `fl_app_run` to block until the
+// main window closes. Emit the UI inside the `FlAppFrameFn` you pass. Call `fl_app_destroy` when you are done.
+//
+// The `inject` and `headless` calls drive and read back an app created with `FlAppSettings.headless`, for tests.
+// Creates an app from `settings` and returns it, or null if it could not be created.
+//
+// The reason is logged. `FlAppSettings.width` and `FlAppSettings.height` must be above 0.
 FL_API FlApp* fl_app_create(const FlAppSettings* settings);
-// Tear the app down and free it. No-op on a null handle.
+// Destroys the app and everything it owns, its windows included.
+//
+// Does nothing if `app` is null.
 FL_API void fl_app_destroy(FlApp* app);
-// Run one frame: pump input, invoke the frame callback, and present. Returns false once a quit /
-// window-close has been seen.
+// Runs one frame and returns false once the main window has been closed.
+//
+// Pumps input, calls `frame` for the main window and presents. Windows opened with `fl_app_window_open` run in
+// the same call, each with the callback it was opened with.
 FL_API bool fl_app_tick(FlApp* app, void* user_data, FlAppFrameFn frame);
-// Blocking convenience: while (fl_app_tick(...)) {}.
+// Calls `fl_app_tick` in a loop until it returns false.
 FL_API void fl_app_run(FlApp* app, void* user_data, FlAppFrameFn frame);
-// Open another window owned and driven by app.
+// Opens another window and returns it, or null if it could not be opened.
+//
+// `frame` is called for this window on every `fl_app_tick`. If you call this inside a frame callback, the window
+// opens at the start of the next tick. If it cannot be opened then, it never appears.
 FL_API FlAppWindow* fl_app_window_open(FlApp* app, const FlWindowSettings* settings, FlAppFrameFn frame, void* user_data);
-// Request deferred closure of a host-opened window.
+// Closes a window opened with `fl_app_window_open`.
+//
+// The window closes at the start of the next `fl_app_tick`, so you can call this inside a frame callback. It does
+// nothing for the main window. That one closes when the user closes it.
 FL_API void fl_app_window_close(FlApp* app, FlAppWindow* window);
-// User UI-zoom preference: a relative multiplier on top of monitor DPI. 1.0 is DPI-correct; 1.25 makes the
-// whole UI 25% bigger regardless of monitor. Recomposed immediately against this app's monitor content
-// scale. Default 1.0.
+// Sets the UI zoom, a multiplier on top of the monitor's content scale (default 1.0).
+//
+// 1.0 matches the monitor. 1.25 makes the whole UI 25% bigger. `zoom` must be above 0. It applies to every
+// window at once.
 FL_API void fl_app_set_ui_zoom(FlApp* app, float zoom);
-// Headless harness: move the injected mouse cursor to (x, y) in window pixels. Captured by the next
-// tick's input pump and applied that tick, so it becomes the following frame's hit-test position.
+// Moves the injected mouse cursor to (`x`, `y`) in window pixels. Headless only.
+//
+// The next `fl_app_tick` picks it up, and it becomes the hit-test position of the frame after that.
 FL_API void fl_app_inject_mouse_move(FlApp* app, int32_t x, int32_t y);
-// Headless harness: inject a mouse-button transition. button is the MouseButton; down is press vs. release.
-// Drives click detection a frame later.
+// Presses (`down` is true) or releases a mouse button. Headless only.
+//
+// The next `fl_app_tick` picks it up, and a click is detected one frame later.
 FL_API void fl_app_inject_mouse_button(FlApp* app, FlMouseButton button, bool down);
-// Headless harness: inject a raw relative-motion delta, as a hidden drag produces. The drag-delta query
-// reads it, scaled, that frame.
+// Injects a relative mouse motion, like the one a hidden drag produces. Headless only.
+//
+// The next `fl_app_tick` picks it up.
 FL_API void fl_app_inject_mouse_delta(FlApp* app, float delta_x, float delta_y);
-// Headless harness: inject a mouse-wheel delta. x/y are the per-frame wheel deltas (positive y =
-// scrolled up). Cached for that frame's scoped wheel-delta read, observed on the following tick.
+// Injects a mouse wheel delta (a positive `y` scrolls up). Headless only.
+//
+// The next `fl_app_tick` picks it up.
 FL_API void fl_app_inject_wheel(FlApp* app, float x, float y);
-// Headless harness: inject a key transition. key is an FlKey; down is press vs. release. Observed by
-// the next tick's key queries.
+// Presses (`down` is true) or releases a key. Headless only.
+//
+// The next `fl_app_tick` picks it up.
 FL_API void fl_app_inject_key(FlApp* app, FlKey key, bool down);
-// Headless harness: inject a text-input string for the active frame.
+// Injects typed text. Headless only.
 FL_API void fl_app_inject_text(FlApp* app, FlString text);
-// Headless harness: inject a window-close request. The next tick observes it and returns false.
+// Injects a request to close the main window. Headless only.
+//
+// The next `fl_app_tick` returns false.
 FL_API void fl_app_inject_window_close(FlApp* app);
-// Headless harness: inject an OS file drop at (x, y) in window pixels. Observed by the next tick's
-// dropped-file queries.
+// Injects a file dropped on the window at (`x`, `y`) in window pixels. Headless only.
+//
+// The next `fl_app_tick` picks it up.
 FL_API void fl_app_inject_drop_file(FlApp* app, FlString path, float x, float y);
-// Headless harness: read back the CursorShape the core flushed to the input backend on the last tick.
-// A value outside the real shapes reads back as Arrow.
+// Returns the cursor shape that the last `fl_app_tick` asked the input backend for. Headless only.
+//
+// A shape that does not exist reads back as `FlCursorShape_Arrow`.
 FL_API FlCursorShape fl_app_headless_cursor_shape(FlApp* app);
-// Headless harness: read back the sticky relative-mouse-mode toggle the core flushed to the input backend
-// on the last tick (on for the whole of a hidden drag).
+// Returns whether the last `fl_app_tick` left the input backend in relative mouse mode. Headless only.
+//
+// It is on for as long as a hidden drag lasts.
 FL_API bool fl_app_headless_relative_mouse_mode(FlApp* app);
-// Headless harness: read back the most recent warp-back target the core flushed to the input backend on
-// the last tick (set on a drag end).
+// Returns the last position the cursor was warped back to, in window pixels. Headless only.
+//
+// A hidden drag sets it when it ends.
 FL_API FlVec2 fl_app_headless_last_warp(FlApp* app);
-// Pin the per-frame delta-time to a fixed step (headless only) so time-based behavior is reproducible:
-// every subsequent tick advances time by exactly dt seconds instead of sampling the wall clock. Pass
-// `dt <= 0` to return to wall-clock timing.
+// Makes every `fl_app_tick` advance time by `dt` seconds instead of by the clock. Headless only.
+//
+// Pass 0 or less to go back to the clock.
 FL_API void fl_app_set_test_dt(FlApp* app, float dt);
-// Read back the current frame's rendered pixels from the software backend (native interleaved RGB24).
-// Works in either mode; the headless harness uses it as the golden-comparison surface.
+// Fills `out` with the pixels of the main window's last rendered frame and returns true.
+//
+// Returns false if the render backend cannot read its pixels back. It works in headless and windowed apps.
 FL_API bool fl_app_read_pixels(FlApp* app, FlPixelReadback* out);
 
 

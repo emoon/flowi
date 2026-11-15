@@ -6,13 +6,14 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Text emission: emit adds a plain layout element, and styled adds a configurable run controlled by
-/// a TextConfig.
+/// Text that takes part in the layout.
+///
+/// Call `Text::emit` for plain text, or `Text::styled` to choose the font, size, color and wrapping. Use
+/// `Text::measure` to get the size of a line without drawing it.
 pub struct Text;
 
 impl Text {
-    /// Emit a plain layout-participating text element in the theme primary color: laid out as a normal child of
-    /// the current container.
+    /// Adds text in the theme's primary color as a child of the current container.
     #[inline]
     pub fn emit(text: impl AsRef<str>) {
         let text = text.as_ref();
@@ -20,8 +21,7 @@ impl Text {
         unsafe { crate::sys::fl_text_emit({ let s = text; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }) }
     }
 
-    /// Emit a configurable layout-participating text element: config carries font, size, color, spacing,
-    /// vertical alignment, and wrap control.
+    /// Adds text styled by `config` as a child of the current container.
     #[inline]
     pub fn styled(text: impl AsRef<str>, config: crate::sys::TextConfig) {
         let text = text.as_ref();
@@ -29,10 +29,10 @@ impl Text {
         unsafe { crate::sys::fl_text_styled({ let s = text; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, config) }
     }
 
-    /// Measure a single-line string without drawing it: its laid-out width plus letter spacing
-    /// (n−1 gaps), and the line's vertical metrics at the styled size. Uses the same styling inputs
-    /// as the painter styled draw, so a measured run matches what gets drawn. An unloaded font
-    /// measures as all zeroes; missing glyphs measure via the fallback face, same as rendering.
+    /// Measures a single line of text without drawing it.
+    ///
+    /// The result matches what `Painter::text_styled` draws with the same `style`. A font that is not loaded
+    /// measures as all zeroes.
     #[inline]
     pub fn measure(text: impl AsRef<str>, style: crate::sys::TextStyle) -> crate::sys::TextMetrics {
         let text = text.as_ref();

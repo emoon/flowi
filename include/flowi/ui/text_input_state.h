@@ -6,7 +6,9 @@
 extern "C" {
 #endif
 
-// Opaque cross-frame text-input editor state. Apps own it only through the TextInput create/destroy handle API.
+// The text and editing state of a `TextInput`.
+//
+// You only hold it through `TextInput`, which creates and frees it.
 typedef struct FlTextInputState FlTextInputState;
 
 

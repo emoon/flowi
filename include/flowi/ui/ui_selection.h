@@ -11,32 +11,41 @@
 extern "C" {
 #endif
 
-// Opaque caller-owned set of selected List stable ids. Created by create, destroyed by destroy.
+// The ids of the selected rows of a list.
+//
+// You own the set. Pass it to `fl_list_begin` and the list updates it.
 typedef struct FlSelectionSet FlSelectionSet;
 
-// Caller-owned storage of selected List stable ids. Feed it the List's per-frame SelectionRequests with
-// apply, query membership per row with contains, and read the whole selection with copy_ids.
-// Create an empty selection set. initial_capacity is a hint for the id count (0 -> built-in default; a
-// floor applies). Returns the handle; pair with destroy.
+// Stores the ids of the selected rows.
+//
+// Pass a set to `fl_list_begin` and the list updates it. Check a row with `fl_selection_set_contains` and read the
+// whole selection with `fl_selection_set_copy_ids`.
+// Creates an empty set.
+//
+// `initial_capacity` is the number of ids to make room for. 0 uses a default.
 FL_API FlSelectionSet* fl_selection_set_create(uint32_t initial_capacity);
-// Destroy a handle from create. No-op on a null handle.
+// Destroys the set. Does nothing for a null set.
 FL_API void fl_selection_set_destroy(FlSelectionSet* set);
-// True if id is currently selected.
+// Returns whether `id` is selected.
 FL_API bool fl_selection_set_contains(FlSelectionSet* set, uint64_t id);
-// Select (selected = true) or deselect (false) a single id.
+// Selects `id` if `selected` is true, and deselects it otherwise.
 FL_API void fl_selection_set_set(FlSelectionSet* set, uint64_t id, bool selected);
-// Remove every id (empty the set).
+// Deselects every id.
 FL_API void fl_selection_set_clear_all(FlSelectionSet* set);
-// Replace the set's contents with exactly the count ids at ids. Resolves SetAll(true).
+// Replaces the selection with exactly the `count` ids at `ids`.
 FL_API void fl_selection_set_set_all(FlSelectionSet* set, const uint64_t* ids, uint64_t count);
-// Fold req_count requests at reqs into the set, in array order. ordered_ids (id_count entries) is the
-// app's full ordered model, used to resolve a SetRange span / SetAll(true); may be null/0 when no such
-// request is present. A missing range endpoint applies nothing.
+// Applies `FlSelectionRequest` values to the set, in order.
+//
+// `ordered_ids` holds the ids of all `id_count` rows in display order. `FlSelectionRequestKind_SetRange` and
+// `FlSelectionRequestKind_SetAll` use it to find their rows. It can be null if neither is in `reqs`. A range
+// with an end that is not in `ordered_ids` changes nothing.
 FL_API void fl_selection_set_apply(FlSelectionSet* set, const FlSelectionRequest* reqs, uint64_t req_count, const uint64_t* ordered_ids, uint64_t id_count);
-// Number of selected ids.
+// Returns the number of selected ids.
 FL_API uint64_t fl_selection_set_len(FlSelectionSet* set);
-// Snapshot the selected ids into out (its slice length is the capacity); returns the number written (min of
-// len and capacity). Order is unspecified.
+// Writes the selected ids into `out` and returns how many it wrote.
+//
+// It writes at most `cap` ids, in no particular order. Compare the result with `fl_selection_set_len` to see if
+// `out` was big enough.
 FL_API uint64_t fl_selection_set_copy_ids(FlSelectionSet* set, uint64_t* out, uint64_t cap);
 
 

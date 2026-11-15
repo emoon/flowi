@@ -1,21 +1,28 @@
 #[module(core)]
 
-/// Always-on lightweight per-frame profiler that records a hierarchical scope tree
-/// per thread. Pair frame_begin/frame_end around each frame and begin/end
-/// around timed scopes; the tree auto-prints when a main-thread frame exceeds its budget.
+/// A frame profiler that records how long nested scopes take.
+///
+/// Call `PerfScope::init` once on the main thread. Each frame, call `PerfScope::frame_begin`, wrap the code you want
+/// to time in `PerfScope::begin` and `PerfScope::end`, and call `PerfScope::frame_end`. When the first scope of a
+/// frame on the main thread takes longer than 17 ms, `PerfScope::frame_end` logs a warning with the time of every
+/// scope.
 api PerfScope {
-    /// Initialize the profiler for the calling (main) thread. Call once at startup.
+    /// Marks the calling thread as the main thread. Call it once at startup.
     [manual] init()
-    /// Reset the profiler's thread-local state. Call at application shutdown.
+    /// Clears the profiler state of the calling thread. Call it at application shutdown.
     [manual] destroy()
-    /// Open a timing scope named name and return its stack index (pass it to
-    /// end). Returns UINT32_MAX on overflow (the matching end is a no-op).
+    /// Starts a timing scope called `name` and returns its index.
+    ///
+    /// Pass the index to `PerfScope::end`. `name` must stay valid until the end of the frame. Scopes nest, and each
+    /// thread records its own. If the thread has no room for another scope, it returns `u32::MAX`, and passing that to
+    /// `PerfScope::end` does nothing.
     [manual] begin(name: *const char) -> u32
-    /// Close the timing scope at stack_index (the value begin returned).
+    /// Ends the timing scope that `PerfScope::begin` returned `stack_index` for.
+    ///
+    /// Scopes must end in the reverse order they began. Ending any other scope does nothing.
     [manual] end(stack_index: u32)
-    /// Begin a frame: clear the per-thread scope tree for the new frame.
+    /// Starts a frame by clearing the scopes the calling thread recorded.
     [manual] frame_begin()
-    /// End a frame: on the main thread, print the scope tree if the frame exceeded
-    /// the budget.
+    /// Ends a frame. On the main thread, it logs the scopes if the first scope took longer than 17 ms.
     [manual] frame_end()
 }

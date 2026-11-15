@@ -1,46 +1,52 @@
-/// The mouse pointer's system shape. Arrow is the default and the per-frame fallback when
-/// nothing requests a shape.
+/// The shape of the mouse pointer.
+///
+/// `CursorShape::Arrow` is the default. It is used on a frame where nothing requests a shape.
 enum CursorShape {
-    /// Default arrow pointer.
+    /// The default arrow pointer.
     Arrow = 0,
-    /// Pointing hand (links, draggable affordances).
+    /// A pointing hand.
     Hand = 1,
-    /// Horizontal resize (left/right).
+    /// A horizontal resize pointer (left and right).
     ResizeH = 2,
-    /// Vertical resize (up/down).
+    /// A vertical resize pointer (up and down).
     ResizeV = 3,
-    /// Top-left/bottom-right diagonal resize ("\").
+    /// A diagonal resize pointer from top left to bottom right.
     ResizeDiagonal1 = 4,
-    /// Top-right/bottom-left diagonal resize ("/").
+    /// A diagonal resize pointer from top right to bottom left.
     ResizeDiagonal2 = 5,
-    /// I-beam text caret.
+    /// An I-beam for text.
     Text = 6,
+    /// A crosshair.
     Crosshair = 7,
-    /// Not-allowed / blocked.
+    /// A pointer that shows the action is not allowed.
     NotAllowed = 8,
-    /// Number of cursor shapes; not a real shape.
+    /// The number of shapes, not a shape.
     Count = 9,
 }
 
-/// The cursor value fl_cursor_set takes, carrying a system CursorShape.
+/// A cursor request for `Cursor::set`.
 #[attributes(Copy)]
 struct Cursor {
     /// The requested system shape.
     shape: CursorShape,
 }
 
-/// Cursor shape and visibility requests. Pair set/get_requested for the shape and
-/// set_visible/get_visible for visibility.
+/// The pointer shape and whether the pointer is visible.
+///
+/// The shape is a request for one frame. A widget that wants a pointer other than the arrow calls `Cursor::set`
+/// on every frame it is active. The visibility stays as you set it until you change it.
 #[frame_context]
 api Cursor {
-    /// Request a pointer shape for this frame: per-frame, last-writer-wins, reset to the arrow at frame start.
-    /// A widget wanting a non-arrow cursor re-requests it every active frame; with no request the cursor falls
-    /// back to the arrow.
+    /// Requests the pointer shape for this frame.
+    ///
+    /// If several requests are made in a frame, the last one wins. With no request the pointer is the arrow.
     set(cursor: Cursor)
-    /// The cursor resolved for this frame: the last set request, or the arrow if none.
+    /// Returns the pointer requested so far this frame, or the arrow if there is none.
     get_requested() -> Cursor
-    /// Toggle cursor visibility. Unlike the shape request this is a sticky toggle (not reset per frame).
+    /// Shows or hides the pointer.
+    ///
+    /// Unlike the shape, this is not reset every frame.
     set_visible(visible: bool)
-    /// The current cursor-visibility request (sticky).
+    /// Returns whether the pointer is visible.
     get_visible() -> bool
 }

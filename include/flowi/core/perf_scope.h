@@ -9,22 +9,29 @@
 extern "C" {
 #endif
 
-// Always-on lightweight per-frame profiler that records a hierarchical scope tree
-// per thread. Pair frame_begin/frame_end around each frame and begin/end
-// around timed scopes; the tree auto-prints when a main-thread frame exceeds its budget.
-// Initialize the profiler for the calling (main) thread. Call once at startup.
+// A frame profiler that records how long nested scopes take.
+//
+// Call `fl_perf_scope_init` once on the main thread. Each frame, call `fl_perf_scope_frame_begin`, wrap the code you want
+// to time in `fl_perf_scope_begin` and `fl_perf_scope_end`, and call `fl_perf_scope_frame_end`. When the first scope of a
+// frame on the main thread takes longer than 17 ms, `fl_perf_scope_frame_end` logs a warning with the time of every
+// scope.
+// Marks the calling thread as the main thread. Call it once at startup.
 FL_API void fl_perf_scope_init(void);
-// Reset the profiler's thread-local state. Call at application shutdown.
+// Clears the profiler state of the calling thread. Call it at application shutdown.
 FL_API void fl_perf_scope_destroy(void);
-// Open a timing scope named name and return its stack index (pass it to
-// end). Returns UINT32_MAX on overflow (the matching end is a no-op).
+// Starts a timing scope called `name` and returns its index.
+//
+// Pass the index to `fl_perf_scope_end`. `name` must stay valid until the end of the frame. Scopes nest, and each
+// thread records its own. If the thread has no room for another scope, it returns `u32::MAX`, and passing that to
+// `fl_perf_scope_end` does nothing.
 FL_API uint32_t fl_perf_scope_begin(const char* name);
-// Close the timing scope at stack_index (the value begin returned).
+// Ends the timing scope that `fl_perf_scope_begin` returned `stack_index` for.
+//
+// Scopes must end in the reverse order they began. Ending any other scope does nothing.
 FL_API void fl_perf_scope_end(uint32_t stack_index);
-// Begin a frame: clear the per-thread scope tree for the new frame.
+// Starts a frame by clearing the scopes the calling thread recorded.
 FL_API void fl_perf_scope_frame_begin(void);
-// End a frame: on the main thread, print the scope tree if the frame exceeded
-// the budget.
+// Ends a frame. On the main thread, it logs the scopes if the first scope took longer than 17 ms.
 FL_API void fl_perf_scope_frame_end(void);
 
 

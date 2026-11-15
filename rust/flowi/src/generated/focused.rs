@@ -6,11 +6,11 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Query for the currently focused widget id.
+/// The widget that holds keyboard focus.
 pub struct Focused;
 
 impl Focused {
-    /// The id of the widget that currently holds focus this frame, or 0 when nothing is focused.
+    /// Returns the id of the widget that holds focus this frame, or 0 when nothing is focused.
     #[inline]
     pub fn id() -> u32 {
         let _frame = crate::frame_thread::frame_thread_guard("Focused::id");
