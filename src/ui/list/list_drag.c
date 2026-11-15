@@ -79,7 +79,7 @@ static const u64* collect_from_ids(FlListContext* self, u64 press_id, u32* out_c
 // centre of the gap before row ins), clamped to the viewport.
 static void draw_insertion(FlListContext* self, const ListViewport* vp, f64 scroll, u32 ins) {
     f64 line_content_y
-        = (f64)ins * (f64)list_row_stride(self) - (f64)self->current_gap * 0.5; // middle of the preceding gap
+        = (f64)ins * (f64)list_row_stride(self) - (f64)self->current_gap_px * 0.5; // middle of the preceding gap
     f32 screen_y = clamp(vp->top + (f32)(line_content_y - scroll), vp->top, vp->bottom);
 
     list_draw_overlay(self, &(ListOverlay) {
@@ -96,7 +96,7 @@ static void draw_insertion(FlListContext* self, const ListViewport* vp, f64 scro
 
 // Draw the drag ghost: a translucent, row-height, viewport-width fill centred on the cursor vertically.
 static void draw_ghost(FlListContext* self, const ListViewport* vp) {
-    f32 height = self->current_row_height;
+    f32 height = self->current_row_px;
     f32 top = self->ui_ctx->input_state.mouse.y - height * 0.5f;
 
     const FlThemeColors* theme = fl_theme_colors();
@@ -154,7 +154,7 @@ void list_drag_update(FlListContext* self, ListState* st) {
     // while edge auto-scroll advances scroll underneath it.
     f64 scroll = list_scroll_offset(self);
     f64 cur_content_y = list_clamped_content_y(self, &vp, scroll);
-    u32 ins = insertion_index(cur_content_y, list_row_stride(self), self->current_row_height, self->rows.count);
+    u32 ins = insertion_index(cur_content_y, list_row_stride(self), self->current_row_px, self->rows.count);
     DropTarget drop = drop_target_for(self, ins);
 
     u32 from_count = 0;

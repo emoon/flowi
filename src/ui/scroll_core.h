@@ -16,6 +16,7 @@
 typedef struct ScrollExtent {
     f64 viewport;
     f64 content;
+    f32 bar_strip;
 } ScrollExtent;
 
 // Ease offset toward target, scaled by real frame time dt so the result is the same

@@ -158,7 +158,8 @@ extern "C" {
     pub fn fl_tree_begin_virtual(id: crate::sys::LayoutId, root_count: u32, expanded: *const crate::sys::TreeExpanded, count: u32, set: *mut crate::sys::SelectionSet, config: crate::sys::TreeConfig) -> crate::sys::ListRange;
     /// Returns which child a row of a virtual tree is, so you know what to draw.
     ///
-    /// Call this between `Tree::begin_virtual` and `Tree::end`.
+    /// It works from `Tree::begin_virtual` until another tree begins or the frame ends. After `Tree::end`, pass
+    /// it `TreeResult.toggled_row` to find the node to expand or collapse.
     pub fn fl_tree_row_at(row: u32) -> crate::sys::TreeVirtualRow;
     /// Starts a row of a virtual tree, like `Tree::item_begin`.
     ///

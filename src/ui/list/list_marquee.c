@@ -6,8 +6,8 @@
 // not move it.
 //
 // The container is not registered as an interactive item: the empty-space test is "a press this frame that no row
-// consumed, inside the container's viewport rect". Coverage works in boundingBox/mouse pixel space and assumes
-// ui_scale == 1 (logical == physical); only the overlay's draw divides by scale.
+// consumed, inside the container's viewport rect". Coverage works in boundingBox/mouse pixel space, with the row
+// height and gap in physical pixels; only the overlay's draw divides by scale.
 
 #include "list_private.h"
 #include <core/math.h>
@@ -39,8 +39,8 @@ typedef struct RowSpan {
 static RowSpan covered_rows(const FlListContext* self, Band band) {
     f64 stride = list_row_stride(self);
     i64 count = (i64)self->rows.count;
-    i64 lo = (i64)ceil((band.lo - (f64)self->current_row_height) / stride); // first row whose bottom > band_lo
-    i64 hi = (i64)ceil(band.hi / stride) - 1;                               // last row whose top < band_hi
+    i64 lo = (i64)ceil((band.lo - (f64)self->current_row_px) / stride); // first row whose bottom > band_lo
+    i64 hi = (i64)ceil(band.hi / stride) - 1;                           // last row whose top < band_hi
     if (lo < 0) {
         lo = 0;
     }

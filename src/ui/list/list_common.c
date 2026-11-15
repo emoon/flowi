@@ -2,6 +2,7 @@
 // geometry, edge auto-scroll and the floating overlay rectangles.
 
 #include "list_private.h"
+#include "../pixel_snap.h"
 #include <core/math.h>
 #include "../layout.h"
 #include "../list_uniform.h"
@@ -69,7 +70,7 @@ bool list_viewport_contains(const ListViewport* vp, f32 x, f32 y) {
 }
 
 f32 list_row_stride(const FlListContext* self) {
-    return self->current_row_height + self->current_gap;
+    return self->current_row_px + self->current_gap_px;
 }
 
 f64 list_scroll_offset(const FlListContext* self) {
@@ -106,14 +107,15 @@ void list_edge_autoscroll(FlListContext* self, const ListViewport* vp) {
 
     f32 dir = overshoot > 0.0f ? 1.0f : -1.0f;
     f32 mag = fminf(fabsf(overshoot), LIST_AUTOSCROLL_MAX_OVERSHOOT);
-    f32 step = dir * (LIST_AUTOSCROLL_BASE_SPEED + mag * LIST_AUTOSCROLL_GAIN) * ui->delta_time;
+    f32 speed = (LIST_AUTOSCROLL_BASE_SPEED + mag * LIST_AUTOSCROLL_GAIN) * ui_scale_or_one(ui->ui_scale);
+    f32 step = dir * speed * ui->delta_time;
     list_uniform_nudge_scroll(ui->list_uniform_ctx, self->current_id.name, step, list_row_stride(self),
                               self->rows.count);
 }
 
 // A floating element is authored in logical pixels, so position and size are divided by ui_scale here.
 void list_draw_overlay(FlListContext* self, const ListOverlay* rect) {
-    f32 scale = self->ui_ctx->ui_scale > 0.0f ? self->ui_ctx->ui_scale : 1.0f;
+    f32 scale = ui_scale_or_one(self->ui_ctx->ui_scale);
 
     fl_floating_start((FlLayoutId) { .name = self->current_id.name, .id = rect->float_seed });
     fl_floating_configure((FlFloatingConfig) {

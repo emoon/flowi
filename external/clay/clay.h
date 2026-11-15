@@ -2357,7 +2357,7 @@ void Clay__InitializePersistentMemory(Clay_Context* context) {
     int32_t maxMeasureTextCacheWordCount = context->maxMeasureTextCacheWordCount;
     Clay_Arena *arena = &context->internalArena;
 
-    context->scrollContainerDatas = Clay__ScrollContainerDataInternalArray_Allocate_Arena(100, arena);
+    context->scrollContainerDatas = Clay__ScrollContainerDataInternalArray_Allocate_Arena(1024, arena);
     context->transitionDatas = Clay__TransitionDataInternalArray_Allocate_Arena(200, arena);
     context->layoutElementsHashMapInternal = Clay__LayoutElementHashMapItemArray_Allocate_Arena(maxElementCount, arena);
     context->layoutElementsHashMap = Clay__int32_tArray_Allocate_Arena(maxElementCount, arena);
@@ -4456,7 +4456,9 @@ void Clay_UpdateScrollContainers(bool enableDragScrolling, Clay_Vector2 scrollDe
     for (int32_t i = 0; i < context->scrollContainerDatas.length; i++) {
         Clay__ScrollContainerDataInternal *scrollData = Clay__ScrollContainerDataInternalArray_Get(&context->scrollContainerDatas, i);
         if (!scrollData->openThisFrame) {
+            // FLOWI: step back so the entry swapped into this slot is checked too
             Clay__ScrollContainerDataInternalArray_RemoveSwapback(&context->scrollContainerDatas, i);
+            i--;
             continue;
         }
         scrollData->openThisFrame = false;
@@ -4464,6 +4466,7 @@ void Clay_UpdateScrollContainers(bool enableDragScrolling, Clay_Vector2 scrollDe
         // Element isn't rendered this frame but scroll offset has been retained
         if (!hashMapItem) {
             Clay__ScrollContainerDataInternalArray_RemoveSwapback(&context->scrollContainerDatas, i);
+            i--;
             continue;
         }
 

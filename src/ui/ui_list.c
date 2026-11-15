@@ -175,7 +175,8 @@ FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
     f32 row_height = args.config.row_height > 0.0f ? args.config.row_height : LIST_ROW_DEFAULT_HEIGHT;
     f32 gap = args.config.gap > 0.0f ? args.config.gap : LIST_ROW_DEFAULT_GAP;
     self->current_row_height = row_height;
-    self->current_gap = gap;
+    self->current_row_px = list_uniform_row_px(self->ui_ctx, row_height);
+    self->current_gap_px = list_uniform_gap_px(self->ui_ctx, gap);
 
     // list_uniform provides the scroll engine and uniform-height layout container; the ordered-id count is the
     // virtualization total.
@@ -448,7 +449,7 @@ static void list_decl_row_content(const FlListItem* it, f32 row_height) {
     if (it->icon != FL_IMAGE_HANDLE_INVALID) {
         list_decl_icon(it, row_height);
     }
-    ui_text(it->label);
+    ui_text_styled(it->label, .color = fl_theme_colors()->text.primary);
     fl_layout_end();
 }
 

@@ -33,7 +33,8 @@ impl Tree {
 
     /// Returns which child a row of a virtual tree is, so you know what to draw.
     ///
-    /// Call this between `Tree::begin_virtual` and `Tree::end`.
+    /// It works from `Tree::begin_virtual` until another tree begins or the frame ends. After `Tree::end`, pass
+    /// it `TreeResult.toggled_row` to find the node to expand or collapse.
     #[inline]
     pub fn row_at(row: u32) -> crate::sys::TreeVirtualRow {
         let _frame = crate::frame_thread::frame_thread_guard("Tree::row_at");

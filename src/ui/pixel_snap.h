@@ -10,3 +10,7 @@ static inline float ui_snap_to_pixel(float value) {
 static inline float ui_scale_and_snap(float value, float scale) {
     return ui_snap_to_pixel(value * scale);
 }
+
+static inline float ui_scale_or_one(float scale) {
+    return scale > 0.0f ? scale : 1.0f;
+}

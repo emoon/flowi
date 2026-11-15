@@ -7,6 +7,7 @@
 #include <core/hashmap.h>
 #include <core/log.h>
 #include "layout.h"
+#include "pixel_snap.h"
 #include "scroll_core.h"
 #include "ui.h"
 #include "ui_private.h"
@@ -103,7 +104,8 @@ static void scroll_by_wheel(FlListUniformContext* self, f64 max_scroll) {
     if (wheel_y == 0.0f || !wheel_scope_owns_wheel(self->ui_ctx, self->current_layout_id)) {
         return;
     }
-    f64 target = self->current_state->scroll_target - (f64)(wheel_y * SCROLL_CORE_DEFAULT_WHEEL_SPEED);
+    f32 step = wheel_y * SCROLL_CORE_DEFAULT_WHEEL_SPEED * ui_scale_or_one(self->ui_ctx->ui_scale);
+    f64 target = self->current_state->scroll_target - (f64)step;
     self->current_state->scroll_target = clamp(target, 0.0, max_scroll);
 }
 
@@ -115,7 +117,11 @@ static void scrollbar_update(FlListUniformContext* self) {
     }
 
     ListUniformState* state = self->current_state;
-    ScrollExtent extent = { .viewport = self->viewport_height, .content = self->content_height };
+    ScrollExtent extent = {
+        .viewport = self->viewport_height,
+        .content = self->content_height,
+        .bar_strip = ui_scroll_overlay_bar_reserve(),
+    };
     f64 max_scroll = scroll_max(extent.content, extent.viewport);
     f32 shown = max_scroll > 0.0 ? (f32)(state->scroll_offset / max_scroll) : 0.0f;
     f32 normalized = shown;
@@ -126,6 +132,14 @@ static void scrollbar_update(FlListUniformContext* self) {
         state->scroll_offset = (f64)normalized * max_scroll;
         state->scroll_target = state->scroll_offset;
     }
+}
+
+f32 list_uniform_row_px(const FlUiCtx* ctx, f32 row_height) {
+    return row_height * ui_scale_or_one(ctx->ui_scale);
+}
+
+f32 list_uniform_gap_px(const FlUiCtx* ctx, f32 gap) {
+    return ui_scale_and_snap(gap, ui_scale_or_one(ctx->ui_scale));
 }
 
 void list_uniform_begin_update(FlListUniformContext* self) {
@@ -147,9 +161,8 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
 
     self->in_item = false;
 
-    f32 item_height = opts.height_hint > 0.0f ? opts.height_hint : 32.0f;
-
-    f32 gap = self->current_opts.gap;
+    f32 item_height = list_uniform_row_px(self->ui_ctx, opts.height_hint > 0.0f ? opts.height_hint : 32.0f);
+    f32 gap = list_uniform_gap_px(self->ui_ctx, self->current_opts.gap);
 
     // Until a height has been measured (first frame), size the viewport to ~5 items.
     f32 container_height = self->current_state->container_height;
@@ -191,7 +204,7 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
         .sizing = { sizing_grow(), sizing_grow() },
         .padding = { .right = (u16)bar_reserve },
         .direction = LayoutDirection_TopToBottom,
-        .child_gap = gap,
+        .child_gap = self->current_opts.gap,
         .clip = { .vertical = true, .manual_scroll = true, .scroll_pos = scroll_pos },
     });
 

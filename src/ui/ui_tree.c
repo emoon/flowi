@@ -7,6 +7,7 @@
 #include "painter.h"
 #include "tree_flat.h"
 #include "ui.h"
+#include "ui_widget_internal.h"
 
 #include <math.h>
 
@@ -27,6 +28,7 @@ struct FlTreeContext {
     FlListContext* list;
     const FlTreeRow* rows;
     TreeFlat flat;
+    u64 flat_frame;
     bool is_virtual;
     u32 count;
     f32 indent;
@@ -158,7 +160,7 @@ static void arrow_slot(FlTreeContext* self, u32 row, bool expanded) {
     fl_layout_start(arrow_id);
     fl_layout_configure((FlLayoutConfig) {
         .sizing = { sizing_fixed(self->indent), sizing_fixed(height) },
-        .clip = { .horizontal = true, .vertical = true },
+        .color = UI_HIT_TEST_FILL(1),
     });
     FlSignal signal = fl_item_behavior(arrow_id, FlItemFlags_clickable);
     if (signal.pressed) {
@@ -183,7 +185,7 @@ static FlSignal row_begin(FlTreeContext* self, u32 row, FlTreeRow r) {
     FlSignal signal = list_item_begin_impl(self->list, r.id);
     fl_layout_start_auto();
     fl_layout_configure((FlLayoutConfig) {
-        .sizing = { sizing_grow(), sizing_fit() },
+        .sizing = { sizing_grow(), sizing_fixed(self->list->current_row_height) },
         .direction = LayoutDirection_LeftToRight,
         .child_alignment = { .y = LayoutAlignmentY_Center },
     });
@@ -302,6 +304,7 @@ FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTr
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     self->flat = tree_flat_build(ui_get_ctx()->render_frame_allocator, root_count, expanded, count);
     self->is_virtual = true;
+    self->flat_frame = ui_get_ctx()->frame_counter;
     self->rows = nullptr;
     self->count = self->flat.row_count;
     tree_reset_frame(self, config.indent);
@@ -319,7 +322,8 @@ FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTr
 
 FlTreeVirtualRow fl_tree_row_at(uint32_t row) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    bool has_row = self->is_virtual && row < self->count;
+    bool this_frame = self->is_virtual && self->flat_frame == ui_get_ctx()->frame_counter;
+    bool has_row = this_frame && row < self->count;
     FL_ASSERT(has_row);
     if (!has_row) {
         return (FlTreeVirtualRow) { .parent = -1, .node = -1 };

@@ -72,13 +72,14 @@ struct FlListContext {
     hashmap(u32, ListState) list_states; // list clay id -> persisted anchor/focus
 
     // Current list being emitted (set in begin)
-    FlLayoutId current_id;      // Identifies the list container; row ids derive from its name
-    u32 current_clay_id;        // ui_layout_id_to_clay_id(current_id), the key into list_states
-    ListRows rows;              // The list's rows, borrowed for this begin->end scope
-    FlSelectionSet* set;        // Caller-owned selection storage (nullptr = opt out of auto-apply/highlight)
-    u32 emit_pos;               // Auto-tracked emission position of the next row (absolute index)
-    f32 current_row_height;     // Resolved row height this frame (marquee maps content Y -> row index with this)
-    f32 current_gap;            // Resolved inter-row gap this frame
+    FlLayoutId current_id;  // Identifies the list container; row ids derive from its name
+    u32 current_clay_id;    // ui_layout_id_to_clay_id(current_id), the key into list_states
+    ListRows rows;          // The list's rows, borrowed for this begin->end scope
+    FlSelectionSet* set;    // Caller-owned selection storage (nullptr = opt out of auto-apply/highlight)
+    u32 emit_pos;           // Auto-tracked emission position of the next row (absolute index)
+    f32 current_row_height; // Resolved row height this frame, in logical pixels (for layout)
+    f32 current_row_px;
+    f32 current_gap_px;
     bool suppress_drag_visuals; // config.suppress_drag_visuals this frame (gates the built-in ghost/insertion line)
 
     // Policy toggles resolved at begin (default off = the scoped face's always-multi-select, always-reorderable
