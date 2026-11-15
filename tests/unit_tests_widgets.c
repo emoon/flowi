@@ -1737,6 +1737,49 @@ UTEST(ui_slider, int_slider_with_a_small_range_still_moves) {
     ASSERT_EQ_MSG(value, 6, "one wheel step moves the integer slider by one");
 }
 
+// One frame of a synthetic gesture over a vertical scrollbar in a 100px column.
+static void scrollbar_click_frame(FlUiCtx* ctx, float* value, float mx, float my, bool held, bool pressed,
+                                  bool released) {
+    FlInputState* in = &ctx->input_state;
+    ui_input_set_mouse_position(ctx, mx, my);
+    in->mouse.buttons[FlMouseButton_Left] = held;
+    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed;
+    in->mouse.buttons_released[FlMouseButton_Left] = released;
+    ui_input_update(ctx, 1.0f / 60.0f);
+
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { sizing_fixed(100.0f), sizing_fixed(100.0f) }) {
+        ui_scrollbar(value, .min = 0.0f, .max = 100.0f, .min_thumb_size = 200.0f);
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+}
+
+// A scrollbar whose thumb is as long as its track has no travel, so grabbing it leaves the value alone.
+UTEST(ui_scrollbar, grabbing_a_thumb_that_fills_the_track_keeps_the_value) {
+    FlAppSettings settings = { .window_title = FL_S("scrollbar_short"), .width = 400, .height = 400, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+    FlUiCtx* ctx = ui_get_ctx();
+    ctx->ui_scale = 1.0f;
+    ctx->layout_width = 400.0f;
+    ctx->layout_height = 400.0f;
+    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
+
+    float value = 50.0f;
+    for_count(i, 2) {
+        scrollbar_click_frame(ctx, &value, -100.0f, -100.0f, false, false, false);
+    }
+    const float mx = 4.0f;
+    const float my = 50.0f;
+    scrollbar_click_frame(ctx, &value, mx, my, false, false, false);
+    scrollbar_click_frame(ctx, &value, mx, my, false, false, false);
+    scrollbar_click_frame(ctx, &value, mx, my, true, true, false);
+    scrollbar_click_frame(ctx, &value, mx, my, false, false, true);
+
+    ASSERT_NEAR_MSG((double)value, 50.0, 1e-4, "a press on a thumb that fills the track does not move the value");
+    fl_app_destroy(app);
+}
+
 // FlTabBarConfig's item and strip fields set the tab geometry, and a zeroed config leaves the strip at its
 // built-in geometry (the dock leaf header passes a zeroed one). The case checks the debug render-command
 // snapshot, so the numbers in the assertions are the geometry.

@@ -171,10 +171,10 @@ static bool scrollbar_grabbed(FlSignal signal) {
     return signal.dragging || (signal.clicked && signal.hovered);
 }
 
-// Thumb position in [0, 1] that centers the thumb on the mouse. usable_track is 0 when the thumb fills the track.
+// Thumb position in [0, 1] that centers the thumb on the mouse. usable_track must be positive.
 static f32 scrollbar_normalized_at_mouse(f32 mouse_pos, f32 track_start, f32 thumb_size, f32 usable_track) {
     f32 relative_pos = mouse_pos - track_start - (thumb_size / 2.0f);
-    return usable_track > 0.0f ? clamp(relative_pos / usable_track, 0.0f, 1.0f) : 0.0f;
+    return clamp(relative_pos / usable_track, 0.0f, 1.0f);
 }
 
 // Sizing from an extent across the track and one along it.
@@ -242,7 +242,7 @@ static FlSignal scrollbar_on_track(float* value, FlScrollbarConfig cfg, Scrollba
     f32 range = cfg.max - cfg.min;
     f32 normalized = range > 0.0f ? (*value - cfg.min) / range : 0.0f;
 
-    if (scrollbar_grabbed(signal)) {
+    if (scrollbar_grabbed(signal) && usable_track > 0.0f) {
         f32 scale = ui_scale_or_one(ctx->ui_scale);
         FlVec2 mouse = { ctx->input_state.mouse.x / scale, ctx->input_state.mouse.y / scale };
         normalized = scrollbar_normalized_at_mouse(
