@@ -35,9 +35,9 @@ typedef enum FlLogLevel {
 // Registers a channel called `name` and returns its id.
 //
 // Registering a name that already exists returns the id of that channel. There is room for 32 channels,
-// including the CORE channel `fl_log_message` uses. When they are all taken it returns `u32::MAX`, even for a
-// name that exists. That is not a registered channel, so messages logged to it appear under a channel named
-// DEFAULT. `name` must stay valid for the rest of the program.
+// including the CORE channel `fl_log_message` uses. When they are all taken it returns the largest 32-bit unsigned
+// value, even for a name that exists. That is not a registered channel, so messages logged to it appear under
+// a channel named DEFAULT. `name` must stay valid for the rest of the program.
 FL_API uint32_t fl_log_register_channel(FlString name);
 // Sets the lowest level that channel `id` logs.
 //

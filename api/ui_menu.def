@@ -8,7 +8,7 @@ api Menu {
     ///
     /// Call `Menu::end` only if this returned true. A click outside the menu closes it. Escape closes the innermost
     /// open submenu, or the menu if no submenu is open.
-    begin_impl(menu_id: LayoutId, config: MenuConfig) -> bool
+    [rust_doc(Menu::begin)] begin_impl(menu_id: LayoutId, config: MenuConfig) -> bool
     /// Ends the menu panel.
     end()
     /// Adds an action item and returns its `Signal`.
@@ -76,7 +76,7 @@ api Menubar {
     /// Starts the menu bar `bar_id` and handles its input, such as clicks and the arrow keys.
     ///
     /// Always call `Menubar::end` after it.
-    begin_impl(bar_id: LayoutId, config: MenuBarConfig)
+    [rust_doc(Menubar::begin)] begin_impl(bar_id: LayoutId, config: MenuBarConfig)
     /// Ends the menu bar.
     end()
     /// Returns true if the menu bar `bar_id` has a dropdown open.
@@ -91,7 +91,7 @@ api MenubarMenu {
     /// Adds an entry labelled `label` to the menu bar and returns true if its dropdown is open.
     ///
     /// Add the items of the dropdown after it and call `MenubarMenu::end`, but only if this returned true.
-    begin_impl(label: String, config: MenuBarMenuConfig) -> bool
+    [rust_doc(MenubarMenu::begin)] begin_impl(label: String, config: MenuBarMenuConfig) -> bool
     /// Ends the dropdown.
     end()
 }

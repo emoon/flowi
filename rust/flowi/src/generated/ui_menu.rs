@@ -9,7 +9,7 @@
 /// Context menus that open at a point on the screen, usually on a right-click.
 ///
 /// Open a menu with `Menu::open`, or put a right-click region around the area that should open it. Each frame, call
-/// `Menu::begin_impl`. It returns true only while the menu is open. If it did, add items and call `Menu::end`.
+/// `Menu::begin`. It returns true only while the menu is open. If it did, add items and call `Menu::end`.
 pub struct Menu;
 
 impl Menu {
@@ -146,7 +146,7 @@ impl Submenu {
 
 /// A horizontal menu bar.
 ///
-/// Each frame, call `Menubar::begin_impl`, then `MenubarMenu::begin_impl` for each top-level menu. Finish with
+/// Each frame, call `Menubar::begin`, then `MenubarMenu::begin` for each top-level menu. Finish with
 /// `Menubar::end`.
 pub struct Menubar;
 

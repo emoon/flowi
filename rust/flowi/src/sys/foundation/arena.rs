@@ -82,9 +82,12 @@ extern "C" {
     pub fn fl_arena_scratch_begin() -> crate::sys::TempArena;
     /// Starts a scope on a scratch arena of the calling thread that is not `conflict_arena`.
     ///
-    /// Use it when you already allocate from a scratch arena and need a second one.
+    /// Use it when you already allocate from a scratch arena and need a second one. End it with
+    /// `Arena::fl_arena_scratch_end`.
     pub fn fl_arena_scratch_begin_conflict(conflict_arena: *const crate::sys::Arena) -> crate::sys::TempArena;
-    /// Ends a scope started with `Arena::fl_arena_scratch_begin` and frees what was allocated in it.
+    /// Ends a scratch scope and frees what was allocated in it.
+    ///
+    /// The scope is one started with `Arena::fl_arena_scratch_begin` or `Arena::fl_arena_scratch_begin_conflict`.
     pub fn fl_arena_scratch_end(temp: crate::sys::TempArena);
     /// Gives back the last `bytes_to_release` bytes allocated from `arena`.
     ///

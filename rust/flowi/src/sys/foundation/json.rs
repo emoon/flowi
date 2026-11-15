@@ -145,7 +145,8 @@ const _: () = {
 /// `Json::parse_with_flags` returns the root value. Read `JsonValue.type` to see what it holds.
 #[repr(C)]
 pub struct JsonValue {
-    /// A pointer to a `String`, `JsonNumber`, `JsonObject` or `JsonArray`, as `JsonValue.type` says.
+    /// A pointer to a flowi string (not a C string), a `JsonNumber`, `JsonObject` or `JsonArray`, as
+    /// `JsonValue.type` says.
     ///
     /// It is null for `JsonType::True`, `JsonType::False` and `JsonType::Null`.
     pub payload: *mut core::ffi::c_void,

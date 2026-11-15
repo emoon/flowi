@@ -84,12 +84,12 @@ typedef struct FlMessageBoxConfig {
 //
 // Draw the content of a popup between `fl_popup_begin` and `fl_popup_end`. `fl_popup_tooltip` and `fl_popup_message_box`
 // are single calls.
-// Starts a popup scope anchored to `anchor_id` and returns its guard.
+// Starts a popup scope anchored to `anchor_id`.
 //
-// Everything you draw until the scope ends is part of the popup. The scope ends when the guard drops. To end
-// it earlier, pass the guard to `fl_popup_end`.
+// Everything you draw until `fl_popup_end` is part of the popup. In Rust the call returns a guard that ends the
+// scope when it drops.
 FL_API void fl_popup_begin(FlLayoutId anchor_id, FlPopupConfig config);
-// Ends the popup scope and consumes its guard.
+// Ends the popup scope started with `fl_popup_begin`.
 FL_API void fl_popup_end(void);
 // Shows `text` in a tooltip when the pointer rests on the anchor.
 //
