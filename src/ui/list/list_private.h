@@ -180,7 +180,7 @@ void list_edge_autoscroll(FlListContext* self, const ListViewport* vp);
 void list_draw_overlay(FlListContext* self, const ListOverlay* rect);
 
 // Keyboard navigation for a focused list; returns the index to scroll to (-1 = leave scrolling alone).
-i32 list_handle_keyboard(FlListContext* self, ListState* st, bool has_focus);
+u32 list_handle_keyboard(FlListContext* self, ListState* st, bool has_focus);
 
 // Marquee gesture; runs after the rows are emitted.
 void list_marquee_update(FlListContext* self, ListState* st);

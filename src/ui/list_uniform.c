@@ -85,7 +85,7 @@ static f64 list_content_height(u32 count, f32 item_height, f32 gap) {
     return (f64)count * (f64)(item_height + gap);
 }
 
-static void update_scroll_for_selection(FlListUniformContext* self, i32 selected, f32 item_height, f32 gap) {
+static void update_scroll_for_selection(FlListUniformContext* self, u32 selected, f32 item_height, f32 gap) {
     f32 item_with_gap = item_height + gap;
     f64 item_top = (f64)selected * (f64)item_with_gap;
 
@@ -179,8 +179,8 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
     scroll_by_wheel(self, max_scroll);
     wheel_scope_begin(self->ui_ctx, self->current_layout_id, max_scroll > 0.0);
 
-    if (opts.scroll_to >= 0 && opts.scroll_to < (i32)total_count) {
-        update_scroll_for_selection(self, opts.scroll_to, item_height, gap);
+    if (opts.scroll_to != 0 && opts.scroll_to <= total_count) {
+        update_scroll_for_selection(self, opts.scroll_to - 1, item_height, gap);
     }
 
     self->current_state->scroll_offset

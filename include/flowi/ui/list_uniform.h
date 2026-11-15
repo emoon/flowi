@@ -19,11 +19,11 @@ typedef struct FlListUniformOpts {
     float height_hint;
     // The space between rows, in logical pixels (0 uses 8).
     float gap;
-    // The index of a row to scroll to this frame (-1 leaves the scroll position alone).
+    // The row to scroll to this frame, as its index plus one (0 leaves the scroll position alone).
     //
-    // The list eases toward the row and places it a third of the way down the view. 0 scrolls to the first
-    // row, so a zeroed struct scrolls to the top every frame. An index past the last row is ignored.
-    int32_t scroll_to;
+    // The list eases toward the row and places it a third of the way down the view. A row past the last one
+    // is ignored.
+    uint32_t scroll_to;
     // When the scrollbar is shown (`FlScrollbarDisplayMode_Never` by default). The mouse wheel always scrolls.
     FlScrollbarDisplayMode scrollbar_mode;
 } FlListUniformOpts;
