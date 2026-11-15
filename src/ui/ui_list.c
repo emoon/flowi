@@ -449,7 +449,7 @@ static void list_decl_row_content(const FlListItem* it, f32 row_height) {
     if (it->icon != FL_IMAGE_HANDLE_INVALID) {
         list_decl_icon(it, row_height);
     }
-    ui_text_styled(it->label, .color = fl_theme_colors()->text.primary, .valign = FlTextVAlign_Center);
+    ui_text_styled(it->label, .color = fl_theme_colors()->text.primary);
     fl_layout_end();
 }
 

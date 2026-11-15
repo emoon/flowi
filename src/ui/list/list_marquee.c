@@ -6,8 +6,8 @@
 // not move it.
 //
 // The container is not registered as an interactive item: the empty-space test is "a press this frame that no row
-// consumed, inside the container's viewport rect". Coverage works in boundingBox/mouse pixel space and assumes
-// ui_scale == 1 (logical == physical); only the overlay's draw divides by scale.
+// consumed, inside the container's viewport rect". Coverage works in boundingBox/mouse pixel space, with the row
+// height and gap in physical pixels; only the overlay's draw divides by scale.
 
 #include "list_private.h"
 #include <core/math.h>

@@ -28,6 +28,7 @@ struct FlTreeContext {
     FlListContext* list;
     const FlTreeRow* rows;
     TreeFlat flat;
+    u64 flat_frame;
     bool is_virtual;
     u32 count;
     f32 indent;
@@ -303,6 +304,7 @@ FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTr
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     self->flat = tree_flat_build(ui_get_ctx()->render_frame_allocator, root_count, expanded, count);
     self->is_virtual = true;
+    self->flat_frame = ui_get_ctx()->frame_counter;
     self->rows = nullptr;
     self->count = self->flat.row_count;
     tree_reset_frame(self, config.indent);
@@ -320,7 +322,8 @@ FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTr
 
 FlTreeVirtualRow fl_tree_row_at(uint32_t row) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    bool has_row = self->is_virtual && row < self->count;
+    bool this_frame = self->is_virtual && self->flat_frame == ui_get_ctx()->frame_counter;
+    bool has_row = this_frame && row < self->count;
     FL_ASSERT(has_row);
     if (!has_row) {
         return (FlTreeVirtualRow) { .parent = -1, .node = -1 };

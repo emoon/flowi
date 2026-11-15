@@ -104,7 +104,8 @@ static void scroll_by_wheel(FlListUniformContext* self, f64 max_scroll) {
     if (wheel_y == 0.0f || !wheel_scope_owns_wheel(self->ui_ctx, self->current_layout_id)) {
         return;
     }
-    f64 target = self->current_state->scroll_target - (f64)(wheel_y * SCROLL_CORE_DEFAULT_WHEEL_SPEED);
+    f32 step = wheel_y * SCROLL_CORE_DEFAULT_WHEEL_SPEED * ui_scale_or_one(self->ui_ctx->ui_scale);
+    f64 target = self->current_state->scroll_target - (f64)step;
     self->current_state->scroll_target = clamp(target, 0.0, max_scroll);
 }
 

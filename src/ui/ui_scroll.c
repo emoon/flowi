@@ -132,6 +132,7 @@ typedef struct ScrollbarTrack {
     f32 width;
     u16 inset_near;
     u16 inset_far;
+    u16 end_pad;
 } ScrollbarTrack;
 
 static f32 positive_or(f32 value, f32 fallback) {
@@ -160,12 +161,8 @@ static f32 vec2_along(FlVec2 v, bool is_vertical) {
     return is_vertical ? v.y : v.x;
 }
 
-static f32 logical_scale(const FlUiCtx* ctx) {
-    return ui_scale_or_one(ctx->ui_scale);
-}
-
 static f32 scrollbar_track_length(const FlUiCtx* ctx, const ItemState* item, bool is_vertical) {
-    f32 measured = vec2_along(item->state.size, is_vertical) / logical_scale(ctx);
+    f32 measured = vec2_along(item->state.size, is_vertical) / ui_scale_or_one(ctx->ui_scale);
     return positive_or(measured, 100.0f); // Fallback for first frame
 }
 
@@ -193,8 +190,11 @@ static void scrollbar_spacer(bool is_vertical, f32 length) {
 }
 
 static FlLayoutPadding scrollbar_inset(bool is_vertical, ScrollbarTrack track) {
-    return is_vertical ? (FlLayoutPadding) { .left = track.inset_near, .right = track.inset_far }
-                       : (FlLayoutPadding) { .top = track.inset_near, .bottom = track.inset_far };
+    u16 near = track.inset_near;
+    u16 far = track.inset_far;
+    u16 end = track.end_pad;
+    return is_vertical ? (FlLayoutPadding) { .left = near, .right = far, .top = end, .bottom = end }
+                       : (FlLayoutPadding) { .left = end, .right = end, .top = near, .bottom = far };
 }
 
 static void scrollbar_emit(FlLayoutId id, bool is_vertical, ScrollbarThumb thumb, ScrollbarTrack track) {
@@ -243,10 +243,11 @@ static FlSignal scrollbar_on_track(float* value, FlScrollbarConfig cfg, Scrollba
     f32 normalized = range > 0.0f ? (*value - cfg.min) / range : 0.0f;
 
     if (scrollbar_grabbed(signal)) {
-        f32 scale = logical_scale(ctx);
+        f32 scale = ui_scale_or_one(ctx->ui_scale);
         FlVec2 mouse = { ctx->input_state.mouse.x / scale, ctx->input_state.mouse.y / scale };
         normalized = scrollbar_normalized_at_mouse(
-            vec2_along(mouse, is_vertical), vec2_along(item->state.pos, is_vertical) / scale, thumb_size, usable_track);
+            vec2_along(mouse, is_vertical), vec2_along(item->state.pos, is_vertical) / scale + (f32)track.end_pad,
+            thumb_size, usable_track);
         *value = clamp(cfg.min + normalized * range, cfg.min, cfg.max);
     }
 
@@ -291,10 +292,12 @@ FlSignal ui_scroll_overlay_bar(u32 owner_id, FlScrollbarDisplayMode mode, Scroll
 
     FlSignal signal = { 0 };
     f32 strip = extent.bar_strip > SCROLLBAR_WIDTH ? extent.bar_strip : SCROLLBAR_WIDTH;
+    f32 bar_length = (f32)extent.viewport / ui_scale_or_one(ctx->ui_scale);
     ScrollbarTrack track = {
-        .length = (f32)extent.viewport / logical_scale(ctx),
+        .length = bar_length - SCROLLBAR_PADDING * 2.0f,
         .inset_near = (u16)(strip - SCROLLBAR_WIDTH + SCROLLBAR_PADDING),
         .inset_far = (u16)SCROLLBAR_PADDING,
+        .end_pad = (u16)SCROLLBAR_PADDING,
     };
     FlScrollbarConfig cfg = {
         .orientation = FlScrollbarOrientation_Vertical,
@@ -309,7 +312,7 @@ FlSignal ui_scroll_overlay_bar(u32 owner_id, FlScrollbarDisplayMode mode, Scroll
                         .parent_attach = FlFloatingAttachPoint_RightTop,
                         .element_attach = FlFloatingAttachPoint_RightTop,
                         .pointer_capture = FlFloatingPointerCapture_Passthrough,
-                        .sizing = { sizing_fixed(strip), sizing_fixed(track.length) }) {
+                        .sizing = { sizing_fixed(strip), sizing_fixed(bar_length) }) {
         signal = scrollbar_on_track(normalized, cfg, track);
     }
     return signal;
