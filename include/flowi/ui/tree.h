@@ -100,6 +100,9 @@ FL_API FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t 
 //
 // The indent and the arrow are drawn for you, and what you draw before `fl_tree_item_end` goes to the right
 // of them. A press on the arrow is not a click on the row.
+//
+// `row` must be below the row count. A row past it asserts in a Debug build. In a Release build it starts
+// no row and returns an empty `FlSignal`.
 FL_API FlSignal fl_tree_item_begin(uint32_t row);
 // Starts a tree that can hold millions of rows, and returns the range of rows to draw.
 //
@@ -125,7 +128,8 @@ FL_API FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, con
 FL_API FlTreeVirtualRow fl_tree_row_at(uint32_t row);
 // Starts a row of a virtual tree, like `fl_tree_item_begin`.
 //
-// Pass true for `has_children` to give the row an arrow. An expanded row always has one.
+// Pass true for `has_children` to give the row an arrow. An expanded row always has one. `row` has
+// the same limit as for `fl_tree_item_begin`.
 FL_API FlSignal fl_tree_item_begin_virtual(uint32_t row, bool has_children);
 // Ends the row started with `fl_tree_item_begin` or `fl_tree_item_begin_virtual`.
 FL_API void fl_tree_item_end(void);

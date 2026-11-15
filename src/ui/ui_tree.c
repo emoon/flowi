@@ -35,6 +35,7 @@ struct FlTreeContext {
     u64 toggled_id;
     u32 toggled_row;
     bool toggle_expanded;
+    bool row_skipped;
     hashmap(u32, TreeVirtualState) virtual_states;
 };
 
@@ -207,6 +208,7 @@ static void tree_reset_frame(FlTreeContext* self, f32 indent) {
     self->toggled_id = 0;
     self->toggled_row = 0;
     self->toggle_expanded = false;
+    self->row_skipped = false;
 }
 
 FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set,
@@ -336,15 +338,25 @@ FlTreeVirtualRow fl_tree_row_at(uint32_t row) {
     return tree_flat_row(&self->flat, row);
 }
 
+static bool row_missing(FlTreeContext* self, u32 row) {
+    FL_ASSERT(row < self->count);
+    self->row_skipped = row >= self->count;
+    return self->row_skipped;
+}
+
 FlSignal fl_tree_item_begin(uint32_t row) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    FL_ASSERT(row < self->count);
+    if (row_missing(self, row)) {
+        return (FlSignal) { 0 };
+    }
     return row_begin(self, row, tree_row(self, row));
 }
 
 FlSignal fl_tree_item_begin_virtual(uint32_t row, bool has_children) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    FL_ASSERT(row < self->count);
+    if (row_missing(self, row)) {
+        return (FlSignal) { 0 };
+    }
     FlTreeRow r = tree_row(self, row);
     r.has_children = has_children || r.expanded;
     return row_begin(self, row, r);
@@ -352,6 +364,10 @@ FlSignal fl_tree_item_begin_virtual(uint32_t row, bool has_children) {
 
 void fl_tree_item_end(void) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    if (self->row_skipped) {
+        self->row_skipped = false;
+        return;
+    }
     fl_layout_end();
     list_item_end_impl(self->list);
 }
