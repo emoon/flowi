@@ -444,12 +444,6 @@ static void tree_sections(GalleryState* s) {
     }
 }
 
-static void collection_sections(GalleryState* s) {
-    list_section(s);
-    decl_list_section(s);
-    tree_sections(s);
-}
-
 static void widget_sections(GalleryState* s) {
     button_section(s);
     toggle_sections(s);
@@ -458,7 +452,9 @@ static void widget_sections(GalleryState* s) {
     tooltip_section();
     message_box_section(s);
     context_menu_section(s);
-    collection_sections(s);
+    list_section(s);
+    decl_list_section(s);
+    tree_sections(s);
 }
 
 // Floating context menu, emitted at frame top level so the scroll area never clips it.
@@ -518,7 +514,7 @@ static bool parse_renderer(int argc, char** argv, FlAppRenderer* renderer) {
         } else if (strcmp(argv[i], "--software") == 0) {
             *renderer = FlAppRenderer_Software;
         } else {
-            log_error("widget_gallery: unknown argument '%s' (use --software [default] or --gpu)", argv[i]);
+            log_error("widget_gallery: unknown argument '%s' (use --gpu [default] or --software)", argv[i]);
             return false;
         }
     }
