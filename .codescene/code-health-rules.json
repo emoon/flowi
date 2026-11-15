@@ -2,11 +2,20 @@
   "usage": "Code Health rule overrides for flowi. See https://codescene.io/docs/guides/technical/code-health.html",
   "rule_sets": [
     {
-      "matching_content_path": "src/ui/{ui_api,painter,ui_list,ui_tree,ui_dropdown,ui_slider,list_uniform,ui_selection,scroll_core,dock/dock_persist,dock/dock_tree}.c",
+      "matching_content_path": "src/ui/{ui_api,painter,ui_list,ui_tree,ui_dropdown,ui_slider,dock/dock_persist,dock/dock_tree}.c",
       "thresholds": [
         {
           "name": "function_max_arguments",
           "value": 6
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/ui/{list_uniform,ui_selection,scroll_core}.c",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
         }
       ]
     },

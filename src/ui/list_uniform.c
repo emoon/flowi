@@ -187,12 +187,12 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
         = scroll_smooth_step(self->current_state->scroll_offset, self->current_state->scroll_target, max_scroll,
                              LIST_UNIFORM_SCROLL_SPEED, self->ui_ctx->delta_time);
 
-    ScrollRange visible = scroll_visible_range(self->current_state->scroll_offset, self->viewport_height,
-                                               item_height + gap, total_count, LIST_UNIFORM_VISIBLE_BUFFER);
+    f32 item_with_gap = item_height + gap;
+    ScrollRange visible = scroll_visible_range(self->current_state->scroll_offset, self->viewport_height, item_with_gap,
+                                               total_count, LIST_UNIFORM_VISIBLE_BUFFER);
     self->visible_start = visible.start;
     self->visible_end = visible.end;
 
-    f32 item_with_gap = item_height + gap;
     f64 first_item_top = (f64)self->visible_start * (f64)item_with_gap;
     FlVec2 scroll_pos = { 0, (f32)(first_item_top - self->current_state->scroll_offset) };
 
