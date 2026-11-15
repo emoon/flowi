@@ -720,7 +720,6 @@ bool ui_gamepad_button_released(u32 slot, FlGamepadButton button) {
 }
 
 f32 ui_gamepad_button_hold_duration(u32 slot, FlGamepadButton button) {
-    FL_VALIDATE_RET(g_ui_ctx != nullptr, 0.0f);
     if (!ui_gamepad_connected(slot) || (u32)button >= FlGamepadButton_Count) {
         return 0.0f;
     }
@@ -729,7 +728,6 @@ f32 ui_gamepad_button_hold_duration(u32 slot, FlGamepadButton button) {
 }
 
 f32 ui_gamepad_axis(u32 slot, FlGamepadAxis axis) {
-    FL_VALIDATE_RET(g_ui_ctx != nullptr, 0.0f);
     if (!ui_gamepad_connected(slot) || (u32)axis >= FlGamepadAxis_Count) {
         return 0.0f;
     }
@@ -769,10 +767,12 @@ FlVec2 ui_mouse_drag_delta(void) {
 }
 
 bool ui_get_relative_mouse_mode(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return g_ui_ctx->relative_mouse_mode;
 }
 
 bool ui_take_pending_warp(float* out_x, float* out_y) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     if (!g_ui_ctx->warp_pending) {
         return false;
     }
@@ -852,11 +852,13 @@ void fl_set_focus(FlLayoutId layout_id) {
 // Returns FlElementState with found=0 if the widget has no state entry.
 
 FlElementState ui_get_element_state_by_id(u32 element_id) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlElementState) { 0 });
     ItemState* item = hashmap_get(&g_ui_ctx->shared->item_state, element_id);
     return item != nullptr ? item->state : (FlElementState) { 0 };
 }
 
 FlElementState ui_get_element_state(FlLayoutId layout_id) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlElementState) { 0 });
     return ui_get_element_state_by_id(ui_layout_id_to_clay_id(layout_id));
 }
 
@@ -873,6 +875,7 @@ u32 ui_hot_id(void) {
 // Painter draws in, so a canvas can hit-test the cursor against its painted geometry at any UI scale.
 
 FlVec2 ui_mouse_position(FlLayoutId layout_id) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlVec2) { 0 });
     FlElementState state = ui_get_element_state(layout_id);
     if (!state.found) {
         return (FlVec2) { 0 };
@@ -892,6 +895,7 @@ FlVec2 ui_mouse_position(FlLayoutId layout_id) {
 // next_hot_id/hot_id arbitration picks it up. Call it once per frame for the area you read the wheel over.
 
 void ui_scroll_target(FlLayoutId layout_id) {
+    FL_VALIDATE(g_ui_ctx != nullptr);
     FlUiCtx* self = g_ui_ctx;
     u32 clay_id = ui_layout_id_to_clay_id(layout_id);
     ItemState* item = get_or_create_key(self, clay_id);
@@ -915,6 +919,7 @@ void ui_track_element(FlLayoutId layout_id) {
 // Per-frame delta only; any cumulative offset is the caller's to accumulate.
 
 FlVec2 ui_mouse_wheel_delta(FlLayoutId layout_id) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlVec2) { 0 });
     FlUiCtx* self = g_ui_ctx;
     u32 clay_id = ui_layout_id_to_clay_id(layout_id);
     ItemState* item = hashmap_get(&self->shared->item_state, clay_id);

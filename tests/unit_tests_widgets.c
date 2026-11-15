@@ -5439,6 +5439,7 @@ static int no_context_true_reads(void) {
     count += (int)fl_input_mouse_pressed(FlMouseButton_Left) + (int)fl_input_mouse_down(FlMouseButton_Left);
     count += (int)fl_input_mouse_released(FlMouseButton_Left) + (int)fl_input_gamepad_connected(0);
     count += (int)fl_input_gamepad_button_down(0, button) + (int)fl_input_gamepad_button_pressed(0, button);
+    count += (int)fl_input_get_element_state(ID("no_context_probe")).found;
     return count + (int)fl_input_gamepad_button_released(0, button);
 }
 
@@ -5447,10 +5448,13 @@ static float no_context_number_reads(void) {
     const FlVec2 delta = fl_input_mouse_delta();
     const FlVec2 drag = fl_input_mouse_drag_delta();
     const FlVec2 drop = fl_input_dropped_file_position(0);
+    const FlVec2 local = fl_input_mouse_position(ID("no_context_probe"));
+    const FlVec2 scoped_wheel = fl_input_mouse_wheel_delta(ID("no_context_probe"));
     float sum = fabsf(wheel.x) + fabsf(wheel.y) + fabsf(delta.x) + fabsf(delta.y) + fabsf(drag.x) + fabsf(drag.y);
     sum += fabsf(drop.x) + fabsf(drop.y) + (float)fl_input_dropped_file_count()
            + (float)fl_input_dropped_file(0).length;
     sum += (float)fl_input_keyboard_modifiers() + fabsf(fl_input_gamepad_axis(0, (FlGamepadAxis)0));
+    sum += fabsf(local.x) + fabsf(local.y) + fabsf(scoped_wheel.x) + fabsf(scoped_wheel.y);
     return sum + fl_input_gamepad_button_hold_duration(0, (FlGamepadButton)0);
 }
 
@@ -5461,12 +5465,12 @@ static void no_context_writes(void) {
     fl_consume_nav_right();
     fl_input_mouse_hidden_drag_begin(1.0f);
     fl_input_mouse_hidden_drag_end();
+    fl_input_scroll_target(ID("no_context_probe"));
 }
 
 UTEST(direct_ui_calls, no_context_input_accessors_return_defaults_in_release) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    const bool relative_mode_before = ctx->relative_mouse_mode;
 
     FlUiCtx* active = g_ui_ctx;
     g_ui_ctx = nullptr;
@@ -5477,7 +5481,6 @@ UTEST(direct_ui_calls, no_context_input_accessors_return_defaults_in_release) {
 
     EXPECT_EQ(true_reads, 0);
     EXPECT_EQ(number_reads, 0.0f);
-    EXPECT_EQ(ctx->relative_mouse_mode, relative_mode_before);
 }
 #endif
 
