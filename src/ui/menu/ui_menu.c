@@ -426,7 +426,8 @@ static FlSignal finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg, boo
 
     FlSignal signal = row.signal;
 
-    bool can_confirm = row.highlighted && row.level == m->depth - 1 && ctx->frame_counter > m->open_frame;
+    bool can_confirm
+        = !cfg.disabled && row.highlighted && row.level == m->depth - 1 && ctx->frame_counter > m->open_frame;
     if (can_confirm && ui_action_pressed(ctx, FlAction_Confirm)) {
         signal.clicked = true;
         signal.activated = true;

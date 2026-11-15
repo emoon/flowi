@@ -2343,6 +2343,29 @@ UTEST(ui_menu, context_menu_tracer) {
     fl_app_destroy(app);
 }
 
+// Enter on a disabled row the pointer highlighted does nothing: no click, and the menu stays open.
+UTEST(ui_menu, confirm_on_a_hovered_disabled_row_is_ignored) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+
+    FlAppSettings settings = { .window_title = FL_S("menu_disabled"), .width = 800, .height = 600, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    MenuTestState st = { 0 };
+    fl_app_tick(app, &st, menu_frame);
+    menu_open_at(app, &st, 120, 120);
+    ASSERT_TRUE_MSG(st.menu_open, "right-click in the region opened the menu");
+
+    ASSERT_TRUE_MSG(menu_hover_item(app, &st, FL_S("Paste"), 0, 2), "Paste item was not laid out");
+    ASSERT_EQ_MSG((int)st.ctx->shared->menu.levels[0].highlight_index, 2, "hovering the disabled row highlights it");
+
+    menu_key_tap(app, &st, FlKey_Enter);
+    ASSERT_FALSE_MSG(st.disabled_clicked, "Enter on a disabled row must not report clicked");
+    ASSERT_TRUE_MSG(st.menu_open, "Enter on a disabled row leaves the menu open");
+
+    fl_app_destroy(app);
+}
+
 // The keyboard also drives the per-level highlight, and the most recent input (keyboard or hover) owns it.
 // Gamepad A and B share CONFIRM and CANCEL with Enter and ESC, so these paths cover the pad actions too. Headless
 // has no pad injection.
@@ -5187,8 +5210,8 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     u32 live_fmt_len = 0;
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-        live_range = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100,
-                                           (FlListUniformOpts) { .height_hint = 24.0f });
+        live_range
+            = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100, (FlListUniformOpts) { .height_hint = 24.0f });
         for (u32 i = live_range.start; i < live_range.end; i++) {
             fl_list_uniform_item_begin(i);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
@@ -5223,8 +5246,8 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
 
     // begin and end have to return early as a pair. Each opens or closes a layout element, so a guard on only one
     // of them would leave the layout stack unbalanced.
-    FlListUniformRange range = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100,
-                                                     (FlListUniformOpts) { .height_hint = 24.0f });
+    FlListUniformRange range
+        = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100, (FlListUniformOpts) { .height_hint = 24.0f });
     ASSERT_TRUE_MSG(range.start == 0 && range.end == 0 && range.total == 0,
                     "no context yields an empty visible window");
     fl_list_uniform_item_begin(0);
