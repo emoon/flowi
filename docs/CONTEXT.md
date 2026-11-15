@@ -841,8 +841,8 @@ position.
 **Wheel Scope**:
 The region of a container that scrolls for the user, such as a scroll area or a [[#List]]. Scopes
 nest, and each frame's [[#Wheel Delta]] scrolls one of them: the innermost scope under the pointer
-that can scroll. A List whose rows all fit cannot scroll, so the wheel goes to the scroll area
-around it. This is separate from a [[#Scroll Target]], which is how an app reads the wheel over its
+that takes the wheel. A List whose rows all fit does not take it, so the wheel goes to the scroll
+area around it. A scroll area always takes it. This is separate from a [[#Scroll Target]], which is how an app reads the wheel over its
 own element. See ADR-0078.
 _Avoid_: a container deciding from its own hover alone that the wheel is its to use.
 
@@ -1039,7 +1039,8 @@ _Avoid_: a Tree that stores the expanded set, or a tree widget with its own sele
 **Row Source**:
 What the [[#List]] reads its rows through: a count, the id of a row, the row of an id, and a label
 (`ListRows`). An id slice, the declarative items, the rows of a [[#Tree]] and a bare count are each
-a Row Source, so the List's selection and keyboard code is the same for all of them.
+a Row Source, so the List's selection and keyboard code is the same for all of them. A source may
+have no labels (type-ahead is then off) or no ids.
 _Avoid_: reading the id slice directly inside the List.
 
 **Virtual Source**:

@@ -11,18 +11,20 @@ Right keys that expand, collapse and move between parent and child.
 The Tree is a third face of the List, next to the declarative and the scoped face. `ui_tree.c` calls
 the List's own begin, item and end through `list_private.h` and adds only what is tree-shaped:
 
-- It draws the indent and the arrow in front of each row. A press on the arrow is claimed from the
-  List, so it toggles the row and does not select it.
+- It draws the indent and the arrow in front of each row. The arrow is its own clickable item, so
+  a press on it toggles the row and does not select it. The Tree tells the List about that press so
+  the List keeps keyboard focus and starts no marquee.
 - It passes one hook, `key_target_row`, that maps Left and Right to the row the cursor moves to.
 - It turns drag-reorder off. Reorder and drop Into are not designed for trees yet.
 
 The List reads its rows through a row source (`ListRows`: a count, the id of a row, the row of an
 id, and a label). The id slice, the declarative items, the tree rows and a bare count each have a
-constructor, so the List's selection and keyboard code does not know which one it is reading.
+constructor. A source may have no labels, which turns type-ahead off, or no ids. Apart from those
+two checks the List's selection and keyboard code does not know which source it is reading.
 
 The app owns which nodes are expanded. The Tree stores nothing about expansion. `Tree::end` reports
 the row the user asked to expand or collapse, and the app changes its own data and passes the new
-rows next frame. This is the rule the List follows for selection and reorder.
+rows next frame. The List treats a reorder the same way: it reports the move and the app applies it.
 
 There are two ways to pass the rows:
 
@@ -33,10 +35,11 @@ There are two ways to pass the rows:
   expanded nodes and not the number of rows. A row has no stored id; it is identified by its row
   number (the List sees id = row + 1).
 
-Row numbers change when a node above expands or collapses. On the frame the row count changes, the
-virtual Tree checks that its last reported toggle explains the change. If it does, the cursor, the
-anchor and the selected ids below the toggled row move by the number of rows added or removed, and
-rows that disappeared are dropped. If it does not, all three are cleared.
+Row numbers change when a node above expands or collapses. On a frame where the row count differs
+from the previous frame, the virtual Tree checks that the toggle it reported on that previous frame
+explains the difference. If it does, the cursor, the anchor and the selected ids below the toggled
+row move by the number of rows added or removed, and rows that disappeared are dropped. If it does
+not, all three are cleared. The Tree writes the moved selection into the set the app passed.
 
 ## Considered options
 
@@ -59,3 +62,7 @@ rows that disappeared are dropped. If it does not, all three are cleared.
   a leaf reports an expand the app ignores. Type-ahead is off for the virtual source.
 - An app that passes a null set to the virtual Tree gets no selection shift and has to move its own
   selection after a toggle.
+- The app has to pass the new rows on the frame after the toggle. The Tree remembers a toggle for
+  one frame, so rows that arrive later clear the cursor, the anchor and the selection.
+- A change that leaves the row count the same is not noticed. If one node collapses and another of
+  the same size expands in one frame, the selected row numbers stay and point at other nodes.
