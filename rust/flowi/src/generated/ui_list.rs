@@ -6,45 +6,31 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// A scrolling list where you draw each row yourself. Use it when a row is more than a label and an icon. For
-/// plain label rows, Input::list does everything in one call.
+/// A scrolling list where you draw each row. For plain label rows, Input::list does it in one call.
 ///
-/// You keep the rows and their order. Each frame, call begin with the ids of all rows. It returns the range of
-/// rows that are on screen. For each index in that range, call item_begin with that row's id, draw the row's
-/// content, and call item_end. Then call end and read the result. Rows outside the range are not drawn, so a
-/// list can hold many thousands of rows.
-///
-/// The list fills the layout area it is in and scrolls inside it, so put it in an area with the size you want.
-///
-/// A click selects a row, ctrl-click adds or removes one, shift-click selects a range, Ctrl+A selects
-/// everything, and dragging from empty space selects with a rectangle. Up, Down, Home and End move the keyboard
-/// cursor, and holding Shift with them selects the rows in between. Enter, Space and double-click activate a
-/// row. Dragging a selected row moves all selected rows, and dragging an unselected row moves only that row.
-/// The result tells you where they were dropped and you reorder your own data.
+/// Each frame, call begin with the ids of all rows. For each index in the range it returns, call item_begin,
+/// draw the row, and call item_end. Then call end and act on the result. The list fills the layout area it is
+/// in. It handles selection, the keyboard and row dragging; you keep the rows and reorder them after a drop.
 pub struct List;
 
 impl List {
-    /// Start one row. stable_id is the row's id, the one at this index in ordered_ids. If you passed a set to
-    /// begin, the List draws the selection highlight behind the row. What you draw before item_end goes on top
-    /// of it. The returned Signal tells you if this row is hovered, clicked, double-clicked or right-clicked.
+    /// Start the row with this id. What you draw before item_end is the row's content. The Signal is for this
+    /// row.
     #[inline]
     pub fn item_begin(stable_id: u64) -> crate::sys::Signal {
         let _frame = crate::frame_thread::frame_thread_guard("List::item_begin");
         unsafe { crate::sys::fl_list_item_begin(stable_id) }
     }
 
-    /// Finish the row started with item_begin.
+    /// Finish the row.
     #[inline]
     pub fn item_end() {
         let _frame = crate::frame_thread::frame_thread_guard("List::item_end");
         unsafe { crate::sys::fl_list_item_end() }
     }
 
-    /// Give a list keyboard focus from your code, so the arrow keys, Home, End, Enter, Space and type-ahead go
-    /// to it without the user clicking a row first. Call it once, on the frame a popup that holds the list
-    /// opens. id is the id you pass to begin, and cursor_id is the row the keyboard cursor starts on; pass 0 to
-    /// start on the first row. Each call takes focus away from whatever has it, so do not call it every frame.
-    /// If the list already has focus, the cursor stays where it is.
+    /// Give the list keyboard focus, with the cursor on cursor_id (0 for the first row). Call it once when a
+    /// popup holding the list opens, not every frame: each call takes focus from whatever has it.
     #[inline]
     pub fn request_focus(id: impl Into<crate::LayoutId>, cursor_id: u64) {
         let id: crate::LayoutId = id.into();
