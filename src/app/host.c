@@ -66,9 +66,9 @@ FlHost* host_create(FlArena* arena, const FlHostSettings* settings, const FlRend
     host->arena = arena;
 
     // ui_update_begin() pumps the font cache, so it must be non-null even when a frame draws no text. The cache
-    // and the built-in default font are shared across windows; the load scale multiplies the 8px base (2 -> 16px).
+    // and the built-in default font are shared across windows; the font loads at its default size (16px).
     host->font_cache = font_cache_new(arena);
-    host->default_font = font_cache_load_default_font(host->font_cache, 2);
+    host->default_font = font_cache_load_default_font(host->font_cache, font_cache_default_font_scale(0));
 
     if (adopt_backend) {
         host->backend = *adopt_backend;

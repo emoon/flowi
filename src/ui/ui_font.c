@@ -31,8 +31,8 @@ void ui_font_set(FlFontId id) {
     g_ui_ctx->active_font = id;
 }
 
-// A font handle carries the authored size; text_scale is multiplied in on use (ui_text_styled_impl, the painter).
-// 0 means the default size; 8px is the floor.
+// A file font's handle carries the authored size; text_scale is multiplied in on use (ui_text_styled_impl, the
+// painter). 0 means the default size; 8px is the floor.
 static u16 authored_font_size(u16 default_size) {
     u16 size = default_size != 0 ? default_size : 28;
     return size < 8 ? 8 : size;
@@ -74,5 +74,6 @@ bool ui_font_ensure_loaded(void) {
 
 FlFontId fl_font_load_default(u16 default_size) {
     FL_VALIDATE_RET(g_ui_ctx != nullptr, FONT_ID_INVALID);
-    return font_cache_load_default_font(g_ui_ctx->shared->font_cache, authored_font_size(default_size));
+    FlFontCache* cache = g_ui_ctx->shared->font_cache;
+    return font_cache_load_default_font(cache, font_cache_default_font_scale(default_size));
 }

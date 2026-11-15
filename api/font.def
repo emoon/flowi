@@ -35,8 +35,11 @@ api Font {
     [borrowed] load_mount(mount: *FlVfsMount, relative_path: String, default_size: u16) -> FontId
     /// Loads the built-in font and returns its id, or 0 if the call fails.
     ///
-    /// The font is ready at once. `default_size` multiplies the font's 8 pixel base size (0 uses 28, and values
-    /// below 8 become 8).
+    /// The font is ready at once. `default_size` is its size in unscaled pixels, rounded to the nearest multiple of
+    /// 8. A size halfway between two multiples rounds up (12 becomes 16), and the smallest size is 8.
+    ///
+    /// 0 uses 16, the size of the built-in font the host sets at startup. This differs from `Font::load`, where 0
+    /// uses 28.
     load_default(default_size: u16) -> FontId
     /// Starts loading the font at `relative_path` inside `mount` as the fallback for glyphs the other fonts lack.
     ///
