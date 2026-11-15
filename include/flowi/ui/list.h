@@ -13,104 +13,108 @@
 extern "C" {
 #endif
 
-// Where a `List` drag-reorder lands, relative to a target stable id. A flat list produces only
-// Before/After (sibling reorder); Into (reparent) is reserved for the tree view and never produced.
+// The side of `ListResult.drag_target_id` that dragged rows land on.
 typedef enum FlDropRelationship {
-    // Insert the dragged item(s) immediately before the target.
+    // Before the target row.
     FlDropRelationship_Before = 0,
-    // Insert the dragged item(s) immediately after the target.
+    // After the target row.
     FlDropRelationship_After = 1,
-    // Reparent onto the target. Reserved for the tree view; never produced.
+    // As children of the target row. A List never reports this.
     FlDropRelationship_Into = 2,
 } FlDropRelationship;
 
-// One declarative row descriptor for Input::list: a stable id, the label the List draws and type-aheads on, and an
-// optional leading icon.
+// A row of an `Input::list`.
 typedef struct FlListItem {
-    // Opaque stable id: the selection/result key.
+    // The id of the row (unique, never 0).
     uint64_t id;
-    // Row text the List draws (and type-aheads on); borrowed for the Input::list call.
+    // The text shown on the row, also matched by type-ahead.
     FlString label;
-    // Optional leading icon; `ImageHandle` invalid (or a not-ready handle) draws nothing.
+    // The icon drawn before the label, or an invalid handle for none.
     FlImageHandle icon;
 } FlListItem;
 
-// Configuration for a List, consumed by List::begin.
+// Options for `List::begin`.
+//
+// A field left at zero uses its default.
 typedef struct FlListConfig {
-    // Uniform row height in logical pixels (0 -> default 32).
+    // The height of every row, in logical pixels (0 uses 32).
     float row_height;
-    // Gap between rows in logical pixels (0 -> default 8).
+    // The space between rows, in logical pixels (0 uses 8).
     float gap;
-    // Optional labels parallel to the begin id slice (count entries) for keyboard type-ahead; null disables it.
+    // The labels matched by type-ahead, one per id in the same order (null turns type-ahead off).
     const FlString* labels;
-    // Drag-reorder visuals: false (default) draws the built-in ghost + insertion line; true suppresses them
-    // so the caller overrides the look from the live `drag_*` fields on `ListResult`. Gates only the drawing.
+    // Whether you draw the row drag yourself, from the drag fields of `ListResult`.
     bool suppress_drag_visuals;
-    // When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    // When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
     FlScrollbarDisplayMode scrollbar_mode;
 } FlListConfig;
 
-// Options for Input::list: the layout knobs plus the two policy toggles the caller chooses.
+// Options for `Input::list`.
+//
+// A field left at zero uses its default.
 typedef struct FlListOpts {
-    // Uniform row height in logical pixels (0 -> default 32).
+    // The height of every row, in logical pixels (0 uses 32).
     float row_height;
-    // Gap between rows in logical pixels (0 -> default 8).
+    // The space between rows, in logical pixels (0 uses 8).
     float gap;
-    // false -> single-selection (plain replace only; no ctrl/shift/marquee/Ctrl+A). true -> full multi-select.
+    // Whether the user can select several rows. When false, a click selects one row and unselects the rest.
     bool multi_select;
-    // true -> a row press can begin a drag-reorder. false -> rows never start a reorder drag.
+    // Whether the user can drag rows to a new position. See `ListResult.reorder_emitted`.
     bool reorderable;
-    // true -> the caller draws its own ghost/insertion line from the result's `drag_*` fields; false -> the
-    // List draws the built-in affordances.
+    // Whether you draw the row drag yourself, from the drag fields of `ListResult`.
     bool suppress_drag_visuals;
-    // When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    // When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
     FlScrollbarDisplayMode scrollbar_mode;
 } FlListOpts;
 
-// The visible index window a List emits, returned by List::begin. The caller iterates `[start, end)`
-// and emits one row per index; total echoes the full item count.
+// The rows to draw this frame.
+//
+// This is returned by `List::begin`. Draw the rows from `start` up to, and not including, `end`.
 typedef struct FlListRange {
-    // First visible index (inclusive).
+    // The index of the first row to draw (inclusive).
     uint32_t start;
-    // One past the last visible index (exclusive).
+    // The index after the last row to draw (exclusive).
     uint32_t end;
-    // Total item count passed to List::begin.
+    // The number of rows passed to `begin`.
     uint32_t total;
 } FlListRange;
 
-// The per-frame result a List hands back from List::end. Keyed on the app-supplied opaque u64
-// stable ids, never on dense position; 0 means "none".
+// The outcome of a list for one frame.
+//
+// This is returned by `List::end` and `Input::list`. The ids are the ones you passed in, and 0 means no row.
 typedef struct FlListResult {
-    // Stable id of the item activated this frame (double-click / Enter), or 0.
+    // The row the user activated with a double-click, Enter or Space.
     uint64_t activated_id;
-    // Stable id of the focused item, or 0.
+    // The row under the mouse, or under the keyboard cursor while the list has focus.
     uint64_t focused_id;
-    // Stable id of the item right-clicked this frame, or 0. The List opens no menu: it reports the row so the
-    // app opens its own context menu at the cursor.
+    // The row the user right-clicked. The list opens no menu, so open yours for this row.
     uint64_t context_menu_id;
-    // The Selection Requests the List emitted this frame; always populated, even when the List auto-applied
-    // them into a non-null set. Valid for this frame only. Read request_count entries; null when none.
+    // The selection changes of this frame (`request_count` entries, valid this frame only).
+    //
+    // These are already applied if you passed a set. Otherwise apply them yourself.
     const FlSelectionRequest* requests;
-    // Number of entries in requests (0 = no selection change this frame).
+    // The number of entries in `requests`.
     uint32_t request_count;
-    // Nav-Up pressed while the focus cursor was already on the first row (keyboard navigation hit the top edge).
+    // Whether the user pressed Up on the first row. Use it to move focus above the list.
     bool nav_up_edge;
-    // Nav-Down pressed while the focus cursor was already on the last row (keyboard navigation hit the bottom edge).
+    // Whether the user pressed Down on the last row. Use it to move focus below the list.
     bool nav_down_edge;
-    // A reorder drag is in flight this frame (ghost + insertion line shown). The `drag_*` payload below is the
-    // live CANDIDATE, so a suppress_drag_visuals caller can draw its own affordances.
+    // Whether rows are being dragged. The drag fields then say where they would land.
     bool drag_active;
-    // A reorder request was produced this frame (the drag was released onto a drop). The `drag_*` payload is the
-    // COMMITTED request the app applies. Never true in the same frame as drag_active.
+    // Whether the dragged rows were dropped this frame.
+    //
+    // If so, move `drag_from_ids` to the `drag_rel` side of `drag_target_id` in your own data. The target can
+    // be one of the dragged rows.
     bool reorder_emitted;
-    // The dragged stable ids (`const uint64_t*`): the whole selection when the pressed row was selected, else
-    // just the pressed row. null / 0 entries when no drag is active or emitting.
+    // The dragged rows (`drag_from_count` entries in no particular order, valid this frame only).
+    //
+    // This is every row in your set if the drag started on a selected row, and only the pressed row otherwise.
     const uint64_t* drag_from_ids;
-    // The stable id the drop is positioned relative to (candidate while dragging, committed on release).
+    // The row the drop is next to.
     uint64_t drag_target_id;
-    // Number of entries in drag_from_ids (0 = no drag this frame).
+    // The number of entries in `drag_from_ids`.
     uint32_t drag_from_count;
-    // Where the drop lands relative to the target: Before/After (Into is reserved, never produced).
+    // The side of `drag_target_id` the rows land on.
     FlDropRelationship drag_rel;
 } FlListResult;
 

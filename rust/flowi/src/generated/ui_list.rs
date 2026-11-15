@@ -6,32 +6,36 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Virtualized list for rows with custom caller-emitted content. Call begin, then item_begin
-/// / item_end for each visible row, then end.
+/// A scrolling list where you draw each row.
+///
+/// Each frame, call `begin` with the ids of all rows. For each index in the range it returns, call
+/// `item_begin`, draw the row, and call `item_end`. Then call `end` and act on the result.
+///
+/// The list fills the layout area it is in. It handles selection, the keyboard and row dragging; you keep the
+/// rows and reorder them after a drop. For plain label rows, see `Input::list`.
 pub struct List;
 
 impl List {
-    /// Begin one row carrying the opaque stable_id; returns its interaction Signal (hover /
-    /// click / double-click / right-click) for that row. Pair with item_end.
+    /// Starts the row with the given id and returns the `Signal` for it.
+    ///
+    /// Everything you draw before `item_end` is the row's content.
     #[inline]
     pub fn item_begin(stable_id: u64) -> crate::sys::Signal {
         let _frame = crate::frame_thread::frame_thread_guard("List::item_begin");
         unsafe { crate::sys::fl_list_item_begin(stable_id) }
     }
 
-    /// End the current row.
+    /// Ends the row started with `item_begin`.
     #[inline]
     pub fn item_end() {
         let _frame = crate::frame_thread::frame_thread_guard("List::item_end");
         unsafe { crate::sys::fl_list_item_end() }
     }
 
-    /// Request keyboard focus for list id on a popup's open edge: engages the list's own keyboard handling
-    /// (arrows / Home / End / type-ahead / Enter-Space activate) AND claims the global focus ring so it survives
-    /// the frame the trigger widget blurs. Seeds the focus cursor to cursor_id (a stable Item Id; 0 = first
-    /// row), validated against the ordered slice in begin with fallback to the first row. The cursor is
-    /// seeded only when the list did not already hold focus, so calling this every frame does not move a
-    /// roving cursor.
+    /// Gives the list keyboard focus, with the cursor on `cursor_id` (0 for the first row).
+    ///
+    /// Call this once when a popup holding the list opens. Each call takes focus from whatever has it, so do
+    /// not call it every frame.
     #[inline]
     pub fn request_focus(id: impl Into<crate::LayoutId>, cursor_id: u64) {
         let id: crate::LayoutId = id.into();

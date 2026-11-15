@@ -115,12 +115,10 @@ FL_API float fl_input_gamepad_button_hold_duration(uint32_t slot, FlGamepadButto
 // The current normalized value of axis on the pad in player slot (0-based): -1..1 for the sticks,
 // 0..1 for the triggers, as the backend reported it with no dead zone applied. 0 when the slot is empty.
 FL_API float fl_input_gamepad_axis(uint32_t slot, FlGamepadAxis axis);
-// One-call declarative List. Hand it an array of item descriptors (`count` ListItem entries) and the
-// caller-owned selection set (null opts out), and it runs the whole list internally (virtualization,
-// selection gestures, keyboard nav, marquee, drag-reorder, auto-apply) while drawing each row's label
-// and icon. opts is ListOpts (layout knobs plus multi_select / reorderable). Returns the ListResult;
-// the caller reads the policy outcomes (activated_id, context_menu_id, the reorder request). Use
-// List::begin for rows with custom content.
+// Shows a scrolling list of label rows.
+//
+// `items` holds the `count` rows in display order. Selection goes into `set`; if `set` is null, no row is
+// highlighted. To draw the rows yourself, use `List::begin`.
 FL_API FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t count, FlSelectionSet* set, FlListOpts opts);
 // True when the semantic navigation-down action was pressed this frame, independent of whether it came
 // from an arrow key, D-pad, or analog stick binding.

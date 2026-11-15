@@ -13,25 +13,32 @@
 extern "C" {
 #endif
 
-// Virtualized list for rows with custom caller-emitted content. Call begin, then item_begin
-// / item_end for each visible row, then end.
-// Begin a virtualized list identified by id over the app's full ordered id slice (ordered_ids of
-// count entries), applying selection into set (null opts out), with layout config. Returns the
-// visible index range to emit; pair with end.
+// A scrolling list where you draw each row.
+//
+// Each frame, call `begin` with the ids of all rows. For each index in the range it returns, call
+// `item_begin`, draw the row, and call `item_end`. Then call `end` and act on the result.
+//
+// The list fills the layout area it is in. It handles selection, the keyboard and row dragging; you keep the
+// rows and reorder them after a drop. For plain label rows, see `Input::list`.
+// Starts a list and returns the range of rows to draw.
+//
+// `ordered_ids` holds the ids of all `count` rows in display order. Each id must be unique and not 0.
+//
+// Selection goes into `set`. If `set` is null, read the changes from `ListResult.requests` and draw your
+// own highlight.
 FL_API FlListRange fl_list_begin(FlLayoutId id, const uint64_t* ordered_ids, uint32_t count, FlSelectionSet* set, FlListConfig config);
-// Begin one row carrying the opaque stable_id; returns its interaction Signal (hover /
-// click / double-click / right-click) for that row. Pair with item_end.
+// Starts the row with the given id and returns the `Signal` for it.
+//
+// Everything you draw before `item_end` is the row's content.
 FL_API FlSignal fl_list_item_begin(uint64_t stable_id);
-// End the current row.
+// Ends the row started with `item_begin`.
 FL_API void fl_list_item_end(void);
-// End the list. Returns the per-frame ListResult (activated_id / focused_id), keyed on stable ids.
+// Ends the list and returns the result for this frame.
 FL_API FlListResult fl_list_end(void);
-// Request keyboard focus for list id on a popup's open edge: engages the list's own keyboard handling
-// (arrows / Home / End / type-ahead / Enter-Space activate) AND claims the global focus ring so it survives
-// the frame the trigger widget blurs. Seeds the focus cursor to cursor_id (a stable Item Id; 0 = first
-// row), validated against the ordered slice in begin with fallback to the first row. The cursor is
-// seeded only when the list did not already hold focus, so calling this every frame does not move a
-// roving cursor.
+// Gives the list keyboard focus, with the cursor on `cursor_id` (0 for the first row).
+//
+// Call this once when a popup holding the list opens. Each call takes focus from whatever has it, so do
+// not call it every frame.
 FL_API void fl_list_request_focus(FlLayoutId id, uint64_t cursor_id);
 
 #define fl_list_begin_impl(id, ordered_ids, count, set, config) (fl_list_begin)(id, ordered_ids, count, set, config)
