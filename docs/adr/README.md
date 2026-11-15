@@ -45,7 +45,7 @@ One line per ADR: number, title and status. Decisions are never renumbered; a su
 - [0041](0041-dock-os-window-promotion-injected-host-seam.md) Dock OS-window promotion via an injected host seam; flowi owns the decision, the host owns the mechanics — Accepted
 - [0042](0042-plugin-sdk-exposes-flowi-types-directly.md) An embedding host's plugin SDK exposes flowi types directly; no prefix aliasing — Accepted
 - [0043](0043-generated-data-type-layouts-are-a-downstream-plugin-abi.md) flowi's generated data-type layouts are a downstream `.so` plugin ABI — Accepted
-- [0044](0044-api-doc-comments-are-caller-facing-reference-only.md) API doc comments are caller-facing reference only; api_gen rejects rationale refs — Accepted
+- [0044](0044-api-doc-comments-are-caller-facing-reference-only.md) API doc comments are caller-facing reference only; api_gen rejects rationale refs — Accepted (amended 2026-11-15: the api block comment is a summary line plus the call order)
 - [0045](0045-public-ui-api-naming-convention.md) Public UI API naming: no `_ui_` infix, `_impl` is a generated symbol only, uniform config-struct calls — Accepted
 - [0046](0046-foundation-service-vtables-generated-in-flowi.md) Foundation-service vtables are generated in flowi, beside the host's composed plugin vtable — Superseded by 0058
 - [0047](0047-render-ir-debug-inspector-belongs-in-flowi.md) The render-IR debug inspector belongs in flowi; the IR stays internal — Accepted

@@ -17,13 +17,14 @@ single source of truth) with a content policy for the doc comments it carries.
 **A `///` doc comment in a `.def` is caller-facing reference only — written for someone
 consuming the API who never sees the IDL.** Concretely:
 
-- **Content.** What the function does, its parameters, its return, and how it pairs with
-  its siblings. Type names are named plainly (`Signal`, `ListResult`); `(*.def)`/`(*.h)`
+- **Content.** What the function does, its parameters and its return. Type names are named plainly (`Signal`, `ListResult`); `(*.def)`/`(*.h)`
   source-file pointers are not — the `.def` layout is an internal implementation detail.
-- **Altitude.** The `api`-block comment is a one-or-two-line summary of what the scope *is*
-  and how its calls are used together (e.g. the `begin → item → end` pairing). It never
-  restates individual function signatures. Each function comment documents only that
-  function.
+- **Altitude.** The `api`-block comment says what the scope *is* in one summary line. When
+  its calls are made in a fixed order, a short paragraph after the summary gives that order
+  once, so the function comments do not repeat it. The block comment never restates
+  individual function signatures. Each function comment documents only that function.
+  `docs/how_to_document_apis.md` is the style guide for the wording and shape of every
+  comment.
 - **No motivation in any code comment.** Rationale, design notes, and "why it's built this
   way" do not belong in `///` *or* `//` — they live in an ADR (a decision) or CONTEXT.md (a
   term). Nothing is demoted to `//` to "keep it nearby"; if it is worth keeping it goes to
@@ -62,3 +63,11 @@ consuming the API who never sees the IDL.** Concretely:
   a review nit that can slip through.
 - The mechanical gate does not catch rationale *prose* with no banned token; that remains a
   review responsibility, backed by this ADR.
+
+## Amendment (2026-11-15): the api block comment is a summary line plus the call order
+
+The Altitude bullet used to ask for a one-or-two-line summary of the scope and how its calls
+pair. It now asks for one summary line and, where the calls have an order, a paragraph that
+gives it. The Content bullet no longer asks each function comment to describe the pairing.
+`List`, `ListUniform` and `Tree` are written this way. The other `api/*.def` files still
+have the earlier shape and are converted in later passes.
