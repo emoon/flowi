@@ -530,8 +530,7 @@ static FlString filesystem_root(FlString directory) {
         return FL_S("/");
     }
 
-    const bool has_drive = directory.length >= 3 && directory.data[1] == ':';
-    return has_drive ? fl_string_substr(directory, 0, 3) : (FlString) { 0 };
+    return has_drive_root(directory) ? fl_string_substr(directory, 0, 3) : (FlString) { 0 };
 }
 
 FlString path_find_directory(struct FlArena* arena, FlString start_directory) {

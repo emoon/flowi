@@ -42,8 +42,9 @@ pub fn join(base: &str, relative: &str) -> String {
     })
 }
 
-/// The parent directory of path. A bare filename, an empty path and / itself
-/// yield an empty string; a path directly under / yields /.
+/// The parent directory of path. A bare filename, an empty path and a root (/ or
+/// a drive root such as C:/) yield an empty string; a path directly under a root
+/// yields that root.
 #[inline]
 pub fn parent(path: &str) -> String {
     Arena::scratch(|arena| {
@@ -97,6 +98,7 @@ mod tests {
         assert_eq!(parent("readme.txt"), "");
         assert_eq!(parent(""), "");
         assert_eq!(parent("/"), "");
+        assert_eq!(parent("C:/"), "");
     }
 
     #[test]
@@ -112,6 +114,7 @@ mod tests {
     #[test]
     fn a_file_at_the_root_has_the_root_as_its_parent() {
         assert_eq!(parent("/readme.txt"), "/");
+        assert_eq!(parent(r"C:\readme.txt"), r"C:\");
     }
 
     #[test]
