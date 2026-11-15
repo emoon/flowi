@@ -94,7 +94,8 @@ const _: () = {
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TreeResult {
-    /// The selection, activation and focus, as for a List. The drag fields stay empty.
+    /// The selection, activation and focus, as for a List. Rows cannot be dragged, so the drag fields stay
+    /// empty.
     pub list: crate::sys::ListResult,
     /// The row the user asked to expand or collapse (0 for none).
     ///
@@ -119,12 +120,15 @@ const _: () = {
 // A tree view over rows you own.
 //
 // Each frame, call `Tree::begin` with the visible rows. For each row in the range it returns, call
-// `Tree::item_begin`, draw the row, and call `Tree::item_end`. Then call `Tree::end`, and expand or collapse
-// the row in `TreeResult.toggled_id` in your own data.
+// `Tree::item_begin`, draw the row, and call `Tree::item_end`. Then call `Tree::end`. If
+// `TreeResult.toggled_id` is not 0, expand or collapse that row in your own data.
 //
-// The Tree draws the indent and the arrows. Selection and the keyboard work as in a List. Right expands a
-// row or moves to its first child, and Left collapses a row or moves to its parent. Rows stay selected while
-// a collapsed parent hides them, and rows cannot be dragged.
+// For a tree too large to list row by row, start with `Tree::begin_virtual` and use `Tree::row_at` and
+// `Tree::item_begin_virtual` for the rows.
+//
+// The Tree draws the indent and the arrows. Selection, type-ahead and the keyboard work as in a List. Right
+// expands a row or moves to its first child, and Left collapses a row or moves to its parent. Rows stay
+// selected while a collapsed parent hides them.
 extern "C" {
     /// Starts a tree and returns the range of rows to draw.
     ///
@@ -140,15 +144,17 @@ extern "C" {
     ///
     /// `root_count` is the number of top-level rows and `expanded` holds the `count` expanded nodes. For each
     /// row in the range, call `Tree::row_at` to find out which child it is, then `Tree::item_begin_virtual`
-    /// and `Tree::item_end`.
+    /// and `Tree::item_end`. Finish with `Tree::end`.
     ///
     /// Rows have no ids of their own. The id of a row is its row number plus one, in `set` and in the result.
-    /// When you apply a toggle on the next frame, the Tree moves the cursor and the selection in `set` along
-    /// with the rows below it, and unselects the rows a collapse hid. If the number of rows changes for any
-    /// other reason, the selection is cleared. With a null `set` you have to do the same yourself.
+    /// Expanding or collapsing a row moves the rows below it. When you apply a toggle on the next frame, the
+    /// Tree moves the cursor and the selection in `set` along with those rows, and unselects the rows a
+    /// collapse hid. If the number of rows changes for any other reason, the selection is cleared. With a null
+    /// `set` you have to do the same yourself.
     ///
     /// Right can ask you to expand a row that has no children. Ignore that request. Type-ahead is off and
-    /// `ListConfig.labels` is not read. A tree shows at most 2^31 - 1 rows nested 65535 levels deep.
+    /// `ListConfig.labels` is not read. A tree shows at most 2^31 - 1 rows nested 65535 levels deep, and
+    /// nodes beyond that are left out.
     pub fn fl_tree_begin_virtual(id: crate::sys::LayoutId, root_count: u32, expanded: *const crate::sys::TreeExpanded, count: u32, set: *mut crate::sys::SelectionSet, config: crate::sys::TreeConfig) -> crate::sys::ListRange;
     /// Returns which child a row of a virtual tree is, so you know what to draw.
     ///
@@ -156,7 +162,7 @@ extern "C" {
     pub fn fl_tree_row_at(row: u32) -> crate::sys::TreeVirtualRow;
     /// Starts a row of a virtual tree, like `Tree::item_begin`.
     ///
-    /// Pass true for `has_children` to give the row an arrow.
+    /// Pass true for `has_children` to give the row an arrow. An expanded row always has one.
     pub fn fl_tree_item_begin_virtual(row: u32, has_children: bool) -> crate::sys::Signal;
     /// Ends the row started with `Tree::item_begin` or `Tree::item_begin_virtual`.
     pub fn fl_tree_item_end();
