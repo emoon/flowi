@@ -13,7 +13,7 @@
 //! from an arena the caller has to keep alive.
 //!
 //! ```
-//! use flowi_core::path;
+//! use flowi::path;
 //!
 //! assert_eq!(path::join("/docs", "readme.txt"), "/docs/readme.txt");
 //! assert_eq!(path::parent("/docs/readme.txt"), "/docs");
