@@ -12,7 +12,7 @@
 /// `List::item_begin`, draw the row, and call `List::item_end`. Then call `List::end` and act on the result.
 ///
 /// The list fills the layout area it is in. It handles selection, the keyboard and row dragging; you keep the
-/// rows and reorder them after a drop. For plain label rows, see `Input::list`.
+/// rows and reorder them after a drop. For plain label rows, see `List::show`.
 pub struct List;
 
 impl List {
