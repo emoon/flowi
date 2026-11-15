@@ -8,7 +8,7 @@
 pub enum AppRenderer {
     /// The software renderer. This is the default.
     Software = 0,
-    /// The GPU backend. `App::create` fails and logs the reason on a build without GPU support.
+    /// The GPU backend. `fl_app_create` fails and logs the reason on a build without GPU support.
     Gpu = 1,
     /// The Metal GPU backend.
     Metal = 2,
@@ -19,7 +19,7 @@ const _: () = {
     assert!(core::mem::align_of::<AppRenderer>() == 4, "AppRenderer align drift");
 };
 
-/// The settings for `App::create`.
+/// The settings for `fl_app_create`.
 #[repr(C)]
 pub struct AppSettings {
     /// The title of the main window.

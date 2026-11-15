@@ -2,7 +2,7 @@
 
 /// A keyboard key.
 ///
-/// This is the key that `Input::key_pressed`, `Input::key_down` and `Input::key_released` take.
+/// This is the key that `fl_input_key_pressed`, `fl_input_key_down` and `fl_input_key_released` take.
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Key {

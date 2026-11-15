@@ -17,7 +17,7 @@ const _: () = {
     assert!(core::mem::align_of::<MeshTopology>() == 4, "MeshTopology align drift");
 };
 
-/// A handle to a mesh created by `Mesh::create` or `Mesh::create_lines`.
+/// A handle to a mesh created by `fl_mesh_create` or `fl_mesh_create_lines`.
 ///
 /// A mesh belongs to the render backend, so you can draw it in any viewport.
 #[repr(transparent)]
@@ -66,9 +66,9 @@ const _: () = {
 
 // Geometry that you create once and draw many times.
 //
-// Create a mesh from `MeshVertex` values and 16-bit indices. Use `Mesh::create` for triangles and
-// `Mesh::create_lines` for line segments. Draw it with `Viewport3d::draw_mesh` or `Viewport3d::draw_lines`, and
-// call `Mesh::destroy` when you no longer need it.
+// Create a mesh from `MeshVertex` values and 16-bit indices. Use `fl_mesh_create` for triangles and
+// `fl_mesh_create_lines` for line segments. Draw it with `fl_viewport3d_draw_mesh` or `fl_viewport3d_draw_lines`, and
+// call `fl_mesh_destroy` when you no longer need it.
 extern "C" {
     /// Creates a triangle mesh and returns its handle.
     ///
@@ -81,23 +81,23 @@ extern "C" {
     /// Creates a line mesh and returns its handle.
     ///
     /// `indices` holds two indices per line segment. Lines take their color from the vertices and are never
-    /// textured. Draw them with `Viewport3d::draw_lines`.
+    /// textured. Draw them with `fl_viewport3d_draw_lines`.
     ///
     /// It returns the invalid handle (0) if either array is empty, if the number of indices is odd, if the render
     /// backend has no 3D support, or if the backend cannot hold another mesh.
     pub fn fl_mesh_create_lines(vertices: *const crate::sys::MeshVertex, vertices_size: u32, indices: *const u16, indices_size: u32) -> crate::sys::MeshHandle;
     /// Destroys a mesh and frees its buffers.
     ///
-    /// Do not use the handle afterwards. A later `Mesh::create` can hand out the same value for a new mesh, and a
+    /// Do not use the handle afterwards. A later `fl_mesh_create` can hand out the same value for a new mesh, and a
     /// stale copy of the handle then draws that mesh.
     pub fn fl_mesh_destroy(mesh: crate::sys::MeshHandle);
 }
 
 // A 3D scene that is drawn into a layout element.
 //
-// Each frame, call `Viewport3d::begin` with the id of the element. Use the size it returns to build a
-// view-projection matrix, and pass the matrix to `Viewport3d::set_view_projection`. Then call
-// `Viewport3d::draw_mesh` and `Viewport3d::draw_lines` for each mesh, and finish with `Viewport3d::end`.
+// Each frame, call `fl_viewport3d_begin` with the id of the element. Use the size it returns to build a
+// view-projection matrix, and pass the matrix to `fl_viewport3d_set_view_projection`. Then call
+// `fl_viewport3d_draw_mesh` and `fl_viewport3d_draw_lines` for each mesh, and finish with `fl_viewport3d_end`.
 //
 // Flowi has no cameras, lights or materials. Shading is fixed and unlit, and you do the camera math, the picking
 // and the gizmos yourself. If the render backend has no 3D support, the element shows a flat placeholder.
@@ -105,8 +105,8 @@ extern "C" {
     /// Starts the viewport for an element and returns the size to render at, in device pixels.
     ///
     /// The size is the one the element was laid out at on the previous frame. It is (0, 0) on the first frame and
-    /// one frame behind after a resize. The size is also (0, 0) if another `Viewport3d::begin` is still open, or
-    /// if the app already has 8 live viewports. Call `Viewport3d::end` when you have made your draws.
+    /// one frame behind after a resize. The size is also (0, 0) if another `fl_viewport3d_begin` is still open, or
+    /// if the app already has 8 live viewports. Call `fl_viewport3d_end` when you have made your draws.
     pub fn fl_viewport3d_begin(id: crate::sys::LayoutId) -> crate::sys::Vec2;
     /// Sets the view-projection matrix for the draws that follow in this viewport.
     ///
@@ -118,7 +118,7 @@ extern "C" {
     ///
     /// The vertex colors are multiplied with the texels of `texture`, sampled with `filter`. Pass the invalid
     /// handle (0) to draw with the vertex colors only. A texture must come from
-    /// `Image::create_dedicated`, because the texture coordinates address the whole texture.
+    /// `fl_image_create_dedicated`, because the texture coordinates address the whole texture.
     ///
     /// Draws are rendered in the order you make them, and a viewport takes at most 256 per frame. The rest are
     /// dropped and an error is logged.
@@ -126,9 +126,9 @@ extern "C" {
     /// Draws a line mesh in its vertex colors, one pixel wide.
     ///
     /// With `depth_test` false, the lines stay visible through the geometry. With true, the scene can hide them.
-    /// The draw counts toward the same per-frame limit as `Viewport3d::draw_mesh`.
+    /// The draw counts toward the same per-frame limit as `fl_viewport3d_draw_mesh`.
     pub fn fl_viewport3d_draw_lines(mesh: crate::sys::MeshHandle, depth_test: bool);
-    /// Ends the viewport started by `Viewport3d::begin` and sends its draws to the render backend.
+    /// Ends the viewport started by `fl_viewport3d_begin` and sends its draws to the render backend.
     pub fn fl_viewport3d_end();
 }
 

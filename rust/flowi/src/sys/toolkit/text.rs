@@ -2,7 +2,7 @@
 
 /// The font, size and letter spacing used to measure or draw one line of text.
 ///
-/// This is passed to `Text::measure` and `Painter::text_styled`. A zero field uses the fallback named on the field.
+/// This is passed to `fl_text_measure` and `fl_painter_text_styled`. A zero field uses the fallback named on the field.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TextStyle {
@@ -24,7 +24,7 @@ const _: () = {
 
 /// The size of one line of text, in logical pixels.
 ///
-/// This is returned by `Text::measure`.
+/// This is returned by `fl_text_measure`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TextMetrics {
@@ -49,8 +49,8 @@ const _: () = {
 
 // Text that takes part in the layout.
 //
-// Call `Text::emit` for plain text, or `Text::styled` to choose the font, size, color and wrapping. Use
-// `Text::measure` to get the size of a line without drawing it.
+// Call `fl_text_emit` for plain text, or `fl_text_styled` to choose the font, size, color and wrapping. Use
+// `fl_text_measure` to get the size of a line without drawing it.
 extern "C" {
     /// Adds text in the theme's primary color as a child of the current container.
     pub fn fl_text_emit(text: crate::sys::RawStr);
@@ -58,7 +58,7 @@ extern "C" {
     pub fn fl_text_styled(text: crate::sys::RawStr, config: crate::sys::TextConfig);
     /// Measures a single line of text without drawing it.
     ///
-    /// The result matches what `Painter::text_styled` draws with the same `style`. A font that is not loaded
+    /// The result matches what `fl_painter_text_styled` draws with the same `style`. A font that is not loaded
     /// measures as all zeroes.
     pub fn fl_text_measure(text: crate::sys::RawStr, style: crate::sys::TextStyle) -> crate::sys::TextMetrics;
 }

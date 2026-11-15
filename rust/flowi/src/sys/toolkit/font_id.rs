@@ -4,7 +4,7 @@
 ///
 /// 0 is invalid. Where a font is used to draw or measure text, 0 means the active font.
 ///
-/// This is returned by `Font::load` and taken by `Font::set`, `Font::is_loaded` and `Painter::text`.
+/// This is returned by `fl_font_load` and taken by `fl_font_set`, `fl_font_is_loaded` and `fl_painter_text`.
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FontId(pub u32);

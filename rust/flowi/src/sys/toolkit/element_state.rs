@@ -2,13 +2,13 @@
 
 /// The position, size and interaction state of a laid-out element.
 ///
-/// This is returned by `Input::get_element_state`. It has a value for an element that was given `Item::behavior` or
-/// `Input::scroll_target`, or that is a widget, a scroll area or a list. A plain container from `Layout::start` has
+/// This is returned by `fl_input_get_element_state`. It has a value for an element that was given `fl_item_behavior` or
+/// `fl_input_scroll_target`, or that is a widget, a scroll area or a list. A plain container from `fl_layout_start` has
 /// none, and `found` is false. If the element is not a widget, only the rect and `found`, `visible` and `hot` are
 /// set, and the rest are zero.
 ///
 /// The rect is in physical pixels in C. The Rust binding divides it by the UI scale, so it is in logical pixels, the
-/// same space as `Input::mouse_position` and the painter.
+/// same space as `fl_input_mouse_position` and the painter.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ElementState {

@@ -6,7 +6,7 @@ use crate::sys::text_input_state::*;
 // A single-line text field, such as a search box or an inline rename.
 //
 // Create the field once and keep it across frames. Each frame, show it and act on the signal it returns. Use
-// `TextInput::set_text` and `TextInput::clear` to change the text from code, and read the text back when you
+// `fl_text_input_set_text` and `fl_text_input_clear` to change the text from code, and read the text back when you
 // need it.
 extern "C" {
     /// Creates a text field and returns its handle.

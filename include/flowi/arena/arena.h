@@ -34,7 +34,7 @@ typedef struct FlTempArena {
 // Starts flowi's core services and returns the main arena.
 //
 // `job_threads` is the number of job threads to start. Calling it again returns the same arena and leaves the
-// running services alone. `App::create` calls it for you, so call it yourself only to choose `job_threads`
+// running services alone. Creating an app calls it for you, so call it yourself only to choose `job_threads`
 // or to get the arena before you create an app.
 FL_API FlArena* fl_init(int32_t job_threads);
 // Stops flowi's core services and releases the main arena and the scratch arenas of the calling thread.

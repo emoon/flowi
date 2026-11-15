@@ -25,8 +25,8 @@ const _: () = {
 
 // Logging to named channels, with a minimum level for each.
 //
-// Register a channel with `Log::register_channel` and pass its id to `Log::c_message_formatted` or
-// `Log::c_message`. Messages go to stderr and to the log file if `Log::file_init` has opened one. `Log::message`
+// Register a channel with `fl_log_register_channel` and pass its id to `fl_log_c_message_formatted` or
+// `Log::c_message`. Messages go to stderr and to the log file if `fl_log_file_init` has opened one. `Log::message`
 // logs on a channel named CORE instead.
 extern "C" {
     /// Registers a channel called `name` and returns its id.
@@ -38,7 +38,7 @@ extern "C" {
     pub fn fl_log_register_channel(name: crate::sys::RawStr) -> u32;
     /// Sets the lowest level that channel `id` logs.
     ///
-    /// A new channel starts at the level set by `Log::set_level`, or `LogLevel::Trace` if it was never called.
+    /// A new channel starts at the level set by `fl_log_set_level`, or `LogLevel::Trace` if it was never called.
     pub fn fl_log_channel_set_level(id: u32, level: crate::sys::LogLevel);
     /// Turns channel `id` on or off.
     ///
@@ -57,9 +57,9 @@ extern "C" {
     pub fn fl_log_file_init(base_dir: crate::sys::RawStr) -> bool;
     /// Closes the log file.
     pub fn fl_log_file_shutdown();
-    /// Returns the path of the log file, or an empty string if `Log::file_init` has not opened one.
+    /// Returns the path of the log file, or an empty string if `fl_log_file_init` has not opened one.
     ///
-    /// The path stays readable after `Log::file_shutdown`.
+    /// The path stays readable after `fl_log_file_shutdown`.
     pub fn fl_log_file_get_path() -> crate::sys::RawStr;
     /// Flushes log output.
     ///
@@ -67,7 +67,7 @@ extern "C" {
     pub fn fl_log_flush();
     /// Sets the lowest level that every channel logs, including channels registered later.
     ///
-    /// This replaces the level of each channel set with `Log::channel_set_level`.
+    /// This replaces the level of each channel set with `fl_log_channel_set_level`.
     pub fn fl_log_set_level(level: crate::sys::LogLevel);
 }
 

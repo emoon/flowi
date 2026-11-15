@@ -2,25 +2,25 @@
 
 // Layout containers, the boxes that place their children.
 //
-// Call `Layout::start` or `Layout::start_auto`, then `Layout::configure` to set the container up. Draw the children,
-// then call `Layout::end`. Containers nest, and each `Layout::end` closes the one opened last.
+// Call `fl_layout_start` or `fl_layout_start_auto`, then `fl_layout_configure` to set the container up. Draw the children,
+// then call `fl_layout_end`. Containers nest, and each `fl_layout_end` closes the one opened last.
 extern "C" {
     /// Opens a container with the given id.
     ///
-    /// Each id must be unique within a frame. Close the container with `Layout::end`.
+    /// Each id must be unique within a frame. Close the container with `fl_layout_end`.
     pub fn fl_layout_start(id: crate::sys::LayoutId);
     /// Opens a container without an id, for one you never need to look up again.
     ///
-    /// Close the container with `Layout::end`.
+    /// Close the container with `fl_layout_end`.
     pub fn fl_layout_start_auto();
     /// Applies `config` to the container opened last.
     ///
-    /// Call this once, right after `Layout::start` or `Layout::start_auto`.
+    /// Call this once, right after `fl_layout_start` or `fl_layout_start_auto`.
     pub fn fl_layout_configure(config: crate::sys::LayoutConfig);
     /// Closes the container opened last.
     ///
-    /// This also closes a floating element opened with `Floating::start`. A scroll area is closed with
-    /// `Scroll::area_end`.
+    /// This also closes a floating element opened with `fl_floating_start`. A scroll area is closed with
+    /// `fl_scroll_area_end`.
     pub fn fl_layout_end();
 }
 

@@ -2,13 +2,13 @@
 
 /// The ids of the selected rows of a list.
 ///
-/// You own the set. Pass it to `List::begin` and the list updates it.
+/// You own the set. Pass it to `fl_list_begin` and the list updates it.
 pub enum SelectionSet {}
 
 // A set that holds the ids of the selected rows.
 //
-// Pass a set to `List::begin` and the list updates it. Check a row with `SelectionSet::contains` and read the
-// whole selection with `SelectionSet::copy_ids`.
+// Pass a set to `fl_list_begin` and the list updates it. Check a row with `fl_selection_set_contains` and read the
+// whole selection with `fl_selection_set_copy_ids`.
 extern "C" {
     /// Creates an empty set.
     ///
@@ -36,7 +36,7 @@ extern "C" {
     pub fn fl_selection_set_len(set: *mut crate::sys::SelectionSet) -> u64;
     /// Writes the selected ids into `out` and returns how many it wrote.
     ///
-    /// It writes at most `cap` ids, in no particular order. Compare the result with `SelectionSet::len` to see if
+    /// It writes at most `cap` ids, in no particular order. Compare the result with `fl_selection_set_len` to see if
     /// `out` was big enough.
     pub fn fl_selection_set_copy_ids(set: *mut crate::sys::SelectionSet, out: *mut u64, cap: u64) -> u64;
 }

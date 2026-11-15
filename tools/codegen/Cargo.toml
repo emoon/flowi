@@ -11,6 +11,6 @@ publish = false
 [dependencies]
 # Pinned to an exact commit: the generator that produced the committed output is the one
 # that runs. Bump `rev`, run `cargo regen`, and commit the regenerated output with it.
-api_gen = { git = "https://github.com/emoon/api-gen", rev = "4e7e01d783e653065523bedd9729e46e2dd5d707" }
+api_gen = { git = "https://github.com/emoon/api-gen", rev = "5fdb019931615a591050806d5029ee3735d141c4" }
 
 [workspace]

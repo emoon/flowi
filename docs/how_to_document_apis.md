@@ -91,16 +91,22 @@ to repeat it.
 - Refer to other items by their names in the `.def`, in backticks: `List::begin` for a function, `ListResult`
   for a type, `ListResult.requests` for a field and `DropRelationship::Before` for an enum value. Do not write
   the C name or a Rust-only name. api_gen turns the reference into `fl_list_begin`, `FlListResult` and so on
-  in the C headers. For Rust it leaves the reference as written, unless the function has `[rust_doc]`.
-- If a comment refers to a function whose Rust call has another name, as some `[manual]` functions and every
-  `_impl` function do, add `[rust_doc(List::show)]` to that function with the Rust name. The Rust docs then
-  show that name in place of the reference.
+  in the C headers. In the raw Rust bindings a function becomes `fl_list_begin` too, and types, fields and
+  enum values keep their names. For the Rust wrappers it leaves the reference as written, unless the function
+  has `[rust_doc]`.
+- If a comment refers to a `[manual]` function whose Rust call has another name, add `[rust_doc(List::show)]`
+  to that function with the Rust name. The Rust docs then show that name in place of the reference. A generated
+  `_impl` function needs nothing, because the Rust docs drop the suffix. The exception is a block with a
+  `[drop]` function, where the method keeps the suffix. `[rust_doc]` has no effect in `api/core` and
+  `api/vfs`, which have no generated wrappers.
+- A comment in `api/core` can only refer to items in `api/core`, and one in `api/vfs` to items in those two.
+  api_gen does not see the layers above, so describe such an item in words.
 - Write the full `List::begin` even inside the `List` block. A bare `begin` is not translated.
 - Keep a reference on one line of the comment.
 - api_gen stops with an error if a reference names a function, field or enum value that its type or `api` block
   does not have. It does not catch a misspelt type or `api` name, so check those yourself.
 - A backticked word that is the name of a type is always translated, so do not backtick such a word when you
-  mean something else.
+  mean something else. `String` counts: it is the flowi string and becomes `FlString` in the C headers.
 - Write "null" for a pointer that may be left out. A Rust caller passes `None`.
 - Write true, false and null as plain words, without backticks.
 - Put a failure case or a requirement in a plain paragraph, such as "`value` must not be null." Do not use the

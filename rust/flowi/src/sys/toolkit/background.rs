@@ -2,9 +2,9 @@
 
 // The full-screen background drawn behind all UI.
 //
-// Call `Background::set` to show an image, `Background::set_alpha` to change its opacity and
-// `Background::set_clear_color` to choose the color where no image covers the screen. To crossfade between two
-// images, call `Background::set_blend`.
+// Call `fl_background_set` to show an image, `fl_background_set_alpha` to change its opacity and
+// `fl_background_set_clear_color` to choose the color where no image covers the screen. To crossfade between two
+// images, call `fl_background_set_blend`.
 extern "C" {
     /// Sets the background image, drawn behind all UI instead of clearing the framebuffer.
     ///
@@ -12,7 +12,7 @@ extern "C" {
     pub fn fl_background_set(handle: crate::sys::ImageHandle);
     /// Sets the opacity of the background image (0 is transparent and 255 is opaque, the default).
     ///
-    /// A blend from `Background::set_blend` ignores it.
+    /// A blend from `fl_background_set_blend` ignores it.
     pub fn fl_background_set_alpha(alpha: u8);
     /// Sets the color drawn where no background image covers the screen.
     pub fn fl_background_set_clear_color(r: u8, g: u8, b: u8);

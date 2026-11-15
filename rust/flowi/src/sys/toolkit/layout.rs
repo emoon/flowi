@@ -282,7 +282,7 @@ const _: () = {
 
 /// The settings of one layout container.
 ///
-/// Pass it to `Layout::configure`.
+/// Pass it to `fl_layout_configure`.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct LayoutConfig {

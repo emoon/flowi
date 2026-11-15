@@ -2,7 +2,7 @@
 
 /// A row of a tree, as shown on screen.
 ///
-/// Pass every visible row to `Tree::begin`, top to bottom, and leave out the rows under a collapsed row.
+/// Pass every visible row to `fl_tree_begin`, top to bottom, and leave out the rows under a collapsed row.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TreeRow {
@@ -27,7 +27,7 @@ const _: () = {
 
 /// An expanded node of a virtual tree.
 ///
-/// Pass only the expanded nodes to `Tree::begin_virtual`, in the order they appear on screen, so a node always
+/// Pass only the expanded nodes to `fl_tree_begin_virtual`, in the order they appear on screen, so a node always
 /// comes after its parent.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -48,7 +48,7 @@ const _: () = {
     assert!(core::mem::offset_of!(TreeExpanded, child_count) == 8, "TreeExpanded.child_count offset drift");
 };
 
-/// A row of a virtual tree, returned by `Tree::row_at`.
+/// A row of a virtual tree, returned by `fl_tree_row_at`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TreeVirtualRow {
@@ -71,7 +71,7 @@ const _: () = {
     assert!(core::mem::offset_of!(TreeVirtualRow, node) == 12, "TreeVirtualRow.node offset drift");
 };
 
-/// Options for `Tree::begin` and `Tree::begin_virtual`.
+/// Options for `fl_tree_begin` and `fl_tree_begin_virtual`.
 ///
 /// A field left at zero uses its default.
 #[repr(C)]
@@ -90,7 +90,7 @@ const _: () = {
     assert!(core::mem::offset_of!(TreeConfig, indent) == 24, "TreeConfig.indent offset drift");
 };
 
-/// The outcome of a tree for one frame, returned by `Tree::end`.
+/// The outcome of a tree for one frame, returned by `fl_tree_end`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TreeResult {
@@ -119,12 +119,12 @@ const _: () = {
 
 // A tree view over rows you own.
 //
-// Each frame, call `Tree::begin` with the visible rows. For each row in the range it returns, call
-// `Tree::item_begin`, draw the row, and call `Tree::item_end`. Then call `Tree::end`. If the
+// Each frame, call `fl_tree_begin` with the visible rows. For each row in the range it returns, call
+// `fl_tree_item_begin`, draw the row, and call `fl_tree_item_end`. Then call `fl_tree_end`. If the
 // `TreeResult` reports a toggled row, expand or collapse that row in your own data.
 //
-// For a tree too large to list row by row, start with `Tree::begin_virtual` and use `Tree::row_at` and
-// `Tree::item_begin_virtual` for the rows.
+// For a tree too large to list row by row, start with `fl_tree_begin_virtual` and use `fl_tree_row_at` and
+// `fl_tree_item_begin_virtual` for the rows.
 //
 // The Tree draws the indent and the arrows. Selection, type-ahead and the keyboard work as in a List. Right
 // expands a row or moves to its first child, and Left collapses a row or moves to its parent. Rows stay
@@ -137,14 +137,14 @@ extern "C" {
     pub fn fl_tree_begin(id: crate::sys::LayoutId, rows: *const crate::sys::TreeRow, count: u32, set: *mut crate::sys::SelectionSet, config: crate::sys::TreeConfig) -> crate::sys::ListRange;
     /// Starts the row at index `row` and returns the `Signal` for it.
     ///
-    /// The indent and the arrow are drawn for you, and what you draw before `Tree::item_end` goes to the right
+    /// The indent and the arrow are drawn for you, and what you draw before `fl_tree_item_end` goes to the right
     /// of them. A press on the arrow is not a click on the row.
     pub fn fl_tree_item_begin(row: u32) -> crate::sys::Signal;
     /// Starts a tree that can hold millions of rows, and returns the range of rows to draw.
     ///
     /// `root_count` is the number of top-level rows and `expanded` holds the `count` expanded nodes. For each
-    /// row in the range, call `Tree::row_at` to find out which child it is, then `Tree::item_begin_virtual`
-    /// and `Tree::item_end`. Finish with `Tree::end`.
+    /// row in the range, call `fl_tree_row_at` to find out which child it is, then `fl_tree_item_begin_virtual`
+    /// and `fl_tree_item_end`. Finish with `fl_tree_end`.
     ///
     /// Rows have no ids of their own. The id of a row is its row number plus one, in `set` and in the result.
     /// Expanding or collapsing a row moves the rows below it. When you apply a toggle on the next frame, the
@@ -158,15 +158,15 @@ extern "C" {
     pub fn fl_tree_begin_virtual(id: crate::sys::LayoutId, root_count: u32, expanded: *const crate::sys::TreeExpanded, count: u32, set: *mut crate::sys::SelectionSet, config: crate::sys::TreeConfig) -> crate::sys::ListRange;
     /// Returns which child a row of a virtual tree is, so you know what to draw.
     ///
-    /// It works from `Tree::begin_virtual` until another tree begins or the frame ends. After `Tree::end`, pass
+    /// It works from `fl_tree_begin_virtual` until another tree begins or the frame ends. After `fl_tree_end`, pass
     /// it the row number of the toggled row in the `TreeResult`, not the row's id, to find the node to expand
     /// or collapse.
     pub fn fl_tree_row_at(row: u32) -> crate::sys::TreeVirtualRow;
-    /// Starts a row of a virtual tree, like `Tree::item_begin`.
+    /// Starts a row of a virtual tree, like `fl_tree_item_begin`.
     ///
     /// Pass true for `has_children` to give the row an arrow. An expanded row always has one.
     pub fn fl_tree_item_begin_virtual(row: u32, has_children: bool) -> crate::sys::Signal;
-    /// Ends the row started with `Tree::item_begin` or `Tree::item_begin_virtual`.
+    /// Ends the row started with `fl_tree_item_begin` or `fl_tree_item_begin_virtual`.
     pub fn fl_tree_item_end();
     /// Ends the tree and returns the result for this frame.
     pub fn fl_tree_end() -> crate::sys::TreeResult;

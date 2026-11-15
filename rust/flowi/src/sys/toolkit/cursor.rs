@@ -33,7 +33,7 @@ const _: () = {
     assert!(core::mem::align_of::<CursorShape>() == 4, "CursorShape align drift");
 };
 
-/// A cursor request for `Cursor::set`.
+/// A cursor request for `fl_cursor_set`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Cursor {
@@ -49,7 +49,7 @@ const _: () = {
 
 // The pointer shape and whether the pointer is visible.
 //
-// The shape is a request for one frame. A widget that wants a pointer other than the arrow calls `Cursor::set`
+// The shape is a request for one frame. A widget that wants a pointer other than the arrow calls `fl_cursor_set`
 // on every frame it is active. The visibility stays as you set it until you change it.
 extern "C" {
     /// Requests the pointer shape for this frame.

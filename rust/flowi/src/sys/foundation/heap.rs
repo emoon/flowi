@@ -5,29 +5,29 @@
 // Unlike an arena, every allocation here must be released with its matching free call. Do not mix the two. Code
 // that wraps an external C library can pass these functions to it as its allocator.
 //
-// For allocator statistics, use `MemoryTracker::get_stats`.
+// For allocator statistics, use `fl_memory_tracker_get_stats`.
 extern "C" {
     /// Allocates `size` bytes and returns them, or null if it fails.
     ///
-    /// Release them with `Heap::fl_heap_free`.
+    /// Release them with `fl_heap_free`.
     pub fn fl_heap_alloc(size: u64) -> *mut core::ffi::c_void;
     /// Allocates `count` times `size` bytes filled with zeros and returns them, or null if it fails.
     ///
-    /// Release them with `Heap::fl_heap_free`.
+    /// Release them with `fl_heap_free`.
     pub fn fl_heap_calloc(count: u64, size: u64) -> *mut core::ffi::c_void;
     /// Resizes the allocation `ptr` to `new_size` bytes and returns it.
     ///
     /// The block may move, so use the returned pointer from now on. `ptr` may be null, which allocates.
     pub fn fl_heap_realloc(ptr: *mut core::ffi::c_void, new_size: u64) -> *mut core::ffi::c_void;
-    /// Releases an allocation made by `Heap::fl_heap_alloc`, `Heap::fl_heap_calloc` or `Heap::fl_heap_realloc`.
+    /// Releases an allocation made by `fl_heap_alloc`, `fl_heap_calloc` or `fl_heap_realloc`.
     ///
     /// A null `ptr` does nothing.
     pub fn fl_heap_free(ptr: *mut core::ffi::c_void);
     /// Allocates `size` bytes aligned to `alignment` and returns them, or null if it fails.
     ///
-    /// `alignment` must be a power of two. Release them with `Heap::fl_heap_free_aligned`.
+    /// `alignment` must be a power of two. Release them with `fl_heap_free_aligned`.
     pub fn fl_heap_alloc_aligned(alignment: u64, size: u64) -> *mut core::ffi::c_void;
-    /// Releases an allocation made by `Heap::fl_heap_alloc_aligned`.
+    /// Releases an allocation made by `fl_heap_alloc_aligned`.
     ///
     /// A null `ptr` does nothing.
     pub fn fl_heap_free_aligned(ptr: *mut core::ffi::c_void);

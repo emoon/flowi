@@ -2,11 +2,11 @@
 
 /// The id the core tracks a laid-out element under.
 ///
-/// This is returned by `Input::hot_id` and `Input::hashed_id`. 0 is invalid and means no element, such as when
+/// This is returned by `fl_input_hot_id` and `fl_input_hashed_id`. 0 is invalid and means no element, such as when
 /// nothing is hovered.
 ///
 /// The id is a one-way hash of a `LayoutId`. To find your own object from an id, hash each candidate with
-/// `Input::hashed_id` and look the id up in a map built from the results. The `LayoutId` is the lasting identity of
+/// `fl_input_hashed_id` and look the id up in a map built from the results. The `LayoutId` is the lasting identity of
 /// an element, so keep that rather than the id.
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

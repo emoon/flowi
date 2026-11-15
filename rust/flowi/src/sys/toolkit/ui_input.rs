@@ -8,7 +8,7 @@ extern "C" {
     /// Makes the layout area `id` a scroll target for this frame.
     ///
     /// Call it once per frame, inside the layout scope of the area. Read the wheel over the area with
-    /// `Input::mouse_wheel_delta`.
+    /// `fl_input_mouse_wheel_delta`.
     pub fn fl_input_scroll_target(id: crate::sys::LayoutId);
     /// Returns this frame's mouse wheel delta if `id` is the hot scroll target, and {0, 0} otherwise.
     ///
@@ -17,7 +17,7 @@ extern "C" {
     pub fn fl_input_mouse_wheel_delta(id: crate::sys::LayoutId) -> crate::sys::Vec2;
     /// Returns this frame's mouse wheel delta, whatever is under the cursor.
     ///
-    /// Every caller sees the same value. To read the wheel over one area, use `Input::mouse_wheel_delta`.
+    /// Every caller sees the same value. To read the wheel over one area, use `fl_input_mouse_wheel_delta`.
     pub fn fl_input_mouse_wheel() -> crate::sys::Vec2;
     /// Returns the modifier keys held this frame.
     pub fn fl_input_keyboard_modifiers() -> crate::sys::KeyModifier;
@@ -35,7 +35,7 @@ extern "C" {
     /// Returns true if `key` went down this frame.
     ///
     /// The result does not depend on focus, so a text field that is being edited still sees its keys here. Use
-    /// `Input::text_input_active` to leave those keys alone.
+    /// `fl_input_text_input_active` to leave those keys alone.
     pub fn fl_input_key_pressed(key: crate::sys::Key) -> bool;
     /// Returns true if `key` is held down.
     pub fn fl_input_key_down(key: crate::sys::Key) -> bool;
@@ -49,11 +49,11 @@ extern "C" {
     /// Returns the state of the element `id` for this frame.
     ///
     /// If the element was not laid out, `ElementState.found` is false. In C the rect is in physical pixels, so
-    /// divide it by `Input::get_scale` to get logical pixels. The Rust binding already does that.
+    /// divide it by `fl_input_get_scale` to get logical pixels. The Rust binding already does that.
     pub fn fl_input_get_element_state(id: crate::sys::LayoutId) -> crate::sys::ElementState;
     /// Returns the state of an element from its hashed id.
     ///
-    /// This is the same as `Input::get_element_state`. Use it to read a state outside of a frame, where a
+    /// This is the same as `fl_input_get_element_state`. Use it to read a state outside of a frame, where a
     /// `LayoutId` cannot be built.
     pub fn fl_input_get_element_state_by_id(id: crate::sys::ElementId) -> crate::sys::ElementState;
     /// Returns the UI scale, the factor from logical to physical pixels.
@@ -63,25 +63,25 @@ extern "C" {
     /// To find your own object from the result, hash the ids of your objects and keep a map from the hashed id to
     /// the object.
     pub fn fl_input_hot_id() -> crate::sys::ElementId;
-    /// Returns the hashed id of a `LayoutId`, the one used for `ElementState` and `Input::hot_id`.
+    /// Returns the hashed id of a `LayoutId`, the one used for `ElementState` and `fl_input_hot_id`.
     pub fn fl_input_hashed_id(id: crate::sys::LayoutId) -> crate::sys::ElementId;
     /// Starts a drag that hides the cursor and is not stopped by the screen edge.
     ///
-    /// Read the motion with `Input::mouse_drag_delta`, which is multiplied by `scale`. Call
-    /// `Input::mouse_hidden_drag_end` when the drag is over. The cursor then goes back to where the drag began.
+    /// Read the motion with `fl_input_mouse_drag_delta`, which is multiplied by `scale`. Call
+    /// `fl_input_mouse_hidden_drag_end` when the drag is over. The cursor then goes back to where the drag began.
     pub fn fl_input_mouse_hidden_drag_begin(scale: f32);
-    /// Ends a drag started by `Input::mouse_hidden_drag_begin`.
+    /// Ends a drag started by `fl_input_mouse_hidden_drag_begin`.
     ///
     /// The cursor is shown again at the position where the drag began.
     pub fn fl_input_mouse_hidden_drag_end();
     /// Returns this frame's mouse motion during a hidden drag, multiplied by the `scale` of the drag.
     ///
     /// The value is {0, 0} when no hidden drag is active. It does not stop at the screen edge. For a drag that
-    /// does, use `Input::mouse_delta`.
+    /// does, use `fl_input_mouse_delta`.
     pub fn fl_input_mouse_drag_delta() -> crate::sys::Vec2;
     /// Returns this frame's change in mouse position, in window pixels.
     ///
-    /// It stops at the screen edge. For a drag that does not, use `Input::mouse_drag_delta`.
+    /// It stops at the screen edge. For a drag that does not, use `fl_input_mouse_drag_delta`.
     pub fn fl_input_mouse_delta() -> crate::sys::Vec2;
     /// Returns true if a gamepad is connected in player `slot`.
     ///
@@ -110,7 +110,7 @@ extern "C" {
     /// Shows a scrolling list of label rows.
     ///
     /// `items` holds the `count` rows in display order. Selection goes into `set`; if `set` is null, no row is
-    /// highlighted. To draw the rows yourself, use `List::begin`.
+    /// highlighted. To draw the rows yourself, use `fl_list_begin`.
     pub fn fl_input_list(id: crate::sys::LayoutId, items: *const crate::sys::ListItem, count: u32, set: *mut crate::sys::SelectionSet, opts: crate::sys::ListOpts) -> crate::sys::ListResult;
     /// Returns true if the navigation down action was pressed this frame.
     ///
@@ -118,7 +118,7 @@ extern "C" {
     pub fn fl_input_nav_down_pressed() -> bool;
     /// Returns how many files were dropped onto the window this frame.
     ///
-    /// The count is 0 on a frame without a drop. Use `Input::dropped_file` and `Input::dropped_file_position` to
+    /// The count is 0 on a frame without a drop. Use `fl_input_dropped_file` and `fl_input_dropped_file_position` to
     /// read each file.
     pub fn fl_input_dropped_file_count() -> u32;
     /// Returns the path of the dropped file at `index`.

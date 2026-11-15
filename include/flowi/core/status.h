@@ -9,8 +9,8 @@ extern "C" {
 // A general status code for calls that report success or why they failed.
 //
 // `FlStatus_Success` is 0 and every error is not, so a nonzero value is a failure. Errors are grouped by category
-// in ranges of 100. Parts of the API with many failure modes have their own enum, such as `VfsStatus` for file
-// operations and `FlStringParseStatus` for parsing.
+// in ranges of 100. Parts of the API with many failure modes have their own enum, such as the status of a
+// file operation in the VFS and `FlStringParseStatus` for parsing.
 typedef enum FlStatus {
     // The operation succeeded.
     FlStatus_Success = 0,

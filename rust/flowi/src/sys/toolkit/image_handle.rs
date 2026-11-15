@@ -2,7 +2,7 @@
 
 /// A handle to an image, where 0 is not valid.
 ///
-/// It is returned by `Image::load`, `Image::load_mount`, `Image::create_from_pixels` and `Image::create_dedicated`.
+/// It is returned by `fl_image_load`, `fl_image_load_mount`, `fl_image_create_from_pixels` and `fl_image_create_dedicated`.
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImageHandle(pub u32);

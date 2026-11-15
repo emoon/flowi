@@ -141,7 +141,7 @@ const _: () = {
 
 /// The colors flowi uses when it paints widgets, in groups.
 ///
-/// Pass it to `Theme::update` to set the base palette. `Theme::colors` returns the palette in use.
+/// Pass it to `fl_theme_update` to set the base palette. `fl_theme_colors` returns the palette in use.
 #[repr(C)]
 pub struct ThemeColors {
     pub interactive: crate::sys::ThemeInteractive,
@@ -163,7 +163,7 @@ const _: () = {
 
 /// A replacement for some colors of the current theme.
 ///
-/// Pass it to `Theme::push`. Colors that are not flagged in `ThemeOverride.slots` keep the value they have in the
+/// Pass it to `fl_theme_push`. Colors that are not flagged in `ThemeOverride.slots` keep the value they have in the
 /// theme at the time of the push.
 #[repr(C)]
 pub struct ThemeOverride {
@@ -182,7 +182,7 @@ const _: () = {
 
 // The colors used to paint widgets.
 //
-// Call `Theme::update` to set the base palette. Between `Theme::push` and the matching `Theme::pop`, widgets use
+// Call `fl_theme_update` to set the base palette. Between `fl_theme_push` and the matching `fl_theme_pop`, widgets use
 // the pushed override instead.
 extern "C" {
     /// Sets the base palette that flowi paints with.
@@ -192,20 +192,20 @@ extern "C" {
     ///
     /// If `colors` is null, flowi uses the built-in default palette.
     pub fn fl_theme_update(colors: *const crate::sys::ThemeColors);
-    /// Replaces some colors of the current theme until the matching `Theme::pop`.
+    /// Replaces some colors of the current theme until the matching `fl_theme_pop`.
     ///
     /// Overrides nest, up to 16 at a time. An inner push builds on the theme the outer push produced.
     pub fn fl_theme_push(theme_override: crate::sys::ThemeOverride);
-    /// Ends the most recent `Theme::push` and restores the theme from before it.
+    /// Ends the most recent `fl_theme_push` and restores the theme from before it.
     ///
     /// Call it once for every push.
     pub fn fl_theme_pop();
     /// Returns the palette widgets are painted with now.
     ///
-    /// This is the pushed override if one is active, otherwise the base palette. Before any call to `Theme::update`
+    /// This is the pushed override if one is active, otherwise the base palette. Before any call to `fl_theme_update`
     /// it is the built-in default palette.
     ///
-    /// Do not keep the pointer past the matching `Theme::pop` or the next `Theme::update`.
+    /// Do not keep the pointer past the matching `fl_theme_pop` or the next `fl_theme_update`.
     pub fn fl_theme_colors() -> *const crate::sys::ThemeColors;
 }
 

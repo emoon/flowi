@@ -3,7 +3,7 @@
 bitflags::bitflags! {
     /// Modifier keys held at the same time, as a bit mask.
     ///
-    /// `Input::keyboard_modifiers` returns it, and `KeyEvent.modifiers` carries it.
+    /// `fl_input_keyboard_modifiers` returns it, and `KeyEvent.modifiers` carries it.
     #[repr(transparent)]
     #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
     pub struct KeyModifier: u32 {

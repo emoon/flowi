@@ -2,24 +2,24 @@
 
 // A modal scope that blocks input to everything outside it and takes focus.
 //
-// While the dialog is visible, call `Modal::begin_frame` first in each frame, before any widgets are drawn. Then
-// call `Modal::begin`, draw the dialog content, and call `Modal::end`. When the dialog closes, call `Modal::close`.
+// While the dialog is visible, call `fl_modal_begin_frame` first in each frame, before any widgets are drawn. Then
+// call `fl_modal_begin`, draw the dialog content, and call `fl_modal_end`. When the dialog closes, call `fl_modal_close`.
 //
-// `Popup::message_box` is a ready-made confirm dialog. Use this API when you draw the dialog content yourself.
+// `fl_popup_message_box` is a ready-made confirm dialog. Use this API when you draw the dialog content yourself.
 extern "C" {
     /// Blocks input to the widgets outside the modal.
     ///
-    /// On the first frame it remembers the focused widget so `Modal::close` can give focus back. A `scope_id` of 0
+    /// On the first frame it remembers the focused widget so `fl_modal_close` can give focus back. A `scope_id` of 0
     /// does nothing.
     pub fn fl_modal_begin_frame(scope_id: u32);
     /// Starts the modal content, so the widgets you draw next receive input.
     ///
-    /// It also does what `Modal::begin_frame` does. Use the same `scope_id` for both. A `scope_id` of 0 does
+    /// It also does what `fl_modal_begin_frame` does. Use the same `scope_id` for both. A `scope_id` of 0 does
     /// nothing.
     pub fn fl_modal_begin(scope_id: u32);
     /// Ends the modal content.
     ///
-    /// The modal stays open until `Modal::close`.
+    /// The modal stays open until `fl_modal_close`.
     pub fn fl_modal_end();
     /// Closes the modal and gives focus back to the widget that had it before the modal opened.
     pub fn fl_modal_close();

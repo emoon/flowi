@@ -2,12 +2,12 @@
 
 // A container that clips its content and scrolls it with the mouse wheel.
 //
-// Call `Scroll::area_begin`, draw the content, then call `Scroll::area_end`. Scroll areas can nest, and the wheel
+// Call `fl_scroll_area_begin`, draw the content, then call `fl_scroll_area_end`. Scroll areas can nest, and the wheel
 // scrolls the innermost one under the cursor.
 extern "C" {
     /// Opens a scroll area with the given id and `config`.
     ///
-    /// Each id must be unique within a frame. Close the area with `Scroll::area_end`.
+    /// Each id must be unique within a frame. Close the area with `fl_scroll_area_end`.
     pub fn fl_scroll_area_begin(id: crate::sys::LayoutId, config: crate::sys::ScrollAreaConfig);
     /// Closes the scroll area opened last.
     pub fn fl_scroll_area_end();

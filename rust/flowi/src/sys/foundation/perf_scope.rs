@@ -2,9 +2,9 @@
 
 // A frame profiler that records how long nested scopes take.
 //
-// Call `PerfScope::init` once on the main thread. Each frame, call `PerfScope::frame_begin`, wrap the code you want
-// to time in `PerfScope::begin` and `PerfScope::end`, and call `PerfScope::frame_end`. When the first scope of a
-// frame on the main thread takes longer than 17 ms, `PerfScope::frame_end` logs a warning with the time of every
+// Call `fl_perf_scope_init` once on the main thread. Each frame, call `fl_perf_scope_frame_begin`, wrap the code you want
+// to time in `fl_perf_scope_begin` and `fl_perf_scope_end`, and call `fl_perf_scope_frame_end`. When the first scope of a
+// frame on the main thread takes longer than 17 ms, `fl_perf_scope_frame_end` logs a warning with the time of every
 // scope.
 extern "C" {
     /// Marks the calling thread as the main thread.
@@ -17,11 +17,11 @@ extern "C" {
     pub fn fl_perf_scope_destroy();
     /// Starts a timing scope called `name` and returns its index.
     ///
-    /// Pass the index to `PerfScope::end`. `name` must stay valid until the end of the frame. Scopes nest, and each
+    /// Pass the index to `fl_perf_scope_end`. `name` must stay valid until the end of the frame. Scopes nest, and each
     /// thread records its own. If the thread has no room for another scope, it returns the largest 32-bit unsigned
-    /// value, and passing that to `PerfScope::end` does nothing.
+    /// value, and passing that to `fl_perf_scope_end` does nothing.
     pub fn fl_perf_scope_begin(name: *const core::ffi::c_char) -> u32;
-    /// Ends the timing scope that `PerfScope::begin` returned `stack_index` for.
+    /// Ends the timing scope that `fl_perf_scope_begin` returned `stack_index` for.
     ///
     /// Scopes must end in the reverse order they began. Ending any other scope does nothing.
     pub fn fl_perf_scope_end(stack_index: u32);

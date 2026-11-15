@@ -4,8 +4,8 @@ pub enum FlArena {}
 
 // A widget that draws an image whose pixels you rewrite each frame.
 //
-// Create the image with `DynamicImage::create` or `DynamicImage::create_alpha`, write its pixels each frame, and
-// draw it with `DynamicImage::new`. If you own the pixel buffer, you can fill in a `DynamicImage` yourself
+// Create the image with `fl_dynamic_image_create` or `fl_dynamic_image_create_alpha`, write its pixels each frame, and
+// draw it with `fl_dynamic_image`. If you own the pixel buffer, you can fill in a `DynamicImage` yourself
 // instead.
 extern "C" {
     /// Creates an RGBA image of `width` by `height` pixels in `arena` and returns it.
@@ -14,7 +14,7 @@ extern "C" {
     /// destroyed, so keep it alive for as long as the image is drawn. Returns null if `width` or `height` is not
     /// positive, the size is too large, or `arena` is null.
     pub fn fl_dynamic_image_create(width: i32, height: i32, arena: *mut FlArena) -> *mut crate::sys::DynamicImage;
-    /// Creates an image like `DynamicImage::create`, with one alpha byte per pixel instead of RGBA.
+    /// Creates an image like `fl_dynamic_image_create`, with one alpha byte per pixel instead of RGBA.
     ///
     /// The rows are tightly packed, 1 byte per pixel.
     pub fn fl_dynamic_image_create_alpha(width: i32, height: i32, arena: *mut FlArena) -> *mut crate::sys::DynamicImage;

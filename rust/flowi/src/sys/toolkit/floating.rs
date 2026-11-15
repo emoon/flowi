@@ -58,7 +58,7 @@ const _: () = {
 
 /// The settings of a floating element such as a modal dialog, popup or tooltip.
 ///
-/// Pass it to `Floating::configure`.
+/// Pass it to `fl_floating_configure`.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct FloatingConfig {
@@ -74,7 +74,7 @@ pub struct FloatingConfig {
     pub element_attach: crate::sys::FloatingAttachPoint,
     /// The point on the parent that the element is joined to.
     pub parent_attach: crate::sys::FloatingAttachPoint,
-    /// The id of the element to attach to, as `Input::hashed_id` returns it. It is used when `attach_to` is
+    /// The id of the element to attach to, as `fl_input_hashed_id` returns it. It is used when `attach_to` is
     /// `FloatingAttachTo::Element`.
     pub parent_id: u32,
     /// The size of the element (fits the content by default).
