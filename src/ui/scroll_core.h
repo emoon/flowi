@@ -27,7 +27,11 @@ f64 scroll_smooth_step(f64 offset, f64 target, f64 max, f32 speed, f32 dt);
 // Maximum scroll offset for a content extent inside a viewport. Never negative.
 f64 scroll_max(f64 content, f64 viewport);
 
-// Index range [*out_start, *out_end) of items intersecting the viewport for a uniform
+typedef struct ScrollRange {
+    u32 start;
+    u32 end;
+} ScrollRange;
+
+// Index range [start, end) of items intersecting the viewport for a uniform
 // virtualized list of item_stride-spaced items, padded by buffer items on each side.
-void scroll_visible_range(f64 scroll_offset, f32 viewport, f32 item_stride, u32 total_count, u32 buffer, u32* out_start,
-                          u32* out_end);
+ScrollRange scroll_visible_range(f64 scroll_offset, f32 viewport, f32 item_stride, u32 total_count, u32 buffer);

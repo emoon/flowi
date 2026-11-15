@@ -11,6 +11,15 @@
       ]
     },
     {
+      "matching_content_path": "src/ui/{list_uniform,ui_selection,scroll_core}.c",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
+        }
+      ]
+    },
+    {
       "matching_content_path": "rust/flowi/src/tree.rs",
       "thresholds": [
         {

@@ -20,12 +20,9 @@ f64 scroll_max(f64 content, f64 viewport) {
     return max(0.0, content - viewport);
 }
 
-void scroll_visible_range(f64 scroll_offset, f32 viewport, f32 item_stride, u32 total_count, u32 buffer, u32* out_start,
-                          u32* out_end) {
+ScrollRange scroll_visible_range(f64 scroll_offset, f32 viewport, f32 item_stride, u32 total_count, u32 buffer) {
     if (item_stride <= 0.0f) {
-        *out_start = 0;
-        *out_end = 0;
-        return;
+        return (ScrollRange) { 0 };
     }
 
     i64 total = (i64)total_count;
@@ -35,6 +32,5 @@ void scroll_visible_range(f64 scroll_offset, f32 viewport, f32 item_stride, u32 
     first = clamp(first, 0, total);
     last = clamp(last, first, total);
 
-    *out_start = (u32)first;
-    *out_end = (u32)last;
+    return (ScrollRange) { .start = (u32)first, .end = (u32)last };
 }

@@ -908,12 +908,10 @@ FlListClipper fl_list_clipper_create(int32_t total_items, float item_height, flo
     clipper.items_height = (float)total_items * item_height;
 
     u32 total = total_items > 0 ? (u32)total_items : 0;
-    u32 first = 0;
-    u32 last = 0;
-    scroll_visible_range(scroll_offset_y, viewport_height, item_height, total, 0, &first, &last);
+    ScrollRange visible = scroll_visible_range(scroll_offset_y, viewport_height, item_height, total, 0);
 
-    clipper.display_start = (int32_t)first;
-    clipper.display_end = (int32_t)last;
+    clipper.display_start = (int32_t)visible.start;
+    clipper.display_end = (int32_t)visible.end;
 
     return clipper;
 }
