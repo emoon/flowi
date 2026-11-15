@@ -335,13 +335,13 @@ static void frame(void* user_data) {
                     // rows that are virtualized away.
                     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(180) },
                                    .direction = LayoutDirection_TopToBottom) {
-                        FlListRange r = ui_list_begin(
-                            ID("gallery_list"), s->list_ids, GALLERY_LIST_ROWS, s->list_selection,
-                            (FlListConfig) { .row_height = 26.0f, .gap = 4.0f, .labels = s->list_labels });
+                        FlListRange r
+                            = fl_list_begin(ID("gallery_list"), s->list_ids, GALLERY_LIST_ROWS, s->list_selection,
+                                            .row_height = 26.0f, .gap = 4.0f, .labels = s->list_labels);
                         for (u32 i = r.start; i < r.end; i++) {
                             // Reorder mutates the order, so read the stable id from the slice, not from i.
                             const u64 id = s->list_ids[i];
-                            if (ui_list_item_begin(id).clicked) {
+                            if (fl_list_item_begin(id).clicked) {
                                 s->list_activated = id;
                             }
                             ui_layout_area(.sizing = { .width = sizing_grow() }, .padding = padding_all(6),
@@ -349,9 +349,9 @@ static void frame(void* user_data) {
                                 snprintf(buf, sizeof(buf), "Item %llu", (unsigned long long)id);
                                 ui_text(fl_frame_str(buf, strlen(buf)));
                             }
-                            ui_list_item_end();
+                            fl_list_item_end();
                         }
-                        FlListResult lr = ui_list_end();
+                        FlListResult lr = fl_list_end();
                         if (lr.activated_id != 0) {
                             s->list_activated = lr.activated_id;
                         }

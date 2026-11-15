@@ -7198,17 +7198,17 @@ static void scene_widget_gallery(FlUiCtx* ctx, int n) {
                     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(180) },
                                    .direction = LayoutDirection_TopToBottom) {
                         FlListRange r
-                            = ui_list_begin(ID("gallery_list"), list_ids, (u32)n, list_sel,
+                            = fl_list_begin(ID("gallery_list"), list_ids, (u32)n, list_sel,
                                             (FlListConfig) { .row_height = 26.0f, .gap = 4.0f, .labels = list_labels });
                         for (u32 i = r.start; i < r.end; i++) {
-                            ui_list_item_begin(list_ids[i]);
+                            fl_list_item_begin(list_ids[i]);
                             ui_layout_area(.sizing = { .width = sizing_grow() }, .padding = padding_all(6),
                                            .radius = corner_radius(4)) {
                                 ui_text(list_labels[i]);
                             }
-                            ui_list_item_end();
+                            fl_list_item_end();
                         }
-                        ui_list_end();
+                        fl_list_end();
                     }
                 }
                 GALLERY_SECTION {
@@ -9493,7 +9493,7 @@ UTEST(render, snapped_line_crisp_at_fractional_scroll) {
     canvas_fixture_reset(ctx);
 }
 
-// The List foundation (ui_list_begin, _item and _end on list_uniform's core). The case renders a 100-row list
+// The List foundation (fl_list_begin, _item and _end on list_uniform's core). The case renders a 100-row list
 // inside a fixed 240px viewport and checks that virtualization emits only the visible window. The first frame
 // establishes the list container height, which list_uniform reads from the previous frame's Clay layout. The
 // second frame, with the viewport known, is the one asserted. Each visible row emits one solid rect of a known
@@ -9536,15 +9536,15 @@ static FlListRange list_render_frame(FlUiCtx* ctx, u32 total, FlColor row_color,
         // A nullptr set means no selection, since this case covers only virtualization, and ordered_ids is not
         // used then.
         range
-            = ui_list_begin(ID("vlist"), nullptr, total, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
+            = fl_list_begin(ID("vlist"), nullptr, total, nullptr, (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
         for (u32 i = range.start; i < range.end; i++) {
             // A flat static list can pass the index as the stable id.
-            FlSignal sig = ui_list_item_begin((u64)(i + 1));
+            FlSignal sig = fl_list_item_begin((u64)(i + 1));
             any_clicked |= sig.clicked;
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }, .color = row_color) {}
-            ui_list_item_end();
+            fl_list_item_end();
         }
-        result = ui_list_end();
+        result = fl_list_end();
     }
     ui_update_end(ctx, 1.0f / 60.0f);
     if (out_result != nullptr) {
@@ -9651,16 +9651,16 @@ UTEST(render, list_stable_id_split) {
         ctx->input_state.mouse.y = hover_y;
         ui_update_begin(ctx);
         ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-            FlListRange r = ui_list_begin(ID("split_list"), nullptr, total, nullptr,
+            FlListRange r = fl_list_begin(ID("split_list"), nullptr, total, nullptr,
                                           (FlListConfig) { .row_height = 24.0f, .gap = 4.0f });
             for (u32 i = r.start; i < r.end; i++) {
-                ui_list_item_begin((u64)i * 10ull + 1000ull);
+                fl_list_item_begin((u64)i * 10ull + 1000ull);
                 // Each row has its own red channel, so the target row's rect can be found in the command stream.
                 ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) },
                                .color = ui_color((u8)(20 + i), 120, 200, 255)) {}
-                ui_list_item_end();
+                fl_list_item_end();
             }
-            result = ui_list_end();
+            result = fl_list_end();
         }
         ui_update_end(ctx, 1.0f / 60.0f);
 

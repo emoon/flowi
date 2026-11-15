@@ -26,7 +26,7 @@ typedef struct ListState {
     // A stable id (0 = unset), so it survives virtualization and re-sorts just like the selection ids do.
     u64 focus_cursor_id;
 
-    // A focus seed was requested this frame (ui_list_request_focus) before the model was known: begin
+    // A focus seed was requested this frame (fl_list_request_focus) before the model was known: begin
     // validates focus_cursor_id against the ordered slice and falls back to the first row, then clears this.
     // Scoped to the seed frame so a roving cursor is never re-snapped on a later frame.
     bool focus_seed_pending;

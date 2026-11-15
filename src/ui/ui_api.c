@@ -518,29 +518,6 @@ FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t coun
     return ui_list(id, items, count, set, opts);
 }
 
-// UiList (ui_list.def).
-
-FlListRange fl_list_begin(FlLayoutId id, const uint64_t* ordered_ids, uint32_t count, FlSelectionSet* set,
-                          FlListConfig config) {
-    return ui_list_begin(id, ordered_ids, count, set, config);
-}
-
-FlSignal fl_list_item_begin(uint64_t stable_id) {
-    return ui_list_item_begin(stable_id);
-}
-
-void fl_list_item_end(void) {
-    ui_list_item_end();
-}
-
-FlListResult fl_list_end(void) {
-    return ui_list_end();
-}
-
-void fl_list_request_focus(FlLayoutId id, uint64_t cursor_id) {
-    ui_list_request_focus(id, cursor_id);
-}
-
 // ListUniform (list_uniform.def). The uniform list keeps its state on the UI context, so these thread
 // g_ui_ctx's list_uniform context into the real list_uniform_* free functions and the caller never sees the
 // receiver. The per-frame begin_update / end_update hooks stay internal: ui.c drives them around the frame.

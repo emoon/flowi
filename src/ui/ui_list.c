@@ -1,6 +1,6 @@
 // List implementation (CONTEXT.md "Lists").
 //
-// A thin adapter over list_uniform's virtualization core: ui_list_begin/_item/_end delegate the scroll engine
+// A thin adapter over list_uniform's virtualization core: fl_list_begin/_item/_end delegate the scroll engine
 // and the uniform-height layout to list_uniform, and layer identity, per-item interaction, and the
 // (multi-)selection gesture state machine on top. Once focused (clicked or Tab-reached) the list also runs
 // keyboard nav, consuming the nav keys it handles so they do not also drive global focus navigation.
@@ -94,7 +94,7 @@ static bool list_resolve_focus(FlListContext* self, ListState* st, FlLayoutId id
     return st->has_focus;
 }
 
-// Resolve a focus seed requested this frame (ui_list_request_focus). The caller chose cursor_id before the model
+// Resolve a focus seed requested this frame (fl_list_request_focus). The caller chose cursor_id before the model
 // was known, so validate it now against the ordered slice and fall back to the first row when it is 0 or absent.
 // This happens only on the seed frame; a roving cursor is never re-snapped.
 static void list_resolve_focus_seed(FlListContext* self, ListState* st) {
@@ -157,7 +157,7 @@ FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
     // The slice is the model the List forwards to selection_set_apply; it must be present whenever the List is
     // the one applying (non-null set). A no-selection caller (nullptr set) need not owe the slice.
     FL_ASSERT_DEBUG((args.set == nullptr || args.rows.count == 0 || args.rows.id_at != nullptr)
-                    && "ui_list_begin: row ids required when set is non-null");
+                    && "fl_list_begin: row ids required when set is non-null");
 
     list_reset_frame(self, &args);
 
@@ -485,7 +485,7 @@ FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelect
 
 // Scoped face: forward to the core with the global UI context's list state.
 
-FlListRange ui_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config) {
+FlListRange fl_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config) {
     return list_begin_impl(ui_get_ctx()->ui_list_ctx, (ListBeginArgs) {
                                                           .id = id,
                                                           .rows = list_rows_from_ids(ordered_ids, config.labels, count),
@@ -494,19 +494,19 @@ FlListRange ui_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSe
                                                       });
 }
 
-FlSignal ui_list_item_begin(u64 stable_id) {
+FlSignal fl_list_item_begin(u64 stable_id) {
     return list_item_begin_impl(ui_get_ctx()->ui_list_ctx, stable_id);
 }
 
-void ui_list_item_end(void) {
+void fl_list_item_end(void) {
     list_item_end_impl(ui_get_ctx()->ui_list_ctx);
 }
 
-FlListResult ui_list_end(void) {
+FlListResult fl_list_end(void) {
     return list_end_impl(ui_get_ctx()->ui_list_ctx);
 }
 
-void ui_list_request_focus(FlLayoutId id, u64 cursor_id) {
+void fl_list_request_focus(FlLayoutId id, u64 cursor_id) {
     FlListContext* self = ui_get_ctx()->ui_list_ctx;
     u32 clay_id = ui_layout_id_to_clay_id(id);
     ListState* st = list_state_get(self, clay_id);

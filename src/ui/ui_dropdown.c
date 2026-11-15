@@ -209,7 +209,7 @@ static DropdownSearch dropdown_draw_search(const Dropdown* d, float min_width) {
 // search input instead and hands off to the list.
 static void dropdown_focus_list_on_open(const Dropdown* d, bool opened_this_frame) {
     if (opened_this_frame && !d->cfg->searchable) {
-        ui_list_request_focus(d->list_id, (u64)(d->selected_index + 1));
+        fl_list_request_focus(d->list_id, (u64)(d->selected_index + 1));
     }
 }
 
@@ -223,7 +223,7 @@ static void dropdown_hand_off_search_to_list(const DropdownSearch* search, const
     }
     fl_consume_nav_down();
     if (rows->count > 0) {
-        ui_list_request_focus(list_id, rows->items[0].id);
+        fl_list_request_focus(list_id, rows->items[0].id);
     }
 }
 
