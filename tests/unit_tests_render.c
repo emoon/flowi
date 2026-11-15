@@ -183,12 +183,14 @@ UTEST(font_cache, measure_text_default_font) {
 UTEST(render, load_default_font_takes_a_size_in_pixels) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    const u16 sizes[] = { 0, 4, 8, 16, 20, 28 };
-    const f32 heights[] = { 16.0f, 8.0f, 8.0f, 16.0f, 24.0f, 32.0f };
+    const u16 sizes[] = { 0, 1, 4, 8, 12, 16, 20, 28, UINT16_MAX };
+    const u16 scales[] = { 2, 1, 1, 1, 2, 2, 3, 4, 8191 };
     for_count(i, sizeof_array(sizes)) {
-        FlFontId font = fl_font_load_default(sizes[i]);
-        EXPECT_EQ(font_cache_get_font_metrics(s_render.font_cache, font, 0.0f).line_height, heights[i]);
+        EXPECT_EQ(font_cache_default_font_scale(sizes[i]), scales[i]);
     }
+    FlFontId font = fl_font_load_default(20);
+    ASSERT_NE((int)font, (int)FONT_ID_INVALID);
+    EXPECT_EQ(font_cache_get_font_metrics(s_render.font_cache, font, 0.0f).line_height, 24.0f);
 }
 
 // The glyph-outline service over the embedded test fonts (tests/fixtures/fonts/glyph_test_fonts.h). 'A' is a solid

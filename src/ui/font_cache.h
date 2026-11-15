@@ -61,6 +61,7 @@ bool font_cache_load_fallback(FlFontCache* self, FlVfsMount* mount, FlString rel
 void font_cache_set_fallback_font(FlFontCache* self, FlFontId font_id);
 bool font_cache_is_fallback_font(FlFontCache* self, FlFontId font_id);
 FlFontId font_cache_load_default_font(FlFontCache* self, u16 scale);
+u16 font_cache_default_font_scale(u16 pixel_size);
 // Pump I/O until the font leaves FontStatus_Loading. No timeout: a missing or unreadable file resolves to
 // FontStatus_Failed, so the wait always terminates.
 void font_cache_wait_loaded(FlFontCache* self, FlFontId id);

@@ -286,6 +286,13 @@ bool font_cache_load_fallback(FlFontCache* self, FlVfsMount* mount, FlString rel
     return true;
 }
 
+u16 font_cache_default_font_scale(u16 pixel_size) {
+    if (pixel_size == 0) {
+        return 2;
+    }
+    return (u16)clamp((pixel_size + 4) / 8, 1, UINT16_MAX / 8);
+}
+
 FlFontId font_cache_load_default_font(FlFontCache* self, u16 scale) {
     FontFace* face = alloc_face(self, FlFontRasterKind_Default, 8 * scale); // Base size is 8x8 pixels
     if (face == nullptr) {
