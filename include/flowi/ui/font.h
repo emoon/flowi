@@ -47,8 +47,8 @@ FL_API FlFontId fl_font_load(FlString path, uint16_t default_size);
 FL_API FlFontId fl_font_load_mount(FlVfsMount* mount, FlString relative_path, uint16_t default_size);
 // Loads the built-in font and returns its id, or 0 if the call fails.
 //
-// The font is ready at once. `default_size` multiplies the font's 8 pixel base size (0 uses 28, and values
-// below 8 become 8).
+// The font is ready at once. `default_size` is its size in unscaled pixels, rounded to a multiple of 8
+// (0 uses 16, and the smallest size is 8).
 FL_API FlFontId fl_font_load_default(uint16_t default_size);
 // Starts loading the font at `relative_path` inside `mount` as the fallback for glyphs the other fonts lack.
 //

@@ -74,5 +74,6 @@ bool ui_font_ensure_loaded(void) {
 
 FlFontId fl_font_load_default(u16 default_size) {
     FL_VALIDATE_RET(g_ui_ctx != nullptr, FONT_ID_INVALID);
-    return font_cache_load_default_font(g_ui_ctx->shared->font_cache, authored_font_size(default_size));
+    u16 scale = default_size != 0 ? max((u16)1, (u16)((default_size + 4) / 8)) : 2;
+    return font_cache_load_default_font(g_ui_ctx->shared->font_cache, scale);
 }

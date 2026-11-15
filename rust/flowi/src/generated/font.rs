@@ -29,8 +29,8 @@ impl Font {
 
     /// Loads the built-in font and returns its id, or 0 if the call fails.
     ///
-    /// The font is ready at once. `default_size` multiplies the font's 8 pixel base size (0 uses 28, and values
-    /// below 8 become 8).
+    /// The font is ready at once. `default_size` is its size in unscaled pixels, rounded to a multiple of 8
+    /// (0 uses 16, and the smallest size is 8).
     #[inline]
     pub fn load_default(default_size: u16) -> crate::sys::FontId {
         let _frame = crate::frame_thread::frame_thread_guard("Font::load_default");

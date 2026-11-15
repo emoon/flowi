@@ -45,8 +45,8 @@ extern "C" {
     pub fn fl_font_load_mount(mount: *mut FlVfsMount, relative_path: crate::sys::RawStr, default_size: u16) -> crate::sys::FontId;
     /// Loads the built-in font and returns its id, or 0 if the call fails.
     ///
-    /// The font is ready at once. `default_size` multiplies the font's 8 pixel base size (0 uses 28, and values
-    /// below 8 become 8).
+    /// The font is ready at once. `default_size` is its size in unscaled pixels, rounded to a multiple of 8
+    /// (0 uses 16, and the smallest size is 8).
     pub fn fl_font_load_default(default_size: u16) -> crate::sys::FontId;
     /// Starts loading the font at `relative_path` inside `mount` as the fallback for glyphs the other fonts lack.
     ///
