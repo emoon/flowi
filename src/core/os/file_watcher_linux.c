@@ -311,6 +311,11 @@ static FileWatcherError process_event(FileWatcherState* state, LinuxWatcherData*
         return FileWatcherError_Success;
     }
 
+    if (event->mask & IN_Q_OVERFLOW) {
+        logc_warning(FW_ID, "FileWatcher[%u]: Event queue overflow, changes were dropped", state->handle);
+        return FileWatcherError_Success;
+    }
+
     // Skip events without names
     if (event->len == 0) {
         return FileWatcherError_Success;

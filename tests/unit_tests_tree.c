@@ -244,6 +244,30 @@ UTEST(tree, left_and_right_are_consumed_only_while_focused) {
     ctx->nav_frame.nav_left = false;
 }
 
+UTEST(tree, right_is_consumed_when_down_moves_the_cursor) {
+    FlUiCtx* ctx = tree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("tree_consume_both");
+    const TreeModel model = { s_open_rows, sizeof_array(s_open_rows), nullptr };
+
+    for_count(i, 2) {
+        tree_key(ctx, tree, model, (TreeInput) { 0 });
+    }
+    tree_click(ctx, tree, model, (Vec2) { TREE_BODY_X, tree_row_y(0) });
+    ui_input_set_mouse_position(ctx, 310.0f, 250.0f);
+    ui_input_update(ctx, 1.0f / 60.0f);
+    ctx->nav_frame.nav_down = true;
+    ctx->nav_frame.nav_right = true;
+    ui_update_begin(ctx);
+    fl_tree_begin(tree, model.rows, model.count, nullptr, (FlTreeConfig) { 0 });
+    const bool right_left_over = fl_get_nav_frame().nav_right;
+    fl_tree_end();
+    ui_update_end(ctx, 1.0f / 60.0f);
+    ctx->nav_frame.nav_down = false;
+    ctx->nav_frame.nav_right = false;
+    ASSERT_FALSE_MSG(right_left_over, "a focused tree consumes Right even when Down moved the cursor");
+}
+
 UTEST(tree, collapse_moves_a_cursor_inside_the_subtree_to_the_row) {
     FlUiCtx* ctx = tree_fixture();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");

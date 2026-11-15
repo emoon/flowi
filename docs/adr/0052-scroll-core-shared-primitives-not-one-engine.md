@@ -1,7 +1,8 @@
 # Scroll consolidation is a shared pure `scroll_core`, not one stateful engine — and `FlListClipper` stays a separate public shim
 
 Status: accepted. Partly superseded by later code: `content_view` no longer exists, so `scroll_core` is used by
-`ui_scroll`, `list_uniform` and `ui_menu` (`scroll_max`); and the Clay-leak follow-up below has since been done.
+`ui_scroll`, `list_uniform` and `ui_menu` (`scroll_max`); the Clay-leak follow-up below has since been done; and
+`FlListClipper` calls `scroll_visible_range` (see the amendment at the end).
 
 
 The scroll/virtualization consolidation (audit 2026-06-30, third candidate) is implemented as a
@@ -87,3 +88,17 @@ is unfinished.
 - Latent, out of scope: `scroll_visible_range`'s viewport-relative count can miss a straddle row
   when the offset is unaligned — masked today only because the widgets pass `buffer=2`. The
   `FlListClipper` divergence above is the same math weakness seen without the buffer cushion.
+
+## Amendment (2026-11-15): `FlListClipper` calls `scroll_visible_range`
+
+This records a change made earlier, with the virtual-list work. `scroll_visible_range` counts the
+last row from the absolute `(offset + viewport) / stride + 1`, the form the clipper used, and
+clamps the range to `[0, total]`. With `offset=19, vp=2, stride=20` it returns 2 rows, so the
+straddling row is kept. The two no longer diverge, and `fl_list_clipper_create` calls
+`scroll_visible_range` with `buffer = 0`. The clipper is still a public type with its own struct.
+
+Three passages above describe the code before that change: the "left standalone" bullet, the
+rejected option about merging the clipper, and the latent straddle-row note.
+
+The range is computed in floating point and clamped before it becomes an integer. A NaN or infinite
+offset, viewport or stride gives an empty range.

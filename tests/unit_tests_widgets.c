@@ -242,6 +242,24 @@ UTEST(scroll_math, smooth_step_is_frame_rate_independent) {
     EXPECT_EQ(scroll_smooth_step(10.0f, 200.0f, 1000.0f, speed, 10.0f), 200.0f);
 }
 
+UTEST(scroll_math, visible_range_survives_values_no_integer_holds) {
+    ScrollRange r = scroll_visible_range(100.0, 500.0f, 1.0e-30f, 1000, 0);
+    EXPECT_EQ(r.start, 1000u);
+    EXPECT_EQ(r.end, 1000u);
+
+    r = scroll_visible_range((f64)NAN, 500.0f, 50.0f, 1000, 0);
+    EXPECT_EQ(r.start, 0u);
+    EXPECT_EQ(r.end, 0u);
+
+    r = scroll_visible_range(0.0, 500.0f, NAN, 1000, 0);
+    EXPECT_EQ(r.start, 0u);
+    EXPECT_EQ(r.end, 0u);
+
+    r = scroll_visible_range(0.0, INFINITY, 50.0f, 1000, 0);
+    EXPECT_EQ(r.start, 0u);
+    EXPECT_EQ(r.end, 0u);
+}
+
 UTEST(scroll_math, visible_range_virtualization_window) {
     f32 stride = 50.0f; // item height + gap
     f32 viewport = 500.0f;

@@ -305,7 +305,8 @@ static void emit_alpha_coverage_image(const SrIrRequest* req, const FlCmdImage* 
     cmd->render_text.stride = (int)cov_stride;
 }
 
-// Resolve a static handle to a planar ImageData the texture sampler can read. Null when the image is not ready.
+// Resolve a static handle to a planar ImageData the texture sampler can read. Null when the image is not ready or
+// cannot be converted.
 static ImageData* resolve_static_image(const SrIrRequest* req, const FlCmdImage* im) {
     ImageData* src = image_cache_get_data((ImageHandle)im->source.handle);
     if (src == nullptr || !sr_image_needs_conversion(src)) {
@@ -313,8 +314,7 @@ static ImageData* resolve_static_image(const SrIrRequest* req, const FlCmdImage*
     }
     // RGBA keeps its alpha plane for blending; XRGB drops the unused X byte.
     bool keep_alpha = (src->format == FlImageFormat_RGBA);
-    ImageData* converted = sr_convert_to_planar(src, keep_alpha, req->state_arena);
-    return converted != nullptr ? converted : src;
+    return sr_convert_to_planar(src, keep_alpha, req->state_arena);
 }
 
 // Dynamic neutral RGBA buffer: deinterleave to 3-plane RGB.
