@@ -569,30 +569,37 @@ void ui_app_frame_begin(FlUiCtx* self) {
 }
 
 FlVec2 ui_get_mouse_wheel(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlVec2) { 0 });
     return (FlVec2) { g_ui_ctx->input_state.mouse.wheel_x_cached, g_ui_ctx->input_state.mouse.wheel_y_cached };
 }
 
 bool fl_nav_up_pressed(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return g_ui_ctx->nav_frame.nav_up;
 }
 
 bool fl_nav_down_pressed(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return g_ui_ctx->nav_frame.nav_down;
 }
 
 void fl_consume_nav_up(void) {
+    FL_VALIDATE(g_ui_ctx != nullptr);
     g_ui_ctx->nav_frame.nav_up = false;
 }
 
 void fl_consume_nav_down(void) {
+    FL_VALIDATE(g_ui_ctx != nullptr);
     g_ui_ctx->nav_frame.nav_down = false;
 }
 
 void fl_consume_nav_left(void) {
+    FL_VALIDATE(g_ui_ctx != nullptr);
     g_ui_ctx->nav_frame.nav_left = false;
 }
 
 void fl_consume_nav_right(void) {
+    FL_VALIDATE(g_ui_ctx != nullptr);
     g_ui_ctx->nav_frame.nav_right = false;
 }
 
@@ -607,30 +614,37 @@ void fl_consume_nav_right(void) {
 #define key_edge_get(member, key) (((int)(key) < 0 || (int)(key) >= FlKey_Count) ? false : g_ui_ctx->member[(key)])
 
 bool ui_key_pressed(FlKey key) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return key_edge_get(keys_pressed_this_frame, key);
 }
 
 bool ui_key_down(FlKey key) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return key_state_get(keys, key);
 }
 
 bool ui_key_released(FlKey key) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return key_edge_get(keys_released_this_frame, key);
 }
 
 bool ui_text_input_active(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return g_ui_ctx->input_state.text_input_active;
 }
 
 u32 ui_keyboard_modifiers(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, 0);
     return g_ui_ctx->input_state.keyboard.modifiers;
 }
 
 u32 ui_dropped_file_count(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, 0);
     return g_ui_ctx->dropped_file_count_this_frame;
 }
 
 FlString ui_dropped_file(u32 index) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlString) { 0 });
     if (index >= g_ui_ctx->dropped_file_count_this_frame) {
         return (FlString) { .data = nullptr, .length = 0, .is_static = 0 };
     }
@@ -638,6 +652,7 @@ FlString ui_dropped_file(u32 index) {
 }
 
 FlVec2 ui_dropped_file_position(u32 index) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlVec2) { 0 });
     if (index >= g_ui_ctx->dropped_file_count_this_frame) {
         return (FlVec2) { .x = 0.0f, .y = 0.0f };
     }
@@ -650,29 +665,35 @@ FlVec2 ui_dropped_file_position(u32 index) {
     (((int)(button) < 0 || (int)(button) >= FlMouseButton_Count) ? false : (array)[(button)])
 
 bool ui_mouse_pressed(FlMouseButton button) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return mouse_button_state_get(g_ui_ctx->mouse_buttons_pressed_this_frame, button);
 }
 
 bool ui_mouse_down(FlMouseButton button) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return mouse_button_state_get(g_ui_ctx->input_state.mouse.buttons, button);
 }
 
 bool ui_mouse_released(FlMouseButton button) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return mouse_button_state_get(g_ui_ctx->mouse_buttons_released_this_frame, button);
 }
 
 FlVec2 ui_mouse_delta(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlVec2) { 0 });
     const MouseState* mouse = &g_ui_ctx->input_state.mouse;
     return (FlVec2) { mouse->delta_x, mouse->delta_y };
 }
 
 bool ui_gamepad_connected(u32 slot) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return slot < UI_INPUT_MAX_GAMEPADS && g_ui_ctx->input_state.gamepads[slot].connected;
 }
 
 // An empty slot reads as "no buttons held".
 
 bool ui_gamepad_button_down(u32 slot, FlGamepadButton button) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     if (slot >= UI_INPUT_MAX_GAMEPADS || (u32)button >= FlGamepadButton_Count) {
         return false;
     }
@@ -689,14 +710,17 @@ static bool gamepad_edge_get(bool edges[UI_INPUT_MAX_GAMEPADS][FlGamepadButton_C
 }
 
 bool ui_gamepad_button_pressed(u32 slot, FlGamepadButton button) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return gamepad_edge_get(g_ui_ctx->gamepad_buttons_pressed_this_frame, slot, button);
 }
 
 bool ui_gamepad_button_released(u32 slot, FlGamepadButton button) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return gamepad_edge_get(g_ui_ctx->gamepad_buttons_released_this_frame, slot, button);
 }
 
 f32 ui_gamepad_button_hold_duration(u32 slot, FlGamepadButton button) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, 0.0f);
     if (!ui_gamepad_connected(slot) || (u32)button >= FlGamepadButton_Count) {
         return 0.0f;
     }
@@ -705,6 +729,7 @@ f32 ui_gamepad_button_hold_duration(u32 slot, FlGamepadButton button) {
 }
 
 f32 ui_gamepad_axis(u32 slot, FlGamepadAxis axis) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, 0.0f);
     if (!ui_gamepad_connected(slot) || (u32)axis >= FlGamepadAxis_Count) {
         return 0.0f;
     }
@@ -713,6 +738,7 @@ f32 ui_gamepad_axis(u32 slot, FlGamepadAxis axis) {
 }
 
 void ui_mouse_hidden_drag_begin(float scale) {
+    FL_VALIDATE(g_ui_ctx != nullptr);
     g_ui_ctx->hidden_drag_active = true;
     g_ui_ctx->hidden_drag_scale = scale;
     // Grab the current absolute mouse position as the press point, the warp-back target on end.
@@ -724,6 +750,7 @@ void ui_mouse_hidden_drag_begin(float scale) {
 }
 
 void ui_mouse_hidden_drag_end(void) {
+    FL_VALIDATE(g_ui_ctx != nullptr);
     g_ui_ctx->hidden_drag_active = false;
     g_ui_ctx->relative_mouse_mode = false;
     // One-shot warp back to where the drag began; the app's flush consumes it via ui_take_pending_warp.
@@ -733,6 +760,7 @@ void ui_mouse_hidden_drag_end(void) {
 }
 
 FlVec2 ui_mouse_drag_delta(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlVec2) { 0 });
     if (!g_ui_ctx->hidden_drag_active) {
         return (FlVec2) { 0.0f, 0.0f };
     }
@@ -755,10 +783,12 @@ bool ui_take_pending_warp(float* out_x, float* out_y) {
 }
 
 bool fl_action_pressed(FlAction action) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, false);
     return ui_action_pressed(g_ui_ctx, action);
 }
 
 FlNavFrame fl_get_nav_frame(void) {
+    FL_VALIDATE_RET(g_ui_ctx != nullptr, (FlNavFrame) { 0 });
     return g_ui_ctx->nav_frame;
 }
 
