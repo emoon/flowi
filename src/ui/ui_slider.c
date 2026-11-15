@@ -295,7 +295,7 @@ FlSignal ui_slider_float_impl(FlString label, float* value, float min, float max
 FlSignal ui_slider_int_impl(FlString label, int* value, int min, int max, FlSliderConfig cfg) {
     // Drive the shared slider over a float mirror of the int, formatting the display against the integer value
     // (is_int = true).
-    float step = cfg.step > 0.0f ? cfg.step : (float)(max - min) * 0.01f;
+    float step = cfg.step > 0.0f ? cfg.step : ((float)max - (float)min) * 0.01f;
     cfg.step = fmaxf(step, 1.0f);
     SliderModel m = slider_model_new((float)(*value), (float)min, (float)max, cfg);
     FlSignal signal = slider_impl(label, &m, cfg, true);

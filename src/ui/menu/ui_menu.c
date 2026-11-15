@@ -419,13 +419,13 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
     return true;
 }
 
-// Apply keyboard activation and the close policy to a leaf row. Returns its signal.
 static bool leaf_confirmed(FlUiCtx* ctx, MenuRow row) {
     const UiMenuState* m = &ctx->shared->menu;
     bool can_confirm = row.highlighted && row.level == m->depth - 1 && ctx->frame_counter > m->open_frame;
     return can_confirm && ui_action_pressed(ctx, FlAction_Confirm);
 }
 
+// Apply keyboard activation and the close policy to a leaf row. Returns its signal.
 static FlSignal finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg, bool kind_default_close) {
     UiMenuFrame* mf = &ctx->menu_frame;
 

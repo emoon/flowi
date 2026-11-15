@@ -1255,6 +1255,30 @@ UTEST(render_ir, painter_rects_frame_stream_matches_scalar_loop) {
     fl_arena_destroy(arena);
 }
 
+UTEST(render_ir, software_alpha_coverage_stays_inside_its_source) {
+    FlArena* ir_arena = arena_new();
+    FlArena* commands = arena_new();
+    FlArena* state = arena_new();
+    u8 mask[4 * 4] = { 0 };
+
+    fl_arena_align(ir_arena, 8);
+    const u8* start = (const u8*)fl_arena_current_pos(ir_arena);
+    FlImageSource source = { .kind = FlImageKind_Dynamic, .dynamic = { .pixels = mask, .w = 4, .h = 4 } };
+    fl_ir_image(ir_arena, source, FlImageMode_AlphaCoverage, (FlRect) { 10.0f, 20.0f, 12.0f, 9.0f }, (FlRect) { 0 },
+                (FlColor) { 255, 255, 255, 255 }, FlImageFilter_Linear, nullptr);
+
+    size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - start);
+    const UiRenderCommandsArray result = sw_translate(commands, state, start, bytes, 255);
+    ASSERT_EQ_MSG(result.count, 1, "the coverage image translates to one command");
+    const f32x4 aabb = result.commands[0].render_text.aabb;
+    EXPECT_EQ(f32x4_extract(aabb, 2), 14.0f);
+    EXPECT_EQ(f32x4_extract(aabb, 3), 24.0f);
+
+    fl_arena_destroy(state);
+    fl_arena_destroy(commands);
+    fl_arena_destroy(ir_arena);
+}
+
 UTEST(render_ir, software_translation_stops_at_a_zero_size_record) {
     FlArena* commands = arena_new();
     FlArena* state = arena_new();
