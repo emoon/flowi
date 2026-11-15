@@ -39,7 +39,7 @@ typedef struct FlSignal {
     bool selected;
     // The mouse position relative to the widget, in physical pixels.
     FlVec2 mouse_pos;
-    // How far the mouse has moved since the drag started.
+    // How far the mouse has moved since the drag started, in physical pixels.
     FlVec2 drag_delta;
     // The mouse wheel movement over the widget. It needs `FlItemFlags_scroll_target`, and `FlItemFlags_clickable` or
     // `FlItemFlags_draggable` to make the widget hovered.

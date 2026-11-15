@@ -1,7 +1,10 @@
 /// What the user wants to do, independent of the key or gamepad button that triggers it.
 ///
 /// By default, Enter and Space give `Action::Confirm`, Escape gives `Action::Cancel` and the arrow keys give the
-/// navigation actions. The gamepad has its own default buttons.
+/// navigation actions. The defaults on each member also name the gamepad button, where there is one.
+///
+/// The drag, scroll and text-editing members are used inside flowi. No public call reports them. The order of
+/// the members is part of the plugin interface and does not change.
 ///
 /// `Action::Count` is the number of actions, not an action.
 enum Action {
@@ -17,17 +20,17 @@ enum Action {
     Nav_Left,
     /// Move focus right.
     Nav_Right,
-    /// Move focus to the next item. By default this is Tab.
+    /// Move focus to the next item. By default this is Tab or the gamepad's right bumper.
     Nav_Next,
-    /// Move focus to the previous item. By default this is Shift+Tab.
+    /// Move focus to the previous item. By default this is Shift+Tab or the gamepad's left bumper.
     Nav_Prev,
 
     // Confirmation / Cancel
-    /// Activate the focused item. By default this is Enter or Space.
+    /// Activate the focused item. By default this is Enter, Space or gamepad A.
     Confirm,
-    /// Dismiss or go back. By default this is Escape.
+    /// Dismiss or go back. By default this is Escape or gamepad B.
     Cancel,
-    /// Open the system menu. By default this is Escape.
+    /// Open the system menu. By default this is Escape or the gamepad's Start button.
     Menu,
 
     // Interaction
@@ -41,11 +44,11 @@ enum Action {
     Scroll_Down,
 
     // Widget-specific
-    /// Increment the focused value. By default this is the Right arrow or the plus key.
+    /// Increment the focused value. By default this is the Right arrow or the Equal key, which is the plus key on most layouts.
     Increment,
     /// Decrement the focused value. By default this is the Left arrow or the minus key.
     Decrement,
-    /// Toggle the focused item. By default this is Space.
+    /// Toggle the focused item. By default this is Space or gamepad A.
     Toggle,
 
     // Text editing (internal-use)

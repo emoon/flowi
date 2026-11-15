@@ -28,7 +28,7 @@ struct Signal {
     selected: bool,
     /// The mouse position relative to the widget, in physical pixels.
     mouse_pos: Vec2,
-    /// How far the mouse has moved since the drag started.
+    /// How far the mouse has moved since the drag started, in physical pixels.
     drag_delta: Vec2,
     /// The mouse wheel movement over the widget. It needs `ItemFlags::scroll_target`, and `ItemFlags::clickable` or
     /// `ItemFlags::draggable` to make the widget hovered.

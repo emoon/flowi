@@ -74,8 +74,8 @@ api Jobs {
     [manual] is_finished(handle: JobHandle) -> JobsResult
     /// Blocks until the job for `handle` completes.
     ///
-    /// Only the main thread blocks. Called from a worker thread this returns at once, so poll `Jobs::is_finished`
-    /// there.
+    /// Called from a worker thread this returns at once, so poll `Jobs::is_finished` there. Any other thread
+    /// blocks.
     [manual] wait(handle: JobHandle)
     /// Destroys the global job system and waits for its workers to exit.
     [manual] destroy()
@@ -100,6 +100,6 @@ api Jobs {
     ///
     /// Pass the pointer as `user_data` when you schedule the job. It is released after the job function returns.
     [manual] alloc_context(size: usize) -> *void
-    /// Returns whether the caller is on the main thread rather than a worker.
+    /// Returns false on a worker thread and true on any other thread.
     [manual] is_main_thread() -> bool
 }

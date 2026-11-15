@@ -31,7 +31,7 @@ pub struct Signal {
     pub selected: bool,
     /// The mouse position relative to the widget, in physical pixels.
     pub mouse_pos: crate::sys::Vec2,
-    /// How far the mouse has moved since the drag started.
+    /// How far the mouse has moved since the drag started, in physical pixels.
     pub drag_delta: crate::sys::Vec2,
     /// The mouse wheel movement over the widget. It needs `ItemFlags::scroll_target`, and `ItemFlags::clickable` or
     /// `ItemFlags::draggable` to make the widget hovered.

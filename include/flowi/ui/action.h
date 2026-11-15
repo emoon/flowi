@@ -9,7 +9,10 @@ extern "C" {
 // What the user wants to do, independent of the key or gamepad button that triggers it.
 //
 // By default, Enter and Space give `FlAction_Confirm`, Escape gives `FlAction_Cancel` and the arrow keys give the
-// navigation actions. The gamepad has its own default buttons.
+// navigation actions. The defaults on each member also name the gamepad button, where there is one.
+//
+// The drag, scroll and text-editing members are used inside flowi. No public call reports them. The order of
+// the members is part of the plugin interface and does not change.
 //
 // `FlAction_Count` is the number of actions, not an action.
 typedef enum FlAction {
@@ -23,15 +26,15 @@ typedef enum FlAction {
     FlAction_Nav_Left = 3,
     // Move focus right.
     FlAction_Nav_Right = 4,
-    // Move focus to the next item. By default this is Tab.
+    // Move focus to the next item. By default this is Tab or the gamepad's right bumper.
     FlAction_Nav_Next = 5,
-    // Move focus to the previous item. By default this is Shift+Tab.
+    // Move focus to the previous item. By default this is Shift+Tab or the gamepad's left bumper.
     FlAction_Nav_Prev = 6,
-    // Activate the focused item. By default this is Enter or Space.
+    // Activate the focused item. By default this is Enter, Space or gamepad A.
     FlAction_Confirm = 7,
-    // Dismiss or go back. By default this is Escape.
+    // Dismiss or go back. By default this is Escape or gamepad B.
     FlAction_Cancel = 8,
-    // Open the system menu. By default this is Escape.
+    // Open the system menu. By default this is Escape or the gamepad's Start button.
     FlAction_Menu = 9,
     // Begin a drag.
     FlAction_Drag_Start = 10,
@@ -41,11 +44,11 @@ typedef enum FlAction {
     FlAction_Scroll_Up = 12,
     // Scroll down with the mouse wheel.
     FlAction_Scroll_Down = 13,
-    // Increment the focused value. By default this is the Right arrow or the plus key.
+    // Increment the focused value. By default this is the Right arrow or the Equal key, which is the plus key on most layouts.
     FlAction_Increment = 14,
     // Decrement the focused value. By default this is the Left arrow or the minus key.
     FlAction_Decrement = 15,
-    // Toggle the focused item. By default this is Space.
+    // Toggle the focused item. By default this is Space or gamepad A.
     FlAction_Toggle = 16,
     // Delete the character before the cursor.
     FlAction_Text_Backspace = 17,

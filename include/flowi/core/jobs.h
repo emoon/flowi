@@ -85,8 +85,8 @@ FL_API FlJobHandle fl_jobs_add_job_with_dependency(FlJobsFunc func, void* user_d
 FL_API FlJobsResult fl_jobs_is_finished(FlJobHandle handle);
 // Blocks until the job for `handle` completes.
 //
-// Only the main thread blocks. Called from a worker thread this returns at once, so poll `fl_jobs_is_finished`
-// there.
+// Called from a worker thread this returns at once, so poll `fl_jobs_is_finished` there. Any other thread
+// blocks.
 FL_API void fl_jobs_wait(FlJobHandle handle);
 // Destroys the global job system and waits for its workers to exit.
 FL_API void fl_jobs_destroy(void);
@@ -111,7 +111,7 @@ FL_API FlJobPriority fl_jobs_get_priority(FlJobHandle handle);
 //
 // Pass the pointer as `user_data` when you schedule the job. It is released after the job function returns.
 FL_API void* fl_jobs_alloc_context(size_t size);
-// Returns whether the caller is on the main thread rather than a worker.
+// Returns false on a worker thread and true on any other thread.
 FL_API bool fl_jobs_is_main_thread(void);
 
 

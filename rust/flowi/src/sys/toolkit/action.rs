@@ -3,7 +3,10 @@
 /// What the user wants to do, independent of the key or gamepad button that triggers it.
 ///
 /// By default, Enter and Space give `Action::Confirm`, Escape gives `Action::Cancel` and the arrow keys give the
-/// navigation actions. The gamepad has its own default buttons.
+/// navigation actions. The defaults on each member also name the gamepad button, where there is one.
+///
+/// The drag, scroll and text-editing members are used inside flowi. No public call reports them. The order of
+/// the members is part of the plugin interface and does not change.
 ///
 /// `Action::Count` is the number of actions, not an action.
 #[repr(C)]
@@ -19,15 +22,15 @@ pub enum Action {
     Nav_Left = 3,
     /// Move focus right.
     Nav_Right = 4,
-    /// Move focus to the next item. By default this is Tab.
+    /// Move focus to the next item. By default this is Tab or the gamepad's right bumper.
     Nav_Next = 5,
-    /// Move focus to the previous item. By default this is Shift+Tab.
+    /// Move focus to the previous item. By default this is Shift+Tab or the gamepad's left bumper.
     Nav_Prev = 6,
-    /// Activate the focused item. By default this is Enter or Space.
+    /// Activate the focused item. By default this is Enter, Space or gamepad A.
     Confirm = 7,
-    /// Dismiss or go back. By default this is Escape.
+    /// Dismiss or go back. By default this is Escape or gamepad B.
     Cancel = 8,
-    /// Open the system menu. By default this is Escape.
+    /// Open the system menu. By default this is Escape or the gamepad's Start button.
     Menu = 9,
     /// Begin a drag.
     Drag_Start = 10,
@@ -37,11 +40,11 @@ pub enum Action {
     Scroll_Up = 12,
     /// Scroll down with the mouse wheel.
     Scroll_Down = 13,
-    /// Increment the focused value. By default this is the Right arrow or the plus key.
+    /// Increment the focused value. By default this is the Right arrow or the Equal key, which is the plus key on most layouts.
     Increment = 14,
     /// Decrement the focused value. By default this is the Left arrow or the minus key.
     Decrement = 15,
-    /// Toggle the focused item. By default this is Space.
+    /// Toggle the focused item. By default this is Space or gamepad A.
     Toggle = 16,
     /// Delete the character before the cursor.
     Text_Backspace = 17,

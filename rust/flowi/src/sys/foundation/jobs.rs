@@ -106,8 +106,8 @@ extern "C" {
     pub fn fl_jobs_is_finished(handle: crate::sys::JobHandle) -> crate::sys::JobsResult;
     /// Blocks until the job for `handle` completes.
     ///
-    /// Only the main thread blocks. Called from a worker thread this returns at once, so poll `Jobs::is_finished`
-    /// there.
+    /// Called from a worker thread this returns at once, so poll `Jobs::is_finished` there. Any other thread
+    /// blocks.
     pub fn fl_jobs_wait(handle: crate::sys::JobHandle);
     /// Destroys the global job system and waits for its workers to exit.
     pub fn fl_jobs_destroy();
@@ -132,7 +132,7 @@ extern "C" {
     ///
     /// Pass the pointer as `user_data` when you schedule the job. It is released after the job function returns.
     pub fn fl_jobs_alloc_context(size: usize) -> *mut core::ffi::c_void;
-    /// Returns whether the caller is on the main thread rather than a worker.
+    /// Returns false on a worker thread and true on any other thread.
     pub fn fl_jobs_is_main_thread() -> bool;
 }
 
