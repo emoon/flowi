@@ -52,8 +52,10 @@ static void clay_image_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
         return;
     }
     // FlCmdImage carries no corner radius, so a rounded Clay image loses its rounding through the IR.
-    fl_ir_image(arena, *source, FlImageMode_Color, to_em_rect(cmd->boundingBox), (FlRect) { 0 },
-                to_em_color(image->backgroundColor), FlImageFilter_Linear, nullptr);
+    bool alpha_only = source->kind == FlImageKind_Dynamic && source->dynamic.alpha_only;
+    fl_ir_image(arena, *source, alpha_only ? FlImageMode_AlphaCoverage : FlImageMode_Color,
+                to_em_rect(cmd->boundingBox), (FlRect) { 0 }, to_em_color(image->backgroundColor), FlImageFilter_Linear,
+                nullptr);
 }
 
 // Splice one painter span. The painter records each element's primitives in element-local pixel

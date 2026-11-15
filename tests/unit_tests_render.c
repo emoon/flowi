@@ -4246,6 +4246,27 @@ UTEST(render, layout_border_dash_pattern_reaches_the_ir_scaled) {
                     "the dash pattern arrives scaled by the UI scale, like every other length");
 }
 
+// An alpha-only DynamicImage drawn through the widget path reaches the frame as an alpha-coverage image. As a
+// color image the backend would read four bytes per pixel from the one-byte-per-pixel buffer.
+UTEST(render, widget_dynamic_image_keeps_alpha_only_mode) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    ui_set_scale(1.0f, 1.0f);
+
+    FlDynamicImage* alpha = fl_dynamic_image_create_alpha(4, 4, (FlArena*)s_arena);
+    ASSERT_TRUE_MSG(alpha != nullptr, "alpha image creation failed");
+
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
+        fl_dynamic_image(alpha, (FlImageOpts) { .color = ui_color(255, 255, 255, 255) });
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+
+    ASSERT_TRUE_MSG(s_render.image_found, "the dynamic image must reach the frame");
+    ASSERT_EQ_MSG((int)s_render.submitted_image.mode, (int)FlImageMode_AlphaCoverage,
+                  "an alpha-only image must be drawn as alpha coverage");
+}
+
 // Text follows a scale change made after the font was loaded. A font handle names the size the caller authored,
 // and text_scale is multiplied in when the size is used, so a face keeps nothing from the scale it was loaded
 // under. Both paths are covered: an explicit config.font_size, and font_size 0 falling back to the load size.

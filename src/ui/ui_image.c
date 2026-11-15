@@ -44,13 +44,14 @@ void ui_dynamic_image_impl(FlDynamicImage* image, FlImageOpts opts) {
         return;
     }
 
-    // The descriptor references the live RGBA buffer; the backend deinterleaves it on ingest.
+    // The descriptor references the live buffer; the backend deinterleaves it on ingest.
     FlImageSource* source = arena_alloc_zero(g_ui_ctx->render_frame_allocator, FlImageSource);
     source->kind = 1;
     source->dynamic.pixels = image->user_buffer;
     source->dynamic.w = (u32)image->width;
     source->dynamic.h = (u32)image->height;
     source->dynamic.stride = (u32)image->user_stride;
+    source->dynamic.alpha_only = image->is_alpha_only;
 
     ui_emit_image_element(source, opts.color,
                           image_sizing(opts.fill_container, (float)image->width, (float)image->height));
