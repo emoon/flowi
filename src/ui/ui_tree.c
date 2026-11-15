@@ -28,6 +28,10 @@ FlTreeContext* ui_tree_create(FlArena* arena, FlListContext* list) {
     return self;
 }
 
+static FlTreeRow tree_row(const FlTreeContext* self, u32 row) {
+    return self->rows[row];
+}
+
 static u32 subtree_end(const FlTreeContext* self, u32 row) {
     u32 end = row + 1;
     while (end < self->count && self->rows[end].depth > self->rows[row].depth) {
@@ -53,25 +57,25 @@ static void move_cursor_out_of_subtree(const FlTreeContext* self, u32 row) {
     i32 cursor = list_index_of_id(list, st->focus_cursor_id);
     bool below_row = cursor > (i32)row;
     if (below_row && (u32)cursor < subtree_end(self, row)) {
-        st->focus_cursor_id = self->rows[row].id;
+        st->focus_cursor_id = tree_row(self, row).id;
     }
 }
 
 static void toggle_row(FlTreeContext* self, u32 row) {
-    const FlTreeRow* r = &self->rows[row];
-    self->toggled_id = r->id;
-    self->toggle_expanded = !r->expanded;
-    if (r->expanded) {
+    FlTreeRow r = tree_row(self, row);
+    self->toggled_id = r.id;
+    self->toggle_expanded = !r.expanded;
+    if (r.expanded) {
         move_cursor_out_of_subtree(self, row);
     }
 }
 
 static i32 step_into(FlTreeContext* self, u32 row) {
-    const FlTreeRow* r = &self->rows[row];
-    if (!r->has_children) {
+    FlTreeRow r = tree_row(self, row);
+    if (!r.has_children) {
         return (i32)row;
     }
-    if (!r->expanded) {
+    if (!r.expanded) {
         toggle_row(self, row);
         return (i32)row;
     }
@@ -79,8 +83,8 @@ static i32 step_into(FlTreeContext* self, u32 row) {
 }
 
 static i32 step_out_of(FlTreeContext* self, u32 row) {
-    const FlTreeRow* r = &self->rows[row];
-    if (r->has_children && r->expanded) {
+    FlTreeRow r = tree_row(self, row);
+    if (r.has_children && r.expanded) {
         toggle_row(self, row);
         return (i32)row;
     }
@@ -120,7 +124,7 @@ static void draw_arrow(bool expanded, f32 width, f32 height) {
     painter_rects(ui_get_painter(), bars, TREE_ARROW_STEPS);
 }
 
-static void arrow_slot(FlTreeContext* self, u32 row) {
+static void arrow_slot(FlTreeContext* self, u32 row, bool expanded) {
     FlListContext* list = self->list;
     f32 height = list->current_row_height;
     FlLayoutId arrow_id = { .name = list->current_id.name, .id = -(i32)(row + 1) };
@@ -135,19 +139,30 @@ static void arrow_slot(FlTreeContext* self, u32 row) {
         list_claim_press(list);
         toggle_row(self, row);
     }
-    draw_arrow(self->rows[row].expanded, self->indent, height);
+    draw_arrow(expanded, self->indent, height);
     fl_layout_end();
 }
 
-static void row_lead(FlTreeContext* self, u32 row) {
-    const FlTreeRow* r = &self->rows[row];
-    u32 blank_levels = r->has_children ? r->depth : (u32)r->depth + 1;
+static void row_lead(FlTreeContext* self, u32 row, FlTreeRow r) {
+    u32 blank_levels = r.has_children ? r.depth : (u32)r.depth + 1;
     if (blank_levels > 0) {
         ui_spacer_h(self->indent * (f32)blank_levels);
     }
-    if (r->has_children) {
-        arrow_slot(self, row);
+    if (r.has_children) {
+        arrow_slot(self, row, r.expanded);
     }
+}
+
+static FlSignal row_begin(FlTreeContext* self, u32 row, FlTreeRow r) {
+    FlSignal signal = list_item_begin_impl(self->list, r.id);
+    fl_layout_start_auto();
+    fl_layout_configure((FlLayoutConfig) {
+        .sizing = { sizing_grow(), sizing_fit() },
+        .direction = LayoutDirection_LeftToRight,
+        .child_alignment = { .y = LayoutAlignmentY_Center },
+    });
+    row_lead(self, row, r);
+    return signal;
 }
 
 FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set,
@@ -172,17 +187,7 @@ FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, 
 FlSignal fl_tree_item_begin(uint32_t row) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     FL_ASSERT(row < self->count);
-    const FlTreeRow* r = &self->rows[row];
-
-    FlSignal signal = list_item_begin_impl(self->list, r->id);
-    fl_layout_start_auto();
-    fl_layout_configure((FlLayoutConfig) {
-        .sizing = { sizing_grow(), sizing_fit() },
-        .direction = LayoutDirection_LeftToRight,
-        .child_alignment = { .y = LayoutAlignmentY_Center },
-    });
-    row_lead(self, row);
-    return signal;
+    return row_begin(self, row, tree_row(self, row));
 }
 
 void fl_tree_item_end(void) {
