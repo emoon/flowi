@@ -36,6 +36,7 @@ pub mod tab_bar;
 pub mod text;
 pub mod text_input;
 pub mod theme;
+pub mod tree;
 pub mod ui_floating;
 pub mod ui_input;
 pub mod ui_layout;

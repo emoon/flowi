@@ -64,6 +64,10 @@ static i32 resolve_target(FlListContext* self, ListState* st, i32 cur, bool* dir
     }
 
     *directional = false;
+    i32 hooked = self->key_target_row != nullptr ? self->key_target_row(cur) : cur;
+    if (hooked != cur) {
+        return hooked;
+    }
     i32 ta = typeahead_target(self, st, cur);
     return (ta >= 0) ? ta : cur;
 }

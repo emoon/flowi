@@ -1,8 +1,8 @@
 #pragma once
 
 // List internals shared by the List's source files: the persisted per-list state, the per-frame context, and the
-// helpers the keyboard, marquee and drag gestures all use. Nothing outside src/ui/ui_list.c and src/ui/list/
-// includes this.
+// helpers the keyboard, marquee and drag gestures all use. Nothing outside src/ui/ui_list.c, src/ui/ui_tree.c and
+// src/ui/list/ includes this.
 
 #include "../list_rows.h"
 #include "../ui_list.h"
@@ -54,6 +54,17 @@ typedef struct ListState {
     u64 drag_press_id; // stable id of the row the press landed on (selected => drag the whole selection)
 } ListState;
 
+// The arguments of the begin core: the scoped face's begin call plus the declarative face's policy toggles.
+typedef struct ListBeginArgs {
+    FlLayoutId id;
+    ListRows rows;
+    FlSelectionSet* set;
+    FlListConfig config;
+    bool single_select;
+    bool disable_reorder;
+    i32 (*key_target_row)(i32 cursor_row);
+} ListBeginArgs;
+
 struct FlListContext {
     FlArena* arena;
     FlUiCtx* ui_ctx;
@@ -74,6 +85,7 @@ struct FlListContext {
     // behavior). The declarative face (ui_list) sets them from FlListOpts; the scoped begin leaves them off.
     bool single_select;   // true: ignore ctrl/shift/marquee/Ctrl+A; plain click replace only (single-selection).
     bool disable_reorder; // true: a row press never arms a drag-reorder gesture.
+    i32 (*key_target_row)(i32 cursor_row);
 
     // Per-frame Selection Requests (frame-arena backed; returned on the result and auto-applied at end).
     FlSelectionRequest* requests;
@@ -174,3 +186,13 @@ void list_marquee_update(FlListContext* self, ListState* st);
 
 // Drag-reorder gesture; runs after the rows are emitted.
 void list_drag_update(FlListContext* self, ListState* st);
+
+FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args);
+
+FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id);
+
+void list_item_end_impl(FlListContext* self);
+
+FlListResult list_end_impl(FlListContext* self);
+
+void list_claim_press(FlListContext* self);

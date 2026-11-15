@@ -311,6 +311,7 @@ pub use toolkit::theme::{
     ThemeBorder, ThemeColors, ThemeFeedback, ThemeInteractive, ThemeOverride, ThemeSlot,
     ThemeSurface, ThemeText,
 };
+pub use toolkit::tree::*;
 pub use toolkit::ui_floating::*;
 pub use toolkit::ui_input::*;
 pub use toolkit::ui_layout::*;
