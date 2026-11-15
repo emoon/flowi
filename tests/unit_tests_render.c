@@ -4246,8 +4246,6 @@ UTEST(render, layout_border_dash_pattern_reaches_the_ir_scaled) {
                     "the dash pattern arrives scaled by the UI scale, like every other length");
 }
 
-// An alpha-only DynamicImage drawn through the widget path reaches the frame as an alpha-coverage image. As a
-// color image the backend would read four bytes per pixel from the one-byte-per-pixel buffer.
 UTEST(render, widget_dynamic_image_keeps_alpha_only_mode) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -4267,8 +4265,6 @@ UTEST(render, widget_dynamic_image_keeps_alpha_only_mode) {
                   "an alpha-only image must be drawn as alpha coverage");
 }
 
-// The built-in bitmap font draws its glyphs above the baseline, so its ascent is the whole cell. With a zero ascent
-// the text lands one cell above its box, and a vertically centred line sits half a cell above the centre.
 UTEST(render, bitmap_font_baseline_sits_a_cell_below_the_box_top) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");

@@ -2343,7 +2343,6 @@ UTEST(ui_menu, context_menu_tracer) {
     fl_app_destroy(app);
 }
 
-// Enter on a disabled row the pointer highlighted does nothing: no click, and the menu stays open.
 UTEST(ui_menu, confirm_on_a_hovered_disabled_row_is_ignored) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
@@ -2366,8 +2365,6 @@ UTEST(ui_menu, confirm_on_a_hovered_disabled_row_is_ignored) {
     fl_app_destroy(app);
 }
 
-// The region opens the menu on the right-button press, not while the button is held: dismissing the menu with the
-// button still down leaves it closed.
 UTEST(ui_menu, region_opens_on_the_press_not_while_held) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 
