@@ -76,16 +76,20 @@ to repeat it.
 ```
 /// A scrolling list where you draw each row.
 ///
-/// Each frame, call `begin` with the ids of all rows. For each index in the range it returns, call
-/// `item_begin`, draw the row, and call `item_end`. Then call `end` and act on the result.
+/// Each frame, call `List::begin` with the ids of all rows. For each index in the range it returns, call
+/// `List::item_begin`, draw the row, and call `List::item_end`. Then call `List::end` and act on the result.
 ```
 
 ## Wording
 
 - Put identifiers in backticks: `set`, `ListResult.requests`, `List::begin`.
-- Refer to other items by their names in the `.def`: `List::begin` for a function, `ListResult` for a type and
-  `ListResult.requests` for a field. Do not write the C name (`fl_list_begin`) or a Rust-only name. The same
-  text goes to both languages.
+- Refer to other items by their names in the `.def`, in backticks: `List::begin` for a function, `ListResult`
+  for a type, `ListResult.requests` for a field and `DropRelationship::Before` for an enum value. Do not write
+  the C name or a Rust-only name. api_gen turns the reference into `fl_list_begin`, `FlListResult` and so on
+  in the C headers, and leaves it as written for Rust.
+- Write the full `List::begin` even inside the `List` block. A bare `begin` is not translated.
+- Keep a reference on one line of the comment.
+- api_gen stops with an error if a reference names a function, field or enum value that does not exist.
 - Write "null" for a pointer that may be left out. A Rust caller passes `None`.
 - Use the names the API uses. If the field is `expanded`, write expanded and collapsed.
 - Use "you" for advice to the caller: "If you keep the selection yourself, ...".

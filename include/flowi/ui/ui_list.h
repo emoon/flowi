@@ -15,23 +15,23 @@ extern "C" {
 
 // A scrolling list where you draw each row.
 //
-// Each frame, call `begin` with the ids of all rows. For each index in the range it returns, call
-// `item_begin`, draw the row, and call `item_end`. Then call `end` and act on the result.
+// Each frame, call `fl_list_begin` with the ids of all rows. For each index in the range it returns, call
+// `fl_list_item_begin`, draw the row, and call `fl_list_item_end`. Then call `fl_list_end` and act on the result.
 //
 // The list fills the layout area it is in. It handles selection, the keyboard and row dragging; you keep the
-// rows and reorder them after a drop. For plain label rows, see `Input::list`.
+// rows and reorder them after a drop. For plain label rows, see `fl_input_list`.
 // Starts a list and returns the range of rows to draw.
 //
 // `ordered_ids` holds the ids of all `count` rows in display order. Each id must be unique and not 0.
 //
-// Selection goes into `set`. If `set` is null, read the changes from `ListResult.requests` and draw your
+// Selection goes into `set`. If `set` is null, read the changes from `FlListResult.requests` and draw your
 // own highlight.
 FL_API FlListRange fl_list_begin(FlLayoutId id, const uint64_t* ordered_ids, uint32_t count, FlSelectionSet* set, FlListConfig config);
-// Starts the row with the given id and returns the `Signal` for it.
+// Starts the row with the given id and returns the `FlSignal` for it.
 //
-// Everything you draw before `item_end` is the row's content.
+// Everything you draw before `fl_list_item_end` is the row's content.
 FL_API FlSignal fl_list_item_begin(uint64_t stable_id);
-// Ends the row started with `item_begin`.
+// Ends the row started with `fl_list_item_begin`.
 FL_API void fl_list_item_end(void);
 // Ends the list and returns the result for this frame.
 FL_API FlListResult fl_list_end(void);

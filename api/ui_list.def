@@ -1,7 +1,7 @@
 /// A scrolling list where you draw each row.
 ///
-/// Each frame, call `begin` with the ids of all rows. For each index in the range it returns, call
-/// `item_begin`, draw the row, and call `item_end`. Then call `end` and act on the result.
+/// Each frame, call `List::begin` with the ids of all rows. For each index in the range it returns, call
+/// `List::item_begin`, draw the row, and call `List::item_end`. Then call `List::end` and act on the result.
 ///
 /// The list fills the layout area it is in. It handles selection, the keyboard and row dragging; you keep the
 /// rows and reorder them after a drop. For plain label rows, see `Input::list`.
@@ -16,9 +16,9 @@ api List {
     [manual] begin(id: LayoutId, ordered_ids: *const u64, count: u32, set: *SelectionSet, config: ListConfig) -> ListRange
     /// Starts the row with the given id and returns the `Signal` for it.
     ///
-    /// Everything you draw before `item_end` is the row's content.
+    /// Everything you draw before `List::item_end` is the row's content.
     item_begin(stable_id: u64) -> Signal
-    /// Ends the row started with `item_begin`.
+    /// Ends the row started with `List::item_begin`.
     item_end()
     /// Ends the list and returns the result for this frame.
     [manual] end() -> ListResult

@@ -118,7 +118,7 @@ FL_API float fl_input_gamepad_axis(uint32_t slot, FlGamepadAxis axis);
 // Shows a scrolling list of label rows.
 //
 // `items` holds the `count` rows in display order. Selection goes into `set`; if `set` is null, no row is
-// highlighted. To draw the rows yourself, use `List::begin`.
+// highlighted. To draw the rows yourself, use `fl_list_begin`.
 FL_API FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t count, FlSelectionSet* set, FlListOpts opts);
 // True when the semantic navigation-down action was pressed this frame, independent of whether it came
 // from an arrow key, D-pad, or analog stick binding.

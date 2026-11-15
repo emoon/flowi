@@ -64,7 +64,7 @@ struct ListRange {
     start: u32,
     /// The index after the last row to draw (exclusive).
     end: u32,
-    /// The number of rows passed to `begin`.
+    /// The number of rows passed to `List::begin`.
     total: u32,
 }
 

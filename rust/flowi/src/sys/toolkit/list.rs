@@ -106,7 +106,7 @@ pub struct ListRange {
     pub start: u32,
     /// The index after the last row to draw (exclusive).
     pub end: u32,
-    /// The number of rows passed to `begin`.
+    /// The number of rows passed to `List::begin`.
     pub total: u32,
 }
 
