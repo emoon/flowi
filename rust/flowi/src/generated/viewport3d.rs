@@ -6,33 +6,44 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Retained geometry, created once and drawn from any Viewport3d. Vertices use the one fixed format
-/// (MeshVertex); indices are 16-bit and address vertices. Triangles and lines are the same resource with
-/// different index grouping: create makes one of the first, create_lines one of the second.
+/// Geometry that you create once and draw many times.
+///
+/// Create a mesh from `MeshVertex` values and 16-bit indices. Use `Mesh::create` for triangles and
+/// `Mesh::create_lines` for line segments. Draw it with `Viewport3d::draw_mesh` or `Viewport3d::draw_lines`, and
+/// call `Mesh::destroy` when you no longer need it.
 pub struct Mesh;
 
 impl Mesh {
-    /// Create a triangle mesh from vertices and 16-bit indices (three per triangle). The caller may free both
-    /// arrays after this returns. Returns MeshHandle::INVALID when the active backend has no 3D
-    /// support or the geometry is malformed.
+    /// Creates a triangle mesh and returns its handle.
+    ///
+    /// `indices` holds three indices per triangle, each the position of a vertex in `vertices`. Both arrays are
+    /// copied, so you can free them after the call.
+    ///
+    /// It returns the invalid handle (0) if either array is empty, if the number of indices is not a multiple of
+    /// three, if the render backend has no 3D support, or if the backend cannot hold another mesh.
     #[inline]
     pub fn create(vertices: &[crate::sys::MeshVertex], indices: &[u16]) -> crate::sys::MeshHandle {
         let _frame = crate::frame_thread::frame_thread_guard("Mesh::create");
         unsafe { crate::sys::fl_mesh_create(vertices.as_ptr(), vertices.len() as u32, indices.as_ptr(), indices.len() as u32) }
     }
 
-    /// Create a line mesh (wireframes, voxel boxes, gizmos, camera paths) from vertices and 16-bit
-    /// indices (two per segment). Lines are drawn with Viewport3d::draw_lines, take their color from the
-    /// vertices, and are never textured. Same lifetime and sharing rules as create.
+    /// Creates a line mesh and returns its handle.
+    ///
+    /// `indices` holds two indices per line segment. Lines take their color from the vertices and are never
+    /// textured. Draw them with `Viewport3d::draw_lines`.
+    ///
+    /// It returns the invalid handle (0) if either array is empty, if the number of indices is odd, if the render
+    /// backend has no 3D support, or if the backend cannot hold another mesh.
     #[inline]
     pub fn create_lines(vertices: &[crate::sys::MeshVertex], indices: &[u16]) -> crate::sys::MeshHandle {
         let _frame = crate::frame_thread::frame_thread_guard("Mesh::create_lines");
         unsafe { crate::sys::fl_mesh_create_lines(vertices.as_ptr(), vertices.len() as u32, indices.as_ptr(), indices.len() as u32) }
     }
 
-    /// Destroy a mesh and release its backend buffers. The handle is invalid afterwards: drawing it renders
-    /// nothing until a later create reuses its slot and hands the same value back out, at which point the
-    /// stale handle draws the new mesh. Drop your copies when you destroy one.
+    /// Destroys a mesh and frees its buffers.
+    ///
+    /// Do not use the handle afterwards. A later `Mesh::create` can hand out the same value for a new mesh, and a
+    /// stale copy of the handle then draws that mesh.
     #[inline]
     pub fn destroy(mesh: crate::sys::MeshHandle) {
         let _frame = crate::frame_thread::frame_thread_guard("Mesh::destroy");
@@ -40,20 +51,22 @@ impl Mesh {
     }
 }
 
-/// A 3D scene rendered into a regular layout element: a view-projection matrix plus depth-tested
-/// triangle draws, rasterized by the render backend into the element's own color+depth target, which
-/// the UI then samples as an ordinary image.
+/// A 3D scene that is drawn into a layout element.
 ///
-/// Bracket a frame's draws with begin/end. begin returns the element's size in device pixels so
-/// the caller can build its projection matrix; that size is the previous frame's, because layout runs
-/// after the frame callback, so it is zero on an element's first frame and one frame stale across a
-/// resize. flowi does no lighting, materials or cameras: the shading is fixed and unlit, and camera
-/// math, picking and gizmos live in the caller. A backend without a 3D path draws a placeholder.
+/// Each frame, call `Viewport3d::begin` with the id of the element. Use the size it returns to build a
+/// view-projection matrix, and pass the matrix to `Viewport3d::set_view_projection`. Then call
+/// `Viewport3d::draw_mesh` and `Viewport3d::draw_lines` for each mesh, and finish with `Viewport3d::end`.
+///
+/// Flowi has no cameras, lights or materials. Shading is fixed and unlit, and you do the camera math, the picking
+/// and the gizmos yourself. If the render backend has no 3D support, the element shows a flat placeholder.
 pub struct Viewport3d;
 
 impl Viewport3d {
-    /// Declare the 3D viewport element id and open its draw list. Returns the element's device-pixel
-    /// size from the previous frame ((0, 0) on its first). Call inside a frame callback and pair with end.
+    /// Starts the viewport for an element and returns the size to render at, in device pixels.
+    ///
+    /// The size is the one the element was laid out at on the previous frame. It is (0, 0) on the first frame and
+    /// one frame behind after a resize. The size is also (0, 0) if another `Viewport3d::begin` is still open, or
+    /// if the app already has 8 live viewports. Call `Viewport3d::end` when you have made your draws.
     #[inline]
     pub fn begin(id: impl Into<crate::LayoutId>) -> crate::sys::Vec2 {
         let id: crate::LayoutId = id.into();
@@ -61,35 +74,42 @@ impl Viewport3d {
         unsafe { crate::sys::fl_viewport3d_begin(id.into_sys()) }
     }
 
-    /// Set the view-projection matrix applied to every following draw in this viewport: 16 floats,
-    /// column-major, the same convention `gl_Position = matrix * vec4(pos, 1.0)` implies.
+    /// Sets the view-projection matrix for the draws that follow in this viewport.
+    ///
+    /// `matrix` holds 16 floats in column-major order, so a vertex position `pos` is placed at
+    /// `matrix * vec4(pos, 1.0)`. Without a call, the matrix is the identity. Anything but 16 floats is ignored and
+    /// logs an error.
     #[inline]
     pub fn set_view_projection(matrix: &[f32]) {
         let _frame = crate::frame_thread::frame_thread_guard("Viewport3d::set_view_projection");
         unsafe { crate::sys::fl_viewport3d_set_view_projection(matrix.as_ptr(), matrix.len() as u32) }
     }
 
-    /// Draw a triangle mesh with depth testing, modulating its vertex colors by texture sampled with
-    /// filter. Pass ImageFilter::Nearest to see a lightmap's individual texels rather than a smoothed
-    /// blend. Pass ImageHandle::INVALID to draw with vertex colors alone. Draws render in submission order
-    /// with no sorting; a textured draw needs a dedicated image (Image::create_dedicated), because mesh UVs
-    /// address the whole texture.
+    /// Draws a triangle mesh with depth testing.
+    ///
+    /// The vertex colors are multiplied with the texels of `texture`, sampled with `filter`. Pass the invalid
+    /// handle (0) to draw with the vertex colors only. A texture must come from
+    /// `Image::create_dedicated`, because the texture coordinates address the whole texture.
+    ///
+    /// Draws are rendered in the order you make them, and a viewport takes at most 256 per frame. The rest are
+    /// dropped and an error is logged.
     #[inline]
     pub fn draw_mesh(mesh: crate::sys::MeshHandle, texture: crate::sys::ImageHandle, filter: crate::sys::ImageFilter) {
         let _frame = crate::frame_thread::frame_thread_guard("Viewport3d::draw_mesh");
         unsafe { crate::sys::fl_viewport3d_draw_mesh(mesh, texture, filter) }
     }
 
-    /// Draw a line mesh (Mesh::create_lines) in its vertex colors, untextured. depth_test false makes an
-    /// annotation stay visible through the geometry it annotates; true lets the scene occlude it. Lines are
-    /// one pixel wide and draw in submission order like every other draw.
+    /// Draws a line mesh in its vertex colors, one pixel wide.
+    ///
+    /// With `depth_test` false, the lines stay visible through the geometry. With true, the scene can hide them.
+    /// The draw counts toward the same per-frame limit as `Viewport3d::draw_mesh`.
     #[inline]
     pub fn draw_lines(mesh: crate::sys::MeshHandle, depth_test: bool) {
         let _frame = crate::frame_thread::frame_thread_guard("Viewport3d::draw_lines");
         unsafe { crate::sys::fl_viewport3d_draw_lines(mesh, depth_test) }
     }
 
-    /// Close the draw list opened by begin and submit it to the backend.
+    /// Ends the viewport started by `Viewport3d::begin` and sends its draws to the render backend.
     #[inline]
     pub fn end() {
         let _frame = crate::frame_thread::frame_thread_guard("Viewport3d::end");

@@ -6,13 +6,16 @@
 extern "C" {
 #endif
 
-// Controls when a scroll area shows its scrollbar. Names the values that ScrollAreaConfig.scrollbar_mode takes.
+// When a scroll area or list shows its scrollbar.
+//
+// This is the type of `FlScrollAreaConfig.scrollbar_mode`. A scrollbar is only drawn when the content is larger
+// than the view.
 typedef enum FlScrollbarDisplayMode {
-    // Never show the scrollbar.
+    // Never shown.
     FlScrollbarDisplayMode_Never = 0,
-    // Show on hover when content overflows.
+    // Shown while the mouse is over the area or the thumb is being dragged.
     FlScrollbarDisplayMode_Auto = 1,
-    // Always show when content overflows.
+    // Always shown.
     FlScrollbarDisplayMode_Always = 2,
 } FlScrollbarDisplayMode;
 

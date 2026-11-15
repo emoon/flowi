@@ -12,10 +12,13 @@
 extern "C" {
 #endif
 
-// Checkbox widget. Call inside a frame callback and read the returned Signal to react to interaction.
-// Emit a checkbox labelled label bound to `*checked`; activation toggles the bool. config selects
-// label side, colors, and id overrides. Returns its interaction Signal (.clicked the frame it
-// toggles). Call inside a frame callback.
+// A checkbox.
+//
+// Call it inside a frame callback.
+// Draws a checkbox with a label and returns its `FlSignal`.
+//
+// A click or key activation flips `checked`. `FlSignal.clicked` is set on the frame it flips. Clicking the
+// label toggles it too. `checked` must not be null.
 FL_API FlSignal fl_checkbox_impl(FlString label, bool* checked, FlCheckboxConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

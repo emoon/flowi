@@ -1,16 +1,20 @@
-/// Keyboard modifier flags: the bitmask reported alongside key/text input (Shift, Control, Alt, ...).
+/// Modifier keys held at the same time, as a bit mask.
+///
+/// `Input::keyboard_modifiers` returns it, and `KeyEvent.modifiers` carries it.
 #[attributes(bitflags)]
 enum KeyModifier {
     /// No modifiers held.
     None = 0,
+    /// Shift.
     Shift = 1,
+    /// Control.
     Control = 2,
     /// Alt / Option.
     Alt = 4,
     /// Super / Command / Windows.
     Super = 8,
-    /// Caps Lock active.
+    /// Caps Lock is on.
     Caps_Lock = 16,
-    /// Num Lock active.
+    /// Num Lock is on.
     Num_Lock = 32,
 }

@@ -1,30 +1,41 @@
 #[module(heap)]
 
-/// The malloc-family heap allocator (mimalloc, or the system allocator when sanitizers are enabled or
-/// on Windows). This is the individually-owned counterpart to the arena: every allocation must be
-/// released, and the two are not interchangeable. Code wrapping an external C library can hand these
-/// functions to it as its allocator callbacks.
+/// The heap allocator, for memory you free yourself.
 ///
-/// For allocator statistics use fl_memory_tracker_get_stats, which reports mimalloc's allocated/freed
-/// totals alongside the arena ones.
+/// Unlike an arena, every allocation here must be released with its matching free call. Do not mix the two. Code
+/// that wraps an external C library can pass these functions to it as its allocator.
+///
+/// For allocator statistics, use `MemoryTracker::get_stats`.
 #[attributes(service)]
 api Heap {
-    /// Allocate size bytes. Returns null on failure.
+    /// Allocates `size` bytes and returns them, or null if it fails.
+    ///
+    /// Release them with `Heap::fl_heap_free`.
     fl_heap_alloc(size: u64) -> *void
-    /// Allocate count * size zero-initialized bytes. Returns null on failure.
+    /// Allocates `count` times `size` bytes filled with zeros and returns them, or null if it fails.
+    ///
+    /// Release them with `Heap::fl_heap_free`.
     fl_heap_calloc(count: u64, size: u64) -> *void
-    /// Resize an allocation (ptr may be null). The original pointer may be invalidated, so always use
-    /// the returned one.
+    /// Resizes the allocation `ptr` to `new_size` bytes and returns it.
+    ///
+    /// The block may move, so use the returned pointer from now on. `ptr` may be null, which allocates.
     fl_heap_realloc(ptr: *void, new_size: u64) -> *void
-    /// Release an allocation from fl_heap_alloc / fl_heap_calloc / fl_heap_realloc (null is a no-op).
+    /// Releases an allocation made by `Heap::fl_heap_alloc`, `Heap::fl_heap_calloc` or `Heap::fl_heap_realloc`.
+    ///
+    /// A null `ptr` does nothing.
     fl_heap_free(ptr: *void)
 
-    /// Allocate size bytes on an alignment-byte boundary (alignment must be a power of two).
+    /// Allocates `size` bytes aligned to `alignment` and returns them, or null if it fails.
+    ///
+    /// `alignment` must be a power of two. Release them with `Heap::fl_heap_free_aligned`.
     fl_heap_alloc_aligned(alignment: u64, size: u64) -> *void
-    /// Release an allocation from fl_heap_alloc_aligned (null is a no-op).
+    /// Releases an allocation made by `Heap::fl_heap_alloc_aligned`.
+    ///
+    /// A null `ptr` does nothing.
     fl_heap_free_aligned(ptr: *void)
 
-    /// Usable size of an allocation, which may exceed the requested size. Zero when the allocator in
-    /// use cannot report it.
+    /// Returns the number of bytes you can use in the allocation `ptr`, which may be more than you asked for.
+    ///
+    /// Returns 0 if the allocator in use cannot report it.
     fl_heap_usable_size(ptr: *void) -> u64
 }

@@ -9,25 +9,27 @@
 extern "C" {
 #endif
 
-// Modal scope: the focus save/restore and input blocking behind dialogs. Open a scope to block
-// input to widgets outside it and capture focus; emit a custom body between begin/end; close
-// tears the scope down and restores focus. Rich dialogs (install prompts, overlays, system
-// dialogs) drive their own content through this; fl_popup_message_box is the canned
-// confirm/alert widget built over the same scope.
-// Call at the START of each frame while the modal is visible, BEFORE any widgets render.
-// Arms input blocking so widgets emitted before the body don't receive input; on the first
-// frame it saves the currently-focused widget for restoration on close. scope_id of 0 is
-// a no-op.
+// A modal scope that blocks input to everything outside it and takes focus.
+//
+// While the dialog is visible, call `fl_modal_begin_frame` first in each frame, before any widgets are drawn. Then
+// call `fl_modal_begin`, draw the dialog content, and call `fl_modal_end`. When the dialog closes, call `fl_modal_close`.
+//
+// `fl_popup_message_box` is a ready-made confirm dialog. Use this API when you draw the dialog content yourself.
+// Blocks input to the widgets outside the modal.
+//
+// On the first frame it remembers the focused widget so `fl_modal_close` can give focus back. A `scope_id` of 0
+// does nothing.
 FL_API void fl_modal_begin_frame(uint32_t scope_id);
-// Call before emitting the modal body. Same activation/focus-scope setup as begin_frame,
-// plus it sets the current popup scope so widgets inside the body receive input. scope_id of
-// 0 is a no-op.
+// Starts the modal content, so the widgets you draw next receive input.
+//
+// It also does what `fl_modal_begin_frame` does. Use the same `scope_id` for both. A `scope_id` of 0 does
+// nothing.
 FL_API void fl_modal_begin(uint32_t scope_id);
-// Call after emitting the modal body. Clears the current popup scope (the focus scope stays
-// active until close).
+// Ends the modal content.
+//
+// The modal stays open until `fl_modal_close`.
 FL_API void fl_modal_end(void);
-// Close the modal: restore focus to the widget focused before it opened and clear all popup
-// scope state.
+// Closes the modal and gives focus back to the widget that had it before the modal opened.
 FL_API void fl_modal_close(void);
 
 

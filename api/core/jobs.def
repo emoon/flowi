@@ -1,83 +1,107 @@
 #[module(core)]
 
-/// Job result status: what fl_jobs_is_finished reports for a handle.
+/// Whether a job has finished, as reported by `Jobs::is_finished`.
 enum JobsResult {
-    /// Job is still running or pending.
+    /// The job is pending or still running.
     NotFinished = 0,
-    /// Job has completed.
+    /// The job has completed.
     Finished = 1,
-    /// Job handle is invalid or expired.
+    /// The handle is not valid, or the job it named has been recycled.
     Invalid = 2,
 }
 
-/// Job priority levels. Higher-priority jobs are dequeued before lower-priority
-/// ones.
+/// The priority of a job.
+///
+/// Workers take higher-priority jobs first.
 enum JobPriority {
-    /// Background / prefetch work.
+    /// Background and prefetch work.
     Low = 0,
-    /// Default priority.
+    /// The default priority.
     Normal = 1,
-    /// Visible content, user-facing operations.
+    /// Visible content and user-facing operations.
     High = 2,
-    /// Not a priority: what get_priority reports for an invalid or expired handle. Scheduling calls treat it as
-    /// High.
+    /// What `Jobs::get_priority` reports for an invalid or expired handle.
+    ///
+    /// Scheduling calls treat it as `JobPriority::High`.
     Invalid = -1,
 }
 
-/// Opaque handle to a scheduled job. The scheduler hands it out and the caller
-/// passes it back to query or wait. FL_JOB_HANDLE_INVALID (0) is the invalid handle.
+/// A handle to a scheduled job.
+///
+/// The `Jobs` calls that schedule a job return it. Pass it back to query, wait for or reprioritize that job. 0 is the
+/// invalid handle.
 #[handle(u64, invalid = 0)]
 struct JobHandle {}
 
-/// Worker-thread context handed to a job function.
+/// The worker thread a job runs on.
+///
+/// A `JobsFunc` receives it by value.
 struct JobsWorkerInfo {
-    /// Index of the worker thread (0 to num_threads-1).
+    /// The index of the worker thread, from 0 up to the thread count minus one.
     worker_index: i32,
-    /// Temporary arena for scratch allocations, rewound after the job completes.
+    /// An arena for scratch allocations. They are released when the job returns.
     scratch: *Arena,
 }
 
-/// Callback a job runs on a worker thread. Receives the caller's opaque
-/// user_data and the worker context by value.
+/// The function a job runs on a worker thread.
+///
+/// It receives the `user_data` you scheduled it with and the `JobsWorkerInfo` of the worker running it.
 callback JobsFunc(user_data: *void, info: JobsWorkerInfo)
 
-/// Work-stealing job system. Create it, schedule jobs (optionally with a priority
-/// or a dependency), query or wait on their handles, then destroy it.
+/// A pool of worker threads that run jobs.
+///
+/// Call `Jobs::create` once and schedule jobs with `Jobs::add_job`. Use the returned `JobHandle` to query or wait for
+/// a job. Call `Jobs::destroy` to stop the workers.
 api Jobs {
-    /// Create the global job system with num_threads workers, backed by arena.
+    /// Creates the global job system with `num_threads` workers.
+    ///
+    /// `arena` must stay valid until `Jobs::destroy` returns. If a job system already exists, this does nothing.
     [manual] create(arena: *Arena, num_threads: i32)
-    /// Schedule a job; returns its handle (or the immediate-complete sentinel when
-    /// run synchronously from a worker).
-    [manual] add_job(func: JobsFunc, user_data: *void) -> JobHandle
-    /// Schedule a job that runs only after dependency completes. A dependency of
-    /// zero, the immediate-complete sentinel, or an expired handle counts as
-    /// already satisfied and the job is scheduled as if it had none. A job scheduled
-    /// from a worker against an unfinished dependency is deferred, so the returned
-    /// handle is pending.
-    [manual] add_job_with_dependency(func: JobsFunc, user_data: *void, dependency: JobHandle) -> JobHandle
-    /// Query whether a job has finished.
+    /// Schedules a job at normal priority and returns its handle.
+    ///
+    /// Called from a worker thread, the job runs at once on that worker, and the returned handle already reports
+    /// `JobsResult::Finished`.
+    [manual] [rust_doc(Jobs::add)] add_job(func: JobsFunc, user_data: *void) -> JobHandle
+    /// Schedules a job that runs after `dependency` completes and returns its handle.
+    ///
+    /// A `dependency` of 0, a handle that has expired and a handle for a job that has finished all count as
+    /// satisfied, and the job is scheduled as if it had no dependency.
+    ///
+    /// Called from a worker thread against a job that has not finished, the job waits for it, so the returned handle
+    /// is pending.
+    [manual] [rust_doc(Jobs::add_after)] add_job_with_dependency(func: JobsFunc, user_data: *void, dependency: JobHandle) -> JobHandle
+    /// Returns true if the job for `handle` has finished.
+    ///
+    /// Once a finished job's handle has been reused for a new job, it reports `JobsResult::Invalid`.
     [manual] is_finished(handle: JobHandle) -> JobsResult
-    /// Block until handle completes. Only the main thread blocks: called from any
-    /// other thread this returns at once without waiting, since a worker blocking
-    /// on a job that still needs a worker to run would deadlock the pool. Poll
-    /// fl_jobs_is_finished there instead.
+    /// Blocks until the job for `handle` completes.
+    ///
+    /// Called from a worker thread this returns at once, so poll `Jobs::is_finished` there. Any other thread
+    /// blocks.
     [manual] wait(handle: JobHandle)
-    /// Destroy the global job system, joining all workers.
+    /// Destroys the global job system and waits for its workers to exit.
     [manual] destroy()
-    /// Number of worker threads in the global job system.
+    /// Returns the number of worker threads in the global job system.
     [manual] num_threads() -> i32
-    /// Schedule a job at a given priority.
+    /// Schedules a job at `priority` and returns its handle.
+    ///
+    /// See `Jobs::add_job` for what happens when it is called from a worker thread.
     [manual] add_job_with_priority(func: JobsFunc, user_data: *void, priority: JobPriority) -> JobHandle
-    /// Schedule a priority job that runs only after dependency completes. See
-    /// add_job_with_dependency for how the dependency is honored.
+    /// Schedules a job at `priority` that runs after `dependency` completes and returns its handle.
+    ///
+    /// See `Jobs::add_job_with_dependency` for how `dependency` is handled.
     [manual] add_job_with_priority_and_dependency(func: JobsFunc, user_data: *void, priority: JobPriority, dependency: JobHandle) -> JobHandle
-    /// Change a pending job's priority. Returns true if changed, false if it already
-    /// started/completed or the handle is invalid.
+    /// Changes the priority of a job that has not started.
+    ///
+    /// Returns false if the job already started or completed, or if the handle is invalid.
     [manual] set_priority(handle: JobHandle, new_priority: JobPriority) -> bool
-    /// Current priority of a job, or Invalid if the handle is invalid.
+    /// Returns the priority of a job, or `JobPriority::Invalid` if the handle is invalid.
     [manual] get_priority(handle: JobHandle) -> JobPriority
-    /// Allocate per-job context memory of size bytes.
+    /// Allocates `size` bytes of memory that belongs to one job and returns a pointer to it, or null if `size` is
+    /// over 1024.
+    ///
+    /// Pass the pointer as `user_data` when you schedule the job. It is released after the job function returns.
     [manual] alloc_context(size: usize) -> *void
-    /// Whether the caller is executing on the main thread.
+    /// Returns false on a worker thread and true on any other thread.
     [manual] is_main_thread() -> bool
 }

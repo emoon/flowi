@@ -6,8 +6,10 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Caller-owned storage of selected List stable ids. Feed it the List's per-frame SelectionRequests with
-/// apply, query membership per row with contains, and read the whole selection with copy_ids.
+/// A set that holds the ids of the selected rows.
+///
+/// Pass a set to `List::begin` and the list updates it. Check a row with `SelectionSet::contains` and read the
+/// whole selection with `SelectionSet::copy_ids`.
 pub struct SelectionSet {
     pub(crate) handle: *mut crate::sys::SelectionSet,
 }
@@ -22,32 +24,34 @@ impl Drop for SelectionSet {
 }
 
 impl SelectionSet {
-    /// True if id is currently selected.
+    /// Returns true if `id` is selected.
     #[inline]
     pub fn contains(&self, id: u64) -> bool {
         unsafe { crate::sys::fl_selection_set_contains(self.handle, id) }
     }
 
-    /// Select (selected = true) or deselect (false) a single id.
+    /// Selects `id` if `selected` is true, and deselects it otherwise.
     #[inline]
     pub fn set(&mut self, id: u64, selected: bool) {
         unsafe { crate::sys::fl_selection_set_set(self.handle, id, selected) }
     }
 
-    /// Remove every id (empty the set).
+    /// Deselects every id.
     #[inline]
     pub fn clear(&mut self) {
         unsafe { crate::sys::fl_selection_set_clear_all(self.handle) }
     }
 
-    /// Replace the set's contents with exactly the count ids at ids. Resolves SetAll(true).
+    /// Replaces the selection with exactly the `count` ids at `ids`.
     #[inline]
     pub fn set_all(&mut self, ids: &[u64]) {
         unsafe { crate::sys::fl_selection_set_set_all(self.handle, ids.as_ptr(), ids.len() as u64) }
     }
 
-    /// Snapshot the selected ids into out (its slice length is the capacity); returns the number written (min of
-    /// len and capacity). Order is unspecified.
+    /// Writes the selected ids into `out` and returns how many it wrote.
+    ///
+    /// It writes at most `cap` ids, in no particular order. Compare the result with `SelectionSet::len` to see if
+    /// `out` was big enough.
     #[inline]
     pub fn copy_ids(&self, out: &mut [u64]) -> u64 {
         unsafe { crate::sys::fl_selection_set_copy_ids(self.handle, out.as_mut_ptr(), out.len() as u64) }

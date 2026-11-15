@@ -6,36 +6,43 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Controls the full-screen background drawn behind all UI: its image, opacity, clear color, and a
-/// two-image blend. Use set/set_alpha/set_clear_color to configure it and set_blend to cross two images.
+/// The full-screen background drawn behind all UI.
+///
+/// Call `Background::set` to show an image, `Background::set_alpha` to change its opacity and
+/// `Background::set_clear_color` to choose the color where no image covers the screen. To crossfade between two
+/// images, call `Background::set_blend`.
 pub struct Background;
 
 impl Background {
-    /// Set the full-screen background image, drawn behind all UI instead of clearing the framebuffer. Pass the
-    /// invalid handle to clear the image. Resets alpha to opaque and clears any active blend.
+    /// Sets the background image, drawn behind all UI instead of clearing the framebuffer.
+    ///
+    /// Pass the invalid handle to remove the image. This also sets the opacity back to 255 and ends any blend.
     #[inline]
     pub fn set(handle: crate::sys::ImageHandle) {
         let _frame = crate::frame_thread::frame_thread_guard("Background::set");
         unsafe { crate::sys::fl_background_set(handle) }
     }
 
-    /// Set the current-image opacity (0 = transparent, 255 = opaque; default 255).
+    /// Sets the opacity of the background image (0 is transparent and 255 is opaque, the default).
+    ///
+    /// A blend from `Background::set_blend` ignores it.
     #[inline]
     pub fn set_alpha(alpha: u8) {
         let _frame = crate::frame_thread::frame_thread_guard("Background::set_alpha");
         unsafe { crate::sys::fl_background_set_alpha(alpha) }
     }
 
-    /// Set the clear color drawn where no background image covers; match the theme surface base for consistency.
+    /// Sets the color drawn where no background image covers the screen.
     #[inline]
     pub fn set_clear_color(r: u8, g: u8, b: u8) {
         let _frame = crate::frame_thread::frame_thread_guard("Background::set_clear_color");
         unsafe { crate::sys::fl_background_set_clear_color(r, g, b) }
     }
 
-    /// Blend two background images for this frame: t mixes prev (0) toward current (255). flowi holds no
-    /// transition state, so the caller passes both handles and t every frame and drives its own crossfade
-    /// timing.
+    /// Blends two background images.
+    ///
+    /// `t` mixes from `prev` (0) to `current` (255). flowi keeps no transition state, so run the timing of the
+    /// crossfade yourself and pass the new `t` each time it changes.
     #[inline]
     pub fn set_blend(prev: crate::sys::ImageHandle, current: crate::sys::ImageHandle, t: u8) {
         let _frame = crate::frame_thread::frame_thread_guard("Background::set_blend");

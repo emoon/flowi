@@ -9,15 +9,26 @@
 extern "C" {
 #endif
 
-// Build and nest layout containers. Use start/end to open and close a container,
-// with configure applying a LayoutConfig to the currently-open one.
-// Open a layout container identified by id. Must be paired with end.
+// Layout containers, the boxes that place their children.
+//
+// Call `fl_layout_start` or `fl_layout_start_auto`, then `fl_layout_configure` to set the container up. Draw the children,
+// then call `fl_layout_end`. Containers nest, and each `fl_layout_end` closes the one opened last.
+// Opens a container with the given id.
+//
+// Each id must be unique within a frame. Close the container with `fl_layout_end`.
 FL_API void fl_layout_start(FlLayoutId id);
-// Open a no-id layout container (auto-assigned id). Must be paired with end.
+// Opens a container without an id, for one you never need to look up again.
+//
+// Close the container with `fl_layout_end`.
 FL_API void fl_layout_start_auto(void);
-// Apply config to the currently-open container.
+// Applies `config` to the container opened last.
+//
+// Call this once, right after `fl_layout_start` or `fl_layout_start_auto`.
 FL_API void fl_layout_configure(FlLayoutConfig config);
-// Close the most recently opened container.
+// Closes the container opened last.
+//
+// This also closes a floating element opened with `fl_floating_start`. A scroll area is closed with
+// `fl_scroll_area_end`.
 FL_API void fl_layout_end(void);
 
 #define fl_layout_configure_impl(config) (fl_layout_configure)(config)

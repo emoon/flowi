@@ -6,13 +6,19 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Dropdown widget: a button that opens a popup list to pick one of options.
+/// A button that opens a popup list to pick one of several options.
+///
+/// Call it inside a frame callback.
 pub struct Dropdown;
 
 impl Dropdown {
-    /// Emit a dropdown labelled label. `*is_open` tracks the popup open state (caller-owned); selecting an
-    /// option writes its index to `*selected_index`. config selects width and whether a cancel row shows.
-    /// Call inside a frame callback.
+    /// Draws a dropdown and writes the picked option to `selected_index`.
+    ///
+    /// The button shows the label and the selected option. You own `is_open`: it is set to true when the user opens
+    /// the popup and back to false when they pick an option, cancel or click outside. `selected_index` is the index
+    /// into `options` and is reset to 0 if it is out of range.
+    ///
+    /// If `is_open`, `options` or `selected_index` is null, or `options` is empty, nothing is drawn.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(label: impl AsRef<str>, is_open: &mut bool, options: &[impl AsRef<str>], selected_index: &mut i32, config: crate::generated::widget_config::DropdownConfig<'_>) {

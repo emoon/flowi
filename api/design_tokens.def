@@ -1,51 +1,51 @@
-/// Spacing token (logical pixels): a consistent scale for gaps, padding and margins.
+/// A gap, padding or margin size, in logical pixels.
 enum Spacing {
     None = 0,
-    /// Extra small: tight spacing (icon gaps).
+    /// Extra small.
     XS = 4,
-    /// Small: compact layouts.
+    /// Small.
     SM = 8,
-    /// Medium: default gap between elements.
+    /// Medium.
     MD = 16,
-    /// Large: section spacing.
+    /// Large.
     LG = 24,
-    /// Extra large: major section breaks.
+    /// Extra large.
     XL = 32,
 }
 
-/// Corner radius token (logical pixels): a consistent rounding scale; Full is the pill/circle radius.
+/// A corner radius, in logical pixels.
 enum Radius {
     /// Square corners.
     None = 0,
-    /// Small: subtle rounding (inputs, cards).
+    /// Small.
     SM = 4,
-    /// Medium: default for buttons.
+    /// Medium.
     MD = 8,
-    /// Large: prominent cards, dialogs.
+    /// Large.
     LG = 12,
-    /// Extra large: hero cards.
+    /// Extra large.
     XL = 16,
-    /// Pill shape: tags, toggle pills.
+    /// Fully rounded ends, for pills and circles.
     Full = 999,
 }
 
-/// Widget height token (logical pixels, 1080p reference): consistent sizing for interactive elements.
+/// A widget height, in logical pixels.
 enum WidgetHeight {
-    /// Small: compact buttons, chips (WCAG AA touch target).
+    /// Small.
     SM = 44,
-    /// Medium: default button height.
+    /// Medium.
     MD = 60,
-    /// Large: prominent buttons, list items.
+    /// Large.
     LG = 80,
 }
 
-/// Border width token (logical pixels).
+/// A border width, in logical pixels.
 enum BorderWidth {
     None = 0,
-    /// Default border.
+    /// Thin.
     Thin = 1,
-    /// Focus rings, emphasized borders.
+    /// Medium.
     Medium = 2,
-    /// Strong visual separation.
+    /// Thick.
     Thick = 4,
 }

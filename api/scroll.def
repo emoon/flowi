@@ -1,22 +1,27 @@
-/// Configuration for a scroll area: a clipping container with managed scroll
-/// state, consumed by fl_scroll_area_begin.
+/// The settings of a scroll area.
+///
+/// Pass it to `Scroll::area_begin`.
 #[attributes(Copy)]
 struct ScrollAreaConfig {
-    /// Container sizing (default: grow/grow).
+    /// The size of the area.
     sizing: LayoutSizing,
-    /// Layout direction (default: TopToBottom).
+    /// The direction the children are laid out in, and the only direction the area scrolls in.
     direction: LayoutDirection,
-    /// Gap between child elements.
+    /// The space between adjacent children, in logical pixels.
     child_gap: u16,
     padding: LayoutPadding,
-    /// Background color (default: transparent).
+    /// The background color.
     background_color: Color,
     corner_radius: CornerRadius,
-    /// Show a scrollbar when content overflows.
+    /// Whether the area has a vertical scrollbar. It is drawn only when the content is taller than the area.
+    ///
+    /// Space for it is added to the right padding. If `scrollbar_mode` is `ScrollbarDisplayMode::Never`, it is
+    /// treated as `ScrollbarDisplayMode::Always`.
     show_scrollbar: bool,
+    /// When the scrollbar is shown. It is used when `show_scrollbar` is true.
     scrollbar_mode: ScrollbarDisplayMode,
-    /// Enable smooth scroll animation.
+    /// Whether the scroll position moves smoothly towards its target instead of jumping.
     smooth_scroll: bool,
-    /// Pixels per mouse-wheel tick.
+    /// How far one mouse wheel step scrolls, in pixels (0 uses 30).
     scroll_speed: f32,
 }

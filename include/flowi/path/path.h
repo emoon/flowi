@@ -11,44 +11,76 @@
 extern "C" {
 #endif
 
-// Cross-platform path manipulation. Paths are UTF-8 FlStrings using forward slashes as the canonical
-// separator; backslashes are folded to forward slashes on normalization. Every function that builds a
-// new path allocates it from the caller's arena, so nothing here needs freeing. fl_path_get_extension
-// and fl_path_get_filename return a view into their input and take no arena.
-// Fold backslashes to forward slashes and collapse duplicate separators.
+// Functions for working with file paths held in strings.
+//
+// Paths are UTF-8 strings that use forward slashes. A backslash is also read as a separator, and
+// `fl_path_normalize` turns it into a forward slash. Calls that make a new path allocate it from the
+// `arena` you pass, so there is nothing to free. `fl_path_get_extension` and `fl_path_get_filename`
+// return a view into the path you pass and take no arena.
+// Returns `path` with backslashes turned into forward slashes and repeated separators collapsed to one.
+//
+// A trailing separator is removed, except on the root and on an http or https URL.
 FL_API FlString fl_path_normalize(FlArena* arena, FlString path);
-// Normalize, then resolve "." and ".." components.
+// Returns `path` with its "." and ".." components resolved.
+//
+// Backslashes and repeated separators are treated as in `fl_path_normalize`, and a trailing separator is
+// dropped. Only a path that starts with "/" counts as absolute here.
+//
+// A ".." that has nothing before it to remove is kept in a relative path and dropped in an absolute one. A path
+// that resolves to nothing becomes "." if it is relative and "/" if it is absolute.
 FL_API FlString fl_path_normalize_full(FlArena* arena, FlString path);
-// Convert a path to forward slashes only.
+// Returns `path` with backslashes turned into forward slashes.
 FL_API FlString fl_path_to_forward_slashes(FlArena* arena, FlString path);
-// Join relative onto base, handling trailing separators. An absolute relative wins outright.
+// Joins `relative` onto `base` with exactly one separator between them.
+//
+// If `relative` is an absolute path, it is returned alone, except for a single component with a leading
+// slash such as "/name", which is joined like any other. An empty `base` or `relative` returns the other.
 FL_API FlString fl_path_join(FlArena* arena, FlString base, FlString relative);
-// The file extension without its leading dot, as a view into path (empty if there is none).
+// Returns the extension of the file name in `path` without its dot, as a view into `path`.
+//
+// The result is empty if there is no extension. A name that only starts with a dot, such as ".gitignore", has
+// none.
 FL_API FlString fl_path_get_extension(FlString path);
-// The filename component after the last separator, as a view into path (empty if path ends in
-// a separator).
+// Returns the part of `path` after the last separator, as a view into `path`.
+//
+// The result is empty if `path` ends in a separator.
 FL_API FlString fl_path_get_filename(FlString path);
-// The directory component: everything before the last separator.
+// Returns the part of `path` before the last separator.
+//
+// The result is "/" if the only separator is the first character, and empty if there is no separator.
 FL_API FlString fl_path_get_directory(FlArena* arena, FlString path);
-// The basename: the filename without its extension.
+// Returns the file name in `path` without its extension.
 FL_API FlString fl_path_get_basename(FlArena* arena, FlString path);
-// The parent directory, or an empty string if path has none.
+// Returns the directory that contains `path`, or an empty string if there is none.
+//
+// A trailing separator on `path` is ignored.
 FL_API FlString fl_path_get_parent(FlArena* arena, FlString path);
-// Whether path is absolute (Unix: leading "/"; Windows: a drive letter or a UNC prefix).
+// Returns true if `path` is absolute.
+//
+// That means it starts with "/", a drive letter and a separator such as "C:/", two separators, or "http://" or
+// "https://".
 FL_API bool fl_path_is_absolute(FlString path);
-// Whether path is relative: the complement of fl_path_is_absolute.
+// Returns true if `path` is not absolute.
 FL_API bool fl_path_is_relative(FlString path);
-// Whether path ends in extension (given without its dot, e.g. "zip"), ignoring ASCII case.
+// Returns true if the file name in `path` has the extension `extension`, ignoring ASCII case.
+//
+// Give `extension` without its dot, for example "zip". It is false if either one is empty.
 FL_API bool fl_path_has_extension(FlString path, FlString extension);
-// Whether path contains any directory separator.
+// Returns true if `path` contains a separator.
 FL_API bool fl_path_has_separator(FlString path);
-// Whether two paths are equivalent once normalized.
+// Returns true if `path1` and `path2` are the same once `/` and `\` are treated alike.
+//
+// On Windows the case is ignored as well.
 FL_API bool fl_path_equals(FlString path1, FlString path2);
-// Resolve path against base; an already-absolute path is copied through unchanged.
+// Returns `path` joined onto `base`, or a copy of `path` if it is already absolute.
 FL_API FlString fl_path_make_absolute(FlArena* arena, FlString base, FlString path);
-// Drop the trailing separator, if path has one.
+// Returns `path` without its trailing separator.
+//
+// Only one separator is removed. A path that is only a separator is kept as it is.
 FL_API FlString fl_path_remove_trailing_separator(FlArena* arena, FlString path);
-// Add a trailing separator, if path lacks one (marking it as a directory).
+// Returns `path` with a trailing separator, adding one if it has none.
+//
+// An empty `path` becomes "/".
 FL_API FlString fl_path_ensure_trailing_separator(FlArena* arena, FlString path);
 
 

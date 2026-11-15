@@ -11,11 +11,12 @@
 extern "C" {
 #endif
 
-// Adds interaction (click, double-click, right-click, drag) to a laid-out element, returning a Signal.
-// Turn the laid-out element id into an interactive element with the behaviors selected by flags
-// (ItemFlags::CLICKABLE | ItemFlags::DRAGGABLE | ItemFlags::DOUBLE_CLICK | ItemFlags::RIGHT_CLICK) and
-// return its interaction Signal. Call inside a frame callback, after the element is laid out under id;
-// read signal.clicked / double_clicked / right_clicked / dragging / drag_delta to react.
+// Mouse, keyboard and gamepad interaction for an area you laid out.
+// Makes the laid out area `id` interactive and returns its `FlSignal`.
+//
+// `flags` picks what it reacts to, for example `FlItemFlags_clickable` and `FlItemFlags_draggable` together.
+// `id` is the id you lay the area out under. Read the fields of the `FlSignal` that match the flags, such as
+// `FlSignal.clicked` or `FlSignal.drag_delta`.
 FL_API FlSignal fl_item_behavior(FlLayoutId id, FlItemFlags flags);
 
 

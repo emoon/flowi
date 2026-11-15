@@ -12,47 +12,63 @@
 extern "C" {
 #endif
 
-// Memory-tracking statistics snapshot: arena allocator usage across all threads
-// plus the mimalloc allocation/free balance. Filled on demand by
-// fl_memory_tracker_get_stats and read field-wise.
+// A snapshot of memory use: the live arenas and the mimalloc allocation balance.
+//
+// `fl_memory_tracker_get_stats` fills it in. The mimalloc fields are 0 in a build that does not use mimalloc.
 typedef struct FlMemoryStats {
-    // Number of live arenas across all threads.
+    // The number of live arenas across all threads.
     uint32_t live_arena_count;
-    // Total reserved capacity of all arenas, in bytes.
+    // The reserved capacity of all arenas, in bytes.
     uint64_t total_arena_capacity;
-    // Total currently used memory across all arenas, in bytes.
+    // The memory in use across all arenas, in bytes.
     uint64_t total_arena_used;
-    // Total peak memory usage across all arenas, in bytes.
+    // The peak memory use across all arenas, in bytes.
     uint64_t total_arena_peak;
-    // Current mimalloc memory (allocated - freed), in bytes.
+    // The mimalloc memory in use (allocated minus freed), in bytes.
     uint64_t mimalloc_current;
-    // Total bytes allocated via mimalloc.
+    // The bytes allocated through mimalloc.
     uint64_t mimalloc_total_allocated;
-    // Total bytes freed via mimalloc.
+    // The bytes freed through mimalloc.
     uint64_t mimalloc_total_freed;
-    // Number of mimalloc allocations. Block counts cover the calling thread's heap and exited threads.
+    // The number of mimalloc allocations. Block counts cover the calling thread's heap and exited threads.
     uint64_t mimalloc_alloc_count;
-    // Number of mimalloc frees. A block freed while the thread that allocated it is still running counts as live
+    // The number of mimalloc frees. A block freed while the thread that allocated it is still running counts as live
     // until that thread next allocates or collects.
     uint64_t mimalloc_free_count;
 } FlMemoryStats;
 
-// Memory leak-detection and profiling surface. Call init/destroy to bracket the
-// tracker's lifetime, then use the `dump_*` / `export_json_*` calls or get_stats to
-// read a snapshot.
-// Initialize the memory-tracking system. Call early in application startup.
+// Memory use reports for finding leaks.
+//
+// Call `fl_memory_tracker_init` early in startup and `fl_memory_tracker_destroy` at shutdown. In between, read the numbers
+// with `fl_memory_tracker_get_stats`, or get a report of every live arena from `fl_memory_tracker_dump_string` or
+// `fl_memory_tracker_export_json_string`.
+// Starts tracking arenas.
+//
+// Call it early in application startup.
 FL_API void fl_memory_tracker_init(void);
-// Destroy the memory-tracking system. Call at application shutdown.
+// Stops tracking arenas.
+//
+// Call it at application shutdown.
 FL_API void fl_memory_tracker_destroy(void);
-// Dump a memory snapshot as a text FlString allocated from arena.
+// Returns a text report of memory use, allocated from `arena`.
+//
+// Returns an empty string if `arena` is null.
 FL_API FlString fl_memory_tracker_dump_string(FlArena* arena);
-// Dump a memory snapshot to filepath in text format (overwriting). Returns true on success.
+// Writes the text report from `fl_memory_tracker_dump_string` to `filepath`, replacing the file.
+//
+// Returns true if it succeeded. An empty `filepath` fails.
 FL_API bool fl_memory_tracker_dump_to_file(FlString filepath);
-// Export a memory snapshot as a JSON FlString allocated from arena.
+// Returns a JSON report of memory use, allocated from `arena`.
+//
+// Returns an empty string if `arena` is null.
 FL_API FlString fl_memory_tracker_export_json_string(FlArena* arena);
-// Export a memory snapshot to filepath in JSON format (overwriting). Returns true on success.
+// Writes the JSON report from `fl_memory_tracker_export_json_string` to `filepath`, replacing the file.
+//
+// Returns true if it succeeded. An empty `filepath` fails.
 FL_API bool fl_memory_tracker_export_json_to_file(FlString filepath);
-// Fill stats with the current memory statistics. Reclaims empty pages in the calling thread's heap.
+// Fills `stats` with the current memory use.
+//
+// It also reclaims empty pages in the calling thread's heap.
 FL_API void fl_memory_tracker_get_stats(FlMemoryStats* stats);
 
 

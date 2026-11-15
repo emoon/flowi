@@ -6,11 +6,11 @@
 extern "C" {
 #endif
 
-// A keyboard key: the discriminant the Input::key_pressed / key_down / key_released
-// queries take. Key queries are global and not bound to any widget: the app reads the key
-// state and decides what it means.
+// A keyboard key.
+//
+// This is the key that `fl_input_key_pressed`, `fl_input_key_down` and `fl_input_key_released` take.
 typedef enum FlKey {
-    // No key / unknown key.
+    // No key, or a key that is not listed.
     FlKey_Unknown = 0,
     FlKey_A = 1,
     FlKey_B = 2,
@@ -60,7 +60,7 @@ typedef enum FlKey {
     FlKey_Backslash = 46,
     FlKey_Right_Bracket = 47,
     FlKey_Grave_Accent = 48,
-    // First control/function key.
+    // The first of the control and function keys, which start at 256.
     FlKey_Escape = 256,
     FlKey_Enter = 257,
     FlKey_Tab = 258,
@@ -130,7 +130,7 @@ typedef enum FlKey {
     FlKey_Right_Alt = 322,
     FlKey_Right_Super = 323,
     FlKey_Menu = 324,
-    // Size sentinel: number of keys, not a key itself.
+    // The number of keys, not a key.
     FlKey_Count = 325,
 } FlKey;
 

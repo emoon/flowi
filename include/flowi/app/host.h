@@ -13,45 +13,46 @@ extern "C" {
 
 typedef struct FlArena FlArena;
 
-// Settings for bringing up an embedded flowi host, passed to fl_host_create.
+// The settings for `fl_host_create`.
 typedef struct FlHostSettings {
-    // Render width in pixels. The host opens its window at this size and renders every frame into it.
+    // The render width in pixels (above 0). The host opens its window at this size and renders every frame into it.
     int32_t render_width;
-    // Render height in pixels.
+    // The render height in pixels (above 0).
     int32_t render_height;
-    // Mount the process working directory as the hidden default asset mount, so Font::load and
-    // Image::load resolve plain filesystem paths against it. A host that mounts its own data directory
-    // and loads through Font::load_mount leaves this false.
+    // Whether the working directory of the process is mounted as the default asset mount.
+    //
+    // Paths given to `fl_font_load` and `fl_image_load` are then looked up against it. Leave it false if you mount your
+    // own data directory and load through `fl_font_load_mount`.
     bool mount_working_directory;
 } FlHostSettings;
 
-// Opaque handle for the embedded host tier: the render backend, the shared resource tier, the VFS and
-// image-system singletons, and the shared font cache. Every `fl_host_*` entry point takes a `*Host`; the
-// caller holds it solely behind that pointer. Created by fl_host_create, destroyed by fl_host_destroy.
+// A flowi host that you drive yourself.
+//
+// Returned by `fl_host_create` and freed with `fl_host_destroy`.
 typedef struct FlHost FlHost;
 
-// Everything fl_app brings up except the window, the input pump and presentation: the tier an
-// embedding host needs when it owns its own OS integration.
+// A flowi host for a program that owns its own display, input and presentation.
 //
-// A host with its own display/input/audio backends (a kiosk shell, a bare-metal frontend) calls
-// fl_host_create directly, creates a surface per window, attaches a UI context to it, and drives the
-// frame itself. fl_app is the same bring-up plus a window backend, a tick loop and a present path.
+// Use it instead of `FlApp` when flowi should not open the window. `fl_host_create` brings up the renderer, the
+// resource systems and a UI context. Call `fl_host_frame_update` once per frame and emit the UI between two calls.
+// Then call `fl_host_read_pixels` to get the result. Call `fl_host_destroy` when you are done.
+// Creates a host that allocates from `arena` and returns it, or null if it could not be created.
 //
-// Ownership: the host allocates from the caller's arena and never frees it. The VFS and image-system
-// singletons are process-global and first-caller-wins, so fl_host_destroy tears down only what this
-// host actually brought up.
-// Bring up the embedded tier on arena and open its window at the settings' render size: render
-// backend, shared resource tier, VFS, image system, font cache, render surface and UI context.
-// Returns null on failure, having logged the reason.
+// The reason is logged. The host never frees `arena`, so keep it alive until after `fl_host_destroy`.
 FL_API FlHost* fl_host_create(FlArena* arena, const FlHostSettings* settings);
-// Tear the host down and release everything it owns, its window included. No-op on a null handle.
+// Destroys the host and releases everything it owns, its window included.
+//
+// Does nothing if `host` is null.
 FL_API void fl_host_destroy(FlHost* host);
-// Advance one frame. The first call opens the host's frame; every one after it closes the frame just
-// emitted, pumps delta_time seconds of input into the next, and opens that. Everything the host
-// draws happens between two of these calls.
+// Advances the host by one frame.
+//
+// The first call opens a frame. Each call after that closes the frame you just emitted, feeds `delta_time`
+// seconds of input into the next one and opens it. Emit the UI between two calls.
 FL_API void fl_host_frame_update(FlHost* host, double delta_time);
-// Read back the last-rendered pixels (native interleaved: RGB24 software, RGBA8 GPU) so the host can
-// copy them into its own framebuffer. False when the backend has no readback capability.
+// Fills `out` with the pixels of the last rendered frame and returns true.
+//
+// The format is RGB24 for the software renderer and RGBA8 for the GPU. Returns false if the render backend
+// cannot read its pixels back.
 FL_API bool fl_host_read_pixels(FlHost* host, FlPixelReadback* out);
 
 

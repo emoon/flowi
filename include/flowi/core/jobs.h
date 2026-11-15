@@ -12,84 +12,108 @@
 extern "C" {
 #endif
 
-// Job result status: what fl_jobs_is_finished reports for a handle.
+// Whether a job has finished, as reported by `fl_jobs_is_finished`.
 typedef enum FlJobsResult {
-    // Job is still running or pending.
+    // The job is pending or still running.
     FlJobsResult_NotFinished = 0,
-    // Job has completed.
+    // The job has completed.
     FlJobsResult_Finished = 1,
-    // Job handle is invalid or expired.
+    // The handle is not valid, or the job it named has been recycled.
     FlJobsResult_Invalid = 2,
 } FlJobsResult;
 
-// Job priority levels. Higher-priority jobs are dequeued before lower-priority
-// ones.
+// The priority of a job.
+//
+// Workers take higher-priority jobs first.
 typedef enum FlJobPriority {
-    // Background / prefetch work.
+    // Background and prefetch work.
     FlJobPriority_Low = 0,
-    // Default priority.
+    // The default priority.
     FlJobPriority_Normal = 1,
-    // Visible content, user-facing operations.
+    // Visible content and user-facing operations.
     FlJobPriority_High = 2,
-    // Not a priority: what get_priority reports for an invalid or expired handle. Scheduling calls treat it as
-    // High.
+    // What `fl_jobs_get_priority` reports for an invalid or expired handle.
+    //
+    // Scheduling calls treat it as `FlJobPriority_High`.
     FlJobPriority_Invalid = -1,
 } FlJobPriority;
 
-// Worker-thread context handed to a job function.
+// The worker thread a job runs on.
+//
+// A `FlJobsFunc` receives it by value.
 typedef struct FlJobsWorkerInfo {
-    // Index of the worker thread (0 to num_threads-1).
+    // The index of the worker thread, from 0 up to the thread count minus one.
     int32_t worker_index;
-    // Temporary arena for scratch allocations, rewound after the job completes.
+    // An arena for scratch allocations. They are released when the job returns.
     FlArena* scratch;
 } FlJobsWorkerInfo;
 
-// Callback a job runs on a worker thread. Receives the caller's opaque
-// user_data and the worker context by value.
+// The function a job runs on a worker thread.
+//
+// It receives the `user_data` you scheduled it with and the `FlJobsWorkerInfo` of the worker running it.
 typedef void (*FlJobsFunc)(void* user_data, FlJobsWorkerInfo info);
 
-// Opaque handle to a scheduled job. The scheduler hands it out and the caller
-// passes it back to query or wait. FL_JOB_HANDLE_INVALID (0) is the invalid handle.
+// A handle to a scheduled job.
+//
+// The `Jobs` calls that schedule a job return it. Pass it back to query, wait for or reprioritize that job. 0 is the
+// invalid handle.
 typedef uint64_t FlJobHandle;
 #define FL_JOB_HANDLE_INVALID 0
 
-// Work-stealing job system. Create it, schedule jobs (optionally with a priority
-// or a dependency), query or wait on their handles, then destroy it.
-// Create the global job system with num_threads workers, backed by arena.
+// A pool of worker threads that run jobs.
+//
+// Call `fl_jobs_create` once and schedule jobs with `fl_jobs_add_job`. Use the returned `FlJobHandle` to query or wait for
+// a job. Call `fl_jobs_destroy` to stop the workers.
+// Creates the global job system with `num_threads` workers.
+//
+// `arena` must stay valid until `fl_jobs_destroy` returns. If a job system already exists, this does nothing.
 FL_API void fl_jobs_create(FlArena* arena, int32_t num_threads);
-// Schedule a job; returns its handle (or the immediate-complete sentinel when
-// run synchronously from a worker).
+// Schedules a job at normal priority and returns its handle.
+//
+// Called from a worker thread, the job runs at once on that worker, and the returned handle already reports
+// `FlJobsResult_Finished`.
 FL_API FlJobHandle fl_jobs_add_job(FlJobsFunc func, void* user_data);
-// Schedule a job that runs only after dependency completes. A dependency of
-// zero, the immediate-complete sentinel, or an expired handle counts as
-// already satisfied and the job is scheduled as if it had none. A job scheduled
-// from a worker against an unfinished dependency is deferred, so the returned
-// handle is pending.
+// Schedules a job that runs after `dependency` completes and returns its handle.
+//
+// A `dependency` of 0, a handle that has expired and a handle for a job that has finished all count as
+// satisfied, and the job is scheduled as if it had no dependency.
+//
+// Called from a worker thread against a job that has not finished, the job waits for it, so the returned handle
+// is pending.
 FL_API FlJobHandle fl_jobs_add_job_with_dependency(FlJobsFunc func, void* user_data, FlJobHandle dependency);
-// Query whether a job has finished.
+// Returns true if the job for `handle` has finished.
+//
+// Once a finished job's handle has been reused for a new job, it reports `FlJobsResult_Invalid`.
 FL_API FlJobsResult fl_jobs_is_finished(FlJobHandle handle);
-// Block until handle completes. Only the main thread blocks: called from any
-// other thread this returns at once without waiting, since a worker blocking
-// on a job that still needs a worker to run would deadlock the pool. Poll
-// fl_jobs_is_finished there instead.
+// Blocks until the job for `handle` completes.
+//
+// Called from a worker thread this returns at once, so poll `fl_jobs_is_finished` there. Any other thread
+// blocks.
 FL_API void fl_jobs_wait(FlJobHandle handle);
-// Destroy the global job system, joining all workers.
+// Destroys the global job system and waits for its workers to exit.
 FL_API void fl_jobs_destroy(void);
-// Number of worker threads in the global job system.
+// Returns the number of worker threads in the global job system.
 FL_API int32_t fl_jobs_num_threads(void);
-// Schedule a job at a given priority.
+// Schedules a job at `priority` and returns its handle.
+//
+// See `fl_jobs_add_job` for what happens when it is called from a worker thread.
 FL_API FlJobHandle fl_jobs_add_job_with_priority(FlJobsFunc func, void* user_data, FlJobPriority priority);
-// Schedule a priority job that runs only after dependency completes. See
-// add_job_with_dependency for how the dependency is honored.
+// Schedules a job at `priority` that runs after `dependency` completes and returns its handle.
+//
+// See `fl_jobs_add_job_with_dependency` for how `dependency` is handled.
 FL_API FlJobHandle fl_jobs_add_job_with_priority_and_dependency(FlJobsFunc func, void* user_data, FlJobPriority priority, FlJobHandle dependency);
-// Change a pending job's priority. Returns true if changed, false if it already
-// started/completed or the handle is invalid.
+// Changes the priority of a job that has not started.
+//
+// Returns false if the job already started or completed, or if the handle is invalid.
 FL_API bool fl_jobs_set_priority(FlJobHandle handle, FlJobPriority new_priority);
-// Current priority of a job, or Invalid if the handle is invalid.
+// Returns the priority of a job, or `FlJobPriority_Invalid` if the handle is invalid.
 FL_API FlJobPriority fl_jobs_get_priority(FlJobHandle handle);
-// Allocate per-job context memory of size bytes.
+// Allocates `size` bytes of memory that belongs to one job and returns a pointer to it, or null if `size` is
+// over 1024.
+//
+// Pass the pointer as `user_data` when you schedule the job. It is released after the job function returns.
 FL_API void* fl_jobs_alloc_context(size_t size);
-// Whether the caller is executing on the main thread.
+// Returns false on a worker thread and true on any other thread.
 FL_API bool fl_jobs_is_main_thread(void);
 
 

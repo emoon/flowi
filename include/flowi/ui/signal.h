@@ -10,40 +10,47 @@
 extern "C" {
 #endif
 
-// Widget interaction result: the struct every interactive widget returns by value. clicked is
-// the common case.
+// What the user did to a widget this frame.
+//
+// Every interactive widget returns it, and so does `fl_item_behavior`. `clicked` is the one most callers read. A field
+// that needs a behavior the widget did not ask for, such as `double_clicked`, stays false.
 typedef struct FlSignal {
-    // Mouse clicked (or keyboard activated) this frame.
+    // Whether the widget was clicked, or activated with the keyboard or gamepad.
     bool clicked;
-    // Mouse is hovering over the widget.
+    // Whether the cursor is over the widget. It is only set for a widget that is clickable or draggable.
     bool hovered;
-    // Widget holds keyboard/gamepad focus.
+    // Whether the widget has keyboard or gamepad focus.
     bool focused;
-    // Activated via keyboard/gamepad (Enter/Space/Gamepad A).
+    // Whether the user activated the widget with Enter, Space or the gamepad A button.
     bool activated;
-    // Double-click detected (if the widget opts into it).
+    // Whether the user double-clicked the widget. It needs `FlItemFlags_double_click` and `FlItemFlags_clickable`.
     bool double_clicked;
-    // Right mouse button clicked (if the widget opts into it).
+    // Whether the user pressed the right mouse button on the widget. It needs `FlItemFlags_right_click` and a
+    // widget that is hovered, so `FlItemFlags_clickable` or `FlItemFlags_draggable`.
     bool right_clicked;
-    // Mouse/key went down this frame.
+    // Whether the mouse button went down on the widget this frame. It needs `FlItemFlags_clickable`.
     bool pressed;
-    // Mouse/key went up this frame.
+    // Whether the mouse button was released this frame after being pressed on the widget. It needs
+    // `FlItemFlags_clickable`.
     bool released;
-    // Currently dragging (if the widget is draggable).
+    // Whether the widget is being dragged. It needs `FlItemFlags_draggable`.
     bool dragging;
-    // Row is in the current selection set.
+    // Whether the row is in the selection of its list. Only `fl_list_item_begin` sets it.
     bool selected;
-    // Mouse position relative to the widget bounds.
+    // The mouse position relative to the widget, in physical pixels.
     FlVec2 mouse_pos;
-    // Movement since the drag started.
+    // How far the mouse has moved since the drag started, in physical pixels.
     FlVec2 drag_delta;
-    // Mouse wheel delta (if the widget is a scroll target).
+    // The mouse wheel movement over the widget. It needs `FlItemFlags_scroll_target`, and `FlItemFlags_clickable` or
+    // `FlItemFlags_draggable` to make the widget hovered.
     FlVec2 wheel_delta;
-    // Text input only: the text was edited this frame.
+    // Whether a text input was edited this frame. Only text inputs set it.
     bool text_changed;
-    // Text input only: Enter was pressed this frame.
+    // Whether Enter was pressed in a text input this frame. Only text inputs set it.
     bool submitted;
-    // Text input only: Escape was pressed this frame, or the gamepad Cancel button (B).
+    // Whether Escape or the gamepad Cancel button (B) was pressed in a text input this frame.
+    //
+    // Only text inputs set it.
     bool cancelled;
 } FlSignal;
 

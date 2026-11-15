@@ -6,13 +6,16 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Checkbox widget. Call inside a frame callback and read the returned Signal to react to interaction.
+/// A checkbox.
+///
+/// Call it inside a frame callback.
 pub struct Checkbox;
 
 impl Checkbox {
-    /// Emit a checkbox labelled label bound to `*checked`; activation toggles the bool. config selects
-    /// label side, colors, and id overrides. Returns its interaction Signal (.clicked the frame it
-    /// toggles). Call inside a frame callback.
+    /// Draws a checkbox with a label and returns its `Signal`.
+    ///
+    /// A click or key activation flips `checked`. `Signal.clicked` is set on the frame it flips. Clicking the
+    /// label toggles it too. `checked` must not be null.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(label: impl AsRef<str>, checked: &mut bool, config: crate::generated::widget_config::CheckboxConfig<'_>) -> crate::sys::Signal {

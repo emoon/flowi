@@ -13,238 +13,247 @@
 extern "C" {
 #endif
 
-// Visual treatment for shared widget chrome. Solid is the filled accent background and the zero default.
+// The look of a widget's background and border.
 typedef enum FlWidgetVariant {
-    // Filled accent background (the C zero default).
+    // A filled accent background. This is the default.
     FlWidgetVariant_Solid = 0,
-    // Border only, transparent background.
+    // A border with a transparent background.
     FlWidgetVariant_Outline = 1,
-    // Fully transparent until hover.
+    // A transparent background until the pointer hovers over it.
     FlWidgetVariant_Ghost = 2,
-    // Subtle tinted background (accent at low opacity).
+    // A faint tint of the accent color as the background.
     FlWidgetVariant_Soft = 3,
 } FlWidgetVariant;
 
-// Widget size token for interactive control dimensions. Default is the zero default and lets the widget choose its normal size.
+// The size of a widget's controls.
 typedef enum FlWidgetSize {
-    // Use the widget's default size (typically medium).
+    // The widget's normal size. This is the default.
     FlWidgetSize_Default = 0,
-    // Small compact controls.
+    // A small, compact control.
     FlWidgetSize_SM = 1,
-    // Medium standard controls.
+    // A medium, standard control.
     FlWidgetSize_MD = 2,
-    // Large prominent controls.
+    // A large control.
     FlWidgetSize_LG = 3,
 } FlWidgetSize;
 
-// Scrollbar orientation. Vertical is the zero default.
+// The direction a scrollbar runs in.
 typedef enum FlScrollbarOrientation {
-    // Vertical scrollbar (the C zero default).
+    // Up and down. This is the default.
     FlScrollbarOrientation_Vertical = 0,
+    // Left and right.
     FlScrollbarOrientation_Horizontal = 1,
 } FlScrollbarOrientation;
 
-// Whether a widget joins the keyboard focus order. Three-valued: Default is the zero value and keeps each
-// widget family's normal behaviour, so a zeroed config never reads as an explicit opt-out. Most families
-// are focusable by default; a few that are pointer-driven (the scrollbar) are not, and Yes opts those in.
+// Whether a widget takes part in keyboard focus.
+//
+// Most widgets can be focused by default. A few that are driven by the pointer, such as the scrollbar, cannot.
 typedef enum FlFocusable {
-    // Keep the widget family's normal focus behaviour (the C zero default).
+    // The widget's normal focus behaviour. This is the default.
     FlFocusable_Default = 0,
-    // Opt a family that is not focusable by default (the scrollbar) into the focus order. Families that are
-    // already focusable read the same as Default.
+    // Lets a widget that cannot be focused by default, such as the scrollbar, take focus.
     FlFocusable_Yes = 1,
-    // Keep the widget out of the focus order entirely: it is skipped by tab and spatial navigation, is
-    // never picked by focus auto-restore, and never strokes a focus border.
+    // Keeps the widget out of keyboard focus. Tab and the arrow keys skip it.
     FlFocusable_No = 2,
 } FlFocusable;
 
-// Shared per-widget configuration for id, colors, sizing, focus, tab order, and per-widget theme override.
+// Settings shared by every widget.
+//
+// Each widget config holds one of these as its `widget` field.
 typedef struct FlWidgetConfig {
-    // Optional id override (FlString); empty means use the widget's normal id source.
+    // The id to use instead of the one the widget would otherwise get (empty uses the normal id).
     FlString id_override;
-    // Explicit widget color; when set by callers it bypasses themed color resolution.
+    // The widget's color. When set, it is used instead of the theme color.
     FlColor color;
-    // Explicit widget text color.
+    // The widget's text color.
     FlColor text_color;
-    // Visual style for widget chrome (0 = solid).
+    // The look of the widget's background and border (`FlWidgetVariant_Solid` by default). Only buttons use it.
     FlWidgetVariant variant;
-    // Widget size token (0 = widget default).
+    // The size of the widget (`FlWidgetSize_Default` by default). Only the plain text button uses it.
     FlWidgetSize size;
-    // Extra child padding in pixels.
+    // The extra padding around the widget's children, in pixels. No widget reads it yet.
     uint16_t child_padding;
-    // Whether the widget joins the keyboard focus order (0 = the widget family's normal behaviour).
+    // Whether the widget can be focused with the keyboard (`FlFocusable_Default` by default).
     FlFocusable focusable;
-    // Request focus automatically when the widget appears.
+    // Whether the widget takes focus the first time it appears. Only a focusable widget can take it.
     bool auto_focus;
-    // Explicit tab order index.
+    // The widget's position in the tab order. No widget reads it yet.
     int32_t tab_index;
-    // Optional per-widget state-slot theme override; null means none. This is a sparse FlThemeOverride
-    // layered over the resolved theme for this widget only: siblings are unaffected, and it composes with
-    // scoped subtree overrides with widget-level slots winning. The explicit per-object color field still
-    // bypasses the theme entirely.
+    // Theme changes that apply to this widget only (null for none).
+    //
+    // Other widgets keep the theme they had. A scoped override around the widget still applies, and the
+    // slots set here win over it. `color` is still used instead of the theme.
     const FlThemeOverride* theme_override;
 } FlWidgetConfig;
 
-// Slider configuration for value display, stepping, scale, orientation, track/thumb geometry, and shared
-// widget settings.
+// Settings for a slider.
 typedef struct FlSliderConfig {
-    // Printf format for value display (for example "%.2f", "%.0f dB", or "%d%%").
+    // The `printf` format for the displayed value, such as "%.2f", "%.0f dB" or "%d%%".
+    //
+    // Null uses "%.2f", or "%d" for an integer slider.
     const char* format;
-    // Step size for keyboard/gamepad adjustment (0 = auto).
+    // The amount the keyboard, mouse wheel or gamepad changes the value by (0 uses 1% of the range).
     float step;
-    // Use logarithmic scale, useful for volume sliders.
+    // Whether the value moves on a logarithmic scale, which suits volume sliders.
     bool logarithmic;
-    // Vertical orientation: up/down adjust value, left/right navigate away.
+    // Whether the slider is vertical. Up and down change the value, and left and right move focus away.
     bool vertical;
-    // Track bar thickness in pixels (0 = 8). A track thinner than thumb_size centers vertically against
-    // the thumb; the row stays thumb_size tall either way.
+    // The thickness of the track, in pixels (0 uses 8).
+    //
+    // A track thinner than `thumb_size` is centered on the thumb. The row holding the track is `thumb_size` tall
+    // either way.
     float track_height;
-    // Thumb diameter in pixels (0 = 24). Also the track row's height and the span the thumb travels
-    // short of, so it reaches neither edge.
+    // The diameter of the thumb, in pixels (0 uses 24).
+    //
+    // This is also the height of the row holding the track. The thumb's center travels the track's width minus
+    // this, so it stops half a thumb short of each end.
     float thumb_size;
-    // Shared widget config (color, focusability, theme override, and id).
+    // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlSliderConfig;
 
-// Checkbox configuration for label placement and shared widget settings.
+// Settings for a checkbox.
 typedef struct FlCheckboxConfig {
-    // Label position: false = right side, true = left side.
+    // Whether the label is on the left of the box instead of the right.
     bool label_on_left;
-    // Shared widget config (color, focusability, theme override, and id).
+    // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlCheckboxConfig;
 
-// Switch configuration for track geometry, label placement, and shared widget settings. A switch drives
-// a bool like a checkbox but renders as a pill track with a sliding knob. The knob is not sized
-// directly: it is the circle that fits the track height inside knob_inset on every side.
+// Settings for a switch.
+//
+// A switch sets a bool like a checkbox does, but it is drawn as a pill-shaped track with a sliding knob. The
+// knob is as large as fits inside the track height, less `knob_inset` on each side.
 typedef struct FlSwitchConfig {
-    // Label position: false = right side, true = left side.
+    // Whether the label is on the left of the switch instead of the right.
     bool label_on_left;
-    // Track width in pixels (0 = twice track_height).
+    // The width of the track, in pixels (0 uses twice `track_height`).
     float track_width;
-    // Track height in pixels (0 = 24). Also the switch's row height.
+    // The height of the track, in pixels (0 uses 24). This is also the height of the switch.
     float track_height;
-    // Gap between the knob and each track edge in pixels (0 = 2); the knob is
-    // `track_height - 2 * knob_inset` across.
+    // The gap between the knob and the track edge, in pixels (0 uses 2).
     float knob_inset;
-    // Shared widget config (color, focusability, theme override, and id).
+    // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlSwitchConfig;
 
-// Radio group configuration for exclusive single-choice selection.
+// Settings for a radio group.
 typedef struct FlRadioConfig {
-    // Shared widget config (color, focusability, theme override, and id).
+    // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlRadioConfig;
 
-// Progress bar configuration for a determinate progress track. The fraction is passed as a direct
-// argument, not stored here.
+// Settings for a progress bar.
+//
+// The fraction to show is passed to the call, not set here.
 typedef struct FlProgressConfig {
-    // Shared widget config (color overrides the fill, theme override retints slots, and id is available).
+    // The settings shared by every widget. `FlWidgetConfig.color` sets the fill color.
     FlWidgetConfig widget;
 } FlProgressConfig;
 
-// Dropdown configuration for cancel affordance, sizing, trigger geometry, search, and shared widget
-// settings.
+// Settings for a dropdown.
 typedef struct FlDropdownConfig {
-    // Show cancel button (default: true, for single-button gamepads).
+    // Whether the popup has a cancel button (true by default).
     bool show_cancel;
-    // Cancel button text (default: "Cancel").
+    // The text of the cancel button (empty uses "Cancel").
     FlString cancel_label;
-    // Minimum dropdown width in pixels (default: 200).
+    // The minimum width of the popup, in pixels (200 by default).
     float min_width;
-    // Horizontal padding inside the trigger button, in pixels (0 = 16). The trigger grows to its row
-    // either way, so this only insets its contents.
+    // The horizontal padding inside the trigger button, in pixels (0 uses 16).
     float padding_h;
-    // Vertical padding inside the trigger button, in pixels (0 = 8). Setting it switches the trigger off
-    // its fixed 60px height onto padding-driven sizing, which is what a compact pill needs.
+    // The vertical padding inside the trigger button, in pixels (0 uses 8).
+    //
+    // Setting it makes the trigger as tall as its padding and content need, instead of a fixed height. Use it
+    // for a compact trigger.
     float padding_v;
-    // Corner radius of the trigger button, in pixels (0 = 8). The open popup keeps its own.
+    // The corner radius of the trigger button, in pixels (0 uses 8).
     float corner_radius;
-    // Type to filter options while the popup is open.
+    // Whether the user can type to filter the options while the popup is open.
+    //
+    // This needs `search_state`.
     bool searchable;
-    // Buffer for search text; required when searchable is true. Opaque state the callee owns and
-    // mutates; null disables search regardless of searchable. Reachable only from C: the Rust
-    // binding has no safe wrapper for the opaque FlTextInputState.
+    // The state of the search text box. Without it, the dropdown is not searchable.
+    //
+    // The dropdown reads and changes this state. It is not available from Rust, which has no safe way to make one.
     FlTextInputState* search_state;
-    // Max option rows the open popup shows before it scrolls (0 = default ~10); the List virtualizes the rest.
+    // The most option rows the popup shows before it scrolls (0 uses about 10).
     int32_t max_visible_rows;
-    // Shared widget config (color, focusability, theme override, and id).
+    // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlDropdownConfig;
 
-// Tab bar configuration for orientation, tab and strip geometry, label text, and shared widget settings.
+// Settings for a tab bar.
 typedef struct FlTabBarConfig {
-    // false = horizontal tabs (the C zero default), true = vertical sidebar style.
+    // Whether the tabs are stacked vertically as a sidebar instead of laid out in a row.
     bool vertical;
-    // Horizontal padding inside a tab, in pixels (0 = 16). Either padding set switches the tab off its
-    // fixed 60px height onto padding-driven sizing, which is what a compact segmented control needs.
+    // The horizontal padding inside a tab, in pixels (0 uses 16).
+    //
+    // Setting this or `item_padding_v` makes each tab as tall as its padding and label need, instead of a fixed
+    // height. Use it for a compact segmented control.
     float item_padding_h;
-    // Vertical padding inside a tab, in pixels (0 = 8). See item_padding_h for the sizing switch.
+    // The vertical padding inside a tab, in pixels (0 uses 8).
     float item_padding_v;
-    // Corner radius of a tab, in pixels (0 = 8).
+    // The corner radius of a tab, in pixels (0 uses 8).
     float item_radius;
-    // Padding between the strip's edge and its tabs, in pixels (0 = none). Set either this or
-    // container_radius and the strip paints as a surface-colored pill behind the tabs; leave both zero
-    // and it stays a bare layout row.
+    // The padding between the edge of the tab strip and its tabs, in pixels (0 for none).
+    //
+    // Setting this or `container_radius` draws the strip as a pill-shaped surface behind the tabs.
     float container_padding;
-    // Corner radius of that pill, in pixels (0 = square corners).
+    // The corner radius of the strip's pill, in pixels (0 for square corners).
     float container_radius;
-    // Gap between adjacent tabs, in pixels (0 = 4). A negative value gives a flush strip with no gap
-    // (a segmented control), since 0 stands for the default.
+    // The gap between tabs, in pixels (0 uses 4).
+    //
+    // A negative value removes the gap, which gives a segmented control.
     float child_gap;
-    // Label pixel size (0 = the font's default size).
+    // The size of the label text, in pixels (0 uses the font's default size).
     uint16_t font_size;
-    // Extra spacing between label glyphs, in px (0 = none).
+    // The extra space between label characters, in pixels (0 for none).
     uint16_t letter_spacing;
-    // Shared widget config (color, focusability, theme override, and id).
+    // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlTabBarConfig;
 
-// Link configuration for font-size override and shared widget settings.
+// Settings for a link.
 typedef struct FlLinkConfig {
-    // Font size override (0 = default).
+    // The size of the text, in pixels (0 uses the default size).
     uint16_t font_size;
-    // Shared widget config (color, focusability, theme override, and id).
+    // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlLinkConfig;
 
-// Scrollbar configuration for orientation, range, thumb sizing, width, and shared widget settings.
+// Settings for a scrollbar.
 typedef struct FlScrollbarConfig {
-    // Vertical or horizontal orientation (0 = vertical).
+    // The direction the scrollbar runs in (`FlScrollbarOrientation_Vertical` by default).
     FlScrollbarOrientation orientation;
-    // Minimum scroll position (usually 0).
+    // The lowest scroll position, usually 0.
     float min;
-    // Maximum scroll position (content size - viewport size).
+    // The highest scroll position, usually the content size minus the viewport size.
     float max;
-    // Viewport/content ratio for thumb size (0-1, default: 0.2).
+    // The share of the content that is visible, from 0 to 1, which sets the size of the thumb (0.2 by default).
     float viewport_ratio;
-    // Scrollbar width (default: small spacing token, 8 px).
+    // The width of the scrollbar, in pixels (0 uses 8).
     float width;
-    // Minimum thumb size in pixels (default: 32).
+    // The smallest size of the thumb, in pixels (0 uses 40).
     float min_thumb_size;
-    // Shared widget config (color, focusability, theme override, and id).
+    // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlScrollbarConfig;
 
-// Text input configuration for length, accepted characters, password display, placeholder, width, character
-// count, and shared widget settings.
+// Settings for a text input.
 typedef struct FlTextInputConfig {
-    // Character limit (0 = unlimited).
+    // The most characters the input accepts (0 for no limit).
     uint32_t max_length;
-    // Allowed character set (FlString); empty means all printable characters. Read per keypress while
-    // the field has focus, so it need only live for the frame. The on-screen keyboard copies the bytes
-    // into its own arena.
+    // The characters the input accepts (empty accepts all printable characters).
     FlString allowed_chars;
-    // Show bullets instead of text.
+    // Whether the input shows bullets instead of the text.
     bool password_mode;
-    // Text shown when empty, dimmed.
+    // The dimmed text shown while the input is empty.
     FlString placeholder;
-    // Minimum width in pixels (default: 200.0).
+    // The minimum width of the input, in pixels (200 by default).
     float min_width;
-    // Show a character counter such as "15/100".
+    // Whether the input shows a character count, such as "15/100". It needs `max_length`.
     bool show_character_count;
-    // Shared widget config (color, focusability, theme override, and id).
+    // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlTextInputConfig;
 

@@ -12,11 +12,15 @@
 extern "C" {
 #endif
 
-// Button widgets. Call inside a frame callback and read the returned Signal (Signal.clicked for a
-// click) to react to interaction. config selects variant, colors, id override, and focus behavior.
-// Emit a default-styled button labelled label and return its interaction Signal.
+// Push buttons.
+//
+// Call these inside a frame callback. Read `FlSignal.clicked` on the returned `FlSignal` to react to a click.
+// Draws a button with a text label and returns its `FlSignal`.
 FL_API FlSignal fl_button_impl(FlString label, FlWidgetConfig config);
-// Emit a button showing image next to label and return its interaction Signal.
+// Draws a button with an image to the left of the label and returns its `FlSignal`.
+//
+// The button has a fixed size of 400 by 100 logical pixels. It uses `FlWidgetVariant_Ghost` when
+// `FlWidgetConfig.variant` is left at its default.
 FL_API FlSignal fl_button_image_impl(FlString label, FlImageHandle image, FlWidgetConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

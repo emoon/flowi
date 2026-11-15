@@ -2,19 +2,26 @@
 
 pub enum FlArena {}
 
-// Dynamic image widget: draws a per-frame caller-updated image buffer described by DynamicImage. create and
-// create_alpha allocate the image and its pixel buffer from a caller arena; a caller that owns its own buffer
-// can fill a DynamicImage directly instead.
+// A widget that draws an image whose pixels you rewrite each frame.
+//
+// Create the image with `DynamicImage::create` or `DynamicImage::create_alpha`, write its pixels each frame, and
+// draw it with `DynamicImage::new`. If you own the pixel buffer, you can fill in a `DynamicImage` yourself
+// instead.
 extern "C" {
-    /// Allocate a width x height dynamic image with a zeroed, tightly packed RGBA8 buffer from arena. The image
-    /// and its buffer live until the arena is rewound or destroyed, so keep the arena alive for as long as the
-    /// image is drawn. Returns null for a non-positive dimension, a size that overflows, or a null arena.
+    /// Creates an RGBA image of `width` by `height` pixels in `arena` and returns it.
+    ///
+    /// The rows are tightly packed, 4 bytes per pixel. The image and its pixels live until `arena` is rewound or
+    /// destroyed, so keep it alive for as long as the image is drawn. Returns null if `width` or `height` is not
+    /// positive, the size is too large, or `arena` is null.
     pub fn fl_dynamic_image_create(width: i32, height: i32, arena: *mut FlArena) -> *mut crate::sys::DynamicImage;
-    /// Like create, but the buffer is single-channel alpha (is_alpha_only is set): a monochrome mask the widget
-    /// colorizes with the color in its opts.
+    /// Creates an image like `DynamicImage::create`, with one alpha byte per pixel instead of RGBA.
+    ///
+    /// The rows are tightly packed, 1 byte per pixel.
     pub fn fl_dynamic_image_create_alpha(width: i32, height: i32, arena: *mut FlArena) -> *mut crate::sys::DynamicImage;
-    /// Draw the dynamic image image whose buffer the caller refreshes each frame. opts tints and selects
-    /// fill-container scaling. Call inside a frame callback.
+    /// Draws an image whose pixels you refresh each frame.
+    ///
+    /// Call it inside a frame callback. The pixels are read when the frame is drawn, after the callback returns, so
+    /// the image shows what the buffer holds then. Nothing is drawn if `image` is null.
     pub fn fl_dynamic_image(image: *mut crate::sys::DynamicImage, opts: crate::sys::ImageOpts);
 }
 

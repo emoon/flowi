@@ -3,28 +3,39 @@
 #[allow(unused_imports)]
 use crate::sys::text_input_state::*;
 
-// An editable text field (inline rename, search box, any editable value). Construct with new /
-// with_capacity, mutate with set_text / clear, read with text, and emit the widget each frame with show.
+// A single-line text field, such as a search box or an inline rename.
+//
+// Create the field once and keep it across frames. Each frame, show it and act on the signal it returns. Use
+// `TextInput::set_text` and `TextInput::clear` to change the text from code, and read the text back when you
+// need it.
 extern "C" {
-    /// Create a text-input handle backed by a dedicated arena. capacity is the requested initial buffer size
-    /// in bytes; a built-in floor applies for small values. Returns the handle pointer; pair with destroy.
+    /// Creates a text field and returns its handle.
+    ///
+    /// `capacity` is the initial size of the text buffer in bytes. Small values are raised to a minimum, and the
+    /// buffer grows when you set longer text.
     pub fn fl_text_input_create(capacity: u32) -> *mut crate::sys::TextInputState;
-    /// Destroy a handle from create, freeing its dedicated arena (and with it the state, buffer, and editor
-    /// state). No-op on a null handle.
+    /// Frees a text field and its text.
+    ///
+    /// Does nothing if `state` is null.
     pub fn fl_text_input_destroy(state: *mut crate::sys::TextInputState);
-    /// Replace the handle's text with text (copied into the handle's buffer).
+    /// Replaces the text with a copy of `text` and moves the cursor to the end.
     pub fn fl_text_input_set_text(state: *mut crate::sys::TextInputState, text: crate::sys::RawStr);
-    /// Read the handle's current text. The returned string points into the handle's buffer and is valid until
-    /// the next mutation or destroy.
+    /// Returns the current text.
+    ///
+    /// The string points into the field's buffer. It stays valid until the text next changes, from code or from the
+    /// user typing, or until you free the field.
     pub fn fl_text_input_get_text(state: *mut crate::sys::TextInputState) -> crate::sys::RawStr;
-    /// Clear the handle's text and reset its cursor/selection.
+    /// Removes all text and moves the cursor to the start.
     pub fn fl_text_input_clear(state: *mut crate::sys::TextInputState);
-    /// Emit the text-input widget for this handle labelled label and return its interaction Signal.
-    /// The Signal's text_changed, submitted (Enter) and cancelled (Escape or gamepad B) are true only on the frame they
-    /// happen. Call inside a frame callback.
+    /// Shows the text field with default options and returns its `Signal`.
+    ///
+    /// `Signal.text_changed`, `Signal.submitted` (Enter) and `Signal.cancelled` (Escape or gamepad B) are true only
+    /// on the frame they happen. Call this inside a frame callback.
     pub fn fl_text_input_show(label: crate::sys::RawStr, state: *mut crate::sys::TextInputState) -> crate::sys::Signal;
-    /// Emit the text-input widget with per-call configuration. config controls placeholder text, width,
-    /// maximum length, and shared focus behavior. A zero configuration preserves the default behavior.
+    /// Shows the text field with the options in `config` and returns its `Signal`.
+    ///
+    /// The signal is the same as the one from the call without a `config`. A zeroed `config` gives the default
+    /// behavior.
     pub fn fl_text_input_show_impl(label: crate::sys::RawStr, state: *mut crate::sys::TextInputState, config: crate::sys::TextInputConfig) -> crate::sys::Signal;
 }
 

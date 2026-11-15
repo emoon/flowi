@@ -15,48 +15,65 @@ extern "C" {
 
 typedef struct FlVfsMount FlVfsMount;
 
-// String-independent vertical metrics of a font at a given size, for stable vertical centering of
-// dynamic readouts (the values don't change with the text). All values are logical px.
+// The vertical metrics of a font at one size, in logical pixels.
+//
+// This is returned by `fl_font_metrics`. It does not depend on any text, so it is stable for centering text that
+// changes, such as a counter.
 typedef struct FlFontMetrics {
-    // Distance from baseline to top.
+    // The distance from the baseline up to the top.
     float ascent;
-    // Distance from baseline to bottom (positive).
+    // The distance from the baseline down to the bottom (positive).
     float descent;
-    // Line height at this size.
+    // The height of a line at this size.
     float line_height;
 } FlFontMetrics;
 
-// Font loading and selection: load fonts (including default/fallback), set the active font or a
-// registered weight/style for rendering, and check or wait for their asynchronous loads to complete.
-// Load a TTF from path at default_size (unscaled px; 0 selects a built-in default).
-// Returns the font id (0 = invalid). Async: poll is_loaded for completion.
+// Loading and choosing fonts.
+//
+// Fonts load in the background. Call `fl_font_load` or `fl_font_load_default` for each font, then
+// `fl_font_ensure_loaded` once before the first frame, or poll `fl_font_is_loaded`. Use `fl_font_set` or
+// `fl_font_style_set` to choose which font text uses when it asks for font 0.
+// Starts loading the font file at `path` and returns its id, or 0 if the load cannot start.
+//
+// The path is resolved in the host's asset mount, and the call returns 0 if the host has none. Use
+// `fl_font_load_mount` to load from a mount of your own.
+//
+// `default_size` is the font's default size in unscaled pixels (0 uses 28, and values below 8 become 8).
 FL_API FlFontId fl_font_load(FlString path, uint16_t default_size);
-// Load a TTF from mount/relative_path at default_size (unscaled px; 0 selects a built-in
-// default). The mount-relative counterpart to load, for a host that serves fonts out of its own
-// data mount rather than the working directory. Returns the font id (0 = invalid). Async: poll
-// is_loaded for completion.
+// Starts loading the font file at `relative_path` inside `mount` and returns its id, or 0 if the load cannot
+// start.
+//
+// `default_size` works as it does for `fl_font_load`.
 FL_API FlFontId fl_font_load_mount(FlVfsMount* mount, FlString relative_path, uint16_t default_size);
-// Load the built-in default font at default_size (unscaled px; 0 selects a built-in default).
-// Returns the font id (0 = invalid).
+// Loads the built-in font and returns its id, or 0 if the call fails.
+//
+// The font is ready at once. `default_size` multiplies the font's 8 pixel base size (0 uses 28, and values
+// below 8 become 8).
 FL_API FlFontId fl_font_load_default(uint16_t default_size);
-// Load a fallback font from mount/relative_path for Unicode glyphs missing in primary fonts
-// (typically Noto Sans for full Latin Extended coverage). Returns false on failure.
+// Starts loading the font at `relative_path` inside `mount` as the fallback for glyphs the other fonts lack.
+//
+// Returns false if the load could not start. Only one fallback is kept: if one is already set, the new font is
+// ignored and this returns true.
 FL_API bool fl_font_load_fallback(FlVfsMount* mount, FlString relative_path);
-// Make font the active font for text that uses font 0.
+// Makes `font` the active font, used by text that asks for font 0.
 FL_API void fl_font_set(FlFontId font);
-// Register font as the font used for the given weight/style slot.
+// Sets `font` as the font for `style`.
+//
+// Choose it with `fl_font_style_set`.
 FL_API void fl_font_style_register(FlFontId font, FlFontStyle style);
-// Make the font registered for style the active font for text that uses font 0.
+// Makes the font registered for `style` the active font.
 FL_API void fl_font_style_set(FlFontStyle style);
-// True once font's async load has completed and it is ready to render.
+// Returns true if `font` has finished loading and is ready to draw.
 FL_API bool fl_font_is_loaded(FlFontId font);
-// Block until every kicked-off font has finished loading (metrics ready or failed), pumping I/O
-// meanwhile. Returns false if any font failed. Other async loads (images) keep streaming. Call once
-// after kicking off font loads in setup, before the first rendered frame.
+// Waits until every font that was started has finished loading.
+//
+// Returns false if any font failed to load. Call it once after starting your fonts in setup, before the first
+// frame is drawn.
 FL_API bool fl_font_ensure_loaded(void);
-// Vertical metrics of font at size px (fractional allowed; 0 = the font's default size,
-// font 0 = the active font). String-independent, for stable vertical centering of dynamic
-// readouts. An unloaded font reports all zeroes.
+// Returns the vertical metrics of `font` at `size` pixels.
+//
+// Fractions are allowed. A `size` of 0 uses the font's default size, and font 0 is the active font. A font that
+// is not loaded gives all zeroes.
 FL_API FlFontMetrics fl_font_metrics(FlFontId font, float size);
 
 

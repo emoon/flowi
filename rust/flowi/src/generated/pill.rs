@@ -6,13 +6,17 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Pill widget: a pill-shaped toggle button for category filters (solid when selected, ghost when not).
+/// A pill-shaped toggle button, for example a category filter.
+///
+/// Call it inside a frame callback.
 pub struct Pill;
 
 impl Pill {
-    /// Emit a pill labelled label bound to `*selected`; activation toggles the bool. config selects
-    /// colors and id overrides. Returns its interaction Signal (.clicked the frame it toggles). Call
-    /// inside a frame callback.
+    /// Draws a pill with a label and returns its `Signal`.
+    ///
+    /// A click flips `selected`, and `Signal.clicked` is set on the frame it flips. A selected pill is filled and
+    /// an unselected one is transparent until hovered. If `selected` is null, nothing is drawn and the returned
+    /// `Signal` is empty.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(label: impl AsRef<str>, selected: &mut bool, config: crate::generated::widget_config::WidgetConfig<'_>) -> crate::sys::Signal {

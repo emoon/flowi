@@ -6,35 +6,39 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Cursor shape and visibility requests. Pair set/get_requested for the shape and
-/// set_visible/get_visible for visibility.
+/// The pointer shape and whether the pointer is visible.
+///
+/// The shape is a request for one frame. A widget that wants a pointer other than the arrow calls `Cursor::set`
+/// on every frame it is active. The visibility stays as you set it until you change it.
 pub struct Cursor;
 
 impl Cursor {
-    /// Request a pointer shape for this frame: per-frame, last-writer-wins, reset to the arrow at frame start.
-    /// A widget wanting a non-arrow cursor re-requests it every active frame; with no request the cursor falls
-    /// back to the arrow.
+    /// Requests the pointer shape for this frame.
+    ///
+    /// If several requests are made in a frame, the last one wins. With no request the pointer is the arrow.
     #[inline]
     pub fn set(cursor: crate::sys::Cursor) {
         let _frame = crate::frame_thread::frame_thread_guard("Cursor::set");
         unsafe { crate::sys::fl_cursor_set(cursor) }
     }
 
-    /// The cursor resolved for this frame: the last set request, or the arrow if none.
+    /// Returns the pointer requested so far this frame, or the arrow if there is none.
     #[inline]
     pub fn get_requested() -> crate::sys::Cursor {
         let _frame = crate::frame_thread::frame_thread_guard("Cursor::get_requested");
         unsafe { crate::sys::fl_cursor_get_requested() }
     }
 
-    /// Toggle cursor visibility. Unlike the shape request this is a sticky toggle (not reset per frame).
+    /// Shows or hides the pointer.
+    ///
+    /// Unlike the shape, this is not reset every frame.
     #[inline]
     pub fn set_visible(visible: bool) {
         let _frame = crate::frame_thread::frame_thread_guard("Cursor::set_visible");
         unsafe { crate::sys::fl_cursor_set_visible(visible) }
     }
 
-    /// The current cursor-visibility request (sticky).
+    /// Returns true if the pointer is visible.
     #[inline]
     pub fn get_visible() -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Cursor::get_visible");

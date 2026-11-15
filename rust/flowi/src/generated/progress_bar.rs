@@ -6,12 +6,16 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Progress bar widget: determinate, non-interactive. Paints a track plus a fill sized to fraction.
+/// A progress bar.
+///
+/// Call it inside a frame callback.
 pub struct ProgressBar;
 
 impl ProgressBar {
-    /// Paint a progress bar filled to fraction (normalized [0,1], clamped). config selects colors and
-    /// sizing. Pure paint: no id, no interaction. The caller owns the fraction. Call inside a frame callback.
+    /// Draws a progress bar filled to `fraction`.
+    ///
+    /// `fraction` runs from 0 to 1 and values outside that range are clamped. The bar fills the available width
+    /// and cannot be interacted with.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(fraction: f32, config: crate::generated::widget_config::ProgressConfig<'_>) {

@@ -6,12 +6,16 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Link widget: clickable, underlined text for hyperlinks.
+/// Clickable text for hyperlinks.
+///
+/// Call it inside a frame callback.
 pub struct Link;
 
 impl Link {
-    /// Emit link text (link-colored, underlined). config selects font size and colors. Returns its
-    /// interaction Signal (.clicked the frame it activates). Call inside a frame callback.
+    /// Draws a link and returns its `Signal`.
+    ///
+    /// The text does not wrap. It gets an underline while hovered or focused. Read `Signal.clicked` to follow
+    /// the link.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(text: impl AsRef<str>, config: crate::generated::widget_config::LinkConfig<'_>) -> crate::sys::Signal {

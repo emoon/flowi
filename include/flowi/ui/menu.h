@@ -11,68 +11,70 @@
 extern "C" {
 #endif
 
-// Per-item close policy on menu-item activation. Each item kind has a natural default
-// (Default): an action item closes the chain, a checkable/radio item keeps it open.
-// Close / KeepOpen force the rare exception either way. Default is the zero value.
+// Whether activating a menu item closes the menu.
+//
+// Each kind of item has a default. An action item closes the menu, and a check or radio item keeps it open.
 typedef enum FlMenuClosePolicy {
-    // Use the item kind's natural default: action closes, checkable/radio keep open.
+    // Uses the default of the item kind.
     FlMenuClosePolicy_Default = 0,
-    // Force close on activation.
+    // Closes the menu.
     FlMenuClosePolicy_Close = 1,
-    // Force keep-open on activation.
+    // Keeps the menu open.
     FlMenuClosePolicy_KeepOpen = 2,
 } FlMenuClosePolicy;
 
-// Configuration for a context menu panel. A zeroed config uses the defaults
-// (min_width 0 → 180, z_index 0 → 1000).
+// The settings for a context menu.
+//
+// A field left at 0 uses its default.
 typedef struct FlMenuConfig {
-    // Menu panel width in logical px (0 = C default, 180).
+    // The width of the menu panel, in logical pixels (0 uses 180).
     float min_width;
-    // Render order; higher = on top (0 = C default, 1000, above popups).
+    // The render order. Higher draws on top (0 uses 1000, above popups).
     int16_t z_index;
 } FlMenuConfig;
 
-// Shared configuration for the menu leaf item kinds. The close_policy resolves against the
-// kind's natural default (see MenuClosePolicy); shortcut is display-only right-aligned text
-// (no dispatch). A zeroed config uses the defaults.
+// The settings shared by action, check and radio menu items.
 typedef struct FlMenuItemConfig {
-    // Close behaviour on activation (0 = the item kind's natural default).
+    // Whether activating the item closes the menu (0 uses the default of the item kind).
     FlMenuClosePolicy close_policy;
-    // Optional shortcut text shown right-aligned (display only, no dispatch).
+    // The text shown right-aligned in the row, such as a key combination. It is only displayed and does not
+    // trigger the item.
     FlString shortcut;
-    // Greyed out and non-interactive.
+    // Whether the item is greyed out and cannot be used.
     bool disabled;
 } FlMenuItemConfig;
 
-// Configuration for a submenu parent. A zeroed config uses the defaults (min_width 0 → 180, same as
-// the root menu).
+// The settings for a submenu.
+//
+// A field left at 0 uses its default.
 typedef struct FlSubmenuConfig {
-    // Child panel width in logical px (0 = C default, 180, same as the root menu).
+    // The width of the submenu panel, in logical pixels (0 uses 180).
     float min_width;
-    // Greyed out and non-opening.
+    // Whether the submenu row is greyed out and does not open.
     bool disabled;
 } FlSubmenuConfig;
 
-// Configuration for a right-click menu region.
+// The settings for a right-click region.
 typedef struct FlMenuRegionConfig {
-    // Region element sizing (zeroed = grow/grow, covering the parent area).
+    // The size of the region. A zeroed value grows in both directions to cover the parent.
     FlLayoutSizing sizing;
 } FlMenuRegionConfig;
 
-// Configuration for the menu-bar strip: the persistent File/Edit/View surface. The bar carries
-// only the dropdowns' render order; the per-dropdown width is on MenuBarMenuConfig. A zeroed
-// config uses the default (z_index 0 → 1000, same as a context menu).
+// The settings for a menu bar.
+//
+// The width of each dropdown is set by `FlMenuBarMenuConfig.min_width`.
 typedef struct FlMenuBarConfig {
-    // Dropdown render order; higher = on top (0 = C default, 1000, same as a context menu).
+    // The render order of the dropdowns. Higher draws on top (0 uses 1000, the same as a context menu).
     int16_t z_index;
 } FlMenuBarConfig;
 
-// Configuration for one top-level entry in the menu bar. A zeroed config uses the default
-// (min_width 0 → 180, same as a context menu).
+// The settings for one entry in a menu bar.
+//
+// A field left at 0 uses its default.
 typedef struct FlMenuBarMenuConfig {
-    // Dropdown panel width in logical px (0 = C default, 180, same as a context menu).
+    // The width of the dropdown panel, in logical pixels (0 uses 180).
     float min_width;
-    // Greyed-out top that never highlights, opens, or accepts a switch.
+    // Whether the entry is greyed out. It cannot be highlighted, opened or switched to.
     bool disabled;
 } FlMenuBarMenuConfig;
 

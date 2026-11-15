@@ -9,12 +9,16 @@
 extern "C" {
 #endif
 
-// Spacer widgets: fixed empty gaps, useful for list-clipper padding and virtualization spacers.
-// Add fixed empty vertical space height px (the spacer in a vertical layout). Call inside a frame
-// callback.
+// Fixed empty gaps in a layout.
+//
+// Call these inside a frame callback.
+// Adds an empty gap of `height` logical pixels.
+//
+// It fills the available width.
 FL_API void fl_spacer(float height);
-// Add fixed empty horizontal space width px (the spacer in a horizontal layout). Call inside a frame
-// callback.
+// Adds an empty gap of `width` logical pixels.
+//
+// It fills the available height.
 FL_API void fl_spacer_h(float width);
 
 

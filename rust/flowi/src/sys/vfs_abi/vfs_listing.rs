@@ -2,9 +2,9 @@
 
 pub enum FlVfsEntry {}
 
-/// Directory-listing callback, invoked once per entry during a directory
-/// listing. user_data is the caller's opaque pointer passed to the listing
-/// call; entry is valid only for the duration of the callback. Returns true to
-/// continue listing, false to stop.
+/// Called once for each entry of a directory listing.
+///
+/// `user_data` is the pointer passed to the listing call. `entry` is valid only during the callback. Return true to
+/// keep listing and false to stop.
 pub type VfsListingCallback = Option<unsafe extern "C" fn(user_data: *mut core::ffi::c_void, entry: *const FlVfsEntry) -> bool>;
 

@@ -6,13 +6,18 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Radio group widget: exclusive single-choice selection across a set of options.
+/// A group of radio buttons where exactly one option is selected.
+///
+/// Call it inside a frame callback.
 pub struct RadioGroup;
 
 impl RadioGroup {
-    /// Emit a radio group over options; selecting one writes its index to `*selected_index`, clearing the
-    /// others. config selects layout and colors. Returns a Signal whose .clicked is set the frame the
-    /// selection changes. Call inside a frame callback.
+    /// Draws one radio button per option and returns a `Signal` for the group.
+    ///
+    /// `selected_index` is the index into `options`. It is reset to 0 if it is out of range, and it is
+    /// updated when the user picks another option. `Signal.clicked` is set on the frame the selection changes.
+    ///
+    /// If `options` is empty or `selected_index` is null, nothing is drawn and the returned `Signal` is empty.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(options: &[impl AsRef<str>], selected_index: &mut i32, config: crate::generated::widget_config::RadioConfig<'_>) -> crate::sys::Signal {

@@ -12,89 +12,125 @@
 extern "C" {
 #endif
 
-// The workspace edge a default-layout dock_outer call attaches the new region to.
+// The edge of the workspace that `fl_dock_dock_outer` attaches a panel to.
 typedef enum FlDockSide {
+    // The left edge.
     FlDockSide_Left = 0,
+    // The right edge.
     FlDockSide_Right = 1,
+    // The top edge.
     FlDockSide_Top = 2,
+    // The bottom edge.
     FlDockSide_Bottom = 3,
 } FlDockSide;
 
-// Declare and lay out Detachable Panels on the current docking workspace. Bracket each frame's
-// panel calls with workspace_begin/workspace_end, and use add_panel/dock_outer to author a layout.
-// Open this frame's panel-declaration window on the current workspace. Bracket each frame's panel calls
-// with workspace_begin/workspace_end: panels not re-declared this frame fall back to reserved.
+// Panels that the user can dock, tab, split and drag out of the window.
+//
+// Each frame, call `fl_dock_workspace_begin`, then `fl_dock_workspace_emit` to lay out the tiles. Declare every panel
+// with `fl_dock_panel`. If it returns true, draw the panel content and call `fl_dock_panel_end`. Then call
+// `fl_dock_workspace_end`. A panel is identified by a `u64` id that you choose.
+//
+// `fl_dock_add_panel`, `fl_dock_dock_outer` and `fl_dock_dock_outer_share` build the first layout. The calls act on the
+// workspace of the current window.
+// Starts the frame's panel declarations on the current workspace.
+//
+// Panels that you do not declare again before `fl_dock_workspace_end` are reserved: they keep their slot in
+// the layout but draw nothing.
 FL_API void fl_dock_workspace_begin(void);
-// Close the declaration window opened by workspace_begin.
+// Ends the panel declarations started by `fl_dock_workspace_begin`.
+//
+// If the active panel is hidden, reserved or a background tab by now, there is no active panel afterwards.
 FL_API void fl_dock_workspace_end(void);
-// Declare Detachable Panel id on the current workspace under title and return whether its content
-// should emit now: true iff id is the selected tab of the leaf holding it. A panel mid-drag is floating and
-// does not emit: the drag overlay draws its title, and its body draws nowhere until the drop. On true it
-// also opens the panel's content element inside that tile, so the body's widgets land where the dock put
-// the panel; the caller MUST close it with panel_end. Rust spells the pair
-// `dock_panel!(id, title, { /* emit */ })`. Call between workspace_begin/workspace_end.
+// Declares a panel and returns true if you should draw its content now.
 //
-// title is the tab's label, copied into the panel's record. Empty renders a blank tab.
+// `title` is the label of the panel's tab (an empty string gives a blank tab). The call returns true when the
+// panel is the selected tab of the tile that holds it. It returns false for a hidden panel and for a panel
+// that is being dragged.
+//
+// When it returns true, draw the content of the panel and then call `fl_dock_panel_end`. The content fills the
+// tile and is clipped to it. Call `fl_dock_workspace_emit` first, or the call logs an error and returns false.
+// In Rust, the `dock_panel!` macro makes both calls.
 FL_API bool fl_dock_panel(uint64_t id, FlString title);
-// Close the content element opened by a panel call that returned true. Never call it after a panel that
-// returned false: that closes an element this panel does not own.
-FL_API void fl_dock_panel_end(void);
-// Default-layout builder: dock panel as a tab of the current workspace's root leaf (a no-op move if the
-// root is a split). Call repeatedly to author an initial tab group; pair with dock_outer for splits.
-FL_API void fl_dock_add_panel(uint64_t panel);
-// Default-layout builder: dock panel as a new region on the root's outer side. On an empty
-// workspace the first call simply lands the panel in the floor.
-FL_API void fl_dock_dock_outer(uint64_t panel, FlDockSide side);
-// Default-layout builder: dock_outer, with the new region taking share of the root's extent along
-// side's axis (0.25 is a quarter of the width for Left/Right). Clamped to the dock's minimum sizes;
-// share <= 0 takes the default half.
-FL_API void fl_dock_dock_outer_share(uint64_t panel, FlDockSide side, float share);
-// Emit the current workspace's tile geometry for this frame. Call inside a UI frame.
-FL_API void fl_dock_workspace_emit(void);
-// Request promoting panel (in the current window's workspace) into its own OS window. Deferred
-// and applied at the next safe point; a no-op when no dock host is registered or the panel is absent.
-FL_API void fl_dock_promote_panel(uint64_t panel);
-// True if id's content should emit this frame on the current workspace: the tab the leaf holding it shows
-// as selected. Always false for a hidden panel and for a panel mid-drag.
-FL_API bool fl_dock_panel_should_emit(uint64_t id);
-// Show or hide Detachable Panel id on the current workspace. A hidden panel keeps its slot and its tab
-// index but renders no tab and emits no content; a leaf whose panels are all hidden gives its space to its
-// neighbour. Declare the panel every frame either way: hiding never turns it reserved. Not persisted: the
-// app re-asserts visibility each session, like the title.
-FL_API void fl_dock_set_panel_visible(uint64_t id, bool visible);
-// Read back whether Detachable Panel id is shown on the current workspace. True for a panel the app has
-// never hidden, including one the workspace has never seen.
-FL_API bool fl_dock_panel_visible(uint64_t id);
-// The id of the leaf node currently holding id on the current workspace, or 0 if id is floating/absent.
-FL_API uint32_t fl_dock_panel_leaf(uint64_t id);
-// True if id has a slot in the current workspace's tree but was NOT declared this frame, so its slot is
-// reserved pending a future declaration.
-FL_API bool fl_dock_panel_reserved(uint64_t id);
-// The room, in logical px, the dock has given Detachable Panel id: the inner size of its tile, below the
-// leaf's tab header. This is the size a panel sizes its content against; a panel's own elements report the
-// size they LAID OUT at, which a body larger than its tile grows past (flowi clips the overflow).
+// Ends the content of a panel started by `fl_dock_panel`.
 //
-// {0, 0} means DO NOT ACT ON THIS, and is the answer for a panel that is absent, not laid out yet, hidden,
-// mid-drag, a background tab in its leaf, or starved (squeezed below the dock's minimum content size by
-// a window too small for its layout). Reports the previous frame's layout, like every other geometry
-// read-back.
+// Only call it if `fl_dock_panel` returned true.
+FL_API void fl_dock_panel_end(void);
+// Docks a panel as a tab of the root tile, the first layout step.
+//
+// Call it repeatedly to build a tab group. It does nothing if the root of the workspace is already split. Use
+// `fl_dock_dock_outer` to add a region next to the existing ones.
+FL_API void fl_dock_add_panel(uint64_t panel);
+// Docks a panel as a new region on one edge of the workspace.
+//
+// On an empty workspace, the first call just places the panel.
+FL_API void fl_dock_dock_outer(uint64_t panel, FlDockSide side);
+// Docks a panel on one edge of the workspace and sets how much of the workspace it takes.
+//
+// `share` is a fraction of the workspace along the axis of `side`, so 0.25 with `FlDockSide_Left` is a quarter
+// of the width. It is limited so that both regions keep their minimum size. A `share` of 0 or less takes half.
+FL_API void fl_dock_dock_outer_share(uint64_t panel, FlDockSide side, float share);
+// Lays out the tiles of the current workspace for this frame.
+//
+// Call it after `fl_dock_workspace_begin` and before the first `fl_dock_panel`, inside the UI frame.
+FL_API void fl_dock_workspace_emit(void);
+// Asks for a panel of the current workspace to move to a new OS window.
+//
+// The move happens at the start of a later frame. Nothing happens if the panel is not in the workspace or the
+// app has no dock host.
+FL_API void fl_dock_promote_panel(uint64_t panel);
+// Returns true if `fl_dock_panel` would return true for this panel on the current workspace.
+//
+// It is false for a hidden panel and for a panel that is being dragged.
+FL_API bool fl_dock_panel_should_emit(uint64_t id);
+// Shows or hides a panel of the current workspace.
+//
+// A hidden panel keeps its place in the layout but has no tab and draws no content. A tile whose panels are
+// all hidden gives its space to its neighbour. Keep declaring a hidden panel with `fl_dock_panel`, or it is
+// reserved. A panel that is not in the layout is docked at the root when you show it.
+//
+// The setting is not saved with the layout. Set it again each session.
+FL_API void fl_dock_set_panel_visible(uint64_t id, bool visible);
+// Returns true if a panel is shown on the current workspace.
+//
+// It is true for a panel that was never hidden, also one that the workspace has not seen.
+FL_API bool fl_dock_panel_visible(uint64_t id);
+// Returns the id of the tile that holds a panel on the current workspace, or 0 if there is none.
+//
+// A panel that is being dragged, or one that is not in the layout, has no tile.
+FL_API uint32_t fl_dock_panel_leaf(uint64_t id);
+// Returns true if a panel has a place in the layout but was not declared this frame.
+FL_API bool fl_dock_panel_reserved(uint64_t id);
+// Returns the size of the content area of a panel, in logical pixels.
+//
+// This is the room inside the tile, below the tab header. Size the content from it. A body larger than the
+// tile is clipped.
+//
+// The result is (0, 0) when the panel has no usable area: it is absent, not laid out yet, hidden, being
+// dragged, a background tab, or squeezed below the minimum size. Do not use the size then. It comes from the
+// previous frame's layout.
 FL_API FlVec2 fl_dock_panel_size(uint64_t id);
-// Set Detachable Panel id's dock-family tag on the current workspace (0 = general). The tag gates which
-// workspaces accept the panel via their family filter.
+// Sets the dock family of a panel on the current workspace (0 is the general family).
+//
+// A workspace with a family filter only lets the user drag in panels of that family. See
+// `fl_dock_set_family_filter`.
 FL_API void fl_dock_set_panel_family(uint64_t id, uint32_t family);
-// Read back Detachable Panel id's dock-family tag on the current workspace (0 = general / untagged).
+// Returns the dock family of a panel on the current workspace (0 if it has none).
 FL_API uint32_t fl_dock_panel_family(uint64_t id);
-// The Detachable Panel a press last made active on the current workspace, or 0 when none is. A press
-// inside a tile sets it, hover never does, and it falls back to 0 as soon as that panel stops emitting.
-// Not persisted: it starts at 0 each session.
+// Returns the id of the active panel on the current workspace, or 0 if there is none.
+//
+// A press inside a panel makes it active. Hovering does not. It becomes 0 when the panel stops drawing. The
+// value is not saved with the layout, so it starts at 0 each session.
 FL_API uint64_t fl_dock_active_panel(void);
-// Make Detachable Panel id the active one on the current workspace; 0 clears it. Any change of active
-// panel blurs the keyboard focus ring, so a widget in the newly active panel has to claim it back.
+// Makes a panel the active one on the current workspace, or clears it with 0.
+//
+// Changing the active panel clears the keyboard focus. A widget in the new active panel has to ask for it
+// again.
 FL_API void fl_dock_set_active_panel(uint64_t id);
-// Set the current workspace's accepted-dock-family filter (0 = accept any). When non-zero, only a dragged
-// panel whose family equals the filter can dock here.
+// Sets which dock family the current workspace accepts (0 accepts any).
+//
+// A non-zero filter only lets a dragged panel dock here if its family is the same.
 FL_API void fl_dock_set_family_filter(uint32_t family);
-// Read back the current workspace's accepted-dock-family filter (0 = accept any).
+// Returns which dock family the current workspace accepts (0 accepts any).
 FL_API uint32_t fl_dock_family_filter(void);
 
 

@@ -6,8 +6,9 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Configuration for a context menu panel. A zeroed config uses the defaults
-/// (min_width 0 → 180, z_index 0 → 1000).
+/// The settings for a context menu.
+///
+/// A field left at 0 uses its default.
 ///
 /// The safe twin of [`crate::sys::MenuConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -16,9 +17,9 @@
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct MenuConfig {
-    /// Menu panel width in logical px (0 = C default, 180).
+    /// The width of the menu panel, in logical pixels (0 uses 180).
     pub min_width: f32,
-    /// Render order; higher = on top (0 = C default, 1000, above popups).
+    /// The render order. Higher draws on top (0 uses 1000, above popups).
     pub z_index: i16,
 }
 
@@ -52,9 +53,7 @@ impl MenuConfig {
     }
 }
 
-/// Shared configuration for the menu leaf item kinds. The close_policy resolves against the
-/// kind's natural default (see MenuClosePolicy); shortcut is display-only right-aligned text
-/// (no dispatch). A zeroed config uses the defaults.
+/// The settings shared by action, check and radio menu items.
 ///
 /// The safe twin of [`crate::sys::MenuItemConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -63,11 +62,12 @@ impl MenuConfig {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct MenuItemConfig<'a> {
-    /// Close behaviour on activation (0 = the item kind's natural default).
+    /// Whether activating the item closes the menu (0 uses the default of the item kind).
     pub close_policy: crate::sys::MenuClosePolicy,
-    /// Optional shortcut text shown right-aligned (display only, no dispatch).
+    /// The text shown right-aligned in the row, such as a key combination. It is only displayed and does not
+    /// trigger the item.
     pub shortcut: &'a str,
-    /// Greyed out and non-interactive.
+    /// Whether the item is greyed out and cannot be used.
     pub disabled: bool,
 }
 
@@ -108,8 +108,9 @@ impl MenuItemConfig<'_> {
     }
 }
 
-/// Configuration for a submenu parent. A zeroed config uses the defaults (min_width 0 → 180, same as
-/// the root menu).
+/// The settings for a submenu.
+///
+/// A field left at 0 uses its default.
 ///
 /// The safe twin of [`crate::sys::SubmenuConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -118,9 +119,9 @@ impl MenuItemConfig<'_> {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct SubmenuConfig {
-    /// Child panel width in logical px (0 = C default, 180, same as the root menu).
+    /// The width of the submenu panel, in logical pixels (0 uses 180).
     pub min_width: f32,
-    /// Greyed out and non-opening.
+    /// Whether the submenu row is greyed out and does not open.
     pub disabled: bool,
 }
 
@@ -154,9 +155,9 @@ impl SubmenuConfig {
     }
 }
 
-/// Configuration for the menu-bar strip: the persistent File/Edit/View surface. The bar carries
-/// only the dropdowns' render order; the per-dropdown width is on MenuBarMenuConfig. A zeroed
-/// config uses the default (z_index 0 → 1000, same as a context menu).
+/// The settings for a menu bar.
+///
+/// The width of each dropdown is set by `MenuBarMenuConfig.min_width`.
 ///
 /// The safe twin of [`crate::sys::MenuBarConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -165,7 +166,7 @@ impl SubmenuConfig {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct MenuBarConfig {
-    /// Dropdown render order; higher = on top (0 = C default, 1000, same as a context menu).
+    /// The render order of the dropdowns. Higher draws on top (0 uses 1000, the same as a context menu).
     pub z_index: i16,
 }
 
@@ -197,8 +198,9 @@ impl MenuBarConfig {
     }
 }
 
-/// Configuration for one top-level entry in the menu bar. A zeroed config uses the default
-/// (min_width 0 → 180, same as a context menu).
+/// The settings for one entry in a menu bar.
+///
+/// A field left at 0 uses its default.
 ///
 /// The safe twin of [`crate::sys::MenuBarMenuConfig`]: each FlString field is a plain &str and each optional
 /// pointer an `Option<&T>`, so the whole config is constructible from safe code with no
@@ -207,9 +209,9 @@ impl MenuBarConfig {
 /// arena at the call, so temporaries (a format! result) are fine.
 #[derive(Copy, Clone)]
 pub struct MenuBarMenuConfig {
-    /// Dropdown panel width in logical px (0 = C default, 180, same as a context menu).
+    /// The width of the dropdown panel, in logical pixels (0 uses 180).
     pub min_width: f32,
-    /// Greyed-out top that never highlights, opens, or accepts a switch.
+    /// Whether the entry is greyed out. It cannot be highlighted, opened or switched to.
     pub disabled: bool,
 }
 

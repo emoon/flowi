@@ -8,12 +8,14 @@
 extern "C" {
 #endif
 
-// The within-frame identity of a laid-out element, under which its state and hot/active
-// status are tracked. A value of 0 is invalid ("nothing hot"). hot_element returns it (none
-// when nothing is hovered) and LayoutId::hashed_id produces it. The hash is one-way, so to map
-// a returned id back to your own object, hash your candidate ids via hashed_id and key a
-// `{ElementId -> object}` map on the result. This is a within-frame hash recomputed each frame,
-// not a stable cross-frame handle; the stable identity is the LayoutId (name + seed).
+// The id the core tracks a laid-out element under.
+//
+// This is returned by `fl_input_hot_id` and `fl_input_hashed_id`. 0 is invalid and means no element, such as when
+// nothing is hovered.
+//
+// The id is a one-way hash of a `FlLayoutId`. To find your own object from an id, hash each candidate with
+// `fl_input_hashed_id` and look the id up in a map built from the results. The `FlLayoutId` is the lasting identity of
+// an element, so keep that rather than the id.
 typedef uint32_t FlElementId;
 #define FL_ELEMENT_ID_INVALID 0
 

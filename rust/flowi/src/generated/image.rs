@@ -6,13 +6,16 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Image loading and drawing: load starts an async load, is_ready polls completion, and the bare image call
-/// draws it as a layout widget with options.
+/// Image loading and drawing.
+///
+/// Call `Image::load` or `Image::load_mount` to start a load and keep the returned handle. Poll it with
+/// `Image::status` or `Image::is_ready`, and draw it each frame with `Image::new`.
 pub struct Image;
 
 impl Image {
-    /// Draw handle as a layout widget. opts tints the image and selects fill-container scaling. No-op
-    /// until the image is ready. Call inside a frame callback.
+    /// Draws an image as a layout widget.
+    ///
+    /// Nothing is drawn until the image is ready. Call it inside a frame callback.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(handle: crate::sys::ImageHandle, opts: crate::sys::ImageOpts) {
@@ -20,30 +23,32 @@ impl Image {
         unsafe { crate::sys::fl_image(handle, opts) }
     }
 
-    /// Start an async image load from path. Returns the image handle (0 = invalid); poll is_ready for
-    /// completion.
+    /// Starts loading the image at `path` and returns its handle.
+    ///
+    /// The path is read from the application's asset mount. The handle is 0 if there is no asset mount.
     #[inline]
     pub fn load(path: impl AsRef<str>) -> crate::sys::ImageHandle {
         let path = path.as_ref();
         unsafe { crate::sys::fl_image_load(crate::sys::RawStr::borrow(path)) }
     }
 
-    /// True once the image has finished decoding and is renderable.
+    /// Returns true if the image has finished loading and can be drawn.
     #[inline]
     pub fn is_ready(handle: crate::sys::ImageHandle) -> bool {
         unsafe { crate::sys::fl_image_is_ready(handle) }
     }
 
-    /// Return the semantic state of an image handle. Invalid and failed handles report Error; terminal states
-    /// remain stable across repeated queries.
+    /// Returns how far loading `handle` has got.
+    ///
+    /// A handle that is 0 or whose load failed reports `ImageStatus::Error`. A failed load keeps reporting it.
     #[inline]
     pub fn status(handle: crate::sys::ImageHandle) -> crate::sys::ImageStatus {
         unsafe { crate::sys::fl_image_status(handle) }
     }
 
-    /// Re-prioritize an image load that is still in flight. A view raises the images it is actually showing so
-    /// they decode ahead of work queued earlier for content that has since scrolled away. No-op once the load
-    /// has finished or if the handle is invalid.
+    /// Changes how urgently a load that is still running is decoded.
+    ///
+    /// Does nothing if `handle` is 0.
     #[inline]
     pub fn set_load_priority(handle: crate::sys::ImageHandle, priority: crate::sys::ImageLoadPriority) {
         unsafe { crate::sys::fl_image_set_load_priority(handle, priority) }

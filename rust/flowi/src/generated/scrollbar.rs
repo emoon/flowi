@@ -6,13 +6,19 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Scrollbar widget: a standalone draggable track bound to a normalized scroll position.
+/// A standalone scrollbar.
+///
+/// Call it inside a frame callback.
 pub struct Scrollbar;
 
 impl Scrollbar {
-    /// Emit a scrollbar bound to `*value` (normalized [0,1]); dragging the thumb writes the new position
-    /// back. config selects orientation, sizing, and colors. Returns its interaction Signal. Call inside
-    /// a frame callback.
+    /// Draws a scrollbar and returns its `Signal`.
+    ///
+    /// `value` is the scroll position. It is clamped to `ScrollbarConfig.min` and `ScrollbarConfig.max`, so set
+    /// both, and it is written back when the user drags the thumb. If `value` is null, nothing is drawn.
+    ///
+    /// The thumb is `ScrollbarConfig.viewport_ratio` of the track length, but never smaller than
+    /// `ScrollbarConfig.min_thumb_size`.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(value: &mut f32, config: crate::generated::widget_config::ScrollbarConfig<'_>) -> crate::sys::Signal {

@@ -6,12 +6,18 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Tab bar widget: horizontal or vertical tab navigation across a set of labels.
+/// A row or column of tabs for choosing one of several labels.
+///
+/// Call it inside a frame callback.
 pub struct TabBar;
 
 impl TabBar {
-    /// Emit a tab bar over tabs; clicking a tab writes its index to `*selected_index`. config selects
-    /// vertical mode and colors. Returns true the frame the selection changes. Call inside a frame callback.
+    /// Draws one tab per label and returns true if the selection changed this frame.
+    ///
+    /// `selected_index` is the index into `tabs`. It is reset to 0 if it is out of range, and it is updated when
+    /// the user picks another tab. Set `TabBarConfig.vertical` for a column.
+    ///
+    /// If `tabs` is empty or `selected_index` is null, nothing is drawn and the result is false.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(tabs: &[impl AsRef<str>], selected_index: &mut i32, config: crate::generated::widget_config::TabBarConfig<'_>) -> bool {

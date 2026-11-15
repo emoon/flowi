@@ -12,8 +12,9 @@
 extern "C" {
 #endif
 
-// A mouse button. The discriminant carried on a mouse button event; Count is
-// the array-size sentinel (not a button).
+// A mouse button.
+//
+// `FlMouseButton_Count` is the number of buttons, not a button.
 typedef enum FlMouseButton {
     FlMouseButton_Left = 0,
     FlMouseButton_Right = 1,
@@ -23,8 +24,9 @@ typedef enum FlMouseButton {
     FlMouseButton_Count = 5,
 } FlMouseButton;
 
-// A gamepad button. The discriminant carried on a gamepad button event; Count
-// is the array-size sentinel (not a button).
+// A gamepad button.
+//
+// `FlGamepadButton_Count` is the number of buttons, not a button.
 typedef enum FlGamepadButton {
     FlGamepadButton_A = 0,
     FlGamepadButton_B = 1,
@@ -44,8 +46,9 @@ typedef enum FlGamepadButton {
     FlGamepadButton_Count = 15,
 } FlGamepadButton;
 
-// A gamepad analog axis. The discriminant carried on an axis-motion event;
-// Count is the array-size sentinel (not an axis).
+// A gamepad analog axis.
+//
+// `FlGamepadAxis_Count` is the number of axes, not an axis.
 typedef enum FlGamepadAxis {
     FlGamepadAxis_Left_X = 0,
     FlGamepadAxis_Left_Y = 1,
@@ -56,16 +59,16 @@ typedef enum FlGamepadAxis {
     FlGamepadAxis_Count = 6,
 } FlGamepadAxis;
 
-// What a KeyEvent represents. Constants spell `FlKeyEvent_*` while the type is
-// FlKeyEventType.
+// What a `FlKeyEvent` reports.
 typedef enum FlKeyEventType {
     FlKeyEvent_Down = 0,
     FlKeyEvent_Up = 1,
     FlKeyEvent_Repeat = 2,
 } FlKeyEventType;
 
-// What a MouseEvent represents (which union arm is live). Constants spell
-// `FlMouseEvent_*` while the type is FlMouseEventType.
+// What a `FlMouseEvent` reports.
+//
+// It also tells which payload of the event is set.
 typedef enum FlMouseEventType {
     FlMouseEvent_Move = 0,
     FlMouseEvent_Button_Down = 1,
@@ -73,13 +76,13 @@ typedef enum FlMouseEventType {
     FlMouseEvent_Wheel = 3,
     FlMouseEvent_Enter = 4,
     FlMouseEvent_Leave = 5,
-    // Raw relative motion delivered while the mouse is in relative/unbounded mode
-    // (a hidden drag). Carries a raw delta and no absolute position.
+    // Raw motion during a hidden drag. It has a delta and no position.
     FlMouseEvent_Relative_Motion = 6,
 } FlMouseEventType;
 
-// What a GamepadEvent represents (which union arm is live). Constants spell
-// `FlGamepadEvent_*` while the type is FlGamepadEventType.
+// What a `FlGamepadEvent` reports.
+//
+// It also tells which payload of the event is set.
 typedef enum FlGamepadEventType {
     FlGamepadEvent_Button_Down = 0,
     FlGamepadEvent_Button_Up = 1,
@@ -88,21 +91,22 @@ typedef enum FlGamepadEventType {
     FlGamepadEvent_Disconnected = 4,
 } FlGamepadEventType;
 
-// What a WindowEvent represents. Constants spell `FlWindowEvent_*` while the
-// type is FlWindowEventType.
+// What a `FlWindowEvent` reports.
+//
+// It also tells which payload of the event is set.
 typedef enum FlWindowEventType {
     FlWindowEvent_None = 0,
     FlWindowEvent_Focus_Gained = 1,
     FlWindowEvent_Focus_Lost = 2,
     FlWindowEvent_Resize = 3,
     FlWindowEvent_Close = 4,
-    // One file dropped onto the window from the OS. A multi-file drop delivers one
-    // event per file.
+    // A file was dropped onto the window. A drop of several files gives one event per file.
     FlWindowEvent_Drop_File = 5,
 } FlWindowEventType;
 
-// Absolute-motion arm of MouseEvent: the cursor position plus the
-// position-derived delta since the previous move, in window pixels.
+// The payload of a `FlMouseEvent` of type `FlMouseEvent_Move`.
+//
+// It holds the cursor position and the change since the previous move, in window pixels.
 typedef struct FlMouseMoveData {
     float x;
     float y;
@@ -110,8 +114,10 @@ typedef struct FlMouseMoveData {
     float delta_y;
 } FlMouseMoveData;
 
-// Button-transition arm of MouseEvent: which button, where, and the
-// running click count (for double-click detection).
+// The payload of a `FlMouseEvent` of type `FlMouseEvent_Button_Down` or `FlMouseEvent_Button_Up`.
+//
+// It holds the button, the cursor position in window pixels and the click count, which you can use to detect a
+// double-click.
 typedef struct FlMouseButtonData {
     FlMouseButton button;
     float x;
@@ -119,46 +125,53 @@ typedef struct FlMouseButtonData {
     uint32_t click_count;
 } FlMouseButtonData;
 
-// Wheel arm of MouseEvent: the per-event wheel delta (positive y =
-// scrolled up).
+// The payload of a `FlMouseEvent` of type `FlMouseEvent_Wheel`.
+//
+// It holds the wheel delta of the event. A positive y means scrolled up.
 typedef struct FlMouseWheelData {
     float x;
     float y;
 } FlMouseWheelData;
 
-// Relative-motion arm of MouseEvent: the raw hidden-drag delta, carried
-// with no absolute position.
+// The payload of a `FlMouseEvent` of type `FlMouseEvent_Relative_Motion`.
+//
+// It holds the raw motion of a hidden drag.
 typedef struct FlMouseRelativeData {
     float delta_x;
     float delta_y;
 } FlMouseRelativeData;
 
-// Button-transition arm of GamepadEvent.
+// The payload of a `FlGamepadEvent` of type `FlGamepadEvent_Button_Down` or `FlGamepadEvent_Button_Up`.
 typedef struct FlGamepadButtonData {
     FlGamepadButton button;
 } FlGamepadButtonData;
 
-// Axis-motion arm of GamepadEvent: which axis and its normalized value.
+// The payload of a `FlGamepadEvent` of type `FlGamepadEvent_Axis_Motion`.
+//
+// It holds the axis and its new value.
 typedef struct FlGamepadAxisData {
     FlGamepadAxis axis;
     float value;
 } FlGamepadAxisData;
 
-// Resize arm of WindowEvent: the new window size in pixels.
+// The payload of a `FlWindowEvent` of type `FlWindowEvent_Resize`.
+//
+// It holds the new window size in pixels.
 typedef struct FlWindowResizeData {
     uint32_t width;
     uint32_t height;
 } FlWindowResizeData;
 
-// Drop arm of WindowEvent: the dropped file's OS path, and the cursor position in
-// window pixels at the moment it was released.
+// The payload of a `FlWindowEvent` of type `FlWindowEvent_Drop_File`.
+//
+// It holds the path of the dropped file and the cursor position in window pixels where it was released.
 typedef struct FlWindowDropData {
     FlString path;
     float x;
     float y;
 } FlWindowDropData;
 
-// A keyboard event pushed from the platform into the UI context.
+// A keyboard event for `fl_input_push_key_event`.
 typedef struct FlKeyEvent {
     FlKeyEventType type;
     FlKey key;
@@ -167,15 +180,17 @@ typedef struct FlKeyEvent {
     uint64_t timestamp;
 } FlKeyEvent;
 
-// A text-input (composed character) event. text is a per-frame FlString.
+// A text input event for `fl_input_push_text_input_event`, holding the composed characters.
 typedef struct FlTextInputEvent {
     FlString text;
     uint64_t timestamp;
 } FlTextInputEvent;
 
-// A mouse event. type selects the live arm of the anonymous union (move for
-// Move, button for Button_Down/Button_Up, wheel for Wheel,
-// relative for Relative_Motion; Enter/Leave carry no payload).
+// A mouse event for `fl_input_push_mouse_event`.
+//
+// `type` says which payload is set: `move` for `FlMouseEvent_Move`, `button` for `FlMouseEvent_Button_Down`
+// and `FlMouseEvent_Button_Up`, `wheel` for `FlMouseEvent_Wheel` and `relative` for
+// `FlMouseEvent_Relative_Motion`. `FlMouseEvent_Enter` and `FlMouseEvent_Leave` have no payload.
 typedef struct FlMouseEvent {
     FlMouseEventType type;
     union {
@@ -187,9 +202,11 @@ typedef struct FlMouseEvent {
     uint64_t timestamp;
 } FlMouseEvent;
 
-// A gamepad event. type selects the live arm of the anonymous union (button
-// for the button transitions, axis for Axis_Motion; connect/disconnect carry
-// no payload). gamepad_id names the device.
+// A gamepad event for `fl_input_push_gamepad_event`.
+//
+// `gamepad_id` is the device. `type` says which payload is set: `button` for the two button types and `axis` for
+// `FlGamepadEvent_Axis_Motion`. `FlGamepadEvent_Connected` and `FlGamepadEvent_Disconnected` have no
+// payload.
 typedef struct FlGamepadEvent {
     FlGamepadEventType type;
     uint32_t gamepad_id;
@@ -200,8 +217,10 @@ typedef struct FlGamepadEvent {
     uint64_t timestamp;
 } FlGamepadEvent;
 
-// A window event. type selects the live arm of the anonymous union (resize
-// for Resize, drop for Drop_File; the focus/close types carry no payload).
+// A window event for `fl_input_push_window_event`.
+//
+// `type` says which payload is set: `resize` for `FlWindowEvent_Resize` and `drop` for
+// `FlWindowEvent_Drop_File`. The other types have no payload.
 typedef struct FlWindowEvent {
     FlWindowEventType type;
     union {

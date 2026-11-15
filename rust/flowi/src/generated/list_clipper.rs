@@ -6,13 +6,16 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Build a list clipper for one frame.
+/// A calculation of the visible rows in a long list whose rows have the same height.
 pub struct ListClipper;
 
 impl ListClipper {
-    /// Compute the visible row window for a uniform-height list: total_items rows of item_height, scrolled
-    /// by scroll_offset_y inside a viewport_height viewport. The returned clipper's display_start/
-    /// display_end bound the rows to emit.
+    /// Returns the rows that are visible in the viewport.
+    ///
+    /// The list has `total_items` rows of `item_height` each. `scroll_offset_y` is how far the list is scrolled and
+    /// `viewport_height` is the height of the area it is drawn in. All four use the same unit.
+    ///
+    /// The range is empty if `item_height` is not more than 0.
     #[inline]
     pub fn create(total_items: i32, item_height: f32, scroll_offset_y: f32, viewport_height: f32) -> crate::sys::ListClipper {
         unsafe { crate::sys::fl_list_clipper_create(total_items, item_height, scroll_offset_y, viewport_height) }

@@ -1,24 +1,26 @@
-/// Where a floating element attaches.
+/// What a floating element attaches to.
 enum FloatingAttachTo {
-    /// Floating disabled: the element lays out inline.
+    /// Nothing. The element is not floating and is laid out in the flow.
     None = 0,
-    /// Attach to the parent element.
+    /// The parent of the element.
     Parent = 1,
-    /// Attach to the element with parent_id.
+    /// The element with the id in `FloatingConfig.parent_id`.
     Element = 2,
-    /// Attach to the layout root (absolute positioning).
+    /// The layout root, which positions the element in absolute coordinates.
     Root = 3,
 }
 
-/// How a floating element handles pointer events.
+/// Whether a floating element takes the pointer events that land on it.
 enum FloatingPointerCapture {
-    /// Capture pointer events (modal default).
+    /// The element takes the events, and elements under it do not see them.
     Capture = 0,
-    /// Pass pointer events through to elements underneath.
+    /// The events pass through to the elements under it.
     Passthrough = 1,
 }
 
-/// Anchor point on a parent or on the floating element itself.
+/// A point on the edge or in the middle of a rectangle.
+///
+/// It is used for the point on a floating element and for the point on its parent that the two are joined at.
 enum FloatingAttachPoint {
     LeftTop = 0,
     LeftCenter = 1,
@@ -31,22 +33,26 @@ enum FloatingAttachPoint {
     RightBottom = 8,
 }
 
-/// Configuration for a floating element such as a modal dialog, popup, or tooltip.
+/// The settings of a floating element such as a modal dialog, popup or tooltip.
+///
+/// Pass it to `Floating::configure`.
 #[attributes(Copy)]
 struct FloatingConfig {
-    /// Where to attach (default: None disables floating).
+    /// What the element attaches to (`FloatingAttachTo::None` by default, which turns floating off).
     attach_to: FloatingAttachTo,
+    /// Whether the element takes the pointer events that land on it (`FloatingPointerCapture::Capture` by default).
     pointer_capture: FloatingPointerCapture,
-    /// Layer order; higher draws on top.
+    /// The layer of the element. A higher value is drawn on top.
     z_index: i16,
-    /// Position offset from the resolved attach point.
+    /// The distance from the attach point to the element, in logical pixels.
     offset: Vec2,
-    /// Anchor point on this element.
+    /// The point on this element that is joined to the point on the parent.
     element_attach: FloatingAttachPoint,
-    /// Anchor point on the parent.
+    /// The point on the parent that the element is joined to.
     parent_attach: FloatingAttachPoint,
-    /// Parent element id (for Element attach).
+    /// The id of the element to attach to, as `Input::hashed_id` returns it. It is used when `attach_to` is
+    /// `FloatingAttachTo::Element`.
     parent_id: u32,
-    /// Sizing behaviour (default: Fit).
+    /// The size of the element (fits the content by default).
     sizing: LayoutSizing,
 }

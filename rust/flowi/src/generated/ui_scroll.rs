@@ -6,11 +6,16 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Scroll-area API: area_begin opens a scroll area and area_end closes it.
+/// A container that clips its content and scrolls it with the mouse wheel.
+///
+/// Call `Scroll::area_begin`, draw the content, then call `Scroll::area_end`. Scroll areas can nest, and the wheel
+/// scrolls the innermost one under the cursor.
 pub struct Scroll;
 
 impl Scroll {
-    /// Open a scroll area identified by id, applying config. Pair with area_end.
+    /// Opens a scroll area with the given id and `config`.
+    ///
+    /// Each id must be unique within a frame. Close the area with `Scroll::area_end`.
     #[inline]
     pub fn area_begin(id: impl Into<crate::LayoutId>, config: crate::sys::ScrollAreaConfig) {
         let id: crate::LayoutId = id.into();
@@ -18,7 +23,7 @@ impl Scroll {
         unsafe { crate::sys::fl_scroll_area_begin(id.into_sys(), config) }
     }
 
-    /// Close the most recently opened scroll area.
+    /// Closes the scroll area opened last.
     #[inline]
     pub fn area_end() {
         let _frame = crate::frame_thread::frame_thread_guard("Scroll::area_end");

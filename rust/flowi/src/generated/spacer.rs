@@ -6,12 +6,15 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Spacer widgets: fixed empty gaps, useful for list-clipper padding and virtualization spacers.
+/// Fixed empty gaps in a layout.
+///
+/// Call these inside a frame callback.
 pub struct Spacer;
 
 impl Spacer {
-    /// Add fixed empty vertical space height px (the spacer in a vertical layout). Call inside a frame
-    /// callback.
+    /// Adds an empty gap of `height` logical pixels.
+    ///
+    /// It fills the available width.
     #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(height: f32) {
@@ -19,8 +22,9 @@ impl Spacer {
         unsafe { crate::sys::fl_spacer(height) }
     }
 
-    /// Add fixed empty horizontal space width px (the spacer in a horizontal layout). Call inside a frame
-    /// callback.
+    /// Adds an empty gap of `width` logical pixels.
+    ///
+    /// It fills the available height.
     #[inline]
     pub fn h(width: f32) {
         let _frame = crate::frame_thread::frame_thread_guard("Spacer::h");

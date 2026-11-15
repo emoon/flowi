@@ -1,7 +1,11 @@
-/// Link widget: clickable, underlined text for hyperlinks.
+/// Clickable text for hyperlinks.
+///
+/// Call it inside a frame callback.
 #[frame_context]
 api Link {
-    /// Emit link text (link-colored, underlined). config selects font size and colors. Returns its
-    /// interaction Signal (.clicked the frame it activates). Call inside a frame callback.
+    /// Draws a link and returns its `Signal`.
+    ///
+    /// The text does not wrap. It gets an underline while hovered or focused. Read `Signal.clicked` to follow
+    /// the link.
     new_impl(text: String, config: LinkConfig) -> Signal
 }

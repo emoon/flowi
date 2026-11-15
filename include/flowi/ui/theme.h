@@ -10,8 +10,9 @@
 extern "C" {
 #endif
 
-// One bit per semantic slot of ThemeColors. OR these into a ThemeOverride.slots mask to select which slots
-// an override replaces; the bit order matches the field order in ThemeColors.
+// A flag for one color of `FlThemeColors`, used in `FlThemeOverride.slots`.
+//
+// Combine flags with a bitwise OR. The flags follow the order of the fields in `FlThemeColors`.
 typedef enum FlThemeSlot {
     FlThemeSlot_InteractiveBase = 1,
     FlThemeSlot_InteractiveHover = 2,
@@ -34,66 +35,67 @@ typedef enum FlThemeSlot {
     FlThemeSlot_FeedbackInfo = 262144,
 } FlThemeSlot;
 
-// Interactive (accent/brand) state colors for buttons, toggles, sliders, and focused inputs.
+// The colors for interactive widgets such as buttons, toggles and sliders.
 typedef struct FlThemeInteractive {
-    // Primary accent color (button backgrounds, slider fills, checkmarks).
+    // The accent color of buttons, slider fills and checkmarks.
     FlColor base;
-    // Mouse-hover state (derived: lighten base by 15%).
+    // The color while the mouse is over the widget.
     FlColor hover;
-    // Click/press state (derived: darken base by 15%).
+    // The color while the widget is pressed.
     FlColor press;
-    // Keyboard focus ring (derived: lighten base by 25%).
+    // The color of the keyboard focus ring.
     FlColor focus;
-    // Grayed-out state (derived: base at 50% opacity).
+    // The color of a disabled widget.
     FlColor disabled;
 } FlThemeInteractive;
 
-// Surface (background) colors for the app's UI layers.
+// The background colors of the UI layers.
 typedef struct FlThemeSurface {
-    // Main window/app background (darkest in the dark theme).
+    // The window background.
     FlColor base;
-    // Cards, buttons, inputs. Sits above base (slightly lighter).
+    // The background of cards, buttons and inputs, which sit above `FlThemeSurface.base`.
     FlColor elevated;
-    // Modals, popups, dropdowns: darkened backdrop.
+    // The backdrop behind modals, popups and dropdowns.
     FlColor overlay;
-    // Selected-item highlight (often the interactive accent).
+    // The highlight of a selected item.
     FlColor selected;
 } FlThemeSurface;
 
-// Border and divider colors.
+// The colors of borders and dividers.
 typedef struct FlThemeBorder {
-    // Subtle borders around inputs and cards.
+    // The border around inputs and cards.
     FlColor default_color;
-    // Visible focus ring (derived from the interactive focus when unset).
+    // The border color that marks focus, such as on the cursor row of a list.
     FlColor focus;
-    // Horizontal/vertical divider lines.
+    // The color of divider lines.
     FlColor separator;
 } FlThemeBorder;
 
-// Typography colors.
+// The text colors.
 typedef struct FlThemeText {
-    // Main readable text (high contrast).
+    // The color of main text.
     FlColor primary;
-    // Labels, hints, less important text (dimmed).
+    // The color of labels, hints and other less important text.
     FlColor secondary;
-    // Links and highlighted text (usually the interactive accent).
+    // The color of links and highlighted text.
     FlColor accent;
 } FlThemeText;
 
-// Status/feedback colors for success, warning, error, and info banners.
+// The colors that report the outcome of an action.
 typedef struct FlThemeFeedback {
-    // Positive actions, confirmations (green).
+    // Success and confirmation.
     FlColor success;
-    // Caution, non-blocking issues (orange/yellow).
+    // Cautions and issues that do not block the user.
     FlColor warning;
-    // Errors, destructive actions (red).
+    // Errors and destructive actions.
     FlColor error;
-    // Informational, neutral highlights (blue).
+    // Neutral information.
     FlColor info;
 } FlThemeFeedback;
 
-// The resolved theme palette read when laying out and painting widgets: interactive, surface, border,
-// text, and feedback color groups.
+// The colors flowi uses when it paints widgets, in groups.
+//
+// Pass it to `fl_theme_update` to set the base palette. `fl_theme_colors` returns the palette in use.
 typedef struct FlThemeColors {
     FlThemeInteractive interactive;
     FlThemeSurface surface;
@@ -102,28 +104,42 @@ typedef struct FlThemeColors {
     FlThemeFeedback feedback;
 } FlThemeColors;
 
-// A sparse theme override: only the slots flagged in slots are read from colors; the rest are inherited from
-// the resolved parent theme at push time. Push it to retheme a subtree without touching the global theme.
+// A replacement for some colors of the current theme.
+//
+// Pass it to `fl_theme_push`. Colors that are not flagged in `FlThemeOverride.slots` keep the value they have in the
+// theme at the time of the push.
 typedef struct FlThemeOverride {
-    // Bitwise OR of ThemeSlot: which slots to replace.
+    // The colors to replace, as `FlThemeSlot` flags combined with a bitwise OR.
     uint32_t slots;
-    // Slot values, read only where the matching slots bit is set.
+    // The new colors. Only the ones flagged in `FlThemeOverride.slots` are used.
     FlThemeColors colors;
 } FlThemeOverride;
 
-// Set and override the active UI theme: update replaces the base palette, while push/pop layer a
-// sparse override onto a subtree.
-// Inject the resolved theme palette flowi reads when painting widgets, replacing the active base theme.
-// flowi stores the pointer and reads it every subsequent frame: C callers pass storage that outlives every
-// frame, while the Rust binding copies colors into storage it owns, so a reference to a stack temporary
-// is fine and each call replaces the previously stored palette.
+// The colors used to paint widgets.
+//
+// Call `fl_theme_update` to set the base palette. Between `fl_theme_push` and the matching `fl_theme_pop`, widgets use
+// the pushed override instead.
+// Sets the base palette that flowi paints with.
+//
+// flowi keeps the pointer and reads it every frame, so `colors` must stay valid and unchanged until the next
+// call. The Rust wrapper copies the palette, so a reference to a temporary is fine there.
+//
+// If `colors` is null, flowi uses the built-in default palette.
 FL_API void fl_theme_update(const FlThemeColors* colors);
-// Push a sparse override onto the active theme, retheming the subtree until the matching pop.
+// Replaces some colors of the current theme until the matching `fl_theme_pop`.
+//
+// Overrides nest, up to 16 at a time. An inner push builds on the theme the outer push produced.
 FL_API void fl_theme_push(FlThemeOverride theme_override);
-// Pop the most recently pushed override, restoring the parent theme.
+// Ends the most recent `fl_theme_push` and restores the theme from before it.
+//
+// Call it once for every push.
 FL_API void fl_theme_pop(void);
-// Read the resolved theme palette flowi is currently painting with: the innermost active push
-// override, or the base palette set by update. The returned pointer has no safe Rust wrapper.
+// Returns the palette widgets are painted with now.
+//
+// This is the pushed override if one is active, otherwise the base palette. Before any call to `fl_theme_update`
+// it is the built-in default palette.
+//
+// Do not keep the pointer past the matching `fl_theme_pop` or the next `fl_theme_update`.
 FL_API const FlThemeColors* fl_theme_colors(void);
 
 

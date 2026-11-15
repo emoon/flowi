@@ -6,43 +6,45 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Modal scope: the focus save/restore and input blocking behind dialogs. Open a scope to block
-/// input to widgets outside it and capture focus; emit a custom body between begin/end; close
-/// tears the scope down and restores focus. Rich dialogs (install prompts, overlays, system
-/// dialogs) drive their own content through this; fl_popup_message_box is the canned
-/// confirm/alert widget built over the same scope.
+/// A modal scope that blocks input to everything outside it and takes focus.
+///
+/// While the dialog is visible, call `Modal::begin_frame` first in each frame, before any widgets are drawn. Then
+/// call `Modal::begin`, draw the dialog content, and call `Modal::end`. When the dialog closes, call `Modal::close`.
+///
+/// `Popup::message_box` is a ready-made confirm dialog. Use this API when you draw the dialog content yourself.
 pub struct Modal;
 
 impl Modal {
-    /// Call at the START of each frame while the modal is visible, BEFORE any widgets render.
-    /// Arms input blocking so widgets emitted before the body don't receive input; on the first
-    /// frame it saves the currently-focused widget for restoration on close. scope_id of 0 is
-    /// a no-op.
+    /// Blocks input to the widgets outside the modal.
+    ///
+    /// On the first frame it remembers the focused widget so `Modal::close` can give focus back. A `scope_id` of 0
+    /// does nothing.
     #[inline]
     pub fn begin_frame(scope_id: u32) {
         let _frame = crate::frame_thread::frame_thread_guard("Modal::begin_frame");
         unsafe { crate::sys::fl_modal_begin_frame(scope_id) }
     }
 
-    /// Call before emitting the modal body. Same activation/focus-scope setup as begin_frame,
-    /// plus it sets the current popup scope so widgets inside the body receive input. scope_id of
-    /// 0 is a no-op.
+    /// Starts the modal content, so the widgets you draw next receive input.
+    ///
+    /// It also does what `Modal::begin_frame` does. Use the same `scope_id` for both. A `scope_id` of 0 does
+    /// nothing.
     #[inline]
     pub fn begin(scope_id: u32) {
         let _frame = crate::frame_thread::frame_thread_guard("Modal::begin");
         unsafe { crate::sys::fl_modal_begin(scope_id) }
     }
 
-    /// Call after emitting the modal body. Clears the current popup scope (the focus scope stays
-    /// active until close).
+    /// Ends the modal content.
+    ///
+    /// The modal stays open until `Modal::close`.
     #[inline]
     pub fn end() {
         let _frame = crate::frame_thread::frame_thread_guard("Modal::end");
         unsafe { crate::sys::fl_modal_end() }
     }
 
-    /// Close the modal: restore focus to the widget focused before it opened and clear all popup
-    /// scope state.
+    /// Closes the modal and gives focus back to the widget that had it before the modal opened.
     #[inline]
     pub fn close() {
         let _frame = crate::frame_thread::frame_thread_guard("Modal::close");

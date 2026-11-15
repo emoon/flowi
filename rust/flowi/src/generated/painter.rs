@@ -6,106 +6,119 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Custom-drawing primitives: the painter's shape, line, text, and image commands. Call these to draw
-/// directly into the current frame.
+/// Drawing commands for custom shapes, lines, text and images.
+///
+/// Call these while a layout element is open. They draw into that element, and do nothing outside one. All
+/// positions and sizes are in logical pixels, relative to the element.
+///
+/// The software backend draws only rectangles, outlines, text and images. It skips circles, diamonds, arcs,
+/// lines, polylines and bars.
 pub struct Painter;
 
 impl Painter {
-    /// Set the effect every later painter call in the current element carries, so one shadow covers a
-    /// cluster of draws. A zeroed effect (kind = EffectKind::None) clears it. The effect is scoped to the
-    /// element it was set in: it clears when that element's layout scope closes and at the start of each
-    /// frame, so it never reaches a sibling, a nested child, or a later frame. Text draws ignore it.
+    /// Sets the effect that later draws in the current element carry.
+    ///
+    /// One shadow can then cover a group of draws. A zeroed effect clears it. The effect ends when the element
+    /// ends, so it never reaches a sibling, a child or the next frame. Text ignores it.
     #[inline]
     pub fn set_effect(effect: crate::sys::Effect) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::set_effect");
         unsafe { crate::sys::fl_painter_set_effect(effect) }
     }
 
-    /// Draw a filled rectangle: top-left (x, y), size (w, h), in logical (authoring) space.
+    /// Draws a filled rectangle with its top-left corner at (`x`, `y`).
     #[inline]
     pub fn rect(x: f32, y: f32, w: f32, h: f32, color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::rect");
         unsafe { crate::sys::fl_painter_rect(x, y, w, h, color) }
     }
 
-    /// Draw a batch of solid filled rectangles in one call, for dense visuals such as a scope waveform's
-    /// one-rectangle-per-pixel columns. The result is exactly that of calling rect() for each entry in
-    /// order: call order (later entries paint over earlier ones), alpha compositing, clipping, UI scaling,
-    /// the current effect and Canvas z-order all behave as in the scalar loop, on every render backend.
-    /// An empty batch draws nothing.
+    /// Draws a batch of filled rectangles in one call.
+    ///
+    /// The result is the same as calling `Painter::rect` for each entry in order, so later entries paint over
+    /// earlier ones. An empty batch draws nothing.
     #[inline]
     pub fn rects(rects: &[crate::sys::ColoredRect]) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::rects");
         unsafe { crate::sys::fl_painter_rects(rects.as_ptr(), rects.len() as u32) }
     }
 
-    /// Draw a filled rounded rectangle: top-left (x, y), size (w, h), corner radius, all in logical space.
+    /// Draws a filled rectangle with rounded corners of the same `radius`.
     #[inline]
     pub fn rect_rounded(x: f32, y: f32, w: f32, h: f32, radius: f32, color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::rect_rounded");
         unsafe { crate::sys::fl_painter_rect_rounded(x, y, w, h, radius, color) }
     }
 
-    /// Draw the outline of a rectangle: top-left (x, y), size (w, h), in logical space. The stroke lies
-    /// inside the rectangle and can be dashed; a stroke wider than half the rectangle fills it.
+    /// Draws the outline of a rectangle.
+    ///
+    /// The stroke lies inside the rectangle and can be dashed. A stroke wider than half the shorter side fills it.
     #[inline]
     pub fn rect_stroke(x: f32, y: f32, w: f32, h: f32, stroke: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::rect_stroke");
         unsafe { crate::sys::fl_painter_rect_stroke(x, y, w, h, stroke) }
     }
 
-    /// Draw the outline of a rounded rectangle; radius is the outer corner radius. Otherwise as
-    /// Painter::rect_stroke.
+    /// Draws the outline of a rectangle with rounded corners.
+    ///
+    /// `radius` is the outer radius of the corners. It works like `Painter::rect_stroke` otherwise.
     #[inline]
     pub fn rect_rounded_stroke(x: f32, y: f32, w: f32, h: f32, radius: f32, stroke: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::rect_rounded_stroke");
         unsafe { crate::sys::fl_painter_rect_rounded_stroke(x, y, w, h, radius, stroke) }
     }
 
-    /// Draw a filled rectangle with a four-corner color gradient (bilinear): top-left (x, y), size (w, h),
-    /// in logical space.
+    /// Draws a filled rectangle with a different color in each corner.
     #[inline]
     pub fn gradient_rect(x: f32, y: f32, w: f32, h: f32, colors: crate::sys::CornerColors) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::gradient_rect");
         unsafe { crate::sys::fl_painter_gradient_rect(x, y, w, h, colors) }
     }
 
-    /// Draw a filled rectangle styled by config: per-corner radius and a per-corner color gradient in one
-    /// draw, which is what rect_rounded (solid only) and gradient_rect (square only) cannot express
-    /// together. Top-left (x, y), size (w, h), in logical space. Each radius clamps to half the smaller
-    /// dimension, so an over-large radius gives a pill.
+    /// Draws a filled rectangle with a radius and a color for each corner.
+    ///
+    /// Use it for a rounded rectangle with a gradient, which `Painter::rect_rounded` and `Painter::gradient_rect`
+    /// cannot draw. A radius larger than half the shorter side is clamped to it, which gives a pill.
     #[inline]
     pub fn rect_styled(x: f32, y: f32, w: f32, h: f32, config: crate::sys::RectConfig) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::rect_styled");
         unsafe { crate::sys::fl_painter_rect_styled(x, y, w, h, config) }
     }
 
-    /// Draw a crisp 1px horizontal hairline of length from (x, y). Device-pixel snapped, so it stays sharp at
-    /// fractional scroll/zoom.
+    /// Draws a horizontal line of `length` that is one logical pixel thick.
+    ///
+    /// The thickness is rounded to whole device pixels (at least one) and the line is aligned to them, so it
+    /// stays sharp when the view is scrolled or zoomed by a fraction.
     #[inline]
     pub fn hline(x: f32, y: f32, length: f32, color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::hline");
         unsafe { crate::sys::fl_painter_hline(x, y, length, color) }
     }
 
-    /// Draw a crisp 1px vertical hairline of length from (x, y). Device-pixel snapped, so it stays sharp at
-    /// fractional scroll/zoom.
+    /// Draws a vertical line of `length` that is one logical pixel thick.
+    ///
+    /// The thickness is rounded to whole device pixels (at least one) and the line is aligned to them, so it
+    /// stays sharp when the view is scrolled or zoomed by a fraction.
     #[inline]
     pub fn vline(x: f32, y: f32, length: f32, color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::vline");
         unsafe { crate::sys::fl_painter_vline(x, y, length, color) }
     }
 
-    /// Draw a straight line from (x0, y0) to (x1, y1), centered on the two points, with round caps that
-    /// extend half the stroke width past each end. Coincident points draw a dot of the stroke width. For
-    /// a crisp 1px horizontal or vertical rule use hline or vline instead.
+    /// Draws a straight line from (`x0`, `y0`) to (`x1`, `y1`).
+    ///
+    /// The line is centered on the two points and has round caps that reach half the stroke width past each
+    /// end. Equal points draw a dot as wide as the stroke. For a sharp one pixel line, use `Painter::hline` or
+    /// `Painter::vline`.
     #[inline]
     pub fn line(x0: f32, y0: f32, x1: f32, y1: f32, stroke: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::line");
         unsafe { crate::sys::fl_painter_line(x0, y0, x1, y1, stroke) }
     }
 
-    /// Draw text with font (FontId::INVALID = active font) in color, top-left at (x, y).
+    /// Draws `text` with its top-left corner at (`x`, `y`).
+    ///
+    /// A `font` of 0 uses the active font.
     #[inline]
     pub fn text(x: f32, y: f32, text: impl AsRef<str>, font: crate::sys::FontId, color: crate::sys::Color) {
         let text = text.as_ref();
@@ -113,10 +126,10 @@ impl Painter {
         unsafe { crate::sys::fl_painter_text(x, y, { let s = text; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, font, color) }
     }
 
-    /// Draw single-line text styled by style (font, fractional pixel size, letter spacing; zero fields
-    /// fall back: font_id 0 = active font, font_size 0 = the font's default size), in color, top-left
-    /// at (x, y). Sizes quantize internally to quarter-pixel steps, the same quantizer Text::measure
-    /// uses, so a measured run matches what gets drawn.
+    /// Draws a single line of `text` in the given style, with its top-left corner at (`x`, `y`).
+    ///
+    /// Sizes are rounded to quarter pixels in the same way as in `Text::measure`, so a measured run matches the
+    /// drawn one.
     #[inline]
     pub fn text_styled(x: f32, y: f32, text: impl AsRef<str>, style: crate::sys::TextStyle, color: crate::sys::Color) {
         let text = text.as_ref();
@@ -124,92 +137,101 @@ impl Painter {
         unsafe { crate::sys::fl_painter_text_styled(x, y, { let s = text; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, style, color) }
     }
 
-    /// Draw image image into the rect at top-left (x, y), size (w, h). image is the
-    /// `ImageHandle` from `Image::load`. color multiplicatively tints the image; pass white
-    /// (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
+    /// Draws an image into the rectangle at (`x`, `y`) and returns true if it was drawn.
+    ///
+    /// `image` is the handle from `Image::load`. `color` is multiplied with the image, so pass white
+    /// (255, 255, 255, 255) for no tint. A `w` or `h` of 0 or less uses the width or height of the image. It
+    /// returns false and draws nothing until the image is ready.
     #[inline]
     pub fn image(x: f32, y: f32, w: f32, h: f32, image: crate::sys::ImageHandle, color: crate::sys::Color) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::image");
         unsafe { crate::sys::fl_painter_image(x, y, w, h, image, color) }
     }
 
-    /// Draw a filled circle: center (cx, cy) and radius, in logical space.
+    /// Draws a filled circle.
     #[inline]
     pub fn circle(cx: f32, cy: f32, radius: f32, color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::circle");
         unsafe { crate::sys::fl_painter_circle(cx, cy, radius, color) }
     }
 
-    /// Draw the outline of a circle. The stroke lies inside radius and can be dashed; the dash period is
-    /// rescaled slightly so a whole number of dashes closes the ring, with no stub where the pattern wraps.
+    /// Draws the outline of a circle.
+    ///
+    /// The stroke lies inside `radius` and can be dashed. The dash period is adjusted slightly so that a whole
+    /// number of dashes closes the ring.
     #[inline]
     pub fn circle_stroke(cx: f32, cy: f32, radius: f32, stroke: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::circle_stroke");
         unsafe { crate::sys::fl_painter_circle_stroke(cx, cy, radius, stroke) }
     }
 
-    /// Draw a filled circle and its outline as one shape. Prefer this to a circle call followed by a
-    /// circle_stroke call: the two are antialiased together, so no fill color shows at the outer edge.
+    /// Draws a filled circle with an outline.
+    ///
+    /// Use it instead of `Painter::circle` followed by `Painter::circle_stroke`. The two are drawn as one
+    /// shape, so no fill color shows at the outer edge.
     #[inline]
     pub fn circle_bordered(cx: f32, cy: f32, radius: f32, color: crate::sys::Color, border: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::circle_bordered");
         unsafe { crate::sys::fl_painter_circle_bordered(cx, cy, radius, color, border) }
     }
 
-    /// Draw a filled diamond: center (cx, cy), horizontal half-extent rx and vertical half-extent ry.
+    /// Draws a filled diamond with the half-width `rx` and the half-height `ry`.
     #[inline]
     pub fn diamond(cx: f32, cy: f32, rx: f32, ry: f32, color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::diamond");
         unsafe { crate::sys::fl_painter_diamond(cx, cy, rx, ry, color) }
     }
 
-    /// Draw the outline of a diamond. The stroke lies inside the diamond and is always solid.
+    /// Draws the outline of a diamond.
+    ///
+    /// The stroke lies inside the diamond and is always solid.
     #[inline]
     pub fn diamond_stroke(cx: f32, cy: f32, rx: f32, ry: f32, stroke: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::diamond_stroke");
         unsafe { crate::sys::fl_painter_diamond_stroke(cx, cy, rx, ry, stroke) }
     }
 
-    /// Draw a filled diamond and its outline as one shape, antialiased together like
-    /// Painter::circle_bordered.
+    /// Draws a filled diamond with an outline, as one shape like `Painter::circle_bordered`.
     #[inline]
     pub fn diamond_bordered(cx: f32, cy: f32, rx: f32, ry: f32, color: crate::sys::Color, border: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::diamond_bordered");
         unsafe { crate::sys::fl_painter_diamond_bordered(cx, cy, rx, ry, color, border) }
     }
 
-    /// Draw a stroked arc or ring around (cx, cy). Angles are radians: 0 is 12 o'clock and a positive
-    /// sweep runs clockwise. The stroke grows inward from radius, so a stroke width of radius or more
-    /// gives a filled sector. stroke.cap picks butt or round ends.
+    /// Draws an arc, or a full ring, around (`cx`, `cy`).
+    ///
+    /// The angles are in radians. 0 is 12 o'clock and a positive `sweep` runs clockwise. The stroke grows
+    /// inward from `radius`, so a stroke width of `radius` or more gives a filled sector. `Stroke.cap` sets
+    /// the ends.
     #[inline]
     pub fn arc(cx: f32, cy: f32, radius: f32, start_angle: f32, sweep: f32, stroke: crate::sys::Stroke) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::arc");
         unsafe { crate::sys::fl_painter_arc(cx, cy, radius, start_angle, sweep, stroke) }
     }
 
-    /// Draw a polyline. points are vertices in logical (authoring) space; each vertex's intensity modulates
-    /// stroke alpha (lerped along segments) and scales fill alpha. style carries the stroke and the optional
-    /// fill.
+    /// Draws a line through `points`, with an optional fill.
+    ///
+    /// `style` holds the stroke and the fill. The `PolyPoint.intensity` of each point scales the alpha of the
+    /// stroke and of the fill.
     #[inline]
     pub fn polyline(points: &[crate::sys::PolyPoint], style: crate::sys::PolylineStyle) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::polyline");
         unsafe { crate::sys::fl_painter_polyline(points.as_ptr(), points.len() as u32, style) }
     }
 
-    /// Draw a row of bars off the shared baseline baseline_y, for meters, spectrum analyzers and step
-    /// sequencers. The whole row is one draw. Each bar carries its own x, width, and height, all in logical
-    /// (authoring) space; a negative height draws downward. This is an optional-tier primitive: a backend
-    /// may skip it (today the software backend does).
+    /// Draws a row of bars that start at `baseline_y`, in one draw.
+    ///
+    /// Use it for meters, spectrum analyzers and step sequencers. A backend may skip it, and the software backend
+    /// does.
     #[inline]
     pub fn bars(baseline_y: f32, bars: &[crate::sys::Bar], color: crate::sys::Color) {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::bars");
         unsafe { crate::sys::fl_painter_bars(baseline_y, bars.as_ptr(), bars.len() as u32, color) }
     }
 
-    /// Draw a source rectangle of an image, in source image pixels, into a destination rectangle in
-    /// logical (authoring) space. A non-positive destination width or height uses the source width or
-    /// height. Returns false (and draws nothing) until the image is ready or when the source rect is
-    /// empty.
+    /// Draws part of an image into a destination rectangle and returns true if it was drawn.
+    ///
+    /// It returns false and draws nothing until the image is ready, or when the source rectangle is empty.
     #[inline]
     pub fn image_sub(sub: crate::sys::ImageSub) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Painter::image_sub");

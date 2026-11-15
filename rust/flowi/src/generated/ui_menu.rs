@@ -6,14 +6,17 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// Context menus: build a menu from a begin/item/end group, add right-click regions, and
-/// drive it imperatively with open/close/is_open.
+/// Context menus that open at a point on the screen, usually on a right-click.
+///
+/// Open a menu with `Menu::open`, or put a right-click region around the area that should open it. Each frame, call
+/// `Menu::begin_impl`. It returns true only while the menu is open. If it did, add items and call `Menu::end`.
 pub struct Menu;
 
 impl Menu {
-    /// Begin the menu menu_id with config; returns true (opening the floating panel and
-    /// driving ESC / click-outside dismissal) only while the menu is open. Pair with
-    /// end only when it returned true.
+    /// Starts the menu `menu_id` and returns true if it is open.
+    ///
+    /// Call `Menu::end` only if this returned true. A click outside the menu closes it. Escape closes the innermost
+    /// open submenu, or the menu if no submenu is open.
     #[inline]
     pub fn begin(menu_id: impl Into<crate::LayoutId>, config: crate::generated::menu::MenuConfig) -> bool {
         let menu_id: crate::LayoutId = menu_id.into();
@@ -21,15 +24,17 @@ impl Menu {
         unsafe { crate::sys::fl_menu_begin_impl(menu_id.into_sys(), config.to_sys()) }
     }
 
-    /// End the menu panel opened by begin_impl.
+    /// Ends the menu panel.
     #[inline]
     pub fn end() {
         let _frame = crate::frame_thread::frame_thread_guard("Menu::end");
         unsafe { crate::sys::fl_menu_end() }
     }
 
-    /// Emit one action item labelled label with config; returns its interaction signal
-    /// (.clicked true the frame it activates).
+    /// Adds an action item and returns its `Signal`.
+    ///
+    /// `Signal.clicked` is true on the frame the item is activated. Activating it closes the menu unless
+    /// `MenuItemConfig.close_policy` says otherwise.
     #[inline]
     pub fn item(label: impl AsRef<str>, config: crate::generated::menu::MenuItemConfig<'_>) -> crate::sys::Signal {
         let label = label.as_ref();
@@ -37,8 +42,10 @@ impl Menu {
         unsafe { crate::sys::fl_menu_item_impl({ let s = label; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, config.to_sys()) }
     }
 
-    /// Emit a checkable item labelled label bound to `*checked`: toggles it on activation and shows a check
-    /// marker while it is true. Keep-open by default. Returns the row's signal (.clicked the frame it toggles).
+    /// Adds an item with a check mark and returns its `Signal`.
+    ///
+    /// The check mark shows while `checked` is true. Activating the item flips `checked`. By default it does not
+    /// close the menu.
     #[inline]
     pub fn check(label: impl AsRef<str>, checked: &mut bool, config: crate::generated::menu::MenuItemConfig<'_>) -> crate::sys::Signal {
         let label = label.as_ref();
@@ -46,8 +53,10 @@ impl Menu {
         unsafe { crate::sys::fl_menu_check_impl({ let s = label; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, checked as *mut bool, config.to_sys()) }
     }
 
-    /// Emit a radio item labelled label bound to `*selected`: activation sets `*selected = value`; the bullet
-    /// shows while `*selected == value`. Keep-open by default. Returns the row's signal.
+    /// Adds a radio item and returns its `Signal`.
+    ///
+    /// The bullet shows while `selected` equals `value`. Activating the item sets `selected` to `value`. By default
+    /// it does not close the menu.
     #[inline]
     pub fn radio(label: impl AsRef<str>, selected: &mut i32, value: i32, config: crate::generated::menu::MenuItemConfig<'_>) -> crate::sys::Signal {
         let label = label.as_ref();
@@ -55,16 +64,18 @@ impl Menu {
         unsafe { crate::sys::fl_menu_radio_impl({ let s = label; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, selected as *mut i32, value, config.to_sys()) }
     }
 
-    /// Emit a non-interactive separator rule. Occupies a row but is skipped by navigation and never
-    /// activates; a click on it stays inside the menu (it is part of the surface, not click-outside).
+    /// Adds a separator line.
+    ///
+    /// It cannot be activated.
     #[inline]
     pub fn separator() {
         let _frame = crate::frame_thread::frame_thread_guard("Menu::separator");
         unsafe { crate::sys::fl_menu_separator() }
     }
 
-    /// Emit a non-interactive section-header caption label (dimmed, left-aligned). Like a separator it
-    /// occupies a row, is skipped by navigation, and never activates.
+    /// Adds a caption that names a group of items.
+    ///
+    /// It cannot be activated.
     #[inline]
     pub fn header(label: impl AsRef<str>) {
         let label = label.as_ref();
@@ -72,14 +83,16 @@ impl Menu {
         unsafe { crate::sys::fl_menu_header({ let s = label; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }) }
     }
 
-    /// End the right-click region opened by region_begin_impl.
+    /// Ends the region started with `Menu::region_begin`.
     #[inline]
     pub fn region_end() {
         let _frame = crate::frame_thread::frame_thread_guard("Menu::region_end");
         unsafe { crate::sys::fl_menu_region_end() }
     }
 
-    /// Open the menu chain menu_id at the absolute screen point (captured once).
+    /// Opens the menu `menu_id` at `point`, a position on the screen.
+    ///
+    /// The point is read once, so the menu stays there. It does nothing if the menu is already open.
     #[inline]
     pub fn open(menu_id: impl Into<crate::LayoutId>, point: crate::sys::Vec2) {
         let menu_id: crate::LayoutId = menu_id.into();
@@ -87,7 +100,9 @@ impl Menu {
         unsafe { crate::sys::fl_menu_open(menu_id.into_sys(), point) }
     }
 
-    /// Close the menu chain menu_id (no-op if it is not the open chain).
+    /// Closes the menu `menu_id`.
+    ///
+    /// It does nothing if the menu is not open.
     #[inline]
     pub fn close(menu_id: impl Into<crate::LayoutId>) {
         let menu_id: crate::LayoutId = menu_id.into();
@@ -95,7 +110,7 @@ impl Menu {
         unsafe { crate::sys::fl_menu_close(menu_id.into_sys()) }
     }
 
-    /// True while the menu chain menu_id is open.
+    /// Returns true if the menu `menu_id` is open.
     #[inline]
     pub fn is_open(menu_id: impl Into<crate::LayoutId>) -> bool {
         let menu_id: crate::LayoutId = menu_id.into();
@@ -104,13 +119,16 @@ impl Menu {
     }
 }
 
-/// Nested submenus: a begin/end group whose parent row, when expanded, hosts the nested menu items.
+/// A submenu inside a menu.
+///
+/// A submenu is a row in its parent menu. When the row is expanded, the items you add before `Submenu::end` appear
+/// in a panel beside it.
 pub struct Submenu;
 
 impl Submenu {
-    /// Begin a submenu parent labelled label with config; emits the parent row and returns true ONLY while
-    /// this submenu is expanded, opening the nested panel beside the parent. Pair with end only when it
-    /// returned true.
+    /// Adds a submenu row labelled `label` and returns true if the submenu is expanded.
+    ///
+    /// Call `Submenu::end` only if this returned true.
     #[inline]
     pub fn begin(label: impl AsRef<str>, config: crate::generated::menu::SubmenuConfig) -> bool {
         let label = label.as_ref();
@@ -118,7 +136,7 @@ impl Submenu {
         unsafe { crate::sys::fl_submenu_begin_impl({ let s = label; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, config.to_sys()) }
     }
 
-    /// End the submenu panel opened by begin_impl.
+    /// Ends the submenu panel.
     #[inline]
     pub fn end() {
         let _frame = crate::frame_thread::frame_thread_guard("Submenu::end");
@@ -126,13 +144,16 @@ impl Submenu {
     }
 }
 
-/// Horizontal menu bar: a begin/end group hosting top-level entries, with is_open to query
-/// whether the bar owns the open menu chain.
+/// A horizontal menu bar.
+///
+/// Each frame, call `Menubar::begin_impl`, then `MenubarMenu::begin_impl` for each top-level menu. Finish with
+/// `Menubar::end`.
 pub struct Menubar;
 
 impl Menubar {
-    /// Begin the bar strip bar_id with config and run its per-frame input (click-open, hover-switch-while-open,
-    /// Left/Right/Down/ESC). Always opens the strip. Pair unconditionally with end.
+    /// Starts the menu bar `bar_id` and handles its input, such as clicks and the arrow keys.
+    ///
+    /// Always call `Menubar::end` after it.
     #[inline]
     pub fn begin(bar_id: impl Into<crate::LayoutId>, config: crate::generated::menu::MenuBarConfig) {
         let bar_id: crate::LayoutId = bar_id.into();
@@ -140,15 +161,16 @@ impl Menubar {
         unsafe { crate::sys::fl_menubar_begin_impl(bar_id.into_sys(), config.to_sys()) }
     }
 
-    /// End the bar strip opened by begin_impl.
+    /// Ends the menu bar.
     #[inline]
     pub fn end() {
         let _frame = crate::frame_thread::frame_thread_guard("Menubar::end");
         unsafe { crate::sys::fl_menubar_end() }
     }
 
-    /// True while the bar bar_id owns the open chain (a dropdown is open, or the bar is keyboard-focused after an
-    /// ESC collapsed the dropdown back to the strip).
+    /// Returns true if the menu bar `bar_id` has a dropdown open.
+    ///
+    /// It also returns true after Escape closed a dropdown and the keyboard focus stayed on the bar.
     #[inline]
     pub fn is_open(bar_id: impl Into<crate::LayoutId>) -> bool {
         let bar_id: crate::LayoutId = bar_id.into();
@@ -157,14 +179,13 @@ impl Menubar {
     }
 }
 
-/// Menu-bar top entries: a begin/end group whose top button, when its dropdown is open, hosts the
-/// dropdown's menu items.
+/// An entry in a menu bar, with a dropdown of items.
 pub struct MenubarMenu;
 
 impl MenubarMenu {
-    /// Begin a top labelled label with config; emits the top button and returns true ONLY while this top's
-    /// dropdown is open, opening the dropdown panel anchored under the button. Pair with end only when it
-    /// returned true.
+    /// Adds an entry labelled `label` to the menu bar and returns true if its dropdown is open.
+    ///
+    /// Add the items of the dropdown after it and call `MenubarMenu::end`, but only if this returned true.
     #[inline]
     pub fn begin(label: impl AsRef<str>, config: crate::generated::menu::MenuBarMenuConfig) -> bool {
         let label = label.as_ref();
@@ -172,7 +193,7 @@ impl MenubarMenu {
         unsafe { crate::sys::fl_menubar_menu_begin_impl({ let s = label; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, config.to_sys()) }
     }
 
-    /// End the dropdown panel opened by begin_impl.
+    /// Ends the dropdown.
     #[inline]
     pub fn end() {
         let _frame = crate::frame_thread::frame_thread_guard("MenubarMenu::end");

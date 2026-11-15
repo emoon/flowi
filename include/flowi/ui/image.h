@@ -13,178 +13,202 @@
 extern "C" {
 #endif
 
-// Backend-neutral image readiness state returned by image query helpers.
+// How far an image load has got.
+//
+// This is returned by `fl_image_status`.
 typedef enum FlImageStatus {
-    // Decode/realization is still in flight.
+    // The image is still loading.
     FlImageStatus_Pending = 0,
-    // The active backend has realized the image and logical dimensions are valid.
+    // The image is ready to draw.
     FlImageStatus_Ready = 1,
-    // Loading or realization failed.
+    // The load failed, or the handle is not valid.
     FlImageStatus_Error = 2,
 } FlImageStatus;
 
-// Background composition mode used by image thumbnail/background loading.
+// How a loaded image is composed onto its canvas.
 typedef enum FlBackgroundMode {
-    // Display the decoded image as-is.
+    // The image as decoded.
     FlBackgroundMode_Regular = 0,
-    // Apply a left-to-right tint gradient during loading.
+    // The image with a left-to-right tint gradient.
     FlBackgroundMode_Tint = 1,
-    // Center on the target canvas with black fill, preserving the original image.
+    // The image centered on a black canvas.
     FlBackgroundMode_Center = 2,
 } FlBackgroundMode;
 
-// Scheduling priority for an in-flight image load. Visible content is raised so it decodes ahead of
-// prefetched or off-screen work already queued.
+// How urgently an image load is decoded.
+//
+// Raise the images you are showing so they decode ahead of prefetched or scrolled-away work.
 typedef enum FlImageLoadPriority {
-    // Background or prefetch work; yields to everything else.
+    // Background or prefetch work.
     FlImageLoadPriority_Low = 0,
-    // The default an image load starts at.
+    // The priority a load starts at.
     FlImageLoadPriority_Normal = 1,
-    // Content the user is looking at right now.
+    // Content the user is looking at now.
     FlImageLoadPriority_High = 2,
 } FlImageLoadPriority;
 
-// Resize sampling mode for image loading.
+// How pixels are resampled when an image is resized as it loads.
 typedef enum FlResizeFilter {
-    // Bilinear interpolation, the default for photos and artwork.
+    // Smooth interpolation, the default.
     FlResizeFilter_Linear = 0,
-    // Nearest-neighbor sampling, useful for pixel art and screenshots.
+    // Nearest-neighbor sampling, which keeps hard pixel edges.
     FlResizeFilter_Nearest = 1,
 } FlResizeFilter;
 
-// Sampling filter used when a texture is drawn at a size other than its own: the render IR's per-primitive
-// filter and the per-draw filter a Viewport3d mesh samples with. Distinct from ResizeFilter, which picks
-// how pixels are resampled once at load time.
+// How a texture is sampled when it is drawn at a size other than its own.
+//
+// This is different from `FlResizeFilter`, which resamples once while the image loads.
 typedef enum FlImageFilter {
-    // Bilinear interpolation between neighboring texels.
+    // Interpolate between neighboring texels.
     FlImageFilter_Linear = 0,
-    // Nearest-neighbor sampling, so individual texels stay visible under magnification.
+    // Use the nearest texel, so single texels stay visible when scaled up.
     FlImageFilter_Nearest = 1,
 } FlImageFilter;
 
-// Decoded/realized image format used at load time; it is not exposed in public image query results.
+// The pixel layout of an image.
 typedef enum FlImageFormat {
-    // Keep the decoded source format.
+    // The format of the source image.
     FlImageFormat_Default = 0,
     // Interleaved RGB.
     FlImageFormat_RGB = 1,
     // Interleaved RGBA.
     FlImageFormat_RGBA = 2,
-    // Single-channel alpha.
+    // A single alpha channel.
     FlImageFormat_Alpha = 3,
-    // Backend/SW planar representation.
+    // Separate planes per channel.
     FlImageFormat_Deinterleaved = 4,
-    // XRGB8888, where the X byte is unused.
+    // Interleaved XRGB, where the X byte is unused.
     FlImageFormat_XRGB = 5,
 } FlImageFormat;
 
 typedef struct FlVfsMount FlVfsMount;
 
-// Image widget drawing options.
+// Options for drawing an image with `fl_image` or `fl_dynamic_image`.
 typedef struct FlImageOpts {
-    // Multiplicative tint color. Zero is transparent, so pass white for no tint.
+    // The tint color, with white for no tint. Its alpha is ignored.
     FlColor color;
-    // If true, the image scales to fill its layout box instead of drawing at native size.
+    // Whether the image scales to fill the space its parent gives it (false draws it at its own size).
     bool fill_container;
 } FlImageOpts;
 
-// Image load options for decode, resize, thumbnail composition, and cache overrides.
+// Options for `fl_image_load_mount`.
 typedef struct FlImageLoadOptions {
-    // Resize width (0 = no explicit resize).
+    // The width to resize to, in logical pixels (0 for no resize).
+    //
+    // The image is only resized if `target_width` and `target_height` are both above 0.
     int32_t target_width;
-    // Resize height (0 = no explicit resize).
+    // The height to resize to, in logical pixels (0 for no resize).
     int32_t target_height;
-    // Maximum output width.
+    // Not used yet.
     int32_t max_width;
-    // Maximum output height.
+    // Not used yet.
     int32_t max_height;
-    // Target decode/realization format (0 = source/default).
+    // Not used yet.
     FlImageFormat format;
-    // SVG scale factor for DPI-aware rasterization (default = 1.0).
+    // The scale to rasterize an SVG at, for high-DPI screens (0 uses 1.0).
     float svg_scale_factor;
-    // Preserve SVG aspect ratio (default = true).
+    // Whether the image keeps its aspect ratio when resized. This has the same effect as `preserve_aspect_ratio`.
     bool svg_preserve_aspect_ratio;
-    // Detect and remove black borders while preparing thumbnails.
+    // Whether to detect and remove black borders when preparing a thumbnail.
     bool detect_black_border;
-    // Preserve aspect ratio when resizing.
+    // Whether the image keeps its aspect ratio when resized. Either this or `svg_preserve_aspect_ratio` turns it on.
     bool preserve_aspect_ratio;
+    // How the image is composed onto its canvas.
     FlBackgroundMode background_mode;
+    // How pixels are resampled when the image is resized.
     FlResizeFilter resize_filter;
-    // Apply a vertical fade from the image toward `fade_*`.
+    // Whether to fade the image vertically toward `fade_r`, `fade_g` and `fade_b`.
     bool apply_vertical_fade;
-    // Fade start position, 0.0 = top, 1.0 = bottom.
+    // Where the fade starts, from 0.0 at the top to 1.0 at the bottom.
     float fade_start;
-    // Target fade red channel.
+    // The red channel of the color the image fades to.
     uint8_t fade_r;
-    // Target fade green channel.
+    // The green channel of the color the image fades to.
     uint8_t fade_g;
-    // Target fade blue channel.
+    // The blue channel of the color the image fades to.
     uint8_t fade_b;
-    // Optional cache path override for downloaded files.
+    // Not used yet.
     FlString override_cache_path;
 } FlImageLoadOptions;
 
-// Image metadata: logical dimensions only, with no pixel data, stride, channel count or format.
+// The size of an image.
 typedef struct FlImageData {
-    // Logical width in pixels.
+    // The width in pixels.
     int32_t width;
-    // Logical height in pixels.
+    // The height in pixels.
     int32_t height;
 } FlImageData;
 
-// Image query result. status is the raw VFS operation status; use image_get_status to interpret it.
-// data is valid when the status resolves to ImageStatus::Ready.
+// The size and load state of an image.
+//
+// `data` is only meaningful once `fl_image_status` reports `FlImageStatus_Ready`.
 typedef struct FlImageResult {
-    // Logical image dimensions.
+    // The size of the image.
     FlImageData data;
-    // Raw VfsOpStatus value.
+    // The raw status of the load. Use `fl_image_status` for the interpreted state.
     uint32_t status;
 } FlImageResult;
 
-// Dynamic image buffer for per-frame updated images. The caller writes into user_buffer each frame.
+// An image whose pixels you write each frame.
+//
+// Create it with `fl_dynamic_image_create` or `fl_dynamic_image_create_alpha`, or fill in the fields yourself, and draw
+// it with `fl_dynamic_image`.
 typedef struct FlDynamicImage {
-    // RGBA or alpha buffer owned by the caller/arena.
+    // The pixels. You write to this buffer and keep it alive for as long as the image is drawn.
     uint8_t* user_buffer;
-    // Logical width in pixels.
+    // The width in pixels.
     int32_t width;
-    // Logical height in pixels.
+    // The height in pixels.
     int32_t height;
-    // Stride of user_buffer in bytes.
+    // The number of bytes per row of `user_buffer`.
     int32_t user_stride;
-    // If true, user_buffer is single-channel alpha.
+    // Whether `user_buffer` holds one alpha byte per pixel instead of RGBA.
     bool is_alpha_only;
 } FlDynamicImage;
 
-// Image loading and drawing: load starts an async load, is_ready polls completion, and the bare image call
-// draws it as a layout widget with options.
-// Draw handle as a layout widget. opts tints the image and selects fill-container scaling. No-op
-// until the image is ready. Call inside a frame callback.
+// Image loading and drawing.
+//
+// Call `fl_image_load` or `fl_image_load_mount` to start a load and keep the returned handle. Poll it with
+// `fl_image_status` or `fl_image_is_ready`, and draw it each frame with `fl_image`.
+// Draws an image as a layout widget.
+//
+// Nothing is drawn until the image is ready. Call it inside a frame callback.
 FL_API void fl_image(FlImageHandle handle, FlImageOpts opts);
-// Start an async image load from path. Returns the image handle (0 = invalid); poll is_ready for
-// completion.
+// Starts loading the image at `path` and returns its handle.
+//
+// The path is read from the application's asset mount. The handle is 0 if there is no asset mount.
 FL_API FlImageHandle fl_image_load(FlString path);
-// True once the image has finished decoding and is renderable.
+// Returns true if the image has finished loading and can be drawn.
 FL_API bool fl_image_is_ready(FlImageHandle handle);
-// Copy raw pixels into a backend-owned static image and return a handle that is ready immediately.
-// Supports RGB, RGBA, Alpha, and XRGB input. The caller may free pixels after this returns.
+// Creates an image from raw pixels and returns its handle, which is ready at once.
+//
+// `pixels` holds `width` by `height` pixels in `format`, which can be RGB, RGBA, Alpha or XRGB. The pixels are
+// copied, so you can free them after the call. The handle is 0 if `pixels` is null, `format` is not one of
+// those or the image could not be created.
 FL_API FlImageHandle fl_image_create_from_pixels(const void* pixels, int32_t width, int32_t height, FlImageFormat format);
-// Like create_from_pixels, but the image always gets a texture of its own and never enters the shared
-// image atlas. Required for anything a mesh samples, because mesh UVs address the whole texture. The flag
-// is fixed at creation: an image cannot be pulled out of the atlas afterwards.
+// Creates an image like `fl_image_create_from_pixels`, with a texture of its own.
+//
+// Use it for anything a mesh samples, because mesh UVs address the whole texture. The image can not be moved
+// into the shared atlas later.
 FL_API FlImageHandle fl_image_create_dedicated(const void* pixels, int32_t width, int32_t height, FlImageFormat format);
-// Re-upload pixels into an existing handle, keeping its identity stable across the update. The
-// dimensions and format are the ones the image was created with; the caller may free pixels after this
-// returns. Returns false when the handle was not created from pixels or the backend cannot realize it.
+// Replaces the pixels of an image made by `fl_image_create_from_pixels` or `fl_image_create_dedicated`.
+//
+// `handle` stays valid and keeps the size and format it was created with. `pixels` is copied. Returns false
+// if `pixels` is null or `handle` was not created from pixels. It also returns false if the new pixels could
+// not be uploaded, and the image is then not drawn until a later update succeeds.
 FL_API bool fl_image_update_pixels(FlImageHandle handle, const void* pixels);
-// Start an asynchronous image load relative to mount, applying options. The mount is borrowed by the
-// operation. Returns zero when the request cannot be started.
+// Starts loading the image at `relative_path` under `mount` and returns its handle.
+//
+// Keep `mount` alive until the load finishes. The handle is 0 if `mount` is null. Loading the same path with
+// the same options again returns the existing handle.
 FL_API FlImageHandle fl_image_load_mount(FlVfsMount* mount, FlString relative_path, FlImageLoadOptions options);
-// Return the semantic state of an image handle. Invalid and failed handles report Error; terminal states
-// remain stable across repeated queries.
+// Returns how far loading `handle` has got.
+//
+// A handle that is 0 or whose load failed reports `FlImageStatus_Error`. A failed load keeps reporting it.
 FL_API FlImageStatus fl_image_status(FlImageHandle handle);
-// Re-prioritize an image load that is still in flight. A view raises the images it is actually showing so
-// they decode ahead of work queued earlier for content that has since scrolled away. No-op once the load
-// has finished or if the handle is invalid.
+// Changes how urgently a load that is still running is decoded.
+//
+// Does nothing if `handle` is 0.
 FL_API void fl_image_set_load_priority(FlImageHandle handle, FlImageLoadPriority priority);
 
 

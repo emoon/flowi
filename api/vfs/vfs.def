@@ -2,8 +2,9 @@
 
 extern opaque FlVfsMount
 
-/// Mount readiness, as reported by fl_vfs_mount_get_status. The driver-side FlVfsStatus
-/// carries the detailed error codes.
+/// The readiness of a mount, as returned by `Vfs::fl_vfs_mount_get_status`.
+///
+/// `VfsStatus` has the detailed error codes.
 enum VfsMountStatus {
     /// Mount operation in progress.
     Pending,
@@ -13,28 +14,35 @@ enum VfsMountStatus {
     Error,
 }
 
-/// Async operation priority. Maps to the job system priority.
+/// The priority of an async operation, set with `Vfs::fl_vfs_set_priority`.
 enum VfsLoadPriority {
     /// Background or prefetch work, run when workers are idle.
     Low = 0,
-    /// Default priority.
+    /// The default priority.
     Normal = 1,
     /// User-visible content.
     High = 2,
-    /// Highest priority (maps to High in the job system).
+    /// The same as `VfsLoadPriority::High` in the job system.
     Highest = 3,
 }
 
-/// Detailed mount error code: the status field of VfsMountResult. Check for
-/// Success before using the returned mount pointer.
+/// Why a mount failed, or `VfsMountErrorStatus::Success`.
+///
+/// This is `VfsMountResult.status`. Check it before you use `VfsMountResult.mount`.
 enum VfsMountErrorStatus {
     /// Mount succeeded.
     Success = 0,
     /// Source path is empty or invalid.
     InvalidPath,
     /// No VFS plugin available to handle the source.
+    ///
+    /// `Vfs::fl_vfs_mount_with_options` does not return it. A mount that cannot be resolved ends as
+    /// `VfsMountStatus::Error`.
     PluginNotFound,
     /// Plugin failed to mount (permission, not found, etc.).
+    ///
+    /// `Vfs::fl_vfs_mount_with_options` does not return it. A mount that cannot be resolved ends as
+    /// `VfsMountStatus::Error`.
     MountFailed,
     /// Memory allocation failed.
     OutOfMemory,
@@ -42,109 +50,136 @@ enum VfsMountErrorStatus {
     NotInitialized,
 }
 
-/// Result of a mount operation: a mount handle plus a detailed status. Check
-/// status == FlVfsMountErrorStatus_Success before using mount.
+/// The outcome of `Vfs::fl_vfs_mount_with_options`: a mount and a status.
+///
+/// Use `VfsMountResult.mount` only if `VfsMountResult.status` is `VfsMountErrorStatus::Success`.
 struct VfsMountResult {
-    /// Mount handle (null on error).
+    /// The mount, or null on error.
     mount: *FlVfsMount,
-    /// Success or a specific error code.
+    /// `VfsMountErrorStatus::Success` or the reason the mount failed.
     status: VfsMountErrorStatus,
-    /// Human-readable error message (empty on success).
+    /// A readable error message (empty on success).
     error_message: String,
 }
 
-/// Result of a directory-listing operation. Check success; entries is a
-/// borrowed array of count entries valid until the owning handle is closed.
+/// The outcome of `Vfs::fl_vfs_get_file_list`.
+///
+/// Check `VfsFileList.success` first. The entries and the message are valid until you close the handle.
 struct VfsFileList {
-    /// Array of entries (null on error).
+    /// The entries (null on error).
     entries: *VfsEntry,
-    /// Number of entries (0 on error).
+    /// The number of entries (0 on error).
     count: u32,
-    /// false if the operation failed.
+    /// Whether the listing succeeded.
     success: bool,
-    /// Human-readable error message (empty if success), valid until the
-    /// owning handle is closed.
+    /// A readable error message (empty on success).
     error_message: String,
 }
 
-/// Result of a file-read operation. Check success; data/size are the read
-/// bytes, owned by the VFS and freed on close.
+/// The outcome of `Vfs::fl_vfs_get_data`.
+///
+/// Check `VfsData.success` first. After `Vfs::fl_vfs_mount_read_all_with_options` the bytes belong to the VFS and are
+/// freed when you close the handle. After `Vfs::fl_vfs_read` they are your `buffer`.
 struct VfsData {
-    /// File data (null on error).
+    /// The file data (null on error).
     data: *u8,
-    /// File size in bytes (0 on error).
+    /// The size of the data in bytes (0 on error).
     size: i64,
-    /// false if the operation failed.
+    /// Whether the read succeeded.
     success: bool,
-    /// Human-readable error message (empty if success), valid until the
-    /// owning handle is closed.
+    /// A readable error message (empty on success).
     error_message: String,
 }
 
-/// Mount information reported by fl_vfs_mount_get_info.
+/// Information about a mount, returned by `Vfs::fl_vfs_mount_get_info`.
 struct VfsMountInfo {
-    /// Original mount path.
+    /// The path the mount was created from.
     path: String,
-    /// Mount is ready for operations.
+    /// Whether the mount is ready for operations.
     is_ready: bool,
 }
 
-/// Optional post-processing callback invoked on read data. Receives the raw
-/// buffer, its size, and the caller's opaque user_data; returns the (possibly
-/// transformed) VfsData. A failed read invokes it once with data == null
-/// and size == 0 so it can release what user_data owns; the VfsData it
-/// returns is ignored on that path.
+/// Called with the bytes of a finished read, so you can process them before they are returned.
+///
+/// It gets the buffer, its size and the `user_data` you passed to the read, and returns the `VfsData` to hand out.
+/// If the read fails, it is called once with a null `data` and a `size` of 0, so you can free what `user_data`
+/// owns. The `VfsData` it returns is ignored then.
 callback VfsReadCallback(data: *void, size: i64, user_data: *void) -> VfsData
 
-/// Optional release hook for a read's user_data. Invoked exactly once, after the
-/// read's job has finished and the callback (if any) has run, when the last
-/// reference to the operation goes: at fl_vfs_close or fl_vfs_mount_close once the
-/// job has run, otherwise on the worker as the job ends. Runs on whichever
-/// thread drops that last reference, outside every VFS lock.
+/// Called once to release the `user_data` of a read.
+///
+/// It runs after the read's job has finished and `VfsReadCallback` has run. It runs on the thread that drops the
+/// last reference to the operation, which can be a worker or the thread that calls `Vfs::fl_vfs_close` or
+/// `Vfs::fl_vfs_mount_close`.
 callback VfsReleaseCallback(user_data: *void)
 
-/// Non-blocking virtual filesystem access. All operations are async: the call returns a handle, and
-/// the caller polls fl_vfs_is_ready before reading the result.
+/// Non-blocking access to files, directories and archives.
+///
+/// Every operation is async. A call returns a handle. Poll it with `Vfs::fl_vfs_is_ready`, read the result, and
+/// release the handle with `Vfs::fl_vfs_close`. Start with `Vfs::fl_vfs_mount_with_options` and finish with
+/// `Vfs::fl_vfs_mount_close`.
 #[attributes(service)]
 api Vfs {
-    /// Mount a resource (archive, URL, or directory) with options.
+    /// Mounts a directory, archive or URL and returns the mount.
+    ///
+    /// Check `VfsMountResult.status` before you use the mount.
+    ///
+    /// Success means the mount was created. It resolves the source in the background, so poll
+    /// `Vfs::fl_vfs_mount_is_ready` or `Vfs::fl_vfs_mount_get_status` for `VfsMountStatus::Ready` or
+    /// `VfsMountStatus::Error`.
     fl_vfs_mount_with_options(source_path: String, options: VfsMountOptions) -> VfsMountResult
-    /// Check if a mount is ready for operations (non-blocking).
+    /// Returns true if the mount is ready for operations.
     fl_vfs_mount_is_ready(mount: *FlVfsMount) -> bool
-    /// Get a mount's status.
+    /// Returns the readiness of the mount.
     fl_vfs_mount_get_status(mount: *FlVfsMount) -> VfsMountStatus
-    /// Get a mount's information.
+    /// Returns information about the mount.
     fl_vfs_mount_get_info(mount: *FlVfsMount) -> VfsMountInfo
-    /// Close and clean up a mount.
+    /// Closes the mount and frees its resources.
+    ///
+    /// The handles of the mount's operations stop being valid, so close them first if you still need their results.
     fl_vfs_mount_close(mount: *FlVfsMount)
 
-    /// Read an entire file from within a mount (async). Returns a tracking handle.
+    /// Starts reading a whole file from a mount and returns a handle for it.
+    ///
+    /// `callback` and `release` are optional. `reuse_handle` asks for that handle value, and 0 picks one. The call
+    /// returns 0 if the value is already in use. Get the result with `Vfs::fl_vfs_get_data`.
     fl_vfs_mount_read_all_with_options(mount: *FlVfsMount, relative_path: String, callback: VfsReadCallback, user_data: *void, release: VfsReleaseCallback, reuse_handle: u32) -> u32
 
-    /// Open a file for reading within a mount. Returns a file handle.
+    /// Opens a file in a mount for reading and returns a file handle.
     fl_vfs_mount_open(mount: *FlVfsMount, relative_path: String, flags: u32) -> u32
-    /// Read at most size bytes from an open file into buffer (async, chained
-    /// onto the file handle). The caller keeps buffer alive until the returned
-    /// handle completes. Returns a tracking handle.
+    /// Starts reading at most `size` bytes of an open file into `buffer` and returns a handle for the read.
+    ///
+    /// Keep `buffer` alive until the returned handle is ready. The call returns 0 if `file_handle` is not an open
+    /// file, `buffer` is null or `size` is not positive.
     fl_vfs_read(file_handle: u32, buffer: *void, size: i64) -> u32
 
-    /// List directory contents within a mount (async). Returns a directory handle.
-    /// depth is currently ignored: the listing is always one level.
+    /// Starts listing a directory in a mount and returns a handle for the listing.
+    ///
+    /// The listing is always one level deep. `depth` is ignored. Get the result with `Vfs::fl_vfs_get_file_list`.
     fl_vfs_get_listing(mount: *FlVfsMount, relative_path: String, depth: i32) -> u32
 
-    /// Check if an async operation is complete (non-blocking).
+    /// Returns true if the operation has finished.
+    ///
+    /// It is false for a handle that is not open.
     fl_vfs_is_ready(handle: u32) -> bool
-    /// Block until an async operation completes. A worker thread that calls it keeps
-    /// stealing work while it waits, so it is safe from inside a job body. Never call it
-    /// from the frame loop.
+    /// Blocks the main thread until the operation has finished.
+    ///
+    /// A job worker does not block. It returns at once and logs an error if the operation is still running, so poll
+    /// `Vfs::fl_vfs_is_ready` there. Do not call it from the frame loop.
     fl_vfs_wait(handle: u32)
-    /// Get the data from a completed read operation. Call only after fl_vfs_is_ready.
+    /// Returns the data of a finished read.
+    ///
+    /// Call it only after `Vfs::fl_vfs_is_ready` returns true.
     fl_vfs_get_data(handle: u32) -> VfsData
-    /// Get the file list from a completed directory operation. Call only after
-    /// fl_vfs_is_ready.
+    /// Returns the entries of a finished directory listing.
+    ///
+    /// Call it only after `Vfs::fl_vfs_is_ready` returns true.
     fl_vfs_get_file_list(handle: u32) -> VfsFileList
-    /// Update the priority of a pending operation.
+    /// Changes the priority of a pending operation.
     fl_vfs_set_priority(handle: u32, priority: VfsLoadPriority)
-    /// Close a handle and clean up its resources.
+    /// Closes the handle and frees what it owns.
+    ///
+    /// Closing a `Vfs::fl_vfs_read` handle that is still running waits for it on the main thread. On a job worker
+    /// the handle stays open.
     fl_vfs_close(handle: u32)
 }

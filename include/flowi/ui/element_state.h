@@ -10,33 +10,35 @@
 extern "C" {
 #endif
 
-// Per-element interaction and geometry state, returned by value from Input::get_element_state
-// for any laid-out element. Works for a plain area as well as a widget: pos/size are the
-// element's rect, found/visible its layout presence, and hot/focused/active (with
-// their _t animation interpolators) its interaction state. A non-widget area reports the
-// rect plus visible/hot/found and zeros for the rest. The rect is in physical px; the Rust
-// binding divides by the absolute UI scale to report logical px, the same space mouse_position
-// and the Painter use.
+// The position, size and interaction state of a laid-out element.
+//
+// This is returned by `fl_input_get_element_state`. It has a value for an element that was given `fl_item_behavior` or
+// `fl_input_scroll_target`, or that is a widget, a scroll area or a list. A plain container from `fl_layout_start` has
+// none, and `found` is false. If the element is not a widget, only the rect and `found`, `visible` and `hot` are
+// set, and the rest are zero.
+//
+// The rect is in physical pixels in C. The Rust binding divides it by the UI scale, so it is in logical pixels, the
+// same space as `fl_input_mouse_position` and the painter.
 typedef struct FlElementState {
-    // Element origin (physical px; the Rust binding reports logical px).
+    // The top left corner of the element (physical pixels in C, logical pixels in Rust).
     FlVec2 pos;
-    // Element size (physical px; the Rust binding reports logical px).
+    // The size of the element (physical pixels in C, logical pixels in Rust).
     FlVec2 size;
-    // Hover animation phase, 0..1.
+    // The hover animation, from 0 to 1.
     float hot_t;
-    // Active/press animation phase, 0..1.
+    // The press animation, from 0 to 1.
     float active_t;
-    // Focus animation phase, 0..1.
+    // The focus animation, from 0 to 1.
     float focused_t;
-    // The element was present in this frame's layout state (else the rect/flags are zero).
+    // Whether the element has a state this frame. If false, the rect and flags are zero.
     bool found;
-    // The element is within the visible/clip region.
+    // Whether the element is inside the visible area.
     bool visible;
-    // The cursor is over this element (flowi's own hit-test).
+    // Whether the cursor is over the element.
     bool hot;
-    // The element holds keyboard/gamepad focus.
+    // Whether the element has keyboard or gamepad focus.
     bool focused;
-    // The element is being pressed/activated.
+    // Whether the element is being pressed.
     bool active;
 } FlElementState;
 

@@ -12,10 +12,15 @@
 extern "C" {
 #endif
 
-// Radio group widget: exclusive single-choice selection across a set of options.
-// Emit a radio group over options; selecting one writes its index to `*selected_index`, clearing the
-// others. config selects layout and colors. Returns a Signal whose .clicked is set the frame the
-// selection changes. Call inside a frame callback.
+// A group of radio buttons where exactly one option is selected.
+//
+// Call it inside a frame callback.
+// Draws one radio button per option and returns a `FlSignal` for the group.
+//
+// `selected_index` is the index into `options`. It is reset to 0 if it is out of range, and it is
+// updated when the user picks another option. `FlSignal.clicked` is set on the frame the selection changes.
+//
+// If `options` is empty or `selected_index` is null, nothing is drawn and the returned `FlSignal` is empty.
 FL_API FlSignal fl_radio_group_impl(const FlString* options, uint32_t options_size, int32_t* selected_index, FlRadioConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

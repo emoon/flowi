@@ -10,46 +10,46 @@
 extern "C" {
 #endif
 
-// Vertical alignment of a text run within its line box. Baseline is the default.
+// How a text run is aligned vertically within its line box.
 typedef enum FlTextVAlign {
-    // Text baseline at the bottom of the bounding box (the C zero default).
+    // The baseline at the bottom of the box (what a zeroed config gives).
     FlTextVAlign_Baseline = 0,
-    // Text top (ascender) at the top of the bounding box.
+    // The top of the text at the top of the box.
     FlTextVAlign_Top = 1,
-    // Text vertically centered.
+    // The text centered in the box.
     FlTextVAlign_Center = 2,
-    // Text bottom (descender) at the bottom of the bounding box.
+    // The bottom of the text at the bottom of the box.
     FlTextVAlign_Bottom = 3,
 } FlTextVAlign;
 
-// How a single-line text run that overflows its box is handled. Clip is the default
-// (hard-clip); Elide truncates to the longest fitting prefix and appends an ellipsis (U+2026).
+// What happens to a single line of text that is wider than its box.
 typedef enum FlOverflow {
-    // Hard-clip: the run keeps its full width and the remainder is scissored away (the C zero default).
+    // The text keeps its full width and the part outside the box is cut off (the default).
     FlOverflow_Clip = 0,
-    // Truncate to the longest fitting prefix and append an ellipsis (U+2026).
+    // The text is cut to the longest start that fits and ends with an ellipsis (U+2026).
     FlOverflow_Elide = 1,
 } FlOverflow;
 
-// Per-call styled-text configuration: font, size, color, spacing, vertical alignment, and wrap
-// control. A zero field means "use the fallback" (font_id = 0 → active font, font_size = 0 →
-// font default size); color has no fallback: a zeroed color is transparent, so set it explicitly.
+// The options for `fl_text_styled`.
+//
+// A zero font or size uses the fallback named on the field. The color has no fallback: a zeroed color is
+// transparent, so set it.
 typedef struct FlTextConfig {
-    // Font to use (0 = active font).
+    // The font to use (0 uses the active font).
     uint32_t font_id;
-    // Pixel size (0 = font's default size).
+    // The size in pixels (0 uses the font's default size).
     uint16_t font_size;
-    // Text color (zeroed = transparent).
+    // The text color.
     FlColor color;
-    // Extra spacing between glyphs, in px.
+    // The extra space between glyphs, in pixels.
     uint16_t letter_spacing;
-    // Line height in px (0 = font metric).
+    // The line height in pixels (0 uses the font's line height).
     uint16_t line_height;
-    // Vertical alignment within the line box (0 = baseline).
+    // How the text is aligned vertically within its line box.
     FlTextVAlign valign;
-    // Disable wrapping (single line) when true.
+    // Whether to keep the text on one line.
     bool no_wrap;
-    // Single-line overflow handling (0 = clip).
+    // What happens to a single line that overflows its box.
     FlOverflow overflow;
 } FlTextConfig;
 

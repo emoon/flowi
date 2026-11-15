@@ -12,20 +12,29 @@
 extern "C" {
 #endif
 
-// Controls properties captured in the active UI frame envelope. Frame opacity affects UI content only;
-// full-screen background composition remains unaffected.
-// Copy bytes into the active frame arena and return the frame-lifetime string.
+// Per-frame helpers: frame-lifetime strings, the frame opacity, the frame time and the screen size.
+//
+// Call these from inside a frame, for example in an `FlAppFrameFn`.
+// Copies `len` bytes at `ptr` into the frame and returns them as a string.
+//
+// The string is valid until the end of the frame.
 FL_API FlString fl_frame_str(const char* ptr, size_t len);
-// Reserve count uninitialized frame-lifetime string slots in the active frame arena. The array
-// counterpart of str, for the widgets taking a counted string array; the caller fills every slot.
+// Reserves `count` empty string slots in the frame and returns them.
+//
+// Use it for the widgets that take an array of strings. You must fill every slot. It returns null if `count` is
+// 0.
 FL_API FlString* fl_frame_str_array(uint32_t count);
-// Set frame-wide UI opacity (0 = transparent, 255 = opaque; default 255). Persists until changed.
+// Sets the opacity of the whole UI, from 0 (transparent) to 255 (opaque, the default).
+//
+// It stays until you change it. The background is not affected.
 FL_API void fl_frame_set_alpha(uint8_t alpha);
-// Seconds elapsed since the previous frame. The frame-rate-independent step an animation or smooth-scroll
-// integrator multiplies into its per-second rate.
+// Returns the seconds since the previous frame.
+//
+// Multiply it into a per-second rate to animate independently of the frame rate.
 FL_API float fl_frame_delta_time(void);
-// Size of the drawable screen this frame, in logical pixels. The viewport a full-screen layout sizes itself
-// against, and the extent a virtualizing container measures its visible window from.
+// Returns the size of the drawable screen in logical pixels.
+//
+// Use it to size a full-screen layout.
 FL_API FlVec2 fl_frame_screen_size(void);
 
 

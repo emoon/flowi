@@ -10,11 +10,16 @@
 extern "C" {
 #endif
 
-// Floating elements: start opens one, configure applies its FloatingConfig, and it is
-// closed with UiLayout::end.
-// Open a floating element identified by id. Closed with UiLayout::end.
+// An element that floats above the layout, such as a modal dialog, popup or tooltip.
+//
+// Call `fl_floating_start`, then `fl_floating_configure`. Draw the contents, then close it with `fl_layout_end`.
+// Opens a floating element with the given id.
+//
+// Each id must be unique within a frame. Close the element with `fl_layout_end`.
 FL_API void fl_floating_start(FlLayoutId id);
-// Apply config to the currently-open floating element.
+// Applies `config` to the floating element opened last.
+//
+// Call this once, right after `fl_floating_start`.
 FL_API void fl_floating_configure(FlFloatingConfig config);
 
 #define fl_floating_configure_impl(config) (fl_floating_configure)(config)

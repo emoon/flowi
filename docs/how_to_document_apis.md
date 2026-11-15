@@ -20,7 +20,8 @@ Most items need only the summary line. Stop when the caller has what they need.
 
 ### Functions
 
-The summary starts with a third-person verb and says what the call does and returns.
+The summary starts with a third-person verb and says what the call does and returns. For a call that returns a
+bool, write "Returns true if ...", as std does, and not "Returns whether ...".
 
 ```
 /// Starts a list and returns the range of rows to draw.
@@ -34,7 +35,11 @@ The summary starts with a third-person verb and says what the call does and retu
 
 ### Structs
 
-The summary is a noun phrase. The next paragraph says where the value comes from or where it goes.
+The summary is a noun phrase. The next paragraph says where the value comes from or where it goes. An enum
+summary follows the same rule.
+
+A clause that starts with "How", "What", "When" or "Whether" also works as a summary for a struct, an enum or a
+field, when it is shorter than the noun phrase: "How an axis is sized."
 
 ```
 /// The outcome of a list for one frame.
@@ -96,6 +101,9 @@ to repeat it.
 - A backticked word that is the name of a type is always translated, so do not backtick such a word when you
   mean something else.
 - Write "null" for a pointer that may be left out. A Rust caller passes `None`.
+- Write true, false and null as plain words, without backticks.
+- Put a failure case or a requirement in a plain paragraph, such as "`value` must not be null." Do not use the
+  `# Panics` or `# Errors` headings from rustdoc. They would show up as text in the C headers.
 - Do not build a sentence on how C represents a value, such as "if `TreeResult.toggled_id` is not 0", when
   Rust has another type for it. Say what the value means: "if the `TreeResult` reports a toggled row". The
   comment on the field itself can still say how to read it.

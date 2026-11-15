@@ -11,76 +11,87 @@
 extern "C" {
 #endif
 
-// Kinds of file system change, reported as a bitmask in FlFileChange::change_types.
+// A kind of file system change.
+//
+// `FlFileChange.change_types` combines them as a bitmask.
 typedef enum FlFileChangeType {
     FlFileChangeType_None = 0,
-    // File or directory was created.
+    // The file or directory was created.
     FlFileChangeType_Created = 1,
-    // File or directory was modified.
+    // The file or directory was modified.
     FlFileChangeType_Modified = 2,
-    // File or directory was deleted.
+    // The file or directory was deleted.
     FlFileChangeType_Deleted = 4,
-    // File or directory was renamed.
+    // The file or directory was renamed.
     FlFileChangeType_Renamed = 8,
-    // File or directory was moved.
+    // The file or directory was moved.
     FlFileChangeType_Moved = 16,
 } FlFileChangeType;
 
 typedef struct FlArena FlArena;
 
-// What a watcher should report, passed to FileWatcher::start.
+// What a watcher reports, passed to `fl_file_watcher_start`.
 typedef struct FlFileWatcherConfig {
-    // Watch subdirectories too.
+    // Whether to watch subdirectories too.
     bool recursive;
-    // Report changes to files.
+    // Whether to report changes to files.
     bool watch_files;
-    // Report changes to directories.
+    // Whether to report changes to directories.
     bool watch_directories;
-    // Maximum changes to buffer between polls (0 = platform default).
+    // The most changes to keep between calls to `fl_file_watcher_take_changes` (0 uses 1000).
     uint32_t max_changes;
 } FlFileWatcherConfig;
 
-// One file system change event. Paths are borrowed from the batch's arena and stay valid until that
-// arena is reset.
+// One file system change.
+//
+// The paths belong to the arena passed to `fl_file_watcher_take_changes` and stay valid until you reset it.
 typedef struct FlFileChange {
-    // Full path to the changed file or directory.
+    // The full path of the changed file or directory.
     FlString path;
-    // The previous path for a rename or move; empty otherwise.
+    // The previous path after a rename or move, and empty otherwise.
     FlString old_path;
-    // Bitmask of FileChangeType values.
+    // The kinds of change, as a bitmask of `FlFileChangeType` values.
     FlFileChangeType change_types;
-    // When the change occurred, in microseconds since the epoch.
+    // When the change happened, in microseconds since the epoch.
     uint64_t timestamp;
-    // True when the change affects a directory rather than a file.
+    // Whether the change is to a directory rather than a file.
     bool is_directory;
 } FlFileChange;
 
-// A batch of pending changes taken from a watcher: a counted array allocated in the caller's arena.
-// Valid until that arena is reset.
+// The changes `fl_file_watcher_take_changes` took from a watcher.
+//
+// The array is allocated in the arena you passed to `fl_file_watcher_take_changes` and stays valid until you reset it.
 typedef struct FlFileChanges {
-    // The changes (null when count is 0).
+    // The changes, or null if there are none.
     const FlFileChange* changes;
-    // Number of entries in changes.
+    // The number of entries in `FlFileChanges.changes`.
     uint32_t count;
-    // True when the watcher dropped changes because its buffer filled between polls.
+    // Whether the watcher dropped changes because more than `FlFileWatcherConfig.max_changes` arrived between calls.
     bool has_overflow;
 } FlFileChanges;
 
-// Platform-independent file system monitoring for a host that reloads content when it changes on disk.
+// A watcher that reports file system changes under a path.
 //
-// Start a watcher on a directory, poll has_changes each frame, and take the pending batch into a
-// scratch arena when there is something to look at. Taking a batch clears it, so each change is reported
-// once.
-// Start watching path. Returns a watcher handle, or 0 when the path cannot be watched or
-// config is null.
+// Call `fl_file_watcher_start` on a file or directory and poll `fl_file_watcher_has_changes` each frame. When it returns
+// true, call `fl_file_watcher_take_changes` to get the pending changes. Taking them clears them, so each change is
+// reported once. Call `fl_file_watcher_stop` when you are done.
+// Starts watching `path` and returns a watcher handle.
+//
+// Returns 0 if `config` is null, `path` does not exist, the platform cannot watch it or too many watchers
+// are running.
 FL_API uint32_t fl_file_watcher_start(FlString path, const FlFileWatcherConfig* config);
-// Stop watching and release the watcher's resources. No-op on a 0 handle.
+// Stops the watcher and releases its resources.
+//
+// Passing 0 does nothing.
 FL_API void fl_file_watcher_stop(uint32_t handle);
-// True while the watcher is alive and its path still exists.
+// Returns true if the watcher is still running.
 FL_API bool fl_file_watcher_is_active(uint32_t handle);
-// True when changes are pending. Allocates nothing, so it is the cheap per-frame poll.
+// Returns true if changes are waiting to be taken.
 FL_API bool fl_file_watcher_has_changes(uint32_t handle);
-// Take the pending changes into arena and clear them from the watcher.
+// Takes the pending changes into `arena` and clears them from the watcher.
+//
+// Several changes to one path in quick succession are reported as one entry. A moved file is also reported as
+// modified. If the handle is not valid, the returned `FlFileChanges` is empty.
 FL_API FlFileChanges fl_file_watcher_take_changes(uint32_t handle, FlArena* arena);
 
 

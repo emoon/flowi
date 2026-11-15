@@ -6,55 +6,55 @@
 extern "C" {
 #endif
 
-// Spacing token (logical pixels): a consistent scale for gaps, padding and margins.
+// A gap, padding or margin size, in logical pixels.
 typedef enum FlSpacing {
     FlSpacing_None = 0,
-    // Extra small: tight spacing (icon gaps).
+    // Extra small.
     FlSpacing_XS = 4,
-    // Small: compact layouts.
+    // Small.
     FlSpacing_SM = 8,
-    // Medium: default gap between elements.
+    // Medium.
     FlSpacing_MD = 16,
-    // Large: section spacing.
+    // Large.
     FlSpacing_LG = 24,
-    // Extra large: major section breaks.
+    // Extra large.
     FlSpacing_XL = 32,
 } FlSpacing;
 
-// Corner radius token (logical pixels): a consistent rounding scale; Full is the pill/circle radius.
+// A corner radius, in logical pixels.
 typedef enum FlRadius {
     // Square corners.
     FlRadius_None = 0,
-    // Small: subtle rounding (inputs, cards).
+    // Small.
     FlRadius_SM = 4,
-    // Medium: default for buttons.
+    // Medium.
     FlRadius_MD = 8,
-    // Large: prominent cards, dialogs.
+    // Large.
     FlRadius_LG = 12,
-    // Extra large: hero cards.
+    // Extra large.
     FlRadius_XL = 16,
-    // Pill shape: tags, toggle pills.
+    // Fully rounded ends, for pills and circles.
     FlRadius_Full = 999,
 } FlRadius;
 
-// Widget height token (logical pixels, 1080p reference): consistent sizing for interactive elements.
+// A widget height, in logical pixels.
 typedef enum FlWidgetHeight {
-    // Small: compact buttons, chips (WCAG AA touch target).
+    // Small.
     FlWidgetHeight_SM = 44,
-    // Medium: default button height.
+    // Medium.
     FlWidgetHeight_MD = 60,
-    // Large: prominent buttons, list items.
+    // Large.
     FlWidgetHeight_LG = 80,
 } FlWidgetHeight;
 
-// Border width token (logical pixels).
+// A border width, in logical pixels.
 typedef enum FlBorderWidth {
     FlBorderWidth_None = 0,
-    // Default border.
+    // Thin.
     FlBorderWidth_Thin = 1,
-    // Focus rings, emphasized borders.
+    // Medium.
     FlBorderWidth_Medium = 2,
-    // Strong visual separation.
+    // Thick.
     FlBorderWidth_Thick = 4,
 } FlBorderWidth;
 

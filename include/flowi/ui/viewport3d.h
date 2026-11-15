@@ -14,8 +14,9 @@
 extern "C" {
 #endif
 
-// How a mesh's indices are grouped into primitives. Fixed at creation: a mesh is triangles or lines for
-// its whole life, because the index array only means one of the two.
+// How the indices of a mesh are grouped into primitives.
+//
+// A mesh keeps its topology for its whole life.
 typedef enum FlMeshTopology {
     // Three indices per triangle.
     FlMeshTopology_Triangles = 0,
@@ -23,69 +24,92 @@ typedef enum FlMeshTopology {
     FlMeshTopology_Lines = 1,
 } FlMeshTopology;
 
-// Handle to a retained mesh. Backend-shared: one mesh draws from any viewport.
+// A handle to a mesh created by `fl_mesh_create` or `fl_mesh_create_lines`.
+//
+// A mesh belongs to the render backend, so you can draw it in any viewport.
 typedef uint32_t FlMeshHandle;
 #define FL_MESH_HANDLE_INVALID 0
 
-// One mesh vertex, in the single fixed vertex format the 3D API accepts: position, texture
-// coordinate, and a vertex color that multiplies whatever the draw samples.
+// A vertex of a mesh.
+//
+// Every mesh uses this one vertex format.
 typedef struct FlMeshVertex {
-    // x position in model space
+    // The x position, in model space.
     float x;
-    // y position in model space
+    // The y position, in model space.
     float y;
-    // z position in model space
+    // The z position, in model space.
     float z;
-    // u texture coordinate, addressing the whole texture (a mesh texture is never atlased)
+    // The u texture coordinate. It addresses the whole texture.
     float u;
-    // v texture coordinate
+    // The v texture coordinate.
     float v;
-    // per-vertex color, multiplied with the sampled texel
+    // The vertex color. It is multiplied with the texel sampled from the texture.
     FlColor color;
 } FlMeshVertex;
 
-// Retained geometry, created once and drawn from any Viewport3d. Vertices use the one fixed format
-// (MeshVertex); indices are 16-bit and address vertices. Triangles and lines are the same resource with
-// different index grouping: create makes one of the first, create_lines one of the second.
-// Create a triangle mesh from vertices and 16-bit indices (three per triangle). The caller may free both
-// arrays after this returns. Returns MeshHandle::INVALID when the active backend has no 3D
-// support or the geometry is malformed.
+// Geometry that you create once and draw many times.
+//
+// Create a mesh from `FlMeshVertex` values and 16-bit indices. Use `fl_mesh_create` for triangles and
+// `fl_mesh_create_lines` for line segments. Draw it with `fl_viewport3d_draw_mesh` or `fl_viewport3d_draw_lines`, and
+// call `fl_mesh_destroy` when you no longer need it.
+// Creates a triangle mesh and returns its handle.
+//
+// `indices` holds three indices per triangle, each the position of a vertex in `vertices`. Both arrays are
+// copied, so you can free them after the call.
+//
+// It returns the invalid handle (0) if either array is empty, if the number of indices is not a multiple of
+// three, if the render backend has no 3D support, or if the backend cannot hold another mesh.
 FL_API FlMeshHandle fl_mesh_create(const FlMeshVertex* vertices, uint32_t vertices_size, const uint16_t* indices, uint32_t indices_size);
-// Create a line mesh (wireframes, voxel boxes, gizmos, camera paths) from vertices and 16-bit
-// indices (two per segment). Lines are drawn with Viewport3d::draw_lines, take their color from the
-// vertices, and are never textured. Same lifetime and sharing rules as create.
+// Creates a line mesh and returns its handle.
+//
+// `indices` holds two indices per line segment. Lines take their color from the vertices and are never
+// textured. Draw them with `fl_viewport3d_draw_lines`.
+//
+// It returns the invalid handle (0) if either array is empty, if the number of indices is odd, if the render
+// backend has no 3D support, or if the backend cannot hold another mesh.
 FL_API FlMeshHandle fl_mesh_create_lines(const FlMeshVertex* vertices, uint32_t vertices_size, const uint16_t* indices, uint32_t indices_size);
-// Destroy a mesh and release its backend buffers. The handle is invalid afterwards: drawing it renders
-// nothing until a later create reuses its slot and hands the same value back out, at which point the
-// stale handle draws the new mesh. Drop your copies when you destroy one.
+// Destroys a mesh and frees its buffers.
+//
+// Do not use the handle afterwards. A later `fl_mesh_create` can hand out the same value for a new mesh, and a
+// stale copy of the handle then draws that mesh.
 FL_API void fl_mesh_destroy(FlMeshHandle mesh);
 
-// A 3D scene rendered into a regular layout element: a view-projection matrix plus depth-tested
-// triangle draws, rasterized by the render backend into the element's own color+depth target, which
-// the UI then samples as an ordinary image.
+// A 3D scene that is drawn into a layout element.
 //
-// Bracket a frame's draws with begin/end. begin returns the element's size in device pixels so
-// the caller can build its projection matrix; that size is the previous frame's, because layout runs
-// after the frame callback, so it is zero on an element's first frame and one frame stale across a
-// resize. flowi does no lighting, materials or cameras: the shading is fixed and unlit, and camera
-// math, picking and gizmos live in the caller. A backend without a 3D path draws a placeholder.
-// Declare the 3D viewport element id and open its draw list. Returns the element's device-pixel
-// size from the previous frame ((0, 0) on its first). Call inside a frame callback and pair with end.
+// Each frame, call `fl_viewport3d_begin` with the id of the element. Use the size it returns to build a
+// view-projection matrix, and pass the matrix to `fl_viewport3d_set_view_projection`. Then call
+// `fl_viewport3d_draw_mesh` and `fl_viewport3d_draw_lines` for each mesh, and finish with `fl_viewport3d_end`.
+//
+// Flowi has no cameras, lights or materials. Shading is fixed and unlit, and you do the camera math, the picking
+// and the gizmos yourself. If the render backend has no 3D support, the element shows a flat placeholder.
+// Starts the viewport for an element and returns the size to render at, in device pixels.
+//
+// The size is the one the element was laid out at on the previous frame. It is (0, 0) on the first frame and
+// one frame behind after a resize. The size is also (0, 0) if another `fl_viewport3d_begin` is still open, or
+// if the app already has 8 live viewports. Call `fl_viewport3d_end` when you have made your draws.
 FL_API FlVec2 fl_viewport3d_begin(FlLayoutId id);
-// Set the view-projection matrix applied to every following draw in this viewport: 16 floats,
-// column-major, the same convention `gl_Position = matrix * vec4(pos, 1.0)` implies.
+// Sets the view-projection matrix for the draws that follow in this viewport.
+//
+// `matrix` holds 16 floats in column-major order, so a vertex position `pos` is placed at
+// `matrix * vec4(pos, 1.0)`. Without a call, the matrix is the identity. Anything but 16 floats is ignored and
+// logs an error.
 FL_API void fl_viewport3d_set_view_projection(const float* matrix, uint32_t matrix_size);
-// Draw a triangle mesh with depth testing, modulating its vertex colors by texture sampled with
-// filter. Pass ImageFilter::Nearest to see a lightmap's individual texels rather than a smoothed
-// blend. Pass ImageHandle::INVALID to draw with vertex colors alone. Draws render in submission order
-// with no sorting; a textured draw needs a dedicated image (Image::create_dedicated), because mesh UVs
-// address the whole texture.
+// Draws a triangle mesh with depth testing.
+//
+// The vertex colors are multiplied with the texels of `texture`, sampled with `filter`. Pass the invalid
+// handle (0) to draw with the vertex colors only. A texture must come from
+// `fl_image_create_dedicated`, because the texture coordinates address the whole texture.
+//
+// Draws are rendered in the order you make them, and a viewport takes at most 256 per frame. The rest are
+// dropped and an error is logged.
 FL_API void fl_viewport3d_draw_mesh(FlMeshHandle mesh, FlImageHandle texture, FlImageFilter filter);
-// Draw a line mesh (Mesh::create_lines) in its vertex colors, untextured. depth_test false makes an
-// annotation stay visible through the geometry it annotates; true lets the scene occlude it. Lines are
-// one pixel wide and draw in submission order like every other draw.
+// Draws a line mesh in its vertex colors, one pixel wide.
+//
+// With `depth_test` false, the lines stay visible through the geometry. With true, the scene can hide them.
+// The draw counts toward the same per-frame limit as `fl_viewport3d_draw_mesh`.
 FL_API void fl_viewport3d_draw_lines(FlMeshHandle mesh, bool depth_test);
-// Close the draw list opened by begin and submit it to the backend.
+// Ends the viewport started by `fl_viewport3d_begin` and sends its draws to the render backend.
 FL_API void fl_viewport3d_end(void);
 
 

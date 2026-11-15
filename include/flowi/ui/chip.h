@@ -12,10 +12,13 @@
 extern "C" {
 #endif
 
-// Chip widget: a small tag/badge toggle with a soft variant for a subtler look than a pill.
-// Emit a chip labelled label bound to `*selected`; activation toggles the bool. config selects
-// colors and id overrides. Returns its interaction Signal (.clicked the frame it toggles). Call
-// inside a frame callback.
+// A small toggle tag with a softer look than a pill.
+//
+// Call it inside a frame callback.
+// Draws a chip with a label and returns its `FlSignal`.
+//
+// A click flips `selected`, and `FlSignal.clicked` is set on the frame it flips. A selected chip has a
+// stronger tint. If `selected` is null, nothing is drawn and the returned `FlSignal` is empty.
 FL_API FlSignal fl_chip_impl(FlString label, bool* selected, FlWidgetConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

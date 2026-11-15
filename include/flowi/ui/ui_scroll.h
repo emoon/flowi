@@ -10,10 +10,15 @@
 extern "C" {
 #endif
 
-// Scroll-area API: area_begin opens a scroll area and area_end closes it.
-// Open a scroll area identified by id, applying config. Pair with area_end.
+// A container that clips its content and scrolls it with the mouse wheel.
+//
+// Call `fl_scroll_area_begin`, draw the content, then call `fl_scroll_area_end`. Scroll areas can nest, and the wheel
+// scrolls the innermost one under the cursor.
+// Opens a scroll area with the given id and `config`.
+//
+// Each id must be unique within a frame. Close the area with `fl_scroll_area_end`.
 FL_API void fl_scroll_area_begin(FlLayoutId id, FlScrollAreaConfig config);
-// Close the most recently opened scroll area.
+// Closes the scroll area opened last.
 FL_API void fl_scroll_area_end(void);
 
 #define fl_scroll_area_begin_impl(id, config) (fl_scroll_area_begin)(id, config)

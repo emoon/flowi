@@ -1,22 +1,26 @@
-/// Built-in toolkit icon. flowi's own chrome renders from this set: the checkbox draws Checkmark,
-/// the dropdown draws ChevronDown, error states draw Warning.
+/// An icon from the built-in set that the toolkit draws in its own widgets.
 enum Icon {
+    /// The mark drawn in a checked checkbox.
     Checkmark = 0,
+    /// The arrow drawn at the right of a dropdown.
     ChevronDown = 1,
+    /// A warning sign.
     Warning = 2,
-    /// Number of icons (size sentinel, not an icon).
+    /// The number of icons. It is not an icon.
     Count = 3,
 }
 
 extern opaque FlVfsMount
 
-/// The built-in toolkit icon registry: load the standard chrome icon set from a VFS mount, then fetch a
-/// realized image handle per Icon.
+/// The built-in icons, which you load once from a VFS mount.
+///
+/// Load the icons first, then get the image handle of each icon you want to draw.
 #[frame_context]
 api Icon {
-    /// Get the image handle for a standard toolkit icon (the FL_IMAGE_HANDLE_INVALID sentinel if not
-    /// loaded or icon is out of range).
+    /// Returns the image handle of `icon`, or an invalid handle if `icon` is out of range.
     get(icon: Icon) -> ImageHandle
-    /// Load the standard toolkit icon set (checkmark, chevron, warning) from mount.
+    /// Starts loading the built-in icons from `mount`.
+    ///
+    /// Does nothing if `mount` is null.
     load(mount: *FlVfsMount)
 }

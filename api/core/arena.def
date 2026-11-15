@@ -1,69 +1,96 @@
 #[module(arena)]
 
-/// Opaque region allocator. Callers hold it by pointer only.
+/// A region allocator that hands out memory by moving a position forward.
+///
+/// You only hold an arena by pointer. Memory from an arena is not freed one allocation at a time: rewind the
+/// arena, end a `TempArena` scope or destroy the arena to release it.
 #[attributes(Opaque)]
 struct Arena {}
 
-/// A savepoint in an arena. Restoring it frees everything allocated after it (a temp/scratch scope).
-/// Passed by value.
+/// A saved position in an arena.
+///
+/// Ending the scope with `Arena::fl_arena_temp_end` or `Arena::fl_arena_scratch_end` frees everything allocated
+/// from the arena after the position was saved.
 struct TempArena {
-    /// The arena the savepoint belongs to.
+    /// The arena the position belongs to.
     arena: *Arena,
-    /// The arena's byte offset when the savepoint was taken.
+    /// The byte offset in the arena when the position was saved.
     pos: u64,
 }
 
-/// The bump/region allocator.
+/// Arenas, and the start and stop of flowi's core services.
+///
+/// An arena reserves address space up front and commits memory as it is used. Allocations that run past the
+/// reserved size stop the program. For short lived memory, use a scratch arena scope: call
+/// `Arena::fl_arena_scratch_begin`, allocate, and call `Arena::fl_arena_scratch_end` with the scope it returned.
 #[attributes(service)]
 api Arena {
-    /// Initialize flowi's process-wide core services and return the main arena. Idempotent: a
-    /// second call returns the live arena and leaves the running services alone. fl_app_create
-    /// calls this itself, so an app only calls it directly to pick a job_threads count or to
-    /// reach the arena before there is an application.
+    /// Starts flowi's core services and returns the main arena.
+    ///
+    /// `job_threads` is the number of job threads to start. Calling it again returns the same arena and leaves the
+    /// running services alone. `App::create` calls it for you, so call it yourself only to choose `job_threads`
+    /// or to get the arena before you create an app.
     fl_init(job_threads: i32) -> *Arena
-    /// Shut flowi's process-wide core services down and release the arenas fl_init reserved:
-    /// the main arena it returned and the calling thread's scratch arenas. Every flowi object
-    /// must already be gone, and the returned arena is dangling afterwards. A no-op when the
-    /// services are already down; a later fl_init brings them back up.
+    /// Stops flowi's core services and releases the main arena and the scratch arenas of the calling thread.
+    ///
+    /// Every flowi object must be destroyed first. The arena returned by `Arena::fl_init` is invalid afterwards.
+    /// Does nothing if the services are not running, and `Arena::fl_init` starts them again.
     fl_destroy()
 
-    /// Reserve a new arena (reserved_size virtual bytes, committed on demand); file/line identify
-    /// the allocation site.
+    /// Reserves a new arena of `reserved_size` bytes of address space and returns it.
+    ///
+    /// Memory is committed as it is used. `file` and `line` name the place that created the arena.
     fl_arena_create(reserved_size: u64, file: *const char, line: i32) -> *Arena
-    /// Destroy an arena and free all its memory.
+    /// Destroys `arena` and frees all its memory.
     fl_arena_destroy(arena: *Arena)
-    /// Reset an arena to empty, reusing its memory (per-frame pattern).
+    /// Frees everything allocated from `arena` and keeps its memory for reuse, for example once per frame.
     fl_arena_rewind(arena: *Arena)
 
-    /// Allocate raw bytes (thread-safe, CAS).
+    /// Allocates `size` bytes aligned to `alignment` and returns them.
+    ///
+    /// It is safe to call from several threads at once. `alignment` must be a power of two.
     fl_arena_alloc_raw(arena: *Arena, size: u64, alignment: u64) -> *void
-    /// Allocate zero-initialized bytes (thread-safe, CAS).
+    /// Allocates `size` bytes aligned to `alignment`, filled with zeros.
+    ///
+    /// It is safe to call from several threads at once. `alignment` must be a power of two.
     fl_arena_alloc_raw_zero(arena: *Arena, size: u64, alignment: u64) -> *void
-    /// Allocate raw bytes (single-threaded, no atomics).
+    /// Allocates `size` bytes aligned to `alignment` and returns them, for an arena used by one thread.
+    ///
+    /// `alignment` must be a power of two.
     fl_arena_alloc_raw_st(arena: *Arena, size: u64, alignment: u64) -> *void
-    /// Allocate zero-initialized bytes (single-threaded, no atomics).
+    /// Allocates `size` bytes aligned to `alignment`, filled with zeros, for an arena used by one thread.
+    ///
+    /// `alignment` must be a power of two.
     fl_arena_alloc_raw_zero_st(arena: *Arena, size: u64, alignment: u64) -> *void
 
-    /// Advance the arena position to an alignment boundary without allocating.
+    /// Moves the position of `arena` up to a multiple of `alignment` without allocating.
     fl_arena_align(arena: *Arena, alignment: u64)
-    /// Current (next) allocation address.
+    /// Returns the address of the next allocation.
     fl_arena_current_pos(arena: *Arena) -> *void
-    /// Next aligned allocation address, without advancing.
+    /// Returns the address the next allocation of `alignment` would get, without allocating.
     fl_arena_aligned_pos(arena: *Arena, alignment: u64) -> *void
 
-    /// Begin a temporary scope (save the current position).
+    /// Starts a scope that frees what you allocate from `arena` until `Arena::fl_arena_temp_end`.
     [scope_begin] fl_arena_temp_begin(arena: *Arena) -> TempArena
-    /// End a temporary scope (restore the saved position).
+    /// Ends the scope started with `Arena::fl_arena_temp_begin` and frees what was allocated in it.
     [scope_end] fl_arena_temp_end(temp: TempArena)
-    /// Acquire a thread-local scratch arena scope.
+    /// Starts a scope on a scratch arena of the calling thread.
+    ///
+    /// End it with `Arena::fl_arena_scratch_end`.
     [scope_begin] fl_arena_scratch_begin() -> TempArena
-    /// Acquire a thread-local scratch arena scope that avoids conflict_arena.
+    /// Starts a scope on a scratch arena of the calling thread that is not `conflict_arena`.
+    ///
+    /// Use it when you already allocate from a scratch arena and need a second one.
     [scope_begin] fl_arena_scratch_begin_conflict(conflict_arena: *const Arena) -> TempArena
-    /// End a scratch arena scope.
+    /// Ends a scope started with `Arena::fl_arena_scratch_begin` and frees what was allocated in it.
     [scope_end] fl_arena_scratch_end(temp: TempArena)
 
-    /// Release bytes_to_release bytes from the end of the arena.
+    /// Gives back the last `bytes_to_release` bytes allocated from `arena`.
+    ///
+    /// It stops the program if that is more than the arena holds.
     fl_arena_compact_bytes(arena: *Arena, bytes_to_release: u64)
-    /// Count complete element_size-sized elements between start_ptr and the current position.
+    /// Returns how many whole elements of `element_size` bytes lie between `start_ptr` and the current position.
+    ///
+    /// `start_ptr` must point into `arena`.
     fl_arena_count_elements(arena: *const Arena, start_ptr: *const void, element_size: u64) -> u64
 }

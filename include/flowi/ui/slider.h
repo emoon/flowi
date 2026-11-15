@@ -12,14 +12,18 @@
 extern "C" {
 #endif
 
-// Slider widgets. Each call emits one slider for the current frame and returns its
-// interaction Signal; call them inside a frame callback.
-// Emit a float slider for label bound to `*value` in [min, max] and return its interaction
-// Signal. config selects the value-readout format, adjustment step, taper, and orientation (a
-// vertical logarithmic slider is the fader). Call inside a frame callback.
+// Sliders for a float or an integer value.
+//
+// Call these inside a frame callback. Each call draws one slider and returns its `FlSignal`.
+// Draws a slider for a float and returns its `FlSignal`.
+//
+// `value` is kept between `min` and `max` and is written back when the user changes it. `FlSliderConfig.format`
+// sets how the value is shown beside the label, with "%.2f" as the default.
 FL_API FlSignal fl_slider_float_impl(FlString label, float* value, float min, float max, FlSliderConfig config);
-// Emit an integer slider for label bound to `*value` in [min, max] and return its interaction
-// Signal. config behaves as for the float slider. Call inside a frame callback.
+// Draws a slider for an integer and returns its `FlSignal`.
+//
+// `value` is kept between `min` and `max` and is written back when the user changes it. `FlSliderConfig.format`
+// sets how the value is shown beside the label, with "%d" as the default.
 FL_API FlSignal fl_slider_int_impl(FlString label, int32_t* value, int32_t min, int32_t max, FlSliderConfig config);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.

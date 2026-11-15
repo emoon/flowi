@@ -12,8 +12,9 @@
 extern "C" {
 #endif
 
-// Mount readiness, as reported by fl_vfs_mount_get_status. The driver-side FlVfsStatus
-// carries the detailed error codes.
+// The readiness of a mount, as returned by `fl_vfs_mount_get_status`.
+//
+// `FlVfsStatus` has the detailed error codes.
 typedef enum FlVfsMountStatus {
     // Mount operation in progress.
     FlVfsMountStatus_Pending = 0,
@@ -23,28 +24,35 @@ typedef enum FlVfsMountStatus {
     FlVfsMountStatus_Error = 2,
 } FlVfsMountStatus;
 
-// Async operation priority. Maps to the job system priority.
+// The priority of an async operation, set with `fl_vfs_set_priority`.
 typedef enum FlVfsLoadPriority {
     // Background or prefetch work, run when workers are idle.
     FlVfsLoadPriority_Low = 0,
-    // Default priority.
+    // The default priority.
     FlVfsLoadPriority_Normal = 1,
     // User-visible content.
     FlVfsLoadPriority_High = 2,
-    // Highest priority (maps to High in the job system).
+    // The same as `FlVfsLoadPriority_High` in the job system.
     FlVfsLoadPriority_Highest = 3,
 } FlVfsLoadPriority;
 
-// Detailed mount error code: the status field of VfsMountResult. Check for
-// Success before using the returned mount pointer.
+// Why a mount failed, or `FlVfsMountErrorStatus_Success`.
+//
+// This is `FlVfsMountResult.status`. Check it before you use `FlVfsMountResult.mount`.
 typedef enum FlVfsMountErrorStatus {
     // Mount succeeded.
     FlVfsMountErrorStatus_Success = 0,
     // Source path is empty or invalid.
     FlVfsMountErrorStatus_InvalidPath = 1,
     // No VFS plugin available to handle the source.
+    //
+    // `fl_vfs_mount_with_options` does not return it. A mount that cannot be resolved ends as
+    // `FlVfsMountStatus_Error`.
     FlVfsMountErrorStatus_PluginNotFound = 2,
     // Plugin failed to mount (permission, not found, etc.).
+    //
+    // `fl_vfs_mount_with_options` does not return it. A mount that cannot be resolved ends as
+    // `FlVfsMountStatus_Error`.
     FlVfsMountErrorStatus_MountFailed = 3,
     // Memory allocation failed.
     FlVfsMountErrorStatus_OutOfMemory = 4,
@@ -54,104 +62,131 @@ typedef enum FlVfsMountErrorStatus {
 
 typedef struct FlVfsMount FlVfsMount;
 
-// Result of a file-read operation. Check success; data/size are the read
-// bytes, owned by the VFS and freed on close.
+// The outcome of `fl_vfs_get_data`.
+//
+// Check `FlVfsData.success` first. After `fl_vfs_mount_read_all_with_options` the bytes belong to the VFS and are
+// freed when you close the handle. After `fl_vfs_read` they are your `buffer`.
 typedef struct FlVfsData {
-    // File data (null on error).
+    // The file data (null on error).
     uint8_t* data;
-    // File size in bytes (0 on error).
+    // The size of the data in bytes (0 on error).
     int64_t size;
-    // false if the operation failed.
+    // Whether the read succeeded.
     bool success;
-    // Human-readable error message (empty if success), valid until the
-    // owning handle is closed.
+    // A readable error message (empty on success).
     FlString error_message;
 } FlVfsData;
 
-// Optional post-processing callback invoked on read data. Receives the raw
-// buffer, its size, and the caller's opaque user_data; returns the (possibly
-// transformed) VfsData. A failed read invokes it once with data == null
-// and size == 0 so it can release what user_data owns; the VfsData it
-// returns is ignored on that path.
+// Called with the bytes of a finished read, so you can process them before they are returned.
+//
+// It gets the buffer, its size and the `user_data` you passed to the read, and returns the `FlVfsData` to hand out.
+// If the read fails, it is called once with a null `data` and a `size` of 0, so you can free what `user_data`
+// owns. The `FlVfsData` it returns is ignored then.
 typedef FlVfsData (*FlVfsReadCallback)(void* data, int64_t size, void* user_data);
 
-// Optional release hook for a read's user_data. Invoked exactly once, after the
-// read's job has finished and the callback (if any) has run, when the last
-// reference to the operation goes: at fl_vfs_close or fl_vfs_mount_close once the
-// job has run, otherwise on the worker as the job ends. Runs on whichever
-// thread drops that last reference, outside every VFS lock.
+// Called once to release the `user_data` of a read.
+//
+// It runs after the read's job has finished and `FlVfsReadCallback` has run. It runs on the thread that drops the
+// last reference to the operation, which can be a worker or the thread that calls `fl_vfs_close` or
+// `fl_vfs_mount_close`.
 typedef void (*FlVfsReleaseCallback)(void* user_data);
 
-// Result of a mount operation: a mount handle plus a detailed status. Check
-// status == FlVfsMountErrorStatus_Success before using mount.
+// The outcome of `fl_vfs_mount_with_options`: a mount and a status.
+//
+// Use `FlVfsMountResult.mount` only if `FlVfsMountResult.status` is `FlVfsMountErrorStatus_Success`.
 typedef struct FlVfsMountResult {
-    // Mount handle (null on error).
+    // The mount, or null on error.
     FlVfsMount* mount;
-    // Success or a specific error code.
+    // `FlVfsMountErrorStatus_Success` or the reason the mount failed.
     FlVfsMountErrorStatus status;
-    // Human-readable error message (empty on success).
+    // A readable error message (empty on success).
     FlString error_message;
 } FlVfsMountResult;
 
-// Result of a directory-listing operation. Check success; entries is a
-// borrowed array of count entries valid until the owning handle is closed.
+// The outcome of `fl_vfs_get_file_list`.
+//
+// Check `FlVfsFileList.success` first. The entries and the message are valid until you close the handle.
 typedef struct FlVfsFileList {
-    // Array of entries (null on error).
+    // The entries (null on error).
     FlVfsEntry* entries;
-    // Number of entries (0 on error).
+    // The number of entries (0 on error).
     uint32_t count;
-    // false if the operation failed.
+    // Whether the listing succeeded.
     bool success;
-    // Human-readable error message (empty if success), valid until the
-    // owning handle is closed.
+    // A readable error message (empty on success).
     FlString error_message;
 } FlVfsFileList;
 
-// Mount information reported by fl_vfs_mount_get_info.
+// Information about a mount, returned by `fl_vfs_mount_get_info`.
 typedef struct FlVfsMountInfo {
-    // Original mount path.
+    // The path the mount was created from.
     FlString path;
-    // Mount is ready for operations.
+    // Whether the mount is ready for operations.
     bool is_ready;
 } FlVfsMountInfo;
 
-// Non-blocking virtual filesystem access. All operations are async: the call returns a handle, and
-// the caller polls fl_vfs_is_ready before reading the result.
-// Mount a resource (archive, URL, or directory) with options.
+// Non-blocking access to files, directories and archives.
+//
+// Every operation is async. A call returns a handle. Poll it with `fl_vfs_is_ready`, read the result, and
+// release the handle with `fl_vfs_close`. Start with `fl_vfs_mount_with_options` and finish with
+// `fl_vfs_mount_close`.
+// Mounts a directory, archive or URL and returns the mount.
+//
+// Check `FlVfsMountResult.status` before you use the mount.
+//
+// Success means the mount was created. It resolves the source in the background, so poll
+// `fl_vfs_mount_is_ready` or `fl_vfs_mount_get_status` for `FlVfsMountStatus_Ready` or
+// `FlVfsMountStatus_Error`.
 FL_API FlVfsMountResult fl_vfs_mount_with_options(FlString source_path, FlVfsMountOptions options);
-// Check if a mount is ready for operations (non-blocking).
+// Returns true if the mount is ready for operations.
 FL_API bool fl_vfs_mount_is_ready(FlVfsMount* mount);
-// Get a mount's status.
+// Returns the readiness of the mount.
 FL_API FlVfsMountStatus fl_vfs_mount_get_status(FlVfsMount* mount);
-// Get a mount's information.
+// Returns information about the mount.
 FL_API FlVfsMountInfo fl_vfs_mount_get_info(FlVfsMount* mount);
-// Close and clean up a mount.
+// Closes the mount and frees its resources.
+//
+// The handles of the mount's operations stop being valid, so close them first if you still need their results.
 FL_API void fl_vfs_mount_close(FlVfsMount* mount);
-// Read an entire file from within a mount (async). Returns a tracking handle.
+// Starts reading a whole file from a mount and returns a handle for it.
+//
+// `callback` and `release` are optional. `reuse_handle` asks for that handle value, and 0 picks one. The call
+// returns 0 if the value is already in use. Get the result with `fl_vfs_get_data`.
 FL_API uint32_t fl_vfs_mount_read_all_with_options(FlVfsMount* mount, FlString relative_path, FlVfsReadCallback callback, void* user_data, FlVfsReleaseCallback release, uint32_t reuse_handle);
-// Open a file for reading within a mount. Returns a file handle.
+// Opens a file in a mount for reading and returns a file handle.
 FL_API uint32_t fl_vfs_mount_open(FlVfsMount* mount, FlString relative_path, uint32_t flags);
-// Read at most size bytes from an open file into buffer (async, chained
-// onto the file handle). The caller keeps buffer alive until the returned
-// handle completes. Returns a tracking handle.
+// Starts reading at most `size` bytes of an open file into `buffer` and returns a handle for the read.
+//
+// Keep `buffer` alive until the returned handle is ready. The call returns 0 if `file_handle` is not an open
+// file, `buffer` is null or `size` is not positive.
 FL_API uint32_t fl_vfs_read(uint32_t file_handle, void* buffer, int64_t size);
-// List directory contents within a mount (async). Returns a directory handle.
-// depth is currently ignored: the listing is always one level.
+// Starts listing a directory in a mount and returns a handle for the listing.
+//
+// The listing is always one level deep. `depth` is ignored. Get the result with `fl_vfs_get_file_list`.
 FL_API uint32_t fl_vfs_get_listing(FlVfsMount* mount, FlString relative_path, int32_t depth);
-// Check if an async operation is complete (non-blocking).
+// Returns true if the operation has finished.
+//
+// It is false for a handle that is not open.
 FL_API bool fl_vfs_is_ready(uint32_t handle);
-// Block until an async operation completes. A worker thread that calls it keeps
-// stealing work while it waits, so it is safe from inside a job body. Never call it
-// from the frame loop.
+// Blocks the main thread until the operation has finished.
+//
+// A job worker does not block. It returns at once and logs an error if the operation is still running, so poll
+// `fl_vfs_is_ready` there. Do not call it from the frame loop.
 FL_API void fl_vfs_wait(uint32_t handle);
-// Get the data from a completed read operation. Call only after fl_vfs_is_ready.
+// Returns the data of a finished read.
+//
+// Call it only after `fl_vfs_is_ready` returns true.
 FL_API FlVfsData fl_vfs_get_data(uint32_t handle);
-// Get the file list from a completed directory operation. Call only after
-// fl_vfs_is_ready.
+// Returns the entries of a finished directory listing.
+//
+// Call it only after `fl_vfs_is_ready` returns true.
 FL_API FlVfsFileList fl_vfs_get_file_list(uint32_t handle);
-// Update the priority of a pending operation.
+// Changes the priority of a pending operation.
 FL_API void fl_vfs_set_priority(uint32_t handle, FlVfsLoadPriority priority);
-// Close a handle and clean up its resources.
+// Closes the handle and frees what it owns.
+//
+// Closing a `fl_vfs_read` handle that is still running waits for it on the main thread. On a job worker
+// the handle stays open.
 FL_API void fl_vfs_close(uint32_t handle);
 
 
