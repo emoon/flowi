@@ -305,3 +305,80 @@ UTEST(list_scroll, a_drag_beside_the_thumb_does_not_start_a_marquee) {
     ASSERT_EQ_MSG((u64)0, selected_after_drag_at(ID("bar_strip_right"), 299.0f), "right of the thumb");
     ASSERT_EQ_MSG((u64)0, selected_after_drag_at(ID("bar_strip_left"), 286.0f), "left of the thumb");
 }
+
+#define UNIFORM_ROWS 1000u
+
+static FlListUniformRange uniform_frame(FlUiCtx* ctx, FlString id, u32 scroll_to) {
+    FlListUniformRange range = { 0 };
+    ui_input_set_mouse_position(ctx, 310.0f, 250.0f);
+    ctx->input_state.mouse.buttons[FlMouseButton_Left] = false;
+    ctx->input_state.mouse.buttons_pressed[FlMouseButton_Left] = false;
+    ui_input_update(ctx, 1.0f / 60.0f);
+    ctx->input_state.mouse.wheel_x_cached = 0.0f;
+    ctx->input_state.mouse.wheel_y_cached = 0.0f;
+
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
+        range = fl_list_uniform_begin(id, UNIFORM_ROWS,
+                                      (FlListUniformOpts) { .height_hint = 24.0f, .scroll_to = scroll_to });
+        for (u32 i = range.start; i < range.end; i++) {
+            fl_list_uniform_item_begin(i);
+            ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
+            fl_list_uniform_item_end();
+        }
+        fl_list_uniform_end();
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+    return range;
+}
+
+static FlListUniformRange uniform_frames(FlUiCtx* ctx, FlString id, u32 scroll_to, u32 frames) {
+    FlListUniformRange range = { 0 };
+    for_count(i, frames) {
+        range = uniform_frame(ctx, id, scroll_to);
+    }
+    return range;
+}
+
+static f64 uniform_offset(FlUiCtx* ctx, FlString id) {
+    return list_uniform_scroll_offset(ctx->list_uniform_ctx, id);
+}
+
+UTEST(list_scroll, scroll_to_zero_leaves_the_scroll_position_alone) {
+    FlUiCtx* ctx = wheel_list_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlString id = FL_S("uniform_scroll_to_zero");
+    const f32 stride = 32.0f;
+
+    uniform_frames(ctx, id, 0, 2);
+    list_uniform_nudge_scroll(ctx->list_uniform_ctx, id, 10.0f * stride, stride, UNIFORM_ROWS);
+    uniform_frames(ctx, id, 0, 60);
+    ASSERT_TRUE_MSG(uniform_offset(ctx, id) == (f64)(10.0f * stride),
+                    "zeroed options do not scroll back to the first row");
+}
+
+UTEST(list_scroll, scroll_to_takes_the_row_index_plus_one) {
+    FlUiCtx* ctx = wheel_list_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlString id = FL_S("uniform_scroll_to_row");
+
+    FlListUniformRange range = uniform_frames(ctx, id, 501, 240);
+    ASSERT_TRUE_MSG(range.start <= 500 && 500 < range.end, "501 brings the row with index 500 into view");
+
+    range = uniform_frames(ctx, id, UNIFORM_ROWS, 240);
+    ASSERT_EQ_MSG(UNIFORM_ROWS, range.end, "the row count brings the last row into view");
+
+    uniform_frames(ctx, id, 1, 240);
+    ASSERT_TRUE_MSG(uniform_offset(ctx, id) < 0.5, "1 scrolls to the first row");
+}
+
+UTEST(list_scroll, scroll_to_past_the_last_row_is_ignored) {
+    FlUiCtx* ctx = wheel_list_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlString id = FL_S("uniform_scroll_to_past");
+
+    uniform_frames(ctx, id, 501, 240);
+    const f64 before = uniform_offset(ctx, id);
+    uniform_frames(ctx, id, UNIFORM_ROWS + 1, 60);
+    ASSERT_TRUE_MSG(uniform_offset(ctx, id) == before, "the scroll position does not move");
+}

@@ -10,11 +10,11 @@ pub struct ListUniformOpts {
     pub height_hint: f32,
     /// The space between rows, in logical pixels (0 uses 8).
     pub gap: f32,
-    /// The index of a row to scroll to this frame (-1 leaves the scroll position alone).
+    /// The row to scroll to this frame, as its index plus one (0 leaves the scroll position alone).
     ///
-    /// The list eases toward the row and places it a third of the way down the view. 0 scrolls to the first
-    /// row, so a zeroed struct scrolls to the top every frame. An index past the last row is ignored.
-    pub scroll_to: i32,
+    /// The list eases toward the row and places it a third of the way down the view. A row past the last one
+    /// is ignored.
+    pub scroll_to: u32,
     /// When the scrollbar is shown (`ScrollbarDisplayMode::Never` by default). The mouse wheel always scrolls.
     pub scrollbar_mode: crate::sys::ScrollbarDisplayMode,
 }

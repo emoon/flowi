@@ -137,24 +137,24 @@ static void activate_row(FlListContext* self, i32 target) {
 }
 
 // Runs at begin (before list_uniform_begin so a cursor move can scroll the target into view this same frame).
-i32 list_handle_keyboard(FlListContext* self, ListState* st, bool has_focus) {
+u32 list_handle_keyboard(FlListContext* self, ListState* st, bool has_focus) {
     if (!has_focus || !list_has_rows(self)) {
-        return -1;
+        return 0;
     }
 
     u32 mods = ui_keyboard_modifiers();
     i32 cur = list_index_of_id(self, st->focus_cursor_id);
     if (handle_select_all(self, (mods & FlKeyModifier_Control) != 0)) {
-        return -1;
+        return 0;
     }
 
     bool directional;
     i32 target = resolve_target(self, st, cur, &directional);
     activate_row(self, target);
     if (target == cur) {
-        return -1;
+        return 0;
     }
 
     commit_move(self, st, (CursorMove) { cur, target, extends_selection(self, mods, directional) });
-    return target;
+    return (u32)(target + 1);
 }

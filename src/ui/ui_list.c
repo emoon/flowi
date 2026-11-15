@@ -169,7 +169,7 @@ FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
 
     // Keyboard navigation runs before list_uniform_begin so a cursor move scrolls its target into view this
     // frame. It may emit Ctrl+A / shift-range requests into the buffer above and returns the scroll target.
-    i32 scroll_to = list_handle_keyboard(self, st, has_focus);
+    u32 scroll_to = list_handle_keyboard(self, st, has_focus);
     list_expose_cursor(self, st, has_focus);
 
     f32 row_height = args.config.row_height > 0.0f ? args.config.row_height : LIST_ROW_DEFAULT_HEIGHT;

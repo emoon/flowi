@@ -5188,7 +5188,7 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
         live_range = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100,
-                                           (FlListUniformOpts) { .height_hint = 24.0f, .scroll_to = -1 });
+                                           (FlListUniformOpts) { .height_hint = 24.0f });
         for (u32 i = live_range.start; i < live_range.end; i++) {
             fl_list_uniform_item_begin(i);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
@@ -5224,7 +5224,7 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     // begin and end have to return early as a pair. Each opens or closes a layout element, so a guard on only one
     // of them would leave the layout stack unbalanced.
     FlListUniformRange range = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100,
-                                                     (FlListUniformOpts) { .height_hint = 24.0f, .scroll_to = -1 });
+                                                     (FlListUniformOpts) { .height_hint = 24.0f });
     ASSERT_TRUE_MSG(range.start == 0 && range.end == 0 && range.total == 0,
                     "no context yields an empty visible window");
     fl_list_uniform_item_begin(0);
