@@ -1672,7 +1672,6 @@ UTEST(ui_slider, hit_math_follows_thumb_size) {
     fl_app_destroy(app);
 }
 
-// A slider whose min equals its max has no range to travel, so its fill, thumb and track keep finite sizes.
 UTEST(ui_slider, equal_min_and_max_keeps_finite_geometry) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -1701,7 +1700,6 @@ UTEST(ui_slider, equal_min_and_max_keeps_finite_geometry) {
     ASSERT_NEAR_MSG((double)value, 3.0, 1e-4, "the value stays at the only value in range");
 }
 
-// One frame of an integer slider with the cursor over its row and the wheel turned by wheel_y.
 static void slider_int_wheel_frame(FlUiCtx* ctx, FlString label, int* value, float wheel_y) {
     const ItemState* row
         = hashmap_get(&ctx->shared->item_state, ui_layout_id_to_clay_id((FlLayoutId) { .name = label, .id = 0 }));
@@ -1719,8 +1717,6 @@ static void slider_int_wheel_frame(FlUiCtx* ctx, FlString label, int* value, flo
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// The default step is 1% of the range, which is 0.1 on a 0..10 slider and rounds back to the same integer. An
-// integer slider takes steps of at least 1, so the wheel moves it.
 UTEST(ui_slider, int_slider_with_a_small_range_still_moves) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -1737,7 +1733,6 @@ UTEST(ui_slider, int_slider_with_a_small_range_still_moves) {
     ASSERT_EQ_MSG(value, 6, "one wheel step moves the integer slider by one");
 }
 
-// One frame of a synthetic gesture over a vertical scrollbar in a 100px column.
 static void scrollbar_click_frame(FlUiCtx* ctx, float* value, float mx, float my, bool held, bool pressed,
                                   bool released) {
     FlInputState* in = &ctx->input_state;
@@ -1754,7 +1749,6 @@ static void scrollbar_click_frame(FlUiCtx* ctx, float* value, float mx, float my
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// A scrollbar whose thumb is as long as its track has no travel, so grabbing it leaves the value alone.
 UTEST(ui_scrollbar, grabbing_a_thumb_that_fills_the_track_keeps_the_value) {
     FlAppSettings settings = { .window_title = FL_S("scrollbar_short"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
