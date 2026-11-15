@@ -257,7 +257,7 @@ UTEST(scroll_math, visible_range_survives_values_no_integer_holds) {
 
     r = scroll_visible_range(0.0, INFINITY, 50.0f, 1000, 0);
     EXPECT_EQ(r.start, 0u);
-    EXPECT_EQ(r.end, 1000u);
+    EXPECT_EQ(r.end, 0u);
 }
 
 UTEST(scroll_math, visible_range_virtualization_window) {

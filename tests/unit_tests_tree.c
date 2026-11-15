@@ -260,11 +260,12 @@ UTEST(tree, right_is_consumed_when_down_moves_the_cursor) {
     ctx->nav_frame.nav_right = true;
     ui_update_begin(ctx);
     fl_tree_begin(tree, model.rows, model.count, nullptr, (FlTreeConfig) { 0 });
-    ASSERT_FALSE_MSG(fl_get_nav_frame().nav_right, "a focused tree consumes Right even when Down moved the cursor");
+    const bool right_left_over = fl_get_nav_frame().nav_right;
     fl_tree_end();
     ui_update_end(ctx, 1.0f / 60.0f);
     ctx->nav_frame.nav_down = false;
     ctx->nav_frame.nav_right = false;
+    ASSERT_FALSE_MSG(right_left_over, "a focused tree consumes Right even when Down moved the cursor");
 }
 
 UTEST(tree, collapse_moves_a_cursor_inside_the_subtree_to_the_row) {

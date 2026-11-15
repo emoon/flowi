@@ -123,11 +123,9 @@ static i32 key_target_row(i32 cursor_row) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     FlNavFrame nav = fl_get_nav_frame();
     if (nav.nav_right) {
-        fl_consume_nav_right();
         return cursor_row < 0 ? cursor_row : step_into(self, (u32)cursor_row);
     }
     if (nav.nav_left) {
-        fl_consume_nav_left();
         return cursor_row < 0 ? cursor_row : step_out_of(self, (u32)cursor_row);
     }
     return cursor_row;

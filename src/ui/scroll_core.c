@@ -28,7 +28,7 @@ ScrollRange scroll_visible_range(f64 scroll_offset, f32 viewport, f32 item_strid
     f64 total = (f64)total_count;
     f64 first = trunc(scroll_offset / item_stride) - (f64)buffer;
     f64 last = trunc((scroll_offset + viewport) / item_stride) + 1.0 + (f64)buffer;
-    if (isnan(first) || isnan(last)) {
+    if (!isfinite(first) || !isfinite(last)) {
         return (ScrollRange) { 0 };
     }
 
