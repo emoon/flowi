@@ -14,105 +14,120 @@
 extern "C" {
 #endif
 
-// One row of a tree as it appears on screen. Pass every visible row, top to bottom, each frame, and leave out
-// the rows under a collapsed row.
+// A row of a tree, as shown on screen.
+//
+// Pass every visible row to `fl_tree_begin`, top to bottom, and leave out the rows under a collapsed row.
 typedef struct FlTreeRow {
-    // Your id for the row. Selection and the result use it.
+    // The id of the row (unique, never 0).
     uint64_t id;
-    // How deep the row is nested: 0 for a top-level row, 1 for its children, and so on.
+    // The nesting depth (0 for a top-level row).
     uint16_t depth;
-    // Set this to give the row an expand arrow.
+    // Whether the row gets an expand arrow.
     bool has_children;
-    // Set this when the row is expanded. Its children are then the next rows in the slice.
+    // Whether the row is expanded. Its children are then the next rows in the slice.
     bool expanded;
 } FlTreeRow;
 
-// One expanded node of a virtual tree. Pass only the expanded nodes, in the order they appear on screen, so a
-// node always comes after its parent. Children are numbered from 0 under their parent.
+// An expanded node of a virtual tree.
+//
+// Pass only the expanded nodes to `fl_tree_begin_virtual`, in the order they appear on screen, so a node always
+// comes after its parent.
 typedef struct FlTreeExpanded {
-    // Index of the parent's entry in this slice, or -1 when the node is a top-level row.
+    // The index of the parent's entry in this slice (-1 for a top-level row).
     int32_t parent;
-    // Which child of the parent this node is.
+    // Which child of the parent this node is, counted from 0.
     uint32_t child_index;
-    // How many children the node has.
+    // The number of children the node has.
     uint32_t child_count;
 } FlTreeExpanded;
 
-// What Tree::row_at tells you about a row of a virtual tree, so you know what to draw.
+// A row of a virtual tree, returned by `fl_tree_row_at`.
 typedef struct FlTreeVirtualRow {
-    // Index of the parent's entry in your expanded slice, or -1 for a top-level row.
+    // The index of the parent's entry in your expanded slice (-1 for a top-level row).
     int32_t parent;
-    // Which child of the parent this row is.
+    // Which child of the parent this row is, counted from 0.
     uint32_t child_index;
-    // How deep the row is nested, 0 for a top-level row.
+    // The nesting depth (0 for a top-level row).
     uint16_t depth;
-    // Index of the row's own entry in your expanded slice if it is expanded, or -1 if it is not.
+    // The index of the row's own entry in your expanded slice (-1 if the row is not expanded).
     int32_t node;
 } FlTreeVirtualRow;
 
-// Options for a Tree.
+// Options for `fl_tree_begin` and `fl_tree_begin_virtual`.
+//
+// A field left at zero uses its default.
 typedef struct FlTreeConfig {
-    // Row height, gap, scrollbar and type-ahead labels, the same as for a List. labels has one entry per row.
+    // The row height, gap, scrollbar and type-ahead labels, as for a List (one label per row).
     FlListConfig list;
-    // How far each nesting level is indented, in logical pixels. The arrow is this wide too. 0 uses 16.
+    // The indent of each nesting level, in logical pixels (0 uses 16). The arrow is this wide too.
     float indent;
 } FlTreeConfig;
 
-// What Tree::end returns.
+// The outcome of a tree for one frame, returned by `fl_tree_end`.
 typedef struct FlTreeResult {
-    // Selection, activation and focus, the same as for a List.
+    // The selection, activation and focus, as for a List. Rows cannot be dragged, so the drag fields stay
+    // empty.
     FlListResult list;
-    // Id of the row the user asked to expand or collapse this frame, or 0. The Tree does not remember which
-    // rows are expanded: change your own data and pass the new rows next frame.
+    // The row the user asked to expand or collapse (0 for none).
+    //
+    // The Tree does not remember which rows are expanded. Change your own data and pass the new rows next
+    // frame.
     uint64_t toggled_id;
-    // true when the row should expand, false when it should collapse.
+    // Whether the row should expand (true) or collapse (false).
     bool toggle_expanded;
-    // Row number of that row this frame. Only read it when toggled_id is not 0.
+    // The row number of that row this frame. Only read it when `toggled_id` is not 0.
     uint32_t toggled_row;
 } FlTreeResult;
 
-// A tree view. You keep the tree and which rows are expanded. The Tree draws the indent and the arrows and
-// handles the mouse and keyboard.
+// A tree view over rows you own.
 //
-// Each frame, call begin with the visible rows. For every row in the range it returns, call item_begin, draw
-// the row's content, and call item_end. Then call end. If the result has a toggled_id, expand or collapse that
-// row in your data.
+// Each frame, call `fl_tree_begin` with the visible rows. For each row in the range it returns, call
+// `fl_tree_item_begin`, draw the row, and call `fl_tree_item_end`. Then call `fl_tree_end`. If
+// `FlTreeResult.toggled_id` is not 0, expand or collapse that row in your own data.
 //
-// Selection, type-ahead, Up, Down, Home, End, Enter and Space work as in a List. Right expands a row, or moves
-// to its first child if it is already expanded. Left collapses a row, or moves to its parent if it is already
-// collapsed. Rows stay selected while a collapsed parent hides them.
+// For a tree too large to list row by row, start with `fl_tree_begin_virtual` and use `fl_tree_row_at` and
+// `fl_tree_item_begin_virtual` for the rows.
 //
-// Rows cannot be dragged yet, so the drag fields of the result stay empty.
-// Start a tree. rows holds the count visible rows. Selection goes into set; pass null if you handle
-// selection yourself. Emit the rows in the returned range, then call end.
+// The Tree draws the indent and the arrows. Selection, type-ahead and the keyboard work as in a List. Right
+// expands a row or moves to its first child, and Left collapses a row or moves to its parent. Rows stay
+// selected while a collapsed parent hides them.
+// Starts a tree and returns the range of rows to draw.
+//
+// `rows` holds the `count` visible rows. Selection goes into `set`. If `set` is null, read the changes
+// from `FlListResult.requests` and draw your own highlight.
 FL_API FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set, FlTreeConfig config);
-// Start one row. row is its index in the slice you passed to begin. The indent and the arrow are drawn for
-// you, and what you draw before item_end goes to the right of them. The returned Signal is for the row
-// itself: a press on the arrow is not a click on the row.
+// Starts the row at index `row` and returns the `FlSignal` for it.
+//
+// The indent and the arrow are drawn for you, and what you draw before `fl_tree_item_end` goes to the right
+// of them. A press on the arrow is not a click on the row.
 FL_API FlSignal fl_tree_item_begin(uint32_t row);
-// Start a tree that can hold millions of rows without you building a row list. root_count is the number
-// of top-level rows and expanded holds the count nodes that are expanded (see TreeExpanded). For each row
-// in the returned range, call row_at to find out which child it is, then item_begin_virtual and item_end.
-// Finish with end.
+// Starts a tree that can hold millions of rows, and returns the range of rows to draw.
 //
-// Rows have no ids of their own here. A row's id is its row number plus one, in set and in the result.
+// `root_count` is the number of top-level rows and `expanded` holds the `count` expanded nodes. For each
+// row in the range, call `fl_tree_row_at` to find out which child it is, then `fl_tree_item_begin_virtual`
+// and `fl_tree_item_end`. Finish with `fl_tree_end`.
+//
+// Rows have no ids of their own. The id of a row is its row number plus one, in `set` and in the result.
 // Expanding or collapsing a row moves the rows below it. When you apply a toggle on the next frame, the
-// Tree moves the cursor and the selection in set along with those rows, and unselects the rows a collapse
-// hid. If the number of rows changes for any other reason, the selection is cleared. If you pass null for
-// set and keep your own selection, you have to do the same yourself.
+// Tree moves the cursor and the selection in `set` along with those rows, and unselects the rows a
+// collapse hid. If the number of rows changes for any other reason, the selection is cleared. With a null
+// `set` you have to do the same yourself.
 //
-// The Tree does not know which rows have children until you emit them, so Right can ask you to expand a
-// row that has none. Ignore that request. Type-ahead does not work here and config.list.labels is not
-// read. A tree can show 2^31 - 1 rows nested 65535 levels deep; nodes beyond that are left out.
+// Right can ask you to expand a row that has no children. Ignore that request. Type-ahead is off and
+// `FlListConfig.labels` is not read. A tree shows at most 2^31 - 1 rows nested 65535 levels deep, and
+// nodes beyond that are left out.
 FL_API FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTreeExpanded* expanded, uint32_t count, FlSelectionSet* set, FlTreeConfig config);
-// Find out which child a row of a virtual tree is, so you know what to draw. Call it between
-// begin_virtual and end.
+// Returns which child a row of a virtual tree is, so you know what to draw.
+//
+// Call this between `fl_tree_begin_virtual` and `fl_tree_end`.
 FL_API FlTreeVirtualRow fl_tree_row_at(uint32_t row);
-// Start one row of a virtual tree, like item_begin. Pass true for has_children to give the row an arrow.
+// Starts a row of a virtual tree, like `fl_tree_item_begin`.
+//
+// Pass true for `has_children` to give the row an arrow. An expanded row always has one.
 FL_API FlSignal fl_tree_item_begin_virtual(uint32_t row, bool has_children);
-// Finish the row started with item_begin or item_begin_virtual.
+// Ends the row started with `fl_tree_item_begin` or `fl_tree_item_begin_virtual`.
 FL_API void fl_tree_item_end(void);
-// Finish the tree and get this frame's result.
+// Ends the tree and returns the result for this frame.
 FL_API FlTreeResult fl_tree_end(void);
 
 #define fl_tree_begin_impl(id, rows, count, set, config) (fl_tree_begin)(id, rows, count, set, config)

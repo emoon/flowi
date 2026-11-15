@@ -245,7 +245,7 @@ pub struct ImageSub {
     pub sw: f32,
     /// source height
     pub sh: f32,
-    /// the `ImageHandle` from Image::load
+    /// the `ImageHandle` from `Image::load`
     pub image: crate::sys::ImageHandle,
     /// multiplicatively tints color images and colorizes alpha atlases
     pub color: crate::sys::Color,
@@ -316,7 +316,7 @@ extern "C" {
     /// uses, so a measured run matches what gets drawn.
     pub fn fl_painter_text_styled(x: f32, y: f32, text: crate::sys::RawStr, style: crate::sys::TextStyle, color: crate::sys::Color);
     /// Draw image image into the rect at top-left (x, y), size (w, h). image is the
-    /// `ImageHandle` from Image::load. color multiplicatively tints the image; pass white
+    /// `ImageHandle` from `Image::load`. color multiplicatively tints the image; pass white
     /// (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
     pub fn fl_painter_image(x: f32, y: f32, w: f32, h: f32, image: crate::sys::ImageHandle, color: crate::sys::Color) -> bool;
     /// Draw a filled circle: center (cx, cy) and radius, in logical space.

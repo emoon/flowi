@@ -6,46 +6,50 @@
 //! Blocks that carry an argument beyond this one document it at the site.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
-/// A tree view. You keep the tree and which rows are expanded. The Tree draws the indent and the arrows and
-/// handles the mouse and keyboard.
+/// A tree view over rows you own.
 ///
-/// Each frame, call begin with the visible rows. For every row in the range it returns, call item_begin, draw
-/// the row's content, and call item_end. Then call end. If the result has a toggled_id, expand or collapse that
-/// row in your data.
+/// Each frame, call `Tree::begin` with the visible rows. For each row in the range it returns, call
+/// `Tree::item_begin`, draw the row, and call `Tree::item_end`. Then call `Tree::end`. If
+/// `TreeResult.toggled_id` is not 0, expand or collapse that row in your own data.
 ///
-/// Selection, type-ahead, Up, Down, Home, End, Enter and Space work as in a List. Right expands a row, or moves
-/// to its first child if it is already expanded. Left collapses a row, or moves to its parent if it is already
-/// collapsed. Rows stay selected while a collapsed parent hides them.
+/// For a tree too large to list row by row, start with `Tree::begin_virtual` and use `Tree::row_at` and
+/// `Tree::item_begin_virtual` for the rows.
 ///
-/// Rows cannot be dragged yet, so the drag fields of the result stay empty.
+/// The Tree draws the indent and the arrows. Selection, type-ahead and the keyboard work as in a List. Right
+/// expands a row or moves to its first child, and Left collapses a row or moves to its parent. Rows stay
+/// selected while a collapsed parent hides them.
 pub struct Tree;
 
 impl Tree {
-    /// Start one row. row is its index in the slice you passed to begin. The indent and the arrow are drawn for
-    /// you, and what you draw before item_end goes to the right of them. The returned Signal is for the row
-    /// itself: a press on the arrow is not a click on the row.
+    /// Starts the row at index `row` and returns the `Signal` for it.
+    ///
+    /// The indent and the arrow are drawn for you, and what you draw before `Tree::item_end` goes to the right
+    /// of them. A press on the arrow is not a click on the row.
     #[inline]
     pub fn item_begin(row: u32) -> crate::sys::Signal {
         let _frame = crate::frame_thread::frame_thread_guard("Tree::item_begin");
         unsafe { crate::sys::fl_tree_item_begin(row) }
     }
 
-    /// Find out which child a row of a virtual tree is, so you know what to draw. Call it between
-    /// begin_virtual and end.
+    /// Returns which child a row of a virtual tree is, so you know what to draw.
+    ///
+    /// Call this between `Tree::begin_virtual` and `Tree::end`.
     #[inline]
     pub fn row_at(row: u32) -> crate::sys::TreeVirtualRow {
         let _frame = crate::frame_thread::frame_thread_guard("Tree::row_at");
         unsafe { crate::sys::fl_tree_row_at(row) }
     }
 
-    /// Start one row of a virtual tree, like item_begin. Pass true for has_children to give the row an arrow.
+    /// Starts a row of a virtual tree, like `Tree::item_begin`.
+    ///
+    /// Pass true for `has_children` to give the row an arrow. An expanded row always has one.
     #[inline]
     pub fn item_begin_virtual(row: u32, has_children: bool) -> crate::sys::Signal {
         let _frame = crate::frame_thread::frame_thread_guard("Tree::item_begin_virtual");
         unsafe { crate::sys::fl_tree_item_begin_virtual(row, has_children) }
     }
 
-    /// Finish the row started with item_begin or item_begin_virtual.
+    /// Ends the row started with `Tree::item_begin` or `Tree::item_begin_virtual`.
     #[inline]
     pub fn item_end() {
         let _frame = crate::frame_thread::frame_thread_guard("Tree::item_end");

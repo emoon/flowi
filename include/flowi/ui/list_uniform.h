@@ -11,48 +11,51 @@
 extern "C" {
 #endif
 
-// Options for a uniform list, consumed by begin.
+// Options for `fl_list_uniform_begin`.
 typedef struct FlListUniformOpts {
-    // Row height in logical pixels used for the visible-window and spacer arithmetic (0 -> default 32). Rows
-    // size to their content, so the caller keeps each row at this height.
+    // The height of every row, in logical pixels (0 uses 32).
+    //
+    // The list does not size the rows, so give each row's content this height.
     float height_hint;
-    // Gap between rows in logical pixels (0 -> default 8).
+    // The space between rows, in logical pixels (0 uses 8).
     float gap;
-    // Index to scroll to this frame. In range, the scroll target is set to place that row a third of the
-    // viewport height below the top (clamped to the scrollable extent) and the offset eases toward it.
-    // Negative or out of range leaves the scroll target alone.
+    // The index of a row to scroll to this frame (-1 leaves the scroll position alone).
+    //
+    // The list eases toward the row and places it a third of the way down the view. 0 scrolls to the first
+    // row, so a zeroed struct scrolls to the top every frame. An index past the last row is ignored.
     int32_t scroll_to;
-    // When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    // When the scrollbar is shown (`FlScrollbarDisplayMode_Never` by default). The mouse wheel always scrolls.
     FlScrollbarDisplayMode scrollbar_mode;
 } FlListUniformOpts;
 
-// The visible index window a uniform list emits, returned by begin. The caller iterates `[start, end)` and
-// emits one row per index; total echoes the full row count.
+// The rows to draw this frame.
+//
+// This is returned by `fl_list_uniform_begin`. Draw the rows from `start` up to, and not including, `end`.
 typedef struct FlListUniformRange {
-    // First visible index (inclusive).
+    // The index of the first row to draw (inclusive).
     uint32_t start;
-    // One past the last visible index (exclusive).
+    // The index after the last row to draw (exclusive).
     uint32_t end;
-    // Total row count passed to begin.
+    // The number of rows passed to `fl_list_uniform_begin`.
     uint32_t total;
 } FlListUniformRange;
 
-// Virtualized list of uniform-height rows carrying caller-emitted content. Every row is the same height, so the
-// visible window is arithmetic and only the rows on screen lay out. Call begin, then item_begin / item_end
-// for each index in the returned range, then end.
+// A scrolling list of same-height rows, addressed by index.
 //
-// Rows are addressed by dense index and the caller owns everything inside them; the List is the richer
-// surface that keys on stable ids and runs the selection gestures itself.
+// Each frame, call `fl_list_uniform_begin` with the number of rows. For each index in the range it returns, call
+// `fl_list_uniform_item_begin`, draw the row, and call `fl_list_uniform_item_end`. Then call `fl_list_uniform_end`.
 //
-// Scroll offset and the measured container height are stored under the id passed to begin.
-// Begin a virtualized list of total_count uniform-height rows, identified by id and laid out per opts.
-// Returns the visible index range to emit; pair with end.
+// Only the rows on screen are drawn. This list only scrolls: for selection, keyboard navigation and row
+// dragging, use `fl_list_begin`.
+// Starts a list of `total_count` rows and returns the range of rows to draw.
+//
+// The scroll position is kept under `id`, so use the same `id` every frame.
 FL_API FlListUniformRange fl_list_uniform_begin(FlString id, uint32_t total_count, FlListUniformOpts opts);
-// Begin the row at index index. Pair with item_end.
+// Starts the row at `index`.
 FL_API void fl_list_uniform_item_begin(uint32_t index);
-// End the current row.
+// Ends the row started with `fl_list_uniform_item_begin`.
 FL_API void fl_list_uniform_item_end(void);
-// End the list.
+// Ends the list.
 FL_API void fl_list_uniform_end(void);
 
 

@@ -152,7 +152,7 @@ typedef struct FlImageSub {
     float sw;
     // source height
     float sh;
-    // the `FlImageHandle` from Image::load
+    // the `FlImageHandle` from `fl_image_load`
     FlImageHandle image;
     // multiplicatively tints color images and colorizes alpha atlases
     FlColor color;
@@ -207,7 +207,7 @@ FL_API void fl_painter_text(float x, float y, FlString text, FlFontId font, FlCo
 // uses, so a measured run matches what gets drawn.
 FL_API void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, FlColor color);
 // Draw image image into the rect at top-left (x, y), size (w, h). image is the
-// `FlImageHandle` from Image::load. color multiplicatively tints the image; pass white
+// `FlImageHandle` from `fl_image_load`. color multiplicatively tints the image; pass white
 // (255, 255, 255, 255) for no tint. Returns false (and draws nothing) until the image is ready.
 FL_API bool fl_painter_image(float x, float y, float w, float h, FlImageHandle image, FlColor color);
 // Draw a filled circle: center (cx, cy) and radius, in logical space.
