@@ -362,22 +362,12 @@ bool fl_path_equals(FlString path1, FlString path2) {
 }
 
 bool fl_path_has_extension(FlString path, FlString extension) {
-    FlString ext = fl_path_get_extension(path);
-    if (ext.length == 0 || extension.length == 0) {
+    if (extension.length == 0) {
         return false;
     }
 
-    if (ext.length != extension.length) {
-        return false;
-    }
-
-    for (u64 i = 0; i < ext.length; i++) {
-        if (tolower(ext.data[i]) != tolower(extension.data[i])) {
-            return false;
-        }
-    }
-
-    return true;
+    const FlString ext = fl_path_get_extension(path);
+    return ext.length > 0 && fl_string_equals_nocase(ext, extension);
 }
 
 bool fl_path_has_separator(FlString path) {
