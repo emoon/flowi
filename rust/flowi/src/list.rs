@@ -1,5 +1,5 @@
-//! Virtualized lists ([`List`]) and the caller-owned [`SelectionSet`] they select into, plus
-//! the value types they exchange ([`ListItem`], [`ListOpts`], [`Reorder`], [`SelectionRequest`]).
+//! Scrolling lists ([`List`]), the [`SelectionSet`] they select into, and the value types they exchange
+//! ([`ListItem`], [`ListOpts`], [`Reorder`], [`SelectionRequest`]).
 
 use std::os::raw::c_char;
 use std::ptr;
@@ -9,28 +9,19 @@ use crate::sys;
 use crate::frame_thread::frame_thread_guard;
 use crate::{ensure_fl_init, DropRelationship, ImageHandle, LayoutId, List, ListRange};
 
-/// Scrollable, virtualized (uniform-row-height) lists of caller-emitted rows. This is the scoped face,
-/// for rows with custom content. Open the list with [`List::begin`] (returns the visible [`ListRange`] to emit), then for each index
-/// in start..end bracket the row's content between [`List::item_begin`] (passing the row's opaque u64 stable
-/// id; returns its interaction [`Signal`](crate::Signal)) and [`List::item_end`], and close
-/// with [`List::end`] (returns the [`ListResult`]). The List never interprets the stable id.
-/// [`List::begin`] takes any [`LayoutId`] like [`Layout::start`](crate::Layout::start).
 impl List {
-    /// Begin a virtualized list identified by id over the app's full ordered id slice ordered_ids,
-    /// applying config. Call inside a frame callback. Returns the visible [`ListRange`] to emit
-    /// (start..end); pair with [`List::end`]. The id is any [`LayoutId`] (string, or (name, seed) tuple
-    /// to disambiguate repeated lists in a loop).
+    /// Starts a list and returns the range of rows to draw.
     ///
-    /// The List runs the selection gestures internally (plain click replaces, ctrl/⌘-click toggles,
-    /// shift-click ranges, Ctrl+A selects all) and, when set is Some, auto-applies the resulting
-    /// [`SelectionRequest`]s into it (resolving ranges against ordered_ids) and draws the row highlight from
-    /// set membership. Pass None to opt out: the List applies and highlights nothing, and the caller drives
-    /// selection from [`List::requests`]. The emitted requests are always available on the [`ListResult`]
-    /// regardless of set.
+    /// Call this inside a frame callback. `id` names the list, so give each list its own. `ordered_ids` holds
+    /// the ids of all rows in display order. Each id must be unique and not 0.
+    ///
+    /// Selection goes into `set`. With `None`, read the changes from [`List::requests`] and draw your own
+    /// highlight.
     ///
     /// # Panics
-    /// Panics if ordered_ids holds more than `u32::MAX` ids, or when called off the thread that owns the
-    /// live [`Application`](crate::Application).
+    ///
+    /// Panics if `ordered_ids` holds more than `u32::MAX` ids, or when called off the thread that owns the live
+    /// [`Application`](crate::Application).
     pub fn begin(
         id: impl Into<LayoutId>,
         ordered_ids: &[u64],
@@ -62,9 +53,10 @@ impl List {
         }
     }
 
-    /// End the list and return the per-frame [`ListResult`], keyed on stable ids. Pair with [`List::begin`].
+    /// Ends the list and returns the result for this frame.
     ///
     /// # Panics
+    ///
     /// Panics when called off the thread that owns the live [`Application`](crate::Application).
     pub fn end() -> ListResult {
         let _frame = frame_thread_guard("List::end");
@@ -73,37 +65,38 @@ impl List {
         ListResult::from_sys(unsafe { sys::fl_list_end() })
     }
 
-    /// The Selection Requests the List emitted this frame, read from a [`ListResult`]. Empty when the gesture
-    /// made no change. Useful on the None-set path (the caller owns apply/highlight); on the auto-apply path
-    /// they have already been folded into the set.
+    /// Returns the selection changes of this frame.
+    ///
+    /// They are already applied if you passed a set. Otherwise apply them yourself with
+    /// [`SelectionSet::apply`] and the ids you passed to [`List::begin`].
     pub fn requests(result: &ListResult) -> Vec<SelectionRequest> {
         result.requests.clone()
     }
 
-    /// The reorder request emitted on the release frame of a drag-reorder, or None when no drop happened this
-    /// frame. The app owns the model mutation: move every id in [`Reorder::from_ids`] to sit
-    /// [`Reorder::rel`] the [`Reorder::target`] id. The relationship is always Before or After.
+    /// Returns where the dragged rows were dropped this frame, or `None` if there was no drop.
+    ///
+    /// Move the rows in [`Reorder::from_ids`] to the [`Reorder::rel`] side of [`Reorder::target`] in your own
+    /// data. The target can be one of the dragged rows.
     pub fn reorder(result: &ListResult) -> Option<Reorder> {
         result.reorder_emitted.then(|| result.reorder())
     }
 
-    /// The live state of an in-flight reorder drag, or None when no drag is active this frame. Same shape as the
-    /// committed [`Reorder`], but the target/rel are the live CANDIDATE drop position. Exposed so a caller
-    /// that set [`ListConfig::suppress_drag_visuals`] can draw its own ghost / insertion line from these fields.
+    /// Returns where the rows being dragged would land, or `None` while no rows are dragged.
+    ///
+    /// Use it to draw the drag yourself when [`ListConfig::suppress_drag_visuals`] or
+    /// [`ListOpts::suppress_drag_visuals`] is set. The rows have not moved yet, so leave your data alone.
     pub fn drag_state(result: &ListResult) -> Option<Reorder> {
         result.drag_active.then(|| result.reorder())
     }
 
-    /// The declarative one-call List, for rows that are a label and an optional icon. Hand it the rows as
-    /// [`ListItem`] descriptors ({ id, label, icon }) plus the caller-owned set (None opts out of
-    /// auto-apply/highlight). The List runs the whole interaction internally (virtualization, the selection
-    /// gesture machine, keyboard nav, marquee, drag-reorder, the highlight/ghost/insertion-line drawing, and
-    /// auto-applying selection) and draws each row's label + icon. The caller reads only the policy outcomes
-    /// off the [`ListResult`]: activated_id, context_menu_id (see [`List::context_menu`]), and the reorder
-    /// request (see [`List::reorder`]). opts carries the layout knobs plus the multi_select / reorderable
-    /// policy toggles. Use the scoped [`List::begin`] for rows with custom content. Call inside a frame.
+    /// Shows a scrolling list of label rows and returns the result for this frame.
+    ///
+    /// Call this inside a frame callback. `id` names the list, so give each list its own. `items` holds the
+    /// rows in display order. Selection goes into `set`. With `None`, no row is highlighted. To draw the rows
+    /// yourself, use [`List::begin`].
     ///
     /// # Panics
+    ///
     /// Panics when called off the thread that owns the live [`Application`](crate::Application).
     pub fn show(
         id: impl Into<LayoutId>,
@@ -143,30 +136,31 @@ impl List {
         ListResult::from_sys(raw)
     }
 
-    /// The right-clicked row's stable id from a [`ListResult`], or None when no row was right-clicked this
-    /// frame. The List opens no menu itself; the app opens its own at the cursor for this id. Available on
-    /// both faces (the scoped face populates it from a row's right-click too).
+    /// Returns the row the user right-clicked this frame, or `None`.
+    ///
+    /// The list opens no menu, so open yours for this row.
     pub fn context_menu(result: &ListResult) -> Option<u64> {
         (result.context_menu_id != 0).then_some(result.context_menu_id)
     }
 }
 
-/// Configuration for [`List::begin`]. [`Default`] is the C zero default: the List's own row height and gap,
-/// no type-ahead labels, built-in drag visuals.
+/// Options for [`List::begin`].
+///
+/// [`Default`] uses the List's own row height and gap, with type-ahead off.
 #[derive(Copy, Clone, Debug)]
 pub struct ListConfig<'a> {
-    /// Uniform row height in logical pixels (0 -> default 32).
+    /// The height of every row, in logical pixels (0 uses 32).
     pub row_height: f32,
-    /// Gap between rows in logical pixels (0 -> default 8).
+    /// The space between rows, in logical pixels (0 uses 8).
     pub gap: f32,
-    /// Per-row labels for keyboard type-ahead, parallel to the ordered id slice passed to [`List::begin`].
-    /// Empty, or a length different from the id slice's, disables type-ahead. The strings are copied into
-    /// the per-frame arena at the call.
+    /// The labels matched by type-ahead, one per id in the same order.
+    ///
+    /// Type-ahead is off when this is empty or its length differs from the number of ids.
     pub labels: &'a [&'a str],
-    /// false (default): the List draws the built-in drag ghost + insertion line. true: it draws neither, so
-    /// the caller draws its own from [`List::drag_state`].
+    /// Whether you draw the row drag yourself, from [`List::drag_state`].
     pub suppress_drag_visuals: bool,
-    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    /// When the scrollbar is shown ([`ScrollbarDisplayMode::Never`](crate::ScrollbarDisplayMode::Never) by
+    /// default). The mouse wheel always scrolls.
     pub scrollbar_mode: sys::ScrollbarDisplayMode,
 }
 
@@ -196,10 +190,10 @@ impl ListConfig<'_> {
     }
 }
 
-/// The per-frame outcome of a [`List`], returned by [`List::end`] and [`List::show`]. It owns everything it
-/// carries: the selection requests and dragged ids are copied out of the C List's frame storage when the
-/// result is built, so no field points into memory the next frame reuses. It is not [`Copy`] and has no
-/// public constructor. The stable ids are the app's own opaque u64s; 0 means "none".
+/// The outcome of a list for one frame.
+///
+/// This is returned by [`List::end`] and [`List::show`]. The ids are the ones you passed in, and 0 means no
+/// row. You can keep the value after the frame ends.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ListResult {
     activated_id: u64,
@@ -264,22 +258,22 @@ impl ListResult {
         }
     }
 
-    /// Stable id of the item activated this frame (double-click / Enter), or 0.
+    /// The row the user activated with a double-click, Enter or Space (0 for none).
     pub fn activated_id(&self) -> u64 {
         self.activated_id
     }
 
-    /// Stable id of the focused item, or 0.
+    /// The row under the mouse, or under the keyboard cursor while the list has focus (0 for none).
     pub fn focused_id(&self) -> u64 {
         self.focused_id
     }
 
-    /// Nav-Up pressed while the focus cursor was already on the first row.
+    /// Whether the user pressed Up on the first row. Use it to move focus above the list.
     pub fn nav_up_edge(&self) -> bool {
         self.nav_up_edge
     }
 
-    /// Nav-Down pressed while the focus cursor was already on the last row.
+    /// Whether the user pressed Down on the last row. Use it to move focus below the list.
     pub fn nav_down_edge(&self) -> bool {
         self.nav_down_edge
     }
@@ -333,36 +327,36 @@ pub(crate) fn set_handle(set: Option<&mut SelectionSet>) -> *mut sys::SelectionS
     }
 }
 
-/// One row descriptor for [`List::show`]. Carries the row's opaque u64 stable id (pure identity; the
-/// selection and result key), the label the List renders and type-aheads on (borrowed for the [`List::show`]
-/// call; copied into the per-frame arena), and an optional leading icon (None renders label-only).
+/// A row of a [`List::show`] list.
 #[derive(Copy, Clone, Debug)]
 pub struct ListItem<'a> {
-    /// Opaque stable id, never interpreted. It is the selection, activation and reorder key.
+    /// The id of the row (unique, never 0).
     pub id: u64,
-    /// Row text the List draws and uses for keyboard type-ahead.
+    /// The text shown on the row, also matched by type-ahead.
     pub label: &'a str,
-    /// Optional leading icon; None (or a not-ready handle) draws nothing.
+    /// The icon drawn before the label, or `None` for no icon. An icon that is not ready is not drawn.
     pub icon: Option<ImageHandle>,
 }
 
-/// Options for [`List::show`]. multi_select (default true) gates ctrl/shift/marquee/Ctrl+A; reorderable (default true) gates
-/// drag-reorder; suppress_drag_visuals lets the caller draw its own affordances. Row height / gap default to
-/// the List's own (0 -> 32 / 8).
+/// Options for [`List::show`].
+///
+/// [`Default`] turns `multi_select` and `reorderable` on and uses the List's own row height and gap.
 #[derive(Copy, Clone, Debug)]
 pub struct ListOpts {
-    /// Uniform row height in logical pixels (0 -> default 32).
+    /// The height of every row, in logical pixels (0 uses 32).
     pub row_height: f32,
-    /// Gap between rows in logical pixels (0 -> default 8).
+    /// The space between rows, in logical pixels (0 uses 8).
     pub gap: f32,
-    /// true (default): full multi-select. false: single-selection (plain replace only).
+    /// Whether the user can select several rows (true by default). When false, a click selects one row and
+    /// unselects the rest.
     pub multi_select: bool,
-    /// true (default): a row press can begin a drag-reorder. false: rows never start a reorder drag.
+    /// Whether the user can drag rows to a new position (true by default). Read the drop from
+    /// [`List::reorder`].
     pub reorderable: bool,
-    /// true: the caller draws its own ghost/insertion line from the result's `drag_*`; false (default): the
-    /// List draws the built-in affordances.
+    /// Whether you draw the row drag yourself, from [`List::drag_state`].
     pub suppress_drag_visuals: bool,
-    /// When the list shows its scrollbar (default: never). The mouse wheel scrolls the list in every mode.
+    /// When the scrollbar is shown ([`ScrollbarDisplayMode::Never`](crate::ScrollbarDisplayMode::Never) by
+    /// default). The mouse wheel always scrolls.
     pub scrollbar_mode: sys::ScrollbarDisplayMode,
 }
 
@@ -393,33 +387,36 @@ impl ListOpts {
     }
 }
 
-/// A drag-reorder request a [`List`] hands back. The List runs the
-/// gesture and draws the affordances; the app owns the model mutation: move every id in from_ids so it sits
-/// rel the target id. Dragging any row of a multi-selection drags the whole selection (from_ids lists all
-/// of them); dragging an unselected row drags just it. Returned by [`List::reorder`] on the release frame; the
-/// same shape is returned by [`List::drag_state`] every in-flight frame as the live candidate.
+/// Where dragged rows land, from [`List::reorder`] and [`List::drag_state`].
+///
+/// When it comes from [`List::reorder`], move the rows in `from_ids` to the `rel` side of `target` in your
+/// own data.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Reorder {
-    /// The dragged stable ids (the whole selection if the pressed row was selected, else just that row).
+    /// The dragged rows, in no particular order.
+    ///
+    /// This is every id in your set if the drag started on a selected row, and only the pressed row otherwise.
     pub from_ids: Vec<u64>,
-    /// The stable id the drop is positioned relative to.
+    /// The row the drop is next to.
     pub target: u64,
-    /// Where the drop lands relative to target: always Before or After.
+    /// The side of `target` the rows land on. A List only reports [`DropRelationship::Before`] and
+    /// [`DropRelationship::After`].
     pub rel: DropRelationship,
 }
 
-/// A single selection change a [`List`] emits per frame, applied to a [`SelectionSet`] with
-/// [`SelectionSet::apply`]. Ranges name their two endpoint stable ids (never the span), so
-/// they survive virtualization. [`SelectionSet::apply`] resolves them against the app's ordered id list.
+/// A selection change from a [`List`], returned by [`List::requests`].
+///
+/// Apply it to a [`SelectionSet`] with [`SelectionSet::apply`].
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SelectionRequest {
-    /// Empty the set.
+    /// Unselects every row.
     ClearAll,
-    /// Select (true) or deselect (false) every item in the ordered model.
+    /// Selects (true) or unselects (false) every row.
     SetAll(bool),
-    /// Select/deselect a single item by stable id.
+    /// Selects or unselects the row with this id.
     SetOne(u64, bool),
-    /// Select/deselect the inclusive span between two endpoint stable ids (from, to); order-agnostic.
+    /// Selects or unselects the rows from one id to the other, both included. The two ids can come in either
+    /// order.
     SetRange(u64, u64, bool),
 }
 
@@ -468,23 +465,26 @@ impl SelectionRequest {
     }
 }
 
-/// The caller-owned storage of selected [`List`] stable ids, freed on drop. Membership is read with
-/// [`contains`](SelectionSet::contains) and edited with [`set`](SelectionSet::set) /
-/// [`set_all`](SelectionSet::set_all) / [`clear`](SelectionSet::clear) or by folding in a batch of
-/// [`SelectionRequest`]s with [`apply`](SelectionSet::apply).
+/// The ids of the selected rows of a [`List`].
+///
+/// You own the set and pass it to the list each frame. Read it with [`contains`](SelectionSet::contains)
+/// and change it with [`set`](SelectionSet::set), [`set_all`](SelectionSet::set_all),
+/// [`clear`](SelectionSet::clear) or [`apply`](SelectionSet::apply).
 pub use crate::generated::ui_selection::SelectionSet;
 
 impl SelectionSet {
-    /// Create an empty selection set with a default initial capacity. Usable without a live [`Application`](crate::Application) (the
-    /// handle's arena is independent); only emitting a List needs a frame.
+    /// Creates an empty set.
+    ///
+    /// You can create one before the [`Application`](crate::Application) exists.
     pub fn new() -> Self {
         Self::with_capacity(0)
     }
 
-    /// Create an empty selection set hinting capacity ids (a built-in floor applies; it also grows on demand).
+    /// Creates an empty set with room for `capacity` ids. The set grows when it needs more.
     ///
     /// # Panics
-    /// Panics if the native set cannot be allocated.
+    ///
+    /// Panics if the set cannot be allocated.
     pub fn with_capacity(capacity: u32) -> Self {
         ensure_fl_init();
         // SAFETY: a plain call over a u32; the base subsystems it allocates from are up (just ensured).
@@ -493,9 +493,10 @@ impl SelectionSet {
         SelectionSet { handle }
     }
 
-    /// Fold a batch of requests into the set, in order. ordered_ids is the app's full ordered model, used to
-    /// resolve any [`SelectionRequest::SetRange`] / [`SelectionRequest::SetAll`] span; pass an empty slice when no
-    /// such request is present. The bytes do not escape the call.
+    /// Applies `requests` to the set, in order.
+    ///
+    /// `ordered_ids` holds the ids of all rows in display order. [`SelectionRequest::SetRange`] and
+    /// [`SelectionRequest::SetAll`] need it to find their rows. It can be empty when neither is in `requests`.
     pub fn apply(&mut self, requests: &[SelectionRequest], ordered_ids: &[u64]) {
         let lowered: Vec<sys::SelectionRequest> = requests.iter().map(|r| r.to_sys()).collect();
         // SAFETY: self.handle is the live handle this set owns, and both slices are passed as
@@ -511,20 +512,21 @@ impl SelectionSet {
         };
     }
 
-    /// Number of selected ids.
+    /// Returns the number of selected ids.
     #[inline]
     pub fn len(&self) -> usize {
         // SAFETY: self.handle is the live handle this set owns.
         unsafe { sys::fl_selection_set_len(self.handle) as usize }
     }
 
-    /// True if nothing is selected.
+    /// Returns true if nothing is selected.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Snapshot the selected ids into an owned Vec (order unspecified). This is the allocating convenience
-    /// over [`copy_ids`](SelectionSet::copy_ids), which fills a caller's `&mut [u64]`.
+    /// Returns the selected ids, in no particular order.
+    ///
+    /// To fill a slice of your own instead, use [`copy_ids`](SelectionSet::copy_ids).
     pub fn ids(&self) -> Vec<u64> {
         let n = self.len();
         let mut out = vec![0u64; n];
