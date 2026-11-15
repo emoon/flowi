@@ -54,11 +54,6 @@ typedef struct ListState {
     u64 drag_press_id; // stable id of the row the press landed on (selected => drag the whole selection)
 } ListState;
 
-typedef struct ListKeyHook {
-    void* user;
-    i32 (*target_row)(void* user, i32 cursor_row);
-} ListKeyHook;
-
 // The arguments of the begin core: the scoped face's begin call plus the declarative face's policy toggles.
 typedef struct ListBeginArgs {
     FlLayoutId id;
@@ -67,7 +62,7 @@ typedef struct ListBeginArgs {
     FlListConfig config;
     bool single_select;
     bool disable_reorder;
-    ListKeyHook key_hook;
+    i32 (*key_target_row)(i32 cursor_row);
 } ListBeginArgs;
 
 struct FlListContext {
@@ -90,7 +85,7 @@ struct FlListContext {
     // behavior). The declarative face (ui_list) sets them from FlListOpts; the scoped begin leaves them off.
     bool single_select;   // true: ignore ctrl/shift/marquee/Ctrl+A; plain click replace only (single-selection).
     bool disable_reorder; // true: a row press never arms a drag-reorder gesture.
-    ListKeyHook key_hook;
+    i32 (*key_target_row)(i32 cursor_row);
 
     // Per-frame Selection Requests (frame-arena backed; returned on the result and auto-applied at end).
     FlSelectionRequest* requests;

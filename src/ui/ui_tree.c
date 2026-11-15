@@ -22,8 +22,10 @@ struct FlTreeContext {
     bool toggle_expanded;
 };
 
-FlTreeContext* ui_tree_create(FlArena* arena) {
-    return arena_alloc_zero(arena, FlTreeContext);
+FlTreeContext* ui_tree_create(FlArena* arena, FlListContext* list) {
+    FlTreeContext* self = arena_alloc_zero(arena, FlTreeContext);
+    self->list = list;
+    return self;
 }
 
 static u32 subtree_end(const FlTreeContext* self, u32 row) {
@@ -85,8 +87,8 @@ static i32 step_out_of(FlTreeContext* self, u32 row) {
     return (i32)parent_row(self, row);
 }
 
-static i32 key_target_row(void* user, i32 cursor_row) {
-    FlTreeContext* self = user;
+static i32 key_target_row(i32 cursor_row) {
+    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     FlNavFrame nav = fl_get_nav_frame();
     if (nav.nav_right) {
         fl_consume_nav_right();
@@ -151,7 +153,6 @@ static void row_lead(FlTreeContext* self, u32 row) {
 FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set,
                           FlTreeConfig config) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    self->list = ui_get_ctx()->ui_list_ctx;
     self->rows = rows;
     self->count = rows != nullptr ? count : 0;
     self->indent = config.indent > 0.0f ? config.indent : TREE_DEFAULT_INDENT;
@@ -163,7 +164,7 @@ FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, 
                                            .rows = list_rows_from_tree(rows, config.list.labels, count),
                                            .set = set,
                                            .config = config.list,
-                                           .key_hook = { .user = self, .target_row = key_target_row },
+                                           .key_target_row = key_target_row,
                                        });
 }
 

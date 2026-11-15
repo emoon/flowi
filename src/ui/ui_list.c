@@ -114,7 +114,7 @@ static void list_resolve_focus_seed(FlListContext* self, ListState* st) {
 static void list_reset_frame(FlListContext* self, const ListBeginArgs* args) {
     self->single_select = args->single_select;
     self->disable_reorder = args->disable_reorder;
-    self->key_hook = args->key_hook;
+    self->key_target_row = args->key_target_row;
     self->context_menu_id = 0;
     self->current_id = args->id;
     self->current_clay_id = ui_layout_id_to_clay_id(args->id);
