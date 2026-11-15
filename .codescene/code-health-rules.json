@@ -9,6 +9,15 @@
           "value": 6
         }
       ]
+    },
+    {
+      "matching_content_path": "rust/flowi/src/tree.rs",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 6
+        }
+      ]
     }
   ]
 }

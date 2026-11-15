@@ -618,6 +618,9 @@ mod public_surface_guard {
         crate::ThemeSlot = crate::sys::ThemeSlot,
         crate::ThemeSurface = crate::sys::ThemeSurface,
         crate::ThemeText = crate::sys::ThemeText,
+        crate::TreeExpanded = crate::sys::TreeExpanded,
+        crate::TreeRow = crate::sys::TreeRow,
+        crate::TreeVirtualRow = crate::sys::TreeVirtualRow,
         crate::Vec2 = crate::sys::Vec2,
         crate::WidgetHeight = crate::sys::WidgetHeight,
         crate::WidgetSize = crate::sys::WidgetSize,
@@ -1132,6 +1135,18 @@ mod list;
 pub use list::{
     ListConfig, ListItem, ListOpts, ListResult, Reorder, SelectionRequest, SelectionSet,
 };
+
+/// The composing [`Tree`] methods and the value types they hand around.
+mod tree;
+
+/// A tree view over rows the app owns.
+pub use generated::tree::Tree;
+
+/// The rows a [`Tree`] takes and the row [`Tree::row_at`] returns.
+pub use crate::sys::{TreeExpanded, TreeRow, TreeVirtualRow};
+
+/// The Tree value types.
+pub use tree::{TreeConfig, TreeResult, TreeToggle};
 
 /// The dynamic-image widget and the owned pixel buffer it draws.
 mod dynamic_image;
