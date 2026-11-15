@@ -165,8 +165,8 @@ UTEST(font_cache, measure_text_default_font) {
     FlTextMetrics m = measure(cache, ab, font, 0.0f, 0.0f);
     ASSERT_NEAR_MSG(m.width, 32.0f, 0.0001f, "two cells at 8px × scale 2");
     ASSERT_NEAR_MSG(m.height, 16.0f, 0.0001f, "cell height at scale 2");
-    ASSERT_TRUE_MSG(m.ascent == 0.0f && m.descent == 0.0f,
-                    "the built-in font's baseline sits at the cell top (zero ascent/descent)");
+    ASSERT_TRUE_MSG(m.ascent == 16.0f && m.descent == 0.0f,
+                    "the built-in font's glyphs sit above the baseline (ascent is the cell, no descent)");
     ASSERT_NEAR_MSG(measure(cache, ab, font, 0.0f, 2.0f).width, 34.0f, 0.0001f,
                     "letter spacing applies to the built-in font too");
     ASSERT_NEAR_MSG(measure(cache, ab, font, 12.34f, 0.0f).width, m.width, 0.0001f,
@@ -4267,6 +4267,42 @@ UTEST(render, widget_dynamic_image_keeps_alpha_only_mode) {
                   "an alpha-only image must be drawn as alpha coverage");
 }
 
+// The built-in bitmap font draws its glyphs above the baseline, so its ascent is the whole cell. With a zero ascent
+// the text lands one cell above its box, and a vertically centred line sits half a cell above the centre.
+UTEST(render, bitmap_font_baseline_sits_a_cell_below_the_box_top) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    ui_set_scale(1.0f, 1.0f);
+
+    const u16 load_scale = 2;
+    const float cell = 8.0f * (float)load_scale;
+    FlFontId font = font_cache_load_default_font(s_render.font_cache, load_scale);
+    ASSERT_TRUE_MSG(font != FONT_ID_INVALID, "the built-in font loads");
+
+    ui_update_begin(ctx);
+    fl_layout_start(ID("bitmap_top_root"));
+    fl_layout_configure((FlLayoutConfig) { .sizing = { .width = sizing_grow(), .height = sizing_grow() } });
+    ui_text_styled(FL_S("A"), .font_id = font, .valign = FlTextVAlign_Top, .color = ui_color(255, 255, 255, 255));
+    fl_layout_end();
+    ui_update_end(ctx, 1.0f / 60.0f);
+
+    ASSERT_TRUE_MSG(s_render.text_run_found, "the text must reach the frame as a text run");
+    ASSERT_NEAR_MSG(cell, s_render.text_run_glyphs[0].y, 0.5f, "a top-aligned line puts the baseline one cell down");
+
+    const float row = 100.0f;
+    ui_update_begin(ctx);
+    fl_layout_start(ID("bitmap_center_root"));
+    fl_layout_configure((FlLayoutConfig) { .sizing = { .width = sizing_grow(), .height = sizing_fixed(row) },
+                                           .child_alignment = ui_align(Left, Center) });
+    ui_text_styled(FL_S("A"), .font_id = font, .valign = FlTextVAlign_Center, .color = ui_color(255, 255, 255, 255));
+    fl_layout_end();
+    ui_update_end(ctx, 1.0f / 60.0f);
+
+    ASSERT_TRUE_MSG(s_render.text_run_found, "the centred text must reach the frame as a text run");
+    ASSERT_NEAR_MSG(row * 0.5f + cell * 0.5f, s_render.text_run_glyphs[0].y, 0.5f,
+                    "a centred line spans one cell around the row centre");
+}
+
 // Text follows a scale change made after the font was loaded. A font handle names the size the caller authored,
 // and text_scale is multiplied in when the size is used, so a face keeps nothing from the scale it was loaded
 // under. Both paths are covered: an explicit config.font_size, and font_size 0 falling back to the load size.
@@ -8072,9 +8108,9 @@ UTEST(render, slider_skin) {
 // A tab bar skinned as a segmented control, rendered under a default one. The default bar uses the zeroed config
 // the dock leaf header also passes.
 //
-// The check is a scanline through the middle of the pill, positioned from the snapshot. It crosses exactly one
-// run of the accent fill (the selected tab), and the strip shows the pill's own surface color between its edge
-// and that tab.
+// The check is a scanline through the top of the pill, above the labels and positioned from the snapshot. It crosses
+// exactly one run of the accent fill (the selected tab), and the strip shows the pill's own surface color between its
+// edge and that tab.
 UTEST(render, tab_bar_skin) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -8135,10 +8171,10 @@ UTEST(render, tab_bar_skin) {
     ASSERT_TRUE_MSG(buf.pixels != nullptr, "render buffer data is null");
     ASSERT_TRUE_MSG(buf.width == 1920 && buf.height == 1080, "unexpected render buffer dimensions");
 
-    // Scan the pill's middle row across its full width. The selected tab is the only accent fill on it.
+    // Scan a row near the pill's top across its full width. The selected tab is the only accent fill on it.
     const u8 accent_rgb[3] = { 200, 30, 40 };
     const u8 pill_rgb[3] = { 36, 38, 44 };
-    const int scan_y = (int)(pill.y + pill.height / 2.0f);
+    const int scan_y = (int)pill.y + 4;
     int accent_runs = 0;
     bool in_run = false;
     for (int x = (int)pill.x; x < (int)(pill.x + pill.width); x++) {
