@@ -19,14 +19,14 @@
 /// A click selects a row, ctrl-click adds or removes one, shift-click selects a range, Ctrl+A selects
 /// everything, and dragging from empty space selects with a rectangle. Up, Down, Home and End move the keyboard
 /// cursor, and holding Shift with them selects the rows in between. Enter, Space and double-click activate a
-/// row. Dragging a row moves it and any other selected rows; the result tells you where they were dropped and
-/// you reorder your own data.
+/// row. Dragging a selected row moves all selected rows, and dragging an unselected row moves only that row.
+/// The result tells you where they were dropped and you reorder your own data.
 pub struct List;
 
 impl List {
-    /// Start one row. stable_id is the row's id, the one at this index in ordered_ids. The List draws the
-    /// selection highlight behind the row, and what you draw before item_end goes on top of it. The returned
-    /// Signal tells you if this row is hovered, clicked, double-clicked or right-clicked.
+    /// Start one row. stable_id is the row's id, the one at this index in ordered_ids. If you passed a set to
+    /// begin, the List draws the selection highlight behind the row. What you draw before item_end goes on top
+    /// of it. The returned Signal tells you if this row is hovered, clicked, double-clicked or right-clicked.
     #[inline]
     pub fn item_begin(stable_id: u64) -> crate::sys::Signal {
         let _frame = crate::frame_thread::frame_thread_guard("List::item_begin");
@@ -41,10 +41,10 @@ impl List {
     }
 
     /// Give a list keyboard focus from your code, so the arrow keys, Home, End, Enter, Space and type-ahead go
-    /// to it without the user clicking a row first. Call it when a popup that holds the list opens. id is the
-    /// id you pass to begin, and cursor_id is the row the keyboard cursor starts on; pass 0 to start on the
-    /// first row. If the list already has focus the cursor stays where it is, so calling this every frame
-    /// while the popup is open is fine.
+    /// to it without the user clicking a row first. Call it once, on the frame a popup that holds the list
+    /// opens. id is the id you pass to begin, and cursor_id is the row the keyboard cursor starts on; pass 0 to
+    /// start on the first row. Each call takes focus away from whatever has it, so do not call it every frame.
+    /// If the list already has focus, the cursor stays where it is.
     #[inline]
     pub fn request_focus(id: impl Into<crate::LayoutId>, cursor_id: u64) {
         let id: crate::LayoutId = id.into();

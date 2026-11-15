@@ -83,8 +83,8 @@ typedef struct FlListRange {
     uint32_t total;
 } FlListRange;
 
-// What happened in the list this frame. List::end and Input::list return it. Every id here is one of the ids
-// you passed in, and 0 means "no row".
+// What happened in the list this frame. List::end and Input::list return it, and TreeResult holds one. Every
+// id here is one of the ids you passed in, and 0 means "no row".
 typedef struct FlListResult {
     // The row the user picked this frame with a double-click, Enter or Space, or 0. Open or run the item here.
     uint64_t activated_id;
@@ -95,8 +95,8 @@ typedef struct FlListResult {
     uint64_t context_menu_id;
     // The selection changes the user made this frame. You only need these if you passed null for the set and
     // keep the selection yourself: apply them with SelectionSet::apply or handle each one in your own code.
-    // With a set they are already applied. The array holds request_count entries, is null when there are none,
-    // and is only valid this frame.
+    // With a set they are already applied. Read request_count entries and no more. The array is only valid
+    // this frame.
     const FlSelectionRequest* requests;
     // Number of entries in requests. 0 means the selection did not change.
     uint32_t request_count;
@@ -108,12 +108,14 @@ typedef struct FlListResult {
     // were dropped now. You only need them if you set suppress_drag_visuals and draw the drag yourself.
     bool drag_active;
     // true on the frame the user drops the dragged rows. Move the rows in drag_from_ids next to drag_target_id
-    // in your own data, on the side drag_rel says. The List does not reorder anything itself, so the rows stay
-    // where they were until you pass the new order to begin. Never true on the same frame as drag_active.
+    // in your own data, on the side drag_rel says. The target can be one of the dragged rows, so find its
+    // position before you take the dragged rows out. The List does not reorder anything itself, so the rows
+    // stay where they were until you pass the new order to begin. Never true on the same frame as drag_active.
     bool reorder_emitted;
-    // The rows being dragged. This is every selected row if the drag started on a selected row, and only the
-    // pressed row otherwise. The array holds drag_from_count entries, is null when there is no drag, and is
-    // only valid this frame.
+    // The rows being dragged. This is every row in your set if the drag started on a selected row, and only
+    // the pressed row otherwise. Without a set it is always only the pressed row. The ids come in no
+    // particular order, so take the order from your own data when you move them. The array holds
+    // drag_from_count entries, is null when there is no drag, and is only valid this frame.
     const uint64_t* drag_from_ids;
     // The row the drop is next to.
     uint64_t drag_target_id;

@@ -26,25 +26,26 @@ extern "C" {
 // A click selects a row, ctrl-click adds or removes one, shift-click selects a range, Ctrl+A selects
 // everything, and dragging from empty space selects with a rectangle. Up, Down, Home and End move the keyboard
 // cursor, and holding Shift with them selects the rows in between. Enter, Space and double-click activate a
-// row. Dragging a row moves it and any other selected rows; the result tells you where they were dropped and
-// you reorder your own data.
+// row. Dragging a selected row moves all selected rows, and dragging an unselected row moves only that row.
+// The result tells you where they were dropped and you reorder your own data.
 // Start a list. ordered_ids holds the ids of all count rows, in the order they are shown. Give every row a
-// different id and never use 0. Selection goes into set; pass null if you keep the selection yourself and
-// want to read the changes from ListResult.requests. Draw the rows in the returned range, then call end.
+// different id and never use 0. Selection goes into set, and the List highlights the rows in it. Pass null
+// if you keep the selection yourself: you then read the changes from ListResult.requests and draw your own
+// highlight in each row. Draw the rows in the returned range, then call end.
 FL_API FlListRange fl_list_begin(FlLayoutId id, const uint64_t* ordered_ids, uint32_t count, FlSelectionSet* set, FlListConfig config);
-// Start one row. stable_id is the row's id, the one at this index in ordered_ids. The List draws the
-// selection highlight behind the row, and what you draw before item_end goes on top of it. The returned
-// Signal tells you if this row is hovered, clicked, double-clicked or right-clicked.
+// Start one row. stable_id is the row's id, the one at this index in ordered_ids. If you passed a set to
+// begin, the List draws the selection highlight behind the row. What you draw before item_end goes on top
+// of it. The returned Signal tells you if this row is hovered, clicked, double-clicked or right-clicked.
 FL_API FlSignal fl_list_item_begin(uint64_t stable_id);
 // Finish the row started with item_begin.
 FL_API void fl_list_item_end(void);
 // Finish the list and get this frame's result: the activated row, a drop to apply, and so on.
 FL_API FlListResult fl_list_end(void);
 // Give a list keyboard focus from your code, so the arrow keys, Home, End, Enter, Space and type-ahead go
-// to it without the user clicking a row first. Call it when a popup that holds the list opens. id is the
-// id you pass to begin, and cursor_id is the row the keyboard cursor starts on; pass 0 to start on the
-// first row. If the list already has focus the cursor stays where it is, so calling this every frame
-// while the popup is open is fine.
+// to it without the user clicking a row first. Call it once, on the frame a popup that holds the list
+// opens. id is the id you pass to begin, and cursor_id is the row the keyboard cursor starts on; pass 0 to
+// start on the first row. Each call takes focus away from whatever has it, so do not call it every frame.
+// If the list already has focus, the cursor stays where it is.
 FL_API void fl_list_request_focus(FlLayoutId id, uint64_t cursor_id);
 
 #define fl_list_begin_impl(id, ordered_ids, count, set, config) (fl_list_begin)(id, ordered_ids, count, set, config)
