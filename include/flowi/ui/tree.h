@@ -68,6 +68,8 @@ typedef struct FlTreeResult {
     uint64_t toggled_id;
     // The state toggled_id should take: true to expand, false to collapse.
     bool toggle_expanded;
+    // Row number of toggled_id in the rows of this frame. Meaningful only while toggled_id is not 0.
+    uint32_t toggled_row;
 } FlTreeResult;
 
 // Virtualized tree over the List: rows indent by depth and rows with children get an expand arrow. The app
@@ -86,6 +88,22 @@ FL_API FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t 
 // leaves a left-to-right container open for the row's content. Returns the row's interaction Signal; a
 // press on the arrow toggles the row and is not part of it. Pair with item_end.
 FL_API FlSignal fl_tree_item_begin(uint32_t row);
+// Begin a virtual tree identified by id. The app passes the number of root rows and only the expanded
+// nodes (expanded of count entries, see TreeExpanded), so the cost follows the number of expanded nodes
+// and not the number of rows. Returns the row range to emit: for each row call row_at to learn which child
+// it is, then item_begin_virtual / item_end; pair with end.
+//
+// A row's id is its row number plus one, in the selection set and in every id of the result. When a row
+// is toggled and the app applies it on the next frame, the Tree moves the cursor and the selection with
+// the rows that shifted; rows hidden by a collapse are unselected. If the row count changes in a frame
+// with no toggle to explain it, the selection is cleared. A toggle to expand can name a row with no
+// children; ignore it. Type-ahead is off: config.list.labels is not read.
+FL_API FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTreeExpanded* expanded, uint32_t count, FlSelectionSet* set, FlTreeConfig config);
+// Where row sits in a virtual tree: its parent node, child index, depth and its own expanded node.
+// Valid between begin_virtual and end.
+FL_API FlTreeVirtualRow fl_tree_row_at(uint32_t row);
+// Begin row of a virtual tree, as item_begin does. has_children gives the row an expand arrow.
+FL_API FlSignal fl_tree_item_begin_virtual(uint32_t row, bool has_children);
 // End the current row.
 FL_API void fl_tree_item_end(void);
 // End the tree. Returns the per-frame TreeResult.
@@ -95,6 +113,13 @@ FL_API FlTreeResult fl_tree_end(void);
 #ifndef FL_API_IMPLEMENTATION
 // Designated-initializer convenience macro - routes directly to the fl_* body.
 #define fl_tree_begin(id, rows, count, set, ...) fl_tree_begin(id, rows, count, set, (FlTreeConfig) { __VA_ARGS__ })
+
+#endif
+
+#define fl_tree_begin_virtual_impl(id, root_count, expanded, count, set, config) (fl_tree_begin_virtual)(id, root_count, expanded, count, set, config)
+#ifndef FL_API_IMPLEMENTATION
+// Designated-initializer convenience macro - routes directly to the fl_* body.
+#define fl_tree_begin_virtual(id, root_count, expanded, count, set, ...) fl_tree_begin_virtual(id, root_count, expanded, count, set, (FlTreeConfig) { __VA_ARGS__ })
 
 #endif
 

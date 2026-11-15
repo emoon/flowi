@@ -27,6 +27,21 @@ impl Tree {
         unsafe { crate::sys::fl_tree_item_begin(row) }
     }
 
+    /// Where row sits in a virtual tree: its parent node, child index, depth and its own expanded node.
+    /// Valid between begin_virtual and end.
+    #[inline]
+    pub fn row_at(row: u32) -> crate::sys::TreeVirtualRow {
+        let _frame = crate::frame_thread::frame_thread_guard("Tree::row_at");
+        unsafe { crate::sys::fl_tree_row_at(row) }
+    }
+
+    /// Begin row of a virtual tree, as item_begin does. has_children gives the row an expand arrow.
+    #[inline]
+    pub fn item_begin_virtual(row: u32, has_children: bool) -> crate::sys::Signal {
+        let _frame = crate::frame_thread::frame_thread_guard("Tree::item_begin_virtual");
+        unsafe { crate::sys::fl_tree_item_begin_virtual(row, has_children) }
+    }
+
     /// End the current row.
     #[inline]
     pub fn item_end() {

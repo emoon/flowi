@@ -5,6 +5,7 @@
 #include <ui/ui_theme.h>
 #include "layout.h"
 #include "painter.h"
+#include "tree_flat.h"
 #include "ui.h"
 
 #include <math.h>
@@ -13,26 +14,46 @@
 #define TREE_ARROW_STEPS 4
 #define TREE_ARROW_LENGTH 4.0f
 
+typedef struct TreeVirtualState {
+    u32 row_count;
+    u32 toggle_row;
+    bool toggle_pending;
+    bool toggle_expanded;
+    bool seen;
+} TreeVirtualState;
+
 struct FlTreeContext {
     FlListContext* list;
     const FlTreeRow* rows;
+    TreeFlat flat;
+    bool is_virtual;
     u32 count;
     f32 indent;
     u64 toggled_id;
+    u32 toggled_row;
     bool toggle_expanded;
+    hashmap(u32, TreeVirtualState) virtual_states;
 };
 
 FlTreeContext* ui_tree_create(FlArena* arena, FlListContext* list) {
     FlTreeContext* self = arena_alloc_zero(arena, FlTreeContext);
     self->list = list;
+    hashmap_new(&self->virtual_states, arena, 8);
     return self;
 }
 
 static FlTreeRow tree_row(const FlTreeContext* self, u32 row) {
-    return self->rows[row];
+    if (!self->is_virtual) {
+        return self->rows[row];
+    }
+    FlTreeVirtualRow at = tree_flat_row(&self->flat, row);
+    return (FlTreeRow) { .id = (u64)row + 1, .depth = at.depth, .has_children = true, .expanded = at.node >= 0 };
 }
 
 static u32 subtree_end(const FlTreeContext* self, u32 row) {
+    if (self->is_virtual) {
+        return tree_flat_subtree_end(&self->flat, row);
+    }
     u32 end = row + 1;
     while (end < self->count && self->rows[end].depth > self->rows[row].depth) {
         end++;
@@ -41,6 +62,9 @@ static u32 subtree_end(const FlTreeContext* self, u32 row) {
 }
 
 static u32 parent_row(const FlTreeContext* self, u32 row) {
+    if (self->is_virtual) {
+        return tree_flat_parent_row(&self->flat, row);
+    }
     u32 i = row;
     while (i > 0) {
         i--;
@@ -64,6 +88,7 @@ static void move_cursor_out_of_subtree(const FlTreeContext* self, u32 row) {
 static void toggle_row(FlTreeContext* self, u32 row) {
     FlTreeRow r = tree_row(self, row);
     self->toggled_id = r.id;
+    self->toggled_row = row;
     self->toggle_expanded = !r.expanded;
     if (r.expanded) {
         move_cursor_out_of_subtree(self, row);
@@ -165,14 +190,20 @@ static FlSignal row_begin(FlTreeContext* self, u32 row, FlTreeRow r) {
     return signal;
 }
 
+static void tree_reset_frame(FlTreeContext* self, f32 indent) {
+    self->indent = indent > 0.0f ? indent : TREE_DEFAULT_INDENT;
+    self->toggled_id = 0;
+    self->toggled_row = 0;
+    self->toggle_expanded = false;
+}
+
 FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set,
                           FlTreeConfig config) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    self->is_virtual = false;
     self->rows = rows;
     self->count = rows != nullptr ? count : 0;
-    self->indent = config.indent > 0.0f ? config.indent : TREE_DEFAULT_INDENT;
-    self->toggled_id = 0;
-    self->toggle_expanded = false;
+    tree_reset_frame(self, config.indent);
 
     return list_begin_impl(self->list, (ListBeginArgs) {
                                            .id = id,
@@ -184,10 +215,116 @@ FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, 
                                        });
 }
 
+static TreeVirtualState* virtual_state_get(FlTreeContext* self, u32 clay_id) {
+    TreeVirtualState* state = hashmap_get(&self->virtual_states, clay_id);
+    if (state == nullptr) {
+        TreeVirtualState fresh = { 0 };
+        state = hashmap_insert(&self->virtual_states, clay_id, fresh);
+    }
+    FL_ASSERT(state != nullptr);
+    return state;
+}
+
+typedef struct RowShift {
+    u64 after_id;
+    u64 removed;
+    u64 added;
+} RowShift;
+
+static u64 shifted_id(RowShift shift, u64 id) {
+    if (id <= shift.after_id) {
+        return id;
+    }
+    if (id - shift.after_id <= shift.removed) {
+        return 0;
+    }
+    return id - shift.removed + shift.added;
+}
+
+static void shift_selection(FlSelectionSet* set, RowShift shift) {
+    u64 count = selection_set_len(set);
+    u64* ids = arena_alloc_array(ui_get_ctx()->render_frame_allocator, u64, count);
+    selection_set_copy_ids(set, ids, count);
+    selection_set_clear_all(set);
+    for_count(i, count) {
+        u64 id = shifted_id(shift, ids[i]);
+        if (id != 0) {
+            selection_set_set(set, id, true);
+        }
+    }
+}
+
+static RowShift shift_after_toggle(const TreeVirtualState* state, u32 row_count) {
+    RowShift shift = { .after_id = (u64)state->toggle_row + 1 };
+    if (row_count > state->row_count) {
+        shift.added = row_count - state->row_count;
+    } else {
+        shift.removed = state->row_count - row_count;
+    }
+    return shift;
+}
+
+static bool toggle_explains(const TreeVirtualState* state, u32 row_count) {
+    bool grew = row_count > state->row_count;
+    return state->toggle_pending && grew == state->toggle_expanded;
+}
+
+static void follow_row_change(FlTreeContext* self, u32 clay_id, FlSelectionSet* set) {
+    TreeVirtualState* state = virtual_state_get(self, clay_id);
+    bool changed = state->seen && state->row_count != self->count;
+    if (!changed) {
+        return;
+    }
+    ListState* st = list_state_get(self->list, clay_id);
+    RowShift shift = { .removed = UINT64_MAX };
+    if (toggle_explains(state, self->count)) {
+        shift = shift_after_toggle(state, self->count);
+    }
+    st->focus_cursor_id = shifted_id(shift, st->focus_cursor_id);
+    st->anchor_id = shifted_id(shift, st->anchor_id);
+    if (set != nullptr) {
+        shift_selection(set, shift);
+    }
+}
+
+FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTreeExpanded* expanded, uint32_t count,
+                                  FlSelectionSet* set, FlTreeConfig config) {
+    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    self->flat = tree_flat_build(ui_get_ctx()->render_frame_allocator, root_count, expanded, count);
+    self->is_virtual = true;
+    self->rows = nullptr;
+    self->count = self->flat.row_count;
+    tree_reset_frame(self, config.indent);
+    follow_row_change(self, ui_layout_id_to_clay_id(id), set);
+
+    return list_begin_impl(self->list, (ListBeginArgs) {
+                                           .id = id,
+                                           .rows = list_rows_from_count(self->count),
+                                           .set = set,
+                                           .config = config.list,
+                                           .disable_reorder = true,
+                                           .key_target_row = key_target_row,
+                                       });
+}
+
+FlTreeVirtualRow fl_tree_row_at(uint32_t row) {
+    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    FL_ASSERT(self->is_virtual);
+    return tree_flat_row(&self->flat, row);
+}
+
 FlSignal fl_tree_item_begin(uint32_t row) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     FL_ASSERT(row < self->count);
     return row_begin(self, row, tree_row(self, row));
+}
+
+FlSignal fl_tree_item_begin_virtual(uint32_t row, bool has_children) {
+    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    FL_ASSERT(row < self->count);
+    FlTreeRow r = tree_row(self, row);
+    r.has_children = has_children || r.expanded;
+    return row_begin(self, row, r);
 }
 
 void fl_tree_item_end(void) {
@@ -196,11 +333,24 @@ void fl_tree_item_end(void) {
     list_item_end_impl(self->list);
 }
 
+static void remember_virtual_frame(FlTreeContext* self) {
+    TreeVirtualState* state = virtual_state_get(self, self->list->current_clay_id);
+    state->seen = true;
+    state->row_count = self->count;
+    state->toggle_pending = self->toggled_id != 0;
+    state->toggle_row = self->toggled_row;
+    state->toggle_expanded = self->toggle_expanded;
+}
+
 FlTreeResult fl_tree_end(void) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    if (self->is_virtual) {
+        remember_virtual_frame(self);
+    }
     return (FlTreeResult) {
         .list = list_end_impl(self->list),
         .toggled_id = self->toggled_id,
         .toggle_expanded = self->toggle_expanded,
+        .toggled_row = self->toggled_row,
     };
 }

@@ -97,6 +97,8 @@ pub struct TreeResult {
     pub toggled_id: u64,
     /// The state toggled_id should take: true to expand, false to collapse.
     pub toggle_expanded: bool,
+    /// Row number of toggled_id in the rows of this frame. Meaningful only while toggled_id is not 0.
+    pub toggled_row: u32,
 }
 
 const _: () = {
@@ -105,6 +107,7 @@ const _: () = {
     assert!(core::mem::offset_of!(TreeResult, list) == 0, "TreeResult.list offset drift");
     assert!(core::mem::offset_of!(TreeResult, toggled_id) == 64, "TreeResult.toggled_id offset drift");
     assert!(core::mem::offset_of!(TreeResult, toggle_expanded) == 72, "TreeResult.toggle_expanded offset drift");
+    assert!(core::mem::offset_of!(TreeResult, toggled_row) == 76, "TreeResult.toggled_row offset drift");
 };
 
 // Virtualized tree over the List: rows indent by depth and rows with children get an expand arrow. The app
@@ -124,6 +127,22 @@ extern "C" {
     /// leaves a left-to-right container open for the row's content. Returns the row's interaction Signal; a
     /// press on the arrow toggles the row and is not part of it. Pair with item_end.
     pub fn fl_tree_item_begin(row: u32) -> crate::sys::Signal;
+    /// Begin a virtual tree identified by id. The app passes the number of root rows and only the expanded
+    /// nodes (expanded of count entries, see TreeExpanded), so the cost follows the number of expanded nodes
+    /// and not the number of rows. Returns the row range to emit: for each row call row_at to learn which child
+    /// it is, then item_begin_virtual / item_end; pair with end.
+    ///
+    /// A row's id is its row number plus one, in the selection set and in every id of the result. When a row
+    /// is toggled and the app applies it on the next frame, the Tree moves the cursor and the selection with
+    /// the rows that shifted; rows hidden by a collapse are unselected. If the row count changes in a frame
+    /// with no toggle to explain it, the selection is cleared. A toggle to expand can name a row with no
+    /// children; ignore it. Type-ahead is off: config.list.labels is not read.
+    pub fn fl_tree_begin_virtual(id: crate::sys::LayoutId, root_count: u32, expanded: *const crate::sys::TreeExpanded, count: u32, set: *mut crate::sys::SelectionSet, config: crate::sys::TreeConfig) -> crate::sys::ListRange;
+    /// Where row sits in a virtual tree: its parent node, child index, depth and its own expanded node.
+    /// Valid between begin_virtual and end.
+    pub fn fl_tree_row_at(row: u32) -> crate::sys::TreeVirtualRow;
+    /// Begin row of a virtual tree, as item_begin does. has_children gives the row an expand arrow.
+    pub fn fl_tree_item_begin_virtual(row: u32, has_children: bool) -> crate::sys::Signal;
     /// End the current row.
     pub fn fl_tree_item_end();
     /// End the tree. Returns the per-frame TreeResult.

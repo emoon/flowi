@@ -57,6 +57,8 @@ struct TreeResult {
     toggled_id: u64,
     /// The state toggled_id should take: true to expand, false to collapse.
     toggle_expanded: bool,
+    /// Row number of toggled_id in the rows of this frame. Meaningful only while toggled_id is not 0.
+    toggled_row: u32,
 }
 
 /// Virtualized tree over the List: rows indent by depth and rows with children get an expand arrow. The app
@@ -77,6 +79,22 @@ api Tree {
     /// leaves a left-to-right container open for the row's content. Returns the row's interaction Signal; a
     /// press on the arrow toggles the row and is not part of it. Pair with item_end.
     item_begin(row: u32) -> Signal
+    /// Begin a virtual tree identified by id. The app passes the number of root rows and only the expanded
+    /// nodes (expanded of count entries, see TreeExpanded), so the cost follows the number of expanded nodes
+    /// and not the number of rows. Returns the row range to emit: for each row call row_at to learn which child
+    /// it is, then item_begin_virtual / item_end; pair with end.
+    ///
+    /// A row's id is its row number plus one, in the selection set and in every id of the result. When a row
+    /// is toggled and the app applies it on the next frame, the Tree moves the cursor and the selection with
+    /// the rows that shifted; rows hidden by a collapse are unselected. If the row count changes in a frame
+    /// with no toggle to explain it, the selection is cleared. A toggle to expand can name a row with no
+    /// children; ignore it. Type-ahead is off: config.list.labels is not read.
+    [manual] begin_virtual(id: LayoutId, root_count: u32, expanded: *const TreeExpanded, count: u32, set: *SelectionSet, config: TreeConfig) -> ListRange
+    /// Where row sits in a virtual tree: its parent node, child index, depth and its own expanded node.
+    /// Valid between begin_virtual and end.
+    row_at(row: u32) -> TreeVirtualRow
+    /// Begin row of a virtual tree, as item_begin does. has_children gives the row an expand arrow.
+    item_begin_virtual(row: u32, has_children: bool) -> Signal
     /// End the current row.
     item_end()
     /// End the tree. Returns the per-frame TreeResult.

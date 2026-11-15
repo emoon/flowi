@@ -68,6 +68,20 @@ ListRows list_rows_from_tree(const FlTreeRow* tree_rows, const FlString* labels,
     return rows;
 }
 
+static u64 count_id_at(const ListRows* rows, u32 row) {
+    (void)rows;
+    return (u64)row + 1;
+}
+
+static i32 count_row_of(const ListRows* rows, u64 id) {
+    bool in_rows = id >= 1 && id <= rows->count;
+    return in_rows ? (i32)(id - 1) : -1;
+}
+
+ListRows list_rows_from_count(u32 count) {
+    return (ListRows) { .count = count, .id_at = count_id_at, .row_of = count_row_of };
+}
+
 bool list_rows_have_ids(const ListRows* rows) {
     return rows->id_at != nullptr && rows->count > 0;
 }
