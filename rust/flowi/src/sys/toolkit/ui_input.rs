@@ -96,9 +96,10 @@ extern "C" {
     /// The current normalized value of axis on the pad in player slot (0-based): -1..1 for the sticks,
     /// 0..1 for the triggers, as the backend reported it with no dead zone applied. 0 when the slot is empty.
     pub fn fl_input_gamepad_axis(slot: u32, axis: crate::sys::GamepadAxis) -> f32;
-    /// Show a scrolling list of label rows in one call. items holds the count rows in display order.
-    /// Selection goes into set; with a null set no row is highlighted. Act on the result: activated_id,
-    /// context_menu_id and reorder_emitted. To draw the rows yourself, use List::begin.
+    /// Shows a scrolling list of label rows.
+    ///
+    /// `items` holds the `count` rows in display order. Selection goes into `set`; if `set` is null, no row is
+    /// highlighted. To draw the rows yourself, use `List::begin`.
     pub fn fl_input_list(id: crate::sys::LayoutId, items: *const crate::sys::ListItem, count: u32, set: *mut crate::sys::SelectionSet, opts: crate::sys::ListOpts) -> crate::sys::ListResult;
     /// True when the semantic navigation-down action was pressed this frame, independent of whether it came
     /// from an arrow key, D-pad, or analog stick binding.

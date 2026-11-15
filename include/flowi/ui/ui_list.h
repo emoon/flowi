@@ -13,24 +13,32 @@
 extern "C" {
 #endif
 
-// A scrolling list where you draw each row. For plain label rows, Input::list does it in one call.
+// A scrolling list where you draw each row.
 //
-// Each frame, call begin with the ids of all rows. For each index in the range it returns, call item_begin,
-// draw the row, and call item_end. Then call end and act on the result. The list fills the layout area it is
-// in. It handles selection, the keyboard and row dragging; you keep the rows and reorder them after a drop.
-// Start a list. ordered_ids holds the ids of all count rows in display order, each unique and never 0.
-// Selection goes into set. Pass null to keep the selection yourself: read ListResult.requests and draw
-// your own highlight.
+// Each frame, call `begin` with the ids of all rows. For each index in the range it returns, call
+// `item_begin`, draw the row, and call `item_end`. Then call `end` and act on the result.
+//
+// The list fills the layout area it is in. It handles selection, the keyboard and row dragging; you keep the
+// rows and reorder them after a drop. For plain label rows, see `Input::list`.
+// Starts a list and returns the range of rows to draw.
+//
+// `ordered_ids` holds the ids of all `count` rows in display order. Each id must be unique and not 0.
+//
+// Selection goes into `set`. If `set` is null, read the changes from `ListResult.requests` and draw your
+// own highlight.
 FL_API FlListRange fl_list_begin(FlLayoutId id, const uint64_t* ordered_ids, uint32_t count, FlSelectionSet* set, FlListConfig config);
-// Start the row with this id. What you draw before item_end is the row's content. The Signal is for this
-// row.
+// Starts the row with the given id and returns the `Signal` for it.
+//
+// Everything you draw before `item_end` is the row's content.
 FL_API FlSignal fl_list_item_begin(uint64_t stable_id);
-// Finish the row.
+// Ends the row started with `item_begin`.
 FL_API void fl_list_item_end(void);
-// Finish the list and get this frame's result.
+// Ends the list and returns the result for this frame.
 FL_API FlListResult fl_list_end(void);
-// Give the list keyboard focus, with the cursor on cursor_id (0 for the first row). Call it once when a
-// popup holding the list opens, not every frame: each call takes focus from whatever has it.
+// Gives the list keyboard focus, with the cursor on `cursor_id` (0 for the first row).
+//
+// Call this once when a popup holding the list opens. Each call takes focus from whatever has it, so do
+// not call it every frame.
 FL_API void fl_list_request_focus(FlLayoutId id, uint64_t cursor_id);
 
 #define fl_list_begin_impl(id, ordered_ids, count, set, config) (fl_list_begin)(id, ordered_ids, count, set, config)
