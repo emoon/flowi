@@ -58,7 +58,8 @@ static bool child_fits(const OpenNode* open, u32 child_index) {
 static void open_node(FlatBuild* build, const FlTreeExpanded* nodes, u32 index, u64* rows_left) {
     const FlTreeExpanded* node = &nodes[index];
     i32 level = open_level_of(build, node->parent);
-    bool fits = level >= 0 && child_fits(&build->open[level], node->child_index);
+    bool has_level = level >= 0 && level < UINT16_MAX;
+    bool fits = has_level && child_fits(&build->open[level], node->child_index);
     bool valid = fits && node->child_count <= *rows_left;
     FL_ASSERT_DEBUG(valid && "expanded nodes must be in display order and fit their parent");
     if (!valid) {
@@ -77,14 +78,15 @@ TreeFlat tree_flat_build(FlArena* arena, u32 root_count, const FlTreeExpanded* n
         .open = arena_alloc_array(arena, OpenNode, (u64)used_nodes + 1),
         .open_count = 1,
     };
-    build.open[0] = (OpenNode) { .node = -1, .child_count = root_count };
-    u64 rows_left = (u64)UINT32_MAX - root_count;
+    u32 root_rows = root_count < (u32)INT32_MAX ? root_count : (u32)INT32_MAX;
+    build.open[0] = (OpenNode) { .node = -1, .child_count = root_rows };
+    u64 rows_left = (u64)INT32_MAX - root_rows;
 
     for_count(i, used_nodes) {
         open_node(&build, nodes, i, &rows_left);
     }
     close_to_level(&build, 0);
-    push_range(&build, 0, root_count, -1);
+    push_range(&build, 0, root_rows, -1);
     return build.flat;
 }
 

@@ -280,3 +280,37 @@ UTEST(tree_virtual, only_rows_with_children_get_an_arrow) {
         ASSERT_EQ_MSG(expect_arrow[row], arrow.found, "root rows have an arrow slot, child rows do not");
     }
 }
+
+UTEST(tree_virtual, a_declined_toggle_does_not_explain_a_later_row_change) {
+    FlUiCtx* ctx = vtree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("vtree_declined");
+    FlSelectionSet* set = selection_set_create(0);
+    const VTreeModel open = { 4, s_vtree_first_open, sizeof_array(s_vtree_first_open), set };
+    const VTreeModel grown = { 6, s_vtree_first_open, sizeof_array(s_vtree_first_open), set };
+
+    vtree_click(ctx, tree, open, (VTreeInput) { .at = vtree_body(6) });
+    vtree_click(ctx, tree, open, (VTreeInput) { .at = vtree_body(1), .modifiers = FlKeyModifier_Control });
+    FlTreeResult r = vtree_key(ctx, tree, open, (VTreeInput) { .nav_right = true });
+    ASSERT_EQ_MSG(1u, r.toggled_row, "Right on the child row asks to expand it");
+
+    vtree_frame(ctx, tree, grown, (VTreeInput) { .at = s_vtree_away });
+    ASSERT_EQ_MSG((u64)0, selection_set_len(set), "the toggled row did not expand, so the new rows are unexplained");
+
+    selection_set_destroy(set);
+}
+
+UTEST(tree_virtual, a_focus_request_names_a_row_of_the_new_frame) {
+    FlUiCtx* ctx = vtree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("vtree_seed");
+    const VTreeModel closed = { 4, nullptr, 0, nullptr };
+    const VTreeModel open = { 4, s_vtree_first_open, sizeof_array(s_vtree_first_open), nullptr };
+
+    for_count(i, 3) {
+        vtree_frame(ctx, tree, closed, (VTreeInput) { .at = s_vtree_away });
+    }
+    fl_list_request_focus(tree, 3);
+    VTreeFrame frame = vtree_frame(ctx, tree, open, (VTreeInput) { .at = s_vtree_away });
+    ASSERT_EQ_MSG((u64)3, frame.result.list.focused_id, "the requested row is not moved or dropped with the old rows");
+}

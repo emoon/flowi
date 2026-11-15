@@ -17,6 +17,7 @@
 typedef struct TreeVirtualState {
     u32 row_count;
     u32 toggle_row;
+    u32 toggle_subtree;
     bool toggle_pending;
     bool toggle_expanded;
     bool seen;
@@ -254,19 +255,29 @@ static void shift_selection(FlSelectionSet* set, RowShift shift) {
     }
 }
 
-static RowShift shift_after_toggle(const TreeVirtualState* state, u32 row_count) {
-    RowShift shift = { .after_id = (u64)state->toggle_row + 1 };
-    if (row_count > state->row_count) {
-        shift.added = row_count - state->row_count;
-    } else {
-        shift.removed = state->row_count - row_count;
-    }
-    return shift;
+static u32 rows_under(const FlTreeContext* self, u32 row) {
+    return subtree_end(self, row) - row - 1;
 }
 
-static bool toggle_explains(const TreeVirtualState* state, u32 row_count) {
-    bool grew = row_count > state->row_count;
-    return state->toggle_pending && grew == state->toggle_expanded;
+static bool toggle_explains(const FlTreeContext* self, const TreeVirtualState* state) {
+    bool row_exists = state->toggle_pending && state->toggle_row < self->count;
+    if (!row_exists || tree_row(self, state->toggle_row).expanded != state->toggle_expanded) {
+        return false;
+    }
+    i64 rows_delta = (i64)self->count - (i64)state->row_count;
+    i64 subtree_delta = (i64)rows_under(self, state->toggle_row) - (i64)state->toggle_subtree;
+    return rows_delta == subtree_delta;
+}
+
+static RowShift shift_for(const FlTreeContext* self, const TreeVirtualState* state) {
+    if (!toggle_explains(self, state)) {
+        return (RowShift) { .removed = UINT64_MAX };
+    }
+    return (RowShift) {
+        .after_id = (u64)state->toggle_row + 1,
+        .removed = state->toggle_subtree,
+        .added = rows_under(self, state->toggle_row),
+    };
 }
 
 static void follow_row_change(FlTreeContext* self, u32 clay_id, FlSelectionSet* set) {
@@ -276,11 +287,10 @@ static void follow_row_change(FlTreeContext* self, u32 clay_id, FlSelectionSet* 
         return;
     }
     ListState* st = list_state_get(self->list, clay_id);
-    RowShift shift = { .removed = UINT64_MAX };
-    if (toggle_explains(state, self->count)) {
-        shift = shift_after_toggle(state, self->count);
+    RowShift shift = shift_for(self, state);
+    if (!st->focus_seed_pending) {
+        st->focus_cursor_id = shifted_id(shift, st->focus_cursor_id);
     }
-    st->focus_cursor_id = shifted_id(shift, st->focus_cursor_id);
     st->anchor_id = shifted_id(shift, st->anchor_id);
     if (set != nullptr) {
         shift_selection(set, shift);
@@ -309,7 +319,11 @@ FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTr
 
 FlTreeVirtualRow fl_tree_row_at(uint32_t row) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    FL_ASSERT(self->is_virtual);
+    bool has_row = self->is_virtual && row < self->count;
+    FL_ASSERT(has_row);
+    if (!has_row) {
+        return (FlTreeVirtualRow) { .parent = -1, .node = -1 };
+    }
     return tree_flat_row(&self->flat, row);
 }
 
@@ -340,6 +354,7 @@ static void remember_virtual_frame(FlTreeContext* self) {
     state->toggle_pending = self->toggled_id != 0;
     state->toggle_row = self->toggled_row;
     state->toggle_expanded = self->toggle_expanded;
+    state->toggle_subtree = state->toggle_pending ? rows_under(self, self->toggled_row) : 0;
 }
 
 FlTreeResult fl_tree_end(void) {

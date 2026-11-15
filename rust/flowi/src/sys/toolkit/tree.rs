@@ -135,8 +135,10 @@ extern "C" {
     /// A row's id is its row number plus one, in the selection set and in every id of the result. When a row
     /// is toggled and the app applies it on the next frame, the Tree moves the cursor and the selection with
     /// the rows that shifted; rows hidden by a collapse are unselected. If the row count changes in a frame
-    /// with no toggle to explain it, the selection is cleared. A toggle to expand can name a row with no
-    /// children; ignore it. Type-ahead is off: config.list.labels is not read.
+    /// with no toggle to explain it, the selection is cleared. Only the set passed here is moved or cleared: an
+    /// app that passes null and keeps its own set has to do the same. A toggle to expand can name a row with
+    /// no children; ignore it. Type-ahead is off: config.list.labels is not read. A tree shows at most 2^31 - 1
+    /// rows and 65535 nesting levels; nodes past either limit are left out.
     pub fn fl_tree_begin_virtual(id: crate::sys::LayoutId, root_count: u32, expanded: *const crate::sys::TreeExpanded, count: u32, set: *mut crate::sys::SelectionSet, config: crate::sys::TreeConfig) -> crate::sys::ListRange;
     /// Where row sits in a virtual tree: its parent node, child index, depth and its own expanded node.
     /// Valid between begin_virtual and end.

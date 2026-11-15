@@ -118,3 +118,27 @@ UTEST(tree_flat, nodes_that_do_not_fit_are_left_out) {
     fl_arena_destroy(arena);
 }
 #endif
+
+UTEST(tree_flat, rows_stop_at_what_a_row_number_can_hold) {
+    FlArena* arena = arena_new(.reserved_size = MB(1));
+    TreeFlat flat = tree_flat_build(arena, UINT32_MAX, nullptr, 0);
+
+    ASSERT_EQ_MSG((u32)INT32_MAX, flat.row_count, "row numbers are signed 32-bit inside the List");
+    fl_arena_destroy(arena);
+}
+
+#ifdef NDEBUG
+UTEST(tree_flat, nesting_stops_at_the_deepest_level_a_row_can_report) {
+    const u32 chain = 70000;
+    FlArena* arena = arena_new(.reserved_size = MB(16));
+    FlTreeExpanded* nodes = arena_alloc_array(arena, FlTreeExpanded, chain);
+    for_count(i, chain) {
+        nodes[i] = (FlTreeExpanded) { .parent = (i32)i - 1, .child_index = 0, .child_count = 1 };
+    }
+    TreeFlat flat = tree_flat_build(arena, 1, nodes, chain);
+
+    ASSERT_EQ_MSG((u32)UINT16_MAX + 1, flat.row_count, "one row per level down to the deepest one");
+    ASSERT_EQ_MSG((int)UINT16_MAX, (int)tree_flat_row(&flat, flat.row_count - 1).depth, "the last row's depth");
+    fl_arena_destroy(arena);
+}
+#endif
