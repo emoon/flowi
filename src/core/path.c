@@ -25,8 +25,19 @@ static bool is_unc(FlString path) {
     return path.length >= 2 && path_is_separator(path.data[0]) && path_is_separator(path.data[1]);
 }
 
+static u64 root_length(FlString path) {
+    if (has_drive_root(path)) {
+        return 3;
+    }
+    return path.length > 0 && path_is_separator(path.data[0]) ? 1 : 0;
+}
+
 static bool has_trailing_separator(FlString path) {
     return path.length > 0 && path_is_separator(path.data[path.length - 1]);
+}
+
+static bool has_removable_trailing_separator(FlString path) {
+    return path.length > root_length(path) && has_trailing_separator(path);
 }
 
 // Index of the last separator within the first end bytes of path, or -1
@@ -100,13 +111,13 @@ FlString fl_path_normalize(struct FlArena* arena, FlString path) {
     char* buffer = arena_alloc_array(arena, char, path.length + 1);
     u64 out_len = collapse_separators(path, keep_until, buffer);
 
-    // A trailing slash is kept on the root and on URLs, where it indicates a directory
-    const bool drops_trailing_slash = !is_url && out_len > 1 && buffer[out_len - 1] == '/';
-    if (drops_trailing_slash) {
-        out_len--;
+    // A trailing slash is kept on a root and on URLs, where it indicates a directory
+    FlString result = { .data = buffer, .length = out_len, .is_ascii = path.is_ascii };
+    if (!is_url && has_removable_trailing_separator(result)) {
+        result.length--;
     }
 
-    return (FlString) { .data = buffer, .length = out_len, .is_ascii = path.is_ascii };
+    return result;
 }
 
 static bool can_pop_segment(const FlString* resolved, u32 count) {
@@ -283,15 +294,15 @@ FlString fl_path_get_basename(struct FlArena* arena, FlString path) {
     return last_dot > 0 ? copy_prefix(arena, filename, (u64)last_dot) : fl_string_copy(arena, filename);
 }
 
-// The part before the last separator within the first end bytes of path: "/" when that separator is the leading
-// one, and empty when there is none.
+// The part before the last separator within the first end bytes of path: the root when that separator belongs to
+// it, and empty when there is none.
 static FlString directory_part(struct FlArena* arena, FlString path, u64 end) {
     const i64 last_sep = last_separator_index(path, end);
     if (last_sep < 0) {
         return (FlString) { 0 };
     }
 
-    return last_sep == 0 ? copy_root(arena) : copy_prefix(arena, path, (u64)last_sep);
+    return copy_prefix(arena, path, max((u64)last_sep, root_length(path)));
 }
 
 FlString fl_path_get_directory(struct FlArena* arena, FlString path) {
@@ -300,12 +311,13 @@ FlString fl_path_get_directory(struct FlArena* arena, FlString path) {
 
 FlString fl_path_get_parent(struct FlArena* arena, FlString path) {
     // Trailing separators do not start a new component
+    const u64 root = root_length(path);
     u64 end = path.length;
-    while (end > 1 && path_is_separator(path.data[end - 1])) {
+    while (end > root && path_is_separator(path.data[end - 1])) {
         end--;
     }
 
-    return directory_part(arena, path, end);
+    return end > root ? directory_part(arena, path, end) : (FlString) { 0 };
 }
 
 // Queries
@@ -382,8 +394,8 @@ FlString fl_path_remove_trailing_separator(struct FlArena* arena, FlString path)
     }
 
     // Don't remove separator from root path
-    const bool removes_separator = path.length > 1 && has_trailing_separator(path);
-    return removes_separator ? copy_prefix(arena, path, path.length - 1) : fl_string_copy(arena, path);
+    return has_removable_trailing_separator(path) ? copy_prefix(arena, path, path.length - 1)
+                                                  : fl_string_copy(arena, path);
 }
 
 FlString fl_path_ensure_trailing_separator(struct FlArena* arena, FlString path) {

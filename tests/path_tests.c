@@ -1098,3 +1098,70 @@ UTEST(path, find_directory_with_separators) {
 
     fl_arena_destroy(arena);
 }
+
+typedef struct PathCase {
+    FlString input;
+    FlString expected;
+} PathCase;
+
+typedef FlString (*PathFunction)(struct FlArena* arena, FlString path);
+
+static int first_path_mismatch(PathFunction function, const PathCase* cases, u32 count) {
+    FlArena* arena = arena_new(.reserved_size = MB(64));
+    int mismatch = -1;
+    for_count(i, count) {
+        if (mismatch < 0 && !fl_string_equals(function(arena, cases[i].input), cases[i].expected)) {
+            mismatch = (int)i;
+        }
+    }
+    fl_arena_destroy(arena);
+    return mismatch;
+}
+
+UTEST(path, normalize_keeps_the_separator_of_a_drive_root) {
+    const PathCase cases[] = {
+        { FL_S("C:/"), FL_S("C:/") },
+        { FL_S("C:\\"), FL_S("C:/") },
+        { FL_S("C:\\\\"), FL_S("C:/") },
+        { FL_S("C:/dir/"), FL_S("C:/dir") },
+    };
+    EXPECT_EQ(-1, first_path_mismatch(fl_path_normalize, cases, sizeof_array(cases)));
+}
+
+UTEST(path, remove_trailing_separator_keeps_a_drive_root) {
+    const PathCase cases[] = {
+        { FL_S("C:/"), FL_S("C:/") },
+        { FL_S("C:\\"), FL_S("C:\\") },
+        { FL_S("C:/dir/"), FL_S("C:/dir") },
+    };
+    EXPECT_EQ(-1, first_path_mismatch(fl_path_remove_trailing_separator, cases, sizeof_array(cases)));
+}
+
+UTEST(path, get_parent_of_a_root_is_empty) {
+    const PathCase cases[] = {
+        { FL_S("/"), FL_S("") },
+        { FL_S("///"), FL_S("") },
+        { FL_S("C:/"), FL_S("") },
+        { FL_S("C:\\"), FL_S("") },
+    };
+    EXPECT_EQ(-1, first_path_mismatch(fl_path_get_parent, cases, sizeof_array(cases)));
+}
+
+UTEST(path, directory_keeps_the_separator_of_a_drive_root) {
+    const PathCase cases[] = {
+        { FL_S("C:/foo"), FL_S("C:/") },
+        { FL_S("C:/foo/bar"), FL_S("C:/foo") },
+        { FL_S("/foo"), FL_S("/") },
+    };
+    EXPECT_EQ(-1, first_path_mismatch(fl_path_get_directory, cases, sizeof_array(cases)));
+}
+
+UTEST(path, get_parent_of_a_path_under_a_root_is_the_root) {
+    const PathCase cases[] = {
+        { FL_S("C:/foo"), FL_S("C:/") },
+        { FL_S("C:\\foo\\"), FL_S("C:\\") },
+        { FL_S("/foo/"), FL_S("/") },
+        { FL_S("/foo/bar"), FL_S("/foo") },
+    };
+    EXPECT_EQ(-1, first_path_mismatch(fl_path_get_parent, cases, sizeof_array(cases)));
+}
