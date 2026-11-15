@@ -139,6 +139,8 @@ extern "C" {
     ///
     /// The indent and the arrow are drawn for you, and what you draw before `fl_tree_item_end` goes to the right
     /// of them. A press on the arrow is not a click on the row.
+    ///
+    /// A `row` at or past the row count starts no row and returns an empty `Signal`.
     pub fn fl_tree_item_begin(row: u32) -> crate::sys::Signal;
     /// Starts a tree that can hold millions of rows, and returns the range of rows to draw.
     ///
@@ -164,7 +166,8 @@ extern "C" {
     pub fn fl_tree_row_at(row: u32) -> crate::sys::TreeVirtualRow;
     /// Starts a row of a virtual tree, like `fl_tree_item_begin`.
     ///
-    /// Pass true for `has_children` to give the row an arrow. An expanded row always has one.
+    /// Pass true for `has_children` to give the row an arrow. An expanded row always has one. A `row` at or
+    /// past the row count starts no row and returns an empty `Signal`.
     pub fn fl_tree_item_begin_virtual(row: u32, has_children: bool) -> crate::sys::Signal;
     /// Ends the row started with `fl_tree_item_begin` or `fl_tree_item_begin_virtual`.
     pub fn fl_tree_item_end();
