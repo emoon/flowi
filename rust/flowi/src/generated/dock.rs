@@ -36,7 +36,7 @@ impl Dock {
         unsafe { crate::sys::fl_dock_workspace_end() }
     }
 
-    /// Declares a panel and returns whether to draw its content now.
+    /// Declares a panel and returns true if you should draw its content now.
     ///
     /// `title` is the label of the panel's tab (an empty string gives a blank tab). The call returns true when the
     /// panel is the selected tab of the tile that holds it. It returns false for a hidden panel and for a panel
@@ -109,7 +109,7 @@ impl Dock {
         unsafe { crate::sys::fl_dock_promote_panel(panel) }
     }
 
-    /// Returns whether `Dock::panel` would return true for this panel on the current workspace.
+    /// Returns true if `Dock::panel` would return true for this panel on the current workspace.
     ///
     /// It is false for a hidden panel and for a panel that is being dragged.
     #[inline]
@@ -131,7 +131,7 @@ impl Dock {
         unsafe { crate::sys::fl_dock_set_panel_visible(id, visible) }
     }
 
-    /// Returns whether a panel is shown on the current workspace.
+    /// Returns true if a panel is shown on the current workspace.
     ///
     /// It is true for a panel that was never hidden, also one that the workspace has not seen.
     #[inline]
@@ -149,7 +149,7 @@ impl Dock {
         unsafe { crate::sys::fl_dock_panel_leaf(id) }
     }
 
-    /// Returns whether a panel has a place in the layout but was not declared this frame.
+    /// Returns true if a panel has a place in the layout but was not declared this frame.
     #[inline]
     pub fn panel_reserved(id: u64) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Dock::panel_reserved");

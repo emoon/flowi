@@ -61,7 +61,7 @@ extern "C" {
     pub fn fl_memory_tracker_dump_string(arena: *mut crate::sys::Arena) -> crate::sys::RawStr;
     /// Writes the text report from `MemoryTracker::dump_string` to `filepath`, replacing the file.
     ///
-    /// Returns whether it succeeded. An empty `filepath` fails.
+    /// Returns true if it succeeded. An empty `filepath` fails.
     pub fn fl_memory_tracker_dump_to_file(filepath: crate::sys::RawStr) -> bool;
     /// Returns a JSON report of memory use, allocated from `arena`.
     ///
@@ -69,7 +69,7 @@ extern "C" {
     pub fn fl_memory_tracker_export_json_string(arena: *mut crate::sys::Arena) -> crate::sys::RawStr;
     /// Writes the JSON report from `MemoryTracker::export_json_string` to `filepath`, replacing the file.
     ///
-    /// Returns whether it succeeded. An empty `filepath` fails.
+    /// Returns true if it succeeded. An empty `filepath` fails.
     pub fn fl_memory_tracker_export_json_to_file(filepath: crate::sys::RawStr) -> bool;
     /// Fills `stats` with the current memory use.
     ///

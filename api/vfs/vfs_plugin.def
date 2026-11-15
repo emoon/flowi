@@ -196,11 +196,11 @@ struct VfsPlugin {
     /// Destroys an instance made by `create`.
     destroy(driver_instance: *void),
 
-    /// Returns whether the path looks like one this driver handles, without doing any I/O.
+    /// Returns true if the path looks like one this driver handles, without doing any I/O.
     ///
     /// The VFS uses it to pick a driver.
     supports_path(path: String) -> bool,
-    /// Returns whether the driver can open the path. This may do I/O.
+    /// Returns true if the driver can open the path. This may do I/O.
     can_open(path: String) -> bool,
 
     /// Opens a file or directory and returns the result.
@@ -208,7 +208,7 @@ struct VfsPlugin {
     /// The path is relative to `parent_handle`, or absolute if `parent_handle` is null. The VFS supplies
     /// `mount_options`.
     open(driver_instance: *void, parent_handle: *void, path: String, flags: u32, mount_options: VfsMountOptions) -> VfsOpenResult,
-    /// Returns whether an open handle is a directory or an archive.
+    /// Returns true if an open handle is a directory or an archive.
     is_directory(driver_instance: *void, handle: *void) -> bool,
 
     /// Reads file contents into `buffer`, which the caller owns.
@@ -241,6 +241,6 @@ struct VfsPlugin {
     ///
     /// The string is empty if no path is available.
     get_file_path(driver_instance: *void, handle: *void, relative_path: String, arena: *FlArena) -> String,
-    /// Returns whether a path is cached and fresh. This needs `VfsDriverCapabilities::Cache` (null if unsupported).
+    /// Returns true if a path is cached and fresh. This needs `VfsDriverCapabilities::Cache` (null if unsupported).
     is_cached(driver_instance: *void, path: String) -> bool,
 }

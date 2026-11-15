@@ -196,18 +196,18 @@ typedef struct FlVfsPlugin {
     FlPluginCreateResult (*create)(void);
     // Destroys an instance made by `create`.
     void (*destroy)(void* driver_instance);
-    // Returns whether the path looks like one this driver handles, without doing any I/O.
+    // Returns true if the path looks like one this driver handles, without doing any I/O.
     //
     // The VFS uses it to pick a driver.
     bool (*supports_path)(FlString path);
-    // Returns whether the driver can open the path. This may do I/O.
+    // Returns true if the driver can open the path. This may do I/O.
     bool (*can_open)(FlString path);
     // Opens a file or directory and returns the result.
     //
     // The path is relative to `parent_handle`, or absolute if `parent_handle` is null. The VFS supplies
     // `mount_options`.
     FlVfsOpenResult (*open)(void* driver_instance, void* parent_handle, FlString path, uint32_t flags, FlVfsMountOptions mount_options);
-    // Returns whether an open handle is a directory or an archive.
+    // Returns true if an open handle is a directory or an archive.
     bool (*is_directory)(void* driver_instance, void* handle);
     // Reads file contents into `buffer`, which the caller owns.
     //
@@ -236,7 +236,7 @@ typedef struct FlVfsPlugin {
     //
     // The string is empty if no path is available.
     FlString (*get_file_path)(void* driver_instance, void* handle, FlString relative_path, FlArena* arena);
-    // Returns whether a path is cached and fresh. This needs `FlVfsDriverCapabilities_Cache` (null if unsupported).
+    // Returns true if a path is cached and fresh. This needs `FlVfsDriverCapabilities_Cache` (null if unsupported).
     bool (*is_cached)(void* driver_instance, FlString path);
 } FlVfsPlugin;
 

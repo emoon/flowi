@@ -137,7 +137,7 @@ impl Painter {
         unsafe { crate::sys::fl_painter_text_styled(x, y, { let s = text; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, style, color) }
     }
 
-    /// Draws an image into the rectangle at (`x`, `y`) and returns whether it was drawn.
+    /// Draws an image into the rectangle at (`x`, `y`) and returns true if it was drawn.
     ///
     /// `image` is the handle from `Image::load`. `color` is multiplied with the image, so pass white
     /// (255, 255, 255, 255) for no tint. A `w` or `h` of 0 or less uses the width or height of the image. It
@@ -229,7 +229,7 @@ impl Painter {
         unsafe { crate::sys::fl_painter_bars(baseline_y, bars.as_ptr(), bars.len() as u32, color) }
     }
 
-    /// Draws part of an image into a destination rectangle and returns whether it was drawn.
+    /// Draws part of an image into a destination rectangle and returns true if it was drawn.
     ///
     /// It returns false and draws nothing until the image is ready, or when the source rectangle is empty.
     #[inline]

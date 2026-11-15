@@ -45,22 +45,22 @@ FL_API FlKeyModifier fl_input_keyboard_modifiers(void);
 // This is the space the painter draws in. It is {0, 0} if the element was not laid out this frame. The
 // `FlSignal.mouse_pos` field is in physical pixels instead.
 FL_API FlVec2 fl_input_mouse_position(FlLayoutId id);
-// Returns whether `button` went down this frame.
+// Returns true if `button` went down this frame.
 FL_API bool fl_input_mouse_pressed(FlMouseButton button);
-// Returns whether `button` is held down.
+// Returns true if `button` is held down.
 FL_API bool fl_input_mouse_down(FlMouseButton button);
-// Returns whether `button` was released this frame.
+// Returns true if `button` was released this frame.
 FL_API bool fl_input_mouse_released(FlMouseButton button);
-// Returns whether `key` went down this frame.
+// Returns true if `key` went down this frame.
 //
 // The result does not depend on focus, so a text field that is being edited still sees its keys here. Use
 // `fl_input_text_input_active` to leave those keys alone.
 FL_API bool fl_input_key_pressed(FlKey key);
-// Returns whether `key` is held down.
+// Returns true if `key` is held down.
 FL_API bool fl_input_key_down(FlKey key);
-// Returns whether `key` was released this frame.
+// Returns true if `key` was released this frame.
 FL_API bool fl_input_key_released(FlKey key);
-// Returns whether a text input had keyboard focus in the previous frame.
+// Returns true if a text input had keyboard focus in the previous frame.
 //
 // If you map keys to your own actions, skip the editing keys while this is true. Those are the characters,
 // Backspace, Delete and the arrows.
@@ -102,19 +102,19 @@ FL_API FlVec2 fl_input_mouse_drag_delta(void);
 //
 // It stops at the screen edge. For a drag that does not, use `fl_input_mouse_drag_delta`.
 FL_API FlVec2 fl_input_mouse_delta(void);
-// Returns whether a gamepad is connected in player `slot`.
+// Returns true if a gamepad is connected in player `slot`.
 //
 // A `slot` that is out of range reads as not connected.
 FL_API bool fl_input_gamepad_connected(uint32_t slot);
-// Returns whether `button` is held on the gamepad in player `slot`.
+// Returns true if `button` is held on the gamepad in player `slot`.
 //
 // It is false if the slot has no gamepad.
 FL_API bool fl_input_gamepad_button_down(uint32_t slot, FlGamepadButton button);
-// Returns whether `button` went down this frame on the gamepad in player `slot`.
+// Returns true if `button` went down this frame on the gamepad in player `slot`.
 //
 // It is false if the slot has no gamepad.
 FL_API bool fl_input_gamepad_button_pressed(uint32_t slot, FlGamepadButton button);
-// Returns whether `button` was released this frame on the gamepad in player `slot`.
+// Returns true if `button` was released this frame on the gamepad in player `slot`.
 //
 // It is false if the slot has no gamepad.
 FL_API bool fl_input_gamepad_button_released(uint32_t slot, FlGamepadButton button);
@@ -131,7 +131,7 @@ FL_API float fl_input_gamepad_axis(uint32_t slot, FlGamepadAxis axis);
 // `items` holds the `count` rows in display order. Selection goes into `set`; if `set` is null, no row is
 // highlighted. To draw the rows yourself, use `fl_list_begin`.
 FL_API FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t count, FlSelectionSet* set, FlListOpts opts);
-// Returns whether the navigation down action was pressed this frame.
+// Returns true if the navigation down action was pressed this frame.
 //
 // It is the same for an arrow key, the D-pad or the analog stick.
 FL_API bool fl_input_nav_down_pressed(void);

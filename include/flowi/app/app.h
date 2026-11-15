@@ -133,7 +133,7 @@ FL_API void fl_app_inject_drop_file(FlApp* app, FlString path, float x, float y)
 //
 // This call is for headless apps only.
 FL_API FlCursorShape fl_app_headless_cursor_shape(FlApp* app);
-// Returns whether the last `fl_app_tick` left the input backend in relative mouse mode.
+// Returns true if the last `fl_app_tick` left the input backend in relative mouse mode.
 //
 // It is on for as long as a hidden drag lasts.
 //

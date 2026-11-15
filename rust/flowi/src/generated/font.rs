@@ -60,7 +60,7 @@ impl Font {
         unsafe { crate::sys::fl_font_style_set(style) }
     }
 
-    /// Returns whether `font` has finished loading and is ready to draw.
+    /// Returns true if `font` has finished loading and is ready to draw.
     #[inline]
     pub fn is_loaded(font: crate::sys::FontId) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Font::is_loaded");

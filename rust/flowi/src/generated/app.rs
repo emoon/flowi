@@ -66,7 +66,7 @@ impl App {
         unsafe { crate::sys::fl_app_inject_key(self.handle, key, down) }
     }
 
-    /// Returns whether the last `App::tick` left the input backend in relative mouse mode.
+    /// Returns true if the last `App::tick` left the input backend in relative mouse mode.
     ///
     /// It is on for as long as a hidden drag lasts.
     ///

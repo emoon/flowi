@@ -81,7 +81,7 @@ FL_API FlJobHandle fl_jobs_add_job(FlJobsFunc func, void* user_data);
 // Called from a worker thread against a job that has not finished, the job waits for it, so the returned handle
 // is pending.
 FL_API FlJobHandle fl_jobs_add_job_with_dependency(FlJobsFunc func, void* user_data, FlJobHandle dependency);
-// Returns whether the job for `handle` has finished.
+// Returns true if the job for `handle` has finished.
 //
 // Once a finished job's handle has been reused for a new job, it reports `FlJobsResult_Invalid`.
 FL_API FlJobsResult fl_jobs_is_finished(FlJobHandle handle);

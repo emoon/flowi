@@ -55,20 +55,20 @@ FL_API FlString fl_path_get_basename(FlArena* arena, FlString path);
 //
 // A trailing separator on `path` is ignored.
 FL_API FlString fl_path_get_parent(FlArena* arena, FlString path);
-// Returns whether `path` is absolute.
+// Returns true if `path` is absolute.
 //
 // That means it starts with "/", a drive letter and a separator such as "C:/", two separators, or "http://" or
 // "https://".
 FL_API bool fl_path_is_absolute(FlString path);
-// Returns whether `path` is not absolute.
+// Returns true if `path` is not absolute.
 FL_API bool fl_path_is_relative(FlString path);
-// Returns whether the file name in `path` has the extension `extension`, ignoring ASCII case.
+// Returns true if the file name in `path` has the extension `extension`, ignoring ASCII case.
 //
 // Give `extension` without its dot, for example "zip". It is false if either one is empty.
 FL_API bool fl_path_has_extension(FlString path, FlString extension);
-// Returns whether `path` contains a separator.
+// Returns true if `path` contains a separator.
 FL_API bool fl_path_has_separator(FlString path);
-// Returns whether `path1` and `path2` are the same once `/` and `\` are treated alike.
+// Returns true if `path1` and `path2` are the same once `/` and `\` are treated alike.
 //
 // On Windows the case is ignored as well.
 FL_API bool fl_path_equals(FlString path1, FlString path2);

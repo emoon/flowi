@@ -38,7 +38,7 @@ impl Cursor {
         unsafe { crate::sys::fl_cursor_set_visible(visible) }
     }
 
-    /// Returns whether the pointer is visible.
+    /// Returns true if the pointer is visible.
     #[inline]
     pub fn get_visible() -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Cursor::get_visible");

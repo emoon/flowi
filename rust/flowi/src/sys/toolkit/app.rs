@@ -128,7 +128,7 @@ extern "C" {
     ///
     /// This call is for headless apps only.
     pub fn fl_app_headless_cursor_shape(app: *mut crate::sys::App) -> crate::sys::CursorShape;
-    /// Returns whether the last `App::tick` left the input backend in relative mouse mode.
+    /// Returns true if the last `App::tick` left the input backend in relative mouse mode.
     ///
     /// It is on for as long as a hidden drag lasts.
     ///

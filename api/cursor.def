@@ -47,6 +47,6 @@ api Cursor {
     ///
     /// Unlike the shape, this is not reset every frame.
     set_visible(visible: bool)
-    /// Returns whether the pointer is visible.
+    /// Returns true if the pointer is visible.
     get_visible() -> bool
 }

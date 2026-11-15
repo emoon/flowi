@@ -5,7 +5,7 @@
 // Open a menu with `Menu::open`, or put a right-click region around the area that should open it. Each frame, call
 // `Menu::begin_impl`. It returns true only while the menu is open. If it did, add items and call `Menu::end`.
 extern "C" {
-    /// Starts the menu `menu_id` and returns whether it is open.
+    /// Starts the menu `menu_id` and returns true if it is open.
     ///
     /// Call `Menu::end` only if this returned true. A click outside the menu closes it. Escape closes the innermost
     /// open submenu, or the menu if no submenu is open.
@@ -50,7 +50,7 @@ extern "C" {
     ///
     /// It does nothing if the menu is not open.
     pub fn fl_menu_close(menu_id: crate::sys::LayoutId);
-    /// Returns whether the menu `menu_id` is open.
+    /// Returns true if the menu `menu_id` is open.
     pub fn fl_menu_is_open(menu_id: crate::sys::LayoutId) -> bool;
 }
 
@@ -59,7 +59,7 @@ extern "C" {
 // A submenu is a row in its parent menu. When the row is expanded, the items you add before `Submenu::end` appear
 // in a panel beside it.
 extern "C" {
-    /// Adds a submenu row labelled `label` and returns whether the submenu is expanded.
+    /// Adds a submenu row labelled `label` and returns true if the submenu is expanded.
     ///
     /// Call `Submenu::end` only if this returned true.
     pub fn fl_submenu_begin_impl(label: crate::sys::RawStr, config: crate::sys::SubmenuConfig) -> bool;
@@ -78,7 +78,7 @@ extern "C" {
     pub fn fl_menubar_begin_impl(bar_id: crate::sys::LayoutId, config: crate::sys::MenuBarConfig);
     /// Ends the menu bar.
     pub fn fl_menubar_end();
-    /// Returns whether the menu bar `bar_id` has a dropdown open.
+    /// Returns true if the menu bar `bar_id` has a dropdown open.
     ///
     /// It also returns true after Escape closed a dropdown and the keyboard focus stayed on the bar.
     pub fn fl_menubar_is_open(bar_id: crate::sys::LayoutId) -> bool;
@@ -86,7 +86,7 @@ extern "C" {
 
 // An entry in a menu bar, with a dropdown of items.
 extern "C" {
-    /// Adds an entry labelled `label` to the menu bar and returns whether its dropdown is open.
+    /// Adds an entry labelled `label` to the menu bar and returns true if its dropdown is open.
     ///
     /// Add the items of the dropdown after it and call `MenubarMenu::end`, but only if this returned true.
     pub fn fl_menubar_menu_begin_impl(label: crate::sys::RawStr, config: crate::sys::MenuBarMenuConfig) -> bool;

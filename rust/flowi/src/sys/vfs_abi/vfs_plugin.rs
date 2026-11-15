@@ -270,18 +270,18 @@ pub struct VfsPlugin {
     pub create: Option<unsafe extern "C" fn() -> crate::sys::PluginCreateResult>,
     /// Destroys an instance made by `create`.
     pub destroy: Option<unsafe extern "C" fn(driver_instance: *mut core::ffi::c_void)>,
-    /// Returns whether the path looks like one this driver handles, without doing any I/O.
+    /// Returns true if the path looks like one this driver handles, without doing any I/O.
     ///
     /// The VFS uses it to pick a driver.
     pub supports_path: Option<unsafe extern "C" fn(path: crate::sys::RawStr) -> bool>,
-    /// Returns whether the driver can open the path. This may do I/O.
+    /// Returns true if the driver can open the path. This may do I/O.
     pub can_open: Option<unsafe extern "C" fn(path: crate::sys::RawStr) -> bool>,
     /// Opens a file or directory and returns the result.
     ///
     /// The path is relative to `parent_handle`, or absolute if `parent_handle` is null. The VFS supplies
     /// `mount_options`.
     pub open: Option<unsafe extern "C" fn(driver_instance: *mut core::ffi::c_void, parent_handle: *mut core::ffi::c_void, path: crate::sys::RawStr, flags: u32, mount_options: crate::sys::VfsMountOptions) -> crate::sys::VfsOpenResult>,
-    /// Returns whether an open handle is a directory or an archive.
+    /// Returns true if an open handle is a directory or an archive.
     pub is_directory: Option<unsafe extern "C" fn(driver_instance: *mut core::ffi::c_void, handle: *mut core::ffi::c_void) -> bool>,
     /// Reads file contents into `buffer`, which the caller owns.
     ///
@@ -310,7 +310,7 @@ pub struct VfsPlugin {
     ///
     /// The string is empty if no path is available.
     pub get_file_path: Option<unsafe extern "C" fn(driver_instance: *mut core::ffi::c_void, handle: *mut core::ffi::c_void, relative_path: crate::sys::RawStr, arena: *mut FlArena) -> crate::sys::RawStr>,
-    /// Returns whether a path is cached and fresh. This needs `VfsDriverCapabilities::Cache` (null if unsupported).
+    /// Returns true if a path is cached and fresh. This needs `VfsDriverCapabilities::Cache` (null if unsupported).
     pub is_cached: Option<unsafe extern "C" fn(driver_instance: *mut core::ffi::c_void, path: crate::sys::RawStr) -> bool>,
 }
 

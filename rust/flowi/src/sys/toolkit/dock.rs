@@ -37,7 +37,7 @@ extern "C" {
     ///
     /// If the active panel is hidden, reserved or a background tab by now, there is no active panel afterwards.
     pub fn fl_dock_workspace_end();
-    /// Declares a panel and returns whether to draw its content now.
+    /// Declares a panel and returns true if you should draw its content now.
     ///
     /// `title` is the label of the panel's tab (an empty string gives a blank tab). The call returns true when the
     /// panel is the selected tab of the tile that holds it. It returns false for a hidden panel and for a panel
@@ -74,7 +74,7 @@ extern "C" {
     /// The move happens at the start of a later frame. Nothing happens if the panel is not in the workspace or the
     /// app has no dock host.
     pub fn fl_dock_promote_panel(panel: u64);
-    /// Returns whether `Dock::panel` would return true for this panel on the current workspace.
+    /// Returns true if `Dock::panel` would return true for this panel on the current workspace.
     ///
     /// It is false for a hidden panel and for a panel that is being dragged.
     pub fn fl_dock_panel_should_emit(id: u64) -> bool;
@@ -86,7 +86,7 @@ extern "C" {
     ///
     /// The setting is not saved with the layout. Set it again each session.
     pub fn fl_dock_set_panel_visible(id: u64, visible: bool);
-    /// Returns whether a panel is shown on the current workspace.
+    /// Returns true if a panel is shown on the current workspace.
     ///
     /// It is true for a panel that was never hidden, also one that the workspace has not seen.
     pub fn fl_dock_panel_visible(id: u64) -> bool;
@@ -94,7 +94,7 @@ extern "C" {
     ///
     /// A panel that is being dragged, or one that is not in the layout, has no tile.
     pub fn fl_dock_panel_leaf(id: u64) -> u32;
-    /// Returns whether a panel has a place in the layout but was not declared this frame.
+    /// Returns true if a panel has a place in the layout but was not declared this frame.
     pub fn fl_dock_panel_reserved(id: u64) -> bool;
     /// Returns the size of the content area of a panel, in logical pixels.
     ///

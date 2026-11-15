@@ -84,9 +84,9 @@ FL_API uint32_t fl_file_watcher_start(FlString path, const FlFileWatcherConfig* 
 //
 // Passing 0 does nothing.
 FL_API void fl_file_watcher_stop(uint32_t handle);
-// Returns whether the watcher is still running.
+// Returns true if the watcher is still running.
 FL_API bool fl_file_watcher_is_active(uint32_t handle);
-// Returns whether changes are waiting to be taken.
+// Returns true if changes are waiting to be taken.
 FL_API bool fl_file_watcher_has_changes(uint32_t handle);
 // Takes the pending changes into `arena` and clears them from the watcher.
 //

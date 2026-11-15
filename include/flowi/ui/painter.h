@@ -247,7 +247,7 @@ FL_API void fl_painter_text(float x, float y, FlString text, FlFontId font, FlCo
 // Sizes are rounded to quarter pixels in the same way as in `fl_text_measure`, so a measured run matches the
 // drawn one.
 FL_API void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, FlColor color);
-// Draws an image into the rectangle at (`x`, `y`) and returns whether it was drawn.
+// Draws an image into the rectangle at (`x`, `y`) and returns true if it was drawn.
 //
 // `image` is the handle from `fl_image_load`. `color` is multiplied with the image, so pass white
 // (255, 255, 255, 255) for no tint. A `w` or `h` of 0 or less uses the width or height of the image. It
@@ -289,7 +289,7 @@ FL_API void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size,
 // Use it for meters, spectrum analyzers and step sequencers. A backend may skip it, and the software backend
 // does.
 FL_API void fl_painter_bars(float baseline_y, const FlBar* bars, uint32_t bars_size, FlColor color);
-// Draws part of an image into a destination rectangle and returns whether it was drawn.
+// Draws part of an image into a destination rectangle and returns true if it was drawn.
 //
 // It returns false and draws nothing until the image is ready, or when the source rectangle is empty.
 FL_API bool fl_painter_image_sub(FlImageSub sub);

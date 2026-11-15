@@ -102,7 +102,7 @@ extern "C" {
     /// Called from a worker thread against a job that has not finished, the job waits for it, so the returned handle
     /// is pending.
     pub fn fl_jobs_add_job_with_dependency(func: crate::sys::JobsFunc, user_data: *mut core::ffi::c_void, dependency: crate::sys::JobHandle) -> crate::sys::JobHandle;
-    /// Returns whether the job for `handle` has finished.
+    /// Returns true if the job for `handle` has finished.
     ///
     /// Once a finished job's handle has been reused for a new job, it reports `JobsResult::Invalid`.
     pub fn fl_jobs_is_finished(handle: crate::sys::JobHandle) -> crate::sys::JobsResult;

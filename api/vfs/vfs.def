@@ -128,7 +128,7 @@ api Vfs {
     /// `Vfs::fl_vfs_mount_is_ready` or `Vfs::fl_vfs_mount_get_status` for `VfsMountStatus::Ready` or
     /// `VfsMountStatus::Error`.
     fl_vfs_mount_with_options(source_path: String, options: VfsMountOptions) -> VfsMountResult
-    /// Returns whether the mount is ready for operations.
+    /// Returns true if the mount is ready for operations.
     fl_vfs_mount_is_ready(mount: *FlVfsMount) -> bool
     /// Returns the readiness of the mount.
     fl_vfs_mount_get_status(mount: *FlVfsMount) -> VfsMountStatus
@@ -158,7 +158,7 @@ api Vfs {
     /// The listing is always one level deep. `depth` is ignored. Get the result with `Vfs::fl_vfs_get_file_list`.
     fl_vfs_get_listing(mount: *FlVfsMount, relative_path: String, depth: i32) -> u32
 
-    /// Returns whether the operation has finished.
+    /// Returns true if the operation has finished.
     ///
     /// It is false for a handle that is not open.
     fl_vfs_is_ready(handle: u32) -> bool

@@ -18,7 +18,7 @@ extern "C" {
     ///
     /// Does nothing for a null set.
     pub fn fl_selection_set_destroy(set: *mut crate::sys::SelectionSet);
-    /// Returns whether `id` is selected.
+    /// Returns true if `id` is selected.
     pub fn fl_selection_set_contains(set: *mut crate::sys::SelectionSet, id: u64) -> bool;
     /// Selects `id` if `selected` is true, and deselects it otherwise.
     pub fn fl_selection_set_set(set: *mut crate::sys::SelectionSet, id: u64, selected: bool);

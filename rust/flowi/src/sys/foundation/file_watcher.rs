@@ -112,9 +112,9 @@ extern "C" {
     ///
     /// Passing 0 does nothing.
     pub fn fl_file_watcher_stop(handle: u32);
-    /// Returns whether the watcher is still running.
+    /// Returns true if the watcher is still running.
     pub fn fl_file_watcher_is_active(handle: u32) -> bool;
-    /// Returns whether changes are waiting to be taken.
+    /// Returns true if changes are waiting to be taken.
     pub fn fl_file_watcher_has_changes(handle: u32) -> bool;
     /// Takes the pending changes into `arena` and clears them from the watcher.
     ///

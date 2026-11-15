@@ -4,7 +4,7 @@
 /// `Menu::begin_impl`. It returns true only while the menu is open. If it did, add items and call `Menu::end`.
 #[frame_context]
 api Menu {
-    /// Starts the menu `menu_id` and returns whether it is open.
+    /// Starts the menu `menu_id` and returns true if it is open.
     ///
     /// Call `Menu::end` only if this returned true. A click outside the menu closes it. Escape closes the innermost
     /// open submenu, or the menu if no submenu is open.
@@ -49,7 +49,7 @@ api Menu {
     ///
     /// It does nothing if the menu is not open.
     close(menu_id: LayoutId)
-    /// Returns whether the menu `menu_id` is open.
+    /// Returns true if the menu `menu_id` is open.
     is_open(menu_id: LayoutId) -> bool
 }
 
@@ -59,7 +59,7 @@ api Menu {
 /// in a panel beside it.
 #[frame_context]
 api Submenu {
-    /// Adds a submenu row labelled `label` and returns whether the submenu is expanded.
+    /// Adds a submenu row labelled `label` and returns true if the submenu is expanded.
     ///
     /// Call `Submenu::end` only if this returned true.
     begin_impl(label: String, config: SubmenuConfig) -> bool
@@ -79,7 +79,7 @@ api Menubar {
     begin_impl(bar_id: LayoutId, config: MenuBarConfig)
     /// Ends the menu bar.
     end()
-    /// Returns whether the menu bar `bar_id` has a dropdown open.
+    /// Returns true if the menu bar `bar_id` has a dropdown open.
     ///
     /// It also returns true after Escape closed a dropdown and the keyboard focus stayed on the bar.
     is_open(bar_id: LayoutId) -> bool
@@ -88,7 +88,7 @@ api Menubar {
 /// An entry in a menu bar, with a dropdown of items.
 #[frame_context]
 api MenubarMenu {
-    /// Adds an entry labelled `label` to the menu bar and returns whether its dropdown is open.
+    /// Adds an entry labelled `label` to the menu bar and returns true if its dropdown is open.
     ///
     /// Add the items of the dropdown after it and call `MenubarMenu::end`, but only if this returned true.
     begin_impl(label: String, config: MenuBarMenuConfig) -> bool

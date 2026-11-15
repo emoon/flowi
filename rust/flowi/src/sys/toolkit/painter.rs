@@ -356,7 +356,7 @@ extern "C" {
     /// Sizes are rounded to quarter pixels in the same way as in `Text::measure`, so a measured run matches the
     /// drawn one.
     pub fn fl_painter_text_styled(x: f32, y: f32, text: crate::sys::RawStr, style: crate::sys::TextStyle, color: crate::sys::Color);
-    /// Draws an image into the rectangle at (`x`, `y`) and returns whether it was drawn.
+    /// Draws an image into the rectangle at (`x`, `y`) and returns true if it was drawn.
     ///
     /// `image` is the handle from `Image::load`. `color` is multiplied with the image, so pass white
     /// (255, 255, 255, 255) for no tint. A `w` or `h` of 0 or less uses the width or height of the image. It
@@ -398,7 +398,7 @@ extern "C" {
     /// Use it for meters, spectrum analyzers and step sequencers. A backend may skip it, and the software backend
     /// does.
     pub fn fl_painter_bars(baseline_y: f32, bars: *const crate::sys::Bar, bars_size: u32, color: crate::sys::Color);
-    /// Draws part of an image into a destination rectangle and returns whether it was drawn.
+    /// Draws part of an image into a destination rectangle and returns true if it was drawn.
     ///
     /// It returns false and draws nothing until the image is ready, or when the source rectangle is empty.
     pub fn fl_painter_image_sub(sub: crate::sys::ImageSub) -> bool;

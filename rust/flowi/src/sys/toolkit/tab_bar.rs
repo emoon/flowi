@@ -4,7 +4,7 @@
 //
 // Call it inside a frame callback.
 extern "C" {
-    /// Draws one tab per label and returns whether the selection changed this frame.
+    /// Draws one tab per label and returns true if the selection changed this frame.
     ///
     /// `selected_index` is the index into `tabs`. It is reset to 0 if it is out of range, and it is updated when
     /// the user picks another tab. Set `TabBarConfig.vertical` for a column.

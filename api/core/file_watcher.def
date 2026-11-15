@@ -75,9 +75,9 @@ api FileWatcher {
     ///
     /// Passing 0 does nothing.
     [manual] stop(handle: u32)
-    /// Returns whether the watcher is still running.
+    /// Returns true if the watcher is still running.
     [manual] is_active(handle: u32) -> bool
-    /// Returns whether changes are waiting to be taken.
+    /// Returns true if changes are waiting to be taken.
     [manual] has_changes(handle: u32) -> bool
     /// Takes the pending changes into `arena` and clears them from the watcher.
     ///

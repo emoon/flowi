@@ -49,20 +49,20 @@ api Path {
     /// A trailing separator on `path` is ignored.
     fl_path_get_parent(arena: *Arena, path: String) -> String
 
-    /// Returns whether `path` is absolute.
+    /// Returns true if `path` is absolute.
     ///
     /// That means it starts with "/", a drive letter and a separator such as "C:/", two separators, or "http://" or
     /// "https://".
     fl_path_is_absolute(path: String) -> bool
-    /// Returns whether `path` is not absolute.
+    /// Returns true if `path` is not absolute.
     fl_path_is_relative(path: String) -> bool
-    /// Returns whether the file name in `path` has the extension `extension`, ignoring ASCII case.
+    /// Returns true if the file name in `path` has the extension `extension`, ignoring ASCII case.
     ///
     /// Give `extension` without its dot, for example "zip". It is false if either one is empty.
     fl_path_has_extension(path: String, extension: String) -> bool
-    /// Returns whether `path` contains a separator.
+    /// Returns true if `path` contains a separator.
     fl_path_has_separator(path: String) -> bool
-    /// Returns whether `path1` and `path2` are the same once `/` and `\` are treated alike.
+    /// Returns true if `path1` and `path2` are the same once `/` and `\` are treated alike.
     ///
     /// On Windows the case is ignored as well.
     fl_path_equals(path1: String, path2: String) -> bool

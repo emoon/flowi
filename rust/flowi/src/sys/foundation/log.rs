@@ -50,7 +50,7 @@ extern "C" {
     pub fn fl_log_c_message_formatted(id: u32, level: crate::sys::LogLevel, file: *const core::ffi::c_char, line: i32, message: crate::sys::RawStr);
     /// Sets whether messages show their source file and line.
     pub fn fl_log_set_show_location(show: bool);
-    /// Opens the log file under `base_dir` and returns whether it succeeded.
+    /// Opens the log file under `base_dir` and returns true if it succeeded.
     ///
     /// An empty `base_dir` uses the application's data directory in the home directory. A log file from an earlier
     /// run is renamed with the suffix `.old`, replacing the previous `.old` file.

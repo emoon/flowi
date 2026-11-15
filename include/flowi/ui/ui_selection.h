@@ -28,7 +28,7 @@ FL_API FlSelectionSet* fl_selection_set_create(uint32_t initial_capacity);
 //
 // Does nothing for a null set.
 FL_API void fl_selection_set_destroy(FlSelectionSet* set);
-// Returns whether `id` is selected.
+// Returns true if `id` is selected.
 FL_API bool fl_selection_set_contains(FlSelectionSet* set, uint64_t id);
 // Selects `id` if `selected` is true, and deselects it otherwise.
 FL_API void fl_selection_set_set(FlSelectionSet* set, uint64_t id, bool selected);

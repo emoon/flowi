@@ -55,7 +55,7 @@ FL_API FlCursor fl_cursor_get_requested(void);
 //
 // Unlike the shape, this is not reset every frame.
 FL_API void fl_cursor_set_visible(bool visible);
-// Returns whether the pointer is visible.
+// Returns true if the pointer is visible.
 FL_API bool fl_cursor_get_visible(void);
 
 

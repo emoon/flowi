@@ -41,7 +41,7 @@ FL_API void fl_dock_workspace_begin(void);
 //
 // If the active panel is hidden, reserved or a background tab by now, there is no active panel afterwards.
 FL_API void fl_dock_workspace_end(void);
-// Declares a panel and returns whether to draw its content now.
+// Declares a panel and returns true if you should draw its content now.
 //
 // `title` is the label of the panel's tab (an empty string gives a blank tab). The call returns true when the
 // panel is the selected tab of the tile that holds it. It returns false for a hidden panel and for a panel
@@ -78,7 +78,7 @@ FL_API void fl_dock_workspace_emit(void);
 // The move happens at the start of a later frame. Nothing happens if the panel is not in the workspace or the
 // app has no dock host.
 FL_API void fl_dock_promote_panel(uint64_t panel);
-// Returns whether `fl_dock_panel` would return true for this panel on the current workspace.
+// Returns true if `fl_dock_panel` would return true for this panel on the current workspace.
 //
 // It is false for a hidden panel and for a panel that is being dragged.
 FL_API bool fl_dock_panel_should_emit(uint64_t id);
@@ -90,7 +90,7 @@ FL_API bool fl_dock_panel_should_emit(uint64_t id);
 //
 // The setting is not saved with the layout. Set it again each session.
 FL_API void fl_dock_set_panel_visible(uint64_t id, bool visible);
-// Returns whether a panel is shown on the current workspace.
+// Returns true if a panel is shown on the current workspace.
 //
 // It is true for a panel that was never hidden, also one that the workspace has not seen.
 FL_API bool fl_dock_panel_visible(uint64_t id);
@@ -98,7 +98,7 @@ FL_API bool fl_dock_panel_visible(uint64_t id);
 //
 // A panel that is being dragged, or one that is not in the layout, has no tile.
 FL_API uint32_t fl_dock_panel_leaf(uint64_t id);
-// Returns whether a panel has a place in the layout but was not declared this frame.
+// Returns true if a panel has a place in the layout but was not declared this frame.
 FL_API bool fl_dock_panel_reserved(uint64_t id);
 // Returns the size of the content area of a panel, in logical pixels.
 //

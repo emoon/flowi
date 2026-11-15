@@ -26,22 +26,22 @@ extern "C" {
     /// This is the space the painter draws in. It is {0, 0} if the element was not laid out this frame. The
     /// `Signal.mouse_pos` field is in physical pixels instead.
     pub fn fl_input_mouse_position(id: crate::sys::LayoutId) -> crate::sys::Vec2;
-    /// Returns whether `button` went down this frame.
+    /// Returns true if `button` went down this frame.
     pub fn fl_input_mouse_pressed(button: crate::sys::MouseButton) -> bool;
-    /// Returns whether `button` is held down.
+    /// Returns true if `button` is held down.
     pub fn fl_input_mouse_down(button: crate::sys::MouseButton) -> bool;
-    /// Returns whether `button` was released this frame.
+    /// Returns true if `button` was released this frame.
     pub fn fl_input_mouse_released(button: crate::sys::MouseButton) -> bool;
-    /// Returns whether `key` went down this frame.
+    /// Returns true if `key` went down this frame.
     ///
     /// The result does not depend on focus, so a text field that is being edited still sees its keys here. Use
     /// `Input::text_input_active` to leave those keys alone.
     pub fn fl_input_key_pressed(key: crate::sys::Key) -> bool;
-    /// Returns whether `key` is held down.
+    /// Returns true if `key` is held down.
     pub fn fl_input_key_down(key: crate::sys::Key) -> bool;
-    /// Returns whether `key` was released this frame.
+    /// Returns true if `key` was released this frame.
     pub fn fl_input_key_released(key: crate::sys::Key) -> bool;
-    /// Returns whether a text input had keyboard focus in the previous frame.
+    /// Returns true if a text input had keyboard focus in the previous frame.
     ///
     /// If you map keys to your own actions, skip the editing keys while this is true. Those are the characters,
     /// Backspace, Delete and the arrows.
@@ -83,19 +83,19 @@ extern "C" {
     ///
     /// It stops at the screen edge. For a drag that does not, use `Input::mouse_drag_delta`.
     pub fn fl_input_mouse_delta() -> crate::sys::Vec2;
-    /// Returns whether a gamepad is connected in player `slot`.
+    /// Returns true if a gamepad is connected in player `slot`.
     ///
     /// A `slot` that is out of range reads as not connected.
     pub fn fl_input_gamepad_connected(slot: u32) -> bool;
-    /// Returns whether `button` is held on the gamepad in player `slot`.
+    /// Returns true if `button` is held on the gamepad in player `slot`.
     ///
     /// It is false if the slot has no gamepad.
     pub fn fl_input_gamepad_button_down(slot: u32, button: crate::sys::GamepadButton) -> bool;
-    /// Returns whether `button` went down this frame on the gamepad in player `slot`.
+    /// Returns true if `button` went down this frame on the gamepad in player `slot`.
     ///
     /// It is false if the slot has no gamepad.
     pub fn fl_input_gamepad_button_pressed(slot: u32, button: crate::sys::GamepadButton) -> bool;
-    /// Returns whether `button` was released this frame on the gamepad in player `slot`.
+    /// Returns true if `button` was released this frame on the gamepad in player `slot`.
     ///
     /// It is false if the slot has no gamepad.
     pub fn fl_input_gamepad_button_released(slot: u32, button: crate::sys::GamepadButton) -> bool;
@@ -112,7 +112,7 @@ extern "C" {
     /// `items` holds the `count` rows in display order. Selection goes into `set`; if `set` is null, no row is
     /// highlighted. To draw the rows yourself, use `List::begin`.
     pub fn fl_input_list(id: crate::sys::LayoutId, items: *const crate::sys::ListItem, count: u32, set: *mut crate::sys::SelectionSet, opts: crate::sys::ListOpts) -> crate::sys::ListResult;
-    /// Returns whether the navigation down action was pressed this frame.
+    /// Returns true if the navigation down action was pressed this frame.
     ///
     /// It is the same for an arrow key, the D-pad or the analog stick.
     pub fn fl_input_nav_down_pressed() -> bool;

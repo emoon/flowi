@@ -61,7 +61,7 @@ extern "C" {
     pub fn fl_font_style_register(font: crate::sys::FontId, style: crate::sys::FontStyle);
     /// Makes the font registered for `style` the active font.
     pub fn fl_font_style_set(style: crate::sys::FontStyle);
-    /// Returns whether `font` has finished loading and is ready to draw.
+    /// Returns true if `font` has finished loading and is ready to draw.
     pub fn fl_font_is_loaded(font: crate::sys::FontId) -> bool;
     /// Waits until every font that was started has finished loading.
     ///

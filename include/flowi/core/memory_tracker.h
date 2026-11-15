@@ -56,7 +56,7 @@ FL_API void fl_memory_tracker_destroy(void);
 FL_API FlString fl_memory_tracker_dump_string(FlArena* arena);
 // Writes the text report from `fl_memory_tracker_dump_string` to `filepath`, replacing the file.
 //
-// Returns whether it succeeded. An empty `filepath` fails.
+// Returns true if it succeeded. An empty `filepath` fails.
 FL_API bool fl_memory_tracker_dump_to_file(FlString filepath);
 // Returns a JSON report of memory use, allocated from `arena`.
 //
@@ -64,7 +64,7 @@ FL_API bool fl_memory_tracker_dump_to_file(FlString filepath);
 FL_API FlString fl_memory_tracker_export_json_string(FlArena* arena);
 // Writes the JSON report from `fl_memory_tracker_export_json_string` to `filepath`, replacing the file.
 //
-// Returns whether it succeeded. An empty `filepath` fails.
+// Returns true if it succeeded. An empty `filepath` fails.
 FL_API bool fl_memory_tracker_export_json_to_file(FlString filepath);
 // Fills `stats` with the current memory use.
 //

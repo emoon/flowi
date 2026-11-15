@@ -13,7 +13,7 @@
 pub struct Menu;
 
 impl Menu {
-    /// Starts the menu `menu_id` and returns whether it is open.
+    /// Starts the menu `menu_id` and returns true if it is open.
     ///
     /// Call `Menu::end` only if this returned true. A click outside the menu closes it. Escape closes the innermost
     /// open submenu, or the menu if no submenu is open.
@@ -110,7 +110,7 @@ impl Menu {
         unsafe { crate::sys::fl_menu_close(menu_id.into_sys()) }
     }
 
-    /// Returns whether the menu `menu_id` is open.
+    /// Returns true if the menu `menu_id` is open.
     #[inline]
     pub fn is_open(menu_id: impl Into<crate::LayoutId>) -> bool {
         let menu_id: crate::LayoutId = menu_id.into();
@@ -126,7 +126,7 @@ impl Menu {
 pub struct Submenu;
 
 impl Submenu {
-    /// Adds a submenu row labelled `label` and returns whether the submenu is expanded.
+    /// Adds a submenu row labelled `label` and returns true if the submenu is expanded.
     ///
     /// Call `Submenu::end` only if this returned true.
     #[inline]
@@ -168,7 +168,7 @@ impl Menubar {
         unsafe { crate::sys::fl_menubar_end() }
     }
 
-    /// Returns whether the menu bar `bar_id` has a dropdown open.
+    /// Returns true if the menu bar `bar_id` has a dropdown open.
     ///
     /// It also returns true after Escape closed a dropdown and the keyboard focus stayed on the bar.
     #[inline]
@@ -183,7 +183,7 @@ impl Menubar {
 pub struct MenubarMenu;
 
 impl MenubarMenu {
-    /// Adds an entry labelled `label` to the menu bar and returns whether its dropdown is open.
+    /// Adds an entry labelled `label` to the menu bar and returns true if its dropdown is open.
     ///
     /// Add the items of the dropdown after it and call `MenubarMenu::end`, but only if this returned true.
     #[inline]

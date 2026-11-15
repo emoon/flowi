@@ -43,7 +43,7 @@ api Log {
     [manual] c_message_formatted(id: u32, level: LogLevel, file: *const char, line: i32, message: String)
     /// Sets whether messages show their source file and line.
     [manual] set_show_location(show: bool)
-    /// Opens the log file under `base_dir` and returns whether it succeeded.
+    /// Opens the log file under `base_dir` and returns true if it succeeded.
     ///
     /// An empty `base_dir` uses the application's data directory in the home directory. A log file from an earlier
     /// run is renamed with the suffix `.old`, replacing the previous `.old` file.

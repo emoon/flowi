@@ -63,7 +63,7 @@ FL_API void fl_font_set(FlFontId font);
 FL_API void fl_font_style_register(FlFontId font, FlFontStyle style);
 // Makes the font registered for `style` the active font.
 FL_API void fl_font_style_set(FlFontStyle style);
-// Returns whether `font` has finished loading and is ready to draw.
+// Returns true if `font` has finished loading and is ready to draw.
 FL_API bool fl_font_is_loaded(FlFontId font);
 // Waits until every font that was started has finished loading.
 //

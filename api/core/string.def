@@ -100,13 +100,13 @@ api String {
     ///
     /// A string that does not fit is cut short. Nothing is written if `buffer_len` is 0.
     fl_string_to_cstr_buffer(dest: *char, buffer_len: u64, str: String)
-    /// Returns whether `str` starts with `needle`.
+    /// Returns true if `str` starts with `needle`.
     fl_string_begins_with(str: String, needle: String) -> bool
-    /// Returns whether `str` ends with `needle`.
+    /// Returns true if `str` ends with `needle`.
     fl_string_ends_with(str: String, needle: String) -> bool
-    /// Returns whether `a` and `b` hold the same bytes.
+    /// Returns true if `a` and `b` hold the same bytes.
     fl_string_equals(a: String, b: String) -> bool
-    /// Returns whether `a` and `b` hold the same bytes, ignoring ASCII case.
+    /// Returns true if `a` and `b` hold the same bytes, ignoring ASCII case.
     fl_string_equals_nocase(a: String, b: String) -> bool
     /// Compares at most `max_len` bytes of `a` and `b`.
     ///
@@ -199,9 +199,9 @@ api String {
     fl_string_find_substr(str: String, needle: String) -> i64
     /// Returns the index of the first `c` in `str` at or after `offset`, or -1 if there is none.
     fl_string_find_char_from(str: String, c: char, offset: u64) -> i64
-    /// Returns whether `str` contains `needle`.
+    /// Returns true if `str` contains `needle`.
     fl_string_contains(str: String, needle: String) -> bool
-    /// Returns whether `str` contains `needle`, ignoring ASCII case.
+    /// Returns true if `str` contains `needle`, ignoring ASCII case.
     fl_string_contains_nocase(str: String, needle: String) -> bool
     /// Returns the FNV-1a hash of the bytes of `str`.
     fl_string_hash_fnv1a(str: String) -> u64

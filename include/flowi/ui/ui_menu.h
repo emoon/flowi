@@ -19,7 +19,7 @@ extern "C" {
 //
 // Open a menu with `fl_menu_open`, or put a right-click region around the area that should open it. Each frame, call
 // `fl_menu_begin`. It returns true only while the menu is open. If it did, add items and call `fl_menu_end`.
-// Starts the menu `menu_id` and returns whether it is open.
+// Starts the menu `menu_id` and returns true if it is open.
 //
 // Call `fl_menu_end` only if this returned true. A click outside the menu closes it. Escape closes the innermost
 // open submenu, or the menu if no submenu is open.
@@ -64,7 +64,7 @@ FL_API void fl_menu_open(FlLayoutId menu_id, FlVec2 point);
 //
 // It does nothing if the menu is not open.
 FL_API void fl_menu_close(FlLayoutId menu_id);
-// Returns whether the menu `menu_id` is open.
+// Returns true if the menu `menu_id` is open.
 FL_API bool fl_menu_is_open(FlLayoutId menu_id);
 
 // Designated-initializer convenience macro - routes directly to the fl_* body.
@@ -86,7 +86,7 @@ FL_API bool fl_menu_is_open(FlLayoutId menu_id);
 //
 // A submenu is a row in its parent menu. When the row is expanded, the items you add before `fl_submenu_end` appear
 // in a panel beside it.
-// Adds a submenu row labelled `label` and returns whether the submenu is expanded.
+// Adds a submenu row labelled `label` and returns true if the submenu is expanded.
 //
 // Call `fl_submenu_end` only if this returned true.
 FL_API bool fl_submenu_begin_impl(FlString label, FlSubmenuConfig config);
@@ -106,7 +106,7 @@ FL_API void fl_submenu_end(void);
 FL_API void fl_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig config);
 // Ends the menu bar.
 FL_API void fl_menubar_end(void);
-// Returns whether the menu bar `bar_id` has a dropdown open.
+// Returns true if the menu bar `bar_id` has a dropdown open.
 //
 // It also returns true after Escape closed a dropdown and the keyboard focus stayed on the bar.
 FL_API bool fl_menubar_is_open(FlLayoutId bar_id);
@@ -115,7 +115,7 @@ FL_API bool fl_menubar_is_open(FlLayoutId bar_id);
 #define fl_menubar_begin(bar_id, ...) fl_menubar_begin_impl(bar_id, (FlMenuBarConfig) { __VA_ARGS__ })
 
 // An entry in a menu bar, with a dropdown of items.
-// Adds an entry labelled `label` to the menu bar and returns whether its dropdown is open.
+// Adds an entry labelled `label` to the menu bar and returns true if its dropdown is open.
 //
 // Add the items of the dropdown after it and call `fl_menubar_menu_end`, but only if this returned true.
 FL_API bool fl_menubar_menu_begin_impl(FlString label, FlMenuBarMenuConfig config);

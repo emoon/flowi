@@ -53,7 +53,7 @@ FL_API void fl_log_channel_enable(uint32_t id, bool enabled);
 FL_API void fl_log_c_message_formatted(uint32_t id, FlLogLevel level, const char* file, int32_t line, FlString message);
 // Sets whether messages show their source file and line.
 FL_API void fl_log_set_show_location(bool show);
-// Opens the log file under `base_dir` and returns whether it succeeded.
+// Opens the log file under `base_dir` and returns true if it succeeded.
 //
 // An empty `base_dir` uses the application's data directory in the home directory. A log file from an earlier
 // run is renamed with the suffix `.old`, replacing the previous `.old` file.

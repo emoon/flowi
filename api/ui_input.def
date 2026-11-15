@@ -25,22 +25,22 @@ api Input {
     /// This is the space the painter draws in. It is {0, 0} if the element was not laid out this frame. The
     /// `Signal.mouse_pos` field is in physical pixels instead.
     mouse_position(id: LayoutId) -> Vec2
-    /// Returns whether `button` went down this frame.
+    /// Returns true if `button` went down this frame.
     mouse_pressed(button: MouseButton) -> bool
-    /// Returns whether `button` is held down.
+    /// Returns true if `button` is held down.
     mouse_down(button: MouseButton) -> bool
-    /// Returns whether `button` was released this frame.
+    /// Returns true if `button` was released this frame.
     mouse_released(button: MouseButton) -> bool
-    /// Returns whether `key` went down this frame.
+    /// Returns true if `key` went down this frame.
     ///
     /// The result does not depend on focus, so a text field that is being edited still sees its keys here. Use
     /// `Input::text_input_active` to leave those keys alone.
     key_pressed(key: Key) -> bool
-    /// Returns whether `key` is held down.
+    /// Returns true if `key` is held down.
     key_down(key: Key) -> bool
-    /// Returns whether `key` was released this frame.
+    /// Returns true if `key` was released this frame.
     key_released(key: Key) -> bool
-    /// Returns whether a text input had keyboard focus in the previous frame.
+    /// Returns true if a text input had keyboard focus in the previous frame.
     ///
     /// If you map keys to your own actions, skip the editing keys while this is true. Those are the characters,
     /// Backspace, Delete and the arrows.
@@ -82,19 +82,19 @@ api Input {
     ///
     /// It stops at the screen edge. For a drag that does not, use `Input::mouse_drag_delta`.
     mouse_delta() -> Vec2
-    /// Returns whether a gamepad is connected in player `slot`.
+    /// Returns true if a gamepad is connected in player `slot`.
     ///
     /// A `slot` that is out of range reads as not connected.
     gamepad_connected(slot: u32) -> bool
-    /// Returns whether `button` is held on the gamepad in player `slot`.
+    /// Returns true if `button` is held on the gamepad in player `slot`.
     ///
     /// It is false if the slot has no gamepad.
     gamepad_button_down(slot: u32, button: GamepadButton) -> bool
-    /// Returns whether `button` went down this frame on the gamepad in player `slot`.
+    /// Returns true if `button` went down this frame on the gamepad in player `slot`.
     ///
     /// It is false if the slot has no gamepad.
     gamepad_button_pressed(slot: u32, button: GamepadButton) -> bool
-    /// Returns whether `button` was released this frame on the gamepad in player `slot`.
+    /// Returns true if `button` was released this frame on the gamepad in player `slot`.
     ///
     /// It is false if the slot has no gamepad.
     gamepad_button_released(slot: u32, button: GamepadButton) -> bool
@@ -111,7 +111,7 @@ api Input {
     /// `items` holds the `count` rows in display order. Selection goes into `set`; if `set` is null, no row is
     /// highlighted. To draw the rows yourself, use `List::begin`.
     [manual] [rust_doc(List::show)] list(id: LayoutId, items: *const ListItem, count: u32, set: *SelectionSet, opts: ListOpts) -> ListResult
-    /// Returns whether the navigation down action was pressed this frame.
+    /// Returns true if the navigation down action was pressed this frame.
     ///
     /// It is the same for an arrow key, the D-pad or the analog stick.
     [manual] nav_down_pressed() -> bool

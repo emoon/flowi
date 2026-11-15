@@ -178,7 +178,7 @@ FL_API void fl_image(FlImageHandle handle, FlImageOpts opts);
 //
 // The path is read from the application's asset mount. The handle is 0 if there is no asset mount.
 FL_API FlImageHandle fl_image_load(FlString path);
-// Returns whether the image has finished loading and can be drawn.
+// Returns true if the image has finished loading and can be drawn.
 FL_API bool fl_image_is_ready(FlImageHandle handle);
 // Creates an image from raw pixels and returns its handle, which is ready at once.
 //

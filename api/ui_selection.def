@@ -17,7 +17,7 @@ api SelectionSet {
     ///
     /// Does nothing for a null set.
     [drop] destroy(set: *SelectionSet)
-    /// Returns whether `id` is selected.
+    /// Returns true if `id` is selected.
     [const] contains(set: *SelectionSet, id: u64) -> bool
     /// Selects `id` if `selected` is true, and deselects it otherwise.
     set(set: *SelectionSet, id: u64, selected: bool)

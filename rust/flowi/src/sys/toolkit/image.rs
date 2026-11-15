@@ -269,7 +269,7 @@ extern "C" {
     ///
     /// The path is read from the application's asset mount. The handle is 0 if there is no asset mount.
     pub fn fl_image_load(path: crate::sys::RawStr) -> crate::sys::ImageHandle;
-    /// Returns whether the image has finished loading and can be drawn.
+    /// Returns true if the image has finished loading and can be drawn.
     pub fn fl_image_is_ready(handle: crate::sys::ImageHandle) -> bool;
     /// Creates an image from raw pixels and returns its handle, which is ready at once.
     ///

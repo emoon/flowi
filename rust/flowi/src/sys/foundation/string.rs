@@ -162,13 +162,13 @@ extern "C" {
     ///
     /// A string that does not fit is cut short. Nothing is written if `buffer_len` is 0.
     pub fn fl_string_to_cstr_buffer(dest: *mut core::ffi::c_char, buffer_len: u64, str: crate::sys::RawStr);
-    /// Returns whether `str` starts with `needle`.
+    /// Returns true if `str` starts with `needle`.
     pub fn fl_string_begins_with(str: crate::sys::RawStr, needle: crate::sys::RawStr) -> bool;
-    /// Returns whether `str` ends with `needle`.
+    /// Returns true if `str` ends with `needle`.
     pub fn fl_string_ends_with(str: crate::sys::RawStr, needle: crate::sys::RawStr) -> bool;
-    /// Returns whether `a` and `b` hold the same bytes.
+    /// Returns true if `a` and `b` hold the same bytes.
     pub fn fl_string_equals(a: crate::sys::RawStr, b: crate::sys::RawStr) -> bool;
-    /// Returns whether `a` and `b` hold the same bytes, ignoring ASCII case.
+    /// Returns true if `a` and `b` hold the same bytes, ignoring ASCII case.
     pub fn fl_string_equals_nocase(a: crate::sys::RawStr, b: crate::sys::RawStr) -> bool;
     /// Compares at most `max_len` bytes of `a` and `b`.
     ///
@@ -254,9 +254,9 @@ extern "C" {
     pub fn fl_string_find_substr(str: crate::sys::RawStr, needle: crate::sys::RawStr) -> i64;
     /// Returns the index of the first `c` in `str` at or after `offset`, or -1 if there is none.
     pub fn fl_string_find_char_from(str: crate::sys::RawStr, c: core::ffi::c_char, offset: u64) -> i64;
-    /// Returns whether `str` contains `needle`.
+    /// Returns true if `str` contains `needle`.
     pub fn fl_string_contains(str: crate::sys::RawStr, needle: crate::sys::RawStr) -> bool;
-    /// Returns whether `str` contains `needle`, ignoring ASCII case.
+    /// Returns true if `str` contains `needle`, ignoring ASCII case.
     pub fn fl_string_contains_nocase(str: crate::sys::RawStr, needle: crate::sys::RawStr) -> bool;
     /// Returns the FNV-1a hash of the bytes of `str`.
     pub fn fl_string_hash_fnv1a(str: crate::sys::RawStr) -> u64;

@@ -62,7 +62,7 @@ extern "C" {
     ///
     /// Unlike the shape, this is not reset every frame.
     pub fn fl_cursor_set_visible(visible: bool);
-    /// Returns whether the pointer is visible.
+    /// Returns true if the pointer is visible.
     pub fn fl_cursor_get_visible() -> bool;
 }
 

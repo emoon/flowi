@@ -45,20 +45,20 @@ extern "C" {
     ///
     /// A trailing separator on `path` is ignored.
     pub fn fl_path_get_parent(arena: *mut crate::sys::Arena, path: crate::sys::RawStr) -> crate::sys::RawStr;
-    /// Returns whether `path` is absolute.
+    /// Returns true if `path` is absolute.
     ///
     /// That means it starts with "/", a drive letter and a separator such as "C:/", two separators, or "http://" or
     /// "https://".
     pub fn fl_path_is_absolute(path: crate::sys::RawStr) -> bool;
-    /// Returns whether `path` is not absolute.
+    /// Returns true if `path` is not absolute.
     pub fn fl_path_is_relative(path: crate::sys::RawStr) -> bool;
-    /// Returns whether the file name in `path` has the extension `extension`, ignoring ASCII case.
+    /// Returns true if the file name in `path` has the extension `extension`, ignoring ASCII case.
     ///
     /// Give `extension` without its dot, for example "zip". It is false if either one is empty.
     pub fn fl_path_has_extension(path: crate::sys::RawStr, extension: crate::sys::RawStr) -> bool;
-    /// Returns whether `path` contains a separator.
+    /// Returns true if `path` contains a separator.
     pub fn fl_path_has_separator(path: crate::sys::RawStr) -> bool;
-    /// Returns whether `path1` and `path2` are the same once `/` and `\` are treated alike.
+    /// Returns true if `path1` and `path2` are the same once `/` and `\` are treated alike.
     ///
     /// On Windows the case is ignored as well.
     pub fn fl_path_equals(path1: crate::sys::RawStr, path2: crate::sys::RawStr) -> bool;

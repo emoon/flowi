@@ -24,7 +24,7 @@ impl Drop for SelectionSet {
 }
 
 impl SelectionSet {
-    /// Returns whether `id` is selected.
+    /// Returns true if `id` is selected.
     #[inline]
     pub fn contains(&self, id: u64) -> bool {
         unsafe { crate::sys::fl_selection_set_contains(self.handle, id) }

@@ -32,7 +32,7 @@ impl Image {
         unsafe { crate::sys::fl_image_load(crate::sys::RawStr::borrow(path)) }
     }
 
-    /// Returns whether the image has finished loading and can be drawn.
+    /// Returns true if the image has finished loading and can be drawn.
     #[inline]
     pub fn is_ready(handle: crate::sys::ImageHandle) -> bool {
         unsafe { crate::sys::fl_image_is_ready(handle) }

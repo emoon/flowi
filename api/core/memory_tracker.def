@@ -46,7 +46,7 @@ api MemoryTracker {
     [manual] dump_string(arena: *Arena) -> String
     /// Writes the text report from `MemoryTracker::dump_string` to `filepath`, replacing the file.
     ///
-    /// Returns whether it succeeded. An empty `filepath` fails.
+    /// Returns true if it succeeded. An empty `filepath` fails.
     [manual] dump_to_file(filepath: String) -> bool
     /// Returns a JSON report of memory use, allocated from `arena`.
     ///
@@ -54,7 +54,7 @@ api MemoryTracker {
     [manual] export_json_string(arena: *Arena) -> String
     /// Writes the JSON report from `MemoryTracker::export_json_string` to `filepath`, replacing the file.
     ///
-    /// Returns whether it succeeded. An empty `filepath` fails.
+    /// Returns true if it succeeded. An empty `filepath` fails.
     [manual] export_json_to_file(filepath: String) -> bool
     /// Fills `stats` with the current memory use.
     ///

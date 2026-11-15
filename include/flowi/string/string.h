@@ -110,13 +110,13 @@ FL_API const char* fl_string_to_cstr(FlArena* arena, FlString str);
 //
 // A string that does not fit is cut short. Nothing is written if `buffer_len` is 0.
 FL_API void fl_string_to_cstr_buffer(char* dest, uint64_t buffer_len, FlString str);
-// Returns whether `str` starts with `needle`.
+// Returns true if `str` starts with `needle`.
 FL_API bool fl_string_begins_with(FlString str, FlString needle);
-// Returns whether `str` ends with `needle`.
+// Returns true if `str` ends with `needle`.
 FL_API bool fl_string_ends_with(FlString str, FlString needle);
-// Returns whether `a` and `b` hold the same bytes.
+// Returns true if `a` and `b` hold the same bytes.
 FL_API bool fl_string_equals(FlString a, FlString b);
-// Returns whether `a` and `b` hold the same bytes, ignoring ASCII case.
+// Returns true if `a` and `b` hold the same bytes, ignoring ASCII case.
 FL_API bool fl_string_equals_nocase(FlString a, FlString b);
 // Compares at most `max_len` bytes of `a` and `b`.
 //
@@ -206,9 +206,9 @@ FL_API int64_t fl_string_find_char(FlString str, char c);
 FL_API int64_t fl_string_find_substr(FlString str, FlString needle);
 // Returns the index of the first `c` in `str` at or after `offset`, or -1 if there is none.
 FL_API int64_t fl_string_find_char_from(FlString str, char c, uint64_t offset);
-// Returns whether `str` contains `needle`.
+// Returns true if `str` contains `needle`.
 FL_API bool fl_string_contains(FlString str, FlString needle);
-// Returns whether `str` contains `needle`, ignoring ASCII case.
+// Returns true if `str` contains `needle`, ignoring ASCII case.
 FL_API bool fl_string_contains_nocase(FlString str, FlString needle);
 // Returns the FNV-1a hash of the bytes of `str`.
 FL_API uint64_t fl_string_hash_fnv1a(FlString str);

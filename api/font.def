@@ -51,7 +51,7 @@ api Font {
     style_register(font: FontId, style: FontStyle)
     /// Makes the font registered for `style` the active font.
     style_set(style: FontStyle)
-    /// Returns whether `font` has finished loading and is ready to draw.
+    /// Returns true if `font` has finished loading and is ready to draw.
     is_loaded(font: FontId) -> bool
     /// Waits until every font that was started has finished loading.
     ///

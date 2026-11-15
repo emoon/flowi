@@ -62,28 +62,28 @@ impl Input {
         unsafe { crate::sys::fl_input_mouse_position(id.into_sys()) }
     }
 
-    /// Returns whether `button` went down this frame.
+    /// Returns true if `button` went down this frame.
     #[inline]
     pub fn mouse_pressed(button: crate::sys::MouseButton) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Input::mouse_pressed");
         unsafe { crate::sys::fl_input_mouse_pressed(button) }
     }
 
-    /// Returns whether `button` is held down.
+    /// Returns true if `button` is held down.
     #[inline]
     pub fn mouse_down(button: crate::sys::MouseButton) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Input::mouse_down");
         unsafe { crate::sys::fl_input_mouse_down(button) }
     }
 
-    /// Returns whether `button` was released this frame.
+    /// Returns true if `button` was released this frame.
     #[inline]
     pub fn mouse_released(button: crate::sys::MouseButton) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Input::mouse_released");
         unsafe { crate::sys::fl_input_mouse_released(button) }
     }
 
-    /// Returns whether `key` went down this frame.
+    /// Returns true if `key` went down this frame.
     ///
     /// The result does not depend on focus, so a text field that is being edited still sees its keys here. Use
     /// `Input::text_input_active` to leave those keys alone.
@@ -93,21 +93,21 @@ impl Input {
         unsafe { crate::sys::fl_input_key_pressed(key) }
     }
 
-    /// Returns whether `key` is held down.
+    /// Returns true if `key` is held down.
     #[inline]
     pub fn key_down(key: crate::sys::Key) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Input::key_down");
         unsafe { crate::sys::fl_input_key_down(key) }
     }
 
-    /// Returns whether `key` was released this frame.
+    /// Returns true if `key` was released this frame.
     #[inline]
     pub fn key_released(key: crate::sys::Key) -> bool {
         let _frame = crate::frame_thread::frame_thread_guard("Input::key_released");
         unsafe { crate::sys::fl_input_key_released(key) }
     }
 
-    /// Returns whether a text input had keyboard focus in the previous frame.
+    /// Returns true if a text input had keyboard focus in the previous frame.
     ///
     /// If you map keys to your own actions, skip the editing keys while this is true. Those are the characters,
     /// Backspace, Delete and the arrows.
@@ -173,7 +173,7 @@ impl Input {
         unsafe { crate::sys::fl_input_mouse_delta() }
     }
 
-    /// Returns whether a gamepad is connected in player `slot`.
+    /// Returns true if a gamepad is connected in player `slot`.
     ///
     /// A `slot` that is out of range reads as not connected.
     #[inline]
@@ -182,7 +182,7 @@ impl Input {
         unsafe { crate::sys::fl_input_gamepad_connected(slot) }
     }
 
-    /// Returns whether `button` is held on the gamepad in player `slot`.
+    /// Returns true if `button` is held on the gamepad in player `slot`.
     ///
     /// It is false if the slot has no gamepad.
     #[inline]
@@ -191,7 +191,7 @@ impl Input {
         unsafe { crate::sys::fl_input_gamepad_button_down(slot, button) }
     }
 
-    /// Returns whether `button` went down this frame on the gamepad in player `slot`.
+    /// Returns true if `button` went down this frame on the gamepad in player `slot`.
     ///
     /// It is false if the slot has no gamepad.
     #[inline]
@@ -200,7 +200,7 @@ impl Input {
         unsafe { crate::sys::fl_input_gamepad_button_pressed(slot, button) }
     }
 
-    /// Returns whether `button` was released this frame on the gamepad in player `slot`.
+    /// Returns true if `button` was released this frame on the gamepad in player `slot`.
     ///
     /// It is false if the slot has no gamepad.
     #[inline]
