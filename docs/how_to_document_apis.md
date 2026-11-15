@@ -89,7 +89,10 @@ to repeat it.
   in the C headers, and leaves it as written for Rust.
 - Write the full `List::begin` even inside the `List` block. A bare `begin` is not translated.
 - Keep a reference on one line of the comment.
-- api_gen stops with an error if a reference names a function, field or enum value that does not exist.
+- api_gen stops with an error if a reference names a function, field or enum value that its type or `api` block
+  does not have. It does not catch a misspelt type or `api` name, so check those yourself.
+- A backticked word that is the name of a type is always translated, so do not backtick such a word when you
+  mean something else.
 - Write "null" for a pointer that may be left out. A Rust caller passes `None`.
 - Use the names the API uses. If the field is `expanded`, write expanded and collapsed.
 - Use "you" for advice to the caller: "If you keep the selection yourself, ...".

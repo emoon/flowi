@@ -22,7 +22,7 @@ struct ListConfig {
     labels: *const String,
     /// Whether you draw the row drag yourself, from the drag fields of `ListResult`.
     suppress_drag_visuals: bool,
-    /// When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
+    /// When the scrollbar is shown (`ScrollbarDisplayMode::Never` by default). The mouse wheel always scrolls.
     scrollbar_mode: ScrollbarDisplayMode,
 }
 
@@ -41,7 +41,7 @@ struct ListOpts {
     reorderable: bool,
     /// Whether you draw the row drag yourself, from the drag fields of `ListResult`.
     suppress_drag_visuals: bool,
-    /// When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
+    /// When the scrollbar is shown (`ScrollbarDisplayMode::Never` by default). The mouse wheel always scrolls.
     scrollbar_mode: ScrollbarDisplayMode,
 }
 

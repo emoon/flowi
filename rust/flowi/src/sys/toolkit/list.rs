@@ -51,7 +51,7 @@ pub struct ListConfig {
     pub labels: *const crate::sys::RawStr,
     /// Whether you draw the row drag yourself, from the drag fields of `ListResult`.
     pub suppress_drag_visuals: bool,
-    /// When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
+    /// When the scrollbar is shown (`ScrollbarDisplayMode::Never` by default). The mouse wheel always scrolls.
     pub scrollbar_mode: crate::sys::ScrollbarDisplayMode,
 }
 
@@ -81,7 +81,7 @@ pub struct ListOpts {
     pub reorderable: bool,
     /// Whether you draw the row drag yourself, from the drag fields of `ListResult`.
     pub suppress_drag_visuals: bool,
-    /// When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
+    /// When the scrollbar is shown (`ScrollbarDisplayMode::Never` by default). The mouse wheel always scrolls.
     pub scrollbar_mode: crate::sys::ScrollbarDisplayMode,
 }
 

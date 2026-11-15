@@ -45,7 +45,7 @@ typedef struct FlListConfig {
     const FlString* labels;
     // Whether you draw the row drag yourself, from the drag fields of `FlListResult`.
     bool suppress_drag_visuals;
-    // When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
+    // When the scrollbar is shown (`FlScrollbarDisplayMode_Never` by default). The mouse wheel always scrolls.
     FlScrollbarDisplayMode scrollbar_mode;
 } FlListConfig;
 
@@ -63,7 +63,7 @@ typedef struct FlListOpts {
     bool reorderable;
     // Whether you draw the row drag yourself, from the drag fields of `FlListResult`.
     bool suppress_drag_visuals;
-    // When the scrollbar is shown (`Never` by default). The mouse wheel scrolls in every mode.
+    // When the scrollbar is shown (`FlScrollbarDisplayMode_Never` by default). The mouse wheel always scrolls.
     FlScrollbarDisplayMode scrollbar_mode;
 } FlListOpts;
 
