@@ -395,3 +395,18 @@ UTEST(loc_check, every_check_has_a_report_heading) {
         ASSERT_TRUE(loc_check_heading_label((LocCheckId)check) != nullptr);
     }
 }
+
+UTEST(loc_check, a_table_without_a_strings_object_names_the_file) {
+    FlArena* arena = arena_new(.reserved_size = MB(16));
+
+    const LocCheckTable tables[] = {
+        { .tag = FL_S("en"), .path = FL_S("en.json5"), .json = FL_S("{\"SID_A\":\"a\"}") },
+    };
+
+    const LocCheckResult result = run_check(arena, nullptr, 0, tables, 1);
+    const LocCheckFinding* finding = first_finding(&result, LocCheckId_TableUnreadable);
+    ASSERT_TRUE(finding != nullptr);
+    ASSERT_TRUE(fl_string_equals(finding->message, FL_S("en.json5 has no \"strings\" object")));
+
+    fl_arena_destroy(arena);
+}
