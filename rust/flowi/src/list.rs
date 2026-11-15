@@ -97,13 +97,15 @@ impl List {
     ///
     /// # Panics
     ///
-    /// Panics when called off the thread that owns the live [`Application`](crate::Application).
+    /// Panics if `items` holds more than `u32::MAX` rows, or when called off the thread that owns the live
+    /// [`Application`](crate::Application).
     pub fn show(
         id: impl Into<LayoutId>,
         items: &[ListItem<'_>],
         set: Option<&mut SelectionSet>,
         opts: ListOpts,
     ) -> ListResult {
+        let count = u32::try_from(items.len()).expect("a List holds at most u32::MAX items");
         let set_ptr = set_handle(set);
         let id: LayoutId = id.into();
         let _frame = frame_thread_guard("List::show");
@@ -128,7 +130,7 @@ impl List {
             sys::fl_input_list(
                 id.into_sys(),
                 sys_items.as_ptr(),
-                sys_items.len() as u32,
+                count,
                 set_ptr,
                 opts.to_sys(),
             )

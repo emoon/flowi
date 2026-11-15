@@ -515,6 +515,7 @@ void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColo
     source.dynamic.w = (u32)image->width;
     source.dynamic.h = (u32)image->height;
     source.dynamic.stride = (u32)image->user_stride;
+    source.dynamic.alpha_only = image->is_alpha_only;
 
     // In alpha-coverage mode the tint colorizes the mask.
     FlImageMode mode = image->is_alpha_only ? FlImageMode_AlphaCoverage : FlImageMode_Color;

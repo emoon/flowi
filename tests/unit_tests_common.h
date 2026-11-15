@@ -173,6 +173,8 @@ typedef struct RenderFixture {
     // once the frame is done.
     bool border_found;
     FlCmdBorder submitted_border;
+    bool image_found;
+    FlCmdImage submitted_image;
     bool text_run_found;
     FlCmdTextRun submitted_text_run;
     FlGlyph text_run_glyphs[4]; // leading glyphs of that run; their pen deltas show the letter spacing

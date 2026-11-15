@@ -131,6 +131,7 @@ typedef struct FlImageSource {
             u32 w;
             u32 h;
             u32 stride; // bytes per row
+            bool alpha_only;
         } dynamic;
     };
 } FlImageSource;

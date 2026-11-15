@@ -648,9 +648,10 @@ static FlFontMetrics face_vmetrics(FlFontCache* self, FontFace* face, u16 q4) {
             break;
         }
         case FlFontRasterKind_Default:
-            // The built-in font's baseline sits at the cell top (zero ascender/descender); only the cell
-            // height is meaningful.
-            out.line_height = (float)(8 * face->default_scale);
+            // The built-in font's glyphs sit above the baseline (bearing_y is the cell height), so the ascent
+            // is the whole cell and there is no descent.
+            out.ascent = (float)(8 * face->default_scale);
+            out.line_height = out.ascent;
             break;
         case FlFontRasterKind_None:
         default:

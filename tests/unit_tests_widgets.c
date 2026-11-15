@@ -1,6 +1,7 @@
 // UI widget, input and selection tests
 
 #include "unit_tests_common.h"
+#include <math.h>
 
 // FlSelectionSet membership and applying Selection Requests.
 
@@ -1671,6 +1672,108 @@ UTEST(ui_slider, hit_math_follows_thumb_size) {
     fl_app_destroy(app);
 }
 
+UTEST(ui_slider, equal_min_and_max_keeps_finite_geometry) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+
+    ctx->layout_width = 1920.0f;
+    ctx->layout_height = 1080.0f;
+    ui_set_scale(1.0f, 1.0f);
+
+    if (ctx->shared->renderer.render != slider_rects_capture) {
+        s_slider_rects_next = ctx->shared->renderer.render;
+        ctx->shared->renderer.render = slider_rects_capture;
+    }
+
+    float value = 3.0f;
+    for_count(pass, 2) {
+        ui_update_begin(ctx);
+        ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
+            ui_slider_float(FL_S("slider_flat_range"), &value, 3.0f, 3.0f);
+        }
+        ui_update_end(ctx, 1.0f / 60.0f);
+    }
+
+    ASSERT_EQ_MSG(s_slider_rects.count, 4, "a slider draws the row, the filled bar, the thumb, the unfilled bar");
+    ASSERT_TRUE_MSG(isfinite(s_slider_rects.rect[1].w), "the filled bar has a finite width");
+    ASSERT_TRUE_MSG(isfinite(s_slider_rects.rect[3].w), "the unfilled bar has a finite width");
+    ASSERT_NEAR_MSG((double)value, 3.0, 1e-4, "the value stays at the only value in range");
+}
+
+static void slider_int_wheel_frame(FlUiCtx* ctx, FlString label, int* value, float wheel_y) {
+    const ItemState* row
+        = hashmap_get(&ctx->shared->item_state, ui_layout_id_to_clay_id((FlLayoutId) { .name = label, .id = 0 }));
+    if (row != nullptr) {
+        ui_input_set_mouse_position(ctx, row->state.pos.x + 50.0f, row->state.pos.y + row->state.size.y / 2.0f);
+    }
+    ui_input_update(ctx, 1.0f / 60.0f);
+    ctx->input_state.mouse.wheel_x_cached = 0.0f;
+    ctx->input_state.mouse.wheel_y_cached = wheel_y;
+
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
+        ui_slider_int(label, value, 0, 10, .step = 0.0f);
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+}
+
+UTEST(ui_slider, int_slider_with_a_small_range_still_moves) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    ctx->layout_width = 1920.0f;
+    ctx->layout_height = 1080.0f;
+    ui_set_scale(1.0f, 1.0f);
+
+    int value = 5;
+    const FlString label = FL_S("slider_int_small_range");
+    for_count(i, 3) {
+        slider_int_wheel_frame(ctx, label, &value, 0.0f);
+    }
+    slider_int_wheel_frame(ctx, label, &value, 1.0f);
+    ASSERT_EQ_MSG(value, 6, "one wheel step moves the integer slider by one");
+}
+
+static void scrollbar_click_frame(FlUiCtx* ctx, float* value, float mx, float my, bool held, bool pressed,
+                                  bool released) {
+    FlInputState* in = &ctx->input_state;
+    ui_input_set_mouse_position(ctx, mx, my);
+    in->mouse.buttons[FlMouseButton_Left] = held;
+    in->mouse.buttons_pressed[FlMouseButton_Left] = pressed;
+    in->mouse.buttons_released[FlMouseButton_Left] = released;
+    ui_input_update(ctx, 1.0f / 60.0f);
+
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { sizing_fixed(100.0f), sizing_fixed(100.0f) }) {
+        ui_scrollbar(value, .min = 0.0f, .max = 100.0f, .min_thumb_size = 200.0f);
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+}
+
+UTEST(ui_scrollbar, grabbing_a_thumb_that_fills_the_track_keeps_the_value) {
+    FlAppSettings settings = { .window_title = FL_S("scrollbar_short"), .width = 400, .height = 400, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+    FlUiCtx* ctx = ui_get_ctx();
+    ctx->ui_scale = 1.0f;
+    ctx->layout_width = 400.0f;
+    ctx->layout_height = 400.0f;
+    Clay_SetLayoutDimensions((Clay_Dimensions) { .width = 400.0f, .height = 400.0f });
+
+    float value = 50.0f;
+    for_count(i, 2) {
+        scrollbar_click_frame(ctx, &value, -100.0f, -100.0f, false, false, false);
+    }
+    const float mx = 4.0f;
+    const float my = 50.0f;
+    scrollbar_click_frame(ctx, &value, mx, my, false, false, false);
+    scrollbar_click_frame(ctx, &value, mx, my, false, false, false);
+    scrollbar_click_frame(ctx, &value, mx, my, true, true, false);
+    scrollbar_click_frame(ctx, &value, mx, my, false, false, true);
+
+    ASSERT_NEAR_MSG((double)value, 50.0, 1e-4, "a press on a thumb that fills the track does not move the value");
+    fl_app_destroy(app);
+}
+
 // FlTabBarConfig's item and strip fields set the tab geometry, and a zeroed config leaves the strip at its
 // built-in geometry (the dock leaf header passes a zeroed one). The case checks the debug render-command
 // snapshot, so the numbers in the assertions are the geometry.
@@ -2340,6 +2443,55 @@ UTEST(ui_menu, context_menu_tracer) {
     menu_click_at(app, &st, 5, 5);
     ASSERT_FALSE_MSG(st.menu_open, "a click outside the menu rects dismisses it");
 
+    fl_app_destroy(app);
+}
+
+UTEST(ui_menu, confirm_on_a_hovered_disabled_row_is_ignored) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+
+    FlAppSettings settings = { .window_title = FL_S("menu_disabled"), .width = 800, .height = 600, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    MenuTestState st = { 0 };
+    fl_app_tick(app, &st, menu_frame);
+    menu_open_at(app, &st, 120, 120);
+    ASSERT_TRUE_MSG(st.menu_open, "right-click in the region opened the menu");
+
+    ASSERT_TRUE_MSG(menu_hover_item(app, &st, FL_S("Paste"), 0, 2), "Paste item was not laid out");
+    ASSERT_EQ_MSG((int)st.ctx->shared->menu.levels[0].highlight_index, 2, "hovering the disabled row highlights it");
+
+    menu_key_tap(app, &st, FlKey_Enter);
+    ASSERT_FALSE_MSG(st.disabled_clicked, "Enter on a disabled row must not report clicked");
+    ASSERT_TRUE_MSG(st.menu_open, "Enter on a disabled row leaves the menu open");
+
+    fl_app_destroy(app);
+}
+
+UTEST(ui_menu, region_opens_on_the_press_not_while_held) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+
+    FlAppSettings settings = { .window_title = FL_S("menu_held"), .width = 800, .height = 600, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    MenuTestState st = { 0 };
+    fl_app_tick(app, &st, menu_frame);
+    fl_app_inject_mouse_move(app, 120, 120);
+    fl_app_tick(app, &st, menu_frame);
+    fl_app_tick(app, &st, menu_frame);
+    fl_app_inject_mouse_button(app, FlMouseButton_Right, true);
+    fl_app_tick(app, &st, menu_frame);
+    ASSERT_TRUE_MSG(st.menu_open, "the right-button press opened the menu");
+
+    menu_key_tap(app, &st, FlKey_Escape);
+    ASSERT_FALSE_MSG(st.menu_open, "ESC dismisses the menu while the right button is still down");
+
+    fl_app_tick(app, &st, menu_frame);
+    fl_app_tick(app, &st, menu_frame);
+    ASSERT_FALSE_MSG(st.menu_open, "holding the right button must not reopen the dismissed menu");
+
+    fl_app_inject_mouse_button(app, FlMouseButton_Right, false);
     fl_app_destroy(app);
 }
 
@@ -5187,8 +5339,8 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
     u32 live_fmt_len = 0;
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-        live_range = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100,
-                                           (FlListUniformOpts) { .height_hint = 24.0f });
+        live_range
+            = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100, (FlListUniformOpts) { .height_hint = 24.0f });
         for (u32 i = live_range.start; i < live_range.end; i++) {
             fl_list_uniform_item_begin(i);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
@@ -5223,8 +5375,8 @@ UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
 
     // begin and end have to return early as a pair. Each opens or closes a layout element, so a guard on only one
     // of them would leave the layout stack unbalanced.
-    FlListUniformRange range = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100,
-                                                     (FlListUniformOpts) { .height_hint = 24.0f });
+    FlListUniformRange range
+        = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100, (FlListUniformOpts) { .height_hint = 24.0f });
     ASSERT_TRUE_MSG(range.start == 0 && range.end == 0 && range.total == 0,
                     "no context yields an empty visible window");
     fl_list_uniform_item_begin(0);

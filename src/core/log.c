@@ -58,16 +58,16 @@ LogChannelId fl_log_register_channel(FlString name) {
     mutex_lock(&s_channel_mutex);
 
     u32 count = atomic_load(&s_channel_count);
-    if (count >= MAX_LOG_CHANNELS) {
-        mutex_unlock(&s_channel_mutex);
-        return LOG_CHANNEL_INVALID;
-    }
-
     for_count(i, count) {
         if (fl_string_equals(s_channels[i].name, name)) {
             mutex_unlock(&s_channel_mutex);
             return i;
         }
+    }
+
+    if (count >= MAX_LOG_CHANNELS) {
+        mutex_unlock(&s_channel_mutex);
+        return LOG_CHANNEL_INVALID;
     }
 
     // Fill in the channel before incrementing the count, so lock-free readers never see a count

@@ -270,12 +270,16 @@ void render_fixture_capture(void* user_data, FlSurface* surface, const FlRenderF
     s_render.submitted_global_alpha = frame->global_alpha;
     s_render.submitted_background = frame->background;
     s_render.border_found = false;
+    s_render.image_found = false;
     s_render.text_run_found = false;
     for (const u8* p = (const u8*)frame->commands; p < (const u8*)frame->commands + frame->bytes;) {
         const FlCmdHeader* h = (const FlCmdHeader*)p;
         if (h->kind == FlCmd_Border && !s_render.border_found) {
             s_render.submitted_border = *(const FlCmdBorder*)(h + 1);
             s_render.border_found = true;
+        } else if (h->kind == FlCmd_Image && !s_render.image_found) {
+            s_render.submitted_image = *(const FlCmdImage*)(h + 1);
+            s_render.image_found = true;
         } else if (h->kind == FlCmd_TextRun && !s_render.text_run_found) {
             const FlCmdTextRun* run = (const FlCmdTextRun*)(h + 1);
             s_render.submitted_text_run = *run;

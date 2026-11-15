@@ -419,15 +419,19 @@ bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
     return true;
 }
 
+static bool leaf_confirmed(FlUiCtx* ctx, MenuRow row) {
+    const UiMenuState* m = &ctx->shared->menu;
+    bool can_confirm = row.highlighted && row.level == m->depth - 1 && ctx->frame_counter > m->open_frame;
+    return can_confirm && ui_action_pressed(ctx, FlAction_Confirm);
+}
+
 // Apply keyboard activation and the close policy to a leaf row. Returns its signal.
 static FlSignal finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg, bool kind_default_close) {
-    UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
     FlSignal signal = row.signal;
 
-    bool can_confirm = row.highlighted && row.level == m->depth - 1 && ctx->frame_counter > m->open_frame;
-    if (can_confirm && ui_action_pressed(ctx, FlAction_Confirm)) {
+    if (!cfg.disabled && leaf_confirmed(ctx, row)) {
         signal.clicked = true;
         signal.activated = true;
     }
@@ -592,7 +596,7 @@ FlSignal ui_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlM
         = ui_item_behavior(region_id, FlItemFlags_clickable | FlItemFlags_right_click, (FlWidgetConfig) { 0 });
 
     FlVec2 mouse = { ctx->input_state.mouse.x, ctx->input_state.mouse.y };
-    if (ctx->input_state.mouse.buttons[FlMouseButton_Right] && region_contains(region_id, mouse)) {
+    if (ctx->mouse_buttons_pressed_this_frame[FlMouseButton_Right] && region_contains(region_id, mouse)) {
         ui_menu_open_impl(menu_id, mouse);
     }
 

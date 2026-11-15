@@ -289,7 +289,10 @@ static void emit_alpha_coverage_image(const SrIrRequest* req, const FlCmdImage* 
     RenderCommand* cmd = sr_alloc_command(req);
     cmd->mask = RenderMask_DrawQuad | RenderMask_Text;
     cmd->global_alpha = req->global_alpha;
-    cmd->render_text.aabb = sr_rect_to_aabb(im->dst);
+    FlRect dst = im->dst;
+    dst.w = min(dst.w, (f32)im->source.dynamic.w);
+    dst.h = min(dst.h, (f32)im->source.dynamic.h);
+    cmd->render_text.aabb = sr_rect_to_aabb(dst);
     cmd->render_text.color = sr_color_premul(im->tint, req->global_alpha);
     cmd->render_text.data_r = (const u8*)im->source.dynamic.pixels;
     cmd->render_text.data_g = nullptr; // nullptr signals grayscale mode
@@ -444,6 +447,9 @@ UiRenderCommandsArray sr_ir_to_render_commands(const SrIrRequest* req) {
     const u8* end = p + req->ir_bytes;
     while (p < end) {
         const FlCmdHeader* header = (const FlCmdHeader*)p;
+        if (header->byte_size == 0) {
+            break;
+        }
         emit_ir_command(req, header);
         p += header->byte_size;
     }

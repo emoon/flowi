@@ -63,11 +63,11 @@ static bool is_cldr_category(FlString name) {
 
 static void parse_table(Checker* self, const LocCheckTable* table, u32 index, ParsedTable* out) {
     hashmap_string_new(&out->lookup, self->arena, 256);
-    FlStringBuilder sb = fl_sb_create(self->arena);
 
     if (table->json.length == 0) {
-        finding_error(self, LocCheckId_TableUnreadable, index,
-                      fl_sb_to_string(fl_sb_appendf(sb, "%S is empty or could not be read", table->path)));
+        finding_error(
+            self, LocCheckId_TableUnreadable, index,
+            fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena), "%S is empty or could not be read", table->path)));
         return;
     }
 
@@ -75,15 +75,16 @@ static void parse_table(Checker* self, const LocCheckTable* table, u32 index, Pa
     FlJsonValue* root = fl_json_parse_with_flags(self->arena, table->json, FlJsonParseFlags_AllowJson5, &result);
     if (root == nullptr) {
         finding_error(self, LocCheckId_TableUnreadable, index,
-                      fl_sb_to_string(fl_sb_appendf(sb, "%S failed to parse: %S", table->path,
+                      fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena), "%S failed to parse: %S", table->path,
                                                     fl_json_get_error_description(result.error))));
         return;
     }
 
     FlJsonValue* strings = fl_json_get_object_prop(root, FL_S("strings"));
     if (strings == nullptr) {
-        finding_error(self, LocCheckId_TableUnreadable, index,
-                      fl_sb_to_string(fl_sb_appendf(sb, "%S has no \"strings\" object", table->path)));
+        finding_error(
+            self, LocCheckId_TableUnreadable, index,
+            fl_sb_to_string(fl_sb_appendf(fl_sb_create(self->arena), "%S has no \"strings\" object", table->path)));
         return;
     }
 
