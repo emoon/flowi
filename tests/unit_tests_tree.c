@@ -52,14 +52,14 @@ static FlTreeResult tree_frame(FlUiCtx* ctx, FlLayoutId tree_id, TreeModel model
     FlTreeResult result = { 0 };
     ui_update_begin(ctx);
     ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(200) }, .direction = FlLayoutDirection_TopToBottom) {
-        FlListRange range = ui_tree_begin(tree_id, model.rows, model.count, model.set,
+        FlListRange range = fl_tree_begin(tree_id, model.rows, model.count, model.set,
                                           (FlTreeConfig) { .list = { .row_height = 24.0f, .gap = 2.0f } });
         for (u32 row = range.start; row < range.end; row++) {
-            ui_tree_item_begin(row);
+            fl_tree_item_begin(row);
             ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-            ui_tree_item_end();
+            fl_tree_item_end();
         }
-        result = ui_tree_end();
+        result = fl_tree_end();
     }
     ui_update_end(ctx, 1.0f / 60.0f);
 
@@ -227,9 +227,9 @@ UTEST(tree, left_and_right_are_consumed_only_while_focused) {
     ui_input_update(ctx, 1.0f / 60.0f);
     ctx->nav_frame.nav_left = true;
     ui_update_begin(ctx);
-    ui_tree_begin(tree, model.rows, model.count, nullptr, (FlTreeConfig) { 0 });
+    fl_tree_begin(tree, model.rows, model.count, nullptr, (FlTreeConfig) { 0 });
     ASSERT_TRUE_MSG(fl_get_nav_frame().nav_left, "an unfocused tree leaves Left to spatial navigation");
-    ui_tree_end();
+    fl_tree_end();
     ui_update_end(ctx, 1.0f / 60.0f);
 
     tree_click(ctx, tree, model, (Vec2) { TREE_BODY_X, tree_row_y(6) });
@@ -237,9 +237,9 @@ UTEST(tree, left_and_right_are_consumed_only_while_focused) {
     ui_input_update(ctx, 1.0f / 60.0f);
     ctx->nav_frame.nav_left = true;
     ui_update_begin(ctx);
-    ui_tree_begin(tree, model.rows, model.count, nullptr, (FlTreeConfig) { 0 });
+    fl_tree_begin(tree, model.rows, model.count, nullptr, (FlTreeConfig) { 0 });
     ASSERT_FALSE_MSG(fl_get_nav_frame().nav_left, "a focused tree consumes Left");
-    ui_tree_end();
+    fl_tree_end();
     ui_update_end(ctx, 1.0f / 60.0f);
     ctx->nav_frame.nav_left = false;
 }

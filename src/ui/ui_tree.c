@@ -148,7 +148,8 @@ static void row_lead(FlTreeContext* self, u32 row) {
     }
 }
 
-FlListRange ui_tree_begin(FlLayoutId id, const FlTreeRow* rows, u32 count, FlSelectionSet* set, FlTreeConfig config) {
+FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set,
+                          FlTreeConfig config) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     self->list = ui_get_ctx()->ui_list_ctx;
     self->rows = rows;
@@ -166,7 +167,7 @@ FlListRange ui_tree_begin(FlLayoutId id, const FlTreeRow* rows, u32 count, FlSel
                                        });
 }
 
-FlSignal ui_tree_item_begin(u32 row) {
+FlSignal fl_tree_item_begin(uint32_t row) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     FL_ASSERT(row < self->count);
     const FlTreeRow* r = &self->rows[row];
@@ -182,13 +183,13 @@ FlSignal ui_tree_item_begin(u32 row) {
     return signal;
 }
 
-void ui_tree_item_end(void) {
+void fl_tree_item_end(void) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     fl_layout_end();
     list_item_end_impl(self->list);
 }
 
-FlTreeResult ui_tree_end(void) {
+FlTreeResult fl_tree_end(void) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
     return (FlTreeResult) {
         .list = list_end_impl(self->list),
