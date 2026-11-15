@@ -331,15 +331,24 @@ FlTreeVirtualRow fl_tree_row_at(uint32_t row) {
     return tree_flat_row(&self->flat, row);
 }
 
+static bool row_in_range(const FlTreeContext* self, u32 row) {
+    FL_ASSERT(row < self->count);
+    return row < self->count;
+}
+
 FlSignal fl_tree_item_begin(uint32_t row) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    FL_ASSERT(row < self->count);
+    if (!row_in_range(self, row)) {
+        return row_begin(self, row, (FlTreeRow) { 0 });
+    }
     return row_begin(self, row, tree_row(self, row));
 }
 
 FlSignal fl_tree_item_begin_virtual(uint32_t row, bool has_children) {
     FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    FL_ASSERT(row < self->count);
+    if (!row_in_range(self, row)) {
+        return row_begin(self, row, (FlTreeRow) { 0 });
+    }
     FlTreeRow r = tree_row(self, row);
     r.has_children = has_children || r.expanded;
     return row_begin(self, row, r);

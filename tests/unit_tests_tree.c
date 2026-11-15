@@ -318,6 +318,37 @@ UTEST(tree, null_rows_are_an_empty_tree) {
     ASSERT_EQ_MSG((u64)0, r.list.focused_id, "nothing is focused");
 }
 
+#ifdef NDEBUG
+UTEST(tree, a_row_past_the_count_is_an_empty_row) {
+    FlUiCtx* ctx = tree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const u32 bad_row = sizeof_array(s_open_rows) + 1000000;
+
+    FlTreeResult plain = { 0 };
+    FlTreeResult flat = { 0 };
+    for_count(i, 3) {
+        ui_update_begin(ctx);
+        ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(200) }, .direction = FlLayoutDirection_TopToBottom) {
+            fl_tree_begin(ID("tree_bad_row"), s_open_rows, sizeof_array(s_open_rows), nullptr,
+                          (FlTreeConfig) { .list = { .row_height = 24.0f } });
+            fl_tree_item_begin(bad_row);
+            fl_tree_item_end();
+            plain = fl_tree_end();
+        }
+        ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(200) }, .direction = FlLayoutDirection_TopToBottom) {
+            fl_tree_begin_virtual(ID("tree_bad_virtual_row"), 4, nullptr, 0, nullptr,
+                                  (FlTreeConfig) { .list = { .row_height = 24.0f } });
+            fl_tree_item_begin_virtual(bad_row, true);
+            fl_tree_item_end();
+            flat = fl_tree_end();
+        }
+        ui_update_end(ctx, 1.0f / 60.0f);
+    }
+    ASSERT_EQ_MSG((u64)0, plain.toggled_id, "a row that does not exist toggles nothing");
+    ASSERT_EQ_MSG((u64)0, flat.toggled_id, "a virtual row that does not exist toggles nothing");
+}
+#endif
+
 UTEST(tree, shift_click_after_the_anchor_was_hidden_selects_the_row) {
     FlUiCtx* ctx = tree_fixture();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
