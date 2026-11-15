@@ -30,6 +30,8 @@ typedef struct FlScrollAreaConfig {
     //
     // Space for it is added to the right padding. If `scrollbar_mode` is `FlScrollbarDisplayMode_Never`, it is
     // treated as `FlScrollbarDisplayMode_Always`.
+    //
+    // An area that scrolls horizontally has no scrollbar, and this field does nothing there.
     bool show_scrollbar;
     // When the scrollbar is shown. It is used when `show_scrollbar` is true.
     FlScrollbarDisplayMode scrollbar_mode;

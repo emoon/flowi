@@ -81,7 +81,7 @@ typedef struct UiTabStripLayout {
 // the press in a behaviour pass before drawing (activate-on-press), so the pressed tab paints selected this frame.
 // Owns no selection storage: returns the index that should now be selected (the pressed/activated tab, else
 // selected unchanged).
-// cfg carries the orientation, the geometry knobs and widget's focusable/tab_index for keyboard
+// cfg carries the orientation, the geometry knobs and widget's focusable for keyboard
 // reachability; theme is the already-resolved palette; layout is the shape above.
 //
 // out_dragged (optional) opts the strip into the pull-out gesture: the tabs become draggable behind the drag

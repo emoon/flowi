@@ -274,8 +274,6 @@ pub use toolkit::menu::{
     MenuRegionConfig, SubmenuConfig,
 };
 pub use toolkit::modal::*;
-/// The navigation-edge bitmask a UI plugin's update returns.
-pub use toolkit::nav_edge::NavEdge;
 pub use toolkit::painter::*;
 pub use toolkit::popup::{fl_popup_begin, fl_popup_end, fl_popup_message_box, fl_popup_tooltip};
 /// The popup, dialog, tooltip and message-box config types.

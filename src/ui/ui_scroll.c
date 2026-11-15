@@ -424,7 +424,7 @@ void fl_scroll_area_begin(FlLayoutId id, FlScrollAreaConfig config) {
 
     // Add extra right padding when scrollbar is shown to prevent content overlapping
     FlLayoutPadding padding = config.padding;
-    if (config.show_scrollbar) {
+    if (config.show_scrollbar && config.direction == FlLayoutDirection_TopToBottom) {
         u16 scrollbar_space = (u16)ui_scroll_overlay_bar_reserve();
         padding.right = (u16)(padding.right + scrollbar_space);
     }
@@ -482,7 +482,7 @@ void fl_scroll_area_end(void) {
     if (entry != nullptr && entry->state != nullptr) {
         scroll_area_update_extent(entry->state, entry->scroll_area_id);
 
-        if (entry->config.show_scrollbar) {
+        if (entry->config.show_scrollbar && entry->config.direction == FlLayoutDirection_TopToBottom) {
             // If show_scrollbar is true but mode is Never (default 0), treat as Always
             FlScrollbarDisplayMode mode = entry->config.scrollbar_mode;
             if (mode == FlScrollbarDisplayMode_Never) {

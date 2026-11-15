@@ -19,7 +19,7 @@
 pub struct WidgetConfig<'a> {
     /// The id to use instead of the one the widget would otherwise get (empty uses the normal id).
     pub id_override: &'a str,
-    /// The widget's color. When set, it is used instead of the theme color.
+    /// The widget's color. When set, it is used instead of the theme color. A link and a tab bar ignore it.
     pub color: crate::sys::Color,
     /// The widget's text color.
     pub text_color: crate::sys::Color,
@@ -27,14 +27,10 @@ pub struct WidgetConfig<'a> {
     pub variant: crate::sys::WidgetVariant,
     /// The size of the widget (`WidgetSize::Default` by default). Only the plain text button uses it.
     pub size: crate::sys::WidgetSize,
-    /// The extra padding around the widget's children, in pixels. No widget reads it yet.
-    pub child_padding: u16,
     /// Whether the widget can be focused with the keyboard (`Focusable::Default` by default).
     pub focusable: crate::sys::Focusable,
     /// Whether the widget takes focus the first time it appears. Only a focusable widget can take it.
     pub auto_focus: bool,
-    /// The widget's position in the tab order. No widget reads it yet.
-    pub tab_index: i32,
     /// Theme changes that apply to this widget only (null for none).
     ///
     /// Other widgets keep the theme they had. A scoped override around the widget still applies, and the
@@ -58,10 +54,8 @@ impl Default for WidgetConfig<'_> {
             text_color: zero.text_color,
             variant: zero.variant,
             size: zero.size,
-            child_padding: zero.child_padding,
             focusable: zero.focusable,
             auto_focus: zero.auto_focus,
-            tab_index: zero.tab_index,
             theme_override: None,
         }
     }
@@ -83,10 +77,8 @@ impl WidgetConfig<'_> {
                 text_color: self.text_color,
                 variant: self.variant,
                 size: self.size,
-                child_padding: self.child_padding,
                 focusable: self.focusable,
                 auto_focus: self.auto_focus,
-                tab_index: self.tab_index,
                 theme_override: self.theme_override.map_or(core::ptr::null(), |v| v as *const crate::sys::ThemeOverride),
             }
         }

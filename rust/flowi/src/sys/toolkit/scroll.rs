@@ -20,6 +20,8 @@ pub struct ScrollAreaConfig {
     ///
     /// Space for it is added to the right padding. If `scrollbar_mode` is `ScrollbarDisplayMode::Never`, it is
     /// treated as `ScrollbarDisplayMode::Always`.
+    ///
+    /// An area that scrolls horizontally has no scrollbar, and this field does nothing there.
     pub show_scrollbar: bool,
     /// When the scrollbar is shown. It is used when `show_scrollbar` is true.
     pub scrollbar_mode: crate::sys::ScrollbarDisplayMode,

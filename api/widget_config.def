@@ -49,7 +49,7 @@ enum Focusable {
 struct WidgetConfig {
     /// The id to use instead of the one the widget would otherwise get (empty uses the normal id).
     id_override: String,
-    /// The widget's color. When set, it is used instead of the theme color.
+    /// The widget's color. When set, it is used instead of the theme color. A link and a tab bar ignore it.
     color: Color,
     /// The widget's text color.
     text_color: Color,
@@ -57,14 +57,10 @@ struct WidgetConfig {
     variant: WidgetVariant,
     /// The size of the widget (`WidgetSize::Default` by default). Only the plain text button uses it.
     size: WidgetSize,
-    /// The extra padding around the widget's children, in pixels. No widget reads it yet.
-    child_padding: u16,
     /// Whether the widget can be focused with the keyboard (`Focusable::Default` by default).
     focusable: Focusable,
     /// Whether the widget takes focus the first time it appears. Only a focusable widget can take it.
     auto_focus: bool,
-    /// The widget's position in the tab order. No widget reads it yet.
-    tab_index: i32,
     /// Theme changes that apply to this widget only (null for none).
     ///
     /// Other widgets keep the theme they had. A scoped override around the widget still applies, and the

@@ -34,7 +34,6 @@ int ui_tab_strip(FlString name, u32 instance_id, const FlString* labels, int cou
         FlLayoutId tab_id = { .name = name, .id = ui_item_id_seed(instance_id, (u32)i) };
         FlWidgetConfig tab_cfg = {
             .focusable = cfg.widget.focusable,
-            .tab_index = cfg.widget.tab_index + i,
         };
         FlSignal signal = ui_item_behavior(tab_id, tab_flags, tab_cfg);
         if (signal.pressed || signal.activated) {
