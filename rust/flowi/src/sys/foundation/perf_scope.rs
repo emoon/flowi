@@ -18,8 +18,8 @@ extern "C" {
     /// Starts a timing scope called `name` and returns its index.
     ///
     /// Pass the index to `PerfScope::end`. `name` must stay valid until the end of the frame. Scopes nest, and each
-    /// thread records its own. If the thread has no room for another scope, it returns `u32::MAX`, and passing that to
-    /// `PerfScope::end` does nothing.
+    /// thread records its own. If the thread has no room for another scope, it returns the largest 32-bit unsigned
+    /// value, and passing that to `PerfScope::end` does nothing.
     pub fn fl_perf_scope_begin(name: *const core::ffi::c_char) -> u32;
     /// Ends the timing scope that `PerfScope::begin` returned `stack_index` for.
     ///

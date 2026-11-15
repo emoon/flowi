@@ -70,7 +70,7 @@ api Jobs {
     /// Called from a worker thread against a job that has not finished, the job waits for it, so the returned handle
     /// is pending.
     [manual] [rust_doc(Jobs::add_after)] add_job_with_dependency(func: JobsFunc, user_data: *void, dependency: JobHandle) -> JobHandle
-    /// Returns true if the job for `handle` has finished.
+    /// Returns a `JobsResult` that says if the job for `handle` has finished.
     ///
     /// Once a finished job's handle has been reused for a new job, it reports `JobsResult::Invalid`.
     [manual] is_finished(handle: JobHandle) -> JobsResult

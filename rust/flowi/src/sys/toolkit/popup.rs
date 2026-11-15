@@ -120,12 +120,12 @@ const _: () = {
 // Draw the content of a popup between `Popup::begin` and `Popup::end`. `Popup::tooltip` and `Popup::message_box`
 // are single calls.
 extern "C" {
-    /// Starts a popup scope anchored to `anchor_id` and returns its guard.
+    /// Starts a popup scope anchored to `anchor_id`.
     ///
-    /// Everything you draw until the scope ends is part of the popup. The scope ends when the guard drops. To end
-    /// it earlier, pass the guard to `Popup::end`.
+    /// Everything you draw until `Popup::end` is part of the popup. In Rust the call returns a guard that ends the
+    /// scope when it drops.
     pub fn fl_popup_begin(anchor_id: crate::sys::LayoutId, config: crate::sys::PopupConfig);
-    /// Ends the popup scope and consumes its guard.
+    /// Ends the popup scope started with `Popup::begin`.
     pub fn fl_popup_end();
     /// Shows `text` in a tooltip when the pointer rests on the anchor.
     ///

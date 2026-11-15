@@ -26,8 +26,8 @@ FL_API void fl_perf_scope_destroy(void);
 // Starts a timing scope called `name` and returns its index.
 //
 // Pass the index to `fl_perf_scope_end`. `name` must stay valid until the end of the frame. Scopes nest, and each
-// thread records its own. If the thread has no room for another scope, it returns `u32::MAX`, and passing that to
-// `fl_perf_scope_end` does nothing.
+// thread records its own. If the thread has no room for another scope, it returns the largest 32-bit unsigned
+// value, and passing that to `fl_perf_scope_end` does nothing.
 FL_API uint32_t fl_perf_scope_begin(const char* name);
 // Ends the timing scope that `fl_perf_scope_begin` returned `stack_index` for.
 //

@@ -82,9 +82,12 @@ FL_API void fl_arena_temp_end(FlTempArena temp);
 FL_API FlTempArena fl_arena_scratch_begin(void);
 // Starts a scope on a scratch arena of the calling thread that is not `conflict_arena`.
 //
-// Use it when you already allocate from a scratch arena and need a second one.
+// Use it when you already allocate from a scratch arena and need a second one. End it with
+// `fl_arena_scratch_end`.
 FL_API FlTempArena fl_arena_scratch_begin_conflict(const FlArena* conflict_arena);
-// Ends a scope started with `fl_arena_scratch_begin` and frees what was allocated in it.
+// Ends a scratch scope and frees what was allocated in it.
+//
+// The scope is one started with `fl_arena_scratch_begin` or `fl_arena_scratch_begin_conflict`.
 FL_API void fl_arena_scratch_end(FlTempArena temp);
 // Gives back the last `bytes_to_release` bytes allocated from `arena`.
 //
