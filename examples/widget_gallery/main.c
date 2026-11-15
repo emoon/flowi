@@ -134,6 +134,51 @@ static void gallery_feedback(const FlUiFeedbackEvent* ev, void* user_data) {
     }
 }
 
+static void list_section(GalleryState* s) {
+    char buf[64];
+    section {
+        section_header(FL_S("List (virtualized, multi-select + marquee + drag-reorder)"));
+        // A long list in a fixed-height viewport: only the rows intersecting the viewport lay out. Each
+        // row has an opaque, stable u64 id, here its 1-based index. The List runs the selection
+        // gestures, applies them to the caller-owned set, and draws the row highlight and the marquee
+        // rectangle from set membership, so the row content is transparent and draws over the
+        // highlight.
+        if (s->list_selection == nullptr) {
+            s->list_selection = selection_set_create(64);
+        }
+        // The List forwards the full ordered id slice to the set, so a shift-range or Ctrl+A covers
+        // rows that are virtualized away.
+        ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(180) },
+                       .direction = LayoutDirection_TopToBottom) {
+            FlListRange r = fl_list_begin(ID("gallery_list"), s->list_ids, GALLERY_LIST_ROWS, s->list_selection,
+                                          .row_height = 26.0f, .gap = 4.0f, .labels = s->list_labels);
+            for (u32 i = r.start; i < r.end; i++) {
+                // Reorder mutates the order, so read the stable id from the slice, not from i.
+                const u64 id = s->list_ids[i];
+                if (fl_list_item_begin(id).clicked) {
+                    s->list_activated = id;
+                }
+                ui_layout_area(.sizing = { .width = sizing_grow() }, .padding = padding_all(6),
+                               .radius = corner_radius(4)) {
+                    snprintf(buf, sizeof(buf), "Item %llu", (unsigned long long)id);
+                    ui_text(fl_frame_str(buf, strlen(buf)));
+                }
+                fl_list_item_end();
+            }
+            FlListResult lr = fl_list_end();
+            if (lr.activated_id != 0) {
+                s->list_activated = lr.activated_id;
+            }
+            if (lr.reorder_emitted) {
+                gallery_apply_reorder(s, &lr);
+            }
+        }
+        snprintf(buf, sizeof(buf), "%llu selected (last click id %llu)",
+                 (unsigned long long)selection_set_len(s->list_selection), (unsigned long long)s->list_activated);
+        ui_text(fl_frame_str(buf, strlen(buf)));
+    }
+}
+
 static void frame(void* user_data) {
     GalleryState* s = (GalleryState*)user_data;
 
@@ -321,49 +366,7 @@ static void frame(void* user_data) {
                     }
                 }
 
-                section {
-                    section_header(FL_S("List (virtualized, multi-select + marquee + drag-reorder)"));
-                    // A long list in a fixed-height viewport: only the rows intersecting the viewport lay out. Each
-                    // row has an opaque, stable u64 id, here its 1-based index. The List runs the selection
-                    // gestures, applies them to the caller-owned set, and draws the row highlight and the marquee
-                    // rectangle from set membership, so the row content is transparent and draws over the
-                    // highlight.
-                    if (s->list_selection == nullptr) {
-                        s->list_selection = selection_set_create(64);
-                    }
-                    // The List forwards the full ordered id slice to the set, so a shift-range or Ctrl+A covers
-                    // rows that are virtualized away.
-                    ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(180) },
-                                   .direction = LayoutDirection_TopToBottom) {
-                        FlListRange r
-                            = fl_list_begin(ID("gallery_list"), s->list_ids, GALLERY_LIST_ROWS, s->list_selection,
-                                            .row_height = 26.0f, .gap = 4.0f, .labels = s->list_labels);
-                        for (u32 i = r.start; i < r.end; i++) {
-                            // Reorder mutates the order, so read the stable id from the slice, not from i.
-                            const u64 id = s->list_ids[i];
-                            if (fl_list_item_begin(id).clicked) {
-                                s->list_activated = id;
-                            }
-                            ui_layout_area(.sizing = { .width = sizing_grow() }, .padding = padding_all(6),
-                                           .radius = corner_radius(4)) {
-                                snprintf(buf, sizeof(buf), "Item %llu", (unsigned long long)id);
-                                ui_text(fl_frame_str(buf, strlen(buf)));
-                            }
-                            fl_list_item_end();
-                        }
-                        FlListResult lr = fl_list_end();
-                        if (lr.activated_id != 0) {
-                            s->list_activated = lr.activated_id;
-                        }
-                        if (lr.reorder_emitted) {
-                            gallery_apply_reorder(s, &lr);
-                        }
-                    }
-                    snprintf(buf, sizeof(buf), "%llu selected (last click id %llu)",
-                             (unsigned long long)selection_set_len(s->list_selection),
-                             (unsigned long long)s->list_activated);
-                    ui_text(fl_frame_str(buf, strlen(buf)));
-                }
+                list_section(s);
 
                 section {
                     section_header(FL_S("List (declarative ui_list — one call, label/icon rows)"));
