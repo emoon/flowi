@@ -63,6 +63,14 @@ static u32 focus_restore_target(FlUiCtx* self, bool popup_active) {
     return first_navigable_in_focus_order(self, popup_active);
 }
 
+static bool focus_ring_needs_repair(const FlUiCtx* self) {
+    return self->focused_id != 0 && self->focus_order_count > 0;
+}
+
+static bool focus_repair_allowed(const FlUiCtx* self) {
+    return focus_ring_needs_repair(self) && self->input_state.window_focused;
+}
+
 static void ui_restore_focus_if_needed(FlUiCtx* self) {
     bool popup_active = (self->popup_stack_count > 0);
     bool focused_valid = focus_order_navigable(self, self->focused_id, popup_active);
@@ -73,7 +81,7 @@ static void ui_restore_focus_if_needed(FlUiCtx* self) {
     // Only auto-restore focus while the window is OS-focused. A deactivated window keeps focused_id at
     // 0 (cleared on the focus-lost edge) so it shows no focus ring; focus-gained restores its stashed widget. A
     // single-window app never receives activation events, so window_focused stays true and this is a no-op gate.
-    if (!focused_valid && self->focused_id != 0 && self->focus_order_count > 0 && self->input_state.window_focused) {
+    if (!focused_valid && focus_repair_allowed(self)) {
         self->focused_id = focus_restore_target(self, popup_active);
     }
 
