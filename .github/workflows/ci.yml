@@ -188,7 +188,7 @@ jobs:
       # default features, so reuse that library.
       - name: Windowed default links libSDL2, exports unchanged
         run: |
-          so=$(find rust/target/debug/build -name 'libflowi.so' -path "*/flowi-*/out/*" | head -1)
+          so=$(find rust/target/debug/build -name 'libflowi.so' -path '*/out/*' | head -1)
           echo "windowed lib: $so"
           if readelf -d "$so" | grep -q 'NEEDED.*libSDL2'; then
             echo "OK: libSDL2 is DT_NEEDED"
