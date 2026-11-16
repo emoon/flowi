@@ -103,6 +103,12 @@ typedef struct UiTabStrip {
 // bar, whose tabs stay click-only.
 int ui_tab_strip(const UiTabStrip* strip);
 
+// Layout id of tab i inside strip: the same id the behavior and draw passes use. (ui_tab_bar.c)
+FlLayoutId ui_tab_strip_tab_id(const UiTabStrip* strip, int i);
+
+// Moves focus between the strip's tabs from this frame's nav input and consumes the key. (ui_tab_bar_nav.c)
+void ui_tab_strip_navigate(const UiTabStrip* strip);
+
 // Shared widget prologue for custom-coloured widgets: resolve id + dispatch the shared interaction behaviour +
 // look up item-state + resolve theme. Leaves UiWidgetState.colors zeroed; no variant colours are calculated.
 // (body in ui_widget_common.c)

@@ -14,7 +14,11 @@
 // Horizontal or vertical tab navigation. ui_tab_strip is the embeddable core (also driven by the dock leaf
 // header); ui_tab_bar_impl wraps it with the int*-storage + keyboard-nav surface.
 
-static FlLayoutId tab_layout_id(const UiTabStrip* strip, int i) {
+static bool index_in_range(int index, int count) {
+    return index >= 0 && index < count;
+}
+
+FlLayoutId ui_tab_strip_tab_id(const UiTabStrip* strip, int i) {
     return (FlLayoutId) { .name = strip->name, .id = ui_item_id_seed(strip->instance_id, (u32)i) };
 }
 
@@ -25,32 +29,44 @@ static FlItemFlags tab_item_flags(const UiTabStrip* strip) {
                                          : STANDARD_WIDGET_FLAGS;
 }
 
+static bool tab_selects(FlSignal signal) {
+    return signal.pressed || signal.activated;
+}
+
+static void observe_tab(const UiTabStrip* strip, FlItemFlags tab_flags, int i, int* result) {
+    FlWidgetConfig tab_cfg = {
+        .focusable = strip->cfg.widget.focusable,
+        .tab_index = strip->cfg.widget.tab_index + i,
+    };
+    FlSignal signal = ui_item_behavior(ui_tab_strip_tab_id(strip, i), tab_flags, tab_cfg);
+    if (tab_selects(signal)) {
+        *result = i;
+    }
+    if (signal.dragging && strip->out_dragged != nullptr) {
+        *strip->out_dragged = i;
+    }
+    // The selected tab gets the hand too; in a dock header its press begins the pull-out drag.
+    if (signal.hovered) {
+        fl_cursor_set((FlCursor) { .shape = FlCursorShape_Hand });
+    }
+}
+
+static int initial_selection(const UiTabStrip* strip) {
+    return index_in_range(strip->selected, strip->count) ? strip->selected : 0;
+}
+
 // Behavior pass: resolve the selection from this frame's input before any tab lays out; tabs activate on
 // press (signal.pressed). Hover state reflects last frame's geometry. ui_item_behavior runs once per tab here;
 // the render pass reads cached state via get_item_state.
 static int resolve_tab_selection(const UiTabStrip* strip) {
-    int result = (strip->selected < 0 || strip->selected >= strip->count) ? 0 : strip->selected;
+    int result = initial_selection(strip);
     if (strip->out_dragged != nullptr) {
         *strip->out_dragged = -1;
     }
     const FlItemFlags tab_flags = tab_item_flags(strip);
 
     for_count(i, strip->count) {
-        FlWidgetConfig tab_cfg = {
-            .focusable = strip->cfg.widget.focusable,
-            .tab_index = strip->cfg.widget.tab_index + i,
-        };
-        FlSignal signal = ui_item_behavior(tab_layout_id(strip, i), tab_flags, tab_cfg);
-        if (signal.pressed || signal.activated) {
-            result = i;
-        }
-        if (signal.dragging && strip->out_dragged != nullptr) {
-            *strip->out_dragged = i;
-        }
-        // The selected tab gets the hand too; in a dock header its press begins the pull-out drag.
-        if (signal.hovered) {
-            fl_cursor_set((FlCursor) { .shape = FlCursorShape_Hand });
-        }
+        observe_tab(strip, tab_flags, i, &result);
     }
     return result;
 }
@@ -111,7 +127,7 @@ static FlWidgetColors tab_colors(const UiTabStrip* strip, ItemState* item, bool 
 
 static void emit_tab(const UiTabStrip* strip, const TabGeometry* geometry, int i, bool is_selected) {
     // Same per-instance id as the behavior pass; selection is already resolved, so this pass only draws.
-    FlLayoutId tab_id = tab_layout_id(strip, i);
+    FlLayoutId tab_id = ui_tab_strip_tab_id(strip, i);
     FlWidgetColors colors = tab_colors(strip, get_item_state(tab_id), is_selected);
     FlColor tab_bg = ui_hit_testable(colors.bg, 2);
 
@@ -172,44 +188,19 @@ int ui_tab_strip(const UiTabStrip* strip) {
     return result;
 }
 
-static void navigate_from_tab(const UiTabStrip* strip, int i) {
-    FlUiCtx* self = g_ui_ctx;
-    const bool vertical = strip->cfg.vertical;
-    bool* nav_prev = vertical ? &self->nav_frame.nav_up : &self->nav_frame.nav_left;
-    bool* nav_next = vertical ? &self->nav_frame.nav_down : &self->nav_frame.nav_right;
-
-    if (*nav_prev && i > 0) {
-        fl_set_focus(tab_layout_id(strip, i - 1));
-        *nav_prev = false;
-    } else if (*nav_next && i < strip->count - 1) {
-        fl_set_focus(tab_layout_id(strip, i + 1));
-        *nav_next = false;
-    }
-}
-
-// Keyboard navigation is gated on the same value the tabs registered focus under.
-static void navigate_tabs(const UiTabStrip* strip) {
-    if (strip->cfg.widget.focusable == FlFocusable_No) {
-        return;
-    }
-    for_count(i, strip->count) {
-        ItemState* item = get_item_state(tab_layout_id(strip, i));
-        if (item && item->state.focused_t > 0.5f) {
-            navigate_from_tab(strip, i);
-            return;
-        }
-    }
+static bool has_tabs(const FlString* tabs, int tab_count, const int* selected_index) {
+    return tabs != nullptr && tab_count > 0 && selected_index != nullptr;
 }
 
 bool ui_tab_bar_impl(FlString* tabs, int tab_count, int* selected_index, FlTabBarConfig cfg) {
     FlUiCtx* self = g_ui_ctx;
 
-    if (!tabs || tab_count <= 0 || !selected_index) {
+    if (!has_tabs(tabs, tab_count, selected_index)) {
         log_error("ui_tab_bar_impl: invalid parameters");
         return false;
     }
 
-    if (*selected_index < 0 || *selected_index >= tab_count) {
+    if (!index_in_range(*selected_index, tab_count)) {
         *selected_index = 0;
     }
 
@@ -230,7 +221,7 @@ bool ui_tab_bar_impl(FlString* tabs, int tab_count, int* selected_index, FlTabBa
     bool selection_changed = (new_selected != *selected_index);
     *selected_index = new_selected;
 
-    navigate_tabs(&strip);
+    ui_tab_strip_navigate(&strip);
 
     return selection_changed;
 }
