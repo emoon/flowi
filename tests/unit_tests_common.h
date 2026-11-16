@@ -29,6 +29,7 @@
 #include <render/gpu/gpu_ir_to_draw_cmd.h>
 #include <render/gpu/gpu_orchestrator.h>
 #include <render/gpu/gpu_prepare_core.h>
+#include <render/gpu/gpu_prepare_svg.h>
 #include <render/gpu/gpu_svg_atlas.h>
 #include <render/gpu/gpu_svg_color_lower.h>
 #include <render/gpu/gpu_svg_translate.h>

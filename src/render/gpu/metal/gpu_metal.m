@@ -550,8 +550,7 @@ static void metal_destroy(void* user_data) {
 // The textures are not cleared.
 static void metal_scale_changed(void* user_data, float ui_scale) {
     MetalShared* self = user_data;
-    gpu_prepare_scale_changed(&self->last_ui_scale, ui_scale, self->perm_arena,
-                              &self->cpu.glyph_atlas, &self->cpu.svg_atlas, &self->cpu.color_svg_atlas);
+    gpu_prepare_scale_changed(&self->cpu, &self->last_ui_scale, ui_scale, self->perm_arena);
 }
 
 static void metal_set_font_cache(void* user_data, struct FlFontCache* font_cache) {
