@@ -6,6 +6,7 @@
 #include "gpu_bindings.h"        // GPU_BIND_*
 #include "gpu_debug.h"           // GPU_TILE_SIZE
 #include "gpu_prepare_core.h"    // backend-agnostic prepare front halves
+#include "gpu_prepare_svg.h"
 #include "gpu_svg_color_lower.h" // GpuColorShape
 #include <core/log.h>
 #include <ui/font_cache.h>     // FlGlyphOutline
@@ -119,8 +120,8 @@ bool metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const
         return true;
     }
 
-    GpuAtlasImageUpload upload;
-    if (!gpu_prepare_image_place_atlas(&self->cpu.image_atlas, request_id, decoded, scratch, &upload)) {
+    GpuAtlasImageUpload upload = gpu_prepare_image_place_atlas(&self->cpu.image_atlas, request_id, decoded, scratch);
+    if (upload.pixels == nullptr) {
         return false;
     }
     metal_texture_upload(self->image_atlas_tex, upload.x, upload.y, upload.w, upload.h, upload.stride, 4,
@@ -133,8 +134,9 @@ bool metal_prepare_image(void* user_data, FlImageLoadRequestId request_id, const
 void metal_prepare_glyph(void* user_data, FlFontId font, uint16_t size, uint32_t glyph_index,
                          const FlGlyphOutline* outline) {
     MetalShared* self = user_data;
-    GpuGlyphRaster glyph;
-    if (!gpu_prepare_glyph_place(&self->cpu.glyph_atlas, self->frame_arena, font, size, glyph_index, outline, &glyph)) {
+    GpuGlyphKey key = { .font = font, .size = size, .glyph_index = glyph_index };
+    GpuGlyphRaster glyph = gpu_prepare_glyph_place(&self->cpu.glyph_atlas, self->frame_arena, key, outline);
+    if (glyph.entry == nullptr) {
         return;
     }
 
@@ -157,8 +159,8 @@ void metal_prepare_glyph(void* user_data, FlFontId font, uint16_t size, uint32_t
 // here. Ticks svg_raster_count.
 static void metal_raster_svg_cell(void* backend, const GpuSvgEntry* entry, const FlVectorImage* vector, bool color) {
     MetalShared* self = backend;
-    GpuSvgCellGeometry geom;
-    if (!gpu_prepare_svg_cell_geometry(self->frame_arena, entry, vector, color, &geom)) {
+    GpuSvgCellGeometry geom = gpu_prepare_svg_cell_geometry(self->frame_arena, entry, vector, color);
+    if (geom.floats == nullptr) {
         return;
     }
 
@@ -182,6 +184,5 @@ static void metal_raster_svg_cell(void* backend, const GpuSvgEntry* entry, const
 // gpu_prepare_vector. Runs on the render thread.
 void metal_prepare_vector(void* user_data, FlImageHandle handle, uint16_t size, const FlVectorImage* vector) {
     MetalShared* self = user_data;
-    gpu_prepare_vector(self, &self->cpu.svg_atlas, &self->cpu.color_svg_atlas, handle, size, vector,
-                       metal_raster_svg_cell, &self->cpu.svg_compact_count);
+    gpu_prepare_vector(self, metal_raster_svg_cell, (GpuSvgKey) { .handle = handle, .size = size }, vector);
 }

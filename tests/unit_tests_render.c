@@ -1241,17 +1241,16 @@ UTEST(gpu_prepare_core, svg_cell_geometry_rejects_a_cell_with_nothing_to_raster)
         = gpu_svg_atlas_place(&atlas, 1, 32, fit.pw, fit.ph, img.classification, img.mono_color, &img);
     ASSERT_TRUE_MSG(entry != nullptr, "the cell places");
 
-    GpuSvgCellGeometry geom = { 0 };
-    ASSERT_FALSE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, nullptr, false, &geom),
-                     "a cell with no retained geometry lowers to nothing");
+    GpuSvgCellGeometry geom = gpu_prepare_svg_cell_geometry(s_arena, entry, nullptr, false);
+    ASSERT_TRUE_MSG(geom.floats == nullptr, "a cell with no retained geometry lowers to nothing");
 
     FlVectorImage contourless = img;
     FlVectorShape empty_shapes[2] = { img.shapes[0], img.shapes[1] };
     empty_shapes[0].segment_count = 0;
     empty_shapes[1].segment_count = 0;
     contourless.shapes = empty_shapes;
-    ASSERT_FALSE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, &contourless, false, &geom),
-                     "shapes with no contours lower to nothing");
+    geom = gpu_prepare_svg_cell_geometry(s_arena, entry, &contourless, false);
+    ASSERT_TRUE_MSG(geom.floats == nullptr, "shapes with no contours lower to nothing");
 }
 
 typedef struct PreparedExtent {
@@ -1293,8 +1292,8 @@ UTEST(gpu_prepare_core, svg_cell_geometry_lowers_mono_contours_into_the_padded_c
         = gpu_svg_atlas_place(&atlas, 1, 100, fit.pw, fit.ph, img.classification, img.mono_color, &img);
     ASSERT_TRUE_MSG(entry != nullptr, "the cell places");
 
-    GpuSvgCellGeometry geom = { 0 };
-    ASSERT_TRUE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, &img, false, &geom), "the mono cell lowers");
+    GpuSvgCellGeometry geom = gpu_prepare_svg_cell_geometry(s_arena, entry, &img, false);
+    ASSERT_TRUE_MSG(geom.floats != nullptr, "the mono cell lowers");
     ASSERT_TRUE_MSG(geom.shapes == nullptr && geom.shape_count == 0,
                     "the mono path lowers one undifferentiated soup — nothing per-shape to say");
 
@@ -1333,8 +1332,8 @@ UTEST(gpu_prepare_core, svg_cell_geometry_scales_mono_contours_by_the_fit) {
         = gpu_svg_atlas_place(&atlas, 1, 50, fit.pw, fit.ph, img.classification, img.mono_color, &img);
     ASSERT_TRUE_MSG(entry != nullptr, "the cell places");
 
-    GpuSvgCellGeometry geom = { 0 };
-    ASSERT_TRUE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, &img, false, &geom), "the mono cell lowers");
+    GpuSvgCellGeometry geom = gpu_prepare_svg_cell_geometry(s_arena, entry, &img, false);
+    ASSERT_TRUE_MSG(geom.floats != nullptr, "the mono cell lowers");
 
     PreparedExtent ext = lowered_extent(&geom);
     const f32 pad = (f32)GPU_SVG_ATLAS_PAD;
@@ -1361,8 +1360,8 @@ UTEST(gpu_prepare_core, svg_cell_geometry_keeps_shapes_distinct_on_the_color_pat
         = gpu_svg_atlas_place(&atlas, 3, 64, fit.pw, fit.ph, img.classification, img.mono_color, &img);
     ASSERT_TRUE_MSG(entry != nullptr, "the cell places");
 
-    GpuSvgCellGeometry geom = { 0 };
-    ASSERT_TRUE_MSG(gpu_prepare_svg_cell_geometry(s_arena, entry, &img, true, &geom), "the color cell lowers");
+    GpuSvgCellGeometry geom = gpu_prepare_svg_cell_geometry(s_arena, entry, &img, true);
+    ASSERT_TRUE_MSG(geom.floats != nullptr, "the color cell lowers");
     ASSERT_EQ_MSG((int)geom.shape_count, (int)img.shape_count, "one wire record per document shape");
     ASSERT_EQ_MSG((int)geom.shapes[0].quad_start, 0, "the first shape starts at quad 0");
     ASSERT_EQ_MSG((int)(geom.shapes[0].quad_count + geom.shapes[1].quad_count), (int)geom.quad_count,
@@ -1389,16 +1388,17 @@ UTEST(gpu_prepare_core, vector_into_rasters_once_per_size_step) {
     GpuSvgAtlas atlas = { 0 };
     gpu_svg_atlas_init(&atlas, s_arena, GpuSvgTexel_R8);
     FakeRasterBackend fake = { 0 };
+    GpuSvgRaster raster = { .backend = &fake, .fn = fake_raster_cell };
     u32 compact_count = 0;
 
-    gpu_prepare_vector_into(&fake, &atlas, 1, 32, &img, false, fake_raster_cell, &compact_count);
+    compact_count += gpu_prepare_vector_into(&raster, &atlas, (GpuSvgKey) { .handle = 1, .size = 32 }, &img);
     ASSERT_EQ_MSG((int)fake.raster_calls, 1, "a fresh icon rasters once");
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 1) != nullptr, "and it is placed live");
 
-    gpu_prepare_vector_into(&fake, &atlas, 1, 32, &img, false, fake_raster_cell, &compact_count);
+    compact_count += gpu_prepare_vector_into(&raster, &atlas, (GpuSvgKey) { .handle = 1, .size = 32 }, &img);
     ASSERT_EQ_MSG((int)fake.raster_calls, 1, "re-preparing at the same size does not re-dispatch");
 
-    gpu_prepare_vector_into(&fake, &atlas, 1, 64, &img, false, fake_raster_cell, &compact_count);
+    compact_count += gpu_prepare_vector_into(&raster, &atlas, (GpuSvgKey) { .handle = 1, .size = 64 }, &img);
     ASSERT_EQ_MSG((int)fake.raster_calls, 2, "a size step rasters into a fresh cell");
     ASSERT_EQ_MSG((int)compact_count, 0, "a roomy atlas never compacts");
 
@@ -1406,7 +1406,7 @@ UTEST(gpu_prepare_core, vector_into_rasters_once_per_size_step) {
     FlVectorImage no_extent = img;
     no_extent.width = 0.0f;
     no_extent.height = 0.0f;
-    gpu_prepare_vector_into(&fake, &atlas, 2, 32, &no_extent, false, fake_raster_cell, &compact_count);
+    compact_count += gpu_prepare_vector_into(&raster, &atlas, (GpuSvgKey) { .handle = 2, .size = 32 }, &no_extent);
     ASSERT_EQ_MSG((int)fake.raster_calls, 2, "a zero-extent document neither places nor rasters");
     ASSERT_TRUE_MSG(gpu_svg_atlas_find(&atlas, 2) == nullptr, "and nothing is live for it");
 }
@@ -1422,12 +1422,13 @@ UTEST(gpu_prepare_core, vector_into_compacts_and_re_rasters_survivors_when_the_a
     GpuSvgAtlas atlas = { 0 };
     gpu_svg_atlas_init(&atlas, s_arena, GpuSvgTexel_R8);
     FakeRasterBackend fake = { 0 };
+    GpuSvgRaster raster = { .backend = &fake, .fn = fake_raster_cell };
     u32 compact_count = 0;
 
     // Near the top of the mono ladder each cell is roughly 2000x1600, so only a handful fit in the 4096^2 atlas.
     u32 steps = 0;
     for (u16 size = 2000; size < 2064 && compact_count == 0; size++) {
-        gpu_prepare_vector_into(&fake, &atlas, 1, size, &img, false, fake_raster_cell, &compact_count);
+        compact_count += gpu_prepare_vector_into(&raster, &atlas, (GpuSvgKey) { .handle = 1, .size = size }, &img);
         steps++;
     }
 
@@ -1456,6 +1457,7 @@ UTEST(gpu_prepare_core, vector_into_drops_an_icon_too_big_for_even_a_fresh_atlas
     GpuSvgAtlas atlas = { 0 };
     gpu_svg_atlas_init(&atlas, s_arena, GpuSvgTexel_R8);
     FakeRasterBackend fake = { 0 };
+    GpuSvgRaster raster = { .backend = &fake, .fn = fake_raster_cell };
     u32 compact_count = 0;
 
     // The document's larger side is 100, so a raster size past the atlas extent gives a cell wider than the whole
@@ -1466,7 +1468,7 @@ UTEST(gpu_prepare_core, vector_into_drops_an_icon_too_big_for_even_a_fresh_atlas
                     "the fit itself succeeds — it is the atlas that refuses");
     ASSERT_TRUE_MSG(fit.pw > GPU_SVG_ATLAS_SIZE_MONO, "the cell really is wider than the atlas");
 
-    gpu_prepare_vector_into(&fake, &atlas, 1, oversized, &img, false, fake_raster_cell, &compact_count);
+    compact_count += gpu_prepare_vector_into(&raster, &atlas, (GpuSvgKey) { .handle = 1, .size = oversized }, &img);
 
     ASSERT_EQ_MSG((int)fake.raster_calls, 0, "an unplaceable icon is never rastered");
     ASSERT_EQ_MSG((int)compact_count, 1, "the atlas was compacted once in the attempt to make room");

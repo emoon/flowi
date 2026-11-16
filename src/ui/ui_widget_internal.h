@@ -74,6 +74,18 @@ typedef struct UiTabStripLayout {
     FlWidgetVariant selected_variant;
 } UiTabStripLayout;
 
+typedef struct UiTabStrip {
+    FlString name;
+    u32 instance_id;
+    const FlString* labels;
+    int count;
+    int selected;
+    FlTabBarConfig cfg;
+    const FlThemeColors* theme;
+    UiTabStripLayout layout;
+    int* out_dragged;
+} UiTabStrip;
+
 // Horizontal/vertical tab strip: the core of ui_tab_bar, also driven by the dock leaf header
 // (ui/dock/dock_layout.c).
 // Renders count tabs labelled by labels, highlighting selected, with each tab's id seeded from
@@ -87,8 +99,11 @@ typedef struct UiTabStripLayout {
 // out_dragged (optional) opts the strip into the pull-out gesture: the tabs become draggable behind the drag
 // threshold and the index of the tab being dragged is written back (-1 when none). Pass nullptr for a plain tab
 // bar, whose tabs stay click-only.
-int ui_tab_strip(FlString name, u32 instance_id, const FlString* labels, int count, int selected, FlTabBarConfig cfg,
-                 const FlThemeColors* theme, UiTabStripLayout layout, int* out_dragged);
+int ui_tab_strip(const UiTabStrip* strip);
+
+FlLayoutId ui_tab_strip_tab_id(const UiTabStrip* strip, int i);
+
+void ui_tab_strip_navigate(const UiTabStrip* strip);
 
 // Shared widget prologue for custom-coloured widgets: resolve id + dispatch the shared interaction behaviour +
 // look up item-state + resolve theme. Leaves UiWidgetState.colors zeroed; no variant colours are calculated.

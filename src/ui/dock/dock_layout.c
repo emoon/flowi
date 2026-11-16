@@ -137,8 +137,18 @@ static int emit_tab_header(const LeafTabs* tabs, FlDockNodeId leaf_id, const FlT
     int new_selected = tabs->selected;
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(DOCK_TAB_HEIGHT) },
                    .color = theme->surface.elevated) {
-        new_selected = ui_tab_strip(FL_S("fl_dock_tab"), instance_id, tabs->labels, tabs->count, tabs->selected,
-                                    header_cfg, theme, header, dragged);
+        const UiTabStrip strip = {
+            .name = FL_S("fl_dock_tab"),
+            .instance_id = instance_id,
+            .labels = tabs->labels,
+            .count = tabs->count,
+            .selected = tabs->selected,
+            .cfg = header_cfg,
+            .theme = theme,
+            .layout = header,
+            .out_dragged = dragged,
+        };
+        new_selected = ui_tab_strip(&strip);
     }
     return new_selected;
 }
