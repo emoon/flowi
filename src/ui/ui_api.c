@@ -221,6 +221,18 @@ void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, 
     painter_text_styled(ui_get_painter(), x, y, text, style, color);
 }
 
+void fl_painter_text_spans(float x, float y, FlString text, FlTextStyle style, const FlTextSpan* spans,
+                           uint32_t spans_size) {
+    FlUiCtx* self = g_ui_ctx;
+    if (self == nullptr) {
+        return;
+    }
+    style.font_id = resolve_font_id(self, style.font_id);
+    painter_text_spans(ui_get_painter(), x, y,
+                       (SpannedText) { .text = text, .spans = spans, .span_count = spans != nullptr ? spans_size : 0 },
+                       style);
+}
+
 bool fl_painter_image(float x, float y, float w, float h, uint32_t image, FlColor color) {
     return painter_image(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, image, color);
 }
@@ -284,6 +296,24 @@ FlTextMetrics fl_text_measure(FlString text, FlTextStyle style) {
     }
     style.font_id = resolve_font_id(self, style.font_id);
     return font_cache_measure_text(self->shared->font_cache, text, style);
+}
+
+uint32_t fl_text_x_to_offset(FlString text, FlTextStyle style, float x) {
+    FlUiCtx* self = g_ui_ctx;
+    if (self == nullptr) {
+        return 0;
+    }
+    style.font_id = resolve_font_id(self, style.font_id);
+    return font_cache_x_to_offset(self->shared->font_cache, text, style, x);
+}
+
+float fl_text_offset_to_x(FlString text, FlTextStyle style, uint32_t offset) {
+    FlUiCtx* self = g_ui_ctx;
+    if (self == nullptr) {
+        return 0.0f;
+    }
+    style.font_id = resolve_font_id(self, style.font_id);
+    return font_cache_offset_to_x(self->shared->font_cache, text, style, offset);
 }
 
 // The scroll (fl_scroll_area_*), floating (fl_floating_*) and layout (fl_layout_*) families are defined

@@ -72,7 +72,7 @@ fn painter_bindings_round_trip() {
                 // Font 0 is the active font. The built-in font paints its cells above the pen baseline, so
                 // anchor both runs deep in the unasserted bottom band.
                 Painter::text(4.0, 60.0, "au", FontId(0), c);
-                Painter::text_styled(40.0, 60.0, "au", TextStyle { font_id: 0, font_size: 7.5, letter_spacing: 0.5 }, c);
+                Painter::text_styled(40.0, 60.0, "au", TextStyle { font_id: 0, font_size: 7.5, letter_spacing: 0.5, tab_width: 0.0 }, c);
                 // Invalid image handle (0): a no-op that still crosses the FFI boundary and returns false.
                 assert!(!Painter::image(28.0, 4.0, 12.0, 12.0, flowi::ImageHandle(0), c), "invalid image handle draws nothing");
             }}

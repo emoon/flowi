@@ -110,3 +110,20 @@ UTEST(kb_route, a_combining_mark_is_moved_off_the_pen) {
 
     kb_route_close(&route);
 }
+
+UTEST(kb_route, shaped_glyphs_carry_the_utf8_byte_offset_of_their_codepoint) {
+    KbRoute route = kb_route_open();
+    const FlString text = { .data = "na\xC3\xAFve", .length = 5, .is_static = 1 };
+
+    const FlShapedRun run = font_cache_shape_run(route.cache, route.roboto, 22 * 4, text);
+    const u32 offsets[] = { 0, 1, 2, 4 };
+    ASSERT_EQ((int)run.count, (int)sizeof_array(offsets));
+    for_count(i, sizeof_array(offsets)) {
+        ASSERT_EQ((int)run.glyphs[i].byte_offset, (int)offsets[i]);
+    }
+
+    const FlShapedRun again = font_cache_shape_run(route.cache, route.roboto, 22 * 4, text);
+    ASSERT_EQ((int)again.glyphs[3].byte_offset, 4);
+
+    kb_route_close(&route);
+}

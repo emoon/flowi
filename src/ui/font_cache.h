@@ -110,11 +110,19 @@ int font_cache_get_glyph_advance_q4(FlFontCache* self, FlFontId font_id, u16 siz
 // fallback face, same as rendering.
 FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextStyle style);
 
+// Hit testing on the line font_cache_measure_text measures, with the same style. A font that is unknown or not ready
+// gives 0. The offsets are bytes of `text`.
+u32 font_cache_x_to_offset(FlFontCache* self, FlString text, FlTextStyle style, float x);
+float font_cache_offset_to_x(FlFontCache* self, FlString text, FlTextStyle style, u32 offset);
+
 typedef struct FlShapedGlyph {
     FlFontId font;
     u32 glyph_index;
     i32 x;
     i32 y;
+    // The UTF-8 byte offset in the shaped string of the first codepoint this glyph stands for. A ligature takes the
+    // offset of its first codepoint; glyphs from one codepoint share its offset.
+    u32 byte_offset;
 } FlShapedGlyph;
 
 typedef struct FlShapedRun {
@@ -124,6 +132,16 @@ typedef struct FlShapedRun {
 } FlShapedRun;
 
 FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q4, FlString text);
+
+// One line of text and how its tabs are laid out: each tab moves the pen to the next multiple of `tab_width` space
+// advances, counted from the start of the string. A `tab_width` of 0 or less leaves tabs as shaped.
+typedef struct TabbedLine {
+    FlString text;
+    float tab_width;
+} TabbedLine;
+
+// font_cache_shape_run with the tabs of `line` laid out. The glyphs are valid until the next shaping call.
+FlShapedRun font_cache_shape_line(FlFontCache* self, FlFontId font_id, u16 size_q4, TabbedLine line);
 
 bool font_cache_is_fixed_pitch(FlFontCache* self, FlFontId font_id);
 

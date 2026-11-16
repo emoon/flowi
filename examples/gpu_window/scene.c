@@ -2,7 +2,7 @@
 #include <render/gpu/gpu_svg_atlas.h>
 
 void scene_fill_rect(const Painter* p, FlRect r, FlCornerRadius cr, const FlColor corners[4]) {
-    fl_ir_fill_rect(p->arena, v_rect(p->view, r), v_radius(p->view, cr), corners, nullptr);
+    ir_fill_rect(p->arena, v_rect(p->view, r), v_radius(p->view, cr), corners, nullptr);
 }
 
 void scene_fill_solid(const Painter* p, FlRect r, FlCornerRadius cr, FlColor color) {
@@ -11,40 +11,40 @@ void scene_fill_solid(const Painter* p, FlRect r, FlCornerRadius cr, FlColor col
 
 void scene_border(const Painter* p, FlRect r, BorderSpec border) {
     View v = p->view;
-    fl_ir_border(p->arena, v_rect(v, r), v_len(v, border.left), v_len(v, border.right), v_len(v, border.top),
+    ir_border(p->arena, v_rect(v, r), v_len(v, border.left), v_len(v, border.right), v_len(v, border.top),
                  v_len(v, border.bottom), v_radius(v, border.radius), border.color);
 }
 
 void scene_circle(const Painter* p, FlVec2 center, f32 radius, ShapeStyle style) {
     View v = p->view;
-    fl_ir_circle(p->arena, v_x(v, center.x), v_y(v, center.y), v_len(v, radius), style.fill, style.stroke,
+    ir_circle(p->arena, v_x(v, center.x), v_y(v, center.y), v_len(v, radius), style.fill, style.stroke,
                  v_len(v, style.stroke_width), style.effect);
 }
 
 void scene_diamond(const Painter* p, FlVec2 center, FlVec2 radii, ShapeStyle style) {
     View v = p->view;
-    fl_ir_diamond(p->arena, v_x(v, center.x), v_y(v, center.y), v_len(v, radii.x), v_len(v, radii.y), style.fill,
+    ir_diamond(p->arena, v_x(v, center.x), v_y(v, center.y), v_len(v, radii.x), v_len(v, radii.y), style.fill,
                   style.stroke, v_len(v, style.stroke_width), style.effect);
 }
 
 void scene_arc(const Painter* p, ArcSpec arc) {
     View v = p->view;
-    fl_ir_arc(p->arena, v_x(v, arc.center.x), v_y(v, arc.center.y), v_len(v, arc.radius), v_len(v, arc.thickness),
+    ir_arc(p->arena, v_x(v, arc.center.x), v_y(v, arc.center.y), v_len(v, arc.radius), v_len(v, arc.thickness),
               arc.start, arc.sweep, arc.color, arc.flags, nullptr);
 }
 
 FlPolyPoint* scene_polyline(const Painter* p, PolylineSpec spec) {
     View v = p->view;
-    return fl_ir_polyline(p->arena, spec.color, spec.fill_color, v_len(v, spec.width), v_y(v, spec.baseline_y),
+    return ir_polyline(p->arena, spec.color, spec.fill_color, v_len(v, spec.width), v_y(v, spec.baseline_y),
                           spec.flags, spec.point_count, nullptr);
 }
 
 FlBar* scene_bars(const Painter* p, f32 baseline_y, FlColor color, u32 count) {
-    return fl_ir_bars(p->arena, v_y(p->view, baseline_y), color, count, nullptr);
+    return ir_bars(p->arena, v_y(p->view, baseline_y), color, count, nullptr);
 }
 
 void scene_image(const Painter* p, FlImageSource src, FlRect dst, ImageStyle style) {
-    fl_ir_image(p->arena, src, FlImageMode_Color, v_rect(p->view, dst), (FlRect) { 0 }, style.tint, style.filter,
+    ir_image(p->arena, src, FlImageMode_Color, v_rect(p->view, dst), (FlRect) { 0 }, style.tint, style.filter,
                 nullptr);
 }
 
@@ -113,7 +113,7 @@ static FlRect glyph_pen(FlVec2 origin, const FlShapedGlyph* sg) {
 // Emits one run per face; render() prepares the glyphs through the bound font cache.
 //
 // Shape at the metrics size, in world space, and place each glyph at its view-mapped screen
-// position. This is fl_ir_text_layout's loop with the advance size separate from the run's raster size, which
+// position. This is ir_text_layout's loop with the advance size separate from the run's raster size, which
 // that builder cannot express. Off-screen glyphs are dropped, so the run only references atlas cells that
 // exist.
 void scene_text(const Painter* p, TextSpec text) {
@@ -137,7 +137,7 @@ void scene_text(const Painter* p, TextSpec text) {
                 = (FlGlyph) { .x = v_x(p->view, pen.x), .y = v_y(p->view, pen.y), .glyph_index = sg->glyph_index };
         }
         if (count > 0 && face_span_ends_at(&shaped, i)) {
-            fl_ir_text_run(p->arena, sg->font, sizes.raster_q4, sizes.scale, text.color, glyphs, count);
+            ir_text_run(p->arena, sg->font, sizes.raster_q4, sizes.scale, text.color, glyphs, count);
             count = 0;
         }
     }

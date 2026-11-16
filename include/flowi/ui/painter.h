@@ -130,6 +130,18 @@ typedef struct FlColoredRect {
     FlColor color;
 } FlColoredRect;
 
+// One run of a string drawn by `fl_painter_text_spans`: how many bytes it covers and how they are drawn.
+typedef struct FlTextSpan {
+    // The length of the run, in bytes of the string.
+    uint32_t len;
+    // Reserved. Pass 0.
+    uint32_t flags;
+    // The color of the text in the run.
+    FlColor color;
+    // The color drawn behind the run (an alpha of 0 draws nothing).
+    FlColor bg;
+} FlTextSpan;
+
 // The corner colors of a gradient rectangle.
 //
 // This is passed to `fl_painter_gradient_rect`. The colors are interpolated across the rectangle.
@@ -252,6 +264,14 @@ FL_API void fl_painter_text(float x, float y, FlString text, FlFontId font, FlCo
 // Sizes are rounded to quarter pixels in the same way as in `fl_text_measure`, so a measured run matches the
 // drawn one.
 FL_API void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, FlColor color);
+// Draws a single line of `text` with a color, and optionally a background, for each run, with its top-left
+// corner at (`x`, `y`).
+//
+// `spans` cover the text in order from its first byte, and text after the last span is not drawn. A span
+// that reaches past the end of the text is cut at it, and one that ends inside a UTF-8 sequence ends after
+// that sequence instead. The line is laid out as a whole, so the spans change colors and nothing else: the
+// positions and the width are those of `fl_painter_text_styled` with the same `style`.
+FL_API void fl_painter_text_spans(float x, float y, FlString text, FlTextStyle style, const FlTextSpan* spans, uint32_t spans_size);
 // Draws an image into the rectangle at (`x`, `y`) and returns true if it was drawn.
 //
 // `image` is the handle from `fl_image_load`. `color` is multiplied with the image, so pass white

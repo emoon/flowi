@@ -79,9 +79,9 @@ static void cell_borders(const Gallery* g, FlRect c) {
 static void cell_clip(const Gallery* g, FlRect c) {
     const Painter* p = &g->painter;
     draw_cell_chrome(p, c, FL_S("clip"));
-    fl_ir_clip_push(p->arena, v_rect(p->view, (FlRect) { c.x + 16, c.y + 16, 120, 70 }));
+    ir_clip_push(p->arena, v_rect(p->view, (FlRect) { c.x + 16, c.y + 16, 120, 70 }));
     scene_fill_solid(p, (FlRect) { c.x + 60, c.y + 8, 140, 110 }, radius_all(0), k_green);
-    fl_ir_clip_pop(p->arena);
+    ir_clip_pop(p->arena);
 }
 
 static void cell_circle_diamond(const Gallery* g, FlRect c) {
@@ -205,7 +205,7 @@ static const void* begin_scene(FlArena* arena) {
 static void draw_backdrop_and_title(const Painter* p) {
     // Full-window background, emitted in screen space (not view-transformed) so it fills the window while the
     // gallery pans and zooms over it.
-    fl_ir_fill_rect(p->arena, (FlRect) { 0, 0, p->view.screen_w, p->view.screen_h }, (FlCornerRadius) { 0 },
+    ir_fill_rect(p->arena, (FlRect) { 0, 0, p->view.screen_w, p->view.screen_h }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { k_bg, k_bg, k_bg, k_bg }, nullptr);
 
     scene_text(

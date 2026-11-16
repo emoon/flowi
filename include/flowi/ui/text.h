@@ -21,6 +21,10 @@ typedef struct FlTextStyle {
     float font_size;
     // The extra space between glyphs, in pixels. A string of n glyphs gets n - 1 gaps.
     float letter_spacing;
+    // The distance between tab stops, in widths of a space (0 gives a tab the width the font gives it).
+    //
+    // A tab moves the pen to the next stop, counted from the start of the string.
+    float tab_width;
 } FlTextStyle;
 
 // The size of one line of text, in logical pixels.
@@ -50,6 +54,18 @@ FL_API void fl_text_styled(FlString text, FlTextConfig config);
 // The result matches what `fl_painter_text_styled` draws with the same `style`. A font that is not loaded
 // measures as all zeroes.
 FL_API FlTextMetrics fl_text_measure(FlString text, FlTextStyle style);
+// Returns the byte offset of the character under `x` in a single line of `text`.
+//
+// `x` is measured in logical pixels from the left edge of the line, and the line is laid out as
+// `fl_text_measure` and `fl_painter_text_styled` lay it out with the same `style`. An `x` before the line gives
+// 0 and an `x` past its end gives the length of `text`. A font that is not loaded gives 0.
+FL_API uint32_t fl_text_x_to_offset(FlString text, FlTextStyle style, float x);
+// Returns the x of the left edge of the character at byte `offset` in a single line of `text`.
+//
+// The result is in logical pixels from the left edge of the line, laid out as for `fl_text_x_to_offset`. An
+// `offset` inside a UTF-8 sequence gives the next character, and one at or past the end of `text` gives the
+// width of the line. A font that is not loaded gives 0.
+FL_API float fl_text_offset_to_x(FlString text, FlTextStyle style, uint32_t offset);
 
 #define fl_text_styled_impl(text, config) (fl_text_styled)(text, config)
 #ifndef FL_API_IMPLEMENTATION

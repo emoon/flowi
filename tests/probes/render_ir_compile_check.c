@@ -94,7 +94,7 @@ _Static_assert(FlImageMode_Color == 0 && FlImageMode_AlphaCoverage == 1, "image 
 _Static_assert(FlImageFilter_Linear == 0 && FlImageFilter_Nearest == 1, "image filter values");
 
 // Compile-level proof that both union arms and the alpha-coverage+tint mode exist by name.
-static void fl_ir_image_source_shapes(void) {
+static void ir_image_source_shapes(void) {
     FlImageSource s;
     s.kind = FlImageKind_Static;
     s.handle = (FlImageHandle)0;
@@ -196,7 +196,7 @@ _Static_assert(sizeof(((FlRenderFrame*)0)->background) == sizeof(FlBackground), 
 _Static_assert(sizeof(FlRenderBackend) == 17 * sizeof(void*),
                "FlRenderBackend is user_data + 15 function pointers + capability flag");
 
-static bool fl_ir_backend_shapes(void) {
+static bool ir_backend_shapes(void) {
     FlRenderBackend b = { 0 };
     b.user_data = nullptr;
     b.create_surface = nullptr;
@@ -225,6 +225,6 @@ static bool fl_ir_backend_shapes(void) {
 // Reference the helpers so -Wunused-function stays quiet.
 void fl_render_ir_compile_check(void);
 void fl_render_ir_compile_check(void) {
-    fl_ir_image_source_shapes();
-    (void)fl_ir_backend_shapes();
+    ir_image_source_shapes();
+    (void)ir_backend_shapes();
 }

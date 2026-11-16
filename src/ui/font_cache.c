@@ -1,6 +1,8 @@
 #include "font_cache.h"
 #include "font_shaper.h"
 #include "shaped_run_cache.h"
+#include "shaped_run_hit.h"
+#include "shaped_run_tabs.h"
 #include <core/arena.h>
 #include <core/hashmap.h>
 #include <core/log.h>
@@ -71,6 +73,7 @@ struct FlFontCache {
     int face_count;
     FlFontId next_id;
     FlArena* shape_arena;
+    FlArena* tab_arena;
     StatsRegistry* stats;
     FontShaper* shaper;
     ShapedRunCache* shaped_runs;
@@ -81,6 +84,7 @@ FlFontCache* font_cache_new(FlArena* arena) {
     cache->next_id = 1;
     cache->arena = arena_new();
     cache->shape_arena = arena_new();
+    cache->tab_arena = arena_new();
     cache->stats = stats_create(cache->arena);
     cache->shaper = font_shaper_new(cache->arena);
     cache->shaped_runs = shaped_run_cache_new(cache->arena, SHAPED_RUN_CACHE_BYTES, cache->stats);
@@ -372,6 +376,7 @@ void font_cache_destroy(FlFontCache* self) {
     stats_destroy(self->stats);
     fl_arena_destroy(self->arena);
     fl_arena_destroy(self->shape_arena);
+    fl_arena_destroy(self->tab_arena);
 
     self->face_count = 0;
 }
@@ -667,13 +672,19 @@ static FlFontMetrics face_vmetrics(FlFontCache* self, FontFace* face, u16 q4) {
     return out;
 }
 
-static void shape_codepoint(const AdvanceRun* run, u32 codepoint, FlShapedGlyph* glyphs, FlShapedRun* out) {
-    const CachedGlyph glyph = run_glyph(run, codepoint);
+typedef struct SourceCodepoint {
+    u32 codepoint;
+    u32 byte_offset;
+} SourceCodepoint;
+
+static void shape_codepoint(const AdvanceRun* run, SourceCodepoint source, FlShapedGlyph* glyphs, FlShapedRun* out) {
+    const CachedGlyph glyph = run_glyph(run, source.codepoint);
     if (glyphs != nullptr) {
         glyphs[out->count] = (FlShapedGlyph) {
             .font = glyph.fallback ? run->cache->fallback_face->id : run->font,
             .glyph_index = glyph.glyph_index,
             .x = (i32)out->width,
+            .byte_offset = source.byte_offset,
         };
     }
     out->count++;
@@ -687,13 +698,14 @@ static FlShapedRun shape_run(const AdvanceRun* run, FlString text, FlShapedGlyph
     }
     if (text.is_ascii) {
         for_count(j, text.length) {
-            shape_codepoint(run, (unsigned char)text.data[j], glyphs, &out);
+            shape_codepoint(run, (SourceCodepoint) { (unsigned char)text.data[j], (u32)j }, glyphs, &out);
         }
         return out;
     }
     Utf8Iter it = utf8_iter(text);
     while (!utf8_iter_done(&it)) {
-        shape_codepoint(run, utf8_iter_next(&it), glyphs, &out);
+        const u32 byte_offset = (u32)(it.ptr - text.data);
+        shape_codepoint(run, (SourceCodepoint) { utf8_iter_next(&it), byte_offset }, glyphs, &out);
     }
     return out;
 }
@@ -826,6 +838,23 @@ FlShapedRun font_cache_shape_run(FlFontCache* self, FlFontId font_id, u16 size_q
     return shape_run_into(&run, text, self->shape_arena);
 }
 
+// The tab stop in 26.6 pixels: `columns` widths of a space at this size.
+static i64 tab_stop_26_6(FlFontCache* self, FlFontId font_id, u16 size_q4, float columns) {
+    return (i64)((float)font_cache_get_glyph_advance_q4(self, font_id, size_q4, ' ') * columns);
+}
+
+FlShapedRun font_cache_shape_line(FlFontCache* self, FlFontId font_id, u16 size_q4, TabbedLine line) {
+    const FlShapedRun shaped = font_cache_shape_run(self, font_id, size_q4, line.text);
+    if (line.tab_width <= 0.0f || !shaped_run_text_has_tab(line.text)) {
+        return shaped;
+    }
+    const FontGlyphRef space = font_cache_resolve_glyph(self, font_id, ' ');
+    const TabLayout tabs = { .stop = tab_stop_26_6(self, font_id, size_q4, line.tab_width),
+                             .blank = { .font = space.font, .glyph_index = space.glyph_index } };
+    fl_arena_rewind(self->tab_arena);
+    return shaped_run_apply_tabs(self->tab_arena, line.text, shaped, tabs);
+}
+
 Vec2 font_cache_get_text_size(FlFontCache* self, FlString text, FlFontId font_id, u16 font_size) {
     FontFace* face = face_for_metrics(self, font_id, "font_cache_get_text_size");
     if (face == nullptr) {
@@ -861,6 +890,9 @@ FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextSt
 
     AdvanceRun run = { .cache = self, .face = face, .q4 = q4, .may_claim_row = false };
     FlShapedRun shaped = measure_run(&run, text);
+    if (style.tab_width > 0.0f && shaped_run_text_has_tab(text)) {
+        shaped = font_cache_shape_line(self, face->id, q4, (TabbedLine) { text, style.tab_width });
+    }
     out.width = (float)shaped.width / 64.0f;
     if (shaped.count > 1) {
         out.width += style.letter_spacing * (float)(shaped.count - 1);
@@ -871,6 +903,31 @@ FlTextMetrics font_cache_measure_text(FlFontCache* self, FlString text, FlTextSt
     out.ascent = vm.ascent;
     out.descent = vm.descent;
     return out;
+}
+
+static bool style_hit_line(FlFontCache* self, FlString text, FlTextStyle style, HitLine* out) {
+    FontFace* face = face_for_metrics(self, style.font_id, "font_cache_hit_test");
+    if (face == nullptr) {
+        return false;
+    }
+    const u16 q4 = resolve_size_q4(face, style.font_size);
+    if (face->kind == FlFontRasterKind_FreeType && q4 == 0) {
+        return false;
+    }
+    *out = (HitLine) { .shaped = font_cache_shape_line(self, face->id, q4, (TabbedLine) { text, style.tab_width }),
+                       .letter_spacing = style.letter_spacing,
+                       .text_length = (u32)text.length };
+    return true;
+}
+
+u32 font_cache_x_to_offset(FlFontCache* self, FlString text, FlTextStyle style, float x) {
+    HitLine line;
+    return style_hit_line(self, text, style, &line) ? hit_line_offset_at(line, x) : 0;
+}
+
+float font_cache_offset_to_x(FlFontCache* self, FlString text, FlTextStyle style, u32 offset) {
+    HitLine line;
+    return style_hit_line(self, text, style, &line) ? hit_line_x_of_offset(line, offset) : 0.0f;
 }
 
 // String-independent vertical metrics at a fractional size: what font_cache_measure_text reports minus the

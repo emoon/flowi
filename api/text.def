@@ -9,6 +9,10 @@ struct TextStyle {
     font_size: f32,
     /// The extra space between glyphs, in pixels. A string of n glyphs gets n - 1 gaps.
     letter_spacing: f32,
+    /// The distance between tab stops, in widths of a space (0 gives a tab the width the font gives it).
+    ///
+    /// A tab moves the pen to the next stop, counted from the start of the string.
+    tab_width: f32,
 }
 
 /// The size of one line of text, in logical pixels.
@@ -41,4 +45,16 @@ api Text {
     /// The result matches what `Painter::text_styled` draws with the same `style`. A font that is not loaded
     /// measures as all zeroes.
     [borrowed] measure(text: String, style: TextStyle) -> TextMetrics
+    /// Returns the byte offset of the character under `x` in a single line of `text`.
+    ///
+    /// `x` is measured in logical pixels from the left edge of the line, and the line is laid out as
+    /// `Text::measure` and `Painter::text_styled` lay it out with the same `style`. An `x` before the line gives
+    /// 0 and an `x` past its end gives the length of `text`. A font that is not loaded gives 0.
+    [borrowed] x_to_offset(text: String, style: TextStyle, x: f32) -> u32
+    /// Returns the x of the left edge of the character at byte `offset` in a single line of `text`.
+    ///
+    /// The result is in logical pixels from the left edge of the line, laid out as for `Text::x_to_offset`. An
+    /// `offset` inside a UTF-8 sequence gives the next character, and one at or past the end of `text` gives the
+    /// width of the line. A font that is not loaded gives 0.
+    [borrowed] offset_to_x(text: String, style: TextStyle, offset: u32) -> f32
 }

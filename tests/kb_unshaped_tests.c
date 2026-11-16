@@ -81,3 +81,18 @@ UTEST(kb_unshaped, fallback_kb_cannot_load_keeps_the_whole_run_unshaped) {
 
     kb_route_close(&route);
 }
+
+UTEST(kb_unshaped, unshaped_glyphs_carry_the_utf8_byte_offset_of_their_codepoint) {
+    KbRoute route = kb_route_open();
+    FlFontId mono = font_cache_load_font_memory(route.cache, k_fixed_pitch_test_ttf, k_fixed_pitch_test_ttf_size, 16);
+    const FlString text = { .data = "na\xC3\xAFve", .length = 5, .is_static = 1 };
+
+    const FlShapedRun shaped = font_cache_shape_run(route.cache, mono, 13 * 4, text);
+    const u32 offsets[] = { 0, 1, 2, 4 };
+    ASSERT_EQ((int)shaped.count, (int)sizeof_array(offsets));
+    for_count(i, sizeof_array(offsets)) {
+        ASSERT_EQ((int)shaped.glyphs[i].byte_offset, (int)offsets[i]);
+    }
+
+    kb_route_close(&route);
+}

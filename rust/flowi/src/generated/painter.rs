@@ -142,6 +142,20 @@ impl Painter {
         unsafe { crate::sys::fl_painter_text_styled(x, y, { let s = text; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, style, color) }
     }
 
+    /// Draws a single line of `text` with a color, and optionally a background, for each run, with its top-left
+    /// corner at (`x`, `y`).
+    ///
+    /// `spans` cover the text in order from its first byte, and text after the last span is not drawn. A span
+    /// that reaches past the end of the text is cut at it, and one that ends inside a UTF-8 sequence ends after
+    /// that sequence instead. The line is laid out as a whole, so the spans change colors and nothing else: the
+    /// positions and the width are those of `Painter::text_styled` with the same `style`.
+    #[inline]
+    pub fn text_spans(x: f32, y: f32, text: impl AsRef<str>, style: crate::sys::TextStyle, spans: &[crate::sys::TextSpan]) {
+        let text = text.as_ref();
+        let _frame = crate::frame_thread::frame_thread_guard("Painter::text_spans");
+        unsafe { crate::sys::fl_painter_text_spans(x, y, { let s = text; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) }, style, spans.as_ptr(), spans.len() as u32) }
+    }
+
     /// Draws an image into the rectangle at (`x`, `y`) and returns true if it was drawn.
     ///
     /// `image` is the handle from `Image::load`. `color` is multiplied with the image, so pass white
