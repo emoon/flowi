@@ -36,7 +36,7 @@ FlString ui_get_clay_element_name(u32 element_id) {
 }
 
 i32 ui_get_render_command_count(void) {
-    return g_ui_ctx ? g_ui_ctx->last_render_command_count : 0;
+    return g_ui_ctx->last_render_command_count;
 }
 
 static UiRenderCommandType map_clay_command_type(Clay_RenderCommandType t) {
@@ -137,7 +137,7 @@ void ui_capture_render_commands(FlUiCtx* self, Clay_RenderCommandArray* commands
 }
 
 bool ui_get_render_command(i32 index, UiRenderCommand* out) {
-    if (!g_ui_ctx || index < 0 || index >= g_ui_ctx->last_render_command_count || !out) {
+    if (index < 0 || index >= g_ui_ctx->last_render_command_count || !out) {
         return false;
     }
 

@@ -176,9 +176,7 @@ void dock_workspace_set_active_panel(FlDockWorkspace* ws, FlDockPanelId id) {
     }
     ws->active_panel = id;
     // Clear focus; a widget pressed inside the newly active panel re-claims it later in the same frame.
-    if (g_ui_ctx != nullptr) {
-        g_ui_ctx->focused_id = 0;
-    }
+    g_ui_ctx->focused_id = 0;
 }
 
 // Persistence hooks. The serialize, load and rebind logic lives in dock_persist; these hooks add the file I/O.
@@ -494,10 +492,6 @@ static void end_drag_gesture(FlDockWorkspace* ws, bool held) {
 }
 
 void dock_workspace_emit(FlDockWorkspace* ws) {
-    if (g_ui_ctx == nullptr) {
-        return; // the walk emits Clay elements, which need a live context
-    }
-
     // Structural gestures touch the tree only here, before this frame's walk.
     FlDockPanelId grab = ws->pending_grab;
     ws->pending_grab = 0;
@@ -545,7 +539,7 @@ FlVec2 dock_workspace_panel_size(const FlDockWorkspace* ws, FlDockPanelId id) {
 }
 
 FlDockWorkspace* dock_workspace_current(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     // Every fl_dock_* entry point resolves through here: calling the dock outside a live UI context is fatal.
     FL_ASSERT_FATAL(ctx != nullptr && ctx->dock_workspace != nullptr);
     return ctx->dock_workspace; // non-owning; the registry default at ui_create, rebound for promoted windows

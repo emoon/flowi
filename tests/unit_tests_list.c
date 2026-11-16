@@ -838,7 +838,7 @@ UTEST(list_marquee, rubber_band_with_autoscroll) {
     FlAppSettings settings = { .window_title = FL_S("list_marquee"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ctx->ui_scale = 1.0f; // logical == physical, so the list is at the window origin and content Y == screen Y
     ctx->layout_width = 400.0f;
     ctx->layout_height = 400.0f;
@@ -938,7 +938,7 @@ UTEST(list_marquee, press_keeps_keyboard_focus) {
         = { .window_title = FL_S("list_marquee_focus"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ctx->ui_scale = 1.0f;
     ctx->layout_width = 400.0f;
     ctx->layout_height = 400.0f;
@@ -1034,7 +1034,7 @@ UTEST(list_drag, reorder_request) {
     FlAppSettings settings = { .window_title = FL_S("list_drag"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ctx->ui_scale = 1.0f; // logical == physical, so the list is at the window origin and content Y == screen Y
     ctx->layout_width = 400.0f;
     ctx->layout_height = 400.0f;
@@ -1167,7 +1167,7 @@ UTEST(list_declarative, policy_outcomes) {
         = { .window_title = FL_S("list_declarative"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ctx->ui_scale = 1.0f; // logical == physical, so the list is at the window origin and content Y == screen Y
     ctx->layout_width = 400.0f;
     ctx->layout_height = 400.0f;

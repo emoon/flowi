@@ -10,7 +10,7 @@
 #define UI_TOOLTIP_DEFAULT_OFFSET_Y 4.0f
 
 void ui_tooltip_impl(FlLayoutId anchor_id, FlString text, FlTooltipConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
 
     // Shown while the anchor is present and hovered and the pointer has been stationary for at least delay seconds.
     FlElementState anchor = ui_get_element_state(anchor_id);

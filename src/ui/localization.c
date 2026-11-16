@@ -693,10 +693,6 @@ static bool has_brace(FlString text) {
 
 FlString fl_localize_fmt(FlString sid, const FlFmtArg* args, u32 count) {
     FlUiCtx* ctx = g_ui_ctx;
-    if (ctx == nullptr) {
-        log_error("fl_localize_fmt needs a ui context");
-        return sid;
-    }
 
     const TableEntry* entry = lookup_without_count(ctx->shared->localization, sid);
     const FlString text = entry != nullptr ? entry->text : sid;
@@ -747,10 +743,6 @@ static FmtArgs args_with_count(FlArena* arena, i64 count, const FlFmtArg* args, 
 
 FlString fl_localize_plural(FlString sid, i64 count, const FlFmtArg* args, u32 arg_count) {
     FlUiCtx* ctx = g_ui_ctx;
-    if (ctx == nullptr) {
-        log_error("fl_localize_plural needs a ui context");
-        return sid;
-    }
 
     StringTable* table = nullptr;
     TableEntry* entry = lookup_entry(ctx->shared->localization, sid, &table);

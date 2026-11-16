@@ -73,7 +73,7 @@ FlDockWorkspace* dock_shared_default(FlDockShared* ds) {
 // nullptr when there is no shared tier (a standalone workspace driven directly by a unit test), so the entry points
 // below must no-op on it.
 static FlDockShared* dock_shared_get(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     if (ctx == nullptr || ctx->shared == nullptr) {
         return nullptr;
     }

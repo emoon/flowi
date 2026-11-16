@@ -62,7 +62,7 @@ static float STB_TEXTEDIT_GETWIDTH(FlTextInputState* state, int line_start, int 
         return 0.0f;
     }
 
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     if (!can_measure(ctx)) {
         return 8.0f; // Fallback width
     }
@@ -71,7 +71,7 @@ static float STB_TEXTEDIT_GETWIDTH(FlTextInputState* state, int line_start, int 
 }
 
 static void STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* row, FlTextInputState* state, int line_start) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     const float font_height = can_measure(ctx) ? ui_text_edit_measure(ctx, S("M")).y : 16.0f;
 
     row->x0 = 0.0f;

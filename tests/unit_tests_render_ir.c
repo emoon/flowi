@@ -1149,7 +1149,6 @@ UTEST(render_ir, painter_rects_noop_cases_record_nothing) {
         p, (PainterFrame) { .font_cache = nullptr, .ui_scale = 1.0f, .text_scale = 1.0f, .state_arena = arena });
     FlColoredRect one = { 0.0f, 0.0f, 1.0f, 1.0f, { 1, 2, 3, 4 } };
 
-    painter_rects(nullptr, &one, 1);
     painter_rects(p, &one, 1); // no open scope
 
     void* slot = nullptr;

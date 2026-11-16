@@ -149,7 +149,7 @@ void fl_app_set_test_dt(FlApp* app, float dt);
 bool fl_app_read_pixels(FlApp* app, FlPixelReadback* out);
 
 // Copy len bytes into the current frame's arena; valid until the end of the frame. Resolves the arena via the
-// process-global UI context (ui_get_ctx()); calling it with no active frame (between fl_app_tick's
+// process-global UI context (g_ui_ctx); calling it with no active frame (between fl_app_tick's
 // update_begin/update_end) terminates the process in every build type, release included.
 FlString fl_frame_str(const char* ptr, size_t len);
 

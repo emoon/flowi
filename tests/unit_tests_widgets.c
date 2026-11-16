@@ -1660,7 +1660,7 @@ UTEST(ui_slider, hit_math_follows_thumb_size) {
     FlAppSettings settings = { .window_title = FL_S("slider_hit"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ctx->ui_scale = 1.0f; // logical == physical, so an injected window pixel is the logical x the slider sees
     ctx->layout_width = 400.0f;
     ctx->layout_height = 400.0f;
@@ -1751,7 +1751,7 @@ UTEST(ui_slider, int_slider_with_a_small_range_still_moves) {
 }
 
 static FlUiCtx* scrollbar_test_ctx(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ctx->ui_scale = 1.0f;
     ctx->layout_width = 400.0f;
     ctx->layout_height = 400.0f;
@@ -1797,7 +1797,7 @@ UTEST(ui_scrollbar, grabbing_a_thumb_that_fills_the_track_keeps_the_value) {
 }
 
 static void scrollbar_drag_frame(float* value, float my, bool held, bool pressed) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     FlInputState* in = &ctx->input_state;
     ui_input_set_mouse_position(ctx, 4.0f, my);
     in->mouse.buttons[FlMouseButton_Left] = held;
@@ -2266,7 +2266,7 @@ typedef struct RadioPressState {
 
 static void radio_press_frame(void* user_data) {
     RadioPressState* st = (RadioPressState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     FlString options[3] = { FL_S("A"), FL_S("B"), FL_S("C") };
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         st->last_changed = ui_radio_group(options, (int)sizeof_array(options), &st->choice).clicked;
@@ -2360,7 +2360,7 @@ static const FlLayoutId k_menu_id = { .name = { .data = "ctx_menu", .length = 8,
 
 static void menu_frame(void* user_data) {
     MenuTestState* st = (MenuTestState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     // The region is the top-level element, and Clay grows it to fill the window.
     ui_menu_region(k_menu_region_id, k_menu_id) {}
@@ -2763,7 +2763,7 @@ UTEST(ui_menu, type_ahead) {
 //   L2 (under Sub2): D0(0)  D1(1)
 static void submenu_frame(void* user_data) {
     MenuTestState* st = (MenuTestState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     ui_menu_region(k_menu_region_id, k_menu_id) {}
 
@@ -3007,7 +3007,7 @@ typedef struct MenuCollideState {
 
 static void collide_frame(void* user_data) {
     MenuCollideState* st = (MenuCollideState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     ui_menu_region(k_menu_region_id, k_menu_id) {}
 
@@ -3130,7 +3130,7 @@ static const FlString k_menu_sep_name = { .data = "##menu_sep", .length = 10, .i
 
 static void static_kinds_frame(void* user_data) {
     MenuTestState* st = (MenuTestState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     ui_menu_region(k_menu_region_id, k_menu_id) {}
 
@@ -3260,7 +3260,7 @@ static const FlLayoutId k_menu_sf_id = { .name = { .data = "sf_menu", .length = 
 
 static void menu_stateful_frame(void* user_data) {
     MenuStatefulState* st = (MenuStatefulState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     ui_menu_region(k_menu_sf_region_id, k_menu_sf_id) {}
 
@@ -3376,7 +3376,7 @@ static const FlLayoutId k_menubar_id = { .name = { .data = "appbar", .length = 6
 
 static void menubar_frame(void* user_data) {
     MenuBarState* st = (MenuBarState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     ui_menubar(k_menubar_id) {
         ui_menubar_menu(FL_S("File")) {
@@ -3573,7 +3573,7 @@ UTEST(ui_menu, disabled_highlight_is_dimmer) {
 
 static void bar_over_content_frame(void* user_data) {
     MenuBarState* st = (MenuBarState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     ui_menubar(k_menubar_id) {
         ui_menubar_menu(FL_S("File")) {
@@ -3673,7 +3673,7 @@ static void bar_and_popup_menu(BarAndPopupState* st) {
 
 static void bar_and_popup_frame(void* user_data) {
     BarAndPopupState* st = (BarAndPopupState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     if (st->popup_first) {
         bar_and_popup_menu(st);
         bar_and_popup_bar();
@@ -3743,7 +3743,7 @@ UTEST(ui_menu, menubar_beside_popup) {
 // width.
 static void widerow_frame(void* user_data) {
     MenuBarState* st = (MenuBarState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     ui_menubar(k_menubar_id) {
         ui_menubar_menu(FL_S("Edit")) {
@@ -3883,7 +3883,7 @@ static const FlString k_tall_sub[MENU_TALL_COUNT] = {
 // level and the submenu overflow the short test window, so each scrolls.
 static void menu_tall_frame(void* user_data) {
     MenuTestState* st = (MenuTestState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     ui_menu_region(k_menu_region_id, k_menu_id) {}
 
@@ -4063,7 +4063,7 @@ static void progress_frame(void* user_data) {
         .interactive.base = { 10, 200, 80, 255 }, // fill (PROGRESS_FILL_COLOR)
         .text.primary = { 240, 240, 240, 255 },
     };
-    ui_set_theme(ui_get_ctx(), &theme);
+    ui_set_theme(g_ui_ctx, &theme);
     // A padded full-window column holding only the bar, so the track grows to one known width.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }, .padding = padding_all(20)) {
         ui_progress_bar(st->fraction);
@@ -4141,7 +4141,7 @@ UTEST(wheel_input, inner_shadows_outer) {
     FlAppSettings settings = { .window_title = FL_S("wheel_input"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ASSERT_TRUE_MSG(ctx != nullptr, "fl_app_create did not establish a global UI context");
 
     const int layout_w = 400;
@@ -4241,7 +4241,7 @@ UTEST(wheel_input, unflagged_region_keeps_unconsumed_wheel) {
     FlAppSettings settings = { .window_title = FL_S("wheel_unflagged"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ASSERT_TRUE_MSG(ctx != nullptr, "fl_app_create did not establish a global UI context");
 
     ctx->ui_scale = 1.0f;
@@ -4304,7 +4304,7 @@ UTEST(wheel_input, container_and_scroll_target_no_double_consume) {
     FlAppSettings settings = { .window_title = FL_S("wheel_dbl"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ASSERT_TRUE_MSG(ctx != nullptr, "fl_app_create did not establish a global UI context");
 
     ctx->ui_scale = 1.0f;
@@ -4403,7 +4403,7 @@ UTEST(drag_threshold, click_vs_drag) {
     FlAppSettings settings = { .window_title = FL_S("drag_threshold"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ctx->ui_scale = 1.0f; // sizing_fixed() multiplies by ui_scale, so 1.0 puts the item at 0,0
     ctx->layout_width = 400.0f;
     ctx->layout_height = 400.0f;
@@ -4446,7 +4446,7 @@ typedef struct DropdownState {
 
 static void dropdown_frame(void* user_data) {
     DropdownState* st = (DropdownState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     FlDropdownConfig cfg = {
         .show_cancel = false, // the popup holds only the list, which keeps the geometry simple to read
         .min_width = 200.0f,
@@ -5173,8 +5173,7 @@ UTEST(direct_ui_calls, calls_reach_real_bodies_in_a_live_frame) {
     ui_update_end(ctx, 1.0f / 60.0f);
 }
 
-// The public measurement calls: font_id 0 means the active font, and with no context they do nothing and return
-// zeroed metrics.
+// The public measurement calls: font_id 0 means the active font.
 UTEST(direct_ui_calls, text_measure_resolves_the_active_font) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -5190,14 +5189,6 @@ UTEST(direct_ui_calls, text_measure_resolves_the_active_font) {
     FlFontMetrics fm = fl_font_metrics(0, 0.0f);
     ASSERT_NEAR_MSG(fm.line_height, 16.0f, 0.0001f, "font metrics resolve font id 0 to the active font");
     ui_update_end(ctx, 1.0f / 60.0f);
-
-    FlUiCtx* active = g_ui_ctx;
-    g_ui_ctx = nullptr;
-    FlTextMetrics none = fl_text_measure(FL_S("AA"), (FlTextStyle) { 0 });
-    FlFontMetrics none_fm = fl_font_metrics(0, 0.0f);
-    g_ui_ctx = active;
-    ASSERT_TRUE_MSG(none.width == 0.0f && none.height == 0.0f, "no-context measure returns zeroed metrics");
-    ASSERT_TRUE_MSG(none_fm.line_height == 0.0f, "no-context font metrics returns zeroed metrics");
 }
 
 // A real frame passes the context's text_scale to the painter, and the public measure API does not apply it. An
@@ -5230,7 +5221,7 @@ UTEST(direct_ui_calls, a_frame_scales_painter_text_but_not_the_measure_api) {
     FlTextMetrics measured_at_2 = fl_text_measure(FL_S("AA"), (FlTextStyle) { .font_id = font, .font_size = 12.0f });
     FlFontMetrics vmetrics_at_2 = fl_font_metrics(font, 12.0f);
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        struct Painter* p = ui_get_painter();
+        struct Painter* p = g_ui_ctx->painter;
         ASSERT_TRUE_MSG(p != nullptr, "a painter is available inside the layout scope");
         void* slot = nullptr;
         painter_scope_push(p, &slot);
@@ -5255,7 +5246,7 @@ UTEST(direct_ui_calls, a_frame_scales_painter_text_but_not_the_measure_api) {
 }
 
 // The painter's styled draw call treats font_id 0 as the active font, the same rule fl_text_measure applies, so
-// draw and measure agree. With no context it does nothing.
+// draw and measure agree.
 UTEST(direct_ui_calls, painter_text_styled_resolves_the_active_font) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -5267,7 +5258,7 @@ UTEST(direct_ui_calls, painter_text_styled_resolves_the_active_font) {
     const FlPaintSpan* by_active = nullptr;
     const FlPaintSpan* by_id = nullptr;
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        struct Painter* p = ui_get_painter();
+        struct Painter* p = g_ui_ctx->painter;
         ASSERT_TRUE_MSG(p != nullptr, "a painter is available inside the layout scope");
         void* slot_active = nullptr;
         painter_scope_push(p, &slot_active);
@@ -5301,15 +5292,9 @@ UTEST(direct_ui_calls, painter_text_styled_resolves_the_active_font) {
     ASSERT_TRUE_MSG(g_active[0].x == g_id[0].x && g_active[0].y == g_id[0].y && g_active[1].x == g_id[1].x,
                     "both spellings lay the run out identically");
     ui_update_end(ctx, 1.0f / 60.0f);
-
-    FlUiCtx* active = g_ui_ctx;
-    g_ui_ctx = nullptr;
-    fl_painter_text_styled(0.0f, 0.0f, FL_S("AA"), (FlTextStyle) { 0 }, ui_color(255, 255, 255, 255));
-    g_ui_ctx = active;
 }
 
-// The public effect call reaches the painter inside a live frame, and does nothing with no context, when no scope
-// is open.
+// The public effect call reaches the painter inside a live frame, when no scope is open.
 UTEST(direct_ui_calls, painter_set_effect_reaches_the_body) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -5318,7 +5303,7 @@ UTEST(direct_ui_calls, painter_set_effect_reaches_the_body) {
     ui_update_begin(ctx);
     const FlPaintSpan* painted = nullptr;
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        struct Painter* p = ui_get_painter();
+        struct Painter* p = g_ui_ctx->painter;
         ASSERT_TRUE_MSG(p != nullptr, "a painter is available inside the layout scope");
         void* slot = nullptr;
         painter_scope_push(p, &slot);
@@ -5337,15 +5322,10 @@ UTEST(direct_ui_calls, painter_set_effect_reaches_the_body) {
     ASSERT_TRUE_MSG(fx->kind == FlEffectKind_DropShadow && fx->off_y == 24.0f && fx->blur == 70.0f,
                     "the effect crosses the public seam intact");
     ui_update_end(ctx, 1.0f / 60.0f);
-
-    FlUiCtx* active = g_ui_ctx;
-    g_ui_ctx = nullptr;
-    fl_painter_set_effect((FlEffect) { .kind = FlEffectKind_Glow, .blur = 1.0f });
-    g_ui_ctx = active;
 }
 
 // The public bar-row call reaches the painter inside a live frame, where the whole row (pointer and count)
-// becomes one batched record. With no context it does nothing.
+// becomes one batched record.
 UTEST(direct_ui_calls, painter_bars_reaches_the_body) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
@@ -5354,7 +5334,7 @@ UTEST(direct_ui_calls, painter_bars_reaches_the_body) {
     ui_update_begin(ctx);
     const FlPaintSpan* painted = nullptr;
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        struct Painter* p = ui_get_painter();
+        struct Painter* p = g_ui_ctx->painter;
         ASSERT_TRUE_MSG(p != nullptr, "a painter is available inside the layout scope");
         void* slot = nullptr;
         painter_scope_push(p, &slot);
@@ -5374,115 +5354,6 @@ UTEST(direct_ui_calls, painter_bars_reaches_the_body) {
     ASSERT_TRUE_MSG(rbars[2].x == 6.0f && rbars[2].w == 2.0f && rbars[2].h == 7.0f,
                     "the last bar survives the pointer+count seam, so the whole row does");
     ui_update_end(ctx, 1.0f / 60.0f);
-
-    FlUiCtx* active = g_ui_ctx;
-    g_ui_ctx = nullptr;
-    FlBar one = { 0.0f, 1.0f, 1.0f };
-    fl_painter_bars(0.0f, &one, 1, ui_color(255, 255, 255, 255));
-    g_ui_ctx = active;
-}
-
-// Every forwarder in ui_api.c that touches the context starts by fetching it and returning if there is none. With
-// no active context these public calls do nothing and return the value their contract documents as "nothing". A
-// zeroed struct is not always that value: the cursor is visible by default, so a zeroed false would invert it.
-UTEST(direct_ui_calls, no_context_forwarders_return_documented_defaults) {
-    FlUiCtx* ctx = render_fixture_get();
-    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-
-    // With a live context each forwarder reaches its body.
-
-    fl_cursor_set((FlCursor) { .shape = FlCursorShape_Hand });
-    ASSERT_EQ_MSG((int)fl_cursor_get_requested().shape, (int)FlCursorShape_Hand,
-                  "the requested shape reaches the context");
-    fl_cursor_set_visible(false);
-    ASSERT_FALSE_MSG(fl_cursor_get_visible(), "the visibility toggle reaches the context");
-
-    fl_input_push_mouse_event((FlMouseEvent) { .type = FlMouseEvent_Move, .move = { .x = 42.0f, .y = 24.0f } });
-    ASSERT_TRUE_MSG(ctx->input_state.mouse.x == 42.0f && ctx->input_state.mouse.y == 24.0f,
-                    "the pushed event reaches the context's input state");
-
-    // Save the two fields the pushes below would write, so the no-context half can show they were not written.
-    const uint32_t text_len_before = ctx->input_state.keyboard.text_input.length;
-    const bool focus_gained_before = ctx->input_state.window_events.focus_gained;
-    const bool key0_before = ctx->input_state.keyboard.keys[0];
-    const bool pad0_button0_before = ctx->input_state.gamepads[0].buttons[0];
-
-    FlListUniformRange live_range = { 0, 0, 0 };
-    char live_fmt[8] = { 0 };
-    u32 live_fmt_len = 0;
-    ui_update_begin(ctx);
-    ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
-        live_range
-            = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100, (FlListUniformOpts) { .height_hint = 24.0f });
-        for (u32 i = live_range.start; i < live_range.end; i++) {
-            fl_list_uniform_item_begin(i);
-            ui_layout_area(.sizing = { sizing_grow(), sizing_fixed(24) }) {}
-            fl_list_uniform_item_end();
-        }
-        fl_list_uniform_end();
-
-        // The frame arena the variadic formatter writes into is live only inside the frame, so copy out here.
-        FlString formatted = fl_format_frame_string("%d-%s", 7, "ok");
-        live_fmt_len = formatted.length;
-        if (formatted.length > 0 && formatted.length < sizeof(live_fmt)) {
-            memcpy(live_fmt, formatted.data, formatted.length);
-        }
-    }
-    ui_update_end(ctx, 1.0f / 60.0f);
-
-    ASSERT_EQ_MSG(live_range.total, 100u, "the uniform-list forwarder reaches the body and echoes the row count");
-    ASSERT_TRUE_MSG(live_range.end > live_range.start, "the live call emits a non-empty visible window");
-    ASSERT_EQ_MSG(live_fmt_len, 4u, "the variadic formatter reaches the frame arena");
-    ASSERT_TRUE_MSG(memcmp(live_fmt, "7-ok", 4) == 0, "the formatted frame string crosses the seam intact");
-
-    // With no context every one of them returns early.
-
-    FlUiCtx* active = g_ui_ctx;
-    g_ui_ctx = nullptr;
-
-    fl_cursor_set((FlCursor) { .shape = FlCursorShape_Crosshair });
-    fl_cursor_set_visible(true);
-    ASSERT_EQ_MSG((int)fl_cursor_get_requested().shape, (int)FlCursorShape_Arrow,
-                  "no context resolves to the arrow, the documented fallback shape");
-    ASSERT_TRUE_MSG(fl_cursor_get_visible(), "no context reports the default-visible cursor, not a zeroed false");
-
-    // begin and end have to return early as a pair. Each opens or closes a layout element, so a guard on only one
-    // of them would leave the layout stack unbalanced.
-    FlListUniformRange range
-        = fl_list_uniform_begin(FL_S("uniform_bail_probe"), 100, (FlListUniformOpts) { .height_hint = 24.0f });
-    ASSERT_TRUE_MSG(range.start == 0 && range.end == 0 && range.total == 0,
-                    "no context yields an empty visible window");
-    fl_list_uniform_item_begin(0);
-    fl_list_uniform_item_end();
-    fl_list_uniform_end();
-
-    FlString bailed = fl_format_frame_string("%d", 1);
-    ASSERT_TRUE_MSG(bailed.length == 0, "no context yields an empty frame string");
-
-    // The push calls are guarded in the forwarder: platform_input_push_* starts with `&ctx->input_state` and
-    // requires a non-null context, so an unguarded forwarder would write through null. Every payload below reaches
-    // a branch that writes. A zero FlTextInputEvent (length 0) and a zero FlWindowEvent (FlWindowEvent_None) do
-    // nothing in the callee, so they would pass with or without the guard.
-    fl_input_push_key_event((FlKeyEvent) { 0 });                              // key 0 is in range, so it writes keys[0]
-    fl_input_push_text_input_event((FlTextInputEvent) { .text = FL_S("x") }); // length > 0, so it writes the text
-    fl_input_push_mouse_event((FlMouseEvent) { .type = FlMouseEvent_Move, .move = { .x = 1.0f, .y = 1.0f } });
-    fl_input_push_gamepad_event((FlGamepadEvent) { 0 }); // slot 0 is in range, so it writes buttons
-    fl_input_push_window_event((FlWindowEvent) { .type = FlWindowEvent_Focus_Gained });
-
-    g_ui_ctx = active;
-    ASSERT_TRUE_MSG(ctx->input_state.mouse.x == 42.0f,
-                    "the no-context mouse push dropped its event rather than reaching the live context");
-    ASSERT_TRUE_MSG(ctx->input_state.keyboard.text_input.length == text_len_before,
-                    "the no-context text-input push dropped its event rather than reaching the live context");
-    ASSERT_TRUE_MSG(ctx->input_state.window_events.focus_gained == focus_gained_before,
-                    "the no-context window push dropped its event rather than reaching the live context");
-    ASSERT_TRUE_MSG(ctx->input_state.keyboard.keys[0] == key0_before,
-                    "the no-context key push dropped its event rather than reaching the live context");
-    ASSERT_TRUE_MSG(ctx->input_state.gamepads[0].buttons[0] == pad0_button0_before,
-                    "the no-context gamepad push dropped its event rather than reaching the live context");
-
-    fl_cursor_set_visible(true);
-    ASSERT_TRUE_MSG(fl_cursor_get_visible(), "the restored context is reachable again");
 }
 
 UTEST(frame_api, setter_updates_persistent_frame_envelope_alpha) {
@@ -5502,12 +5373,6 @@ UTEST(frame_api, setter_updates_persistent_frame_envelope_alpha) {
     ASSERT_EQ_MSG(ctx->global_alpha, 91, "frame opacity persists across submission until changed");
     ASSERT_EQ_MSG(s_render.submitted_background.alpha, 255,
                   "frame opacity does not modify background composition opacity");
-
-    FlUiCtx* active = g_ui_ctx;
-    g_ui_ctx = nullptr;
-    fl_frame_set_alpha(0);
-    g_ui_ctx = active;
-    ASSERT_EQ_MSG(ctx->global_alpha, 91, "no-context frame setter is a safe no-op");
 
     fl_frame_set_alpha(255);
 }
@@ -5766,7 +5631,7 @@ typedef struct TypedTextState {
 
 static void typed_text_frame(void* user_data) {
     TypedTextState* st = (TypedTextState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     // The field is given focus every frame, with a physical keyboard so no virtual keyboard opens. Focus survives
     // the tick anyway, and setting it again makes the case independent of focus auto-restore.
     st->ctx->physical_keyboard_available = true;
@@ -5893,7 +5758,7 @@ typedef struct TextInputEdgesState {
 
 static void text_input_edges_frame(void* user_data) {
     TextInputEdgesState* st = (TextInputEdgesState*)user_data;
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ctx->physical_keyboard_available = true;
     ctx->focused_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("edges_input"), .id = 0 });
     ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
@@ -6102,7 +5967,7 @@ typedef struct UnaimedTextState {
 
 static void unaimed_text_frame(void* user_data) {
     UnaimedTextState* st = (UnaimedTextState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     st->ctx->physical_keyboard_available = true;
     ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
         ui_text_input(FL_S("unaimed_input"), &st->input, (FlTextInputConfig) { 0 });
@@ -6143,7 +6008,7 @@ typedef struct EditingTextState {
 
 static void editing_text_frame(void* user_data) {
     EditingTextState* st = (EditingTextState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     st->ctx->physical_keyboard_available = true;
     if (st->aimed) {
         st->ctx->focused_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("editing_input"), .id = 0 });
@@ -6191,7 +6056,7 @@ typedef struct PublicTextInputState {
 
 static void public_text_input_frame(void* user_data) {
     PublicTextInputState* st = (PublicTextInputState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     st->ctx->physical_keyboard_available = true;
     ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
         st->signal = fl_text_input_show(FL_S("configured_input"), st->input, .placeholder = FL_S("type here"),
@@ -6209,7 +6074,7 @@ static float s_caret_min_width = 300.0f; // narrowed by the scrolling case so th
 
 static void scaled_caret_frame(void* user_data) {
     PublicTextInputState* st = (PublicTextInputState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     st->ctx->physical_keyboard_available = true;
     if (s_caret_font == 0) {
         s_caret_font
@@ -6512,7 +6377,7 @@ UTEST(hit_clip, an_overflowing_element_takes_input_only_where_it_paints) {
     FlAppSettings settings = { .window_title = FL_S("hitclip"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ASSERT_TRUE_MSG(ctx != nullptr, "fl_app_create did not establish a global UI context");
 
     ctx->ui_scale = 1.0f; // sizing_fixed() multiplies by ui_scale, so 1.0 keeps the rects exact
@@ -6581,7 +6446,7 @@ UTEST(hit_clip, a_background_and_clip_update_the_item_once_per_frame) {
     FlAppSettings settings = { .window_title = FL_S("hitonce"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ASSERT_TRUE_MSG(ctx != nullptr, "fl_app_create did not establish a global UI context");
 
     ctx->ui_scale = 1.0f;
@@ -6634,7 +6499,7 @@ UTEST(hit_clip, an_element_with_an_overlay_color_still_takes_hover) {
     FlAppSettings settings = { .window_title = FL_S("hitoverlay"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ASSERT_TRUE_MSG(ctx != nullptr, "fl_app_create did not establish a global UI context");
 
     ctx->ui_scale = 1.0f;
@@ -6701,7 +6566,7 @@ UTEST(hit_clip, a_push_past_the_stack_capacity_does_not_pop_a_live_clip) {
     FlAppSettings settings = { .window_title = FL_S("hitclipdeep"), .width = 400, .height = 400, .headless = true };
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     ASSERT_TRUE_MSG(ctx != nullptr, "fl_app_create did not establish a global UI context");
 
     ctx->ui_scale = 1.0f;
@@ -6905,7 +6770,7 @@ UTEST(localization, startup_never_blocks_and_text_resolves_once_the_table_lands)
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
 
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     fl_localization_init(mount, FL_S("manifest.json"), false);
 
     fl_app_tick(app, nullptr, localization_barrier_frame);
@@ -6997,7 +6862,7 @@ UTEST(localization, a_switch_applies_at_the_frame_boundary) {
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
 
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     fl_localization_init(mount, FL_S("manifest.json"), false);
     localization_settle(ctx->shared->localization);
     s_localization_switch_requested = false;
@@ -7047,7 +6912,7 @@ UTEST(localization, set_language_during_setup_selects_the_initial_language) {
     FlApp* app = fl_app_create(&settings);
     ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
 
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     fl_localization_init(mount, FL_S("manifest.json"), false);
     fl_localization_set_language(FL_S("de"));
 

@@ -117,39 +117,26 @@ FlSignal fl_slider_int_impl(FlString label, int* value, int min, int max, FlSlid
 
 void fl_cursor_set(FlCursor cursor) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     self->requested_cursor = cursor;
 }
 
 FlCursor fl_cursor_get_requested(void) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return (FlCursor) { 0 };
-    }
     return self->requested_cursor;
 }
 
 void fl_cursor_set_visible(bool visible) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     self->cursor_visible = visible;
 }
 
 bool fl_cursor_get_visible(void) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return true; // the context default (ui_create), not the zero value; nothing has hidden the cursor
-    }
     return self->cursor_visible;
 }
 
-// Hand-written bodies for the generated Painter api. ui_get_painter() returns nullptr outside an open layout
-// element and every primitive no-ops (or returns false) on a nullptr painter, so the off-context case needs no
-// check here.
+// Hand-written bodies for the generated Painter api. The painter always exists; a primitive outside an open
+// layout element is a no-op inside the painter itself.
 
 // The one home of the font-id zero semantic (0 / FontId::INVALID = active font), shared by text draw, styled
 // draw, measurement, and font metrics.
@@ -158,124 +145,112 @@ static FlFontId resolve_font_id(const FlUiCtx* self, FlFontId font_id) {
 }
 
 void fl_painter_set_effect(FlEffect effect) {
-    painter_set_effect(ui_get_painter(), effect);
+    painter_set_effect(g_ui_ctx->painter, effect);
 }
 
 void fl_painter_rect(float x, float y, float w, float h, FlColor color) {
-    painter_rect(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, color);
+    painter_rect(g_ui_ctx->painter, (FlRect) { .x = x, .y = y, .w = w, .h = h }, color);
 }
 
 void fl_painter_rects(const FlColoredRect* rects, uint32_t rects_size) {
-    painter_rects(ui_get_painter(), rects, rects_size);
+    painter_rects(g_ui_ctx->painter, rects, rects_size);
 }
 
 void fl_painter_rect_rounded(float x, float y, float w, float h, float radius, FlColor color) {
-    painter_rect_rounded(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, radius, color);
+    painter_rect_rounded(g_ui_ctx->painter, (FlRect) { .x = x, .y = y, .w = w, .h = h }, radius, color);
 }
 
 void fl_painter_rect_stroke(float x, float y, float w, float h, FlStroke stroke) {
-    painter_rect_stroke(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, 0.0f, stroke);
+    painter_rect_stroke(g_ui_ctx->painter, (FlRect) { .x = x, .y = y, .w = w, .h = h }, 0.0f, stroke);
 }
 
 void fl_painter_rect_rounded_stroke(float x, float y, float w, float h, float radius, FlStroke stroke) {
-    painter_rect_stroke(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, radius, stroke);
+    painter_rect_stroke(g_ui_ctx->painter, (FlRect) { .x = x, .y = y, .w = w, .h = h }, radius, stroke);
 }
 
 void fl_painter_gradient_rect(float x, float y, float w, float h, FlCornerColors colors) {
-    painter_gradient_rect(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, colors);
+    painter_gradient_rect(g_ui_ctx->painter, (FlRect) { .x = x, .y = y, .w = w, .h = h }, colors);
 }
 
 void fl_painter_rect_styled(float x, float y, float w, float h, FlRectConfig config) {
-    painter_rect_styled(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, config);
+    painter_rect_styled(g_ui_ctx->painter, (FlRect) { .x = x, .y = y, .w = w, .h = h }, config);
 }
 
 void fl_painter_hline(float x, float y, float length, FlColor color) {
-    painter_hline(ui_get_painter(), x, y, length, color);
+    painter_hline(g_ui_ctx->painter, x, y, length, color);
 }
 
 void fl_painter_vline(float x, float y, float length, FlColor color) {
-    painter_vline(ui_get_painter(), x, y, length, color);
+    painter_vline(g_ui_ctx->painter, x, y, length, color);
 }
 
 void fl_painter_line(float x0, float y0, float x1, float y1, FlStroke stroke) {
-    painter_line(ui_get_painter(), (FlVec2) { .x = x0, .y = y0 }, (FlVec2) { .x = x1, .y = y1 }, stroke);
+    painter_line(g_ui_ctx->painter, (FlVec2) { .x = x0, .y = y0 }, (FlVec2) { .x = x1, .y = y1 }, stroke);
 }
-
-// The two text draws are the exception: resolving the font-id zero semantic reads the context itself, so they
-// carry the file's standard nullptr-context guard on top of the painter's own no-op.
 
 void fl_painter_text(float x, float y, FlString text, uint32_t font, FlColor color) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
-    painter_text(ui_get_painter(), x, y, text, resolve_font_id(self, font), color);
+    painter_text(g_ui_ctx->painter, x, y, text, resolve_font_id(self, font), color);
 }
 
 void fl_painter_text_styled(float x, float y, FlString text, FlTextStyle style, FlColor color) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     style.font_id = resolve_font_id(self, style.font_id);
-    painter_text_styled(ui_get_painter(), x, y, text, style, color);
+    painter_text_styled(g_ui_ctx->painter, x, y, text, style, color);
 }
 
 void fl_painter_text_spans(float x, float y, FlString text, FlTextStyle style, const FlTextSpan* spans,
                            uint32_t spans_size) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     style.font_id = resolve_font_id(self, style.font_id);
-    painter_text_spans(ui_get_painter(), x, y,
+    painter_text_spans(g_ui_ctx->painter, x, y,
                        (SpannedText) { .text = text, .spans = spans, .span_count = spans != nullptr ? spans_size : 0 },
                        style);
 }
 
 bool fl_painter_image(float x, float y, float w, float h, uint32_t image, FlColor color) {
-    return painter_image(ui_get_painter(), (FlRect) { .x = x, .y = y, .w = w, .h = h }, image, color);
+    return painter_image(g_ui_ctx->painter, (FlRect) { .x = x, .y = y, .w = w, .h = h }, image, color);
 }
 
 bool fl_painter_image_sub(FlImageSub sub) {
-    return painter_image_sub(ui_get_painter(), sub);
+    return painter_image_sub(g_ui_ctx->painter, sub);
 }
 
 void fl_painter_circle(float cx, float cy, float radius, FlColor color) {
-    painter_circle(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, radius, color);
+    painter_circle(g_ui_ctx->painter, (FlVec2) { .x = cx, .y = cy }, radius, color);
 }
 
 void fl_painter_circle_stroke(float cx, float cy, float radius, FlStroke stroke) {
-    painter_circle_stroke(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, radius, stroke);
+    painter_circle_stroke(g_ui_ctx->painter, (FlVec2) { .x = cx, .y = cy }, radius, stroke);
 }
 
 void fl_painter_circle_bordered(float cx, float cy, float radius, FlColor color, FlStroke border) {
-    painter_circle_bordered(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, radius, color, border);
+    painter_circle_bordered(g_ui_ctx->painter, (FlVec2) { .x = cx, .y = cy }, radius, color, border);
 }
 
 void fl_painter_diamond(float cx, float cy, float rx, float ry, FlColor color) {
-    painter_diamond(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, (FlVec2) { .x = rx, .y = ry }, color);
+    painter_diamond(g_ui_ctx->painter, (FlVec2) { .x = cx, .y = cy }, (FlVec2) { .x = rx, .y = ry }, color);
 }
 
 void fl_painter_diamond_stroke(float cx, float cy, float rx, float ry, FlStroke stroke) {
-    painter_diamond_stroke(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, (FlVec2) { .x = rx, .y = ry }, stroke);
+    painter_diamond_stroke(g_ui_ctx->painter, (FlVec2) { .x = cx, .y = cy }, (FlVec2) { .x = rx, .y = ry }, stroke);
 }
 
 void fl_painter_diamond_bordered(float cx, float cy, float rx, float ry, FlColor color, FlStroke border) {
-    painter_diamond_bordered(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, (FlVec2) { .x = rx, .y = ry }, color,
+    painter_diamond_bordered(g_ui_ctx->painter, (FlVec2) { .x = cx, .y = cy }, (FlVec2) { .x = rx, .y = ry }, color,
                              border);
 }
 
 void fl_painter_arc(float cx, float cy, float radius, float start_angle, float sweep, FlStroke stroke) {
-    painter_arc(ui_get_painter(), (FlVec2) { .x = cx, .y = cy }, radius, start_angle, sweep, stroke);
+    painter_arc(g_ui_ctx->painter, (FlVec2) { .x = cx, .y = cy }, radius, start_angle, sweep, stroke);
 }
 
 void fl_painter_polyline(const FlPolyPoint* points, uint32_t points_size, FlPolylineStyle style) {
-    painter_polyline(ui_get_painter(), points, points_size, style);
+    painter_polyline(g_ui_ctx->painter, points, points_size, style);
 }
 
 void fl_painter_bars(float baseline_y, const FlBar* bars, uint32_t bars_size, FlColor color) {
-    painter_bars(ui_get_painter(), baseline_y, bars, bars_size, color);
+    painter_bars(g_ui_ctx->painter, baseline_y, bars, bars_size, color);
 }
 
 // Hand-written bodies for the generated Text api. emit is a plain layout element in the theme primary
@@ -291,27 +266,18 @@ void fl_text_styled(FlString text, FlTextConfig config) {
 
 FlTextMetrics fl_text_measure(FlString text, FlTextStyle style) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return (FlTextMetrics) { 0 };
-    }
     style.font_id = resolve_font_id(self, style.font_id);
     return font_cache_measure_text(self->shared->font_cache, text, style);
 }
 
 uint32_t fl_text_x_to_offset(FlString text, FlTextStyle style, float x) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return 0;
-    }
     style.font_id = resolve_font_id(self, style.font_id);
     return font_cache_x_to_offset(self->shared->font_cache, text, style, x);
 }
 
 float fl_text_offset_to_x(FlString text, FlTextStyle style, uint32_t offset) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return 0.0f;
-    }
     style.font_id = resolve_font_id(self, style.font_id);
     return font_cache_offset_to_x(self->shared->font_cache, text, style, offset);
 }
@@ -334,7 +300,7 @@ void fl_theme_pop(void) {
     ui_theme_pop(g_ui_ctx);
 }
 
-// UiBackground (background.def). The ui_background_* callees own the g_ui_ctx no-op guard. Image handles cross
+// UiBackground (background.def). Image handles cross
 // as FlImageHandle and pass through numerically to the internal ImageHandle.
 
 void fl_background_set(FlImageHandle handle) {
@@ -357,9 +323,6 @@ void fl_background_set_blend(FlImageHandle prev, FlImageHandle current, uint8_t 
 
 void fl_frame_set_alpha(uint8_t alpha) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     self->global_alpha = alpha;
 }
 
@@ -504,41 +467,26 @@ f32 fl_input_gamepad_axis(u32 slot, FlGamepadAxis axis) {
 
 void fl_input_push_key_event(FlKeyEvent event) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     platform_input_push_key_event(self, event);
 }
 
 void fl_input_push_text_input_event(FlTextInputEvent event) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     platform_input_push_text_input_event(self, event);
 }
 
 void fl_input_push_mouse_event(FlMouseEvent event) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     platform_input_push_mouse_event(self, event);
 }
 
 void fl_input_push_gamepad_event(FlGamepadEvent event) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     platform_input_push_gamepad_event(self, event);
 }
 
 void fl_input_push_window_event(FlWindowEvent event) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     platform_input_push_window_event(self, event);
 }
 
@@ -554,33 +502,21 @@ FlListResult fl_input_list(FlLayoutId id, const FlListItem* items, uint32_t coun
 
 FlListUniformRange fl_list_uniform_begin(FlString id, uint32_t total_count, FlListUniformOpts opts) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return (FlListUniformRange) { 0 };
-    }
     return list_uniform_begin(self->list_uniform_ctx, id, total_count, opts);
 }
 
 void fl_list_uniform_item_begin(uint32_t index) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     list_uniform_item_begin(self->list_uniform_ctx, index);
 }
 
 void fl_list_uniform_item_end(void) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     list_uniform_item_end(self->list_uniform_ctx);
 }
 
 void fl_list_uniform_end(void) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
     list_uniform_end(self->list_uniform_ctx);
 }
 
@@ -653,9 +589,6 @@ bool fl_font_ensure_loaded(void) {
 
 FlFontMetrics fl_font_metrics(FlFontId font, float size) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return (FlFontMetrics) { 0 };
-    }
     return font_cache_get_font_metrics(self->shared->font_cache, resolve_font_id(self, font), size);
 }
 
@@ -870,9 +803,6 @@ FlDialogResult fl_popup_message_box(FlString title, FlString message, bool* open
 
 FlString fl_format_frame_string(const char* format, ...) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return (FlString) { 0 };
-    }
 
     va_list args;
     va_start(args, format);

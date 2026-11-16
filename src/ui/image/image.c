@@ -15,7 +15,7 @@ static ImageSystem* s_image_system = nullptr;
 
 static void set_thumbnail_tint_color(ImageThumbnailOptions* opts, FlBackgroundMode mode) {
     if (mode == FlBackgroundMode_Tint) {
-        const FlThemeColors* theme = ui_get_theme_colors(ui_get_ctx());
+        const FlThemeColors* theme = ui_get_theme_colors(g_ui_ctx);
         opts->tint_r = theme->surface.base.r;
         opts->tint_g = theme->surface.base.g;
         opts->tint_b = theme->surface.base.b;

@@ -1299,7 +1299,7 @@ static void dock_app_close(DockApp* scope) {
 // workspace and emits its tiles into a grow/grow area. Returns the workspace, or nullptr before one exists. The
 // caller declares any panel bodies and then calls dock_workspace_end on the returned workspace.
 static FlDockWorkspace* dock_fixture_emit(DockFixture* st, const FlDockSpec* spec) {
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     FlDockWorkspace* ws = dock_workspace_current();
     st->ws = ws;
     if (!st->installed && ws != nullptr) {
@@ -2961,7 +2961,7 @@ static FlTextInputState s_dock_active_input;
 
 static void dock_active_frame(void* user_data) {
     DockActiveState* st = (DockActiveState*)user_data;
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     if (ctx != nullptr) {
         ctx->physical_keyboard_available = true; // so a focused text input opens no virtual keyboard
     }
@@ -4620,7 +4620,7 @@ UTEST(dock_workspace, an_overlay_stays_hot_past_the_tile_it_was_opened_from) {
 
 static void dock_outer_share_frame(void* user_data) {
     DockFixture* st = (DockFixture*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     st->ws = dock_workspace_current();
     if (!st->installed && st->ws != nullptr) {
         fl_dock_add_panel(1);

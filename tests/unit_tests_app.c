@@ -13,7 +13,7 @@ UTEST(multi_window, per_window_clay_context) {
     ASSERT_TRUE_MSG(a != nullptr, "render fixture creation failed");
 
     ui_make_current(a);
-    ASSERT_TRUE_MSG(ui_get_ctx() == a, "ui_make_current must select the core singleton");
+    ASSERT_TRUE_MSG(g_ui_ctx == a, "ui_make_current must select the core singleton");
     ASSERT_TRUE_MSG(Clay_GetCurrentContext() == a->clay_ctx, "ui_make_current must select the window's Clay context");
 
     // A second window on the same shared resources, with its own Clay context.
@@ -22,7 +22,7 @@ UTEST(multi_window, per_window_clay_context) {
     ASSERT_TRUE_MSG(b->clay_ctx != a->clay_ctx, "each window must own a distinct Clay context");
 
     ui_make_current(b);
-    ASSERT_TRUE_MSG(ui_get_ctx() == b, "ui_make_current must reselect to B");
+    ASSERT_TRUE_MSG(g_ui_ctx == b, "ui_make_current must reselect to B");
     ASSERT_TRUE_MSG(Clay_GetCurrentContext() == b->clay_ctx, "Clay current must follow to B's context");
 
     // B has not run a frame, so its render-command capture is empty.
@@ -264,7 +264,7 @@ typedef struct InputLatState {
 static void input_lat_frame(void* user_data) {
     InputLatState* st = (InputLatState*)user_data;
     st->tick++;
-    if (ui_get_ctx()->mouse_pressed_this_frame && st->pressed_seen_tick < 0) {
+    if (g_ui_ctx->mouse_pressed_this_frame && st->pressed_seen_tick < 0) {
         st->pressed_seen_tick = st->tick;
     }
     // ui_update_end needs a tree to walk.
@@ -302,7 +302,7 @@ typedef struct TabPressState {
 
 static void tab_press_frame(void* user_data) {
     TabPressState* st = (TabPressState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
     FlString tabs[3] = { FL_S("Gen"), FL_S("Aud"), FL_S("Vid") };
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
@@ -544,7 +544,7 @@ static void retire_item(FlLayoutId id) {
 
 static void item_retire_frame_main(void* user_data) {
     ItemRetireProbe* p = (ItemRetireProbe*)user_data;
-    p->ctx = ui_get_ctx();
+    p->ctx = g_ui_ctx;
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         retire_item(ID("retire_item_main"));
         if (p->emit_extra) {
@@ -650,12 +650,12 @@ typedef struct DupIdProbe {
 } DupIdProbe;
 
 static void dup_id_frame_a(void* user_data) {
-    ((DupIdProbe*)user_data)->ctx = ui_get_ctx();
+    ((DupIdProbe*)user_data)->ctx = g_ui_ctx;
     ui_layout_area_id(ID("dup_id_win_a"), .sizing = { .width = sizing_grow(), .height = sizing_grow() }) {}
 }
 
 static void dup_id_frame_b(void* user_data) {
-    ((DupIdProbe*)user_data)->ctx = ui_get_ctx();
+    ((DupIdProbe*)user_data)->ctx = g_ui_ctx;
     ui_layout_area_id(ID("dup_id_win_b"), .sizing = { .width = sizing_grow(), .height = sizing_grow() }) {}
 }
 
@@ -846,7 +846,7 @@ typedef struct FocusProbe {
 
 static void focus_frame_main(void* user_data) {
     FocusProbe* p = (FocusProbe*)user_data;
-    p->focused_id = ui_get_ctx()->focused_id;
+    p->focused_id = g_ui_ctx->focused_id;
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         ui_item_behavior(ID("focus_item_main"), FlItemFlags_focusable, (FlWidgetConfig) { 0 });
     }
@@ -858,7 +858,7 @@ static void focus_frame_main(void* user_data) {
 
 static void focus_frame_sec(void* user_data) {
     FocusProbe* p = (FocusProbe*)user_data;
-    p->focused_id = ui_get_ctx()->focused_id;
+    p->focused_id = g_ui_ctx->focused_id;
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         ui_item_behavior(ID("focus_item_sec"), FlItemFlags_focusable, (FlWidgetConfig) { 0 });
     }

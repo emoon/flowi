@@ -836,7 +836,7 @@ void fl_app_set_ui_zoom(FlApp* app, float zoom) {
     // Recompose every window's scale right away, so the change is visible on the next frame even if no window
     // resizes. ui_set_scale targets the current context, so make each window current to push its scale, then
     // restore the context that was current on entry, because the setter must not leave a different window selected.
-    FlUiCtx* prev = ui_get_ctx();
+    FlUiCtx* prev = g_ui_ctx;
     for (int i = 0; i < app->window_count; i++) {
         ui_make_current(app->windows[i]->ctx);
         fl_app_apply_window_scale(app, app->windows[i]);
@@ -970,10 +970,7 @@ bool fl_app_read_pixels(FlApp* app, FlPixelReadback* out) {
 }
 
 FlString fl_frame_str(const char* ptr, size_t len) {
-    FlUiCtx* ctx = ui_get_ctx();
-    // Fatal in every build type: the next statement allocates out of the frame arena this check just proved
-    // absent.
-    FL_ASSERT_FATAL_MSG(ctx != nullptr, "fl_frame_str has no active UI context");
+    FlUiCtx* ctx = g_ui_ctx;
     // The precondition is the frame arena being live, which the UI layer owns. A host driving
     // ui_update_begin/ui_update_end itself has a frame open with no fl_app frame callback on the stack.
     FL_ASSERT_FATAL_MSG(ctx->frame_open, "fl_frame_str called outside an active frame");
@@ -986,9 +983,7 @@ FlString fl_frame_str(const char* ptr, size_t len) {
 }
 
 FlString* fl_frame_str_array(uint32_t count) {
-    FlUiCtx* ctx = ui_get_ctx();
-    // Fatal in every build type: the frame-arena allocation below has no null-context path.
-    FL_ASSERT_FATAL_MSG(ctx != nullptr, "fl_frame_str_array has no active UI context");
+    FlUiCtx* ctx = g_ui_ctx;
     // Same precondition as fl_frame_str: the frame arena is live between ui_update_begin and ui_update_end.
     FL_ASSERT_FATAL_MSG(ctx->frame_open, "fl_frame_str_array called outside an active frame");
 

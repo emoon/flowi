@@ -33,8 +33,7 @@ void ui_scroll_test_force_state_alloc_failure(bool enable) {
 }
 
 static ScrollAreaState* get_or_create_scroll_state(u32 element_id) {
-    FlUiCtx* ctx = ui_get_ctx();
-    FL_VALIDATE_RET(ctx != nullptr, nullptr);
+    FlUiCtx* ctx = g_ui_ctx;
 
     ScrollAreaState* state = hashmap_get(&ctx->shared->scroll_states, element_id);
     if (state != nullptr) {
@@ -86,11 +85,6 @@ static bool get_element_bounds(u32 element_id, FlVec2* out_pos, FlVec2* out_size
 }
 
 static void handle_mouse_wheel(ScrollAreaState* state, FlVec2 max_scroll, f32 scroll_speed, bool smooth_scroll) {
-    FlUiCtx* ctx = ui_get_ctx();
-    if (ctx == nullptr) {
-        return;
-    }
-
     FlVec2 wheel = ui_get_mouse_wheel();
     if (wheel.x == 0.0f && wheel.y == 0.0f) {
         return;
@@ -221,8 +215,7 @@ static void scrollbar_emit(FlLayoutId id, bool is_vertical, ScrollbarThumb thumb
 }
 
 static FlSignal scrollbar_on_track(float* value, FlScrollbarConfig cfg, ScrollbarTrack track) {
-    FlUiCtx* ctx = ui_get_ctx();
-    FL_VALIDATE_RET(ctx != nullptr, (FlSignal) { 0 });
+    FlUiCtx* ctx = g_ui_ctx;
     FL_VALIDATE_RET(value != nullptr, (FlSignal) { 0 });
 
     f32 scrollbar_width = positive_or(cfg.width, (f32)FlSpacing_SM);
@@ -297,7 +290,7 @@ FlSignal ui_scroll_overlay_bar(u32 owner_id, FlScrollbarDisplayMode mode, Scroll
     if (extent.content <= extent.viewport || mode == FlScrollbarDisplayMode_Never) {
         return (FlSignal) { 0 };
     }
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     FlLayoutId bar_id = { .name = fl_sprintf_arena(ctx->render_frame_allocator, "_sb_%u", owner_id) };
     if (!overlay_bar_shown(ctx, owner_id, mode, bar_id)) {
         return (FlSignal) { 0 };
@@ -370,8 +363,7 @@ static bool scroll_area_has_bar(const FlScrollAreaConfig* config) {
 }
 
 void fl_scroll_area_begin(FlLayoutId id, FlScrollAreaConfig config) {
-    FlUiCtx* ctx = ui_get_ctx();
-    FL_VALIDATE(ctx != nullptr);
+    FlUiCtx* ctx = g_ui_ctx;
 
     u32 element_id = ui_layout_id_to_clay_id(id);
     bool owns_wheel = wheel_scope_owns_wheel(ctx, element_id);
@@ -490,11 +482,9 @@ static void scroll_area_update_extent(ScrollAreaState* state, u32 scroll_area_id
 }
 
 void fl_scroll_area_end(void) {
-    FlUiCtx* ctx = ui_get_ctx();
-    ScrollAreaStackEntry* entry = ctx != nullptr ? scroll_stack_pop(ctx) : nullptr;
-    if (ctx != nullptr) {
-        wheel_scope_end(ctx);
-    }
+    FlUiCtx* ctx = g_ui_ctx;
+    ScrollAreaStackEntry* entry = scroll_stack_pop(ctx);
+    wheel_scope_end(ctx);
 
     if (entry != nullptr && entry->state != nullptr) {
         scroll_area_update_extent(entry->state, entry->scroll_area_id);
@@ -519,10 +509,7 @@ static u32 widget_scroll_area_id(FlUiCtx* ctx, u32 widget_clay_id) {
 }
 
 bool ui_is_widget_visible(FlLayoutId widget_id) {
-    FlUiCtx* ctx = ui_get_ctx();
-    if (ctx == nullptr) {
-        return true;
-    }
+    FlUiCtx* ctx = g_ui_ctx;
 
     u32 id = ui_layout_id_to_clay_id(widget_id);
     u32 scroll_area_id = widget_scroll_area_id(ctx, id);
@@ -589,10 +576,7 @@ static f32 scroll_target_for_align(FlScrollAlignment align, f32 margin, ScrollTo
 
 // Takes the raw Clay id; used by ui_scroll_auto_to_focused.
 static void scroll_to_widget_internal(u32 widget_clay_id, FlScrollToOptions opts) {
-    FlUiCtx* ctx = ui_get_ctx();
-    if (ctx == nullptr) {
-        return;
-    }
+    FlUiCtx* ctx = g_ui_ctx;
 
     u32 scroll_area_id = widget_scroll_area_id(ctx, widget_clay_id);
     if (scroll_area_id == 0) {
@@ -642,10 +626,7 @@ void ui_scroll_to_widget_ex(FlLayoutId widget_id, FlScrollToOptions opts) {
 }
 
 void ui_scroll_auto_to_focused(void) {
-    FlUiCtx* ctx = ui_get_ctx();
-    if (ctx == nullptr) {
-        return;
-    }
+    FlUiCtx* ctx = g_ui_ctx;
 
     // Only scroll if focus changed this frame via navigation (keyboard/gamepad, not mouse click)
     // The should_scroll_to_focused flag is set by ui_navigate_tab_order and spatial navigation

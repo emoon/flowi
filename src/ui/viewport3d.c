@@ -63,10 +63,7 @@ static const f32 k_identity[16] = {
 // The active backend when it implements the 3D seam, else nullptr. The three entries are bound as a group, so
 // testing one tests all (see the seam's contract in ui/render_backend.h).
 static const FlRenderBackend* renderer_3d(void) {
-    FlUiCtx* ctx = ui_get_ctx();
-    if (ctx == nullptr) {
-        return nullptr;
-    }
+    FlUiCtx* ctx = g_ui_ctx;
 
     const FlRenderBackend* backend = &ctx->shared->renderer;
     return backend->viewport3d_submit != nullptr ? backend : nullptr;
@@ -77,7 +74,7 @@ static const FlRenderBackend* renderer_3d(void) {
 // owned by another window cannot be judged from this window's frame counter, so it stays until its owner is
 // destroyed (viewport3d_release_owner).
 static Viewport3d* find_or_create(u32 element_id) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     const u64 frame = ctx != nullptr ? ctx->frame_counter : 0;
     Viewport3d* stale = nullptr;
     u64 stale_age = 1;
@@ -135,7 +132,7 @@ static void emit_element(FlLayoutId id, FlImageHandle color) {
     if (color != FL_IMAGE_HANDLE_INVALID) {
         // The same neutral image-source descriptor the image widget stashes; the Clay->IR translator reads it
         // and the backend resolves the handle to its texture on ingest.
-        FlImageSource* source = arena_alloc_zero(ui_get_ctx()->render_frame_allocator, FlImageSource);
+        FlImageSource* source = arena_alloc_zero(g_ui_ctx->render_frame_allocator, FlImageSource);
         source->kind = FlImageKind_Static;
         source->handle = color;
         decl.backgroundColor = VIEWPORT3D_NO_TINT;

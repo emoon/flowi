@@ -121,7 +121,7 @@ static i32 step_out_of(FlTreeContext* self, u32 row) {
 }
 
 static i32 key_target_row(i32 cursor_row) {
-    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    FlTreeContext* self = g_ui_ctx->ui_tree_ctx;
     FlNavFrame nav = fl_get_nav_frame();
     if (nav.nav_right) {
         return cursor_row < 0 ? cursor_row : step_into(self, (u32)cursor_row);
@@ -159,7 +159,7 @@ static void draw_arrow(bool expanded, f32 width, f32 height) {
             .color = color,
         };
     }
-    painter_rects(ui_get_painter(), bars, TREE_ARROW_STEPS);
+    painter_rects(g_ui_ctx->painter, bars, TREE_ARROW_STEPS);
 }
 
 static void arrow_slot(FlTreeContext* self, u32 row, bool expanded) {
@@ -213,7 +213,7 @@ static void tree_reset_frame(FlTreeContext* self, f32 indent) {
 
 FlListRange fl_tree_begin(FlLayoutId id, const FlTreeRow* rows, uint32_t count, FlSelectionSet* set,
                           FlTreeConfig config) {
-    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    FlTreeContext* self = g_ui_ctx->ui_tree_ctx;
     self->is_virtual = false;
     self->rows = rows;
     self->count = rows != nullptr ? count : 0;
@@ -297,10 +297,10 @@ static void follow_row_change(FlTreeContext* self, u32 clay_id, FlSelectionSet* 
 
 FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTreeExpanded* expanded, uint32_t count,
                                   FlSelectionSet* set, FlTreeConfig config) {
-    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    self->flat = tree_flat_build(ui_get_ctx()->render_frame_allocator, root_count, expanded, count);
+    FlTreeContext* self = g_ui_ctx->ui_tree_ctx;
+    self->flat = tree_flat_build(g_ui_ctx->render_frame_allocator, root_count, expanded, count);
     self->is_virtual = true;
-    self->flat_frame = ui_get_ctx()->frame_counter;
+    self->flat_frame = g_ui_ctx->frame_counter;
     self->rows = nullptr;
     self->count = self->flat.row_count;
     tree_reset_frame(self, config.indent);
@@ -315,8 +315,8 @@ FlListRange fl_tree_begin_virtual(FlLayoutId id, uint32_t root_count, const FlTr
 }
 
 FlTreeVirtualRow fl_tree_row_at(uint32_t row) {
-    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
-    bool this_frame = self->is_virtual && self->flat_frame == ui_get_ctx()->frame_counter;
+    FlTreeContext* self = g_ui_ctx->ui_tree_ctx;
+    bool this_frame = self->is_virtual && self->flat_frame == g_ui_ctx->frame_counter;
     bool has_row = this_frame && row < self->count;
     FL_ASSERT(has_row);
     if (!has_row) {
@@ -332,7 +332,7 @@ static bool row_missing(FlTreeContext* self, u32 row) {
 }
 
 FlSignal fl_tree_item_begin(uint32_t row) {
-    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    FlTreeContext* self = g_ui_ctx->ui_tree_ctx;
     if (row_missing(self, row)) {
         return (FlSignal) { 0 };
     }
@@ -340,7 +340,7 @@ FlSignal fl_tree_item_begin(uint32_t row) {
 }
 
 FlSignal fl_tree_item_begin_virtual(uint32_t row, bool has_children) {
-    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    FlTreeContext* self = g_ui_ctx->ui_tree_ctx;
     if (row_missing(self, row)) {
         return (FlSignal) { 0 };
     }
@@ -350,7 +350,7 @@ FlSignal fl_tree_item_begin_virtual(uint32_t row, bool has_children) {
 }
 
 void fl_tree_item_end(void) {
-    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    FlTreeContext* self = g_ui_ctx->ui_tree_ctx;
     if (self->row_skipped) {
         self->row_skipped = false;
         return;
@@ -370,7 +370,7 @@ static void remember_virtual_frame(FlTreeContext* self) {
 }
 
 FlTreeResult fl_tree_end(void) {
-    FlTreeContext* self = ui_get_ctx()->ui_tree_ctx;
+    FlTreeContext* self = g_ui_ctx->ui_tree_ctx;
     if (self->is_virtual) {
         remember_virtual_frame(self);
     }

@@ -8,7 +8,7 @@
 // Painter calls draw inside the open layout element's immediate-mode scope: each call records
 // into that element's paint span, and fl_clay_to_render_ir splices the span into the frame at the element's
 // Clay CUSTOM marker: at the element's z, under its child elements, bracketed by the live layout scissor
-// stack. A painter call outside any open scope is a no-op (see ui_get_painter).
+// stack. A painter call outside any open scope is a no-op.
 //
 // All coordinates are element-local logical (authoring) space and are scaled to actual pixels here, at emit
 // time; the splice adds the element's resolved rect origin.
@@ -57,7 +57,7 @@ void painter_scope_push(Painter* p, void** custom_slot);
 
 void painter_scope_pop(Painter* p);
 
-// Number of open painting scopes. ui_get_painter() is valid only when this is > 0.
+// Number of open painting scopes. Painting records only when this is > 0.
 u32 painter_scope_depth(const Painter* p);
 
 // Effect state is the painter's only state; everything else (colors, geometry) stays per call.

@@ -15,14 +15,14 @@
 // fl_layout_end.
 
 static void ui_paint_scope_push(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     if (ctx != nullptr && ctx->painter != nullptr) {
         painter_scope_push(ctx->painter, Clay_GetOpenElementCustomDataSlot());
     }
 }
 
 static void ui_paint_scope_pop(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     if (ctx != nullptr && ctx->painter != nullptr) {
         painter_scope_pop(ctx->painter);
     }
@@ -52,7 +52,7 @@ static void ui_open_element_with_id(FlLayoutId id) {
         = Clay__HashString((Clay_String) { .chars = id.name.data, .length = (u32)id.name.length }, id.id);
 #ifndef NDEBUG
     u32 element_id_value = element_id.id;
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     if (ctx) {
         ItemState* existing = hashmap_get(&ctx->shared->debug_id_tracker, element_id_value);
         if (existing) {
@@ -87,7 +87,7 @@ void fl_floating_start(FlLayoutId id) {
 void fl_floating_configure(FlFloatingConfig config) {
     Clay_ElementDeclaration decl = { 0 };
 
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     float scale = ctx ? ctx->ui_scale : 1.0f;
     ui_apply_sizing(&decl.layout.sizing, config.sizing, scale);
 
@@ -145,7 +145,7 @@ FlScrollContainerExtent ui_get_scroll_container_extent(u32 element_id) {
 }
 
 void fl_layout_configure(FlLayoutConfig config) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     float scale = ctx ? ctx->ui_scale : 1.0f;
 
     Clay_ElementDeclaration temp = { 0 };
