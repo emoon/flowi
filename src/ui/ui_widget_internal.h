@@ -74,6 +74,20 @@ typedef struct UiTabStripLayout {
     FlWidgetVariant selected_variant;
 } UiTabStripLayout;
 
+// Everything ui_tab_strip needs: the id namespace (name, instance_id), the tabs (labels, count, selected), the
+// look (cfg, theme, layout) and the optional drag report.
+typedef struct UiTabStrip {
+    FlString name;
+    u32 instance_id;
+    const FlString* labels;
+    int count;
+    int selected;
+    FlTabBarConfig cfg;
+    const FlThemeColors* theme;
+    UiTabStripLayout layout;
+    int* out_dragged;
+} UiTabStrip;
+
 // Horizontal/vertical tab strip: the core of ui_tab_bar, also driven by the dock leaf header
 // (ui/dock/dock_layout.c).
 // Renders count tabs labelled by labels, highlighting selected, with each tab's id seeded from
@@ -82,13 +96,18 @@ typedef struct UiTabStripLayout {
 // Owns no selection storage: returns the index that should now be selected (the pressed/activated tab, else
 // selected unchanged).
 // cfg carries the orientation, the geometry knobs and widget's focusable/tab_index for keyboard
-// reachability; theme is the already-resolved palette; layout is the shape above.
+// reachability; theme is the already-resolved palette; layout is the shape above. All arrive in strip.
 //
 // out_dragged (optional) opts the strip into the pull-out gesture: the tabs become draggable behind the drag
 // threshold and the index of the tab being dragged is written back (-1 when none). Pass nullptr for a plain tab
 // bar, whose tabs stay click-only.
-int ui_tab_strip(FlString name, u32 instance_id, const FlString* labels, int count, int selected, FlTabBarConfig cfg,
-                 const FlThemeColors* theme, UiTabStripLayout layout, int* out_dragged);
+int ui_tab_strip(const UiTabStrip* strip);
+
+// Layout id of tab i inside strip: the same id the behavior and draw passes use. (ui_tab_bar.c)
+FlLayoutId ui_tab_strip_tab_id(const UiTabStrip* strip, int i);
+
+// Moves focus between the strip's tabs from this frame's nav input and consumes the key. (ui_tab_bar_nav.c)
+void ui_tab_strip_navigate(const UiTabStrip* strip);
 
 // Shared widget prologue for custom-coloured widgets: resolve id + dispatch the shared interaction behaviour +
 // look up item-state + resolve theme. Leaves UiWidgetState.colors zeroed; no variant colours are calculated.
