@@ -34,7 +34,6 @@ static u64 range_size(SelectionRange range) {
     return range.last - range.first + 1;
 }
 
-// Index of the first range whose last id is not below id.
 static u64 first_ending_at_or_after(const FlSelectionSet* set, u64 id) {
     u64 lo = 0;
     u64 hi = set->count;
@@ -49,7 +48,6 @@ static u64 first_ending_at_or_after(const FlSelectionSet* set, u64 id) {
     return lo;
 }
 
-// Index of the first range that starts after id.
 static u64 first_starting_after(const FlSelectionSet* set, u64 id) {
     u64 lo = 0;
     u64 hi = set->count;
@@ -64,7 +62,6 @@ static u64 first_starting_after(const FlSelectionSet* set, u64 id) {
     return lo;
 }
 
-// Replaces the removed ranges starting at index at with the added ones.
 static void splice(FlSelectionSet* set, u64 at, u64 removed, const SelectionRange* pieces, u64 added) {
     u64 new_count = set->count - removed + added;
     if (new_count > set->capacity) {
@@ -103,7 +100,29 @@ static void remove_span(FlSelectionSet* set, u64 first, u64 last) {
     splice(set, begin, end - begin, pieces, kept);
 }
 
+static bool span_joins_tail(const SelectionRange* tail, u64 first) {
+    return first <= tail->last || first - 1 == tail->last;
+}
+
+static void append_span(FlSelectionSet* set, u64 first, u64 last) {
+    SelectionRange* tail = set->count > 0 ? &set->ranges[set->count - 1] : nullptr;
+    if (tail != nullptr && span_joins_tail(tail, first)) {
+        if (last > tail->last) {
+            set->total += last - tail->last;
+            tail->last = last;
+        }
+        return;
+    }
+    SelectionRange piece = { first, last };
+    set->total += range_size(piece);
+    splice(set, set->count, 0, &piece, 1);
+}
+
 static void add_span(FlSelectionSet* set, u64 first, u64 last) {
+    if (set->count == 0 || set->ranges[set->count - 1].first <= first) {
+        append_span(set, first, last);
+        return;
+    }
     remove_span(set, first, last);
     u64 at = first_starting_after(set, last);
     SelectionRange merged = { first, last };
@@ -127,26 +146,6 @@ static void set_span(FlSelectionSet* set, u64 first, u64 last, bool selected) {
     } else {
         remove_span(set, first, last);
     }
-}
-
-static bool span_joins_tail(const SelectionRange* tail, u64 first) {
-    return first <= tail->last || first - 1 == tail->last;
-}
-
-// Adds a span that starts at or after the first id of every span already in the set, merging when it touches the
-// tail.
-static void append_span(FlSelectionSet* set, u64 first, u64 last) {
-    SelectionRange* tail = set->count > 0 ? &set->ranges[set->count - 1] : nullptr;
-    if (tail != nullptr && span_joins_tail(tail, first)) {
-        if (last > tail->last) {
-            set->total += last - tail->last;
-            tail->last = last;
-        }
-        return;
-    }
-    SelectionRange piece = { first, last };
-    set->total += range_size(piece);
-    splice(set, set->count, 0, &piece, 1);
 }
 
 FlSelectionSet* selection_set_create(u32 initial_capacity) {
@@ -203,7 +202,6 @@ void selection_set_set_all(FlSelectionSet* set, const u64* ids, u64 count) {
     fl_heap_free(sorted);
 }
 
-// Applies selected to the ids of rows lo to hi inclusive, one span per run of consecutive ids.
 static void apply_rows_span(FlSelectionSet* set, const ListRows* rows, u32 lo, u32 hi, bool selected) {
     u64 first = rows->id_at(rows, lo);
     u64 last = first;
@@ -300,6 +298,11 @@ u64 selection_set_copy_ids(const FlSelectionSet* set, u64* out, u64 cap) {
     return written;
 }
 
+static u64 shifted_up(u64 id, u64 removed, u64 added) {
+    u64 kept = id - removed;
+    return kept > UINT64_MAX - added ? UINT64_MAX : kept + added;
+}
+
 static void shift_range(FlSelectionSet* set, SelectionRange range, u64 after_id, u64 removed, u64 added) {
     u64 dropped_last = removed > UINT64_MAX - after_id ? UINT64_MAX : after_id + removed;
     if (range.first <= after_id) {
@@ -307,7 +310,7 @@ static void shift_range(FlSelectionSet* set, SelectionRange range, u64 after_id,
     }
     if (dropped_last < UINT64_MAX && range.last > dropped_last) {
         u64 first = max(range.first, dropped_last + 1);
-        append_span(set, first - removed + added, range.last - removed + added);
+        append_span(set, shifted_up(first, removed, added), shifted_up(range.last, removed, added));
     }
 }
 

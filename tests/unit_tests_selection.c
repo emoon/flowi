@@ -1,5 +1,3 @@
-// FlSelectionSet range storage tests
-
 #include "unit_tests_common.h"
 
 static bool selection_holds(const FlSelectionSet* set, const u64* expected, u64 count) {
@@ -136,4 +134,14 @@ UTEST(selection_ranges, shifting_rows_moves_drops_and_rejoins_ids) {
         EXPECT_TRUE(selection_holds(set, cases[c].expected, cases[c].expected_count));
         selection_set_destroy(set);
     }
+}
+
+UTEST(selection_ranges, shifting_ids_up_stops_at_the_largest_id) {
+    FlSelectionSet* set = selection_set_create(0);
+    selection_set_set(set, UINT64_MAX - 1, true);
+    selection_set_set(set, UINT64_MAX, true);
+    selection_set_shift(set, 0, 0, 5);
+    const u64 expected[] = { UINT64_MAX };
+    EXPECT_TRUE(selection_holds(set, expected, 1));
+    selection_set_destroy(set);
 }
