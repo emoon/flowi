@@ -6,7 +6,7 @@
 #include "gpu_bindings.h"        // GPU_BIND_*
 #include "gpu_debug.h"           // GPU_TILE_SIZE
 #include "gpu_prepare_core.h"    // backend-agnostic prepare front halves
-#include "gpu_prepare_svg.h"     // the vector-image half
+#include "gpu_prepare_svg.h"
 #include "gpu_svg_color_lower.h" // GpuColorShape
 #include <core/log.h>
 #include <ui/font_cache.h>     // FlGlyphOutline

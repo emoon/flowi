@@ -3,8 +3,8 @@
 // GPU backend: the backend-agnostic CPU core of the resource-prepare seams, shared by the GL and Metal prepares.
 //
 // Everything a prepare seam does before it touches an API: decode validation, the atlas-or-slot tier choice,
-// glyph placement and lowering, and the UI-scale atlas reset. The vector-image half is gpu_prepare_svg.h. A
-// backend supplies only the texture upload and the compute dispatch.
+// glyph placement and lowering, and the UI-scale atlas reset. A backend supplies
+// only the texture upload and the compute dispatch.
 
 #include "gpu_glyph_atlas.h"
 #include "gpu_image_atlas.h"
@@ -61,7 +61,6 @@ typedef struct GpuGlyphCell {
 // not translated to 0.
 GpuGlyphCell gpu_prepare_glyph_cell(const struct FlGlyphOutline* outline);
 
-// The atlas key of one glyph: the font at a quantized size.
 typedef struct GpuGlyphKey {
     FlFontId font;
     u16 size;

@@ -8,7 +8,7 @@
 
 typedef struct Painter {
     FlArena* arena;
-    FlArena* scratch; // must be a different arena from `arena`
+    FlArena* scratch;
     FlRenderBackend* backend;
     FlFontCache* font_cache;
     FlFontId font;
@@ -65,7 +65,7 @@ typedef struct TextSpec {
     f32 size;
     FlColor color;
     FlString text;
-    FlVec2 origin; // pen x and baseline y
+    FlVec2 origin;
 } TextSpec;
 
 static inline FlCornerRadius radius_all(f32 r) {

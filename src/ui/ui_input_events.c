@@ -44,8 +44,7 @@ void platform_input_push_key_event(FlUiCtx* ctx, FlKeyEvent event) {
     }
 }
 
-// Bytes of text that fit in the frame's remaining room, backing off to a codepoint start so a multi-byte character
-// is dropped whole, not split.
+// Back off to a codepoint start so a multi-byte character is dropped whole, not split.
 static u64 text_input_fit_count(FlString text, u64 room) {
     u64 count = min(text.length, room);
     if (count < text.length) {

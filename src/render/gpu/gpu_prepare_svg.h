@@ -1,10 +1,5 @@
 #pragma once
 
-// GPU backend: the vector-image half of the backend-agnostic prepare core, shared by the GL and Metal prepares.
-//
-// SVG fit and placement, the lowering of a placed cell's contours, and the compaction retry around a full SVG
-// atlas. A backend supplies only the cell raster dispatch.
-
 #include "gpu_svg_atlas.h"
 #include "gpu_svg_color_lower.h"
 #include <core/types.h>
@@ -47,13 +42,11 @@ GpuSvgCellGeometry gpu_prepare_svg_cell_geometry(struct FlArena* arena, const Gp
 typedef void (*GpuRasterCellFn)(void* backend, const GpuSvgEntry* entry, const struct FlVectorImage* vector,
                                 bool color);
 
-// A backend's raster dispatch bound to the shared state it runs against.
 typedef struct GpuSvgRaster {
     void* backend;
     GpuRasterCellFn fn;
 } GpuSvgRaster;
 
-// The atlas key of one prepared icon: the handle at a quantized raster size.
 typedef struct GpuSvgKey {
     FlImageHandle handle;
     u16 size;
@@ -62,12 +55,11 @@ typedef struct GpuSvgKey {
 // Place key into atlas and rasterize it through raster, which is the only backend-specific step. A handle
 // already rasterized at this size is a no-op. On a placement failure the atlas is compacted wholesale, every
 // survivor is re-rastered into its new position from its retained geometry, and the placement is retried once;
-// an icon too big for a freshly-compacted atlas is dropped. The cells are multi-color when atlas holds RGBA8
-// texels. Returns true when the atlas was compacted.
+// an icon too big for a freshly-compacted atlas is dropped. Returns true when the atlas was compacted.
 bool gpu_prepare_vector_into(const GpuSvgRaster* raster, GpuSvgAtlas* atlas, GpuSvgKey key,
                              const struct FlVectorImage* vector);
 
 // Vector-image entry: pick the monochrome or multi-color atlas of the GpuCpuState backend by vector->classification
-// and place and raster through gpu_prepare_vector_into, ticking svg_compact_count on a compaction. backend is the
-// backend's shared struct, which embeds its GpuCpuState first. A null or shapeless vector is a no-op.
+// and place and raster through gpu_prepare_vector_into, ticking svg_compact_count on a compaction. A null or
+// shapeless vector is a no-op.
 void gpu_prepare_vector(void* backend, GpuRasterCellFn raster_cell, GpuSvgKey key, const struct FlVectorImage* vector);

@@ -182,7 +182,6 @@ static bool find_archive_entry(struct archive* a, const char* target_cstr, size_
     return true;
 }
 
-// Advances the archive to the entry a handle targets. A raw compression stream has the one entry.
 
 static bool seek_entry(struct archive* a, bool is_raw_compression, FlString target, FlArena* scratch,
                        struct archive_entry** entry_out) {
@@ -263,7 +262,6 @@ static FlVfsOpenResult open_succeeded(LibArchiveHandle* handle, bool is_director
                                .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-// Opens a member of an already-opened archive
 
 static FlVfsOpenResult libarchive_open_member(void* driver_instance, LibArchiveHandle* parent, FlString path) {
     LibArchiveHandle* handle = (LibArchiveHandle*)fl_heap_alloc(sizeof(LibArchiveHandle));
@@ -288,7 +286,6 @@ static FlVfsOpenResult libarchive_open_member(void* driver_instance, LibArchiveH
     return open_succeeded(handle, false);
 }
 
-// Replaces the handle's reader with a fresh one over path_cstr, or over the handle's memory. Returns the open code.
 
 static int restart_reader(LibArchiveHandle* handle, const char* path_cstr) {
     if (handle->archive) {
@@ -303,7 +300,6 @@ static int restart_reader(LibArchiveHandle* handle, const char* path_cstr) {
     return archive_read_open_filename(handle->archive, path_cstr, LIBARCHIVE_BLOCK_SIZE);
 }
 
-// True when the archive's first header reads, or the archive is empty
 
 static bool first_header_is_valid(struct archive* a) {
     struct archive_entry* entry = nullptr;
@@ -388,7 +384,6 @@ static FlVfsSizeResult size_succeeded(int64_t size) {
     return (FlVfsSizeResult) { .size = size, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
-// Reads from the entry the handle's archive is already positioned at
 
 static FlVfsReadResult read_positioned_entry(LibArchiveHandle* handle, uint8_t* buffer, int64_t size) {
     la_ssize_t bytes_read = archive_read_data(handle->archive, buffer, (size_t)size);
@@ -483,7 +478,6 @@ static FlVfsSizeResult libarchive_get_size(void* driver_instance, void* handle_p
     return size_succeeded(result_size);
 }
 
-// The name an entry is listed under without its trailing slash. Empty when the entry has no usable name.
 
 static FlString listed_entry_path(const LibArchiveHandle* handle, struct archive_entry* entry) {
     FlString path;

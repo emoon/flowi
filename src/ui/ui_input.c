@@ -185,8 +185,7 @@ static void snapshot_dropped_files(FlUiCtx* ctx, const WindowEventState* window_
     }
 }
 
-// Shift held swaps the wheel axes for this frame's accumulated values, then both are cached before the live
-// accumulators are cleared.
+// Shift held swaps the wheel axes for this frame's accumulated values, before they are cached and cleared.
 static void cache_wheel(MouseState* mouse, const KeyboardState* kb) {
     mouse->wheel_axis_swap_requested = (kb->modifiers & FlKeyModifier_Shift) != 0;
     if (mouse->wheel_axis_swap_requested) {

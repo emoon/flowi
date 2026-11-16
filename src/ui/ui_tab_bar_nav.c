@@ -1,5 +1,3 @@
-// Tab bar keyboard navigation.
-
 #include "ui.h"
 #include "ui_private.h"
 #include "ui_widget_internal.h"

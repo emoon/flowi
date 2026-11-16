@@ -168,7 +168,6 @@ static void resize_surface(App* app) {
     app->backend.change_resolution(app->backend.user_data, app->surface, (int)view->screen_w, (int)view->screen_h);
 }
 
-// Drains the whole event queue, starting from the already-fetched event. Returns true when the view changed.
 static bool drain_events(App* app, SDL_Event* event, bool* running) {
     bool dirty = false;
     do {
