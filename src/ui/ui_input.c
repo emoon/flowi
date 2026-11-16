@@ -19,217 +19,6 @@ void ui_input_state_init(FlInputState* state) {
     }
 }
 
-void platform_input_push_key_event(FlUiCtx* ctx, FlKeyEvent event) {
-    FlInputState* state = &ctx->input_state;
-    KeyboardState* kb = &state->keyboard;
-
-    // The unsigned cast also rejects negative key codes.
-    if ((u32)event.key >= FlKey_Count) {
-        log_debug("Ignoring key event with out-of-range key code %d", (int)event.key);
-        return;
-    }
-
-    switch (event.type) {
-        case FlKeyEvent_Down:
-            if (!kb->keys[event.key]) {
-                kb->keys[event.key] = true;
-                kb->keys_pressed[event.key] = true;
-                kb->key_hold_duration[event.key] = 0.0f;
-            }
-            kb->modifiers = event.modifiers;
-            break;
-
-        case FlKeyEvent_Up:
-            kb->keys[event.key] = false;
-            kb->keys_released[event.key] = true;
-            kb->key_hold_duration[event.key] = 0.0f;
-            kb->modifiers = event.modifiers;
-            break;
-
-        case FlKeyEvent_Repeat:
-            break;
-    }
-}
-
-void platform_input_push_text_input_event(FlUiCtx* ctx, FlTextInputEvent event) {
-    FlInputState* state = &ctx->input_state;
-
-    // Append each event's text into the frame's buffer, keeping the earliest text on overflow.
-    KeyboardState* kb = &state->keyboard;
-    u64 used = kb->text_input.length;
-    u64 room = UI_TEXT_INPUT_THIS_FRAME_CAP - used;
-    u64 count = min(event.text.length, room);
-    if (count < event.text.length) {
-        // Back off to a codepoint start so a multi-byte character is dropped whole, not split.
-        while (count > 0 && (event.text.data[count] & 0xC0) == 0x80) {
-            count--;
-        }
-    }
-    if (count == 0) {
-        return;
-    }
-    memcpy(kb->text_input_storage + used, event.text.data, count);
-    kb->text_input = (FlString) { .data = kb->text_input_storage, .length = used + count, .is_static = 0 };
-}
-
-void platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
-    FlInputState* state = &ctx->input_state;
-    MouseState* mouse = &state->mouse;
-
-    // The unsigned cast also rejects negative button codes.
-    if ((event.type == FlMouseEvent_Button_Down || event.type == FlMouseEvent_Button_Up)
-        && (u32)event.button.button >= FlMouseButton_Count) {
-        log_debug("Ignoring mouse event with out-of-range button %d", (int)event.button.button);
-        return;
-    }
-
-    switch (event.type) {
-        case FlMouseEvent_Move:
-            mouse->x = event.move.x;
-            mouse->y = event.move.y;
-            // Delta is not accumulated here; ui_input_update_mouse derives it from the position difference
-            break;
-
-        case FlMouseEvent_Button_Down:
-            if (!mouse->buttons[event.button.button]) {
-                mouse->buttons[event.button.button] = true;
-                mouse->buttons_pressed[event.button.button] = true;
-                mouse->button_press_timestamp[event.button.button] = event.timestamp;
-                mouse->button_hold_duration[event.button.button] = 0.0f;
-            }
-            // The click count is calculated from timing.
-            break;
-
-        case FlMouseEvent_Button_Up:
-            mouse->buttons[event.button.button] = false;
-            mouse->buttons_released[event.button.button] = true;
-            mouse->button_hold_duration[event.button.button] = 0.0f;
-            break;
-
-        case FlMouseEvent_Wheel:
-            mouse->wheel_x += event.wheel.x;
-            mouse->wheel_y += event.wheel.y;
-            break;
-
-        case FlMouseEvent_Enter:
-            mouse->is_inside_window = true;
-            break;
-
-        case FlMouseEvent_Leave:
-            mouse->is_inside_window = false;
-            break;
-
-        case FlMouseEvent_Relative_Motion:
-            // Raw relative motion (hidden drag): the unbounded delta accumulates separately from absolute position
-            mouse->raw_delta_x += event.relative.delta_x;
-            mouse->raw_delta_y += event.relative.delta_y;
-            break;
-    }
-}
-
-void platform_input_push_gamepad_event(FlUiCtx* ctx, FlGamepadEvent event) {
-    FlInputState* state = &ctx->input_state;
-
-    if (event.gamepad_id >= UI_INPUT_MAX_GAMEPADS) {
-        return;
-    }
-
-    // The unsigned casts also reject negative button/axis codes.
-    if ((event.type == FlGamepadEvent_Button_Down || event.type == FlGamepadEvent_Button_Up)
-        && (u32)event.button.button >= FlGamepadButton_Count) {
-        log_debug("Ignoring gamepad event with out-of-range button %d", (int)event.button.button);
-        return;
-    }
-
-    if (event.type == FlGamepadEvent_Axis_Motion && (u32)event.axis.axis >= FlGamepadAxis_Count) {
-        log_debug("Ignoring gamepad event with out-of-range axis %d", (int)event.axis.axis);
-        return;
-    }
-
-    GamepadState* gamepad = &state->gamepads[event.gamepad_id];
-
-    switch (event.type) {
-        case FlGamepadEvent_Button_Down:
-            if (!gamepad->buttons[event.button.button]) {
-                gamepad->buttons[event.button.button] = true;
-                gamepad->buttons_pressed[event.button.button] = true;
-                gamepad->button_press_timestamp[event.button.button] = event.timestamp;
-                gamepad->button_hold_duration[event.button.button] = 0.0f;
-            }
-            break;
-
-        case FlGamepadEvent_Button_Up:
-            gamepad->buttons[event.button.button] = false;
-            gamepad->buttons_released[event.button.button] = true;
-            gamepad->button_hold_duration[event.button.button] = 0.0f;
-            break;
-
-        case FlGamepadEvent_Axis_Motion:
-            gamepad->axes[event.axis.axis] = event.axis.value;
-            break;
-
-        case FlGamepadEvent_Connected:
-            gamepad->connected = true;
-            gamepad->id = event.gamepad_id;
-            break;
-
-        case FlGamepadEvent_Disconnected:
-            gamepad->connected = false;
-            break;
-    }
-}
-
-// Copy one dropped path into the frame arena and record it.
-static void push_dropped_file(FlUiCtx* ctx, WindowEventState* window_events, FlWindowDropData drop) {
-    if (drop.path.length == 0 || drop.path.data == nullptr) {
-        return;
-    }
-    if (window_events->dropped_file_count >= UI_DROPPED_FILES_CAP) {
-        log_warning("Dropped-file queue full, ignoring %.*s", (int)drop.path.length, drop.path.data);
-        return;
-    }
-    char* path_copy = arena_alloc_array(ctx->render_frame_allocator, char, drop.path.length + 1);
-    memcpy(path_copy, drop.path.data, drop.path.length);
-    path_copy[drop.path.length] = '\0';
-
-    u32 slot = window_events->dropped_file_count++;
-    window_events->dropped_files[slot] = (FlString) { .data = path_copy, .length = drop.path.length, .is_static = 0 };
-    window_events->dropped_file_positions[slot] = (FlVec2) { .x = drop.x, .y = drop.y };
-}
-
-void platform_input_push_window_event(FlUiCtx* ctx, FlWindowEvent event) {
-    FlInputState* state = &ctx->input_state;
-    WindowEventState* window_events = &state->window_events;
-
-    switch (event.type) {
-        case FlWindowEvent_None:
-            break;
-
-        case FlWindowEvent_Focus_Gained:
-            state->window_focused = true;
-            window_events->focus_gained = true;
-            break;
-
-        case FlWindowEvent_Focus_Lost:
-            state->window_focused = false;
-            window_events->focus_lost = true;
-            break;
-
-        case FlWindowEvent_Resize:
-            window_events->resized = true;
-            break;
-
-        case FlWindowEvent_Close:
-            state->quit_requested = true;
-            window_events->close_requested = true;
-            break;
-
-        case FlWindowEvent_Drop_File:
-            push_dropped_file(ctx, window_events, event.drop);
-            break;
-    }
-}
-
 void ui_input_set_mouse_position(FlUiCtx* ctx, float x, float y) {
     FlInputState* state = &ctx->input_state;
     state->mouse.x = x;
@@ -246,9 +35,7 @@ static float mouse_distance_sqr(float x1, float y1, float x2, float y2) {
     return dx * dx + dy * dy;
 }
 
-static void ui_input_update_mouse(FlInputState* state, double dt) {
-    MouseState* mouse = &state->mouse;
-
+static void update_mouse_position(MouseState* mouse) {
     if (is_mouse_pos_valid(mouse->x, mouse->y)) {
         mouse->x = floorf(mouse->x + 0.5f);
         mouse->y = floorf(mouse->y + 0.5f);
@@ -264,7 +51,9 @@ static void ui_input_update_mouse(FlInputState* state, double dt) {
         mouse->delta_x = 0.0f;
         mouse->delta_y = 0.0f;
     }
+}
 
+static void update_mouse_stationary_timer(MouseState* mouse, double dt) {
     float delta_length_sqr = mouse->delta_x * mouse->delta_x + mouse->delta_y * mouse->delta_y;
     float threshold_sqr = UI_MOUSE_STATIONARY_THRESHOLD * UI_MOUSE_STATIONARY_THRESHOLD;
     bool mouse_stationary = delta_length_sqr <= threshold_sqr;
@@ -274,38 +63,54 @@ static void ui_input_update_mouse(FlInputState* state, double dt) {
     } else {
         mouse->stationary_timer = 0.0f;
     }
+}
+
+static bool is_repeated_click(const FlInputState* state, u32 button) {
+    const MouseState* mouse = &state->mouse;
+    if (!mouse->position_valid
+        || (state->time * 1000.0 - mouse->last_click_time[button]) >= (UI_MOUSE_DOUBLE_CLICK_TIME * 1000.0)) {
+        return false;
+    }
+
+    float dist_sqr = mouse_distance_sqr(mouse->x, mouse->y, mouse->click_pos_x[button], mouse->click_pos_y[button]);
+    return dist_sqr < UI_MOUSE_DOUBLE_CLICK_MAX_DIST * UI_MOUSE_DOUBLE_CLICK_MAX_DIST;
+}
+
+static void register_mouse_click(FlInputState* state, u32 button) {
+    MouseState* mouse = &state->mouse;
+
+    if (is_repeated_click(state, button)) {
+        mouse->click_count[button]++;
+    } else {
+        mouse->click_count[button] = 1;
+    }
+
+    mouse->click_pos_x[button] = mouse->x;
+    mouse->click_pos_y[button] = mouse->y;
+    mouse->last_click_time[button] = (u64)(state->time * 1000.0);
+    mouse->drag_max_distance_sqr[button] = 0.0f;
+}
+
+static void track_mouse_drag(MouseState* mouse, u32 button) {
+    float drag_dist_sqr = mouse_distance_sqr(mouse->x, mouse->y, mouse->click_pos_x[button], mouse->click_pos_y[button]);
+    if (drag_dist_sqr > mouse->drag_max_distance_sqr[button]) {
+        mouse->drag_max_distance_sqr[button] = drag_dist_sqr;
+    }
+}
+
+static void ui_input_update_mouse(FlInputState* state, double dt) {
+    MouseState* mouse = &state->mouse;
+
+    update_mouse_position(mouse);
+    update_mouse_stationary_timer(mouse, dt);
 
     for_count(i, FlMouseButton_Count) {
         if (mouse->buttons_pressed[i]) {
-            bool is_repeated_click = false;
-
-            if (mouse->position_valid
-                && (state->time * 1000.0 - mouse->last_click_time[i]) < (UI_MOUSE_DOUBLE_CLICK_TIME * 1000.0)) {
-
-                float dist_sqr = mouse_distance_sqr(mouse->x, mouse->y, mouse->click_pos_x[i], mouse->click_pos_y[i]);
-
-                if (dist_sqr < UI_MOUSE_DOUBLE_CLICK_MAX_DIST * UI_MOUSE_DOUBLE_CLICK_MAX_DIST) {
-                    is_repeated_click = true;
-                }
-            }
-
-            if (is_repeated_click) {
-                mouse->click_count[i]++;
-            } else {
-                mouse->click_count[i] = 1;
-            }
-
-            mouse->click_pos_x[i] = mouse->x;
-            mouse->click_pos_y[i] = mouse->y;
-            mouse->last_click_time[i] = (u64)(state->time * 1000.0);
-            mouse->drag_max_distance_sqr[i] = 0.0f;
+            register_mouse_click(state, i);
         }
 
         if (mouse->buttons[i] && mouse->position_valid) {
-            float drag_dist_sqr = mouse_distance_sqr(mouse->x, mouse->y, mouse->click_pos_x[i], mouse->click_pos_y[i]);
-            if (drag_dist_sqr > mouse->drag_max_distance_sqr[i]) {
-                mouse->drag_max_distance_sqr[i] = drag_dist_sqr;
-            }
+            track_mouse_drag(mouse, i);
         }
     }
 
@@ -313,23 +118,20 @@ static void ui_input_update_mouse(FlInputState* state, double dt) {
     mouse->prev_y = mouse->y;
 }
 
-void ui_input_update(FlUiCtx* ctx, double dt) {
-    FlInputState* state = &ctx->input_state;
-    KeyboardState* kb = &state->keyboard;
-
-    // Window-activation keyboard focus: focus-lost stashes and clears the live focus; focus-gained restores the
-    // stashed widget.
-    if (state->window_events.focus_lost) {
+static void restore_focus_on_activation(FlUiCtx* ctx, const WindowEventState* window_events) {
+    if (window_events->focus_lost) {
         if (ctx->focused_id != 0) {
             ctx->last_focused_id = ctx->focused_id;
         }
         ctx->focused_id = 0;
     }
-    if (state->window_events.focus_gained) {
+    if (window_events->focus_gained) {
         ctx->focused_id = ctx->last_focused_id;
     }
+}
 
-    ctx->delta_time = (float)dt;
+static void snapshot_pressed_released(FlUiCtx* ctx, const FlInputState* state) {
+    const KeyboardState* kb = &state->keyboard;
 
     // Capture mouse button state for IMGUI before we clear the flags
     ctx->mouse_pressed_this_frame = state->mouse.buttons_pressed[FlMouseButton_Left];
@@ -351,20 +153,24 @@ void ui_input_update(FlUiCtx* ctx, double dt) {
             ctx->gamepad_buttons_released_this_frame[pad][i] = state->gamepads[pad].buttons_released[i];
         }
     }
+}
 
-    // This-frame typed-text snapshot, taken before the raw kb->text_input is cleared below.
+// This-frame typed-text snapshot, taken before the raw kb->text_input is cleared.
+static void snapshot_text_input(FlUiCtx* ctx, const KeyboardState* kb) {
     u64 text_len = kb->text_input.length;
     if (text_len > 0) {
         memcpy(ctx->text_input_buffer, kb->text_input.data, text_len);
     }
     ctx->text_input_this_frame = (FlString) { .data = ctx->text_input_buffer, .length = text_len, .is_static = 0 };
+}
 
-    // This-frame dropped-file snapshot: paths packed NUL-separated into one buffer; a path that would overflow it
-    // ends the snapshot.
+// This-frame dropped-file snapshot: paths packed NUL-separated into one buffer; a path that would overflow it
+// ends the snapshot.
+static void snapshot_dropped_files(FlUiCtx* ctx, const WindowEventState* window_events) {
     ctx->dropped_file_count_this_frame = 0;
     u64 path_bytes = 0;
-    for_count(i, state->window_events.dropped_file_count) {
-        FlString path = state->window_events.dropped_files[i];
+    for_count(i, window_events->dropped_file_count) {
+        FlString path = window_events->dropped_files[i];
         if (path.length + 1 > UI_DROPPED_PATH_BYTES - path_bytes) {
             log_warning("Dropped-file path buffer full, ignoring the rest of this frame's drop");
             break;
@@ -373,49 +179,44 @@ void ui_input_update(FlUiCtx* ctx, double dt) {
         memcpy(slot, path.data, path.length);
         slot[path.length] = '\0';
         ctx->dropped_files_this_frame[i] = (FlString) { .data = slot, .length = path.length, .is_static = 0 };
-        ctx->dropped_file_positions_this_frame[i] = state->window_events.dropped_file_positions[i];
+        ctx->dropped_file_positions_this_frame[i] = window_events->dropped_file_positions[i];
         path_bytes += path.length + 1;
         ctx->dropped_file_count_this_frame++;
     }
+}
 
-    // Shift held swaps the wheel axes for this frame's accumulated values, before they are cached and cleared.
-    state->mouse.wheel_axis_swap_requested = (kb->modifiers & FlKeyModifier_Shift) != 0;
-    if (state->mouse.wheel_axis_swap_requested) {
-        float temp = state->mouse.wheel_x;
-        state->mouse.wheel_x = state->mouse.wheel_y;
-        state->mouse.wheel_y = temp;
+// Shift held swaps the wheel axes for this frame's accumulated values, then both are cached before the live
+// accumulators are cleared.
+static void cache_wheel(MouseState* mouse, const KeyboardState* kb) {
+    mouse->wheel_axis_swap_requested = (kb->modifiers & FlKeyModifier_Shift) != 0;
+    if (mouse->wheel_axis_swap_requested) {
+        float temp = mouse->wheel_x;
+        mouse->wheel_x = mouse->wheel_y;
+        mouse->wheel_y = temp;
     }
 
-    // Cache the wheel values for the frame before the live accumulators are cleared further down.
-    state->mouse.wheel_x_cached = state->mouse.wheel_x;
-    state->mouse.wheel_y_cached = state->mouse.wheel_y;
+    mouse->wheel_x_cached = mouse->wheel_x;
+    mouse->wheel_y_cached = mouse->wheel_y;
+}
 
-    // Evaluate actions before the flags are cleared.
-    ui_actions_update(ctx);
+static bool nav_repeat_pressed(FlUiCtx* ctx, FlAction action, const KeyboardState* kb, FlKey key, float dt) {
+    return ui_action_pressed(ctx, action) || input_should_nav_repeat(kb, key, UI_NAV_REPEAT_DELAY, UI_NAV_REPEAT_RATE, dt);
+}
 
+static void update_nav(FlUiCtx* ctx, const KeyboardState* kb, float dt) {
     ctx->nav_next_pressed = ui_action_pressed(ctx, FlAction_Nav_Next);
     ctx->nav_prev_pressed = ui_action_pressed(ctx, FlAction_Nav_Prev);
     ctx->nav_activate_pressed = ui_action_pressed(ctx, FlAction_Confirm);
 
     // Software repeat: trigger on initial press or at intervals after delay
     ctx->nav_frame.focused_id = ctx->focused_id;
-    ctx->nav_frame.nav_up
-        = ui_action_pressed(ctx, FlAction_Nav_Up)
-          || input_should_nav_repeat(kb, FlKey_Up, UI_NAV_REPEAT_DELAY, UI_NAV_REPEAT_RATE, (float)dt);
-    ctx->nav_frame.nav_down
-        = ui_action_pressed(ctx, FlAction_Nav_Down)
-          || input_should_nav_repeat(kb, FlKey_Down, UI_NAV_REPEAT_DELAY, UI_NAV_REPEAT_RATE, (float)dt);
-    ctx->nav_frame.nav_left
-        = ui_action_pressed(ctx, FlAction_Nav_Left)
-          || input_should_nav_repeat(kb, FlKey_Left, UI_NAV_REPEAT_DELAY, UI_NAV_REPEAT_RATE, (float)dt);
-    ctx->nav_frame.nav_right
-        = ui_action_pressed(ctx, FlAction_Nav_Right)
-          || input_should_nav_repeat(kb, FlKey_Right, UI_NAV_REPEAT_DELAY, UI_NAV_REPEAT_RATE, (float)dt);
+    ctx->nav_frame.nav_up = nav_repeat_pressed(ctx, FlAction_Nav_Up, kb, FlKey_Up, dt);
+    ctx->nav_frame.nav_down = nav_repeat_pressed(ctx, FlAction_Nav_Down, kb, FlKey_Down, dt);
+    ctx->nav_frame.nav_left = nav_repeat_pressed(ctx, FlAction_Nav_Left, kb, FlKey_Left, dt);
+    ctx->nav_frame.nav_right = nav_repeat_pressed(ctx, FlAction_Nav_Right, kb, FlKey_Right, dt);
+}
 
-    // Update timing first (needed by mouse update)
-    state->time += dt;
-    state->delta_time = dt;
-
+static void advance_keyboard(KeyboardState* kb, double dt) {
     for_count(i, FlKey_Count) {
         kb->keys_pressed[i] = false;
         kb->keys_released[i] = false;
@@ -428,28 +229,32 @@ void ui_input_update(FlUiCtx* ctx, double dt) {
             kb->key_hold_duration[i] += (float)dt;
         }
     }
+}
 
+static void clear_mouse_accumulators(MouseState* mouse) {
     // Cache this frame's accumulated raw relative-motion delta before clearing the accumulator.
-    state->mouse.raw_delta_x_cached = state->mouse.raw_delta_x;
-    state->mouse.raw_delta_y_cached = state->mouse.raw_delta_y;
+    mouse->raw_delta_x_cached = mouse->raw_delta_x;
+    mouse->raw_delta_y_cached = mouse->raw_delta_y;
 
-    state->mouse.wheel_x = 0.0f;
-    state->mouse.wheel_y = 0.0f;
-    state->mouse.delta_x = 0.0f;
-    state->mouse.delta_y = 0.0f;
-    state->mouse.raw_delta_x = 0.0f;
-    state->mouse.raw_delta_y = 0.0f;
+    mouse->wheel_x = 0.0f;
+    mouse->wheel_y = 0.0f;
+    mouse->delta_x = 0.0f;
+    mouse->delta_y = 0.0f;
+    mouse->raw_delta_x = 0.0f;
+    mouse->raw_delta_y = 0.0f;
+}
 
-    ui_input_update_mouse(state, dt);
-
+static void advance_mouse_buttons(MouseState* mouse, double dt) {
     for_count(i, FlMouseButton_Count) {
-        if (state->mouse.buttons[i]) {
-            state->mouse.button_hold_duration[i] += (float)dt;
+        if (mouse->buttons[i]) {
+            mouse->button_hold_duration[i] += (float)dt;
         }
-        state->mouse.buttons_pressed[i] = false;
-        state->mouse.buttons_released[i] = false;
+        mouse->buttons_pressed[i] = false;
+        mouse->buttons_released[i] = false;
     }
+}
 
+static void advance_gamepads(FlInputState* state, double dt) {
     for_count(gamepad_idx, UI_INPUT_MAX_GAMEPADS) {
         GamepadState* gamepad = &state->gamepads[gamepad_idx];
         for_count(i, FlGamepadButton_Count) {
@@ -464,10 +269,43 @@ void ui_input_update(FlUiCtx* ctx, double dt) {
             gamepad->axes_prev[i] = gamepad->axes[i];
         }
     }
+}
 
-    state->window_events.focus_gained = false;
-    state->window_events.focus_lost = false;
-    state->window_events.resized = false;
-    state->window_events.close_requested = false;
-    state->window_events.dropped_file_count = 0;
+static void clear_window_events(WindowEventState* window_events) {
+    window_events->focus_gained = false;
+    window_events->focus_lost = false;
+    window_events->resized = false;
+    window_events->close_requested = false;
+    window_events->dropped_file_count = 0;
+}
+
+void ui_input_update(FlUiCtx* ctx, double dt) {
+    FlInputState* state = &ctx->input_state;
+    KeyboardState* kb = &state->keyboard;
+
+    // Window-activation keyboard focus: focus-lost stashes and clears the live focus; focus-gained restores the
+    // stashed widget.
+    restore_focus_on_activation(ctx, &state->window_events);
+
+    ctx->delta_time = (float)dt;
+
+    snapshot_pressed_released(ctx, state);
+    snapshot_text_input(ctx, kb);
+    snapshot_dropped_files(ctx, &state->window_events);
+    cache_wheel(&state->mouse, kb);
+
+    // Evaluate actions before the flags are cleared.
+    ui_actions_update(ctx);
+    update_nav(ctx, kb, (float)dt);
+
+    // Update timing first (needed by mouse update)
+    state->time += dt;
+    state->delta_time = dt;
+
+    advance_keyboard(kb, dt);
+    clear_mouse_accumulators(&state->mouse);
+    ui_input_update_mouse(state, dt);
+    advance_mouse_buttons(&state->mouse, dt);
+    advance_gamepads(state, dt);
+    clear_window_events(&state->window_events);
 }
