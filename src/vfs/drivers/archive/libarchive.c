@@ -152,30 +152,53 @@ static struct archive* open_archive_reader(LibArchiveHandle* handle, FlArena* sc
     return a;
 }
 
+static bool entry_path_matches(struct archive_entry* entry, const char* target_cstr, size_t target_len) {
+    const char* entry_path = archive_entry_pathname(entry);
+    return entry_path && vfs_archive_entry_path_matches(entry_path, target_cstr, target_len);
+}
+
+static bool read_until_match(struct archive* a, const char* target_cstr, size_t target_len,
+                             struct archive_entry** entry) {
+    while (archive_read_next_header(a, entry) == ARCHIVE_OK) {
+        if (entry_path_matches(*entry, target_cstr, target_len)) {
+            return true;
+        }
+        archive_read_data_skip(a);
+    }
+    return false;
+}
+
 // Advances the archive to the entry named target_cstr and stores it in entry_out when given. False when absent.
 
 static bool find_archive_entry(struct archive* a, const char* target_cstr, size_t target_len,
                                struct archive_entry** entry_out) {
     struct archive_entry* entry;
+    if (!read_until_match(a, target_cstr, target_len, &entry)) {
+        return false;
+    }
+    if (entry_out) {
+        *entry_out = entry;
+    }
+    return true;
+}
 
-    while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
-        const char* entry_path = archive_entry_pathname(entry);
-        if (!entry_path) {
-            archive_read_data_skip(a);
-            continue;
+// Advances the archive to the entry a handle targets. A raw compression stream has the one entry.
+
+static bool seek_entry(struct archive* a, bool is_raw_compression, FlString target, FlArena* scratch,
+                       struct archive_entry** entry_out) {
+    if (is_raw_compression) {
+        struct archive_entry* entry;
+        if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
+            return false;
         }
-
-        if (vfs_archive_entry_path_matches(entry_path, target_cstr, target_len)) {
-            if (entry_out) {
-                *entry_out = entry;
-            }
-            return true;
+        if (entry_out) {
+            *entry_out = entry;
         }
-
-        archive_read_data_skip(a);
+        return true;
     }
 
-    return false;
+    const char* target_cstr = fl_string_to_cstr(scratch, target);
+    return find_archive_entry(a, target_cstr, target.length, entry_out);
 }
 
 static void libarchive_close(void* driver_instance, void* handle_ptr);
@@ -199,26 +222,13 @@ static FlVfsStatus libarchive_seek_to_entry(LibArchiveHandle* handle, FlArena* s
     }
 
     struct archive_entry* entry;
-
-    // A raw compression stream has the one entry
-    if (handle->is_raw_compression) {
-        if (archive_read_next_header(handle->archive, &entry) == ARCHIVE_OK) {
-            handle->entry_size = archive_entry_size(entry); // May be 0 (unknown) for raw format
-            handle->entry_ready = true;
-            return FlVfsStatus_Success;
-        }
+    if (!seek_entry(handle->archive, handle->is_raw_compression, handle->base.target_path, scratch, &entry)) {
         return FlVfsStatus_FileNotFound;
     }
 
-    const char* target_cstr = fl_string_to_cstr(scratch, handle->base.target_path);
-
-    if (find_archive_entry(handle->archive, target_cstr, handle->base.target_path.length, &entry)) {
-        handle->entry_size = archive_entry_size(entry);
-        handle->entry_ready = true;
-        return FlVfsStatus_Success;
-    }
-
-    return FlVfsStatus_FileNotFound;
+    handle->entry_size = archive_entry_size(entry); // May be 0 (unknown) for raw format
+    handle->entry_ready = true;
+    return FlVfsStatus_Success;
 }
 
 // Allocates the handle of an archive root. data is the archive's bytes, or nullptr for a file-backed one.
@@ -243,58 +253,75 @@ static LibArchiveHandle* libarchive_alloc_root(FlString archive_path, const uint
     return handle;
 }
 
-// Opens a member of an already-opened archive, or the archive file itself
+static FlVfsOpenResult open_failed(FlVfsStatus status) {
+    return (FlVfsOpenResult) { .handle = nullptr, .is_directory = false, .error = { .vfs_status = status } };
+}
 
-static FlVfsOpenResult libarchive_open(void* driver_instance, void* parent_handle, FlString path, uint32_t flags,
-                                       FlVfsMountOptions mount_options) {
-    (void)flags;
-    (void)mount_options;
+static FlVfsOpenResult open_succeeded(LibArchiveHandle* handle, bool is_directory) {
+    return (FlVfsOpenResult) { .handle = handle,
+                               .is_directory = is_directory,
+                               .error = { .vfs_status = FlVfsStatus_Success } };
+}
 
-    if (parent_handle) {
-        LibArchiveHandle* parent = (LibArchiveHandle*)parent_handle;
-        LibArchiveHandle* handle = (LibArchiveHandle*)fl_heap_alloc(sizeof(LibArchiveHandle));
-        if (!handle) {
-            return (FlVfsOpenResult) { .handle = nullptr, .error = { .vfs_status = FlVfsStatus_OutOfMemory } };
-        }
-        *handle = (LibArchiveHandle) { 0 };
-        vfs_archive_handle_init_child(&handle->base, &parent->base, path);
+// Opens a member of an already-opened archive
 
-        handle->archive_path = fl_string_copy_malloc(parent->archive_path);
-        handle->is_raw_compression = parent->is_raw_compression;
-        handle->decompressed_name = parent->decompressed_name; // Shared with the parent, not owned
-        handle->entry_size = -1;
+static FlVfsOpenResult libarchive_open_member(void* driver_instance, LibArchiveHandle* parent, FlString path) {
+    LibArchiveHandle* handle = (LibArchiveHandle*)fl_heap_alloc(sizeof(LibArchiveHandle));
+    if (!handle) {
+        return open_failed(FlVfsStatus_OutOfMemory);
+    }
+    *handle = (LibArchiveHandle) { 0 };
+    vfs_archive_handle_init_child(&handle->base, &parent->base, path);
 
-        arena_scratch_auto(temp);
-        FlVfsStatus status = libarchive_seek_to_entry(handle, temp.arena);
-        if (status != FlVfsStatus_Success) {
-            libarchive_close(driver_instance, handle);
-            return (FlVfsOpenResult) { .handle = nullptr, .error = { .vfs_status = status } };
-        }
+    handle->archive_path = fl_string_copy_malloc(parent->archive_path);
+    handle->is_raw_compression = parent->is_raw_compression;
+    handle->decompressed_name = parent->decompressed_name; // Shared with the parent, not owned
+    handle->entry_size = -1;
 
-        return (FlVfsOpenResult) { .handle = handle, .error = { .vfs_status = FlVfsStatus_Success } };
+    arena_scratch_auto(temp);
+    FlVfsStatus status = libarchive_seek_to_entry(handle, temp.arena);
+    if (status != FlVfsStatus_Success) {
+        libarchive_close(driver_instance, handle);
+        return open_failed(status);
     }
 
-    if (!is_archive_file(path)) {
-        return (FlVfsOpenResult) { .handle = nullptr,
-                                   .is_directory = false,
-                                   .error = { .vfs_status = FlVfsStatus_PathInvalid } };
-    }
+    return open_succeeded(handle, false);
+}
 
+// Replaces the handle's reader with a fresh one over path_cstr, or over the handle's memory. Returns the open code.
+
+static int restart_reader(LibArchiveHandle* handle, const char* path_cstr) {
+    if (handle->archive) {
+        archive_read_free(handle->archive);
+    }
+    handle->archive = archive_read_new();
+    configure_archive_format(handle->archive, handle->is_raw_compression);
+
+    if (handle->base.memory_buffer) {
+        return archive_read_open_memory(handle->archive, handle->base.memory_buffer, handle->base.memory_size);
+    }
+    return archive_read_open_filename(handle->archive, path_cstr, LIBARCHIVE_BLOCK_SIZE);
+}
+
+// True when the archive's first header reads, or the archive is empty
+
+static bool first_header_is_valid(struct archive* a) {
+    struct archive_entry* entry = nullptr;
+    int r = archive_read_next_header(a, &entry);
+    return r == ARCHIVE_OK || r == ARCHIVE_EOF;
+}
+
+static FlVfsOpenResult libarchive_open_file(void* driver_instance, FlString path) {
     arena_scratch_auto(temp);
 
     LibArchiveHandle* handle = libarchive_alloc_root(path, nullptr, 0, temp.arena);
     if (!handle) {
-        return (FlVfsOpenResult) { .handle = nullptr,
-                                   .is_directory = false,
-                                   .error = { .vfs_status = FlVfsStatus_OutOfMemory } };
+        return open_failed(FlVfsStatus_OutOfMemory);
     }
-
-    handle->archive = archive_read_new();
-    configure_archive_format(handle->archive, handle->is_raw_compression);
 
     const char* archive_path_cstr = fl_string_to_cstr(temp.arena, path);
 
-    int r = archive_read_open_filename(handle->archive, archive_path_cstr, LIBARCHIVE_BLOCK_SIZE);
+    int r = restart_reader(handle, archive_path_cstr);
     if (r != ARCHIVE_OK) {
         FlVfsStatus status = libarchive_errno_to_vfs_status(r);
         int native_error = archive_errno(handle->archive);
@@ -305,36 +332,72 @@ static FlVfsOpenResult libarchive_open(void* driver_instance, void* parent_handl
                                    .error = { .vfs_status = status, .native_error = native_error } };
     }
 
-    struct archive_entry* entry;
-    r = archive_read_next_header(handle->archive, &entry);
-    if (r != ARCHIVE_OK && r != ARCHIVE_EOF) {
+    if (!first_header_is_valid(handle->archive)) {
         logc_debug(VFS_ID, "Archive validation failed for: %.*s", (int)path.length, path.data);
         libarchive_close(driver_instance, handle);
-
-        return (FlVfsOpenResult) { .handle = nullptr,
-                                   .is_directory = false,
-                                   .error = { .vfs_status = FlVfsStatus_ArchiveError } };
+        return open_failed(FlVfsStatus_ArchiveError);
     }
 
-    archive_read_free(handle->archive);
-    handle->archive = archive_read_new();
-    configure_archive_format(handle->archive, handle->is_raw_compression);
-
-    r = archive_read_open_filename(handle->archive, archive_path_cstr, LIBARCHIVE_BLOCK_SIZE);
+    r = restart_reader(handle, archive_path_cstr);
     if (r != ARCHIVE_OK) {
         FlVfsStatus status = libarchive_errno_to_vfs_status(r);
         libarchive_close(driver_instance, handle);
-
-        return (FlVfsOpenResult) { .handle = nullptr, .is_directory = false, .error = { .vfs_status = status } };
+        return open_failed(status);
     }
 
-    return (FlVfsOpenResult) { .handle = handle, .is_directory = true, .error = { .vfs_status = FlVfsStatus_Success } };
+    return open_succeeded(handle, true);
+}
+
+// Opens a member of an already-opened archive, or the archive file itself
+
+static FlVfsOpenResult libarchive_open(void* driver_instance, void* parent_handle, FlString path, uint32_t flags,
+                                       FlVfsMountOptions mount_options) {
+    (void)flags;
+    (void)mount_options;
+
+    if (parent_handle) {
+        return libarchive_open_member(driver_instance, (LibArchiveHandle*)parent_handle, path);
+    }
+
+    if (!is_archive_file(path)) {
+        return open_failed(FlVfsStatus_PathInvalid);
+    }
+
+    return libarchive_open_file(driver_instance, path);
 }
 
 static bool libarchive_is_directory(void* driver_instance, void* handle) {
     (void)driver_instance;
     LibArchiveHandle* h = (LibArchiveHandle*)handle;
     return h ? h->base.is_directory : false;
+}
+
+static FlVfsReadResult read_failed(FlVfsStatus status) {
+    return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = status } };
+}
+
+static FlVfsReadResult read_succeeded(la_ssize_t bytes_read) {
+    return (FlVfsReadResult) { .bytes_read = (int64_t)bytes_read, .error = { .vfs_status = FlVfsStatus_Success } };
+}
+
+static FlVfsSizeResult size_failed(FlVfsStatus status) {
+    return (FlVfsSizeResult) { .size = -1, .error = { .vfs_status = status } };
+}
+
+static FlVfsSizeResult size_succeeded(int64_t size) {
+    return (FlVfsSizeResult) { .size = size, .error = { .vfs_status = FlVfsStatus_Success } };
+}
+
+// Reads from the entry the handle's archive is already positioned at
+
+static FlVfsReadResult read_positioned_entry(LibArchiveHandle* handle, uint8_t* buffer, int64_t size) {
+    la_ssize_t bytes_read = archive_read_data(handle->archive, buffer, (size_t)size);
+    if (bytes_read < 0) {
+        logc_error(VFS_ID, "Failed to read from archive entry: %S (libarchive: %s)", handle->base.target_path,
+                   archive_error_string(handle->archive));
+        return read_failed(FlVfsStatus_ReadError);
+    }
+    return read_succeeded(bytes_read);
 }
 
 static FlVfsReadResult libarchive_read(void* driver_instance, void* handle_ptr, FlString path, uint8_t* buffer,
@@ -344,44 +407,29 @@ static FlVfsReadResult libarchive_read(void* driver_instance, void* handle_ptr, 
 
     if (!handle) {
         logc_error(VFS_ID, "Invalid handle for read");
-        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_InvalidHandle } };
+        return read_failed(FlVfsStatus_InvalidHandle);
     }
 
     FlString target_path = vfs_archive_resolve_target_path(&handle->base, path);
     if (target_path.length == 0) {
         logc_error(VFS_ID, "No target file specified for read");
-        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_PathInvalid } };
+        return read_failed(FlVfsStatus_PathInvalid);
     }
 
     if (handle->entry_ready && handle->archive) {
-        la_ssize_t bytes_read = archive_read_data(handle->archive, buffer, (size_t)size);
-        if (bytes_read < 0) {
-            logc_error(VFS_ID, "Failed to read from archive entry: %S (libarchive: %s)", handle->base.target_path,
-                       archive_error_string(handle->archive));
-            return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_ReadError } };
-        }
-        return (FlVfsReadResult) { .bytes_read = (int64_t)bytes_read, .error = { .vfs_status = FlVfsStatus_Success } };
+        return read_positioned_entry(handle, buffer, size);
     }
 
     arena_scratch_auto(temp);
 
     struct archive* a = open_archive_reader(handle, temp.arena);
     if (!a) {
-        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_ArchiveError } };
+        return read_failed(FlVfsStatus_ArchiveError);
     }
 
-    struct archive_entry* entry = nullptr;
-    if (handle->is_raw_compression) {
-        if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
-            archive_read_free(a);
-            return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_FileNotFound } };
-        }
-    } else {
-        const char* target_cstr = fl_string_to_cstr(temp.arena, target_path);
-        if (!find_archive_entry(a, target_cstr, target_path.length, nullptr)) {
-            archive_read_free(a);
-            return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_FileNotFound } };
-        }
+    if (!seek_entry(a, handle->is_raw_compression, target_path, temp.arena, nullptr)) {
+        archive_read_free(a);
+        return read_failed(FlVfsStatus_FileNotFound);
     }
 
     la_ssize_t bytes_read = archive_read_data(a, buffer, (size_t)size);
@@ -389,13 +437,12 @@ static FlVfsReadResult libarchive_read(void* driver_instance, void* handle_ptr, 
     if (bytes_read < 0) {
         logc_error(VFS_ID, "Failed to read from archive entry: %.*s", (int)target_path.length, target_path.data);
         archive_read_free(a);
-
-        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_ReadError } };
+        return read_failed(FlVfsStatus_ReadError);
     }
 
     archive_read_free(a);
 
-    return (FlVfsReadResult) { .bytes_read = (int64_t)bytes_read, .error = { .vfs_status = FlVfsStatus_Success } };
+    return read_succeeded(bytes_read);
 }
 
 static FlVfsSizeResult libarchive_get_size(void* driver_instance, void* handle_ptr, FlString path) {
@@ -404,45 +451,58 @@ static FlVfsSizeResult libarchive_get_size(void* driver_instance, void* handle_p
 
     if (!handle) {
         logc_error(VFS_ID, "Invalid handle for get_size");
-        return (FlVfsSizeResult) { .size = -1, .error = { .vfs_status = FlVfsStatus_InvalidHandle } };
+        return size_failed(FlVfsStatus_InvalidHandle);
     }
 
     if (handle->entry_ready && handle->entry_size >= 0) {
-        return (FlVfsSizeResult) { .size = handle->entry_size, .error = { .vfs_status = FlVfsStatus_Success } };
+        return size_succeeded(handle->entry_size);
     }
 
     FlString target_path = vfs_archive_resolve_target_path(&handle->base, path);
     if (target_path.length == 0) {
         logc_error(VFS_ID, "No target file specified for get_size");
-        return (FlVfsSizeResult) { .size = -1, .error = { .vfs_status = FlVfsStatus_PathInvalid } };
+        return size_failed(FlVfsStatus_PathInvalid);
     }
 
     arena_scratch_auto(temp);
 
     struct archive* a = open_archive_reader(handle, temp.arena);
     if (!a) {
-        return (FlVfsSizeResult) { .size = -1, .error = { .vfs_status = FlVfsStatus_ArchiveError } };
+        return size_failed(FlVfsStatus_ArchiveError);
     }
 
     struct archive_entry* entry = nullptr;
-
-    if (handle->is_raw_compression) {
-        if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
-            archive_read_free(a);
-            return (FlVfsSizeResult) { .size = -1, .error = { .vfs_status = FlVfsStatus_FileNotFound } };
-        }
-    } else {
-        const char* target_cstr = fl_string_to_cstr(temp.arena, target_path);
-        if (!find_archive_entry(a, target_cstr, target_path.length, &entry)) {
-            archive_read_free(a);
-            return (FlVfsSizeResult) { .size = -1, .error = { .vfs_status = FlVfsStatus_FileNotFound } };
-        }
+    if (!seek_entry(a, handle->is_raw_compression, target_path, temp.arena, &entry)) {
+        archive_read_free(a);
+        return size_failed(FlVfsStatus_FileNotFound);
     }
 
     int64_t result_size = archive_entry_size(entry);
     archive_read_free(a);
 
-    return (FlVfsSizeResult) { .size = result_size, .error = { .vfs_status = FlVfsStatus_Success } };
+    return size_succeeded(result_size);
+}
+
+// The name an entry is listed under without its trailing slash. Empty when the entry has no usable name.
+
+static FlString listed_entry_path(const LibArchiveHandle* handle, struct archive_entry* entry) {
+    FlString path;
+
+    // Raw compression lists the decompressed filename in place of libarchive's "data"
+    if (handle->is_raw_compression && handle->decompressed_name.length > 0) {
+        path = handle->decompressed_name;
+    } else {
+        const char* entry_name = archive_entry_pathname(entry);
+        if (!entry_name) {
+            return FL_S("");
+        }
+        path = string_from_cstr(entry_name);
+    }
+
+    if (path.length > 0 && path.data[path.length - 1] == '/') {
+        path.length--;
+    }
+    return path;
 }
 
 // Reads every entry header into the listing cache
@@ -454,31 +514,11 @@ static void build_entry_cache(LibArchiveHandle* handle) {
 
     struct archive_entry* entry;
     while (archive_read_next_header(handle->archive, &entry) == ARCHIVE_OK) {
-        FlString path;
-
-        // Raw compression lists the decompressed filename in place of libarchive's "data"
-        if (handle->is_raw_compression && handle->decompressed_name.length > 0) {
-            path = handle->decompressed_name;
-        } else {
-            const char* entry_name = archive_entry_pathname(entry);
-            if (!entry_name) {
-                archive_read_data_skip(handle->archive);
-                continue;
-            }
-            path = string_from_cstr(entry_name);
+        FlString path = listed_entry_path(handle, entry);
+        if (path.length > 0) {
+            vfs_entry_cache_add(&handle->base.entries, path, archive_entry_size(entry),
+                                archive_entry_filetype(entry) == AE_IFDIR);
         }
-
-        if (path.length > 0 && path.data[path.length - 1] == '/') {
-            path.length--;
-        }
-
-        if (path.length == 0) {
-            archive_read_data_skip(handle->archive);
-            continue;
-        }
-
-        vfs_entry_cache_add(&handle->base.entries, path, archive_entry_size(entry),
-                            archive_entry_filetype(entry) == AE_IFDIR);
         archive_read_data_skip(handle->archive);
     }
 }
@@ -523,58 +563,39 @@ static FlVfsOpenResult libarchive_open_memory(void* driver_instance, const uint8
     (void)driver_instance;
 
     if (!data || size == 0) {
-        return (FlVfsOpenResult) { .handle = nullptr,
-                                   .is_directory = false,
-                                   .error = { .vfs_status = FlVfsStatus_PathInvalid } };
+        return open_failed(FlVfsStatus_PathInvalid);
     }
 
     arena_scratch_auto(temp);
 
     LibArchiveHandle* handle = libarchive_alloc_root(original_path, data, size, temp.arena);
     if (!handle) {
-        return (FlVfsOpenResult) { .handle = nullptr,
-                                   .is_directory = false,
-                                   .error = { .vfs_status = FlVfsStatus_OutOfMemory } };
+        return open_failed(FlVfsStatus_OutOfMemory);
     }
 
-    handle->archive = archive_read_new();
-    configure_archive_format(handle->archive, handle->is_raw_compression);
-
-    int r = archive_read_open_memory(handle->archive, (void*)data, (size_t)size);
+    int r = restart_reader(handle, nullptr);
     if (r != ARCHIVE_OK) {
         logc_debug(VFS_ID, "Failed to open archive from memory buffer (size: %llu) - %s", (unsigned long long)size,
                    archive_error_string(handle->archive));
         libarchive_close(driver_instance, handle);
-        return (FlVfsOpenResult) { .handle = nullptr,
-                                   .is_directory = false,
-                                   .error = { .vfs_status = FlVfsStatus_ArchiveError } };
+        return open_failed(FlVfsStatus_ArchiveError);
     }
 
-    struct archive_entry* entry = nullptr;
-    r = archive_read_next_header(handle->archive, &entry);
-    if (r != ARCHIVE_OK && r != ARCHIVE_EOF) {
+    if (!first_header_is_valid(handle->archive)) {
         logc_debug(VFS_ID, "Failed to validate archive from memory buffer (size: %llu)", (unsigned long long)size);
         libarchive_close(driver_instance, handle);
-        return (FlVfsOpenResult) { .handle = nullptr,
-                                   .is_directory = false,
-                                   .error = { .vfs_status = FlVfsStatus_ArchiveError } };
+        return open_failed(FlVfsStatus_ArchiveError);
     }
 
-    archive_read_free(handle->archive);
-    handle->archive = archive_read_new();
-    configure_archive_format(handle->archive, handle->is_raw_compression);
-
-    r = archive_read_open_memory(handle->archive, (void*)data, (size_t)size);
+    r = restart_reader(handle, nullptr);
     if (r != ARCHIVE_OK) {
         libarchive_close(driver_instance, handle);
-        return (FlVfsOpenResult) { .handle = nullptr,
-                                   .is_directory = false,
-                                   .error = { .vfs_status = libarchive_errno_to_vfs_status(r) } };
+        return open_failed(libarchive_errno_to_vfs_status(r));
     }
 
     handle->base.owns_memory = true;
 
-    return (FlVfsOpenResult) { .handle = handle, .is_directory = true, .error = { .vfs_status = FlVfsStatus_Success } };
+    return open_succeeded(handle, true);
 }
 
 static FlVfsDriverCapabilities libarchive_get_capabilities(void) {
