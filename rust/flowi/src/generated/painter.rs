@@ -8,8 +8,13 @@
 
 /// Drawing commands for custom shapes, lines, text and images.
 ///
-/// Call these while a layout element is open. They draw into that element, and do nothing outside one. All
-/// positions and sizes are in logical pixels, relative to the element.
+/// Call these while a layout element is open. They draw into the innermost open element, and do nothing outside
+/// one. All positions and sizes are in logical pixels, relative to the top-left corner of that element, and not
+/// to the window or the dock panel.
+///
+/// Drawing is clipped to the element. A shape placed outside it, such as one at a window position, is not drawn.
+///
+/// The drawing goes above the background of the element and below its children.
 ///
 /// The software backend draws only rectangles, outlines, text and images. It skips circles, diamonds, arcs,
 /// lines, polylines and bars.
