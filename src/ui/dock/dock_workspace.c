@@ -418,9 +418,6 @@ _Static_assert(FL_DOCK_DRAG_THRESHOLD >= UI_MOUSE_DRAG_THRESHOLD,
 // drag in flight.
 static bool drag_past_arm_threshold(void) {
     FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return false;
-    }
     f32 scale = dock_ui_scale();
     f32 travelled_sqr = self->input_state.mouse.drag_max_distance_sqr[FlMouseButton_Left] / (scale * scale);
     return travelled_sqr > FL_DOCK_DRAG_THRESHOLD * FL_DOCK_DRAG_THRESHOLD;
@@ -448,7 +445,7 @@ static const FlDockNode* leaf_at_point(const FlDockNode* node, f32 x, f32 y) {
 }
 
 static bool press_can_activate(const FlUiCtx* self) {
-    return self != nullptr && self->modal_scope_id == 0 && ui_mouse_pressed(FlMouseButton_Left);
+    return self->modal_scope_id == 0 && ui_mouse_pressed(FlMouseButton_Left);
 }
 
 // A press inside a tile activates that tile's shown panel. A modal blocks it; a popup does not.
@@ -539,10 +536,7 @@ FlVec2 dock_workspace_panel_size(const FlDockWorkspace* ws, FlDockPanelId id) {
 }
 
 FlDockWorkspace* dock_workspace_current(void) {
-    FlUiCtx* ctx = g_ui_ctx;
-    // Every fl_dock_* entry point resolves through here: calling the dock outside a live UI context is fatal.
-    FL_ASSERT_FATAL(ctx != nullptr && ctx->dock_workspace != nullptr);
-    return ctx->dock_workspace; // non-owning; the registry default at ui_create, rebound for promoted windows
+    return g_ui_ctx->dock_workspace; // non-owning; the registry default at ui_create, rebound for promoted windows
 }
 
 // The clip container a panel's body lives in. Its viewport is the tile and its content is whatever the body

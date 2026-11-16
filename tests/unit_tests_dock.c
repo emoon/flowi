@@ -1447,6 +1447,7 @@ UTEST(dock_splitter, divider_drag_resizes_through_op) {
 // These cases need no Clay frame.
 
 UTEST(dock_workspace, binding_and_reservation) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlDockWorkspace* ws = dock_workspace_create();
     FlDockTree* tree = ws->tree;
     FlDockNodeId root = tree->root->id;
@@ -1512,6 +1513,7 @@ UTEST(dock_workspace, binding_and_reservation) {
 // A panel's title is copied into its record. The declared string is borrowed for the call only, and a reserved
 // panel keeps the title from its last declaration.
 UTEST(dock_workspace, panel_title_is_copied_and_retained) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlDockWorkspace* ws = dock_workspace_create();
     FlDockTree* tree = ws->tree;
     FlDockRequest tab = { .kind = FlDockRequest_Tab, .panel = 40, .target_node = tree->root->id };
@@ -1556,6 +1558,7 @@ UTEST(dock_workspace, panel_title_is_copied_and_retained) {
 // A loose (undocked) panel does not emit. The drag overlay draws its title and the body is drawn nowhere, so the
 // emit decision and dock_workspace_declare both return false for it.
 UTEST(dock_workspace, floating_panel_does_not_emit) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlDockWorkspace* ws = dock_workspace_create();
     FlDockTree* tree = ws->tree;
 
@@ -1606,6 +1609,7 @@ UTEST(dock_workspace, panel_family_tags) {
 // Visibility is a bit the app sets alongside the tree. A hidden panel keeps everything the tree holds for it and
 // only stops rendering.
 UTEST(dock_workspace, hidden_panel_keeps_its_slot_and_tab_index) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     FlDockWorkspace* ws = dock_workspace_create();
     FlDockTree* tree = ws->tree;
 
@@ -4166,6 +4170,7 @@ UTEST(dock_persist, rebind_dangling_workspace_reparent) {
 }
 
 UTEST(dock_persist, workspace_save_load_and_prune) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
     DOCK_TEMP_DIR(temp, "persist_save_load");
     const FlString dir = temp.path;
 

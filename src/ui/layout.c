@@ -15,17 +15,11 @@
 // fl_layout_end.
 
 static void ui_paint_scope_push(void) {
-    FlUiCtx* ctx = g_ui_ctx;
-    if (ctx != nullptr && ctx->painter != nullptr) {
-        painter_scope_push(ctx->painter, Clay_GetOpenElementCustomDataSlot());
-    }
+    painter_scope_push(g_ui_ctx->painter, Clay_GetOpenElementCustomDataSlot());
 }
 
 static void ui_paint_scope_pop(void) {
-    FlUiCtx* ctx = g_ui_ctx;
-    if (ctx != nullptr && ctx->painter != nullptr) {
-        painter_scope_pop(ctx->painter);
-    }
+    painter_scope_pop(g_ui_ctx->painter);
 }
 
 static void ui_apply_sizing(Clay_Sizing* out, FlLayoutSizing sizing, float scale) {
@@ -53,17 +47,15 @@ static void ui_open_element_with_id(FlLayoutId id) {
 #ifndef NDEBUG
     u32 element_id_value = element_id.id;
     FlUiCtx* ctx = g_ui_ctx;
-    if (ctx) {
-        ItemState* existing = hashmap_get(&ctx->shared->debug_id_tracker, element_id_value);
-        if (existing) {
-            log_error("DUPLICATE ID DETECTED: name='%.*s' id=%u (hash=0x%08X)", (int)id.name.length, id.name.data,
-                      id.id, element_id_value);
-            FL_ASSERT_FATAL(!existing);
-        } else {
-            // Only presence matters, not the value
-            ItemState dummy = { 0 };
-            hashmap_insert(&ctx->shared->debug_id_tracker, element_id_value, dummy);
-        }
+    ItemState* existing = hashmap_get(&ctx->shared->debug_id_tracker, element_id_value);
+    if (existing) {
+        log_error("DUPLICATE ID DETECTED: name='%.*s' id=%u (hash=0x%08X)", (int)id.name.length, id.name.data,
+                  id.id, element_id_value);
+        FL_ASSERT_FATAL(!existing);
+    } else {
+        // Only presence matters, not the value
+        ItemState dummy = { 0 };
+        hashmap_insert(&ctx->shared->debug_id_tracker, element_id_value, dummy);
     }
 #endif
 
@@ -87,8 +79,7 @@ void fl_floating_start(FlLayoutId id) {
 void fl_floating_configure(FlFloatingConfig config) {
     Clay_ElementDeclaration decl = { 0 };
 
-    FlUiCtx* ctx = g_ui_ctx;
-    float scale = ctx ? ctx->ui_scale : 1.0f;
+    float scale = g_ui_ctx->ui_scale;
     ui_apply_sizing(&decl.layout.sizing, config.sizing, scale);
 
     switch (config.attach_to) {
@@ -145,8 +136,7 @@ FlScrollContainerExtent ui_get_scroll_container_extent(u32 element_id) {
 }
 
 void fl_layout_configure(FlLayoutConfig config) {
-    FlUiCtx* ctx = g_ui_ctx;
-    float scale = ctx ? ctx->ui_scale : 1.0f;
+    float scale = g_ui_ctx->ui_scale;
 
     Clay_ElementDeclaration temp = { 0 };
 

@@ -70,14 +70,8 @@ FlDockWorkspace* dock_shared_default(FlDockShared* ds) {
     return (ds != nullptr && ds->registry_count > 0) ? ds->registry[0] : nullptr;
 }
 
-// nullptr when there is no shared tier (a standalone workspace driven directly by a unit test), so the entry points
-// below must no-op on it.
 static FlDockShared* dock_shared_get(void) {
-    FlUiCtx* ctx = g_ui_ctx;
-    if (ctx == nullptr || ctx->shared == nullptr) {
-        return nullptr;
-    }
-    return ctx->shared->dock;
+    return g_ui_ctx->shared->dock;
 }
 
 // A node id names the node's layout elements, and every window of a tick lays out into one id space. So each
@@ -167,10 +161,7 @@ static void demote_all(FlDockWorkspace* src, FlDockWorkspace* dst) {
 }
 
 void fl_dock_register_host(FlDockHost host) {
-    FlDockShared* ds = dock_shared_get();
-    if (ds != nullptr) {
-        ds->host = host;
-    }
+    dock_shared_get()->host = host;
 }
 
 static bool promote_is_queued(const FlDockShared* ds, const FlDockWorkspace* src, FlDockPanelId panel) {
@@ -184,7 +175,7 @@ static bool promote_is_queued(const FlDockShared* ds, const FlDockWorkspace* src
 
 void dock_promote_panel(FlDockPanelId panel) {
     FlDockShared* ds = dock_shared_get();
-    if (ds == nullptr || ds->host.open_promoted_window == nullptr) {
+    if (ds->host.open_promoted_window == nullptr) {
         return; // no host registered: promotion has no window to open
     }
     FlDockWorkspace* src = dock_workspace_current();
@@ -277,9 +268,6 @@ static DockPromoteRequest take_promote(FlDockShared* ds, u32 index) {
 // reports a window closed from inside its open callback can then drop queued requests without upsetting the loop.
 void dock_shared_flush_promotes(void) {
     FlDockShared* ds = dock_shared_get();
-    if (ds == nullptr) {
-        return;
-    }
     for (i32 ready = next_ready_promote(ds); ready >= 0; ready = next_ready_promote(ds)) {
         DockPromoteRequest req = take_promote(ds, (u32)ready);
         apply_promote(ds, &req);
@@ -297,7 +285,7 @@ static i32 promotion_index(const FlDockShared* ds, const void* host_window) {
 
 void fl_dock_notify_window_closed(void* host_window) {
     FlDockShared* ds = dock_shared_get();
-    if (ds == nullptr || host_window == nullptr) {
+    if (host_window == nullptr) {
         return;
     }
     i32 index = promotion_index(ds, host_window);

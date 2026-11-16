@@ -89,7 +89,7 @@ static bool is_ascii_quick(const char* data, i32 len) {
 static Clay_Dimensions measure_text_function(Clay_StringSlice text, Clay_TextElementConfig* config, void* user_data) {
     FlUiCtx* ctx = (FlUiCtx*)user_data;
 
-    if (!ctx || !ctx->shared->font_cache) {
+    if (!ctx->shared->font_cache) {
         return (Clay_Dimensions) { 0, 0 };
     }
 
@@ -365,7 +365,7 @@ void fl_ui_set_feedback_hook(FlUiFeedbackCallback cb, void* user_data) {
 
 // The bottom of the theme resolution stack: the host-injected colors, or the built-in default.
 static const FlThemeColors* ui_theme_base_colors(const FlUiCtx* ctx) {
-    if (!ctx || !ctx->shared->theme_colors) {
+    if (!ctx->shared->theme_colors) {
         static const FlThemeColors default_colors = {
             .interactive.base = FL_THEME_DEFAULT_INTERACTIVE_BASE,
             .interactive.hover = FL_THEME_DEFAULT_INTERACTIVE_HOVER,
@@ -397,7 +397,7 @@ static const FlThemeColors* ui_theme_base_colors(const FlUiCtx* ctx) {
 // base theme.
 
 const FlThemeColors* ui_get_theme_colors(FlUiCtx* ctx) {
-    if (ctx && ctx->theme_override_depth > 0) {
+    if (ctx->theme_override_depth > 0) {
         return ctx->theme_override_stack[ctx->theme_override_depth - 1];
     }
     return ui_theme_base_colors(ctx);
@@ -800,8 +800,7 @@ FlElementState ui_get_element_state(FlLayoutId layout_id) {
 // The single topmost-hovered element id this frame: the core's already-arbitrated hot_id (0 = nothing hovered).
 
 u32 ui_hot_id(void) {
-    FlUiCtx* ctx = g_ui_ctx;
-    return ctx ? ctx->hot_id : 0;
+    return g_ui_ctx->hot_id;
 }
 
 // Pointer position in an element's local logical (authoring) space: (mouse - origin) / ui_scale. The
@@ -839,11 +838,7 @@ void ui_scroll_target(FlLayoutId layout_id) {
 // scroll_target flag (see ui_track_element in ui.h for the hot/active-arbitration side effect).
 
 void ui_track_element(FlLayoutId layout_id) {
-    FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
-    get_or_create_key(self, ui_layout_id_to_clay_id(layout_id));
+    get_or_create_key(g_ui_ctx, ui_layout_id_to_clay_id(layout_id));
 }
 
 // Scoped per-frame wheel delta. Returns the frame's wheel delta only when this

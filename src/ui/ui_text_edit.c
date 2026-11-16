@@ -48,7 +48,7 @@ Vec2 ui_text_edit_measure(FlUiCtx* ctx, FlString text) {
 }
 
 static bool can_measure(FlUiCtx* ctx) {
-    return ctx && ctx->shared->font_cache;
+    return ctx->shared->font_cache != nullptr;
 }
 
 static float prefix_width(FlUiCtx* ctx, const FlTextInputState* state, int length) {
