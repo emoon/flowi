@@ -145,13 +145,28 @@ jobs:
   # need no Xvfb.
   rust:
     runs-on: ubuntu-latest
+    # build.rs builds libflowi with cmake for every distinct cargo target dir
+    # and feature set (build, trybuild, allocation-probe, headless). ccache
+    # lets the later builds reuse the objects of the first. CCACHE_NOHASHDIR
+    # keeps the differing build directories from changing the cache key.
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_NOHASHDIR: "1"
+      CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v4
       - name: Install deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libsdl2-dev clang \
+          sudo apt-get install -y cmake ninja-build libsdl2-dev clang ccache \
             libegl1-mesa-dev libgl1-mesa-dev
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-rust-${{ github.sha }}
+          restore-keys: ccache-rust-
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -214,3 +229,6 @@ jobs:
       # tools/codegen/Cargo.lock pins the commit that produced the committed output.
       - name: Codegen matches the IDL
         run: cargo regen-check
+      - name: ccache statistics
+        if: always()
+        run: ccache --show-stats
