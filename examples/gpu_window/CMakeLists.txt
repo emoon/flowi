@@ -19,7 +19,7 @@ embed_asset(${CMAKE_CURRENT_SOURCE_DIR}/assets/icon_mono.svg
 embed_asset(${CMAKE_CURRENT_SOURCE_DIR}/assets/icon_color.svg
     ${CMAKE_CURRENT_BINARY_DIR}/icon_color_svg.h k_icon_color_svg)
 
-add_executable(gpu_window_example main.c)
+add_executable(gpu_window_example main.c compositor.c demo_assets.c gallery.c input.c scene.c)
 target_include_directories(gpu_window_example PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(gpu_window_example PRIVATE flowi_objects)
 apply_target_config(gpu_window_example)
