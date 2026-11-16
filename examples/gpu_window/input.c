@@ -46,14 +46,25 @@ static InputOutcome handle_motion(View* view, const SDL_MouseMotionEvent* motion
 
 // Repaint only on a size change or an expose. Other window events (focus, enter/leave, moves)
 // do not redraw.
+static bool is_resize(const SDL_WindowEvent* window) {
+    return window->event == SDL_WINDOWEVENT_SIZE_CHANGED;
+}
+
+static bool size_differs(const View* view, const SDL_WindowEvent* window) {
+    return (f32)window->data1 != view->screen_w || (f32)window->data2 != view->screen_h;
+}
+
+static bool is_expose(const SDL_WindowEvent* window) {
+    return window->event == SDL_WINDOWEVENT_EXPOSED;
+}
+
 static InputOutcome handle_window(View* view, const SDL_WindowEvent* window) {
-    if (window->event == SDL_WINDOWEVENT_SIZE_CHANGED
-        && ((f32)window->data1 != view->screen_w || (f32)window->data2 != view->screen_h)) {
+    if (is_resize(window) && size_differs(view, window)) {
         view->screen_w = (f32)window->data1;
         view->screen_h = (f32)window->data2;
         return (InputOutcome) { .redraw = true, .resized = true };
     }
-    if (window->event == SDL_WINDOWEVENT_EXPOSED) {
+    if (is_expose(window)) {
         return (InputOutcome) { .redraw = true };
     }
     return (InputOutcome) { 0 };

@@ -47,15 +47,11 @@ static FlImageSource static_image(FlImageHandle handle) {
     return (FlImageSource) { .kind = FlImageKind_Static, .handle = handle };
 }
 
-static void draw_text_at(const Painter* p, f32 size, FlColor color, FlString text, FlVec2 origin) {
-    scene_text(p, (TextSpec) { .size = size, .color = color, .text = text, .origin = origin });
-}
-
 // A faint panel + label backing every gallery cell.
 static void draw_cell_chrome(const Painter* p, FlRect cell, FlString label) {
     scene_fill_solid(p, cell, radius_all(8), k_panel);
     scene_border(p, cell, (BorderSpec) { 1, 1, 1, 1, radius_all(8), k_panel_border });
-    draw_text_at(p, LABEL_SIZE, k_dim, label, point_at(cell, 12.0f, cell.h - 12.0f));
+    scene_text(p, (TextSpec) { LABEL_SIZE, k_dim, label, point_at(cell, 12.0f, cell.h - 12.0f) });
 }
 
 static void cell_fill_gradient(const Gallery* g, FlRect c) {
@@ -159,9 +155,9 @@ static void cell_images(const Gallery* g, FlRect c) {
 static void cell_text(const Gallery* g, FlRect c) {
     const Painter* p = &g->painter;
     draw_cell_chrome(p, c, FL_S("text (Roboto)"));
-    draw_text_at(p, 22, k_ink, FL_S("Sphinx of black quartz,"), point_at(c, 14, 38));
-    draw_text_at(p, 16, k_dim, FL_S("judge my vow. 0123456789"), point_at(c, 14, 66));
-    draw_text_at(p, 14, k_green, FL_S("The quick brown fox jumps"), point_at(c, 14, 92));
+    scene_text(p, (TextSpec) { 22, k_ink, FL_S("Sphinx of black quartz,"), point_at(c, 14, 38) });
+    scene_text(p, (TextSpec) { 16, k_dim, FL_S("judge my vow. 0123456789"), point_at(c, 14, 66) });
+    scene_text(p, (TextSpec) { 14, k_green, FL_S("The quick brown fox jumps"), point_at(c, 14, 92) });
 }
 
 static void cell_svg_mono(const Gallery* g, FlRect c) {
@@ -212,8 +208,8 @@ static void draw_backdrop_and_title(const Painter* p) {
     fl_ir_fill_rect(p->arena, (FlRect) { 0, 0, p->view.screen_w, p->view.screen_h }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { k_bg, k_bg, k_bg, k_bg }, nullptr);
 
-    draw_text_at(p, TITLE_SIZE, k_ink, FL_S("flowi — GPU backend primitive gallery"),
-                 (FlVec2) { MARGIN, MARGIN + 26.0f });
+    scene_text(
+        p, (TextSpec) { TITLE_SIZE, k_ink, FL_S("flowi — GPU backend primitive gallery"), { MARGIN, MARGIN + 26.0f } });
 }
 
 // The scene has no animation.
