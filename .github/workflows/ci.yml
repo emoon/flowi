@@ -164,7 +164,11 @@ jobs:
       # The lint set is `[workspace.lints]` in rust/Cargo.toml, so plain
       # `cargo clippy` reports the same lints. This step turns the warnings
       # into errors.
+      # Clippy only type-checks. FLOWI_SKIP_NATIVE_LINK=1 stops build.rs from
+      # rebuilding libflowi, which the clippy wrapper would otherwise force.
       - name: Clippy
+        env:
+          FLOWI_SKIP_NATIVE_LINK: "1"
         run: cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
       # One crate build serves both a host application and a plugin, and there
       # is no `plugin` cargo feature. Fail if a `feature = "plugin"` cfg or a
@@ -180,11 +184,11 @@ jobs:
       # and must carry libSDL2 as DT_NEEDED. Build it in its own target dir and
       # check the link and the export list (the version script's `local: *`
       # hides the SDL symbols). Opening a window needs a display, so this only
-      # checks that it links.
+      # checks that it links. The Build step above already built it with the
+      # default features, so reuse that library.
       - name: Windowed default links libSDL2, exports unchanged
         run: |
-          cargo build --manifest-path rust/Cargo.toml -p flowi --target-dir /tmp/flowi-windowed
-          so=$(find /tmp/flowi-windowed -name 'libflowi.so' -path "*/flowi-*/out/*" | head -1)
+          so=$(find rust/target/debug/build -name 'libflowi.so' -path "*/flowi-*/out/*" | head -1)
           echo "windowed lib: $so"
           if readelf -d "$so" | grep -q 'NEEDED.*libSDL2'; then
             echo "OK: libSDL2 is DT_NEEDED"
