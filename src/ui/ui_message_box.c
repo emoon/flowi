@@ -18,7 +18,7 @@
 #define UI_MESSAGE_BOX_CANCEL_ID "##msgbox_cancel"
 
 FlDialogResult ui_message_box_impl(FlString title, FlString message, bool* open, FlMessageBoxConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
 
     // A closed dialog is a no-op; if the app cleared `*open` itself, close the modal scope still armed from the
     // previous frame.

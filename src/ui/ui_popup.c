@@ -5,7 +5,7 @@
 #include "ui_private.h"
 
 void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
 
     u32 anchor_widget_id = ui_layout_id_to_clay_id(anchor_id);
 
@@ -90,7 +90,7 @@ void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
 }
 
 void ui_popup_end(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
 
     Clay__CloseElement();
 

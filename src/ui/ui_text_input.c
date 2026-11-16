@@ -349,8 +349,8 @@ static void render_field(const TextField* f, FlLayoutId input_id, bool focused) 
 }
 
 FlSignal ui_text_input(FlString label, FlTextInputState* state, FlTextInputConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
-    if (!ctx || !state) {
+    FlUiCtx* ctx = g_ui_ctx;
+    if (!state) {
         return (FlSignal) { 0 };
     }
 

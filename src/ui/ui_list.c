@@ -43,7 +43,7 @@
 FlListContext* ui_list_create(FlArena* arena) {
     FlListContext* ctx = arena_alloc_zero(arena, FlListContext);
     ctx->arena = arena;
-    ctx->ui_ctx = ui_get_ctx();
+    ctx->ui_ctx = g_ui_ctx;
     hashmap_new(&ctx->list_states, arena, 8);
 
     log_info("List context created");
@@ -454,7 +454,7 @@ static void list_decl_row_content(const FlListItem* it, f32 row_height) {
 }
 
 FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelectionSet* set, FlListOpts opts) {
-    FlListContext* self = ui_get_ctx()->ui_list_ctx;
+    FlListContext* self = g_ui_ctx->ui_list_ctx;
     // A nullptr item array is treated as empty regardless of count, because the loop below dereferences items[i] and
     // a non-zero count with nullptr items would fault.
     ListRows rows = list_rows_from_items(items, count);
@@ -487,7 +487,7 @@ FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelect
 // Scoped face: forward to the core with the global UI context's list state.
 
 FlListRange fl_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config) {
-    return list_begin_impl(ui_get_ctx()->ui_list_ctx, (ListBeginArgs) {
+    return list_begin_impl(g_ui_ctx->ui_list_ctx, (ListBeginArgs) {
                                                           .id = id,
                                                           .rows = list_rows_from_ids(ordered_ids, config.labels, count),
                                                           .set = set,
@@ -496,19 +496,19 @@ FlListRange fl_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSe
 }
 
 FlSignal fl_list_item_begin(u64 stable_id) {
-    return list_item_begin_impl(ui_get_ctx()->ui_list_ctx, stable_id);
+    return list_item_begin_impl(g_ui_ctx->ui_list_ctx, stable_id);
 }
 
 void fl_list_item_end(void) {
-    list_item_end_impl(ui_get_ctx()->ui_list_ctx);
+    list_item_end_impl(g_ui_ctx->ui_list_ctx);
 }
 
 FlListResult fl_list_end(void) {
-    return list_end_impl(ui_get_ctx()->ui_list_ctx);
+    return list_end_impl(g_ui_ctx->ui_list_ctx);
 }
 
 void fl_list_request_focus(FlLayoutId id, u64 cursor_id) {
-    FlListContext* self = ui_get_ctx()->ui_list_ctx;
+    FlListContext* self = g_ui_ctx->ui_list_ctx;
     u32 clay_id = ui_layout_id_to_clay_id(id);
     ListState* st = list_state_get(self, clay_id);
 

@@ -2117,15 +2117,6 @@ UTEST(background, blend_t_round_trip) {
     }
 }
 
-// The background calls do nothing on the null context that exists before init, so ui_background_set_blend before
-// ui_create is harmless. The case needs that null context, so it asserts the context is null first.
-UTEST(background, set_blend_before_init_is_noop) {
-    render_fixture_teardown();
-    ASSERT_TRUE_MSG(ui_get_ctx() == nullptr, "precondition: must run before any ui_create (s_ctx still null)");
-
-    ui_background_set_blend(H_A, H_B, 128);
-}
-
 // sr_command_split_rounded: the general 9-grid case emits a corner command only for a non-zero corner, so the
 // arena advance, which the caller reads through arena_count, equals corners written + 5. Every written command is
 // a copy of initial_command, so a valid slot always has the base mask bit. An uninitialized slot on a new arena
@@ -7495,7 +7486,7 @@ UTEST(render, theme_scope_frame_hygiene) {
 UTEST(render, theme_stack_fl_api) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    ASSERT_TRUE_MSG(ui_get_ctx() == ctx, "fl_theme_* forward to s_ctx; fixture ctx must be the current ctx");
+    ASSERT_TRUE_MSG(g_ui_ctx == ctx, "fl_theme_* forward to s_ctx; fixture ctx must be the current ctx");
 
     static const FlThemeColors base = {
         .interactive.base = { 200, 30, 40, 255 },
@@ -7535,7 +7526,7 @@ UTEST(render, theme_stack_fl_api) {
 UTEST(render, public_read_getters) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    ASSERT_TRUE_MSG(ui_get_ctx() == ctx, "getters read the current ctx; fixture ctx must be current");
+    ASSERT_TRUE_MSG(g_ui_ctx == ctx, "getters read the current ctx; fixture ctx must be current");
 
     static const FlThemeColors base = { .surface.base = { 21, 22, 23, 255 } };
     fl_theme_update(&base);
@@ -7577,7 +7568,7 @@ UTEST(render, public_read_getters) {
 UTEST(render, public_nav_query) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    ASSERT_TRUE_MSG(ui_get_ctx() == ctx, "fl_* nav queries read the current ctx; fixture ctx must be current");
+    ASSERT_TRUE_MSG(g_ui_ctx == ctx, "fl_* nav queries read the current ctx; fixture ctx must be current");
 
     ctx->input_state.keyboard.keys_pressed[FlKey_Enter] = true;
     ui_actions_update(ctx);
@@ -7599,7 +7590,7 @@ UTEST(render, public_nav_query) {
 UTEST(render, public_widget_api_smoke) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    ASSERT_TRUE_MSG(ui_get_ctx() == ctx, "fl_* widgets forward to the current ctx; fixture ctx must be current");
+    ASSERT_TRUE_MSG(g_ui_ctx == ctx, "fl_* widgets forward to the current ctx; fixture ctx must be current");
 
     ctx->layout_width = 256.0f;
     ctx->layout_height = 256.0f;
@@ -8580,8 +8571,7 @@ UTEST(render, canvas_paint_z_clip_and_one_span) {
         ui_layout_area_id(ID("clipbox"), .sizing = { sizing_fixed(120), sizing_fixed(120) },
                           .clip = { .horizontal = true, .vertical = true }) {
             ui_layout_area_id(ID("canvas"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-                Painter* p = ui_get_painter();
-                ASSERT_TRUE_MSG(p != nullptr, "ui_get_painter is valid inside an open painting scope");
+                Painter* p = g_ui_ctx->painter;
                 // Many primitives in one scope, which become a single CUSTOM span.
                 painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 200.0f }, canvas_col);
                 painter_rect(p, (FlRect) { .x = 4.0f, .y = 4.0f, .w = 8.0f, .h = 8.0f }, canvas_col);
@@ -9062,8 +9052,7 @@ UTEST(render, canvas_paint_over_fill_and_self_clip) {
         // clips (the root grow area is unclipped), so only the canvas's own scissor can cut the paint.
         ui_layout_area_id(ID("fillcanvas"), .sizing = { sizing_fixed(100), sizing_fixed(100) }, .color = fill_col,
                           .border = fl_border(border_col, 4)) {
-            Painter* p = ui_get_painter();
-            ASSERT_TRUE_MSG(p != nullptr, "ui_get_painter is valid inside an open painting scope");
+            Painter* p = g_ui_ctx->painter;
             // A paint band that overshoots the element to the right: x 0..200, and the element is 100 wide.
             painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 50.0f }, paint_col);
             // A child box at the canvas origin, which draws over the paint.
@@ -9108,7 +9097,7 @@ UTEST(render, canvas_under_popup) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
         ui_layout_area_id(ID("canvas3"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 200.0f }, canvas_col);
+            painter_rect(g_ui_ctx->painter, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 200.0f, .h = 200.0f }, canvas_col);
         }
         // The popup is a floating element attached to the root at the origin and declared after the canvas, so it
         // composes over the paint.
@@ -9129,15 +9118,14 @@ UTEST(render, canvas_under_popup) {
 }
 
 // A custom control is an ordinary layout element (interaction by id through ui_widget_behavior and
-// ui_get_element_state) whose fill is painted inside its scope. The case also checks when ui_get_painter() is
-// valid.
+// ui_get_element_state) whose fill is painted inside its scope. The case also checks when painting scopes are open.
 UTEST(render, canvas_custom_control) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
     canvas_fixture_reset(ctx);
 
-    // Outside any frame or scope the painter accessor returns nullptr, since paint has nothing to attach to.
-    ASSERT_TRUE_MSG(ui_get_painter() == nullptr, "ui_get_painter is null outside any painting scope");
+    // Outside any frame or scope no painting scope is open, since paint has nothing to attach to.
+    ASSERT_EQ_MSG(painter_scope_depth(g_ui_ctx->painter), 0u, "no painting scope is open outside a layout element");
 
     const FlColor ctrl_col = ui_color(200, 160, 40, 255);
     const FlLayoutId ctrl_id = ID("custom_control");
@@ -9145,21 +9133,21 @@ UTEST(render, canvas_custom_control) {
 
     ui_update_begin(ctx);
     // A frame is open but no layout element is, so there is still no scope.
-    ASSERT_TRUE_MSG(ui_get_painter() == nullptr, "ui_get_painter is null before any layout element opens");
+    ASSERT_EQ_MSG(painter_scope_depth(g_ui_ctx->painter), 0u, "no painting scope is open before any layout element");
 
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         ui_layout_area_id(ctrl_id, .sizing = { sizing_fixed(80), sizing_fixed(80) }) {
             FlSignal sig = ui_widget_behavior(ctrl_id, (FlWidgetConfig) { 0 });
             (void)sig;
-            Painter* p = ui_get_painter();
-            painter_valid_in_scope = (p != nullptr);
+            Painter* p = g_ui_ctx->painter;
+            painter_valid_in_scope = painter_scope_depth(p) > 0;
             painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f }, ctrl_col);
         }
     }
-    ASSERT_TRUE_MSG(ui_get_painter() == nullptr, "ui_get_painter is null again once the scope closes");
+    ASSERT_EQ_MSG(painter_scope_depth(g_ui_ctx->painter), 0u, "no painting scope is open once the element closes");
     ui_update_end(ctx, 1.0f / 60.0f);
 
-    ASSERT_TRUE_MSG(painter_valid_in_scope, "ui_get_painter was valid inside the control's scope");
+    ASSERT_TRUE_MSG(painter_valid_in_scope, "a painting scope was open inside the control's element");
 
     FlElementState st = ui_get_element_state(ctrl_id);
     ASSERT_TRUE_MSG(st.found, "the custom control is hit-tested as an ordinary layout element");
@@ -9197,7 +9185,7 @@ UTEST(render, canvas_command_accounting) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom) {
         ui_layout_area_id(ID("acct"), .sizing = { sizing_fixed(100), sizing_fixed(100) }, .color = box_col) {
-            Painter* p = ui_get_painter();
+            Painter* p = g_ui_ctx->painter;
             painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 100.0f, .h = 100.0f }, paint_col);
             painter_rect(p, (FlRect) { .x = 2.0f, .y = 2.0f, .w = 4.0f, .h = 4.0f }, paint_col);
             painter_circle(p, (FlVec2) { .x = 50.0f, .y = 50.0f }, 6.0f, paint_col);
@@ -9226,7 +9214,7 @@ UTEST(render, canvas_paint_translated_by_origin) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() },
                    .direction = FlLayoutDirection_TopToBottom, .padding = { .left = 40, .top = 30 }) {
         ui_layout_area_id(ID("offset_canvas"), .sizing = { sizing_fixed(80), sizing_fixed(80) }) {
-            painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
+            painter_rect(g_ui_ctx->painter, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
                          canvas_col); // element-local (0,0)
         }
     }
@@ -9259,7 +9247,7 @@ UTEST(render, canvas_element_local_pointer_pos) {
             // A canvas registers by id as an ordinary interactive element, which records its resolved rect. The
             // paint emits a command carrying the element id, and that marks the rect as resolved (found).
             ui_widget_behavior(ID("ptr_canvas"), (FlWidgetConfig) { 0 });
-            painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
+            painter_rect(g_ui_ctx->painter, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
                          ui_color(40, 200, 120, 255));
         }
     }
@@ -9298,7 +9286,7 @@ UTEST(render, canvas_element_local_pointer_pos) {
                    .padding = { .left = 40, .top = 30 }) {
         ui_layout_area_id(ID("ptr_canvas"), .sizing = { sizing_fixed(80), sizing_fixed(80) }) {
             ui_widget_behavior(ID("ptr_canvas"), (FlWidgetConfig) { 0 });
-            painter_rect(ui_get_painter(), (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
+            painter_rect(g_ui_ctx->painter, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 80.0f, .h = 80.0f },
                          ui_color(40, 200, 120, 255));
         }
     }
@@ -9336,7 +9324,7 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
                    .padding = { .left = 40, .top = 30 }) {
         ui_layout_area_id(ID("hover_canvas"), .sizing = { sizing_fixed(80), sizing_fixed(80) }) {
             ui_widget_behavior(ID("hover_canvas"), (FlWidgetConfig) { 0 });
-            Painter* p = ui_get_painter();
+            Painter* p = g_ui_ctx->painter;
             painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, base);
             painter_rect(p, (FlRect) { .x = 40.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, base);
         }
@@ -9354,7 +9342,7 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
             ui_widget_behavior(ID("hover_canvas"), (FlWidgetConfig) { 0 });
             FlVec2 local = ui_mouse_position(ID("hover_canvas"));
             bool right = local.x >= 40.0f;
-            Painter* p = ui_get_painter();
+            Painter* p = g_ui_ctx->painter;
             painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, right ? base : hl);
             painter_rect(p, (FlRect) { .x = 40.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, right ? hl : base);
         }
@@ -9376,7 +9364,7 @@ UTEST(render, canvas_hover_highlight_tracks_pointer) {
             ui_widget_behavior(ID("hover_canvas"), (FlWidgetConfig) { 0 });
             FlVec2 local = ui_mouse_position(ID("hover_canvas"));
             bool right = local.x >= 40.0f;
-            Painter* p = ui_get_painter();
+            Painter* p = g_ui_ctx->painter;
             painter_rect(p, (FlRect) { .x = 0.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, right ? base : hl);
             painter_rect(p, (FlRect) { .x = 40.0f, .y = 0.0f, .w = 40.0f, .h = 80.0f }, right ? hl : base);
         }
@@ -9516,7 +9504,7 @@ UTEST(render, snapped_line_crisp_at_fractional_dpi) {
         // The canvas is at the device origin (0,0). A hairline at local y=9 is at device y = 9 * 1.25 = 11.25,
         // which snaps to row 11. Local x 0..100 covers device x 0..125, so x=50 is in the middle of the line.
         ui_layout_area_id(ID("canvas"), .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_hline(ui_get_painter(), 0.0f, 9.0f, 100.0f, line_col);
+            painter_hline(g_ui_ctx->painter, 0.0f, 9.0f, 100.0f, line_col);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -9547,7 +9535,7 @@ UTEST(render, snapped_line_crisp_at_fractional_scroll) {
         // x 0..100 with the x offset of 200 covers device x 200..300, so x=250 is in the middle of the line.
         ui_floating_area_id(ID("scrolled_canvas"), .attach_to = FlFloatingAttachTo_Root, .offset = { 200.0f, 10.4f },
                             .sizing = { sizing_fixed(200), sizing_fixed(200) }) {
-            painter_hline(ui_get_painter(), 0.0f, 0.0f, 100.0f, line_col);
+            painter_hline(g_ui_ctx->painter, 0.0f, 0.0f, 100.0f, line_col);
         }
     }
     ui_update_end(ctx, 1.0f / 60.0f);
@@ -9785,7 +9773,7 @@ static const FlLayoutId k_wheel_scroll_id
 // painter rects and no text, so its bytes are deterministic on the software renderer.
 static void wheel_scroll_frame(void* user_data) {
     WheelScrollState* st = (WheelScrollState*)user_data;
-    st->ctx = ui_get_ctx();
+    st->ctx = g_ui_ctx;
 
     ui_layout_area_id(k_wheel_scroll_id, .sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
         ui_scroll_target(k_wheel_scroll_id);
@@ -9909,7 +9897,7 @@ UTEST(render, app_headless_smoke) {
 UTEST(render, adjacent_radio_groups_no_id_collision) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    ASSERT_TRUE_MSG(ui_get_ctx() == ctx, "widgets forward to the current ctx; fixture ctx must be current");
+    ASSERT_TRUE_MSG(g_ui_ctx == ctx, "widgets forward to the current ctx; fixture ctx must be current");
 
     ctx->layout_width = 256.0f;
     ctx->layout_height = 256.0f;
@@ -9947,7 +9935,7 @@ UTEST(render, adjacent_radio_groups_no_id_collision) {
 UTEST(render, adjacent_tab_bars_no_id_collision) {
     FlUiCtx* ctx = render_fixture_get();
     ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
-    ASSERT_TRUE_MSG(ui_get_ctx() == ctx, "widgets forward to the current ctx; fixture ctx must be current");
+    ASSERT_TRUE_MSG(g_ui_ctx == ctx, "widgets forward to the current ctx; fixture ctx must be current");
 
     ctx->layout_width = 256.0f;
     ctx->layout_height = 256.0f;

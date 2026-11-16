@@ -6120,7 +6120,7 @@ static void fl_app_gpu_frame(void* user_data) {
     // ui_zoom; a headless backend reports content scale 1.0 and the default zoom is 1.0, so the scale is 1.0
     // here and element-local painter coordinates map 1:1 to the 256x256 surface.
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {
-        Painter* p = ui_get_painter();
+        Painter* p = g_ui_ctx->painter;
         painter_rect(p, (FlRect) { .x = 20.0f, .y = 20.0f, .w = 100.0f, .h = 100.0f }, ui_color(40, 60, 200, 255));
         painter_circle(p, (FlVec2) { .x = 180.0f, .y = 180.0f }, 50.0f, ui_color(230, 80, 60, 255));
         // Two green outlines, the rect in the left half and the circle in the right; the readback counts each

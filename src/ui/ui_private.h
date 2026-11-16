@@ -609,7 +609,6 @@ void ui_destroy(FlUiCtx* ctx);
 
 // Frees every viewport3d table slot last begun by ctx; ui_destroy calls it.
 void viewport3d_release_owner(const FlUiCtx* ctx);
-FlUiCtx* ui_get_ctx(void);
 
 // Bind this window's hosted dock workspace: a non-owning pointer into the shared registry that
 // dock_workspace_current() resolves to for this context. The runner calls it when materializing a promoted
@@ -621,7 +620,7 @@ void ui_ctx_set_dock_workspace(FlUiCtx* ctx, struct FlDockWorkspace* ws);
 // render commands all land on that window's tree.
 void ui_make_current(FlUiCtx* ctx);
 
-// The single active UI context, defined in ui.c. ui_get_ctx() is the thin accessor over it.
+// The single active UI context, defined in ui.c. g_ui_ctx is the thin accessor over it.
 extern FlUiCtx* g_ui_ctx;
 
 // The item's persisted state for id, created on first use and re-scoped into the current popup. Never nullptr.

@@ -184,7 +184,7 @@ static void handle_input(FlUiCtx* ctx, BarHot hot) {
 }
 
 void ui_menubar_begin_impl(FlLayoutId bar_id, FlMenuBarConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
     u32 scope = ui_layout_id_to_clay_id(bar_id);
@@ -290,7 +290,7 @@ static void dropdown_begin(FlUiCtx* ctx, FlLayoutId top_id, float min_width) {
 }
 
 bool ui_menubar_menu_begin_impl(FlString label, FlMenuBarMenuConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
@@ -313,7 +313,7 @@ bool ui_menubar_menu_begin_impl(FlString label, FlMenuBarMenuConfig cfg) {
 }
 
 void ui_menubar_menu_end_impl(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     UiMenuFrame* mf = &ctx->menu_frame;
 
     fl_layout_end();
@@ -326,7 +326,7 @@ void ui_menubar_menu_end_impl(void) {
 }
 
 void ui_menubar_end_impl(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     UiMenuFrame* mf = &ctx->menu_frame;
 
     fl_layout_end();
@@ -340,6 +340,6 @@ void ui_menubar_end_impl(void) {
 }
 
 bool ui_menubar_is_open_impl(FlLayoutId bar_id) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     return menu_owned_by(ctx, ui_layout_id_to_clay_id(bar_id));
 }

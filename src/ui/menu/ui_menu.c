@@ -60,7 +60,7 @@ FlColor ui_menu_blend(FlColor a, FlColor b, float t) {
 // Open-path state
 
 void ui_menu_open_impl(FlLayoutId menu_id, FlVec2 point) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     UiMenuState* m = &ctx->shared->menu;
     u32 scope = ui_layout_id_to_clay_id(menu_id);
 
@@ -76,14 +76,14 @@ void ui_menu_open_impl(FlLayoutId menu_id, FlVec2 point) {
 }
 
 void ui_menu_close_impl(FlLayoutId menu_id) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     if (menu_owned_by(ctx, ui_layout_id_to_clay_id(menu_id))) {
         menu_close_internal(ctx);
     }
 }
 
 bool ui_menu_is_open_impl(FlLayoutId menu_id) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     return menu_owned_by(ctx, ui_layout_id_to_clay_id(menu_id));
 }
 
@@ -387,7 +387,7 @@ static void handle_input(FlUiCtx* ctx) {
 }
 
 bool ui_menu_begin_impl(FlLayoutId menu_id, FlMenuConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
     u32 scope = ui_layout_id_to_clay_id(menu_id);
@@ -445,13 +445,13 @@ static FlSignal finish_leaf(FlUiCtx* ctx, MenuRow row, FlMenuItemConfig cfg, boo
 }
 
 FlSignal ui_menu_item_impl(FlString label, FlMenuItemConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     MenuRow row = emit_row(ctx, (MenuRowSpec) { .label = label, .shortcut = cfg.shortcut, .disabled = cfg.disabled });
     return finish_leaf(ctx, row, cfg, /*kind_default_close=*/true);
 }
 
 FlSignal ui_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     bool marked = checked != nullptr && *checked;
     MenuRow row = emit_row(ctx, (MenuRowSpec) { .label = label,
                                                 .shortcut = cfg.shortcut,
@@ -467,7 +467,7 @@ FlSignal ui_menu_check_impl(FlString label, bool* checked, FlMenuItemConfig cfg)
 }
 
 FlSignal ui_menu_radio_impl(FlString label, int* selected, int value, FlMenuItemConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     bool marked = selected != nullptr && *selected == value;
     MenuRow row = emit_row(ctx, (MenuRowSpec) { .label = label,
                                                 .shortcut = cfg.shortcut,
@@ -491,7 +491,7 @@ static FlLayoutId record_static_row(FlUiCtx* ctx, FlString name, f32 row_height)
 }
 
 void ui_menu_separator_impl(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
 
     FlLayoutId item_id = record_static_row(ctx, FL_S("##menu_sep"), UI_MENU_SEPARATOR_HEIGHT);
@@ -504,7 +504,7 @@ void ui_menu_separator_impl(void) {
 }
 
 void ui_menu_header_impl(FlString label) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     const FlThemeColors* theme = ui_get_theme_colors(ctx);
 
     FlLayoutId item_id = record_static_row(ctx, label, UI_MENU_HEADER_HEIGHT);
@@ -518,7 +518,7 @@ void ui_menu_header_impl(FlString label) {
 }
 
 bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     UiMenuState* m = &ctx->shared->menu;
     UiMenuFrame* mf = &ctx->menu_frame;
 
@@ -550,7 +550,7 @@ bool ui_submenu_begin_impl(FlString label, FlSubmenuConfig cfg) {
 }
 
 void ui_submenu_end_impl(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     UiMenuFrame* mf = &ctx->menu_frame;
 
     fl_layout_end();
@@ -562,7 +562,7 @@ void ui_submenu_end_impl(void) {
 }
 
 void ui_menu_end_impl(void) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
     UiMenuFrame* mf = &ctx->menu_frame;
 
     fl_layout_end();
@@ -590,7 +590,7 @@ static FlLayoutSizing region_sizing(FlLayoutSizing requested) {
 }
 
 FlSignal ui_menu_region_begin_impl(FlLayoutId region_id, FlLayoutId menu_id, FlMenuRegionConfig cfg) {
-    FlUiCtx* ctx = ui_get_ctx();
+    FlUiCtx* ctx = g_ui_ctx;
 
     FlSignal signal
         = ui_item_behavior(region_id, FlItemFlags_clickable | FlItemFlags_right_click, (FlWidgetConfig) { 0 });

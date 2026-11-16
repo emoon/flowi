@@ -59,9 +59,6 @@ Painter* painter_create(FlArena* persistent_arena) {
 }
 
 void painter_destroy(Painter* p) {
-    if (p == nullptr) {
-        return;
-    }
     fl_arena_destroy(p->arena);
     p->arena = nullptr;
 }
@@ -115,9 +112,6 @@ static PaintScope* painter_top_scope_mut(Painter* p) {
 }
 
 void painter_set_effect(Painter* p, FlEffect effect) {
-    if (p == nullptr) {
-        return;
-    }
     PaintScope* scope = painter_top_scope_mut(p);
     if (scope != nullptr) {
         scope->effect = effect;
@@ -193,9 +187,6 @@ static void painter_record_end(Painter* p, FlPaintSpan* span, void* start) {
 // backend re-resolves each glyph id and rasterizes it.
 
 void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, FlColor color) {
-    if (p == nullptr) {
-        return;
-    }
     if (string_is_empty(text) || p->font_cache == nullptr) {
         return;
     }
@@ -273,7 +264,7 @@ static bool painter_prepare_line(const Painter* p, float x, float y, FlString te
 
 void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color) {
     StyledLine line;
-    if (p == nullptr || !painter_prepare_line(p, x, y, text, style, &line)) {
+    if (!painter_prepare_line(p, x, y, text, style, &line)) {
         return;
     }
     void* start;
@@ -300,9 +291,6 @@ static void painter_emit_fill_rect(Painter* p, FlRect rect, const FlRectConfig* 
 }
 
 void painter_rect_styled(Painter* p, FlRect rect, FlRectConfig config) {
-    if (p == nullptr) {
-        return;
-    }
     void* start;
     FlPaintSpan* span = painter_record_begin(p, &start);
     if (span == nullptr) {
@@ -317,9 +305,6 @@ void painter_rect(Painter* p, FlRect rect, FlColor color) {
 }
 
 void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count) {
-    if (p == nullptr) {
-        return;
-    }
     if (rects == nullptr || rect_count == 0) {
         return;
     }
@@ -367,7 +352,7 @@ static void painter_emit_span_text(Painter* p, const StyledLine* line, const Tex
 }
 
 void painter_text_spans(Painter* p, float x, float y, SpannedText text, FlTextStyle style) {
-    if (p == nullptr || p->ui_scale <= 0.0f) {
+    if (p->ui_scale <= 0.0f) {
         return;
     }
     StyledLine line;
@@ -404,9 +389,6 @@ static FlStrokeStyle painter_scale_dash(const Painter* p, FlStrokeStyle dash) {
 }
 
 void painter_rect_stroke(Painter* p, FlRect rect, float radius, FlStroke stroke) {
-    if (p == nullptr) {
-        return;
-    }
     // The band cannot be wider than half the rect; past that the outline is the filled rect. Clamping here
     // keeps every backend inside the rect, whatever it does with an over-wide band itself.
     const float width = min(stroke.width, min(rect.w, rect.h) * 0.5f);
@@ -462,18 +444,12 @@ static void painter_record_snapped_rect(Painter* p, FlRect rect, FlColor color) 
 }
 
 void painter_hline(Painter* p, float x, float y, float length, FlColor color) {
-    if (p == nullptr) {
-        return;
-    }
     painter_record_snapped_rect(
         p, (FlRect) { .x = scale(p, x), .y = scale(p, y), .w = scale(p, length), .h = device_hairline(p->ui_scale) },
         color);
 }
 
 void painter_vline(Painter* p, float x, float y, float length, FlColor color) {
-    if (p == nullptr) {
-        return;
-    }
     painter_record_snapped_rect(
         p, (FlRect) { .x = scale(p, x), .y = scale(p, y), .w = device_hairline(p->ui_scale), .h = scale(p, length) },
         color);
@@ -485,9 +461,6 @@ static float painter_extent_or(const Painter* p, float length, float fallback_px
 }
 
 bool painter_image(Painter* p, FlRect rect, FlImageHandle image, FlColor color) {
-    if (p == nullptr) {
-        return false;
-    }
 
     // Readiness and native size come from the core image registry: ready == the active backend
     // realized the handle.
@@ -534,9 +507,6 @@ static bool painter_ready_source(FlImageHandle image, FlRect want, FlRect* out) 
 }
 
 bool painter_image_sub(Painter* p, FlImageSub sub) {
-    if (p == nullptr) {
-        return false;
-    }
     if (sub.sw <= 0.0f || sub.sh <= 0.0f) {
         return false;
     }
@@ -569,9 +539,6 @@ bool painter_image_sub(Painter* p, FlImageSub sub) {
 }
 
 void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColor color) {
-    if (p == nullptr) {
-        return;
-    }
     if (image == nullptr || image->user_buffer == nullptr) {
         return;
     }
@@ -603,9 +570,6 @@ void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColo
 // intensity are unitless and pass through unscaled.
 
 void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, FlPolylineStyle style) {
-    if (p == nullptr) {
-        return;
-    }
     if (points == nullptr || point_count == 0) {
         return;
     }
@@ -638,9 +602,6 @@ void painter_line(Painter* p, FlVec2 a, FlVec2 b, FlStroke stroke) {
 }
 
 void painter_arc(Painter* p, FlVec2 center, float radius, float start_angle, float sweep, FlStroke stroke) {
-    if (p == nullptr) {
-        return;
-    }
     void* start;
     FlPaintSpan* span = painter_record_begin(p, &start);
     if (span == nullptr) {
@@ -658,9 +619,6 @@ void painter_arc(Painter* p, FlVec2 center, float radius, float start_angle, flo
 static const FlColor k_no_fill = { 0 };
 
 void painter_circle_bordered(Painter* p, FlVec2 center, float radius, FlColor color, FlStroke border) {
-    if (p == nullptr) {
-        return;
-    }
     void* start;
     FlPaintSpan* span = painter_record_begin(p, &start);
     if (span == nullptr) {
@@ -680,9 +638,6 @@ void painter_circle_stroke(Painter* p, FlVec2 center, float radius, FlStroke str
 }
 
 void painter_diamond_bordered(Painter* p, FlVec2 center, FlVec2 half_extent, FlColor color, FlStroke border) {
-    if (p == nullptr) {
-        return;
-    }
     void* start;
     FlPaintSpan* span = painter_record_begin(p, &start);
     if (span == nullptr) {
@@ -702,9 +657,6 @@ void painter_diamond_stroke(Painter* p, FlVec2 center, FlVec2 half_extent, FlStr
 }
 
 void painter_bars(Painter* p, float baseline_y, const FlBar* bars, u32 bar_count, FlColor color) {
-    if (p == nullptr) {
-        return;
-    }
     if (bars == nullptr || bar_count == 0) {
         return;
     }

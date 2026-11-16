@@ -54,7 +54,7 @@ struct FlListUniformContext {
 FlListUniformContext* list_uniform_create(FlArena* arena) {
     FlListUniformContext* ctx = arena_alloc_zero(arena, FlListUniformContext);
     ctx->arena = arena;
-    ctx->ui_ctx = ui_get_ctx();
+    ctx->ui_ctx = g_ui_ctx;
 
     hashmap_new(&ctx->states, arena, 16);
 

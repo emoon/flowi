@@ -69,8 +69,7 @@
 #include <stdio.h>
 #include <string.h>
 
-// The process-global UI context: non-null between ui_create and ui_destroy. Public entry points check it once
-// with FL_VALIDATE(g_ui_ctx != nullptr); the background family no-ops on nullptr instead.
+// The process-global UI context: non-null between ui_create and ui_destroy. Nothing else checks it.
 FlUiCtx* g_ui_ctx;
 
 static bool is_ascii_quick(const char* data, i32 len) {
@@ -90,7 +89,7 @@ static bool is_ascii_quick(const char* data, i32 len) {
 static Clay_Dimensions measure_text_function(Clay_StringSlice text, Clay_TextElementConfig* config, void* user_data) {
     FlUiCtx* ctx = (FlUiCtx*)user_data;
 
-    if (!ctx || !ctx->shared->font_cache) {
+    if (!ctx->shared->font_cache) {
         return (Clay_Dimensions) { 0, 0 };
     }
 
@@ -276,7 +275,6 @@ static void unbind_context(FlUiCtx* ctx) {
 }
 
 void ui_destroy(FlUiCtx* ctx) {
-    FL_VALIDATE(ctx != nullptr);
 
     if (ctx->list_uniform_ctx) {
         list_uniform_destroy(ctx->list_uniform_ctx);
@@ -285,10 +283,8 @@ void ui_destroy(FlUiCtx* ctx) {
 
     viewport3d_release_owner(ctx);
 
-    if (ctx->painter) {
-        painter_destroy(ctx->painter);
-        ctx->painter = nullptr;
-    }
+    painter_destroy(ctx->painter);
+    ctx->painter = nullptr;
 
     destroy_frame_arenas(ctx);
     unbind_context(ctx);
@@ -299,13 +295,11 @@ void ui_destroy(FlUiCtx* ctx) {
 // Select ctx as the active window context: swap both the core singleton and Clay's current layout
 // context so layout/input/render-command emission all target this window's tree. Called before a window emits.
 void ui_make_current(FlUiCtx* ctx) {
-    FL_VALIDATE(ctx != nullptr);
     g_ui_ctx = ctx;
     Clay_SetCurrentContext(ctx->clay_ctx);
 }
 
 void ui_set_surface(FlUiCtx* ctx, FlSurface* surface) {
-    FL_VALIDATE(ctx != nullptr);
     ctx->surface = surface;
 }
 
@@ -319,7 +313,6 @@ void ui_set_font_cache(FlUiCtx* ctx, struct FlFontCache* font_cache) {
 }
 
 void ui_set_theme(FlUiCtx* ctx, const struct FlThemeColors* colors) {
-    FL_VALIDATE(ctx != nullptr);
 
     ctx->shared->theme_colors = colors;
 }
@@ -335,7 +328,7 @@ static const struct {
 };
 
 void fl_icon_load(FlVfsMount* mount) {
-    if (!g_ui_ctx || !mount) {
+    if (!mount) {
         return;
     }
 
@@ -346,7 +339,7 @@ void fl_icon_load(FlVfsMount* mount) {
 }
 
 FlImageHandle fl_icon_get(FlIcon icon) {
-    if (!g_ui_ctx || (unsigned)icon >= FlIcon_Count) {
+    if ((unsigned)icon >= FlIcon_Count) {
         return FL_IMAGE_HANDLE_INVALID;
     }
     return (FlImageHandle)g_ui_ctx->shared->icons[icon];
@@ -361,22 +354,18 @@ const FlThemeColors* fl_theme_colors(void) {
 }
 
 uint32_t fl_focused_id(void) {
-    return g_ui_ctx ? g_ui_ctx->focused_id : 0;
+    return g_ui_ctx->focused_id;
 }
 
-// Install (or clear) the app's UI feedback hook. One hook serves every window. No-op before any
-// ui_create (no shared tier to hold it).
+// Install (or clear) the app's UI feedback hook. One hook serves every window.
 void fl_ui_set_feedback_hook(FlUiFeedbackCallback cb, void* user_data) {
-    if (g_ui_ctx == nullptr) {
-        return;
-    }
     g_ui_ctx->shared->feedback_hook = cb;
     g_ui_ctx->shared->feedback_user_data = user_data;
 }
 
 // The bottom of the theme resolution stack: the host-injected colors, or the built-in default.
 static const FlThemeColors* ui_theme_base_colors(const FlUiCtx* ctx) {
-    if (!ctx || !ctx->shared->theme_colors) {
+    if (!ctx->shared->theme_colors) {
         static const FlThemeColors default_colors = {
             .interactive.base = FL_THEME_DEFAULT_INTERACTIVE_BASE,
             .interactive.hover = FL_THEME_DEFAULT_INTERACTIVE_HOVER,
@@ -408,7 +397,7 @@ static const FlThemeColors* ui_theme_base_colors(const FlUiCtx* ctx) {
 // base theme.
 
 const FlThemeColors* ui_get_theme_colors(FlUiCtx* ctx) {
-    if (ctx && ctx->theme_override_depth > 0) {
+    if (ctx->theme_override_depth > 0) {
         return ctx->theme_override_stack[ctx->theme_override_depth - 1];
     }
     return ui_theme_base_colors(ctx);
@@ -418,7 +407,6 @@ const FlThemeColors* ui_get_theme_colors(FlUiCtx* ctx) {
 // is what makes nested overrides stack (an inner push layers on top of the outer's merged result).
 
 void ui_theme_push(FlUiCtx* ctx, FlThemeOverride override) {
-    FL_VALIDATE(ctx != nullptr);
     FL_VALIDATE(ctx->theme_override_depth < UI_THEME_OVERRIDE_MAX);
 
     const FlThemeColors merged = fl_theme_merge_override(ui_get_theme_colors(ctx), &override);
@@ -443,33 +431,12 @@ const FlThemeColors* ui_resolve_widget_theme(FlUiCtx* self, const FlThemeOverrid
 }
 
 void ui_theme_pop(FlUiCtx* ctx) {
-    FL_VALIDATE(ctx != nullptr);
     FL_VALIDATE(ctx->theme_override_depth > 0);
     ctx->theme_override_depth--;
 }
 
-// Returns nullptr in the pre-init window; see the g_ui_ctx declaration for the guarding rule callers must follow.
-FlUiCtx* ui_get_ctx(void) {
-    return g_ui_ctx;
-}
-
 void ui_ctx_set_dock_workspace(FlUiCtx* ctx, struct FlDockWorkspace* ws) {
-    if (ctx != nullptr) {
-        ctx->dock_workspace = ws; // non-owning: the shared registry owns the workspace
-    }
-}
-
-// The current context's Painter, so the shape primitives (painter_circle, ...) are reachable without threading
-// one. Valid only inside an open painting scope (a layout element); returns nullptr before ui_create, with no
-// active context, or outside any scope: paint draws inside an element's immediate-mode scope, never on top.
-struct Painter* ui_get_painter(void) {
-    if (g_ui_ctx == nullptr || g_ui_ctx->painter == nullptr) {
-        return nullptr;
-    }
-    if (painter_scope_depth(g_ui_ctx->painter) == 0) {
-        return nullptr; // outside any open layout element; there is nowhere to attach paint
-    }
-    return g_ui_ctx->painter;
+    ctx->dock_workspace = ws; // non-owning: the shared registry owns the workspace
 }
 
 // The previous frame's hot_id decides the wheel's arbiter.
@@ -763,7 +730,7 @@ FlNavFrame fl_get_nav_frame(void) {
 }
 
 float ui_get_delta_time(void) {
-    return g_ui_ctx ? g_ui_ctx->delta_time : 0.0f;
+    return g_ui_ctx->delta_time;
 }
 
 void fl_modal_begin_frame(u32 scope_id) {
@@ -833,8 +800,7 @@ FlElementState ui_get_element_state(FlLayoutId layout_id) {
 // The single topmost-hovered element id this frame: the core's already-arbitrated hot_id (0 = nothing hovered).
 
 u32 ui_hot_id(void) {
-    FlUiCtx* ctx = g_ui_ctx;
-    return ctx ? ctx->hot_id : 0;
+    return g_ui_ctx->hot_id;
 }
 
 // Pointer position in an element's local logical (authoring) space: (mouse - origin) / ui_scale. The
@@ -872,11 +838,7 @@ void ui_scroll_target(FlLayoutId layout_id) {
 // scroll_target flag (see ui_track_element in ui.h for the hot/active-arbitration side effect).
 
 void ui_track_element(FlLayoutId layout_id) {
-    FlUiCtx* self = g_ui_ctx;
-    if (self == nullptr) {
-        return;
-    }
-    get_or_create_key(self, ui_layout_id_to_clay_id(layout_id));
+    get_or_create_key(g_ui_ctx, ui_layout_id_to_clay_id(layout_id));
 }
 
 // Scoped per-frame wheel delta. Returns the frame's wheel delta only when this
@@ -1144,9 +1106,6 @@ void ui_text_styled_impl(FlString string, FlTextConfig config) {
 
 FlVec2 ui_get_screen_size(void) {
     FlUiCtx* ctx = g_ui_ctx;
-    if (ctx == nullptr) {
-        return (FlVec2) { 0, 0 };
-    }
     return (FlVec2) { ctx->layout_width, ctx->layout_height };
 }
 
@@ -1156,9 +1115,6 @@ FlVec2 ui_get_screen_size(void) {
 
 void ui_set_scale(float ui_scale, float text_scale) {
     FlUiCtx* ctx = g_ui_ctx;
-    if (!ctx) {
-        return;
-    }
 
     ctx->ui_scale = ui_scale;
     ctx->text_scale = text_scale;
@@ -1174,9 +1130,6 @@ void ui_set_scale(float ui_scale, float text_scale) {
 
 void ui_set_display_resolution(int width, int height) {
     FlUiCtx* ctx = g_ui_ctx;
-    if (!ctx) {
-        return;
-    }
 
     // Layout area only, with no scale side effect. Scale is set independently via ui_set_scale.
     ctx->layout_width = (float)width;
@@ -1202,28 +1155,20 @@ float ui_get_text_scale(void) {
 
 void ui_background_set(ImageHandle handle) {
     FlUiCtx* ctx = g_ui_ctx;
-    if (!ctx)
-        return;
     background_controller_set(&ctx->background, handle);
 }
 
 void ui_background_set_alpha(u8 alpha) {
     FlUiCtx* ctx = g_ui_ctx;
-    if (!ctx)
-        return;
     background_controller_set_alpha(&ctx->background, alpha);
 }
 
 void ui_background_set_clear_color(u8 r, u8 g, u8 b) {
     FlUiCtx* ctx = g_ui_ctx;
-    if (!ctx)
-        return;
     background_controller_set_clear_color(&ctx->background, r, g, b);
 }
 
 void ui_background_set_blend(ImageHandle prev, ImageHandle current, u8 t) {
     FlUiCtx* ctx = g_ui_ctx;
-    if (!ctx)
-        return;
     background_controller_set_blend(&ctx->background, prev, current, t);
 }

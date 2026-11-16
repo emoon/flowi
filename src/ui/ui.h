@@ -314,10 +314,7 @@ float ui_get_scale(void);
 // Get the current absolute text scale.
 float ui_get_text_scale(void);
 
-// Get the current context's Painter (custom-drawing API, ui/painter.h). nullptr before ui_create / outside an
-// active context.
 struct Painter;
-struct Painter* ui_get_painter(void);
 
 // Register the process-wide default filesystem mount that fl_font_load / fl_image_load resolve against. The
 // runner calls this once after creating the mount; pass nullptr to clear it.
