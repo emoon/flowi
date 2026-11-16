@@ -199,8 +199,8 @@ static void cache_wheel(MouseState* mouse, const KeyboardState* kb) {
     mouse->wheel_y_cached = mouse->wheel_y;
 }
 
-static bool nav_repeat_pressed(FlUiCtx* ctx, FlAction action, const KeyboardState* kb, FlKey key, float dt) {
-    return ui_action_pressed(ctx, action) || input_should_nav_repeat(kb, key, UI_NAV_REPEAT_DELAY, UI_NAV_REPEAT_RATE, dt);
+static bool nav_repeat(const KeyboardState* kb, FlKey key, float dt) {
+    return input_should_nav_repeat(kb, key, UI_NAV_REPEAT_DELAY, UI_NAV_REPEAT_RATE, dt);
 }
 
 static void update_nav(FlUiCtx* ctx, const KeyboardState* kb, float dt) {
@@ -210,10 +210,10 @@ static void update_nav(FlUiCtx* ctx, const KeyboardState* kb, float dt) {
 
     // Software repeat: trigger on initial press or at intervals after delay
     ctx->nav_frame.focused_id = ctx->focused_id;
-    ctx->nav_frame.nav_up = nav_repeat_pressed(ctx, FlAction_Nav_Up, kb, FlKey_Up, dt);
-    ctx->nav_frame.nav_down = nav_repeat_pressed(ctx, FlAction_Nav_Down, kb, FlKey_Down, dt);
-    ctx->nav_frame.nav_left = nav_repeat_pressed(ctx, FlAction_Nav_Left, kb, FlKey_Left, dt);
-    ctx->nav_frame.nav_right = nav_repeat_pressed(ctx, FlAction_Nav_Right, kb, FlKey_Right, dt);
+    ctx->nav_frame.nav_up = ui_action_pressed(ctx, FlAction_Nav_Up) || nav_repeat(kb, FlKey_Up, dt);
+    ctx->nav_frame.nav_down = ui_action_pressed(ctx, FlAction_Nav_Down) || nav_repeat(kb, FlKey_Down, dt);
+    ctx->nav_frame.nav_left = ui_action_pressed(ctx, FlAction_Nav_Left) || nav_repeat(kb, FlKey_Left, dt);
+    ctx->nav_frame.nav_right = ui_action_pressed(ctx, FlAction_Nav_Right) || nav_repeat(kb, FlKey_Right, dt);
 }
 
 static void advance_keyboard(KeyboardState* kb, double dt) {

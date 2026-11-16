@@ -86,29 +86,12 @@ static bool mouse_event_has_bad_button(FlMouseEvent event) {
     return is_button_event && (u32)event.button.button >= FlMouseButton_Count;
 }
 
-void platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
-    FlInputState* state = &ctx->input_state;
-    MouseState* mouse = &state->mouse;
-
-    if (mouse_event_has_bad_button(event)) {
-        log_debug("Ignoring mouse event with out-of-range button %d", (int)event.button.button);
-        return;
-    }
-
+static void mouse_push_motion_event(MouseState* mouse, FlMouseEvent event) {
     switch (event.type) {
         case FlMouseEvent_Move:
             mouse->x = event.move.x;
             mouse->y = event.move.y;
             // Delta is not accumulated here; ui_input_update_mouse derives it from the position difference
-            break;
-
-        case FlMouseEvent_Button_Down:
-            // The click count is calculated from timing.
-            mouse_button_down(mouse, event);
-            break;
-
-        case FlMouseEvent_Button_Up:
-            mouse_button_up(mouse, event);
             break;
 
         case FlMouseEvent_Wheel:
@@ -128,6 +111,35 @@ void platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
             // Raw relative motion (hidden drag): the unbounded delta accumulates separately from absolute position
             mouse->raw_delta_x += event.relative.delta_x;
             mouse->raw_delta_y += event.relative.delta_y;
+            break;
+
+        case FlMouseEvent_Button_Down:
+        case FlMouseEvent_Button_Up:
+            break;
+    }
+}
+
+void platform_input_push_mouse_event(FlUiCtx* ctx, FlMouseEvent event) {
+    FlInputState* state = &ctx->input_state;
+    MouseState* mouse = &state->mouse;
+
+    if (mouse_event_has_bad_button(event)) {
+        log_debug("Ignoring mouse event with out-of-range button %d", (int)event.button.button);
+        return;
+    }
+
+    switch (event.type) {
+        case FlMouseEvent_Button_Down:
+            // The click count is calculated from timing.
+            mouse_button_down(mouse, event);
+            break;
+
+        case FlMouseEvent_Button_Up:
+            mouse_button_up(mouse, event);
+            break;
+
+        default:
+            mouse_push_motion_event(mouse, event);
             break;
     }
 }
