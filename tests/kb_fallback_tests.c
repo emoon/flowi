@@ -40,7 +40,7 @@ UTEST(kb_fallback, fallback_glyph_gets_its_own_text_run) {
 
     FlArena* ir = arena_new();
     const FlCmdHeader* first = fl_arena_current_pos(ir);
-    fl_ir_text_layout(ir, route.cache, fonts.primary, 32 * 4, 1.0f, (FlColor) { 255, 255, 255, 255 }, FL_S("AoB"), 0.0f,
+    ir_text_layout(ir, route.cache, fonts.primary, 32 * 4, 1.0f, (FlColor) { 255, 255, 255, 255 }, FL_S("AoB"), 0.0f,
                       0.0f, 0.0f);
     const FlCmdTextRun* primary_run = (const FlCmdTextRun*)(first + 1);
     const FlCmdHeader* second = (const FlCmdHeader*)((const u8*)first + first->byte_size);

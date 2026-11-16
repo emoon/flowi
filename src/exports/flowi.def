@@ -293,6 +293,7 @@ EXPORTS
     fl_painter_rects
     fl_painter_set_effect
     fl_painter_text
+    fl_painter_text_spans
     fl_painter_text_styled
     fl_painter_vline
     fl_path_ensure_trailing_separator
@@ -396,7 +397,9 @@ EXPORTS
     fl_text_input_show
     fl_text_input_show_impl
     fl_text_measure
+    fl_text_offset_to_x
     fl_text_styled
+    fl_text_x_to_offset
     fl_theme_colors
     fl_theme_pop
     fl_theme_push

@@ -21,6 +21,7 @@ fn text_measure_reports_default_font_cells() {
                     font_id: 0,
                     font_size: 0.0,
                     letter_spacing: 2.0,
+                    tab_width: 0.0,
                 },
             );
             assert!(

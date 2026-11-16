@@ -168,7 +168,7 @@ static int check_aa_ramp_line(const FlPixelReadback* buf, int x0, int y0, int dx
 // Emit a polyline into the IR arena from an array of points (no scaling; the points are already pixel coordinates).
 static void emit_polyline(FlArena* arena, const FlPolyPoint* points, u32 count, FlColor color, FlColor fill_color,
                           f32 width, f32 baseline_y, u32 flags) {
-    FlPolyPoint* dst = fl_ir_polyline(arena, color, fill_color, width, baseline_y, flags, count, nullptr);
+    FlPolyPoint* dst = ir_polyline(arena, color, fill_color, width, baseline_y, flags, count, nullptr);
     for (u32 i = 0; i < count; i++) {
         dst[i] = points[i];
     }
@@ -179,11 +179,11 @@ static void emit_polyline(FlArena* arena, const FlPolyPoint* points, u32 count, 
 #if !defined(__APPLE__)
 
 static void emit_solid_rect(FlArena* arena, f32 x, f32 y, f32 w, f32 h, FlColor c) {
-    fl_ir_fill_rect(arena, (FlRect) { x, y, w, h }, (FlCornerRadius) { 0 }, (FlColor[4]) { c, c, c, c }, nullptr);
+    ir_fill_rect(arena, (FlRect) { x, y, w, h }, (FlCornerRadius) { 0 }, (FlColor[4]) { c, c, c, c }, nullptr);
 }
 
 static void emit_rect_effect(FlArena* arena, f32 x, f32 y, f32 w, f32 h, FlColor c, const FlEffect* fx) {
-    fl_ir_fill_rect(arena, (FlRect) { x, y, w, h }, (FlCornerRadius) { 0 }, (FlColor[4]) { c, c, c, c }, fx);
+    ir_fill_rect(arena, (FlRect) { x, y, w, h }, (FlCornerRadius) { 0 }, (FlColor[4]) { c, c, c, c }, fx);
 }
 
 // Read an f32 back from a bit pattern the translator stored in a packed u32 word.
@@ -477,9 +477,9 @@ static int run_translator_tests(void) {
     CHECK((list.cmds[0].color[0] >> 24) == 64u, "translate: global_alpha 128 over a=128 should round to 64");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 100, 50 }, (FlCornerRadius) { 3.0f, 5.0f, 7.0f, 9.0f },
+    ir_fill_rect(ir_arena, (FlRect) { 0, 0, 100, 50 }, (FlCornerRadius) { 3.0f, 5.0f, 7.0f, 9.0f },
                     (FlColor[4]) { red, red, red, red }, nullptr);
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 40, 20 }, (FlCornerRadius) { 30.0f, 5.0f, -3.0f, 10.0f },
+    ir_fill_rect(ir_arena, (FlRect) { 0, 0, 40, 20 }, (FlCornerRadius) { 30.0f, 5.0f, -3.0f, 10.0f },
                     (FlColor[4]) { red, red, red, red }, nullptr);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "translate: rounded rects should translate");
@@ -498,7 +498,7 @@ static int run_translator_tests(void) {
     const FlColor bl = { 70, 80, 90, 64 };
     const FlColor br = { 100, 110, 120, 0 };
     start = ir_rewind_begin(ir_arena);
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 50, 50 }, (FlCornerRadius) { 0 }, (FlColor[4]) { tl, tr, bl, br },
+    ir_fill_rect(ir_arena, (FlRect) { 0, 0, 50, 50 }, (FlCornerRadius) { 0 }, (FlColor[4]) { tl, tr, bl, br },
                     nullptr);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "translate: a gradient (distinct corner colors) should translate");
@@ -513,15 +513,15 @@ static int run_translator_tests(void) {
           "translate: global_alpha should fold into every corner's alpha");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 50, 50 }, (FlCornerRadius) { .tl = 4.0f },
+    ir_fill_rect(ir_arena, (FlRect) { 0, 0, 50, 50 }, (FlCornerRadius) { .tl = 4.0f },
                     (FlColor[4]) { red, red, red, red }, nullptr);
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 50, 50 }, (FlCornerRadius) { 0 }, (FlColor[4]) { red, red, red, blue },
+    ir_fill_rect(ir_arena, (FlRect) { 0, 0, 50, 50 }, (FlCornerRadius) { 0 }, (FlColor[4]) { red, red, red, blue },
                     nullptr);
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 0.0f, 50.0f, red);                       // empty: w == 0
-    FlPolyPoint* pts = fl_ir_polyline(ir_arena, red, red, 1.0f, 0.0f, 0, 1, nullptr); // one point: no segment
+    FlPolyPoint* pts = ir_polyline(ir_arena, red, red, 1.0f, 0.0f, 0, 1, nullptr); // one point: no segment
     pts[0] = (FlPolyPoint) { 0.0f, 0.0f, 1.0f };
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 50, 50 });
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 50, 50 });
+    ir_clip_pop(ir_arena);
     emit_solid_rect(ir_arena, 1.0f, 2.0f, 3.0f, 4.0f, red);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 3, "translate: empty/non-rect records should be skipped; rounded and gradient kept");
@@ -537,17 +537,17 @@ static int run_translator_tests(void) {
           "translate: clips[0] is the full target rect");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 100, 100, 200, 200 }); // A
+    ir_clip_push(ir_arena, (FlRect) { 100, 100, 200, 200 }); // A
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 400.0f, 400.0f, red); // index 0: clipped by A
-    fl_ir_clip_push(ir_arena, (FlRect) { 150, 50, 300, 100 });  // B; effective = A ^ B = {150,100,300,150}
+    ir_clip_push(ir_arena, (FlRect) { 150, 50, 300, 100 });  // B; effective = A ^ B = {150,100,300,150}
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 400.0f, 400.0f, red); // index 1: clipped by A ^ B
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 400.0f, 400.0f, red); // index 2: back to A (dedups with index 0)
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 400.0f, 400.0f, red); // index 3: full target
-    fl_ir_clip_push(ir_arena, (FlRect) { 100, 100, 200, 200 }); // A re-pushed
+    ir_clip_push(ir_arena, (FlRect) { 100, 100, 200, 200 }); // A re-pushed
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 400.0f, 400.0f, red); // index 4: dedups with A's entry
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 5, "clip: every partially visible command translates");
     CHECK(list.clip_count == 3, "clip: dedup keeps one entry per distinct effective rect");
@@ -569,13 +569,13 @@ static int run_translator_tests(void) {
           "clip: the command's rect passes through unclipped (the raster pass cuts coverage)");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 50, 50 });
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 50, 50 });
     emit_solid_rect(ir_arena, 100.0f, 100.0f, 20.0f, 20.0f, red); // outside the clip: dropped
     emit_solid_rect(ir_arena, 40.0f, 40.0f, 20.0f, 20.0f, red);   // partial overlap: survives
-    fl_ir_clip_push(ir_arena, (FlRect) { 60, 60, 10, 10 });       // disjoint from the outer clip: empty
+    ir_clip_push(ir_arena, (FlRect) { 60, 60, 10, 10 });       // disjoint from the outer clip: empty
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 100.0f, 100.0f, red);   // under an empty clip: dropped
-    fl_ir_clip_pop(ir_arena);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     emit_solid_rect(ir_arena, (f32)TR_TARGET + 10.0f, 0.0f, 20.0f, 20.0f, red); // off-target: dropped
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "clip: fully clipped-out and off-target commands never translate");
@@ -584,9 +584,9 @@ static int run_translator_tests(void) {
           "clip: the surviving command's AABB clamps to the clip");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_pop(ir_arena); // nothing to pop
+    ir_clip_pop(ir_arena); // nothing to pop
     emit_solid_rect(ir_arena, 10.0f, 10.0f, 20.0f, 20.0f, red);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 30, 30 }); // never popped
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 30, 30 }); // never popped
     emit_solid_rect(ir_arena, 10.0f, 10.0f, 40.0f, 40.0f, red);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "clip: an unbalanced stream still translates");
@@ -596,11 +596,11 @@ static int run_translator_tests(void) {
 
     start = ir_rewind_begin(ir_arena);
     for (int d = 0; d < 40; d++) {
-        fl_ir_clip_push(ir_arena, (FlRect) { (f32)d, (f32)d, (f32)TR_TARGET, (f32)TR_TARGET });
+        ir_clip_push(ir_arena, (FlRect) { (f32)d, (f32)d, (f32)TR_TARGET, (f32)TR_TARGET });
     }
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 100.0f, 100.0f, red);
     for (int d = 0; d < 40; d++) {
-        fl_ir_clip_pop(ir_arena);
+        ir_clip_pop(ir_arena);
     }
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 100.0f, 100.0f, red);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
@@ -620,16 +620,16 @@ static int run_translator_tests(void) {
     const FlImageSource src_a = { .kind = FlImageKind_Static, .handle = 7 };
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 10, 20, 8, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 10, 20, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr); // whole image, linear
-    fl_ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 30, 20, 4, 3 }, (FlRect) { 2, 1, 4, 3 }, white,
+    ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 30, 20, 4, 3 }, (FlRect) { 2, 1, 4, 3 }, white,
                 FlImageFilter_Nearest, nullptr); // sub-rect, nearest
-    fl_ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 50, 20, 8, 8 }, (FlRect) { 6, 6, 8, 8 }, white,
+    ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 50, 20, 8, 8 }, (FlRect) { 6, 6, 8, 8 }, white,
                 FlImageFilter_Linear, nullptr); // overhanging src
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Dynamic }, FlImageMode_Color, (FlRect) { 70, 20, 8, 8 },
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Dynamic }, FlImageMode_Color, (FlRect) { 70, 20, 8, 8 },
                 (FlRect) { 0 }, white, FlImageFilter_Linear,
                 nullptr); // dynamic source: skipped without slot bookkeeping (slots == nullptr here)
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = 99 }, FlImageMode_Color,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = 99 }, FlImageMode_Color,
                 (FlRect) { 90, 20, 8, 8 }, (FlRect) { 0 }, white, FlImageFilter_Linear,
                 nullptr); // unresolved handle: skipped
     list = translate(out_arena, ir_arena, start, 255, &atlas, nullptr);
@@ -650,7 +650,7 @@ static int run_translator_tests(void) {
           "image translate: a src rect overhanging the image clamps to its extent");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 10, 20, 8, 8 }, (FlRect) { 0 },
+    ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 10, 20, 8, 8 }, (FlRect) { 0 },
                 (FlColor) { 200, 100, 50, 128 }, FlImageFilter_Linear, nullptr);
     list = translate(out_arena, ir_arena, start, 255, &atlas, nullptr);
     CHECK(list.cmds[0].color[0] == (100u | (50u << 8) | (25u << 16) | (128u << 24)),
@@ -660,12 +660,12 @@ static int run_translator_tests(void) {
           "image translate: global_alpha folds into the premultiplied tint");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 14, 24 });
-    fl_ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 10, 20, 8, 8 }, (FlRect) { 0 }, white,
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 14, 24 });
+    ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 10, 20, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr); // partial overlap
-    fl_ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 100, 20, 8, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, src_a, FlImageMode_Color, (FlRect) { 100, 20, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr); // fully clipped out
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     list = translate(out_arena, ir_arena, start, 255, &atlas, nullptr);
     CHECK(list.count == 1, "image translate: a fully clipped image never translates");
     CHECK(list.aabbs[0].x1 == 14.0f && list.aabbs[0].y1 == 24.0f,
@@ -709,7 +709,7 @@ static int run_translator_tests(void) {
     // instead of spinning forever.
     start = ir_rewind_begin(ir_arena);
     emit_solid_rect(ir_arena, 1.0f, 2.0f, 3.0f, 4.0f, red);
-    FlCmdHeader* bad = fl_ir_header(ir_arena, FlCmd_FillRect, (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdFillRect)));
+    FlCmdHeader* bad = ir_header(ir_arena, FlCmd_FillRect, (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdFillRect)));
     arena_alloc_zero(ir_arena, FlCmdFillRect); // payload present but never reached past the guard
     bad->byte_size = 0;
     emit_solid_rect(ir_arena, 5.0f, 6.0f, 7.0f, 8.0f, red); // after the corruption: must be dropped
@@ -813,11 +813,11 @@ static int run_effect_translator_tests(void) {
           "shadow: global_alpha folds into the effect color's alpha");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 200, 100, 100, 100 }); // clip [200,100,300,200]
+    ir_clip_push(ir_arena, (FlRect) { 200, 100, 100, 100 }); // clip [200,100,300,200]
     FlEffect reach
         = { .kind = FlEffectKind_DropShadow, .color = { 0, 0, 0, 255 }, .off_x = 80.0f, .off_y = 0.0f, .blur = 4.0f };
     emit_rect_effect(ir_arena, 130.0f, 120.0f, 20.0f, 20.0f, red, &reach); // body [130,120,150,140], left of clip
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "shadow: a body outside the clip still survives when its shadow reaches in");
     // union(body, reach) = union([130,120,150,140], [206,116,234,144]) = [130,116,234,144];
@@ -829,7 +829,7 @@ static int run_effect_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     const FlColor bar_color = { 10, 20, 30, 255 };
     FlEffect bar_glow = { .kind = FlEffectKind_Glow, .color = bar_color, .blur = 3.0f };
-    FlBar* bars = fl_ir_bars(ir_arena, 200.0f, red, 3, &bar_glow);
+    FlBar* bars = ir_bars(ir_arena, 200.0f, red, 3, &bar_glow);
     bars[0] = (FlBar) { 10.0f, 8.0f, 20.0f };
     bars[1] = (FlBar) { 40.0f, 8.0f, 30.0f };
     bars[2] = (FlBar) { 70.0f, 8.0f, 40.0f };
@@ -848,12 +848,12 @@ static int run_effect_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     FlEffect arc_fx
         = { .kind = FlEffectKind_DropShadow, .color = fx_color, .off_x = 4.0f, .off_y = 0.0f, .blur = 2.0f };
-    fl_ir_arc(ir_arena, 200.0f, 200.0f, 40.0f, 8.0f, 0.0f, 0.25f * TAU, red, 0, &arc_fx);
+    ir_arc(ir_arena, 200.0f, 200.0f, 40.0f, 8.0f, 0.0f, 0.25f * TAU, red, 0, &arc_fx);
     FlEffect circle_fx = { .kind = FlEffectKind_Glow, .color = fx_color, .blur = 3.0f };
-    fl_ir_circle(ir_arena, 200.0f, 200.0f, 20.0f, red, red, 0.0f, &circle_fx);
+    ir_circle(ir_arena, 200.0f, 200.0f, 20.0f, red, red, 0.0f, &circle_fx);
     FlEffect diamond_fx
         = { .kind = FlEffectKind_DropShadow, .color = fx_color, .off_x = 5.0f, .off_y = 5.0f, .blur = 1.0f };
-    fl_ir_diamond(ir_arena, 200.0f, 200.0f, 15.0f, 15.0f, red, red, 0.0f, &diamond_fx);
+    ir_diamond(ir_arena, 200.0f, 200.0f, 15.0f, 15.0f, red, red, 0.0f, &diamond_fx);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 3, "effect kinds: arc, circle, and diamond each translate");
     CHECK(effect_kind_of(&list.cmds[0]) == 1 && list.cmds[0].effect[3] == fx_packed,
@@ -868,8 +868,8 @@ static int run_effect_translator_tests(void) {
     start = ir_rewind_begin(ir_arena);
     FlEffect border_fx
         = { .kind = FlEffectKind_DropShadow, .color = fx_color, .off_x = 3.0f, .off_y = 3.0f, .blur = 2.0f };
-    FlCmdHeader* bheader = fl_ir_header(
-        ir_arena, FlCmd_Border, (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdBorder)) + fl_ir_effect_bytes(&border_fx));
+    FlCmdHeader* bheader = ir_header(
+        ir_arena, FlCmd_Border, (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdBorder)) + ir_effect_bytes(&border_fx));
     FlCmdBorder* bd = arena_alloc_zero(ir_arena, FlCmdBorder);
     bd->rect = (FlRect) { 100, 100, 60, 40 };
     bd->w_l = 4.0f;
@@ -877,7 +877,7 @@ static int run_effect_translator_tests(void) {
     bd->w_t = 4.0f;
     bd->w_b = 4.0f;
     bd->color = red;
-    fl_ir_append_effect(ir_arena, bheader, &border_fx);
+    ir_append_effect(ir_arena, bheader, &border_fx);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1 && list.cmds[0].kind == GpuDraw_Border, "effect kinds: the border translates");
     CHECK(effect_kind_of(&list.cmds[0]) == 1 && list.cmds[0].effect[3] == fx_packed,
@@ -889,13 +889,13 @@ static int run_effect_translator_tests(void) {
     gpu_image_atlas_place(&fx_atlas, 42, 16, 16);
     start = ir_rewind_begin(ir_arena);
     FlEffect image_fx = { .kind = FlEffectKind_Glow, .color = fx_color, .blur = 4.0f };
-    FlCmdHeader* iheader = fl_ir_header(
-        ir_arena, FlCmd_Image, (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdImage)) + fl_ir_effect_bytes(&image_fx));
+    FlCmdHeader* iheader = ir_header(
+        ir_arena, FlCmd_Image, (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdImage)) + ir_effect_bytes(&image_fx));
     FlCmdImage* im = arena_alloc_zero(ir_arena, FlCmdImage);
     im->source = (FlImageSource) { .kind = FlImageKind_Static, .handle = 42 };
     im->dst = (FlRect) { 100, 100, 16, 16 };
     im->tint = white;
-    fl_ir_append_effect(ir_arena, iheader, &image_fx);
+    ir_append_effect(ir_arena, iheader, &image_fx);
     list = translate(out_arena, ir_arena, start, 255, &fx_atlas, nullptr);
     CHECK(list.count == 1 && list.cmds[0].kind == GpuDraw_Image, "effect kinds: the atlas image translates");
     CHECK(effect_kind_of(&list.cmds[0]) == 2 && list.cmds[0].effect[3] == fx_packed,
@@ -923,7 +923,7 @@ static int run_shape_translator_tests(void) {
     // A quarter ring from 12 to 3 o'clock. The encoding carries center + outer/inner radius and the wedge
     // frame: bisector cos/sin and half-aperture sin/cos, all four 1/sqrt(2) for this quarter.
     void* start = ir_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
     GpuDrawList list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "arc: one record translates to one command");
     CHECK(list.cmds[0].kind == GpuDraw_Arc, "arc: kind is Arc");
@@ -944,8 +944,8 @@ static int run_shape_translator_tests(void) {
     CHECK((list.cmds[0].color[0] >> 24) == 128u, "arc: global_alpha folds into the packed color");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.25f * TAU, -0.25f * TAU, red, 0, nullptr);
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.25f * TAU, -0.25f * TAU, red, 0, nullptr);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "arc: both sweep directions translate");
     CHECK(memcmp(&list.cmds[0], &list.cmds[1], sizeof(GpuDrawCmd)) == 0,
@@ -955,7 +955,7 @@ static int run_shape_translator_tests(void) {
 
     // Round caps widen the AABB by the cap discs (centerline radius 40, cap radius 10).
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, FL_IR_ARC_ROUND_CAPS, nullptr);
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, FL_IR_ARC_ROUND_CAPS, nullptr);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.cmds[0].flags == GPU_DRAW_ARC_ROUND_CAPS, "arc: round caps map to the flag");
     CHECK(near_f32(list.aabbs[0].x0, 90.0f, 1e-3f) && near_f32(list.aabbs[0].y1, 110.0f, 1e-3f),
@@ -964,7 +964,7 @@ static int run_shape_translator_tests(void) {
           "arc: the outer cardinal extremes still bound the capped sector");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 8.0f, 1.0f, TAU + 1.0f, red, 0, nullptr);
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 8.0f, 1.0f, TAU + 1.0f, red, 0, nullptr);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.cmds[0].flags == GPU_DRAW_ARC_FULL, "arc: a sweep past a full turn sets the FULL flag");
     CHECK(list.aabbs[0].x0 == 50.0f && list.aabbs[0].y0 == 50.0f && list.aabbs[0].x1 == 150.0f
@@ -972,22 +972,22 @@ static int run_shape_translator_tests(void) {
           "arc: a full ring bounds the whole circle");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 80.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 80.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.cmds[0].rect[3] == 0.0f, "arc: thickness past the radius clamps the inner radius to 0");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 0.0f, 8.0f, 0.0f, 1.0f, red, 0, nullptr);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 0.0f, 0.0f, 1.0f, red, 0, nullptr);
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 8.0f, 0.0f, 0.0f, red, 0, nullptr);
+    ir_arc(ir_arena, 100.0f, 100.0f, 0.0f, 8.0f, 0.0f, 1.0f, red, 0, nullptr);
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 0.0f, 0.0f, 1.0f, red, 0, nullptr);
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 8.0f, 0.0f, 0.0f, red, 0, nullptr);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 0, "arc: zero radius, thickness, or sweep drops the record");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 60, 60 });
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);        // top-right quadrant
-    fl_ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.75f * TAU, 0.25f * TAU, red, 0, nullptr); // 9-to-12
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 60, 60 });
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);        // top-right quadrant
+    ir_arc(ir_arena, 100.0f, 100.0f, 50.0f, 20.0f, 0.75f * TAU, 0.25f * TAU, red, 0, nullptr); // 9-to-12
+    ir_clip_pop(ir_arena);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "arc: a sector wholly outside the clip drops even though its circle overlaps");
     CHECK(near_f32(list.aabbs[0].x0, 50.0f, 1e-3f) && near_f32(list.aabbs[0].y0, 50.0f, 1e-3f)
@@ -995,10 +995,10 @@ static int run_shape_translator_tests(void) {
           "arc: the surviving sector's AABB clamps to the clip");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, 3.0f, nullptr);
-    fl_ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, -5.0f, nullptr); // negative width clamps to 0
-    fl_ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, 10.0f, nullptr); // border consumes the disc
-    fl_ir_circle(ir_arena, 40.0f, 60.0f, 0.0f, red, green, 0.0f, nullptr);   // degenerate: dropped
+    ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, 3.0f, nullptr);
+    ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, -5.0f, nullptr); // negative width clamps to 0
+    ir_circle(ir_arena, 40.0f, 60.0f, 10.0f, red, green, 10.0f, nullptr); // border consumes the disc
+    ir_circle(ir_arena, 40.0f, 60.0f, 0.0f, red, green, 0.0f, nullptr);   // degenerate: dropped
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 3, "circle: a zero radius drops the record");
     CHECK(list.cmds[0].kind == GpuDraw_Circle, "circle: kind is Circle");
@@ -1016,9 +1016,9 @@ static int run_shape_translator_tests(void) {
 
     // Diamond border normalization is against the inradius (rx*ry/len = 4.8 here).
     start = ir_rewind_begin(ir_arena);
-    fl_ir_diamond(ir_arena, 40.0f, 60.0f, 8.0f, 6.0f, red, green, 2.0f, nullptr);
-    fl_ir_diamond(ir_arena, 40.0f, 60.0f, 8.0f, 6.0f, red, green, 5.0f, nullptr); // past the inradius
-    fl_ir_diamond(ir_arena, 40.0f, 60.0f, 0.0f, 6.0f, red, green, 0.0f, nullptr); // degenerate: dropped
+    ir_diamond(ir_arena, 40.0f, 60.0f, 8.0f, 6.0f, red, green, 2.0f, nullptr);
+    ir_diamond(ir_arena, 40.0f, 60.0f, 8.0f, 6.0f, red, green, 5.0f, nullptr); // past the inradius
+    ir_diamond(ir_arena, 40.0f, 60.0f, 0.0f, 6.0f, red, green, 0.0f, nullptr); // degenerate: dropped
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "diamond: a zero half-extent drops the record");
     CHECK(list.cmds[0].kind == GpuDraw_Diamond, "diamond: kind is Diamond");
@@ -1036,7 +1036,7 @@ static int run_shape_translator_tests(void) {
 
     // Each bar expands to one solid rect command off the shared baseline at y = 100.
     start = ir_rewind_begin(ir_arena);
-    FlBar* bars = fl_ir_bars(ir_arena, 100.0f, red, 5, nullptr);
+    FlBar* bars = ir_bars(ir_arena, 100.0f, red, 5, nullptr);
     bars[0] = (FlBar) { 10.0f, 5.0f, 20.0f };  // up: y 80..100
     bars[1] = (FlBar) { 20.0f, 5.0f, -15.0f }; // down: y 100..115
     bars[2] = (FlBar) { 30.0f, 0.0f, 10.0f };  // zero width: dropped
@@ -1061,12 +1061,12 @@ static int run_shape_translator_tests(void) {
     }
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 18, 200 });
-    bars = fl_ir_bars(ir_arena, 100.0f, red, 3, nullptr);
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 18, 200 });
+    bars = ir_bars(ir_arena, 100.0f, red, 3, nullptr);
     bars[0] = (FlBar) { 10.0f, 5.0f, 20.0f };  // wholly inside
     bars[1] = (FlBar) { 15.0f, 10.0f, 20.0f }; // straddles the clip edge at x = 18
     bars[2] = (FlBar) { 30.0f, 5.0f, 20.0f };  // wholly outside: dropped
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "bars: a bar wholly outside the clip drops; the rest survive");
     CHECK(list.aabbs[1].x1 == 18.0f, "bars: a straddling bar's AABB clamps to the clip");
@@ -1089,7 +1089,7 @@ static int run_polyline_translator_tests(void) {
     const u32 packed_green = packed_rgba(green, 255);
 
     void* start = ir_begin(ir_arena);
-    FlPolyPoint* pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 3, nullptr);
+    FlPolyPoint* pts = ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 3, nullptr);
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 30.0f, 20.0f, 0.5f };
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 0.25f };
@@ -1114,7 +1114,7 @@ static int run_polyline_translator_tests(void) {
     // FILLED: 3 points -> 2 fill trapezoids (first, behind the stroke) + 2 stroke capsules.
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 100.0f, FlPolylineFlags_filled, 3, nullptr);
+    pts = ir_polyline(ir_arena, red, green, 2.0f, 100.0f, FlPolylineFlags_filled, 3, nullptr);
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 30.0f, 20.0f, 1.0f };
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 1.0f };
@@ -1134,7 +1134,7 @@ static int run_polyline_translator_tests(void) {
 
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, FlPolylineFlags_closed, 3, nullptr);
+    pts = ir_polyline(ir_arena, red, green, 2.0f, 0.0f, FlPolylineFlags_closed, 3, nullptr);
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 30.0f, 20.0f, 1.0f };
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 1.0f };
@@ -1146,13 +1146,13 @@ static int run_polyline_translator_tests(void) {
 
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 1, nullptr); // one point: no segment
+    pts = ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 1, nullptr); // one point: no segment
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
-    pts = fl_ir_polyline(ir_arena, red, green, 0.0f, 0.0f, 0, 3, nullptr); // width 0, not filled: nothing
+    pts = ir_polyline(ir_arena, red, green, 0.0f, 0.0f, 0, 3, nullptr); // width 0, not filled: nothing
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 30.0f, 20.0f, 1.0f };
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 1.0f };
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 3, nullptr); // a zero-length middle segment drops
+    pts = ir_polyline(ir_arena, red, green, 2.0f, 0.0f, 0, 3, nullptr); // a zero-length middle segment drops
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f }; // coincident with pts[0]
     pts[2] = (FlPolyPoint) { 50.0f, 10.0f, 1.0f };
@@ -1163,7 +1163,7 @@ static int run_polyline_translator_tests(void) {
 
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 2.0f, 100.0f, FlPolylineFlags_filled, 2, nullptr);
+    pts = ir_polyline(ir_arena, red, green, 2.0f, 100.0f, FlPolylineFlags_filled, 2, nullptr);
     pts[0] = (FlPolyPoint) { 20.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 20.0f, 40.0f, 1.0f }; // vertical
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
@@ -1172,7 +1172,7 @@ static int run_polyline_translator_tests(void) {
 
     fl_arena_rewind(out_arena);
     start = ir_rewind_begin(ir_arena);
-    pts = fl_ir_polyline(ir_arena, red, green, 0.0f, 100.0f, FlPolylineFlags_filled, 2, nullptr);
+    pts = ir_polyline(ir_arena, red, green, 0.0f, 100.0f, FlPolylineFlags_filled, 2, nullptr);
     pts[0] = (FlPolyPoint) { 10.0f, 10.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 50.0f, 20.0f, 1.0f };
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
@@ -1196,7 +1196,7 @@ static int run_border_translator_tests(void) {
     const u32 packed_green = 40u | (200u << 8) | (60u << 16) | (255u << 24);
 
     void* start = ir_begin(ir_arena);
-    fl_ir_border(ir_arena, (FlRect) { 10, 20, 60, 40 }, 1.5f, 2.0f, 3.0f, 4.25f, (FlCornerRadius) { 5, 6, 7, 8 }, red);
+    ir_border(ir_arena, (FlRect) { 10, 20, 60, 40 }, 1.5f, 2.0f, 3.0f, 4.25f, (FlCornerRadius) { 5, 6, 7, 8 }, red);
     GpuDrawList list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "border: one record translates to one command");
     CHECK(list.cmds[0].kind == GpuDraw_Border, "border: kind is Border");
@@ -1218,17 +1218,17 @@ static int run_border_translator_tests(void) {
     CHECK((list.cmds[0].color[0] >> 24) == 128u, "border: global_alpha folds into the packed color");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_border(ir_arena, (FlRect) { 0, 0, 40, 20 }, 2, 2, 2, 2, (FlCornerRadius) { 30.0f, 5.0f, -3.0f, 10.0f }, red);
+    ir_border(ir_arena, (FlRect) { 0, 0, 40, 20 }, 2, 2, 2, 2, (FlCornerRadius) { 30.0f, 5.0f, -3.0f, 10.0f }, red);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.cmds[0].radius[0] == 10.0f && list.cmds[0].radius[1] == 5.0f && list.cmds[0].radius[2] == 0.0f
               && list.cmds[0].radius[3] == 10.0f,
           "border: outer radii clamp like the fill path (oversized to half the smaller dimension, negative to 0)");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_border(ir_arena, (FlRect) { 0, 0, 50, 50 }, -3.0f, 2.0f, 0.0f, 0.0f, (FlCornerRadius) { 0 }, red);
-    fl_ir_border(ir_arena, (FlRect) { 0, 0, 50, 50 }, 0, 0, 0, 0, (FlCornerRadius) { 4, 4, 4, 4 }, red);
-    fl_ir_border(ir_arena, (FlRect) { 0, 0, 50, 50 }, -1.0f, -1.0f, -1.0f, -1.0f, (FlCornerRadius) { 0 }, red);
-    fl_ir_border(ir_arena, (FlRect) { 0, 0, 0, 50 }, 2, 2, 2, 2, (FlCornerRadius) { 0 }, red);
+    ir_border(ir_arena, (FlRect) { 0, 0, 50, 50 }, -3.0f, 2.0f, 0.0f, 0.0f, (FlCornerRadius) { 0 }, red);
+    ir_border(ir_arena, (FlRect) { 0, 0, 50, 50 }, 0, 0, 0, 0, (FlCornerRadius) { 4, 4, 4, 4 }, red);
+    ir_border(ir_arena, (FlRect) { 0, 0, 50, 50 }, -1.0f, -1.0f, -1.0f, -1.0f, (FlCornerRadius) { 0 }, red);
+    ir_border(ir_arena, (FlRect) { 0, 0, 0, 50 }, 2, 2, 2, 2, (FlCornerRadius) { 0 }, red);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "border: all-zero/negative widths and empty rects drop");
     CHECK(bits_f32(list.cmds[0].color[1]) == 0.0f && bits_f32(list.cmds[0].color[2]) == 2.0f,
@@ -1236,8 +1236,8 @@ static int run_border_translator_tests(void) {
 
     // Either axis alone is enough to consume the rect.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_border(ir_arena, (FlRect) { 0, 0, 40, 40 }, 20.0f, 20.0f, 1.0f, 1.0f, (FlCornerRadius) { 4, 4, 4, 4 }, green);
-    fl_ir_border(ir_arena, (FlRect) { 0, 0, 40, 40 }, 1.0f, 1.0f, 0.0f, 50.0f, (FlCornerRadius) { 0 }, green);
+    ir_border(ir_arena, (FlRect) { 0, 0, 40, 40 }, 20.0f, 20.0f, 1.0f, 1.0f, (FlCornerRadius) { 4, 4, 4, 4 }, green);
+    ir_border(ir_arena, (FlRect) { 0, 0, 40, 40 }, 1.0f, 1.0f, 0.0f, 50.0f, (FlCornerRadius) { 0 }, green);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 2, "border: borders consuming the rect still translate");
     for (int i = 0; i < 2; i++) {
@@ -1250,10 +1250,10 @@ static int run_border_translator_tests(void) {
     CHECK(list.cmds[0].radius[0] == 4.0f, "border: the normalized fill keeps the outer radii");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 30, 200 });
-    fl_ir_border(ir_arena, (FlRect) { 10, 10, 40, 40 }, 2, 2, 2, 2, (FlCornerRadius) { 0 }, red); // straddles
-    fl_ir_border(ir_arena, (FlRect) { 60, 10, 40, 40 }, 2, 2, 2, 2, (FlCornerRadius) { 0 }, red); // outside
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 30, 200 });
+    ir_border(ir_arena, (FlRect) { 10, 10, 40, 40 }, 2, 2, 2, 2, (FlCornerRadius) { 0 }, red); // straddles
+    ir_border(ir_arena, (FlRect) { 60, 10, 40, 40 }, 2, 2, 2, 2, (FlCornerRadius) { 0 }, red); // outside
+    ir_clip_pop(ir_arena);
     list = translate(out_arena, ir_arena, start, 255, nullptr, nullptr);
     CHECK(list.count == 1, "border: a border wholly outside the clip drops");
     CHECK(list.aabbs[0].x1 == 30.0f, "border: a straddling border's AABB clamps to the clip");
@@ -1393,13 +1393,13 @@ static int run_slot_translator_tests(void) {
 
     // One frame mixing all three image paths. Source sub-rects are in the texture's own texels.
     void* start = ir_begin(ir_arena);
-    fl_ir_image(ir_arena, src_small, FlImageMode_Color, (FlRect) { 10, 10, 8, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, src_small, FlImageMode_Color, (FlRect) { 10, 10, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
-    fl_ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 30, 10, 300, 40 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 30, 10, 300, 40 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, src_dyn, FlImageMode_Color, (FlRect) { 30, 60, 4, 4 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, src_dyn, FlImageMode_Color, (FlRect) { 30, 60, 4, 4 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
-    fl_ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 30, 110, 50, 20 }, (FlRect) { 250, 20, 60, 30 },
+    ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 30, 110, 50, 20 }, (FlRect) { 250, 20, 60, 30 },
                 white, FlImageFilter_Nearest, nullptr);
     GpuDrawList list = translate(out_arena, ir_arena, start, 255, &atlas, &slots);
     CHECK(list.count == 4, "slot translate: all three image paths translate");
@@ -1425,24 +1425,24 @@ static int run_slot_translator_tests(void) {
     CHECK(slots.overflow == 0, "slot translate: no overflow with free slots");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 0, 0, 10, 10 }, (FlRect) { 0 },
+    ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 0, 0, 10, 10 }, (FlRect) { 0 },
                 (FlColor) { 200, 100, 50, 128 }, FlImageFilter_Linear, nullptr);
     list = translate(out_arena, ir_arena, start, 255, &atlas, &slots);
     CHECK(list.cmds[0].color[0] == (100u | (50u << 8) | (25u << 16) | (128u << 24)),
           "slot translate: the tint packs premultiplied");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 0, 0, 10, 10 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 0, 0, 10, 10 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
-    fl_ir_image(ir_arena, src_dyn, FlImageMode_Color, (FlRect) { 20, 0, 4, 4 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, src_dyn, FlImageMode_Color, (FlRect) { 20, 0, 4, 4 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     list = translate(out_arena, ir_arena, start, 255, &atlas, nullptr);
     CHECK(list.count == 0, "slot translate: without slot bookkeeping, slot-tier records skip");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Dynamic }, FlImageMode_Color, (FlRect) { 0, 0, 8, 8 },
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Dynamic }, FlImageMode_Color, (FlRect) { 0, 0, 8, 8 },
                 (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
-    fl_ir_image(ir_arena,
+    ir_image(ir_arena,
                 (FlImageSource) { .kind = FlImageKind_Dynamic, .dynamic = { .pixels = dyn_buf, .w = 0, .h = 4 } },
                 FlImageMode_Color, (FlRect) { 20, 0, 8, 8 }, (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
     list = translate(out_arena, ir_arena, start, 255, &atlas, &slots);
@@ -1451,14 +1451,14 @@ static int run_slot_translator_tests(void) {
     static u8 dyn_clipped[4];
     u32 entries_before = slots.image_count;
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 8, 8 });
-    fl_ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 100, 100, 300, 40 }, (FlRect) { 0 }, white,
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 8, 8 });
+    ir_image(ir_arena, src_large, FlImageMode_Color, (FlRect) { 100, 100, 300, 40 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
-    fl_ir_image(ir_arena,
+    ir_image(ir_arena,
                 (FlImageSource) { .kind = FlImageKind_Dynamic,
                                   .dynamic = { .pixels = dyn_clipped, .w = 1, .h = 1, .stride = 4 } },
                 FlImageMode_Color, (FlRect) { 200, 200, 4, 4 }, (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     list = translate(out_arena, ir_arena, start, 255, &atlas, &slots);
     CHECK(list.count == 0 && slots.slot_count == 0 && slots.overflow == 0,
           "slot translate: fully clipped-out slot images claim nothing");
@@ -1470,7 +1470,7 @@ static int run_slot_translator_tests(void) {
     static u8 bufs[GPU_IMAGE_SLOT_COUNT + 2][4];
     start = ir_rewind_begin(ir_arena);
     for (u32 i = 0; i < GPU_IMAGE_SLOT_COUNT + 2; i++) {
-        fl_ir_image(ir_arena,
+        ir_image(ir_arena,
                     (FlImageSource) { .kind = FlImageKind_Dynamic,
                                       .dynamic = { .pixels = bufs[i], .w = 1, .h = 1, .stride = 4 } },
                     FlImageMode_Color, (FlRect) { (f32)(i * 10), 0, 4, 4 }, (FlRect) { 0 }, white, FlImageFilter_Linear,
@@ -1628,7 +1628,7 @@ static int run_text_translator_tests(void) {
         { .x = 125.0f, .y = 200.0f, .glyph_index = 'Z' }, // never prepared: skipped like an unresolved image
     };
     void* start = ir_begin(ir_arena);
-    fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
+    ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
     GpuDrawList list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                                       .bytes = ir_bytes(ir_arena, start),
                                                                       .global_alpha = 255,
@@ -1663,7 +1663,7 @@ static int run_text_translator_tests(void) {
     const FlColor half = { 200, 100, 50, 128 };
     start = ir_rewind_begin(ir_arena);
     FlGlyph one = { .x = 0.0f, .y = 50.0f, .glyph_index = 'A' };
-    fl_ir_text_run(ir_arena, font, size, 1.0f, half, &one, 1);
+    ir_text_run(ir_arena, font, size, 1.0f, half, &one, 1);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
                                                           .global_alpha = 255,
@@ -1678,7 +1678,7 @@ static int run_text_translator_tests(void) {
           "text translate: the run tint packs premultiplied (alpha-coverage colorization)");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_text_run(ir_arena, font, (u16)(size + 2), 1.0f, run_color, run, 4);
+    ir_text_run(ir_arena, font, (u16)(size + 2), 1.0f, run_color, run, 4);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
                                                           .global_alpha = 255,
@@ -1688,7 +1688,7 @@ static int run_text_translator_tests(void) {
     CHECK(list.count == 0, "text translate: a run at an unprepared size resolves no glyphs");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
+    ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
                                                           .global_alpha = 255,
@@ -1697,9 +1697,9 @@ static int run_text_translator_tests(void) {
     CHECK(list.count == 0, "text translate: a nullptr glyph atlas emits no text commands");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0.0f, 0.0f, 4.0f, 4.0f }); // a tiny box far from the glyphs at ~(100, 200)
-    fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_push(ir_arena, (FlRect) { 0.0f, 0.0f, 4.0f, 4.0f }); // a tiny box far from the glyphs at ~(100, 200)
+    ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
+    ir_clip_pop(ir_arena);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
                                                           .global_alpha = 255,
@@ -1709,9 +1709,9 @@ static int run_text_translator_tests(void) {
     CHECK(list.count == 0, "text translate: glyphs fully outside the clip drop");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 90.0f, 180.0f, 80.0f, 40.0f }); // covers 'A' (~100,200) and 'b' (~117,200)
-    fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_push(ir_arena, (FlRect) { 90.0f, 180.0f, 80.0f, 40.0f }); // covers 'A' (~100,200) and 'b' (~117,200)
+    ir_text_run(ir_arena, font, size, 1.0f, run_color, run, 4);
+    ir_clip_pop(ir_arena);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
                                                           .global_alpha = 255,
@@ -1723,7 +1723,7 @@ static int run_text_translator_tests(void) {
 
     start = ir_rewind_begin(ir_arena);
     FlGlyph ga = { .x = 0.0f, .y = 50.0f, .glyph_index = 'A' };
-    fl_ir_text_run(ir_arena, font, size, 1.0f, run_color, &ga, 1);
+    ir_text_run(ir_arena, font, size, 1.0f, run_color, &ga, 1);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
                                                           .global_alpha = 128,
@@ -1743,7 +1743,7 @@ static int run_text_translator_tests(void) {
     const f32 s = 1.5f;
     start = ir_rewind_begin(ir_arena);
     FlGlyph scaled = { .x = 100.0f, .y = 200.0f, .glyph_index = 'A' };
-    fl_ir_text_run(ir_arena, font, size, s, run_color, &scaled, 1);
+    ir_text_run(ir_arena, font, size, s, run_color, &scaled, 1);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
                                                           .global_alpha = 255,
@@ -1764,14 +1764,14 @@ static int run_text_translator_tests(void) {
           "text translate: the AABB bounds the scaled quad");
 
     // A text run's effect sits past the inline FlGlyph array, not right after the payload. Reading it at the
-    // wrong offset picks up glyph bytes. fl_ir_text_run takes no effect, so assemble the record directly.
+    // wrong offset picks up glyph bytes. ir_text_run takes no effect, so assemble the record directly.
     const FlColor tfx_color = { 9, 87, 65, 255 };
     FlEffect text_fx
         = { .kind = FlEffectKind_DropShadow, .color = tfx_color, .off_x = 2.0f, .off_y = 2.0f, .blur = 1.0f };
     start = ir_rewind_begin(ir_arena);
-    FlCmdHeader* theader = fl_ir_header(ir_arena, FlCmd_TextRun,
+    FlCmdHeader* theader = ir_header(ir_arena, FlCmd_TextRun,
                                         (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdTextRun) + sizeof(FlGlyph))
-                                            + fl_ir_effect_bytes(&text_fx));
+                                            + ir_effect_bytes(&text_fx));
     FlCmdTextRun* trun = arena_alloc_zero(ir_arena, FlCmdTextRun);
     trun->font = font;
     trun->size = size;
@@ -1780,7 +1780,7 @@ static int run_text_translator_tests(void) {
     trun->scale = 1.0f;
     FlGlyph* trun_glyphs = arena_alloc_array(ir_arena, FlGlyph, 1);
     trun_glyphs[0] = (FlGlyph) { .x = 100.0f, .y = 200.0f, .glyph_index = 'A' };
-    fl_ir_append_effect(ir_arena, theader, &text_fx);
+    ir_append_effect(ir_arena, theader, &text_fx);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
                                                           .global_alpha = 255,
@@ -1819,7 +1819,7 @@ static int run_svg_translator_tests(void) {
     // The authored fill is opaque, so the premultiply leaves rgb intact and equals the straight pack.
     const FlRect dst = { 100.0f, 120.0f, 32.0f, 24.0f };
     void* start = ir_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
                 (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
     GpuDrawList list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                                       .bytes = ir_bytes(ir_arena, start),
@@ -1843,7 +1843,7 @@ static int run_svg_translator_tests(void) {
 
     const FlColor override = { 230, 80, 200, 255 };
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
                 (FlRect) { 0 }, override, FlImageFilter_Linear, nullptr);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
@@ -1855,7 +1855,7 @@ static int run_svg_translator_tests(void) {
           "svg translate: a non-identity tint recolors the icon");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
                 (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
@@ -1872,7 +1872,7 @@ static int run_svg_translator_tests(void) {
 
     // A handle that lives only in the SVG tier drops rather than falling through to a slot or misrouting.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = handle }, FlImageMode_Color, dst,
                 (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
@@ -1891,7 +1891,7 @@ static int run_svg_translator_tests(void) {
     CHECK(color_cell != nullptr, "svg color translate: the icon places into the RGBA8 atlas");
 
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = color_handle }, FlImageMode_Color,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = color_handle }, FlImageMode_Color,
                 dst, (FlRect) { 0 }, override, FlImageFilter_Linear, nullptr);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
@@ -1914,7 +1914,7 @@ static int run_svg_translator_tests(void) {
 
     // The frame global_alpha is applied per frame to the persistent premultiplied cell, never baked into it.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = color_handle }, FlImageMode_Color,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = color_handle }, FlImageMode_Color,
                 dst, (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
     list = gpu_ir_to_draw_cmds(out_arena, &(GpuIrInput) { .commands = start,
                                                           .bytes = ir_bytes(ir_arena, start),
@@ -2671,22 +2671,22 @@ static int run_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
 
     start = ir_rewind_begin(ir_arena);
     // R1: one rounded corner (TL, radius 16) mixed with three square ones.
-    fl_ir_fill_rect(ir_arena, (FlRect) { 32, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
+    ir_fill_rect(ir_arena, (FlRect) { 32, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
                     (FlColor[4]) { red, red, red, red }, nullptr);
     // R2: all four corners rounded, radius 8.
-    fl_ir_fill_rect(ir_arena, (FlRect) { 128, 32, 64, 64 }, (FlCornerRadius) { 8, 8, 8, 8 },
+    ir_fill_rect(ir_arena, (FlRect) { 128, 32, 64, 64 }, (FlCornerRadius) { 8, 8, 8, 8 },
                     (FlColor[4]) { red, red, red, red }, nullptr);
     // G1: horizontal gradient black -> red.
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0, 128, 128, 32 }, (FlCornerRadius) { 0 },
+    ir_fill_rect(ir_arena, (FlRect) { 0, 128, 128, 32 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { black, pure_red, black, pure_red }, nullptr);
     // G2: vertical gradient green -> blue.
-    fl_ir_fill_rect(ir_arena, (FlRect) { 160, 128, 32, 128 }, (FlCornerRadius) { 0 },
+    ir_fill_rect(ir_arena, (FlRect) { 160, 128, 32, 128 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { pure_green, pure_green, pure_blue, pure_blue }, nullptr);
     // G3: four distinct corners (corner-order check: TL red, TR green, BL blue, BR white).
-    fl_ir_fill_rect(ir_arena, (FlRect) { 224, 128, 64, 64 }, (FlCornerRadius) { 0 },
+    ir_fill_rect(ir_arena, (FlRect) { 224, 128, 64, 64 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { pure_red, pure_green, pure_blue, white }, nullptr);
     // G4: half-alpha gradient over the transparent target (premultiplied-output check).
-    fl_ir_fill_rect(ir_arena, (FlRect) { 320, 128, 64, 32 }, (FlCornerRadius) { 0 },
+    ir_fill_rect(ir_arena, (FlRect) { 320, 128, 64, 32 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { half_red, half_blue, half_red, half_blue }, nullptr);
     frame.global_alpha = 255;
     ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -2762,19 +2762,19 @@ static int run_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // Clip cut: pixels land exactly at clip boundaries
     start = ir_rewind_begin(ir_arena);
     // K1: a 64x64 red rect clipped to {16,16,32,32}: every visible pixel comes from the clip, not the rect.
-    fl_ir_clip_push(ir_arena, (FlRect) { 16, 16, 32, 32 });
+    ir_clip_push(ir_arena, (FlRect) { 16, 16, 32, 32 });
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 64.0f, 64.0f, red);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     // K2: a green rect whose clip starts at the fractional x = 100.5, so pixel column 100 is half covered.
-    fl_ir_clip_push(ir_arena, (FlRect) { 100.5f, 0.0f, 32.0f, 32.0f });
+    ir_clip_push(ir_arena, (FlRect) { 100.5f, 0.0f, 32.0f, 32.0f });
     emit_solid_rect(ir_arena, 96.0f, 0.0f, 64.0f, 32.0f, green);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     // K3: a rounded rect (TL radius 16, arc circle centered at (208,48)) clipped to its left 8 pixels
     // ({192..200} x {32..96}); the clip edge at x = 200 slices through the corner arc.
-    fl_ir_clip_push(ir_arena, (FlRect) { 192, 32, 8, 64 });
-    fl_ir_fill_rect(ir_arena, (FlRect) { 192, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
+    ir_clip_push(ir_arena, (FlRect) { 192, 32, 8, 64 });
+    ir_fill_rect(ir_arena, (FlRect) { 192, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
                     (FlColor[4]) { red, red, red, red }, nullptr);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the clip frame");
 
@@ -2829,27 +2829,27 @@ static int run_border_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // One frame of non-overlapping borders.
     void* start = ir_rewind_begin(ir_arena);
     // B1: square border, uniform width 4; bands at {32..36} and {92..96} on each axis.
-    fl_ir_border(ir_arena, (FlRect) { 32, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, red);
+    ir_border(ir_arena, (FlRect) { 32, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, red);
     // B2: per-side widths l=8 r=2 t=4 b=0; each side's band is its own width; the bottom has none.
-    fl_ir_border(ir_arena, (FlRect) { 128, 32, 64, 64 }, 8, 2, 4, 0, (FlCornerRadius) { 0 }, green);
+    ir_border(ir_arena, (FlRect) { 128, 32, 64, 64 }, 8, 2, 4, 0, (FlCornerRadius) { 0 }, green);
     // B3: rounded, radius 16, width 4; the TL outer arc is centered at (240, 48), outer 16, inner 12.
-    fl_ir_border(ir_arena, (FlRect) { 224, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 16, 16, 16, 16 }, red);
+    ir_border(ir_arena, (FlRect) { 224, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 16, 16, 16, 16 }, red);
     // B4: width 10 past the radius 6; the inner corner at (330, 42) is sharp.
-    fl_ir_border(ir_arena, (FlRect) { 320, 32, 64, 64 }, 10, 10, 10, 10, (FlCornerRadius) { 6, 6, 6, 6 }, red);
+    ir_border(ir_arena, (FlRect) { 320, 32, 64, 64 }, 10, 10, 10, 10, (FlCornerRadius) { 6, 6, 6, 6 }, red);
     // B5: widths consuming the rect, which renders as a filled rounded rect in the border color.
-    fl_ir_border(ir_arena, (FlRect) { 416, 32, 64, 64 }, 40, 40, 40, 40, (FlCornerRadius) { 8, 8, 8, 8 }, red);
+    ir_border(ir_arena, (FlRect) { 416, 32, 64, 64 }, 40, 40, 40, 40, (FlCornerRadius) { 8, 8, 8, 8 }, red);
     // B6: half-alpha border; band pixels land premultiplied like every other kind.
-    fl_ir_border(ir_arena, (FlRect) { 512, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, blue);
+    ir_border(ir_arena, (FlRect) { 512, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, blue);
     // B7: rounded with per-side widths; each corner's inner radius derives from its own two adjacent
     // sides (TL pairs left+top, TR right+top, BL left+bottom, BR right+bottom): radius 12 with widths
     // l=8 r=2 t=6 b=1 gives inner radii TL 4, TR 6, BL 4, BR 10, with the inner rect at {616, 38, 54, 57}.
-    fl_ir_border(ir_arena, (FlRect) { 608, 32, 64, 64 }, 8, 2, 6, 1, (FlCornerRadius) { 12, 12, 12, 12 }, red);
+    ir_border(ir_arena, (FlRect) { 608, 32, 64, 64 }, 8, 2, 6, 1, (FlCornerRadius) { 12, 12, 12, 12 }, red);
     // B8: fractional uniform width 4.5; the inner edge sits on a half-pixel boundary at x = 708.5.
-    fl_ir_border(ir_arena, (FlRect) { 704, 32, 64, 64 }, 4.5f, 4.5f, 4.5f, 4.5f, (FlCornerRadius) { 0 }, red);
+    ir_border(ir_arena, (FlRect) { 704, 32, 64, 64 }, 4.5f, 4.5f, 4.5f, 4.5f, (FlCornerRadius) { 0 }, red);
     // B9: dashed, 8 on 8 off. Both runs are 64 long, an exact 4 periods, so the rescale is the identity and
     // the pattern lands on known coordinates: dashes at 0..8, 16..24, 32..40, 48..56 along each edge,
     // measured from the outer rect's origin down whichever axis the nearest edge runs.
-    fl_ir_border_stroked(ir_arena, (FlRect) { 800, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, red,
+    ir_border_stroked(ir_arena, (FlRect) { 800, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, red,
                          (FlStrokeStyle) { 8.0f, 8.0f });
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the border frame");
@@ -3043,23 +3043,23 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     const FlImageSource img_ramp = { .kind = FlImageKind_Static, .handle = 103 };
 
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 16, 16, 8, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 16, 16, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr); // nearest, native
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 48, 16, 8, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 48, 16, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr); // linear, native
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 80, 16, 8, 8 }, (FlRect) { 0 },
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 80, 16, 8, 8 }, (FlRect) { 0 },
                 (FlColor) { 128, 255, 255, 255 }, FlImageFilter_Nearest, nullptr); // tinted
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 112, 16, 4, 4 }, (FlRect) { 4, 4, 4, 4 }, white,
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 112, 16, 4, 4 }, (FlRect) { 4, 4, 4, 4 }, white,
                 FlImageFilter_Nearest, nullptr); // sub-rect
-    fl_ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 16, 48, 4, 4 }, (FlRect) { 0 },
+    ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 16, 48, 4, 4 }, (FlRect) { 0 },
                 (FlColor) { 200, 40, 50, 255 }, FlImageFilter_Nearest, nullptr); // alpha-coverage
-    fl_ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 48, 16, 4 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 48, 16, 4 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr); // ramp, linear
-    fl_ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 64, 16, 4 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 64, 16, 4 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr); // ramp, nearest
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = 104 }, FlImageMode_Color,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = 104 }, FlImageMode_Color,
                 (FlRect) { 80, 48, 2, 2 }, (FlRect) { 0 }, white, FlImageFilter_Nearest, nullptr); // strided source
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = 105 }, FlImageMode_Color,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = 105 }, FlImageMode_Color,
                 (FlRect) { 96, 48, 8, 8 }, (FlRect) { 0 }, white, FlImageFilter_Nearest, nullptr); // large: slot tier
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the image frame");
@@ -3124,9 +3124,9 @@ static int run_image_tests(FlRenderBackend* backend, FlArena* ir_arena) {
 
     backend->release_image(backend->user_data, 101);
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 16, 16, 8, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 16, 16, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 16, 48, 4, 4 }, (FlRect) { 0 },
+    ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 16, 48, 4, 4 }, (FlRect) { 0 },
                 (FlColor) { 200, 40, 50, 255 }, FlImageFilter_Nearest, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed after release_image");
@@ -3241,23 +3241,23 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     // Frame 1: the slot-image matrix: large static native and scaled (nearest), src sub-rect, large
     // alpha-coverage colorization, and all four dynamic buffers side by side.
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 8, 8, LW, LH }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 8, 8, LW, LH }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr); // native
-    fl_ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 8, 24, 600, 16 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 8, 24, 600, 16 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr); // 2x up
-    fl_ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 700, 24, 100, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 700, 24, 100, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr); // 3x down
-    fl_ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 860, 24, 80, 8 }, (FlRect) { 260, 0, 40, 8 }, white,
+    ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 860, 24, 80, 8 }, (FlRect) { 260, 0, 40, 8 }, white,
                 FlImageFilter_Nearest, nullptr); // sub-rect 2x
-    fl_ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 8, 48, LW, 4 }, (FlRect) { 0 }, alpha_tint,
+    ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 8, 48, LW, 4 }, (FlRect) { 0 }, alpha_tint,
                 FlImageFilter_Nearest, nullptr); // colorize
-    fl_ir_image(ir_arena, img_dyn, FlImageMode_Color, (FlRect) { 400, 48, DW, DH }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_dyn, FlImageMode_Color, (FlRect) { 400, 48, DW, DH }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_dyn_alpha, FlImageMode_AlphaCoverage, (FlRect) { 448, 48, 8, 1 }, (FlRect) { 0 },
+    ir_image(ir_arena, img_dyn_alpha, FlImageMode_AlphaCoverage, (FlRect) { 448, 48, 8, 1 }, (FlRect) { 0 },
                 (FlColor) { 40, 200, 60, 255 }, FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_dyn_strided, FlImageMode_Color, (FlRect) { 480, 48, 4, 2 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_dyn_strided, FlImageMode_Color, (FlRect) { 480, 48, 4, 2 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_dyn_repack, FlImageMode_Color, (FlRect) { 500, 48, 4, 2 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_dyn_repack, FlImageMode_Color, (FlRect) { 500, 48, 4, 2 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the slot-image frame");
@@ -3348,9 +3348,9 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
         dyn_alpha[x] = (u8)(252 - x * 36);
     }
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, img_dyn, FlImageMode_Color, (FlRect) { 400, 48, DW, DH }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_dyn, FlImageMode_Color, (FlRect) { 400, 48, DW, DH }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_dyn_alpha, FlImageMode_AlphaCoverage, (FlRect) { 448, 48, 8, 1 }, (FlRect) { 0 },
+    ir_image(ir_arena, img_dyn_alpha, FlImageMode_AlphaCoverage, (FlRect) { 448, 48, 8, 1 }, (FlRect) { 0 },
                 (FlColor) { 40, 200, 60, 255 }, FlImageFilter_Nearest, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the mutated dynamic frame");
@@ -3367,7 +3367,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     // A 2x linear upscale across the blue split at texel 150 ramps through genuine intermediates where
     // nearest (frame 1's 2x upscale) stepped 0 -> 255 between adjacent pixel pairs.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 8, 96, 600, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 8, 96, 600, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the linear slot frame");
@@ -3390,7 +3390,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
             ov_px[i][1] = 77;
             ov_px[i][2] = 200;
             ov_px[i][3] = 255;
-            fl_ir_image(ir_arena,
+            ir_image(ir_arena,
                         (FlImageSource) { .kind = FlImageKind_Dynamic,
                                           .dynamic = { .pixels = ov_px[i], .w = 1, .h = 1, .stride = 4 } },
                         FlImageMode_Color, (FlRect) { (f32)(8 + i * 8), 80, 4, 4 }, (FlRect) { 0 }, white,
@@ -3425,7 +3425,7 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
         u32 c0 = gpu_debug_dynamic_upload_count(backend->user_data);
 
         start = ir_rewind_begin(ir_arena);
-        fl_ir_image(ir_arena, img_stream, FlImageMode_Color, (FlRect) { 8, 120, 4, 4 }, (FlRect) { 0 }, white,
+        ir_image(ir_arena, img_stream, FlImageMode_Color, (FlRect) { 8, 120, 4, 4 }, (FlRect) { 0 }, white,
                     FlImageFilter_Nearest, nullptr);
         ir_frame_render(backend, surface, &frame, ir_arena, start);
         u32 c1 = gpu_debug_dynamic_upload_count(backend->user_data);
@@ -3433,14 +3433,14 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
 
         // A plain static draw, no dynamic image: the entry stays live but uploads nothing.
         start = ir_rewind_begin(ir_arena);
-        fl_ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 8, 48, LW, 4 }, (FlRect) { 0 },
+        ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 8, 48, LW, 4 }, (FlRect) { 0 },
                     alpha_tint, FlImageFilter_Nearest, nullptr);
         ir_frame_render(backend, surface, &frame, ir_arena, start);
         u32 c2 = gpu_debug_dynamic_upload_count(backend->user_data);
         CHECK(c2 == c1, "dynamic upload counter: a frame that references no dynamic image uploads nothing");
 
         start = ir_rewind_begin(ir_arena);
-        fl_ir_image(ir_arena, img_stream, FlImageMode_Color, (FlRect) { 8, 120, 4, 4 }, (FlRect) { 0 }, white,
+        ir_image(ir_arena, img_stream, FlImageMode_Color, (FlRect) { 8, 120, 4, 4 }, (FlRect) { 0 }, white,
                     FlImageFilter_Nearest, nullptr);
         ir_frame_render(backend, surface, &frame, ir_arena, start);
         u32 c3 = gpu_debug_dynamic_upload_count(backend->user_data);
@@ -3450,9 +3450,9 @@ static int run_slot_image_pixel_tests(FlRenderBackend* backend, FlArena* ir_aren
     // Release: the released image's texture is deleted on the next render.
     backend->release_image(backend->user_data, 201);
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 8, 8, LW, LH }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_large, FlImageMode_Color, (FlRect) { 8, 8, LW, LH }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 8, 48, LW, 4 }, (FlRect) { 0 }, alpha_tint,
+    ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 8, 48, LW, 4 }, (FlRect) { 0 }, alpha_tint,
                 FlImageFilter_Nearest, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed after slot release");
@@ -3750,10 +3750,10 @@ static int run_classification_tests(FlRenderBackend* backend, FlArena* ir_arena)
 
     // Clip culling is structural: a command classifies by its clip-intersected AABB.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 8, 8 });           // exactly tile (0,0)
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 8, 8 });           // exactly tile (0,0)
     emit_solid_rect(ir_arena, 200.0f, 200.0f, 16.0f, 16.0f, red); // fully clipped out: culled at translation
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 64.0f, 8.0f, green);    // rect spans tiles (0..7,0); clip keeps (0,0)
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     fl_arena_rewind(debug_arena);
     CHECK(gpu_debug_read_tile_classification(backend->user_data, surface, debug_arena, &cls),
@@ -3770,7 +3770,7 @@ static int run_classification_tests(FlRenderBackend* backend, FlArena* ir_arena)
     // hold nothing. A 12-to-3 quarter ring at center (64, 64), radius 40: its sector AABB spans pixels
     // x 64..104, y 24..64: a handful of tiles in the top-right quadrant, against ~100 for the full circle.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 64.0f, 64.0f, 40.0f, 8.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
+    ir_arc(ir_arena, 64.0f, 64.0f, 40.0f, 8.0f, 0.0f, 0.25f * TAU, red, 0, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     fl_arena_rewind(debug_arena);
     CHECK(gpu_debug_read_tile_classification(backend->user_data, surface, debug_arena, &cls),
@@ -3891,7 +3891,7 @@ static bool viewport3d_render_and_read(FlRenderBackend* backend, FlSurface* surf
 
     FlRenderFrame frame = test_frame();
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = color }, FlImageMode_Color,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = color }, FlImageMode_Color,
                 (FlRect) { 0, 0, (f32)w, (f32)h }, (FlRect) { 0 }, white, FlImageFilter_Nearest, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     return backend->read_pixels(backend->user_data, surface, out);
@@ -4006,11 +4006,11 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // destination. The clip proves the result composites through the normal image path.
     FlRenderFrame frame = test_frame();
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_clip_push(ir_arena, (FlRect) { 0, 0, 32, 64 });
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = vp_color }, FlImageMode_Color,
+    ir_clip_push(ir_arena, (FlRect) { 0, 0, 32, 64 });
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = vp_color }, FlImageMode_Color,
                 (FlRect) { 0, 0, (f32)vp_w, (f32)vp_h }, (FlRect) { 0 }, white, FlImageFilter_Nearest, nullptr);
-    fl_ir_clip_pop(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = vp_color }, FlImageMode_Color,
+    ir_clip_pop(ir_arena);
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = vp_color }, FlImageMode_Color,
                 (FlRect) { 64, 0, (f32)vp_w, (f32)vp_h }, (FlRect) { 0 }, white, FlImageFilter_Nearest, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
 
@@ -4098,7 +4098,7 @@ static int run_viewport3d_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     backend->mesh_destroy(backend->user_data, green_mesh);
     backend->viewport3d_submit(backend->user_data, viewport_id, vp_color, vp_w, vp_h, identity, draws, 3);
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = vp_color }, FlImageMode_Color,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = vp_color }, FlImageMode_Color,
                 (FlRect) { 0, 0, (f32)vp_w, (f32)vp_h }, (FlRect) { 0 }, white, FlImageFilter_Nearest, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(backend->read_pixels(backend->user_data, surface, &buf), "viewport3d: read_pixels failed after destroy");
@@ -4228,7 +4228,7 @@ static int run_frame_lifecycle_tests(FlRenderBackend* backend, FlArena* ir_arena
 
     start = ir_rewind_begin(ir_arena);
     emit_solid_rect(ir_arena, 0.0f, 0.0f, 0.0f, 64.0f, red); // empty: w == 0
-    fl_ir_border(ir_arena, (FlRect) { 0, 0, 64, 64 }, 0, 0, 0, 0, (FlCornerRadius) { 0 }, red);
+    ir_border(ir_arena, (FlRect) { 0, 0, 64, 64 }, 0, 0, 0, 0, (FlCornerRadius) { 0 }, red);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed after empty frame");
     CHECK(pixel_transparent(pixel_at(&buf, 36, 36)), "empty frame: the target must clear to fully transparent");
@@ -4422,9 +4422,9 @@ static int run_svg_raster_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     const FlImageSource src = { .kind = FlImageKind_Static, .handle = handle };
 
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, src, FlImageMode_Color, (FlRect) { 100, 100, (f32)cw, (f32)ch }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, src, FlImageMode_Color, (FlRect) { 100, 100, (f32)cw, (f32)ch }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
-    fl_ir_image(ir_arena, src, FlImageMode_Color, (FlRect) { 200, 100, (f32)cw, (f32)ch }, (FlRect) { 0 }, recolor,
+    ir_image(ir_arena, src, FlImageMode_Color, (FlRect) { 200, 100, (f32)cw, (f32)ch }, (FlRect) { 0 }, recolor,
                 FlImageFilter_Linear, nullptr);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -4551,7 +4551,7 @@ static int run_svg_color_raster_tests(FlRenderBackend* backend, FlArena* ir_aren
     const FlColor green = { 0, 255, 0, 255 };
     const FlColor red = { 255, 0, 0, 255 };
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = h_order }, FlImageMode_Color,
+    ir_image(ir_arena, (FlImageSource) { .kind = FlImageKind_Static, .handle = h_order }, FlImageMode_Color,
                 (FlRect) { 100, 100, (f32)cw, (f32)ch }, (FlRect) { 0 }, white, FlImageFilter_Linear, nullptr);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -4664,7 +4664,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
         int cw = (int)e->cell.w - 2 * GPU_SVG_ATLAS_PAD;
         int ch = (int)e->cell.h - 2 * GPU_SVG_ATLAS_PAD;
         void* start = ir_rewind_begin(ir_arena);
-        fl_ir_image(ir_arena, srcA, FlImageMode_Color, (FlRect) { 100, 100, (f32)cw, (f32)ch }, (FlRect) { 0 }, white,
+        ir_image(ir_arena, srcA, FlImageMode_Color, (FlRect) { 100, 100, (f32)cw, (f32)ch }, (FlRect) { 0 }, white,
                     FlImageFilter_Linear, nullptr);
         FlRenderFrame frame = test_frame();
         ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -4682,7 +4682,7 @@ static int run_svg_zoom_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     int cw48 = (int)e48->cell.w - 2 * GPU_SVG_ATLAS_PAD;
     u32 count_before_stretch = gpu_debug_svg_raster_count(ud);
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, srcA, FlImageMode_Color, (FlRect) { 100, 100, (f32)cw48, (f32)cw48 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, srcA, FlImageMode_Color, (FlRect) { 100, 100, (f32)cw48, (f32)cw48 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -4748,9 +4748,9 @@ static int run_svg_compaction_tests(FlRenderBackend* backend, FlArena* ir_arena)
     const int acw = (int)a_live->cell.w - 2 * GPU_SVG_ATLAS_PAD;
     const int ach = (int)a_live->cell.h - 2 * GPU_SVG_ATLAS_PAD;
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, srcB, FlImageMode_Color, (FlRect) { 100, 100, (f32)bcw, (f32)bch }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, srcB, FlImageMode_Color, (FlRect) { 100, 100, (f32)bcw, (f32)bch }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
-    fl_ir_image(ir_arena, srcA, FlImageMode_Color, (FlRect) { 100, 300, (f32)acw, (f32)ach }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, srcA, FlImageMode_Color, (FlRect) { 100, 300, (f32)acw, (f32)ach }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -4973,7 +4973,7 @@ static bool text_run_paints(FlRenderBackend* backend, FlSurface* surface, FlAren
     const f32 pen_y = 300.0f;
     FlGlyph glyph = { .x = pen_x, .y = pen_y, .glyph_index = glyph_index };
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_text_run(ir_arena, font, size, 1.0f, color, &glyph, 1);
+    ir_text_run(ir_arena, font, size, 1.0f, color, &glyph, 1);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
 
@@ -5015,7 +5015,7 @@ static int run_text_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     };
 
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_text_run(ir_arena, font, size, 1.0f, text_col, glyphs, 2);
+    ir_text_run(ir_arena, font, size, 1.0f, text_col, glyphs, 2);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
 
@@ -5167,7 +5167,7 @@ static int run_text_atlas_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     CHECK(e != nullptr && e->cell.w > 0, "text atlas: the closing glyph prepares");
     FlGlyph one = { .x = 300.0f, .y = 300.0f, .glyph_index = idx };
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_text_run(ir_arena, font, 32 * 4, 1.0f, white, &one, 1);
+    ir_text_run(ir_arena, font, 32 * 4, 1.0f, white, &one, 1);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     FlPixelReadback buf;
@@ -5273,7 +5273,7 @@ static int run_rect_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, w, h);
 
     const void* start = shared_ir_begin(ir_arena);
-    fl_ir_fill_rect(ir_arena, (FlRect) { 32, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
+    ir_fill_rect(ir_arena, (FlRect) { 32, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
                     (FlColor[4]) { rect_fill, rect_fill, rect_fill, rect_fill }, nullptr);
     FlRenderFrame frame = test_frame();
     frame.commands = start;
@@ -5318,7 +5318,7 @@ static int run_border_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
 
     // Outer edges at 32/96, inner edges at 36/92 (outer + width), so the band is {32..36} and {92..96} per axis.
     const void* start = shared_ir_begin(ir_arena);
-    fl_ir_border(ir_arena, (FlRect) { 32, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, rect_fill);
+    ir_border(ir_arena, (FlRect) { 32, 32, 64, 64 }, 4, 4, 4, 4, (FlCornerRadius) { 0 }, rect_fill);
     FlRenderFrame frame = test_frame();
     frame.commands = start;
     frame.bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - (const u8*)start);
@@ -5481,7 +5481,7 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     const f32 kend = 0.375f * tau;
     const f32 kdelta = 4.0f / 54.0f; // ~4px of arc length on the centerline
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, 0, nullptr);
+    ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, 0, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the knob arc frame");
 
@@ -5514,7 +5514,7 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // The same knob with round caps
     // The cap disc (radius 6) covers ~4px past the end angle; ~10px past stays clear.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, FL_IR_ARC_ROUND_CAPS, nullptr);
+    ir_arc(ir_arena, kcx, kcy, 60.0f, 12.0f, -kend, 0.75f * tau, green, FL_IR_ARC_ROUND_CAPS, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the round-cap frame");
     CHECK(pixel_color(pixel_at_knob_angle(&buf, kcx, kcy, kend + kdelta, 54.0f), green, 2.0f),
@@ -5525,8 +5525,8 @@ static int run_arc_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // Filled sector and full ring
     // Thickness reaching the center makes a pie wedge; a full-turn sweep is a seamless ring.
     start = ir_rewind_begin(ir_arena);
-    fl_ir_arc(ir_arena, 300.5f, 100.5f, 40.0f, 40.0f, 0.0f, 0.25f * tau, red, 0, nullptr);
-    fl_ir_arc(ir_arena, 500.5f, 100.5f, 40.0f, 8.0f, 0.0f, tau, blue, 0, nullptr);
+    ir_arc(ir_arena, 300.5f, 100.5f, 40.0f, 40.0f, 0.0f, 0.25f * tau, red, 0, nullptr);
+    ir_arc(ir_arena, 500.5f, 100.5f, 40.0f, 8.0f, 0.0f, tau, blue, 0, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the sector/ring frame");
 
@@ -5566,16 +5566,16 @@ static int run_circle_diamond_pixel_tests(FlRenderBackend* backend, FlArena* ir_
 
     // Circles and diamond (modulation points / automation nodes), plus a clip cut
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_circle(ir_arena, 200.5f, 300.5f, 30.0f, red, green, 6.0f, nullptr); // bordered: fill inside r = 24
-    fl_ir_circle(ir_arena, 300.5f, 300.5f, 20.0f, red, green, 0.0f, nullptr); // borderless: green never shows
+    ir_circle(ir_arena, 200.5f, 300.5f, 30.0f, red, green, 6.0f, nullptr); // bordered: fill inside r = 24
+    ir_circle(ir_arena, 300.5f, 300.5f, 20.0f, red, green, 0.0f, nullptr); // borderless: green never shows
     // Dashed ring, 6 on 6 off around the ring centerline at radius 18 (circumference 113.10). Nine periods
     // fit closest, so the rescale lands the pattern at 12.57 with a 6.28 dash, putting the top of the ring
     // a quarter period into a dash and the bottom a quarter period into a gap.
-    fl_ir_circle_stroked(ir_arena, 700.5f, 300.5f, 20.0f, red, green, 4.0f, (FlStrokeStyle) { 6.0f, 6.0f }, nullptr);
-    fl_ir_diamond(ir_arena, 400.5f, 300.5f, 30.0f, 20.0f, red, green, 4.0f, nullptr);
-    fl_ir_clip_push(ir_arena, (FlRect) { 600.0f, 280.0f, 21.0f, 41.0f }); // cuts at x = 621
-    fl_ir_circle(ir_arena, 620.5f, 300.5f, 15.0f, red, red, 0.0f, nullptr);
-    fl_ir_clip_pop(ir_arena);
+    ir_circle_stroked(ir_arena, 700.5f, 300.5f, 20.0f, red, green, 4.0f, (FlStrokeStyle) { 6.0f, 6.0f }, nullptr);
+    ir_diamond(ir_arena, 400.5f, 300.5f, 30.0f, 20.0f, red, green, 4.0f, nullptr);
+    ir_clip_push(ir_arena, (FlRect) { 600.0f, 280.0f, 21.0f, 41.0f }); // cuts at x = 621
+    ir_circle(ir_arena, 620.5f, 300.5f, 15.0f, red, red, 0.0f, nullptr);
+    ir_clip_pop(ir_arena);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "read_pixels failed on the circle/diamond frame");
 
@@ -5625,7 +5625,7 @@ static int run_circle_diamond_pixel_tests(FlRenderBackend* backend, FlArena* ir_
 // Meter-bar pixel cases: the batched optional-tier primitive
 // rendered end-to-end: a single bar-set record off a shared baseline carrying a full row of bars. Bar sets are
 // batched at the IR record level (one FlCmd_Bar carries the whole row) and lower CPU-side to one GpuDraw_Rect
-// per bar off the baseline. Rendering the whole row from one fl_ir_bars record is the readback that proves the
+// per bar off the baseline. Rendering the whole row from one ir_bars record is the readback that proves the
 // record stays batched (not degraded to one fill-rect call per bar).
 static int run_bar_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     FlSurface* surface = backend->create_surface(backend->user_data, 1920, 1080);
@@ -5637,7 +5637,7 @@ static int run_bar_pixel_tests(FlRenderBackend* backend, FlArena* ir_arena) {
     // Meter bars
     // One bar-set record off a baseline at y = 400: two upward bars, a gap, and a negative bar hanging below.
     void* start = ir_rewind_begin(ir_arena);
-    FlBar* bars = fl_ir_bars(ir_arena, 400.0f, green, 3, nullptr);
+    FlBar* bars = ir_bars(ir_arena, 400.0f, green, 3, nullptr);
     bars[0] = (FlBar) { 50.0f, 6.0f, 30.0f };
     bars[1] = (FlBar) { 60.0f, 6.0f, 60.0f };
     bars[2] = (FlBar) { 70.0f, 6.0f, -20.0f };
@@ -5680,16 +5680,16 @@ static int run_gradient_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) 
 
     void* start = ir_rewind_begin(ir_arena);
     // G1: horizontal gradient black -> red (TL/BL black, TR/BR red).
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 128, 16 }, (FlCornerRadius) { 0 },
+    ir_fill_rect(ir_arena, (FlRect) { 0, 0, 128, 16 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { black, pure_red, black, pure_red }, nullptr);
     // G2: vertical gradient green -> blue (TL/TR green, BL/BR blue).
-    fl_ir_fill_rect(ir_arena, (FlRect) { 160, 0, 16, 128 }, (FlCornerRadius) { 0 },
+    ir_fill_rect(ir_arena, (FlRect) { 160, 0, 16, 128 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { pure_green, pure_green, pure_blue, pure_blue }, nullptr);
     // G3: four distinct corners (TL red, TR green, BL blue, BR white), the corner-order check.
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0, 160, 64, 64 }, (FlCornerRadius) { 0 },
+    ir_fill_rect(ir_arena, (FlRect) { 0, 160, 64, 64 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { pure_red, pure_green, pure_blue, white }, nullptr);
     // G4: half-alpha gradient over the transparent target (premultiplied-output check).
-    fl_ir_fill_rect(ir_arena, (FlRect) { 80, 160, 64, 32 }, (FlCornerRadius) { 0 },
+    ir_fill_rect(ir_arena, (FlRect) { 80, 160, 64, 32 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { half_red, half_blue, half_red, half_blue }, nullptr);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -5758,21 +5758,21 @@ static int run_clip_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
 
     void* start = ir_rewind_begin(ir_arena);
     // K1: a 64x64 red rect clipped to {16,16,32,32}.
-    fl_ir_clip_push(ir_arena, (FlRect) { 16, 16, 32, 32 });
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0, 0, 64, 64 }, (FlCornerRadius) { 0 },
+    ir_clip_push(ir_arena, (FlRect) { 16, 16, 32, 32 });
+    ir_fill_rect(ir_arena, (FlRect) { 0, 0, 64, 64 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { clip_red, clip_red, clip_red, clip_red }, nullptr);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     // K2: a green rect whose clip starts at the fractional x = 100.5, so pixel column 100 is half covered.
-    fl_ir_clip_push(ir_arena, (FlRect) { 100.5f, 0.0f, 32.0f, 32.0f });
-    fl_ir_fill_rect(ir_arena, (FlRect) { 96, 0, 64, 32 }, (FlCornerRadius) { 0 },
+    ir_clip_push(ir_arena, (FlRect) { 100.5f, 0.0f, 32.0f, 32.0f });
+    ir_fill_rect(ir_arena, (FlRect) { 96, 0, 64, 32 }, (FlCornerRadius) { 0 },
                     (FlColor[4]) { clip_green, clip_green, clip_green, clip_green }, nullptr);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     // K3: a rounded rect (TL radius 16, arc circle centered at (208,48)) clipped to its left 8 pixels
     // ({192..200} x {32..96}); the clip edge at x = 200 slices through the corner arc.
-    fl_ir_clip_push(ir_arena, (FlRect) { 192, 32, 8, 64 });
-    fl_ir_fill_rect(ir_arena, (FlRect) { 192, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
+    ir_clip_push(ir_arena, (FlRect) { 192, 32, 8, 64 });
+    ir_fill_rect(ir_arena, (FlRect) { 192, 32, 64, 64 }, (FlCornerRadius) { .tl = 16.0f },
                     (FlColor[4]) { clip_red, clip_red, clip_red, clip_red }, nullptr);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
 
@@ -5990,28 +5990,28 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
     const FlImageSource img_tight = { .kind = FlImageKind_Static, .handle = 305 };
 
     void* start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 16, 16, 8, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 16, 16, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 48, 16, 8, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 48, 16, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 80, 16, 8, 8 }, (FlRect) { 0 },
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 80, 16, 8, 8 }, (FlRect) { 0 },
                 (FlColor) { 128, 255, 255, 255 }, FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 112, 16, 4, 4 }, (FlRect) { 4, 4, 4, 4 }, white,
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 112, 16, 4, 4 }, (FlRect) { 4, 4, 4, 4 }, white,
                 FlImageFilter_Nearest, nullptr); // src sub-rect (bottom-right quadrant)
-    fl_ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 16, 48, 4, 4 }, (FlRect) { 0 },
+    ir_image(ir_arena, img_alpha, FlImageMode_AlphaCoverage, (FlRect) { 16, 48, 4, 4 }, (FlRect) { 0 },
                 (FlColor) { 200, 40, 50, 255 }, FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 48, 16, 4 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 48, 16, 4 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
-    fl_ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 64, 16, 4 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 64, 16, 4 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_clip_push(ir_arena, (FlRect) { 96, 48, 4, 8 });
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 96, 48, 8, 8 }, (FlRect) { 0 }, white,
+    ir_clip_push(ir_arena, (FlRect) { 96, 48, 4, 8 });
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 96, 48, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_clip_pop(ir_arena);
+    ir_clip_pop(ir_arena);
     // The two row-pitch forms, at native size so every texel is a checkable passthrough.
-    fl_ir_image(ir_arena, img_padded, FlImageMode_Color, (FlRect) { 16, 80, 2, 2 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_padded, FlImageMode_Color, (FlRect) { 16, 80, 2, 2 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_tight, FlImageMode_Color, (FlRect) { 32, 80, 2, 2 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_tight, FlImageMode_Color, (FlRect) { 32, 80, 2, 2 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
     FlRenderFrame frame = test_frame();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
@@ -6084,9 +6084,9 @@ static int run_image_pixel_test(FlRenderBackend* backend, FlArena* ir_arena) {
 
     backend->release_image(backend->user_data, 301);
     start = ir_rewind_begin(ir_arena);
-    fl_ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 16, 16, 8, 8 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_color, FlImageMode_Color, (FlRect) { 16, 16, 8, 8 }, (FlRect) { 0 }, white,
                 FlImageFilter_Nearest, nullptr);
-    fl_ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 48, 16, 4 }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, img_ramp, FlImageMode_Color, (FlRect) { 48, 48, 16, 4 }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     ir_frame_render(backend, surface, &frame, ir_arena, start);
     CHECK(render_seam_read_pixels(backend, surface, &buf), "image: read_pixels after release failed");
@@ -6386,7 +6386,7 @@ static int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
             { .x = x, .y = 200.0f, .glyph_index = glyph_a },
             { .x = x + 60.0f, .y = 200.0f, .glyph_index = glyph_o },
         };
-        fl_ir_text_run(ir_arena, font, sizes[s], 1.0f, white, glyphs, 2);
+        ir_text_run(ir_arena, font, sizes[s], 1.0f, white, glyphs, 2);
     }
     FlRenderFrame frame = test_frame();
 

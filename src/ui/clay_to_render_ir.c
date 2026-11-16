@@ -34,12 +34,12 @@ static void clay_rectangle_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) 
     const Clay_RectangleRenderData* rect = &cmd->renderData.rectangle;
     FlColor c = to_em_color(rect->backgroundColor);
     FlColor corners[4] = { c, c, c, c }; // solid fill = four equal corner colors
-    fl_ir_fill_rect(arena, to_em_rect(cmd->boundingBox), to_em_radius(rect->cornerRadius), corners, nullptr);
+    ir_fill_rect(arena, to_em_rect(cmd->boundingBox), to_em_radius(rect->cornerRadius), corners, nullptr);
 }
 
 static void clay_border_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     const Clay_BorderRenderData* border = &cmd->renderData.border;
-    fl_ir_border_stroked(arena, to_em_rect(cmd->boundingBox), (f32)border->width.left, (f32)border->width.right,
+    ir_border_stroked(arena, to_em_rect(cmd->boundingBox), (f32)border->width.left, (f32)border->width.right,
                          (f32)border->width.top, (f32)border->width.bottom, to_em_radius(border->cornerRadius),
                          to_em_color(border->color), (FlStrokeStyle) { border->dashLen, border->gapLen });
 }
@@ -53,7 +53,7 @@ static void clay_image_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     }
     // FlCmdImage carries no corner radius, so a rounded Clay image loses its rounding through the IR.
     bool alpha_only = source->kind == FlImageKind_Dynamic && source->dynamic.alpha_only;
-    fl_ir_image(arena, *source, alpha_only ? FlImageMode_AlphaCoverage : FlImageMode_Color,
+    ir_image(arena, *source, alpha_only ? FlImageMode_AlphaCoverage : FlImageMode_Color,
                 to_em_rect(cmd->boundingBox), (FlRect) { 0 }, to_em_color(image->backgroundColor), FlImageFilter_Linear,
                 nullptr);
 }
@@ -210,7 +210,7 @@ static void clay_text_to_ir(FlArena* arena, FlFontCache* font_cache, const Clay_
     // 1:1 scale: layout already sizes glyphs at the resolved font size; there is no separate display zoom here.
     // Letter spacing is applied between glyphs (n−1 gaps), the same rule font_cache_measure_text and the painter
     // follow.
-    fl_ir_text_layout(arena, font_cache, text_data->fontId, font_cache_whole_px_to_q4(text_data->fontSize), 1.0f,
+    ir_text_layout(arena, font_cache, text_data->fontId, font_cache_whole_px_to_q4(text_data->fontSize), 1.0f,
                       to_em_color(text_data->textColor), (FlString) { .data = text, .length = length }, bb.x,
                       baseline_y, (float)text_data->letterSpacing);
 }
@@ -234,10 +234,10 @@ void fl_clay_to_render_ir(FlArena* arena, FlFontCache* font_cache, Clay_RenderCo
                 clay_border_to_ir(arena, cmd);
                 break;
             case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START:
-                fl_ir_clip_push(arena, to_em_rect(cmd->boundingBox));
+                ir_clip_push(arena, to_em_rect(cmd->boundingBox));
                 break;
             case CLAY_RENDER_COMMAND_TYPE_SCISSOR_END:
-                fl_ir_clip_pop(arena);
+                ir_clip_pop(arena);
                 break;
             case CLAY_RENDER_COMMAND_TYPE_CUSTOM:
                 clay_custom_to_ir(arena, cmd);

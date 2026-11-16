@@ -39,5 +39,29 @@ impl Text {
         let _frame = crate::frame_thread::frame_thread_guard("Text::measure");
         unsafe { crate::sys::fl_text_measure(crate::sys::RawStr::borrow(text), style) }
     }
+
+    /// Returns the byte offset of the character under `x` in a single line of `text`.
+    ///
+    /// `x` is measured in logical pixels from the left edge of the line, and the line is laid out as
+    /// `Text::measure` and `Painter::text_styled` lay it out with the same `style`. An `x` before the line gives
+    /// 0 and an `x` past its end gives the length of `text`. A font that is not loaded gives 0.
+    #[inline]
+    pub fn x_to_offset(text: impl AsRef<str>, style: crate::sys::TextStyle, x: f32) -> u32 {
+        let text = text.as_ref();
+        let _frame = crate::frame_thread::frame_thread_guard("Text::x_to_offset");
+        unsafe { crate::sys::fl_text_x_to_offset(crate::sys::RawStr::borrow(text), style, x) }
+    }
+
+    /// Returns the x of the left edge of the character at byte `offset` in a single line of `text`.
+    ///
+    /// The result is in logical pixels from the left edge of the line, laid out as for `Text::x_to_offset`. An
+    /// `offset` inside a UTF-8 sequence gives the next character, and one at or past the end of `text` gives the
+    /// width of the line. A font that is not loaded gives 0.
+    #[inline]
+    pub fn offset_to_x(text: impl AsRef<str>, style: crate::sys::TextStyle, offset: u32) -> f32 {
+        let text = text.as_ref();
+        let _frame = crate::frame_thread::frame_thread_guard("Text::offset_to_x");
+        unsafe { crate::sys::fl_text_offset_to_x(crate::sys::RawStr::borrow(text), style, offset) }
+    }
 }
 

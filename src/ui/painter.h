@@ -77,6 +77,18 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
 // matches what gets drawn.
 void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color);
 
+// The text of painter_text_spans and the spans that color it.
+typedef struct SpannedText {
+    FlString text;
+    const FlTextSpan* spans;
+    u32 span_count;
+} SpannedText;
+
+// Draw single-line text like painter_text_styled, with the color and background of each span applied to its bytes
+// of `text`; bytes no span covers are not drawn. Spans color one shaped line: positions and width are those of
+// painter_text_styled. A span's background is drawn before any text, so no span's fill covers another's glyphs.
+void painter_text_spans(Painter* p, float x, float y, SpannedText text, FlTextStyle style);
+
 // Draw a rectangle styled by config: per-corner radius and per-corner colors at once. The three narrower
 // calls below are thin configs over it.
 void painter_rect_styled(Painter* p, FlRect rect, FlRectConfig config);

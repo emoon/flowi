@@ -518,7 +518,7 @@ UTEST(font_cache, text_layout_splits_runs_per_face) {
     void* start = fl_arena_current_pos(ir);
     FlString text = { .data = "AAB", .length = 3, .is_static = 1, .is_ascii = 1 };
     const u16 q4 = font_cache_whole_px_to_q4(size);
-    fl_ir_text_layout(ir, cache, primary, q4, 1.0f, (FlColor) { 255, 255, 255, 255 }, text, 0.0f, 0.0f, 0.0f);
+    ir_text_layout(ir, cache, primary, q4, 1.0f, (FlColor) { 255, 255, 255, 255 }, text, 0.0f, 0.0f, 0.0f);
 
     const FlCmdHeader* h0 = (const FlCmdHeader*)start;
     const FlCmdTextRun* run0 = (const FlCmdTextRun*)(h0 + 1);
@@ -3953,21 +3953,21 @@ UTEST(render, scissor_stack_deep_nesting_balanced) {
     // 15 pushes fit: depth is capped at MAX_SCISSOR_STACK_DEPTH == 16 and slot 0 is the tile scissor. The last
     // one that fits restricts to the top-left 16x16, and the earlier 14 leave the region unrestricted.
     for (int i = 0; i < 14; ++i) {
-        fl_ir_clip_push(ir, full);
+        ir_clip_push(ir, full);
     }
-    fl_ir_clip_push(ir, corner); // 15th push: the innermost rect, which has to survive the over-cap pop below
+    ir_clip_push(ir, corner); // 15th push: the innermost rect, which has to survive the over-cap pop below
 
     // The 16th push is past the cap, so the renderer drops it. Its matching pop cancels the dropped push and does
     // not pop the 16x16 clip, which is still active.
-    fl_ir_clip_push(ir, full);
-    fl_ir_clip_pop(ir);
+    ir_clip_push(ir, full);
+    ir_clip_pop(ir);
 
     // A full-surface fill, drawn while the 16x16 clip is the innermost scissor.
-    fl_ir_fill_rect(ir, full, (FlCornerRadius) { 0 }, red4, nullptr);
+    ir_fill_rect(ir, full, (FlCornerRadius) { 0 }, red4, nullptr);
 
     // Pop the 15 real pushes to balance the stream.
     for (int i = 0; i < 15; ++i) {
-        fl_ir_clip_pop(ir);
+        ir_clip_pop(ir);
     }
 
     const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
@@ -4042,7 +4042,7 @@ UTEST(render, text_alpha_linear_fade) {
         src.dynamic.w = 16;
         src.dynamic.h = 16;
         src.dynamic.stride = 16;
-        fl_ir_image(ir, src, FlImageMode_AlphaCoverage, (FlRect) { 8.0f, 8.0f, 16.0f, 16.0f },
+        ir_image(ir, src, FlImageMode_AlphaCoverage, (FlRect) { 8.0f, 8.0f, 16.0f, 16.0f },
                     (FlRect) { 0.0f, 0.0f, 0.0f, 0.0f }, black, FlImageFilter_Nearest, nullptr);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
 
@@ -4112,7 +4112,7 @@ UTEST(render, dynamic_image_stride_zero_tight) {
         src.dynamic.w = 16;
         src.dynamic.h = 16;
         src.dynamic.stride = 0; // tightly packed, read as w*1
-        fl_ir_image(ir, src, FlImageMode_AlphaCoverage, dst, (FlRect) { 0.0f, 0.0f, 0.0f, 0.0f }, black,
+        ir_image(ir, src, FlImageMode_AlphaCoverage, dst, (FlRect) { 0.0f, 0.0f, 0.0f, 0.0f }, black,
                     FlImageFilter_Nearest, nullptr);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
 
@@ -4158,7 +4158,7 @@ UTEST(render, dynamic_image_stride_zero_tight) {
         src.dynamic.w = 16;
         src.dynamic.h = 16;
         src.dynamic.stride = 0; // tightly packed, read as w*4
-        fl_ir_image(ir, src, FlImageMode_Color, dst, (FlRect) { 0.0f, 0.0f, 0.0f, 0.0f }, white, FlImageFilter_Nearest,
+        ir_image(ir, src, FlImageMode_Color, dst, (FlRect) { 0.0f, 0.0f, 0.0f, 0.0f }, white, FlImageFilter_Nearest,
                     nullptr);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
 
@@ -4547,7 +4547,7 @@ UTEST(render, translucent_fill_border_over) {
         fl_arena_align(ir, 8);
         const u8* start = (const u8*)fl_arena_current_pos(ir);
         const FlColor corners[4] = { tA, tA, tA, tA };
-        fl_ir_fill_rect(ir, (FlRect) { 10.0f, 10.0f, 40.0f, 40.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
+        ir_fill_rect(ir, (FlRect) { 10.0f, 10.0f, 40.0f, 40.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
         GpuDrawList g = gpu_ir_to_draw_cmds(
             commands_arena,
@@ -4565,7 +4565,7 @@ UTEST(render, translucent_fill_border_over) {
         FlArena* ir = arena_new();
         fl_arena_align(ir, 8);
         const u8* start = (const u8*)fl_arena_current_pos(ir);
-        fl_ir_border(ir, (FlRect) { 70.0f, 10.0f, 40.0f, 40.0f }, 12.0f, 12.0f, 12.0f, 12.0f, (FlCornerRadius) { 0 },
+        ir_border(ir, (FlRect) { 70.0f, 10.0f, 40.0f, 40.0f }, 12.0f, 12.0f, 12.0f, 12.0f, (FlCornerRadius) { 0 },
                      tA);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
         GpuDrawList g = gpu_ir_to_draw_cmds(
@@ -4588,7 +4588,7 @@ UTEST(render, translucent_fill_border_over) {
         fl_arena_align(ir, 8);
         const u8* start = (const u8*)fl_arena_current_pos(ir);
         const FlColor corners[4] = { tA, tB, tA, tB }; // TL, TR, BL, BR
-        fl_ir_fill_rect(ir, (FlRect) { 10.0f, 70.0f, 48.0f, 48.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
+        ir_fill_rect(ir, (FlRect) { 10.0f, 70.0f, 48.0f, 48.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
         GpuDrawList g = gpu_ir_to_draw_cmds(
             commands_arena,
@@ -4610,7 +4610,7 @@ UTEST(render, translucent_fill_border_over) {
         fl_arena_align(ir, 8);
         const u8* start = (const u8*)fl_arena_current_pos(ir);
         const FlCornerRadius r = { .tl = 24.0f, .tr = 24.0f, .bl = 24.0f, .br = 24.0f };
-        fl_ir_border(ir, (FlRect) { 70.0f, 70.0f, 48.0f, 48.0f }, 24.0f, 24.0f, 24.0f, 24.0f, r, tA);
+        ir_border(ir, (FlRect) { 70.0f, 70.0f, 48.0f, 48.0f }, 24.0f, 24.0f, 24.0f, 24.0f, r, tA);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
         GpuDrawList g = gpu_ir_to_draw_cmds(
             commands_arena,
@@ -6175,7 +6175,7 @@ UTEST(render, image_scale_plane_over_read_guard) {
 // An image destination of zero width is dropped and not rasterized. The scaled path precomputes a shuffle table
 // sized to the integer destination width. At dst_width == 0 the padding-fill loop in calculate_shuffle_tables
 // would index result[dst_width - 1], and as a size_t subscript -1 becomes a huge out-of-bounds index. The painter
-// clamps degenerate sizes, so the case uses the raw IR path (Clay images, direct fl_ir_image), which can carry a
+// clamps degenerate sizes, so the case uses the raw IR path (Clay images, direct ir_image), which can carry a
 // zero-width dst.
 
 UTEST(render, zero_width_image_dst_is_dropped) {
@@ -6200,7 +6200,7 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     // Control: an 8x8 destination for the 2x2 source takes the scaled path and emits one command.
     fl_arena_align(ir_arena, 8);
     const u8* pos_start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 8.0f, 8.0f }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 8.0f, 8.0f }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     size_t pos_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - pos_start);
     UiRenderCommandsArray pos = sw_translate(commands_arena, state_arena, pos_start, pos_bytes, 255);
@@ -6211,7 +6211,7 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     // it.
     fl_arena_align(ir_arena, 8);
     const u8* zero_start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 0.0f, 8.0f }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 0.0f, 8.0f }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     size_t zero_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - zero_start);
     UiRenderCommandsArray zero = sw_translate(commands_arena, state_arena, zero_start, zero_bytes, 255);
@@ -6220,7 +6220,7 @@ UTEST(render, zero_width_image_dst_is_dropped) {
     // A destination narrower than one whole pixel truncates to zero columns and is dropped the same way.
     fl_arena_align(ir_arena, 8);
     const u8* thin_start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 0.5f, 8.0f }, (FlRect) { 0 }, white,
+    ir_image(ir_arena, source, FlImageMode_Color, (FlRect) { 4.0f, 4.0f, 0.5f, 8.0f }, (FlRect) { 0 }, white,
                 FlImageFilter_Linear, nullptr);
     size_t thin_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - thin_start);
     UiRenderCommandsArray thin = sw_translate(commands_arena, state_arena, thin_start, thin_bytes, 255);
@@ -6244,7 +6244,7 @@ static bool render_image_scaled(FlImageSource source, FlColor tint, u8 frame_glo
     FlArena* ir = arena_new();
     fl_arena_align(ir, 8);
     const u8* start = (const u8*)fl_arena_current_pos(ir);
-    fl_ir_image(ir, source, FlImageMode_Color, (FlRect) { 8.0f, 8.0f, 8.0f, 8.0f }, (FlRect) { 0 }, tint,
+    ir_image(ir, source, FlImageMode_Color, (FlRect) { 8.0f, 8.0f, 8.0f, 8.0f }, (FlRect) { 0 }, tint,
                 FlImageFilter_Linear, nullptr);
     const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir) - start);
 

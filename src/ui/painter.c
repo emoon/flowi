@@ -19,6 +19,7 @@
 #include "image/image_registry.h"
 #include "render_ir.h"
 #include "render_ir_build.h"
+#include "text_spans.h"
 
 #include <math.h>
 
@@ -218,7 +219,7 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
     float baseline_y = scale(p, y) + (float)glyph_list.ascender / 64.0f;
 
     // 1:1 scale: the painter draws at the reference-scaled size directly, no separate display zoom.
-    fl_ir_text_layout(p->arena, p->font_cache, font, font_cache_whole_px_to_q4(font_size), 1.0f, color, text, cursor_x,
+    ir_text_layout(p->arena, p->font_cache, font, font_cache_whole_px_to_q4(font_size), 1.0f, color, text, cursor_x,
                       baseline_y, 0.0f);
     painter_record_end(p, span, start);
 }
@@ -227,18 +228,24 @@ void painter_text(Painter* p, float x, float y, FlString text, FlFontId font, Fl
 // positions, and the n−1 letter-spacing rule with font_cache_measure_text, so a measured run matches what gets
 // drawn. Positions carry ui_scale (chrome); the size and spacing carry text_scale (type).
 
-void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color) {
-    if (p == nullptr) {
-        return;
-    }
-    if (string_is_empty(text) || p->font_cache == nullptr) {
-        return;
-    }
+// One styled line ready to draw: shaped (tabs laid out) with its pen origin and baseline in pixels.
+typedef struct StyledLine {
+    FlShapedRun shaped;
+    TextRunStyle style;
+    TextPlacement at;
+    float line_height;
+} StyledLine;
 
-    // Silent while the font is still loading or failed. This is the same metrics gate every measurement entry point
-    // applies, so a frame never lands where measure reports real metrics but the draw is skipped.
+// Resolves the size, shapes the line and places it, or returns false when there is nothing to draw: no text, no
+// font cache, or a font that is still loading or failed. The font check is the metrics gate every measurement entry
+// point applies, so a frame never lands where measure reports real metrics but the draw is skipped.
+static bool painter_prepare_line(const Painter* p, float x, float y, FlString text, FlTextStyle style,
+                                 StyledLine* out) {
+    if (string_is_empty(text) || p->font_cache == nullptr) {
+        return false;
+    }
     if (!font_cache_metrics_ready(p->font_cache, style.font_id)) {
-        return;
+        return false;
     }
 
     // 0 = the font's default size, resolved inside the font layer. style.font_size is authored, so the type
@@ -246,23 +253,36 @@ void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyl
     float size_px = font_cache_resolve_size_px(p->font_cache, style.font_id, style.font_size, p->text_scale);
     u16 size_q4 = font_cache_quantize_size_q4(size_px);
     if (size_q4 == 0) {
-        return;
+        return false;
     }
 
+    // Top-left anchored like painter_text: the baseline sits one ascent below y, at the styled size. Letter spacing
+    // is authored px; it scales with text_scale.
+    FlFontMetrics vm = font_cache_get_font_metrics(p->font_cache, style.font_id, size_px);
+    *out = (StyledLine) {
+        .shaped = font_cache_shape_line(p->font_cache, style.font_id, size_q4,
+                                        (TabbedLine) { text, style.tab_width }),
+        .style = { .font = style.font_id, .size_q4 = size_q4, .scale = 1.0f },
+        .at = { .cursor_x = scale(p, x),
+                .baseline_y = scale(p, y) + vm.ascent,
+                .letter_spacing = style.letter_spacing * p->text_scale },
+        .line_height = vm.line_height,
+    };
+    return true;
+}
+
+void painter_text_styled(Painter* p, float x, float y, FlString text, FlTextStyle style, FlColor color) {
+    StyledLine line;
+    if (p == nullptr || !painter_prepare_line(p, x, y, text, style, &line)) {
+        return;
+    }
     void* start;
     FlPaintSpan* span = painter_record_begin(p, &start);
     if (span == nullptr) {
         return;
     }
-
-    // Top-left anchored like painter_text: the baseline sits one ascent below y, at the styled size.
-    FlFontMetrics vm = font_cache_get_font_metrics(p->font_cache, style.font_id, size_px);
-    float cursor_x = scale(p, x);
-    float baseline_y = scale(p, y) + vm.ascent;
-
-    // Letter spacing is authored px; it scales with text_scale.
-    fl_ir_text_layout(p->arena, p->font_cache, style.font_id, size_q4, 1.0f, color, text, cursor_x, baseline_y,
-                      style.letter_spacing * p->text_scale);
+    line.style.color = color;
+    ir_text_layout_shaped(p->arena, line.shaped, line.style, line.at);
     painter_record_end(p, span, start);
 }
 
@@ -276,7 +296,7 @@ static void painter_emit_fill_rect(Painter* p, FlRect rect, const FlRectConfig* 
         .tl = scale(p, radius.tl), .tr = scale(p, radius.tr), .bl = scale(p, radius.bl), .br = scale(p, radius.br)
     };
     FlRect scaled_rect = { .x = scale(p, rect.x), .y = scale(p, rect.y), .w = scale(p, rect.w), .h = scale(p, rect.h) };
-    fl_ir_fill_rect(p->arena, scaled_rect, scaled, config->corner, effect);
+    ir_fill_rect(p->arena, scaled_rect, scaled, config->corner, effect);
 }
 
 void painter_rect_styled(Painter* p, FlRect rect, FlRectConfig config) {
@@ -313,6 +333,61 @@ void painter_rects(Painter* p, const FlColoredRect* rects, u32 rect_count) {
         const FlColoredRect* r = &rects[i];
         const FlRectConfig config = { .corner = { r->color, r->color, r->color, r->color } };
         painter_emit_fill_rect(p, (FlRect) { .x = r->x, .y = r->y, .w = r->w, .h = r->h }, &config, effect);
+    }
+    painter_record_end(p, span, start);
+}
+
+// The fill behind one span: from where its first glyph starts to where the next span starts, over the full line
+// height. Letter spacing is counted up to the glyph that ends the slice, with none after the last glyph of the line.
+static void painter_emit_span_fill(Painter* p, const StyledLine* line, const TextSpanSlice* slice, float y) {
+    const u32 last = line->shaped.count - 1;
+    const float inv = 1.0f / p->ui_scale;
+    const float spacing = line->at.letter_spacing;
+    const float left = (float)slice->x_start / 64.0f + (float)slice->first_glyph * spacing;
+    const float right = (float)slice->x_end / 64.0f + (float)(slice->first_glyph + slice->glyph_count < last
+                                                               ? slice->first_glyph + slice->glyph_count
+                                                               : last) * spacing;
+    const FlRect rect = { .x = (line->at.cursor_x + left) * inv,
+                          .y = y,
+                          .w = (right - left) * inv,
+                          .h = line->line_height * inv };
+    const FlRectConfig config = { .corner = { slice->bg, slice->bg, slice->bg, slice->bg } };
+    painter_emit_fill_rect(p, rect, &config, painter_current_effect(p));
+}
+
+static void painter_emit_span_text(Painter* p, const StyledLine* line, const TextSpanSlice* slice) {
+    const FlShapedRun part = { .glyphs = line->shaped.glyphs + slice->first_glyph,
+                               .count = slice->glyph_count,
+                               .width = slice->x_end - slice->x_start };
+    TextRunStyle style = line->style;
+    style.color = slice->color;
+    TextPlacement at = line->at;
+    at.first_index = slice->first_glyph;
+    ir_text_layout_shaped(p->arena, part, style, at);
+}
+
+void painter_text_spans(Painter* p, float x, float y, SpannedText text, FlTextStyle style) {
+    if (p == nullptr || p->ui_scale <= 0.0f) {
+        return;
+    }
+    StyledLine line;
+    if (!painter_prepare_line(p, x, y, text.text, style, &line)) {
+        return;
+    }
+    const TextSpanSlices slices
+        = text_span_slices(p->state_arena, (SpannedLine) { text.text, line.shaped }, text.spans, text.span_count);
+    void* start;
+    FlPaintSpan* span = painter_record_begin(p, &start);
+    if (span == nullptr) {
+        return;
+    }
+    for_count(i, slices.count) {
+        if (slices.slices[i].bg.a != 0) {
+            painter_emit_span_fill(p, &line, &slices.slices[i], y);
+        }
+    }
+    for_count(i, slices.count) {
+        painter_emit_span_text(p, &line, &slices.slices[i]);
     }
     painter_record_end(p, span, start);
 }
@@ -355,7 +430,7 @@ void painter_rect_stroke(Painter* p, FlRect rect, float radius, FlStroke stroke)
         .color = stroke.color,
         .stroke = painter_scale_dash(p, stroke.dash),
     };
-    fl_ir_border_cmd(p->arena, &band, painter_current_effect(p));
+    ir_border_cmd(p->arena, &band, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
@@ -382,7 +457,7 @@ static void painter_record_snapped_rect(Painter* p, FlRect rect, FlColor color) 
     if (span == nullptr) {
         return;
     }
-    fl_ir_fill_rect_snapped(p->arena, rect, color, painter_current_effect(p));
+    ir_fill_rect_snapped(p->arena, rect, color, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
@@ -436,7 +511,7 @@ bool painter_image(Painter* p, FlRect rect, FlImageHandle image, FlColor color) 
 
     FlImageSource source = { .kind = FlImageKind_Static };
     source.handle = image;
-    fl_ir_image(p->arena, source, FlImageMode_Color, dst, (FlRect) { 0 }, color, FlImageFilter_Linear,
+    ir_image(p->arena, source, FlImageMode_Color, dst, (FlRect) { 0 }, color, FlImageFilter_Linear,
                 painter_current_effect(p));
     painter_record_end(p, span, start);
     return true;
@@ -487,7 +562,7 @@ bool painter_image_sub(Painter* p, FlImageSub sub) {
 
     FlImageSource source = { .kind = FlImageKind_Static };
     source.handle = sub.image;
-    fl_ir_image(p->arena, source, FlImageMode_Color, dst, src, sub.color, FlImageFilter_Linear,
+    ir_image(p->arena, source, FlImageMode_Color, dst, src, sub.color, FlImageFilter_Linear,
                 painter_current_effect(p));
     painter_record_end(p, span, start);
     return true;
@@ -519,7 +594,7 @@ void painter_dynamic_image(Painter* p, FlVec2 pos, FlDynamicImage* image, FlColo
 
     // In alpha-coverage mode the tint colorizes the mask.
     FlImageMode mode = image->is_alpha_only ? FlImageMode_AlphaCoverage : FlImageMode_Color;
-    fl_ir_image(p->arena, source, mode, dst, (FlRect) { 0 }, color, FlImageFilter_Linear, painter_current_effect(p));
+    ir_image(p->arena, source, mode, dst, (FlRect) { 0 }, color, FlImageFilter_Linear, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
 
@@ -540,7 +615,7 @@ void painter_polyline(Painter* p, const FlPolyPoint* points, u32 point_count, Fl
         return;
     }
 
-    FlPolyPoint* dst = fl_ir_polyline(p->arena, style.stroke.color, style.fill_color, scale(p, style.stroke.width),
+    FlPolyPoint* dst = ir_polyline(p->arena, style.stroke.color, style.fill_color, scale(p, style.stroke.width),
                                       scale(p, style.baseline_y), style.flags, point_count, painter_current_effect(p));
     for (u32 i = 0; i < point_count; i++) {
         dst[i].x = scale(p, points[i].x);
@@ -573,7 +648,7 @@ void painter_arc(Painter* p, FlVec2 center, float radius, float start_angle, flo
     }
     // Angles are unitless (radians); only the lengths scale.
     const u32 flags = stroke.cap == FlStrokeCap_Round ? FL_IR_ARC_ROUND_CAPS : 0u;
-    fl_ir_arc(p->arena, scale(p, center.x), scale(p, center.y), scale(p, radius), scale(p, stroke.width), start_angle,
+    ir_arc(p->arena, scale(p, center.x), scale(p, center.y), scale(p, radius), scale(p, stroke.width), start_angle,
               sweep, stroke.color, flags, painter_current_effect(p));
     painter_record_end(p, span, start);
 }
@@ -591,7 +666,7 @@ void painter_circle_bordered(Painter* p, FlVec2 center, float radius, FlColor co
     if (span == nullptr) {
         return;
     }
-    fl_ir_circle_stroked(p->arena, scale(p, center.x), scale(p, center.y), scale(p, radius), color, border.color,
+    ir_circle_stroked(p->arena, scale(p, center.x), scale(p, center.y), scale(p, radius), color, border.color,
                          scale(p, border.width), painter_scale_dash(p, border.dash), painter_current_effect(p));
     painter_record_end(p, span, start);
 }
@@ -613,7 +688,7 @@ void painter_diamond_bordered(Painter* p, FlVec2 center, FlVec2 half_extent, FlC
     if (span == nullptr) {
         return;
     }
-    fl_ir_diamond(p->arena, scale(p, center.x), scale(p, center.y), scale(p, half_extent.x), scale(p, half_extent.y),
+    ir_diamond(p->arena, scale(p, center.x), scale(p, center.y), scale(p, half_extent.x), scale(p, half_extent.y),
                   color, border.color, scale(p, border.width), painter_current_effect(p));
     painter_record_end(p, span, start);
 }
@@ -639,7 +714,7 @@ void painter_bars(Painter* p, float baseline_y, const FlBar* bars, u32 bar_count
         return;
     }
 
-    FlBar* dst = fl_ir_bars(p->arena, scale(p, baseline_y), color, bar_count, painter_current_effect(p));
+    FlBar* dst = ir_bars(p->arena, scale(p, baseline_y), color, bar_count, painter_current_effect(p));
     for (u32 i = 0; i < bar_count; i++) {
         dst[i].x = scale(p, bars[i].x);
         dst[i].w = scale(p, bars[i].w);

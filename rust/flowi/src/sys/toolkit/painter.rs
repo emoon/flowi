@@ -199,6 +199,29 @@ const _: () = {
     assert!(core::mem::offset_of!(ColoredRect, color) == 16, "ColoredRect.color offset drift");
 };
 
+/// One run of a string drawn by `fl_painter_text_spans`: how many bytes it covers and how they are drawn.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct TextSpan {
+    /// The length of the run, in bytes of the string.
+    pub len: u32,
+    /// Reserved. Pass 0.
+    pub flags: u32,
+    /// The color of the text in the run.
+    pub color: crate::sys::Color,
+    /// The color drawn behind the run (an alpha of 0 draws nothing).
+    pub bg: crate::sys::Color,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<TextSpan>() == 16, "TextSpan size drift");
+    assert!(core::mem::align_of::<TextSpan>() == 4, "TextSpan align drift");
+    assert!(core::mem::offset_of!(TextSpan, len) == 0, "TextSpan.len offset drift");
+    assert!(core::mem::offset_of!(TextSpan, flags) == 4, "TextSpan.flags offset drift");
+    assert!(core::mem::offset_of!(TextSpan, color) == 8, "TextSpan.color offset drift");
+    assert!(core::mem::offset_of!(TextSpan, bg) == 12, "TextSpan.bg offset drift");
+};
+
 /// The corner colors of a gradient rectangle.
 ///
 /// This is passed to `fl_painter_gradient_rect`. The colors are interpolated across the rectangle.
@@ -361,6 +384,14 @@ extern "C" {
     /// Sizes are rounded to quarter pixels in the same way as in `fl_text_measure`, so a measured run matches the
     /// drawn one.
     pub fn fl_painter_text_styled(x: f32, y: f32, text: crate::sys::RawStr, style: crate::sys::TextStyle, color: crate::sys::Color);
+    /// Draws a single line of `text` with a color, and optionally a background, for each run, with its top-left
+    /// corner at (`x`, `y`).
+    ///
+    /// `spans` cover the text in order from its first byte, and text after the last span is not drawn. A span
+    /// that reaches past the end of the text is cut at it, and one that ends inside a UTF-8 sequence ends after
+    /// that sequence instead. The line is laid out as a whole, so the spans change colors and nothing else: the
+    /// positions and the width are those of `fl_painter_text_styled` with the same `style`.
+    pub fn fl_painter_text_spans(x: f32, y: f32, text: crate::sys::RawStr, style: crate::sys::TextStyle, spans: *const crate::sys::TextSpan, spans_size: u32);
     /// Draws an image into the rectangle at (`x`, `y`) and returns true if it was drawn.
     ///
     /// `image` is the handle from `fl_image_load`. `color` is multiplied with the image, so pass white

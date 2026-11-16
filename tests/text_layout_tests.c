@@ -42,7 +42,7 @@ static bool layout_follows_the_pen(const PenLayout* layout, FlString text) {
 
     FlArena* ir = arena_new();
     void* start = fl_arena_current_pos(ir);
-    fl_ir_text_layout(ir, layout->cache, layout->font, layout->q4, layout->scale, (FlColor) { 255, 255, 255, 255 },
+    ir_text_layout(ir, layout->cache, layout->font, layout->q4, layout->scale, (FlColor) { 255, 255, 255, 255 },
                       text, layout->origin_x, 20.25f, layout->spacing);
     FlGlyph glyphs[128];
     const u32 count = collect_run_glyphs(start, fl_arena_current_pos(ir), glyphs);

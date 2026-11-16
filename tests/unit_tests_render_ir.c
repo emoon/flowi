@@ -2,7 +2,7 @@
 
 #include "unit_tests_common.h"
 
-// The styled text-run layout (fl_ir_text_layout at a fractional quarter-px key) agrees with
+// The styled text-run layout (ir_text_layout at a fractional quarter-px key) agrees with
 // font_cache_measure_text: the same quantizer, the same glyph positions and the same n-1 letter-spacing rule.
 
 UTEST(render_ir, styled_text_layout_matches_measurement) {
@@ -18,7 +18,7 @@ UTEST(render_ir, styled_text_layout_matches_measurement) {
     FlArena* ir = arena_new();
     void* start = fl_arena_current_pos(ir);
     FlString aaa = { .data = "AAA", .length = 3, .is_static = 1, .is_ascii = 1 };
-    fl_ir_text_layout(ir, cache, font, q4, 1.0f, (FlColor) { 255, 255, 255, 255 }, aaa, 10.0f, 20.0f, spacing);
+    ir_text_layout(ir, cache, font, q4, 1.0f, (FlColor) { 255, 255, 255, 255 }, aaa, 10.0f, 20.0f, spacing);
 
     const FlCmdHeader* h = (const FlCmdHeader*)start;
     ASSERT_EQ_MSG((int)h->kind, (int)FlCmd_TextRun, "the layout emits one text run");
@@ -166,14 +166,14 @@ UTEST(render_ir, optional_tier_builders_round_trip) {
     FlEffect glow = { .kind = FlEffectKind_Glow, .color = { 1, 2, 3, 4 }, .off_x = 0.0f, .off_y = 0.0f, .blur = 6.0f };
 
     FlPolyPoint* pts
-        = fl_ir_polyline(arena, stroke, fill, 2.0f, 100.0f, FlPolylineFlags_filled | FlPolylineFlags_closed, 3, &glow);
+        = ir_polyline(arena, stroke, fill, 2.0f, 100.0f, FlPolylineFlags_filled | FlPolylineFlags_closed, 3, &glow);
     pts[0] = (FlPolyPoint) { 0.0f, 8.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 10.0f, 5.0f, 0.5f };
     pts[2] = (FlPolyPoint) { 20.0f, 8.0f, 1.0f };
-    fl_ir_arc(arena, 50.0f, 60.0f, 24.0f, 4.0f, -2.0f, 4.0f, stroke, FL_IR_ARC_ROUND_CAPS, nullptr);
-    fl_ir_circle(arena, 1.0f, 2.0f, 3.0f, stroke, fill, 1.5f, nullptr);
-    fl_ir_diamond(arena, 4.0f, 5.0f, 6.0f, 7.0f, stroke, fill, 0.0f, nullptr);
-    FlBar* bars = fl_ir_bars(arena, 200.0f, stroke, 2, &glow);
+    ir_arc(arena, 50.0f, 60.0f, 24.0f, 4.0f, -2.0f, 4.0f, stroke, FL_IR_ARC_ROUND_CAPS, nullptr);
+    ir_circle(arena, 1.0f, 2.0f, 3.0f, stroke, fill, 1.5f, nullptr);
+    ir_diamond(arena, 4.0f, 5.0f, 6.0f, 7.0f, stroke, fill, 0.0f, nullptr);
+    FlBar* bars = ir_bars(arena, 200.0f, stroke, 2, &glow);
     bars[0] = (FlBar) { 0.0f, 4.0f, 50.0f };
     bars[1] = (FlBar) { 6.0f, 4.0f, -10.0f };
 
@@ -694,16 +694,16 @@ UTEST(render_ir, sw_backend_skips_optional_tier) {
     FlColor corners[4] = { c, c, c, c };
     FlEffect glow = { .kind = FlEffectKind_Glow, .color = c, .blur = 4.0f };
 
-    fl_ir_fill_rect(ir_arena, (FlRect) { 0.0f, 0.0f, 10.0f, 10.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
-    FlPolyPoint* pts = fl_ir_polyline(ir_arena, c, c, 1.0f, 0.0f, 0, 2, &glow);
+    ir_fill_rect(ir_arena, (FlRect) { 0.0f, 0.0f, 10.0f, 10.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
+    FlPolyPoint* pts = ir_polyline(ir_arena, c, c, 1.0f, 0.0f, 0, 2, &glow);
     pts[0] = (FlPolyPoint) { 0.0f, 0.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 1.0f, 1.0f, 1.0f };
-    fl_ir_arc(ir_arena, 0.0f, 0.0f, 5.0f, 1.0f, 0.0f, 3.0f, c, 0, nullptr);
-    fl_ir_circle(ir_arena, 0.0f, 0.0f, 2.0f, c, c, 0.0f, nullptr);
-    fl_ir_diamond(ir_arena, 0.0f, 0.0f, 2.0f, 2.0f, c, c, 0.0f, nullptr);
-    FlBar* bars = fl_ir_bars(ir_arena, 0.0f, c, 1, nullptr);
+    ir_arc(ir_arena, 0.0f, 0.0f, 5.0f, 1.0f, 0.0f, 3.0f, c, 0, nullptr);
+    ir_circle(ir_arena, 0.0f, 0.0f, 2.0f, c, c, 0.0f, nullptr);
+    ir_diamond(ir_arena, 0.0f, 0.0f, 2.0f, 2.0f, c, c, 0.0f, nullptr);
+    FlBar* bars = ir_bars(ir_arena, 0.0f, c, 1, nullptr);
     bars[0] = (FlBar) { 0.0f, 1.0f, 1.0f };
-    fl_ir_fill_rect(ir_arena, (FlRect) { 20.0f, 0.0f, 10.0f, 10.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
+    ir_fill_rect(ir_arena, (FlRect) { 20.0f, 0.0f, 10.0f, 10.0f }, (FlCornerRadius) { 0 }, corners, nullptr);
 
     size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - start);
     UiRenderCommandsArray out = sw_translate(commands_arena, state_arena, start, bytes, 255);
@@ -731,7 +731,7 @@ UTEST(render_ir, sw_backend_drops_each_optional_tier) {
 
     fl_arena_align(ir_arena, 8);
     const u8* start = (const u8*)fl_arena_current_pos(ir_arena);
-    FlPolyPoint* pts = fl_ir_polyline(ir_arena, c, c, 1.0f, 0.0f, 0, 2, nullptr);
+    FlPolyPoint* pts = ir_polyline(ir_arena, c, c, 1.0f, 0.0f, 0, 2, nullptr);
     pts[0] = (FlPolyPoint) { 0.0f, 0.0f, 1.0f };
     pts[1] = (FlPolyPoint) { 1.0f, 1.0f, 1.0f };
     ASSERT_TRUE_MSG(sw_translate_range(ir_arena, commands_arena, state_arena, start) == 0,
@@ -739,25 +739,25 @@ UTEST(render_ir, sw_backend_drops_each_optional_tier) {
 
     fl_arena_align(ir_arena, 8);
     start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_arc(ir_arena, 0.0f, 0.0f, 5.0f, 1.0f, 0.0f, 3.0f, c, 0, nullptr);
+    ir_arc(ir_arena, 0.0f, 0.0f, 5.0f, 1.0f, 0.0f, 3.0f, c, 0, nullptr);
     ASSERT_TRUE_MSG(sw_translate_range(ir_arena, commands_arena, state_arena, start) == 0,
                     "Arc is optional-tier: the SW backend drops it");
 
     fl_arena_align(ir_arena, 8);
     start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_circle(ir_arena, 0.0f, 0.0f, 2.0f, c, c, 0.0f, nullptr);
+    ir_circle(ir_arena, 0.0f, 0.0f, 2.0f, c, c, 0.0f, nullptr);
     ASSERT_TRUE_MSG(sw_translate_range(ir_arena, commands_arena, state_arena, start) == 0,
                     "Circle is optional-tier: the SW backend drops it");
 
     fl_arena_align(ir_arena, 8);
     start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_diamond(ir_arena, 0.0f, 0.0f, 2.0f, 2.0f, c, c, 0.0f, nullptr);
+    ir_diamond(ir_arena, 0.0f, 0.0f, 2.0f, 2.0f, c, c, 0.0f, nullptr);
     ASSERT_TRUE_MSG(sw_translate_range(ir_arena, commands_arena, state_arena, start) == 0,
                     "Diamond is optional-tier: the SW backend drops it");
 
     fl_arena_align(ir_arena, 8);
     start = (const u8*)fl_arena_current_pos(ir_arena);
-    FlBar* bars = fl_ir_bars(ir_arena, 0.0f, c, 1, nullptr);
+    FlBar* bars = ir_bars(ir_arena, 0.0f, c, 1, nullptr);
     bars[0] = (FlBar) { 0.0f, 1.0f, 1.0f };
     ASSERT_TRUE_MSG(sw_translate_range(ir_arena, commands_arena, state_arena, start) == 0,
                     "Bar is optional-tier: the SW backend drops it");
@@ -783,22 +783,22 @@ UTEST(render_ir, sw_backend_ignores_effect_on_core_command) {
 
     fl_arena_align(ir_arena, 8);
     const u8* plain_start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_fill_rect(ir_arena, rect, (FlCornerRadius) { 0 }, corners, nullptr);
+    ir_fill_rect(ir_arena, rect, (FlCornerRadius) { 0 }, corners, nullptr);
     size_t plain_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - plain_start);
 
     // The same rect with a drop shadow appended at the record tail. The core builder has no effect parameter, so
     // the record is assembled directly, as the painter's annotation path does.
     fl_arena_align(ir_arena, 8);
     const u8* fx_start = (const u8*)fl_arena_current_pos(ir_arena);
-    FlCmdHeader* header = fl_ir_header(
-        ir_arena, FlCmd_FillRect, (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdFillRect)) + fl_ir_effect_bytes(&shadow));
+    FlCmdHeader* header = ir_header(
+        ir_arena, FlCmd_FillRect, (u32)(sizeof(FlCmdHeader) + sizeof(FlCmdFillRect)) + ir_effect_bytes(&shadow));
     FlCmdFillRect* fr = arena_alloc_zero(ir_arena, FlCmdFillRect);
     fr->rect = rect;
     fr->corner[0] = c;
     fr->corner[1] = c;
     fr->corner[2] = c;
     fr->corner[3] = c;
-    fl_ir_append_effect(ir_arena, header, &shadow);
+    ir_append_effect(ir_arena, header, &shadow);
     size_t fx_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - fx_start);
 
     UiRenderCommandsArray plain = sw_translate(commands_arena, state_arena, plain_start, plain_bytes, 255);
@@ -835,7 +835,7 @@ UTEST(render_ir, sw_gpu_decode_agrees) {
 
     fl_arena_align(ir_arena, 8);
     const u8* fill_start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_fill_rect(ir_arena, rect, (FlCornerRadius) { 0 }, solid, nullptr);
+    ir_fill_rect(ir_arena, rect, (FlCornerRadius) { 0 }, solid, nullptr);
     size_t fill_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - fill_start);
 
     UiRenderCommandsArray sw = sw_translate(commands_arena, state_arena, fill_start, fill_bytes, 200);
@@ -865,12 +865,12 @@ UTEST(render_ir, sw_gpu_decode_agrees) {
 
     fl_arena_align(ir_arena, 8);
     const u8* neg_start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_fill_rect(ir_arena, rect, neg_r, op4, nullptr);
+    ir_fill_rect(ir_arena, rect, neg_r, op4, nullptr);
     size_t neg_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - neg_start);
 
     fl_arena_align(ir_arena, 8);
     const u8* zero_start = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_fill_rect(ir_arena, rect, zero_r, op4, nullptr);
+    ir_fill_rect(ir_arena, rect, zero_r, op4, nullptr);
     size_t zero_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - zero_start);
 
     UiRenderCommandsArray sw_neg = sw_translate(commands_arena, state_arena, neg_start, neg_bytes, 255);
@@ -904,12 +904,12 @@ UTEST(render_ir, sw_backend_ignores_a_border_dash_pattern) {
 
     fl_arena_align(ir_arena, 8);
     const u8* solid = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_border(ir_arena, rect, 4.0f, 3.0f, 2.0f, 1.0f, radius, color);
+    ir_border(ir_arena, rect, 4.0f, 3.0f, 2.0f, 1.0f, radius, color);
     size_t solid_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - solid);
 
     fl_arena_align(ir_arena, 8);
     const u8* dashed = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_border_stroked(ir_arena, rect, 4.0f, 3.0f, 2.0f, 1.0f, radius, color, (FlStrokeStyle) { 3.0f, 2.0f });
+    ir_border_stroked(ir_arena, rect, 4.0f, 3.0f, 2.0f, 1.0f, radius, color, (FlStrokeStyle) { 3.0f, 2.0f });
     size_t dashed_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - dashed);
 
     UiRenderCommandsArray sw_solid = sw_translate(commands_arena, state_arena, solid, solid_bytes, 255);
@@ -958,7 +958,7 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
     for_count(i, sizeof_array(border_cases)) {
         fl_arena_align(ir_arena, 8);
         const u8* start = (const u8*)fl_arena_current_pos(ir_arena);
-        fl_ir_border_stroked(ir_arena, rect, 4.0f, 4.0f, 4.0f, 4.0f, (FlCornerRadius) { 0 }, color,
+        ir_border_stroked(ir_arena, rect, 4.0f, 4.0f, 4.0f, 4.0f, (FlCornerRadius) { 0 }, color,
                              border_cases[i].stroke);
         const size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - start);
         GpuDrawList g = gpu_ir_to_draw_cmds(
@@ -972,7 +972,7 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
     // A border whose widths consume the rect degenerates to a plain fill, which has no ring to dash.
     fl_arena_align(ir_arena, 8);
     const u8* consumed = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_border_stroked(ir_arena, rect, 40.0f, 40.0f, 40.0f, 40.0f, (FlCornerRadius) { 0 }, color,
+    ir_border_stroked(ir_arena, rect, 40.0f, 40.0f, 40.0f, 40.0f, (FlCornerRadius) { 0 }, color,
                          (FlStrokeStyle) { 3.0f, 2.0f });
     size_t consumed_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - consumed);
     GpuDrawList gc = gpu_ir_to_draw_cmds(commands_arena, &(GpuIrInput) { .commands = consumed,
@@ -987,9 +987,9 @@ UTEST(render_ir, gpu_packs_the_dash_pattern_into_the_flags_word) {
     // The same encoding on a circle's ring, and no pattern when the normalization leaves no ring.
     fl_arena_align(ir_arena, 8);
     const u8* ring = (const u8*)fl_arena_current_pos(ir_arena);
-    fl_ir_circle_stroked(ir_arena, 20.0f, 20.0f, 10.0f, color, color, 2.0f, (FlStrokeStyle) { 3.0f, 2.0f }, nullptr);
-    fl_ir_circle_stroked(ir_arena, 20.0f, 20.0f, 10.0f, color, color, 0.0f, (FlStrokeStyle) { 3.0f, 2.0f }, nullptr);
-    fl_ir_circle_stroked(ir_arena, 20.0f, 20.0f, 10.0f, color, color, 10.0f, (FlStrokeStyle) { 3.0f, 2.0f }, nullptr);
+    ir_circle_stroked(ir_arena, 20.0f, 20.0f, 10.0f, color, color, 2.0f, (FlStrokeStyle) { 3.0f, 2.0f }, nullptr);
+    ir_circle_stroked(ir_arena, 20.0f, 20.0f, 10.0f, color, color, 0.0f, (FlStrokeStyle) { 3.0f, 2.0f }, nullptr);
+    ir_circle_stroked(ir_arena, 20.0f, 20.0f, 10.0f, color, color, 10.0f, (FlStrokeStyle) { 3.0f, 2.0f }, nullptr);
     size_t ring_bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - ring);
     GpuDrawList gr = gpu_ir_to_draw_cmds(
         commands_arena,
@@ -1264,7 +1264,7 @@ UTEST(render_ir, software_alpha_coverage_stays_inside_its_source) {
     fl_arena_align(ir_arena, 8);
     const u8* start = (const u8*)fl_arena_current_pos(ir_arena);
     FlImageSource source = { .kind = FlImageKind_Dynamic, .dynamic = { .pixels = mask, .w = 4, .h = 4 } };
-    fl_ir_image(ir_arena, source, FlImageMode_AlphaCoverage, (FlRect) { 10.0f, 20.0f, 12.0f, 9.0f }, (FlRect) { 0 },
+    ir_image(ir_arena, source, FlImageMode_AlphaCoverage, (FlRect) { 10.0f, 20.0f, 12.0f, 9.0f }, (FlRect) { 0 },
                 (FlColor) { 255, 255, 255, 255 }, FlImageFilter_Linear, nullptr);
 
     size_t bytes = (size_t)((const u8*)fl_arena_current_pos(ir_arena) - start);

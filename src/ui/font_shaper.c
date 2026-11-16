@@ -17,6 +17,7 @@ struct FontShaper {
 };
 
 typedef struct ShapePen {
+    kbts_shape_context* context;
     FlArena* arena;
     FlShapedRun out;
     FlFontId font;
@@ -82,6 +83,13 @@ static i64 units_to_26_6(const ShapePen* pen, i64 units) {
     return (scaled >= 0 ? scaled + half : scaled - half) / pen->units_per_em;
 }
 
+// The glyph's codepoint index is the context's own; the user id given at shape time is the UTF-8 byte offset.
+static u32 glyph_byte_offset(const ShapePen* pen, const kbts_glyph* glyph) {
+    kbts_shape_codepoint codepoint = { 0 };
+    kbts_ShapeGetShapeCodepoint(pen->context, glyph->UserIdOrCodepointIndex, &codepoint);
+    return (u32)codepoint.UserId;
+}
+
 static void pen_emit_glyph(ShapePen* pen, const kbts_glyph* glyph) {
     FlShapedGlyph* out = arena_alloc_st(pen->arena, FlShapedGlyph);
     *out = (FlShapedGlyph) {
@@ -89,6 +97,7 @@ static void pen_emit_glyph(ShapePen* pen, const kbts_glyph* glyph) {
         .glyph_index = glyph->Id,
         .x = (i32)(pen->base + units_to_26_6(pen, pen->units + glyph->OffsetX)),
         .y = (i32)units_to_26_6(pen, glyph->OffsetY),
+        .byte_offset = glyph_byte_offset(pen, glyph),
     };
     pen->out.count++;
     pen->units += glyph->Id != 0 ? glyph->AdvanceX : 0;
@@ -111,12 +120,12 @@ static const FontShaperFace* run_face(const FontShaperRun* run, const kbts_font*
 
 static void shape_text(kbts_shape_context* context, FlString text) {
     kbts_ShapeBegin(context, KBTS_DIRECTION_LTR, KBTS_LANGUAGE_DONT_KNOW);
-    kbts_ShapeUtf8(context, text.data, (int)text.length, KBTS_USER_ID_GENERATION_MODE_CODEPOINT_INDEX);
+    kbts_ShapeUtf8(context, text.data, (int)text.length, KBTS_USER_ID_GENERATION_MODE_SOURCE_INDEX);
     kbts_ShapeEnd(context);
 }
 
 static FlShapedRun collect_runs(kbts_shape_context* context, const FontShaperRun* run, FlArena* arena) {
-    ShapePen pen = { .arena = arena, .q4 = run->size_q4 };
+    ShapePen pen = { .context = context, .arena = arena, .q4 = run->size_q4 };
     pen.out.glyphs = arena_pos_type(arena, FlShapedGlyph);
     kbts_run shaped;
     while (kbts_ShapeRun(context, &shaped)) {

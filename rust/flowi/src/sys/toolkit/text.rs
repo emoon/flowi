@@ -12,14 +12,19 @@ pub struct TextStyle {
     pub font_size: f32,
     /// The extra space between glyphs, in pixels. A string of n glyphs gets n - 1 gaps.
     pub letter_spacing: f32,
+    /// The distance between tab stops, in widths of a space (0 gives a tab the width the font gives it).
+    ///
+    /// A tab moves the pen to the next stop, counted from the start of the string.
+    pub tab_width: f32,
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<TextStyle>() == 12, "TextStyle size drift");
+    assert!(core::mem::size_of::<TextStyle>() == 16, "TextStyle size drift");
     assert!(core::mem::align_of::<TextStyle>() == 4, "TextStyle align drift");
     assert!(core::mem::offset_of!(TextStyle, font_id) == 0, "TextStyle.font_id offset drift");
     assert!(core::mem::offset_of!(TextStyle, font_size) == 4, "TextStyle.font_size offset drift");
     assert!(core::mem::offset_of!(TextStyle, letter_spacing) == 8, "TextStyle.letter_spacing offset drift");
+    assert!(core::mem::offset_of!(TextStyle, tab_width) == 12, "TextStyle.tab_width offset drift");
 };
 
 /// The size of one line of text, in logical pixels.
@@ -61,5 +66,17 @@ extern "C" {
     /// The result matches what `fl_painter_text_styled` draws with the same `style`. A font that is not loaded
     /// measures as all zeroes.
     pub fn fl_text_measure(text: crate::sys::RawStr, style: crate::sys::TextStyle) -> crate::sys::TextMetrics;
+    /// Returns the byte offset of the character under `x` in a single line of `text`.
+    ///
+    /// `x` is measured in logical pixels from the left edge of the line, and the line is laid out as
+    /// `fl_text_measure` and `fl_painter_text_styled` lay it out with the same `style`. An `x` before the line gives
+    /// 0 and an `x` past its end gives the length of `text`. A font that is not loaded gives 0.
+    pub fn fl_text_x_to_offset(text: crate::sys::RawStr, style: crate::sys::TextStyle, x: f32) -> u32;
+    /// Returns the x of the left edge of the character at byte `offset` in a single line of `text`.
+    ///
+    /// The result is in logical pixels from the left edge of the line, laid out as for `fl_text_x_to_offset`. An
+    /// `offset` inside a UTF-8 sequence gives the next character, and one at or past the end of `text` gives the
+    /// width of the line. A font that is not loaded gives 0.
+    pub fn fl_text_offset_to_x(text: crate::sys::RawStr, style: crate::sys::TextStyle, offset: u32) -> f32;
 }
 

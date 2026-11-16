@@ -119,6 +119,19 @@ struct ColoredRect {
     color: Color,
 }
 
+/// One run of a string drawn by `Painter::text_spans`: how many bytes it covers and how they are drawn.
+#[attributes(Copy)]
+struct TextSpan {
+    /// The length of the run, in bytes of the string.
+    len: u32,
+    /// Reserved. Pass 0.
+    flags: u32,
+    /// The color of the text in the run.
+    color: Color,
+    /// The color drawn behind the run (an alpha of 0 draws nothing).
+    bg: Color,
+}
+
 /// The corner colors of a gradient rectangle.
 ///
 /// This is passed to `Painter::gradient_rect`. The colors are interpolated across the rectangle.
@@ -246,6 +259,14 @@ api Painter {
     /// Sizes are rounded to quarter pixels in the same way as in `Text::measure`, so a measured run matches the
     /// drawn one.
     text_styled(x: f32, y: f32, text: String, style: TextStyle, color: Color)
+    /// Draws a single line of `text` with a color, and optionally a background, for each run, with its top-left
+    /// corner at (`x`, `y`).
+    ///
+    /// `spans` cover the text in order from its first byte, and text after the last span is not drawn. A span
+    /// that reaches past the end of the text is cut at it, and one that ends inside a UTF-8 sequence ends after
+    /// that sequence instead. The line is laid out as a whole, so the spans change colors and nothing else: the
+    /// positions and the width are those of `Painter::text_styled` with the same `style`.
+    text_spans(x: f32, y: f32, text: String, style: TextStyle, spans: [*const TextSpan])
     /// Draws an image into the rectangle at (`x`, `y`) and returns true if it was drawn.
     ///
     /// `image` is the handle from `Image::load`. `color` is multiplied with the image, so pass white
