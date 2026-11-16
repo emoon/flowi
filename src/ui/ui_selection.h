@@ -55,6 +55,8 @@ void selection_set_apply(FlSelectionSet* set, const FlSelectionRequest* reqs, u6
 
 void selection_set_apply_rows(FlSelectionSet* set, const FlSelectionRequest* reqs, u64 req_count, const ListRows* rows);
 
+void selection_set_shift(FlSelectionSet* set, u64 after_id, u64 removed, u64 added);
+
 // Number of selected ids.
 u64 selection_set_len(const FlSelectionSet* set);
 

@@ -253,19 +253,6 @@ static u64 shifted_id(RowShift shift, u64 id) {
     return id - shift.removed + shift.added;
 }
 
-static void shift_selection(FlSelectionSet* set, RowShift shift) {
-    u64 count = selection_set_len(set);
-    u64* ids = arena_alloc_array(ui_get_ctx()->render_frame_allocator, u64, count);
-    selection_set_copy_ids(set, ids, count);
-    selection_set_clear_all(set);
-    for_count(i, count) {
-        u64 id = shifted_id(shift, ids[i]);
-        if (id != 0) {
-            selection_set_set(set, id, true);
-        }
-    }
-}
-
 static u32 rows_under(const FlTreeContext* self, u32 row) {
     return subtree_end(self, row) - row - 1;
 }
@@ -304,7 +291,7 @@ static void follow_row_change(FlTreeContext* self, u32 clay_id, FlSelectionSet* 
     }
     st->anchor_id = shifted_id(shift, st->anchor_id);
     if (set != nullptr) {
-        shift_selection(set, shift);
+        selection_set_shift(set, shift.after_id, shift.removed, shift.added);
     }
 }
 
