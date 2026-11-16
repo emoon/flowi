@@ -158,8 +158,7 @@ static void change_resolution(void* user_data, FlSurface* surface_handle, int wi
 // and SVG placement so the live set repacks at the new sizes. The textures are not cleared.
 static void scale_changed(void* user_data, float ui_scale) {
     GpuShared* self = user_data;
-    gpu_prepare_scale_changed(&self->last_ui_scale, ui_scale, self->perm_arena, &self->cpu.glyph_atlas,
-                              &self->cpu.svg_atlas, &self->cpu.color_svg_atlas);
+    gpu_prepare_scale_changed(&self->cpu, &self->last_ui_scale, ui_scale, self->perm_arena);
 }
 
 // Sampler-slot textures (gpu_image_slots.h): the GL half of the non-atlas image paths. Dynamic textures are

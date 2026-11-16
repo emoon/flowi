@@ -1,6 +1,7 @@
 #include <core/arena.h>
 #include <core/log.h>
 #include "gpu_prepare_core.h"
+#include "gpu_prepare_svg.h"
 #include "gpu_renderer_internal.h"
 #include "gpu_svg_color_lower.h"
 #include <ui/font_cache.h>
@@ -49,8 +50,8 @@ bool prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlIma
         return prepare_large_image(self, (FlImageHandle)request_id, decoded, scratch);
     }
 
-    GpuAtlasImageUpload upload;
-    if (!gpu_prepare_image_place_atlas(&self->cpu.image_atlas, request_id, decoded, scratch, &upload)) {
+    GpuAtlasImageUpload upload = gpu_prepare_image_place_atlas(&self->cpu.image_atlas, request_id, decoded, scratch);
+    if (upload.pixels == nullptr) {
         return false;
     }
     glBindTexture(GL_TEXTURE_2D, self->atlas_tex);
@@ -94,8 +95,9 @@ static void raster_coverage_cell(GpuShared* self, GLuint target, u32 x, u32 y, u
 
 void prepare_glyph(void* user_data, FlFontId font, u16 size, u32 glyph_index, const struct FlGlyphOutline* outline) {
     GpuShared* self = user_data;
-    GpuGlyphRaster glyph;
-    if (!gpu_prepare_glyph_place(&self->cpu.glyph_atlas, self->frame_arena, font, size, glyph_index, outline, &glyph)) {
+    GpuGlyphKey key = { .font = font, .size = size, .glyph_index = glyph_index };
+    GpuGlyphRaster glyph = gpu_prepare_glyph_place(&self->cpu.glyph_atlas, self->frame_arena, key, outline);
+    if (glyph.entry == nullptr) {
         return;
     }
 
@@ -113,8 +115,8 @@ void prepare_glyph(void* user_data, FlFontId font, u16 size, u32 glyph_index, co
 
 static void raster_svg_cell(void* backend, const GpuSvgEntry* entry, const FlVectorImage* vector, bool color) {
     GpuShared* self = backend;
-    GpuSvgCellGeometry geom;
-    if (!gpu_prepare_svg_cell_geometry(self->frame_arena, entry, vector, color, &geom)) {
+    GpuSvgCellGeometry geom = gpu_prepare_svg_cell_geometry(self->frame_arena, entry, vector, color);
+    if (geom.floats == nullptr) {
         return;
     }
 
@@ -149,6 +151,5 @@ static void raster_svg_cell(void* backend, const GpuSvgEntry* entry, const FlVec
 
 void prepare_vector(void* user_data, FlImageHandle handle, u16 size, const FlVectorImage* vector) {
     GpuShared* self = user_data;
-    gpu_prepare_vector(self, &self->cpu.svg_atlas, &self->cpu.color_svg_atlas, handle, size, vector, raster_svg_cell,
-                       &self->cpu.svg_compact_count);
+    gpu_prepare_vector(self, raster_svg_cell, (GpuSvgKey) { .handle = handle, .size = size }, vector);
 }
