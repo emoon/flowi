@@ -152,30 +152,34 @@ static struct archive* open_archive_reader(LibArchiveHandle* handle, FlArena* sc
     return a;
 }
 
+static bool entry_path_matches(struct archive_entry* entry, const char* target_cstr, size_t target_len) {
+    const char* entry_path = archive_entry_pathname(entry);
+    return entry_path && vfs_archive_entry_path_matches(entry_path, target_cstr, target_len);
+}
+
+static bool read_until_match(struct archive* a, const char* target_cstr, size_t target_len,
+                             struct archive_entry** entry) {
+    while (archive_read_next_header(a, entry) == ARCHIVE_OK) {
+        if (entry_path_matches(*entry, target_cstr, target_len)) {
+            return true;
+        }
+        archive_read_data_skip(a);
+    }
+    return false;
+}
+
 // Advances the archive to the entry named target_cstr and stores it in entry_out when given. False when absent.
 
 static bool find_archive_entry(struct archive* a, const char* target_cstr, size_t target_len,
                                struct archive_entry** entry_out) {
     struct archive_entry* entry;
-
-    while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
-        const char* entry_path = archive_entry_pathname(entry);
-        if (!entry_path) {
-            archive_read_data_skip(a);
-            continue;
-        }
-
-        if (vfs_archive_entry_path_matches(entry_path, target_cstr, target_len)) {
-            if (entry_out) {
-                *entry_out = entry;
-            }
-            return true;
-        }
-
-        archive_read_data_skip(a);
+    if (!read_until_match(a, target_cstr, target_len, &entry)) {
+        return false;
     }
-
-    return false;
+    if (entry_out) {
+        *entry_out = entry;
+    }
+    return true;
 }
 
 // Advances the archive to the entry a handle targets. A raw compression stream has the one entry.
