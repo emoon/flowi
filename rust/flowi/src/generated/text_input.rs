@@ -46,5 +46,17 @@ impl TextInput {
     pub fn clear(&mut self) {
         unsafe { crate::sys::fl_text_input_clear(self.handle) }
     }
+
+    /// Gives the text field keyboard focus the next time it is shown.
+    ///
+    /// If `select_all` is true, the whole text is selected, so typing replaces it.
+    ///
+    /// Call this once, on the frame an edit starts, or on the frame a field in a list row is shown again after the
+    /// row was scrolled out of view. Each call scrolls the field into view, so a call on every frame pulls the
+    /// list back whenever the user scrolls away.
+    #[inline]
+    pub fn request_focus(&mut self, select_all: bool) {
+        unsafe { crate::sys::fl_text_input_request_focus(self.handle, select_all) }
+    }
 }
 

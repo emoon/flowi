@@ -580,6 +580,12 @@ pub struct TextInputConfig<'a> {
     pub min_width: f32,
     /// Whether the input shows a character count, such as "15/100". It needs `max_length`.
     pub show_character_count: bool,
+    /// Whether the input has no border, background or padding and fills the box it is in.
+    ///
+    /// Use it to edit a value in place, such as in a `Cell`. `min_width` is not used.
+    ///
+    /// While a borderless input has focus, Up and Down do not move focus to another widget.
+    pub borderless: bool,
     /// The settings shared by every widget.
     pub widget: crate::generated::widget_config::WidgetConfig<'a>,
 }
@@ -601,6 +607,7 @@ impl Default for TextInputConfig<'_> {
             placeholder: "",
             min_width: zero.min_width,
             show_character_count: zero.show_character_count,
+            borderless: zero.borderless,
             widget: Default::default(),
         }
     }
@@ -623,6 +630,7 @@ impl TextInputConfig<'_> {
                 placeholder: { let s = self.placeholder; crate::sys::fl_frame_str(s.as_ptr() as *const core::ffi::c_char, s.len()) },
                 min_width: self.min_width,
                 show_character_count: self.show_character_count,
+                borderless: self.borderless,
                 widget: self.widget.to_sys(),
             }
         }

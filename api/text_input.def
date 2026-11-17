@@ -24,6 +24,14 @@ api TextInput {
     [const] [rename(text)] get_text(state: *TextInputState) -> String
     /// Removes all text and moves the cursor to the start.
     clear(state: *TextInputState)
+    /// Gives the text field keyboard focus the next time it is shown.
+    ///
+    /// If `select_all` is true, the whole text is selected, so typing replaces it.
+    ///
+    /// Call this once, on the frame an edit starts, or on the frame a field in a list row is shown again after the
+    /// row was scrolled out of view. Each call scrolls the field into view, so a call on every frame pulls the
+    /// list back whenever the user scrolls away.
+    request_focus(state: *TextInputState, select_all: bool)
     /// Shows the text field with default options and returns its `Signal`.
     ///
     /// `Signal.text_changed`, `Signal.submitted` (Enter) and `Signal.cancelled` (Escape or gamepad B) are true only

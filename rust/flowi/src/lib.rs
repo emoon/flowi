@@ -368,6 +368,7 @@ pub use crate::sys::DockSide;
 pub use crate::sys::PolylineFlags;
 pub use generated::background::Background;
 pub use generated::button::Button;
+pub use generated::cell::Cell;
 pub use generated::checkbox::Checkbox;
 pub use generated::chip::Chip;
 pub use generated::cursor::Cursor;
@@ -1133,7 +1134,7 @@ mod list;
 
 /// The List/selection value types.
 pub use list::{
-    ListConfig, ListItem, ListOpts, ListResult, Reorder, SelectionRequest, SelectionSet,
+    Column, ListConfig, ListItem, ListOpts, ListResult, Reorder, SelectionRequest, SelectionSet,
 };
 
 /// The composing [`Tree`] methods and the value types they hand around.

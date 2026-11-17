@@ -34,6 +34,8 @@ struct FlTextInputState {
     f32 target_scroll_x;
     bool was_focused_last_frame;
     u64 focus_gained_frame;
+    bool focus_requested;
+    bool select_all_requested;
     FlArena* arena;
 };
 
@@ -52,6 +54,9 @@ void ui_text_input_set_text(FlTextInputState* state, FlString text);
 FlString ui_text_input_get_text(const FlTextInputState* state);
 
 void ui_text_input_clear(FlTextInputState* state);
+
+// Focus the field the next time ui_text_input shows it, with the whole text selected when select_all is set.
+void ui_text_input_request_focus(FlTextInputState* state, bool select_all);
 
 // Insert text at the caret, replacing the selection. Characters cfg rejects are dropped and the rest is cut to fit
 // cfg->max_length. Returns false, leaving the buffer and selection untouched, when nothing is left to insert.

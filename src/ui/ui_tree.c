@@ -165,7 +165,7 @@ static void draw_arrow(bool expanded, f32 width, f32 height) {
 static void arrow_slot(FlTreeContext* self, u32 row, bool expanded) {
     FlListContext* list = self->list;
     f32 height = list->current_row_height;
-    FlLayoutId arrow_id = { .name = list->current_id.name, .id = -(i32)(row + 1) };
+    FlLayoutId arrow_id = { .name = list->current_id.name, .id = TREE_ARROW_ID(row) };
 
     fl_layout_start(arrow_id);
     fl_layout_configure((FlLayoutConfig) {
@@ -191,6 +191,33 @@ static void row_lead(FlTreeContext* self, u32 row, FlTreeRow r) {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// With columns, the lead is cut off at the first column's right edge so the other columns stay under their headers.
+static void row_lead_in_column(FlTreeContext* self, u32 row, FlTreeRow r) {
+    FlListContext* list = self->list;
+    if (list->column_count == 0) {
+        row_lead(self, row, r);
+        return;
+    }
+    f32 lead = self->indent * (f32)(r.depth + 1);
+    f32 width = lead < list->column_widths[0] ? lead : list->column_widths[0];
+    list->cell_cursor = width;
+    if (width <= 0.0f) {
+        return;
+    }
+    fl_layout_start_auto();
+    fl_layout_configure((FlLayoutConfig) {
+        .sizing = { sizing_fixed(width), sizing_fixed(list->current_row_height) },
+        .direction = LayoutDirection_LeftToRight,
+        .clip = { .horizontal = true },
+    });
+    row_lead(self, row, r);
+    fl_layout_end();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static FlSignal row_begin(FlTreeContext* self, u32 row, FlTreeRow r) {
     FlSignal signal = list_item_begin_impl(self->list, r.id);
     fl_layout_start_auto();
@@ -199,7 +226,7 @@ static FlSignal row_begin(FlTreeContext* self, u32 row, FlTreeRow r) {
         .direction = LayoutDirection_LeftToRight,
         .child_alignment = { .y = LayoutAlignmentY_Center },
     });
-    row_lead(self, row, r);
+    row_lead_in_column(self, row, r);
     return signal;
 }
 

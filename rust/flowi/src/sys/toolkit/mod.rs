@@ -9,6 +9,7 @@ pub mod app;
 pub mod application_settings;
 pub mod background;
 pub mod button;
+pub mod cell;
 pub mod checkbox;
 pub mod chip;
 pub mod cursor;

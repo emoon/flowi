@@ -146,6 +146,27 @@ impl List {
     }
 }
 
+/// A column of a list or tree with a header, passed in [`ListConfig::columns`].
+///
+/// You own the widths. When the user resizes a column, [`ListResult::resized`] reports the new width, and you pass
+/// it back as `width` on the next frame.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct Column<'a> {
+    /// The id of the column (unique, never 0). Signals and results name a column by this id.
+    pub id: u32,
+    /// The text shown in the header.
+    pub title: &'a str,
+    /// The width of the column, in logical pixels (0 makes the column flexible).
+    pub width: f32,
+    /// The share of the leftover width a flexible column takes (0 uses 1).
+    pub flex: f32,
+    /// The narrowest the column can get, in logical pixels (0 for no minimum).
+    ///
+    /// If the columns do not fit, a flexible column stays at its minimum, a fixed one keeps its `width`, and the
+    /// right edge is clipped.
+    pub min_width: f32,
+}
+
 /// Options for [`List::begin`].
 ///
 /// [`Default`] uses the List's own row height and gap, with type-ahead off.
@@ -164,6 +185,12 @@ pub struct ListConfig<'a> {
     /// When the scrollbar is shown ([`ScrollbarDisplayMode::Never`](crate::ScrollbarDisplayMode::Never) by
     /// default). The mouse wheel always scrolls.
     pub scrollbar_mode: sys::ScrollbarDisplayMode,
+    /// The columns, or none for a list without a header.
+    ///
+    /// With columns, the list draws a header above the rows that stays in place while they scroll.
+    pub columns: &'a [Column<'a>],
+    /// The height of the header, in logical pixels (0 uses `row_height`).
+    pub header_height: f32,
 }
 
 impl Default for ListConfig<'_> {
@@ -174,20 +201,28 @@ impl Default for ListConfig<'_> {
             labels: &[],
             suppress_drag_visuals: false,
             scrollbar_mode: sys::ScrollbarDisplayMode::Never,
+            columns: &[],
+            header_height: 0.0,
         }
     }
 }
 
 impl ListConfig<'_> {
     /// Lower to the `#[repr(C)]` mirror the C List consumes, with labels the frame-arena array already
-    /// built from [`ListConfig::labels`] (null for none).
+    /// built from [`ListConfig::labels`] (null for none). Must run inside a frame, which copies the columns into
+    /// the frame arena.
     pub(crate) fn to_sys(self, labels: *const sys::RawStr) -> sys::ListConfig {
+        let column_count =
+            u32::try_from(self.columns.len()).expect("a List holds at most u32::MAX columns");
         sys::ListConfig {
             row_height: self.row_height,
             gap: self.gap,
             labels,
             suppress_drag_visuals: self.suppress_drag_visuals,
             scrollbar_mode: self.scrollbar_mode,
+            columns: frame_columns(self.columns),
+            column_count,
+            header_height: self.header_height,
         }
     }
 }
@@ -196,11 +231,12 @@ impl ListConfig<'_> {
 ///
 /// This is returned by [`List::end`] and [`List::show`]. The ids are the ones you passed in, and 0 means no
 /// row. You can keep the value after the frame ends.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ListResult {
     activated_id: u64,
     focused_id: u64,
     context_menu_id: u64,
+    context_menu_cell: u32,
     requests: Vec<SelectionRequest>,
     nav_up_edge: bool,
     nav_down_edge: bool,
@@ -209,6 +245,10 @@ pub struct ListResult {
     drag_from_ids: Vec<u64>,
     drag_target_id: u64,
     drag_rel: DropRelationship,
+    header_clicked_column: u32,
+    resized_column: u32,
+    resized_width: f32,
+    column_widths: Vec<f32>,
 }
 
 impl ListResult {
@@ -236,10 +276,21 @@ impl ListResult {
             };
             slice.to_vec()
         };
+        let column_widths = if raw.column_widths.is_null() || raw.column_width_count == 0 {
+            Vec::new()
+        } else {
+            // SAFETY: the C List wrote column_width_count valid f32s at column_widths this frame, and the
+            // frame arena holding them is not rewound before this copy.
+            let slice = unsafe {
+                std::slice::from_raw_parts(raw.column_widths, raw.column_width_count as usize)
+            };
+            slice.to_vec()
+        };
         ListResult {
             activated_id: raw.activated_id,
             focused_id: raw.focused_id,
             context_menu_id: raw.context_menu_id,
+            context_menu_cell: raw.context_menu_cell,
             requests,
             nav_up_edge: raw.nav_up_edge,
             nav_down_edge: raw.nav_down_edge,
@@ -248,6 +299,10 @@ impl ListResult {
             drag_from_ids,
             drag_target_id: raw.drag_target_id,
             drag_rel: raw.drag_rel,
+            header_clicked_column: raw.header_clicked_column,
+            resized_column: raw.resized_column,
+            resized_width: raw.resized_width,
+            column_widths,
         }
     }
 
@@ -270,6 +325,32 @@ impl ListResult {
         self.focused_id
     }
 
+    /// The column the user right-clicked in the row that [`List::context_menu`] returns, or `None`.
+    pub fn context_menu_cell(&self) -> Option<u32> {
+        (self.context_menu_cell != 0).then_some(self.context_menu_cell)
+    }
+
+    /// The column whose header the user clicked, or `None`. The list does not sort.
+    pub fn header_clicked(&self) -> Option<u32> {
+        (self.header_clicked_column != 0).then_some(self.header_clicked_column)
+    }
+
+    /// The column the user is resizing and its new width in logical pixels, or `None`.
+    ///
+    /// It is reported on each frame of the drag, once the mouse has moved. Pass the width back as
+    /// [`Column::width`] of that column, which also makes a flexible column fixed.
+    pub fn resized(&self) -> Option<(u32, f32)> {
+        (self.resized_column != 0).then_some((self.resized_column, self.resized_width))
+    }
+
+    /// The width every column got this frame, in logical pixels, in the order of [`ListConfig::columns`].
+    ///
+    /// Read it to save the layout. It is empty on the first frames of a list, until the list knows how wide it
+    /// is.
+    pub fn column_widths(&self) -> &[f32] {
+        &self.column_widths
+    }
+
     /// Whether the user pressed Up on the first row. Use it to move focus above the list.
     pub fn nav_up_edge(&self) -> bool {
         self.nav_up_edge
@@ -279,6 +360,28 @@ impl ListResult {
     pub fn nav_down_edge(&self) -> bool {
         self.nav_down_edge
     }
+}
+
+/// Copy columns into the frame arena as a `ColumnDef` array, with each title copied alongside; null when there
+/// are none. Must run inside a frame.
+fn frame_columns(columns: &[Column<'_>]) -> *const sys::ColumnDef {
+    if columns.is_empty() {
+        return ptr::null();
+    }
+    let defs: Vec<sys::ColumnDef> = columns
+        .iter()
+        .map(|c| sys::ColumnDef {
+            id: c.id,
+            // SAFETY: the pointer/length pair describes the title's live bytes. fl_frame_str copies them
+            // before returning, so the arena copy outlives the borrow. It asserts an active frame, which
+            // every caller runs inside.
+            title: unsafe { sys::fl_frame_str(c.title.as_ptr() as *const c_char, c.title.len()) },
+            width: c.width,
+            flex: c.flex,
+            min_width: c.min_width,
+        })
+        .collect();
+    frame_copy(&defs)
 }
 
 /// Copy labels into the frame arena as an FlString array and return it; null when labels is empty or too

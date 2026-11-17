@@ -142,7 +142,7 @@ pub struct TreeToggle {
 }
 
 /// The outcome of a tree for one frame, returned by [`Tree::end`].
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TreeResult {
     list: ListResult,
     toggle: Option<TreeToggle>,

@@ -9,6 +9,27 @@ struct ListItem {
     icon: ImageHandle,
 }
 
+/// A column of a list or tree with a header.
+///
+/// Pass the columns in `ListConfig.columns`, in the order they are drawn. You own the widths: when the user resizes
+/// a column, `ListResult.resized_column` reports it, and you pass the new width back as `width` on the next frame.
+#[attributes(Copy)]
+struct ColumnDef {
+    /// The id of the column (unique, never 0). Signals and results name a column by this id.
+    id: u32,
+    /// The text shown in the header.
+    title: String,
+    /// The width of the column, in logical pixels (0 makes the column flexible).
+    width: f32,
+    /// The share of the leftover width a flexible column takes (0 uses 1).
+    flex: f32,
+    /// The narrowest the column can get, in logical pixels (0 for no minimum).
+    ///
+    /// If the columns do not fit, a flexible column stays at its minimum, a fixed one keeps its `width`, and the
+    /// right edge is clipped.
+    min_width: f32,
+}
+
 /// Options for `List::begin`.
 ///
 /// A field left at zero uses its default.
@@ -24,6 +45,17 @@ struct ListConfig {
     suppress_drag_visuals: bool,
     /// When the scrollbar is shown (`ScrollbarDisplayMode::Never` by default). The mouse wheel always scrolls.
     scrollbar_mode: ScrollbarDisplayMode,
+    /// The columns (`column_count` entries, null for a list without columns).
+    ///
+    /// With columns, the list draws a header above the rows that stays in place while they scroll. Draw each cell
+    /// of a row with `Cell::begin`.
+    ///
+    /// If typing in the table starts an edit, leave `labels` null so type-ahead does not take the keys.
+    columns: *const ColumnDef,
+    /// The number of entries in `columns`.
+    column_count: u32,
+    /// The height of the header, in logical pixels (0 uses `row_height`).
+    header_height: f32,
 }
 
 /// Options for `Input::list`.
@@ -79,6 +111,8 @@ struct ListResult {
     focused_id: u64,
     /// The row the user right-clicked. The list opens no menu, so open yours for this row.
     context_menu_id: u64,
+    /// The column the user right-clicked in the row `context_menu_id` (0 for none).
+    context_menu_cell: u32,
     /// The selection changes of this frame (`request_count` entries, valid this frame only).
     ///
     /// These are already applied if you passed a set. Otherwise apply them yourself.
@@ -106,4 +140,20 @@ struct ListResult {
     drag_from_count: u32,
     /// The side of `drag_target_id` the rows land on.
     drag_rel: DropRelationship,
+    /// The column whose header the user clicked (0 for none). The list does not sort.
+    header_clicked_column: u32,
+    /// The column the user is resizing (0 for none).
+    ///
+    /// It is reported on each frame of the drag, once the mouse has moved.
+    resized_column: u32,
+    /// The width of `resized_column`, in logical pixels.
+    resized_width: f32,
+    /// The width every column got this frame, in logical pixels (`column_width_count` entries, valid this frame
+    /// only).
+    ///
+    /// Read it to save the layout. The entries follow the order of `ListConfig.columns`. It is empty on the first
+    /// frames of a list, until the list knows how wide it is.
+    column_widths: *const f32,
+    /// The number of entries in `column_widths`.
+    column_width_count: u32,
 }

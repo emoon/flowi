@@ -31,6 +31,11 @@ pub struct Signal {
     pub selected: bool,
     /// The mouse position relative to the widget, in physical pixels.
     pub mouse_pos: crate::sys::Vec2,
+    /// The id of the column under the mouse (0 for none).
+    ///
+    /// `fl_list_item_begin` and `fl_tree_item_begin` set it for a row of a list with columns, whenever the mouse is
+    /// inside the row. That includes when a widget in the row has the mouse, so `hovered` can be false.
+    pub cell: u32,
     /// How far the mouse has moved since the drag started, in physical pixels.
     pub drag_delta: crate::sys::Vec2,
     /// The mouse wheel movement over the widget. It needs `ItemFlags::scroll_target`, and `ItemFlags::clickable` or
@@ -47,7 +52,7 @@ pub struct Signal {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<Signal>() == 40, "Signal size drift");
+    assert!(core::mem::size_of::<Signal>() == 44, "Signal size drift");
     assert!(core::mem::align_of::<Signal>() == 4, "Signal align drift");
     assert!(core::mem::offset_of!(Signal, clicked) == 0, "Signal.clicked offset drift");
     assert!(core::mem::offset_of!(Signal, hovered) == 1, "Signal.hovered offset drift");
@@ -60,10 +65,11 @@ const _: () = {
     assert!(core::mem::offset_of!(Signal, dragging) == 8, "Signal.dragging offset drift");
     assert!(core::mem::offset_of!(Signal, selected) == 9, "Signal.selected offset drift");
     assert!(core::mem::offset_of!(Signal, mouse_pos) == 12, "Signal.mouse_pos offset drift");
-    assert!(core::mem::offset_of!(Signal, drag_delta) == 20, "Signal.drag_delta offset drift");
-    assert!(core::mem::offset_of!(Signal, wheel_delta) == 28, "Signal.wheel_delta offset drift");
-    assert!(core::mem::offset_of!(Signal, text_changed) == 36, "Signal.text_changed offset drift");
-    assert!(core::mem::offset_of!(Signal, submitted) == 37, "Signal.submitted offset drift");
-    assert!(core::mem::offset_of!(Signal, cancelled) == 38, "Signal.cancelled offset drift");
+    assert!(core::mem::offset_of!(Signal, cell) == 20, "Signal.cell offset drift");
+    assert!(core::mem::offset_of!(Signal, drag_delta) == 24, "Signal.drag_delta offset drift");
+    assert!(core::mem::offset_of!(Signal, wheel_delta) == 32, "Signal.wheel_delta offset drift");
+    assert!(core::mem::offset_of!(Signal, text_changed) == 40, "Signal.text_changed offset drift");
+    assert!(core::mem::offset_of!(Signal, submitted) == 41, "Signal.submitted offset drift");
+    assert!(core::mem::offset_of!(Signal, cancelled) == 42, "Signal.cancelled offset drift");
 };
 

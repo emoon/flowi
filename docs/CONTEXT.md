@@ -1036,6 +1036,35 @@ not remember which rows are expanded: it reports the row the user toggled and th
 rows next frame. Rows cannot be dragged. See ADR-0077.
 _Avoid_: a Tree that stores the expanded set, or a tree widget with its own selection code.
 
+**Column**:
+A vertical band of a [[#List]] or [[#Tree]] with a header above the rows (`ColumnDef`). The app
+describes the columns in the config each frame and owns their widths: a column is fixed (a width in
+pixels) or flexible (a share of what the fixed columns leave). Flowi resolves every width itself, so
+a header and the cells under it always line up, and reports the resolved widths back. A column is
+named by an id the app picks, never by its index, and 0 means no column. The header stays in place
+while the rows scroll. It reports a click and a resize and does neither sort nor store a width: a
+resize reports the new width in pixels, and the app passes it back as a fixed width.
+_Avoid_: naming a column by its index. _Avoid_: a List that keeps the widths or sorts the rows.
+
+**Cell**:
+The part of a row inside one [[#Column]] (`Cell::begin` / `Cell::end`). What is drawn in it is
+ordinary drawing, cut off at the column edge, and text that elides gets its ellipsis there. The row
+stays one item: selection, the [[#Focus Cursor]] and hover belong to the row, and the row's signal
+only names the column under the mouse. A row that draws no cell spans every column (a group
+heading). In a Tree the indent and the arrow sit inside the first column, so the other columns line
+up at every depth.
+_Avoid_: a cell with its own selection or keyboard focus.
+
+**Cell Edit**:
+Editing a value where it is shown: the app draws a borderless text input in the [[#Cell]] in place
+of the text, for as long as its own edit state says so. The app starts it (on Enter, a double-click
+or a key it picks), asks the input for focus once, and ends it on submit, cancel or loss of focus.
+When it ends, the app hands focus back to the List on the edited row. The text lives in the input's
+state, so it survives the row scrolling out of view; focus does not, and the app asks for it again
+when the row is drawn again.
+_Avoid_: the List knowing which cell is being edited. _Avoid_: asking for focus every frame, which
+scrolls the row back into view each time.
+
 **Row Source**:
 What the [[#List]] reads its rows through: a count, the id of a row, the row of an id, and a label
 (`ListRows`). An id slice, the declarative items, the rows of a [[#Tree]] and a bare count are each

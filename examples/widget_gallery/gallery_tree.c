@@ -4,10 +4,12 @@
 #include <string.h>
 
 #include <core/core.h>
+#include <flowi/ui/cell.h>
 #include <flowi/ui/frame.h>
 #include <flowi/ui/theme.h>
 #include "ui/layout.h"
 #include "ui/ui.h"
+#include "ui/ui_list.h"
 #include "ui/ui_selection.h"
 
 #define GALLERY_TREE_HEIGHT 180.0f
@@ -19,15 +21,28 @@
 #define GALLERY_VTREE_SMALL_COUNT 3u
 #define GALLERY_VTREE_LEAVES 4u
 
+enum { TreeColumn_Name = 1, TreeColumn_Kind, TreeColumn_Size };
+
 typedef struct GalleryNode {
     FlString label;
     u16 depth;
+    FlString kind;
+    FlString size;
 } GalleryNode;
 
 static const GalleryNode s_nodes[GALLERY_TREE_NODES] = {
-    { FL_S_("Assets"), 0 },     { FL_S_("Audio"), 1 },     { FL_S_("kick.wav"), 2 },  { FL_S_("snare.wav"), 2 },
-    { FL_S_("Textures"), 1 },   { FL_S_("grass.png"), 2 }, { FL_S_("stone.png"), 2 }, { FL_S_("Scripts"), 0 },
-    { FL_S_("player.lua"), 1 }, { FL_S_("enemy.lua"), 1 }, { FL_S_("Docs"), 0 },      { FL_S_("readme.md"), 1 },
+    { FL_S_("Assets"), 0, FL_S_("Folder"), FL_S_("2 items") },
+    { FL_S_("Audio"), 1, FL_S_("Folder"), FL_S_("2 items") },
+    { FL_S_("kick.wav"), 2, FL_S_("Wave audio"), FL_S_("412 KB") },
+    { FL_S_("snare.wav"), 2, FL_S_("Wave audio"), FL_S_("388 KB") },
+    { FL_S_("Textures"), 1, FL_S_("Folder"), FL_S_("2 items") },
+    { FL_S_("grass.png"), 2, FL_S_("PNG image"), FL_S_("1.2 MB") },
+    { FL_S_("stone.png"), 2, FL_S_("PNG image"), FL_S_("2.4 MB") },
+    { FL_S_("Scripts"), 0, FL_S_("Folder"), FL_S_("2 items") },
+    { FL_S_("player.lua"), 1, FL_S_("Lua script"), FL_S_("9 KB") },
+    { FL_S_("enemy.lua"), 1, FL_S_("Lua script"), FL_S_("14 KB") },
+    { FL_S_("Docs"), 0, FL_S_("Folder"), FL_S_("1 item") },
+    { FL_S_("readme.md"), 1, FL_S_("Markdown"), FL_S_("3 KB") },
 };
 
 typedef struct VisibleRows {
@@ -117,6 +132,119 @@ void gallery_tree_show(GalleryTree* tree) {
         }
     }
     status_text(selection_set_len(tree->selection), expanded_nodes(tree), "of", expandable_nodes());
+}
+
+void gallery_tree_table_init(GalleryTreeTable* table) {
+    gallery_tree_init(&table->tree);
+    table->tree.expanded[1] = true;
+    table->edit.input = fl_text_input_create(GALLERY_KIND_MAX);
+    for_count(i, GALLERY_TREE_NODES) {
+        snprintf(table->kinds[i], GALLERY_KIND_MAX, "%.*s", (int)s_nodes[i].kind.length, s_nodes[i].kind.data);
+    }
+    table->columns.columns[0] = (FlColumnDef) { .id = TreeColumn_Name, .title = FL_S_("Name"), .width = 220.0f };
+    table->columns.columns[1] = (FlColumnDef) { .id = TreeColumn_Kind, .title = FL_S_("Kind"), .width = 120.0f };
+    table->columns.columns[2]
+        = (FlColumnDef) { .id = TreeColumn_Size, .title = FL_S_("Size"), .flex = 1.0f, .min_width = 60.0f };
+}
+
+void gallery_tree_table_destroy(GalleryTreeTable* table) {
+    fl_text_input_destroy(table->edit.input);
+    gallery_tree_destroy(&table->tree);
+}
+
+static FlString kind_of(const GalleryTreeTable* table, u64 row_id) {
+    const char* kind = table->kinds[row_id - 1];
+    return fl_frame_str(kind, strlen(kind));
+}
+
+// Enter or a double-click on a row starts the edit, with the whole text selected.
+static void edit_start(GalleryTreeTable* table, u64 row_id) {
+    table->edit.row_id = row_id;
+    table->edit.had_focus = false;
+    fl_text_input_set_text(table->edit.input, kind_of(table, row_id));
+    fl_text_input_request_focus(table->edit.input, true);
+}
+
+static void edit_commit(GalleryTreeTable* table) {
+    FlString text = fl_text_input_get_text(table->edit.input);
+    snprintf(table->kinds[table->edit.row_id - 1], GALLERY_KIND_MAX, "%.*s", (int)text.length, text.data);
+}
+
+// Ends the edit and gives the keyboard back to the tree, on the row that was edited.
+static void edit_end(GalleryTreeTable* table, bool commit) {
+    if (commit) {
+        edit_commit(table);
+    }
+    fl_list_request_focus(ID("gallery_tree_table"), table->edit.row_id);
+    table->edit.row_id = 0;
+}
+
+static bool edit_lost_focus(const GalleryCellEdit* edit, FlSignal signal) {
+    return edit->had_focus && !signal.focused;
+}
+
+// The edit ends on Enter (commit), Escape (cancel) or when focus goes elsewhere (commit).
+static void edit_cell(GalleryTreeTable* table) {
+    fl_cell_begin(TreeColumn_Kind);
+    FlSignal signal = fl_text_input_show(FL_S("gallery_tree_edit"), table->edit.input, .borderless = true);
+    fl_cell_end();
+    if (signal.cancelled) {
+        edit_end(table, false);
+    } else if (signal.submitted || edit_lost_focus(&table->edit, signal)) {
+        edit_end(table, true);
+    }
+    table->edit.had_focus = signal.focused;
+}
+
+static void kind_cell(GalleryTreeTable* table, u64 row_id) {
+    if (table->edit.row_id == row_id) {
+        edit_cell(table);
+    } else {
+        gallery_cell_text(TreeColumn_Kind, kind_of(table, row_id));
+    }
+}
+
+static void tree_table_row(GalleryTreeTable* table, const VisibleRows* visible, u32 row) {
+    u64 row_id = visible->rows[row].id;
+    const GalleryNode* node = &s_nodes[row_id - 1];
+    FlSignal signal = fl_tree_item_begin(row);
+    if (signal.cell != 0) {
+        table->columns.hovered = signal.cell;
+    }
+    gallery_cell_text(TreeColumn_Name, node->label);
+    kind_cell(table, row_id);
+    gallery_cell_text(TreeColumn_Size, node->size);
+    fl_tree_item_end();
+}
+
+static void tree_table_apply(GalleryTreeTable* table, const FlTreeResult* result) {
+    if (result->toggled_id != 0) {
+        table->tree.expanded[result->toggled_id - 1] = result->toggle_expanded;
+    }
+    if (result->list.activated_id != 0) {
+        edit_start(table, result->list.activated_id);
+    }
+    gallery_columns_apply(&table->columns, &result->list);
+}
+
+void gallery_tree_table_show(GalleryTreeTable* table) {
+    VisibleRows visible = visible_rows(&table->tree);
+    table->columns.hovered = 0;
+    ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_fixed(GALLERY_TREE_HEIGHT) },
+                   .direction = LayoutDirection_TopToBottom) {
+        FlListRange range = fl_tree_begin(ID("gallery_tree_table"), visible.rows, visible.count, table->tree.selection,
+                                          .list = { .row_height = GALLERY_TREE_ROW_HEIGHT,
+                                                    .gap = GALLERY_TREE_GAP,
+                                                    .columns = table->columns.columns,
+                                                    .column_count = GALLERY_TABLE_COLUMNS,
+                                                    .scrollbar_mode = FlScrollbarDisplayMode_Auto });
+        for (u32 row = range.start; row < range.end; row++) {
+            tree_table_row(table, &visible, row);
+        }
+        FlTreeResult result = fl_tree_end();
+        tree_table_apply(table, &result);
+    }
+    gallery_columns_status(&table->columns);
 }
 
 static u32 virtual_child_count(const GalleryVirtualTree* tree, FlTreeVirtualRow row) {

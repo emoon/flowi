@@ -1,4 +1,6 @@
 #include "unit_tests_common.h"
+#include <ui/ui_tree.h>
+#include <flowi/ui/cell.h>
 
 #define TREE_ROW_STRIDE 26.0f
 #define TREE_INDENT 16.0f
@@ -319,7 +321,7 @@ UTEST(tree, rows_indent_by_depth) {
     const Clay_ElementData container = Clay_GetElementData((Clay_ElementId) { .id = container_id });
     ASSERT_TRUE_MSG(container.found, "the tree container was laid out");
     for_count(row, sizeof_array(s_open_rows)) {
-        const FlLayoutId arrow_id = { .name = tree.name, .id = -(i32)(row + 1) };
+        const FlLayoutId arrow_id = { .name = tree.name, .id = TREE_ARROW_ID(row) };
         const Clay_ElementData arrow
             = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(arrow_id) });
         ASSERT_EQ_MSG(s_open_rows[row].has_children, arrow.found, "only rows with children have an arrow slot");
@@ -440,4 +442,203 @@ UTEST(tree, dragging_a_row_does_not_reorder) {
     ASSERT_FALSE_MSG(drop.list.reorder_emitted, "releasing over another row emits no reorder request");
 
     selection_set_destroy(set);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#define TREE_CELL_PAD 6.0f
+#define TREE_COL_ROWS 7
+
+typedef struct TreeColsFrame {
+    FlTreeResult result;
+    FlSignal rows[TREE_COL_ROWS];
+} TreeColsFrame;
+
+static FlElementState tree_probe(u32 row, u32 col) {
+    FlLayoutId id = { .name = FL_S("tcp"), .id = (i32)(row * 10 + col + 1) };
+    return ui_get_element_state_by_id(ui_layout_id_to_clay_id(id));
+}
+
+static FlElementState tree_header_cell(FlLayoutId tree, i32 col) {
+    FlLayoutId id = { .name = tree.name, .id = -3 - 2 * col };
+    return ui_get_element_state_by_id(ui_layout_id_to_clay_id(id));
+}
+
+static void tree_cells(u32 row) {
+    const u32 ids[2] = { 11, 22 };
+    for (u32 c = 0; c < 2; c++) {
+        fl_cell_begin(ids[c]);
+        FlLayoutId pid = { .name = FL_S("tcp"), .id = (i32)(row * 10 + c + 1) };
+        fl_layout_start(pid);
+        fl_layout_configure(
+            (FlLayoutConfig) { .sizing = { sizing_grow(), sizing_fixed(10) }, .clip = { .horizontal = true } });
+        fl_item_behavior(pid, FlItemFlags_clickable);
+        fl_layout_end();
+        fl_cell_end();
+    }
+}
+
+static FlTreeConfig tree_cols_config(const FlColumnDef* cols) {
+    return (FlTreeConfig) { .list = { .row_height = 24.0f, .columns = cols, .column_count = 2 } };
+}
+
+static void tree_cols_input(FlUiCtx* ctx, TreeInput in) {
+    ui_input_set_mouse_position(ctx, in.mx, in.my);
+    ctx->input_state.mouse.buttons[FlMouseButton_Left] = in.pressed || in.held;
+    ctx->input_state.mouse.buttons_pressed[FlMouseButton_Left] = in.pressed;
+    ctx->input_state.mouse.buttons_released[FlMouseButton_Left] = in.released;
+    ui_input_update(ctx, 1.0f / 60.0f);
+}
+
+static TreeColsFrame tree_columns_frame(FlUiCtx* ctx, FlLayoutId tree_id, f32 first_width, TreeInput in) {
+    const FlColumnDef cols[2] = {
+        { .id = 11, .title = { .data = "A", .length = 1 }, .width = first_width },
+        { .id = 22, .title = { .data = "B", .length = 1 }, .width = 80.0f },
+    };
+    TreeColsFrame f = { 0 };
+    tree_cols_input(ctx, in);
+    ui_update_begin(ctx);
+    ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
+        FlListRange range
+            = fl_tree_begin(tree_id, s_open_rows, sizeof_array(s_open_rows), nullptr, tree_cols_config(cols));
+        for (u32 row = range.start; row < range.end; row++) {
+            f.rows[row] = fl_tree_item_begin(row);
+            tree_cells(row);
+            fl_tree_item_end();
+        }
+        f.result = fl_tree_end();
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+    return f;
+}
+
+static const TreeInput s_tree_mouse_away = { .mx = -100.0f, .my = -100.0f };
+
+UTEST(tree, column_edges_line_up_at_every_depth) {
+    FlUiCtx* ctx = tree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("tree_columns");
+    for_count(i, 3) {
+        tree_columns_frame(ctx, tree, 120.0f, s_tree_mouse_away);
+    }
+
+    const FlElementState second = tree_header_cell(tree, 1);
+    ASSERT_TRUE_MSG(second.found, "the second header cell was laid out");
+    for_count(i, 3) {
+        const FlElementState col0 = tree_probe(i, 0);
+        const FlElementState col1 = tree_probe(i, 1);
+        ASSERT_TRUE_MSG(col0.found && col1.found, "both cells were laid out");
+        ASSERT_NEAR((double)second.pos.x + TREE_CELL_PAD, (double)col1.pos.x, 0.01);
+        ASSERT_NEAR((double)second.pos.x - TREE_CELL_PAD, (double)(col0.pos.x + col0.size.x), 0.01);
+        ASSERT_NEAR((double)tree_probe(0, 0).pos.x + (double)i * TREE_INDENT, (double)col0.pos.x, 0.01);
+    }
+}
+
+UTEST(tree, a_lead_wider_than_the_first_column_leaves_the_other_columns_in_place) {
+    FlUiCtx* ctx = tree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("tree_columns_narrow");
+    for_count(i, 3) {
+        tree_columns_frame(ctx, tree, 20.0f, s_tree_mouse_away);
+    }
+
+    const FlElementState second = tree_header_cell(tree, 1);
+    ASSERT_TRUE_MSG(second.found, "the second header cell was laid out");
+    ASSERT_NEAR(20.0, (double)second.pos.x, 0.01);
+    for_count(i, 5) {
+        const FlElementState col1 = tree_probe(i, 1);
+        ASSERT_TRUE_MSG(col1.found, "the second cell was laid out");
+        ASSERT_NEAR((double)second.pos.x + TREE_CELL_PAD, (double)col1.pos.x, 0.01);
+    }
+}
+
+UTEST(tree, a_row_at_depth_names_the_column_under_the_mouse) {
+    FlUiCtx* ctx = tree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("tree_columns_cell");
+    for_count(i, 3) {
+        tree_columns_frame(ctx, tree, 120.0f, s_tree_mouse_away);
+    }
+    const f32 y = tree_probe(2, 0).pos.y + 2.0f;
+
+    TreeColsFrame f = { 0 };
+    for_count(i, 3) {
+        f = tree_columns_frame(ctx, tree, 120.0f, (TreeInput) { .mx = 100.0f, .my = y });
+    }
+    ASSERT_EQ_MSG(11u, f.rows[2].cell, "inside the first column at depth 2");
+    ASSERT_EQ_MSG(0u, f.rows[1].cell, "another row names no column");
+
+    for_count(i, 3) {
+        f = tree_columns_frame(ctx, tree, 120.0f, (TreeInput) { .mx = 150.0f, .my = y });
+    }
+    ASSERT_EQ_MSG(22u, f.rows[2].cell, "inside the second column at depth 2");
+
+    const f32 arrow_y = tree_probe(1, 0).pos.y + 2.0f;
+    for_count(i, 3) {
+        f = tree_columns_frame(ctx, tree, 120.0f, (TreeInput) { .mx = tree_arrow_x(1), .my = arrow_y });
+    }
+    ASSERT_EQ_MSG(11u, f.rows[1].cell, "over the arrow, which sits in the first column");
+}
+
+UTEST(tree, an_arrow_press_toggles_in_a_tree_with_columns) {
+    FlUiCtx* ctx = tree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("tree_columns_arrow");
+    for_count(i, 3) {
+        tree_columns_frame(ctx, tree, 120.0f, s_tree_mouse_away);
+    }
+    const TreeInput at = { .mx = tree_arrow_x(1), .my = tree_probe(1, 0).pos.y + 2.0f };
+    for_count(i, 3) {
+        tree_columns_frame(ctx, tree, 120.0f, at);
+    }
+    TreeInput press = at;
+    press.pressed = true;
+    TreeColsFrame f = tree_columns_frame(ctx, tree, 120.0f, press);
+    TreeInput release = at;
+    release.released = true;
+    TreeColsFrame g = tree_columns_frame(ctx, tree, 120.0f, release);
+    const u64 toggled = f.result.toggled_id != 0 ? f.result.toggled_id : g.result.toggled_id;
+    ASSERT_EQ_MSG((u64)2, toggled, "the arrow of the depth 1 row toggles it");
+}
+
+static const FlTreeExpanded s_vtree_cols_open[] = {
+    { .parent = -1, .child_index = 0, .child_count = 3 },
+};
+
+UTEST(tree, a_virtual_tree_keeps_its_columns_under_the_header) {
+    FlUiCtx* ctx = tree_fixture();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    const FlLayoutId tree = ID("vtree_columns");
+    const FlColumnDef cols[2] = {
+        { .id = 11, .title = { .data = "A", .length = 1 }, .width = 120.0f },
+        { .id = 22, .title = { .data = "B", .length = 1 }, .width = 80.0f },
+    };
+    u16 depths[4] = { 0 };
+    for_count(frame, 3) {
+        tree_cols_input(ctx, s_tree_mouse_away);
+        ui_update_begin(ctx);
+        ui_layout_area(.sizing = { sizing_fixed(300), sizing_fixed(240) }, .direction = FlLayoutDirection_TopToBottom) {
+            FlListRange range = fl_tree_begin_virtual(tree, 2, s_vtree_cols_open, 1, nullptr, tree_cols_config(cols));
+            for (u32 row = range.start; row < range.end && row < 4; row++) {
+                FlTreeVirtualRow at = fl_tree_row_at(row);
+                depths[row] = at.depth;
+                fl_tree_item_begin_virtual(row, at.depth == 0);
+                tree_cells(row);
+                fl_tree_item_end();
+            }
+            fl_tree_end();
+        }
+        ui_update_end(ctx, 1.0f / 60.0f);
+    }
+
+    const FlElementState second = tree_header_cell(tree, 1);
+    ASSERT_TRUE_MSG(second.found, "the second header cell was laid out");
+    ASSERT_EQ_MSG(1u, (u32)depths[1], "the second row is a child");
+    for_count(i, 2) {
+        const FlElementState col0 = tree_probe(i, 0);
+        const FlElementState col1 = tree_probe(i, 1);
+        ASSERT_TRUE_MSG(col0.found && col1.found, "both cells were laid out");
+        ASSERT_NEAR((double)second.pos.x + TREE_CELL_PAD, (double)col1.pos.x, 0.01);
+        ASSERT_NEAR((double)(depths[i] + 1) * TREE_INDENT + TREE_CELL_PAD, (double)col0.pos.x, 0.01);
+    }
 }

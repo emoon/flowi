@@ -3,6 +3,7 @@
 #pragma once
 
 #include <flowi/fl_api.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <flowi/core/string.h>
 #include <flowi/ui/signal.h>
@@ -37,6 +38,14 @@ FL_API void fl_text_input_set_text(FlTextInputState* state, FlString text);
 FL_API FlString fl_text_input_get_text(FlTextInputState* state);
 // Removes all text and moves the cursor to the start.
 FL_API void fl_text_input_clear(FlTextInputState* state);
+// Gives the text field keyboard focus the next time it is shown.
+//
+// If `select_all` is true, the whole text is selected, so typing replaces it.
+//
+// Call this once, on the frame an edit starts, or on the frame a field in a list row is shown again after the
+// row was scrolled out of view. Each call scrolls the field into view, so a call on every frame pulls the
+// list back whenever the user scrolls away.
+FL_API void fl_text_input_request_focus(FlTextInputState* state, bool select_all);
 // Shows the text field with default options and returns its `FlSignal`.
 //
 // `FlSignal.text_changed`, `FlSignal.submitted` (Enter) and `FlSignal.cancelled` (Escape or gamepad B) are true only

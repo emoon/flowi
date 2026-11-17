@@ -55,6 +55,8 @@ typedef struct GalleryState {
     u64 decl_menu;
     bool feedback_installed; // installed on the first frame, once the UI context exists
     GalleryTree tree;
+    GalleryTable table;
+    GalleryTreeTable tree_table;
     GalleryVirtualTree virtual_tree;
 } GalleryState;
 
@@ -433,6 +435,17 @@ static void decl_list_section(GalleryState* s) {
     }
 }
 
+static void table_sections(GalleryState* s) {
+    section {
+        section_header(FL_S("Table (List with columns: drag a header edge to resize)"));
+        gallery_table_show(&s->table);
+    }
+    section {
+        section_header(FL_S("Table (Tree with columns: Enter or double-click edits Kind)"));
+        gallery_tree_table_show(&s->tree_table);
+    }
+}
+
 static void tree_sections(GalleryState* s) {
     section {
         section_header(FL_S("Tree (rows from the app, type-ahead, Left/Right)"));
@@ -454,6 +467,7 @@ static void widget_sections(GalleryState* s) {
     context_menu_section(s);
     list_section(s);
     decl_list_section(s);
+    table_sections(s);
     tree_sections(s);
 }
 
@@ -532,6 +546,8 @@ static void state_init(GalleryState* state) {
     state->list_selection = selection_set_create(64);
     state->decl_selection = selection_set_create(16);
     gallery_tree_init(&state->tree);
+    gallery_table_init(&state->table);
+    gallery_tree_table_init(&state->tree_table);
     gallery_virtual_tree_init(&state->virtual_tree);
     // The parallel labels back keyboard type-ahead, including rows virtualized out of view.
     for_count(i, GALLERY_LIST_ROWS) {
@@ -551,6 +567,8 @@ static void state_destroy(GalleryState* state) {
     selection_set_destroy(state->list_selection);
     selection_set_destroy(state->decl_selection);
     gallery_tree_destroy(&state->tree);
+    gallery_table_destroy(&state->table);
+    gallery_tree_table_destroy(&state->tree_table);
     gallery_virtual_tree_destroy(&state->virtual_tree);
 }
 
